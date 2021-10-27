@@ -1,0 +1,90 @@
+/*************************************************************************
+ * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "kernels/binary_op/binary_op_3pipeline.h"
+
+#define SQRTBACK_NRAM_USED MAX_NRAM_SIZE
+__nram__ char nram_buffer[SQRTBACK_NRAM_USED];
+
+/*Fast mode only will be used when data type is float*/
+template <typename T>
+__mlu_func__ void get3OffsetSqrtBackwardFast(int32_t &nram_limit,
+                                             int32_t &pong_x,
+                                             int32_t &pong_y,
+                                             T *&nram_x,
+                                             T *&nram_y,
+                                             T *&nram_aux1,
+                                             T *&nram_aux2,
+                                             T *&nram_aux3,
+                                             char *nram_buffer) {
+  // x - x_pong - y - y_pong
+  nram_limit = (SQRTBACK_NRAM_USED / sizeof(T)) / 4;
+  nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
+  pong_x = nram_limit;
+  pong_y = nram_limit;
+  nram_x = (T *)nram_buffer;  // nram_x_pong = nram_x + nram_limit
+  nram_y = nram_x + nram_limit * 2;
+}
+
+/*HighAcc mode only will be used when data type is half*/
+template <typename T>
+__mlu_func__ void get3OffsetSqrtBackwardHighAcc(int32_t &nram_limit,
+                                                int32_t &pong_x,
+                                                int32_t &pong_y,
+                                                T *&nram_x,
+                                                T *&nram_y,
+                                                T *&nram_aux1,
+                                                T *&nram_aux2,
+                                                T *&nram_aux3,
+                                                char *nram_buffer) {
+  // x - x_pong - y - y_pong
+  // x half->float bit_up
+  nram_limit = (SQRTBACK_NRAM_USED / sizeof(T)) / 6;
+  nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
+  pong_x = 2 * nram_limit;
+  pong_y = nram_limit;
+  nram_x = (T *)nram_buffer + nram_limit;
+  nram_y = nram_x + nram_limit * 3;
+}
+
+template <typename T>
+__mlu_func__ void computeSqrtBackwardFast(T *nram_y,
+                                          T *nram_dy,
+                                          T *nram_aux1,
+                                          T *nram_aux2,
+                                          T *nram_aux3,
+                                          const int32_t actual_num,
+                                          const int32_t deal_num) {
+  __bang_mul_const(nram_dy, nram_dy, (T)0.5, deal_num);
+  __bang_active_reciphp((float *)nram_y, (float *)nram_y, deal_num);
+  __bang_mul(nram_y, nram_dy, nram_y, deal_num);
+}
+
+template <typename T>
+__mlu_func__ void computeSqrtBackwardHighAcc(T *nram_y,
+                                             T *nram_dy,
+                                             T *nram_aux1,
+                                             T *nram_aux2,
+                                             T *nram_aux3,
+                                             const int32_t actual_num,
+                                             const int32_t deal_num) {
+  float *nram_fp_y = (float *)(nram_y - deal_num);
+  // bit-up
+  __bang_half2float(nram_fp_y, nram_y, deal_num);
+  __bang_active_reciphp(nram_fp_y, nram_fp_y, deal_num);
+  __bang_float2half_rd((half *)nram_fp_y, (float *)nram_fp_y, deal_num);
+  __bang_mul_const(nram_dy, nram_dy, (T)0.5, deal_num);
+  __bang_mul(nram_y, (half *)nram_fp_y, nram_dy, deal_num);
+}
+
+BINARY_OP_3PIPELINE_IMPLE(SqrtBackward, float, Fast);
+BINARY_OP_3PIPELINE_IMPLE(SqrtBackward, half, HighAcc);
