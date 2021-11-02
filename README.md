@@ -12,6 +12,8 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
   - 编译和运行时依赖 CNToolkit v2.3.2 或更高版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v4.15.3 或更高版本
+- 外部链接库：
+  - libxml2-dev libprotobuf-dev protobuf-compiler
 
 ## 编译 mlu-ops
 
@@ -28,6 +30,13 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
   sudo apt-get update
   sudo apt-get install cncc cnas cnbin cndrv cnrt
   export NEUWARE_HOME=/usr/local/neuware/
+  ```
+
+- 准备链接库环境
+
+  ```sh
+  sudo apt-get update
+  sudo apt-get install protobuf-compiler libxml2-dev libprotobuf-dev
   ```
 
 - 编译 mlu-ops 库及测试程序
