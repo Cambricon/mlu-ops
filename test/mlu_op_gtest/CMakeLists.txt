@@ -17,7 +17,7 @@ endif()
 
 message("[MLUOP GTEST REGISTER OP]: ")
 file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/*case_list.cpp")
-execute_process(COMMAND rm ${CASE_LIST})
+execute_process(COMMAND rm -f ${CASE_LIST})
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
 
 
