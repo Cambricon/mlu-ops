@@ -58,12 +58,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   int32_t element_num = mluOpGetTensorElementNum(x_desc);
   void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num, float coef);
   MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbsfloatFast;
-  if (handle->arch == MLUOP_MLU270) {
-    VLOG(5) << "kernel MLUBlockKernel5StagePipelineAbsfloatFast";
-    MLUBlockKernelUnary = MLUBlockKernel5StagePipelineAbsfloatFast;
-  } else {
+  if (x_desc->dtype == MLUOP_DTYPE_HALF) {
     VLOG(5) << "kernel MLUBlockKernel3StagePipelineAbshalfFast";
     MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbshalfFast;
+  } else {
+    VLOG(5) << "kernel MLUBlockKernel3StagePipelineAbsfloatFast";
+    MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbsfloatFast;
   }
   KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>((void *)x, (void *)y,
                                                                       element_num, 0.0)));
