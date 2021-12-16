@@ -74,4 +74,5 @@ cd build/test/
 | [core](core)         | 包含公共数据类型的操作、运行时管理、日志等公共实现。           |
 | [kernels](kernels)   | 算子代码实现，包含一元、二元算子模板供其他算子调用。           |
 | [test](test)         | 存放测试算子用的代码。                                         |
+| [docker](docker)     | 存放docker打包脚本，提供CI构建环境。                           |
 | [docs](docs)         | 算子开发、测试、精度验收的说明文档。                           |
