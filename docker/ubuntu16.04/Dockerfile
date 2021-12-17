@@ -6,16 +6,15 @@ ENV NEUWARE_HOME="/usr/local/neuware/"
 
 WORKDIR /tmp
 
-RUN apt update && apt install -y wget
+RUN apt update && apt install --no-install-recommends -y git apt-transport-https wget build-essential cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # NOTE: the url below is only for internal usage
 RUN wget http://daily.software.cambricon.com/release/cntoolkit/Linux/x86_64/Ubuntu/16.04/${CNTOOLKIT_VERSION}/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb
 # You could use COPY with your own cntoolkit package
 
-RUN apt install -y git apt-transport-https && \
-    dpkg -i cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb && \
+RUN dpkg -i cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb && \
     apt update && \
-    apt install --no-install-recommends -y cncc cnas cnbin cnrt cndrv build-essential cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler && \
+    apt install --no-install-recommends -y cncc cnas cnbin cnrt cndrv && \
     echo "/usr/local/neuware/lib64" > /etc/ld.so.conf.d/neuware.conf && ldconfig && \
     rm -rf /tmp/*.deb && apt-get autoclean && apt-get clean && rm -rf /var/lib/apt/lists/*
 
