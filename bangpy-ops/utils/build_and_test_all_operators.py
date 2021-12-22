@@ -43,6 +43,11 @@ def collect_build_test_funcs(op, cur_file_name):
     for dic in dicts:
         for name, obj in list(dic.items()):
             if is_build_func(name, obj):
+                if dicts[0][name].__qualname__.find("register_mlu_op") != 0:
+                    raise TypeError(
+                        "Please use 'register_mlu_op' to decorate your build function in '%s.py'."
+                        % (op.__name__)
+                    )
                 build_entrys.append(obj)
                 build_exist = 1
             if is_test_func(name, obj):
@@ -89,7 +94,7 @@ def main():
             oper_idx += 1
             for arg in sys.argv[2:]:
                 if arg.find("--target=") != -1:
-                    target = arg[arg.find("--target=") + len("--target="):]
+                    target = arg[arg.find("--target=") + len("--target=") :]
         if len(sys.argv) == 2 and oper_idx != 1:
             raise ValueError("Please input operators list.")
 
@@ -100,7 +105,9 @@ def main():
 
     for op in operator_lists:
         if operator_lists.count(op) > 1:
-            raise ValueError("Duplicate operator \"%s\", please check the input operators."%(op))
+            raise ValueError(
+                'Duplicate operator "%s", please check the input operators.' % (op)
+            )
 
     for op_name in operator_lists:
         files = os.listdir(ops_path + op_name)
