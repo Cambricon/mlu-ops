@@ -76,6 +76,7 @@ parts/
 sdist/
 var/
 wheels/
+outs/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
