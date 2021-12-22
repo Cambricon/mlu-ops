@@ -18,7 +18,7 @@
   ./build.sh
   ```
 
-  编译成功后在 `bangc-ops/build/lib` 目录下生成算子库文件 `libmluops.so`，在 `bangc-ops/build/test` 目录下生成测试用的可执行文件 `bangc-ops/mluop_gtest` 。
+  编译成功后在 `bangc-ops/build/lib` 目录下生成算子库文件 `libmluops.so`，在 `bangc-ops/build/test` 目录下生成测试用的可执行文件 `mluop_gtest` 。
 
 
 ## 运行测试用例

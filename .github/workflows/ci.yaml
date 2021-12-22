@@ -13,16 +13,24 @@ jobs:
       - uses: actions/checkout@v2
       - name: build
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.3-ubuntu1604
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
+          source env.sh
+          cd bangc-ops
           ./build.sh
+          cd /work/bangpy-ops/utils
+          ./build_operators.sh
 
       - name: test
         run: >
           docker run --rm --device /dev/cambricon_dev0 --device /dev/cambricon_ctl --device /dev/commu0
-          -v $(pwd):/work -w /work/build/test -e LD_LIBRARY_PATH=/work/build/lib
-          docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.3-ubuntu1604
-          ./mluop_gtest
+          -v $(pwd):/work -w /work -e LD_LIBRARY_PATH=/work/build/lib
+          docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
+          source env.sh
+          ./bangc-ops/build/test/mluop_gtest
+          ./bangpy-ops/utils/test_operators.sh --only_test
+
       - name: clean
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.3-ubuntu1604
-          rm -rf build
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
+          rm -rf bangc-ops/build
+          rm -rf bangpy-ops/outs
