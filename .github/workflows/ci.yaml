@@ -28,6 +28,7 @@ jobs:
           ./build_operators.sh
           cd ../.. 
       - name: test
+        run: |
           echo "Start test BANGC operators..."
           ./bangc-ops/build/test/mluop_gtest
           echo "Start test BANGPy operators..."
