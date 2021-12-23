@@ -1,5 +1,5 @@
-test/mlu_op_gtest/src/gtest/case_list.cpp
-test/mlu_op_gtest/src/gtest/op_register.h
+bangc-ops/test/mlu_op_gtest/src/gtest/case_list.cpp
+bangc-ops/test/mlu_op_gtest/src/gtest/op_register.h
 
 # Swap
 [._]*.s[a-v][a-z]

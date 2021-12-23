@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test BANGC and BANGPy all operators cases, used for CI test.
 # If you want to run specify operators, refer to bangc-ops and bangpy-ops README.md.
-# You need to run build.sh, befor running this script.
+# You need to run build.sh, before running this script.
 set -e
 
 source env.sh
@@ -47,9 +47,5 @@ cd bangc-ops/build/test/
 ./mluop_gtest
 cd ../../..
 
-# Test BANGPy Operato
+# Test BANGPy all operators cases.
 ./bangpy-ops/utils/test_operators.sh --only_test --target=${MLU_TARGET}
-
-# Clean test files.
-rm -rf bangc-ops/build
-rm -rf bangpy-ops/outs
