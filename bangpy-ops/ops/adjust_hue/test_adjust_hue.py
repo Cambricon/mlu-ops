@@ -50,8 +50,8 @@ def cal_diff(result, data_out):
         )
         / np.sum(np.power(result, 2))
     )
-    assert round(diff1 * 100, 5) < 10
-    assert round(diff2 * 100, 5) < 10
+    assert round(diff1 * 100, 5) < 3e-3 * 100
+    assert round(diff2 * 100, 5) < 3e-3 * 100
     print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
