@@ -29,7 +29,7 @@ from bangpy.platform.bang_config import TARGET
 
 NRAM_SIZE_LIMIT = lambda x, y, z, align: x / z / y / align * align
 DTYPES = [bp.float16, bp.float32]
-TARGET_LIST = ["mlu270", "mlu290"]
+TARGET_LIST = ["mlu290",]
 KERNEL_NAME = "adjust_hue"
 
 class AdjustHue(object):

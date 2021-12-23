@@ -21,3 +21,8 @@ jobs:
           docker run --rm --device /dev/cambricon_dev0 --device /dev/cambricon_ctl --device /dev/commu0
           -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
           ./test.sh --target=mlu270
+
+      - name: clean
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
+          bash -c "rm -rf bangc-ops/build && rm -rf bangpy-ops/outs"
