@@ -42,3 +42,7 @@ fi
 
 # Test BANGPy Operato
 ./bangpy-ops/utils/test_operators.sh --only_test --target=MLU_TARGET
+
+# Clean test files.
+rm -rf bangc-ops/build
+rm -rf bangpy-ops/outs
