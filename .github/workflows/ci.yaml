@@ -9,25 +9,21 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, mlu270-x5k]
-    container:
-      image: docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
-      volumes: ${{ github.workspace }}:/work
     steps:
       - uses: actions/checkout@v2
       - name: build
-        run: |
-          echo "Start build BANGC operators..."
-          source env.sh
-          cd bangc-ops
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
           ./build.sh
-          cd ..
-          echo "Start build BANGPy operators..."
-          cd bangpy-ops/utils
-          ./build_operators.sh
-          cd ../.. 
+
       - name: test
-        run: |
-          echo "Start test BANGC operators..."
-          ./bangc-ops/build/test/mluop_gtest
-          echo "Start test BANGPy operators..."
-          ./bangpy-ops/utils/test_operators.sh --only_test --target=mlu270
+        run: >
+          docker run --rm --device /dev/cambricon_dev0 --device /dev/cambricon_ctl --device /dev/commu0
+          -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
+          ./test.sh --target=mlu270
+
+      - name: clean
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
+          rm -rf bangc-ops/build &&
+          rm -rf bangpy-ops/outs
