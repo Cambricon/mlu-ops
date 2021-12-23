@@ -3,10 +3,8 @@
 # If you want to run specify operators, refer to bangc-ops and bangpy-ops README.md.
 # You need to run build.sh, befor running this script.
 set -e
-set -u
 
 source env.sh
-
 usage () {
     echo "USAGE: test_operators.sh <options>"
     echo
