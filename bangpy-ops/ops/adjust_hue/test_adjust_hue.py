@@ -82,18 +82,17 @@ def test_adjust_hue(target, shape, delta, dtype):
     h = shape[1]
     w = shape[2]
     c = shape[3]
-    stride = w *c * dtype.bytes
     print("shape:", [n, h, w, c], " delta:", delta, " dtype:", dtype.name)
     # set device
     dev = bp.device(0)
     # generate input data
-    data_in = np.zeros((n, h, stride // dtype.bytes), dtype="float32")
+    data_in = np.zeros((n, h, w, c), dtype="float32")
     for i in range(n):
         data_in[i] = np.random.uniform(
-            low=0, high=1, size=(1, h, stride // dtype.bytes)
+            low=0, high=1, size=(1, h, w, c)
         )
 
-    data_out = np.zeros((n, h, stride // dtype.bytes), dtype="float32")
+    data_out = np.zeros((n, h, w, c), dtype="float32")
     data_in_handle = bp.Array(data_in.astype(dtype.name), dev)
     data_out_handle = bp.Array(data_out.astype(dtype.name), dev)
     f = load_op_by_type(
@@ -102,12 +101,6 @@ def test_adjust_hue(target, shape, delta, dtype):
     f(
         data_in_handle,
         delta,
-        n,
-        h,
-        w,
-        c,
-        stride,
-        stride,
         data_out_handle,
     )
     # convert all output to float for diff comparison
@@ -115,14 +108,13 @@ def test_adjust_hue(target, shape, delta, dtype):
     for i in range(n):
         mlu_result[i] = (
             data_out_handle
-            .numpy()[i, :, : w * c]
-            .reshape(h, w, c)
+            .numpy()[i, :, :, :]
             .astype("float32")
         )
     cpu_result = np.zeros((n, h, w, c), dtype="float32")
     for i in range(n):
         cpu_result[i] = adjust_hue_cpu(
-            data_in_handle.numpy()[i, :, : w * c].reshape([h, w, c]), delta
+            data_in_handle.numpy()[i, :, :, :], delta
         )
     # calculate difference between cpu and mlu results
     cal_diff(cpu_result, mlu_result)

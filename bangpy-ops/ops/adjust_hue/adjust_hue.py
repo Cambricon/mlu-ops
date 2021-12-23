@@ -53,8 +53,6 @@ class AdjustHue(object):
             name="nram_size",
             value=self.nram_use,
         )
-        self.src_stride = self.tcp.SizeVar("src_stride")
-        self.dst_stride = self.tcp.SizeVar("dst_stride")
         self.delta = self.tcp.Var("delta", dtype=bp.float32)
         self.line_align = self.tcp.Scalar(
             dtype=bp.int32, name="line_align", value=64 // dtype.bytes
@@ -88,13 +86,13 @@ class AdjustHue(object):
             name="row_each_per",
         )
         self.src_gdram = self.tcp.Buffer(
-            shape=(self.n, self.h, self.src_stride / self.dtype.bytes),
+            shape=(self.n, self.h, self.w, self.c),
             dtype=self.dtype,
             scope="global",
             name="src_gdram",
         )
         self.dst_gdram = self.tcp.Buffer(
-            shape=(self.n, self.h, self.dst_stride / self.dtype.bytes),
+            shape=(self.n, self.h, self.w, self.c),
             dtype=self.dtype,
             scope="global",
             name="dst_gdram",
@@ -293,13 +291,15 @@ class AdjustHue(object):
                 rgb.reshape(
                     (
                         self.nram_limit / self.r_w / self.c,
-                        self.r_w * self.c,
+                        self.r_w,
+                        self.c,
                     )
-                )[: self.r_h][:],
+                )[: self.r_h][:][:],
                 self.src_gdram[
                     batch_index,
                     offset_h_start : offset_h_start + self.r_h,
-                    offset_w_start : offset_w_start + self.r_w * self.c,
+                    offset_w_start : offset_w_start + self.r_w,
+                    :,
                 ],
             )
         with self.tcp.block("compute" if db else "null"):
@@ -411,14 +411,16 @@ class AdjustHue(object):
                 self.dst_gdram[
                     batch_index,
                     offset_h_start : offset_h_start + self.r_h,
-                    offset_w_start : offset_w_start + self.r_w * self.c,
+                    offset_w_start : offset_w_start + self.r_w,
+                    :,
                 ],
                 rgb.reshape(
                     (
                         self.nram_limit / self.r_w / self.c,
-                        self.r_w * self.c,
+                        self.r_w,
+                        self.c,
                     )
-                )[: self.r_h][:],
+                )[: self.r_h][:][:],
             )
 
     def compute_body(self):
@@ -462,7 +464,7 @@ class AdjustHue(object):
                     j == ((self.w + self.r_w_tmp - 1) / self.r_w_tmp - 1)
                 ):
                     self.r_w.assign(self.w - j * self.r_w_tmp)
-                offset_w_start.assign(j * self.r_w_tmp * self.c)
+                offset_w_start.assign(j * self.r_w_tmp)
                 self.r_h.assign(self.row_each_per)
                 h_loop_num.assign(
                     (self.real_task_num + self.row_each_per - 1) / self.row_each_per
@@ -500,12 +502,6 @@ class AdjustHue(object):
             inputs=[
                 self.src_gdram,
                 self.delta,
-                self.n,
-                self.h,
-                self.w,
-                self.c,
-                self.src_stride,
-                self.dst_stride,
             ],
             outputs=[self.dst_gdram],
             kernel_name=KERNEL_NAME,
