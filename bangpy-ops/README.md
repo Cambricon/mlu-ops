@@ -95,7 +95,7 @@
 详情可以参考文档 [BANGPy-OPS 算子开发流程.md](../docs/BANGPy-OPS算子开发流程.md)。
 
 1. 在 `mlu-ops/bangpy-ops/ops/` 路径下，创建算子文件夹，添加算子实现文件，可以参考现有的 add 算子中的[add.py](./ops/add/add.py)进行添加。
-2. 在 `mlu-ops/bangpy-ops/ops/` 路径下创建以 `test_` 为前缀的算子测试文件，添加测试代码，可以参考[test_add.py](./ops/add/test_add.py)进行添加。
+2. 在算子文件夹下创建以 `test_` 为前缀的算子测试文件，添加测试代码，可以参考[test_add.py](./ops/add/test_add.py)进行添加。
 
 ## 目录文件结构
 
