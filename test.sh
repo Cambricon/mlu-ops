@@ -6,15 +6,16 @@ set -e
 
 source env.sh
 usage () {
-    echo "USAGE: test_operators.sh <options>"
+    echo "USAGE: test.sh <options>"
     echo
     echo "OPTIONS:"
     echo "      -h, --help         Print usage"
     echo "      --target=*         Test mlu target:[mlu270, mlu370-s4, mlu220-m2, mlu290]"
     echo
 }
-
-if [ $# == 0 ]; then echo "Have no options, use -h or --help" >&2 ; exit -1; fi
+if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi
+cmdline_args=$(getopt -o h --long target: -n 'test.sh' -- "$@")
+eval set -- "$cmdline_args"
 if [ $# != 0 ]; then
   while true; do
     case "$1" in
@@ -26,6 +27,10 @@ if [ $# != 0 ]; then
       -h | --help)
           usage
           exit 0
+          ;;
+      --)
+          shift
+          break
           ;;
       *)
           echo "-- Unknown options ${1}, use -h or --help"
