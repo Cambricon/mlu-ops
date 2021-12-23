@@ -21,7 +21,7 @@ if [ -n "${BUILD_OUT_DIR}" ]; then
     fi
 else
     echo "Please set BANGPY_BUILD_PATH environment variable first."
-    echo "eg. export BANGPY_BUILD_PATH=/usr/bangpy-ops/outs/"
+    echo "eg. export BANGPY_BUILD_PATH=/mlu-ops/bangpy-ops/outs/"
     exit -1
 fi
 

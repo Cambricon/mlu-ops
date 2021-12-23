@@ -9,13 +9,13 @@ if [ -n "${BUILD_OUT_DIR}" ]; then
     fi
 else
     echo "Please set BANGPY_BUILD_PATH environment variable first."
-    echo "eg. export BANGPY_BUILD_PATH=/usr/bangpy/outs/"
+    echo "eg. export BANGPY_BUILD_PATH=/mlu-ops/bangpy-ops/outs/"
     exit -1
 fi
 
 if [ -z "${BANGPY_HOME}" ]; then
     echo "Please set BANGPY_HOME environment variable first."
-    echo "eg. export BANGPY_HOME=/usr/bangpy/"
+    echo "eg. export BANGPY_HOME=/mlu-ops/bangpy-ops/"
     exit -1
 fi
 
@@ -30,7 +30,7 @@ usage () {
     echo "OPTIONS:"
     echo "      -h, --help                     Print usage"
     echo "      --filter=*                     Build specified OP only"
-    echo "      --target=*                     Test mlu target"
+    echo "      --target=*                     Test mlu target:[mlu270, mlu370-s4, mlu220-m2, mlu290]"
     echo "      --opsfile=*                    Operators list file"
     echo "      -r, --release                  Build by release mode"
     echo "      -t, --test                     Test operators after build"
