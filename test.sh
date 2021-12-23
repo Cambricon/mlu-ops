@@ -43,7 +43,9 @@ fi
 
 
 # Test BANGC all operators cases.
-./bangc-ops/build/test/mluop_gtest
+cd bangc-ops/build/test/
+./mluop_gtest
+cd ../../..
 
 # Test BANGPy Operato
 ./bangpy-ops/utils/test_operators.sh --only_test --target=${MLU_TARGET}
