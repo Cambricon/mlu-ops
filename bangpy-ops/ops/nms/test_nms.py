@@ -31,7 +31,7 @@ from bangpy.tcp.runtime import TaskType
 from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.util import round_up, round_down
 from bangpy.common import compile_for_multi_dtype_platform, utils, load_op_by_type
-from nms import KERNEL_NAME
+from nms import KERNEL_NAME, TARGET_LIST
 
 
 def _py_nms(output, iou_threshold=0.5, score_threshold=0.5, valid_num=1):
@@ -134,6 +134,8 @@ def verify_operator(
 
 def test_nms(target):
     """Test nms operator by giving multiple sets of parameters."""
+    if target not in TARGET_LIST:
+        return
     verify_operator(16, max_output_size=1, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
     verify_operator(15, max_output_size=1, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
     verify_operator(300, max_output_size=4, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)

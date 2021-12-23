@@ -22,7 +22,7 @@
 """NonZero test demo."""
 import numpy as np
 import pytest
-from nonzero import NonZero
+from nonzero import NonZero, TARGET_LIST
 from nonzero_count import NonZeroCount
 import bangpy as bp
 from bangpy import tcp
@@ -51,6 +51,8 @@ import os
 )
 def test_nonzero(target, trans, dtype, shape):
     """Test case."""
+    if target not in TARGET_LIST:
+        return
     task_num = TARGET(target).cluster_num * TARGET(target).core_num
     dim_num = 4
     in_np = np.random.randint(0, 2, size=shape).astype(dtype.name)

@@ -29,7 +29,7 @@ from bangpy.platform.bang_config import TARGET
 
 NRAM_SIZE_LIMIT = lambda x, y, z, align: x / z / y / align * align
 DTYPES = [bp.float16, bp.float32]
-TRAGET_LIST = ["mlu270", "mlu290"]
+TARGET_LIST = ["mlu270", "mlu290"]
 KERNEL_NAME = "adjust_hue"
 
 class AdjustHue(object):
@@ -511,7 +511,7 @@ class AdjustHue(object):
             kernel_name=KERNEL_NAME,
         )
 
-@tcp.register_mlu_op(DTYPES, TRAGET_LIST, KERNEL_NAME)
+@tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_adjust_hue(dtype=None, target=None):
     stage = 1
     task_type = TaskType.UNION4 if target == "mlu270" else TaskType.UNION16

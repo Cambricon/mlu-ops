@@ -29,7 +29,7 @@ from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 
 DTYPES = [bangpy.float16]
-TRAGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
+TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 SHAPE = (64000,)
 KERNEL_NAME = "add"
 
@@ -113,7 +113,7 @@ class Add(object):
         return f
 
 
-@tcp.register_mlu_op(DTYPES, TRAGET_LIST, KERNEL_NAME)
+@tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_add(dtype=None, target=None):
     # tasktype fixed in UNION1
     task_num = 4

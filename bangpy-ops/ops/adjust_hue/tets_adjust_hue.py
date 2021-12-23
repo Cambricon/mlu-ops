@@ -23,7 +23,7 @@ import os
 import numpy as np
 import matplotlib
 import pytest
-from adjust_hue import DTYPES, KERNEL_NAME
+from adjust_hue import DTYPES, KERNEL_NAME, TARGET_LIST
 import bangpy as bp
 from bangpy.common import load_op_by_type
 
@@ -75,7 +75,9 @@ def cal_diff(result, data_out):
 @pytest.mark.parametrize(
     "delta", [-0.45932, 0.7373],
 )
-def test_adjust_hue(shape, delta, dtype):
+def test_adjust_hue(target, shape, delta, dtype):
+    if target not in TARGET_LIST:
+        return
     n = shape[0]
     h = shape[1]
     w = shape[2]

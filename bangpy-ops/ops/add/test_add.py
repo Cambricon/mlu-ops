@@ -28,7 +28,7 @@ from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
-from add import DTYPES, SHAPE, KERNEL_NAME
+from add import DTYPES, SHAPE, KERNEL_NAME, TARGET_LIST
 
 
 @pytest.mark.parametrize(
@@ -38,6 +38,8 @@ from add import DTYPES, SHAPE, KERNEL_NAME
     "dtype", DTYPES,
 )
 def test_add(target, shape, dtype):
+    if target not in TARGET_LIST:
+        return
     data_in0 = np.random.uniform(low=-10, high=10, size=shape)
     data_in1 = np.random.uniform(low=-10, high=10, size=shape)
 

@@ -32,7 +32,7 @@ from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.util import round_up, round_down
 from bangpy.common import compile_for_multi_dtype_platform, utils, load_op_by_type
 
-TRAGET_LIST = ["mlu270", "mlu290"]
+TARGET_LIST = ["mlu270", "mlu290"]
 KERNEL_NAME = "nms"
 DTYPES = [bp.float16]
 NMS_SIZE = 64
@@ -462,7 +462,7 @@ class NMS(object):
         )
 
 
-@tcp.register_mlu_op(DTYPES, TRAGET_LIST, KERNEL_NAME)
+@tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_nms(dtype=None, target=None):
     task_type = TaskType.UNION1
     op_mod = NMS(dtype=dtype, target=target, task_type=task_type).nms_compute()

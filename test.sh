@@ -46,7 +46,7 @@ fi
 ./bangc-ops/build/test/mluop_gtest
 
 # Test BANGPy Operato
-./bangpy-ops/utils/test_operators.sh --only_test --target=MLU_TARGET
+./bangpy-ops/utils/test_operators.sh --only_test --target=${MLU_TARGET}
 
 # Clean test files.
 rm -rf bangc-ops/build
