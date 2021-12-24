@@ -43,6 +43,7 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3")
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
                                          "--bang-mlu-arch=mtp_270"
                                          "--bang-mlu-arch=mtp_290"
+                                         "--bang-mlu-arch=mtp_372"
 )
 file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.mlu" "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")

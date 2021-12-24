@@ -1,24 +1,15 @@
 #!/bin/bash
+# Build BANGC and BANGPy all operators, used for CI test.
 set -e
 
-SCRIPT_DIR=`dirname $0`
-BUILD_PATH=${SCRIPT_DIR}/build
-CMAKE=cmake
+source env.sh
 
-if [ ! -d "$BUILD_PATH" ]; then
-  mkdir "$BUILD_PATH"
-fi
+# 1.build BANGC ops
+cd bangc-ops
+./build.sh
+cd ..
 
-if [ ! -z "${NEUWARE_HOME}" ]; then
-  echo "-- using NEUWARE_HOME = ${NEUWARE_HOME}"
-else
-  echo "-- NEUWARE_HOME is null, refer README.md to prepare NEUWARE_HOME environment."
-  exit -1
-fi
-
-pushd ${BUILD_PATH} > /dev/null
-  rm -rf *
-  echo "-- Build cambricon release test cases."
-  ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}"
-popd > /dev/null
-${CMAKE} --build build --  -j
+# 2.build BANGPy ops
+cd bangpy-ops/utils
+./build_operators.sh
+cd ../..
