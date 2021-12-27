@@ -117,21 +117,21 @@ example:
 
 - TensorFlow
 
-```c++
-// 给出python接口
+```python
+# 给出TensorFlow接口
 ```
 
 - PyTorch
 
-```c++
-// 给出python接口
+```python
+# 给出PyTorch接口
 ```
 
 ### 2.2 接口设计
 
-```c++
-// 给出BANGPy MLU-OPS算子接口
-// 算子接口名称(module参数)
+```python
+# 给出BANGPy MLU-OPS算子接口
+# 算子接口名称(module参数)
 ```
 
 `注意`: 这里的 `算子接口名称` 的格式是 `MluOp` + `算子名称`(首字母大写)，`module参数` 即执行 `tcp.BuildBANG` 时传入的 `inputs` + `outputs` 参数 
