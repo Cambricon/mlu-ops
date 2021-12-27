@@ -34,7 +34,7 @@ BANGPy-Ops 库中算子的开发过程，文档与算子的代码实现同样重
 
 ### 1. 文档开发阶段
 
-在 docs/bangpy-docs/design_docs/ 目录下新建以算子名命名的目录，目录名首字母小写，并在算子目录下新建以算子名命名的 md 文件。如：
+在 docs/bangpy-docs/design_docs/ 目录下新建以算子名命名的目录，目录名首字母小写，算子名的格式只能取 `xxx` 和 `xxx_xxx` 的其中一种，并在算子目录下新建以算子名命名的 md 文件。如：
 
 ```bash
 $ cd docs/bangpy-docs/design\_docs/
