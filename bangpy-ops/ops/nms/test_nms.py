@@ -131,14 +131,23 @@ def verify_operator(
         output.numpy(), cpu_output.astype(dtype.as_numpy_dtype), rtol=1e-2
     )
 
-
-def test_nms(target):
+@pytest.mark.parametrize(
+    "box_num", [16, 15, 300],
+)
+@pytest.mark.parametrize(
+    "max_output_size", [1, 4],
+)
+@pytest.mark.parametrize(
+    "iou_threshold", [0.5],
+)
+@pytest.mark.parametrize(
+    "score_threshold", [0.5],
+)
+@pytest.mark.parametrize(
+    "dtype", [bp.float16],
+)
+def test_nms(target, box_num, max_output_size, iou_threshold, score_threshold, dtype):
     """Test nms operator by giving multiple sets of parameters."""
     if target not in TARGET_LIST:
         return
-    verify_operator(16, max_output_size=1, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
-    verify_operator(15, max_output_size=1, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
-    verify_operator(300, max_output_size=4, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
-    verify_operator(16, max_output_size=1, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
-    verify_operator(15, max_output_size=1, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
-    verify_operator(300, max_output_size=4, iou_threshold=0.5, score_threshold=0.5, dtype=bp.float16)
+    verify_operator(box_num, max_output_size, iou_threshold, score_threshold, dtype)
