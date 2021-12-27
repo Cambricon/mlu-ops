@@ -72,13 +72,9 @@ example:
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |      | 输入              |             | /        | 无       |
-| input1_desc |      | 输入              |             | /        | 无       |
 | input1      |      | 输入              | half, float | NHWC     | 无       |
-| input2_desc |      | 输入              |             | /        | 无       |
 | input2      |      | 输入              | half, float | ARRAY    | 无       |
 | mode        |      | 输入              |             | /        | 无       |
-| output_desc |      | 输入              |             | /        | 无       |
 | output      |      | 输出              |             | NHWC     | 无       |
 
 ### 1.4 算子限制
@@ -122,13 +118,13 @@ example:
 - TensorFlow
 
 ```c++
-// 给出TensorFlow接口
+// 给出python接口
 ```
 
 - PyTorch
 
 ```c++
-// 给出PyTorch接口
+// 给出python接口
 ```
 
 ### 2.2 接口设计
