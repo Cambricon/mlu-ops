@@ -266,7 +266,7 @@ class NMS(object):
             with self.tcp.if_scope(self.tcp.taskId == task_num - 1):
                 self.tcp.assign(self.x1, 0)
                 self.tcp.memcpy(
-                    self.output[self.output_box_num : self.max_output_size], self.x1
+                    self.output[self.output_box_num : self.max_output_size], self.x1[:]
                 )
 
     def nms_compute(self):
