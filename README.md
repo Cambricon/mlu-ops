@@ -37,7 +37,7 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 
   ```sh
   wget https://www.python.org/ftp/python/3.8.0/Python-3.8.0.tgz
-  tar -xvf /tmp/Python-3.8.0.tgz
+  tar -xvf Python-3.8.0.tgz
   cd Python-3.8.0
   make -j24 && make install
   ```
