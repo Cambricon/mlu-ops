@@ -28,9 +28,8 @@ from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 
-DTYPES = [bangpy.float16]
+DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
-SHAPE = (64000,)
 KERNEL_NAME = "add"
 
 
@@ -39,42 +38,34 @@ class Add(object):
     Add the data in the two buffers.
     """
 
-    def __init__(self, shape, dtype, target, task_num):
-        self.shape = shape
+    def __init__(self, dtype, target, task_num):
         self.dtype = dtype
         self.target = target
         self.task_num = task_num
-        self.length = np.prod(shape)
+        self.bp = tcp.TCP(target)
+        self.length = self.bp.SizeVar("length")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        self.bp = tcp.TCP(target)
+        self.single_buffer_size = 1024
         self.bp.launch_task(self.task_num, 1, 1)
 
     def compute_body(self):
         # calculate split strategy
-        # ensure the data size can be divisible by task_num and 128 bytes aligned
-        assert (self.dtype_sz * self.length) % self.task_num % ALIGN_LENGTH == 0
         # gets the data length to be calculated for each task
         data_calculated_each_task = self.length // self.task_num
-        loop_num = np.ceil(
-            3 * data_calculated_each_task * self.dtype_sz / self.nram_size
-        )
-        # ensure the data size is 128 bytes aligned for each calculation
-        while (
-            data_calculated_each_task % loop_num != 0
-            or data_calculated_each_task // loop_num % ALIGN_LENGTH != 0
-        ):
-            loop_num += 1
-        data_calculated_each_time = int(data_calculated_each_task // loop_num)
+        # gets the number of cycles required for each task
+        loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
+        # gets the data length for each calculation
+        data_calculated_each_time = self.single_buffer_size // self.dtype_sz
         # declare I/O buffer
         buffer_in0 = self.bp.Buffer(
-            shape=self.shape, name="INPUT0", dtype=self.dtype, scope="global"
+            shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
         )
         buffer_in1 = self.bp.Buffer(
-            shape=self.shape, name="INPUT1", dtype=self.dtype, scope="global"
+            shape=(self.length,), name="INPUT1", dtype=self.dtype, scope="global"
         )
         buffer_out = self.bp.Buffer(
-            shape=self.shape, name="OUTPUT", dtype=self.dtype, scope="global"
+            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
         )
         task_id = self.bp.taskId
         # declare on-chip buffer
@@ -117,5 +108,5 @@ class Add(object):
 def build_add(dtype=None, target=None):
     # tasktype fixed in UNION1
     task_num = 4
-    f = Add(SHAPE, dtype, target, task_num).compute_body()
+    f = Add(dtype, target, task_num).compute_body()
     return f
