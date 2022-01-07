@@ -87,7 +87,7 @@ ${BANGPY_UTILS_PATH}"build_operators.sh" ${ARGS}
 if [ "${BUILD_MODE}" == "Release" ]; then
     # Link the files of .so in the compiled directory to bangpylib.
     BANGPY_HEAD_FILES_LIST=()
-    BANGPY_LINK_FILE_LIST=()
+    BANGPY_LINK_FILE_LIST=(${BANGPY_HOME}"prebuild/runtime_tensor.o")
     BANGPY_LINK_OP_DIR_LIST=()
     if [ -z "${BANGPY_LINK_OP_DIR_LIST}" ]; then
         for file in $(find ${BUILD_OUT_DIR} -maxdepth 1 -type d)
