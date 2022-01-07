@@ -32,9 +32,10 @@
 #include <atomic>
 #include <cstring>
 #include "cnrt.h"
-
+#include "cn_api.h"
 
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
+#define CONTEXT_DEVICENAME_LEAST_SIZE 6
 #define RUNTIME_DIM_MAX 8
 #define RUNTIME_PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #define RUNTIME_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
@@ -195,7 +196,7 @@ typedef enum {
   RUNTIME_CE3226 = 322,
 } RuntimeDevType_t;
 
-struct DeviceName {
+struct RuntimeDeviceName {
   char name[CONTEXT_DEVICENAME_BUFFER_SIZE];
   RuntimeDevType_t type;
 };
@@ -214,6 +215,14 @@ struct RuntimeContext {
 };
 
 typedef struct RuntimeContext *RuntimeHandle_t;
+
+RuntimeDevType_t RuntimeConvertDeviceName(char *name);
+
+RuntimeStatus_t RuntimeSetContext(RuntimeHandle_t *handle);
+
+RuntimeStatus_t RuntimeSetQueue(RuntimeHandle_t handle, cnrtQueue_t queue);
+
+RuntimeStatus_t RuntimeGetQueue(RuntimeHandle_t handle, cnrtQueue_t *queue);
 
 size_t GetSizeOfDataType(RuntimeDataType_t dtype);
 
