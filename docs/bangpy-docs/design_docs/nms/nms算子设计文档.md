@@ -36,7 +36,7 @@ Nms及其变体在有锚框目标检测算法中必不可少。
 
 | 算子功能简介      | 在特征图中从许多重叠边界框中筛选出若干边界框      |
 | --------------- | ----------------------------------------- |
-| 需求来源         | PyTorch/Tensorflow/...                    |
+| 需求来源         | PyTorch/TensorFlow/...                    |
 | 应用网络         | Faster RCNN/SSD/YOLOv3，v4，v5/...         |
 | 输入数据类型      | half，float，int                           |
 | 输入 Shape      | input1: gdram_score[input_strde,]; input2: input_score[input_strde,]; input3: input_box[4,input_stride]; input4: num_boxes，input5: max_output_size，input6: iou_threshold，input7: score_threshold  |
@@ -95,7 +95,7 @@ Nms及其变体在有锚框目标检测算法中必不可少。
 
 - TensorFlow
 
-Tensorflow接口：
+TensorFlow接口：
 ```python
 tf.image.non_max_suppression(
     boxes，scores，max_output_size，iou_threshold=0.5，

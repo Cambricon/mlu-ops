@@ -30,9 +30,9 @@ compute_efficiency = theory_compute_ops / (latency * peak_compute_force)
 
 `theory_compute_ops` 可以类比算法复杂度，只不过我们给出的不是量级，是确数。
 
-`lantency` 表示算子运行的实际时间
+`lantency` 表示算子运行的实际时间单位为秒（s）。
 
-`peak_compute_force` 为硬件平台的峰值算力，其单位是 op/s（每秒执行多少次操作）。不同平台算力不同。
+`peak_compute_force` 为硬件平台的峰值算力，其单位是 op/s（每秒执行多少次操作）。不同平台不同数据类型算力不同。
 
 ### 2. 计算效率与 IO 效率的标准
 

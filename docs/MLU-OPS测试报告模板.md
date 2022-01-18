@@ -12,7 +12,7 @@
 
 4. 算子支持的张量维度是否覆盖全，例如 BatchNormForward 支持 4 维和 5 维张量、激活类算子支持 1~8 维张量等；
 
-5. 算子支持的张量数据摆放方式是否覆盖全，例如 BMM/MatMul 支持 transpose 参数、Convolution, BatchNormForward 后续会支持 NCHW/NHWC 的数据摆放方式等；
+5. 算子支持的张量数据摆放方式是否覆盖全，例如 BatchMatMul/MatMul 支持 transpose 参数、Convolution, BatchNormForward 后续会支持 NCHW/NHWC 的数据摆放方式等；
 
 6. 算子稳定性是否有验证，例如不停机连续跑 5000 次；
 
