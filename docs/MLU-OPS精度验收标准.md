@@ -18,7 +18,7 @@ MLU-OPS 算子精度验收标准
 
 其中：
 
-- evaluated_data 表示待评价数据，baseline_data 表示基准数据。
+- evaluated_data 表示待评价数据，baseline_data 表示基准数据。通常情况下baseline_data为cpu计算结果。
 
 - diff3 返回两个结果，根据 baseline_data 的每个数与 th 的大小关系，选择相应的计算公式，并分别得到两个公式下计算结果的最大值。当数据类型为 fp32 时，th 为 1e-6；当数据类型为 fp16 时，th 为 1e-4。
 
@@ -36,4 +36,4 @@ MLU-OPS 算子精度验收标准
 |  4  |    算术类    | 例如加减乘除。                                                                           |                                   diff3 == 0                                    |
 |  5  |    纯 IO     | 纯 IO 类的算子，不涉及任何运算。比如：concat、split。                                    |                                   diff3 == 0                                    |
 |  9  |    复合类    | 如果算子是由上面几种类型算子中的一种或几种复合组成，则算做复合算子。                     |                         diff1 <= 3e-3 && diff2 <= 3e-3                          |
-| 10  | atomicAdd 类 | 使用了 atomic 指令的算子，结果不唯一。                                                   |                          diff1<=3e-3 && diff2 <= 3e-3                           |
+| 10  | atomicAdd 类 | 使用了 atomic 指令的算子，多次运行结果可能不同。                                         |                          diff1<=3e-3 && diff2 <= 3e-3                           |

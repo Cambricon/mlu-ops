@@ -88,7 +88,7 @@ typedef enum {
      @endverbatim
  *
  * @par Reference
- * - https://www.tensorflow.google.cn/api_docs/python/tf/math/abs
+ * - https://www.tensorflow.org/api_docs/python/tf/math/abs
  */
 mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
                                   const mluOpTensorDescriptor_t x_desc,
@@ -149,7 +149,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- * - https://tensorflow.google.cn/api_docs/python/tf/math/log
+ * - https://www.tensorflow.org/api_docs/python/tf/math/log
  */
 mluOpStatus_t MLUOP_WIN_API mluOpLog(mluOpHandle_t handle,
                                   const mluOpComputationPreference_t prefer,
@@ -215,7 +215,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLog(mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- * - https://www.tensorflow.google.cn/api_docs/python/tf/math/divide
+ * - https://www.tensorflow.org/api_docs/python/tf/math/divide
  */
 mluOpStatus_t MLUOP_WIN_API mluOpDiv(mluOpHandle_t handle,
                                   const mluOpComputationPreference_t prefer,
@@ -273,7 +273,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDiv(mluOpHandle_t handle,
  * - None.
 
  * @par Reference
- * - https://www.tensorflow.google.cn/api_docs/python/tf/math/sqrt
+ * - https://www.tensorflow.org/api_docs/python/tf/math/sqrt
  */
 mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
                                    const mluOpComputationPreference_t prefer,
@@ -329,7 +329,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- * - https://www.tensorflow.org/api_docs/python/tf/sqrt_grad
+ * - https://www.tensorflow.org/api_docs/python/tf/raw_ops/SqrtGrad
  */
 mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
                                            const mluOpTensorDescriptor_t y_desc,
