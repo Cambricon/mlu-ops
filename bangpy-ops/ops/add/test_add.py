@@ -22,22 +22,13 @@
 """A multi-platform code link example test for BANGPy TCP."""
 import numpy as np
 import pytest
-
 import bangpy
-from bangpy import tcp
-from bangpy.common import utils, load_op_by_type
-from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
-from bangpy.tcp.runtime import TaskType
+from bangpy.common import load_op_by_type
 from add import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 @pytest.mark.parametrize(
-    "shape", 
-    [
-        (2048,),
-        (4096,),
-        (6144,),
-    ],
+    "shape", [(2048,), (4096,), (6144,),],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -58,6 +49,4 @@ def test_add(target, shape, dtype):
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     f1(data_in0_dev, data_in1_dev, data_out_dev)
-    bangpy.assert_allclose(
-        data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype)
-    )
+    bangpy.assert_allclose(data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype))

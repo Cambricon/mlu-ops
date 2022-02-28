@@ -22,23 +22,19 @@
 """NonZero test demo."""
 import numpy as np
 import pytest
-from nonzero import NonZero, TARGET_LIST
-from nonzero_count import NonZeroCount
+from nonzero import TARGET_LIST
 import bangpy as bp
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
 from bangpy.platform.bang_config import TARGET
 from bangpy.common import load_op_by_type
-import os
 
 
 @pytest.mark.parametrize(
-    "trans",
-    [0, 1],
+    "trans", [0, 1],
 )
 @pytest.mark.parametrize(
-    "dtype",
-    [bp.float16],
+    "dtype", [bp.float16],
 )
 @pytest.mark.parametrize(
     "shape",
@@ -46,7 +42,13 @@ import os
         (4, 16, 120, 64),
         (4, 32, 120, 128),
         (2, 2, 16, 120),
-        (4, 8, 16, 1280),
+        (3, 2, 1, 1000000),
+        (3, 2, 1, 100000),
+        (4, 8, 100000, 1),
+        (3, 2, 1, 10000),
+        (3, 2, 1, 1000),
+        (4, 100000, 1, 1),
+        (100000, 16, 1, 1),
     ],
 )
 def test_nonzero(target, trans, dtype, shape):
@@ -96,8 +98,5 @@ def test_nonzero(target, trans, dtype, shape):
         mlu_out = mlu_out.reshape((num_nonzero, dim_num))
 
     bp.assert_allclose(
-        mlu_out,
-        cpu_out,
-        rtol=0.0,
-        atol=0.0,
+        mlu_out, cpu_out, rtol=0.0, atol=0.0,
     )

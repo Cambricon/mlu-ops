@@ -18,8 +18,8 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# pylint: disable=invalid-name, missing-class-docstring, missing-function-docstring
 """Test adjustHue operator with multi-platform code link."""
-import os
 import numpy as np
 import matplotlib
 import pytest
@@ -28,6 +28,7 @@ import bangpy as bp
 from bangpy.common import load_op_by_type
 
 np.set_printoptions(threshold=np.inf)
+
 
 def adjust_hue_cpu(image, delta):
     image = matplotlib.colors.rgb_to_hsv(image)
@@ -42,18 +43,14 @@ def adjust_hue_cpu(image, delta):
 def cal_diff(result, data_out):
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
     diff2 = np.sqrt(
-        np.sum(
-            np.power(
-                np.subtract(data_out, result),
-                2,
-            )
-        )
+        np.sum(np.power(np.subtract(data_out, result), 2,))
         / np.sum(np.power(result, 2))
     )
     assert round(diff1 * 100, 5) < 3e-3 * 100
     assert round(diff2 * 100, 5) < 3e-3 * 100
     print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
+
 
 @pytest.mark.parametrize(
     "shape",
@@ -88,33 +85,21 @@ def test_adjust_hue(target, shape, delta, dtype):
     # generate input data
     data_in = np.zeros((n, h, w, c), dtype="float32")
     for i in range(n):
-        data_in[i] = np.random.uniform(
-            low=0, high=1, size=(1, h, w, c)
-        )
+        data_in[i] = np.random.uniform(low=0, high=1, size=(1, h, w, c))
 
     data_out = np.zeros((n, h, w, c), dtype="float32")
     data_in_handle = bp.Array(data_in.astype(dtype.name), dev)
     data_out_handle = bp.Array(data_out.astype(dtype.name), dev)
-    f = load_op_by_type(
-        KERNEL_NAME, dtype.name
-    )
+    f = load_op_by_type(KERNEL_NAME, dtype.name)
     f(
-        data_in_handle,
-        delta,
-        data_out_handle,
+        data_in_handle, delta, data_out_handle,
     )
     # convert all output to float for diff comparison
     mlu_result = np.zeros((n, h, w, c), dtype="float32")
     for i in range(n):
-        mlu_result[i] = (
-            data_out_handle
-            .numpy()[i, :, :, :]
-            .astype("float32")
-        )
+        mlu_result[i] = data_out_handle.numpy()[i, :, :, :].astype("float32")
     cpu_result = np.zeros((n, h, w, c), dtype="float32")
     for i in range(n):
-        cpu_result[i] = adjust_hue_cpu(
-            data_in_handle.numpy()[i, :, :, :], delta
-        )
+        cpu_result[i] = adjust_hue_cpu(data_in_handle.numpy()[i, :, :, :], delta)
     # calculate difference between cpu and mlu results
     cal_diff(cpu_result, mlu_result)

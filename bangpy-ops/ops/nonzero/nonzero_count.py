@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -162,7 +162,14 @@ class NonZeroCount(object):
         with self.tcp.if_scope(remain > 0):
             global_index.assign(core_index + repeat * self.nram_size)
             remain_align = self.tcp.Scalar(dtype=bp.int32, name="remain_align")
-            remain_align.assign(round_up(remain, ALIGN_SIZE))
+            remain_align.assign(
+                round_up(
+                    remain,
+                    ALIGN_SIZE
+                    if self.tcp.mlu_device[:6] == "mlu370"
+                    else ALIGN_SIZE * 2,
+                )
+            )
             data_nram = self.tcp.Buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
