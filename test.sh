@@ -45,11 +45,11 @@ fi
 
 
 # Test BANGC all operators cases.
-# cd bangc-ops/build/test/
-# ./mluop_gtest
-# cd ../../..
+cd bangc-ops/build/test/
+./mluop_gtest
+cd ../../..
 
-# Format BANGPy all operators cases.
+# Check all python file format.
 python3 -m pylint ./bangpy-ops  --rcfile=./bangpy-ops/utils/pylintrc
 
 # Test BANGPy all operators cases.
