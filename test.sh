@@ -3,8 +3,6 @@
 # If you want to run specify operators, refer to bangc-ops and bangpy-ops README.md.
 # You need to run build.sh, before running this script.
 set -e
-set -u
-set -o pipefail
 
 source env.sh
 usage () {
