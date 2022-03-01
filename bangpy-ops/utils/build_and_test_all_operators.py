@@ -18,6 +18,7 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# pylint: disable=missing-docstring, too-many-locals, missing-function-docstring
 import os
 import sys
 import pytest
@@ -70,7 +71,7 @@ def test_all_op(target):
     print("Test all operators...")
     # for obj in test_entrys:
     #     obj()
-    if target != None:
+    if target is not None:
         pytest.main(["-s", "--target=" + target, *test_files])
     else:
         pytest.main(["-s", *test_files])
@@ -85,18 +86,17 @@ def main():
     oper_idx = 1
     if len(sys.argv) == 1:
         raise ValueError("Please input operators list.")
-    else:
-        if sys.argv[1] == "-b" or sys.argv[1] == "--build":
-            test_enable = False
-            oper_idx += 1
-        elif sys.argv[1] == "-t" or sys.argv[1] == "--test":
-            build_enable = False
-            oper_idx += 1
-            for arg in sys.argv[2:]:
-                if arg.find("--target=") != -1:
-                    target = arg[arg.find("--target=") + len("--target=") :]
-        if len(sys.argv) == 2 and oper_idx != 1:
-            raise ValueError("Please input operators list.")
+    if sys.argv[1] == "-b" or sys.argv[1] == "--build":
+        test_enable = False
+        oper_idx += 1
+    elif sys.argv[1] == "-t" or sys.argv[1] == "--test":
+        build_enable = False
+        oper_idx += 1
+        for arg in sys.argv[2:]:
+            if arg.find("--target=") != -1:
+                target = arg[arg.find("--target=") + len("--target=") :]
+    if len(sys.argv) == 2 and oper_idx != 1:
+        raise ValueError("Please input operators list.")
 
     operator_lists = sys.argv[oper_idx].split(",")
     operator_lists = [i for i in operator_lists if i != ""]
@@ -128,7 +128,8 @@ def main():
         for k, v in operator_statuts.items():
             if not v & 1:
                 print(
-                    "Build Warning: Operator %s was skipped, please check whether there is a function start with 'build' prefix in the operator."
+                    "Build Warning: Operator %s was skipped, please check whether\
+                     there is a function start with 'build' prefix in the operator."
                     % (k)
                 )
     if test_enable:
@@ -136,7 +137,8 @@ def main():
         for k, v in operator_statuts.items():
             if not v & 2:
                 print(
-                    "Test Warning: Operator %s was skipped, please check whether there is a function start with 'test' prefix in the operator."
+                    "Test Warning: Operator %s was skipped, please check whether\
+                     there is a function start with 'test' prefix in the operator."
                     % (k)
                 )
 

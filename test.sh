@@ -47,5 +47,8 @@ cd bangc-ops/build/test/
 ./mluop_gtest
 cd ../../..
 
+# Check all python file format.
+python3 -m pylint ./bangpy-ops  --rcfile=./bangpy-ops/utils/pylintrc
+
 # Test BANGPy all operators cases.
 ./bangpy-ops/utils/test_operators.sh --only_test --target=${MLU_TARGET}

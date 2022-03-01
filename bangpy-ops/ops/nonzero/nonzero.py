@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -198,7 +198,7 @@ class NonZero(object):
         repeat.assign(pre_core / self.nram_size)
         remain = self.tcp.Scalar(dtype=bp.int32, name="remain")
         remain.assign(pre_core % self.nram_size)
-
+        zero = self.tcp.Scalar(dtype=self.dtype, name="zero", value=0)
         index_0_nram = self.tcp.Buffer(
             shape=(2 * self.nram_size + ALIGN_SIZE,),
             dtype=self.int_type,
@@ -214,6 +214,7 @@ class NonZero(object):
         out_nram = self.tcp.Buffer(
             shape=(self.nram_size,), dtype=self.int_type, name="out_nram", scope="nram"
         )
+
         with self.tcp.if_scope(self.dim_num > 1):
             index_1_nram = self.tcp.Buffer(
                 shape=(self.nram_size + ALIGN_SIZE,),
@@ -221,54 +222,12 @@ class NonZero(object):
                 name="index_1_nram",
                 scope="nram",
             )
-
-        dim_3_align = self.tcp.Scalar(dtype=bp.int32, name="dim_3_align")
-        # NRAM2NRAM memcpy need align to 128 bytes.
-        dim_3_align.assign(round_up(self.dim_3, 128 / self.dtype.bytes))
-
-        # Set the indice of last dimension.
-        with self.tcp.for_range(0, self.dim_3) as i:
-            index_0_nram[i] = i
-
-        re_index = self.tcp.Scalar(dtype=bp.int32, name="re_index")
-        re_remain = self.tcp.Scalar(dtype=bp.int32, name="re_remain")
-        re_remain_align = self.tcp.Scalar(dtype=bp.int32, name="re_remain_align")
-        size = self.tcp.Scalar(dtype=bp.int32, name="size")
-        size.assign(self.nram_size * 2)
-        re_index.assign(size / self.dim_3)
-        re_remain.assign(size % self.dim_3)
-        if self.dtype == bp.float32:
-            re_remain_align.assign(round_up(re_remain, 32))
-        elif self.dtype == bp.float16:
-            re_remain_align.assign(round_up(re_remain, 64))
-        elif self.dtype == bp.int8:
-            re_remain_align.assign(round_up(re_remain, 128))
-        else:
-            raise ValueError("Not supported data type.")
-
-        # Broadcast last indices.
-        with self.tcp.for_range(0, re_index - 1) as i:
-            self.tcp.memcpy(
-                index_0_nram[(i + 1) * self.dim_3 : (i + 1) * self.dim_3 + dim_3_align],
-                index_0_nram[:dim_3_align],
-            )
-
-        with self.tcp.if_scope(re_remain != 0):
-            self.tcp.memcpy(
-                index_0_nram[
-                    re_index * self.dim_3 : re_index * self.dim_3 + re_remain_align
-                ],
-                index_0_nram[:re_remain_align],
-            )
-
-        zero = self.tcp.Scalar(dtype=self.dtype, name="zero", value=0)
-
         with self.tcp.for_range(0, repeat, stage=1) as i:
             global_index = core_index + i * self.nram_size
-            remain_front_0 = global_index % self.dim_3
+
             # The count number buffer for count_nonzero, size at least 128 bytes.
             count_num = self.tcp.Buffer(
-                shape=(32,), dtype=bp.uint32, name="count", scope="nram"
+                shape=(32,), dtype=bp.int32, name="count", scope="nram"
             )
             data_nram = self.tcp.Buffer(
                 shape=(self.nram_size,),
@@ -304,12 +263,12 @@ class NonZero(object):
                     cast_nram = data_nram
 
                 # One dims compute.
-                self.tcp.count_nonzero(count_num, cast_nram)
+                with self.tcp.for_range(0, self.nram_size) as k:
+                    index_0_nram[k] = (global_index + k) % self.dim_3
+                self.tcp.count_nonzero(count_num.reinterpret_cast(bp.uint32), cast_nram)
                 self.tcp.take(
                     out_nram.reinterpret_cast(self.float_type),
-                    index_0_nram[
-                        remain_front_0 : remain_front_0 + self.nram_size
-                    ].reinterpret_cast(self.float_type),
+                    index_0_nram[: self.nram_size].reinterpret_cast(self.float_type),
                     cast_nram,
                 )
 
@@ -376,7 +335,6 @@ class NonZero(object):
                     self.gather_data(
                         out_nram_int64, out_nram, self.nram_size, self.dim_num - 4
                     )
-
             with self.tcp.block("data_copy"):
                 with self.tcp.if_scope(self.trans == 1):
                     out_nram_int64 = out_nram_int64[
@@ -384,12 +342,8 @@ class NonZero(object):
                     ].reshape((self.nram_size, self.dim_num))
                     out_buffer = out_buffer.reshape((self.num_nonzero, self.dim_num))
                     self.tcp.memcpy(
-                        out_buffer[
-                            out_offset : out_offset + count_num[0],
-                        ],
-                        out_nram_int64[
-                            : count_num[0],
-                        ],
+                        out_buffer[out_offset : out_offset + count_num[0],],
+                        out_nram_int64[: count_num[0],],
                     )
                 with self.tcp.else_scope():
                     out_nram_int64 = out_nram_int64[
@@ -403,13 +357,18 @@ class NonZero(object):
 
             with self.tcp.block("compute"):
                 out_offset.assign(out_offset + count_num[0])
-
         with self.tcp.if_scope(remain > 0):
             global_index = core_index + repeat * self.nram_size
-            remain_front_0 = global_index % self.dim_3
 
             remain_align = self.tcp.Scalar(dtype=bp.int32, name="remain_align")
-            remain_align.assign(round_up(remain, ALIGN_SIZE))
+            remain_align.assign(
+                round_up(
+                    remain,
+                    ALIGN_SIZE
+                    if self.tcp.mlu_device[:6] == "mlu370"
+                    else ALIGN_SIZE * 2,
+                )
+            )
             data_nram = self.tcp.Buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
@@ -441,12 +400,15 @@ class NonZero(object):
                 )
             else:
                 cast_nram = data_nram
-            self.tcp.count_nonzero(count_num, cast_nram[:remain_align])
+
+            self.tcp.count_nonzero(
+                count_num.reinterpret_cast(bp.uint32), cast_nram[:remain_align]
+            )
+            with self.tcp.for_range(0, remain) as k:
+                index_0_nram[k] = (global_index + k) % self.dim_3
             self.tcp.take(
                 out_nram.reinterpret_cast(self.float_type),
-                index_0_nram[
-                    remain_front_0 : remain_front_0 + remain_align
-                ].reinterpret_cast(self.float_type),
+                index_0_nram[:remain_align].reinterpret_cast(self.float_type),
                 cast_nram[:remain_align],
             )
             self.gather_data(out_nram_int64, out_nram, remain_align, self.dim_num - 1)
@@ -507,12 +469,8 @@ class NonZero(object):
                 )
                 out_buffer = out_buffer.reshape((self.num_nonzero, self.dim_num))
                 self.tcp.memcpy(
-                    out_buffer[
-                        out_offset : out_offset + count_num[0],
-                    ],
-                    out_nram_int64[
-                        : count_num[0],
-                    ],
+                    out_buffer[out_offset : out_offset + count_num[0],],
+                    out_nram_int64[: count_num[0],],
                 )
             with self.tcp.else_scope():
                 out_nram_int64 = out_nram_int64[: self.dim_num * remain_align].reshape(
@@ -564,11 +522,7 @@ class NonZero(object):
             with self.tcp.for_range(0, self.tcp.taskId) as i:
                 out_offset.assign(out_offset + self.core_count[i])
             self.core_compute(
-                pre_core,
-                core_index,
-                out_offset,
-                self.in_buffer,
-                self.out_buffer,
+                pre_core, core_index, out_offset, self.in_buffer, self.out_buffer,
             )
 
         return self.tcp.BuildBANG(

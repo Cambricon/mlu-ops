@@ -22,15 +22,11 @@
 # pylint: disable=too-many-instance-attributes, too-many-arguments, too-many-locals
 # pylint: disable=too-many-statements, attribute-defined-outside-init
 """Non-maximum suppression operator implementation using BANGPy TCP API."""
-import pytest
-import numpy as np
 import bangpy as bp
-import os
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
-from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.util import round_up, round_down
-from bangpy.common import compile_for_multi_dtype_platform, utils, load_op_by_type
+
 
 TARGET_LIST = ["mlu270", "mlu290"]
 KERNEL_NAME = "nms"

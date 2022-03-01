@@ -18,6 +18,8 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# pylint: disable=invalid-name, missing-class-docstring, missing-function-docstring
+# pylint: disable=attribute-defined-outside-init
 """AdjustHue operator implementation using BANGPy TCP API."""
 from active_table import ACTIVE_TABLE1, ACTIVE_TABLE2, ACTIVE_TABLE3
 from active_table import ACTIVE_TABLE4, ACTIVE_TABLE5, ACTIVE_TABLE6, ACTIVE_TABLE7
@@ -32,10 +34,9 @@ DTYPES = [bp.float16, bp.float32]
 TARGET_LIST = ["mlu290", "mlu270"]
 KERNEL_NAME = "adjust_hue"
 
+
 class AdjustHue(object):
-    def __init__(
-        self, dtype, stage, target, task_type
-    ):
+    def __init__(self, dtype, stage, target, task_type):
         self.dtype = dtype
         self.stage = stage
         self.target = target
@@ -49,9 +50,7 @@ class AdjustHue(object):
         self.c = self.tcp.SizeVar("c")
         self.nram_use = (TARGET(target).nram_size - 52 * 1024) // 4
         self.nram_size = self.tcp.Scalar(
-            dtype=bp.int32,
-            name="nram_size",
-            value=self.nram_use,
+            dtype=bp.int32, name="nram_size", value=self.nram_use,
         )
         self.delta = self.tcp.Var("delta", dtype=bp.float32)
         self.line_align = self.tcp.Scalar(
@@ -270,12 +269,7 @@ class AdjustHue(object):
             self.row_each_per.assign(1)
         with self.tcp.else_scope():
             real_w_size.assign(self.w)
-            with self.tcp.if_scope(
-                tcp.all(
-                    (loop_num <= 4),
-                    (self.row_each_per != 1),
-                )
-            ):
+            with self.tcp.if_scope(tcp.all((loop_num <= 4), (self.row_each_per != 1),)):
                 with self.tcp.if_scope(real_w_size <= 3900):
                     self.row_each_per.assign(3900 / self.w)
 
@@ -288,13 +282,9 @@ class AdjustHue(object):
         ].reinterpret_cast(bp.int16)
         with self.tcp.block("data_copy" if db else "null"):
             self.tcp.memcpy(
-                rgb.reshape(
-                    (
-                        self.nram_limit / self.r_w / self.c,
-                        self.r_w,
-                        self.c,
-                    )
-                )[: self.r_h][:][:],
+                rgb.reshape((self.nram_limit / self.r_w / self.c, self.r_w, self.c,))[
+                    : self.r_h
+                ][:][:],
                 self.src_gdram[
                     batch_index,
                     offset_h_start : offset_h_start + self.r_h,
@@ -305,39 +295,19 @@ class AdjustHue(object):
         with self.tcp.block("compute" if db else "null"):
             self.tcp.transpose(
                 hsv[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.r_hw / self.line_align * self.c,
-                        1,
-                        self.line_align,
-                    )
+                    (1, self.r_hw / self.line_align * self.c, 1, self.line_align,)
                 ),
                 rgb[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.line_align,
-                        1,
-                        self.r_hw / self.line_align * self.c,
-                    )
+                    (1, self.line_align, 1, self.r_hw / self.line_align * self.c,)
                 ),
                 (0, 3, 1, 2),
             )
             self.tcp.transpose(
                 rgb[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.line_align * self.c,
-                        1,
-                        self.r_hw / self.line_align,
-                    )
+                    (1, self.line_align * self.c, 1, self.r_hw / self.line_align,)
                 ),
                 hsv[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.r_hw / self.line_align,
-                        1,
-                        self.line_align * self.c,
-                    )
+                    (1, self.r_hw / self.line_align, 1, self.line_align * self.c,)
                 ),
                 (0, 3, 1, 2),
             )
@@ -354,55 +324,26 @@ class AdjustHue(object):
             aux2_nram = aux[: self.r_hw * self.c].reshape((self.c, self.r_hw))[2]
             aux_int_nram = aux_int[: self.r_hw].reshape((self.r_hw,))
             self.rgb2hsv(
-                aux_reshape[0:3],
-                h,
-                s,
-                v,
-                r,
-                g,
-                b,
-                aux_nram,
-                aux1_nram,
-                aux2_nram,
+                aux_reshape[0:3], h, s, v, r, g, b, aux_nram, aux1_nram, aux2_nram,
             )
             self.add_delta(h, self.new_delta)
             self.hsv2rgb(h, s, v, r, g, b, aux_nram, aux1_nram, aux_int_nram)
             self.tcp.add(rgb_reshape[0:3], rgb_reshape[0:3], s)
             self.tcp.transpose(
                 hsv[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.r_hw / self.line_align,
-                        1,
-                        self.line_align * self.c,
-                    )
+                    (1, self.r_hw / self.line_align, 1, self.line_align * self.c,)
                 ),
                 rgb[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.line_align * self.c,
-                        self.r_hw / self.line_align,
-                        1,
-                    )
+                    (1, self.line_align * self.c, self.r_hw / self.line_align, 1,)
                 ),
                 (0, 2, 3, 1),
             )
             self.tcp.transpose(
                 rgb[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.line_align,
-                        1,
-                        self.r_hw / self.line_align * self.c,
-                    )
+                    (1, self.line_align, 1, self.r_hw / self.line_align * self.c,)
                 ),
                 hsv[: self.r_hw * self.c].reshape(
-                    (
-                        1,
-                        self.r_hw / self.line_align * self.c,
-                        self.line_align,
-                        1,
-                    )
+                    (1, self.r_hw / self.line_align * self.c, self.line_align, 1,)
                 ),
                 (0, 2, 3, 1),
             )
@@ -414,13 +355,9 @@ class AdjustHue(object):
                     offset_w_start : offset_w_start + self.r_w,
                     :,
                 ],
-                rgb.reshape(
-                    (
-                        self.nram_limit / self.r_w / self.c,
-                        self.r_w,
-                        self.c,
-                    )
-                )[: self.r_h][:][:],
+                rgb.reshape((self.nram_limit / self.r_w / self.c, self.r_w, self.c,))[
+                    : self.r_h
+                ][:][:],
             )
 
     def compute_body(self):
@@ -467,8 +404,7 @@ class AdjustHue(object):
                 offset_w_start.assign(j * self.r_w_tmp)
                 self.r_h.assign(self.row_each_per)
                 h_loop_num.assign(
-                    (self.real_task_num + self.row_each_per - 1) / self.row_each_per
-                    - 1
+                    (self.real_task_num + self.row_each_per - 1) / self.row_each_per - 1
                 )
                 with self.tcp.for_range(begin=0, end=h_loop_num, stage=self.stage) as k:
                     # h_loop_num = 3
@@ -485,12 +421,8 @@ class AdjustHue(object):
 
                 with self.tcp.if_scope(self.real_task_num > 0):
                     # compute for h divide loop tail.
-                    self.r_h.assign(
-                        self.real_task_num - h_loop_num * self.row_each_per
-                    )
-                    offset_h_start = (
-                        h_loop_num * self.row_each_per + self.core_offset
-                    )
+                    self.r_h.assign(self.real_task_num - h_loop_num * self.row_each_per)
+                    offset_h_start = h_loop_num * self.row_each_per + self.core_offset
                     self.r_hw.assign(
                         (self.r_h * self.r_w + self.reshape_align - 1)
                         / self.reshape_align
@@ -499,19 +431,15 @@ class AdjustHue(object):
                     self.loop_body(i, offset_h_start, offset_w_start, db=False)
 
         return self.tcp.BuildBANG(
-            inputs=[
-                self.src_gdram,
-                self.delta,
-            ],
+            inputs=[self.src_gdram, self.delta,],
             outputs=[self.dst_gdram],
             kernel_name=KERNEL_NAME,
         )
+
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_adjust_hue(dtype=None, target=None):
     stage = 1
     task_type = TaskType.UNION4
-    op_mod = AdjustHue(
-        dtype, stage, target, task_type
-    ).compute_body()
+    op_mod = AdjustHue(dtype, stage, target, task_type).compute_body()
     return op_mod

@@ -25,12 +25,7 @@
 import pytest
 import numpy as np
 import bangpy as bp
-import os
-from bangpy import tcp
-from bangpy.tcp.runtime import TaskType
-from bangpy.platform.bang_config import TARGET
-from bangpy.tcp.util import round_up, round_down
-from bangpy.common import compile_for_multi_dtype_platform, utils, load_op_by_type
+from bangpy.common import load_op_by_type
 from nms import KERNEL_NAME, TARGET_LIST
 
 
@@ -82,11 +77,7 @@ def _py_nms(output, iou_threshold=0.5, score_threshold=0.5, valid_num=1):
 
 
 def verify_operator(
-    box_num,
-    max_output_size=None,
-    iou_threshold=0.5,
-    score_threshold=0.5,
-    dtype=None
+    box_num, max_output_size=None, iou_threshold=0.5, score_threshold=0.5, dtype=None
 ):
     """Check the NMS's result."""
     max_output_size = box_num if not max_output_size else max_output_size
@@ -104,9 +95,7 @@ def verify_operator(
     score_temp = bp.Array(score_array.astype(dtype.as_numpy_dtype), dev)
     score = bp.Array(np.zeros([box_num], dtype=dtype.as_numpy_dtype), dev)
     box = bp.Array(box_array.astype(dtype.as_numpy_dtype), dev)
-    output = bp.Array(
-        np.zeros([max_output_size, 5], dtype=dtype.as_numpy_dtype), dev
-    )
+    output = bp.Array(np.zeros([max_output_size, 5], dtype=dtype.as_numpy_dtype), dev)
     f = load_op_by_type(KERNEL_NAME, dtype.name)
     evaluator = f.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
     print(
@@ -130,6 +119,7 @@ def verify_operator(
     bp.assert_allclose(
         output.numpy(), cpu_output.astype(dtype.as_numpy_dtype), rtol=1e-2
     )
+
 
 @pytest.mark.parametrize(
     "box_num", [16, 15, 300],
