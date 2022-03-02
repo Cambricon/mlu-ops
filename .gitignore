@@ -205,3 +205,4 @@ cython_debug/
 .history/
 
 
+*.stamp
