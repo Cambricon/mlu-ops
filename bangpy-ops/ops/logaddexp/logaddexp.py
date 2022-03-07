@@ -30,7 +30,7 @@ from bangpy.tcp.runtime import TaskType
 
 DTYPES = [bangpy.float16, bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]#支持的设备
-KERNEL_NAME = "logaddexp"#算子名
+KERNEL_NAME = "LogAddExp" #算子名
 
 
 class LogAddExp(object):
