@@ -54,7 +54,7 @@ class LogAddExp(object):
         # gets the data length to be calculated for each task
         #因为要进行128字节对齐 这里向下取整 不足128字节的将会被舍弃掉不进行运算
         data_calculated_each_task = self.length // self.task_num #数据长度除以投入的核心数 向下取整 得出每个核心计算的长度
-        insufficient_one_core_length = self.length % self.task_num #取余 确认是否有没参加运算的数据
+        # insufficient_one_core_length = self.length % self.task_num #取余 确认是否有没参加运算的数据
         # gets the number of cycles required for each task
         loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size #每次计算的长度乘以数据类型大小得到数据所占字节数（每个核分到的） 除以核内单个缓冲区的大小 来计算出每个核需要循环计算的次数（向下取整）
         tail_size = (data_calculated_each_task* self.dtype_sz  % self.single_buffer_size) / self.dtype_sz#每个核 分到的数据长度 取余运算  确认是否有没有原酸的数据
@@ -71,7 +71,7 @@ class LogAddExp(object):
         buffer_out = self.bp.Buffer(
             shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
         )
-        #self.bp.print("self.length",self.length)
+        # self.bp.print("self.length",self.length)
         task_id = self.bp.taskId
         # declare on-chip buffer
         buffer_in0_n = self.bp.Buffer(
@@ -127,8 +127,8 @@ class LogAddExp(object):
             self.bp.memcpy(buffer_out[start:stop], out_res)
        
         with self.bp.if_scope(tail_size > 0):# 当每个核有不够一次循环计算长度的  尾部补0 至一次计算的长度 单独算一次
-            self.bp.print("length",self.length)
-            self.bp.print("tail_zize",tail_size)
+            # self.bp.print("length",self.length)
+            # self.bp.print("tail_zize",tail_size)
             self.bp.zeros(buffer_in0_n)
             self.bp.zeros(buffer_in1_n)
             self.bp.zeros(natural_power_x)
@@ -144,22 +144,22 @@ class LogAddExp(object):
             self.bp.add(antilogarithm, natural_power_x, natural_power_y)
             self.bp.log(out_res,antilogarithm)
             self.bp.memcpy(buffer_out[start:stop], out_res[:tail_size])
-        with self.bp.if_scope(insufficient_one_core_length>0):#当整体拆分任务至每个核时 如果有余  在这里计算  
-            self.bp.zeros(buffer_in0_n)
-            self.bp.zeros(buffer_in1_n)
-            self.bp.zeros(natural_power_x)
-            self.bp.zeros(natural_power_y)
-            self.bp.zeros(antilogarithm)
-            self.bp.zeros(out_res)
-            start = self.length - insufficient_one_core_length
-            stop = self.length
-            self.bp.memcpy(buffer_in0_n[:insufficient_one_core_length], buffer_in0[start:stop]) 
-            self.bp.memcpy(buffer_in1_n[:insufficient_one_core_length], buffer_in1[start:stop]) 
-            self.bp.exp(natural_power_x,buffer_in0_n,"hp")
-            self.bp.exp(natural_power_y,buffer_in1_n,"hp")
-            self.bp.add(antilogarithm, natural_power_x, natural_power_y)
-            self.bp.log(out_res,antilogarithm)
-            self.bp.memcpy(buffer_out[start:stop], out_res[:insufficient_one_core_length])
+        # with self.bp.if_scope(insufficient_one_core_length>0):#当整体拆分任务至每个核时 如果有余  在这里计算  
+        #     self.bp.zeros(buffer_in0_n)
+        #     self.bp.zeros(buffer_in1_n)
+        #     self.bp.zeros(natural_power_x)
+        #     self.bp.zeros(natural_power_y)
+        #     self.bp.zeros(antilogarithm)
+        #     self.bp.zeros(out_res)
+        #     start = self.length - insufficient_one_core_length
+        #     stop = self.length
+        #     self.bp.memcpy(buffer_in0_n[:insufficient_one_core_length], buffer_in0[start:stop]) 
+        #     self.bp.memcpy(buffer_in1_n[:insufficient_one_core_length], buffer_in1[start:stop]) 
+        #     self.bp.exp(natural_power_x,buffer_in0_n,"hp")
+        #     self.bp.exp(natural_power_y,buffer_in1_n,"hp")
+        #     self.bp.add(antilogarithm, natural_power_x, natural_power_y)
+        #     self.bp.log(out_res,antilogarithm)
+        #     self.bp.memcpy(buffer_out[start:stop], out_res[:insufficient_one_core_length])
         f = self.bp.BuildBANG(
             inputs=[buffer_in0, buffer_in1],
             outputs=[buffer_out],
@@ -169,7 +169,7 @@ class LogAddExp(object):
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp(dtype=None, target=None):
     # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
-    task_type=TaskType.UNION1  #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
+    task_type=TaskType.UNION8  #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
     task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
     f = LogAddExp(dtype, target, task_num).compute_body()
     return f

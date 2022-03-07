@@ -24,6 +24,7 @@ from cmath import pi
 from traceback import print_tb
 import numpy as np
 import pytest
+import time
 
 import bangpy
 import bangpy as bp
@@ -41,7 +42,7 @@ def numcheck(input_pow_arr):
 @pytest.mark.parametrize(
     "shape", 
     [
-        (3, 4),
+        (1024, 1024, 128),
     ],
 )
 @pytest.mark.parametrize(
@@ -56,13 +57,18 @@ def test_logaddexp(target, shape, dtype):
     if target not in TARGET_LIST:
         return
 
-    dev = bp.device(0)
-
+    print(dtype)
+    # origin input
+    
     data_x = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+    data_y = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+    mlu_start =time.time()
+    print("mlu start.")
+
+    dev = bp.device(0)
     data_x_flat = data_x.flatten()
     data_x_dev = bp.Array(data_x_flat, dev)
-
-    data_y = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+    
     data_y_flat = data_y.flatten()
     data_y_dev = bp.Array(data_y_flat, dev)
 
@@ -76,9 +82,19 @@ def test_logaddexp(target, shape, dtype):
 
     with tcp.runtime.Run(task_type):
         log_add_exp_func(data_x_dev, data_y_dev, output_dev)
-
-    print(output_buffer)
-
+    
+    np_ret = output_dev.numpy()
+    ret1 = np_ret.reshape(shape)
+    mlu_end = time.time()
+    print('mlu cost ', mlu_end - mlu_start)
+    
+    #print(ret1)
+    print("cpu start.")
+    cpu_start_time = time.time()
+    ret2 = np.logaddexp(data_x_flat, data_y_flat)
+    cpu_end_time = time.time()
+    #print(ret2)
+    print("cpu_time", cpu_end_time - cpu_start_time)
 
     
    
