@@ -41,9 +41,7 @@ def numcheck(input_pow_arr):
 @pytest.mark.parametrize(
     "shape", 
     [
-        (100),
         (3, 4),
-        (100, 120, 140),
     ],
 )
 @pytest.mark.parametrize(
@@ -61,35 +59,25 @@ def test_logaddexp(target, shape, dtype):
     dev = bp.device(0)
 
     data_x = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
-    data_x_dev = bp.Array(data_x, dev)
+    data_x_flat = data_x.flatten()
+    data_x_dev = bp.Array(data_x_flat, dev)
 
     data_y = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
-    data_y_dev = bp.Array(data_y, dev)
-
-    #dim = np.array(data_x).shape
-    shape_dev = bp.Array(shape, dev)
-    total_count = 1
-
-    if isinstance(shape, int):
-        total_count = shape
-    else:
-        for c in shape:
-            total_count *= c
-
-    #print(total_count)
-
+    data_y_flat = data_y.flatten()
+    data_y_dev = bp.Array(data_y_flat, dev)
 
     task_type = TaskType(TARGET(target).cluster_num)
     log_add_exp_func = load_op_by_type("LogAddExp", dtype.name)
 
-    task_num = TARGET(target).cluster_num * TARGET(target).core_num
     task_type = TaskType(TARGET(target).cluster_num)
 
-    output_buffer = np.zeros(total_count, dtype=np.float32)
+    output_buffer = np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype)
     output_dev = bp.Array(output_buffer, dev)
 
-    #with tcp.runtime.Run(task_type):
-    #    log_add_exp_func(data_x_dev, data_y_dev, shape_dev, len(shape_dev))
+    with tcp.runtime.Run(task_type):
+        log_add_exp_func(data_x_dev, data_y_dev, output_dev)
+
+    print(output_buffer)
 
 
     

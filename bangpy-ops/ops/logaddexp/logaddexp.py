@@ -61,10 +61,7 @@ class LogAddExp(object):
         # gets the data length for each calculation
         data_calculated_each_time = self.single_buffer_size // self.dtype_sz   #核内单个缓冲区大小除以数据类型大小 得到一个核一次可以处理多长的数据
        
-        # declare I/O buffer
-        
-      
-       
+        # declare I/O buffer       
         buffer_in0 = self.bp.Buffer(
             shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
         )
@@ -164,7 +161,7 @@ class LogAddExp(object):
             self.bp.log(out_res,antilogarithm)
             self.bp.memcpy(buffer_out[start:stop], out_res[:insufficient_one_core_length])
         f = self.bp.BuildBANG(
-            inputs=[buffer_in0,buffer_in1],
+            inputs=[buffer_in0, buffer_in1],
             outputs=[buffer_out],
             kernel_name=KERNEL_NAME,
         )
