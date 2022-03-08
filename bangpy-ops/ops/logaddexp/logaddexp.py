@@ -47,7 +47,7 @@ class LogAddExp(object):
         
         self.nram_size = TARGET(target).nram_size#每个核的Nram大小 每个core自己的存储空间
         self.dtype_sz = dtype.bytes#类型占用空间的大小(字节)
-        self.single_buffer_size =(512-30-30)/2*1024#每个buffer 占用的空间大小 此时是两个输入 所以除2 又因系统堆栈要30所以减30  多减30预留
+        
         self.bp.launch_task(self.task_num, 1, 1)#将任务维度值设置为在此内核中启动。  三个参数其实就是 taskdimx,y,z   
     def compute_body(self):
         # calculate split strategy
@@ -56,7 +56,10 @@ class LogAddExp(object):
         remain = self.length % self.task_num#分任务时的余数
         current_core_start = 0 #当前核心数据开始索引
         current_core_end = 0 #当前核心数据结束索引
-        process_count = self.single_buffer_size // self.dtype_sz #核心一次最多计算的长度
+
+        nram_avable_size = (TARGET(self.target).nram_size - 30 * 1024) // 2
+
+        process_count = nram_avable_size // self.dtype_sz #核心一次最多计算的长度
         with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
             current_core_start = (one_core_count + 1) * self.bp.taskId 
             current_core_end = (one_core_count + 1) * (self.bp.taskId + 1) - 1 #此处应该不需要减1 待验证  python切片会自动将上标减1
@@ -66,13 +69,13 @@ class LogAddExp(object):
         
         total_count_in_core = current_core_end - current_core_start + 1
 
-        gram_buffer_in0 = self.bp.Buffer(
+        buffer_in0 = self.bp.Buffer(
             shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
         )
-        gram_buffer_in1 = self.bp.Buffer(
+        buffer_in1 = self.bp.Buffer(
             shape=(self.length,), name="INPUT1", dtype=self.dtype, scope="global"
         )
-        gram_buffer_out = self.bp.Buffer(
+        buffer_out = self.bp.Buffer(
             shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
         )
         nram_buffer_in0 = self.bp.Buffer(
@@ -89,24 +92,24 @@ class LogAddExp(object):
         )
 
         calc_loop_count = (total_count_in_core + process_count - 1) // process_count
-        with self.bp.for_range(calc_loop_count) as i:            
+        with self.bp.for_range(0,calc_loop_count) as i:            
             once_loop_start = current_core_start + process_count * i #当前核心数据开始的位置 + 第i次循环所应偏移的长度
             once_loop_end = once_loop_start + process_count - 1
             with self.bp.if_scope(once_loop_end > current_core_start + total_count_in_core + 1):
                 once_loop_end = once_loop_start + total_count_in_core % process_count - 1
             #print(once_loop_start, once_loop_end)
             calc_size = once_loop_end - once_loop_start + 1
-            self.bp.memcpy(nram_buffer_in0[:calc_size], gram_buffer_in0[once_loop_start:once_loop_end + 1]) 
-            self.bp.memcpy(nram_buffer_in1[:calc_size], gram_buffer_in1[once_loop_start:once_loop_end + 1]) 
+            self.bp.memcpy(nram_buffer_in0[:calc_size], buffer_in0[once_loop_start:once_loop_end + 1]) 
+            self.bp.memcpy(nram_buffer_in1[:calc_size], buffer_in1[once_loop_start:once_loop_end + 1]) 
             self.bp.exp(nram_buffer_in0[:calc_size], nram_buffer_in0[:calc_size], "hp")
             self.bp.exp(nram_buffer_in1[:calc_size], nram_buffer_in1[:calc_size], "hp")
             self.bp.add(nram_buffer_in0[:calc_size], nram_buffer_in0[:calc_size], nram_buffer_in1[:calc_size])
             self.bp.log(nram_buffer_in0[:calc_size], nram_buffer_in0[:calc_size])
-            self.bp.memcpy(gram_buffer_out[once_loop_start:once_loop_end + 1], nram_buffer_in0[:calc_size])
+            self.bp.memcpy(buffer_out[once_loop_start:once_loop_end + 1], nram_buffer_in0[:calc_size])
       
         f = self.bp.BuildBANG(
-            inputs=[gram_buffer_in0, gram_buffer_in0],
-            outputs=[gram_buffer_out],
+            inputs=[buffer_in0, buffer_in1,],
+            outputs=[buffer_out],
             kernel_name=KERNEL_NAME,
         )
         return f
