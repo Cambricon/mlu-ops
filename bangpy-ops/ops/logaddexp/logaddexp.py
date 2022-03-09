@@ -26,6 +26,7 @@ import bangpy
 from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
+from bangpy.tcp.util import round_up, round_down
 from bangpy.tcp.runtime import TaskType
 
 DTYPES = [bangpy.float16, bangpy.float32] #支持的类型
@@ -50,25 +51,32 @@ class LogAddExp(object):
         
         self.bp.launch_task(self.task_num, 1, 1)#将任务维度值设置为在此内核中启动。  三个参数其实就是 taskdimx,y,z   
     def compute_body(self):
+        self.bp.print("length",self.length)
         # calculate split strategy
         # gets the data length to be calculated for each task
-        one_core_count = self.length // self.task_num#每个核均摊计算量（按索引分）
-        remain = self.length % self.task_num#分任务时的余数
-        current_core_start = 0 #当前核心数据开始索引
-        current_core_end = 0 #当前核心数据结束索引
-
-        nram_avable_size = (TARGET(self.target).nram_size - 30 * 1024) // 2
-
+        one_core_count = self.bp.Scalar(bangpy.int32,"one_core_count")
+        remain =  self.bp.Scalar(bangpy.int32,"remain")       
+        current_core_start = self.bp.Scalar(bangpy.int32,"current_core_start") #当前核心数据开始索引
+        current_core_end = self.bp.Scalar(bangpy.int32,"current_core_end") #当前核心数据结束索引
+        total_count_in_core = self.bp.Scalar(bangpy.int32,"total_count_in_core")
+        calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
+        once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
+        once_loop_end = self.bp.Scalar(bangpy.int32,"once_loop_end")
+        calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
+        nram_avable_size = round_down( (TARGET(self.target).nram_size - 200* 1024) // 2  ,128)#self.bp.Scalar(bangpy.int32,"nram_avable_size")
+        one_core_count.assign(self.length // self.task_num)#每个核均摊计算量（按索引分）
+        remain.assign(self.length % self.task_num)#分任务时的余数
+        #nram_avable_size = (TARGET(self.target).nram_size - 30 * 1024) // 2  
+             
         process_count = nram_avable_size // self.dtype_sz #核心一次最多计算的长度
+      
         with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
-            current_core_start = (one_core_count + 1) * self.bp.taskId 
-            current_core_end = (one_core_count + 1) * (self.bp.taskId + 1) - 1 #此处应该不需要减1 待验证  python切片会自动将上标减1
+            current_core_start.assign((one_core_count + 1) * self.bp.taskId )
+            current_core_end.assign((one_core_count + 1) * (self.bp.taskId + 1) - 1) #此处应该不需要减1 待验证  python切片会自动将上标减1
         with self.bp.else_scope():
-            current_core_start = (one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain)
-            current_core_end = (one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain) + one_core_count - 1
-        
-        total_count_in_core = current_core_end - current_core_start + 1
-
+            current_core_start.assign((one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain))
+            current_core_end.assign((one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain) + one_core_count - 1)  
+        total_count_in_core.assign(current_core_end - current_core_start + 1)
         buffer_in0 = self.bp.Buffer(
             shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
         )
@@ -90,22 +98,29 @@ class LogAddExp(object):
             dtype=self.dtype,
             scope="nram",
         )
-
-        calc_loop_count = (total_count_in_core + process_count - 1) // process_count
+        calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
         with self.bp.for_range(0,calc_loop_count) as i:            
-            once_loop_start = current_core_start + process_count * i #当前核心数据开始的位置 + 第i次循环所应偏移的长度
-            once_loop_end = once_loop_start + process_count - 1
+            once_loop_start.assign(current_core_start + process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
+            once_loop_end.assign(once_loop_start + process_count - 1)
             with self.bp.if_scope(once_loop_end > current_core_start + total_count_in_core + 1):
-                once_loop_end = once_loop_start + total_count_in_core % process_count - 1
-            #print(once_loop_start, once_loop_end)
-            calc_size = once_loop_end - once_loop_start + 1
-            self.bp.memcpy(nram_buffer_in0[:calc_size], buffer_in0[once_loop_start:once_loop_end + 1]) 
-            self.bp.memcpy(nram_buffer_in1[:calc_size], buffer_in1[once_loop_start:once_loop_end + 1]) 
-            self.bp.exp(nram_buffer_in0[:calc_size], nram_buffer_in0[:calc_size], "hp")
-            self.bp.exp(nram_buffer_in1[:calc_size], nram_buffer_in1[:calc_size], "hp")
-            self.bp.add(nram_buffer_in0[:calc_size], nram_buffer_in0[:calc_size], nram_buffer_in1[:calc_size])
-            self.bp.log(nram_buffer_in0[:calc_size], nram_buffer_in0[:calc_size])
+                once_loop_end.assign(once_loop_start + total_count_in_core % process_count - 1)
+            calc_size.assign(once_loop_end - once_loop_start + 1)
+            
+            self.bp.print("task_id:",self.bp.taskId)
+            self.bp.print("calc_loop_count:",calc_loop_count)
+            self.bp.print("calc_in_core:",total_count_in_core)
+            self.bp.print("calc_size:",calc_size)
+            self.bp.print("once_loop_start:",once_loop_start)
+            self.bp.print("once_loop_end:",once_loop_end)
+            
+            self.bp.memcpy(nram_buffer_in0, buffer_in0[once_loop_start:once_loop_end + 1 ]) 
+            self.bp.memcpy(nram_buffer_in1, buffer_in1[once_loop_start:once_loop_end + 1]) 
+            self.bp.exp(nram_buffer_in0, nram_buffer_in0, "hp")
+            self.bp.exp(nram_buffer_in1, nram_buffer_in1, "hp")
+            self.bp.add(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
+            self.bp.log(nram_buffer_in0, nram_buffer_in0)
             self.bp.memcpy(buffer_out[once_loop_start:once_loop_end + 1], nram_buffer_in0[:calc_size])
+            
       
         f = self.bp.BuildBANG(
             inputs=[buffer_in0, buffer_in1,],
@@ -116,7 +131,7 @@ class LogAddExp(object):
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp(dtype=None, target=None):
     # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
-    task_type=TaskType.UNION8  #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
+    task_type=TaskType.UNION1 #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
     task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
     f = LogAddExp(dtype, target, task_num).compute_body()
     return f
