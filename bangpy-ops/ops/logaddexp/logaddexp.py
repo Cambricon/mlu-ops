@@ -99,27 +99,21 @@ class LogAddExp(object):
             scope="nram",
         )
         calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
-        with self.bp.for_range(0,calc_loop_count) as i:            
+        with self.bp.for_range(0, calc_loop_count) as i:            
             once_loop_start.assign(current_core_start + process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
-            once_loop_end.assign(once_loop_start + process_count - 1)
-            with self.bp.if_scope(once_loop_end > current_core_start + total_count_in_core + 1):
-                once_loop_end.assign(once_loop_start + total_count_in_core % process_count - 1)
-            calc_size.assign(once_loop_end - once_loop_start + 1)
-            
-            self.bp.print("task_id:",self.bp.taskId)
-            self.bp.print("calc_loop_count:",calc_loop_count)
-            self.bp.print("calc_in_core:",total_count_in_core)
-            self.bp.print("calc_size:",calc_size)
-            self.bp.print("once_loop_start:",once_loop_start)
-            self.bp.print("once_loop_end:",once_loop_end)
-            
-            self.bp.memcpy(nram_buffer_in0, buffer_in0[once_loop_start:once_loop_end + 1 ]) 
-            self.bp.memcpy(nram_buffer_in1, buffer_in1[once_loop_start:once_loop_end + 1]) 
+            with self.bp.if_scope(i < calc_loop_count - 1):
+                calc_size.assign(process_count)
+            with self.bp.else_scope():
+                calc_size.assign(total_count_in_core % process_count)
+
+            with self.bp.block("data_copy"):
+                self.bp.memcpy(nram_buffer_in0[0:calc_size], buffer_in0[once_loop_start:once_loop_start + calc_size]) 
+                self.bp.memcpy(nram_buffer_in1[0:calc_size], buffer_in1[once_loop_start:once_loop_start + calc_size]) 
             self.bp.exp(nram_buffer_in0, nram_buffer_in0, "hp")
             self.bp.exp(nram_buffer_in1, nram_buffer_in1, "hp")
             self.bp.add(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
             self.bp.log(nram_buffer_in0, nram_buffer_in0)
-            self.bp.memcpy(buffer_out[once_loop_start:once_loop_end + 1], nram_buffer_in0[:calc_size])
+            self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
             
       
         f = self.bp.BuildBANG(
