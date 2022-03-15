@@ -22,7 +22,7 @@
 """A multi-platform code link example test for BANGPy TCP."""
 import numpy as np
 import pytest
-
+import time
 import bangpy
 from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
@@ -33,10 +33,8 @@ from add import DTYPES, KERNEL_NAME, TARGET_LIST
 
 @pytest.mark.parametrize(
     "shape", 
-    [
-        (2048,),
-        (4096,),
-        (6144,),
+    [    
+        (268435456),# 即(256*1024*1024)  float32 下 刚好为1G 两输入一输出 总共3G
     ],
 )
 @pytest.mark.parametrize(
@@ -47,7 +45,6 @@ def test_add(target, shape, dtype):
         return
     data_in0 = np.random.uniform(low=-10, high=10, size=shape)
     data_in1 = np.random.uniform(low=-10, high=10, size=shape)
-
     data_out = data_in0.astype(dtype.as_numpy_dtype) + data_in1.astype(
         dtype.as_numpy_dtype
     )
@@ -56,8 +53,13 @@ def test_add(target, shape, dtype):
     data_in0_dev = bangpy.Array(data_in0.astype(dtype.as_numpy_dtype), dev)
     data_in1_dev = bangpy.Array(data_in1.astype(dtype.as_numpy_dtype), dev)
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
+    start = time.time()# 增加cpu侧计算开始时间
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     f1(data_in0_dev, data_in1_dev, data_out_dev)
+    end = time.time()# 增加cpu侧计算结束时间
+    print("total_time:",end-start)# 输出耗时
     bangpy.assert_allclose(
         data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype)
     )
+    evaluator = f1.time_evaluator(number=10,repeat=1,min_repeat_ms=0)#使用 evaluator进行分析
+    print('time consuming : %f ms' % (evaluator(data_in0_dev, data_in1_dev, data_out_dev).mean* 1e3))#测试并打印
