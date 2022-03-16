@@ -95,7 +95,8 @@ def test_logaddexp(target, shape, dtype):
     cpu_end_time = time.time()
     #print(ret2)
     print("cpu_time", cpu_end_time - cpu_start_time)
+    bp.testing.assert_allclose(ret1.numpy(), ret2.astype(dtype.as_numpy_dtype), rtol = 1e-5, atol = 0)
 
     
    
-    
+       
