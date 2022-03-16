@@ -27,7 +27,7 @@ from bangpy.tcp.util import round_up, round_down
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bp.float16, bp.float32]
-TARGET_LIST = ["mlu370-s4", "mlu290"]
+TARGET_LIST = ["mlu370-s4", "mlu290", "mlu270"]
 
 # Align to 64.
 ALIGN_SIZE = 64
