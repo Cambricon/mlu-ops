@@ -28,7 +28,7 @@ from bangpy.tcp.util import round_up, round_down
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bp.float16, bp.float32]
-TARGET_LIST = ["mlu370-s4", "mlu290"]
+TARGET_LIST = ["mlu370-s4", "mlu290", "mlu270"]
 
 # Align to 64.
 ALIGN_SIZE = 64
@@ -262,101 +262,118 @@ class NonZero(object):
                 else:
                     cast_nram = data_nram
 
-                # One dims compute.
-                with self.tcp.for_range(0, self.nram_size) as k:
-                    index_0_nram[k] = (global_index + k) % self.dim_3
+                # cast_nram only computes if there are non-zero elements in it.
                 self.tcp.count_nonzero(count_num.reinterpret_cast(bp.uint32), cast_nram)
-                self.tcp.take(
-                    out_nram.reinterpret_cast(self.float_type),
-                    index_0_nram[: self.nram_size].reinterpret_cast(self.float_type),
-                    cast_nram,
-                )
+                with self.tcp.if_scope(count_num[0] > 0):
 
-                self.gather_data(
-                    out_nram_int64, out_nram, self.nram_size, self.dim_num - 1
-                )
-
-                # Two dims compute.
-                with self.tcp.if_scope(self.dim_num > 1):
-                    self.indices_set(
-                        index_1_nram,
-                        global_index,
-                        self.nram_size,
-                        self.dim_3,
-                        self.dim_2,
-                    )
+                    # One dims compute.
+                    with self.tcp.for_range(0, self.nram_size) as k:
+                        index_0_nram[k] = (global_index + k) % self.dim_3
                     self.tcp.take(
                         out_nram.reinterpret_cast(self.float_type),
-                        index_1_nram[: self.nram_size].reinterpret_cast(
+                        index_0_nram[: self.nram_size].reinterpret_cast(
                             self.float_type
                         ),
                         cast_nram,
                     )
+
                     self.gather_data(
-                        out_nram_int64, out_nram, self.nram_size, self.dim_num - 2
+                        out_nram_int64, out_nram, self.nram_size, self.dim_num - 1
                     )
 
-                # Tree dims compute.
-                with self.tcp.if_scope(self.dim_num > 2):
-                    self.indices_set(
-                        index_1_nram,
-                        global_index,
-                        self.nram_size,
-                        self.dim_3 * self.dim_2,
-                        self.dim_1,
-                    )
-                    self.tcp.take(
-                        out_nram.reinterpret_cast(self.float_type),
-                        index_1_nram[: self.nram_size].reinterpret_cast(
-                            self.float_type
-                        ),
-                        cast_nram,
-                    )
-                    self.gather_data(
-                        out_nram_int64, out_nram, self.nram_size, self.dim_num - 3
-                    )
+                    # Two dims compute.
+                    with self.tcp.if_scope(self.dim_num > 1):
+                        self.indices_set(
+                            index_1_nram,
+                            global_index,
+                            self.nram_size,
+                            self.dim_3,
+                            self.dim_2,
+                        )
 
-                # Four dims compute.
-                with self.tcp.if_scope(self.dim_num > 3):
-                    self.indices_set(
-                        index_1_nram,
-                        global_index,
-                        self.nram_size,
-                        self.dim_3 * self.dim_2 * self.dim_1,
-                        self.dim_0,
-                    )
-                    self.tcp.take(
-                        out_nram.reinterpret_cast(self.float_type),
-                        index_1_nram[: self.nram_size].reinterpret_cast(
-                            self.float_type
-                        ),
-                        cast_nram,
-                    )
-                    self.gather_data(
-                        out_nram_int64, out_nram, self.nram_size, self.dim_num - 4
-                    )
+                        self.tcp.take(
+                            out_nram.reinterpret_cast(self.float_type),
+                            index_1_nram[: self.nram_size].reinterpret_cast(
+                                self.float_type
+                            ),
+                            cast_nram,
+                        )
+                        self.gather_data(
+                            out_nram_int64, out_nram, self.nram_size, self.dim_num - 2
+                        )
+
+                    # Tree dims compute.
+                    with self.tcp.if_scope(self.dim_num > 2):
+                        self.indices_set(
+                            index_1_nram,
+                            global_index,
+                            self.nram_size,
+                            self.dim_3 * self.dim_2,
+                            self.dim_1,
+                        )
+                        self.tcp.take(
+                            out_nram.reinterpret_cast(self.float_type),
+                            index_1_nram[: self.nram_size].reinterpret_cast(
+                                self.float_type
+                            ),
+                            cast_nram,
+                        )
+                        self.gather_data(
+                            out_nram_int64, out_nram, self.nram_size, self.dim_num - 3
+                        )
+
+                    # Four dims compute.
+                    with self.tcp.if_scope(self.dim_num > 3):
+                        self.indices_set(
+                            index_1_nram,
+                            global_index,
+                            self.nram_size,
+                            self.dim_3 * self.dim_2 * self.dim_1,
+                            self.dim_0,
+                        )
+                        self.tcp.take(
+                            out_nram.reinterpret_cast(self.float_type),
+                            index_1_nram[: self.nram_size].reinterpret_cast(
+                                self.float_type
+                            ),
+                            cast_nram,
+                        )
+                        self.gather_data(
+                            out_nram_int64, out_nram, self.nram_size, self.dim_num - 4
+                        )
+
             with self.tcp.block("data_copy"):
-                with self.tcp.if_scope(self.trans == 1):
-                    out_nram_int64 = out_nram_int64[
-                        : self.dim_num * self.nram_size
-                    ].reshape((self.nram_size, self.dim_num))
-                    out_buffer = out_buffer.reshape((self.num_nonzero, self.dim_num))
-                    self.tcp.memcpy(
-                        out_buffer[out_offset : out_offset + count_num[0],],
-                        out_nram_int64[: count_num[0],],
-                    )
-                with self.tcp.else_scope():
-                    out_nram_int64 = out_nram_int64[
-                        : self.dim_num * self.nram_size
-                    ].reshape((self.dim_num, self.nram_size))
-                    out_buffer = out_buffer.reshape((self.dim_num, self.num_nonzero))
-                    self.tcp.memcpy(
-                        out_buffer[:, out_offset : out_offset + count_num[0]],
-                        out_nram_int64[:, : count_num[0]],
-                    )
+                with self.tcp.if_scope(count_num[0] > 0):
+                    with self.tcp.if_scope(self.trans == 1):
+                        out_nram_int64 = out_nram_int64[
+                            : self.dim_num * self.nram_size
+                        ].reshape((self.nram_size, self.dim_num))
+                        out_buffer = out_buffer.reshape(
+                            (self.num_nonzero, self.dim_num)
+                        )
+                        self.tcp.memcpy(
+                            out_buffer[
+                                out_offset : out_offset + count_num[0],
+                            ],
+                            out_nram_int64[
+                                : count_num[0],
+                            ],
+                        )
+                    with self.tcp.else_scope():
+                        out_nram_int64 = out_nram_int64[
+                            : self.dim_num * self.nram_size
+                        ].reshape((self.dim_num, self.nram_size))
+                        out_buffer = out_buffer.reshape(
+                            (self.dim_num, self.num_nonzero)
+                        )
+                        self.tcp.memcpy(
+                            out_buffer[:, out_offset : out_offset + count_num[0]],
+                            out_nram_int64[:, : count_num[0]],
+                        )
 
             with self.tcp.block("compute"):
-                out_offset.assign(out_offset + count_num[0])
+                with self.tcp.if_scope(count_num[0] > 0):
+                    out_offset.assign(out_offset + count_num[0])
         with self.tcp.if_scope(remain > 0):
             global_index = core_index + repeat * self.nram_size
 
@@ -401,86 +418,96 @@ class NonZero(object):
             else:
                 cast_nram = data_nram
 
+            # cast_nram only computes if there are non-zero elements in it.
             self.tcp.count_nonzero(
                 count_num.reinterpret_cast(bp.uint32), cast_nram[:remain_align]
             )
-            with self.tcp.for_range(0, remain) as k:
-                index_0_nram[k] = (global_index + k) % self.dim_3
-            self.tcp.take(
-                out_nram.reinterpret_cast(self.float_type),
-                index_0_nram[:remain_align].reinterpret_cast(self.float_type),
-                cast_nram[:remain_align],
-            )
-            self.gather_data(out_nram_int64, out_nram, remain_align, self.dim_num - 1)
+            with self.tcp.if_scope(count_num[0] > 0):
 
-            # Two dims compute.
-            with self.tcp.if_scope(self.dim_num > 1):
-                self.indices_set(
-                    index_1_nram, global_index, remain, self.dim_3, self.dim_2
-                )
+                # One dims compute.
+                with self.tcp.for_range(0, remain) as k:
+                    index_0_nram[k] = (global_index + k) % self.dim_3
                 self.tcp.take(
                     out_nram.reinterpret_cast(self.float_type),
-                    index_1_nram[:remain_align].reinterpret_cast(self.float_type),
-                    cast_nram,
+                    index_0_nram[:remain_align].reinterpret_cast(self.float_type),
+                    cast_nram[:remain_align],
                 )
                 self.gather_data(
-                    out_nram_int64, out_nram, remain_align, self.dim_num - 2
+                    out_nram_int64, out_nram, remain_align, self.dim_num - 1
                 )
 
-            # Tree dims compute.
-            with self.tcp.if_scope(self.dim_num > 2):
-                self.indices_set(
-                    index_1_nram,
-                    global_index,
-                    remain,
-                    self.dim_3 * self.dim_2,
-                    self.dim_1,
-                )
-                self.tcp.take(
-                    out_nram.reinterpret_cast(self.float_type),
-                    index_1_nram[:remain_align].reinterpret_cast(self.float_type),
-                    cast_nram,
-                )
-                self.gather_data(
-                    out_nram_int64, out_nram, remain_align, self.dim_num - 3
-                )
+                # Two dims compute.
+                with self.tcp.if_scope(self.dim_num > 1):
+                    self.indices_set(
+                        index_1_nram, global_index, remain, self.dim_3, self.dim_2
+                    )
+                    self.tcp.take(
+                        out_nram.reinterpret_cast(self.float_type),
+                        index_1_nram[:remain_align].reinterpret_cast(self.float_type),
+                        cast_nram,
+                    )
+                    self.gather_data(
+                        out_nram_int64, out_nram, remain_align, self.dim_num - 2
+                    )
 
-            # Four dims compute.
-            with self.tcp.if_scope(self.dim_num > 3):
-                self.indices_set(
-                    index_1_nram,
-                    global_index,
-                    remain,
-                    self.dim_3 * self.dim_2 * self.dim_1,
-                    self.dim_0,
-                )
-                self.tcp.take(
-                    out_nram.reinterpret_cast(self.float_type),
-                    index_1_nram[:remain_align].reinterpret_cast(self.float_type),
-                    cast_nram,
-                )
-                self.gather_data(
-                    out_nram_int64, out_nram, remain_align, self.dim_num - 4
-                )
+                # Tree dims compute.
+                with self.tcp.if_scope(self.dim_num > 2):
+                    self.indices_set(
+                        index_1_nram,
+                        global_index,
+                        remain,
+                        self.dim_3 * self.dim_2,
+                        self.dim_1,
+                    )
+                    self.tcp.take(
+                        out_nram.reinterpret_cast(self.float_type),
+                        index_1_nram[:remain_align].reinterpret_cast(self.float_type),
+                        cast_nram,
+                    )
+                    self.gather_data(
+                        out_nram_int64, out_nram, remain_align, self.dim_num - 3
+                    )
 
-            with self.tcp.if_scope(self.trans == 1):
-                out_nram_int64 = out_nram_int64[: self.dim_num * remain_align].reshape(
-                    (remain_align, self.dim_num)
-                )
-                out_buffer = out_buffer.reshape((self.num_nonzero, self.dim_num))
-                self.tcp.memcpy(
-                    out_buffer[out_offset : out_offset + count_num[0],],
-                    out_nram_int64[: count_num[0],],
-                )
-            with self.tcp.else_scope():
-                out_nram_int64 = out_nram_int64[: self.dim_num * remain_align].reshape(
-                    (self.dim_num, remain_align)
-                )
-                out_buffer = out_buffer.reshape((self.dim_num, self.num_nonzero))
-                self.tcp.memcpy(
-                    out_buffer[:, out_offset : out_offset + count_num[0]],
-                    out_nram_int64[:, : count_num[0]],
-                )
+                # Four dims compute.
+                with self.tcp.if_scope(self.dim_num > 3):
+                    self.indices_set(
+                        index_1_nram,
+                        global_index,
+                        remain,
+                        self.dim_3 * self.dim_2 * self.dim_1,
+                        self.dim_0,
+                    )
+                    self.tcp.take(
+                        out_nram.reinterpret_cast(self.float_type),
+                        index_1_nram[:remain_align].reinterpret_cast(self.float_type),
+                        cast_nram,
+                    )
+                    self.gather_data(
+                        out_nram_int64, out_nram, remain_align, self.dim_num - 4
+                    )
+
+                with self.tcp.if_scope(self.trans == 1):
+                    out_nram_int64 = out_nram_int64[
+                        : self.dim_num * remain_align
+                    ].reshape((remain_align, self.dim_num))
+                    out_buffer = out_buffer.reshape((self.num_nonzero, self.dim_num))
+                    self.tcp.memcpy(
+                        out_buffer[
+                            out_offset : out_offset + count_num[0],
+                        ],
+                        out_nram_int64[
+                            : count_num[0],
+                        ],
+                    )
+                with self.tcp.else_scope():
+                    out_nram_int64 = out_nram_int64[
+                        : self.dim_num * remain_align
+                    ].reshape((self.dim_num, remain_align))
+                    out_buffer = out_buffer.reshape((self.dim_num, self.num_nonzero))
+                    self.tcp.memcpy(
+                        out_buffer[:, out_offset : out_offset + count_num[0]],
+                        out_nram_int64[:, : count_num[0]],
+                    )
 
     def nonzero_compute(self):
         """The entry of the NonZero operator."""
@@ -522,7 +549,11 @@ class NonZero(object):
             with self.tcp.for_range(0, self.tcp.taskId) as i:
                 out_offset.assign(out_offset + self.core_count[i])
             self.core_compute(
-                pre_core, core_index, out_offset, self.in_buffer, self.out_buffer,
+                pre_core,
+                core_index,
+                out_offset,
+                self.in_buffer,
+                self.out_buffer,
             )
 
         return self.tcp.BuildBANG(
