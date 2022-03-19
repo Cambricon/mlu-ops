@@ -29,7 +29,7 @@ from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.util import round_up, round_down
 from bangpy.tcp.runtime import TaskType
 
-DTYPES = [bangpy.float16, bangpy.float32] #支持的类型
+DTYPES = [ bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]#支持的设备
 KERNEL_NAME = "Celu" #算子名
 
@@ -44,7 +44,7 @@ class Celu(object):
         self.target = target
         self.task_num = task_num     
         self.bp = tcp.TCP(target)
-        self.alpha = self.bp.SizeVar("alpha",dtype)
+        self.alpha = self.bp.SizeVar("alpha", self.dtype)
         self.inplace = self.bp.Var("inplace")
         self.length = self.bp.SizeVar("length")#得到数据的长度  此处应该是数组的长度
         self.dtype_sz = dtype.bytes#类型占用空间的大小(字节)
@@ -153,7 +153,7 @@ class Celu(object):
             dtype=self.dtype,
             scope="nram",
         )
-        nram__marked_zero = self.bp.Buffer(
+        nram_marked_zero = self.bp.Buffer(
             shape=(process_count,),
             name="NMZ",
             dtype=self.dtype,
@@ -176,16 +176,18 @@ class Celu(object):
                 self.bp.memcpy(nram_buffer_in0[0:calc_size], buffer_in0[once_loop_start:once_loop_start + calc_size]) 
             #这里开始计算min
             with self.bp.if_scope(self.alpha != 0):
-                self.bp.less_equal(nram__marked_zero,nram_buffer_in0,const_zero,'elemwise') #大于等于0的标记为0 小于的标记为1
+                self.bp.less_equal(nram_marked_zero,nram_buffer_in0,const_zero,'elemwise') #大于等于0的标记为0 小于的标记为1
+               
                 self.bp.divide(nram_middle_value,nram_buffer_in0,self.alpha)#获得x/a
-                self.mark_the_out_of_range_vlaue(nram_middle_value,nram__marked_exp_beyond_the_lower_limit,nram_marked_exp_overrun_the_upper_limit)#标记出所有超出运算范围的值的位置并分别在两个buffer中用0标注
+               
+                self.mark_the_out_of_range_vlaue(nram_middle_value,nram_marked_exp_overrun_the_upper_limit,nram__marked_exp_beyond_the_lower_limit)#标记出所有超出运算范围的值的位置并分别在两个buffer中用0标注
                 #前期准备基本完成 开始常规计算
                 self.bp.exp(nram_middle_value,nram_middle_value)#计算exp(x/a)
                 self.bp.subtract(nram_middle_value, nram_middle_value, const_one)#-1
                 self.bp.multiply(nram_middle_value, nram_middle_value, self.alpha)#*a
-                self.bp.maximum(nram_min,nram_middle_value,const_zero)#min(0,...)
+                self.bp. minimum(nram_min,nram_middle_value,const_zero)#min(0,...)
                 #开始替换
-                self.bp.multiply(nram_middle_value, nram_middle_value,nram__marked_zero)#将所有x>=0得位置全部替换成0
+                self.bp.multiply(nram_middle_value, nram_middle_value,nram_marked_zero)#将所有x>=0得位置全部替换成0
                 #一种情况 当（x/a）> e 的最大次方值时  返回-inf  这个先不做  等周一问问咋显示
                 #另一种情况  当（x/a）< e 的最小次方值时   将所有标记位替换成 -a和0中小的那个
                 with self.bp.if_scope(self.alpha * -1 > 0):
@@ -199,7 +201,7 @@ class Celu(object):
             #这里开始计算max           
             self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
             #计算max+min
-            self.bp.add(nram_buffer_in0,nram_max,nram_buffer_in0)         
+            self.bp.add(nram_buffer_in0,nram_max,nram_min)         
             self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
             
       
@@ -213,6 +215,7 @@ class Celu(object):
 def build_celu(dtype=None, target=None):
     # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
     task_type=TaskType.UNION16 #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
-    task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
+    #task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
+    task_num =1
     f = Celu(dtype, target, task_num).compute_body()
     return f
