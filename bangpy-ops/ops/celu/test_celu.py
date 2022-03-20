@@ -35,25 +35,29 @@ from celu import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "shape", 
     [
-        (5,6,3,2,4),
+        (3,4,),
     ],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
 
+#
+#一共测了两种数据类型  在算子源码dtype数组中写的那两种  每种测了三次  每次的数组长度 看37行开始的那个数组
+#
 
 def test_celu(target, shape, dtype):
     if target not in TARGET_LIST:
         return  
-    data_x = np.random.uniform(low=-1000, high=1000, size=shape).astype(dtype.as_numpy_dtype)
-    #data_x = np.array([-166.7]).astype(dtype.as_numpy_dtype)
+    data_x = np.random.uniform(low=-7.75, high=10, size=shape).astype(dtype.as_numpy_dtype)
+    #data_x = np.array([83.35]).astype(dtype.as_numpy_dtype)
    
   
 
     dev = bp.device(0)
     data_x_flat = data_x.flatten()
     data_x_dev = bp.Array(data_x_flat, dev)
+    
     task_type = TaskType(TARGET(target).cluster_num)
     celu_func = load_op_by_type("Celu", dtype.name)
     task_type = TaskType(TARGET(target).cluster_num)

@@ -184,8 +184,9 @@ class Celu(object):
                 #前期准备基本完成 开始常规计算
                 self.bp.exp(nram_middle_value,nram_middle_value)#计算exp(x/a)
                 self.bp.subtract(nram_middle_value, nram_middle_value, const_one)#-1
+                self.bp.print(nram_middle_value[0])
                 self.bp.multiply(nram_middle_value, nram_middle_value, self.alpha)#*a
-                self.bp. minimum(nram_min,nram_middle_value,const_zero)#min(0,...)
+                self.bp.minimum(nram_min,nram_middle_value,const_zero)#min(0,...)
                 #开始替换
                 self.bp.multiply(nram_middle_value, nram_middle_value,nram_marked_zero)#将所有x>=0得位置全部替换成0
                 #一种情况 当（x/a）> e 的最大次方值时  返回-inf  这个先不做  等周一问问咋显示
@@ -197,7 +198,7 @@ class Celu(object):
                 self.replace_the_marked_position_with_the_value_of_the_same_position(nram_middle_value,nram__marked_exp_beyond_the_lower_limit,replace_value)             
             with self.bp.else_scope():#当alpha为0时  min全为0
                 self.bp.zeros(nram_min)   
-
+            
             #这里开始计算max           
             self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
             #计算max+min
@@ -215,7 +216,7 @@ class Celu(object):
 def build_celu(dtype=None, target=None):
     # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
     task_type=TaskType.UNION16 #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
-    #task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
-    task_num =1
+    task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
+   
     f = Celu(dtype, target, task_num).compute_body()
     return f
