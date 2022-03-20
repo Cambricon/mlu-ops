@@ -53,7 +53,7 @@ def test_celu(target, shape, dtype):
     #data_x = np.array([83.35]).astype(dtype.as_numpy_dtype)
    
   
-
+    
     dev = bp.device(0)
     data_x_flat = data_x.flatten()
     data_x_dev = bp.Array(data_x_flat, dev)
@@ -64,8 +64,9 @@ def test_celu(target, shape, dtype):
     output_buffer = np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype)
     output_dev = bp.Array(output_buffer, dev)
     alpha = -2.0 #定义alpha
+    buffer_alpha = bp.Array(np.array([alpha]).astype(dtype.as_numpy_dtype), dev) 
     with tcp.runtime.Run(task_type):
-        celu_func(data_x_dev,alpha,False, output_dev)
+        celu_func(data_x_dev,buffer_alpha,False, output_dev)
     
     np_ret = output_dev.numpy()
     print("data_x:",data_x_flat)
