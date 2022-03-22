@@ -189,7 +189,6 @@ class Celu(object):
                 #前期准备基本完成 开始常规计算
                 self.bp.exp(nram_middle_value,nram_middle_value)#计算exp(x/a)
                 self.bp.subtract(nram_middle_value, nram_middle_value, const_one)#-1
-                self.bp.print(nram_middle_value[0])
                 self.bp.multiply(nram_middle_value, nram_middle_value, alpha)#*a
                 self.bp.minimum(nram_min,nram_middle_value,const_zero)#min(0,...)
                 #开始替换
@@ -203,12 +202,14 @@ class Celu(object):
                 self.replace_the_marked_position_with_the_value_of_the_same_position(nram_middle_value,nram__marked_exp_beyond_the_lower_limit,replace_value)             
             with self.bp.else_scope():#当alpha为0时  min全为0
                 self.bp.zeros(nram_min)   
-            
             #这里开始计算max           
             self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
             #计算max+min
-            self.bp.add(nram_buffer_in0,nram_max,nram_min)         
-            self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
+            self.bp.add(nram_buffer_in0,nram_max,nram_min)
+            with self.bp.if_scope(self.inplace):
+                self.bp.memcpy(buffer_in0[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
+            with self.bp.else_scope():         
+                self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
             
       
         f = self.bp.BuildBANG(

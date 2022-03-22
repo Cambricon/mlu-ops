@@ -41,36 +41,31 @@ from celu import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
-
-#
-#一共测了两种数据类型  在算子源码dtype数组中写的那两种  每种测了三次  每次的数组长度 看37行开始的那个数组
-#
-
 def test_celu(target, shape, dtype):
     if target not in TARGET_LIST:
         return  
+    def celu_out (alpha = 1,inplace = False):
+        dev = bp.device(0)
+        celu_func = load_op_by_type("Celu",dtype.name)
+        def celu_inner(input_param):          
+            primative = input_param.shape#记录shape    
+            data_x_flat = input_param.flatten()#压平
+            buffer_alpha_param = bp.Array(np.array([alpha]).astype( dtype=dtype.as_numpy_dtype), dev)   
+            data_x_dev_param = bp.Array(data_x_flat, dev) 
+            output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype), dev)
+            celu_func(data_x_dev_param,buffer_alpha_param,inplace,output_dev_param)#计算   
+            res = output_dev_param.numpy().reshape(primative)#还原shape
+            if inplace :
+                input_param = res#如果在原位改动
+            return res#返回结果 在原位改动直接拿input 反正俩地址现在一样      
+        return celu_inner#返回函数
     data_x = np.random.uniform(low=-7.75, high=10, size=shape).astype(dtype.as_numpy_dtype)
-    #data_x = np.array([83.35]).astype(dtype.as_numpy_dtype)
-   
+    print("input:",data_x)
+    gala = celu_out(-2,True)
+    res = gala(data_x)
+    print("input_changed:",data_x)
+    print("out:",res)
   
-    
-    dev = bp.device(0)
-    data_x_flat = data_x.flatten()
-    data_x_dev = bp.Array(data_x_flat, dev)
-    
-    task_type = TaskType(TARGET(target).cluster_num)
-    celu_func = load_op_by_type("Celu", dtype.name)
-    task_type = TaskType(TARGET(target).cluster_num)
-    output_buffer = np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype)
-    output_dev = bp.Array(output_buffer, dev)
-    alpha = -2.0 #定义alpha
-    buffer_alpha = bp.Array(np.array([alpha]).astype(dtype.as_numpy_dtype), dev) 
-    with tcp.runtime.Run(task_type):
-        celu_func(data_x_dev,buffer_alpha,False, output_dev)
-    
-    np_ret = output_dev.numpy()
-    print("data_x:",data_x_flat)
-    print("res:",np_ret)
    
     #bangpy.assert_allclose( np_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.1, atol = 0.1)
     
