@@ -64,8 +64,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         return
 
     # input data
-    shape_x = shape[0]
-    shape_y = shape[1]
+    shape_x = np.array(shape[0])
+
+    shape_y = np.array(shape[1])
     data_x = np.random.uniform(low=-10, high=10, size=shape_x).astype(dtype.as_numpy_dtype)
     data_y = np.random.uniform(low=-10, high=10, size=shape_y).astype(dtype.as_numpy_dtype)
 
@@ -76,20 +77,34 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     flat_y = data_y.flatten()
     flat_y_dev = bp.Array(flat_y, dev)
 
+
+    shape_x.dtype = 'int32'
+    shape_y.dtype = 'int32'
+
     shp_x_dev = bp.Array(shape_x, dev)
     shp_y_dev = bp.Array(shape_y, dev)
 
     output_len = len(flat_x) // shape_x[1]
     output_buffer = np.zeros(output_len, dtype=dtype.as_numpy_dtype)
     output_dev = bp.Array(output_buffer, dev)
+
+    print("badahutong")
+    print(flat_x)
+    print("badahutong 2")
+
+
+
+
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
     if len(shape_x) > len(shape_y):
-        func(flat_x_dev, flat_y_dev, len(flat_x), len(flat_y), output_len, output_dev)
+        func(flat_x_dev, flat_y_dev, shp_x_dev, shp_y_dev, 
+            len(flat_x), len(flat_y), len(shape_x), len(shape_y), 
+            output_len, output_dev)
     else:
-        func(flat_y_dev, shp_y_dev, flat_x_dev, shp_x_dev, 
-            len(flat_y), len(shape_y), len(flat_x), len(shape_x),
-            p, eps, output_dev)
+        func(flat_y_dev, flat_x_dev, shp_y_dev, shp_x_dev, 
+            len(flat_y), len(flat_x), len(shape_y), len(shape_x), 
+            output_len, output_dev)
 
     '''bangpy.assert_allclose(
         output_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=0.1, atol=0.1

@@ -23,6 +23,7 @@
 import numpy as np
 
 import bangpy
+import bangpy as bp
 from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
@@ -45,6 +46,9 @@ class PairwiseDistance(object):
 
         self.x_length = self.bp.SizeVar("x_length")
         self.y_length = self.bp.SizeVar("y_length")
+        self.shp_x_len = self.bp.SizeVar("shp_x_len")
+        self.shp_y_len = self.bp.SizeVar("shp_y_len")
+
         self.output_len = self.bp.SizeVar("output_len")
 
         gram_x = self.bp.Buffer(
@@ -55,18 +59,31 @@ class PairwiseDistance(object):
             shape=(self.y_length,), name="gram_y", dtype=self.dtype, scope="global"
         )
 
+        gram_shp_x = self.bp.Buffer(
+            shape=(self.shp_x_len,), name="gram_shp_x", dtype=bp.int32, scope="global"
+        )
+
+        gram_shp_y = self.bp.Buffer(
+            shape=(self.shp_y_len,), name="gram_shp_y", dtype=bp.int32, scope="global"
+        )
+
         buffer_out = self.bp.Buffer(
             shape=(self.output_len,), name="OUTPUT", dtype=self.dtype, scope="global"
         )
         
         self.bp.print(gram_x)
         self.bp.print(gram_y)
-        self.bp.print(self.x_length)
-        self.bp.print(self.y_length)
+        self.bp.print(gram_shp_x)
+        self.bp.print(gram_shp_y)
+        self.bp.print('shp x len ', self.shp_x_len)
+        self.bp.print(self.shp_y_len)
         #self.bp.print(buffer_out)
 
         f = self.bp.BuildBANG(
-            inputs=[gram_x, gram_y, self.x_length, self.y_length, self.output_len],
+            inputs=[gram_x, gram_y, 
+                    gram_shp_x, gram_shp_y,
+                    self.x_length, self.y_length, self.shp_x_len, self.shp_y_len,
+                    self.output_len],
             outputs=[buffer_out],
             kernel_name=KERNEL_NAME,
         )
