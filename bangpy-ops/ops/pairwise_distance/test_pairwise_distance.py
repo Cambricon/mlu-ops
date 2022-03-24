@@ -64,9 +64,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         return
 
     # input data
-    shape_x = np.array(shape[0])
+    shape_x = np.array(shape[0]).astype('int32')
+    shape_y = np.array(shape[1]).astype('int32')
 
-    shape_y = np.array(shape[1])
     data_x = np.random.uniform(low=-10, high=10, size=shape_x).astype(dtype.as_numpy_dtype)
     data_y = np.random.uniform(low=-10, high=10, size=shape_y).astype(dtype.as_numpy_dtype)
 
@@ -77,24 +77,12 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     flat_y = data_y.flatten()
     flat_y_dev = bp.Array(flat_y, dev)
 
-
-    shape_x.dtype = 'int32'
-    shape_y.dtype = 'int32'
-
     shp_x_dev = bp.Array(shape_x, dev)
     shp_y_dev = bp.Array(shape_y, dev)
 
     output_len = len(flat_x) // shape_x[1]
     output_buffer = np.zeros(output_len, dtype=dtype.as_numpy_dtype)
     output_dev = bp.Array(output_buffer, dev)
-
-    print("badahutong")
-    print(flat_x)
-    print("badahutong 2")
-
-
-
-
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
     if len(shape_x) > len(shape_y):
