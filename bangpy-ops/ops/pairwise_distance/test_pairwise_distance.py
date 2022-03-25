@@ -60,38 +60,61 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 
 def test_pairwise_distance(target, shape, p, eps, keepdim, dtype): 
     if target not in TARGET_LIST:
-        print('no')
         return
 
-    # input data
-    shape_x = np.array(shape[0]).astype('int32')
-    shape_y = np.array(shape[1]).astype('int32')
+    def get_total_size(shp):
+        size = 1
+        for s in shp:
+            size *= s
+        return size
 
-    data_x = np.random.uniform(low=-10, high=10, size=shape_x).astype(dtype.as_numpy_dtype)
-    data_y = np.random.uniform(low=-10, high=10, size=shape_y).astype(dtype.as_numpy_dtype)
+    def create_origin_input(shpx, shpy):
+        shape_x = np.array(shpx).astype('int32')
+        shape_y = np.array(shpy).astype('int32')
+        data_x = np.random.uniform(low=-10, high=10, size=shape_x).astype(dtype.as_numpy_dtype)
+        data_y = np.random.uniform(low=-10, high=10, size=shape_y).astype(dtype.as_numpy_dtype)
+        return data_x, data_y
+
+    def create_mlu_input(x, y, dev):        
+        reshp_x = x.flatten()
+        x_dev = bp.Array(reshp_x, dev)
+
+        reshp_y = y.flatten()
+        y_dev = bp.Array(reshp_y, dev)
+
+        shp_x = np.array(x.shape).astype('int32')
+        shp_y = np.array(y.shape).astype('int32')
+        shp_x_dev = bp.Array(shp_x, dev)
+        shp_y_dev = bp.Array(shp_y, dev)
+
+        return x_dev, y_dev, shp_x_dev, shp_y_dev
+
+    def create_output(output_len, dev):
+        output_buffer = np.zeros(output_len, dtype=dtype.as_numpy_dtype)
+        return bp.Array(output_buffer, dev)
+
+    shpx = shape[0]
+    shpy = shape[1]
+
+    x, y = create_origin_input(shpx, shpy)
 
     dev = bp.device(0)
-    flat_x = data_x.flatten()
-    flat_x_dev = bp.Array(flat_x, dev)
 
-    flat_y = data_y.flatten()
-    flat_y_dev = bp.Array(flat_y, dev)
+    x_dev, y_dev, shp_x_dev, shp_y_dev = create_mlu_input(x, y, dev)
 
-    shp_x_dev = bp.Array(shape_x, dev)
-    shp_y_dev = bp.Array(shape_y, dev)
+    output_len = get_total_size(shpx) // shpx[1]
+    print('output size')
 
-    output_len = len(flat_x) // shape_x[1]
-    output_buffer = np.zeros(output_len, dtype=dtype.as_numpy_dtype)
-    output_dev = bp.Array(output_buffer, dev)
+    output_dev = create_output(output_len, dev)
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
-    if len(shape_x) > len(shape_y):
-        func(flat_x_dev, flat_y_dev, shp_x_dev, shp_y_dev, 
-            len(flat_x), len(flat_y), len(shape_x), len(shape_y), 
+    if len(shpx) > len(shpy):
+        func(x_dev, y_dev, shp_x_dev, shp_y_dev, 
+            get_total_size(shpx), get_total_size(shpy), len(shpx), len(shpy), 
             output_len, output_dev)
     else:
         func(flat_y_dev, flat_x_dev, shp_y_dev, shp_x_dev, 
-            len(flat_y), len(flat_x), len(shape_y), len(shape_x), 
+            len(flat_y), len(flat_x), len(shpy), len(shpx), 
             output_len, output_dev)
 
     '''bangpy.assert_allclose(
