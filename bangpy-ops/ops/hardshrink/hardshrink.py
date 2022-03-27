@@ -28,7 +28,7 @@ from bangpy.common import utils,load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 
-DTYPES = [bangpy.float32]
+DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "hardshrink"
 
@@ -57,8 +57,8 @@ class HardShrink(object):
         self.task_num = task_num
         self.task_type = task_type
         self.kernel_name = kernel_name
-        self.lambdaPara = self.bp.Var("lambdaPara", dtype = self.dtype)
-        self.scalar_lambda = self.bp.Scalar(name = "scalar_lambda", value = self.lambdaPara, dtype = self.dtype)
+        self.lambdaPara = self.bp.Var("lambdaPara", dtype = bangpy.float32)
+        self.scalar_lambda = self.bp.Scalar(name = "scalar_lambda", value = self.lambdaPara.astype(dtype), dtype = self.dtype) # need attention to the astype, or error: ‘half’ has not been declared
         """Attributes
         ------
         tcp : tcp.TCP

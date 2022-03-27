@@ -21,7 +21,7 @@
 """Test HardShrink operator with multi-platform code link."""
 import numpy as np
 import pytest
-from hardshrink import HardShrink, TARGET_LIST
+from hardshrink import HardShrink, TARGET_LIST, DTYPES
 import bangpy as bp
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
@@ -30,15 +30,18 @@ from bangpy.common import load_op_by_type
 import os
 import time
 
+# float16 has poor accuracy
 @pytest.mark.parametrize(
     "dtype",
-    [bp.float32],
+    DTYPES,
 )
 @pytest.mark.parametrize(
     "shape",
     [
         (4,16,1,1), # 4,194,304 1,095,642,089,843
-        # (4,16,972,1078),
+        (4,16,1024,1024),
+        (4,16,2048,2048),
+        (4,16,972,1078),
         # (4,16,4096),
         # (4,4096),
         # (4096)
