@@ -1,29 +1,8 @@
-# Copyright (C) [2021] by Cambricon, Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
 import numpy as np
 
 import bangpy
 from bangpy import tcp
+from bangpy.tcp.util import round_down
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
@@ -31,80 +10,112 @@ from bangpy.tcp.runtime import TaskType
 DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "expm1"
+ALIGN_SIZE = 64
 
 
 class Expm1(object):
-    """Operator description:
-    Add the data in the two buffers.
-    """
-
     def __init__(self, dtype, target, task_num):
         self.dtype = dtype
         self.target = target
         self.task_num = task_num
         self.bp = tcp.TCP(target)
-        self.length = self.bp.SizeVar("length")
+        self.dim_n = self.bp.SizeVar("dim_n")
+        self.dim_h = self.bp.SizeVar("dim_h")
+        self.dim_w = self.bp.SizeVar("dim_w")
+        self.dim_c = self.bp.SizeVar("dim_c")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        self.single_buffer_size = 1024
+        self.single_nram_size = round_down(
+            (self.nram_size - 30 * 1024) // 32 // self.dtype_sz, 128
+        )
         self.bp.launch_task(self.task_num, 1, 1)
 
     def compute_body(self):
-        # calculate split strategy
-        # gets the data length to be calculated for each task
-        data_calculated_each_task = self.length // self.task_num
-        # gets the number of cycles required for each task
-        loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
-        # gets the data length for each calculation
-        data_calculated_each_time = self.single_buffer_size // self.dtype_sz
-        # declare I/O buffer
+        # global
         buffer_in = self.bp.Buffer(
-            shape=(self.length,), name="INPUT", dtype=self.dtype, scope="global"
+            shape=(self.dim_n, self.dim_h, self.dim_w, self.dim_c),
+            dtype=self.dtype,
+            name="buffer_in",
+            scope="global"
         )
         buffer_out = self.bp.Buffer(
-            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
-        )
-        task_id = self.bp.taskId
-        # declare on-chip buffer
-        buffer_in_n = self.bp.Buffer(
-            shape=(data_calculated_each_time,),
-            name="INPUT_N",
+            shape=(self.dim_n, self.dim_h, self.dim_w, self.dim_c),
             dtype=self.dtype,
-            scope="nram",
-        )
-        buffer_out_n = self.bp.Buffer(
-            shape=(data_calculated_each_time,),
-            name="OUTPUT_N",
-            dtype=self.dtype,
-            scope="nram",
+            name="buffer_out",
+            scope="global"
         )
 
-        buffer_temp_n = self.bp.Buffer(
-            shape=(data_calculated_each_time,),
-            name="TEMP_N",
-            dtype=self.dtype,
-            scope="nram",
-        )
+        data_num = self.bp.Scalar(dtype=bangpy.int32, name="data_num")
+        data_num.assign(self.dim_n * self.dim_h * self.dim_w * self.dim_c)
+        average_core = self.bp.Scalar(dtype=bangpy.int32, name="average_core")
+        average_core.assign(data_num / self.task_num)
+        remain_core = self.bp.Scalar(dtype=bangpy.int32, name="remain")
+        remain_core.assign(data_num % self.task_num)
+
+        # flatten
+        flatten_buffer_in = buffer_in.reshape((data_num,))
+        flatten_buffer_out = buffer_out.reshape((data_num,))
         buffer_one = self.bp.Scalar(
             name="ONE",
             dtype=self.dtype,
             value=1,
         )
-        # split and compute
-        with self.bp.for_range(0, loop_num) as i:
-            start = task_id * data_calculated_each_task + i * data_calculated_each_time
-            stop = start + data_calculated_each_time
-            self.bp.memcpy(buffer_in_n, buffer_in[start:stop])
+
+        # nram
+        buffer_in_n = self.bp.Buffer(
+            shape=(self.single_nram_size,),
+            name="INPUT_N",
+            dtype=self.dtype,
+            scope="nram",
+        )
+        buffer_out_n = self.bp.Buffer(
+            shape=(self.single_nram_size,),
+            name="OUTPUT_N",
+            dtype=self.dtype,
+            scope="nram",
+        )
+
+        task_id = self.bp.taskId
+        core_start = task_id * average_core
+        with self.bp.if_scope(task_id == self.task_num - 1):
+            core_end = core_start + remain_core
+            repeat = (average_core + remain_core) // self.single_nram_size
+            remain = (average_core + remain_core) % self.single_nram_size
+        with self.bp.else_scope():
+            core_end = core_start + average_core
+            repeat = average_core // self.single_nram_size
+            remain = average_core % self.single_nram_size
+
+        with self.bp.for_range(0, repeat) as i:
+            start = core_start + i * self.single_nram_size
+            end = start + self.single_nram_size
+            self.bp.memcpy(buffer_in_n, flatten_buffer_in[start:end])
             self.bp.exp(buffer_in_n, buffer_in_n)
             self.bp.subtract(buffer_out_n, buffer_in_n, buffer_one)
-            self.bp.memcpy(buffer_out[start:stop], buffer_out_n)
-        # build a executable module
-        f = self.bp.BuildBANG(
-            inputs=[buffer_in],
-            outputs=[buffer_out],
+            self.bp.memcpy(flatten_buffer_out[start:end], buffer_out_n)
+        with self.bp.if_scope(remain != 0):
+            start = core_start + repeat * self.single_nram_size
+            end = start + remain
+            self.bp.memcpy(buffer_in_n[:remain], flatten_buffer_in[start:end])
+            self.bp.exp(buffer_in_n, buffer_in_n)
+            self.bp.subtract(buffer_out_n, buffer_in_n, buffer_one)
+            self.bp.memcpy(flatten_buffer_out[start:end], buffer_out_n[:remain])
+
+        buffer_out = flatten_buffer_out.reshape((self.dim_n, self.dim_h, self.dim_w, self.dim_c))
+
+        return self.bp.BuildBANG(
+            inputs=[
+                buffer_in,
+                self.dim_n,
+                self.dim_h,
+                self.dim_w,
+                self.dim_c
+            ],
+            outputs=[
+                buffer_out
+            ],
             kernel_name=KERNEL_NAME,
         )
-        return f
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)

@@ -29,31 +29,42 @@ from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from expm1 import DTYPES, KERNEL_NAME, TARGET_LIST
+import time
 
 
 @pytest.mark.parametrize(
     "shape",
     [
-        (2048,),
-        (4096,),
-        (6144,),
+        (8, 2, 7, 9),
     ],
 )
 @pytest.mark.parametrize(
-    "dtype", DTYPES,
+    "dtype", [bangpy.float32],
 )
 def test_expm1(target, shape, dtype):
     if target not in TARGET_LIST:
         return
-    data_in = np.random.uniform(low=-10, high=10, size=shape)
-
-    data_out = np.exp(data_in.astype(dtype.as_numpy_dtype)) - 1
+    data_in = np.random.uniform(low=-1, high=1, size=shape)
+    cpu_start = time.time()
+    data_out = np.expm1(data_in.astype(dtype.as_numpy_dtype))
+    cpu_end = time.time()
+    print("cpu exe time: " + str(cpu_end - cpu_start) + "s")
     dev = bangpy.device(0)
     # set I/O data
     data_in_dev = bangpy.Array(data_in.astype(dtype.as_numpy_dtype), dev)
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
-    f = load_op_by_type(KERNEL_NAME, dtype.name)
-    f(data_in_dev, data_out_dev)
+    f1 = load_op_by_type(KERNEL_NAME, dtype.name)
+    mlu_start = time.time()
+    f1(
+        data_in_dev,
+        shape[0],
+        shape[1],
+        shape[2],
+        shape[3],
+        data_out_dev
+    )
+    mlu_end = time.time()
+    print("mlu exe time: " + str(mlu_end - mlu_start) + "s")
     bangpy.assert_allclose(
-        data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype)
+        data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=3e-3, atol=3e-3
     )
