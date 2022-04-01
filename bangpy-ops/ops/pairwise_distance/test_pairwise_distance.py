@@ -36,7 +36,7 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 3, 4), (3, 4))
+        ((2, 3, 4), (2, 3, 4))
     ],
 )
 
@@ -62,60 +62,88 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     if target not in TARGET_LIST:
         return
 
-    def get_total_size(shp):
-        size = 1
-        for s in shp:
-            size *= s
-        return size
+    class pwsdst_processor:
+        _dtype = None
+        _p = 1
+        _eps = 0.000001
+        _keepdim = False
+        _shape1 = None
+        _shape2 = None
+        _dev = None
 
-    def create_origin_input(shpx, shpy):
-        shape_x = np.array(shpx).astype('int32')
-        shape_y = np.array(shpy).astype('int32')
-        data_x = np.random.uniform(low=-10, high=10, size=shape_x).astype(dtype.as_numpy_dtype)
-        data_y = np.random.uniform(low=-10, high=10, size=shape_y).astype(dtype.as_numpy_dtype)
-        return data_x, data_y
+        _ori_input1 = None
+        _ori_input2 = None
 
-    def create_mlu_input(x, y, dev):        
-        reshp_x = x.flatten()
-        x_dev = bp.Array(reshp_x, dev)
+        _mlu_input1 = None
+        _mlu_input2 = None
 
-        reshp_y = y.flatten()
-        y_dev = bp.Array(reshp_y, dev)
+        _mlu_output = None
+        _output_len = -1
 
-        shp_x = np.array(x.shape).astype('int32')
-        shp_y = np.array(y.shape).astype('int32')
-        shp_x_dev = bp.Array(shp_x, dev)
-        shp_y_dev = bp.Array(shp_y, dev)
+        _pd_height = -1
+        _pd_width = -1
+        _pd_len = -1
 
-        return x_dev, y_dev, shp_x_dev, shp_y_dev
+        def init(self, shapes, dtype, p, eps, keepdim):
+            self._dtype = dtype
+            self._p = p
+            self._eps = eps
+            self._keepdim = keepdim
+            if len(shape[0]) > len(shape[1]):
+                self._shape1 = shape[0]
+                self._shape2 = shape[1]
+            else:
+                self._shape1 = shape[1]
+                self._shape2 = shape[0]
 
-    def create_output(output_len, dev):
-        output_buffer = np.zeros(output_len, dtype=dtype.as_numpy_dtype)
-        return bp.Array(output_buffer, dev)
+            self._dev = bp.device(0)
 
-    shpx = shape[0]
-    shpy = shape[1]
 
-    x, y = create_origin_input(shpx, shpy)
+        def create_origin_intput(self):
+            shape1 = np.array(self._shape1).astype('int32')
+            shape2 = np.array(self._shape2).astype('int32')
+            self._ori_input1 = np.random.uniform(low=-10, high=10, size=shape1).astype(self._dtype.as_numpy_dtype)
+            self._ori_input2 = np.random.uniform(low=-10, high=10, size=shape2).astype(self._dtype.as_numpy_dtype)
 
-    dev = bp.device(0)
+        def create_mlu_input(self):
+            reshp_x = self._ori_input1.flatten()
+            self._mlu_input1 = bp.Array(reshp_x, self._dev)
 
-    x_dev, y_dev, shp_x_dev, shp_y_dev = create_mlu_input(x, y, dev)
+            reshp_y = self._ori_input2.flatten()
+            self._mlu_input2 = bp.Array(reshp_y, self._dev)
 
-    output_len = get_total_size(shpx) // shpx[1]
-    print('output size')
+        def create_output(self):
+            self._output_len = self.get_total_size(self._shape1) // self._shape1[1]
+            output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
+            self._mlu_output = bp.Array(output_buffer, self._dev)
 
-    output_dev = create_output(output_len, dev)
+        def get_total_size(self, shp):
+            size = 1
+            for s in shp:
+                size *= s
+            return size
+
+        def create_pd_paras(self):
+            self._pd_len = self._shape1[1]
+            self._pd_width = 1
+            for i in range(2, len(self._shape1)):
+                self._pd_width *= self._shape1[i]
+
+            self._pd_height = self._shape1[1] * self._shape1[0]
+
+
+
+    ins = pwsdst_processor()
+    ins.init(shape, dtype, p, eps, keepdim)    
+    ins.create_origin_intput()
+    ins.create_output()
+    ins.create_pd_paras()
+    ins.create_mlu_input()
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
-    if len(shpx) > len(shpy):
-        func(x_dev, y_dev, shp_x_dev, shp_y_dev, 
-            get_total_size(shpx), get_total_size(shpy), len(shpx), len(shpy), 
-            output_len, output_dev)
-    else:
-        func(flat_y_dev, flat_x_dev, shp_y_dev, shp_x_dev, 
-            len(flat_y), len(flat_x), len(shpy), len(shpx), 
-            output_len, output_dev)
+    func(ins._mlu_input1, ins._mlu_input2, ins.get_total_size(ins._shape1), ins.get_total_size(ins._shape2),
+         ins._pd_len, ins._pd_height, ins._pd_width, ins._output_len
+         , ins._mlu_output)
 
     '''bangpy.assert_allclose(
         output_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=0.1, atol=0.1
