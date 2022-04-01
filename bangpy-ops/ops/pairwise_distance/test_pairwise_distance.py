@@ -36,7 +36,7 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 3, 4), (2, 3, 4))
+        ((1666, 128, 8), (1666, 128, 8))
     ],
 )
 
@@ -107,6 +107,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
 
         def create_mlu_input(self):
             reshp_x = self._ori_input1.flatten()
+
             self._mlu_input1 = bp.Array(reshp_x, self._dev)
 
             reshp_y = self._ori_input2.flatten()

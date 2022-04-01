@@ -74,39 +74,61 @@ class PairwiseDistance(object):
         const_one = self.bp.Scalar(dtype = self.dtype, name = "const_one", value = 1)
         calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
         calc_loop_count.assign((total_count_in_core + nram_process_count - 1) // nram_process_count)
+
+        self.bp.print('bada hutong calc_loop_count ', calc_loop_count)
+
         with self.bp.for_range(0, calc_loop_count) as i:            
             once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
             with self.bp.if_scope(i < calc_loop_count - 1):
                 calc_size.assign(nram_process_count)
             with self.bp.else_scope():
                 calc_size.assign(total_count_in_core % nram_process_count)
+
             with self.bp.block("data_copy"):
                 self.bp.memcpy(nram_buffer_in0[0:calc_size], t1[once_loop_start:once_loop_start + calc_size]) 
-                self.bp.memcpy(nram_buffer_in1[0:calc_size], t2[once_loop_start:once_loop_start + calc_size]) 
-            
 
-            self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)# y-x
+                head_offset = self.bp.Scalar(bangpy.int32, "head_len", once_loop_start % len_t2)
 
-            self.bp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])   
+                with self.bp.if_scope(head_offset == 0):
+                    head_len = self.bp.Scalar(bangpy.int32, "head_len", 0)
+                with self.bp.else_scope():
+                    head_len = self.bp.Scalar(bangpy.int32, "head_len", len_t2 - head_offset)
 
-        '''
-        self.bp.memcpy(nram_buffer_in1[0:a], t1[0:a])
-        self.bp.memcpy(nram_buffer_in2[0:a], t2[0:a])
+                with self.bp.if_scope(head_len >= calc_size):
+                    self.bp.memcpy(nram_buffer_in1[0:calc_size], t2[head_offset:head_offset + calc_size])
+                with self.bp.else_scope():
+                    with self.bp.if_scope(head_len > 0):
+                        self.bp.memcpy(nram_buffer_in1[0:head_len], t2[head_offset:len_t2])             
 
-        self.bp.subtract(nram_buffer_in1, nram_buffer_in1, nram_buffer_in2)
+                    total_offset = self.bp.Scalar(bangpy.int32, "total_offset")
+                    total_offset.assign(head_len)
 
-        self.bp.memcpy(t1[0:a], nram_buffer_in1[0:a])
-        '''
+                    body_cp_count = self.bp.Scalar(bangpy.int32, "body_cp_count")
+                    body_cp_count.assign((calc_size - head_len) // len_t2)
 
+                    with self.bp.for_range(0, body_cp_count) as j: 
+                        self.bp.memcpy(nram_buffer_in1[total_offset:total_offset + len_t2], t2[0:len_t2])    
+                        total_offset.assign(total_offset + len_t2)                            
 
+                    offset_end = self.bp.Scalar(bangpy.int32, "offset_end")
+                    offset_end.assign((once_loop_start + calc_size) % len_t2)
+                    
+                    with self.bp.if_scope(offset_end > 0):
+                        self.bp.memcpy(nram_buffer_in1[total_offset:total_offset + offset_end], t2[0:offset_end])      
+
+            with self.bp.block("compute"):
+                self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)# y-x
+
+            with self.bp.block("data_copy"):
+                self.bp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])   
+
+    
     def compute_body(self):
         self._data_man.init(self.bp)
         self.bp.launch_task(self.task_num, 1, 1)
 
         self.len_tensor1 = self.bp.SizeVar("len_tensor1")
         self.len_tensor2 = self.bp.SizeVar("len_tensor2")
-
-        self.bp.print(self.len_tensor1)
         
         self.pd_len = self.bp.SizeVar("pd_len")
         self.pd_height = self.bp.SizeVar("pd_height")
@@ -126,10 +148,7 @@ class PairwiseDistance(object):
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
-        self.bp.print(gram_tensor1)
-        self.bp.print(gram_tensor2)
         self.sub_tensor(gram_tensor1, gram_tensor2, self.len_tensor1, self.len_tensor2)
-        self.bp.print(gram_tensor1)
         self.bp.sync_all()
 
 
@@ -166,6 +185,9 @@ class PairwiseDistance(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_pairwisedistance(dtype=None, target=None):
-    task_num = 4
+    task_num = 8
     f = PairwiseDistance(dtype, target, task_num).compute_body()
     return f
+
+
+
