@@ -75,8 +75,6 @@ class PairwiseDistance(object):
         calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
         calc_loop_count.assign((total_count_in_core + nram_process_count - 1) // nram_process_count)
 
-        self.bp.print('bada hutong calc_loop_count ', calc_loop_count)
-
         with self.bp.for_range(0, calc_loop_count) as i:            
             once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
             with self.bp.if_scope(i < calc_loop_count - 1):
@@ -151,27 +149,16 @@ class PairwiseDistance(object):
         self.sub_tensor(gram_tensor1, gram_tensor2, self.len_tensor1, self.len_tensor2)
         self.bp.sync_all()
 
+        # reshape tensor1.
+        with self.bp.if_scope(self.bp.taskId == 0):
+            #self.bp.print(gram_tensor1)
 
-       
-        '''
-        nram_buff = self.bp.Buffer(
-            shape=(2, 1), dtype=self.dtype, name="count", scope="nram"
-        )
+            buf = gram_tensor1.reshape([self.pd_height, self.pd_width])
+            self.bp.print(buf)
+        self.bp.sync_all()
 
-        self.bp.print(gram_x)
-        self.bp.memcpy(nram_buff[0:2, 0:1], gram_x[0:2, 0:1])
+        
 
-        self.bp.print(nram_buff)
-        self.bp.print("-------", )
-
-
-        self.bp.print(gram_y)
-        self.bp.print(gram_shp_x)
-        self.bp.print(gram_shp_y)
-        self.bp.print('shp x len ', self.shp_x_len)
-        self.bp.print(self.shp_y_len)
-        #self.bp.print(buffer_out)
-        '''
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor1, gram_tensor2, 

@@ -36,7 +36,7 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((1666, 128, 8), (1666, 128, 8))
+        ((2, 2, 3, 4), (2, 3, 4))
     ],
 )
 
@@ -150,3 +150,5 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         output_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=0.1, atol=0.1
     )'''
    
+
+    print (ins._mlu_output.numpy())
