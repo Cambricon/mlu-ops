@@ -68,23 +68,25 @@ class PairwiseDistance(object):
         )
 
         current_core_start = self._data_man._current_core_start
-        once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
         total_count_in_core = self._data_man._total_count_in_core
-        calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
-        const_one = self.bp.Scalar(dtype = self.dtype, name = "const_one", value = 1)
-        calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
-        calc_loop_count.assign((total_count_in_core + nram_process_count - 1) // nram_process_count)
+        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
 
-        with self.bp.for_range(0, calc_loop_count) as i:            
-            once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
+        calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
+        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + nram_process_count - 1) // nram_process_count)
+
+        with self.bp.for_range(0, calc_loop_count) as i:          
             with self.bp.if_scope(i < calc_loop_count - 1):
                 calc_size.assign(nram_process_count)
             with self.bp.else_scope():
                 calc_size.assign(total_count_in_core % nram_process_count)
 
+            once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
+
             with self.bp.block("data_copy"):
+                # tensor1 copy
                 self.bp.memcpy(nram_buffer_in0[0:calc_size], t1[once_loop_start:once_loop_start + calc_size]) 
 
+                # tensor2 copy
                 head_offset = self.bp.Scalar(bangpy.int32, "head_len", once_loop_start % len_t2)
 
                 with self.bp.if_scope(head_offset == 0):
@@ -101,21 +103,19 @@ class PairwiseDistance(object):
                     total_offset = self.bp.Scalar(bangpy.int32, "total_offset")
                     total_offset.assign(head_len)
 
-                    body_cp_count = self.bp.Scalar(bangpy.int32, "body_cp_count")
-                    body_cp_count.assign((calc_size - head_len) // len_t2)
+                    body_cp_count = self.bp.Scalar(bangpy.int32, "body_cp_count", (calc_size - head_len) // len_t2)
 
                     with self.bp.for_range(0, body_cp_count) as j: 
                         self.bp.memcpy(nram_buffer_in1[total_offset:total_offset + len_t2], t2[0:len_t2])    
                         total_offset.assign(total_offset + len_t2)                            
 
-                    offset_end = self.bp.Scalar(bangpy.int32, "offset_end")
-                    offset_end.assign((once_loop_start + calc_size) % len_t2)
+                    offset_end = self.bp.Scalar(bangpy.int32, "offset_end", (once_loop_start + calc_size) % len_t2)
                     
                     with self.bp.if_scope(offset_end > 0):
                         self.bp.memcpy(nram_buffer_in1[total_offset:total_offset + offset_end], t2[0:offset_end])      
 
             with self.bp.block("compute"):
-                self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)# y-x
+                self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
 
             with self.bp.block("data_copy"):
                 self.bp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])   
@@ -146,18 +146,18 @@ class PairwiseDistance(object):
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
+        gram_buffer_temp = self.bp.Buffer(
+            shape=((self.task_num - 1) * 2, ), name="gram_buffer_temp", dtype=self.dtype, scope="global"
+        )
+
         self.sub_tensor(gram_tensor1, gram_tensor2, self.len_tensor1, self.len_tensor2)
+        self.bp.print(gram_tensor1)
         self.bp.sync_all()
 
-        # reshape tensor1.
+        # self.len_tensor1 == 48
         with self.bp.if_scope(self.bp.taskId == 0):
-            #self.bp.print(gram_tensor1)
-
-            buf = gram_tensor1.reshape([self.pd_height, self.pd_width])
-            self.bp.print(buf)
-        self.bp.sync_all()
-
-        
+            newBuffer = gram_tensor1.reshape([self.pd_height, self.pd_width])
+        self.bp.sync_all()        
 
 
         f = self.bp.BuildBANG(
