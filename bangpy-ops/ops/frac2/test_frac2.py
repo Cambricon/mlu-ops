@@ -28,7 +28,7 @@ from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
-from frac import DTYPES, KERNEL_NAME, TARGET_LIST
+from frac2 import DTYPES, KERNEL_NAME, TARGET_LIST
 
 import os
 import time
@@ -36,7 +36,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [
-        (4, 4, 4, 127),
+        (4, 4, 3, 2),
     ],
 )
 @pytest.mark.parametrize(
@@ -45,6 +45,7 @@ import time
 def test_frac(target, shape, dtype):
     if target not in TARGET_LIST:
         return
+    print(TARGET(target).nram_size)
     data_in = np.random.uniform(low=-10, high=10, size=shape)
     data_absolute = np.absolute(data_in)
     data_floor = np.floor(data_absolute)
@@ -69,6 +70,5 @@ def test_frac(target, shape, dtype):
     theory_io_size = shape[0] * shape[1] * shape[2] * shape[3] * 4 * 2
     IO_BANDWIDTH = 1024 * 1024 * 1024 * 1024
     latency = mlu_end_time - mlu_start_time
-    #print(latency)
     io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
     print(io_efficiency)

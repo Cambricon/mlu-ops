@@ -1,0 +1,21 @@
+#include <iostream>
+#include <vector>
+#include "kernel.h"
+#include "runtime_tensor.h"
+RuntimeStatus_t MluOpFrac(
+  RuntimeHandle_t handle,
+  const RuntimeTensorDescriptor_t desc_INPUT,
+  const void *INPUT,
+  const RuntimeTensorDescriptor_t desc_OUTPUT,
+  const void *OUTPUT){
+    cnrtDim3_t k_dim;
+    cnrtFunctionType_t k_type;
+    k_type = CNRT_FUNC_TYPE_BLOCK;
+    k_dim.x = 1;
+    k_dim.y = 1;
+    k_dim.z = 1;
+    if(desc_INPUT->dtype == RUNTIME_DTYPE_FLOAT && desc_OUTPUT->dtype == RUNTIME_DTYPE_FLOAT){
+        frac_float32_kernel0<<<k_dim, k_type, handle->queue>>>((float*)INPUT, (float*)OUTPUT, desc_OUTPUT->dims[0], desc_OUTPUT->dims[1], desc_OUTPUT->dims[2], desc_OUTPUT->dims[3]);
+    }
+    return RUNTIME_STATUS_SUCCESS;
+}

@@ -1,0 +1,11 @@
+#if defined(__BANG_ARCH__)
+#include "kernel.h"
+#endif
+#if __BANG_ARCH__ == 290
+#include "frac_mtp_290.inc"
+#elif defined(__BANG_ARCH__)
+#else
+#include <bang.h>
+#include <stdint.h>
+extern "C" __mlu_global__ void frac_float32_kernel0(float* INPUT, float* OUTPUT, int dim_0, int dim_1, int dim_2, int dim_3) {}
+#endif
