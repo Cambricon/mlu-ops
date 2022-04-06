@@ -24,8 +24,6 @@ import pytest
 from hardshrink import HardShrink, TARGET_LIST, DTYPES
 import bangpy as bp
 from bangpy import tcp
-from bangpy.tcp.runtime import TaskType
-from bangpy.platform.bang_config import TARGET
 from bangpy.common import load_op_by_type
 import os
 import time
@@ -37,11 +35,11 @@ import time
 )
 @pytest.mark.parametrize(
     "shape",
-    [
-        (4,16,1,1), # 4,194,304 1,095,642,089,843
-        (4,16,1024,1024),
-        (4,16,2048,2048),
-        (4,16,972,1078),
+    [   
+        # (20, 4, 4096, 4096),
+        (4, 16, 1024, 1024),
+        # (4,16,1,64), # 4,194,304 1,095,642,089,843
+        (3, 5,197 ,175),
         # (4,16,4096),
         # (4,4096),
         # (4096)
@@ -51,12 +49,12 @@ import time
     "lambdaPara",
     [0.5,]
 )
-@pytest.mark.parametrize(
-    "dim_num",
-    [4,]
-)
+# @pytest.mark.parametrize(
+#     "dim_num",
+#     [4,]
+# )
 
-def test_hardshrink(target,shape,dtype,lambdaPara,dim_num):
+def test_hardshrink(target,shape,dtype,lambdaPara):
     """Test case."""
     if target not in TARGET_LIST:
         return
@@ -71,7 +69,6 @@ def test_hardshrink(target,shape,dtype,lambdaPara,dim_num):
     mlu_start_time = time.time()
     f_hardshrink(
         data_in_dev,
-        dim_num,
         lambdaPara,
         data_out_dev
     )
@@ -82,8 +79,10 @@ def test_hardshrink(target,shape,dtype,lambdaPara,dim_num):
     cpu_start_time = time.time()
     cpu_out = np.where((data_in + lambdaPara > -eps) & (data_in - lambdaPara < eps), 0, data_in)
     cpu_end_time = time.time()
+
     print("mlu run time:", mlu_end_time - mlu_start_time)
     print("cpu run time:", cpu_end_time - cpu_start_time)
+
     bp.assert_allclose(
         data_out_dev.numpy(),
         cpu_out.astype(dtype.as_numpy_dtype),
