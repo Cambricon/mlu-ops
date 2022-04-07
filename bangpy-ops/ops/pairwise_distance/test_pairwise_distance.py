@@ -145,7 +145,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     ins.create_mlu_input()
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
-    func(ins._mlu_input1, ins._mlu_input2, ins.get_total_size(ins._shape1), ins.get_total_size(ins._shape2),
+    func(ins._mlu_input1, ins._mlu_input2, 
+         ins.get_total_size(ins._shape1), ins.get_total_size(ins._shape2),
          ins._pd_len, ins._pd_height, ins._pd_width, ins._output_len
          , ins._mlu_output, ins._mlu_border_output)
 

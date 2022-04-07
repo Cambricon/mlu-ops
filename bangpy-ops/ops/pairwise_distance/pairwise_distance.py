@@ -53,12 +53,12 @@ class PairwiseDistance(object):
 
         nram_buffer_in = self.bp.Buffer(
             shape=(2, nram_process_count),
-            name="nram_buffer_in0",
+            name="nram_buffer_in",
             dtype=self.dtype,
             scope="nram")
 
         nram_buffer_in0 = nram_buffer_in[0][:] 
-        nram_buffer_in1 = nram_buffer_in[1][:] 
+        nram_buffer_in1 = nram_buffer_in[1][:]  
 
 
         current_core_start = self._data_man._current_core_start
@@ -222,10 +222,8 @@ class PairwiseDistance(object):
                     tail_start = nram_pos_offset + body_cp_count * dim_len
                     norm_value = self.calc_norm(nram_norm_buffer, tail_start, tail_start + tail_size)
 
-
-
             with self.bp.block("data_copy"):
-                if oper_type == 0:                    
+                if oper_type == 0:        
                     with self.bp.if_scope(norm_offset == dim_len):
                         #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
                         if norm_total_count == 1:
@@ -242,8 +240,9 @@ class PairwiseDistance(object):
 
 
 
+
     def calc_norm(self, buffer, start, end):
-        return 0.0
+        return 1.0
         
 
     
@@ -273,7 +272,7 @@ class PairwiseDistance(object):
         )
 
         gram_border_buf_out = self.bp.Buffer(
-            shape=(256 * 2, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
+            shape=(256, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
         )
 
         self._data_man.calc_core_process_count(self.len_tensor1, self.task_num)
@@ -287,9 +286,11 @@ class PairwiseDistance(object):
 
         self.calc_pairwise_distance(gram_reshape_tensor, self.pd_len, self.pd_height, self.pd_width, gram_border_buf_out, gram_buffer_out)
 
+        self.bp.sync_all()
+
 
         f = self.bp.BuildBANG(
-            inputs=[gram_tensor1, gram_tensor2, 
+            inputs=[gram_tensor1, gram_tensor2,
                     self.len_tensor1, self.len_tensor2,
                     self.pd_len, self.pd_height, self.pd_width,
                     self.output_len],
