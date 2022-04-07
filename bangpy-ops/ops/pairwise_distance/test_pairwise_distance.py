@@ -118,6 +118,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
             self._mlu_output = bp.Array(output_buffer, self._dev)
 
+            output_buffer2 = np.zeros(256, dtype=self._dtype.as_numpy_dtype)
+            self._mlu_border_output = bp.Array(output_buffer2, self._dev)
+
         def get_total_size(self, shp):
             size = 1
             for s in shp:
@@ -144,7 +147,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     func = load_op_by_type(KERNEL_NAME, dtype.name)
     func(ins._mlu_input1, ins._mlu_input2, ins.get_total_size(ins._shape1), ins.get_total_size(ins._shape2),
          ins._pd_len, ins._pd_height, ins._pd_width, ins._output_len
-         , ins._mlu_output)
+         , ins._mlu_output, ins._mlu_border_output)
 
     '''bangpy.assert_allclose(
         output_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=0.1, atol=0.1
