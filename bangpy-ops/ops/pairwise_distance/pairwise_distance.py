@@ -189,6 +189,7 @@ class PairwiseDistance(object):
                         # 拷贝头，身，尾巴
                         head_len = self.bp.Scalar(bangpy.int32, "head_len", dim_len - norm_offset)
                         nram_pos_offset.assign(dim_len - norm_offset)
+                        self.bp.print(" bada ", head_len)
                     
                     # 拷贝身，尾巴, 如果state是2，norm_offset 就是 0
                     # 先计算一下，能拷贝多少
@@ -236,6 +237,14 @@ class PairwiseDistance(object):
                     with self.bp.if_scope(tail_size > 0): # 尾巴长度不是0
                         with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环
                             head_tail_buf[2 * self.bp.taskId + 1] = norm_value # 彻底完了.
+
+            self.bp.sync_all()
+            with self.bp.if_scope(self.bp.taskId != 0):
+                # 把接缝处给它补上。0号core不需要补
+                with self.bp.if_scope(current_core_start % dim_len != 0):
+                    head = head_tail_buf[2 * (self.bp.taskId - 1) + 1]
+                    tail = head_tail_buf[2 * self.bp.taskId]
+                    outputs[(current_core_start + dim_len - 1) // dim_len - 1] = head + tail
                             
 
 
