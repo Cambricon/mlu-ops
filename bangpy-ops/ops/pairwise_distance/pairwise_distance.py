@@ -110,6 +110,7 @@ class PairwiseDistance(object):
 
             with self.bp.block("compute"):
                 self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
+                self.bp.abs(nram_buffer_in0, nram_buffer_in0)
 
             with self.bp.block("data_copy"):
                 self.bp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])   
@@ -152,7 +153,7 @@ class PairwiseDistance(object):
         1 : 要压缩的维度，从中间开始，比nram小
         2 : 要压缩的维度，从头开始
         '''
-        oper_type = 0
+        oper_type = self.bp.Scalar(bangpy.int32, "oper_type", 0)
 
         # 确认本次循环要从gram拷贝回nram的数量      
         calc_size = self.bp.Scalar(bangpy.int32, "calc_size", nram_process_count)
@@ -161,6 +162,9 @@ class PairwiseDistance(object):
             with self.bp.if_scope(i == calc_loop_count - 1):
                 calc_size.assign(total_count_in_core % nram_process_count)
                 
+            self.bp.print("cur core calc data size ", total_count_in_core, calc_size)
+
+
             # 确认本次要处理的数据开头，在gram中的偏移量
             #当前核心数据开始的位置 + 第i次循环所应偏移的长度
             cur_loop_start = self.bp.Scalar(bangpy.int32, "cur_loop_start", current_core_start + nram_process_count * i)
@@ -169,23 +173,23 @@ class PairwiseDistance(object):
             norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", cur_loop_start % dim_len)
             with self.bp.if_scope(norm_offset == 0):
                 # 如果正好是开头，那么就走正常流程
-                oper_type = 2
+                oper_type.assign(2)
             with self.bp.else_scope():
                 with self.bp.if_scope(dim_len - norm_offset >= calc_size):
-                    oper_type = 0
+                    oper_type.assign(0)
                 with self.bp.else_scope():
-                    oper_type = 1
+                    oper_type.assign(1)
 
             # 开始拷贝数据了
             nram_pos_offset = self.bp.Scalar(bangpy.int32, "nram_pos_offset", 0)
             tail_size = self.bp.Scalar(bangpy.int32, "tail_size", 0)
             body_cp_count = self.bp.Scalar(bangpy.int32, "body_cp_count", 0)
             with self.bp.block("data_copy"):
-                if oper_type == 0:
+                with self.bp.if_scope(oper_type == 0):
                     self.copy_from_2d_tensor(nram_norm_buffer, 0, tensor, cur_loop_start, dim_len, height, width, calc_size)
                     norm_offset.assign(norm_offset + calc_size)
-                else:                    
-                    if oper_type == 1:
+                with self.bp.else_scope():                    
+                    with self.bp.if_scope(oper_type == 1):
                         # 拷贝头，身，尾巴
                         head_len = self.bp.Scalar(bangpy.int32, "head_len", dim_len - norm_offset)
                         nram_pos_offset.assign(dim_len - norm_offset)
@@ -212,27 +216,26 @@ class PairwiseDistance(object):
 
             seg_norm_value = None
             with self.bp.block("compute"):
-                if oper_type == 0:
+                with self.bp.if_scope(oper_type == 0):
                     seg_norm_value = self.calc_norm(nram_norm_buffer, 0, calc_size)
                     norm_value = seg_norm_value + norm_value
                     with self.bp.if_scope(norm_offset == dim_len):
                         #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
                         norm_total_count += 1
-                else:
+                with self.bp.else_scope():   
                     # 身子直接计算，拷贝完成了。只考虑tail的问题。
                     tail_start = nram_pos_offset + body_cp_count * dim_len
                     norm_value = self.calc_norm(nram_norm_buffer, tail_start, tail_start + tail_size)
 
             with self.bp.block("data_copy"):
-                if oper_type == 0:        
+                with self.bp.if_scope(oper_type == 0):        
                     with self.bp.if_scope(norm_offset == dim_len):
                         #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
                         if norm_total_count == 1:
                             # 这个 core 处理的第一个张量
                             head_tail_buf[2 * self.bp.taskId] = norm_value
                             norm_value = 0.0
-
-                else:
+                with self.bp.else_scope():   
                     # 身子也不管了，只考虑tail
                     with self.bp.if_scope(tail_size > 0): # 尾巴长度不是0
                         with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环
@@ -312,7 +315,7 @@ class PairwiseDistance(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_pairwisedistance(dtype=None, target=None):
-    task_num = 8
+    task_num = 1
     f = PairwiseDistance(dtype, target, task_num).compute_body()
     return f
 

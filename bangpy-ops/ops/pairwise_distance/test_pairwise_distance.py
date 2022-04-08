@@ -23,6 +23,7 @@
 from cmath import pi
 from traceback import print_tb
 import numpy as np
+#import torch
 import pytest
 
 import bangpy
@@ -33,10 +34,12 @@ from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 
+
+
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 2, 3, 4), (2, 3, 4))
+        ((2, 2, 2), (2, 2, 2))
     ],
 )
 
@@ -104,6 +107,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             shape2 = np.array(self._shape2).astype('int32')
             self._ori_input1 = np.random.uniform(low=-10, high=10, size=shape1).astype(self._dtype.as_numpy_dtype)
             self._ori_input2 = np.random.uniform(low=-10, high=10, size=shape2).astype(self._dtype.as_numpy_dtype)
+            print(self._ori_input1)
+            print(self._ori_input2)
 
         def create_mlu_input(self):
             reshp_x = self._ori_input1.flatten()
@@ -150,11 +155,6 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
          ins._pd_len, ins._pd_height, ins._pd_width, ins._output_len
          , ins._mlu_output, ins._mlu_border_output)
 
-    '''bangpy.assert_allclose(
-        output_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=0.1, atol=0.1
-    )'''
-   
-
     result = ins._mlu_output.numpy()
     outputshape = []
     for item in ins._shape1:
@@ -163,3 +163,15 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     print(outputshape)
     ret = result.reshape(outputshape)
     print(ret)
+
+    '''
+    print("==============================")
+
+    pdist = torch.nn.PairwiseDistance(p=1)
+    tensor1 = torch.Tensor(ins._ori_input1)
+    tensor2 = torch.Tensor(ins._ori_input2)
+
+    print(pdist(tensor1, tensor2))
+
+    '''
+    
