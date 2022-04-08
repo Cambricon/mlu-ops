@@ -155,4 +155,11 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     )'''
    
 
-    print (ins._mlu_output.numpy())
+    result = ins._mlu_output.numpy()
+    outputshape = []
+    for item in ins._shape1:
+        outputshape.append(item)
+    outputshape[1] = 1
+    print(outputshape)
+    ret = result.reshape(outputshape)
+    print(ret)

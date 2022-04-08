@@ -251,9 +251,11 @@ class PairwiseDistance(object):
 
 
     def calc_norm(self, buffer, start, end):
-        return 1.0
-        
-
+        result = self.bp.Scalar(self.dtype, "size", 0.0)
+        size = self.bp.Scalar(bangpy.int32, "size", end - start - 1)
+        with self.bp.for_range(0, size) as i:          
+            result.assign(buffer[i] + result)
+        return result
     
     def compute_body(self):
         self._data_man.init(self.bp)
