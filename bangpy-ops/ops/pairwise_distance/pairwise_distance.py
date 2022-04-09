@@ -162,9 +162,6 @@ class PairwiseDistance(object):
             with self.bp.if_scope(i == calc_loop_count - 1):
                 calc_size.assign(total_count_in_core % nram_process_count)
                 
-            self.bp.print("cur core calc data size ", total_count_in_core, calc_size)
-
-
             # 确认本次要处理的数据开头，在gram中的偏移量
             #当前核心数据开始的位置 + 第i次循环所应偏移的长度
             cur_loop_start = self.bp.Scalar(bangpy.int32, "cur_loop_start", current_core_start + nram_process_count * i)
@@ -193,7 +190,6 @@ class PairwiseDistance(object):
                         # 拷贝头，身，尾巴
                         head_len = self.bp.Scalar(bangpy.int32, "head_len", dim_len - norm_offset)
                         nram_pos_offset.assign(dim_len - norm_offset)
-                        self.bp.print(" bada ", head_len)
                     
                     # 拷贝身，尾巴, 如果state是2，norm_offset 就是 0
                     # 先计算一下，能拷贝多少
@@ -203,6 +199,7 @@ class PairwiseDistance(object):
                         self.copy_from_2d_tensor(nram_norm_buffer, nram_pos_offset + j * dim_len, 
                                                  tensor, cur_loop_start + nram_pos_offset + j * dim_len, 
                                                  dim_len, height, width, dim_len)
+
                         body_norm_value = self.calc_norm(nram_norm_buffer, nram_pos_offset + j * dim_len, nram_pos_offset + (j + 1) * dim_len)
                         outputs[nram_pos_offset // dim_len + j] = body_norm_value # 计算完毕，直接拷贝回输出
                         norm_total_count += 1
@@ -250,14 +247,12 @@ class PairwiseDistance(object):
                     outputs[(current_core_start + dim_len - 1) // dim_len - 1] = head + tail
                             
 
-
-
-
     def calc_norm(self, buffer, start, end):
         result = self.bp.Scalar(self.dtype, "size", 0.0)
-        size = self.bp.Scalar(bangpy.int32, "size", end - start - 1)
+        size = self.bp.Scalar(bangpy.int32, "size", end - start)
         with self.bp.for_range(0, size) as i:          
-            result.assign(buffer[i] + result)
+            result.assign(buffer[start + i] + result)
+        
         return result
     
     def compute_body(self):
@@ -296,10 +291,6 @@ class PairwiseDistance(object):
 
         with self.bp.if_scope(self.bp.taskId == 0):
             gram_reshape_tensor = gram_tensor1.reshape([self.pd_height, self.pd_width])
-            self.bp.print("************************")
-            self.bp.print(gram_tensor1)
-            self.bp.print(gram_reshape_tensor)
-            self.bp.print("************************")
         self.bp.sync_all()
 
         self.calc_pairwise_distance(gram_reshape_tensor, self.pd_len, self.pd_height, self.pd_width, gram_border_buf_out, gram_buffer_out)

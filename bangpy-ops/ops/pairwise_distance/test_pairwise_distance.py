@@ -34,12 +34,12 @@ from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 
-
+import time
 
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 3, 2), (2, 3, 2))    
+        ((2, 3, 4), (3, 4))    
     ],
 )
 
@@ -156,6 +156,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     ins.init(shape, dtype, p, eps, keepdim)    
     ins.create_origin_intput()
 
+    mlu_start = time.time()
+
     dim_index = len(ins._shape1) - 1
     ins.create_pd_paras(dim_index)
     ins.create_output(dim_index)
@@ -177,15 +179,18 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         for i in range(0, len(ins._shape1) - 1):
             outputshape.append(ins._shape1[i])
 
-    print(outputshape)
     ret = result.reshape(outputshape)
+    print('mlu cost ', time.time() - mlu_start)
     print(ret)
 
     
     print("============torch calc==================")
 
+    cpu_start = time.time()
     pdist = torch.nn.PairwiseDistance(p=ins._p, keepdim=keepdim)
     tensor1 = torch.Tensor(ins._ori_input1)
     tensor2 = torch.Tensor(ins._ori_input2)
+    cpu_ret = pdist(tensor1, tensor2)
+    print('cpu cost ', time.time() - cpu_start)
 
-    print(pdist(tensor1, tensor2))
+    print(cpu_ret)
