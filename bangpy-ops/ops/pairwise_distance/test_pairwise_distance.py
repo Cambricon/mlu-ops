@@ -23,7 +23,7 @@
 from cmath import pi
 from traceback import print_tb
 import numpy as np
-#import torch
+import torch
 import pytest
 
 import bangpy
@@ -39,7 +39,7 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 2, 2), (2, 2, 2))
+        ((2, 3, 2), (2, 3, 2))    
     ],
 )
 
@@ -48,7 +48,7 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 )
 
 @pytest.mark.parametrize(
-    "p", [2.],
+    "p", [1.],
 )
 
 @pytest.mark.parametrize(
@@ -118,8 +118,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             reshp_y = self._ori_input2.flatten()
             self._mlu_input2 = bp.Array(reshp_y, self._dev)
 
-        def create_output(self):
-            self._output_len = self.get_total_size(self._shape1) // self._shape1[1]
+        def create_output(self, dim_index):
+            self._output_len = self.get_total_size(self._shape1) // self._shape1[dim_index]
             output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
             self._mlu_output = bp.Array(output_buffer, self._dev)
 
@@ -132,21 +132,33 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 size *= s
             return size
 
-        def create_pd_paras(self):
-            self._pd_len = self._shape1[1]
+        def create_pd_paras(self, dim_index):
+            shp_len = len(self._shape1)
+
+            self._pd_len = self._shape1[shp_len - 1]
+            self._pd_height = 1
             self._pd_width = 1
-            for i in range(2, len(self._shape1)):
-                self._pd_width *= self._shape1[i]
 
-            self._pd_height = self._shape1[1] * self._shape1[0]
+            for i in range(0, dim_index + 1):
+                self._pd_height *= self._shape1[i]
 
+            if dim_index == shp_len - 1:
+                pass
+            else:
+                for i in range(dim_index + 1, shp_len):
+                    self._pd_width *= self._shape1[i]
 
+            #print(self._pd_height, self._pd_width)
+
+    
 
     ins = pwsdst_processor()
     ins.init(shape, dtype, p, eps, keepdim)    
     ins.create_origin_intput()
-    ins.create_output()
-    ins.create_pd_paras()
+
+    dim_index = len(ins._shape1) - 1
+    ins.create_pd_paras(dim_index)
+    ins.create_output(dim_index)
     ins.create_mlu_input()
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
@@ -157,21 +169,23 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
 
     result = ins._mlu_output.numpy()
     outputshape = []
-    for item in ins._shape1:
-        outputshape.append(item)
-    outputshape[1] = 1
+    if keepdim:
+        for item in ins._shape1:
+            outputshape.append(item)
+        outputshape[dim_index] = 1
+    else:
+        for i in range(0, len(ins._shape1) - 1):
+            outputshape.append(ins._shape1[i])
+
     print(outputshape)
     ret = result.reshape(outputshape)
     print(ret)
 
-    '''
-    print("==============================")
+    
+    print("============torch calc==================")
 
-    pdist = torch.nn.PairwiseDistance(p=1)
+    pdist = torch.nn.PairwiseDistance(p=ins._p, keepdim=keepdim)
     tensor1 = torch.Tensor(ins._ori_input1)
     tensor2 = torch.Tensor(ins._ori_input2)
 
     print(pdist(tensor1, tensor2))
-
-    '''
-    

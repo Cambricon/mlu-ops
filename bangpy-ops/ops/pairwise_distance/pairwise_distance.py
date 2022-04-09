@@ -296,6 +296,10 @@ class PairwiseDistance(object):
 
         with self.bp.if_scope(self.bp.taskId == 0):
             gram_reshape_tensor = gram_tensor1.reshape([self.pd_height, self.pd_width])
+            self.bp.print("************************")
+            self.bp.print(gram_tensor1)
+            self.bp.print(gram_reshape_tensor)
+            self.bp.print("************************")
         self.bp.sync_all()
 
         self.calc_pairwise_distance(gram_reshape_tensor, self.pd_len, self.pd_height, self.pd_width, gram_border_buf_out, gram_buffer_out)
