@@ -10,8 +10,8 @@ RuntimeStatus_t MluOpFrac(
   const void *OUTPUT){
     cnrtDim3_t k_dim;
     cnrtFunctionType_t k_type;
-    k_type = CNRT_FUNC_TYPE_BLOCK;
-    k_dim.x = 1;
+    k_type = CNRT_FUNC_TYPE_UNION16;
+    k_dim.x = 64;
     k_dim.y = 1;
     k_dim.z = 1;
     if(desc_INPUT->dtype == RUNTIME_DTYPE_FLOAT && desc_OUTPUT->dtype == RUNTIME_DTYPE_FLOAT){
