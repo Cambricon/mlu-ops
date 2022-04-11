@@ -125,7 +125,9 @@ class PairwiseDistance(object):
         big_n = (offset_src + dim_len - 1) % dim_len
         n = big_n % width
 
-        self.bp.memcpy(dst[offset_dst:offset_dst + cp_len, 0:1], src[m:m + cp_len, n:n + 1])
+        self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], src[m:m + cp_len  // 2, n:n + 1])
+        self.bp.memcpy(dst[offset_dst+ cp_len // 2:offset_dst + cp_len, 0:1], src[m+ cp_len // 2:m + cp_len, n:n + 1])
+
 
     def calc_pairwise_distance(self, tensor, dim_len, height, width, head_tail_buf, outputs):
         nram_avable_size = round_down( (TARGET(self.target).nram_size - 30 * 1024), 128)
@@ -145,8 +147,8 @@ class PairwiseDistance(object):
         
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + nram_process_count - 1) // nram_process_count)
 
-        norm_value = 0.0
-        norm_total_count = 0
+        norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
+        norm_total_count = self.bp.Scalar(bangpy.int32, "norm_total_count", 0)
 
         '''
         0 : 要压缩的维度，从中间开始，且比nram还要长
@@ -202,7 +204,7 @@ class PairwiseDistance(object):
 
                         body_norm_value = self.calc_norm(nram_norm_buffer, nram_pos_offset + j * dim_len, nram_pos_offset + (j + 1) * dim_len)
                         outputs[nram_pos_offset // dim_len + j] = body_norm_value # 计算完毕，直接拷贝回输出
-                        norm_total_count += 1
+                        norm_total_count.assign(norm_total_count + 1)
 
                     # 处理尾巴
                     tail_size.assign(nram_remain_len % dim_len)
@@ -215,23 +217,25 @@ class PairwiseDistance(object):
             with self.bp.block("compute"):
                 with self.bp.if_scope(oper_type == 0):
                     seg_norm_value = self.calc_norm(nram_norm_buffer, 0, calc_size)
-                    norm_value = seg_norm_value + norm_value
+                    norm_value.assign(seg_norm_value + norm_value)
+                    self.bp.print("norm value is ", norm_value)
+
                     with self.bp.if_scope(norm_offset == dim_len):
                         #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
-                        norm_total_count += 1
+                        norm_total_count.assign(norm_total_count + 1)
                 with self.bp.else_scope():   
                     # 身子直接计算，拷贝完成了。只考虑tail的问题。
                     tail_start = nram_pos_offset + body_cp_count * dim_len
-                    norm_value = self.calc_norm(nram_norm_buffer, tail_start, tail_start + tail_size)
+                    norm_value.assign(self.calc_norm(nram_norm_buffer, tail_start, tail_start + tail_size))
 
             with self.bp.block("data_copy"):
                 with self.bp.if_scope(oper_type == 0):        
                     with self.bp.if_scope(norm_offset == dim_len):
                         #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
-                        if norm_total_count == 1:
+                        with self.bp.if_scope(norm_total_count == 1):  
                             # 这个 core 处理的第一个张量
                             head_tail_buf[2 * self.bp.taskId] = norm_value
-                            norm_value = 0.0
+                            norm_value.assign(0.0)
                 with self.bp.else_scope():   
                     # 身子也不管了，只考虑tail
                     with self.bp.if_scope(tail_size > 0): # 尾巴长度不是0
@@ -239,20 +243,26 @@ class PairwiseDistance(object):
                             head_tail_buf[2 * self.bp.taskId + 1] = norm_value # 彻底完了.
 
             self.bp.sync_all()
+            '''
             with self.bp.if_scope(self.bp.taskId != 0):
                 # 把接缝处给它补上。0号core不需要补
                 with self.bp.if_scope(current_core_start % dim_len != 0):
                     head = head_tail_buf[2 * (self.bp.taskId - 1) + 1]
+
                     tail = head_tail_buf[2 * self.bp.taskId]
+
                     outputs[(current_core_start + dim_len - 1) // dim_len - 1] = head + tail
+            with self.bp.else_scope():
+                with self.bp.if_scope(outputs[0] != 0.0):
+                    outputs[0] = head_tail_buf[0]
+                    '''
                             
 
     def calc_norm(self, buffer, start, end):
-        result = self.bp.Scalar(self.dtype, "size", 0.0)
+        result = self.bp.Scalar(self.dtype, "result", 0.0)
         size = self.bp.Scalar(bangpy.int32, "size", end - start)
-        with self.bp.for_range(0, size) as i:          
+        with self.bp.for_range(0, size) as i:
             result.assign(buffer[start + i] + result)
-        
         return result
     
     def compute_body(self):

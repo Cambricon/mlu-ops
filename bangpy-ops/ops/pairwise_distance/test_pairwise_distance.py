@@ -39,7 +39,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 3, 4), (3, 4))    
+        ((1, 1, 1024 * 1024), (1, 1024 * 1024))    
     ],
 )
 
@@ -105,14 +105,18 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         def create_origin_intput(self):
             shape1 = np.array(self._shape1).astype('int32')
             shape2 = np.array(self._shape2).astype('int32')
-            self._ori_input1 = np.random.uniform(low=-10, high=10, size=shape1).astype(self._dtype.as_numpy_dtype)
-            self._ori_input2 = np.random.uniform(low=-10, high=10, size=shape2).astype(self._dtype.as_numpy_dtype)
+            #self._ori_input1 = np.random.uniform(low=-10, high=10, size=shape1).astype(self._dtype.as_numpy_dtype)
+            #self._ori_input2 = np.random.uniform(low=-10, high=10, size=shape2).astype(self._dtype.as_numpy_dtype)
+
+            total_len = self.get_total_size(shape1)
+            self._ori_input1 = np.ones(total_len, dtype=self._dtype.as_numpy_dtype)
+            self._ori_input2 = np.zeros(total_len, dtype=self._dtype.as_numpy_dtype)
+
             print(self._ori_input1)
             print(self._ori_input2)
 
         def create_mlu_input(self):
             reshp_x = self._ori_input1.flatten()
-
             self._mlu_input1 = bp.Array(reshp_x, self._dev)
 
             reshp_y = self._ori_input2.flatten()
