@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -36,7 +36,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [
-        (4, 4, 1024, 1024),
+        (4, 4, 16, 1024),
     ],
 )
 @pytest.mark.parametrize(
@@ -45,21 +45,21 @@ import time
 def test_frac(target, shape, dtype):
     if target not in TARGET_LIST:
         return
-    print(TARGET(target).nram_size)
+
     data_in = np.random.uniform(low=-10, high=10, size=shape)
     data_absolute = np.absolute(data_in)
     data_floor = np.floor(data_absolute)
     data_sign = np.sign(data_in)
     data_tem = np.multiply(data_floor, data_sign)
     data_out = np.subtract(data_in, data_tem)
-    print(data_out.shape)
+
     dev = bangpy.device(0)
     # set I/O data
     data_in_dev = bangpy.Array(data_in.astype(dtype.as_numpy_dtype), dev)
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     mlu_start_time = time.time()
-    f1(data_in_dev, shape[0], shape[1], shape[2], shape[3], data_out_dev)
+    f1(data_in_dev, data_out_dev)
     mlu_end_time = time.time()
 
     bangpy.assert_allclose(
