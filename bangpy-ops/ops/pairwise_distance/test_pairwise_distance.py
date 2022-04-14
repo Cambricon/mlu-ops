@@ -116,11 +116,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             print(self._ori_input2)
 
         def create_mlu_input(self):
-            reshp_x = self._ori_input1.flatten()
-            self._mlu_input1 = bp.Array(reshp_x, self._dev)
-
-            reshp_y = self._ori_input2.flatten()
-            self._mlu_input2 = bp.Array(reshp_y, self._dev)
+            self._mlu_input1 = bp.Array(self._ori_input1, self._dev)
+            self._mlu_input2 = bp.Array(self._ori_input2, self._dev)
 
         def create_output(self, dim_index):
             self._output_len = self.get_total_size(self._shape1) // self._shape1[dim_index]
