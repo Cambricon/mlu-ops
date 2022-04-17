@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -212,11 +212,7 @@ class Frac(object):
         buffer_original = buffer_in.reshape((self.dim_0, self.dim_1, self.dim_2, self.dim_3))
         buffer_final = buffer_out.reshape((self.dim_0, self.dim_1, self.dim_2, self.dim_3))
         f = self.bp.BuildBANG(
-            inputs=[buffer_original,
-                    self.dim_0,
-                    self.dim_1,
-                    self.dim_2,
-                    self.dim_3],
+            inputs=[buffer_original],
             outputs=[buffer_final],
             kernel_name=KERNEL_NAME,
         )
@@ -226,8 +222,9 @@ class Frac(object):
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_frac(dtype=None, target=None):
     # tasktype fixed in UNION1
-    task_num = 64
-    task_type = TaskType.BLOCK
+    
+    task_type = TaskType.UNION4
+    task_num = 4 * task_type.value
     stage = 1
     f = Frac(dtype, target, task_num, stage).compute_body()
     return f
