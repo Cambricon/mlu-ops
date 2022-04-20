@@ -126,143 +126,13 @@ class PairwiseDistance(object):
         n = big_n % width
 
         self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], src[m:m + cp_len  // 2, n:n + 1])
-        self.bp.memcpy(dst[offset_dst+ cp_len // 2:offset_dst + cp_len, 0:1], src[m+ cp_len // 2:m + cp_len, n:n + 1])
-
-
-    def calc_pairwise_distance(self, tensor, dim_len, height, width, head_tail_buf, outputs):
-        nram_avable_size = round_down( (TARGET(self.target).nram_size - 30 * 1024), 128)
-        nram_process_count = nram_avable_size // self.dtype_sz
-
-        nram_norm_buffer = self.bp.Buffer(
-            shape=(nram_process_count, 1),
-            name="nram_norm_buffer",
-            dtype=self.dtype,
-            scope="nram",
-        )
-
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
-        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
-
-        
-        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + nram_process_count - 1) // nram_process_count)
-
-        norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
-        norm_total_count = self.bp.Scalar(bangpy.int32, "norm_total_count", 0)
-
-        '''
-        0 : 要压缩的维度，从中间开始，且比nram还要长
-        1 : 要压缩的维度，从中间开始，比nram小
-        2 : 要压缩的维度，从头开始
-        '''
-        oper_type = self.bp.Scalar(bangpy.int32, "oper_type", 0)
-
-        # 确认本次循环要从gram拷贝回nram的数量      
-        calc_size = self.bp.Scalar(bangpy.int32, "calc_size", nram_process_count)
-
-        with self.bp.for_range(0, calc_loop_count) as i:
-            with self.bp.if_scope(i == calc_loop_count - 1):
-                calc_size.assign(total_count_in_core % nram_process_count)
-                
-            # 确认本次要处理的数据开头，在gram中的偏移量
-            #当前核心数据开始的位置 + 第i次循环所应偏移的长度
-            cur_loop_start = self.bp.Scalar(bangpy.int32, "cur_loop_start", current_core_start + nram_process_count * i)
-
-            # 先判断一下，是那种类型
-            norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", cur_loop_start % dim_len)
-            with self.bp.if_scope(norm_offset == 0):
-                # 如果正好是开头，那么就走正常流程
-                oper_type.assign(2)
-            with self.bp.else_scope():
-                with self.bp.if_scope(dim_len - norm_offset >= calc_size):
-                    oper_type.assign(0)
-                with self.bp.else_scope():
-                    oper_type.assign(1)
-
-            # 开始拷贝数据了
-            nram_pos_offset = self.bp.Scalar(bangpy.int32, "nram_pos_offset", 0)
-            tail_size = self.bp.Scalar(bangpy.int32, "tail_size", 0)
-            body_cp_count = self.bp.Scalar(bangpy.int32, "body_cp_count", 0)
-            with self.bp.block("data_copy"):
-                with self.bp.if_scope(oper_type == 0):
-                    self.copy_from_2d_tensor(nram_norm_buffer, 0, tensor, cur_loop_start, dim_len, height, width, calc_size)
-                    norm_offset.assign(norm_offset + calc_size)
-                with self.bp.else_scope():                    
-                    with self.bp.if_scope(oper_type == 1):
-                        # 拷贝头，身，尾巴
-                        head_len = self.bp.Scalar(bangpy.int32, "head_len", dim_len - norm_offset)
-                        nram_pos_offset.assign(dim_len - norm_offset)
-                    
-                    # 拷贝身，尾巴, 如果state是2，norm_offset 就是 0
-                    # 先计算一下，能拷贝多少
-                    nram_remain_len = self.bp.Scalar(bangpy.int32, "nram_remain_len", calc_size - nram_pos_offset)
-                    body_cp_count.assign(nram_remain_len // dim_len) # 这个可能是0
-                    with self.bp.for_range(0, body_cp_count) as j:
-                        self.copy_from_2d_tensor(nram_norm_buffer, nram_pos_offset + j * dim_len, 
-                                                 tensor, cur_loop_start + nram_pos_offset + j * dim_len, 
-                                                 dim_len, height, width, dim_len)
-
-                        body_norm_value = self.calc_norm(nram_norm_buffer, nram_pos_offset + j * dim_len, nram_pos_offset + (j + 1) * dim_len)
-                        outputs[nram_pos_offset // dim_len + j] = body_norm_value # 计算完毕，直接拷贝回输出
-                        norm_total_count.assign(norm_total_count + 1)
-
-                    # 处理尾巴
-                    tail_size.assign(nram_remain_len % dim_len)
-                    with self.bp.if_scope(tail_size > 0):
-                        self.copy_from_2d_tensor(nram_norm_buffer, nram_pos_offset + body_cp_count * dim_len, 
-                                                 tensor, cur_loop_start +  nram_pos_offset + body_cp_count * dim_len, 
-                                                 dim_len, height, width, tail_size)    
-
-            seg_norm_value = None
-            with self.bp.block("compute"):
-                with self.bp.if_scope(oper_type == 0):
-                    seg_norm_value = self.calc_norm(nram_norm_buffer, 0, calc_size)
-                    norm_value.assign(seg_norm_value + norm_value)
-                    self.bp.print("norm value is ", norm_value)
-
-                    with self.bp.if_scope(norm_offset == dim_len):
-                        #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
-                        norm_total_count.assign(norm_total_count + 1)
-                with self.bp.else_scope():   
-                    # 身子直接计算，拷贝完成了。只考虑tail的问题。
-                    tail_start = nram_pos_offset + body_cp_count * dim_len
-                    norm_value.assign(self.calc_norm(nram_norm_buffer, tail_start, tail_start + tail_size))
-
-            with self.bp.block("data_copy"):
-                with self.bp.if_scope(oper_type == 0):        
-                    with self.bp.if_scope(norm_offset == dim_len):
-                        #norm_offset 不用累加，cur_loop_start 已经累加过了，一个元素已经处理完毕了
-                        with self.bp.if_scope(norm_total_count == 1):  
-                            # 这个 core 处理的第一个张量
-                            head_tail_buf[2 * self.bp.taskId] = norm_value
-                            norm_value.assign(0.0)
-                with self.bp.else_scope():   
-                    # 身子也不管了，只考虑tail
-                    with self.bp.if_scope(tail_size > 0): # 尾巴长度不是0
-                        with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环
-                            head_tail_buf[2 * self.bp.taskId + 1] = norm_value # 彻底完了.
-
-            self.bp.sync_all()
-            '''
-            with self.bp.if_scope(self.bp.taskId != 0):
-                # 把接缝处给它补上。0号core不需要补
-                with self.bp.if_scope(current_core_start % dim_len != 0):
-                    head = head_tail_buf[2 * (self.bp.taskId - 1) + 1]
-
-                    tail = head_tail_buf[2 * self.bp.taskId]
-
-                    outputs[(current_core_start + dim_len - 1) // dim_len - 1] = head + tail
-            with self.bp.else_scope():
-                with self.bp.if_scope(outputs[0] != 0.0):
-                    outputs[0] = head_tail_buf[0]
-                    '''
-                            
+        self.bp.memcpy(dst[offset_dst+ cp_len // 2:offset_dst + cp_len, 0:1], src[m+ cp_len // 2:m + cp_len, n:n + 1])                            
 
     def calc_norm(self, buffer, start, end):
         result = self.bp.Scalar(self.dtype, "result", 0.0)
         size = self.bp.Scalar(bangpy.int32, "size", end - start)
         with self.bp.for_range(0, size) as i:
-            result.assign(buffer[start + i] + result)
+            result.assign(result + buffer[start + i])
         return result
     
     def compute_body(self):
@@ -303,10 +173,18 @@ class PairwiseDistance(object):
             gram_reshape_tensor = gram_tensor1.reshape([self.pd_height, self.pd_width])
         self.bp.sync_all()
 
-        self.calc_pairwise_distance(gram_reshape_tensor, self.pd_len, self.pd_height, self.pd_width, gram_border_buf_out, gram_buffer_out)
+        nram_avable_size = round_down(TARGET(self.target).nram_size - 500 * 1024, 128)
+        self.nram_process_count = nram_avable_size // self.dtype_sz
+        self.nram_calc_buffer = self.bp.Buffer(
+            shape=(self.nram_process_count, 1),
+            name="nram_calc_buffer",
+            dtype=self.dtype,
+            scope="nram")
 
-        self.bp.sync_all()
-
+        with self.bp.if_scope(self.pd_len > self.nram_process_count):
+            self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_buffer_out)
+        with self.bp.else_scope():
+            self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_buffer_out)
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor1, gram_tensor2,
@@ -315,8 +193,68 @@ class PairwiseDistance(object):
                     self.output_len],
             outputs=[gram_buffer_out, gram_border_buf_out],
             kernel_name=KERNEL_NAME,
+            dump_ir=True,
         )
         return f
+
+    def calc_pairwise_distance1(self, gram_tensor, border_outputs, outputs):# nram 一次还存不下一个元素
+        current_core_start = self._data_man._current_core_start
+        total_count_in_core = self._data_man._total_count_in_core
+        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + self.nram_process_count - 1) // self.nram_process_count)
+
+        norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
+
+        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")        
+
+        oper_type = self.bp.Scalar(bangpy.int32, "oper_type", 0)
+
+        dim_len = self.pd_len
+        norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", current_core_start % dim_len)
+        with self.bp.if_scope(norm_offset == 0):
+            oper_type.assign(2)
+        with self.bp.else_scope():
+            oper_type.assign(0)
+
+        flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
+        '''
+        0 : 要压缩的维度，从中间开始，且比nram还要长
+        1 : 要压缩的维度，从中间开始，比nram小
+        2 : 要压缩的维度，从头开始
+        '''
+        #以上记录一下，是否是从半截开始处理的，如果是，要缓存
+
+        complete_norm_count = self.bp.Scalar(bangpy.int32, "complete_norm_count", 0)
+
+        norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
+        # 确认本次循环要从gram拷贝回nram的数量      
+        calc_size = self.bp.Scalar(bangpy.int32, "calc_size", self.nram_process_count)
+
+        cp_data_len = self.bp.Scalar(bangpy.int32, "cp_data_len", 0)
+        with self.bp.for_range(0, calc_loop_count) as i:
+            self.bp.print("loop is ", i)
+            once_loop_start.assign(current_core_start + self.nram_process_count * i)
+            with self.bp.if_scope(i == calc_loop_count - 1):
+                calc_size.assign(total_count_in_core % self.nram_process_count)
+
+            norm_offset.assign(once_loop_start % dim_len)
+            expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", dim_len - norm_offset)
+            with self.bp.if_scope(expect_cp_len > calc_size):
+                expect_cp_len.assign(calc_size)
+                # 一口气拷贝不完，那就尽可能多的拷贝.
+                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, dim_len, self.pd_height, self.pd_width, calc_size)
+                cp_data_len.assign(cp_data_len + calc_size)
+                seg_norm_value = self.calc_norm(flat_nram, 0, calc_size)
+                norm_value.assign(norm_value + seg_norm_value)
+                self.bp.print("norm value is ", norm_value)
+
+            
+
+
+                
+
+
+    def calc_pairwise_distance2(self, gram_tensor, border_outputs, outputs):
+        pass
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_pairwisedistance(dtype=None, target=None):
