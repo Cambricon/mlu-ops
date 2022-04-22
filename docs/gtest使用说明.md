@@ -1,10 +1,7 @@
 # Gtest测试框架使用说明
 
-[TOC]
 
-# 								
-
-##　 1.mlu-ops gtest 介绍
+## 1.mlu-ops gtest 介绍
 
 ​		mlu-ops gtest(以下简称 gtest)是 mlu-ops 集成的自动测试框架，算子开发者在开发完算子任务之后，可通过一定的规则修改算子对应的配置文件，
 
