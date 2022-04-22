@@ -119,10 +119,11 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
             self._mlu_output = bp.Array(output_buffer, self._dev)
 
-            output_buffer2 = np.zeros(256, dtype=self._dtype.as_numpy_dtype)
+            output_count = 10
+            output_buffer2 = np.zeros(output_count, dtype=self._dtype.as_numpy_dtype)
             self._mlu_border_output = bp.Array(output_buffer2, self._dev)
 
-            output_buffer3 = np.zeros(256, dtype=np.int32)
+            output_buffer3 = np.zeros(output_count, dtype=np.int32)
             self._mlu_border_idx_output = bp.Array(output_buffer3, self._dev)
 
         def get_total_size(self, shp):

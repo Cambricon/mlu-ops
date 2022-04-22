@@ -160,7 +160,7 @@ class PairwiseDistance(object):
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
-        border_array_size = 128
+        border_array_size = 5
         gram_border_buf_out = self.bp.Buffer(
             shape=(border_array_size * 2, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
         )
@@ -194,6 +194,9 @@ class PairwiseDistance(object):
 
         # 处理边界数据
         with self.bp.if_scope(self.bp.taskId == 0):
+            self.bp.print("boder ", gram_border_buf_out)
+            self.bp.print("boder idx ", gram_border_idx_out)
+            self.bp.print("outputs ", gram_buffer_out)
             with self.bp.for_range(0, border_array_size) as i:
                 index1 = gram_border_idx_out[2 * i]
                 index2 = gram_border_idx_out[2 * i + 1]
@@ -210,9 +213,8 @@ class PairwiseDistance(object):
                     self.pd_len, self.pd_height, self.pd_width,
                     self.output_len],
             outputs=[gram_border_buf_out, gram_border_idx_out, gram_buffer_out],
-            kernel_name=KERNEL_NAME,
-            dump_ir=True,
-        )
+            kernel_name=KERNEL_NAME
+            )
         return f
 
     def get_norm_index(self, data_pos, dim_len):
@@ -271,8 +273,8 @@ class PairwiseDistance(object):
                 #self.bp.print("norm value ", norm_value)
                 with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                     # 缓存一下
-                    index = self.get_norm_index(once_loop_start + cp_data_len, dim_len)
-                    self.bp.print("cache ", norm_value, index)
+                    index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
+                    #self.bp.print("cache ", norm_value, once_loop_start, cp_data_len, dim_len, index)
                     with self.bp.if_scope(once_norm_ok == 0):
                         border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                         idx_outputs[self.bp.taskId * 2] = index
@@ -291,10 +293,12 @@ class PairwiseDistance(object):
                 once_norm_ok.assign(1)
                 # 看看这个norm是不是半截
                 index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
-                with self.bp.if_scope(cp_data_len < dim_len):                    
+                with self.bp.if_scope(cp_data_len < dim_len):   
+                    self.bp.print("cache2 ", norm_value, index)                 
                     border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
+                    self.bp.print("--------------------------------------------- ", norm_value)
                     outputs[index] = norm_value # 一个完整的norm算出来了 
 
                 norm_value.assign(0.0)
@@ -308,9 +312,10 @@ class PairwiseDistance(object):
                     #self.bp.print("hahaha a ", norm_value, i, calc_loop_count)
                     with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                         # 肯定没有拷贝完
+                        self.bp.print("cache3 ", norm_value, index + 1)
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value 
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1     
-                        self.bp.print("hahaha ", norm_value)
+                        
                 
                         
 
@@ -321,7 +326,7 @@ class PairwiseDistance(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_pairwisedistance(dtype=None, target=None):
-    task_num = 2
+    task_num = 4
     f = PairwiseDistance(dtype, target, task_num).compute_body()
     return f
 
