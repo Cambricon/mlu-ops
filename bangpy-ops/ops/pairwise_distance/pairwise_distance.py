@@ -290,9 +290,7 @@ class PairwiseDistance(object):
                     border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
-                    self.bp.print("*******************index is ", index, norm_value)
-                    outputs[index] = norm_value # 一个完整的norm算出来了
-                
+                    outputs[index] = norm_value # 一个完整的norm算出来了               
                 
                 # 接下来，拷贝下一个norm
                 cp_data_len.assign(calc_size - expect_cp_len)
