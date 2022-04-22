@@ -285,12 +285,12 @@ class PairwiseDistance(object):
                 # 标记一下
                 once_norm_ok.assign(1)
                 # 看看这个norm是不是半截
-                index = self.get_norm_index(once_loop_start + cp_data_len, dim_len)
-                #self.bp.print("cp data len ", cp_data_len, dim_len)
+                index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
                 with self.bp.if_scope(cp_data_len < dim_len):                    
                     border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
+                    self.bp.print("*******************index is ", index, norm_value)
                     outputs[index] = norm_value # 一个完整的norm算出来了
                 
                 
