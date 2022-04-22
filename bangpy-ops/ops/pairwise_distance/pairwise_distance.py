@@ -160,12 +160,12 @@ class PairwiseDistance(object):
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
+        border_array_size = 128
         gram_border_buf_out = self.bp.Buffer(
-            shape=(256, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
+            shape=(border_array_size * 2, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
         )
-
         gram_border_idx_out = self.bp.Buffer(
-            shape=(256, ), name="gram_border_idx_out", dtype=bangpy.int32, scope="global"
+            shape=(border_array_size * 2, ), name="gram_border_idx_out", dtype=bangpy.int32, scope="global"
         )
 
         self._data_man.calc_core_process_count(self.len_tensor1, self.task_num)
@@ -189,6 +189,17 @@ class PairwiseDistance(object):
             self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
         with self.bp.else_scope():
             self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+
+        # 处理边界数据
+        with self.bp.for_range(0, border_array_size) as i:
+            index1 = gram_border_idx_out[2 * i]
+            index2 = gram_border_idx_out[2 * i + 1]
+            norm_value1 = gram_border_buf_out[2 * i]
+            norm_value2 = gram_border_buf_out[2 * i + 1]
+
+            gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
+            gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
+
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor1, gram_tensor2,
@@ -246,11 +257,12 @@ class PairwiseDistance(object):
 
             norm_offset.assign(once_loop_start % dim_len)
             expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", dim_len - norm_offset)
+
             with self.bp.if_scope(expect_cp_len > calc_size):
                 expect_cp_len.assign(calc_size)
                 # 一口气拷贝不完，那就尽可能多的拷贝.
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, dim_len, self.pd_height, self.pd_width, expect_cp_len)
-                cp_data_len.assign(cp_data_len + expect_cp_len)
+                cp_data_len.assign(cp_data_len + expect_cp_len)               
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
                 with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
@@ -262,35 +274,39 @@ class PairwiseDistance(object):
                     with self.bp.else_scope():
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value 
                         idx_outputs[self.bp.taskId * 2 + 1] = index
-                   
-                with self.bp.else_scope():
-                    #这个norm可以拷贝完了
-                    self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, dim_len, self.pd_height, self.pd_width, expect_cp_len)
-                    cp_data_len.assign(cp_data_len + expect_cp_len)
-                    seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
-                    norm_value.assign(norm_value + seg_norm_value)
+                
+            with self.bp.else_scope():
+                #这个norm可以拷贝完了
+                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, dim_len, self.pd_height, self.pd_width, expect_cp_len)
+                cp_data_len.assign(cp_data_len + expect_cp_len)
+                seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
+                norm_value.assign(norm_value + seg_norm_value)
 
-                    # 标记一下
-                    once_norm_ok.assign(1)
-                    # 看看这个norm是不是半截
-                    index = self.get_norm_index(once_loop_start + cp_data_len, dim_len)
-                    with self.bp.if_scope(cp_data_len < dim_len):                    
-                        border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
-                        idx_outputs[self.bp.taskId * 2] = index
-                    with self.bp.else_scope():
-                        outputs[index] = norm_value # 一个完整的norm算出来了
-                    
-                    
-                    # 接下来，拷贝下一个norm
-                    cp_data_len.assign(calc_size - expect_cp_len)
-                    with self.bp.if_scope(cp_data_len > 0):
-                        self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + expect_cp_len, dim_len, self.pd_height, self.pd_width, cp_data_len)
-                        norm_value = self.calc_norm(flat_nram, 0, cp_data_len)
-                        with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
-                            # 肯定没有拷贝完
-                            border_outputs[self.bp.taskId * 2 + 1] = norm_value 
-                            idx_outputs[self.bp.taskId * 2 + 1] = index + 1     
+                # 标记一下
+                once_norm_ok.assign(1)
+                # 看看这个norm是不是半截
+                index = self.get_norm_index(once_loop_start + cp_data_len, dim_len)
+                #self.bp.print("cp data len ", cp_data_len, dim_len)
+                with self.bp.if_scope(cp_data_len < dim_len):                    
+                    border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                    idx_outputs[self.bp.taskId * 2] = index
+                with self.bp.else_scope():
+                    outputs[index] = norm_value # 一个完整的norm算出来了
+                
+                
+                # 接下来，拷贝下一个norm
+                cp_data_len.assign(calc_size - expect_cp_len)
+                with self.bp.if_scope(cp_data_len > 0):
+                    self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + expect_cp_len, dim_len, self.pd_height, self.pd_width, cp_data_len)
+                    norm_value = self.calc_norm(flat_nram, 0, cp_data_len)
+                    with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
+                        # 肯定没有拷贝完
+                        border_outputs[self.bp.taskId * 2 + 1] = norm_value 
+                        idx_outputs[self.bp.taskId * 2 + 1] = index + 1     
+                
                         
+
+
 
     def calc_pairwise_distance2(self, gram_tensor, border_outputs, idx_outputs, outputs):
         pass
