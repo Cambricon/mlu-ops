@@ -28,12 +28,12 @@ from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from bangpy.tcp.util import round_up, round_down
-DTYPES = [bangpy.float16,bangpy.float32]
+DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
-KERNEL_NAME = "sum"
+KERNEL_NAME = "exp"
 
 
-class Sum(object):
+class Exp(object):
     """Operator description:
     Add the data in the two buffers.
     """
@@ -48,10 +48,12 @@ class Sum(object):
         self.dtype_sz = dtype.bytes
         self.col_count = self.bp.Var("col_count")
         self.row_count = self.bp.Var("row_count")
-        #self.single_buffer_size = 1024*128 #增加128倍
         self.bp.launch_task(self.task_num, 1, 1)
 
-
+    # buffer 源数据
+    # start_index 起始索引
+    # end_index 结束索引
+    # 计算一维数组 start_index 至 end_index 范围内的和   并将结果写在start_index除
     def gala_sum_pool(self,buffer,start_index,end_index):
         data_length = self.bp.Scalar(bangpy.int32,"data_length",end_index - start_index +1 )#传进来得数据长度
         count_for_128_align =self.bp.Scalar(bangpy.int32,"count_for_128_align",128 // self.dtype_sz)#128字节是几个占几个索引
@@ -80,12 +82,39 @@ class Sum(object):
               reshape_buffer = buffer[start_index:current_end_index].reshape([row,count_for_128_align])
               self.bp.sumpool(reshape_buffer,reshape_buffer,(row,),(1,))
               # self.bp.print("sumpool->",buffer[start_index])
-    
-    def two_dimension_sum(self,buffer,row_count,col_count):
+   
+
+    def two_dimension_row_sum(self,buffer,row_count,col_count):#按行 计算二维数组每行的和 结果放在每行首位
         with self.bp.for_range(0,row_count) as i:
             self.gala_sum_pool(buffer[i][:],0,col_count-1)
             self.bp.print("buffer[",i,"][0]->",buffer[i][0])
 
+
+    #buffer 源数据
+    #temp_buffer 与buffer所占内存空间大小相等的nram存储
+    #row_count 行数
+    #col_count 列数
+    #该函数将计算传入的行数 0 - row_count   列数0 - col_count的这个矩形范围内每列的和 并将结果写在源数据的首行
+    def two_dimension_col_sum(self,buffer,temp_buffer,row_count,col_count):
+        count_for_128_align =self.bp.Scalar(bangpy.int32,"count_for_128_align",128 // self.dtype_sz) # 当前数据类型下 128个字节 对应了多少个元素
+        col_remain = self.bp.Scalar(bangpy.int32,"col_remain",col_count % count_for_128_align)
+        current_col_count = self.bp.Scalar(bangpy.int32,"current_col_count",col_count - col_remain)
+        with self.bp.if_scope(col_remain != 0):
+            with self.bp.for_range(0,col_remain) as i:
+                current_col_index = self.bp.Scalar(bangpy.int32,"current_col_index",col_count - i -1)
+                with self.bp.for_range(0,row_count - 1) as j:
+                    buffer[0][current_col_index] = buffer[0][current_col_index] + buffer[j + 1][current_col_index]
+        with self.bp.if_scope(col_count >= count_for_128_align):
+            reshape_buffer = temp_buffer.reshape([row_count,current_col_count])
+            #self.bp.print("data_before_calc->",buffer[0])
+            self.bp.memcpy(reshape_buffer[:,:],buffer[:,0:current_col_count])
+            self.bp.sumpool(reshape_buffer,reshape_buffer,(row_count,),(1,))
+            #self.bp.print("temp_after_calc->",reshape_buffer[0])
+            self.bp.memcpy(buffer[0][0:current_col_count],reshape_buffer[0][0:current_col_count])
+            #self.bp.print("data_res->",buffer[0])
+
+
+  
 
 
    
@@ -99,7 +128,7 @@ class Sum(object):
         calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
         once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
         calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
-        nram_avable_size = round_down( (TARGET(self.target).nram_size - 30* 1024)  ,128)#self.bp.Scalar(bangpy.int32,"nram_avable_size")
+        nram_avable_size = round_down( (TARGET(self.target).nram_size - 30* 1024) // 2 ,128)#self.bp.Scalar(bangpy.int32,"nram_avable_size")
         one_core_count.assign(self.length // self.task_num)#每个核均摊计算量（按索引分）
         remain.assign(self.length % self.task_num)#分任务时的余数
         
@@ -113,7 +142,9 @@ class Sum(object):
             current_core_start.assign((one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain))
             current_core_end.assign((one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain) + one_core_count - 1)  
         total_count_in_core.assign(current_core_end - current_core_start + 1)
-       
+        # buffer_in0 = self.bp.Buffer(
+        #     shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
+        # )
         buffer_in0 = self.bp.Buffer(
             shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
         )
@@ -126,12 +157,23 @@ class Sum(object):
             dtype=self.dtype,
             scope="nram",
         )
+
+
+
+
+
+        test_buffer = self.bp.Buffer(
+            shape=(process_count,),
+            name="test_buffer",
+            dtype=self.dtype,
+            scope="nram",
+        )
        
        
        
 
 
-       
+        
 
         calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
 
@@ -146,12 +188,17 @@ class Sum(object):
                 calc_size.assign(total_count_in_core % process_count)
             with self.bp.block("data_copy"):
                 self.bp.memcpy(nram_buffer_in0[0:calc_size], buffer_in0[once_loop_start:once_loop_start + calc_size])   
-            self.gala_sum_pool(nram_buffer_in0,0,calc_size -1)
-            # row_count = self.bp.Scalar(dtype = bangpy.int32,name = "row_count",value = self.row_count)
-            # col_count = self.bp.Scalar(dtype = bangpy.int32,name = "col_count",value = self.col_count)
-            # reshape_buffer = nram_buffer_in0[0:calc_size].reshape([row_count,col_count])
-            #self.two_dimension_sum(reshape_buffer,row_count,col_count)
+            self.bp.print("calc_size-->",calc_size)
+            #self.gala_sum_pool(nram_buffer_in0,0,calc_size -1)
+            row_count = self.bp.Scalar(dtype = bangpy.int32,name = "row_count",value = self.row_count)
+            col_count = self.bp.Scalar(dtype = bangpy.int32,name = "col_count",value = self.col_count)
+            reshape_buffer = nram_buffer_in0[0:calc_size].reshape([row_count,col_count])# (33,33)
            
+
+            #二维数组按列求和 
+            #此处需注意 第二个buffer参数上标索引越界的问题 此处只是展示 并未进行处理  实际使用时应以每次传入函数数据的实际尺寸计算
+            self.two_dimension_col_sum(reshape_buffer,test_buffer[0:row_count*col_count],row_count,col_count)
+
            
 
             self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
@@ -166,10 +213,10 @@ class Sum(object):
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
-def build_sum(dtype=None, target=None):
+def build_exp(dtype=None, target=None):
     # tasktype fixed in UNION1
     task_num = 1 #由4 改为64
-    f = Sum(dtype, target, task_num).compute_body()
+    f = Exp(dtype, target, task_num).compute_body()
     return f
 
     
