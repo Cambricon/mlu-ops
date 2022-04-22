@@ -39,7 +39,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((2, 2), (2, 2))    
+        ((3, 1023 * 127), (3, 1023 * 127))    
     ],
 )
 
@@ -109,11 +109,6 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             self._ori_input2 = np.random.uniform(low=0, high=0, size=shape2).astype(self._dtype.as_numpy_dtype)
 
             total_len = self.get_total_size(shape1)
-            #self._ori_input1 = np.ones(total_len, dtype=self._dtype.as_numpy_dtype)
-            #self._ori_input2 = np.zeros(total_len, dtype=self._dtype.as_numpy_dtype)
-
-            print(self._ori_input1)
-            print(self._ori_input2)
 
         def create_mlu_input(self):
             self._mlu_input1 = bp.Array(self._ori_input1.flatten(), self._dev)
@@ -150,11 +145,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 pass
             else:
                 for i in range(dim_index + 1, shp_len):
-                    self._pd_width *= self._shape1[i]
-
-            #print(self._pd_height, self._pd_width)
-
-    
+                    self._pd_width *= self._shape1[i]   
 
     ins = pwsdst_processor()
     ins.init(shape, dtype, p, eps, keepdim)    

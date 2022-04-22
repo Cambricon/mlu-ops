@@ -265,6 +265,7 @@ class PairwiseDistance(object):
                 cp_data_len.assign(cp_data_len + expect_cp_len)               
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
+                self.bp.print("norm value ", norm_value)
                 with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                     # 缓存一下
                     index = self.get_norm_index(once_loop_start + cp_data_len, dim_len)
@@ -281,7 +282,7 @@ class PairwiseDistance(object):
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
-
+                self.bp.print("over norm value is ", norm_value)
                 # 标记一下
                 once_norm_ok.assign(1)
                 # 看看这个norm是不是半截
@@ -290,17 +291,22 @@ class PairwiseDistance(object):
                     border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
-                    outputs[index] = norm_value # 一个完整的norm算出来了               
+                    outputs[index] = norm_value # 一个完整的norm算出来了 
+
+                norm_value.assign(0.0)
                 
                 # 接下来，拷贝下一个norm
                 cp_data_len.assign(calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
                     self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + expect_cp_len, dim_len, self.pd_height, self.pd_width, cp_data_len)
-                    norm_value = self.calc_norm(flat_nram, 0, cp_data_len)
+                    calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
+                    norm_value.assign(calc_result)
+                    self.bp.print("hahaha a ", norm_value, i, calc_loop_count)
                     with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                         # 肯定没有拷贝完
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value 
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1     
+                        self.bp.print("hahaha ", norm_value)
                 
                         
 
