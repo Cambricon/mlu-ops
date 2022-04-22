@@ -190,15 +190,18 @@ class PairwiseDistance(object):
         with self.bp.else_scope():
             self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
 
-        # 处理边界数据
-        with self.bp.for_range(0, border_array_size) as i:
-            index1 = gram_border_idx_out[2 * i]
-            index2 = gram_border_idx_out[2 * i + 1]
-            norm_value1 = gram_border_buf_out[2 * i]
-            norm_value2 = gram_border_buf_out[2 * i + 1]
+        self.bp.sync_all()
 
-            gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
-            gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
+        # 处理边界数据
+        with self.bp.if_scope(self.bp.taskId == 0):
+            with self.bp.for_range(0, border_array_size) as i:
+                index1 = gram_border_idx_out[2 * i]
+                index2 = gram_border_idx_out[2 * i + 1]
+                norm_value1 = gram_border_buf_out[2 * i]
+                norm_value2 = gram_border_buf_out[2 * i + 1]
+
+                gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
+                gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
 
 
         f = self.bp.BuildBANG(
@@ -220,7 +223,7 @@ class PairwiseDistance(object):
         current_core_start = self._data_man._current_core_start
         total_count_in_core = self._data_man._total_count_in_core
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + self.nram_process_count - 1) // self.nram_process_count)
-
+        self.bp.print("loop count ", calc_loop_count)
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
 
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")        
@@ -265,10 +268,11 @@ class PairwiseDistance(object):
                 cp_data_len.assign(cp_data_len + expect_cp_len)               
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
-                self.bp.print("norm value ", norm_value)
+                #self.bp.print("norm value ", norm_value)
                 with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                     # 缓存一下
                     index = self.get_norm_index(once_loop_start + cp_data_len, dim_len)
+                    self.bp.print("cache ", norm_value, index)
                     with self.bp.if_scope(once_norm_ok == 0):
                         border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                         idx_outputs[self.bp.taskId * 2] = index
@@ -301,7 +305,7 @@ class PairwiseDistance(object):
                     self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + expect_cp_len, dim_len, self.pd_height, self.pd_width, cp_data_len)
                     calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
                     norm_value.assign(calc_result)
-                    self.bp.print("hahaha a ", norm_value, i, calc_loop_count)
+                    #self.bp.print("hahaha a ", norm_value, i, calc_loop_count)
                     with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                         # 肯定没有拷贝完
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value 
@@ -317,7 +321,7 @@ class PairwiseDistance(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_pairwisedistance(dtype=None, target=None):
-    task_num = 1
+    task_num = 2
     f = PairwiseDistance(dtype, target, task_num).compute_body()
     return f
 
