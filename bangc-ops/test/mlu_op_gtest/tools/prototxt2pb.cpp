@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
   src_path = (src_path[0] == '/') ? src_path : getCurrentDir() + src_path;
   dst_path = (dst_path[0] == '/') ? dst_path : getCurrentDir() + dst_path;
 
-  if (isFile(src_path) && isFile(dst_path)) {
+  if (isFile(src_path) && !isDir(dst_path)) {
     dumpProto(src_path, dst_path);
   } else if (isFile(src_path) && isDir(dst_path)) {
     std::string name = splitFileName(src_path);
