@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$(which clang-format)" == "" ]; then
+if [[ "$(which clang-format)" == "" ]]; then
   echo "Please install clang-format on your OS!"
 fi
 
@@ -13,7 +13,7 @@ usage () {
   echo
 }
 
-if [ $# -eq 1 ]; then
+if [[ $# -eq 1 ]]; then
   case "${1}" in
       -h | --help)
           usage
@@ -28,14 +28,18 @@ else
   exit 1
 fi
 
-file_list=$(find ${input} -name "*.cc" -or -name "*.cpp" -or -name "*.mlu" -or -name "*.cu")
+file_list=$(find ${input} -name "*.cc" -or -name "*.cpp" \
+  -or -name "*.mlu" -or -name "*.cu")
 for file in ${file_list}; do
   echo "clang-formating ${file} ..."
-  clang-format -style="{BasedOnStyle: "google", PointerAlignment: Right, SortIncludes: false, ColumnLimit: 80}" -i ${file}
+  clang-format -style="{BasedOnStyle: google, PointerAlignment: Right, \
+    SortIncludes: false, ColumnLimit: 80}" -i ${file}
 done
 
 file_list=$(find ${input} -name "*.h" -or -name "*.hpp")
 for file in ${file_list}; do
   echo "clang-formating ${file} ..."
-  clang-format -style="{BasedOnStyle: "google", PointerAlignment: Right, SortIncludes: false, ColumnLimit: 80, AlignConsecutiveAssignments: true}" -i ${file}
+  clang-format -style="{BasedOnStyle: google, PointerAlignment: Right, \
+    SortIncludes: false, ColumnLimit: 80, AlignConsecutiveAssignments: true}" \
+    -i ${file}
 done
