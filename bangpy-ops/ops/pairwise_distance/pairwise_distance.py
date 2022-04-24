@@ -112,6 +112,12 @@ class PairwiseDistance(object):
                 self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
                 self.bp.abs(nram_buffer_in0, nram_buffer_in0)
 
+                # 先加上eps
+                eps = self.bp.Scalar(name='input_eps', dtype=self.dtype, value=self.nram_pd_paras[1])
+                self.bp.add(nram_buffer_in0, nram_buffer_in0, eps)
+
+                # 求指数
+
             with self.bp.block("data_copy"):
                 self.bp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])   
 
@@ -159,6 +165,10 @@ class PairwiseDistance(object):
             shape=(self.len_tensor2, ), name="gram_tensor2", dtype=self.dtype, scope="global"
         )
 
+        gram_paras = self.bp.Buffer(
+            shape=(2, ), name="gram_paras", dtype=self.dtype, scope="global"
+        )
+
         gram_buffer_out = self.bp.Buffer(
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
@@ -170,6 +180,14 @@ class PairwiseDistance(object):
         gram_border_idx_out = self.bp.Buffer(
             shape=(border_array_size * 2, ), name="gram_border_idx_out", dtype=bangpy.int32, scope="global"
         )
+
+        self.nram_pd_paras = self.bp.Buffer(
+            shape=(2, ),
+            name="nram_pd_paras",
+            dtype=self.dtype,
+            scope="nram")
+
+        self.bp.memcpy(self.nram_pd_paras[0:2], gram_paras[0:2]) 
 
         self._data_man.calc_core_process_count(self.len_tensor1, self.task_num)
 
@@ -208,10 +226,11 @@ class PairwiseDistance(object):
 
 
         f = self.bp.BuildBANG(
-            inputs=[gram_tensor1, gram_tensor2,
+            inputs=[gram_tensor1, gram_tensor2, gram_paras,
                     self.len_tensor1, self.len_tensor2,
                     self.pd_len, self.pd_height, self.pd_width,
-                    self.output_len],
+                    self.output_len                    
+                    ],
             outputs=[gram_border_buf_out, gram_border_idx_out, gram_buffer_out],
             kernel_name=KERNEL_NAME
             )

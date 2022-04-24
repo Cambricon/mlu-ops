@@ -52,7 +52,7 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "eps", [0,],
+    "eps", [0.000001,],
 )
 
 @pytest.mark.parametrize(
@@ -114,6 +114,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             self._mlu_input1 = bp.Array(self._ori_input1.flatten(), self._dev)
             self._mlu_input2 = bp.Array(self._ori_input2.flatten(), self._dev)
 
+            paras = np.array([self._p, self._eps]).astype(self._dtype.as_numpy_dtype)
+            self._mlu_paras = bp.Array(paras, self._dev)
+
         def create_output(self, dim_index):
             self._output_len = self.get_total_size(self._shape1) // self._shape1[dim_index]
             output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
@@ -160,7 +163,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     ins.create_mlu_input()
     
     func = load_op_by_type(KERNEL_NAME, dtype.name)
-    func(ins._mlu_input1, ins._mlu_input2, 
+    func(ins._mlu_input1, ins._mlu_input2,
+         ins._mlu_paras, 
          ins.get_total_size(ins._shape1), ins.get_total_size(ins._shape2),
          ins._pd_len, ins._pd_height, ins._pd_width, ins._output_len
          , ins._mlu_border_output, ins._mlu_border_idx_output, ins._mlu_output)
