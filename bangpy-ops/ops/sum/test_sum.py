@@ -67,7 +67,7 @@ def test_sum(target, shape, dtype):
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     f1(data_in0_dev,1024,3, data_out_dev)
 
-    #print("input：",data_in0_dev)
+   
     print("output",data_out_dev.asnumpy()[0])
     print("np_sum->",np.sum(data_in0))
     # print("shape is ->",shape)
