@@ -48,7 +48,7 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [1.],
+    "p", [2.],
 )
 
 @pytest.mark.parametrize(
@@ -105,7 +105,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         def create_origin_intput(self):
             shape1 = np.array(self._shape1).astype('int32')
             shape2 = np.array(self._shape2).astype('int32')
-            self._ori_input1 = np.random.uniform(low=1, high=1, size=shape1).astype(self._dtype.as_numpy_dtype)
+            self._ori_input1 = np.random.uniform(low=1.5, high=1.5, size=shape1).astype(self._dtype.as_numpy_dtype)
             self._ori_input2 = np.random.uniform(low=0, high=0, size=shape2).astype(self._dtype.as_numpy_dtype)
 
             total_len = self.get_total_size(shape1)

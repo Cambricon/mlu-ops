@@ -29,6 +29,7 @@ from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
+
 import sys
 sys.path.append("..")
 from data_man import *
@@ -117,6 +118,10 @@ class PairwiseDistance(object):
                 self.bp.add(nram_buffer_in0, nram_buffer_in0, eps)
 
                 # 求指数
+                self.bp.log(nram_buffer_in0, nram_buffer_in0)
+                p = self.bp.Scalar(name='p', dtype=self.dtype, value=self.nram_pd_paras[0])
+                self.bp.multiply(nram_buffer_in0, nram_buffer_in0, p)
+                self.bp.exp(nram_buffer_in0, nram_buffer_in0)
 
             with self.bp.block("data_copy"):
                 self.bp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])   
@@ -143,6 +148,14 @@ class PairwiseDistance(object):
         with self.bp.for_range(0, size) as i:
             result.assign(result + buffer[start + i])
         return result
+
+    def scalar_pow(self, value, p):
+        self.nram_pow_buffer[0] = value
+        self.bp.log(self.nram_pow_buffer, self.nram_pow_buffer)
+        #pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
+        self.bp.multiply(self.nram_pow_buffer, self.nram_pow_buffer, p)
+        self.bp.exp(self.nram_pow_buffer, self.nram_pow_buffer)
+        return self.nram_pow_buffer[0]
     
     def compute_body(self):
         self._data_man.init(self.bp)
@@ -186,8 +199,13 @@ class PairwiseDistance(object):
             name="nram_pd_paras",
             dtype=self.dtype,
             scope="nram")
-
         self.bp.memcpy(self.nram_pd_paras[0:2], gram_paras[0:2]) 
+
+        self.nram_pow_buffer = self.bp.Buffer(
+            shape=(128, ),
+            name="nram_pow_buffer",
+            dtype=self.dtype,
+            scope="nram")
 
         self._data_man.calc_core_process_count(self.len_tensor1, self.task_num)
 
@@ -249,6 +267,8 @@ class PairwiseDistance(object):
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")        
 
         oper_type = self.bp.Scalar(bangpy.int32, "oper_type", 0)
+
+        pw = self.bp.Scalar(self.dtype, "pw", 1 / self.nram_pd_paras[0])
 
         dim_len = self.pd_len
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", current_core_start % dim_len)
@@ -313,7 +333,7 @@ class PairwiseDistance(object):
                     border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
-                    outputs[index] = norm_value # 一个完整的norm算出来了 
+                    outputs[index] = self.scalar_pow(norm_value, pw) # 一个完整的norm算出来了 
 
                 norm_value.assign(0.0)
                 
@@ -334,7 +354,7 @@ class PairwiseDistance(object):
         total_count_in_core = self._data_man._total_count_in_core        
         dim_len = self.pd_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
-
+        pw = self.bp.Scalar(self.dtype, "pw", 1 / self.nram_pd_paras[0])
         
         flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
 
@@ -376,7 +396,8 @@ class PairwiseDistance(object):
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + j * dim_len, dim_len, self.pd_height, self.pd_width, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
-                outputs[start_index + j] = norm_value
+                #outputs[start_index + j] = norm_value                
+                outputs[start_index + j] = self.scalar_pow(norm_value, pw) # 一个完整的norm算出来了 
 
         #再看一下结尾，是不是要缓存下一个norm的前半截
         norm_loop_end_pos = self.bp.Scalar(bangpy.int32, "norm_loop_end_pos", norm_start_pos + total_norm_in_core * dim_len)
