@@ -125,8 +125,11 @@ class PairwiseDistance(object):
         big_n = (offset_src + dim_len - 1) % dim_len
         n = big_n % width
 
-        self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], src[m:m + cp_len  // 2, n:n + 1])
-        self.bp.memcpy(dst[offset_dst+ cp_len // 2:offset_dst + cp_len, 0:1], src[m+ cp_len // 2:m + cp_len, n:n + 1])                            
+        with self.bp.if_scope(offset_dst != offset_dst + cp_len // 2):
+            self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], src[m:m + cp_len  // 2, n:n + 1])
+
+        with self.bp.if_scope(offset_dst + cp_len // 2 != offset_dst + cp_len):
+            self.bp.memcpy(dst[offset_dst + cp_len // 2:offset_dst + cp_len, 0:1], src[m + cp_len // 2:m + cp_len, n:n + 1])                            
 
     def calc_norm(self, buffer, start, end):
         result = self.bp.Scalar(self.dtype, "result", 0.0)
