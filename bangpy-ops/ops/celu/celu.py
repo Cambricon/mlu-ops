@@ -206,10 +206,10 @@ class Celu(object):
             self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
             #计算max+min
             self.bp.add(nram_buffer_in0,nram_max,nram_min)
-            with self.bp.if_scope(self.inplace):
-                self.bp.memcpy(buffer_in0[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
-            with self.bp.else_scope():         
-                self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
+            # with self.bp.if_scope(self.inplace):
+            #     self.bp.memcpy(buffer_in0[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
+            # with self.bp.else_scope():         
+            self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
             
       
         f = self.bp.BuildBANG(

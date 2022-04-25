@@ -148,7 +148,28 @@ class PairwiseDistance(object):
         with self.bp.for_range(0, size) as i:
             result.assign(result + buffer[start + i])
         return result
-
+    # #end_index 是c风格的数组索引  不是py的  
+    # def calc_norm(self, buffer, start_index, end_index):
+    #     natural_base = self.bp.Scalar(bangpy.float32,"natural_base",2.7182818284590452353602874713526624977572470936999)#5957496696762772407663035354759457138217852516642742746639193200305992181741359662904357290033429526059563)# 07381 32328 62794 34907 63233 82988 07531 95251 01901 15738 34187 93070 21540 89149 93488 41675 09244 76146 06680 82264 80016 84774 11853 74234 54424 37107 53907 77449 92069 55170 27618 38606 26133 13845 83000 75204 49338 26560 29760 67371 13200 70932 87091 27443 74704 72306 96977 20931 01416 92836 81902 55151 08657 46377 21112 52389 78442 50569 53696 77078 54499 69967 94686 44549 05987 93163 68892 30098 79312 77361 78215 42499 92295 76351 48220 82698 95193 66803 31825 28869 39849 64651 05820 93923 98294 88793 32036 25094 43117 30123 81970 68416 14039 70198 37679 32068 32823 76464 80429 53118 02328 78250 98194 55815 30175 67173 61332 06981 12509 96181 88159 30416 90351 59888 85193 45807 27386 67385 89422 87922 84998 92086 80582 57492 79610 48419 84443 63463 24496 84875 60233 62482 70419 78623 20900 21609 90235 30436 99418 49146 31409 34317 38143 64054 62531 52096 18369 08887 07016 76839 64243 78140 59271 45635 49061 30310 72085 10383 75051 01157 47704 17189 86106 87396 96552 12671 54688 95703 50354 )
+    #     const_one = self.bp.Scalar(bangpy.float32,"const_one",1)
+    #     max_threshold_valu = self.bp.Scalar(bangpy.float32,"max_threshold_valu")
+    #     min_threshold_valu = self.bp.Scalar(bangpy.float32,"min_threshold_valu")
+    #     #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的 
+    #     max_threshold_valu.assign(88.722008965395851698332450562653)
+    #     min_threshold_valu.assign(-87.332719095296162600686375692197)
+    #     data_length = self.bp.Scalar(bangpy.int32,"data_length",end_index - start_index +1 )#传进来得数据长度
+    #     sub_value = self.bp.Scalar(bangpy.float32,"sub_value")#y-x的差值
+    #     sum_value = self.bp.Scalar(bangpy.float32,"sum_value",buffer[start_index].astype(bangpy.float32))#
+    #     with self.bp.for_range(0,data_length -1) as i:#这里 -1 是为了循环内省掉一个if
+    #         sub_value.assign(sum_value - buffer [i + 1].astype(bangpy.float32))
+    #         with self.bp.if_scope(tcp.all(sub_value <= max_threshold_valu,sub_value >= min_threshold_valu)):
+    #             sum_value.assign(self.bp.scalar_pow(natural_base,sub_value)+const_one)
+    #             sum_value.assign(self.bp.scalar_log(sum_value)/self.bp.scalar_log(natural_base))
+    #             sum_value.assign(sum_value + buffer [i + 1])
+    #         with self.bp.else_scope():
+    #             with self.bp.if_scope(sub_value < min_threshold_valu):
+    #                 sum_value.assign(buffer[i + 1])
+    #     return sum_value
     def scalar_pow(self, value, p):
         self.nram_pow_buffer[0] = value
         self.bp.log(self.nram_pow_buffer, self.nram_pow_buffer)
