@@ -42,7 +42,7 @@ def numcheck(input_pow_arr):
 @pytest.mark.parametrize(
     "shape", 
     [
-        (1024, 1024, 128),
+        (15104,),
     ],
 )
 @pytest.mark.parametrize(

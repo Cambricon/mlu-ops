@@ -101,7 +101,7 @@ class LogAddExp(object):
         calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
         once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
         calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
-        nram_avable_size = round_down( (TARGET(self.target).nram_size - 200* 1024) // 8 ,128)#self.bp.Scalar(bangpy.int32,"nram_avable_size")
+        nram_avable_size = round_down( (TARGET(self.target).nram_size - 40* 1024) // 8 ,128)#self.bp.Scalar(bangpy.int32,"nram_avable_size")
         one_core_count.assign(self.length // self.task_num)#每个核均摊计算量（按索引分）
         remain.assign(self.length % self.task_num)#分任务时的余数     
         process_count = nram_avable_size // self.dtype_sz #核心一次最多计算的长度 
@@ -181,6 +181,7 @@ class LogAddExp(object):
 def build_logaddexp(dtype=None, target=None):
     # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
     task_type=TaskType.UNION16 #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
-    task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
+    #task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
+    task_num =1
     f = LogAddExp(dtype, target, task_num).compute_body()
     return f
