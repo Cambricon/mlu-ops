@@ -25,6 +25,7 @@ from traceback import print_tb
 import numpy as np
 import torch
 import pytest
+import math
 
 import bangpy
 import bangpy as bp
@@ -173,9 +174,13 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     result_border = ins._mlu_border_output.numpy()
     result_border_idx = ins._mlu_border_idx_output.numpy()
 
-    print(result_border)
-    print(result_border_idx)
+    #收尾
+    s = set()
+    for i in result_border_idx:
+        s.add(i)
 
+    for item in s:
+        result[item] = math.pow(result[item], 1 / p)
 
     outputshape = []
     if keepdim:

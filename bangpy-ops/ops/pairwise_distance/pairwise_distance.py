@@ -216,7 +216,7 @@ class PairwiseDistance(object):
             gram_reshape_tensor = gram_tensor1.reshape([self.pd_height, self.pd_width])
         self.bp.sync_all()
 
-        nram_avable_size = round_down(TARGET(self.target).nram_size - 500 * 1024, 128)
+        nram_avable_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
         self.nram_process_count = nram_avable_size // self.dtype_sz
         self.nram_calc_buffer = self.bp.Buffer(
             shape=(self.nram_process_count, 1),
@@ -247,7 +247,6 @@ class PairwiseDistance(object):
 
                 with self.bp.if_scope(index2 >= 0):
                     gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
-
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor1, gram_tensor2, gram_paras,
