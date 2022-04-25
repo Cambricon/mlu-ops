@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((1, 121, 301), (121, 301))
+        ((1, 1121, 301, 2), (1121, 301, 2))
     ],
 )
 
@@ -49,7 +49,7 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [2.],
+    "p", [3.],
 )
 
 @pytest.mark.parametrize(
@@ -64,144 +64,114 @@ import time
 
 def test_pairwise_distance(target, shape, p, eps, keepdim, dtype): 
     if target not in TARGET_LIST:
-        return
+        return 
 
-    class pwsdst_processor:
-        _dtype = None
-        _p = 1
-        _eps = 0.000001
-        _keepdim = False
-        _shape1 = None
-        _shape2 = None
-        _dev = None
-
-        _ori_input1 = None
-        _ori_input2 = None
-
-        _mlu_input1 = None
-        _mlu_input2 = None
-
-        _mlu_output = None
-        _output_len = -1
-
-        _pd_height = -1
-        _pd_width = -1
-        _pd_len = -1
-
-        def init(self, shapes, dtype, p, eps, keepdim):
-            self._dtype = dtype
-            self._p = p
-            self._eps = eps
-            self._keepdim = keepdim
-            if len(shape[0]) > len(shape[1]):
-                self._shape1 = shape[0]
-                self._shape2 = shape[1]
-            else:
-                self._shape1 = shape[1]
-                self._shape2 = shape[0]
-
-            self._dev = bp.device(0)
-
-
-        def create_origin_intput(self):
-            shape1 = np.array(self._shape1).astype('int32')
-            shape2 = np.array(self._shape2).astype('int32')
-            self._ori_input1 = np.random.uniform(low=1.5, high=1.5, size=shape1).astype(self._dtype.as_numpy_dtype)
-            self._ori_input2 = np.random.uniform(low=0, high=0, size=shape2).astype(self._dtype.as_numpy_dtype)
-
-            total_len = self.get_total_size(shape1)
-
-        def create_mlu_input(self):
-            self._mlu_input1 = bp.Array(self._ori_input1.flatten(), self._dev)
-            self._mlu_input2 = bp.Array(self._ori_input2.flatten(), self._dev)
-
-            paras = np.array([self._p, self._eps]).astype(self._dtype.as_numpy_dtype)
-            self._mlu_paras = bp.Array(paras, self._dev)
-
-        def create_output(self, dim_index):
-            self._output_len = self.get_total_size(self._shape1) // self._shape1[dim_index]
-            output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
-            self._mlu_output = bp.Array(output_buffer, self._dev)
-
-            output_count = 256
-            output_buffer2 = np.zeros(output_count, dtype=self._dtype.as_numpy_dtype)
-            self._mlu_border_output = bp.Array(output_buffer2, self._dev)
-
-            output_buffer3 = -np.ones(output_count, dtype=np.int32)
-            self._mlu_border_idx_output = bp.Array(output_buffer3, self._dev)
-
-        def get_total_size(self, shp):
+    def mlu_pairwise_distance(p, eps, keepdim):
+        def get_total_size(shp):
             size = 1
             for s in shp:
                 size *= s
             return size
 
-        def create_pd_paras(self, dim_index):
-            shp_len = len(self._shape1)
+        def f(a, b):
+            #拿到shape
+            if len(a.shape) > len(b.shape):
+                _shape1 = a.shape
+                _shape2 = b.shape
+            else:
+                _shape1 = b.shape
+                _shape2 = a.shape
+            
+            _dev = bp.device(0)
 
-            self._pd_len = self._shape1[shp_len - 1]
-            self._pd_height = 1
-            self._pd_width = 1
+            shp_len = len(_shape1)
+            dim_index = shp_len - 1
+
+            # mlu 输入参数
+            _pd_len = _shape1[shp_len - 1]
+            _pd_height = 1
+            _pd_width = 1
 
             for i in range(0, dim_index + 1):
-                self._pd_height *= self._shape1[i]
+                _pd_height *= _shape1[i]
 
             if dim_index == shp_len - 1:
                 pass
             else:
                 for i in range(dim_index + 1, shp_len):
-                    self._pd_width *= self._shape1[i]   
+                    _pd_width *= _shape1[i] 
 
-    ins = pwsdst_processor()
-    ins.init(shape, dtype, p, eps, keepdim)    
-    ins.create_origin_intput()
+            # mlu 输入
+            _mlu_input1 = bp.Array(a.flatten(), _dev)
+            _mlu_input2 = bp.Array(b.flatten(), _dev)
+            paras = np.array([p, eps]).astype(dtype.as_numpy_dtype) # 这里需要考虑
+            _mlu_paras = bp.Array(paras, _dev)
+
+            # mlu 输出
+            _output_len = get_total_size(_shape1) // _shape1[dim_index]
+            output_buffer = np.zeros(_output_len, dtype=dtype.as_numpy_dtype)
+            _mlu_output = bp.Array(output_buffer, _dev)
+
+            output_count = 256
+            output_buffer2 = np.zeros(output_count, dtype=dtype.as_numpy_dtype)
+            _mlu_border_output = bp.Array(output_buffer2, _dev)
+
+            output_buffer3 = -np.ones(output_count, dtype=np.int32)
+            _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
+
+            # 调用mlu
+            func = load_op_by_type(KERNEL_NAME, dtype.name)
+            func(_mlu_input1, _mlu_input2,
+                 _mlu_paras, 
+                 get_total_size(_shape1), get_total_size(_shape2),
+                 _pd_len, _pd_height, _pd_width, _output_len
+                 , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
+
+            result = _mlu_output.numpy()
+            result_border = _mlu_border_output.numpy()
+            result_border_idx = _mlu_border_idx_output.numpy()
+
+            #收尾
+            s = set()
+            for i in result_border_idx:
+                s.add(i)
+
+            for item in s:
+                result[item] = math.pow(result[item], 1 / p)
+
+            outputshape = []
+            if keepdim:
+                for item in _shape1:
+                    outputshape.append(item)
+                outputshape[dim_index] = 1
+            else:
+                for i in range(0, len(_shape1) - 1):
+                    outputshape.append(_shape1[i])
+
+            ret = result.reshape(outputshape)
+            return ret
+
+        return f
+
+
+    shape1 = np.array(shape[0]).astype('int32')
+    shape2 = np.array(shape[1]).astype('int32')
+    _ori_input1 = np.random.uniform(low=1.5, high=1.5, size=shape1).astype(dtype.as_numpy_dtype)
+    _ori_input2 = np.random.uniform(low=0, high=0, size=shape2).astype(dtype.as_numpy_dtype)
 
     mlu_start = time.time()
-
-    dim_index = len(ins._shape1) - 1
-    ins.create_pd_paras(dim_index)
-    ins.create_output(dim_index)
-    ins.create_mlu_input()
-    
-    func = load_op_by_type(KERNEL_NAME, dtype.name)
-    func(ins._mlu_input1, ins._mlu_input2,
-         ins._mlu_paras, 
-         ins.get_total_size(ins._shape1), ins.get_total_size(ins._shape2),
-         ins._pd_len, ins._pd_height, ins._pd_width, ins._output_len
-         , ins._mlu_border_output, ins._mlu_border_idx_output, ins._mlu_output)
-
-    result = ins._mlu_output.numpy()
-    result_border = ins._mlu_border_output.numpy()
-    result_border_idx = ins._mlu_border_idx_output.numpy()
-
-    #收尾
-    s = set()
-    for i in result_border_idx:
-        s.add(i)
-
-    for item in s:
-        result[item] = math.pow(result[item], 1 / p)
-
-    outputshape = []
-    if keepdim:
-        for item in ins._shape1:
-            outputshape.append(item)
-        outputshape[dim_index] = 1
-    else:
-        for i in range(0, len(ins._shape1) - 1):
-            outputshape.append(ins._shape1[i])
-
-    ret = result.reshape(outputshape)
+    pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
+    mlu_ret = pdist(_ori_input1, _ori_input2)
     print('mlu cost ', time.time() - mlu_start)
-    print(ret)
+    print(mlu_ret)
 
     
     print("============torch calc==================")
 
     cpu_start = time.time()
-    pdist = torch.nn.PairwiseDistance(p=ins._p, eps = 0.000001, keepdim=keepdim)
-    tensor1 = torch.Tensor(ins._ori_input1)
-    tensor2 = torch.Tensor(ins._ori_input2)
+    pdist = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
+    tensor1 = torch.Tensor(_ori_input1)
+    tensor2 = torch.Tensor(_ori_input2)
     cpu_ret = pdist(tensor1, tensor2)
     print('cpu cost ', time.time() - cpu_start)
 
