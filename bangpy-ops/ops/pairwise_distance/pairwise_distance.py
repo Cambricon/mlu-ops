@@ -148,28 +148,7 @@ class PairwiseDistance(object):
         with self.bp.for_range(0, size) as i:
             result.assign(result + buffer[start + i])
         return result
-    # #end_index 是c风格的数组索引  不是py的  
-    # def calc_norm(self, buffer, start_index, end_index):
-    #     natural_base = self.bp.Scalar(bangpy.float32,"natural_base",2.7182818284590452353602874713526624977572470936999)#5957496696762772407663035354759457138217852516642742746639193200305992181741359662904357290033429526059563)# 07381 32328 62794 34907 63233 82988 07531 95251 01901 15738 34187 93070 21540 89149 93488 41675 09244 76146 06680 82264 80016 84774 11853 74234 54424 37107 53907 77449 92069 55170 27618 38606 26133 13845 83000 75204 49338 26560 29760 67371 13200 70932 87091 27443 74704 72306 96977 20931 01416 92836 81902 55151 08657 46377 21112 52389 78442 50569 53696 77078 54499 69967 94686 44549 05987 93163 68892 30098 79312 77361 78215 42499 92295 76351 48220 82698 95193 66803 31825 28869 39849 64651 05820 93923 98294 88793 32036 25094 43117 30123 81970 68416 14039 70198 37679 32068 32823 76464 80429 53118 02328 78250 98194 55815 30175 67173 61332 06981 12509 96181 88159 30416 90351 59888 85193 45807 27386 67385 89422 87922 84998 92086 80582 57492 79610 48419 84443 63463 24496 84875 60233 62482 70419 78623 20900 21609 90235 30436 99418 49146 31409 34317 38143 64054 62531 52096 18369 08887 07016 76839 64243 78140 59271 45635 49061 30310 72085 10383 75051 01157 47704 17189 86106 87396 96552 12671 54688 95703 50354 )
-    #     const_one = self.bp.Scalar(bangpy.float32,"const_one",1)
-    #     max_threshold_valu = self.bp.Scalar(bangpy.float32,"max_threshold_valu")
-    #     min_threshold_valu = self.bp.Scalar(bangpy.float32,"min_threshold_valu")
-    #     #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的 
-    #     max_threshold_valu.assign(88.722008965395851698332450562653)
-    #     min_threshold_valu.assign(-87.332719095296162600686375692197)
-    #     data_length = self.bp.Scalar(bangpy.int32,"data_length",end_index - start_index +1 )#传进来得数据长度
-    #     sub_value = self.bp.Scalar(bangpy.float32,"sub_value")#y-x的差值
-    #     sum_value = self.bp.Scalar(bangpy.float32,"sum_value",buffer[start_index].astype(bangpy.float32))#
-    #     with self.bp.for_range(0,data_length -1) as i:#这里 -1 是为了循环内省掉一个if
-    #         sub_value.assign(sum_value - buffer [i + 1].astype(bangpy.float32))
-    #         with self.bp.if_scope(tcp.all(sub_value <= max_threshold_valu,sub_value >= min_threshold_valu)):
-    #             sum_value.assign(self.bp.scalar_pow(natural_base,sub_value)+const_one)
-    #             sum_value.assign(self.bp.scalar_log(sum_value)/self.bp.scalar_log(natural_base))
-    #             sum_value.assign(sum_value + buffer [i + 1])
-    #         with self.bp.else_scope():
-    #             with self.bp.if_scope(sub_value < min_threshold_valu):
-    #                 sum_value.assign(buffer[i + 1])
-    #     return sum_value
+
     def scalar_pow(self, value, p):
         self.nram_pow_buffer[0] = value
         self.bp.log(self.nram_pow_buffer, self.nram_pow_buffer)
@@ -207,7 +186,7 @@ class PairwiseDistance(object):
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
-        border_array_size = 5
+        border_array_size = 128
         gram_border_buf_out = self.bp.Buffer(
             shape=(border_array_size * 2, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
         )
@@ -237,7 +216,7 @@ class PairwiseDistance(object):
             gram_reshape_tensor = gram_tensor1.reshape([self.pd_height, self.pd_width])
         self.bp.sync_all()
 
-        nram_avable_size = round_down(TARGET(self.target).nram_size - 500 * 1024, 128)
+        nram_avable_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
         self.nram_process_count = nram_avable_size // self.dtype_sz
         self.nram_calc_buffer = self.bp.Buffer(
             shape=(self.nram_process_count, 1),
@@ -247,8 +226,11 @@ class PairwiseDistance(object):
 
         with self.bp.if_scope(self.pd_len > self.nram_process_count):
             self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
-        with self.bp.else_scope():
-            self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+        with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
+            with self.bp.if_scope(self.len_tensor1 // self.task_num < self.pd_len):
+                self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+            with self.bp.else_scope():
+                self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
 
         self.bp.sync_all()
 
@@ -260,9 +242,11 @@ class PairwiseDistance(object):
                 norm_value1 = gram_border_buf_out[2 * i]
                 norm_value2 = gram_border_buf_out[2 * i + 1]
 
-                gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
-                gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
+                with self.bp.if_scope(index1 >= 0):
+                    gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
 
+                with self.bp.if_scope(index2 >= 0):
+                    gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor1, gram_tensor2, gram_paras,
@@ -422,15 +406,17 @@ class PairwiseDistance(object):
 
         #再看一下结尾，是不是要缓存下一个norm的前半截
         norm_loop_end_pos = self.bp.Scalar(bangpy.int32, "norm_loop_end_pos", norm_start_pos + total_norm_in_core * dim_len)
-        with self.bp.if_scope(norm_loop_end_pos < total_count_in_core):
+        cur_loop_end_pos = self.bp.Scalar(bangpy.int32, "cur_loop_end_pos", current_core_start + total_count_in_core)
+        with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
             #拷贝一下数据
-            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, dim_len, self.pd_height, self.pd_width, total_count_in_core - norm_loop_end_pos)
-            calc_result = self.calc_norm(flat_nram, 0, total_count_in_core - norm_loop_end_pos)
+            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, dim_len, self.pd_height, self.pd_width, cur_loop_end_pos - norm_loop_end_pos)
+            calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
             index = self.get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
             #保存一下
             border_outputs[self.bp.taskId * 2 + 1] = norm_value 
             idx_outputs[self.bp.taskId * 2 + 1] = index  
+            
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_pairwisedistance(dtype=None, target=None):
