@@ -39,7 +39,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((21, 301, 123 ), (21, 301, 123 ))
+        ((1, 21, 301), (21, 301))
     ],
 )
 
@@ -48,7 +48,7 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [2.],
+    "p", [1.],
 )
 
 @pytest.mark.parametrize(
@@ -122,11 +122,11 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             output_buffer = np.zeros(self._output_len, dtype=self._dtype.as_numpy_dtype)
             self._mlu_output = bp.Array(output_buffer, self._dev)
 
-            output_count = 10
+            output_count = 256
             output_buffer2 = np.zeros(output_count, dtype=self._dtype.as_numpy_dtype)
             self._mlu_border_output = bp.Array(output_buffer2, self._dev)
 
-            output_buffer3 = np.zeros(output_count, dtype=np.int32)
+            output_buffer3 = -np.ones(output_count, dtype=np.int32)
             self._mlu_border_idx_output = bp.Array(output_buffer3, self._dev)
 
         def get_total_size(self, shp):
@@ -170,6 +170,13 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
          , ins._mlu_border_output, ins._mlu_border_idx_output, ins._mlu_output)
 
     result = ins._mlu_output.numpy()
+    result_border = ins._mlu_border_output.numpy()
+    result_border_idx = ins._mlu_border_idx_output.numpy()
+
+    #print(result_border)
+    #print(result_border_idx)
+
+
     outputshape = []
     if keepdim:
         for item in ins._shape1:

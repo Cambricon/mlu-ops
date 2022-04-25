@@ -186,7 +186,7 @@ class PairwiseDistance(object):
             shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
-        border_array_size = 5
+        border_array_size = 128
         gram_border_buf_out = self.bp.Buffer(
             shape=(border_array_size * 2, ), name="gram_border_buf_out", dtype=self.dtype, scope="global"
         )
@@ -226,8 +226,11 @@ class PairwiseDistance(object):
 
         with self.bp.if_scope(self.pd_len > self.nram_process_count):
             self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
-        with self.bp.else_scope():
-            self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+        with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
+            with self.bp.if_scope(self.len_tensor1 // self.task_num < self.pd_len):
+                self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+            with self.bp.else_scope():
+                self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
 
         self.bp.sync_all()
 
@@ -239,8 +242,11 @@ class PairwiseDistance(object):
                 norm_value1 = gram_border_buf_out[2 * i]
                 norm_value2 = gram_border_buf_out[2 * i + 1]
 
-                gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
-                gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
+                with self.bp.if_scope(index1 >= 0):
+                    gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
+
+                with self.bp.if_scope(index2 >= 0):
+                    gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
 
 
         f = self.bp.BuildBANG(
