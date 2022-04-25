@@ -68,7 +68,8 @@ struct StringData {
 using VmoduleMap = std::unordered_map<StringData, int, StringData::Hasher>;
 
 // Returns a mapping from module name to VLOG level, derived from the
-// MLUOP_CPP_VMOUDLE environment variable; ownership is transferred to the caller.
+// MLUOP_CPP_VMOUDLE environment variable; ownership is transferred to the
+// caller.
 VmoduleMap *VmodulesMapFromEnv() {
   // The value of the env var is supposed to be of the form:
   //    "foo=1,bar=2,baz=3"
@@ -100,7 +101,8 @@ VmoduleMap *VmodulesMapFromEnv() {
     } else {
       new_env_data = comma + 1;
     }
-    (*result)[StringData(env_data, eq - env_data)] = ParseInteger(after_eq, comma - after_eq);
+    (*result)[StringData(env_data, eq - env_data)] =
+        ParseInteger(after_eq, comma - after_eq);
     env_data = new_env_data;
   }
   return result;
@@ -134,9 +136,10 @@ void LogMessage::GenerateLogMessage() {
   const size_t time_buffer_size = 30;
   char time_buffer[time_buffer_size];  // NOLINT
 
-  strftime(time_buffer, time_buffer_size, "%Y-%m-%d %H:%M:%S", localtime(&now_seconds));
-  fprintf(stderr, "%s.%06d: %c %s:%d] %s\n", time_buffer, micros_remainder, "IWEF"[severity_],
-          fname_, line_, str().c_str());
+  strftime(time_buffer, time_buffer_size, "%Y-%m-%d %H:%M:%S",
+           localtime(&now_seconds));
+  fprintf(stderr, "%s.%06d: %c %s:%d] %s\n", time_buffer, micros_remainder,
+          "IWEF"[severity_], fname_, line_, str().c_str());
 }
 
 LogMessage::LogMessage(const char *fname, int line, int severity)
@@ -161,13 +164,15 @@ bool LogMessage::VmoduleActivated(const char *fname, int level) {
   const char *last_slash = strrchr(fname, '/');
   const char *module_start = last_slash == nullptr ? fname : last_slash + 1;
   const char *dot_after = strchr(module_start, '.');
-  const char *module_limit = dot_after == nullptr ? strchr(fname, '\0') : dot_after;
+  const char *module_limit =
+      dot_after == nullptr ? strchr(fname, '\0') : dot_after;
   StringData module(module_start, module_limit - module_start);
   auto it = vmodules->find(module);
   return it != vmodules->end() && it->second >= level;
 }
 
-void LogString(const char *fname, int line, int severity, const std::string &message) {
+void LogString(const char *fname, int line, int severity,
+               const std::string &message) {
   LogMessage(fname, line, severity) << message;
 }
 
@@ -190,11 +195,13 @@ void MakeCheckOpValueString(std::ostream *os, const signed char &v) {  // NOLINT
 }
 
 template <>
-void MakeCheckOpValueString(std::ostream *os, const unsigned char &v) {  // NOLINT
+void MakeCheckOpValueString(std::ostream *os,
+                            const unsigned char &v) {  // NOLINT
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
-    (*os) << "unsigned char value " << static_cast<unsigned short>(v);  // NOLINT
+    (*os) << "unsigned char value "
+          << static_cast<unsigned short>(v);  // NOLINT
   }
 }
 
@@ -210,9 +217,7 @@ CheckOpMessageBuilder::CheckOpMessageBuilder(const char *exprtext)
   *stream_ << "Check failed: " << exprtext << " (";
 }
 
-CheckOpMessageBuilder::~CheckOpMessageBuilder() {
-  delete stream_;
-}
+CheckOpMessageBuilder::~CheckOpMessageBuilder() { delete stream_; }
 
 std::ostream *CheckOpMessageBuilder::ForVar2() {
   *stream_ << " vs. ";
@@ -227,13 +232,11 @@ std::string *CheckOpMessageBuilder::NewString() {
 }  // namespace internal
 }  // namespace mluop
 
-void mluOpCheck(mluOpStatus_t result,
-                char const *const func,
-                const char *const file,
-                int const line) {
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line) {
   if (result) {
-    std::string error =
-        "\"" + std::string(mluOpGetErrorString(result)) + " in " + std::string(func) + "\"";
+    std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
+                        " in " + std::string(func) + "\"";
     LOG(ERROR) << error;
     throw std::runtime_error(error);
   }

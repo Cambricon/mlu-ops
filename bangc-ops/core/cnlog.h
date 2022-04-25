@@ -70,42 +70,44 @@ namespace cnlog {
 /**
  * @brief: define the interface of the log system.
  */
-#define CLOG(module, severity)                                                                 \
-  LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, true, true, true, \
-             true)                                                                             \
+#define CLOG(module, severity)                                               \
+  LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
+             true, true, true, true)                                         \
       .stream()
 
-#define DCLOG(module, severity)                                                                \
-  LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, true, true, true, \
-             false)                                                                            \
+#define DCLOG(module, severity)                                              \
+  LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
+             true, true, true, false)                                        \
       .stream()
 
-#define PLOG(module, severity) \
-  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, true, true).stream()
+#define PLOG(module, severity)                                                \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             true, true)                                                      \
+      .stream()
 
-#define DPLOG(module, severity) \
-  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, true, false).stream()
+#define DPLOG(module, severity)                                               \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             true, false)                                                     \
+      .stream()
 
-#define SCOUT(module, severity) \
-  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, false, true).stream()
+#define SCOUT(module, severity)                                               \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             false, true)                                                     \
+      .stream()
 
-#define DSCOUT(module, severity) \
-  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, false, false).stream()
+#define DSCOUT(module, severity)                                              \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             false, false)                                                    \
+      .stream()
 
 /**
  * @brief: the log class to realize the log system.
  */
 class LogMessage {
  public:
-  LogMessage(std::string file,
-             int line,
-             int module,
-             int severity,
-             std::string module_name,
-             bool is_print_head,
-             bool is_print_tail,
-             bool is_clear_endl,
-             bool release_can_print);
+  LogMessage(std::string file, int line, int module, int severity,
+             std::string module_name, bool is_print_head, bool is_print_tail,
+             bool is_clear_endl, bool release_can_print);
   ~LogMessage();
 
   /**
@@ -114,10 +116,10 @@ class LogMessage {
   std::stringstream &stream();
 
  private:
-  std::string logInfoFile_;       // the file that the log message code belongs to
-  int logInfoLine_;               // the line that the log message code in
-  int log_module_;                // describe the log message whether to save or to show
-  int logSeverity_;               // the level of the message
+  std::string logInfoFile_;  // the file that the log message code belongs to
+  int logInfoLine_;          // the line that the log message code in
+  int log_module_;   // describe the log message whether to save or to show
+  int logSeverity_;  // the level of the message
   std::string module_name_;       // used to print module name stamp
   bool is_print_head_;            // whether print log head or not
   bool is_print_tail_;            // whether print log tail or not

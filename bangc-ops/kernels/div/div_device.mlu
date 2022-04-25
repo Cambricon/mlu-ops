@@ -21,28 +21,28 @@
 __nram__ char nram_buffer[DIV_NRAM_USED];
 
 template <typename T>
-__mlu_func__ void get3OffsetDivFast(int32_t &nram_limit,
-                                    int32_t &pong_x,
-                                    int32_t &pong_y,
-                                    T *&nram_x,
-                                    T *&nram_y,
-                                    T *&nram_aux1,
-                                    T *&nram_aux2,
-                                    T *&nram_aux3,
+__mlu_func__ void get3OffsetDivFast(int32_t &nram_limit, int32_t &pong_x,
+                                    int32_t &pong_y, T *&nram_x, T *&nram_y,
+                                    T *&nram_aux1, T *&nram_aux2, T *&nram_aux3,
                                     char *nram_buffer) {
   if (sizeof(T) == sizeof(half)) {
     // nram: x - x_pong - y - y_pong - nram_scaling - nram_zero
-    nram_limit = ((DIV_NRAM_USED - 3 * BINARY_ALIGN_NUM * sizeof(float)) / sizeof(T)) / 16;
+    nram_limit =
+        ((DIV_NRAM_USED - 3 * BINARY_ALIGN_NUM * sizeof(float)) / sizeof(T)) /
+        16;
     nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
     pong_x = 2 * nram_limit;
     pong_y = 2 * nram_limit;
-    nram_x = (T *)nram_buffer + nram_limit;  // nram_x_pong = nram_x + nram_limit * 2
+    nram_x =
+        (T *)nram_buffer + nram_limit;  // nram_x_pong = nram_x + nram_limit * 2
     nram_y = nram_x + nram_limit * 4;
     nram_aux1 = nram_y + nram_limit * 3;     // scaling
     nram_aux2 = nram_aux1 + nram_limit * 4;  // nram_aux2
     nram_aux3 = nram_aux2 + nram_limit * 4;  // zero
-    __nramset((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM, (float)HIGH_BOUND);
-    __nramset((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM, (float)LOW_BOUND);
+    __nramset((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+              (float)HIGH_BOUND);
+    __nramset((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+              (float)LOW_BOUND);
   } else {
     // nram: x - x_pong - y - y_pong - scaling - zoom - zero - factor
     nram_limit = (DIV_NRAM_USED / sizeof(T) - 3 * BINARY_ALIGN_NUM) / 8;
@@ -54,43 +54,40 @@ __mlu_func__ void get3OffsetDivFast(int32_t &nram_limit,
     nram_aux1 = nram_y + nram_limit * 2;
     nram_aux2 = nram_aux1 + nram_limit * 2;
     nram_aux3 = nram_aux2 + nram_limit * 2;
-    __nramset(nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM, (float)HIGH_BOUND);
-    __nramset(nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM, (float)LOW_BOUND);
+    __nramset(nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+              (float)HIGH_BOUND);
+    __nramset(nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+              (float)LOW_BOUND);
   }
 }
 
 /* HighAcc mode will only be used when data type is half*/
 template <typename T>
-__mlu_func__ void get3OffsetDivHighAcc(int32_t &nram_limit,
-                                       int32_t &pong_x,
-                                       int32_t &pong_y,
-                                       T *&nram_x,
-                                       T *&nram_y,
-                                       T *&nram_aux1,
-                                       T *&nram_aux2,
-                                       T *&nram_aux3,
-                                       char *nram_buffer) {
+__mlu_func__ void get3OffsetDivHighAcc(int32_t &nram_limit, int32_t &pong_x,
+                                       int32_t &pong_y, T *&nram_x, T *&nram_y,
+                                       T *&nram_aux1, T *&nram_aux2,
+                                       T *&nram_aux3, char *nram_buffer) {
   // nram: x - x_pong - y - y_pong - nram_scaling - nram_zero
-  nram_limit = ((DIV_NRAM_USED - 3 * BINARY_ALIGN_NUM * sizeof(float)) / sizeof(T)) / 16;
+  nram_limit =
+      ((DIV_NRAM_USED - 3 * BINARY_ALIGN_NUM * sizeof(float)) / sizeof(T)) / 16;
   nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
   pong_x = 2 * nram_limit;
   pong_y = 2 * nram_limit;
-  nram_x = (T *)nram_buffer + nram_limit;  // nram_x_pong = nram_x + nram_limit * 2
+  nram_x =
+      (T *)nram_buffer + nram_limit;  // nram_x_pong = nram_x + nram_limit * 2
   nram_y = nram_x + nram_limit * 4;
   nram_aux1 = nram_y + nram_limit * 3;     // scaling
   nram_aux2 = nram_aux1 + nram_limit * 4;  // nram_aux2
   nram_aux3 = nram_aux2 + nram_limit * 4;  // zero
-  __nramset((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM, (float)HIGH_BOUND);
-  __nramset((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM, (float)LOW_BOUND);
+  __nramset((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+            (float)HIGH_BOUND);
+  __nramset((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+            (float)LOW_BOUND);
 }
 
 template <typename T>
-__mlu_func__ void computeDivFast(T *nram_x,
-                                 T *nram_y,
-                                 T *nram_scaling,
-                                 T *nram_aux2,
-                                 T *nram_zero,
-                                 int32_t actual_num,
+__mlu_func__ void computeDivFast(T *nram_x, T *nram_y, T *nram_scaling,
+                                 T *nram_aux2, T *nram_zero, int32_t actual_num,
                                  int32_t deal_num) {
   T *nram_zoom = nram_scaling + deal_num;
   T *nram_aux4 = nram_aux2 + deal_num;
@@ -105,13 +102,17 @@ __mlu_func__ void computeDivFast(T *nram_x,
   if (sizeof(T) == sizeof(float)) {
     // ZOOM
     __bang_cycle_lt(nram_zoom, nram_y, nram_factor, deal_num, BINARY_ALIGN_NUM);
-    __bang_mul_const((float *)nram_zoom, (float *)nram_zoom, (float)(1 - SCALE), deal_num);
-    __bang_add_const((float *)nram_zoom, (float *)nram_zoom, (float)SCALE, deal_num);
+    __bang_mul_const((float *)nram_zoom, (float *)nram_zoom, (float)(1 - SCALE),
+                     deal_num);
+    __bang_add_const((float *)nram_zoom, (float *)nram_zoom, (float)SCALE,
+                     deal_num);
     __bang_mul(nram_y, nram_y, nram_zoom, deal_num);
 
     __bang_cycle_lt(nram_aux2, nram_y, nram_bound, deal_num, BINARY_ALIGN_NUM);
-    __bang_mul_const((float *)nram_aux4, (float *)nram_aux2, (float)LOW_SCALE, deal_num);
-    __bang_cycle_eq(nram_aux2, nram_aux2, nram_zero, deal_num, BINARY_ALIGN_NUM);
+    __bang_mul_const((float *)nram_aux4, (float *)nram_aux2, (float)LOW_SCALE,
+                     deal_num);
+    __bang_cycle_eq(nram_aux2, nram_aux2, nram_zero, deal_num,
+                    BINARY_ALIGN_NUM);
     __bang_add(nram_aux2, nram_aux2, nram_aux4, deal_num);
     __bang_mul(nram_y, nram_y, nram_aux2, deal_num);
   }
@@ -130,13 +131,9 @@ __mlu_func__ void computeDivFast(T *nram_x,
 /* 200 active half with COMPUTATION_HIGH_PRECISION
  */
 template <typename T>
-__mlu_func__ void computeDivHighAcc(T *nram_x,
-                                    T *nram_y,
-                                    T *nram_scaling,
-                                    T *nram_aux2,
-                                    T *nram_zero,
-                                    int32_t actual_num,
-                                    int32_t deal_num) {
+__mlu_func__ void computeDivHighAcc(T *nram_x, T *nram_y, T *nram_scaling,
+                                    T *nram_aux2, T *nram_zero,
+                                    int32_t actual_num, int32_t deal_num) {
   float *nram_fp_x = (float *)(nram_x - deal_num);
   float *nram_fp_y = (float *)(nram_y - deal_num);
   // bit-up

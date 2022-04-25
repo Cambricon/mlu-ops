@@ -20,8 +20,7 @@
 #include "unary_op_host.h"
 
 void unaryOpPolicyFunc(const mluOpHandle_t &handle,
-                       const mluOpTensorDescriptor_t &desc,
-                       cnrtDim3_t *k_dim,
+                       const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
   size_t union_number = mluop::runtime::getClusterLimitCapability(handle);
   size_t core_in_cluster = handle->core_num_per_cluster;
@@ -51,15 +50,11 @@ static inline bool isSupportType(const mluOpDataType_t check_type,
   return false;
 }
 
-mluOpStatus_t unaryOpParamCheck(const std::string &op_name,
-                                const mluOpHandle_t &handle,
-                                const mluOpTensorDescriptor_t &x_desc,
-                                const void *x,
-                                const mluOpTensorDescriptor_t &y_desc,
-                                const void *y,
-                                const mluOpDataType_t support_type[],
-                                const int &len,
-                                bool &zero_element) {
+mluOpStatus_t unaryOpParamCheck(
+    const std::string &op_name, const mluOpHandle_t &handle,
+    const mluOpTensorDescriptor_t &x_desc, const void *x,
+    const mluOpTensorDescriptor_t &y_desc, const void *y,
+    const mluOpDataType_t support_type[], const int &len, bool &zero_element) {
   // check descriptor
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, x_desc != NULL);
@@ -77,8 +72,9 @@ mluOpStatus_t unaryOpParamCheck(const std::string &op_name,
   for (int i = 0; i < x_desc->dim; i++) {
     if (x_desc->dims[i] != y_desc->dims[i]) {
       LOG(ERROR) << op_name << ":The shape of x should be equal to y"
-                 << ". But now x_desc's shape[" << i << "] is " << x_desc->dims[i]
-                 << ", y_desc's shape[" << i << "] is " << y_desc->dims[i] << ".";
+                 << ". But now x_desc's shape[" << i << "] is "
+                 << x_desc->dims[i] << ", y_desc's shape[" << i << "] is "
+                 << y_desc->dims[i] << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
