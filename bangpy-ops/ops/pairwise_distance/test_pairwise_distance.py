@@ -39,7 +39,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((1, 21, 301), (21, 301))
+        ((1, 121, 301), (121, 301))
     ],
 )
 
@@ -48,7 +48,7 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [1.],
+    "p", [2.],
 )
 
 @pytest.mark.parametrize(
@@ -173,8 +173,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     result_border = ins._mlu_border_output.numpy()
     result_border_idx = ins._mlu_border_idx_output.numpy()
 
-    #print(result_border)
-    #print(result_border_idx)
+    print(result_border)
+    print(result_border_idx)
 
 
     outputshape = []
