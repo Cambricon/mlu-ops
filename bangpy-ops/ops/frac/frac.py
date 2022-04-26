@@ -52,7 +52,7 @@ class Frac(object):
         self.length = self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        self.single_buffer_size = self.nram_size // 32
+        self.single_buffer_size = (self.nram_size - 52 * 1024) // 8
         self.bp.launch_task(self.task_num, 1, 1)
 
 
