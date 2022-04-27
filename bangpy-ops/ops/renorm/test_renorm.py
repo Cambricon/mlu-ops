@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        ((1, 1121, 301, 2), (1121, 301, 2))
+        (10, 20, 2)
     ],
 )
 
@@ -53,126 +53,65 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "eps", [0.000001,],
+    "dim", [2],
 )
 
 @pytest.mark.parametrize(
-    "keepdim", [False],
+    "maxnorm", [5.0],
 )
 
 
 
-def test_pairwise_distance(target, shape, p, eps, keepdim, dtype): 
+def test_renorm(target, shape, p, dim, dtype, maxnorm): 
     if target not in TARGET_LIST:
-        return 
+        return
 
-    def mlu_pairwise_distance(p, eps, keepdim):
-        def get_total_size(shp):
-            size = 1
-            for s in shp:
-                size *= s
-            return size
+    total_input_len = 1
+    for s in shape:
+        total_input_len *= s
 
-        def f(a, b):
-            #拿到shape
-            if len(a.shape) > len(b.shape):
-                _shape1 = a.shape
-                _shape2 = b.shape
-            else:
-                _shape1 = b.shape
-                _shape2 = a.shape
-            
-            _dev = bp.device(0)
-
-            shp_len = len(_shape1)
-            dim_index = shp_len - 1
-
-            # mlu 输入参数
-            _pd_len = _shape1[shp_len - 1]
-            _pd_height = 1
-            _pd_width = 1
-
-            for i in range(0, dim_index + 1):
-                _pd_height *= _shape1[i]
-
-            if dim_index == shp_len - 1:
-                pass
-            else:
-                for i in range(dim_index + 1, shp_len):
-                    _pd_width *= _shape1[i] 
-
-            # mlu 输入
-            _mlu_input1 = bp.Array(a.flatten(), _dev)
-            _mlu_input2 = bp.Array(b.flatten(), _dev)
-            paras = np.array([p, eps]).astype(dtype.as_numpy_dtype) # 这里需要考虑
-            _mlu_paras = bp.Array(paras, _dev)
-
-            # mlu 输出
-            _output_len = get_total_size(_shape1) // _shape1[dim_index]
-            output_buffer = np.zeros(_output_len, dtype=dtype.as_numpy_dtype)
-            _mlu_output = bp.Array(output_buffer, _dev)
-
-            output_count = 256
-            output_buffer2 = np.zeros(output_count, dtype=dtype.as_numpy_dtype)
-            _mlu_border_output = bp.Array(output_buffer2, _dev)
-
-            output_buffer3 = -np.ones(output_count, dtype=np.int32)
-            _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
-
-            # 调用mlu
-            func = load_op_by_type(KERNEL_NAME, dtype.name)
-            func(_mlu_input1, _mlu_input2,
-                 _mlu_paras, 
-                 get_total_size(_shape1), get_total_size(_shape2),
-                 _pd_len, _pd_height, _pd_width, _output_len
-                 , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
-
-            result = _mlu_output.numpy()
-            result_border = _mlu_border_output.numpy()
-            result_border_idx = _mlu_border_idx_output.numpy()
-
-            #收尾
-            s = set()
-            for i in result_border_idx:
-                s.add(i)
-
-            for item in s:
-                result[item] = math.pow(result[item], 1 / p)
-
-            outputshape = []
-            if keepdim:
-                for item in _shape1:
-                    outputshape.append(item)
-                outputshape[dim_index] = 1
-            else:
-                for i in range(0, len(_shape1) - 1):
-                    outputshape.append(_shape1[i])
-
-            ret = result.reshape(outputshape)
-            return ret
-
-        return f
-
-
-    shape1 = np.array(shape[0]).astype('int32')
-    shape2 = np.array(shape[1]).astype('int32')
-    _ori_input1 = np.random.uniform(low=1.5, high=1.5, size=shape1).astype(dtype.as_numpy_dtype)
-    _ori_input2 = np.random.uniform(low=0, high=0, size=shape2).astype(dtype.as_numpy_dtype)
+    input_tensor = np.random.uniform(low=-3.5, high=6.5, size=shape).astype(dtype.as_numpy_dtype)
+    
+    # 准备mlu计算
+    dev = bp.device(0)
 
     mlu_start = time.time()
-    pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
-    mlu_ret = pdist(_ori_input1, _ori_input2)
+
+    mlu_input = bp.Array(input_tensor.flatten(), dev)
+    paras = np.array([p, maxnorm]).astype(dtype.as_numpy_dtype) # 这里需要考虑
+    mlu_paras = bp.Array(paras, dev)
+    mlu_output = bp.Array(input_tensor.copy(), dev)
+
+    if dim < 0:
+        dim += len(shape)
+
+    if dim < 0 or dim >= len(shape):
+        print("dim err!")
+        return None
+
+    h = 1
+    for i in range(dim):
+        h *= shape[i]
+    w = total_input_len // h
+    sub_t_count = shape[dim]
+    sub_wid = w // sub_t_count
+
+    func = load_op_by_type(KERNEL_NAME, dtype.name)
+    func(mlu_input, mlu_paras,
+         h, w, sub_wid
+         , mlu_output)
+
+    result = mlu_output.numpy()
+    mlu_ret = result.reshape(shape)
+
     print('mlu cost ', time.time() - mlu_start)
     print(mlu_ret)
 
     
     print("============torch calc==================")
 
+    x = torch.Tensor(input_tensor)
     cpu_start = time.time()
-    pdist = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
-    tensor1 = torch.Tensor(_ori_input1)
-    tensor2 = torch.Tensor(_ori_input2)
-    cpu_ret = pdist(tensor1, tensor2)
+    cpu_ret = torch.renorm(x, p, dim, maxrenorm)
     print('cpu cost ', time.time() - cpu_start)
-
     print(cpu_ret)
