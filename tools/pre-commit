@@ -1,7 +1,20 @@
 #! /bin/bash
 
-filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
-  --diff-filter=R --diff-filter=T --cached --name-only)
+bangc_core="bangc-ops/core|"
+bangc_kernel="bangc-ops/kernels|"
+bangc_op_h="bangc-ops/mlu_op.h|"
+bangc_test_zoo="bangc-ops/test/mlu_op_gtest/src/zoo"
+check_list=${bangc_core}${bangc_kernel}${bangc_op_h}${bangc_test_zoo}
+
+if [[ $# -eq 1 ]]; then
+  filenames=$(git diff --name-only ${1} | \
+    grep -E ${check_list})
+else
+  filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
+    --diff-filter=R --diff-filter=T --cached --name-only | \
+    grep -E ${check_list})
+fi
+
 ret=0
 
 if [[ "$(which cpplint)" == "" ]]; then
