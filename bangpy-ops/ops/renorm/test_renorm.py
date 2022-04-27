@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (10, 20, 2)
+        (2, 2, 3)
     ],
 )
 
@@ -49,11 +49,11 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [3.],
+    "p", [1.],
 )
 
 @pytest.mark.parametrize(
-    "dim", [2],
+    "dim", [1],
 )
 
 @pytest.mark.parametrize(
@@ -77,10 +77,11 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
 
     mlu_start = time.time()
 
-    mlu_input = bp.Array(input_tensor.flatten(), dev)
+    flat_input = input_tensor.flatten()
+    mlu_input = bp.Array(flat_input, dev)
     paras = np.array([p, maxnorm]).astype(dtype.as_numpy_dtype) # 这里需要考虑
     mlu_paras = bp.Array(paras, dev)
-    mlu_output = bp.Array(input_tensor.copy(), dev)
+    mlu_output = bp.Array(flat_input, dev)
 
     if dim < 0:
         dim += len(shape)
@@ -112,6 +113,6 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
 
     x = torch.Tensor(input_tensor)
     cpu_start = time.time()
-    cpu_ret = torch.renorm(x, p, dim, maxrenorm)
+    cpu_ret = torch.renorm(x, p, dim, maxnorm)
     print('cpu cost ', time.time() - cpu_start)
     print(cpu_ret)

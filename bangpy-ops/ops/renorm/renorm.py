@@ -77,6 +77,9 @@ class Renorm(object):
                 self.bp.memcpy(nram_buffer_in[0:calc_size], gram_tensor[once_loop_start:once_loop_start + calc_size]) 
 
             with self.bp.block("compute"):
+                # 求绝对值
+                self.bp.abs(nram_buffer_in, nram_buffer_in)
+
                 # 求指数
                 self.bp.log(nram_buffer_in, nram_buffer_in)
                 pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
@@ -144,6 +147,16 @@ class Renorm(object):
                         self.copy_from_2d_tensor(self.nram_calc_buffer, 0, 0, 
                                                  gram_tensor, self.nram_process_count * k, j, cp_len)
 
+
+                        # 求绝对值
+                        self.bp.abs(self.nram_calc_buffer, self.nram_calc_buffer)
+
+                        # 求指数
+                        self.bp.log(self.nram_calc_buffer, self.nram_calc_buffer)
+                        pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
+                        self.bp.multiply(self.nram_calc_buffer, self.nram_calc_buffer, pw)
+                        self.bp.exp(self.nram_calc_buffer, self.nram_calc_buffer)
+
                         calc_ret = self.calc_norm(self.nram_calc_buffer, 0, cp_len)
                         st_norm_value.assign(st_norm_value + calc_ret)
 
@@ -188,6 +201,7 @@ class Renorm(object):
             shape=(self.h * self.w, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
+
         gram_reshp_buffer_out = gram_buffer_out.reshape([self.h, self.w])
 
         gram_paras = self.bp.Buffer(
@@ -204,15 +218,17 @@ class Renorm(object):
             shape=(128, ),
             name="nram_pow_buffer",
             dtype=self.dtype,
-            scope="nram")
+            scope="nram")        
 
-        self._data_man.calc_core_process_count(self.h * self.w, self.task_num)
+        #self._data_man.calc_core_process_count(self.h * self.w, self.task_num)
         #self.calc_pow(gram_tensor, self.nram_paras[0])
 
-        #self._data_man.calc_core_process_count(self.w // self.sub_wid, self.task_num)
-        #self.process_sub_tensor(gram_rshp_tensor, self.nram_paras[0], self.nram_paras[1], 
-        #    self.h, self.w, self.sub_wid
-        #    , gram_reshp_buffer_out)
+        self._data_man.calc_core_process_count(self.w // self.sub_wid, self.task_num)
+        self.process_sub_tensor(gram_rshp_tensor, self.nram_paras[0], self.nram_paras[1], 
+            self.h, self.w, self.sub_wid
+            , gram_reshp_buffer_out)
+
+        
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor, gram_paras,
@@ -229,7 +245,7 @@ class Renorm(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_renorm(dtype=None, target=None):
-    task_num = 32
+    task_num = 4
     f = Renorm(dtype, target, task_num).compute_body()
     return f
 
