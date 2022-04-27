@@ -26,7 +26,7 @@ import numpy as np
 import torch
 import pytest
 import math
-
+import random
 import bangpy
 import bangpy as bp
 from bangpy import tcp
@@ -37,11 +37,59 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
 
 import time
 
+#max_append_test_count = 50 #附加测试的最大次数
+current_append_test_count = 1 # random.randint(0,max_append_test_count)#本次运行附加测试次数    值为0-最大次数之间随机数
+max_dim_length =5 #最大维度数
+each_dim_max_length =80 #每个维度最大长度
+
+
+#################################################
+#    此值应与kernel中的值保持同步更新状态
+#################################################
+current_mlu_single_buffer_bytes = (512 - 40) * 1024 // 8 #当前kernel中为每个nram_buffer 预留的字节数 
+
+
+const_float32_128_align_element_count = 32 #float32 下 128字节对应元素个数
+const_float16_128_align_element_count = 64 #float16 下 128字节对应元素个数
+const_current_mlu_single_buffer_float32_max_element_size = int(current_mlu_single_buffer_bytes / 4) # float32下 单个nram_buffer的最大元素数
+const_current_mlu_single_buffer_float16_max_element_size = int(current_mlu_single_buffer_bytes / 2) # float16下 单个nram_buffer的最大元素数
+
+
+#此处填充必测shape
+test_shape_list=[
+    # 1,
+    # 2,
+    # const_float32_128_align_element_count - 1, #不足128对齐
+    # const_float32_128_align_element_count    , #满足128对齐
+    # const_float32_128_align_element_count + 1, #128对齐后多1个
+
+    # const_float16_128_align_element_count - 1,
+    # const_float16_128_align_element_count    ,
+    # const_float16_128_align_element_count + 1,
+
+    # const_current_mlu_single_buffer_float32_max_element_size - 1, #比空间大小少一个元素 
+    # const_current_mlu_single_buffer_float32_max_element_size    , #刚好用完空间
+    # const_current_mlu_single_buffer_float32_max_element_size + 1, #比空间大小多一个元素 
+
+    # const_current_mlu_single_buffer_float16_max_element_size - 1,
+    # const_current_mlu_single_buffer_float16_max_element_size    ,
+    # const_current_mlu_single_buffer_float16_max_element_size + 1,
+]
+
+def random_int_list( max_dim_length, each_dim_max_length):
+    random_list = []
+    for i in range(max_dim_length):
+        random_list.append(random.randint(1, each_dim_max_length))
+    return tuple(random_list)
+
+for i in range(current_append_test_count):
+    
+    test_shape_list.append(random_int_list(random.randint(2, max_dim_length),random.randint(1, each_dim_max_length)))
+
+
 @pytest.mark.parametrize(
     "shape", 
-    [        
-        ((1, 1121, 301, 2), (1121, 301, 2))
-    ],
+    test_shape_list,
 )
 
 @pytest.mark.parametrize(
@@ -59,6 +107,7 @@ import time
 @pytest.mark.parametrize(
     "keepdim", [False],
 )
+
 
 
 
@@ -153,26 +202,35 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
 
         return f
 
-
-    shape1 = np.array(shape[0]).astype('int32')
-    shape2 = np.array(shape[1]).astype('int32')
-    _ori_input1 = np.random.uniform(low=1.5, high=1.5, size=shape1).astype(dtype.as_numpy_dtype)
-    _ori_input2 = np.random.uniform(low=0, high=0, size=shape2).astype(dtype.as_numpy_dtype)
-
-    mlu_start = time.time()
-    pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
-    mlu_ret = pdist(_ori_input1, _ori_input2)
-    print('mlu cost ', time.time() - mlu_start)
-    print(mlu_ret)
+    print("current_shape->",shape)
+    # shape1 = np.array(shape).astype('int32')
+    # shape2 = np.array(shape).astype('int32')
+    _ori_input1 = np.random.uniform(low=-1.5, high=1.5, size=shape)
+    _ori_input2 = np.random.uniform(low=-1.5, high=1.5, size=shape)
 
     
-    print("============torch calc==================")
+    pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
+    mlu_ret = pdist(_ori_input1.astype(dtype.as_numpy_dtype), _ori_input2.astype(dtype.as_numpy_dtype))
+    
+
 
     cpu_start = time.time()
     pdist = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
     tensor1 = torch.Tensor(_ori_input1)
     tensor2 = torch.Tensor(_ori_input2)
     cpu_ret = pdist(tensor1, tensor2)
-    print('cpu cost ', time.time() - cpu_start)
+    print("mlu->",mlu_ret)
+    print("cpu->",cpu_ret)
+    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+    
 
-    print(cpu_ret)
+
+
+   
+#   改动说明 
+#   1. 将shape修改成随机生成 +  必测shape 的结合
+#   2. 暂未测shape不等的情况
+#   3. 将原本input的定值 改成随机值
+#   4. 将input的数据类型转化放在kernel入参时再做
+#   5. 使用断言来判断结果
+#
