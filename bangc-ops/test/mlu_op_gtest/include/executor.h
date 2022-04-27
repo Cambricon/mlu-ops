@@ -39,9 +39,12 @@ namespace mluoptest {
   const int interface_time_repeat = 4;
 
   // io bandwidth GB/s
-  const float IO_BANDWIDTH_MLU220 = 25.6;
-  const float IO_BANDWIDTH_MLU270 = 102.4;
-  const float IO_BANDWIDTH_MLU290 = 1024;
+  const float IO_BANDWIDTH_MLU220                = 25.6;
+  const float IO_BANDWIDTH_MLU270                = 102.4;
+  const float IO_BANDWIDTH_MLU290                = 1024;
+  const float IO_BANDWIDTH_MLU370                = 307.2;
+  const float IO_BANDWIDTH_MLUCE3226             = 31;
+  const float IO_BANDWIDTH_MLU370_SINGLE_CLUSTER = 128;
 
   // mlu270 mlu220 mlu290 ct peak compute force is same;
   const int CT_PEAK_FLOAT16_COMPUTE_FORCE = 64;
@@ -65,26 +68,28 @@ namespace mluoptest {
   const int LT_PEAK_INT16_INT16_COMPUTE_FORCE_220 = 2 * 1024;
 
   // op that use lt peak force to get compute efficiency
-  const std::unordered_set<std::string> lt_op_set = {"convolution_forward",
-                                                     "conv",
-                                                     "convolution_backward_filter",
-                                                     "convbpfilter",
-                                                     "convolution_backward_data",
-                                                     "convolution3d_backward_filter",
-                                                     "Convolution_Backward_Data",
-                                                     "convbpdata",
-                                                     "deconvolution",
-                                                     "deconv",
-                                                     "batch_matmul",
-                                                     "batch_matmul_bcast",
-                                                     "quantize_batch_matmul",
-                                                     "quantize_batch_matmul_bcast",
-                                                     "gemm4conv",
-                                                     "matmul",
-                                                     "matmul_inference",
-                                                     "quantize_matmul"};
+  const std::unordered_set<std::string> lt_op_set = {
+      "convolution_forward",
+      "conv",
+      "convolution_backward_filter",
+      "convbpfilter",
+      "convolution_backward_data",
+      "convolution3d_backward_filter",
+      "Convolution_Backward_Data",
+      "convbpdata",
+      "deconvolution",
+      "deconv",
+      "batch_matmul",
+      "batch_matmul_bcast",
+      "quantize_batch_matmul",
+      "quantize_batch_matmul_bcast",
+      "gemm4conv",
+      "matmul",
+      "matmul_inference",
+      "quantize_matmul"};
 
-  const std::set<mluOpDevType_t> arch_skip_nan_inf = {MLUOP_MLU220, MLUOP_MLU270, MLUOP_MLU290};
+  const std::set<mluOpDevType_t> arch_skip_nan_inf = {
+      MLUOP_MLU220, MLUOP_MLU270, MLUOP_MLU290};
 
   // runtime config
   struct ExecuteConfig {
@@ -96,10 +101,14 @@ namespace mluoptest {
 
     void print() {
       std::cout << "Execution config:\n";
-      std::cout << std::left << std::setw(25) << "show diff1~3: " << fixed_criterion << "\n";
-      std::cout << std::left << std::setw(25) << "dump data: " << dump_data << "\n";
-      std::cout << std::left << std::setw(25) << "perf repeat: " << perf_repeat << "\n";
-      std::cout << std::left << std::setw(25) << "check perf baseline: " << perf_baseline << "\n";
+      std::cout << std::left << std::setw(25)
+                << "show diff1~3: " << fixed_criterion << "\n";
+      std::cout << std::left << std::setw(25) << "dump data: " << dump_data
+                << "\n";
+      std::cout << std::left << std::setw(25) << "perf repeat: " << perf_repeat
+                << "\n";
+      std::cout << std::left << std::setw(25)
+                << "check perf baseline: " << perf_baseline << "\n";
     }
 
     bool mlu_only        = false;
@@ -145,7 +154,8 @@ namespace mluoptest {
       }
     }
     void reset() {
-      LOG(WARNING) << "Executor: reset cnrt and go on running, this may caused by cnrt failed.";
+      LOG(WARNING) << "Executor: reset cnrt and go on running, this may caused "
+                      "by cnrt failed.";
       destroy();
       init();
     }
@@ -173,8 +183,10 @@ namespace mluoptest {
     }
     double duration(int repeat = 1) {
       if (durations.empty()) {
-        LOG(WARNING) << "Please add interface_timer_.start() before mlu-ops interface.";
-        LOG(WARNING) << "Please add interface_timer_.stop() after mlu-ops interface.";
+        LOG(WARNING)
+            << "Please add interface_timer_.start() before mlu-ops interface.";
+        LOG(WARNING)
+            << "Please add interface_timer_.stop() after mlu-ops interface.";
         return -1;
       }
       double sum = 0;
@@ -197,42 +209,39 @@ namespace mluoptest {
   };
 
   /* quant mode, used in cast_in().
- * 0:only set position;
- * 1:set position and scale;
- * 2:set posiiton, scale and offset;
- */
-  enum QuantMode { ONLY_POSITION    = 0,
-                   POSITION_SCALE   = 1,
-                   POS_SCALE_OFFSET = 2,
-                   NO_QUANT         = 3 };
+   * 0:only set position;
+   * 1:set position and scale;
+   * 2:set posiiton, scale and offset;
+   */
+  enum QuantMode {
+    ONLY_POSITION    = 0,
+    POSITION_SCALE   = 1,
+    POS_SCALE_OFFSET = 2,
+    NO_QUANT         = 3
+  };
 
   struct DataBlock {
     DataBlock(MetaTensor *ts, bool o) {
       is_null   = ts->is_null;
       is_output = o;
-
-      name   = ts->name;
-      dtype  = ts->dtype;
-      oc_dt  = ts->oc_dt;
-      shape  = ts->shape;
-      stride = ts->stride;
-
-      count = ts->total_count;
-      size  = count * ts->sizeof_dtype;
+      name      = ts->name;
+      dtype     = ts->dtype;
+      oc_dt     = ts->oc_dt;
+      shape     = ts->shape;
+      stride    = ts->stride;
+      count     = ts->total_count;
+      size      = count * ts->sizeof_dtype;
     }
     void *host_ptr          = nullptr; // host pointer;
     void *device_ptr        = nullptr; // device pointer
     void *device_origin_ptr = nullptr; // device pointer of origin
     void *device_perf_ptr   = nullptr; // device pointer for perf test
-
-    size_t size  = 0; // size in bytes (count * sizeof[dtype])
-    size_t count = 0; // element count
-
-    bool is_output = false;
-    bool is_null   = false;
-
-    mluOpDataType_t dtype = MLUOP_DTYPE_INVALID;
-    mluOpDataType_t oc_dt = MLUOP_DTYPE_INVALID;
+    size_t size             = 0;       // size in bytes (count * sizeof[dtype])
+    size_t count            = 0;       // element count
+    bool is_output          = false;
+    bool is_null            = false;
+    mluOpDataType_t dtype   = MLUOP_DTYPE_INVALID;
+    mluOpDataType_t oc_dt   = MLUOP_DTYPE_INVALID;
 
     std::vector<int> shape;
     std::vector<int> stride;
@@ -250,7 +259,8 @@ namespace mluoptest {
     Executor() {}
     virtual ~Executor();
 
-    void init(const std::shared_ptr<ExecuteContext> ctx); // set config param by init().
+    void init(const std::shared_ptr<ExecuteContext>
+                  ctx); // set config param by init().
     // set execute variable by setup().
     void setup(std::string file, const std::shared_ptr<ExecuteConfig> ecfg);
     void launch();
@@ -276,8 +286,10 @@ namespace mluoptest {
     // if we have multi input or output
     // their order must consistent with order in prototxt.
     // and consistent with mlu-ops api
-    std::vector<TensorPair> tensor_desc_; // = delete, same with *->get(i).tensor
-    std::vector<DataBlock> data_vector_;  // = delete, same with *->get(i).host_ptr
+    std::vector<TensorPair>
+        tensor_desc_; // = delete, same with *->get(i).tensor
+    std::vector<DataBlock>
+        data_vector_; // = delete, same with *->get(i).host_ptr
 
     // allocate by mlu_runtime
     std::vector<void *> workspace_;
@@ -339,6 +351,7 @@ namespace mluoptest {
                            int *position,
                            float *scale,
                            int *offset = nullptr);
+
     virtual int64_t getTheoryOps() { return -1; }
     virtual int64_t getTheoryIoSize();
     virtual std::vector<int> getCriterionsUse() { return criterions_use_; }
@@ -370,7 +383,7 @@ namespace mluoptest {
     void copyIn();
     void copyOut();
 
-    //whether input data can be zero
+    // whether input data can be zero
     bool needZeroInput();
 
     void checkBaseline();

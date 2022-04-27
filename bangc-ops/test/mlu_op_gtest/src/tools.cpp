@@ -66,27 +66,30 @@ namespace mluoptest {
     fout.close();
   }
 
-  void saveDataToFile(const std::string &file, float *data, mluOpDataType_t dtype, size_t count) {
+  void saveDataToFile(const std::string &file,
+                      float *data,
+                      mluOpDataType_t dtype,
+                      size_t count) {
     std::ostringstream oss;
     oss << std::this_thread::get_id();
     VLOG(4) << "Save data to file: " << file;
     std::ofstream fout(file + "_" + oss.str(), std::ios::out);
     switch (dtype) {
-    case MLUOP_DTYPE_DOUBLE: {
-      for (auto i = 0; i < count; ++i) {
-        fout << ((double *)data)[i] << std::endl;
+      case MLUOP_DTYPE_DOUBLE: {
+        for (auto i = 0; i < count; ++i) {
+          fout << ((double *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_COMPLEX_FLOAT: {
+        for (auto i = 0; i < 2 * count; ++i) {
+          fout << ((float *)data)[i] << std::endl;
+        }
+        break;
       }
-    } break;
-    case MLUOP_DTYPE_COMPLEX_FLOAT: {
-      for (auto i = 0; i < 2 * count; ++i) {
-        fout << ((float *)data)[i] << std::endl;
-      }
-      break;
-    }
-    default:
-      for (int i = 0; i < count; ++i) {
-        fout << data[i] << std::endl;
-      }
+      default:
+        for (int i = 0; i < count; ++i) {
+          fout << data[i] << std::endl;
+        }
     }
     fout.close();
   }
@@ -99,87 +102,105 @@ namespace mluoptest {
       getline(fin, line);
       if (line.empty()) {
         LOG(ERROR) << "Data in " << file << " not enough, at least " << count;
-        throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
       }
       data[i] = stof(line);
     }
     fin.close();
   }
 
-  void saveHexDataToFile(const std::string &file, void *data, mluOpDataType_t dtype, size_t count) {
+  void saveHexDataToFile(const std::string &file,
+                         void *data,
+                         mluOpDataType_t dtype,
+                         size_t count) {
     VLOG(4) << "Save data to file: " << file;
     std::ofstream fout(file, std::ios::out);
     switch (dtype) {
-    case MLUOP_DTYPE_HALF: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << cvtHalfToFloat(((int16_t *)data)[i])
-             << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_FLOAT: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << ((float *)data)[i] << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_INT8: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << (int32_t)((int8_t *)data)[i]
-             << std::setw(20) << "dec: " << std::setw(10) << std::dec
-             << (int32_t)((int8_t *)data)[i] // don't show char
-             << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_UINT8: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << (uint32_t)((uint8_t *)data)[i]
-             << std::setw(20) << "dec: " << std::setw(10) << std::dec
-             << (uint32_t)((uint8_t *)data)[i] // not char
-             << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_INT16: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << ((int16_t *)data)[i] << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_INT32: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << ((int32_t *)data)[i] << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_INT64: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << ((int64_t *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << ((int64_t *)data)[i] << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_BOOL: {
-      for (int i = 0; i < count; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << (int32_t)((bool *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << (int32_t)((bool *)data)[i] << std::endl;
-      }
-    } break;
-    case MLUOP_DTYPE_INT31: {
-      // int31 save as int16 * 2
-      for (int i = 0; i < count * 2; ++i) {
-        fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i] << std::setw(20)
-             << "dec: " << std::setw(10) << std::dec << ((int16_t *)data)[i] << std::endl;
-      }
-    } break;
+      case MLUOP_DTYPE_HALF: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << cvtHalfToFloat(((int16_t *)data)[i]) << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_FLOAT: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((float *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_INT8: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex
+               << (int32_t)((int8_t *)data)[i] << std::setw(20)
+               << "dec: " << std::setw(10) << std::dec
+               << (int32_t)((int8_t *)data)[i] // don't show char
+               << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_UINT8: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex
+               << (uint32_t)((uint8_t *)data)[i] << std::setw(20)
+               << "dec: " << std::setw(10) << std::dec
+               << (uint32_t)((uint8_t *)data)[i] // not char
+               << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_INT16: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((int16_t *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_INT32: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((int32_t *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_INT64: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int64_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((int64_t *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_BOOL: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex
+               << (int32_t)((bool *)data)[i] << std::setw(20)
+               << "dec: " << std::setw(10) << std::dec
+               << (int32_t)((bool *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_INT31: {
+        // int31 save as int16 * 2
+        for (int i = 0; i < count * 2; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((int16_t *)data)[i] << std::endl;
+        }
+      } break;
     }
     fout.close();
   }
 
-  void generateRandomData(float *data, size_t count, const RandomData *random_param, DataType dtype) {
+  void generateRandomData(float *data,
+                          size_t count,
+                          const RandomData *random_param,
+                          DataType dtype) {
     // round to int
     // if convert_dtype == true, round(float) to int,
     // else don't round, int is qint
-    bool convert_dtype = random_param->has_convert_dtype() ? random_param->convert_dtype() : false;
-    int seed           = random_param->seed();
+    bool convert_dtype = random_param->has_convert_dtype()
+                             ? random_param->convert_dtype()
+                             : false;
+    int seed = random_param->seed();
     // generate random data
     std::default_random_engine re(seed); // re for random engine
 
@@ -210,125 +231,129 @@ namespace mluoptest {
 
     // reset data by dtype
     switch (dtype) {
-    case DTYPE_HALF:
-    case DTYPE_FLOAT:
-      break;
-    case DTYPE_INT8:
-    case DTYPE_INT16:
-      if (convert_dtype) {
-        // if convert_dtype == true, round(float) to int,
-        // else don't round, int is qint
+      case DTYPE_HALF:
+      case DTYPE_FLOAT:
+        break;
+      case DTYPE_INT8:
+      case DTYPE_INT16:
+        if (convert_dtype) {
+          // if convert_dtype == true, round(float) to int,
+          // else don't round, int is qint
+          for (int i = 0; i < count; ++i) {
+            int x   = std::floor(data[i]);
+            data[i] = x;
+          }
+        }
+        break;
+      case DTYPE_UINT8:
+      case DTYPE_INT31:
+      case DTYPE_INT32:
+      case DTYPE_INT64:
         for (int i = 0; i < count; ++i) {
           int x   = std::floor(data[i]);
           data[i] = x;
         }
-      }
-      break;
-    case DTYPE_UINT8:
-    case DTYPE_INT31:
-    case DTYPE_INT32:
-    case DTYPE_INT64:
-      for (int i = 0; i < count; ++i) {
-        int x   = std::floor(data[i]);
-        data[i] = x;
-      }
-      break;
-    case DTYPE_BOOL: {
-      if (!random_param->has_lower_bound() || !random_param->has_upper_bound()) {
-        LOG(ERROR) << "Generate bool data should use uniform distribution.";
-      }
-      float mid = (random_param->upper_bound() + random_param->lower_bound()) / 2;
-      for (int i = 0; i < count; ++i) {
-        data[i] = (data[i] < mid) ? 0.0f : 1.0f;
-      }
-    } break;
-    default:
-      LOG(ERROR) << "Generate random data failed. ";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+        break;
+      case DTYPE_BOOL: {
+        if (!random_param->has_lower_bound() ||
+            !random_param->has_upper_bound()) {
+          LOG(ERROR) << "Generate bool data should use uniform distribution.";
+        }
+        float mid =
+            (random_param->upper_bound() + random_param->lower_bound()) / 2;
+        for (int i = 0; i < count; ++i) {
+          data[i] = (data[i] < mid) ? 0.0f : 1.0f;
+        }
+      } break;
+      default:
+        LOG(ERROR) << "Generate random data failed. ";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
     }
   }
 
   cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
     switch (dtype) {
-    case MLUOP_DTYPE_HALF:
-      return CNRT_FLOAT16;
-    case MLUOP_DTYPE_FLOAT:
-      return CNRT_FLOAT32;
-    case MLUOP_DTYPE_INT8:
-      return CNRT_INT8;
-    case MLUOP_DTYPE_INT16:
-      return CNRT_INT16;
-    case MLUOP_DTYPE_INT32:
-      return CNRT_INT32;
-    case MLUOP_DTYPE_INT64:
-      return CNRT_INT64;
-    case MLUOP_DTYPE_BOOL:
-      return CNRT_BOOL;
-    case MLUOP_DTYPE_UINT8:
-      return CNRT_UINT8;
-    default:
-      LOG(ERROR) << "NOT support this dtype yet";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      case MLUOP_DTYPE_HALF:
+        return CNRT_FLOAT16;
+      case MLUOP_DTYPE_FLOAT:
+        return CNRT_FLOAT32;
+      case MLUOP_DTYPE_INT8:
+        return CNRT_INT8;
+      case MLUOP_DTYPE_INT16:
+        return CNRT_INT16;
+      case MLUOP_DTYPE_INT32:
+        return CNRT_INT32;
+      case MLUOP_DTYPE_INT64:
+        return CNRT_INT64;
+      case MLUOP_DTYPE_BOOL:
+        return CNRT_BOOL;
+      case MLUOP_DTYPE_UINT8:
+        return CNRT_UINT8;
+      default:
+        LOG(ERROR) << "NOT support this dtype yet";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
     }
   }
 
   mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype) {
     switch (dtype) {
-    case DTYPE_HALF:
-      return MLUOP_DTYPE_HALF;
-    case DTYPE_FLOAT:
-      return MLUOP_DTYPE_FLOAT;
-    case DTYPE_INT8:
-      return MLUOP_DTYPE_INT8;
-    case DTYPE_UINT8:
-      return MLUOP_DTYPE_UINT8;
-    case DTYPE_INT16:
-      return MLUOP_DTYPE_INT16;
-    case DTYPE_INT31:
-      return MLUOP_DTYPE_INT31;
-    case DTYPE_INT32:
-      return MLUOP_DTYPE_INT32;
-    case DTYPE_BOOL:
-      return MLUOP_DTYPE_BOOL;
-    case DTYPE_INT64:
-      return MLUOP_DTYPE_INT64;
-    default:
-      LOG(ERROR) << "Don't support this order.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      case DTYPE_HALF:
+        return MLUOP_DTYPE_HALF;
+      case DTYPE_FLOAT:
+        return MLUOP_DTYPE_FLOAT;
+      case DTYPE_INT8:
+        return MLUOP_DTYPE_INT8;
+      case DTYPE_UINT8:
+        return MLUOP_DTYPE_UINT8;
+      case DTYPE_INT16:
+        return MLUOP_DTYPE_INT16;
+      case DTYPE_INT31:
+        return MLUOP_DTYPE_INT31;
+      case DTYPE_INT32:
+        return MLUOP_DTYPE_INT32;
+      case DTYPE_BOOL:
+        return MLUOP_DTYPE_BOOL;
+      case DTYPE_INT64:
+        return MLUOP_DTYPE_INT64;
+      default:
+        LOG(ERROR) << "Don't support this order.";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
     }
   }
 
   mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order) {
     switch (order) {
-    case LAYOUT_ARRAY:
-      return MLUOP_LAYOUT_ARRAY;
-    case LAYOUT_NCHW:
-      return MLUOP_LAYOUT_NCHW;
-    case LAYOUT_NHWC:
-      return MLUOP_LAYOUT_NHWC;
-    case LAYOUT_HWCN:
-      return MLUOP_LAYOUT_HWCN;
-    case LAYOUT_NDHWC:
-      return MLUOP_LAYOUT_NDHWC;
-    case LAYOUT_NCDHW:
-      return MLUOP_LAYOUT_NCDHW;
-    case LAYOUT_TNC:
-      return MLUOP_LAYOUT_TNC;
-    case LAYOUT_NTC:
-      return MLUOP_LAYOUT_NTC;
-    case LAYOUT_NLC:
-      return MLUOP_LAYOUT_NLC;
-    case LAYOUT_NC:
-      return MLUOP_LAYOUT_NC;
-    default:
-      LOG(ERROR) << "Don't support this layout.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      case LAYOUT_ARRAY:
+        return MLUOP_LAYOUT_ARRAY;
+      case LAYOUT_NCHW:
+        return MLUOP_LAYOUT_NCHW;
+      case LAYOUT_NHWC:
+        return MLUOP_LAYOUT_NHWC;
+      case LAYOUT_HWCN:
+        return MLUOP_LAYOUT_HWCN;
+      case LAYOUT_NDHWC:
+        return MLUOP_LAYOUT_NDHWC;
+      case LAYOUT_NCDHW:
+        return MLUOP_LAYOUT_NCDHW;
+      case LAYOUT_TNC:
+        return MLUOP_LAYOUT_TNC;
+      case LAYOUT_NTC:
+        return MLUOP_LAYOUT_NTC;
+      case LAYOUT_NLC:
+        return MLUOP_LAYOUT_NLC;
+      case LAYOUT_NC:
+        return MLUOP_LAYOUT_NC;
+      default:
+        LOG(ERROR) << "Don't support this layout.";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
     }
   }
 
-  int64_t cvtFloatToInt64(float x) {
-    return (int64_t)x;
-  }
+  int64_t cvtFloatToInt64(float x) { return (int64_t)x; }
 
   // ref: sopa/core/src/util/type_converter.cpp
   int16_t cvtFloatToHalf(float x) {
@@ -445,7 +470,8 @@ namespace mluoptest {
           // cvt to digit
           return std::stoul(kb_str) * 1024;
         } catch (std::exception &e) {
-          LOG(ERROR) << "MLUOP GTEST: grep number in " << line << " failed, " << e.what();
+          LOG(ERROR) << "MLUOP GTEST: grep number in " << line << " failed, "
+                     << e.what();
           return 0;
         }
       }
@@ -478,7 +504,7 @@ namespace mluoptest {
     }
   }
 
-  //support uint8 uint16 uint32 uint64 int8 int16 int32 int64 bool
+  // support uint8 uint16 uint32 uint64 int8 int16 int32 int64 bool
   void arrayCastFloatAndNormal(void *src_data,
                                mluOpDataType_t src_dtype,
                                void *dst_data,
@@ -486,58 +512,84 @@ namespace mluoptest {
                                int num) {
     if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_UINT8) {
       arrayCastFloatAndNormal<float, uint8_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_UINT16) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_UINT16) {
       arrayCastFloatAndNormal<float, uint16_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_UINT32) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_UINT32) {
       arrayCastFloatAndNormal<float, uint32_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_UINT64) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_UINT64) {
       arrayCastFloatAndNormal<float, uint64_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_INT8) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_INT8) {
       arrayCastFloatAndNormal<float, int8_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_INT16) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_INT16) {
       arrayCastFloatAndNormal<float, int16_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_INT32) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_INT32) {
       arrayCastFloatAndNormal<float, int32_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_INT64) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_INT64) {
       arrayCastFloatAndNormal<float, int64_t>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_BOOL) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_BOOL) {
       arrayCastFloatAndNormal<float, bool>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_HALF) {
+    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+               dst_dtype == MLUOP_DTYPE_HALF) {
       arrayCastFloatToHalf((int16_t *)dst_data, (float *)src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_UINT8 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_UINT8 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<uint8_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_UINT16 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_UINT16 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<uint16_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_UINT32 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_UINT32 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<uint32_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_UINT64 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_UINT64 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<uint64_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_INT8 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_INT8 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<int8_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_INT16 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_INT16 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<int16_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_INT32 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_INT32 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<int32_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_INT64 && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_INT64 &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<int64_t, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_BOOL && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_BOOL &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastFloatAndNormal<bool, float>(dst_data, src_data, num);
-    } else if (src_dtype == MLUOP_DTYPE_HALF && dst_dtype == MLUOP_DTYPE_FLOAT) {
+    } else if (src_dtype == MLUOP_DTYPE_HALF &&
+               dst_dtype == MLUOP_DTYPE_FLOAT) {
       arrayCastHalfToFloat((float *)dst_data, (int16_t *)src_data, num);
-    } else if ((src_dtype == MLUOP_DTYPE_COMPLEX_HALF && dst_dtype == MLUOP_DTYPE_FLOAT) ||
-               (src_dtype == MLUOP_DTYPE_COMPLEX_HALF && dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT)) {
+    } else if ((src_dtype == MLUOP_DTYPE_COMPLEX_HALF &&
+                dst_dtype == MLUOP_DTYPE_FLOAT) ||
+               (src_dtype == MLUOP_DTYPE_COMPLEX_HALF &&
+                dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT)) {
       arrayCastHalfToFloat((float *)dst_data, (int16_t *)src_data, 2 * num);
-    } else if ((src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_COMPLEX_HALF) ||
-               (src_dtype == MLUOP_DTYPE_COMPLEX_FLOAT && dst_dtype == MLUOP_DTYPE_COMPLEX_HALF)) {
+    } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
+                dst_dtype == MLUOP_DTYPE_COMPLEX_HALF) ||
+               (src_dtype == MLUOP_DTYPE_COMPLEX_FLOAT &&
+                dst_dtype == MLUOP_DTYPE_COMPLEX_HALF)) {
       arrayCastFloatToHalf((int16_t *)dst_data, (float *)src_data, 2 * num);
     } else {
-      LOG(ERROR) << "MLUOPGTEST: arrayCastFloatAndNormal not supported the src_dtype is " << src_dtype
-                 << ", the dst_dtype is " << dst_dtype << " . ";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      LOG(ERROR) << "MLUOPGTEST: arrayCastFloatAndNormal not supported the "
+                    "src_dtype is "
+                 << src_dtype << ", the dst_dtype is " << dst_dtype << " . ";
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
     }
   }
 
-  void arrayCastHalfToInt8or16HalfUp(void *dst, int16_t *src, int pos, int num, int int8or16) {
+  void arrayCastHalfToInt8or16HalfUp(
+      void *dst, int16_t *src, int pos, int num, int int8or16) {
     for (int i = 0; i < num; ++i) {
       int8_t res        = 0;
       int16_t src_int16 = src[i];
@@ -545,9 +597,10 @@ namespace mluoptest {
       float offset_f      = powf(2, pos - 1);
       int16_t offset_half = cvtFloatToHalf(offset_f);
 
-      src_int16 = float_add(src_int16, offset_half, 0, ROUND_MODE_NEAREST_EVEN, 0, 1);
-      int exp   = GenNumberOfFixedWidth(src_int16 >> 10, 5);
-      int eff   = (src_int16 & 0x3ff);
+      src_int16 =
+          float_add(src_int16, offset_half, 0, ROUND_MODE_NEAREST_EVEN, 0, 1);
+      int exp = GenNumberOfFixedWidth(src_int16 >> 10, 5);
+      int eff = (src_int16 & 0x3ff);
 
       if (pos > 0) {
         if (exp > pos) {
@@ -611,9 +664,10 @@ namespace mluoptest {
     }
   }
 
-  //read info from file , return a map,key is name,value is ops
-  //eg: key:black_list_zero_input,value:quantize,pad,xx,...
-  std::unordered_map<std::string, std::vector<std::string>> readFileByLine(const std::string &file) {
+  // read info from file , return a map,key is name,value is ops
+  // eg: key:black_list_zero_input,value:quantize,pad,xx,...
+  std::unordered_map<std::string, std::vector<std::string>>
+      readFileByLine(const std::string &file) {
     std::unordered_map<std::string, std::vector<std::string>> map_info;
     std::string line;
     std::ifstream fin(file, std::ios::in);
@@ -625,8 +679,9 @@ namespace mluoptest {
         auto key_pos_begin = line.find("[");
         if (key_pos_begin != std::string::npos) {
           auto key_pos_end = line.find("]");
-          auto key         = line.substr(key_pos_begin + 1, key_pos_end - key_pos_begin - 1);
-          key_str          = key;
+          auto key =
+              line.substr(key_pos_begin + 1, key_pos_end - key_pos_begin - 1);
+          key_str = key;
         } else {
           map_info[key_str].emplace_back(line);
         }
@@ -676,7 +731,8 @@ namespace mluoptest {
       }
     } else {
       LOG(ERROR) << "Don't support this data_width.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
     }
   }
 
@@ -700,8 +756,14 @@ namespace mluoptest {
     int exp_b     = GenNumberOfFixedWidth(in_b >> eff_bw, exp_bw);
     int eff_b     = GenNumberOfFixedWidth(in_b, eff_bw);
     // unusual number treatment:
-    eff_a = ((exp_a == 0 || exp_a == (pow(2, exp_bw) - 1)) ? eff_a : (eff_a | (1 << eff_bw))) << 3;
-    eff_b = ((exp_b == 0 || exp_b == (pow(2, exp_bw) - 1)) ? eff_b : (eff_b | (1 << eff_bw))) << 3;
+    eff_a = ((exp_a == 0 || exp_a == (pow(2, exp_bw) - 1))
+                 ? eff_a
+                 : (eff_a | (1 << eff_bw)))
+            << 3;
+    eff_b = ((exp_b == 0 || exp_b == (pow(2, exp_bw) - 1))
+                 ? eff_b
+                 : (eff_b | (1 << eff_bw)))
+            << 3;
     exp_a = (exp_a == 0 && eff_a != 0) ? (exp_a + 1) : exp_a;
     exp_b = (exp_b == 0 && eff_b != 0) ? (exp_b + 1) : exp_b;
     // put larger one in a:
@@ -719,11 +781,14 @@ namespace mluoptest {
       change_pos    = 1;
     }
     // eff shift:
-    int sticky_bit =
-        (exp_a - exp_b >= 32) ? (eff_b != 0) : (GenNumberOfFixedWidth(eff_b, exp_a - exp_b) != 0);
-    eff_b = ((exp_a - exp_b >= 32) ? 0 : (eff_b >> (exp_a - exp_b))) | sticky_bit;
+    int sticky_bit = (exp_a - exp_b >= 32)
+                         ? (eff_b != 0)
+                         : (GenNumberOfFixedWidth(eff_b, exp_a - exp_b) != 0);
+    eff_b =
+        ((exp_a - exp_b >= 32) ? 0 : (eff_b >> (exp_a - exp_b))) | sticky_bit;
     // eff add or sub:
-    int eff_res = ((sign_a == sign_b) && add_or_sub) || ((sign_a != sign_b) && !add_or_sub)
+    int eff_res = ((sign_a == sign_b) && add_or_sub) ||
+                          ((sign_a != sign_b) && !add_or_sub)
                       ? (eff_a - eff_b)
                       : (eff_a + eff_b);
     int exp_res  = exp_a;
@@ -751,7 +816,8 @@ namespace mluoptest {
       exp_res = pow(2, exp_bw) - 2;
       up      = 1;
     }
-    if (((eff_res < pow(2, eff_bw + 3)) || eff_res == 0) && (exp_res == 1)) { // DENORM
+    if (((eff_res < pow(2, eff_bw + 3)) || eff_res == 0) &&
+        (exp_res == 1)) { // DENORM
       exp_res = 0;
     }
     if ((eff_res & 0x7) != 0) {
@@ -816,28 +882,35 @@ namespace mluoptest {
 
       if (ieee754) { // ieee754 fp16 add
         // exception treatment:
-        if ((float_number_is_nan_inf(16, in_a) == 1) || (float_number_is_nan_inf(16, in_a) == -1) ||
-            (float_number_is_nan_inf(16, in_b) == 1) || (float_number_is_nan_inf(16, in_b) == -1)) {
+        if ((float_number_is_nan_inf(16, in_a) == 1) ||
+            (float_number_is_nan_inf(16, in_a) == -1) ||
+            (float_number_is_nan_inf(16, in_b) == 1) ||
+            (float_number_is_nan_inf(16, in_b) == -1)) {
           // one is NAN
           return 0x7c01;
         } else if (((float_number_is_nan_inf(16, in_a) == 2) &&
                     (float_number_is_nan_inf(16, in_b) == -2)) ||
                    ((float_number_is_nan_inf(16, in_a) == -2) &&
-                    (float_number_is_nan_inf(16, in_b) == 2))) { // one is +INF, the other -INF
+                    (float_number_is_nan_inf(16, in_b) ==
+                     2))) { // one is +INF, the other -INF
           return 0x7c01;
         } else if (((float_number_is_nan_inf(16, in_a) == 2) &&
                     (float_number_is_nan_inf(16, in_b) == 2)) ||
                    ((float_number_is_nan_inf(16, in_a) == -2) &&
-                    (float_number_is_nan_inf(16, in_b) == -2))) { // both +INF or both -INF
+                    (float_number_is_nan_inf(16, in_b) ==
+                     -2))) { // both +INF or both -INF
           return ((sign_a << 15) | 0x7c00);
         } else if ((float_number_is_nan_inf(16, in_a) == 2) ||
-                   (float_number_is_nan_inf(16, in_a) == -2)) { // a is INF, sign = sign_a
+                   (float_number_is_nan_inf(16, in_a) ==
+                    -2)) { // a is INF, sign = sign_a
           return ((sign_a << 15) | 0x7c00);
         } else if ((float_number_is_nan_inf(16, in_b) == 2) ||
-                   (float_number_is_nan_inf(16, in_b) == -2)) { // b is INF, sign = sign_b
+                   (float_number_is_nan_inf(16, in_b) ==
+                    -2)) { // b is INF, sign = sign_b
           return ((sign_b << 15) | 0x7c00);
         } else if ((((in_a & 0xffff) == 0x0) && ((in_b & 0xffff) == 0x0)) ||
-                   (((in_a & 0xffff) == 0x8000) && ((in_b & 0xffff) == 0x8000))) {
+                   (((in_a & 0xffff) == 0x8000) &&
+                    ((in_b & 0xffff) == 0x8000))) {
           // both +0 or both -0
           return ((sign_a << 15) | 0x0);
         } else if ((((in_a & 0xffff) == 0x0) && ((in_b & 0xffff) == 0x8000)) ||
@@ -873,7 +946,8 @@ namespace mluoptest {
           return temp;
         }      // ieee754 fp16 add
       } else { // not ieee754 fp16 add
-        if ((float_number_is_nan_inf(16, in_a) != 0) && (float_number_is_nan_inf(16, in_b) != 0)) {
+        if ((float_number_is_nan_inf(16, in_a) != 0) &&
+            (float_number_is_nan_inf(16, in_b) != 0)) {
           if (eff_a > eff_b) {
             return ((sign_a << 15) | 0x7bff);
           } else if (eff_a < eff_b) {
@@ -911,17 +985,29 @@ namespace mluoptest {
       // fp16 add
     } else {
       LOG(ERROR) << "CPU float add only support half add now.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
     }
   }
 
-  int float_add(int in_a, int in_b, int float_16or32, int round_mode, int add_or_sub, int ieee754) {
+  int float_add(int in_a,
+                int in_b,
+                int float_16or32,
+                int round_mode,
+                int add_or_sub,
+                int ieee754) {
     int up;
     int down;
-    return float_add_up_down(in_a, in_b, float_16or32, round_mode, add_or_sub, ieee754, up, down);
+    return float_add_up_down(
+        in_a, in_b, float_16or32, round_mode, add_or_sub, ieee754, up, down);
   }
 
-  int float_mult_regular(int in_a, int in_b, int float_16or32, int round_mode, int &up, int &down) {
+  int float_mult_regular(int in_a,
+                         int in_b,
+                         int float_16or32,
+                         int round_mode,
+                         int &up,
+                         int &down) {
     up   = 0;
     down = 0;
     // parse number:
@@ -935,9 +1021,13 @@ namespace mluoptest {
     int exp_b     = GenNumberOfFixedWidth(in_b >> eff_bw, exp_bw);
     int eff_b     = GenNumberOfFixedWidth(in_b, eff_bw);
     // unusual number treatment:
-    eff_a = (exp_a == 0 || exp_a == (pow(2, exp_bw) - 1)) ? eff_a : (eff_a | (1 << eff_bw));
+    eff_a = (exp_a == 0 || exp_a == (pow(2, exp_bw) - 1))
+                ? eff_a
+                : (eff_a | (1 << eff_bw));
     // INF and NAN won't happen here
-    eff_b          = (exp_b == 0 || exp_b == (pow(2, exp_bw) - 1)) ? eff_b : (eff_b | (1 << eff_bw));
+    eff_b = (exp_b == 0 || exp_b == (pow(2, exp_bw) - 1))
+                ? eff_b
+                : (eff_b | (1 << eff_bw));
     exp_a          = (exp_a == 0 && eff_a != 0) ? (exp_a + 1) : exp_a;
     exp_b          = (exp_b == 0 && eff_b != 0) ? (exp_b + 1) : exp_b;
     int exp_offset = float_16or32 ? 0x7f : 0xf;
@@ -945,8 +1035,8 @@ namespace mluoptest {
     int sign_res     = sign_a ^ sign_b;
     uint64_t eff_res = uint64_t(eff_a) * uint64_t(eff_b);
     int exp_res      = ((eff_res == 0) ? 0 : (exp_a + exp_b - exp_offset));
-    // eff_res == 0 won't happen here(if eff_res == 0 then eff_a/b == 0 then exp_a/b == 0, it is 0)
-    // eff normalize:
+    // eff_res == 0 won't happen here(if eff_res == 0 then eff_a/b == 0 then
+    // exp_a/b == 0, it is 0) eff normalize:
     int drop_bit         = 0;
     int drop_highest_bit = 0;
     int drop_else_bit    = 0;
@@ -977,11 +1067,13 @@ namespace mluoptest {
         drop_else_bit = 1;
       } else if (((1 - exp_res) >= 32) &&
                  (((eff_res & 0xffffffff) != 0) ||
-                  (GenNumberOfFixedWidth((eff_res >> 32) & 0xffffffff, 1 - exp_res - 32) != 0))) {
+                  (GenNumberOfFixedWidth((eff_res >> 32) & 0xffffffff,
+                                         1 - exp_res - 32) != 0))) {
         drop_bit      = 1;
         drop_else_bit = 1;
       } else if (((1 - exp_res) < 32) &&
-                 (GenNumberOfFixedWidth(eff_res & 0xffffffff, 1 - exp_res) != 0)) {
+                 (GenNumberOfFixedWidth(eff_res & 0xffffffff, 1 - exp_res) !=
+                  0)) {
         drop_bit      = 1;
         drop_else_bit = 1;
       }
@@ -1056,24 +1148,29 @@ namespace mluoptest {
 
       if (ieee754) { // ieee754 fp16 mult
         // exception treatment:
-        if ((float_number_is_nan_inf(16, in_a) == 1) || (float_number_is_nan_inf(16, in_a) == -1) ||
-            (float_number_is_nan_inf(16, in_b) == 1) || (float_number_is_nan_inf(16, in_b) == -1)) {
+        if ((float_number_is_nan_inf(16, in_a) == 1) ||
+            (float_number_is_nan_inf(16, in_a) == -1) ||
+            (float_number_is_nan_inf(16, in_b) == 1) ||
+            (float_number_is_nan_inf(16, in_b) == -1)) {
           // one is NAN
           return 0x7c01;
         } else if (((in_a & 0x7fff) == 0x0) &&
                    ((float_number_is_nan_inf(16, in_b) == 2) ||
-                    (float_number_is_nan_inf(16, in_b) == -2))) { // a is 0, b is INF
+                    (float_number_is_nan_inf(16, in_b) ==
+                     -2))) { // a is 0, b is INF
           return 0x7c01;
         } else if (((in_b & 0x7fff) == 0x0) &&
                    ((float_number_is_nan_inf(16, in_a) == 2) ||
-                    (float_number_is_nan_inf(16, in_a) == -2))) { // a is INF, b is 0
+                    (float_number_is_nan_inf(16, in_a) ==
+                     -2))) { // a is INF, b is 0
           return 0x7c01;
         } else if ((float_number_is_nan_inf(16, in_a) == 2) ||
                    (float_number_is_nan_inf(16, in_a) == -2) ||
                    (float_number_is_nan_inf(16, in_b) == 2) ||
                    (float_number_is_nan_inf(16, in_b) == -2)) { // one is INF
           return (((sign_a ^ sign_b) << 15) | 0x7c00);
-        } else if (((in_a & 0x7fff) == 0x0) || ((in_b & 0x7fff) == 0x0)) { // one is 0
+        } else if (((in_a & 0x7fff) == 0x0) ||
+                   ((in_b & 0x7fff) == 0x0)) { // one is 0
           return (((sign_a ^ sign_b) << 15) | 0x0);
         } else { // regular treatment:
           int temp = float_mult_regular(in_a, in_b, 0, round_mode, up, down);
@@ -1095,7 +1192,8 @@ namespace mluoptest {
                    (float_number_is_nan_inf(16, in_b) != 0)) {
           return ((sign_a == sign_b) ? 0x7bff : 0xfbff);
         } else {
-          int temp = float_mult_regular(in_a, in_b, float_16or32, round_mode, up, down);
+          int temp = float_mult_regular(
+              in_a, in_b, float_16or32, round_mode, up, down);
           if (temp == 0x7c00) {
             temp = 0x7bff;
           } else if (temp == 0xfc00) {
@@ -1107,14 +1205,17 @@ namespace mluoptest {
       // fp16 mult
     } else {
       LOG(ERROR) << "CPU float mult only support half now.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
     }
   }
 
-  int float_mult(int in_a, int in_b, int float_16or32, int round_mode, int ieee754) {
+  int float_mult(
+      int in_a, int in_b, int float_16or32, int round_mode, int ieee754) {
     int up;
     int down;
-    return float_mult_up_down(in_a, in_b, float_16or32, round_mode, ieee754, up, down);
+    return float_mult_up_down(
+        in_a, in_b, float_16or32, round_mode, ieee754, up, down);
   }
 
 } // namespace mluoptest

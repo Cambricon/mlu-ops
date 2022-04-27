@@ -30,25 +30,35 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-#define GTEST_CHECK(condition, ...)                                                       \
-  if (unlikely(!(condition))) {                                                           \
-    ADD_FAILURE() << "Check failed: " #condition ". " #__VA_ARGS__;                       \
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__)); \
+#define GTEST_CHECK(condition, ...)                                            \
+  if (unlikely(!(condition))) {                                                \
+    ADD_FAILURE() << "Check failed: " #condition ". " #__VA_ARGS__;            \
+    throw std::invalid_argument(std::string(__FILE__) + " +" +                 \
+                                std::to_string(__LINE__));                     \
   }
 
-#define GTEST_WARNING(condition, ...)                              \
-  if (unlikely(!(condition))) {                                    \
-    LOG(WARNING) << "Check failed: " #condition ". " #__VA_ARGS__; \
+#define GTEST_WARNING(condition, ...)                                          \
+  if (unlikely(!(condition))) {                                                \
+    LOG(WARNING) << "Check failed: " #condition ". " #__VA_ARGS__;             \
   }
 
 namespace mluoptest {
 
   // for debug
   void saveDataToFile(const std::string &file, float *data, size_t count);
-  void saveDataToFile(const std::string &file, float *data, mluOpDataType_t dtype, size_t count);
+  void saveDataToFile(const std::string &file,
+                      float *data,
+                      mluOpDataType_t dtype,
+                      size_t count);
   void readDataFromFile(const std::string &file, float *data, size_t count);
-  void saveHexDataToFile(const std::string &file, void *data, mluOpDataType_t dtype, size_t count);
-  void generateRandomData(float *data, size_t count, const RandomData *random_data, DataType dtype);
+  void saveHexDataToFile(const std::string &file,
+                         void *data,
+                         mluOpDataType_t dtype,
+                         size_t count);
+  void generateRandomData(float *data,
+                          size_t count,
+                          const RandomData *random_data,
+                          DataType dtype);
 
   // include stride
   // if no stride this count == shape count
@@ -66,18 +76,30 @@ namespace mluoptest {
   void arrayCastFloatToHalf(int16_t *dst, float *src, int num);
   void arrayCastFloatToInt64(int64_t *dst, float *src, int num);
   void arrayCastHalfToFloat(float *dst, int16_t *src, int num);
-  void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype, void *dst_data, mluOpDataType_t dst_dtype, int num);
-  void arrayCastHalfToInt8or16HalfUp(void *dst, int16_t *src, int pos, int num, int int8or16);
+  void arrayCastFloatAndNormal(void *src_data,
+                               mluOpDataType_t src_dtype,
+                               void *dst_data,
+                               mluOpDataType_t dst_dtype,
+                               int num);
+  void arrayCastHalfToInt8or16HalfUp(
+      void *dst, int16_t *src, int pos, int num, int int8or16);
   uint64_t GenNumberOfFixedWidth(uint64_t a, int witdh);
 
   bool getEnv(const std::string &env, bool default_ret);
   size_t proc_usage_peak();
-  std::unordered_map<std::string, std::vector<std::string>> readFileByLine(const std::string &file);
+  std::unordered_map<std::string, std::vector<std::string>>
+      readFileByLine(const std::string &file);
   // half mult
-  int float_mult(int in_a, int in_b, int float_16or32, int round_mode, int ieee754);
+  int float_mult(
+      int in_a, int in_b, int float_16or32, int round_mode, int ieee754);
 
   // half add
-  int float_add(int in_a, int in_b, int float_16or32, int round_mode, int add_or_sub, int ieee754);
+  int float_add(int in_a,
+                int in_b,
+                int float_16or32,
+                int round_mode,
+                int add_or_sub,
+                int ieee754);
 
   // force fix to float
   template <typename FixedType>
@@ -109,8 +131,11 @@ namespace mluoptest {
     const float max = pow(2, sizeof(FixedType) * 8 - 1) + (-1);
     const float min = pow(2, sizeof(FixedType) * 8 - 1) * (-1);
     for (size_t i = 0; i < num; ++i) {
-      int16_t res =
-          float_mult(cvtFloatToHalf(src[i]), cvtFloatToHalf(scale), 0, ROUND_MODE_NEAREST_EVEN, 1);
+      int16_t res = float_mult(cvtFloatToHalf(src[i]),
+                               cvtFloatToHalf(scale),
+                               0,
+                               ROUND_MODE_NEAREST_EVEN,
+                               1);
       // use 10 because half exponend width only 5 bit
       int pos_tmp         = position >= 0 ? 10 : -10;
       float tmp           = powf(2, -pos_tmp);
@@ -122,9 +147,9 @@ namespace mluoptest {
       if (position % pos_tmp) {
         tmp              = pow(2, -(position % pos_tmp));
         int16_t tmp_half = cvtFloatToHalf(tmp);
-        res              = float_mult(res, tmp_half, 0, ROUND_MODE_NEAREST_EVEN, 1);
+        res = float_mult(res, tmp_half, 0, ROUND_MODE_NEAREST_EVEN, 1);
       }
-      res        = float_add(res, offset_half, 0, ROUND_MODE_NEAREST_EVEN, 0, 1);
+      res = float_add(res, offset_half, 0, ROUND_MODE_NEAREST_EVEN, 0, 1);
       float res1 = cvtHalfToFloat(res);
       if (res1 > max) {
         res1 = max;

@@ -158,35 +158,35 @@ namespace mluoptest {
   void Parser::checkTensorValid(MetaTensor *mt, Tensor *pt) {
     int shape_count = 1;
     switch (mt->value_type) {
-    case VALUE_F:
-    case VALUE_I:
-    case VALUE_L:
-    case VALUE_H:
-      shape_count = std::accumulate(mt->shape.begin(),
-                                    mt->shape.end(),
-                                    shape_count,
-                                    std::multiplies<int>());
-      GTEST_WARNING(mt->shape_count == shape_count,
-                    "Parser: found shape count is not equal to value "
-                    "size.(mt->shape_count is value_size)");
-      break;
-    case VALUE_RANDOM:
-      if (!mt->empty()) {
-        checkRandomParam(pt);
-      }
-      break;
-    case VALUE_PATH:
-      // if found path(only) in pb, but can't access this path, throw.
-      GTEST_CHECK((access(pt->path().c_str(), 4) == -1),
-                  "Parser: open path saved in *prototxt failed.");
-      break;
-    case VALUE_INVALID:
-      // check output, if may shape empty, value is empty, and not random param,
-      // so don't need check.
-      break;
-    default:
-      GTEST_CHECK(false,
-                  "Parser: got unsupported value type, parse tensor failed.");
+      case VALUE_F:
+      case VALUE_I:
+      case VALUE_L:
+      case VALUE_H:
+        shape_count = std::accumulate(mt->shape.begin(),
+                                      mt->shape.end(),
+                                      shape_count,
+                                      std::multiplies<int>());
+        GTEST_WARNING(mt->shape_count == shape_count,
+                      "Parser: found shape count is not equal to value "
+                      "size.(mt->shape_count is value_size)");
+        break;
+      case VALUE_RANDOM:
+        if (!mt->empty()) {
+          checkRandomParam(pt);
+        }
+        break;
+      case VALUE_PATH:
+        // if found path(only) in pb, but can't access this path, throw.
+        GTEST_CHECK((access(pt->path().c_str(), 4) == -1),
+                    "Parser: open path saved in *prototxt failed.");
+        break;
+      case VALUE_INVALID:
+        // check output, if may shape empty, value is empty, and not random
+        // param, so don't need check.
+        break;
+      default:
+        GTEST_CHECK(false,
+                    "Parser: got unsupported value type, parse tensor failed.");
     }
   }
 
@@ -246,20 +246,20 @@ namespace mluoptest {
                 "Parser: when read value_f, expected element num is not equal "
                 "to real element num.");
     switch (pt->dtype()) {
-    case DTYPE_FLOAT:
-      for (int i = 0; i < count; ++i) {
-        ((float *)data)[i] = pt->value_f(i);
-      }
-      break;
-    case DTYPE_HALF:
-      for (int i = 0; i < count; ++i) {
-        ((int16_t *)data)[i] = cvtFloatToHalf(pt->value_f(i));
-      }
-      break;
-    default:
-      GTEST_CHECK(false,
-                  "Parser: found unsuppored dtype in value_f, value_f only "
-                  "supporte float/half.");
+      case DTYPE_FLOAT:
+        for (int i = 0; i < count; ++i) {
+          ((float *)data)[i] = pt->value_f(i);
+        }
+        break;
+      case DTYPE_HALF:
+        for (int i = 0; i < count; ++i) {
+          ((int16_t *)data)[i] = cvtFloatToHalf(pt->value_f(i));
+        }
+        break;
+      default:
+        GTEST_CHECK(false,
+                    "Parser: found unsuppored dtype in value_f, value_f only "
+                    "supporte float/half.");
     }
   }
 
@@ -278,77 +278,77 @@ namespace mluoptest {
     }
 
     switch (pt->dtype()) {
-    case DTYPE_INT8:
-      for (int i = 0; i < count; ++i) {
-        ((int8_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_UINT8:
-      for (int i = 0; i < count; ++i) {
-        ((uint8_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_INT16:
-      for (int i = 0; i < count; ++i) {
-        ((int16_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_INT32:
-      for (int i = 0; i < count; ++i) {
-        ((int32_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_INT64:
-      for (int i = 0; i < count; ++i) {
-        ((int64_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_BOOL: // parser value_i == BOOL
-      for (int i = 0; i < count; ++i) {
-        ((int8_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_INT31: {
-      // in generator prototxt, 1*int31 split into 2*int16, so data_num =
-      // value_size() / 2
-      auto num = count;
-      for (int i = 0; i < num; ++i) {
-        int16_t I1                 = pt->value_i(i);
-        int16_t I2                 = pt->value_i(i + num);
-        ((int16_t *)data)[i]       = I2; // low int16
-        ((int16_t *)data)[i + num] = I1; // high int16
-      }
-    } break;
-    case DTYPE_HALF:
-      for (int i = 0; i < count; ++i) {
-        ((int16_t *)data)[i] = pt->value_i(i);
-      }
-      break;
-    case DTYPE_FLOAT:
-      for (int i = 0; i < count; ++i) {
-        int value_i        = pt->value_i(i);
-        ((float *)data)[i] = *((float *)(&value_i));
-      }
-      break;
-    case DTYPE_COMPLEX_HALF:
-      for (int i = 0; i < 2 * count; i += 2) {
-        ((int16_t *)data)[i]     = pt->value_i(i);
-        ((int16_t *)data)[i + 1] = pt->value_i(i + 1);
-      }
-      break;
-    case DTYPE_COMPLEX_FLOAT:
-      for (int i = 0; i < 2 * count; i += 2) {
-        int value_i            = pt->value_i(i);
-        int value_i_imag       = pt->value_i(i + 1);
-        ((float *)data)[i]     = *((float *)(&value_i));
-        ((float *)data)[i + 1] = *((float *)(&value_i_imag));
-      }
-      break;
-    default:
-      GTEST_CHECK(
-          false,
-          "Parser: found unsuppored dtype in value_i, value_i only support "
-          "int8/uint8/int16/int31/int32/int64/bool.");
+      case DTYPE_INT8:
+        for (int i = 0; i < count; ++i) {
+          ((int8_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_UINT8:
+        for (int i = 0; i < count; ++i) {
+          ((uint8_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_INT16:
+        for (int i = 0; i < count; ++i) {
+          ((int16_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_INT32:
+        for (int i = 0; i < count; ++i) {
+          ((int32_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_INT64:
+        for (int i = 0; i < count; ++i) {
+          ((int64_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_BOOL: // parser value_i == BOOL
+        for (int i = 0; i < count; ++i) {
+          ((int8_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_INT31: {
+        // in generator prototxt, 1*int31 split into 2*int16, so data_num =
+        // value_size() / 2
+        auto num = count;
+        for (int i = 0; i < num; ++i) {
+          int16_t I1                 = pt->value_i(i);
+          int16_t I2                 = pt->value_i(i + num);
+          ((int16_t *)data)[i]       = I2; // low int16
+          ((int16_t *)data)[i + num] = I1; // high int16
+        }
+      } break;
+      case DTYPE_HALF:
+        for (int i = 0; i < count; ++i) {
+          ((int16_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_FLOAT:
+        for (int i = 0; i < count; ++i) {
+          int value_i        = pt->value_i(i);
+          ((float *)data)[i] = *((float *)(&value_i));
+        }
+        break;
+      case DTYPE_COMPLEX_HALF:
+        for (int i = 0; i < 2 * count; i += 2) {
+          ((int16_t *)data)[i]     = pt->value_i(i);
+          ((int16_t *)data)[i + 1] = pt->value_i(i + 1);
+        }
+        break;
+      case DTYPE_COMPLEX_FLOAT:
+        for (int i = 0; i < 2 * count; i += 2) {
+          int value_i            = pt->value_i(i);
+          int value_i_imag       = pt->value_i(i + 1);
+          ((float *)data)[i]     = *((float *)(&value_i));
+          ((float *)data)[i + 1] = *((float *)(&value_i_imag));
+        }
+        break;
+      default:
+        GTEST_CHECK(
+            false,
+            "Parser: found unsuppored dtype in value_i, value_i only support "
+            "int8/uint8/int16/int31/int32/int64/bool.");
     }
   }
 
@@ -359,15 +359,15 @@ namespace mluoptest {
                 "Parser: when read value_l, expected element num is not equal "
                 "to real element num.");
     switch (pt->dtype()) {
-    case DTYPE_INT64:
-      for (int i = 0; i < count; ++i) {
-        ((int64_t *)data)[i] = pt->value_l(i);
-      }
-      break;
-    default:
-      GTEST_CHECK(false,
-                  "Parser: found unsuppored dtype in value_l, value_l only "
-                  "support int64.");
+      case DTYPE_INT64:
+        for (int i = 0; i < count; ++i) {
+          ((int64_t *)data)[i] = pt->value_l(i);
+        }
+        break;
+      default:
+        GTEST_CHECK(false,
+                    "Parser: found unsuppored dtype in value_l, value_l only "
+                    "support int64.");
     }
   }
 
@@ -398,20 +398,20 @@ namespace mluoptest {
                 "Parser: when read value_h, expected element num is not equal "
                 "to real element num.");
     switch (pt->dtype()) {
-    case DTYPE_HALF:
-      for (int i = 0; i < count; ++i) {
-        ((uint16_t *)data)[i] = str2fp16(pt->mutable_value_h(i));
-      }
-      break;
-    case DTYPE_FLOAT:
-      for (int i = 0; i < count; ++i) {
-        ((float *)data)[i] = str2fp32(pt->mutable_value_h(i));
-      }
-      break;
-    default:
-      GTEST_CHECK(false,
-                  "Parser: found unsuppored dtype in value_h, value_h only "
-                  "supporte float/half.");
+      case DTYPE_HALF:
+        for (int i = 0; i < count; ++i) {
+          ((uint16_t *)data)[i] = str2fp16(pt->mutable_value_h(i));
+        }
+        break;
+      case DTYPE_FLOAT:
+        for (int i = 0; i < count; ++i) {
+          ((float *)data)[i] = str2fp32(pt->mutable_value_h(i));
+        }
+        break;
+      default:
+        GTEST_CHECK(false,
+                    "Parser: found unsuppored dtype in value_h, value_h only "
+                    "supporte float/half.");
     }
   }
 
@@ -433,32 +433,32 @@ namespace mluoptest {
                               ValueType value_type,
                               size_t count) {
     switch (value_type) {
-    case VALUE_H:
-      getTensorValueH(pt, data, count);
-      break;
-    case VALUE_F:
-      getTensorValueF(pt, data, count);
-      break;
-    case VALUE_I:
-      getTensorValueI(pt, data, count);
-      break;
-    case VALUE_L:
-      getTensorValueL(pt, data, count);
-      break;
-    case VALUE_RANDOM:
-      getTensorValueRandom(pt, (float *)data, count); // cpu mode dtype fp32
-      break;
-    case VALUE_PATH:
-      getTensorValueByFile(pt, (float *)data, count); // cpu mode dtype fp32
-      break;
-    case VALUE_INVALID:
-      GTEST_WARNING(
-          false,
-          "Parser: trying to get value of tensor, but missing data source.");
-      break;
-    default:
-      GTEST_CHECK(false,
-                  "Parser: get tensor data failed, unsupported value type.");
+      case VALUE_H:
+        getTensorValueH(pt, data, count);
+        break;
+      case VALUE_F:
+        getTensorValueF(pt, data, count);
+        break;
+      case VALUE_I:
+        getTensorValueI(pt, data, count);
+        break;
+      case VALUE_L:
+        getTensorValueL(pt, data, count);
+        break;
+      case VALUE_RANDOM:
+        getTensorValueRandom(pt, (float *)data, count); // cpu mode dtype fp32
+        break;
+      case VALUE_PATH:
+        getTensorValueByFile(pt, (float *)data, count); // cpu mode dtype fp32
+        break;
+      case VALUE_INVALID:
+        GTEST_WARNING(
+            false,
+            "Parser: trying to get value of tensor, but missing data source.");
+        break;
+      default:
+        GTEST_CHECK(false,
+                    "Parser: get tensor data failed, unsupported value type.");
     }
   }
 
@@ -602,22 +602,22 @@ namespace mluoptest {
   Evaluator::Formula
       Parser::cvtProtoEvaluationCriterion(EvaluationCriterion f) {
     switch (f) {
-    case MAPE:
-    case DIFF1:
-      return Evaluator::Formula::DIFF1;
-    case DIFF2:
-      return Evaluator::Formula::DIFF2;
-    case MAXAPE:
-    case DIFF3:
-      return Evaluator::Formula::DIFF3;
-    case DIFF3_2:
-      return Evaluator::Formula::DIFF3_2;
-    case DIFF4:
-      return Evaluator::Formula::DIFF4;
-    default:
-      LOG(ERROR) << "NOT support this evaluation critertion yet";
-      throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                  std::to_string(__LINE__));
+      case MAPE:
+      case DIFF1:
+        return Evaluator::Formula::DIFF1;
+      case DIFF2:
+        return Evaluator::Formula::DIFF2;
+      case MAXAPE:
+      case DIFF3:
+        return Evaluator::Formula::DIFF3;
+      case DIFF3_2:
+        return Evaluator::Formula::DIFF3_2;
+      case DIFF4:
+        return Evaluator::Formula::DIFF4;
+      default:
+        LOG(ERROR) << "NOT support this evaluation critertion yet";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
     }
   }
 
@@ -660,22 +660,23 @@ namespace mluoptest {
     }
 
     switch (value_type) {
-    case VALUE_H:
-      return pt->value_h_size();
-    case VALUE_I:
-      return pt->value_i_size();
-    case VALUE_L:
-      return pt->value_l_size();
-    case VALUE_F:
-      return pt->value_f_size();
-    case VALUE_RANDOM:
-    case VALUE_PATH:
-    case VALUE_INVALID:
-      GTEST_CHECK(pt->has_shape(), "Parser: missing tensor shape in prototxt.");
-      return shapeStrideCount(pt->mutable_shape());
-    default:
-      GTEST_CHECK(false,
-                  "Parser: got unsupported value type, parse tensor failed.");
+      case VALUE_H:
+        return pt->value_h_size();
+      case VALUE_I:
+        return pt->value_i_size();
+      case VALUE_L:
+        return pt->value_l_size();
+      case VALUE_F:
+        return pt->value_f_size();
+      case VALUE_RANDOM:
+      case VALUE_PATH:
+      case VALUE_INVALID:
+        GTEST_CHECK(pt->has_shape(),
+                    "Parser: missing tensor shape in prototxt.");
+        return shapeStrideCount(pt->mutable_shape());
+      default:
+        GTEST_CHECK(false,
+                    "Parser: got unsupported value type, parse tensor failed.");
     }
   }
 

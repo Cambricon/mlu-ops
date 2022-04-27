@@ -23,7 +23,6 @@
 #define GTEST_DEBUG_ENABLE 0
 
 namespace mluoptest {
-
   Executor::~Executor() {
     // these function can't throw exception.
     VLOG(4) << "Free all resource.";
@@ -52,13 +51,10 @@ namespace mluoptest {
   void Executor::setup(std::string file,
                        const std::shared_ptr<ExecuteConfig> ecfg) {
     exe_config_ = ecfg;
-
     jobLimitCheck();
-
     clusterLimitCheck();
 
     parser_->parse(file);
-
     eva_res_.case_path = file;
     VLOG(4) << "param check.";
     paramCheck(); // op oriented check
@@ -75,7 +71,6 @@ namespace mluoptest {
         baselineInputMalloc();
         VLOG(4) << "Init data (random data for cpu compute).";
         initBaselineInput(); // init fp32 cpu data
-
         VLOG(4) << "Cast dtype (host fp32 -> mlu X).";
         castIn(); // init host data(copy to host_data).}
       }
@@ -92,10 +87,8 @@ namespace mluoptest {
     deviceMalloc();
     VLOG(4) << "Copy data from host to device.";
     copyIn();
-
     VLOG(4) << "switch to origin data buffer.";
     switchDataToOrigin();
-
     VLOG(4) << "Device malloc (for workspace).";
     workspaceMalloc();
   }
@@ -275,8 +268,7 @@ namespace mluoptest {
 
     getMluPerfInfo(&(eva_res_.mlu));
 
-    eva_res_.errors = eva_->errors();
-
+    eva_res_.errors    = eva_->errors();
     eva_res_.is_passed = eva_->isPassed();
     eva_res_.what      = std::move(eva_->what());
 
@@ -399,14 +391,14 @@ namespace mluoptest {
         mluop::runtime::getClusterLimitCapability(exe_context_->handle);
     auto core_num = exe_context_->handle->core_num_per_cluster;
     switch (parser_->inputs()[0].dtype) {
-    default:
-      return CT_PEAK_FLOAT32_COMPUTE_FORCE * cluster_num * core_num;
-    case MLUOP_DTYPE_HALF:
-    case MLUOP_DTYPE_INT16:
-      return CT_PEAK_FLOAT16_COMPUTE_FORCE * cluster_num * core_num;
-    case MLUOP_DTYPE_FLOAT:
-    case MLUOP_DTYPE_INT32:
-      return CT_PEAK_FLOAT32_COMPUTE_FORCE * cluster_num * core_num;
+      case MLUOP_DTYPE_HALF:
+      case MLUOP_DTYPE_INT16:
+        return CT_PEAK_FLOAT16_COMPUTE_FORCE * cluster_num * core_num;
+      case MLUOP_DTYPE_FLOAT:
+      case MLUOP_DTYPE_INT32:
+        return CT_PEAK_FLOAT32_COMPUTE_FORCE * cluster_num * core_num;
+      default:
+        return CT_PEAK_FLOAT32_COMPUTE_FORCE * cluster_num * core_num;
     }
   }
 
@@ -505,17 +497,27 @@ namespace mluoptest {
     double io_bandwidth = -1;
     auto platform       = exe_context_->handle->arch;
     switch (platform) {
-    case MLUOP_MLU220:
-      io_bandwidth = IO_BANDWIDTH_MLU220;
-      break;
-    case MLUOP_MLU270:
-      io_bandwidth = IO_BANDWIDTH_MLU270;
-      break;
-    case MLUOP_MLU290:
-      io_bandwidth = IO_BANDWIDTH_MLU290;
-      break;
-    default:
-      LOG(WARNING) << "Executor: got unsupported arch when get io bandwidth.";
+      case MLUOP_MLU220:
+        io_bandwidth = IO_BANDWIDTH_MLU220;
+        break;
+      case MLUOP_MLU270:
+        io_bandwidth = IO_BANDWIDTH_MLU270;
+        break;
+      case MLUOP_MLU290:
+        io_bandwidth = IO_BANDWIDTH_MLU290;
+        break;
+      case MLUOP_MLU370:
+        io_bandwidth = IO_BANDWIDTH_MLU370;
+        break;
+      case MLUOP_CE3226:
+        io_bandwidth = IO_BANDWIDTH_MLUCE3226;
+      default:
+        LOG(WARNING) << "Executor: got unsupported arch when get io bandwidth.";
+    }
+    auto cluster_num =
+        mluop::runtime::getClusterLimitCapability(exe_context_->handle);
+    if (cluster_num == 1 && platform != MLUOP_CE3226) {
+      io_bandwidth = IO_BANDWIDTH_MLU370_SINGLE_CLUSTER;
     }
     VLOG(4) << "Executor: io bandwidth is " << io_bandwidth << " GB/s";
     return io_bandwidth;
@@ -685,18 +687,18 @@ namespace mluoptest {
   // determine dtype of the cpu array for input/output tensor
   mluOpDataType_t Executor::getCpuDtype(mluOpDataType_t tensor_dtype) {
     switch (tensor_dtype) {
-    // DOUBLE data is still stored as DOUBLE dtype in cpu array;
-    case MLUOP_DTYPE_DOUBLE: {
-      return MLUOP_DTYPE_DOUBLE;
-    } break;
-    // each complex number is stored as a COMPLEX_FLOAT data in cpu array
-    case MLUOP_DTYPE_COMPLEX_HALF:
-    case MLUOP_DTYPE_COMPLEX_FLOAT: {
-      return MLUOP_DTYPE_COMPLEX_FLOAT;
-    } break;
-    // the cpu array defaults to FLOAT dtype
-    default:
-      return MLUOP_DTYPE_FLOAT;
+      // DOUBLE data is still stored as DOUBLE dtype in cpu array;
+      case MLUOP_DTYPE_DOUBLE: {
+        return MLUOP_DTYPE_DOUBLE;
+      } break;
+      // each complex number is stored as a COMPLEX_FLOAT data in cpu array
+      case MLUOP_DTYPE_COMPLEX_HALF:
+      case MLUOP_DTYPE_COMPLEX_FLOAT: {
+        return MLUOP_DTYPE_COMPLEX_FLOAT;
+      } break;
+      // the cpu array defaults to FLOAT dtype
+      default:
+        return MLUOP_DTYPE_FLOAT;
     }
   }
 
@@ -1608,32 +1610,32 @@ namespace mluoptest {
 
       KernelClass cn_kernel_class = CN_KERNEL_CLASS_UNION4;
       switch (set_job_limit) {
-      case 1:
-        cn_kernel_class = CN_KERNEL_CLASS_UNION;
-        break;
-      case 2:
-        cn_kernel_class = CN_KERNEL_CLASS_UNION2;
-        break;
-      case 3:
-        cn_kernel_class = CN_KERNEL_CLASS_UNION4;
-        break;
-      case 4:
-        cn_kernel_class = CN_KERNEL_CLASS_UNION8;
-        break;
-      case 5:
-        cn_kernel_class = CN_KERNEL_CLASS_UNION16;
-        break;
-      case 6:
-        // not use
-        cn_kernel_class = CN_KERNEL_CLASS_BLOCK;
-        break;
-      case 7:
-        // not use
-        cn_kernel_class = CN_KERNEL_CLASS_NONE;
-        break;
-      default:
-        LOG(WARNING) << "Executor: got unsupported job limit number."
-                     << " Use default CN_KERNEL_CLASS_UNION4.";
+        case 1:
+          cn_kernel_class = CN_KERNEL_CLASS_UNION;
+          break;
+        case 2:
+          cn_kernel_class = CN_KERNEL_CLASS_UNION2;
+          break;
+        case 3:
+          cn_kernel_class = CN_KERNEL_CLASS_UNION4;
+          break;
+        case 4:
+          cn_kernel_class = CN_KERNEL_CLASS_UNION8;
+          break;
+        case 5:
+          cn_kernel_class = CN_KERNEL_CLASS_UNION16;
+          break;
+        case 6:
+          // not use
+          cn_kernel_class = CN_KERNEL_CLASS_BLOCK;
+          break;
+        case 7:
+          // not use
+          cn_kernel_class = CN_KERNEL_CLASS_NONE;
+          break;
+        default:
+          LOG(WARNING) << "Executor: got unsupported job limit number."
+                       << " Use default CN_KERNEL_CLASS_UNION4.";
       }
       setJobLimitCapability(cn_kernel_class);
       job_limit = mluop::runtime::getJobLimitCapability(handle_);
