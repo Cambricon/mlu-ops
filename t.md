@@ -3,16 +3,16 @@
 
 **期望的代码行为：**
 '''
-with self.tcp.block("data_copy"):\
-    self.tcp.memcpy(buffer_out_s[begin:end], buffer_io_n)\
-    with self.tcp.if_scope(j==2):\
-        st.assign(start-2*data_each_time)\
-        # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):\
-        #     self.tcp.print(buffer_out_s[begin:begin+data_each_time])\
-              self.tcp.memcpy(buffer_out[st:stop],buffer_out_s[begin-2*data_each_time:end])\
-              self.tcp.sync_cluster()\
-        # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):\
-        #     self.tcp.print(buffer_out[st:st+data_each_time])\
+with self.tcp.block("data_copy"):
+    self.tcp.memcpy(buffer_out_s[begin:end], buffer_io_n)
+    with self.tcp.if_scope(j==2):
+        st.assign(start-2*data_each_time)
+        # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):
+        #     self.tcp.print(buffer_out_s[begin:begin+data_each_time])
+              self.tcp.memcpy(buffer_out[st:stop],buffer_out_s[begin-2*data_each_time:end])
+              self.tcp.sync_cluster()
+        # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):
+        #     self.tcp.print(buffer_out[st:st+data_each_time])
 '''
 期望buffer_out的值与buffer_out_w里面的值一致。
 
