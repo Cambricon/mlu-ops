@@ -16,7 +16,7 @@ with self.tcp.block("data_copy"):
 ```
 期望buffer_out的值与buffer_out_s里面的值一致。
 
-**实际运行的代码行为：**
+**实际运行的代码行为：**\
 buffer_out初始值为全0：`data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)`\
 拷贝后输出的仍然是全0，也即数据没有拷入进去
 
