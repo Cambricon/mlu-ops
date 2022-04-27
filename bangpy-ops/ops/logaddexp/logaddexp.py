@@ -159,6 +159,9 @@ class LogAddExp(object):
                 calc_size.assign(process_count)
             with self.bp.else_scope():
                 calc_size.assign(total_count_in_core % process_count)
+                with self.bp.if_scope(calc_size == 0):
+                    calc_size.assign(process_count)
+
             with self.bp.block("data_copy"):
                 self.bp.memcpy(nram_buffer_in0[0:calc_size], buffer_in0[once_loop_start:once_loop_start + calc_size]) 
                 self.bp.memcpy(nram_buffer_in1[0:calc_size], buffer_in1[once_loop_start:once_loop_start + calc_size]) 
