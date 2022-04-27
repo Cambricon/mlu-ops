@@ -1,9 +1,9 @@
 # 拉取请求
 ## 什么是拉取请求
 
-拉取请求 (Pull Request)，GitHub 官方文档定义如下。
+拉取请求 (Pull Request)，GitHub 官方文档定义如下
 ```
-拉取请求是一种通知机制。你修改了他人的代码，将你的修改通知原来作者，希望他合并你的修改。
+拉取请求是一种通知机制。你修改了他人的代码，将你的修改通知原来作者，希望他合并你的修改
 ```
 ## 基本的工作流：
 ```
@@ -18,7 +18,7 @@
 
 1.获取最新的代码库
 
-- 第一次提交pr时,先fork mlu-ops仓库 
+- 第一次提交pr时，先fork mlu-ops仓库 
 ![fork](./pr_fork.png)
 
 - 把fork的代码下载到本地
@@ -29,7 +29,7 @@ git clone https://github.com/你的github用户名/mlu-ops.git
 ```
 git remote add upstream https://github.com/Cambricon/mlu-ops.git
 ```
-- 从第二个PR起 检出本地代码库的主分支，然后从最新的原代码库的主分支拉取更新,确保你的分支语义明确，一看就大概明白你用它来完成什么。后续可以更好的和master同步代码。
+- 从第二个PR起检出本地代码库的主分支，然后从最新的原代码库的主分支拉取更新，确保你的分支语义明确，一看就大概明白你用它来完成什么。后续可以更好的和master同步代码
 ```
 git checkout branchname
 git pull upstream master 
@@ -54,29 +54,28 @@ git push origin branchname(分支名)
 - 根据评审人员的意见修改代码，并推送修改
 
 ## pr规范
+1. 使用 pre-commit hook，尽量减少代码风格相关问题
+2. 一个 PR 对应一个短期分支
+3. 粒度要细，一个PR只做一件事情，避免超大的PR
+    - Bad：实现 Faster R-CNN
+    - Acceptable：给 Faster R-CNN 添加一个 box head
+    - Good：给 box head 增加一个参数来支持自定义的 conv 层数
+4. 每次 Commit 时需要提供清晰且有意义 commit 信息
+5. 提供清晰且有意义的拉取请求描述
+    - 标题写明白任务名称，一般格式:[Prefix] Shortdescription of the pull request (Suffix)
+    -  prefix: 新增功能[Feature]，修bug[Fix]，文档相关[Docs]，开发中[WIP] (暂时不会review)
+    -  描述里介绍拉取请求的主要修改内容，结果，以及对其他部分的影响，参考拉取请求模板
+    -  关联相关的议题(issue)和其他拉取请求
 
-- 使用pre-commit hook，尽量减少代码风格相关问题
-- 一个PR对应一个短期分支粒度要细，一个PR只做一件事情，避免超大的PR
-- 每次Commit时需要提供清晰且有意义commit信息
-- 提供清晰且有意义的拉取请求描述
-```
-标题写明白任务名称，一般格式:[Prefix] Short description of the pull request (Suffix)
-prefix: 新增功能: 
-        feat(bangc-ops):"******" 或者 feat(bangpy-ops):"******",......
-        修bug: fix(bangc-ops):"******" 或者 fix(bangpy-ops):"******".
-        开发中:wip(bangc-ops):"******" 或者 wip(bangpy-ops):"******".  (暂时不会被review)
-        描述里介绍拉取请求的主要修改内容，结果，以及对其他部分的影响，参考拉取请求模板
-        - 关联相关的议题 (issue) 和其他拉取请求
-```
 ## issue
-- 第一次提交的pr,还没有合入master,本地需要继续开发新功能,怎么解决?
+- 第一次提交的pr，还没有合入master，本地需要继续开发新功能，怎么解决
 ```
-  在当前基础上创建新的分支.比如:v0.0.1,基于此分支开发
+  在当前基础上创建新的分支　比如：v0.0.1，基于此分支开发
 
-  直接再当前分支开发,然后push,这样上次的pr会出现两次commit
+  直接再当前分支开发，然后push，这样上次的pr会出现两次commit
 ```
 
-- 提交pr的时候,master已经合入了别人的修改,怎么解决?
+- 提交pr的时候，master已经合入了别人的修改，怎么解决
 ```
-  此时在提交前需要先rebase,同步本地的基分支,若有冲突手动解决冲突.
+  此时在提交前需要先rebase，同步本地的基分支，若有冲突手动解决冲突
 ```
