@@ -22,7 +22,7 @@ buffer_out初始值为全0：`data_out_dev = bangpy.Array(np.zeros(data_out.shap
 
 **运行环境：**
 代码分支：[分支链接](https://github.com/pingmu123/mlu-ops.git)\
-bug复现步骤：定位到hard_sigmoid.py文件184-193行，修改相关print语句，然后直接python3 mytest.py即可\
+bug复现步骤：定位到bangpy-ops/ops/hard_sigmoid/hard_sigmoid.py文件184-193行，修改相关print语句，然后直接python3 mytest.py即可\
 bangpy版本：1.3.1\
 cncc：v3.6.1
 ![bangpy和cncc版本](https://user-images.githubusercontent.com/102028822/165430656-ac6217b7-1078-41dc-be44-7420261b7411.png)
