@@ -27,4 +27,4 @@ bangpy版本：1.3.1\
 cncc：v3.6.1
 ![bangpy和cncc版本](https://user-images.githubusercontent.com/102028822/165430656-ac6217b7-1078-41dc-be44-7420261b7411.png)
 
-感谢！
+大致情况如上述，感谢！
