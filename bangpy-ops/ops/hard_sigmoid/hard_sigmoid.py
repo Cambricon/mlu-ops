@@ -63,7 +63,7 @@ class Hard_sigmoid(object):
         # buffer_io_n*2: double buffering
         # max:  512KB=524288/3=174762.666...(B)
         # note: 174080 to align (128bytes)
-        self.wram_size_buffer=522240
+        self.sram_size_buffer=2088960
         self.nram_size_buffer=174080
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(self.task_num,1,1)
@@ -94,7 +94,7 @@ class Hard_sigmoid(object):
 
         data_each_task = data_all // self.task_num
         data_rem = data_all % self.task_num
-        data_each_w = self.wram_size_buffer // self.dtype_sz
+        data_each_s = self.sram_size_buffer // self.dtype_sz
         data_each_time = self.nram_size_buffer // self.dtype_sz
         loop = data_each_task  // data_each_time
         data_rem_n = data_each_task  % data_each_time
@@ -151,7 +151,7 @@ class Hard_sigmoid(object):
 
         # declare it as cache
         buffer_out_s = self.tcp.Buffer(
-            shape=(data_each_w,),
+            shape=(data_each_s,),
             name="OUTPUT_S",
             dtype=self.dtype,
             scope="sram",
@@ -162,7 +162,7 @@ class Hard_sigmoid(object):
             start = task_id * data_each_task + i * data_each_time
             stop = start + data_each_time
             j =  i % 3
-            begin = core_id * (data_each_task//4) + j * data_each_time
+            begin = core_id * (data_each_s//4) + j * data_each_time
             end = begin + data_each_time
             buffer_io_n = self.tcp.Buffer(
                 shape=(data_each_time,),
