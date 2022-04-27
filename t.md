@@ -2,7 +2,7 @@
 数据从SRAM拷到GDRAM时，打印查看后发现并没有拷进去。
 
 **期望的代码行为：**
-(''')\
+'''
 with self.tcp.block("data_copy"):\
     self.tcp.memcpy(buffer_out_s[begin:end], buffer_io_n)\
     with self.tcp.if_scope(j==2):\
@@ -13,7 +13,7 @@ with self.tcp.block("data_copy"):\
               self.tcp.sync_cluster()\
         # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):\
         #     self.tcp.print(buffer_out[st:st+data_each_time])\
-(''')\
+'''
 期望buffer_out的值与buffer_out_w里面的值一致。
 
 **实际运行的代码行为：**
@@ -26,3 +26,4 @@ buffer_out初始值为全0：\
 bug复现步骤：定位到hard_sigmoid.py文件184-193行，修改相关print语句，然后直接python3 mytest.py即可\
 bangpy版本：1.3.1\
 cncc：v3.6.1
+![bsngpy和cncc版本](https://user-images.githubusercontent.com/102028822/165430656-ac6217b7-1078-41dc-be44-7420261b7411.png)
