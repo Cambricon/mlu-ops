@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (2, 2, 3)
+        (311, 311, 42)
     ],
 )
 
@@ -53,7 +53,7 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "dim", [1],
+    "dim", [2],
 )
 
 @pytest.mark.parametrize(

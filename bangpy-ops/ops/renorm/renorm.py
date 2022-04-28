@@ -70,6 +70,8 @@ class Renorm(object):
                 calc_size.assign(nram_process_count)
             with self.bp.else_scope():
                 calc_size.assign(total_count_in_core % nram_process_count)
+                with self.bp.if_scope(calc_size == 0):
+                    calc_size.assign(nram_process_count)
 
             once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
 
@@ -143,6 +145,8 @@ class Renorm(object):
                     with self.bp.for_range(0, cp_row_count) as k:
                         with self.bp.if_scope(k == cp_row_count - 1):
                             cp_len.assign(h % self.nram_process_count)
+                            with self.bp.if_scope(cp_len == 0):
+                                cp_len.assign(self.nram_process_count)
 
                         self.copy_from_2d_tensor(self.nram_calc_buffer, 0, 0, 
                                                  gram_tensor, self.nram_process_count * k, j, cp_len)
@@ -170,6 +174,8 @@ class Renorm(object):
                         with self.bp.for_range(0, cp_row_count) as k:
                             with self.bp.if_scope(k == cp_row_count - 1):
                                 cp_len.assign(h % self.nram_process_count)
+                                with self.bp.if_scope(cp_len == 0):
+                                    cp_len.assign(self.nram_process_count)
 
                             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, 0, 
                                                      gram_tensor, self.nram_process_count * k, j, cp_len)
