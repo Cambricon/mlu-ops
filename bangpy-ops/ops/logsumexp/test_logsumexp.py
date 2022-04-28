@@ -20,66 +20,133 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
+from cmath import pi
+from traceback import print_tb
 import numpy as np
+import torch
 import pytest
-import time
+import math
+
 import bangpy
+import bangpy as bp
 from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from logsumexp import DTYPES, KERNEL_NAME, TARGET_LIST
 
+import time
 
 @pytest.mark.parametrize(
     "shape", 
-    [    
-        #(269484032,),# 即(256*1024*1024)  float32 下 刚好为1G 两输入一输出 总共3G
-        #(1155,),
-        (1234,),
-        # (1089,),
-        #  (259,),
-         #(992,),
-        #  (31,)
+    [        
+        (31, 31)
     ],
 )
+
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
-def test_logsumexp(target, shape, dtype):
+
+
+@pytest.mark.parametrize(
+    "dim", [1],
+)
+
+@pytest.mark.parametrize(
+    "keepdim", [True],
+)
+
+
+
+def test_logsumexp(target, shape, dim, dtype, keepdim): 
     if target not in TARGET_LIST:
         return
+
+    total_input_len = 1
+    for s in shape:
+        total_input_len *= s
+
+    input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
     
-   
-    a = []
-    for i in range(shape[0]):
-        a.append(i)
-    data_in0 = np.array(a)
-    #data_in0 = np.ones(shape)
-    #data_in0 = np.random.uniform(low=-10,high=10,size=shape)
-   
+    def get_total_size(shp):
+            size = 1
+            for s in shp:
+                size *= s
+            return size        
+            
+    _dev = bp.device(0)
+    shp_len = len(shape)
 
-    data_out =data_in0.astype(dtype.as_numpy_dtype)
-    dev = bangpy.device(0)
-    # set I/O data
-    data_in0_dev = bangpy.Array(data_in0.astype(dtype.as_numpy_dtype), dev)
-    data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
-    f1 = load_op_by_type(KERNEL_NAME, dtype.name)
+    # mlu 输入参数
+    _pd_len = shape[dim]
+    _pd_height = 1
+    _pd_width = 1
+
+    if dim < 0:
+        dim += len(shape)
+
+    if dim < 0 or dim >= len(shape):
+        print("dim err!")
+        return None
+
+    for i in range(0, dim + 1):
+        _pd_height *= shape[i]
+
+    if dim == shp_len - 1:
+        pass
+    else:
+        for i in range(dim + 1, shp_len):
+            _pd_width *= shape[i] 
+
+    # mlu 输入
+    _mlu_input1 = bp.Array(input_tensor.flatten(), _dev)
+
+    # mlu 输出
+    _output_len = get_total_size(shape) // shape[dim]
+    output_buffer = np.zeros(_output_len, dtype=dtype.as_numpy_dtype)
+    _mlu_output = bp.Array(output_buffer, _dev)
+
+    output_count = 256
+    output_buffer2 = np.zeros(output_count, dtype=dtype.as_numpy_dtype)
+    _mlu_border_output = bp.Array(output_buffer2, _dev)
+
+    output_buffer3 = -np.ones(output_count, dtype=np.int32)
+    _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
+
+
+    # 调用mlu
+    func = load_op_by_type(KERNEL_NAME, dtype.name)
+    func(_mlu_input1,
+         get_total_size(shape), 
+         _pd_len, _pd_height, _pd_width, _output_len
+         , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
+
+    result = _mlu_output.numpy()
+    result_border = _mlu_border_output.numpy()
+    result_border_idx = _mlu_border_idx_output.numpy()
+
+
+    outputshape = []
+    if keepdim:
+        for item in shape:
+            outputshape.append(item)
+        outputshape[dim_index] = 1
+    else:
+        for i in range(0, len(shape) - 1):
+            outputshape.append(shape[i])
+
+    mlu_ret = result.reshape(outputshape)
+
 
    
-    f1(data_in0_dev, data_out_dev)#测试expsum使用
+    print("============torch calc==================")
 
-    #print("input：",data_in0_dev)
-    print("output",data_out_dev.numpy()[0])
-    ex = np.exp(data_in0 -(shape[0] - 1))
-    print("ex",ex)
-    su = np.sum(ex)
-    lg = np.log(su)
-    res =lg + shape[0] - 1
-   
-    print("res->",res)
-    # print("shape is ->",shape)
-    # evaluator = f1.time_evaluator(number=10,repeat=1,min_repeat_ms=0)#使用 evaluator进行分析
-    # print('time consuming : %f ms' % (evaluator(data_in0_dev, data_out_dev).mean* 1e3))#测试并打印
+    x = torch.Tensor(input_tensor)
+    cpu_start = time.time()
+    cpu_ret = torch.logsumexp(a, dim, keepdim)
+    print('cpu cost ', time.time() - cpu_start)
+    #print(cpu_ret)
 
+    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
     
