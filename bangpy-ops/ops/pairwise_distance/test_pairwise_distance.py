@@ -186,7 +186,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 s.add(i)
 
             for item in s:
-                result[item] = math.pow(result[item], 1 / p)
+                if item >= 0:
+                    result[item] = math.pow(result[item], 1 / p)
 
             outputshape = []
             if keepdim:
