@@ -74,6 +74,8 @@ class PairwiseDistance(object):
                 calc_size.assign(nram_process_count)
             with self.bp.else_scope():
                 calc_size.assign(total_count_in_core % nram_process_count)
+                with self.bp.if_scope(calc_size == 0):
+                    calc_size.assign(nram_process_count)
 
             once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
 
@@ -302,6 +304,8 @@ class PairwiseDistance(object):
             once_loop_start.assign(current_core_start + self.nram_process_count * i)
             with self.bp.if_scope(i == calc_loop_count - 1):
                 calc_size.assign(total_count_in_core % self.nram_process_count)
+                with self.bp.if_scope(calc_size == 0):
+                    calc_size.assign(self.nram_process_count)
 
             norm_offset.assign(once_loop_start % dim_len)
             expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", dim_len - norm_offset)
@@ -389,14 +393,17 @@ class PairwiseDistance(object):
         #计算一下，要多少个循环
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_norm_in_core + nram_norm_count - 1) // nram_norm_count)
 
+        once_loop_norm_count = self.bp.Scalar(bangpy.int32, "nram_norm_count", nram_norm_count)
         with self.bp.for_range(0, calc_loop_count) as i:
             once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start", norm_start_pos + nram_norm_count * dim_len * i)   
             with self.bp.if_scope(i == calc_loop_count - 1):
-                nram_norm_count.assign(total_norm_in_core % nram_norm_count)
+                once_loop_norm_count.assign(total_norm_in_core % nram_norm_count)
+                with self.bp.if_scope(once_loop_norm_count == 0):
+                    once_loop_norm_count.assign(nram_norm_count)
 
             #这里后续要优化，目前先弄个for循环吧
             start_index = self.bp.Scalar(bangpy.int32, "norm_offset", once_loop_start // dim_len) #肯定可以整除
-            with self.bp.for_range(0, nram_norm_count) as j:
+            with self.bp.for_range(0, once_loop_norm_count) as j:
                 #先拷贝过来
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + j * dim_len, dim_len, self.pd_height, self.pd_width, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
