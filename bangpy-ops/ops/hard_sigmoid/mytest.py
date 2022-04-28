@@ -70,6 +70,6 @@ for dtype in [bangpy.float32]:
         print( "Hardware time : %f ms" % (evaluator2(data_in_dev, data_out_dev).mean * 1e3))
 
         # BANGC code
-        # dev_module = f.module.imported_modules[0]
-        # print("--------------MLU code----------------")
-        # print(dev_module.get_source())
+        dev_module = f.module.imported_modules[0]
+        print("--------------MLU code----------------")
+        print(dev_module.get_source())

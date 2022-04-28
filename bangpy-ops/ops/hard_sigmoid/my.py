@@ -110,5 +110,5 @@ def single_test():
     #print(data_out_dev.numpy())
     #bangpy.assert_allclose(data_out_dev.numpy(), data_out)
 
-single_test()
-# test()
+# single_test()
+test()

@@ -63,7 +63,6 @@ class Hard_sigmoid(object):
         # buffer_io_n*2: double buffering
         # max:  512KB=524288/3=174762.666...(B)
         # note: 174080 to align (128bytes)
-        self.sram_size_buffer=2088960
         self.nram_size_buffer=174080
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(self.task_num,1,1)
@@ -84,8 +83,8 @@ class Hard_sigmoid(object):
         buffer_in=buffer_in.flatten() # Reducing tensor to one dimension to manipulate
         buffer_out=buffer_out.flatten() # keep the shape same with buffer_in
         
-        cluster_id=self.tcp.clusterId
-        core_id = self.tcp.coreId
+        # cluster_id=self.tcp.clusterId
+        # core_id = self.tcp.coreId
         task_id=self.tcp.taskId
         
         # calculate split strategy
@@ -94,7 +93,6 @@ class Hard_sigmoid(object):
 
         data_each_task = data_all // self.task_num
         data_rem = data_all % self.task_num
-        data_each_s = self.sram_size_buffer // self.dtype_sz
         data_each_time = self.nram_size_buffer // self.dtype_sz
         loop = data_each_task  // data_each_time
         data_rem_n = data_each_task  % data_each_time
@@ -149,21 +147,9 @@ class Hard_sigmoid(object):
             scope="nram",
         )
 
-        # declare it as cache
-        buffer_out_s = self.tcp.Buffer(
-            shape=(data_each_s,),
-            name="OUTPUT_S",
-            dtype=self.dtype,
-            scope="sram",
-        )
-
-        st = self.tcp.Scalar(bangpy.int32,"st")
         with self.tcp.for_range(0, loop, stage=1) as i:
             start = task_id * data_each_task + i * data_each_time
             stop = start + data_each_time
-            j =  i % 3
-            begin = core_id * (data_each_s//4) + j * data_each_time
-            end = begin + data_each_time
             buffer_io_n = self.tcp.Buffer(
                 shape=(data_each_time,),
                 name="IO_N",
@@ -182,19 +168,8 @@ class Hard_sigmoid(object):
                 self.tcp.zeros(buffer_temp_n)
                 self.tcp.maximum(buffer_io_n,buffer_io_n,buffer_temp_n)
             with self.tcp.block("data_copy"):
-                self.tcp.memcpy(buffer_out_s[begin:end], buffer_io_n)
-                with self.tcp.if_scope(j==2):
-                    st.assign(start-2*data_each_time)
-                    # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):
-                    #     self.tcp.print(buffer_out_s[begin:begin+data_each_time])
-                    self.tcp.memcpy(buffer_out[st:stop],buffer_out_s[begin-2*data_each_time:end])
-                    self.tcp.sync_cluster()
-                    # with self.tcp.if_scope(tcp.all(task_id==0,i==2)):
-                    #     self.tcp.print(buffer_out[st:st+data_each_time])
-                with self.tcp.if_scope(tcp.all(i==(loop-1),j<2)):
-                    st.assign(start-j*data_each_time)
-                    self.tcp.memcpy(buffer_out[st:stop],buffer_out_s[begin-j*data_each_time:end])
-       
+                self.tcp.memcpy(buffer_out[start:stop], buffer_io_n)
+        
         # if data_rem_n > 0
         with self.tcp.if_scope(data_rem_n > 0):
             start = task_id * data_each_task + loop * data_each_time
