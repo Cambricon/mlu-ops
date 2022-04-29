@@ -23,8 +23,6 @@
 import numpy as np
 import pytest
 import torch
-import time
-import random
 import bangpy
 import bangpy as bp
 from bangpy import tcp
@@ -35,7 +33,7 @@ from celu import DTYPES, KERNEL_NAME, TARGET_LIST
 import sys
 sys.path.append("..")
 from create_shape import *
-test_shape_list = CreatShapeList(nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,append_test_count = 20,max_dim_length = 5 ,each_dim_max_length = 64 )
+test_shape_list = CreatShapeList(nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,append_test_count = 50,max_dim_length = 5 ,each_dim_max_length = 64 )
 
 
 @pytest.mark.parametrize(

@@ -20,8 +20,6 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-from cmath import pi
-from traceback import print_tb
 import numpy as np
 import pytest
 import bangpy
@@ -34,7 +32,7 @@ from logaddexp import DTYPES, KERNEL_NAME, TARGET_LIST
 import sys
 sys.path.append("..")
 from create_shape import *
-test_shape_list = CreatShapeList(nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,append_test_count = 30,max_dim_length = 5 ,each_dim_max_length = 64 )
+test_shape_list = CreatShapeList(nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,append_test_count = 50,max_dim_length = 5 ,each_dim_max_length = 64 )
 @pytest.mark.parametrize(
     "shape", 
     test_shape_list,
