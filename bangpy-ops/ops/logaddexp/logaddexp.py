@@ -30,7 +30,7 @@ from bangpy.tcp.util import round_up, round_down
 from bangpy.tcp.runtime import TaskType
 
 DTYPES = [bangpy.float16, bangpy.float32] #支持的类型
-TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]#支持的设备
+TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "LogAddExp" #算子名
 
 
@@ -45,7 +45,6 @@ class LogAddExp(object):
         self.task_num = task_num     
         self.bp = tcp.TCP(target)
         self.length = self.bp.SizeVar("length")#得到数据的长度  此处应该是数组的长度
-        self.nram_size = TARGET(target).nram_size#每个核的Nram大小 每个core自己的存储空间
         self.dtype_sz = dtype.bytes#类型占用空间的大小(字节)
         self.bp.launch_task(self.task_num, 1, 1)#将任务维度值设置为在此内核中启动。  三个参数其实就是 taskdimx,y,z   
     
@@ -77,17 +76,19 @@ class LogAddExp(object):
     #x承载小于阈值的数据对应位置的buffer 对应位置上
     #y承载大于阈值的数据对应位置的buffer 
     def mark_the_out_of_range_vlaue(self,input,x,y):     
-        max_threshold_valu = self.bp.Scalar(self.dtype,"max_threshold_valu")
-        min_threshold_valu = self.bp.Scalar(self.dtype,"min_threshold_valu")
-        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的
+        max_threshold_valu = self.bp.Scalar(self.dtype,"max_threshold_valu",10)
+        min_threshold_valu = self.bp.Scalar(self.dtype,"min_threshold_valu",-7.5)
+        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的   这里注释掉的原因是 其exp接口最大范围是[-7.5,10] 并不随类型的范围
         #当为16位是 max min 采用以下值       
-        if self.dtype == bangpy.float16 :
-            max_threshold_valu.assign(11.089866488461016076210728979771)
-            min_threshold_valu.assign(-9.703981170988072538409566077448)
-        #32位时使用以下值        
-        else:
-            max_threshold_valu.assign(88.722008965395851698332450562653)
-            min_threshold_valu.assign(-87.332719095296162600686375692197)
+        # if self.dtype == bangpy.float16 :
+        #     max_threshold_valu.assign(11.089866488461016076210728979771)
+        #     min_threshold_valu.assign(-9.703981170988072538409566077448)
+        # #32位时使用以下值        
+        # else:
+        #     max_threshold_valu.assign(88.722008965395851698332450562653)
+        #     min_threshold_valu.assign(-87.332719095296162600686375692197)
+        # max_threshold_valu.assign(10)
+        # min_threshold_valu.assign(-7.5)
         self.mark_the_value_compare_with_threshold_value(input,x,1,min_threshold_valu)#将输入中小于最小值的在x对应位置标为0
         self.mark_the_value_compare_with_threshold_value(input,y,0,max_threshold_valu)#将输入中大于最大值的在y对应位置标为0
     def compute_body(self):
@@ -182,9 +183,9 @@ class LogAddExp(object):
         return f
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp(dtype=None, target=None):
-    # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
-    task_type=TaskType.UNION16 #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
-    #task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
-    task_num =1
+    task_type=TaskType.UNION16 
+    task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
     f = LogAddExp(dtype, target, task_num).compute_body()
     return f
+
+

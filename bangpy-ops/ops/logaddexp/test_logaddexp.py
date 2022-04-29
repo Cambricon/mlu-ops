@@ -24,8 +24,6 @@ from cmath import pi
 from traceback import print_tb
 import numpy as np
 import pytest
-import time
-
 import bangpy
 import bangpy as bp
 from bangpy import tcp
@@ -33,76 +31,82 @@ from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from logaddexp import DTYPES, KERNEL_NAME, TARGET_LIST
-
-def numcheck(input_pow_arr):
-    natural_exponential_res=np.exp(input_pow_arr)
-    natural_power_exponent_one_cent=np.reciprocal(natural_exponential_res)
-    numerator_res=np.subtract(natural_exponential_res,natural_power_exponent_one_cent)
-    return numerator_res*0.5
+import sys
+sys.path.append("..")
+from create_shape import *
+test_shape_list = CreatShapeList(nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,append_test_count = 30,max_dim_length = 5 ,each_dim_max_length = 64 )
 @pytest.mark.parametrize(
     "shape", 
-    [
-        (15104,),
-    ],
+    test_shape_list,
+    #[(5,),]
+    
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
 
-#
-#一共测了两种数据类型  在算子源码dtype数组中写的那两种  每种测了三次  每次的数组长度 看37行开始的那个数组
-#
-
 def test_logaddexp(target, shape, dtype):
     if target not in TARGET_LIST:
         return
-
-    print(dtype)
+   
+    print("dtype->",dtype,"___shape->",shape)
     # origin input
     
-    data_x = np.random.uniform(low=-1000, high=1000, size=shape).astype(dtype.as_numpy_dtype)
-    data_y = np.random.uniform(low=-1000, high=1000, size=shape).astype(dtype.as_numpy_dtype)
-    # data_x =np.array([326.15338,]).astype(dtype.as_numpy_dtype)
-    # data_y = np.array([320.5677,]).astype(dtype.as_numpy_dtype)
-    mlu_start =time.time()
-    print("mlu start.")
+    sub_shape = shape[random.randint(0, len(shape) - 1):len(shape)]
+    data_x = np.random.uniform(low=-1000, high=1000, size=shape)
+    data_y = np.random.uniform(low=-1000, high=1000, size=sub_shape)
+    # data_x = np.random.uniform(low=-1000, high=1000, size=(1,))
+    # data_y = np.random.uniform(low=-1000, high=1000, size=(9,2))
 
-    dev = bp.device(0)
-    data_x_flat = data_x.flatten()
-    data_x_dev = bp.Array(data_x_flat, dev)
+    def logaddexp(input_x,input_y):
+        max = input_x
+        min = input_y
+
+        is_sub = True #是否是子集
+        scale_up = 1 #缩放倍数
+        is_single_element = False #是否存在单元素
+        print("x_shape",input_x.shape)
+        print("y_shape",input_y.shape)
+        
+        if len(max.shape) - len(min.shape) < 0 :#不同维度找出高维的    
+            max = input_y
+            min = input_x   
+        if len(max.shape) ==1 and len(min.shape) == 1:#当同为一维时 根据数组长度确定哪个是大的
+            if max.shape[0] - min.shape[0] < 0 :
+                max = input_y
+                min = input_x        
+        for i in range(len(min.shape)): #倒序比较 shape各元素 
+            if max.shape[-1 - i] != min.shape[-1 - i] :#循环未结束 出现不同 说明短的不是长的子集  不能进行计算
+                is_sub = False
+                break
+        if len(min.shape) == 1 and min.shape[0] == 1 :#特殊情况  当短的只有一个元素时是可以计算的
+            is_sub = True
+            is_single_element =True
+        if is_sub :
+            if not is_single_element :#如果是多个元素 计算差值部分的乘积作为缩放短的缩放倍数
+                for j in range(len(max.shape) - len(min.shape)) :
+                    scale_up *= max.shape[ -1*len(min.shape) -j -1]
+            else:#如果只有一个元素 则缩放倍数为长的shape各元素的乘积
+                for k in range(len(max.shape)):
+                    scale_up *= max.shape[k]
+            dev = bp.device(0)         
+            x = bp.Array(max.astype(dtype.as_numpy_dtype).flatten(), dev)         
+            y = bp.Array(np.tile(min.astype(dtype.as_numpy_dtype).flatten(),scale_up), dev)
+            output_dev = bp.Array(np.zeros(max.size, dtype=dtype.as_numpy_dtype), dev)
+            task_type = TaskType(TARGET(target).cluster_num)
+            log_add_exp_func = load_op_by_type("LogAddExp", dtype.name)
+            with tcp.runtime.Run(task_type):
+                log_add_exp_func(x, y, output_dev)
+            return output_dev.numpy().reshape(max.shape)
+        else :
+            print("need the same shape or sub shape")
+            
+    mlu_ret = logaddexp(data_x,data_y)
+    ret2 = np.logaddexp(data_x, data_y)
+    if dtype.name == "float16":
+        bangpy.assert_allclose( mlu_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.01, atol = 0.01)
+    else:
+        bangpy.assert_allclose( mlu_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.001, atol = 0.01)
     
-    data_y_flat = data_y.flatten()
-    data_y_dev = bp.Array(data_y_flat, dev)
 
-    task_type = TaskType(TARGET(target).cluster_num)
-    log_add_exp_func = load_op_by_type("LogAddExp", dtype.name)
 
-    task_type = TaskType(TARGET(target).cluster_num)
-
-    output_buffer = np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype)
-    output_dev = bp.Array(output_buffer, dev)
-
-    with tcp.runtime.Run(task_type):
-        log_add_exp_func(data_x_dev, data_y_dev, output_dev)
-    
-    np_ret = output_dev.numpy()
-    #ret1 = np_ret.reshape(shape)
-    mlu_end = time.time()
-    print('mlu cost ', mlu_end - mlu_start)
-    
-    #print(ret1)
-    print("cpu start.")
-    # cpu_start_time = time.time()
-    ret2 = np.logaddexp(data_x_flat, data_y_flat)
-    # cpu_end_time = time.time()
-    #print(ret2)
-    # print("cpu_time", cpu_end_time - cpu_start_time)
-    print("data_x:",data_x_flat)
-    print("data_y:",data_y_flat)
-    print("mlu_out:",np_ret)
-    print("cpu_out:",ret2)
-    #bp.testing.assert_allclose(ret1.numpy(), ret2.astype(dtype.as_numpy_dtype), rtol = 0.2, atol = 0.2)
-    bangpy.assert_allclose( np_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.1, atol = 0.1)
-    
-   
-       
