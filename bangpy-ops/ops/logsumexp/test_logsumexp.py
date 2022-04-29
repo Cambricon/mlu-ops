@@ -50,7 +50,7 @@ import time
 
 
 @pytest.mark.parametrize(
-    "dim", [1],
+    "dim", [0],
 )
 
 @pytest.mark.parametrize(
