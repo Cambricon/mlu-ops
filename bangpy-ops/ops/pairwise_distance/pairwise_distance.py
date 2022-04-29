@@ -152,12 +152,7 @@ class PairwiseDistance(object):
         return result
 
     def scalar_pow(self, value, p):
-        self.nram_pow_buffer[0] = value
-        self.bp.log(self.nram_pow_buffer, self.nram_pow_buffer)
-        #pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
-        self.bp.multiply(self.nram_pow_buffer, self.nram_pow_buffer, p)
-        self.bp.exp(self.nram_pow_buffer, self.nram_pow_buffer)
-        return self.nram_pow_buffer[0]
+        return self.bp.scalar_pow(value, p)
     
     def compute_body(self):
         self._data_man.init(self.bp)
