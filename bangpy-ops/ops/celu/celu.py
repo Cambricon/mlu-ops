@@ -30,7 +30,7 @@ from bangpy.tcp.util import round_up, round_down
 from bangpy.tcp.runtime import TaskType
 
 DTYPES = [ bangpy.float16,bangpy.float32] #支持的类型
-TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]#支持的设备
+TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "Celu" #算子名
 
 
@@ -75,17 +75,17 @@ class Celu(object):
     #x承载小于阈值的数据对应位置的buffer 对应位置上
     #y承载大于阈值的数据对应位置的buffer 
     def mark_the_out_of_range_vlaue(self,input,x,y):     
-        max_threshold_valu = self.bp.Scalar(self.dtype,"max_threshold_valu")
-        min_threshold_valu = self.bp.Scalar(self.dtype,"min_threshold_valu")
-        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的
+        max_threshold_valu = self.bp.Scalar(self.dtype,"max_threshold_valu",10)
+        min_threshold_valu = self.bp.Scalar(self.dtype,"min_threshold_valu",-7.5)
+        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的   这里注释掉的原因是 其exp接口最大范围是[-7.5,10] 并不随类型的范围
         #当为16位是 max min 采用以下值       
-        if self.dtype == bangpy.float16 :
-            max_threshold_valu.assign(11.089866488461016076210728979771)
-            min_threshold_valu.assign(-9.703981170988072538409566077448)
-        #32位时使用以下值        
-        else:
-            max_threshold_valu.assign(88.722008965395851698332450562653)
-            min_threshold_valu.assign(-87.332719095296162600686375692197)
+        # if self.dtype == bangpy.float16 :
+        #     max_threshold_valu.assign(11.089866488461016076210728979771)
+        #     min_threshold_valu.assign(-9.703981170988072538409566077448)
+        # #32位时使用以下值        
+        # else:
+        #     max_threshold_valu.assign(88.722008965395851698332450562653)
+        #     min_threshold_valu.assign(-87.332719095296162600686375692197)
         self.mark_the_value_compare_with_threshold_value(input,x,1,min_threshold_valu)#将输入中小于最小值的在x对应位置标为0
         self.mark_the_value_compare_with_threshold_value(input,y,0,max_threshold_valu)#将输入中大于最大值的在y对应位置标为0
     def compute_body(self):
@@ -97,7 +97,7 @@ class Celu(object):
         calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
         once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
         calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
-        nram_avable_size = round_down( (TARGET(self.target).nram_size - 200* 1024) // 8  ,128)
+        nram_avable_size = round_down( (TARGET(self.target).nram_size - 40* 1024) // 8  ,128)
         one_core_count.assign(self.length // self.task_num)#每个核均摊计算量（按索引分）
         remain.assign(self.length % self.task_num)#分任务时的余数
            
@@ -113,12 +113,11 @@ class Celu(object):
         buffer_in0 = self.bp.Buffer(
             shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
         )
-       
-        buffer_out = self.bp.Buffer(
-            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
-        )
         buffer_alpha = self.bp.Buffer(
             shape=(1,), name="ALPHA_PARAM", dtype=self.dtype, scope="global"
+        )
+        buffer_out = self.bp.Buffer(
+            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
         )
         alpha = self.bp.Scalar(dtype = self.dtype,name = "alpha")
         alpha.assign(buffer_alpha[0])
@@ -164,9 +163,6 @@ class Celu(object):
             dtype=self.dtype,
             scope="nram",
         )
-        #is_inf = self.bp.Scalar(dtype = self.dtype,name = "is_inf",value = 0)
-        # alpha = self.bp.Scalar(dtype = self.dtype,name = "ap")
-        # alpha.assign(alpha)
         const_zero = self.bp.Scalar(dtype = self.dtype,name = "const_zero",value = 0)
         const_one = self.bp.Scalar(dtype = self.dtype,name = "const_one",value = 1)
         replace_value =  self.bp.Scalar(dtype = self.dtype,name = "replace_value")
@@ -177,6 +173,9 @@ class Celu(object):
                 calc_size.assign(process_count)
             with self.bp.else_scope():
                 calc_size.assign(total_count_in_core % process_count)
+                with self.bp.if_scope(calc_size == 0):
+                    calc_size.assign(process_count)
+
             with self.bp.block("data_copy"):
                 self.bp.memcpy(nram_buffer_in0[0:calc_size], buffer_in0[once_loop_start:once_loop_start + calc_size]) 
             #这里开始计算min
@@ -189,11 +188,12 @@ class Celu(object):
                 #前期准备基本完成 开始常规计算
                 self.bp.exp(nram_middle_value,nram_middle_value)#计算exp(x/a)
                 self.bp.subtract(nram_middle_value, nram_middle_value, const_one)#-1
+                # self.bp.print(nram_middle_value[0])
                 self.bp.multiply(nram_middle_value, nram_middle_value, alpha)#*a
                 self.bp.minimum(nram_min,nram_middle_value,const_zero)#min(0,...)
                 #开始替换
                 self.bp.multiply(nram_middle_value, nram_middle_value,nram_marked_zero)#将所有x>=0得位置全部替换成0
-                #一种情况 当（x/a）> e 的最大次方值时  返回-inf  这个先不做  等周一问问咋显示
+              
                 #另一种情况  当（x/a）< e 的最小次方值时   将所有标记位替换成 -a和0中小的那个
                 with self.bp.if_scope(alpha * -1 > 0):
                     replace_value.assign(0)
@@ -202,13 +202,11 @@ class Celu(object):
                 self.replace_the_marked_position_with_the_value_of_the_same_position(nram_middle_value,nram__marked_exp_beyond_the_lower_limit,replace_value)             
             with self.bp.else_scope():#当alpha为0时  min全为0
                 self.bp.zeros(nram_min)   
+            
             #这里开始计算max           
             self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
             #计算max+min
-            self.bp.add(nram_buffer_in0,nram_max,nram_min)
-            # with self.bp.if_scope(self.inplace):
-            #     self.bp.memcpy(buffer_in0[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
-            # with self.bp.else_scope():         
+            self.bp.add(nram_buffer_in0,nram_max,nram_min)         
             self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
             
       
@@ -220,9 +218,7 @@ class Celu(object):
         return f
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_celu(dtype=None, target=None):
-    # tasktype fixed in UNION1    调度说明在这里  默认设置为union1 只启用了一个cluster
-    task_type=TaskType.UNION16 #设置为UNION4  即当空闲4个cluster时 这玩意开始干活   union1指只要有一个cluster空闲时就可以干活了
+    task_type=TaskType.UNION16 
     task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
-    #task_num =1
     f = Celu(dtype, target, task_num).compute_body()
     return f

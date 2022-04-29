@@ -22,8 +22,9 @@
 """A multi-platform code link example test for BANGPy TCP."""
 import numpy as np
 import pytest
+import torch
 import time
-
+import random
 import bangpy
 import bangpy as bp
 from bangpy import tcp
@@ -31,12 +32,16 @@ from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from celu import DTYPES, KERNEL_NAME, TARGET_LIST
+import sys
+sys.path.append("..")
+from create_shape import *
+test_shape_list = CreatShapeList(nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,append_test_count = 20,max_dim_length = 5 ,each_dim_max_length = 64 )
+
 
 @pytest.mark.parametrize(
     "shape", 
-    [
-        (3,4,6,5,128),
-    ],
+    test_shape_list,
+    #[(30207,),]
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -54,20 +59,25 @@ def test_celu(target, shape, dtype):
             data_x_dev_param = bp.Array(data_x_flat, dev) 
             output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype), dev)
             celu_func(data_x_dev_param,buffer_alpha_param,inplace,output_dev_param)#计算   
-            res = output_dev_param.numpy().reshape(primative)#还原shape
+            res = output_dev_param.numpy().reshape(primative)#还原shape        
             if inplace :
-                input_param = res#如果在原位改动
+                input_param=res#如果在原位改动
             return res#返回结果 在原位改动直接拿input 反正俩地址现在一样      
         return celu_inner#返回函数
-    data_x = np.random.uniform(low=-7.75, high=10, size=shape).astype(dtype.as_numpy_dtype)
-    print("input:",data_x)
-    gala = celu_out(-2,True)
-    res = gala(data_x)
-    # print("input_changed:",data_x)
-    print("out:",res)
+    data_x = np.random.uniform(low=-1000, high=1000, size=shape)
+    print("current_shape->",shape,"___",dtype.name)
+    gala = celu_out(2,True)
+    res = gala(data_x.astype(dtype.as_numpy_dtype))
+    torch_value = torch.tensor(data_x)        
+    m = torch.nn.CELU(2)
+    t_res = m(torch_value)
+    if dtype.name == "float16":
+        bangpy.assert_allclose( t_res.numpy(), res,rtol = 0.01, atol = 0.01)
+    else:
+        bangpy.assert_allclose( t_res.numpy(), res,rtol = 0.00001, atol = 0.01)
+    
   
    
-    #bangpy.assert_allclose( np_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.1, atol = 0.1)
-    
+   
    
             
