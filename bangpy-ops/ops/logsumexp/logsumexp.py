@@ -163,6 +163,9 @@ class Logsumexp(object):
         return scalar_res
 
     def calc_norm(self, buffer, start_index, end_index):
+        #with self.bp.if_scope(end_index == start_index + 1):
+        #    return buffer[start_index]
+
         natural_base = self.bp.Scalar(bangpy.float32, "natural_base", 2.7182818284590452353602874713526624977572470936999)
         const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
         max_threshold_valu = self.bp.Scalar(bangpy.float32, "max_threshold_valu")
@@ -170,10 +173,15 @@ class Logsumexp(object):
         #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的 
         max_threshold_valu.assign(88.722008965395851698332450562653)
         min_threshold_valu.assign(-87.332719095296162600686375692197)
-        data_length = self.bp.Scalar(bangpy.int32, "data_length", end_index - start_index + 1)#传进来得数据长度
+        data_length = self.bp.Scalar(bangpy.int32, "data_length", end_index - start_index)#传进来得数据长度
+
+        #加了这个玩意，结果没起作用，bug？先注释掉好了
+        #with self.bp.if_scope(data_length == 1):
+        #    return buffer[0]
+
         sub_value = self.bp.Scalar(bangpy.float32, "sub_value")#y-x的差值
         sum_value = self.bp.Scalar(bangpy.float32, "sum_value",buffer[start_index].astype(bangpy.float32))#
-        with self.bp.for_range(0,data_length -1) as i:#这里 -1 是为了循环内省掉一个if
+        with self.bp.for_range(0, data_length -1) as i:#这里 -1 是为了循环内省掉一个if
             sub_value.assign(sum_value - buffer [i + 1].astype(bangpy.float32))
             with self.bp.if_scope(tcp.all(sub_value <= max_threshold_valu,sub_value >= min_threshold_valu)):
                 sum_value.assign(self.bp.scalar_pow(natural_base,sub_value)+const_one)
@@ -338,7 +346,7 @@ class Logsumexp(object):
                 norm_value.assign(calc_result)
                 outputs[start_index + j] = norm_value       # 一个完整的norm算出来了   
 
-                self.bp.print("norm value -------", norm_value)
+                self.bp.print("norm value -------*", norm_value)
                 self.bp.print(flat_nram[0:dim_len])
 
         #再看一下结尾，是不是要缓存下一个norm的前半截
