@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (31, 31)
+        (2, 3, 4)
     ],
 )
 
@@ -114,6 +114,8 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     output_buffer3 = -np.ones(output_count, dtype=np.int32)
     _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
 
+    print('input ', _pd_height, _pd_width)
+    print(input_tensor)
 
     # 调用mlu
     func = load_op_by_type(KERNEL_NAME, dtype.name)
@@ -147,5 +149,5 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     print('cpu cost ', time.time() - cpu_start)
     print(cpu_ret)
 
-    #bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
     

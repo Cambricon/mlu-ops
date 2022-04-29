@@ -47,163 +47,8 @@ class Logsumexp(object):
         self.dtype_sz = dtype.bytes
         self.bp = tcp.TCP(target)
         self._data_man = data_man()
-
-    def calc_pow(self, gram_tensor, p):
-        nram_avable_size = round_down( (TARGET(self.target).nram_size - 30 * 1024) // 2, 128)
-        nram_process_count = nram_avable_size // self.dtype_sz
-
-        nram_buffer_in = self.bp.Buffer(
-            shape=(2 * nram_process_count, ),
-            name="nram_buffer_in",
-            dtype=self.dtype,
-            scope="nram")
-
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
-        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
-
-        calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
-        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + nram_process_count - 1) // nram_process_count)
-
-        with self.bp.for_range(0, calc_loop_count) as i:          
-            with self.bp.if_scope(i < calc_loop_count - 1):
-                calc_size.assign(nram_process_count)
-            with self.bp.else_scope():
-                calc_size.assign(total_count_in_core % nram_process_count)
-                with self.bp.if_scope(calc_size == 0):
-                    calc_size.assign(nram_process_count)
-
-            once_loop_start.assign(current_core_start + nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
-
-            with self.bp.block("data_copy"):
-                self.bp.memcpy(nram_buffer_in[0:calc_size], gram_tensor[once_loop_start:once_loop_start + calc_size]) 
-
-            with self.bp.block("compute"):
-                # 求绝对值
-                self.bp.abs(nram_buffer_in, nram_buffer_in)
-
-                # 求指数
-                self.bp.log(nram_buffer_in, nram_buffer_in)
-                pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
-                self.bp.multiply(nram_buffer_in, nram_buffer_in, pw)
-                self.bp.exp(nram_buffer_in, nram_buffer_in)
-
-                self.bp.print("nram buffer in ", nram_buffer_in)
-
-            with self.bp.block("data_copy"):
-                self.bp.memcpy(gram_tensor[once_loop_start:once_loop_start + calc_size], nram_buffer_in[:calc_size])   
-
-
-
-    def copy_from_2d_tensor(self, dst, md, nd, src, m, n, cp_len):
-        with self.bp.if_scope(cp_len // 2 != 0):
-            self.bp.memcpy(dst[md:md + cp_len // 2, nd:nd + 1], src[m:m + cp_len // 2, n:n + 1])
-
-        with self.bp.if_scope(cp_len // 2 != cp_len):
-            self.bp.memcpy(dst[md + cp_len // 2:md + cp_len, nd:nd + 1], src[m + cp_len // 2:m + cp_len, n:n + 1])                            
     
-
-    def calc_norm(self, buffer, start, end):
-        result = self.bp.Scalar(self.dtype, "result", 0.0)
-        size = self.bp.Scalar(bangpy.int32, "size", end - start)
-        with self.bp.for_range(0, size) as i:
-            result.assign(result + buffer[start + i])
-        return result
-
-    def scalar_pow(self, value, p):
-        self.nram_pow_buffer[0] = value
-        self.bp.log(self.nram_pow_buffer, self.nram_pow_buffer)
-        pw = self.bp.Scalar(name='pw', dtype=self.dtype, value=p)
-        self.bp.multiply(self.nram_pow_buffer, self.nram_pow_buffer, pw)
-        self.bp.exp(self.nram_pow_buffer, self.nram_pow_buffer)
-        return self.nram_pow_buffer[0]
     
-    def process_sub_tensor(self, gram_tensor, p, maxnorm, h, w, sub_wid, output_tensor):
-        # 先拆分数据
-        st_start = self._data_man._current_core_start
-        st_count = self._data_man._total_count_in_core
-
-        nram_avable_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
-        self.nram_process_count = nram_avable_size // self.dtype_sz
-        self.nram_calc_buffer = self.bp.Buffer(
-            shape=(self.nram_process_count, 1),
-            name="nram_calc_buffer",
-            dtype=self.dtype,
-            scope="nram")
-
-        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")   
-
-
-        cp_row_count = self.bp.Scalar(bangpy.int32, "cp_row_count", (h + self.nram_process_count - 1 ) // self.nram_process_count)
-        cp_len = self.bp.Scalar(bangpy.int32, "cp_len", self.nram_process_count)
-
-        with self.bp.for_range(0, st_count) as i: # 这个nram上要处理的子向量个数
-            st_norm_value = self.bp.Scalar(self.dtype, "st_norm_value", 0.0)
-            start_col = self.bp.Scalar(bangpy.int32, "start_col", sub_wid * (st_start + i))
-            end_col = self.bp.Scalar(bangpy.int32, "end_col", sub_wid * (st_start + i + 1))
-            with self.bp.for_range(0, end_col) as j: #要拷贝的列的起止
-                with self.bp.if_scope(j >= start_col): #不这么写，编译不过，
-                    #一次拷贝一列
-                    with self.bp.for_range(0, cp_row_count) as k:
-                        with self.bp.if_scope(k == cp_row_count - 1):
-                            cp_len.assign(h % self.nram_process_count)
-                            with self.bp.if_scope(cp_len == 0):
-                                cp_len.assign(self.nram_process_count)
-
-                        self.copy_from_2d_tensor(self.nram_calc_buffer, 0, 0, 
-                                                 gram_tensor, self.nram_process_count * k, j, cp_len)
-
-
-                        # 求绝对值
-                        self.bp.abs(self.nram_calc_buffer, self.nram_calc_buffer)
-                        self.bp.print("abs ", self.nram_calc_buffer[0])
-
-                        # 求指数
-                        self.bp.log(self.nram_calc_buffer, self.nram_calc_buffer)
-                        self.bp.print("log ", self.nram_calc_buffer[0])
-
-                        pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
-
-                        self.bp.print("p ", pw)
-                        self.bp.multiply(self.nram_calc_buffer, self.nram_calc_buffer, pw)
-
-                        self.bp.print("mul ", self.nram_calc_buffer[0])
-
-                        self.bp.exp(self.nram_calc_buffer, self.nram_calc_buffer)
-                        self.bp.print("exp ", self.nram_calc_buffer[0])
-
-                        calc_ret = self.calc_norm(self.nram_calc_buffer, 0, cp_len)
-                        self.bp.print("first ", self.nram_calc_buffer[0])
-                        self.bp.print("calc_ret ", calc_ret)
-                        self.bp.print("cp_len is ", cp_len)
-                        st_norm_value.assign(st_norm_value + calc_ret)
-
-            #计算一下norm，
-            #self.bp.print("norm value is ", st_norm_value)
-            cp_len.assign(self.nram_process_count)
-            st_norm_value.assign(self.scalar_pow(st_norm_value, 1 / p))
-            with self.bp.if_scope(st_norm_value > maxnorm):
-                tmp = self.scalar_pow(maxnorm / st_norm_value, p)
-                with self.bp.for_range(0, end_col) as j: #要拷贝的列的起止
-                    with self.bp.if_scope(j >= start_col): #不这么写，编译不过，
-                        #一次拷贝一列
-                        with self.bp.for_range(0, cp_row_count) as k:
-                            with self.bp.if_scope(k == cp_row_count - 1):
-                                cp_len.assign(h % self.nram_process_count)
-                                with self.bp.if_scope(cp_len == 0):
-                                    cp_len.assign(self.nram_process_count)
-
-                            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, 0, 
-                                                     gram_tensor, self.nram_process_count * k, j, cp_len)
-
-                            scalar_tmp = self.bp.Scalar(name='p', dtype=self.dtype, value=tmp)
-                            self.bp.multiply(self.nram_calc_buffer, self.nram_calc_buffer, scalar_tmp)
-
-                            #拷贝到output里面去
-                            self.copy_from_2d_tensor(output_tensor, self.nram_process_count * k, j, 
-                                                     self.nram_calc_buffer, 0, 0, cp_len)
-
-
     def compute_body(self):
         self._data_man.init(self.bp)
         self.bp.launch_task(self.task_num, 1, 1)
@@ -229,7 +74,41 @@ class Logsumexp(object):
             shape=(border_array_size * 2, ), name="gram_border_idx_out", dtype=bangpy.int32, scope="global"
         )
 
-        self.bp.print(gram_tensor)
+        with self.bp.if_scope(self.bp.taskId == 0):
+            gram_reshape_tensor = gram_tensor.reshape([self.h, self.w])
+        self.bp.sync_all()
+
+        nram_avable_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
+        self.nram_process_count = nram_avable_size // self.dtype_sz
+        self.nram_calc_buffer = self.bp.Buffer(
+            shape=(self.nram_process_count, 1),
+            name="nram_calc_buffer",
+            dtype=self.dtype,
+            scope="nram")
+
+        self._data_man.calc_core_process_count(self.h * self.w, self.task_num)
+
+        with self.bp.if_scope(self.dim_len > self.nram_process_count):
+            self.calc1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+        with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
+            with self.bp.if_scope((self.h * self.w)  // self.task_num < self.dim_len):
+                self.calc1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+            with self.bp.else_scope():
+                self.calc2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+
+        # 处理边界数据
+        with self.bp.if_scope(self.bp.taskId == 0):
+            with self.bp.for_range(0, border_array_size) as i:
+                index1 = gram_border_idx_out[2 * i]
+                index2 = gram_border_idx_out[2 * i + 1]
+                norm_value1 = gram_border_buf_out[2 * i]
+                norm_value2 = gram_border_buf_out[2 * i + 1]
+
+                with self.bp.if_scope(index1 >= 0):
+                    gram_buffer_out[index1] = self.scalar_logsumexp(gram_buffer_out[index1], norm_value1, 0)
+
+                with self.bp.if_scope(index2 >= 0):
+                    gram_buffer_out[index2] = self.scalar_logsumexp(gram_buffer_out[index2], norm_value2, 0)
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor,
@@ -241,12 +120,244 @@ class Logsumexp(object):
             )
         return f
 
-    
+    def copy_from_2d_tensor(self, dst, offset_dst, src, offset_src, dim_len, height, width, cp_len):
+        dim_col_count = height // dim_len
+
+        big_row = offset_src // (width * dim_len)
+
+        m = offset_src % dim_len + big_row * dim_len
+
+        big_n = (offset_src + dim_len - 1) // dim_len
+        n = big_n % width
+
+        with self.bp.if_scope(offset_dst != offset_dst + cp_len // 2):
+            self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], src[m:m + cp_len  // 2, n:n + 1])
+
+        with self.bp.if_scope(offset_dst + cp_len // 2 != offset_dst + cp_len):
+            self.bp.memcpy(dst[offset_dst + cp_len // 2:offset_dst + cp_len, 0:1], src[m + cp_len // 2:m + cp_len, n:n + 1])                            
+
+    def scalar_logsumexp(self, x, y, inited):
+        with self.bp.if_scope(inited == 0):
+            return y
+
+        natural_base = self.bp.Scalar(bangpy.float32,"natural_base",2.7182818284590452353602874713526624977572470936999)
+        const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
+        #max_threshold_valu = self.bp.Scalar(bangpy.float32, "max_threshold_valu", 10) 
+        #min_threshold_valu = self.bp.Scalar(bangpy.float32, "min_threshold_valu", -7.5)
+        ##如果结果有误 max  min 用下面注释掉的值替换     [-7.5,10] 这里参照了一下文档中exp操作的参数范围   
+        max_threshold_valu = self.bp.Scalar(bangpy.float32,"max_threshold_valu",88.722008965395851698332450562653) 
+        min_threshold_valu = self.bp.Scalar(bangpy.float32,"min_threshold_valu",-87.332719095296162600686375692197)
+
+        const_one = self.bp.Scalar(bangpy.float32,"const_one", 1)
+        scalar_res = self.bp.Scalar(bangpy.float32,"scalar_res", y - x)#计算结果   初始化为 y-x的差值
+        with self.bp.if_scope(tcp.all(scalar_res <= max_threshold_valu, scalar_res >= min_threshold_valu)):#如果差值在合法范围内
+            scalar_res.assign(self.bp.scalar_pow(natural_base, scalar_res))# 作为e的指数
+            scalar_res.assign(scalar_res + const_one) # +1
+            scalar_res.assign(self.bp.scalar_log(scalar_res) / self.bp.scalar_log(natural_base))# 换底公式 计算自然对数
+            scalar_res.assign(scalar_res + x) # +x
+        with self.bp.else_scope():#如果y-x 后的结果不和法
+            with self.bp.if_scope(scalar_res > max_threshold_valu): #超过上限 返回y
+                scalar_res.assign(y)
+            with self.bp.else_scope():#小于下限 返回 x
+                scalar_res.assign(x)
+        return scalar_res
+
+    def calc_norm(self, buffer, start_index, end_index):
+        natural_base = self.bp.Scalar(bangpy.float32, "natural_base", 2.7182818284590452353602874713526624977572470936999)
+        const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
+        max_threshold_valu = self.bp.Scalar(bangpy.float32, "max_threshold_valu")
+        min_threshold_valu = self.bp.Scalar(bangpy.float32, "min_threshold_valu")
+        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的 
+        max_threshold_valu.assign(88.722008965395851698332450562653)
+        min_threshold_valu.assign(-87.332719095296162600686375692197)
+        data_length = self.bp.Scalar(bangpy.int32, "data_length", end_index - start_index + 1)#传进来得数据长度
+        sub_value = self.bp.Scalar(bangpy.float32, "sub_value")#y-x的差值
+        sum_value = self.bp.Scalar(bangpy.float32, "sum_value",buffer[start_index].astype(bangpy.float32))#
+        with self.bp.for_range(0,data_length -1) as i:#这里 -1 是为了循环内省掉一个if
+            sub_value.assign(sum_value - buffer [i + 1].astype(bangpy.float32))
+            with self.bp.if_scope(tcp.all(sub_value <= max_threshold_valu,sub_value >= min_threshold_valu)):
+                sum_value.assign(self.bp.scalar_pow(natural_base,sub_value)+const_one)
+                sum_value.assign(self.bp.scalar_log(sum_value) / self.bp.scalar_log(natural_base))
+                sum_value.assign(sum_value + buffer [i + 1])
+            with self.bp.else_scope():
+                with self.bp.if_scope(sub_value < min_threshold_valu):
+                    sum_value.assign(buffer[i + 1])
+        return sum_value
+
+    def get_norm_index(self, data_pos, dim_len):
+        index = (data_pos + dim_len - 1) // dim_len
+        return index - 1
+
+    def calc1(self, gram_tensor, border_outputs, idx_outputs, outputs):# nram 一次还存不下一个元素
+        current_core_start = self._data_man._current_core_start
+        total_count_in_core = self._data_man._total_count_in_core
+        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_count_in_core + self.nram_process_count - 1) // self.nram_process_count)
+
+        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")        
+
+        oper_type = self.bp.Scalar(bangpy.int32, "oper_type", 0)
+
+        pw = self.bp.Scalar(self.dtype, "pw", 1)
+
+        dim_len = self.dim_len
+        norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", current_core_start % dim_len)
+        with self.bp.if_scope(norm_offset == 0):
+            oper_type.assign(2)
+        with self.bp.else_scope():
+            oper_type.assign(0)
+
+        flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
+        '''
+        0 : 要压缩的维度，从中间开始，且比nram还要长
+        1 : 要压缩的维度，从中间开始，比nram小
+        2 : 要压缩的维度，从头开始
+        '''
+        #以上记录一下，是否是从半截开始处理的，如果是，要缓存
+
+        complete_norm_count = self.bp.Scalar(bangpy.int32, "complete_norm_count", 0)
+
+        norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
+        norm_value_inited = self.bp.Scalar(bangpy.int32, "norm_value", 0)
+
+        # 确认本次循环要从gram拷贝回nram的数量      
+        calc_size = self.bp.Scalar(bangpy.int32, "calc_size", self.nram_process_count)
+
+        once_norm_ok = self.bp.Scalar(bangpy.int32, "once_norm_ok", 0)     
+        cp_data_len = self.bp.Scalar(bangpy.int32, "cp_data_len", 0)
+        with self.bp.for_range(0, calc_loop_count) as i:
+            once_loop_start.assign(current_core_start + self.nram_process_count * i)
+            with self.bp.if_scope(i == calc_loop_count - 1):
+                calc_size.assign(total_count_in_core % self.nram_process_count)
+                with self.bp.if_scope(calc_size == 0):
+                    calc_size.assign(self.nram_process_count)
+
+            norm_offset.assign(once_loop_start % dim_len)
+            expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", dim_len - norm_offset)
+
+            with self.bp.if_scope(expect_cp_len > calc_size):
+                expect_cp_len.assign(calc_size)
+                # 一口气拷贝不完，那就尽可能多的拷贝.
+                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, dim_len, self.h, self.w, expect_cp_len)
+                cp_data_len.assign(cp_data_len + expect_cp_len)               
+                seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
+                norm_value.assign(self.scalar_logsumexp(norm_value, seg_norm_value, norm_value_inited))
+                norm_value_inited.assign(1)
+
+                with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
+                    # 缓存一下
+                    index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
+                    with self.bp.if_scope(once_norm_ok == 0):
+                        border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                        idx_outputs[self.bp.taskId * 2] = index
+                    with self.bp.else_scope():
+                        border_outputs[self.bp.taskId * 2 + 1] = norm_value 
+                        idx_outputs[self.bp.taskId * 2 + 1] = index
+                
+            with self.bp.else_scope():
+                #这个norm可以拷贝完了
+                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, dim_len, self.h, self.w, expect_cp_len)
+                cp_data_len.assign(cp_data_len + expect_cp_len)
+                seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
+                norm_value.assign(self.scalar_logsumexp(norm_value, seg_norm_value, norm_value_inited))
+                norm_value_inited.assign(1)
+
+                # 标记一下
+                once_norm_ok.assign(1)
+                # 看看这个norm是不是半截
+                index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
+                with self.bp.if_scope(cp_data_len < dim_len):   
+                    border_outputs[self.bp.taskId * 2] = norm_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                    idx_outputs[self.bp.taskId * 2] = index
+                with self.bp.else_scope():
+                    outputs[index] = norm_value # 完整的算出来了
+
+                norm_value.assign(0.0)
+                norm_value_inited.assign(0)
+                
+                # 接下来，拷贝下一个norm
+                cp_data_len.assign(calc_size - expect_cp_len)
+                with self.bp.if_scope(cp_data_len > 0):
+                    self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + expect_cp_len, dim_len, self.h, self.w, cp_data_len)
+                    calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
+                    norm_value.assign(calc_result)
+                    norm_value_inited.assign(1)
+                    with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
+                        # 肯定没有拷贝完
+                        border_outputs[self.bp.taskId * 2 + 1] = norm_value 
+                        idx_outputs[self.bp.taskId * 2 + 1] = index + 1     
+                        
+                
+    def calc2(self, gram_tensor, border_outputs, idx_outputs, outputs):
+        current_core_start = self._data_man._current_core_start
+        total_count_in_core = self._data_man._total_count_in_core        
+        dim_len = self.dim_len
+        norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
+        
+        flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
+
+        # 1 先看看有没有上个norm残留的尾巴
+        norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", current_core_start % dim_len)
+        expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", 0)
+        with self.bp.if_scope(norm_offset != 0):
+            #有残留，拷贝过来
+            expect_cp_len.assign(dim_len - norm_offset)
+            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, current_core_start, dim_len, self.h, self.w, expect_cp_len)
+            calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
+            norm_value.assign(calc_result)
+            index = self.get_norm_index(current_core_start + expect_cp_len, dim_len)
+            #保存一下
+            border_outputs[self.bp.taskId * 2] = norm_value 
+            idx_outputs[self.bp.taskId * 2] = index  
+
+        #开始循环拷贝norm了，先计算开始位置
+        norm_start_pos = self.bp.Scalar(bangpy.int32, "norm_start_pos", current_core_start + expect_cp_len)
+
+        #计算一下一个nram里最多能存多少个
+        nram_norm_count = self.bp.Scalar(bangpy.int32, "nram_norm_count", self.nram_process_count // dim_len)
+
+        #计算一下，这个core能处理的norm总数是多少
+        total_norm_in_core = self.bp.Scalar(bangpy.int32, "total_norm_in_core", (total_count_in_core - expect_cp_len) // dim_len)
+
+        #计算一下，要多少个循环
+        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", (total_norm_in_core + nram_norm_count - 1) // nram_norm_count)
+
+        once_loop_norm_count = self.bp.Scalar(bangpy.int32, "nram_norm_count", nram_norm_count)
+        with self.bp.for_range(0, calc_loop_count) as i:
+            once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start", norm_start_pos + nram_norm_count * dim_len * i)   
+            with self.bp.if_scope(i == calc_loop_count - 1):
+                once_loop_norm_count.assign(total_norm_in_core % nram_norm_count)
+                with self.bp.if_scope(once_loop_norm_count == 0):
+                    once_loop_norm_count.assign(nram_norm_count)
+
+            #这里后续要优化，目前先弄个for循环吧
+            start_index = self.bp.Scalar(bangpy.int32, "norm_offset", once_loop_start // dim_len) #肯定可以整除
+            with self.bp.for_range(0, once_loop_norm_count) as j:
+                #先拷贝过来
+                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + j * dim_len, dim_len, self.h, self.w, dim_len)
+                calc_result = self.calc_norm(flat_nram, 0, dim_len)
+                norm_value.assign(calc_result)
+                outputs[start_index + j] = norm_value       # 一个完整的norm算出来了   
+
+                self.bp.print("norm value -------", norm_value)
+                self.bp.print(flat_nram[0:dim_len])
+
+        #再看一下结尾，是不是要缓存下一个norm的前半截
+        norm_loop_end_pos = self.bp.Scalar(bangpy.int32, "norm_loop_end_pos", norm_start_pos + total_norm_in_core * dim_len)
+        cur_loop_end_pos = self.bp.Scalar(bangpy.int32, "cur_loop_end_pos", current_core_start + total_count_in_core)
+        with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
+            #拷贝一下数据
+            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, dim_len, self.h, self.w, cur_loop_end_pos - norm_loop_end_pos)
+            calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
+            norm_value.assign(calc_result)
+            index = self.get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
+            #保存一下
+            border_outputs[self.bp.taskId * 2 + 1] = norm_value 
+            idx_outputs[self.bp.taskId * 2 + 1] = index  
             
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logsumexp(dtype=None, target=None):
-    task_num = 4
+    task_num = 1
     f = Logsumexp(dtype, target, task_num).compute_body()
     return f
 
