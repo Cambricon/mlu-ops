@@ -153,8 +153,8 @@ inline int mluOpGetTensordimN(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_HWCN:
       return desc->dims[3];
     default:
-      LOG(ERROR)
-          << "Failed to call dimN, illegal layout in TensorDescriptor.\n";
+      LOG(ERROR) << "Failed to call dimN, illegal layout in "
+                    "TensorDescriptor.\n";
   }
   return 0;
 }
@@ -166,8 +166,8 @@ inline int mluOpGetTensordimD(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NCDHW:
       return desc->dims[2];
     default:
-      LOG(ERROR)
-          << "Failed to call dimD, illegal layout in TensorDescriptor.\n";
+      LOG(ERROR) << "Failed to call dimD, illegal layout in "
+                    "TensorDescriptor.\n";
   }
   return 0;
 }
@@ -185,8 +185,8 @@ inline int mluOpGetTensordimC(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_HWCN:
       return desc->dims[2];
     default:
-      LOG(ERROR)
-          << "Failed to call dimC, illegal layout in TensorDescriptor.\n";
+      LOG(ERROR) << "Failed to call dimC, illegal layout in "
+                    "TensorDescriptor.\n";
   }
   return 0;
 }
@@ -204,8 +204,8 @@ inline int mluOpGetTensordimH(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_HWCN:
       return desc->dims[0];
     default:
-      LOG(ERROR)
-          << "Failed to call dimH, illegal layout in TensorDescriptor.\n";
+      LOG(ERROR) << "Failed to call dimH, illegal layout in "
+                    "TensorDescriptor.\n";
   }
   return 0;
 }
@@ -223,8 +223,8 @@ inline int mluOpGetTensordimW(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_HWCN:
       return desc->dims[1];
     default:
-      LOG(ERROR)
-          << "Failed to call dimW, illegal layout in TensorDescriptor.\n";
+      LOG(ERROR) << "Failed to call dimW, illegal layout in "
+                    "TensorDescriptor.\n";
   }
   return 0;
 }

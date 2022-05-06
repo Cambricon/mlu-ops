@@ -19,8 +19,7 @@
 
 #define DEP_CHECK_LOG(level)                                                 \
   cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, true, \
-                    true)                                                    \
-      .stream()
+                    true).stream()
 
 // see cnrt_function.c deviceCoreVersion for more info.
 struct deviceName name_list_table[] = {
@@ -28,8 +27,8 @@ struct deviceName name_list_table[] = {
     {"MLU220", MLUOP_MLU220},
     {"MLU220 SOC", MLUOP_MLU220},
     {"MLU290", MLUOP_MLU290},
-    // {"MLU100", MLUOP_MLU100},  // mluOp not support mlu100 only for error
-    // case.
+    // mluOp not support mlu100 only for error case.
+    // {"MLU100", MLUOP_MLU100},
 };
 
 // update this funciton.
@@ -37,9 +36,9 @@ mluOpDevType_t convertDeviceName(char *name) {
   struct deviceName *pName = NULL;
   int num = sizeof(name_list_table) / sizeof(struct deviceName);
   if (CONTEXT_DEVICENAME_LEAST_SIZE > strlen(name)) {
-    LOG(ERROR)
-        << "get device name failed. device name too short. device name = "
-        << name << "\n";
+    LOG(ERROR) << "get device name failed. device name too short. "
+                  "device name = "
+               << name << "\n";
     return MLUOP_UNKNOWN_DEVICE;
   }
   for (int i = 0; i < num; i++) {
@@ -66,11 +65,13 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
     if (!min_check) {
       DEP_CHECK_LOG(level) << "Current CNRT version: " << cnrt_major << "."
                            << cnrt_minor << "." << cnrt_patch;
-      DEP_CHECK_LOG(level)
-          << "CNRT version is too low, please upgrade CNRT to "
-          << MLUOP_DEP_CNRT_MIN_MAJOR << "." << MLUOP_DEP_CNRT_MIN_MINOR
-          << " or higher. For more details, please check the dependency"
-          << " rules in Cambricon-MLUOP-Release-Notes.";
+      DEP_CHECK_LOG(level) << "CNRT version is too low, please upgrade"
+                              " CNRT to "
+                           << MLUOP_DEP_CNRT_MIN_MAJOR << "."
+                           << MLUOP_DEP_CNRT_MIN_MINOR
+                           << " or higher. For more details, please check the"
+                              " dependency rules in"
+                              " Cambricon-MLUOP-Release-Notes.";
       if (level == ERROR) {
         return MLUOP_STATUS_NOT_INITIALIZED;
       }
@@ -83,11 +84,13 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
     if (!max_check) {
       DEP_CHECK_LOG(level) << "Current CNRT version: " << cnrt_major << "."
                            << cnrt_minor << "." << cnrt_patch;
-      DEP_CHECK_LOG(level)
-          << "CNRT version is too high, please downgrade CNRT to "
-          << MLUOP_DEP_CNRT_MAX_MAJOR << "." << MLUOP_DEP_CNRT_MAX_MINOR
-          << " or lower. For more details, please check the dependency"
-          << " rules in Cambricon-MLUOP-Release-Notes.";
+      DEP_CHECK_LOG(level) << "CNRT version is too high, please downgrade "
+                              "CNRT to "
+                           << MLUOP_DEP_CNRT_MAX_MAJOR << "."
+                           << MLUOP_DEP_CNRT_MAX_MINOR
+                           << " or lower. For more details, please check the"
+                              " dependency rules in"
+                              " Cambricon-MLUOP-Release-Notes.";
       if (level == ERROR) {
         return MLUOP_STATUS_NOT_INITIALIZED;
       }

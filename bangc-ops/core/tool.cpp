@@ -85,8 +85,8 @@ mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR)
-        << "[getPosition]:Input num is wrong, it must be greater than 0.";
+    LOG(ERROR) << "[getPosition]:Input num is wrong, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -126,8 +126,8 @@ mluOpStatus_t getPositionAndScale(float *input, size_t num,
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR)
-        << "[getPositionAndScale]:Input num is 0, it must be greater than 0.";
+    LOG(ERROR) << "[getPositionAndScale]:Input num is 0, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (position == NULL) {
@@ -185,8 +185,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (position == NULL) {
-    LOG(ERROR)
-        << "[getPositionScaleAndOffset]:The pointer of position is NULL.";
+    LOG(ERROR) << "[getPositionScaleAndOffset]:The pointer of position is "
+                  "NULL.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (scale == NULL) {
@@ -204,8 +204,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
   } else if (datatype == MLUOP_DTYPE_INT16) {
     bitwidth = 16;
   } else {
-    LOG(ERROR)
-        << "[getPositionScaleAndOffset]:input data type is not supported.";
+    LOG(ERROR) << "[getPositionScaleAndOffset]:input data type is not "
+                  "supported.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   float max_data = input[0];

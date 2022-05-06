@@ -186,10 +186,10 @@ mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
 
       tensor_info << dimSize[dimNb - 1]
                   << "), data width:" << getSizeOfDataType(dtype) << ".";
-      LOG(WARNING)
-          << "[mluOpSetTensorDescriptor]: overflow tensor size with type 'int'."
-          << "Currently, mluOp supports tensor size smaller than 2^31, "
-          << "now tensor " << tensor_info.str();
+      LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow tensor size with "
+                      "type 'int'. Currently, mluOp supports tensor size "
+                      "smaller than 2^31, now tensor "
+                   << tensor_info.str();
     }
   }
   return MLUOP_STATUS_SUCCESS;
