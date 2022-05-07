@@ -13,7 +13,9 @@
 
 size_t getSizeOfDataType(mluOpDataType_t dtype) {
   switch (dtype) {
-    default: { return 0; }
+    default: {
+      return 0;
+    }
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_UINT8: {

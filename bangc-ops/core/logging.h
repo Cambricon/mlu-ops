@@ -66,9 +66,10 @@
 #define KERNEL_CHECK(kernel) \
   { kernel; }
 
-// Because the function of cnrtGetLastErr is incomplete and not binding to thread or
-// queue, errors occur earlly will be caught at mluOp function call. It's not a good
-// method to deal with <<<>>> launch kernel error. Waiting follow-up cntoolkit to use.
+// Because the function of cnrtGetLastErr is incomplete and not binding to
+// thread or queue, errors occur earlly will be caught at mluOp function call.
+// It's not a good method to deal with <<<>>> launch kernel error. Waiting
+// follow-up cntoolkit to use.
 
 // #define KERNEL_CHECK(kernel)                                    \
 //   {                                                             \
@@ -76,7 +77,8 @@
 //     cnrtRet_t ret = cnrtGetLastErr();                           \
 //     if (CNRT_RET_SUCCESS != ret) {                              \
 //       const char *err_str = cnrtGetErrorStr(ret);               \
-//       LOG(ERROR) << "Check failed: Found " << std::string(err_str) << " when invoke kernel."; \
+//       LOG(ERROR) << "Check failed: Found " << std::string(err_str) \
+//                  << " when invoke kernel.";                      \
 //       return MLUOP_STATUS_EXECUTION_FAILED;                      \
 //     }                                                           \
 //   }
@@ -95,41 +97,45 @@
   }
 
 // CHECK_EQ/NE/... with return value.
-#define PARAM_CHECK_EQ(api, val1, val2, ...)                                     \
-  if (!(val1 == val2)) {                                                         \
-    LOG(ERROR) << api << " Check failed: " #val1 " == " #val2 ". " #__VA_ARGS__; \
-    return MLUOP_STATUS_BAD_PARAM;                                               \
+#define PARAM_CHECK_EQ(api, val1, val2, ...)                              \
+  if (!(val1 == val2)) {                                                  \
+    LOG(ERROR) << api                                                     \
+               << " Check failed: " #val1 " == " #val2 ". " #__VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                        \
   }
-#define PARAM_CHECK_NE(api, val1, val2, ...)                                     \
-  if (!(val1 != val2)) {                                                         \
-    LOG(ERROR) << api << " Check failed: " #val1 " != " #val2 ". " #__VA_ARGS__; \
-    return MLUOP_STATUS_BAD_PARAM;                                               \
+#define PARAM_CHECK_NE(api, val1, val2, ...)                              \
+  if (!(val1 != val2)) {                                                  \
+    LOG(ERROR) << api                                                     \
+               << " Check failed: " #val1 " != " #val2 ". " #__VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                        \
   }
-#define PARAM_CHECK_LE(api, val1, val2, ...)                                     \
-  if (!(val1 <= val2)) {                                                         \
-    LOG(ERROR) << api << " Check failed: " #val1 " <= " #val2 ". " #__VA_ARGS__; \
-    return MLUOP_STATUS_BAD_PARAM;                                               \
+#define PARAM_CHECK_LE(api, val1, val2, ...)                              \
+  if (!(val1 <= val2)) {                                                  \
+    LOG(ERROR) << api                                                     \
+               << " Check failed: " #val1 " <= " #val2 ". " #__VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                        \
   }
-#define PARAM_CHECK_LT(api, val1, val2, ...)                                    \
-  if (!(val1 < val2)) {                                                         \
-    LOG(ERROR) << api << " Check failed: " #val1 " < " #val2 ". " #__VA_ARGS__; \
-    return MLUOP_STATUS_BAD_PARAM;                                              \
+#define PARAM_CHECK_LT(api, val1, val2, ...)                             \
+  if (!(val1 < val2)) {                                                  \
+    LOG(ERROR) << api                                                    \
+               << " Check failed: " #val1 " < " #val2 ". " #__VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                       \
   }
-#define PARAM_CHECK_GE(api, val1, val2, ...)                                     \
-  if (!(val1 >= val2)) {                                                         \
-    LOG(ERROR) << api << " Check failed: " #val1 " >= " #val2 ". " #__VA_ARGS__; \
-    return MLUOP_STATUS_BAD_PARAM;                                               \
+#define PARAM_CHECK_GE(api, val1, val2, ...)                              \
+  if (!(val1 >= val2)) {                                                  \
+    LOG(ERROR) << api                                                     \
+               << " Check failed: " #val1 " >= " #val2 ". " #__VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                        \
   }
-#define PARAM_CHECK_GT(api, val1, val2, ...)                                    \
-  if (!(val1 > val2)) {                                                         \
-    LOG(ERROR) << api << " Check failed: " #val1 " > " #val2 ". " #__VA_ARGS__; \
-    return MLUOP_STATUS_BAD_PARAM;                                              \
+#define PARAM_CHECK_GT(api, val1, val2, ...)                             \
+  if (!(val1 > val2)) {                                                  \
+    LOG(ERROR) << api                                                    \
+               << " Check failed: " #val1 " > " #val2 ". " #__VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                       \
   }
 
-void mluOpCheck(mluOpStatus_t result,
-                char const *const func,
-                const char *const file,
-                int const line);
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line);
 #define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
 namespace mluop {
@@ -167,7 +173,7 @@ class LogMessage : public std::basic_ostringstream<char> {
 // that the ternary VLOG() implementation is balanced, type wise.
 struct Voidifier {
   template <typename T>
-  void operator&(const T &)const {}
+  void operator&(const T &) const {}
 };
 
 // LogMessageFatal ensures the process will exit in failure after
@@ -226,8 +232,7 @@ struct CheckOpString {
 
 // Build the error message string. Specify no inlining for code size.
 template <typename T1, typename T2>
-std::string *MakeCheckOpString(const T1 &v1,
-                               const T2 &v2,
+std::string *MakeCheckOpString(const T1 &v1, const T2 &v2,
                                const char *exprtext) MLUOP_ATTRIBUTE_NOINLINE;
 
 // A helper class for formatting "expr (V1 vs. V2)" in a CHECK_XX
@@ -254,7 +259,8 @@ class CheckOpMessageBuilder {
 };
 
 template <typename T1, typename T2>
-std::string *MakeCheckOpString(const T1 &v1, const T2 &v2, const char *exprtext) {
+std::string *MakeCheckOpString(const T1 &v1, const T2 &v2,
+                               const char *exprtext) {
   CheckOpMessageBuilder comb(exprtext);
   MakeCheckOpValueString(comb.ForVar1(), v1);
   MakeCheckOpValueString(comb.ForVar2(), v2);
@@ -267,29 +273,32 @@ std::string *MakeCheckOpString(const T1 &v1, const T2 &v2, const char *exprtext)
 // unnamed enum type - see comment below.
 // The (size_t, int) and (int, size_t) specialization are to handle unsigned
 // comparison errors while still being thorough with the comparison.
-#define MLUOP_DEFINE_CHECK_OP_IMPL(name, op)                                            \
-  template <typename T1, typename T2>                                                   \
-  inline std::string *name##Impl(const T1 &v1, const T2 &v2, const char *exprtext) {    \
-    if (MLUOP_PREDICT_TRUE(v1 op v2))                                                   \
-      return NULL;                                                                      \
-    else                                                                                \
-      return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);                    \
-  }                                                                                     \
-  inline std::string *name##Impl(int v1, int v2, const char *exprtext) {                \
-    return name##Impl<int, int>(v1, v2, exprtext);                                      \
-  }                                                                                     \
-  inline std::string *name##Impl(const size_t v1, const int v2, const char *exprtext) { \
-    if (MLUOP_PREDICT_FALSE(v2 < 0)) {                                                  \
-      return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);                    \
-    }                                                                                   \
-    return name##Impl<size_t, size_t>(v1, v2, exprtext);                                \
-  }                                                                                     \
-  inline std::string *name##Impl(const int v1, const size_t v2, const char *exprtext) { \
-    if (MLUOP_PREDICT_FALSE(v2 >= std::numeric_limits<int>::max())) {                   \
-      return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);                    \
-    }                                                                                   \
-    const size_t uval = (size_t)((unsigned)v2);                                         \
-    return name##Impl<size_t, size_t>(v1, uval, exprtext);                              \
+#define MLUOP_DEFINE_CHECK_OP_IMPL(name, op)                             \
+  template <typename T1, typename T2>                                    \
+  inline std::string *name##Impl(const T1 &v1, const T2 &v2,             \
+                                 const char *exprtext) {                 \
+    if (MLUOP_PREDICT_TRUE(v1 op v2))                                    \
+      return NULL;                                                       \
+    else                                                                 \
+      return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);     \
+  }                                                                      \
+  inline std::string *name##Impl(int v1, int v2, const char *exprtext) { \
+    return name##Impl<int, int>(v1, v2, exprtext);                       \
+  }                                                                      \
+  inline std::string *name##Impl(const size_t v1, const int v2,          \
+                                 const char *exprtext) {                 \
+    if (MLUOP_PREDICT_FALSE(v2 < 0)) {                                   \
+      return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);     \
+    }                                                                    \
+    return name##Impl<size_t, size_t>(v1, v2, exprtext);                 \
+  }                                                                      \
+  inline std::string *name##Impl(const int v1, const size_t v2,          \
+                                 const char *exprtext) {                 \
+    if (MLUOP_PREDICT_FALSE(v2 >= std::numeric_limits<int>::max())) {    \
+      return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);     \
+    }                                                                    \
+    const size_t uval = (size_t)((unsigned)v2);                          \
+    return name##Impl<size_t, size_t>(v1, uval, exprtext);               \
   }
 
 // We use the full name Check_EQ, Check_NE, etc. in case the file including
@@ -306,10 +315,12 @@ MLUOP_DEFINE_CHECK_OP_IMPL(Check_GT, >)
 
 // In optimized mode, use CheckOpString to hint to compiler that
 // the while condition is unlikely.
-#define CHECK_OP_LOG(name, op, val1, val2)                                             \
-  while (::mluop::internal::CheckOpString _result = ::mluop::internal::name##Impl(     \
-             ::mluop::internal::GetReferenceableValue(val1),                           \
-             ::mluop::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)) \
+#define CHECK_OP_LOG(name, op, val1, val2)                       \
+  while (::mluop::internal::CheckOpString _result =              \
+             ::mluop::internal::name##Impl(                      \
+                 ::mluop::internal::GetReferenceableValue(val1), \
+                 ::mluop::internal::GetReferenceableValue(val2), \
+                 #val1 " " #op " " #val2))                       \
   LOG(ERROR) << "[" << __FUNCTION__ << "] " << *(_result.str_)
 
 #define CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
@@ -321,15 +332,9 @@ template <typename T>
 inline const T &GetReferenceableValue(const T &t) {
   return t;
 }
-inline char GetReferenceableValue(char t) {
-  return t;
-}
-inline unsigned char GetReferenceableValue(unsigned char t) {
-  return t;
-}
-inline signed char GetReferenceableValue(signed char t) {
-  return t;
-}
+inline char GetReferenceableValue(char t) { return t; }
+inline unsigned char GetReferenceableValue(unsigned char t) { return t; }
+inline signed char GetReferenceableValue(signed char t) { return t; }
 inline short GetReferenceableValue(short t) {  // NOLINT
   return t;
 }
@@ -339,9 +344,7 @@ inline unsigned short GetReferenceableValue(unsigned short t) {  // NOLINT
 inline int GetReferenceableValue(int t) {  // NOLINT
   return t;
 }
-inline unsigned int GetReferenceableValue(unsigned int t) {
-  return t;
-}
+inline unsigned int GetReferenceableValue(unsigned int t) { return t; }
 inline long GetReferenceableValue(long t) {  // NOLINT
   return t;
 }

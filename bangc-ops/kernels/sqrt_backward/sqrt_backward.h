@@ -14,7 +14,8 @@
 
 #include "kernels/binary_op/binary_op_3pipeline.h"
 
-// declare sqrt_backward 3stage pipeline kernel, half:HighAcc mode, float:Fast mode
+// declare sqrt_backward 3stage pipeline kernel, half:HighAcc mode, float:Fast
+// mode
 BINARY_OP_3PIPELINE_DECLARE(SqrtBackward, half, HighAcc);
 BINARY_OP_3PIPELINE_DECLARE(SqrtBackward, float, Fast);
 

@@ -22,8 +22,7 @@ __mlu_shared__ char sram_buffer[ABS_SRAM_USED];
 template <typename T>
 __mlu_func__ void get3OffsetAbsFast(int32_t &offset_x_half,
                                     int32_t &offset_aux_a,
-                                    int32_t &offset_aux_b,
-                                    int32_t &num_deal,
+                                    int32_t &offset_aux_b, int32_t &num_deal,
                                     int32_t &num_pong) {
   // need ping_pong nram sapce,
   num_deal = FLOOR_ALIGN(ABS_NRAM_USED / sizeof(T) / 2, UNARY_ALIGN_NUM);
@@ -34,12 +33,8 @@ __mlu_func__ void get3OffsetAbsFast(int32_t &offset_x_half,
 }
 
 template <typename T>
-__mlu_func__ void computeAbsFast(T *nram_x,
-                                 T *nram_x_half,
-                                 T *nram_aux_a,
-                                 T *nram_aux_b,
-                                 int deal_num,
-                                 int actual_num,
+__mlu_func__ void computeAbsFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
+                                 T *nram_aux_b, int deal_num, int actual_num,
                                  float coef) {
   __bang_active_abs(nram_x, nram_x_half, deal_num);
 }
@@ -47,8 +42,7 @@ __mlu_func__ void computeAbsFast(T *nram_x,
 template <typename T>
 __mlu_func__ void get5OffsetAbsFast(int32_t &offset_x_half,
                                     int32_t &offset_aux_a,
-                                    int32_t &offset_aux_b,
-                                    int32_t &num_deal) {
+                                    int32_t &offset_aux_b, int32_t &num_deal) {
   // need ping_pong nram space.
   num_deal = FLOOR_ALIGN(ABS_NRAM_USED / 2 / sizeof(T), UNARY_ALIGN_NUM);
   offset_x_half = 0;
