@@ -28,10 +28,13 @@ void DivExecutor::compute() {
   auto dev_z = data_vector_[2].device_ptr;
 
   mluOpComputationPreference_t prefer =
-      (mluOpComputationPreference_t)parser_->getProtoNode()->div_param().prefer();
+      (mluOpComputationPreference_t)parser_->getProtoNode()
+          ->div_param()
+          .prefer();
   VLOG(4) << "call mluOpDiv";
   interface_timer_.start();
-  MLUOP_CHECK(mluOpDiv(handle_, prefer, tensor_x, dev_x, tensor_y, dev_y, tensor_z, dev_z));
+  MLUOP_CHECK(mluOpDiv(handle_, prefer, tensor_x, dev_x, tensor_y, dev_y,
+                       tensor_z, dev_z));
   interface_timer_.stop();
   VLOG(4) << "DivExecutor done";
 }
@@ -50,11 +53,11 @@ void DivExecutor::cpuCompute() {
   float *a_broadcast = (float *)cpu_runtime_.allocate(count3 * sizeof(float));
   float *b_broadcast = (float *)cpu_runtime_.allocate(count3 * sizeof(float));
   expand_compute_cpu(std::vector<int>(a_desc->dims, a_desc->dims + a_desc->dim),
-                     std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim), cpu_fp32_input_[0],
-                     a_broadcast);
+                     std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim),
+                     cpu_fp32_input_[0], a_broadcast);
   expand_compute_cpu(std::vector<int>(b_desc->dims, b_desc->dims + b_desc->dim),
-                     std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim), cpu_fp32_input_[1],
-                     b_broadcast);
+                     std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim),
+                     cpu_fp32_input_[1], b_broadcast);
 
   for (int i = 0; i < count3; ++i) {
     cpu_fp32_output_[0][i] = a_broadcast[i] / b_broadcast[i];
@@ -66,20 +69,18 @@ void DivExecutor::cpuCompute() {
   b_broadcast = NULL;
 }
 
-bool DivExecutor::canBroadCast(std::vector<int> shape0, std::vector<int> shape1) {
+bool DivExecutor::canBroadCast(std::vector<int> shape0,
+                               std::vector<int> shape1) {
   int ndim = shape1.size();
   int tensor_dim = shape0.size();
-  if (tensor_dim == 0)
-    return false;
+  if (tensor_dim == 0) return false;
   for (int i = ndim - 1; i >= 0; i--) {
     int offset = ndim - 1 - i;
     int dim = tensor_dim - 1 - offset;
     int size = (dim >= 0) ? shape0[dim] : 1;
-    if (shape1[i] == -1)
-      shape1[i] = size;
+    if (shape1[i] == -1) shape1[i] = size;
     if (shape1[i] != size)
-      if (size != 1)
-        return false;
+      if (size != 1) return false;
   }
   return true;
 }
@@ -94,8 +95,7 @@ int DivExecutor::expand_num_after_first(int num) {
 }
 
 void DivExecutor::expand_compute_cpu(std::vector<int> shape_a,
-                                     std::vector<int> shape_b,
-                                     float *input,
+                                     std::vector<int> shape_b, float *input,
                                      float *output) {
   if (shape_a.size() < MLUOP_DIM_MAX) {
     shape_a.insert(shape_a.begin(), MLUOP_DIM_MAX - shape_a.size(), 1);
@@ -139,15 +139,17 @@ void DivExecutor::expand_compute_cpu(std::vector<int> shape_a,
       shape_a[i] = shape_b[i];
       for (int j = 0; j < leftSizeA; j++) {
         int numAfter = expand_num_after_first(E);
-        memcpy(output + j * rightSizeB, tmp + j * (rightSizeB / E), rightSizeB / E * sizeof(float));
+        memcpy(output + j * rightSizeB, tmp + j * (rightSizeB / E),
+               rightSizeB / E * sizeof(float));
         for (int k = 1; k <= numAfter; k++) {
           memcpy(output + j * rightSizeB + (1 << (k - 1)) * (rightSizeB / E),
-                 output + j * rightSizeB, (1 << (k - 1)) * (rightSizeB / E) * sizeof(float));
+                 output + j * rightSizeB,
+                 (1 << (k - 1)) * (rightSizeB / E) * sizeof(float));
         }
         int done = 1 << numAfter;
         int rem = E - (1 << numAfter);
-        memcpy(output + j * rightSizeB + done * (rightSizeB / E), output + j * rightSizeB,
-               rem * (rightSizeB / E) * sizeof(float));
+        memcpy(output + j * rightSizeB + done * (rightSizeB / E),
+               output + j * rightSizeB, rem * (rightSizeB / E) * sizeof(float));
       }
       memcpy(tmp, output, sizeB * sizeof(float));
     }

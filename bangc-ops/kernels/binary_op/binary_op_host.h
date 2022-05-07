@@ -17,23 +17,17 @@
 
 void binaryOpPolicyFunc(const mluOpHandle_t &handle,
                         const mluOpTensorDescriptor_t &desc,
-                        const int &align_param,
-                        cnrtDim3_t *k_dim,
+                        const int &align_param, cnrtDim3_t *k_dim,
                         cnrtFunctionType_t *k_type);
 
 /* user param check
  * step1:check desc and data ptr is not nullptr_t
  * step2:check shape and data type
  * */
-mluOpStatus_t binaryOpParamCheck(const std::string &op_name,
-                                 const mluOpHandle_t &handle,
-                                 const mluOpTensorDescriptor_t &input1_desc,
-                                 const void *input1,
-                                 const mluOpTensorDescriptor_t &input2_desc,
-                                 const void *input2,
-                                 const mluOpTensorDescriptor_t &output_desc,
-                                 const void *output,
-                                 const mluOpDataType_t support_type[],
-                                 const int &len,
-                                 bool &zero_element);
+mluOpStatus_t binaryOpParamCheck(
+    const std::string &op_name, const mluOpHandle_t &handle,
+    const mluOpTensorDescriptor_t &input1_desc, const void *input1,
+    const mluOpTensorDescriptor_t &input2_desc, const void *input2,
+    const mluOpTensorDescriptor_t &output_desc, const void *output,
+    const mluOpDataType_t support_type[], const int &len, bool &zero_element);
 #endif  //  KERNELS_BINARY_OP_BINARY_OP_HOST_H_

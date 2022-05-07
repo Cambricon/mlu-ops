@@ -15,8 +15,7 @@
 #include "core/mlu_op_core.h"
 
 void unaryOpPolicyFunc(const mluOpHandle_t &handle,
-                       const mluOpTensorDescriptor_t &desc,
-                       cnrtDim3_t *k_dim,
+                       const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type);
 
 /* user param check
@@ -30,6 +29,5 @@ mluOpStatus_t unaryOpParamCheck(const std::string &op_name,
                                 const mluOpTensorDescriptor_t &y_desc,
                                 const void *y,
                                 const mluOpDataType_t support_type[],
-                                const int &type_len,
-                                bool &zero_element);
+                                const int &type_len, bool &zero_element);
 #endif  // KERNELS_UNARY_OP_UNARY_OP_HOST_H_

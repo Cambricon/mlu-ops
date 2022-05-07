@@ -18,14 +18,10 @@ __nram__ char nram_buffer[SQRTBACK_NRAM_USED];
 /*Fast mode only will be used when data type is float*/
 template <typename T>
 __mlu_func__ void get3OffsetSqrtBackwardFast(int32_t &nram_limit,
-                                             int32_t &pong_x,
-                                             int32_t &pong_y,
-                                             T *&nram_x,
-                                             T *&nram_y,
-                                             T *&nram_aux1,
-                                             T *&nram_aux2,
-                                             T *&nram_aux3,
-                                             char *nram_buffer) {
+                                             int32_t &pong_x, int32_t &pong_y,
+                                             T *&nram_x, T *&nram_y,
+                                             T *&nram_aux1, T *&nram_aux2,
+                                             T *&nram_aux3, char *nram_buffer) {
   // x - x_pong - y - y_pong
   nram_limit = (SQRTBACK_NRAM_USED / sizeof(T)) / 4;
   nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
@@ -39,12 +35,9 @@ __mlu_func__ void get3OffsetSqrtBackwardFast(int32_t &nram_limit,
 template <typename T>
 __mlu_func__ void get3OffsetSqrtBackwardHighAcc(int32_t &nram_limit,
                                                 int32_t &pong_x,
-                                                int32_t &pong_y,
-                                                T *&nram_x,
-                                                T *&nram_y,
-                                                T *&nram_aux1,
-                                                T *&nram_aux2,
-                                                T *&nram_aux3,
+                                                int32_t &pong_y, T *&nram_x,
+                                                T *&nram_y, T *&nram_aux1,
+                                                T *&nram_aux2, T *&nram_aux3,
                                                 char *nram_buffer) {
   // x - x_pong - y - y_pong
   // x half->float bit_up
@@ -57,11 +50,8 @@ __mlu_func__ void get3OffsetSqrtBackwardHighAcc(int32_t &nram_limit,
 }
 
 template <typename T>
-__mlu_func__ void computeSqrtBackwardFast(T *nram_y,
-                                          T *nram_dy,
-                                          T *nram_aux1,
-                                          T *nram_aux2,
-                                          T *nram_aux3,
+__mlu_func__ void computeSqrtBackwardFast(T *nram_y, T *nram_dy, T *nram_aux1,
+                                          T *nram_aux2, T *nram_aux3,
                                           const int32_t actual_num,
                                           const int32_t deal_num) {
   __bang_mul_const(nram_dy, nram_dy, (T)0.5, deal_num);
@@ -70,10 +60,8 @@ __mlu_func__ void computeSqrtBackwardFast(T *nram_y,
 }
 
 template <typename T>
-__mlu_func__ void computeSqrtBackwardHighAcc(T *nram_y,
-                                             T *nram_dy,
-                                             T *nram_aux1,
-                                             T *nram_aux2,
+__mlu_func__ void computeSqrtBackwardHighAcc(T *nram_y, T *nram_dy,
+                                             T *nram_aux1, T *nram_aux2,
                                              T *nram_aux3,
                                              const int32_t actual_num,
                                              const int32_t deal_num) {

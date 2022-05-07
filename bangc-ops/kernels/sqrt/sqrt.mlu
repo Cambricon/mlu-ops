@@ -27,7 +27,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   bool zero_element = false;
   mluOpStatus_t param_check =
-      unaryOpParamCheck("[mluOpSqrt]", handle, x_desc, x, y_desc, y, support_type, 2, zero_element);
+      unaryOpParamCheck("[mluOpSqrt]", handle, x_desc, x, y_desc, y,
+                        support_type, 2, zero_element);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
@@ -39,11 +40,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   unaryOpPolicyFunc(handle, x_desc, &k_dim, &k_type);
-  VLOG(5) << "[mluOpSqrt] launch kernel policyFUnc[" << k_dim.x << ", " << k_dim.y << ", "
-          << k_dim.z << "]";
+  VLOG(5) << "[mluOpSqrt] launch kernel policyFUnc[" << k_dim.x << ", "
+          << k_dim.y << ", " << k_dim.z << "]";
 
   int32_t element_num = mluOpGetTensorElementNum(x_desc);
-  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num, float coef);
+  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num,
+                              float coef);
   MLUBlockKernelUnary = NULL;
   if (handle->arch == MLUOP_MLU270) {
     if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
@@ -72,7 +74,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
       }
     }
   }
-  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>((void *)x, (void *)y,
-                                                                      element_num, 0.0)));
+  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>(
+      (void *)x, (void *)y, element_num, 0.0)));
   return MLUOP_STATUS_SUCCESS;
 }
