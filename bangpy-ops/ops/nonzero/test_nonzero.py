@@ -65,12 +65,15 @@ def test_nonzero(target, trans, dtype, shape):
     count_data = bp.Array(count_np, dev)
 
     task_type = TaskType(TARGET(target).cluster_num)
-    f_nonzero_count = load_op_by_type("NonZeroCount", dtype.name)
+
+    def nonzero_count_compute():
+        f_nonzero_count = load_op_by_type("NonZeroCount", dtype.name)
+        with tcp.runtime.Run(task_type):
+            f_nonzero_count(in_data, shape[0], shape[1], shape[2], shape[3], count_data)
+
+    nonzero_count_compute()
+
     f_nonzero = load_op_by_type("NonZero", dtype.name)
-
-    with tcp.runtime.Run(task_type):
-        f_nonzero_count(in_data, shape[0], shape[1], shape[2], shape[3], count_data)
-
     num_nonzero = int(np.sum(count_data.numpy()))
     out_np = np.ones((dim_num * num_nonzero,), dtype="int64")
     out_data = bp.Array(out_np.astype("int64"), dev)

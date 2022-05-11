@@ -229,7 +229,9 @@ class NMS(object):
                                 * self.nram_save_count
                                 + self.gdram_save_count
                             ],
-                            self.nram_save[: self.gdram_save_count * 5],
+                            self.nram_save[: self.gdram_save_count * 5].reshape(
+                                [self.gdram_save_count, 5],
+                            )
                         )
                         self.save_time += 1
                     self.nram_save_count.assign(0)
@@ -250,9 +252,11 @@ class NMS(object):
                                 self.save_time
                                 * self.gdram_save_count : self.save_time
                                 * self.gdram_save_count
-                                + self.nram_save_count * 5
+                                + self.nram_save_count
                             ],
-                            self.nram_save[: self.nram_save_count * 5],
+                            self.nram_save[: self.nram_save_count * 5].reshape(
+                                [self.nram_save_count, 5]
+                            ),
                         )
 
                 self.score_rewrite(max_area, input_offset, repeat, remain, remain_pad)
@@ -262,7 +266,10 @@ class NMS(object):
             with self.tcp.if_scope(self.tcp.taskId == task_num - 1):
                 self.tcp.assign(self.x1, 0)
                 self.tcp.memcpy(
-                    self.output[self.output_box_num : self.max_output_size], self.x1[:]
+                    self.output[self.output_box_num : self.max_output_size],
+                    self.x1[: (self.max_output_size - self.output_box_num) * 5].reshape(
+                        [self.max_output_size - self.output_box_num, 5]
+                    ),
                 )
 
     def nms_compute(self):
