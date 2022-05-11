@@ -55,7 +55,7 @@ struct deviceName {
 struct mluOpContext {
   CNdev device;
   cnrtQueue_t queue;
-  mluOpDevType_t arch; // return arch type. e.g. MLUOP_MLU270
+  mluOpDevType_t arch;  // return arch type. e.g. MLUOP_MLU270
   int32_t cluster_num;
   int32_t core_num_per_cluster;
   int32_t nram_size;
@@ -68,10 +68,10 @@ struct mluOpContext {
 typedef enum {
   WARNING = 1,
   ERROR   = 2,
-} DepCheckLevel; // related to include/cnlog.h
+} DepCheckLevel;  // related to include/cnlog.h
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,
                                    bool need_check_max = false,
                                    DepCheckLevel level = WARNING);
 
-#endif // CORE_CONTEXT_H_
+#endif  // CORE_CONTEXT_H_

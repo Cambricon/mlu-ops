@@ -12,9 +12,10 @@
 #ifndef CORE_TYPE_H_
 #define CORE_TYPE_H_
 
+#include <string>
 #include "core/logging.h"
 #include "core/mlu_op_core.h"
-#include <string>
+
 
 template <typename T>
 static mluOpStatus_t
@@ -36,4 +37,4 @@ size_t getSizeOfDataType(mluOpDataType_t dtype);
 std::string getNameOfDataType(mluOpDataType_t dtype);
 
 std::string getNameOfTensorLayout(mluOpTensorLayout_t layout);
-#endif // CORE_TYPE_H_
+#endif  // CORE_TYPE_H_
