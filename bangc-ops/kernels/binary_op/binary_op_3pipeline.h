@@ -15,43 +15,37 @@
 #include "kernels/kernel.h"
 #define BINARY_ALIGN_NUM 64
 
-#define BINARY_OP_3PIPELINE_DECLARE(Op, Dtype, Prefer)                                      \
-  __mlu_global__ void MLUKernel3StagePipeline##Op##Dtype##Prefer(void *a, void *b, void *c, \
-                                                                 int32_t data_num)
+#define BINARY_OP_3PIPELINE_DECLARE(Op, Dtype, Prefer)            \
+  __mlu_global__ void MLUKernel3StagePipeline##Op##Dtype##Prefer( \
+      void *a, void *b, void *c, int32_t data_num)
 
-#define BINARY_OP_3PIPELINE_IMPLE(Op, Dtype, Prefer)                                            \
-  __mlu_global__ void MLUKernel3StagePipeline##Op##Dtype##Prefer(void *x, void *y, void *z,     \
-                                                                 int32_t data_num) {            \
-    int32_t nram_limit = 0;                                                                     \
-    int32_t pong_x     = 0;                                                                     \
-    int32_t pong_y     = 0;                                                                     \
-    Dtype *nram_x      = NULL;                                                                  \
-    Dtype *nram_y      = NULL;                                                                  \
-    Dtype *nram_aux1   = NULL;                                                                  \
-    Dtype *nram_aux2   = NULL;                                                                  \
-    Dtype *nram_aux3   = NULL;                                                                  \
-    get3Offset##Op##Prefer(nram_limit, pong_x, pong_y, nram_x, nram_y, nram_aux1, nram_aux2,    \
-                           nram_aux3, nram_buffer);                                             \
-    processBinaryPipe3<Dtype, compute##Op##Prefer>(                                             \
-        (Dtype *)x, (Dtype *)y, (Dtype *)z, nram_buffer, (Dtype *)nram_x, (Dtype *)nram_y,      \
-        (Dtype *)nram_aux1, (Dtype *)nram_aux2, (Dtype *)nram_aux3, nram_limit, pong_x, pong_y, \
-        data_num);                                                                              \
+#define BINARY_OP_3PIPELINE_IMPLE(Op, Dtype, Prefer)                      \
+  __mlu_global__ void MLUKernel3StagePipeline##Op##Dtype##Prefer(         \
+      void *x, void *y, void *z, int32_t data_num) {                      \
+    int32_t nram_limit = 0;                                               \
+    int32_t pong_x     = 0;                                               \
+    int32_t pong_y     = 0;                                               \
+    Dtype *nram_x      = NULL;                                            \
+    Dtype *nram_y      = NULL;                                            \
+    Dtype *nram_aux1   = NULL;                                            \
+    Dtype *nram_aux2   = NULL;                                            \
+    Dtype *nram_aux3   = NULL;                                            \
+    get3Offset##Op##Prefer(nram_limit, pong_x, pong_y, nram_x, nram_y,    \
+                           nram_aux1, nram_aux2, nram_aux3, nram_buffer); \
+    processBinaryPipe3<Dtype, compute##Op##Prefer>(                       \
+        (Dtype *)x, (Dtype *)y, (Dtype *)z, nram_buffer, (Dtype *)nram_x, \
+        (Dtype *)nram_y, (Dtype *)nram_aux1, (Dtype *)nram_aux2,          \
+        (Dtype *)nram_aux3, nram_limit, pong_x, pong_y, data_num);        \
   }
 
-template <typename Dtype,
-          void (*OpFunc)(Dtype *, Dtype *, Dtype *, Dtype *, Dtype *, int32_t, int32_t)>
-__mlu_func__ void processBinaryPipe3(const Dtype *x,
-                                     const Dtype *y,
-                                     Dtype *z,
-                                     char *nram_buffer,
-                                     Dtype *nram_x,
-                                     Dtype *nram_y,
-                                     Dtype *nram_aux1,
-                                     Dtype *nram_aux2,
-                                     Dtype *nram_aux3,
+template <typename Dtype, void (*OpFunc)(Dtype *, Dtype *, Dtype *, Dtype *,
+                                         Dtype *, int32_t, int32_t)>
+__mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
+                                     char *nram_buffer, Dtype *nram_x,
+                                     Dtype *nram_y, Dtype *nram_aux1,
+                                     Dtype *nram_aux2, Dtype *nram_aux3,
                                      const int32_t nram_limit,
-                                     const int32_t pong_x,
-                                     const int32_t pong_y,
+                                     const int32_t pong_x, const int32_t pong_y,
                                      const int32_t data_num) {
   if (coreId == 0x80) {
     return;
@@ -82,67 +76,75 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x,
   }
   if (repeat > 1) {
     // L
-    __memcpy_async(nram_x + pong_x, base_addr_x + nram_limit, span_handle_size, GDRAM2NRAM);
-    __memcpy_async(nram_y + pong_y, base_addr_y + nram_limit, span_handle_size, GDRAM2NRAM);
+    __memcpy_async(nram_x + pong_x, base_addr_x + nram_limit, span_handle_size,
+                   GDRAM2NRAM);
+    __memcpy_async(nram_y + pong_y, base_addr_y + nram_limit, span_handle_size,
+                   GDRAM2NRAM);
     // C
-    OpFunc(nram_x, nram_y, nram_aux1, nram_aux2, nram_aux3, nram_limit, nram_limit);
+    OpFunc(nram_x, nram_y, nram_aux1, nram_aux2, nram_aux3, nram_limit,
+           nram_limit);
     __asm__ volatile("sync;");
   }
 
   for (int32_t i = 0; i < repeat - 2; i++) {
     // S
     pvLock();
-    __memcpy_async(base_addr_z + i * nram_limit, nram_x + (i % 2) * pong_x, span_handle_size,
-                   NRAM2GDRAM);
+    __memcpy_async(base_addr_z + i * nram_limit, nram_x + (i % 2) * pong_x,
+                   span_handle_size, NRAM2GDRAM);
     pvUnlock();
     // L
-    __memcpy_async(nram_x + (i % 2) * pong_x, base_addr_x + (i + 2) * nram_limit, span_handle_size,
+    __memcpy_async(nram_x + (i % 2) * pong_x,
+                   base_addr_x + (i + 2) * nram_limit, span_handle_size,
                    GDRAM2NRAM);
-    __memcpy_async(nram_y + (i % 2) * pong_y, base_addr_y + (i + 2) * nram_limit, span_handle_size,
+    __memcpy_async(nram_y + (i % 2) * pong_y,
+                   base_addr_y + (i + 2) * nram_limit, span_handle_size,
                    GDRAM2NRAM);
     // C
-    OpFunc(nram_x + ((i + 1) % 2) * pong_x, nram_y + ((i + 1) % 2) * pong_y, nram_aux1, nram_aux2,
-           nram_aux3, nram_limit, nram_limit);
+    OpFunc(nram_x + ((i + 1) % 2) * pong_x, nram_y + ((i + 1) % 2) * pong_y,
+           nram_aux1, nram_aux2, nram_aux3, nram_limit, nram_limit);
     __asm__ volatile("sync;");
   }
 
   if (repeat >= 2) {
     // S
     pvLock();
-    __memcpy_async(base_addr_z + (repeat - 2) * nram_limit, nram_x + (repeat % 2) * pong_x,
-                   span_handle_size, NRAM2GDRAM);
+    __memcpy_async(base_addr_z + (repeat - 2) * nram_limit,
+                   nram_x + (repeat % 2) * pong_x, span_handle_size,
+                   NRAM2GDRAM);
     pvUnlock();
   }
   if (rem > 0) {
     // L
-    __memcpy_async(nram_x + (repeat % 2) * pong_x, base_addr_x + repeat * nram_limit, rem_size,
-                   GDRAM2NRAM);
-    __memcpy_async(nram_y + (repeat % 2) * pong_y, base_addr_y + repeat * nram_limit, rem_size,
-                   GDRAM2NRAM);
+    __memcpy_async(nram_x + (repeat % 2) * pong_x,
+                   base_addr_x + repeat * nram_limit, rem_size, GDRAM2NRAM);
+    __memcpy_async(nram_y + (repeat % 2) * pong_y,
+                   base_addr_y + repeat * nram_limit, rem_size, GDRAM2NRAM);
   }
   if (repeat > 0) {
     // C
-    OpFunc(nram_x + ((repeat - 1) % 2) * pong_x, nram_y + ((repeat - 1) % 2) * pong_y, nram_aux1,
-           nram_aux2, nram_aux3, nram_limit, nram_limit);
+    OpFunc(nram_x + ((repeat - 1) % 2) * pong_x,
+           nram_y + ((repeat - 1) % 2) * pong_y, nram_aux1, nram_aux2,
+           nram_aux3, nram_limit, nram_limit);
   }
   __asm__ volatile("sync;");
 
   if (repeat > 0) {
     // S
     pvLock();
-    __memcpy_async(base_addr_z + (repeat - 1) * nram_limit, nram_x + ((repeat - 1) % 2) * pong_x,
-                   span_handle_size, NRAM2GDRAM);
+    __memcpy_async(base_addr_z + (repeat - 1) * nram_limit,
+                   nram_x + ((repeat - 1) % 2) * pong_x, span_handle_size,
+                   NRAM2GDRAM);
     pvUnlock();
   }
   if (rem > 0) {
     // C
-    OpFunc(nram_x + (repeat % 2) * pong_x, nram_y + (repeat % 2) * pong_y, nram_aux1, nram_aux2,
-           nram_aux3, rem, align_rem);
+    OpFunc(nram_x + (repeat % 2) * pong_x, nram_y + (repeat % 2) * pong_y,
+           nram_aux1, nram_aux2, nram_aux3, rem, align_rem);
     __asm__ volatile("sync;");
     // S
     pvLock();
-    __memcpy_async(base_addr_z + repeat * nram_limit, nram_x + (repeat % 2) * pong_x, rem_size,
-                   NRAM2GDRAM);
+    __memcpy_async(base_addr_z + repeat * nram_limit,
+                   nram_x + (repeat % 2) * pong_x, rem_size, NRAM2GDRAM);
     pvUnlock();
   }
 }

@@ -14,7 +14,8 @@
 
 #include "kernels/binary_op/binary_op_3pipeline.h"
 
-// declare div 5stage pipeline kernel, half:Fast or HighAcc mode, float:Fast mode
+// declare div 5stage pipeline kernel, half:Fast or HighAcc mode, float:Fast
+// mode
 BINARY_OP_3PIPELINE_DECLARE(Div, half, HighAcc);
 BINARY_OP_3PIPELINE_DECLARE(Div, half, Fast);
 BINARY_OP_3PIPELINE_DECLARE(Div, float, Fast);

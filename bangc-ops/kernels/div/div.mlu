@@ -26,20 +26,17 @@
 // according to the actual measurement results
 #define THRESHOLD_SIZE (3 * 1024)
 
-mluOpStatus_t MLUOP_WIN_API mluOpDiv(mluOpHandle_t handle,
-                                     const mluOpComputationPreference_t prefer,
-                                     const mluOpTensorDescriptor_t x_desc,
-                                     const void *x,
-                                     const mluOpTensorDescriptor_t y_desc,
-                                     const void *y,
-                                     const mluOpTensorDescriptor_t z_desc,
-                                     void *z) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
+         const mluOpTensorDescriptor_t x_desc, const void *x,
+         const mluOpTensorDescriptor_t y_desc, const void *y,
+         const mluOpTensorDescriptor_t z_desc, void *z) {
   mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   int number_of_supported_types = 2;
   bool zero_element = false;
   mluOpStatus_t param_check =
-      binaryOpParamCheck("mluOpDiv", handle, x_desc, x, y_desc, y, z_desc, z, support_type,
-                         number_of_supported_types, zero_element);
+      binaryOpParamCheck("mluOpDiv", handle, x_desc, x, y_desc, y, z_desc, z,
+                         support_type, number_of_supported_types, zero_element);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
@@ -66,7 +63,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDiv(mluOpHandle_t handle,
     VLOG(5) << "Kernel MLUKernel3StagePipelineDivfloatFast";
     MLUBlockKernelBinary = MLUKernel3StagePipelineDivfloatFast;
   }
-  KERNEL_CHECK((MLUBlockKernelBinary<<<k_dim, k_type, handle->queue>>>((void *)x, (void *)y, z,
-                                                                       element_num)));
+  KERNEL_CHECK((MLUBlockKernelBinary<<<k_dim, k_type, handle->queue>>>(
+      (void *)x, (void *)y, z, element_num)));
   return MLUOP_STATUS_SUCCESS;
 }

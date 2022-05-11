@@ -21,15 +21,15 @@
 
 void binaryOpPolicyFunc(const mluOpHandle_t &handle,
                         const mluOpTensorDescriptor_t &desc,
-                        const int &align_param,
-                        cnrtDim3_t *k_dim,
+                        const int &align_param, cnrtDim3_t *k_dim,
                         cnrtFunctionType_t *k_type) {
   int union_number = mluop::runtime::getClusterLimitCapability(handle);
   int core_dim = handle->core_num_per_cluster;
   int core_number = union_number * core_dim;
 
   int element_num = mluOpGetTensorElementNum(desc);
-  int size = CEIL_ALIGN(element_num * getSizeOfDataType(desc->dtype), align_param);
+  int size =
+      CEIL_ALIGN(element_num * getSizeOfDataType(desc->dtype), align_param);
   int core_used = CEIL_ALIGN(size / align_param, core_dim);
   core_used = core_used > core_number ? core_number : core_used;
 
@@ -50,17 +50,12 @@ static inline bool isSupportType(const mluOpDataType_t check_type,
   return false;
 }
 
-mluOpStatus_t binaryOpParamCheck(const std::string &op_name,
-                                 const mluOpHandle_t &handle,
-                                 const mluOpTensorDescriptor_t &input1_desc,
-                                 const void *input1,
-                                 const mluOpTensorDescriptor_t &input2_desc,
-                                 const void *input2,
-                                 const mluOpTensorDescriptor_t &output_desc,
-                                 const void *output,
-                                 const mluOpDataType_t support_type[],
-                                 const int &len,
-                                 bool &zero_element) {
+mluOpStatus_t binaryOpParamCheck(
+    const std::string &op_name, const mluOpHandle_t &handle,
+    const mluOpTensorDescriptor_t &input1_desc, const void *input1,
+    const mluOpTensorDescriptor_t &input2_desc, const void *input2,
+    const mluOpTensorDescriptor_t &output_desc, const void *output,
+    const mluOpDataType_t support_type[], const int &len, bool &zero_element) {
   // check descriptor
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, input1_desc != NULL);

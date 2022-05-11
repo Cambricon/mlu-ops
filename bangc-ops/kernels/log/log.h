@@ -15,12 +15,14 @@
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
 
-// declare log 3stage pipeline kernel, half:Fast or HighAcc mode, float:Fast mode
+// declare log 3stage pipeline kernel, half:Fast or HighAcc mode, float:Fast
+// mode
 UNARY_OP_KERNEL_3PIPELINE_DECLARE(Log, float, Fast);
 UNARY_OP_KERNEL_3PIPELINE_DECLARE(Log, half, Fast);
 UNARY_OP_KERNEL_3PIPELINE_DECLARE(Log, half, HighAcc);
 
-// declare log 5stage pipeline kernel, half:Fast or HighAcc mode, float:Fast mode
+// declare log 5stage pipeline kernel, half:Fast or HighAcc mode, float:Fast
+// mode
 UNARY_OP_KERNEL_5PIPELINE_DECLARE(Log, float, Fast);
 UNARY_OP_KERNEL_5PIPELINE_DECLARE(Log, half, Fast);
 UNARY_OP_KERNEL_5PIPELINE_DECLARE(Log, half, HighAcc);

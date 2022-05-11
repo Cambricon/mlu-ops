@@ -15,12 +15,14 @@
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
 
-// declare sqrt 3stage pipeline kernel, float:Fast mode, half:Fast or HighAcc mode
+// declare sqrt 3stage pipeline kernel, float:Fast mode, half:Fast or HighAcc
+// mode
 UNARY_OP_KERNEL_3PIPELINE_DECLARE(Sqrt, float, Fast);
 UNARY_OP_KERNEL_3PIPELINE_DECLARE(Sqrt, half, Fast);
 UNARY_OP_KERNEL_3PIPELINE_DECLARE(Sqrt, half, HighAcc);
 
-// declare sqrt 5stage pipeline kernel, float:Fast mode, half:Fast or HighAcc mode
+// declare sqrt 5stage pipeline kernel, float:Fast mode, half:Fast or HighAcc
+// mode
 UNARY_OP_KERNEL_5PIPELINE_DECLARE(Sqrt, float, Fast);
 UNARY_OP_KERNEL_5PIPELINE_DECLARE(Sqrt, half, Fast);
 UNARY_OP_KERNEL_5PIPELINE_DECLARE(Sqrt, half, HighAcc);

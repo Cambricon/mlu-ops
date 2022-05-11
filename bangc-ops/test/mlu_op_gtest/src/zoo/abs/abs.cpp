@@ -14,8 +14,10 @@
 namespace mluoptest {
 
 void AbsExecutor::paramCheck() {
-  GTEST_CHECK(parser_->inputs().size() == 1, "abs tensor input number is wrong.");
-  GTEST_CHECK(parser_->outputs().size() == 1, "abs tensor output number is wrong.");
+  GTEST_CHECK(parser_->inputs().size() == 1,
+              "abs tensor input number is wrong.");
+  GTEST_CHECK(parser_->outputs().size() == 1,
+              "abs tensor output number is wrong.");
 }
 
 void AbsExecutor::compute() {
@@ -34,8 +36,9 @@ void AbsExecutor::cpuCompute() {
   auto count = parser_->input(0)->shape_count;
 
   for (int i = 0; i < count; ++i) {
-    cpu_fp32_output_[0][i] =
-        (cpu_fp32_input_[0][i] >= 0) ? cpu_fp32_input_[0][i] : -1 * (cpu_fp32_input_[0][i]);
+    cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i] >= 0)
+                                 ? cpu_fp32_input_[0][i]
+                                 : -1 * (cpu_fp32_input_[0][i]);
   }
 }
 
