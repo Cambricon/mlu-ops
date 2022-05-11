@@ -5,19 +5,12 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  schedule:
-    - cron: '0 1 * * *'
 
 jobs:
   test:
     runs-on: [self-hosted, mlu270-x5k]
     steps:
       - uses: actions/checkout@v2
-      - name: bangc_lint_check
-        run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604
-          ./tools/pre-commit origin/master
-
       - name: build
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.4-ubuntu1604

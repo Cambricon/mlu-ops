@@ -16,7 +16,6 @@
 #include "core/logging.h"
 #include "core/mlu_op_core.h"
 
-
 template <typename T>
 static mluOpStatus_t
     getLowAndHighValueFrom64Bits(T value, uint32_t *high, int32_t *low) {
