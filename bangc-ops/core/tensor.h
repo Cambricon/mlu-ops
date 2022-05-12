@@ -131,8 +131,6 @@ inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
     case MLUOP_DTYPE_INT16:
       return 2;
     // case MLUOP_DTYPE_INT23:   return 3;
-    case MLUOP_DTYPE_INT31:
-      return 4;
     case MLUOP_DTYPE_INT32:
       return 4;
     case MLUOP_DTYPE_INT64:
