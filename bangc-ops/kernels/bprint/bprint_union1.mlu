@@ -1,0 +1,25 @@
+/*************************************************************************
+ * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "bprint.h"
+#include "kernels/kernel.h"
+
+__mlu_global__ void MLUKernelBprint(const float *x, const int32_t element_num) {
+    __bang_printf("--------------bprintf test start----------------------\n");
+    for (int i = 0; i < element_num; i++) {
+        __bang_printf("%f ", x[i]);
+        if ((i + 1) % 10 == 0)
+            __bang_printf("\n");
+    }
+
+    __bang_printf("\n");
+    __bang_printf("--------------bprintf test end----------------------\n");
+}

@@ -1,0 +1,24 @@
+op_name: "bprint"
+input {
+  id: "input"
+  shape: {
+    dims: 4
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: -100
+    distribution: UNIFORM
+  }
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
