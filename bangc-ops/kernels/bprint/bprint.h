@@ -15,3 +15,4 @@
 __mlu_global__ void MLUKernelBprint(const float *x, const int32_t element_num);
 
 #endif // KERNELS_LOG_LOG_H_
+

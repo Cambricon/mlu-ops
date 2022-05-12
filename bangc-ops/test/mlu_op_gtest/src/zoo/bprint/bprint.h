@@ -17,3 +17,4 @@ class BprintExecutor : public Executor {
 
 } // namespace mluoptest
 #endif // TEST_MLU_OP_GTEST_SRC_ZOO_BPRINT_BPRINT_H_
+
