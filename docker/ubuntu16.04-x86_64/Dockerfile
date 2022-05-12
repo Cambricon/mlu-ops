@@ -13,7 +13,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
-ARG CNTOOLKIT_VERSION="2.6.1-1"
+ARG CNTOOLKIT_VERSION="2.8.0-1"
 # NOTE: the url below is only for internal usage, you could replace with your own cntoolkit package.
 ADD http://daily.software.cambricon.com/release/cntoolkit/Linux/x86_64/Ubuntu/16.04/${CNTOOLKIT_VERSION}/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb /tmp/
 
@@ -100,7 +100,7 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 
 # Install BANGPy.
-ARG BANGPY_VERSION="1.3.1"
+ARG BANGPY_VERSION="1.4.0"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
 ADD http://daily.software.cambricon.com/release/bangpy/${BANGPY_VERSION}-1/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \
