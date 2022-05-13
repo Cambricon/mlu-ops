@@ -112,7 +112,7 @@
    - 标题写明任务类型，一般格式:
 
      ```bash
-     [Prefix] Short description of the pull request（Suffix）
+     [Prefix] Short description of the pull request (Suffix)
      ```
 
    - prefix：新增功能 [Feature] ，修 bug [Fix]，文档相关 [Docs] ，开发中 [WIP] （暂时不会被 review）
