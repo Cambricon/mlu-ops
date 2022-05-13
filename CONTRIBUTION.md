@@ -12,7 +12,7 @@
 
 1. 调研算子功能、API 接口设计、算子实现设计，撰写算子设计文档。参考[BANGC-OPS算子设计文档模板](docs/bangc-docs/BANGC-OPS算子设计文档模板.md)或[BANGPy-OPS算子设计文档模板](docs/bangpy-docs/BANGPy-OPS算子设计文档模板.md)
 2. 编写算子实现代码和测试代码，参考[BANGC-OPS算子开发流程](docs/bangc-docs/BANGC-OPS算子开发流程.md)或[BANGPy-OPS算子开发流程](docs/bangpy-docs/BANGPy-OPS算子开发流程.md)
-3. 完成测试并撰写测试报告，测试报告需要包含：测试的规模、测试的数据类型、性能测试、稳定性测试、内存泄露测试，参考[MLU-OPS性能验收标准](docs/MLU-OPS性能验收标准.md)和[MLU-OPS测试报告模板](docs/MLU-OPS测试报告模板.md)和[MLU-OPS精度验收标准](docs/MLU-OPS精度验收标准.md)
+3. 完成测试并撰写测试报告，测试报告须包含测例规模、测例数据类型、性能测试、稳定性测试、内存泄露测试等，参考[MLU-OPS性能验收标准](docs/MLU-OPS性能验收标准.md)、[MLU-OPS测试报告模板](docs/MLU-OPS测试报告模板.md)、[MLU-OPS精度验收标准](docs/MLU-OPS精度验收标准.md)
 4. 提交 `PR`（Pull Requset），参考[PULL REQUEST流程](./docs/pr.md)，其中算子文档独立提交 `PR` ，算子代码和算子测试报告一起提交 `PR` 
 
 ## 代码风格
@@ -23,10 +23,10 @@
 
 - 采用 [Pylint](https://pypi.org/project/pylint/) 检查代码格式
 
-- 安装 pylint
+- 安装 Pylint
 
     ```shell
-    pip install pylint  #install
+    pip install pylint  # install
     ```
 
 - 手动检查代码格式
@@ -42,7 +42,7 @@
 - 采用 [Cpplint](https://pypi.org/project/cpplint/) 检查代码格式（ pre commit 自动触发格式检查）
 
     ```shell
-    pip install cpplint  #install
+    pip install cpplint  # install
     ```
 
 ## 其它

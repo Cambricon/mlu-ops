@@ -89,8 +89,8 @@
 #### 6.拉取请求合并之后删除该分支
 
   ```bash
-  git branch -d yourbranch  #delete local branch
-  git push origin --delete yourbranch  #delete remote branch
+  git branch -d yourbranch  # delete local branch
+  git push origin --delete yourbranch  # delete remote branch
   ```
 
 ### `PR` 规范
@@ -105,14 +105,14 @@
    - Acceptable：给 Add 算子添加一个类型转换接口
    - Good：给类型转换接口添加一个是否支持 Half 类型的参数
 
-4. 每次 Commit 时需要提供清晰且有意义的 commit 信息
+4. `commit` 需要提供清晰且有意义的 `commit` 信息
 
 5. 提供清晰且有意义的拉取请求描述
 
    - 标题写明任务类型，一般格式:
 
      ```bash
-     [Prefix] Short description of the pull request （Suffix）
+     [Prefix] Short description of the pull request（Suffix）
      ```
 
    - prefix：新增功能 [Feature] ，修 bug [Fix]，文档相关 [Docs] ，开发中 [WIP] （暂时不会被 review）
