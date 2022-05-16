@@ -29,7 +29,7 @@ from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.util import round_up, round_down
 from bangpy.tcp.runtime import TaskType
 
-DTYPES = [bangpy.float16, bangpy.float32] #支持的类型
+DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "LogAddExp" #算子名
 
