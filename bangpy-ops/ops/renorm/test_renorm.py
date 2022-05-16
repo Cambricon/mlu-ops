@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (311, 311, 42)
+        (1, 3, 5, 3)
     ],
 )
 
@@ -49,15 +49,15 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [1.],
+    "p", [1.3],
 )
 
 @pytest.mark.parametrize(
-    "dim", [2],
+    "dim", [1],
 )
 
 @pytest.mark.parametrize(
-    "maxnorm", [5.0],
+    "maxnorm", [15.0],
 )
 
 
@@ -70,7 +70,7 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
     for s in shape:
         total_input_len *= s
 
-    input_tensor = np.random.uniform(low=-3.5, high=6.5, size=shape).astype(dtype.as_numpy_dtype)
+    input_tensor = np.random.uniform(low=1, high=3, size=shape).astype(dtype.as_numpy_dtype)
     
     # 准备mlu计算
     dev = bp.device(0)
@@ -116,3 +116,6 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
     cpu_ret = torch.renorm(x, p, dim, maxnorm)
     print('cpu cost ', time.time() - cpu_start)
     print(cpu_ret)
+
+    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+    
