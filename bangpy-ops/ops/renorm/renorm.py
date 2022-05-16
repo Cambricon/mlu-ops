@@ -88,8 +88,6 @@ class Renorm(object):
                 self.bp.multiply(nram_buffer_in, nram_buffer_in, pw)
                 self.bp.exp(nram_buffer_in, nram_buffer_in)
 
-                self.bp.print("nram buffer in ", nram_buffer_in)
-
             with self.bp.block("data_copy"):
                 self.bp.memcpy(gram_tensor[once_loop_start:once_loop_start + calc_size], nram_buffer_in[:calc_size])   
 
@@ -158,30 +156,20 @@ class Renorm(object):
 
                         # 求绝对值
                         self.bp.abs(self.nram_calc_buffer, self.nram_calc_buffer)
-                        self.bp.print("abs ", self.nram_calc_buffer[0])
 
                         # 求指数
                         self.bp.log(self.nram_calc_buffer, self.nram_calc_buffer)
-                        self.bp.print("log ", self.nram_calc_buffer[0])
 
                         pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
 
-                        self.bp.print("p ", pw)
                         self.bp.multiply(self.nram_calc_buffer, self.nram_calc_buffer, pw)
 
-                        self.bp.print("mul ", self.nram_calc_buffer[0])
-
                         self.bp.exp(self.nram_calc_buffer, self.nram_calc_buffer)
-                        self.bp.print("exp ", self.nram_calc_buffer[0])
 
                         calc_ret = self.calc_norm(self.nram_calc_buffer, 0, cp_len)
-                        self.bp.print("first ", self.nram_calc_buffer[0])
-                        self.bp.print("calc_ret ", calc_ret)
-                        self.bp.print("cp_len is ", cp_len)
                         st_norm_value.assign(st_norm_value + calc_ret)
 
             #计算一下norm，
-            #self.bp.print("norm value is ", st_norm_value)
             cp_len.assign(self.nram_process_count)
             st_norm_value.assign(self.scalar_pow(st_norm_value, 1 / p))
             with self.bp.if_scope(st_norm_value > maxnorm):
