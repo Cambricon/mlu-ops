@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (2, 3, 4)
+        (21, 12, 2)
     ],
 )
 
@@ -50,7 +50,7 @@ import time
 
 
 @pytest.mark.parametrize(
-    "dim", [0],
+    "dim", [1],
 )
 
 @pytest.mark.parametrize(
@@ -138,7 +138,8 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
             outputshape.append(shape[i])
 
     mlu_ret = result.reshape(outputshape)
-
+    print("mlu ret ")
+    #print(mlu_ret)
 
    
     print("============torch calc==================")
@@ -147,7 +148,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     cpu_start = time.time()
     cpu_ret = torch.logsumexp(x, dim, keepdim)
     print('cpu cost ', time.time() - cpu_start)
-    print(cpu_ret)
+    #print(cpu_ret)
 
     bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
     
