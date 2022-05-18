@@ -87,8 +87,8 @@ def test_logaddexp(target, shape, dtype):
             else:#如果只有一个元素 则缩放倍数为长的shape各元素的乘积
                 for k in range(len(max.shape)):
                     scale_up *= max.shape[k]
-            dev = bp.device(0)         
-            x = bp.Array(max.astype(dtype.as_numpy_dtype).flatten(), dev)         
+            dev = bp.device(0)
+            x = bp.Array(max.astype(dtype.as_numpy_dtype).flatten(), dev)
             y = bp.Array(np.tile(min.astype(dtype.as_numpy_dtype).flatten(),scale_up), dev)
             output_dev = bp.Array(np.zeros(max.size, dtype=dtype.as_numpy_dtype), dev)
             task_type = TaskType(TARGET(target).cluster_num)
@@ -98,13 +98,9 @@ def test_logaddexp(target, shape, dtype):
             return output_dev.numpy().reshape(max.shape)
         else :
             print("need the same shape or sub shape")
-            
     mlu_ret = logaddexp(data_x,data_y)
     ret2 = np.logaddexp(data_x, data_y)
     if dtype.name == "float16":
-        bangpy.assert_allclose( mlu_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.01, atol = 0.01)
+        bangpy.assert_allclose(mlu_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.01, atol = 0.01)
     else:
-        bangpy.assert_allclose( mlu_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.001, atol = 0.01)
-    
-
-
+        bangpy.assert_allclose(mlu_ret, ret2.astype(dtype.as_numpy_dtype),rtol = 0.001, atol = 0.01)
