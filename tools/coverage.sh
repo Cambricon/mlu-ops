@@ -5,7 +5,7 @@ readonly RED='\033[1;31m'
 readonly NC='\033[0m'
 readonly CARD_NUM_DEFAULT=8
 
-DEVICE_ID=1
+DEVICE_ID=0
 test_cmd_=''
 temp_dir_='.'
 extra_test_dir_=''
