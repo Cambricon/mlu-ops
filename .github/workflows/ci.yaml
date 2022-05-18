@@ -25,8 +25,8 @@ jobs:
 
       - name: test
         run: >
-          docker run --rm --device /dev/cambricon_dev0 --device /dev/cambricon_ctl --device /dev/commu0
-          -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
+          idx=$(hostname | cut -d'-' -f3);docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev$idx:/dev/cambricon_dev0 
+          --device /dev/commu$idx:/dev/commu0 -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           ./test.sh --target=mlu270
 
       - name: clean
