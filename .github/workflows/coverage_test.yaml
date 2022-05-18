@@ -18,7 +18,7 @@ jobs:
 
       - name: coverage_test
         run: >
-          docker run --rm --device /dev/cambricon_dev0 --device /dev/cambricon_ctl --device /dev/commu0
+          docker run --rm --device /dev/cambricon_dev1 --device /dev/cambricon_ctl --device /dev/commu1
           -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           bash -c "apt install -y lcov html2text && cd bangc-ops/build/test/ && bash ../../../tools/coverage.sh "./mluop_gtest""
 
