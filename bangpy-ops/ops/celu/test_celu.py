@@ -21,11 +21,11 @@
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
 import sys
+import torch
 import numpy as np
 sys.path.append("..")
 from create_shape import *
 import pytest
-import torch
 import bangpy
 import bangpy as bp
 from bangpy import tcp
