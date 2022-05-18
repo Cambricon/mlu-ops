@@ -1,0 +1,19 @@
+{
+    "op_name": "div",
+    "device": "gpu",
+    "require_value": true,
+    "evaluation_criterion": ["diff1","diff2"],
+    "evaluation_threshold": [3e-3,3e-3],
+    "manual_data":[
+        {
+            "inputs":[
+                {"shape":[4,8,1,2],"dtype":"float32","layout":"ARRAY","random_distribution":{"uniform":[-0.1,0.1]}},
+                {"shape":[4,8,1,2],"dtype":"float32","layout":"ARRAY","random_distribution":{"uniform":[-0.1,0.1]}}
+            ],
+            "outputs":[
+                {"shape":[4,8,1,2],"dtype":"float32","layout":"ARRAY"}
+            ],
+            "op_params":{"num":2}
+        }
+    ]
+}

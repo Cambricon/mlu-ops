@@ -42,19 +42,21 @@ enum DataType {
 enum Device {
   CPU           = 1;
   GPU           = 2;
+  CMODEL        = 3;
+  GENERATOR_CPU = 4;
 }
 
 enum EvaluationCriterion {
-  MAPE   = 1;
-  SMAPE  = 2;
-  MAXAPE = 3;
+  MAPE    = 1;
+  SMAPE   = 2;
+  MAXAPE  = 3;
   SMAXAPE = 4;
-  NRMSE  = 5;
-  DIFF1  = 6;
-  DIFF2  = 7;
-  DIFF3  = 8;
-  DIFF3_2  = 9;
-  DIFF4  = 10;
+  NRMSE   = 5;
+  DIFF1   = 6;
+  DIFF2   = 7;
+  DIFF3   = 8;
+  DIFF3_2 = 9;
+  DIFF4   = 10;
 }
 
 enum MLUPlatform {
@@ -83,8 +85,8 @@ message Tensor {
   optional DataType onchip_dtype  = 13;
 
   optional int32 position         = 5;
-  optional float scale            = 6;     // unsupported
-  optional int32 offset           = 14;    // unsupported
+  optional float scale            = 6;
+  optional int32 offset           = 14;
 
   // data
   repeated float value_f          = 7;
