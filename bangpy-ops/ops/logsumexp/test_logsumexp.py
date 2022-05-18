@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (21, 12, 2)
+        (3, 10  )
     ],
 )
 
@@ -67,7 +67,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     for s in shape:
         total_input_len *= s
 
-    input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+    input_tensor = np.random.uniform(low=-0, high=0, size=shape).astype(dtype.as_numpy_dtype)
     
     def get_total_size(shp):
             size = 1
@@ -104,7 +104,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
 
     # mlu 输出
     _output_len = get_total_size(shape) // shape[dim]
-    output_buffer = np.zeros(_output_len, dtype=dtype.as_numpy_dtype)
+    output_buffer = -np.ones(_output_len, dtype=dtype.as_numpy_dtype)
     _mlu_output = bp.Array(output_buffer, _dev)
 
     output_count = 256
@@ -139,7 +139,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
 
     mlu_ret = result.reshape(outputshape)
     print("mlu ret ")
-    #print(mlu_ret)
+    print(mlu_ret)
 
    
     print("============torch calc==================")
@@ -148,7 +148,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     cpu_start = time.time()
     cpu_ret = torch.logsumexp(x, dim, keepdim)
     print('cpu cost ', time.time() - cpu_start)
-    #print(cpu_ret)
+    print(cpu_ret)
 
     bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
     
