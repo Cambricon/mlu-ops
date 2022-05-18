@@ -26,4 +26,3 @@ jobs:
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           bash -c "rm -rf bangc-ops/build"
-          

@@ -11,7 +11,6 @@ temp_dir_='.'
 extra_test_dir_=''
 lib_path_="../lib/libmluops.so"
 
-
 function usage () {
     echo
     echo "Coverage is a code coverage testing tool of bangC for CNNL."
