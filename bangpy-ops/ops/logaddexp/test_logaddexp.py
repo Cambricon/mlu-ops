@@ -30,8 +30,9 @@ from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 from logaddexp import DTYPES, KERNEL_NAME, TARGET_LIST
-sys.path.append("..")
 from create_shape import *
+sys.path.append("..")
+
 test_shape_list = CreatShapeList(
     nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,
     append_test_count = 50,
