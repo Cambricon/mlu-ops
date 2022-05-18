@@ -34,11 +34,7 @@ jobs:
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           bash -c "rm -rf bangc-ops/build && rm -rf bangpy-ops/outs"
 
-  bangc_coverage_test:
-    runs-on: [self-hosted, mlu270-x5k]
-    steps:
-      - uses: actions/checkout@v2
-      - name: build
+      - name: coverage_build
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           bash -c "cd bangc-ops && ./build.sh -c"
@@ -49,7 +45,7 @@ jobs:
           --device /dev/commu$idx:/dev/commu0 -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           bash -c "apt install -y lcov html2text && cd bangc-ops/build/test/ && bash ../../../tools/coverage.sh "./mluop_gtest""
 
-      - name: clean
+      - name: coverage_clean
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.5-ubuntu1604
           bash -c "rm -rf bangc-ops/build"
