@@ -27,7 +27,6 @@ import torch
 import pytest
 import math
 
-import bangpy
 import bangpy as bp
 from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
@@ -38,8 +37,8 @@ from logsumexp import DTYPES, KERNEL_NAME, TARGET_LIST
 import time
 
 @pytest.mark.parametrize(
-    "shape", 
-    [        
+    "shape",
+    [
         (3, 10, 2, 11, 3, 4, 13)
     ],
 )
@@ -59,7 +58,7 @@ import time
 
 
 
-def test_logsumexp(target, shape, dim, dtype, keepdim): 
+def test_logsumexp(target, shape, dim, dtype, keepdim):
     if target not in TARGET_LIST:
         return
 
@@ -68,13 +67,12 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         total_input_len *= s
 
     input_tensor = np.random.uniform(low=-0, high=0, size=shape).astype(dtype.as_numpy_dtype)
-    
     def get_total_size(shp):
-            size = 1
-            for s in shp:
-                size *= s
-            return size        
-            
+        size = 1
+        for s in shp:
+            size *= s
+        return size
+
     _dev = bp.device(0)
     shp_len = len(shape)
 
@@ -97,7 +95,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         pass
     else:
         for i in range(dim + 1, shp_len):
-            _pd_width *= shape[i] 
+            _pd_width *= shape[i]
 
     # mlu 输入
     _mlu_input1 = bp.Array(input_tensor.flatten(), _dev)
@@ -137,17 +135,10 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
             outputshape.append(shape[i])
 
     mlu_ret = result.reshape(outputshape)
-    #print("mlu ret ")
-    #print(mlu_ret)
-
-   
-    #print("============torch calc==================")
 
     x = torch.Tensor(input_tensor)
     cpu_start = time.time()
     cpu_ret = torch.logsumexp(x, dim, keepdim)
-    #print('cpu cost ', time.time() - cpu_start)
-    #print(cpu_ret)
 
-    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
-    
+
+    bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
