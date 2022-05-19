@@ -20,21 +20,14 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-from cmath import pi
-from traceback import print_tb
+
 import numpy as np
 import torch
 import pytest
-import math
 
 import bangpy as bp
-from bangpy import tcp
-from bangpy.common import utils, load_op_by_type
-from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
-from bangpy.tcp.runtime import TaskType
+from bangpy.common import load_op_by_type
 from logsumexp import DTYPES, KERNEL_NAME, TARGET_LIST
-
-import time
 
 @pytest.mark.parametrize(
     "shape",
@@ -47,9 +40,8 @@ import time
     "dtype", DTYPES,
 )
 
-
 @pytest.mark.parametrize(
-    "dim", [0, 1, 2, 3, 4, 5, 6, -7, -6, -5, -4, -3, -2, -1],
+    "dim", [0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1],
 )
 
 @pytest.mark.parametrize(
@@ -73,6 +65,11 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
             size *= s
         return size
 
+    def check_dim_range(dim, shape):
+        if dim < 0 or dim >= len(shape):
+            return False
+        return True
+
     _dev = bp.device(0)
     shp_len = len(shape)
 
@@ -81,12 +78,13 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     _pd_height = 1
     _pd_width = 1
 
+
     if dim < 0:
         dim += len(shape)
 
-    if dim < 0 or dim >= len(shape):
-        print("dim err!")
-        return None
+    if not check_dim_range(dim, shape):
+        print('dim err!')
+        return
 
     for i in range(0, dim + 1):
         _pd_height *= shape[i]
@@ -119,25 +117,27 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
          , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
 
     result = _mlu_output.numpy()
-    result_border = _mlu_border_output.numpy()
-    result_border_idx = _mlu_border_idx_output.numpy()
+    def create_reshape(keepdim, dim, shape):
+        outputshape = []
+        if keepdim:
+            for item in shape:
+                outputshape.append(item)
+            outputshape[dim] = 1
+        else:
+            i = 0
+            for s in shape:
+                if i == dim:
+                    i += 1
+                    continue
+                outputshape.append(s)
+                i += 1
+        return outputshape
 
-
-    outputshape = []
-    if keepdim:
-        for item in shape:
-            outputshape.append(item)
-        outputshape[dim] = 1
-    else:
-        for i in range(0, len(shape)):
-            if i == dim:
-                continue
-            outputshape.append(shape[i])
+    outputshape = create_reshape(keepdim, dim, shape)
 
     mlu_ret = result.reshape(outputshape)
 
     x = torch.Tensor(input_tensor)
-    cpu_start = time.time()
     cpu_ret = torch.logsumexp(x, dim, keepdim)
 
 
