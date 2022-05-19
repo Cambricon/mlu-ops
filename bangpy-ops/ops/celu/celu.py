@@ -22,11 +22,9 @@
 """A multi-platform code link example test for BANGPy TCP."""
 import bangpy
 from bangpy import tcp
-from bangpy.common import utils, load_op_by_type
-from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
-from bangpy.tcp.util import round_up, round_down
+from bangpy.platform.bang_config import TARGET
+from bangpy.tcp.util import round_down
 from bangpy.tcp.runtime import TaskType
-
 DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "Celu" #算子名
