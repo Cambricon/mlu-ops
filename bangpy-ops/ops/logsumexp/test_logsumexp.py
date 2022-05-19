@@ -40,7 +40,7 @@ import time
 @pytest.mark.parametrize(
     "shape", 
     [        
-        (3, 10  )
+        (3, 10, 2, 11, 3, 4, 13)
     ],
 )
 
@@ -50,11 +50,11 @@ import time
 
 
 @pytest.mark.parametrize(
-    "dim", [1],
+    "dim", [0, 1, 2, 3, 4, 5, 6, -7, -6, -5, -4, -3, -2, -1],
 )
 
 @pytest.mark.parametrize(
-    "keepdim", [True],
+    "keepdim", [False, True],
 )
 
 
@@ -114,9 +114,6 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     output_buffer3 = -np.ones(output_count, dtype=np.int32)
     _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
 
-    print('input ', _pd_height, _pd_width)
-    print(input_tensor)
-
     # 调用mlu
     func = load_op_by_type(KERNEL_NAME, dtype.name)
     func(_mlu_input1,
@@ -134,21 +131,23 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
             outputshape.append(item)
         outputshape[dim] = 1
     else:
-        for i in range(0, len(shape) - 1):
+        for i in range(0, len(shape)):
+            if i == dim:
+                continue
             outputshape.append(shape[i])
 
     mlu_ret = result.reshape(outputshape)
-    print("mlu ret ")
-    print(mlu_ret)
+    #print("mlu ret ")
+    #print(mlu_ret)
 
    
-    print("============torch calc==================")
+    #print("============torch calc==================")
 
     x = torch.Tensor(input_tensor)
     cpu_start = time.time()
     cpu_ret = torch.logsumexp(x, dim, keepdim)
-    print('cpu cost ', time.time() - cpu_start)
-    print(cpu_ret)
+    #print('cpu cost ', time.time() - cpu_start)
+    #print(cpu_ret)
 
     bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
     
