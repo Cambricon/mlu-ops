@@ -28,23 +28,51 @@ from bangpy.common import load_op_by_type
 from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.runtime import TaskType
 
-import sys
-sys.path.append("..")
-from data_man import *
-
 DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "Logsumexp"#算子名
+
+class data_man:
+    bp = None
+
+    m_current_core_start = None
+    m_current_core_end = None
+    m_total_count_in_core = None
+
+    def init(self, bp):
+        self.bp = bp
+        self.m_current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
+        self.m_current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")
+        self.m_total_count_in_core = self.bp.Scalar(bangpy.int32, "total_count_in_core")
+
+    def calc_core_process_count(self, data_total_len, task_num):
+        one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count")
+        one_core_count.assign(data_total_len // task_num)
+
+        remain = self.bp.Scalar(bangpy.int32, "remain")
+        remain.assign(data_total_len % task_num)
+
+        with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
+            self.m_current_core_start.assign((one_core_count + 1) * self.bp.taskId )
+            self.m_current_core_end.assign((one_core_count + 1) * \
+                (self.bp.taskId + 1) - 1) #此处应该不需要减1 待验证  python切片会自动将上标减1
+        with self.bp.else_scope():
+            self.m_current_core_start.assign((one_core_count + 1) * \
+                remain + one_core_count * (self.bp.taskId - remain))
+            self.m_current_core_end.assign((one_core_count + 1) * remain + \
+                one_core_count * (self.bp.taskId - remain) + one_core_count - 1)
+
+        self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
 
 class logsum_calcer:
     def __init__(self, bp, dtype):
         self.dtype = dtype
         self.bp = bp
-        self._value = self.bp.Scalar(bangpy.float32, "_value", 0.0)
+        self.m_value = self.bp.Scalar(bangpy.float32, "m_value", 0.0)
         self._oper_count = self.bp.Scalar(bangpy.int32, "_oper_count", 0)
 
     def reset(self):
-        self._value.assign(0.0)
+        self.m_value.assign(0.0)
         self._oper_count.assign(0)
 
     def calc_value(self, x, y):
@@ -72,16 +100,6 @@ class logsum_calcer:
                 scalar_res.assign(x)
         return scalar_res
 
-    def add_value(self, x):
-        with self.bp.if_scope(self._oper_count == 0):
-            self._value.assign(x)
-        with self.bp.else_scope():
-            tmp_calc_value = self.bp.Scalar(bangpy.float32, "tmp_calc_value", self._value)
-            tmp_ret = self.calc_value(tmp_calc_value, x)
-            self._value.assign(tmp_ret)
-
-        self._oper_count.assign(self._oper_count + 1)
-        return self._value
     def calc_buffer(self, buffer, start_index, end_index):
         natural_base = self.bp.Scalar(bangpy.float32, "natural_base", \
             2.7182818284590452353602874713526624977572470936999)
@@ -110,15 +128,19 @@ class logsum_calcer:
 
     def add_buffer(self, buffer, start_index, end_index):
         with self.bp.if_scope(self._oper_count == 0):
-            self._value.assign(self.calc_buffer(buffer, start_index, end_index))
+            self.m_value.assign(self.calc_buffer(buffer, start_index, end_index))
         with self.bp.else_scope():
             ret_value = self.calc_buffer(buffer, start_index, end_index)
-            tmp_calc_value = self.bp.Scalar(bangpy.float32, "tmp_calc_value", self._value)
+            tmp_calc_value = self.bp.Scalar(bangpy.float32, "tmp_calc_value", self.m_value)
             tmp_ret = self.calc_value(tmp_calc_value, ret_value)
-            self._value.assign(tmp_ret)
+            self.m_value.assign(tmp_ret)
 
         self._oper_count.assign(self._oper_count + 1)
-        return self._value
+        return self.m_value
+
+def get_norm_index(data_pos, dim_len):
+    index = (data_pos + dim_len - 1) // dim_len
+    return index - 1
 
 class Logsumexp:
     def __init__(self, dtype, target, task_num):
@@ -262,36 +284,25 @@ class Logsumexp:
                     sum_value.assign(buffer[i + 1])
         return sum_value
 
-    def get_norm_index(self, data_pos, dim_len):
-        index = (data_pos + dim_len - 1) // dim_len
-        return index - 1
-
     def calc1(self, gram_tensor, border_outputs, idx_outputs, outputs):# nram 一次还存不下一个元素
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
+        current_core_start = self._data_man.m_current_core_start
+        total_count_in_core = self._data_man.m_total_count_in_core
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", \
             (total_count_in_core + self.nram_process_count - 1) // self.nram_process_count)
 
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
-
-        oper_type = self.bp.Scalar(bangpy.int32, "oper_type", 0)
 
         pw = self.bp.Scalar(self.dtype, "pw", 1)
 
         dim_len = self.dim_len
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", \
             current_core_start % dim_len)
-        with self.bp.if_scope(norm_offset == 0):
-            oper_type.assign(2)
-        with self.bp.else_scope():
-            oper_type.assign(0)
 
         flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
-        '''
-        0 : 要压缩的维度，从中间开始，且比nram还要长
-        1 : 要压缩的维度，从中间开始，比nram小
-        2 : 要压缩的维度，从头开始
-        '''
+
+        #0 : 要压缩的维度，从中间开始，且比nram还要长
+        #1 : 要压缩的维度，从中间开始，比nram小
+        #2 : 要压缩的维度，从头开始
         #以上记录一下，是否是从半截开始处理的，如果是，要缓存
 
         complete_norm_count = self.bp.Scalar(bangpy.int32, "complete_norm_count", 0)
@@ -323,13 +334,13 @@ class Logsumexp:
 
                 with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                     # 缓存一下
-                    index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
+                    index = get_norm_index(once_loop_start + expect_cp_len, dim_len)
                     with self.bp.if_scope(once_norm_ok == 0):
                         border_outputs[self.bp.taskId * 2] = \
-                            norm_value._value # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                            norm_value.m_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                         idx_outputs[self.bp.taskId * 2] = index
                     with self.bp.else_scope():
-                        border_outputs[self.bp.taskId * 2 + 1] = norm_value._value
+                        border_outputs[self.bp.taskId * 2 + 1] = norm_value.m_value
                         idx_outputs[self.bp.taskId * 2 + 1] = index
 
             with self.bp.else_scope():
@@ -343,13 +354,13 @@ class Logsumexp:
                 # 标记一下
                 once_norm_ok.assign(1)
                 # 看看这个norm是不是半截
-                index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
+                index = get_norm_index(once_loop_start + expect_cp_len, dim_len)
                 with self.bp.if_scope(cp_data_len < dim_len):
                     border_outputs[self.bp.taskId * 2] = \
-                        norm_value._value # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                        norm_value.m_value # 走到这里了，说明这个core一直在处理一个norm的中间部分
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
-                    outputs[index] = norm_value._value # 完整的算出来了
+                    outputs[index] = norm_value.m_value # 完整的算出来了
 
                 norm_value.reset()
 
@@ -363,12 +374,12 @@ class Logsumexp:
                     #norm_value_inited.assign(1)
                     with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
                         # 肯定没有拷贝完
-                        border_outputs[self.bp.taskId * 2 + 1] = norm_value._value
+                        border_outputs[self.bp.taskId * 2 + 1] = norm_value.m_value
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1
 
     def calc2(self, gram_tensor, border_outputs, idx_outputs, outputs):
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
+        current_core_start = self._data_man.m_current_core_start
+        total_count_in_core = self._data_man.m_total_count_in_core
         dim_len = self.dim_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
 
@@ -384,7 +395,7 @@ class Logsumexp:
                 gram_tensor, current_core_start, dim_len, self.w, expect_cp_len)
             calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
-            index = self.get_norm_index(current_core_start + expect_cp_len, dim_len)
+            index = get_norm_index(current_core_start + expect_cp_len, dim_len)
             #保存一下
             border_outputs[self.bp.taskId * 2] = norm_value
             idx_outputs[self.bp.taskId * 2] = index
@@ -436,7 +447,7 @@ class Logsumexp:
                 dim_len, self.w, cur_loop_end_pos - norm_loop_end_pos)
             calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
-            index = self.get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
+            index = get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
             #保存一下
             border_outputs[self.bp.taskId * 2 + 1] = norm_value
             idx_outputs[self.bp.taskId * 2 + 1] = index
