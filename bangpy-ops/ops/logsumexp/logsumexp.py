@@ -153,6 +153,18 @@ class logsumexp_para:
     def run2(self):
         pass
 
+class copy_para:
+    def __init__(self, dst, offset_d, src, offset_s):
+        self.dst = dst
+        self.offset_dst = offset_d
+        self.src = src
+        self.offset_src = offset_s
+
+    def run(self):
+        pass
+
+    def run2(self):
+        pass
 
 class Logsumexp:
     def __init__(self, dtype, target, task_num):
@@ -259,7 +271,12 @@ class Logsumexp:
             )
         return f
 
-    def copy_from_2d_tensor(self, dst, offset_dst, src, offset_src, dim_len, width, cp_len):
+    def copy_from_2d_tensor(self, cp_para, dim_len, width, cp_len):
+        dst = cp_para.dst
+        offset_dst = cp_para.offset_dst
+        src = cp_para.src
+        offset_src = cp_para.offset_src
+
         big_row = offset_src // (width * dim_len)
 
         m = offset_src % dim_len + big_row * dim_len
@@ -343,8 +360,8 @@ class Logsumexp:
             with self.bp.if_scope(expect_cp_len > calc_size):
                 expect_cp_len.assign(calc_size)
                 # 一口气拷贝不完，那就尽可能多的拷贝.
-                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                    once_loop_start, dim_len, self.para.w, expect_cp_len)
+                cp_para = copy_para(self.nram_calc_buffer, 0, gram_tensor, once_loop_start)
+                self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 norm_value.add_buffer(flat_nram, 0, expect_cp_len)
 
@@ -361,8 +378,8 @@ class Logsumexp:
 
             with self.bp.else_scope():
                 #这个norm可以拷贝完了
-                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                    once_loop_start, dim_len, self.para.w, expect_cp_len)
+                cp_para = copy_para(self.nram_calc_buffer, 0, gram_tensor, once_loop_start)
+                self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
 
                 norm_value.add_buffer(flat_nram, 0, expect_cp_len)
@@ -383,8 +400,9 @@ class Logsumexp:
                 # 接下来，拷贝下一个norm
                 cp_data_len.assign(calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
-                    self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                        once_loop_start + expect_cp_len, dim_len, self.para.w, cp_data_len)
+                    cp_para = copy_para(self.nram_calc_buffer, 0, \
+                        gram_tensor, once_loop_start + expect_cp_len)
+                    self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, cp_data_len)
                     #calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
                     norm_value.add_buffer(flat_nram, 0, cp_data_len)
                     #norm_value_inited.assign(1)
@@ -407,8 +425,8 @@ class Logsumexp:
         with self.bp.if_scope(norm_offset != 0):
             #有残留，拷贝过来
             expect_cp_len.assign(dim_len - norm_offset)
-            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, \
-                gram_tensor, current_core_start, dim_len, self.para.w, expect_cp_len)
+            cp_para = copy_para(self.nram_calc_buffer, 0, gram_tensor, current_core_start)
+            self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, expect_cp_len)
             calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
             index = get_norm_index(current_core_start + expect_cp_len, dim_len)
@@ -446,8 +464,9 @@ class Logsumexp:
                 once_loop_start // dim_len) #肯定可以整除
             with self.bp.for_range(0, once_loop_norm_count) as j:
                 #先拷贝过来
-                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                    once_loop_start + j * dim_len, dim_len, self.para.w, dim_len)
+                cp_para = copy_para(self.nram_calc_buffer, 0, \
+                    gram_tensor, once_loop_start + j * dim_len)
+                self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
                 outputs[start_index + j] = norm_value       # 一个完整的norm算出来了
@@ -459,8 +478,9 @@ class Logsumexp:
             current_core_start + total_count_in_core)
         with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
             #拷贝一下数据
-            self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, \
-                dim_len, self.para.w, cur_loop_end_pos - norm_loop_end_pos)
+            cp_para = copy_para(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos)
+            self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, \
+                cur_loop_end_pos - norm_loop_end_pos)
             calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
             index = get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
