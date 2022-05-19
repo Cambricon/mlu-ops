@@ -139,36 +139,54 @@ def get_norm_index(data_pos, dim_len):
     index = (data_pos + dim_len - 1) // dim_len
     return index - 1
 
+class logsumexp_para:
+    dim_len = None
+    h = None
+    w = None
+    output_len = None
+    dtype_sz = None
+    task_num = None
+
+    def run(self):
+        pass
+
+    def run2(self):
+        pass
+
+
 class Logsumexp:
     def __init__(self, dtype, target, task_num):
+        self.para = logsumexp_para()
+        self.para.h = 0
+        self.para.w = 0
+        self.para.output_len = 0
+        self.para.dim_len = 0
+        self.para.task_num = task_num
+        self.para.dtype_sz = dtype.bytes
+
         self.dtype = dtype
         self.target = target
-        self.task_num = task_num
-        self.dtype_sz = dtype.bytes
         self.bp = tcp.TCP(target)
         self._data_man = data_man()
-        self.dim_len = 0
-        self.h = 0
-        self.w = 0
-        self.output_len = 0
         self.nram_process_count = None
         self.nram_calc_buffer = None
 
     def compute_body(self):
         self._data_man.init(self.bp)
-        self.bp.launch_task(self.task_num, 1, 1)
+        self.bp.launch_task(self.para.task_num, 1, 1)
 
-        self.dim_len = self.bp.SizeVar("dim_len")
-        self.h = self.bp.SizeVar("h")
-        self.w = self.bp.SizeVar("w")
-        self.output_len = self.bp.SizeVar("output_len")
+        self.para.dim_len = self.bp.SizeVar("dim_len")
+        self.para.h = self.bp.SizeVar("h")
+        self.para.w = self.bp.SizeVar("w")
+        self.para.output_len = self.bp.SizeVar("output_len")
 
         gram_tensor = self.bp.Buffer(
-            shape=(self.h * self.w, ), name="gram_tensor", dtype=self.dtype, scope="global"
+            shape=(self.para.h * self.para.w, ), \
+                name="gram_tensor", dtype=self.dtype, scope="global"
         )
 
         gram_buffer_out = self.bp.Buffer(
-            shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
+            shape=(self.para.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
         border_array_size = 128
@@ -182,11 +200,11 @@ class Logsumexp:
         )
 
         with self.bp.if_scope(self.bp.taskId == 0):
-            gram_reshape_tensor = gram_tensor.reshape([self.h, self.w])
+            gram_reshape_tensor = gram_tensor.reshape([self.para.h, self.para.w])
         self.bp.sync_all()
 
         nram_avable_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
-        self.nram_process_count = nram_avable_size // self.dtype_sz
+        self.nram_process_count = nram_avable_size // self.para.dtype_sz
         #self.nram_process_count = 2
         self.nram_calc_buffer = self.bp.Buffer(
             shape=(self.nram_process_count, 1),
@@ -194,14 +212,14 @@ class Logsumexp:
             dtype=self.dtype,
             scope="nram")
 
-        self._data_man.calc_core_process_count(self.h * self.w, self.task_num)
+        self._data_man.calc_core_process_count(self.para.h * self.para.w, self.para.task_num)
 
-        with self.bp.if_scope(self.dim_len > self.nram_process_count):
+        with self.bp.if_scope(self.para.dim_len > self.nram_process_count):
             self.calc1(gram_reshape_tensor, gram_border_buf_out, \
                 gram_border_idx_out, gram_buffer_out)
         with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
-            with self.bp.if_scope((self.h * self.w)  \
-                    // self.task_num < self.dim_len):
+            with self.bp.if_scope((self.para.h * self.para.w)  \
+                    // self.para.task_num < self.para.dim_len):
                 self.calc1(gram_reshape_tensor, gram_border_buf_out, \
                     gram_border_idx_out, gram_buffer_out)
             with self.bp.else_scope():
@@ -233,8 +251,8 @@ class Logsumexp:
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor,
-                    self.dim_len, self.h, self.w,
-                    self.output_len
+                    self.para.dim_len, self.para.h, self.para.w,
+                    self.para.output_len
                     ],
             outputs=[gram_border_buf_out, gram_border_idx_out, gram_buffer_out],
             kernel_name=KERNEL_NAME
@@ -295,7 +313,7 @@ class Logsumexp:
 
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
 
-        dim_len = self.dim_len
+        dim_len = self.para.dim_len
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", \
             current_core_start % dim_len)
 
@@ -326,7 +344,7 @@ class Logsumexp:
                 expect_cp_len.assign(calc_size)
                 # 一口气拷贝不完，那就尽可能多的拷贝.
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                    once_loop_start, dim_len, self.w, expect_cp_len)
+                    once_loop_start, dim_len, self.para.w, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 norm_value.add_buffer(flat_nram, 0, expect_cp_len)
 
@@ -344,7 +362,7 @@ class Logsumexp:
             with self.bp.else_scope():
                 #这个norm可以拷贝完了
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                    once_loop_start, dim_len, self.w, expect_cp_len)
+                    once_loop_start, dim_len, self.para.w, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
 
                 norm_value.add_buffer(flat_nram, 0, expect_cp_len)
@@ -366,7 +384,7 @@ class Logsumexp:
                 cp_data_len.assign(calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
                     self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                        once_loop_start + expect_cp_len, dim_len, self.w, cp_data_len)
+                        once_loop_start + expect_cp_len, dim_len, self.para.w, cp_data_len)
                     #calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
                     norm_value.add_buffer(flat_nram, 0, cp_data_len)
                     #norm_value_inited.assign(1)
@@ -378,7 +396,7 @@ class Logsumexp:
     def calc2(self, gram_tensor, border_outputs, idx_outputs, outputs):
         current_core_start = self._data_man.m_current_core_start
         total_count_in_core = self._data_man.m_total_count_in_core
-        dim_len = self.dim_len
+        dim_len = self.para.dim_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
 
         flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
@@ -390,7 +408,7 @@ class Logsumexp:
             #有残留，拷贝过来
             expect_cp_len.assign(dim_len - norm_offset)
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, \
-                gram_tensor, current_core_start, dim_len, self.w, expect_cp_len)
+                gram_tensor, current_core_start, dim_len, self.para.w, expect_cp_len)
             calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
             index = get_norm_index(current_core_start + expect_cp_len, dim_len)
@@ -429,7 +447,7 @@ class Logsumexp:
             with self.bp.for_range(0, once_loop_norm_count) as j:
                 #先拷贝过来
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                    once_loop_start + j * dim_len, dim_len, self.w, dim_len)
+                    once_loop_start + j * dim_len, dim_len, self.para.w, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
                 outputs[start_index + j] = norm_value       # 一个完整的norm算出来了
@@ -442,7 +460,7 @@ class Logsumexp:
         with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
             #拷贝一下数据
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, \
-                dim_len, self.w, cur_loop_end_pos - norm_loop_end_pos)
+                dim_len, self.para.w, cur_loop_end_pos - norm_loop_end_pos)
             calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
             index = get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
