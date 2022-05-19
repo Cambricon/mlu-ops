@@ -13,17 +13,16 @@ lib_path_="../lib/libmluops.so"
 
 function usage () {
     echo
-    echo "Coverage is a code coverage testing tool of bangC for CNNL."
+    echo "Coverage is a code coverage testing tool of bangC for mlu-ops."
     echo "Usage: ./coverage.sh COMMAND [options]"
     echo "COMMAND: gtest command."
     echo "[options]: "
     echo "     -t [optional]: temporary dir to store raw files. optional, default is current dir."
     echo "     -e [optional]: extra gtest dir, optional, meaning that you can run other gtest."
-    echo "     -l [optional]: path of libcnnl.so, optional, default is ../lib/libcnnl.so."
+    echo "     -l [optional]: path of libmluops.so, optional, default is ../lib/libmluops.so."
     echo "**********************example*********************"
     echo "./coverage.sh \"./mluops_gtest --gtest_filter=*add*\""
     echo "**************************************************"
-
 }
 
 # Handle options
@@ -63,7 +62,7 @@ function parse_args () {
     fi
 }
 
-function run_extra_test (){
+function run_extra_test () {
     printf "============= Coverage: run extra test ==============\n"
     export LLVM_PROFILE_FILE=${temp_dir_}/output/host_extra.profraw
     readonly new_case="--cases_dir=${extra_test_dir_}"
@@ -80,10 +79,10 @@ function run_extra_test (){
     ${test_cmd_}
 }
 
-function process (){
+function process () {
     # run gtest
-    readonly cnnl_dir=$(dirname ${lib_path_})
-    export LD_LIBRARY_PATH="${cnnl_dir}":$LD_LIBRARY_PATH
+    readonly mluops_dir=$(dirname ${lib_path_})
+    export LD_LIBRARY_PATH="${mluops_dir}":$LD_LIBRARY_PATH
     export CNRT_DUMP_PGO=1
     mkdir -p ${temp_dir_}
     export CNRT_PGO_OUTPUT_DIR=${temp_dir_}/output
@@ -127,7 +126,7 @@ function main () {
         echo " NEUWARE_HOME:  "${NEUWARE_HOME}
         export PATH="${NEUWARE_HOME}/bin":$PATH
         export LD_LIBRARY_PATH="${NEUWARE_HOME}/lib64":$LD_LIBRARY_PATH
-        export CNNL_GTEST_FILL_RAM=OFF
+        export MLUOPS_GTEST_FILL_RAM=OFF
     else
         printf "${RED} ERROR: please export NEUWARE_HOME variable first!\n${NC}"
         exit 1
@@ -150,7 +149,6 @@ function main () {
     parse_args "$@"
     export MLU_VISIBLE_DEVICES=${DEVICE_ID}
     process
-
 }
 
 main "$@"
