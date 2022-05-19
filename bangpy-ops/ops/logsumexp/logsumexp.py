@@ -20,13 +20,10 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-import numpy as np
 import bangpy
-from bangpy.tcp.util import round_up, round_down
+from bangpy.tcp.util import round_down
 from bangpy import tcp
-from bangpy.common import load_op_by_type
 from bangpy.platform.bang_config import TARGET
-from bangpy.tcp.runtime import TaskType
 
 DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
@@ -150,6 +147,12 @@ class Logsumexp:
         self.dtype_sz = dtype.bytes
         self.bp = tcp.TCP(target)
         self._data_man = data_man()
+        self.dim_len = 0
+        self.h = 0
+        self.w = 0
+        self.output_len = 0
+        self.nram_process_count = None
+        self.nram_calc_buffer = None
 
     def compute_body(self):
         self._data_man.init(self.bp)
@@ -292,8 +295,6 @@ class Logsumexp:
 
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
 
-        pw = self.bp.Scalar(self.dtype, "pw", 1)
-
         dim_len = self.dim_len
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", \
             current_core_start % dim_len)
@@ -304,9 +305,6 @@ class Logsumexp:
         #1 : 要压缩的维度，从中间开始，比nram小
         #2 : 要压缩的维度，从头开始
         #以上记录一下，是否是从半截开始处理的，如果是，要缓存
-
-        complete_norm_count = self.bp.Scalar(bangpy.int32, "complete_norm_count", 0)
-
         norm_value = logsum_calcer(self.bp, self.dtype)
 
         # 确认本次循环要从gram拷贝回nram的数量
