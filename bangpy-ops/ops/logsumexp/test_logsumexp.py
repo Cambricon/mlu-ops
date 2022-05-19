@@ -32,7 +32,7 @@ from logsumexp import DTYPES, KERNEL_NAME, TARGET_LIST
 @pytest.mark.parametrize(
     "shape",
     [
-        (3, 10, 2, 11, 3, 4, 13)
+        (3, 10, 2, 1, 3, 4, 5), (3, 1, 1, 1, 1, 1, 1),
     ],
 )
 

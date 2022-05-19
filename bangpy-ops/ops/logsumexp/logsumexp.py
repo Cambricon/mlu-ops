@@ -300,36 +300,6 @@ class Logsumexp:
             self.bp.memcpy(dst[offset_dst + cp_len // 2:offset_dst + cp_len, 0:1], \
                 src[m + cp_len // 2:m + cp_len, n:n + 1])
 
-    def calc_norm(self, buffer, start_index, end_index):
-        #with self.bp.if_scope(end_index == start_index + 1):
-        #    return buffer[start_index]
-
-        natural_base = self.bp.Scalar(bangpy.float32, "natural_base", \
-            2.7182818284590452353602874713526624977572470936999)
-        const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
-        max_threshold_valu = self.bp.Scalar(bangpy.float32, "max_threshold_valu")
-        min_threshold_valu = self.bp.Scalar(bangpy.float32, "min_threshold_valu")
-        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的
-        max_threshold_valu.assign(88.722008965395851698332450562653)
-        min_threshold_valu.assign(-87.332719095296162600686375692197)
-        data_length = self.bp.Scalar(bangpy.int32, "data_length", end_index - start_index)#传进来得数据长度
-
-        sub_value = self.bp.Scalar(bangpy.float32, "sub_value")#y-x的差值
-        sum_value = self.bp.Scalar(bangpy.float32, \
-            "sum_value",buffer[start_index].astype(bangpy.float32))#
-        with self.bp.for_range(0, data_length -1) as i:#这里 -1 是为了循环内省掉一个if
-            sub_value.assign(sum_value - buffer [i + 1].astype(bangpy.float32))
-            with self.bp.if_scope(tcp.all(sub_value <= \
-                    max_threshold_valu,sub_value >= min_threshold_valu)):
-                sum_value.assign(self.bp.scalar_pow(natural_base,sub_value)+const_one)
-                sum_value.assign(self.bp.scalar_log(sum_value) / \
-                    self.bp.scalar_log(natural_base))
-                sum_value.assign(sum_value + buffer [i + 1])
-            with self.bp.else_scope():
-                with self.bp.if_scope(sub_value < min_threshold_valu):
-                    sum_value.assign(buffer[i + 1])
-        return sum_value
-
     def get_calc_loop_count(self, dataman):
         return self.bp.Scalar(bangpy.int32, "calc_loop_count", \
             (dataman.m_total_count_in_core + self.nram_process_count - 1) \
@@ -422,6 +392,8 @@ class Logsumexp:
         dim_len = self.para.dim_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
 
+        lc = logsum_calcer(self.bp, self.dtype)
+
         # 1 先看看有没有上个norm残留的尾巴
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", current_core_start % dim_len)
         expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", 0)
@@ -430,7 +402,7 @@ class Logsumexp:
             expect_cp_len.assign(dim_len - norm_offset)
             cp_para = copy_para(self.nram_calc_buffer, 0, gram_tensor, current_core_start)
             self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, expect_cp_len)
-            calc_result = self.calc_norm(self.flat_nram, 0, expect_cp_len)
+            calc_result = lc.calc_buffer(self.flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
             index = get_norm_index(current_core_start + expect_cp_len, dim_len)
             #保存一下
@@ -470,7 +442,7 @@ class Logsumexp:
                 cp_para = copy_para(self.nram_calc_buffer, 0, \
                     gram_tensor, once_loop_start + j * dim_len)
                 self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, dim_len)
-                calc_result = self.calc_norm(self.flat_nram, 0, dim_len)
+                calc_result = lc.calc_buffer(self.flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
                 outputs[start_index + j] = norm_value       # 一个完整的norm算出来了
 
@@ -484,7 +456,7 @@ class Logsumexp:
             cp_para = copy_para(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos)
             self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, \
                 cur_loop_end_pos - norm_loop_end_pos)
-            calc_result = self.calc_norm(self.flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
+            calc_result = lc.calc_buffer(self.flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
             index = get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
             #保存一下
