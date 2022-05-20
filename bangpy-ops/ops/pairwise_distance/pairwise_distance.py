@@ -20,14 +20,11 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-import numpy as np
 
 import bangpy
-from bangpy.tcp.util import round_up, round_down
+from bangpy.tcp.util import round_down
 from bangpy import tcp
-from bangpy.common import utils, load_op_by_type
-from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
-from bangpy.tcp.runtime import TaskType
+from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
@@ -183,9 +180,7 @@ class PairwiseDistance:
                     nram_buffer_in0[:calc_size])
 
 
-    def copy_from_2d_tensor(self, dst, offset_dst, src, offset_src, dim_len, height, width, cp_len):
-        dim_col_count = height // dim_len
-
+    def copy_from_2d_tensor(self, dst, offset_dst, src, offset_src, dim_len, width, cp_len):
         big_row = offset_src // (width * dim_len)
         m = offset_src % dim_len + big_row * dim_len
 
@@ -348,14 +343,11 @@ class PairwiseDistance:
             oper_type.assign(0)
 
         flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
-        '''
-        0 : 要压缩的维度，从中间开始，且比nram还要长
-        1 : 要压缩的维度，从中间开始，比nram小
-        2 : 要压缩的维度，从头开始
-        '''
-        #以上记录一下，是否是从半截开始处理的，如果是，要缓存
 
-        complete_norm_count = self.bp.Scalar(bangpy.int32, "complete_norm_count", 0)
+        #0 : 要压缩的维度，从中间开始，且比nram还要长
+        #1 : 要压缩的维度，从中间开始，比nram小
+        #2 : 要压缩的维度，从头开始
+        #以上记录一下，是否是从半截开始处理的，如果是，要缓存
 
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
         # 确认本次循环要从gram拷贝回nram的数量
@@ -379,7 +371,7 @@ class PairwiseDistance:
                 expect_cp_len.assign(calc_size)
                 # 一口气拷贝不完，那就尽可能多的拷贝.
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
-                    dim_len, self.pdpara.pd_height, self.pdpara.pd_width, expect_cp_len)
+                    dim_len, self.pdpara.pd_width, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
@@ -397,7 +389,7 @@ class PairwiseDistance:
             with self.bp.else_scope():
                 #这个norm可以拷贝完了
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
-                    dim_len, self.pdpara.pd_height, self.pdpara.pd_width, expect_cp_len)
+                    dim_len, self.pdpara.pd_width, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
@@ -418,7 +410,7 @@ class PairwiseDistance:
                 cp_data_len.assign(calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
                     self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                        once_loop_start + expect_cp_len, dim_len, self.pdpara.pd_height, \
+                        once_loop_start + expect_cp_len, dim_len, \
                         self.pdpara.pd_width, cp_data_len)
                     calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
                     norm_value.assign(calc_result)
@@ -443,7 +435,7 @@ class PairwiseDistance:
             #有残留，拷贝过来
             expect_cp_len.assign(dim_len - norm_offset)
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, current_core_start, \
-                dim_len, self.pdpara.pd_height, self.pdpara.pd_width, expect_cp_len)
+                dim_len, self.pdpara.pd_width, expect_cp_len)
             calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
             index = self.get_norm_index(current_core_start + expect_cp_len, dim_len)
@@ -484,7 +476,7 @@ class PairwiseDistance:
                 #先拷贝过来
                 self.copy_from_2d_tensor(self.nram_calc_buffer, \
                     0, gram_tensor, once_loop_start + j * \
-                    dim_len, dim_len, self.pdpara.pd_height, self.pdpara.pd_width, dim_len)
+                    dim_len, dim_len, self.pdpara.pd_width, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
                 outputs[start_index + j] = self.scalar_pow(norm_value, pw) # 一个完整的norm算出来了
@@ -497,7 +489,7 @@ class PairwiseDistance:
         with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
             #拷贝一下数据
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, \
-                dim_len, self.pdpara.pd_height, \
+                dim_len, \
                 self.pdpara.pd_width, cur_loop_end_pos - norm_loop_end_pos)
             calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)

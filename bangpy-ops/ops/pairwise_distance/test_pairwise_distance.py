@@ -158,11 +158,11 @@ def test_pairwise_distance(target, shape, p, eps, keepdim):
     m_ori_input1 = np.random.uniform(low=-5, high=5, size=shape[0])
     m_ori_input2 = np.random.uniform(low=-5, high=5, size=shape[1])
 
+    cpu_ret = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
+        (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()
 
-
-    bp.assert_allclose(torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
-        (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()\
-        , mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)\
+    mlu_ret = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)\
         (m_ori_input1.astype(dtype.as_numpy_dtype), \
-        m_ori_input2.astype(dtype.as_numpy_dtype))\
-        , rtol = 0.01, atol = 0.01)
+        m_ori_input2.astype(dtype.as_numpy_dtype))
+
+    bp.assert_allclose(cpu_ret, mlu_ret, rtol = 0.01, atol = 0.01)
