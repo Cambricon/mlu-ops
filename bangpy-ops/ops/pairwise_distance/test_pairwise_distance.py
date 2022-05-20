@@ -27,9 +27,7 @@ import pytest
 import bangpy as bp
 from bangpy.common import load_op_by_type
 from pairwise_distance import KERNEL_NAME, TARGET_LIST
-
-# 只能用float32格式，为了消除lint，不import了
-#from pairwise_distance import DTYPES
+from pairwise_distance import DTYPES
 
 @pytest.mark.parametrize(
     "shape",
@@ -41,9 +39,9 @@ from pairwise_distance import KERNEL_NAME, TARGET_LIST
 )
 
 
-#@pytest.mark.parametrize(
-#    "dtype", DTYPES,
-#)
+@pytest.mark.parametrize(
+    "dtype", DTYPES,
+)
 
 @pytest.mark.parametrize(
     "p", [1, 2.2, 3.5],
@@ -59,13 +57,10 @@ from pairwise_distance import KERNEL_NAME, TARGET_LIST
 
 
 
-def test_pairwise_distance(target, shape, p, eps, keepdim):
+def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     if target not in TARGET_LIST:
         return
 
-
-
-    dtype = bp.float32
     def mlu_pairwise_distance(p, eps, keepdim):
         def get_total_size(shp):
             size = 1
