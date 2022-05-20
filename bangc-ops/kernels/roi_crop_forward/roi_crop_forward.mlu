@@ -28,12 +28,13 @@
                         int bin_num,
                         cnrtDim3_t *k_dim,
                         cnrtFunctionType_t *k_type){
-  unsigned int cluster_num = mluop::runtime::getClusterLimitCapability(handle);
+  //unsigned int cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   unsigned int core_in_cluster = handle->core_num_per_cluster;
   *k_type = CNRT_FUNC_TYPE_UNION1; 
   k_dim->x = core_in_cluster;
-  unsigned int use_cluster = (bin_num + core_in_cluster -1) / core_in_cluster;
-  k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;
+  //unsigned int use_cluster = (bin_num + core_in_cluster -1) / core_in_cluster;
+  //k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;
+  k_dim->y = 1;
   k_dim->z = 1;
 
 }
@@ -58,15 +59,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(mluOpHandle_t handle,
   PARAM_CHECK_EQ(op_name, input_desc->dtype, grid_desc->dtype);
   PARAM_CHECK_EQ(op_name, input_desc->dtype, output_desc->dtype);
 
-  // check dim 
+  // check dim and layout
   PARAM_CHECK_EQ(op_name, input_desc->dim, 4);
+  PARAM_CHECK(op_name, input_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK_EQ(op_name, grid_desc->dim, 4);
+  PARAM_CHECK(op_name, grid_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK_EQ(op_name, output_desc->dim, 4);
-  if (output_desc->dims[0] != grid_desc->dims[0]) {
-    LOG(ERROR) << op_name << ":Check failed: output_desc->dims[0] should be equal to grid_desc->dims[0].";
+  PARAM_CHECK(op_name, output_desc->layout == MLUOP_LAYOUT_NHWC);
+  if (output_desc->dims[0] != grid_desc->dims[0]||output_desc->dims[1] != grid_desc->dims[1]||output_desc->dims[2] != grid_desc->dims[2]) {
+    LOG(ERROR) << op_name << ":Check failed: output_desc->dims[0]/[1]/[2] should be equal to grid_desc->dims[0]/[1]/[2].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-
+  if (output_desc->dims[3] != input_desc->dims[3]) {
+    LOG(ERROR) << op_name << ":Check failed: output_desc->dims[3] should be equal to input_desc->dims[3].";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (grid_desc->dims[0]!=2)
+  {
+    LOG(ERROR) << op_name << ":Check failed: grid_desc->dims[0] should be equal to 2.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  
     // check 0 element
   if ((mluOpGetTensorElementNum(input_desc) == 0) ||
       (mluOpGetTensorElementNum(grid_desc) == 0) ||
