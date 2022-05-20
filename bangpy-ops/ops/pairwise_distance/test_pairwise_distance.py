@@ -20,25 +20,19 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-from cmath import pi
-from traceback import print_tb
+import math
 import numpy as np
 import torch
 import pytest
-import math
-import random
-import bangpy
 import bangpy as bp
-from bangpy import tcp
-from bangpy.common import utils, load_op_by_type
-from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
-from bangpy.tcp.runtime import TaskType
-from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
+from bangpy.common import load_op_by_type
+from pairwise_distance import KERNEL_NAME, TARGET_LIST
 
-import time
+# 只能用float32格式，为了消除lint，不import了
+#from pairwise_distance import DTYPES
 
 @pytest.mark.parametrize(
-    "shape", 
+    "shape",
     [
         [(1, 2, 10241 * 100 ), (1, 2, 10241 * 100)],
         [(2, 3, 5, 4 ), (5, 4,)],
@@ -46,9 +40,10 @@ import time
     ],
 )
 
-@pytest.mark.parametrize(
-    "dtype", DTYPES,
-)
+
+#@pytest.mark.parametrize(
+#    "dtype", DTYPES,
+#)
 
 @pytest.mark.parametrize(
     "p", [1, 2.2, 3.5],
@@ -62,13 +57,11 @@ import time
     "keepdim", [False, True],
 )
 
-
-
-
-def test_pairwise_distance(target, shape, p, eps, keepdim, dtype): 
+def test_pairwise_distance(target, shape, p, eps, keepdim):
     if target not in TARGET_LIST:
-        return 
+        return
 
+    dtype = bp.float32
     def mlu_pairwise_distance(p, eps, keepdim):
         def get_total_size(shp):
             size = 1
@@ -84,7 +77,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             else:
                 _shape1 = b.shape
                 _shape2 = a.shape
-            
+
             _dev = bp.device(0)
 
             shp_len = len(_shape1)
@@ -102,7 +95,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 pass
             else:
                 for i in range(dim_index + 1, shp_len):
-                    _pd_width *= _shape1[i] 
+                    _pd_width *= _shape1[i]
 
             # mlu 输入
             _mlu_input1 = bp.Array(a.flatten(), _dev)
@@ -125,13 +118,12 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             # 调用mlu
             func = load_op_by_type(KERNEL_NAME, dtype.name)
             func(_mlu_input1, _mlu_input2,
-                 _mlu_paras, 
+                 _mlu_paras,
                  get_total_size(_shape1), get_total_size(_shape2),
                  _pd_len, _pd_height, _pd_width, _output_len
                  , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
 
             result = _mlu_output.numpy()
-            result_border = _mlu_border_output.numpy()
             result_border_idx = _mlu_border_idx_output.numpy()
 
             #收尾
@@ -143,15 +135,19 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 if item >= 0:
                     result[item] = math.pow(result[item], 1 / p)
 
-            outputshape = []
-            if keepdim:
-                for item in _shape1:
-                    outputshape.append(item)
-                outputshape[dim_index] = 1
-            else:
-                for i in range(0, len(_shape1) - 1):
-                    outputshape.append(_shape1[i])
 
+            def create_output_shape(shp, dim_idx):
+                outputshape = []
+                if keepdim:
+                    for item in shp:
+                        outputshape.append(item)
+                    outputshape[dim_idx] = 1
+                else:
+                    for i in range(0, len(shp) - 1):
+                        outputshape.append(shp[i])
+                return outputshape
+
+            outputshape = create_output_shape(_shape1, dim_index)
             ret = result.reshape(outputshape)
             return ret
 
@@ -161,21 +157,13 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     _ori_input1 = np.random.uniform(low=-5, high=5, size=shape[0])
     _ori_input2 = np.random.uniform(low=-5, high=5, size=shape[1])
 
-    
+
     pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
-    mlu_ret = pdist(_ori_input1.astype(dtype.as_numpy_dtype), _ori_input2.astype(dtype.as_numpy_dtype))
-    
+    mlu_ret = pdist(_ori_input1.astype(dtype.as_numpy_dtype), \
+        _ori_input2.astype(dtype.as_numpy_dtype))
 
-    print("ori 1", _ori_input1)
-    print("ori 2", _ori_input2)
-
-    cpu_start = time.time()
     pdist = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
     tensor1 = torch.Tensor(_ori_input1)
     tensor2 = torch.Tensor(_ori_input2)
     cpu_ret = pdist(tensor1, tensor2)
-    print("mlu->",mlu_ret)
-    print("cpu->",cpu_ret)
-    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
-    
-
+    bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
