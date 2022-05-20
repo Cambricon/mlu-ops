@@ -115,8 +115,8 @@ class PairwiseDistance(object):
                 self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
                 self.bp.abs(nram_buffer_in0, nram_buffer_in0)
 
-                # 先加上eps
-                eps = self.bp.Scalar(name='input_eps', dtype=self.dtype, value=self.nram_pd_paras[1])
+                # 先减去eps
+                eps = self.bp.Scalar(name='input_eps', dtype=self.dtype, value=-self.nram_pd_paras[1])
                 self.bp.add(nram_buffer_in0, nram_buffer_in0, eps)
 
                 # 求指数
@@ -224,7 +224,7 @@ class PairwiseDistance(object):
         with self.bp.if_scope(self.pd_len > self.nram_process_count):
             self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
         with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
-            with self.bp.if_scope(self.len_tensor1 // self.task_num < self.pd_len):
+            with self.bp.if_scope(self.len_tensor1 // self.task_num + 1 < self.pd_len): #加个1，考虑到不能整除的情况
                 self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
             with self.bp.else_scope():
                 self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
