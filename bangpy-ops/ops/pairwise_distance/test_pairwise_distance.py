@@ -57,9 +57,13 @@ from pairwise_distance import KERNEL_NAME, TARGET_LIST
     "keepdim", [False, True],
 )
 
+
+
 def test_pairwise_distance(target, shape, p, eps, keepdim):
     if target not in TARGET_LIST:
         return
+
+
 
     dtype = bp.float32
     def mlu_pairwise_distance(p, eps, keepdim):
@@ -80,21 +84,20 @@ def test_pairwise_distance(target, shape, p, eps, keepdim):
 
             _dev = bp.device(0)
 
-            shp_len = len(_shape1)
-            dim_index = shp_len - 1
+            dim_index = len(_shape1) - 1
 
             # mlu 输入参数
-            _pd_len = _shape1[shp_len - 1]
+            _pd_len = _shape1[len(_shape1) - 1]
             _pd_height = 1
             _pd_width = 1
 
             for i in range(0, dim_index + 1):
                 _pd_height *= _shape1[i]
 
-            if dim_index == shp_len - 1:
+            if dim_index == len(_shape1) - 1:
                 pass
             else:
-                for i in range(dim_index + 1, shp_len):
+                for i in range(dim_index + 1, len(_shape1)):
                     _pd_width *= _shape1[i]
 
             # mlu 输入
@@ -153,17 +156,15 @@ def test_pairwise_distance(target, shape, p, eps, keepdim):
 
         return f
 
-    #print("current_shape->",shape)
-    _ori_input1 = np.random.uniform(low=-5, high=5, size=shape[0])
-    _ori_input2 = np.random.uniform(low=-5, high=5, size=shape[1])
+
+    m_ori_input1 = np.random.uniform(low=-5, high=5, size=shape[0])
+    m_ori_input2 = np.random.uniform(low=-5, high=5, size=shape[1])
 
 
-    pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
-    mlu_ret = pdist(_ori_input1.astype(dtype.as_numpy_dtype), \
-        _ori_input2.astype(dtype.as_numpy_dtype))
 
-    pdist = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
-    tensor1 = torch.Tensor(_ori_input1)
-    tensor2 = torch.Tensor(_ori_input2)
-    cpu_ret = pdist(tensor1, tensor2)
-    bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+    bp.assert_allclose(torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
+        (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()\
+        , mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)\
+        (m_ori_input1.astype(dtype.as_numpy_dtype), \
+        m_ori_input2.astype(dtype.as_numpy_dtype))\
+        , rtol = 0.01, atol = 0.01)
