@@ -58,7 +58,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
     for s in shape:
         total_input_len *= s
 
-    input_tensor = np.random.uniform(low=-0, high=0, size=shape).astype(dtype.as_numpy_dtype)
+    input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
     def get_total_size(shp):
         size = 1
         for s in shp:
