@@ -26,8 +26,10 @@ import torch
 import pytest
 import bangpy as bp
 from bangpy.common import load_op_by_type
-from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
+from pairwise_distance import KERNEL_NAME, TARGET_LIST
 
+# 只能用float32格式，为了消除lint，不import了
+#from pairwise_distance import DTYPES
 
 @pytest.mark.parametrize(
     "shape",
@@ -38,9 +40,10 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
     ],
 )
 
-@pytest.mark.parametrize(
-    "dtype", DTYPES,
-)
+
+#@pytest.mark.parametrize(
+#    "dtype", DTYPES,
+#)
 
 @pytest.mark.parametrize(
     "p", [1, 2.2, 3.5],
@@ -54,10 +57,11 @@ from pairwise_distance import DTYPES, KERNEL_NAME, TARGET_LIST
     "keepdim", [False, True],
 )
 
-def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
+def test_pairwise_distance(target, shape, p, eps, keepdim):
     if target not in TARGET_LIST:
         return
 
+    dtype = bp.float32
     def mlu_pairwise_distance(p, eps, keepdim):
         def get_total_size(shp):
             size = 1
@@ -131,15 +135,19 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 if item >= 0:
                     result[item] = math.pow(result[item], 1 / p)
 
-            outputshape = []
-            if keepdim:
-                for item in _shape1:
-                    outputshape.append(item)
-                outputshape[dim_index] = 1
-            else:
-                for i in range(0, len(_shape1) - 1):
-                    outputshape.append(_shape1[i])
 
+            def create_output_shape(shp, dim_idx):
+                outputshape = []
+                if keepdim:
+                    for item in shp:
+                        outputshape.append(item)
+                    outputshape[dim_idx] = 1
+                else:
+                    for i in range(0, len(shp) - 1):
+                        outputshape.append(shp[i])
+                return outputshape
+
+            outputshape = create_output_shape(_shape1, dim_index)
             ret = result.reshape(outputshape)
             return ret
 
