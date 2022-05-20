@@ -150,9 +150,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim):
                         outputshape.append(shp[i])
                 return outputshape
 
-            outputshape = create_output_shape(_shape1, dim_index)
-            ret = result.reshape(outputshape)
-            return ret
+            return result.reshape(create_output_shape(_shape1, dim_index))
 
         return f
 
