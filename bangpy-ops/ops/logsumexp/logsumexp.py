@@ -29,6 +29,7 @@ DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "Logsumexp"#算子名
 
+
 class data_man:
     bp = None
 
@@ -151,24 +152,12 @@ class logsumexp_para:
 
     calc_size = None
 
-    def run(self):
-        pass
-
-    def run2(self):
-        pass
-
 class copy_para:
     def __init__(self, dst, offset_d, src, offset_s):
         self.dst = dst
         self.offset_dst = offset_d
         self.src = src
         self.offset_src = offset_s
-
-    def run(self):
-        pass
-
-    def run2(self):
-        pass
 
 class Logsumexp:
     def __init__(self, dtype, target, task_num):

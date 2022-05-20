@@ -20,27 +20,22 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-from cmath import pi
-from traceback import print_tb
 import numpy as np
 import torch
 import pytest
-import math
 
-import bangpy
 import bangpy as bp
-from bangpy import tcp
-from bangpy.common import utils, load_op_by_type
-from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
-from bangpy.tcp.runtime import TaskType
+from bangpy.common import load_op_by_type
 from renorm import DTYPES, KERNEL_NAME, TARGET_LIST
 
-import time
-
 @pytest.mark.parametrize(
-    "shape", 
-    [        
-        (1, 3, 5, 3)
+    "shape",
+    [
+        (4, 4, 3, 2, 1),
+        (1, 1, 1, 1, 1),
+        (1, 3 * 11, 3, 1, 1),
+        (6, 2, 4, 1, 5),
+        (6, 2, 4, 7, 5),
     ],
 )
 
@@ -49,20 +44,20 @@ import time
 )
 
 @pytest.mark.parametrize(
-    "p", [1.3],
+    "p", [2.2, 3.3, 1],
 )
 
 @pytest.mark.parametrize(
-    "dim", [1],
+    "dim", [0, 1, 2, 3, 4, -3],
 )
 
 @pytest.mark.parametrize(
-    "maxnorm", [15.0],
+    "maxnorm", [1.0, 5.0],
 )
 
 
 
-def test_renorm(target, shape, p, dim, dtype, maxnorm): 
+def test_renorm(target, shape, p, dim, dtype, maxnorm):
     if target not in TARGET_LIST:
         return
 
@@ -70,12 +65,11 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
     for s in shape:
         total_input_len *= s
 
-    input_tensor = np.random.uniform(low=1, high=3, size=shape).astype(dtype.as_numpy_dtype)
-    
+    input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+
     # 准备mlu计算
     dev = bp.device(0)
 
-    mlu_start = time.time()
 
     flat_input = input_tensor.flatten()
     mlu_input = bp.Array(flat_input, dev)
@@ -88,7 +82,7 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
 
     if dim < 0 or dim >= len(shape):
         print("dim err!")
-        return None
+        return
 
     h = 1
     for i in range(dim):
@@ -105,17 +99,8 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
     result = mlu_output.numpy()
     mlu_ret = result.reshape(shape)
 
-    print('mlu cost ', time.time() - mlu_start)
-    print(mlu_ret)
-
-    
-    print("============torch calc==================")
 
     x = torch.Tensor(input_tensor)
-    cpu_start = time.time()
     cpu_ret = torch.renorm(x, p, dim, maxnorm)
-    print('cpu cost ', time.time() - cpu_start)
-    print(cpu_ret)
 
-    bangpy.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
-    
+    bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
