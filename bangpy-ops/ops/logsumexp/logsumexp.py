@@ -239,7 +239,7 @@ class Logsumexp:
                 gram_border_idx_out, gram_buffer_out)
         with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
             with self.bp.if_scope((self.para.h * self.para.w)  \
-                    // self.para.task_num < self.para.dim_len):
+                    // self.para.task_num + 1 < self.para.dim_len): #之所以要加1，因为考虑不能整除情况，有的核会分配的多一些
                 self.calc1(gram_reshape_tensor, gram_border_buf_out, \
                     gram_border_idx_out, gram_buffer_out)
             with self.bp.else_scope():
