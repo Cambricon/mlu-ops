@@ -67,6 +67,22 @@ class data_man:
 
 dman = data_man()
 
+class pd_para:
+    len_tensor1 = None
+    len_tensor2 = None
+
+    pd_len = None
+    pd_height = None
+    pd_width = None
+
+    output_len = None
+
+    def run(self):
+        pass
+
+    def run2(self):
+        pass
+
 
 class PairwiseDistance:
     def __init__(self, dtype, target, task_num):
@@ -76,7 +92,9 @@ class PairwiseDistance:
         self.dtype_sz = dtype.bytes
         self.bp = tcp.TCP(target)
 
-    def sub_tensor(self, t1, t2, len_t1, len_t2):
+        self.pdpara = pd_para()
+
+    def sub_tensor(self, t1, t2, len_t2):
         nram_avable_size = round_down( (TARGET(self.target).nram_size - 30 * 1024) // 2, 128)
         nram_process_count = nram_avable_size // self.dtype_sz
 
@@ -89,8 +107,6 @@ class PairwiseDistance:
         nram_buffer_in0 = nram_buffer_in[0][:]
         nram_buffer_in1 = nram_buffer_in[1][:]
 
-
-        current_core_start = dman.m_current_core_start
         total_count_in_core = dman.m_total_count_in_core
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
 
@@ -106,7 +122,7 @@ class PairwiseDistance:
                 with self.bp.if_scope(calc_size == 0):
                     calc_size.assign(nram_process_count)
 
-            once_loop_start.assign(current_core_start + \
+            once_loop_start.assign(dman.m_current_core_start + \
                 nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
 
             with self.bp.block("data_copy"):
@@ -135,7 +151,7 @@ class PairwiseDistance:
                     body_cp_count = self.bp.Scalar(bangpy.int32, "body_cp_count", \
                         (calc_size - head_len) // len_t2)
 
-                    with self.bp.for_range(0, body_cp_count) as j:
+                    with self.bp.for_range(0, body_cp_count):
                         self.bp.memcpy(nram_buffer_in1[total_offset:total_offset \
                             + len_t2], t2[0:len_t2])
                         total_offset.assign(total_offset + len_t2)
@@ -198,21 +214,21 @@ class PairwiseDistance:
         dman.init(self.bp)
         self.bp.launch_task(self.task_num, 1, 1)
 
-        self.len_tensor1 = self.bp.SizeVar("len_tensor1")
-        self.len_tensor2 = self.bp.SizeVar("len_tensor2")
+        self.pdpara.len_tensor1 = self.bp.SizeVar("len_tensor1")
+        self.pdpara.len_tensor2 = self.bp.SizeVar("len_tensor2")
 
-        self.pd_len = self.bp.SizeVar("pd_len")
-        self.pd_height = self.bp.SizeVar("pd_height")
-        self.pd_width = self.bp.SizeVar("pd_width")
+        self.pdpara.pd_len = self.bp.SizeVar("pd_len")
+        self.pdpara.pd_height = self.bp.SizeVar("pd_height")
+        self.pdpara.pd_width = self.bp.SizeVar("pd_width")
 
-        self.output_len = self.bp.SizeVar("output_len")
+        self.pdpara.output_len = self.bp.SizeVar("output_len")
 
         gram_tensor1 = self.bp.Buffer(
-            shape=(self.len_tensor1, ), name="gram_tensor1", dtype=self.dtype, scope="global"
+            shape=(self.pdpara.len_tensor1, ), name="gram_tensor1", dtype=self.dtype, scope="global"
         )
 
         gram_tensor2 = self.bp.Buffer(
-            shape=(self.len_tensor2, ), name="gram_tensor2", dtype=self.dtype, scope="global"
+            shape=(self.pdpara.len_tensor2, ), name="gram_tensor2", dtype=self.dtype, scope="global"
         )
 
         gram_paras = self.bp.Buffer(
@@ -220,7 +236,8 @@ class PairwiseDistance:
         )
 
         gram_buffer_out = self.bp.Buffer(
-            shape=(self.output_len, ), name="gram_buffer_out", dtype=self.dtype, scope="global"
+            shape=(self.pdpara.output_len, ), \
+            name="gram_buffer_out", dtype=self.dtype, scope="global"
         )
 
         border_array_size = 128
@@ -246,13 +263,14 @@ class PairwiseDistance:
             dtype=self.dtype,
             scope="nram")
 
-        dman.calc_core_process_count(self.len_tensor1, self.task_num)
+        dman.calc_core_process_count(self.pdpara.len_tensor1, self.task_num)
 
-        self.sub_tensor(gram_tensor1, gram_tensor2, self.len_tensor1, self.len_tensor2)
+        self.sub_tensor(gram_tensor1, gram_tensor2, self.pdpara.len_tensor2)
         self.bp.sync_all()
 
         with self.bp.if_scope(self.bp.taskId == 0):
-            gram_reshape_tensor = gram_tensor1.reshape([self.pd_height, self.pd_width])
+            gram_reshape_tensor = gram_tensor1.\
+            reshape([self.pdpara.pd_height, self.pdpara.pd_width])
         self.bp.sync_all()
 
         nram_avable_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
@@ -263,12 +281,12 @@ class PairwiseDistance:
             dtype=self.dtype,
             scope="nram")
 
-        with self.bp.if_scope(self.pd_len > self.nram_process_count):
+        with self.bp.if_scope(self.pdpara.pd_len > self.nram_process_count):
             self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, \
                 gram_border_idx_out, gram_buffer_out)
         with self.bp.else_scope(): #nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
-            with self.bp.if_scope(self.len_tensor1 // \
-            self.task_num + 1 < self.pd_len): #加个1，考虑到不能整除的情况
+            with self.bp.if_scope(self.pdpara.len_tensor1 // \
+            self.task_num + 1 < self.pdpara.pd_len): #加个1，考虑到不能整除的情况
                 self.calc_pairwise_distance1(gram_reshape_tensor, \
                     gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
             with self.bp.else_scope():
@@ -293,9 +311,9 @@ class PairwiseDistance:
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor1, gram_tensor2, gram_paras,
-                    self.len_tensor1, self.len_tensor2,
-                    self.pd_len, self.pd_height, self.pd_width,
-                    self.output_len
+                    self.pdpara.len_tensor1, self.pdpara.len_tensor2,
+                    self.pdpara.pd_len, self.pdpara.pd_height, self.pdpara.pd_width,
+                    self.pdpara.output_len
                     ],
             outputs=[gram_border_buf_out, gram_border_idx_out, gram_buffer_out],
             kernel_name=KERNEL_NAME
@@ -321,7 +339,7 @@ class PairwiseDistance:
 
         pw = self.bp.Scalar(self.dtype, "pw", 1 / self.nram_pd_paras[0])
 
-        dim_len = self.pd_len
+        dim_len = self.pdpara.pd_len
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", \
             current_core_start % dim_len)
         with self.bp.if_scope(norm_offset == 0):
@@ -361,7 +379,7 @@ class PairwiseDistance:
                 expect_cp_len.assign(calc_size)
                 # 一口气拷贝不完，那就尽可能多的拷贝.
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
-                    dim_len, self.pd_height, self.pd_width, expect_cp_len)
+                    dim_len, self.pdpara.pd_height, self.pdpara.pd_width, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
@@ -379,7 +397,7 @@ class PairwiseDistance:
             with self.bp.else_scope():
                 #这个norm可以拷贝完了
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
-                    dim_len, self.pd_height, self.pd_width, expect_cp_len)
+                    dim_len, self.pdpara.pd_height, self.pdpara.pd_width, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
@@ -400,8 +418,8 @@ class PairwiseDistance:
                 cp_data_len.assign(calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
                     self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                        once_loop_start + expect_cp_len, dim_len, self.pd_height, \
-                        self.pd_width, cp_data_len)
+                        once_loop_start + expect_cp_len, dim_len, self.pdpara.pd_height, \
+                        self.pdpara.pd_width, cp_data_len)
                     calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
                     norm_value.assign(calc_result)
                     with self.bp.if_scope(i == calc_loop_count - 1): # 最后一个循环了
@@ -412,7 +430,7 @@ class PairwiseDistance:
     def calc_pairwise_distance2(self, gram_tensor, border_outputs, idx_outputs, outputs):
         current_core_start = dman.m_current_core_start
         total_count_in_core = dman.m_total_count_in_core
-        dim_len = self.pd_len
+        dim_len = self.pdpara.pd_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
         pw = self.bp.Scalar(self.dtype, "pw", 1 / self.nram_pd_paras[0])
 
@@ -425,7 +443,7 @@ class PairwiseDistance:
             #有残留，拷贝过来
             expect_cp_len.assign(dim_len - norm_offset)
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, current_core_start, \
-                dim_len, self.pd_height, self.pd_width, expect_cp_len)
+                dim_len, self.pdpara.pd_height, self.pdpara.pd_width, expect_cp_len)
             calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
             index = self.get_norm_index(current_core_start + expect_cp_len, dim_len)
@@ -466,7 +484,7 @@ class PairwiseDistance:
                 #先拷贝过来
                 self.copy_from_2d_tensor(self.nram_calc_buffer, \
                     0, gram_tensor, once_loop_start + j * \
-                    dim_len, dim_len, self.pd_height, self.pd_width, dim_len)
+                    dim_len, dim_len, self.pdpara.pd_height, self.pdpara.pd_width, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
                 outputs[start_index + j] = self.scalar_pow(norm_value, pw) # 一个完整的norm算出来了
@@ -479,7 +497,8 @@ class PairwiseDistance:
         with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
             #拷贝一下数据
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, \
-                dim_len, self.pd_height, self.pd_width, cur_loop_end_pos - norm_loop_end_pos)
+                dim_len, self.pdpara.pd_height, \
+                self.pdpara.pd_width, cur_loop_end_pos - norm_loop_end_pos)
             calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
             index = self.get_norm_index(norm_loop_end_pos + 1, dim_len) #加个1，表示跳到下一个了
