@@ -30,7 +30,7 @@ TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "LogAddExp" #算子名
 
 
-class LogAddExp(object):
+class LogAddExp:
     """Operator description:
     Add the data in the two buffers.
     """
@@ -92,7 +92,7 @@ class LogAddExp(object):
     def compute_body(self):
         # calculate split strategy
         # gets the data length to be calculated for each task
-        one_core_count = self.bp.Scalar(bangpy.int32,"one_core_count")
+        one_core_count = self.bp.Scalar(bangpy.int32,"one_core_count",self.length // self.task_num)
         remain =  self.bp.Scalar(bangpy.int32,"remain")
         current_core_start = self.bp.Scalar(bangpy.int32,"current_core_start") #当前核心数据开始索引
         current_core_end = self.bp.Scalar(bangpy.int32,"current_core_end") #当前核心数据结束索引
@@ -103,7 +103,7 @@ class LogAddExp(object):
         nram_avable_size = round_down(
             (TARGET(self.target).nram_size - 40* 1024) // 8 ,128
         )#self.bp.Scalar(bangpy.int32,"nram_avable_size")
-        one_core_count.assign(self.length // self.task_num)#每个核均摊计算量（按索引分）
+        # one_core_count.assign()#每个核均摊计算量（按索引分）
         remain.assign(self.length % self.task_num)#分任务时的余数
         process_count = nram_avable_size // self.dtype_sz #核心一次最多计算的长度
         with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
