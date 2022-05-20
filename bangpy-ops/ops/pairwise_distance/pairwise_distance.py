@@ -23,30 +23,58 @@
 import numpy as np
 
 import bangpy
-import bangpy as bp
 from bangpy.tcp.util import round_up, round_down
 from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
 
-import sys
-sys.path.append("..")
-from data_man import *
-
 DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "PairwiseDistance"#算子名
 
+class data_man:
+    bp = None
 
-class PairwiseDistance(object):
+    m_current_core_start = None
+    m_current_core_end = None
+    m_total_count_in_core = None
+
+    def init(self, bp):
+        self.bp = bp
+        self.m_current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
+        self.m_current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")
+        self.m_total_count_in_core = self.bp.Scalar(bangpy.int32, "total_count_in_core")
+
+    def calc_core_process_count(self, data_total_len, task_num):
+        one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count")
+        one_core_count.assign(data_total_len // task_num)
+
+        remain = self.bp.Scalar(bangpy.int32, "remain")
+        remain.assign(data_total_len % task_num)
+
+        with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
+            self.m_current_core_start.assign((one_core_count + 1) * self.bp.taskId )
+            self.m_current_core_end.assign((one_core_count + 1) * \
+                (self.bp.taskId + 1) - 1) #此处应该不需要减1 待验证  python切片会自动将上标减1
+        with self.bp.else_scope():
+            self.m_current_core_start.assign((one_core_count + 1) * \
+                remain + one_core_count * (self.bp.taskId - remain))
+            self.m_current_core_end.assign((one_core_count + 1) * remain + \
+                one_core_count * (self.bp.taskId - remain) + one_core_count - 1)
+
+        self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
+
+dman = data_man()
+
+
+class PairwiseDistance:
     def __init__(self, dtype, target, task_num):
         self.dtype = dtype
         self.target = target
         self.task_num = task_num
         self.dtype_sz = dtype.bytes
         self.bp = tcp.TCP(target)
-        self._data_man = data_man()
 
     def sub_tensor(self, t1, t2, len_t1, len_t2):
         nram_avable_size = round_down( (TARGET(self.target).nram_size - 30 * 1024) // 2, 128)
@@ -62,8 +90,8 @@ class PairwiseDistance(object):
         nram_buffer_in1 = nram_buffer_in[1][:]
 
 
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
+        current_core_start = dman.m_current_core_start
+        total_count_in_core = dman.m_total_count_in_core
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
 
         calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
@@ -167,7 +195,7 @@ class PairwiseDistance(object):
         return self.bp.scalar_pow(value, p)
 
     def compute_body(self):
-        self._data_man.init(self.bp)
+        dman.init(self.bp)
         self.bp.launch_task(self.task_num, 1, 1)
 
         self.len_tensor1 = self.bp.SizeVar("len_tensor1")
@@ -218,7 +246,7 @@ class PairwiseDistance(object):
             dtype=self.dtype,
             scope="nram")
 
-        self._data_man.calc_core_process_count(self.len_tensor1, self.task_num)
+        dman.calc_core_process_count(self.len_tensor1, self.task_num)
 
         self.sub_tensor(gram_tensor1, gram_tensor2, self.len_tensor1, self.len_tensor2)
         self.bp.sync_all()
@@ -280,8 +308,8 @@ class PairwiseDistance(object):
 
     def calc_pairwise_distance1(self, gram_tensor, border_outputs, \
         idx_outputs, outputs):# nram 一次还存不下一个元素
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
+        current_core_start = dman.m_current_core_start
+        total_count_in_core = dman.m_total_count_in_core
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", \
             (total_count_in_core + self.nram_process_count - 1) // \
             self.nram_process_count)
@@ -382,8 +410,8 @@ class PairwiseDistance(object):
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1
 
     def calc_pairwise_distance2(self, gram_tensor, border_outputs, idx_outputs, outputs):
-        current_core_start = self._data_man._current_core_start
-        total_count_in_core = self._data_man._total_count_in_core
+        current_core_start = dman.m_current_core_start
+        total_count_in_core = dman.m_total_count_in_core
         dim_len = self.pd_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
         pw = self.bp.Scalar(self.dtype, "pw", 1 / self.nram_pd_paras[0])
@@ -464,6 +492,3 @@ def build_pairwisedistance(dtype=None, target=None):
     task_num = 32
     f = PairwiseDistance(dtype, target, task_num).compute_body()
     return f
-
-
-
