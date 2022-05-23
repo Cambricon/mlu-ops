@@ -28,13 +28,12 @@
                         int bin_num,
                         cnrtDim3_t *k_dim,
                         cnrtFunctionType_t *k_type){
-  //unsigned int cluster_num = mluop::runtime::getClusterLimitCapability(handle);
+  unsigned int cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   unsigned int core_in_cluster = handle->core_num_per_cluster;
   *k_type = CNRT_FUNC_TYPE_UNION1; 
   k_dim->x = core_in_cluster;
-  //unsigned int use_cluster = (bin_num + core_in_cluster -1) / core_in_cluster;
-  //k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;
-  k_dim->y = 1;
+  unsigned int use_cluster = (bin_num + core_in_cluster -1) / core_in_cluster;
+  k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;
   k_dim->z = 1;
 
 }
@@ -49,6 +48,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(mluOpHandle_t handle,
   //check params
   const std::string op_name = "[mluOpRoiCropForward]";
 
+  // check 0 element
+  if ((mluOpGetTensorElementNum(input_desc) == 0) ||
+      (mluOpGetTensorElementNum(grid_desc) == 0) ||
+      (mluOpGetTensorElementNum(output_desc) == 0)) {
+    VLOG(5) << op_name << " skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
+  }
+  int input_dims = input_desc->dims[0]*input_desc->dims[1]*input_desc->dims[2]*input_desc->dims[3];
+  PARAM_CHECK(op_name,input_dims != 0);
+  int grid_dims = grid_desc->dims[0]*grid_desc->dims[1]*grid_desc->dims[2]*grid_desc->dims[3];
+  PARAM_CHECK(op_name,grid_dims != 0);
+  int output_dims = output_desc->dims[0]*output_desc->dims[1]*output_desc->dims[2]*output_desc->dims[3];
+  PARAM_CHECK(op_name,output_dims != 0);
+
   // check descriptor
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, input_desc != NULL);
@@ -58,6 +71,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(mluOpHandle_t handle,
   // check dtype equal
   PARAM_CHECK_EQ(op_name, input_desc->dtype, grid_desc->dtype);
   PARAM_CHECK_EQ(op_name, input_desc->dtype, output_desc->dtype);
+  PARAM_CHECK(op_name, input_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grid_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, output_desc->dtype == MLUOP_DTYPE_FLOAT);
 
   // check dim and layout
   PARAM_CHECK_EQ(op_name, input_desc->dim, 4);
@@ -74,19 +90,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(mluOpHandle_t handle,
     LOG(ERROR) << op_name << ":Check failed: output_desc->dims[3] should be equal to input_desc->dims[3].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (grid_desc->dims[0]!=2)
+  if (grid_desc->dims[3]!=2)
   {
-    LOG(ERROR) << op_name << ":Check failed: grid_desc->dims[0] should be equal to 2.";
+    LOG(ERROR) << op_name << ":Check failed: grid_desc->dims[3] should be equal to 2.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   
-    // check 0 element
-  if ((mluOpGetTensorElementNum(input_desc) == 0) ||
-      (mluOpGetTensorElementNum(grid_desc) == 0) ||
-      (mluOpGetTensorElementNum(output_desc) == 0)) {
-    VLOG(5) << op_name << " skip zero element tensor.";
-    return MLUOP_STATUS_SUCCESS;
-  }
   // check device pointer
   PARAM_CHECK(op_name, input != NULL);
   PARAM_CHECK(op_name, grid != NULL);
