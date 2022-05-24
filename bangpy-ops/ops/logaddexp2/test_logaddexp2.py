@@ -19,7 +19,6 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
 import numpy as np
 import pytest
 import bangpy
@@ -38,7 +37,7 @@ def cal_diff(result, data_out):
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
 @pytest.mark.parametrize(
-    "shape", [(2**10),(2**18-1), 2**20],
+    "shape", [(2**10),(2**18-1), (2**20), (2**26)],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -46,22 +45,17 @@ def cal_diff(result, data_out):
 def test_logaddexp2(target, shape, dtype):
     if target not in TARGET_LIST:
         return
-    data_in0 = np.random.randint(low=0, high=32, size=shape).astype(dtype.as_numpy_dtype)
-    data_in1 = np.random.randint(low=0, high=32, size=shape).astype(dtype.as_numpy_dtype)
-
-    data_out = np.logaddexp2(data_in0, data_in1)
     dev = bangpy.device(0)
-    # set I/O data
+
+    # set data
+    data_in0 = np.random.randint(low=-200, high=-190, size=shape).astype(dtype.as_numpy_dtype)
+    data_in1 = np.random.randint(low=-200, high=-190, size=shape).astype(dtype.as_numpy_dtype)
+    data_out = np.logaddexp2(data_in0, data_in1)
     data_in0_dev = bangpy.Array(data_in0, dev)
     data_in1_dev = bangpy.Array(data_in1, dev)
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
+
+    # calculate
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     f1(data_in0_dev, data_in1_dev, data_out_dev)
-    # print("data_in0_dev")
-    # print(data_in0_dev.numpy())
-    # print("data_in1_dev")
-    # print(data_in1_dev.numpy())
-    # print("data_out_dev")
-    # print(data_out_dev.numpy())
-    # bangpy.assert_allclose(data_out_dev.numpy(), data_out)
     cal_diff(data_out, data_out_dev.numpy())
