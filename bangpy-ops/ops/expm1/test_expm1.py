@@ -47,6 +47,7 @@ def test_expm1(target, shape, dtype):
     if target not in TARGET_LIST:
         return
     data_in = np.random.uniform(low=0.1, high=1, size=shape)
+    cpu_start = time.time()
     data_out = np.expm1(data_in.astype(dtype.as_numpy_dtype))
     dev = bangpy.device(0)
     # set I/O data
@@ -58,7 +59,7 @@ def test_expm1(target, shape, dtype):
         data_out_dev
     )
     evaluator = f1.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
-    latency = evaluator(data_in_dev, data_out_dev).mean
+    latency = evaluator(data_in_dev, shape[0], shape[1], shape[2], shape[3], data_out_dev).mean
     print("expm1: " + str(latency) + "s")
     bangpy.assert_allclose(
         data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=3e-3, atol=3e-3
