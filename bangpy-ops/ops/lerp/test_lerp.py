@@ -21,7 +21,7 @@
 # pylint: disable=useless-object-inheritance, too-many-instance-attributes
 # pylint: disable=attribute-defined-outside-init, too-many-statements
 # pylint: disable=too-many-arguments, too-many-locals
-"""Expm1 operator implementation using BANGPy TCP API."""
+"""Lerp operator implementation using BANGPy TCP API."""
 import numpy as np
 import pytest
 
@@ -30,42 +30,51 @@ from bangpy import tcp
 from bangpy.common import utils, load_op_by_type
 from bangpy.platform.bang_config import ALIGN_LENGTH, TARGET
 from bangpy.tcp.runtime import TaskType
-from expm1 import DTYPES, KERNEL_NAME, TARGET_LIST
-import time
+from lerp import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 @pytest.mark.parametrize(
     "shape",
     [
-        (20, 4, 4096, 4096),
+        (20, 4, 4096, 2048),
     ],
 )
 @pytest.mark.parametrize(
     "dtype", [bangpy.float32],
 )
-def test_expm1(target, shape, dtype):
+def test_lerp(target, shape, dtype):
     if target not in TARGET_LIST:
         return
-    data_in = np.random.uniform(low=0.1, high=1, size=shape)
-    cpu_start = time.time()
-    data_out = np.expm1(data_in.astype(dtype.as_numpy_dtype))
+    data_start = np.random.uniform(low=0.1, high=1, size=shape)
+    data_end = np.random.uniform(low=0.1, high=1, size=shape)
+    data_weight = np.random.uniform(low=0.1, high=1, size=shape)
+
+    data_tmp = np.subtract(data_end, data_start)
+    data_tmp = np.multiply(data_tmp, data_weight)
+    data_out = np.add(data_start, data_tmp)
+
     dev = bangpy.device(0)
     # set I/O data
-    data_in_dev = bangpy.Array(data_in.astype(dtype.as_numpy_dtype), dev)
+    data_start_dev = bangpy.Array(data_start.astype(dtype.as_numpy_dtype), dev)
+    data_end_dev = bangpy.Array(data_end.astype(dtype.as_numpy_dtype), dev)
+    data_weight_dev = bangpy.Array(data_weight.astype(dtype.as_numpy_dtype), dev)
+
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     f1(
-        data_in_dev,
+        data_start_dev,
+        data_end_dev,
+        data_weight_dev,
         data_out_dev
     )
     evaluator = f1.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
-    latency = evaluator(data_in_dev, shape[0], shape[1], shape[2], shape[3], data_out_dev).mean
+    latency = evaluator(data_start_dev, data_end_dev, data_weight_dev, data_out_dev).mean
     print("expm1: " + str(latency) + "s")
     bangpy.assert_allclose(
         data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=3e-3, atol=3e-3
     )
 
     IO_BANDWIDTH = 1024 * 1024 * 1024 * 1024
-    theory_io_size = shape[0] * shape[1] * shape[2] * shape[3] * dtype.bytes * 2
+    theory_io_size = shape[0] * shape[1] * shape[2] * shape[3] * dtype.bytes * 4
     io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
     print(io_efficiency)
