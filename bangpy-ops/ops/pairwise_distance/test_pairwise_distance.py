@@ -29,15 +29,25 @@ from bangpy.common import load_op_by_type
 from pairwise_distance import KERNEL_NAME, TARGET_LIST
 from pairwise_distance import DTYPES
 
+
+def create_random_shape(length, size):
+    return np.random.randint(low=1, high=size, size=length)
+
+
+
+ranshp = create_random_shape(2, 512)
+
 @pytest.mark.parametrize(
     "shape",
     [
         [(1, 2, 10241 * 100 ), (1, 2, 10241 * 100)],
-        [(2, 3, 5, 4 ), (5, 4,)],
-        [(300, 3, 2), (3, 2)],
-        [(1), (1)],
+        [(2, 1, 1, 1, 3, 2, 2, 3, 1, 2, 5, 4 ), (5, 4,)],
+        [(30000, 1), (30000, 1)],
+        [(1, 3), (1, 3)],
         [(4,5,2), (234)],
-
+        [(1, 482 * 1024), (1, 482 * 1024)],
+        [(32, 482 * 1024), (32, 482 * 1024)],
+        [ranshp, ranshp]
     ],
 )
 
@@ -47,7 +57,7 @@ from pairwise_distance import DTYPES
 )
 
 @pytest.mark.parametrize(
-    "p", [1, 2.2, 3.5],
+    "p", [1, 2.2, 3.5, -1.2],
 )
 
 @pytest.mark.parametrize(
@@ -72,6 +82,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             return size
 
         def check_shape(s1, s2):
+            if len(s1) <= 1 or len(s2) <= 1:
+                return False
+
             offset = len(s1) - len(s2)
             for i in range(len(s2)):
                 if s1[offset + i] != s2[i]:
@@ -79,6 +92,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             return True
 
         def f(a, b):
+            if len(a) == 0 or len(b) == 0:
+                raise Exception("shape err")
+
             #拿到shape
             if len(a.shape) > len(b.shape):
                 _shape1 = a.shape
