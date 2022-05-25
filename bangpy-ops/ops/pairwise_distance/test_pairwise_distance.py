@@ -34,7 +34,10 @@ from pairwise_distance import DTYPES
     [
         [(1, 2, 10241 * 100 ), (1, 2, 10241 * 100)],
         [(2, 3, 5, 4 ), (5, 4,)],
-        [(300, 3, 2), (3, 2)]
+        [(300, 3, 2), (3, 2)],
+        [(1), (1)],
+        [(4,5,2), (234)],
+
     ],
 )
 
@@ -68,6 +71,13 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 size *= s
             return size
 
+        def check_shape(s1, s2):
+            offset = len(s1) - len(s2)
+            for i in range(len(s2)):
+                if s1[offset + i] != s2[i]:
+                    return False    
+            return True
+
         def f(a, b):
             #拿到shape
             if len(a.shape) > len(b.shape):
@@ -76,6 +86,10 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             else:
                 _shape1 = b.shape
                 _shape2 = a.shape
+
+            if not check_shape(_shape1, _shape2):
+                raise Exception("shape err")
+
 
             _dev = bp.device(0)
 
@@ -153,11 +167,17 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     m_ori_input1 = np.random.uniform(low=-5, high=5, size=shape[0])
     m_ori_input2 = np.random.uniform(low=-5, high=5, size=shape[1])
 
+    try:
+        mlu_ret = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)\
+            (m_ori_input1.astype(dtype.as_numpy_dtype), \
+            m_ori_input2.astype(dtype.as_numpy_dtype))
+    except Exception as err:
+        print(str(err))        
+        if str(err) == "shape err":
+            return
+
+
     cpu_ret = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
         (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()
-
-    mlu_ret = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)\
-        (m_ori_input1.astype(dtype.as_numpy_dtype), \
-        m_ori_input2.astype(dtype.as_numpy_dtype))
 
     bp.assert_allclose(cpu_ret, mlu_ret, rtol = 0.01, atol = 0.01)
