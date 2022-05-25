@@ -367,19 +367,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
  * @par Data Type
  * - Data types of input tensors and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
- *   - input tensors: half, float.
- *   - grid tensor: half, float.
- *   - output tensor: half, float.
+ *   - Input tensors: float.
+ *   - Grid tensor: float.
+ *   - Output tensor: float.
  *
  * @par Scale Limitation
  * - The input tensor, grid tensor and ouput tensor must have four dimensions.
- * - size of the seconde deminsions of grid tensor, output tensor must be the same.
- * - size of the third deminsions of grid tensor, output tensor must be the same.
- * - size of the highest deminsions of input tensor is divisible by size of the highest deminsions of grid tensor.
- *   the following grid data range:
- *   - float: [-1,1].
- *   - half: [-1,1].
- *
+ * - Size of the second dimension of grid tensor, output tensor must be the same.
+ * - Size of the third dimmension of grid tensor, output tensor must be the same.
+ * - Size of the highest dimension of input tensor is divisible by size of the highest deminsions of grid tensor.
+ *   The following grid data range:
+ *   - Float: [-1.0,1.0].
  * @par Requirements
  * - None.
  *
