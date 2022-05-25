@@ -102,8 +102,7 @@ class LogAddExp:
         calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
         nram_avable_size = round_down(
             (TARGET(self.target).nram_size - 40* 1024) // 8 ,128
-        )#self.bp.Scalar(bangpy.int32,"nram_avable_size")
-        # one_core_count.assign()#每个核均摊计算量（按索引分）
+        )
         remain.assign(self.length % self.task_num)#分任务时的余数
         process_count = nram_avable_size // self.dtype_sz #核心一次最多计算的长度
         with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起

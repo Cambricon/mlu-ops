@@ -25,12 +25,13 @@ from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.util import round_down
 from bangpy.tcp.runtime import TaskType
+
 DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "Celu" #算子名
 
 
-class Celu(object):
+class Celu:
     """Operator description:
     Add the data in the two buffers.
     """
@@ -112,7 +113,6 @@ class Celu(object):
                 (one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain)
                 )
             current_core_end.assign(current_core_start  + one_core_count - 1)
-# (one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain) + one_core_count - 1)
         total_count_in_core.assign(current_core_end - current_core_start + 1)
         buffer_in0 = self.bp.Buffer(
             shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
