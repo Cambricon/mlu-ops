@@ -44,15 +44,15 @@ from renorm import DTYPES, KERNEL_NAME, TARGET_LIST
 )
 
 @pytest.mark.parametrize(
-    "p", [2.2, 3.3, 1],
+    "p", [2.2, 3.3, 1, -4],
 )
 
 @pytest.mark.parametrize(
-    "dim", [0, 1, 2, 3, 4, -3],
+    "dim", [0, 1, 2, 3, 4, -3, 100, -1000],
 )
 
 @pytest.mark.parametrize(
-    "maxnorm", [1.0, 5.0],
+    "maxnorm", [1.0, 5.0, -5.0],
 )
 
 
@@ -61,46 +61,65 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
     if target not in TARGET_LIST:
         return
 
-    total_input_len = 1
-    for s in shape:
-        total_input_len *= s
+    try:
+        total_input_len = 1
+        for s in shape:
+            total_input_len *= s
 
-    input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+        input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
 
-    # 准备mlu计算
-    dev = bp.device(0)
-
-
-    flat_input = input_tensor.flatten()
-    mlu_input = bp.Array(flat_input, dev)
-    paras = np.array([p, maxnorm]).astype(dtype.as_numpy_dtype) # 这里需要考虑
-    mlu_paras = bp.Array(paras, dev)
-    mlu_output = bp.Array(flat_input, dev)
-
-    if dim < 0:
-        dim += len(shape)
-
-    if dim < 0 or dim >= len(shape):
-        print("dim err!")
-        return
-
-    h = 1
-    for i in range(dim):
-        h *= shape[i]
-    w = total_input_len // h
-    sub_t_count = shape[dim]
-    sub_wid = w // sub_t_count
-
-    func = load_op_by_type(KERNEL_NAME, dtype.name)
-    func(mlu_input, mlu_paras,
-         h, w, sub_wid
-         , mlu_output)
-
-    result = mlu_output.numpy()
-    mlu_ret = result.reshape(shape)
+        # 准备mlu计算
+        dev = bp.device(0)
 
 
-    x = torch.Tensor(input_tensor)
-    cpu_ret = torch.renorm(x, p, dim, maxnorm)
+        flat_input = input_tensor.flatten()
+        mlu_input = bp.Array(flat_input, dev)
+        paras = np.array([p, maxnorm]).astype(dtype.as_numpy_dtype) # 这里需要考虑
+        mlu_paras = bp.Array(paras, dev)
+        mlu_output = bp.Array(flat_input, dev)
 
-    bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+        if maxnorm <= 0:
+            raise Exception("expected maxnorm to be >= 0")
+
+        if p < 0:
+            raise Exception("non-positive-norm not supported")
+
+        if dim < 0:
+            dim += len(shape)
+
+        if dim < 0 or dim >= len(shape):
+            raise Exception("dim err")
+
+        h = 1
+        for i in range(dim):
+            h *= shape[i]
+        w = total_input_len // h
+        sub_t_count = shape[dim]
+        sub_wid = w // sub_t_count
+
+        func = load_op_by_type(KERNEL_NAME, dtype.name)
+        func(mlu_input, mlu_paras,
+             h, w, sub_wid
+             , mlu_output)
+
+        result = mlu_output.numpy()
+        mlu_ret = result.reshape(shape)
+
+
+        x = torch.Tensor(input_tensor)
+        cpu_ret = torch.renorm(x, p, dim, maxnorm)
+
+        bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+
+    except Exception as err:
+        print(str(err))
+        if str(err) == "dim err":
+            return
+
+        if str(err) == "non-positive-norm not supported":
+            return
+
+        if str(err) == "expected maxnorm to be >= 0":
+            return
+
+        raise Exception(str(err))

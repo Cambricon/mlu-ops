@@ -196,6 +196,8 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
         if str(err) == "shape err":
             return
 
+        raise Exception(str(err))
+
 
     cpu_ret = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
         (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()
