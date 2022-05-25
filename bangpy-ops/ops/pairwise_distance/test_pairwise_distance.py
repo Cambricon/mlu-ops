@@ -36,6 +36,8 @@ def create_random_shape(length, size):
 
 
 ranshp = create_random_shape(2, 512)
+ranshp1 = create_random_shape(5, 3)
+ranshp2 = create_random_shape(10, 2)
 
 @pytest.mark.parametrize(
     "shape",
@@ -47,7 +49,9 @@ ranshp = create_random_shape(2, 512)
         [(4,5,2), (234)],
         [(1, 482 * 1024), (1, 482 * 1024)],
         [(32, 482 * 1024), (32, 482 * 1024)],
-        [ranshp, ranshp]
+        [ranshp, ranshp],
+        [ranshp1, ranshp1],
+        [ranshp2, ranshp2]
     ],
 )
 
