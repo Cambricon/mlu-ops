@@ -11,21 +11,12 @@
  *************************************************************************/
 #ifndef KERNELS_ROI_CROP_FORWARD_ROI_CROP_FORWARD_H_
 #define KERNELS_ROI_CROP_FORWARD_ROI_CROP_FORWARD_H_
-#include "kernels/kernel.h"
 #include "core/mlu_op_core.h"
-  
-__mlu_global__ void MLUKernelRoiCropForward(const void *input,
-                                            int batch,
-                                            int height,
-                                            int width,
-                                            int channels,
-                                            const void *grid,
-                                            int grid_n,
-                                            void *output,
-                                            int output_h,
-                                            int output_w,
-                                            mluOpDataType_t data_type);
-  
-#endif  // KERNELS_ROI_CROP_FORWARD_ROI_CROP_FORWARD_H_
+#include "kernels/kernel.h"
 
+__mlu_global__ void MLUKernelRoiCropForward(
+    const void *input, const int batch, const int height, const int width,
+    const int channels, const void *grid, const int grid_n, void *output,
+    const int output_h, const int output_w, const mluOpDataType_t data_type);
+#endif  // KERNELS_ROI_CROP_FORWARD_ROI_CROP_FORWARD_H_
 
