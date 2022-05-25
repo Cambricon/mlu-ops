@@ -346,15 +346,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
  *   Input. Handle to a MLUOP context that is used to manage MLU devices and queues in ::mluOpRoiCropForward operation. 
  *   For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
- *   Input. The descriptor of the input tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ *   Input. The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  *   Input. Pointer to the MLU memory that stores the input tensor.
  * @param[in] grid_desc
- *   Input. The descriptor of the grid tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ *   Input. The descriptor of the grid tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] grid_y
  *   Input. Pointer to the MLU memory that stores the grid tensor.
  * @param[in] output_desc
- *   Input. The descriptor of the output tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  *   Output. Pointer to the MLU memory that stores the output tensor.
  *
