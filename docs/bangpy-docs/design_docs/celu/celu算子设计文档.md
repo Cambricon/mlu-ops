@@ -204,7 +204,7 @@ def mark_the_value_compare_with_threshold_value(self,input,nram_bool_mark,is_min
 
 ### 5.1 开发测试计划
 
-2021.12.28 算子入库   
+2022.4.30 算子入库 
 
 ### 5.2 风险分析
 

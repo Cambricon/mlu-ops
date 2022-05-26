@@ -50,6 +50,7 @@ def CreatShapeList(
         nram_single_buffer_size_by_byte / 2)  # float16下 单个nram_buffer的最大元素数
     # 内置固定检测shape
     test_shape_list = [
+        (0,),
         (1,),
         (2,),
         # 128字节对齐边界测试
@@ -66,6 +67,13 @@ def CreatShapeList(
         (const_current_mlu_single_buffer_float16_max_element_size - 1,),
         (const_current_mlu_single_buffer_float16_max_element_size,),
         (const_current_mlu_single_buffer_float16_max_element_size + 1,),
+        (246783,),
+        (246784,),
+        (246785,),
+        (123391,),
+        (123392,),
+        (123393,),
+        (2,2,3,3,4,3,2,4,2,3,4,4,2,3,5,),
     ]
     for _ in range(append_test_count):
         test_shape_list.append(random_int_list(random.randint(
@@ -89,7 +97,6 @@ shape_list = CreatShapeList(
 def test_logaddexp(target, shape, dtype):
     if target not in TARGET_LIST:
         return
-    print("dtype->",dtype,"___shape->",shape)
     # origin input
     sub_shape = shape[random.randint(0, len(shape) - 1):len(shape)]
     data_x = np.random.uniform(low=-1000, high=1000, size=shape)
@@ -97,6 +104,8 @@ def test_logaddexp(target, shape, dtype):
     # data_x = np.random.uniform(low=-1000, high=1000, size=(1,))
     # data_y = np.random.uniform(low=-1000, high=1000, size=(9,2))
     def logaddexp(input_x,input_y):
+        print("input_x_shape->",input_x.shape)
+        print("input_y_shape->",input_y.shape)
         max_size_buffer = input_x
         min_size_buffer = input_y
         is_sub = True #是否是子集

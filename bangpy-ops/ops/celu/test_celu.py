@@ -48,6 +48,7 @@ def CreatShapeList(
         nram_single_buffer_size_by_byte / 2)  # float16下 单个nram_buffer的最大元素数
     # 内置固定检测shape
     test_shape_list = [
+        (0,),
         (1,),
         (2,),
         # 128字节对齐边界测试
@@ -64,6 +65,15 @@ def CreatShapeList(
         (const_current_mlu_single_buffer_float16_max_element_size - 1,),
         (const_current_mlu_single_buffer_float16_max_element_size,),
         (const_current_mlu_single_buffer_float16_max_element_size + 1,),
+        #nram边界测试
+        (246783,),
+        (246784,),
+        (246785,),
+        (123391,),
+        (123392,),
+        (123393,),
+        #高维测试
+        (2,2,3,3,4,3,2,4,2,3,4,4,2,3,5,),
     ]
     for _ in range(append_test_count):
         test_shape_list.append(random_int_list(random.randint(
