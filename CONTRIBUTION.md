@@ -17,7 +17,7 @@
 
 2. 算子代码开发，参考[BANGC-OPS算子开发流程](docs/bangc-docs/BANGC-OPS算子开发流程.md)或[BANGPy-OPS算子开发流程](docs/bangpy-docs/BANGPy-OPS算子开发流程.md)、[PULL REQUEST流程](./docs/pr.md)，主要包括：
     - 算子设计文档提交 `PR`（Pull Requset）
-    - Gtest 代码开发
+    - GTest 代码开发
     - 算子伪代码开发
     - 算子主体代码开发
 
