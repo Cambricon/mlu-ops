@@ -28,14 +28,22 @@ import bangpy as bp
 from bangpy.common import load_op_by_type
 from renorm import DTYPES, KERNEL_NAME, TARGET_LIST
 
+def create_random_shape(length, size):
+    return np.random.randint(low=1, high=size, size=length)
+
+ranshp = create_random_shape(5, 3)
+ranshp2 = create_random_shape(2, 10)
+
 @pytest.mark.parametrize(
     "shape",
     [
-        (4, 4, 3, 2, 1),
+        (4, 40, 3, 2, 1, 1, 1, 1, 1, 1, 1),
         (1, 1, 1, 1, 1),
         (1, 3 * 11, 3, 1, 1),
         (6, 2, 4, 1, 5),
         (6, 2, 4, 7, 5),
+        ranshp,
+        ranshp2
     ],
 )
 
@@ -44,15 +52,15 @@ from renorm import DTYPES, KERNEL_NAME, TARGET_LIST
 )
 
 @pytest.mark.parametrize(
-    "p", [2.2, 3.3, 1, -4],
+    "p", [2.2, 1.0, -12.0, 3.11],
 )
 
 @pytest.mark.parametrize(
-    "dim", [0, 1, 2, 3, 4, -3, 100, -1000],
+    "dim", [0, 1, 2, 3, 4, 5, -1, -2, -3, -4, -5, -100],
 )
 
 @pytest.mark.parametrize(
-    "maxnorm", [1.0, 5.0, -5.0],
+    "maxnorm", [5.0, 1.0, -1.0],
 )
 
 
