@@ -60,11 +60,11 @@ void RoiCropForwardExecutor::printDataInfo() {
 int RoiCropForwardExecutor::getInputTopLeft(float grid_yx_value, int input_hw,
                                             float& weight) {
   VLOG(4) << "[RoiCropForwardExecutor] call getInputLeft() Begin.";
-  float i_top_left_coord = (grid_yx_value + 1) * (input_hw - 1) / 2;
-  int i_top_left = floor(i_top_left_coord);
-  weight = 1 - (i_top_left_coord - i_top_left);
+  float xcoord = (grid_yx_value + 1) * (input_hw - 1) / 2;
+  int point = floor(xcoord);
+  weight = 1 - (xcoord - point);
   VLOG(4) << "[RoiCropForwardExecutor] call getInputLeft() End.";
-  return i_top_left;
+  return point;
 }
 
 void RoiCropForwardExecutor::compute() {
@@ -173,7 +173,7 @@ void RoiCropForwardExecutor::cpuCompute() {
 }
 
 int64_t RoiCropForwardExecutor::getTheoryOps() {
-  int cp_count = 58;
+  int cp_count = 7;
   theory_ops = parser_->getInputDataCount(0) * cp_count;
   VLOG(4) << "[RoiCropForwardExecutor] getTheoryOps: " << theory_ops << " ops.";
   return theory_ops;
