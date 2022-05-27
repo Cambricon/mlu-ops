@@ -351,8 +351,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
  *   Input. Pointer to the MLU memory that stores the input tensor.
  * @param[in] grid_desc
  *   Input. The descriptor of the grid tensor. For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] grid_y
- *   Input. Pointer to the MLU memory that stores the grid tensor.
+ * @param[in] grid
+ *   Input. Pointer to the MLU memory that stores the grid tensor.NaN and INF datas are not supported.
  * @param[in] output_desc
  *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
@@ -377,7 +377,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
  * - Size of the third dimmension of grid tensor, output tensor must be the same.
  * - Size of the highest dimension of input tensor is divisible by size of the highest deminsions of grid tensor.
  *   The following grid data range:
- *   - Float: [-1.0,1.0].
+ *   - Float: [-1.0,1.0].    
  * @par Requirements
  * - None.
  *
