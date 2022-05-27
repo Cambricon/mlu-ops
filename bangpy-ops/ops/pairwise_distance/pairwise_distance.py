@@ -178,7 +178,7 @@ class PairwiseDistance:
         big_row = offset_src // (width * dim_len)
         m = offset_src % dim_len + big_row * dim_len
 
-        big_n = (offset_src + dim_len - 1) % dim_len
+        big_n = (offset_src) % dim_len
         n = big_n % width
 
         with self.bp.if_scope(offset_dst != offset_dst + cp_len // 2):
