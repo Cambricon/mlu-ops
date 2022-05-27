@@ -29,6 +29,28 @@ DTYPES = [bangpy.float32] #支持的类型
 TARGET_LIST = ["mlu290"]#支持的设备
 KERNEL_NAME = "Logsumexp"#算子名
 
+class nram_set:
+    bp = None
+    m_size = 0
+    m_buff = None
+
+    def init(self, bp, buff):
+        self.bp = bp
+        self.m_buff = buff
+
+        self.m_size = self.bp.Scalar(bangpy.int32, "m_size", 0)
+
+    def add(self, index):
+        self.m_buff[self.m_size] = index
+        self.m_size.assign(self.m_size + 1)
+
+    def is_in(self, index):
+        ret = self.bp.Scalar(bangpy.int32, "chk_ret", 0)
+        with self.bp.for_range(0, self.m_size) as i:
+            with self.bp.if_scope(index == self.m_buff[i]):
+                ret.assign(1)
+        return ret
+
 
 class data_man:
     bp = None
@@ -126,6 +148,7 @@ class logsum_calcer:
                     sum_value.assign(buffer[i + 1])
         return sum_value
 
+
     def add_buffer(self, buffer, start_index, end_index):
         with self.bp.if_scope(self._oper_count == 0):
             self.m_value.assign(self.calc_buffer(buffer, start_index, end_index))
@@ -219,6 +242,11 @@ class Logsumexp:
             dtype=self.dtype,
             scope="nram")
 
+        self.m_buff = self.bp.Buffer(
+            shape=(border_array_size * 2, ), name="m_buff", \
+                dtype=bangpy.int32, scope="nram"
+        )
+
         self.flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
 
         dman.calc_core_process_count(self.para.h * self.para.w, self.para.task_num)
@@ -235,9 +263,14 @@ class Logsumexp:
                 self.calc2(gram_reshape_tensor, gram_border_buf_out, \
                     gram_border_idx_out, gram_buffer_out)
 
+        self.bp.sync_all()
+
         # 处理边界数据
         lc = logsum_calcer(self.bp, self.dtype)
         with self.bp.if_scope(self.bp.taskId == 0):
+            nset = nram_set()
+            nset.init(self.bp, self.m_buff)
+
             with self.bp.for_range(0, border_array_size) as i:
                 index1 = gram_border_idx_out[2 * i]
                 index2 = gram_border_idx_out[2 * i + 1]
@@ -245,18 +278,22 @@ class Logsumexp:
                 norm_value2 = gram_border_buf_out[2 * i + 1]
 
                 with self.bp.if_scope(index1 >= 0):
-                    with self.bp.if_scope(gram_buffer_out[index1] < 0):
+                    with self.bp.if_scope(0 == nset.is_in(index1)):
                         gram_buffer_out[index1] = norm_value1
+                        nset.add(index1)
                     with self.bp.else_scope():
                         gram_buffer_out[index1] = \
                             lc.calc_value(gram_buffer_out[index1], norm_value1)
 
                 with self.bp.if_scope(index2 >= 0):
-                    with self.bp.if_scope(gram_buffer_out[index2] < 0):
+                    with self.bp.if_scope(0 == nset.is_in(index2)):
                         gram_buffer_out[index2] = norm_value2
+                        nset.add(index2)
                     with self.bp.else_scope():
                         gram_buffer_out[index2] = \
                             lc.calc_value(gram_buffer_out[index2], norm_value2)
+
+
 
         f = self.bp.BuildBANG(
             inputs=[gram_tensor,
@@ -278,8 +315,20 @@ class Logsumexp:
 
         m = offset_src % dim_len + big_row * dim_len
 
-        big_n = (offset_src + dim_len - 1) // dim_len
+        big_n = (offset_src) // dim_len
         n = big_n % width
+
+        #self.bp.print("task id ", self.bp.taskId)
+        #self.bp.print(" bign width n ", big_n, width, n)
+        #self.bp.print("dst offset " + str( offset_dst))
+        #self.bp.print("src offset ", (offset_src))
+        #self.bp.print("big row ", (big_row))
+        #self.bp.print("big_n ", (big_n))
+        #self.bp.print("dim len ", dim_len)
+        #self.bp.print("width ", width)
+        #self.bp.print("cp m ", (m))
+        #self.bp.print("cp n ", (n))
+        #self.bp.print("-----", self.bp.taskId)
 
         with self.bp.if_scope(offset_dst != offset_dst + cp_len // 2):
             self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], \
@@ -295,6 +344,7 @@ class Logsumexp:
              // self.nram_process_count)
 
     def calc1(self, gram_tensor, border_outputs, idx_outputs, outputs):# nram 一次还存不下一个元素
+
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", \
             dman.m_current_core_start % self.para.dim_len)
@@ -361,6 +411,7 @@ class Logsumexp:
                 with self.bp.else_scope():
                     outputs[index] = norm_value.m_value # 完整的算出来了
 
+
                 norm_value.reset()
 
                 # 接下来，拷贝下一个norm
@@ -376,6 +427,8 @@ class Logsumexp:
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1
 
     def calc2(self, gram_tensor, border_outputs, idx_outputs, outputs):
+
+
         current_core_start = dman.m_current_core_start
         total_count_in_core = dman.m_total_count_in_core
         dim_len = self.para.dim_len
