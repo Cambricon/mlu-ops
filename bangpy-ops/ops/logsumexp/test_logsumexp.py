@@ -168,4 +168,4 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         if strerr == "dim err":
             return
 
-        raise Exception(strerr)
+        raise Exception(strerr) from err

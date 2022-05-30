@@ -278,7 +278,7 @@ class Logsumexp:
                 norm_value2 = gram_border_buf_out[2 * i + 1]
 
                 with self.bp.if_scope(index1 >= 0):
-                    with self.bp.if_scope(0 == nset.is_in(index1)):
+                    with self.bp.if_scope(nset.is_in(index1) == 0):
                         gram_buffer_out[index1] = norm_value1
                         nset.add(index1)
                     with self.bp.else_scope():
@@ -286,7 +286,7 @@ class Logsumexp:
                             lc.calc_value(gram_buffer_out[index1], norm_value1)
 
                 with self.bp.if_scope(index2 >= 0):
-                    with self.bp.if_scope(0 == nset.is_in(index2)):
+                    with self.bp.if_scope(nset.is_in(index2) == 0):
                         gram_buffer_out[index2] = norm_value2
                         nset.add(index2)
                     with self.bp.else_scope():

@@ -39,7 +39,7 @@ def run(input_x, input_y, dtype, target):
     if len(max_size_buffer.shape) - len(min_size_buffer.shape) < 0 :#不同维度找出高维的
         max_size_buffer = input_y
         min_size_buffer = input_x
-    
+
     for i in range(len(min_size_buffer.shape)): #倒序比较 shape各元素
         #循环未结束 出现不同 说明短的不是长的子集  不能进行计算
         if max_size_buffer.shape[-1 - i] != min_size_buffer.shape[-1 - i] :
@@ -51,7 +51,7 @@ def run(input_x, input_y, dtype, target):
         is_sub = True
         is_single_element =True
 
-    if is_sub :
+    if is_sub:
         if not is_single_element :#如果是多个元素 计算差值部分的乘积作为缩放短的缩放倍数
             for j in range(len(max_size_buffer.shape) - len(min_size_buffer.shape)) :
                 scale_up *= max_size_buffer.shape[ -1*len(min_size_buffer.shape) -j -1]
@@ -70,8 +70,8 @@ def run(input_x, input_y, dtype, target):
         with tcp.runtime.Run(task_type):
             log_add_exp_func(x, y, output_dev)
         return output_dev.numpy().reshape(max_size_buffer.shape)
-    else:
-        raise Exception("shape err")
+
+    raise Exception("shape err")
 
 # 生成随机元组
 def random_int_list(max_dim_length, each_dim_max_length):
@@ -152,11 +152,11 @@ def test_logaddexp(target, shape, dtype):
     try:
         mlu_ret = run(data_x, data_y, dtype, target)
     except Exception as err:
-        print(str(err))        
+        print(str(err))
         if str(err) == "shape err":
             return
 
-        raise Exception(str(err))
+        raise Exception(str(err)) from err
 
     cpu_ret = np.logaddexp(data_x, data_y)
     if dtype.name == "float16":
@@ -186,10 +186,10 @@ def test_logaddexp_shp_err(target, shapes, dtype):
     data_y = np.random.uniform(low=-1000, high=1000, size=shapes[1])
 
     try:
-        mlu_ret = run(data_x, data_y, dtype, target)
+        run(data_x, data_y, dtype, target)
     except Exception as err:
-        print(str(err))        
+        print(str(err))
         if str(err) == "shape err":
             return
 
-        raise Exception(str(err))
+        raise Exception(str(err)) from err

@@ -130,4 +130,4 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
         if str(err) == "expected maxnorm to be >= 0":
             return
 
-        raise Exception(str(err))
+        raise Exception(str(err)) from err

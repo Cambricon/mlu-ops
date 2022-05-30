@@ -93,9 +93,11 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                     return True
 
             offset = len(s1) - len(s2)
-            for i in range(len(s2)):
+            i = 0
+            for _ in s2:
                 if s1[offset + i] != s2[i]:
-                    return False    
+                    return False
+                i += 1
             return True
 
         def f(a, b):
@@ -198,11 +200,11 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             (m_ori_input1.astype(dtype.as_numpy_dtype), \
             m_ori_input2.astype(dtype.as_numpy_dtype))
     except Exception as err:
-        print(str(err))        
+        print(str(err))
         if str(err) == "shape err":
             return
 
-        raise Exception(str(err))
+        raise Exception(str(err)) from err
 
 
     cpu_ret = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
