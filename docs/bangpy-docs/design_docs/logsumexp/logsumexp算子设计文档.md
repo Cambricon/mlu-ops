@@ -2,7 +2,7 @@
 
 - #### 文档基本信息
 
-| 算子名称     | pairwise_distance              |
+| 算子名称     | logsumexp              |
 | ----------- | -------------- |
 | 编制人/日期  | UniqueSquirrel/2022-5-18 |
 | 审批人/日期  |              |
@@ -21,7 +21,7 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介               | 计算两个张量的pairwise_distance                   |
+| 算子功能简介               | 计算两个张量的logsumexp                  |
 | ------------------------ | ----------------------------------------|
 | 需求来源                  | 为bangpy-ops提供算子demo                  |
 | 应用网络                  |                                  |
@@ -111,9 +111,19 @@ for i in range(0, dim_index + 1):
 _output_len,是输出张量长度
 _mlu_border_output, _mlu_border_idx_output, _mlu_output ，因为数据分散到多核中，这几个用于存放输出结果，
 在mlu计算完毕后，用cpu加工，得到最终结果
-                 
 
 ```
+
+如果一个张量x, 维度是 [2, 3, 4]
+当dim_index为1时，输出张量y的维度为 [2, 4]
+第i, j 个子张量为
+t = [
+x[i, 0, j], 
+x[i, 1, j], 
+x[i, 2, j] 
+]
+
+y(i, j) = log(exp(t0) + exp(t1) + exp(t2))
 
 ## 3 实现方案设计
 

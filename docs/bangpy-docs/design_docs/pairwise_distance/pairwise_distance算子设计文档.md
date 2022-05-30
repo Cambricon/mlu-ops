@@ -111,9 +111,18 @@ for i in range(0, dim_index + 1):
 _output_len,是输出张量长度
 _mlu_border_output, _mlu_border_idx_output, _mlu_output ，因为数据分散到多核中，这几个用于存放中间输出结果，
 在mlu计算完毕后，用cpu加工，得到最终结果
-                 
-
 ```
+
+如果一个张量x, 维度是 [2, 3, 4]
+如果要在第二个维度计算子张量，
+第i, j 个子张量为
+t = [
+x[i, 0, j], 
+x[i, 1, j], 
+x[i, 2, j] 
+]
+
+pairwise_distance中，我们在最后一个维度的基础上计算两个张量的距离，具体算法，参见实现方案一章
 
 ## 3 实现方案设计
 
