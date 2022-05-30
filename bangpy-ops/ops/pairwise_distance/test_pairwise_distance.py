@@ -42,16 +42,18 @@ ranshp2 = create_random_shape(10, 2)
 @pytest.mark.parametrize(
     "shape",
     [
-        [(1, 2, 10241 * 100 ), (1, 2, 10241 * 100)],
-        [(2, 1, 1, 1, 3, 2, 2, 3, 1, 2, 5, 4 ), (5, 4,)],
-        [(30000, 1), (30000, 1)],
-        [(1, 3), (1, 3)],
-        [(4,5,2), (234)],
-        [(1, 482 * 1024), (1, 482 * 1024)],
-        [(32, 482 * 1024), (32, 482 * 1024)],
-        [ranshp, ranshp],
-        [ranshp1, ranshp1],
-        [ranshp2, ranshp2]
+    [(1, 2, 10241 * 100 ), (1, 2, 10241 * 100)],
+    [(2, 1, 1, 1, 3, 2, 2, 3, 1, 2, 5, 4 ), (5, 4,)],
+    [(30000, 1), (30000, 1)],
+    [(1, 3), (1, 3)],
+    [(4,5,2), (234)],
+    [(1, 482 * 1024), (1, 482 * 1024)],
+    [(32, 482 * 1024), (32, 482 * 1024)],
+    [ranshp, ranshp],
+    [ranshp1, ranshp1],
+    [ranshp2, ranshp2],
+        [[112, 2], [2]],
+        [[112, 12], [1]]
     ],
 )
 
@@ -86,8 +88,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             return size
 
         def check_shape(s1, s2):
-            if len(s1) <= 1 or len(s2) <= 1:
-                return False
+            if len(s2) == 1:
+                if s2[0] == 1:
+                    return True
 
             offset = len(s1) - len(s2)
             for i in range(len(s2)):
@@ -97,6 +100,9 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
 
         def f(a, b):
             if len(a) == 0 or len(b) == 0:
+                raise Exception("shape err")
+
+            if len(a.shape) == 1 and len(b.shape) == 1:
                 raise Exception("shape err")
 
             #拿到shape
