@@ -26,16 +26,15 @@
 | 需求来源                  | 为bangpy-ops提供算子demo                  |  
 | 应用网络                  | ResNet等                                 |
 | 输入数据类型               | float                                   |
-| 输入                      | input1,input2:ARRAY     如果shape不相等 则它们必须可以广播到一个公共形状(成为输出的形状)。|
+| 输入                      | input1,input2:ARRAY     如果shape不相等 则一个必须是另外一个的子张量，具体参见下面说明|
 | 输出数据类型               | float                                    |
 | 输出                      | out:Array    shape为输入的公共形状         |
 
 
 ### 1.2 算子功能和应用场景描述
 
-功能：计算 log(exp(x1) + exp(x2)) 。此函数在计算的事件概率可能小到超出正常浮点数范围的统计中很有用。在这种情况下，存储计算概率的对数。此函数允许添加以这种方式存储的概率。
+功能：计算 log(exp(x1) + exp(x2)) 
 
-例如：
 data_x = [[-744.38378411  , 32.08532465 , 259.21401044],[ -65.55983881 ,-783.89169849 , 692.46914092]]
 data_y = [ 205.4972709 , -982.95625446 , 731.07663893]
 logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.49727 , -783.8917 , 731.07666 ]]
@@ -88,56 +87,23 @@ logaddexp(input1, input2, output)
 ## 3 实现方案设计
 
 ### 3.1 实现方案
-为防止数据溢出  将公式变形为 x+log(exp(y-x) +1) 当y-x小于exp计算范围的最小值时返回x 大于计算范围最大值时返回y 
-将nram空间开辟出5个尽可能大的满足128字节对齐且大小相等的buffer ,nram_buffer_in0、nram_buffer_in1、nram_x_bool、nram_y_bool、nram_middle_value
-将输入从gram中循环拷贝至nram_buffer_in0 与 nram_buffer_in1 中 其中 nram_buffer_in0存储的时x  nram_buffer_in1存储的是y
-nram_middle_value用来存储中间结果
-nram_x_bool用以存储 y - x 结果小于exp计算范围最小值的真值  符合判断条件的结果为1 其余为0
-nram_y_bool用以存储 y - x 结果大于exp计算范围最大值的真值  符合判断条件的结果为1 其余为0
-计算y-x 的差值 存入 nram_middle_value
-与阈值比较 将结果分别存入 nram_x_bool nram_y_bool 
-计算 x+log(exp(y-x) +1) 结果存入 nram_middle_value
-将对nram_x_bool 与 nram_y_bool 分别取反 再与nram_middle_value 做乘法 将溢出位的数据归0
-再将对nram_x_bool 与 nram_y_bool 分别取反 恢复其标记功能
-nram_x_bool 与 nram_buffer_in0 做乘法后 并于 nram_middle_value 相加 完成下溢替换
-nram_y_bool 与 nram_buffer_in1 做乘法后 并于 nram_middle_value 相加 完成上溢替换
-将nram_middle_value拷贝至输出计算完成
+1 将数据分拆，平均分配到多核
+2 在nram上开辟两块内存，用于存放tensor1 和 tensor2的数据
+3 每个核执行一下操作：从gram中拷贝数据到本地，计算logaddexp结果
+4 计算完毕，将数据拷贝回gram
+5 将gram中数据，拷贝回cpu
+
 ### 3.2 伪代码实现
 
 ```python
-self.bp.subtract(nram_middle_value, nram_buffer_in1, nram_buffer_in0) #y-x
-self.mark_the_out_of_range_vlaue(nram_middle_value,nram_x_bool,nram_y_bool) #标记溢出
-self.bp.exp(nram_middle_value, nram_middle_value) #指数计算   
-self.bp.add(nram_middle_value,nram_middle_value,const_one) # +1  
-self.bp.log(nram_middle_value, nram_middle_value) #取对数       
-self.bp.add(nram_middle_value,nram_buffer_in0,nram_middle_value) # +x
-self.replace_the_marked_position_with_the_value_of_the_same_position(nram_middle_value,nram_buffer_in1,nram_y_bool) #上溢替换
-self.replace_the_marked_position_with_the_value_of_the_same_position(nram_middle_value,nram_buffer_in0,nram_x_bool) #下溢替换
-self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_middle_value[:calc_size]) #拷贝至输出    
-```
-```python
-#标记会造成溢出得指数位置
-def mark_the_out_of_range_vlaue(self,input,x,y):     
-        max_threshold_valu = self.bp.Scalar(self.dtype,"max_threshold_valu",10)
-        min_threshold_valu = self.bp.Scalar(self.dtype,"min_threshold_valu",-7.5)
-        self.mark_the_value_compare_with_threshold_value(input,x,1,min_threshold_valu)
-        self.mark_the_value_compare_with_threshold_value(input,y,0,max_threshold_valu)
-```
-```python
-#采用何种标记办法
-def mark_the_value_compare_with_threshold_value(self,input,nram_bool_mark,is_min,threshold_value):
-         if  is_min == 1:       
-              self.bp.greater_equal(nram_bool_mark,input,threshold_value,'elemwise') #大于等于阈值返回1
-         else :  
-              self.bp.less_equal(nram_bool_mark,input,threshold_value,'elemwise') #小于等于阈值返回1        
-```
-```python
-#相同位置进行替换
- def replace_the_marked_position_with_the_value_of_the_same_position(self,waiting_to_be_changed_buffer,value_buffer,marked_bool_buffer):
-        self.bp.multiply(waiting_to_be_changed_buffer,waiting_to_be_changed_buffer,marked_bool_buffer)
-        self.bp.logical_not(marked_bool_buffer,marked_bool_buffer) 
-        self.bp.multiply(marked_bool_buffer,value_buffer,marked_bool_buffer) 
-        self.bp.add(waiting_to_be_changed_buffer,waiting_to_be_changed_buffer,marked_bool_buffer)
+
+memcpy(nram_tensor1, gram_tensor1[start:end])
+memcpy(nram_tensor2, gram_tensor2[start:end])
+
+logsumexp(nram_tensor1, gram_tensor1, gram_tensor2)
+
+memcpy(output[start:end], nram_tensor1)
+
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
 
@@ -162,8 +128,10 @@ def mark_the_value_compare_with_threshold_value(self,input,nram_bool_mark,is_min
   并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内 
 
 ### 3.7 算子防呆检查    
+| 测试点                        | 验收标准 | 测试结果（出错信息）   |
+| --------------               | -------- | -------------------- |
+| 输入两个张量shape不匹配        |正常报错  |     通过              |
 
-除host端自动生成的部分参数防呆检查外，暂不需要进行其他的防呆检查。
 
 ## 4 算子性能优化记录
 
