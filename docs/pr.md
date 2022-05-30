@@ -112,14 +112,14 @@
    - 标题写明任务类型，一般格式:
 
      ```bash
-     [Prefix]() Short description of the pull request (Suffix)
+     [Prefix] Short description of the pull request (Suffix)
      ```
 
    - prefix：新增功能 [Feature] ，修 bug [Fix]，文档相关 [Docs] ，开发中 [WIP] （暂时不会被 review）
      ```
      [Feature](bangc-ops): Revise code type
      [Fix](bangc-ops): Fix div bug
-     [Docs](bangc-ops): Add ** doc
+     [Docs](bangc-ops): Add div doc
      ```
 
    - 描述里介绍拉取请求的主要修改内容、结果，以及对其他部分的影响
