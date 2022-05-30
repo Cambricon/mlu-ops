@@ -339,6 +339,62 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
                                            const mluOpTensorDescriptor_t dx_desc,
                                            void *diff_x);
 
+/*!
+ * @brief Generates fixed size feature map for each grid，Each Value in the feature map is interpolated by bilinear sampling 
+ *
+ * @param[in] handle
+ *   Input. Handle to a MLUOP context that is used to manage MLU devices and queues in ::mluOpRoiCropForward operation. 
+ *   For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ *   Input. The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] grid_desc
+ *   Input. The descriptor of the grid tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grid
+ *   Input. Pointer to the MLU memory that stores the grid tensor.NaN and INF datas are not supported.
+ * @param[in] output_desc
+ *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - See "RoiCropForward Operation" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - Data types of input tensors and output tensor must be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - Input tensors: float.
+ *   - Grid tensor: float.
+ *   - Output tensor: float.
+ *
+ * @par Scale Limitation
+ * - The input tensor, grid tensor and ouput tensor must have four dimensions.
+ * - Size of the second dimension of grid tensor, output tensor must be the same.
+ * - Size of the third dimmension of grid tensor, output tensor must be the same.
+ * - Size of the highest dimension of input tensor is divisible by size of the highest deminsions of grid tensor.
+ *   The following grid data range:
+ *   - Float: [-1.0,1.0].    
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/roi_crop
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(mluOpHandle_t handle,
+                                                const mluOpTensorDescriptor_t input_desc,
+                                                const void *input,
+                                                const mluOpTensorDescriptor_t grid_desc,
+                                                const void *grid,
+                                                const mluOpTensorDescriptor_t output_desc,
+                                                void *output);
+
 #if defined(__cplusplus)
 }
 #endif

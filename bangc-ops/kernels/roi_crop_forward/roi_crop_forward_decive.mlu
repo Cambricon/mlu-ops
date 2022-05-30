@@ -1,0 +1,421 @@
+/*************************************************************************
+ * Copyright (C) 2022 by Cambricon, Inc. All rights reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "roi_crop_forward.h"
+
+#ifndef PAD_DOWN
+#define PAD_DOWN(x, y) (((x) / (y)) * (y))
+#endif
+#ifndef PAD_UP
+#define PAD_UP(x, y) (((x) / (y) + (int)((x) % (y) > 0)) * (y))
+#endif
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_func__ void getInputTopLeft(const T grid_yx_value, const int input_hw,
+                                  T *weight, int *point) {
+  T xcoord = (grid_yx_value + 1) * (input_hw - 1) / 2;
+  *point = floor(xcoord);
+  *weight = 1 - (xcoord - (T)(*point));
+}
+__mlu_func__ bool between(const int value, const int lowerBound,
+                          const int upperBound) {
+  return (value >= lowerBound && value <= upperBound);
+}
+
+template <typename T>
+__mlu_func__ void MLUUnion1RoiCropForward(const T *input, const int batch,
+                                          const int height, const int width,
+                                          const int channels, const T *grid,
+                                          const int grid_n, T *output,
+                                          const int output_h,
+                                          const int output_w) {
+  // evenly distribute BIN to IPU
+  const uint32_t bin_n = grid_n * output_h * output_w;
+  uint32_t task_bins = bin_n / taskDim;
+  uint32_t rem_bins = bin_n % taskDim;
+  if (taskId < rem_bins) {
+    task_bins += 1;
+  }
+  int bins_first_per =
+      (bin_n / taskDim) * taskId + (taskId > rem_bins ? rem_bins : taskId);
+  int bins_loop_per = bins_first_per + task_bins;
+
+  // nram is divided into 8 copies
+  int nram_limit =
+      PAD_DOWN(MAX_NRAM_SIZE / 8 / sizeof(T), NFU_ALIGN_SIZE / sizeof(T));
+  // Data alignment and calculate the number of repeatitions
+  int repeat = channels / nram_limit;
+  const int rem = channels % nram_limit;
+  int rem_num = 0;
+  int rem_align = 0;
+  int bin_i = 0;
+  int c_align = 0;
+  if (repeat == 0) {
+    c_align = PAD_UP(channels, NFU_ALIGN_SIZE / sizeof(T));
+  } else {
+    if (rem != 0) {
+      rem_num += 1;
+      rem_align = PAD_UP(rem, NFU_ALIGN_SIZE / sizeof(T));
+    }
+  }
+
+  int gw, gh, gn, input_batch_index;
+  int i_top_left_x, i_top_left_y;
+  T gy, gx;
+  T i_top_left_x_weight, i_top_left_y_weight;
+  T i_top_left_xy_weight, i_top_right_xy_weight, i_bottom_left_xy_weight,
+      i_bottom_right_xy_weight;
+  T i_top_left_xy_weight_pre, i_top_right_xy_weight_pre,
+      i_bottom_left_xy_weight_pre, i_bottom_right_xy_weight_pre;
+  int i_top_left_offset, i_top_right_offset, i_bottom_left_offset,
+      i_bottom_right_offset;
+  int o_offset = 0;
+  int offset = 0;
+  int o_offset_ping, o_offset_pong, offset_s, offset_s_rem, offset_c_rem,
+      o_offset_s, o_offset_s_rem;
+  T *nram_ping = (T *)nram_buffer;
+
+  for (int bin_index = bins_first_per; bin_index < bins_loop_per; bin_index++) {
+    // corrdinates of bin
+    gw = bin_index % output_w;
+    gh = (bin_index / output_w) % output_h;
+    gn = bin_index / output_w / output_h;
+    // batch index under input
+    input_batch_index = gn / (grid_n / batch);
+    // value of grid data
+    gy = grid[gn * output_h * output_w * 2 + gh * output_w * 2 + gw * 2];
+    gx = grid[gn * output_h * output_w * 2 + gh * output_w * 2 + gw * 2 + 1];
+    // coordinates and weights under input data
+    getInputTopLeft((T)gx, width, (T *)&i_top_left_x_weight, &i_top_left_x);
+    getInputTopLeft((T)gy, height, (T *)&i_top_left_y_weight, &i_top_left_y);
+    i_top_left_offset = input_batch_index * height * width * channels +
+                        i_top_left_y * width * channels +
+                        i_top_left_x * channels;
+    i_top_left_xy_weight = i_top_left_x_weight * i_top_left_y_weight;
+    i_top_right_offset = i_top_left_offset + channels;
+    i_top_right_xy_weight = (1 - i_top_left_x_weight) * i_top_left_y_weight;
+    i_bottom_left_offset = i_top_left_offset + width * channels;
+    i_bottom_left_xy_weight = i_top_left_x_weight * (1 - i_top_left_y_weight);
+    i_bottom_right_offset = i_top_left_offset + width * channels + channels;
+    i_bottom_right_xy_weight =
+        (1 - i_top_left_x_weight) * (1 - i_top_left_y_weight);
+    bool topLeftIsIn = between(i_top_left_x, 0, width - 1) &&
+                       between(i_top_left_y, 0, height - 1);
+    bool topRightIsIn = between(i_top_left_x + 1, 0, width - 1) &&
+                        between(i_top_left_y, 0, height - 1);
+    bool bottomLeftIsIn = between(i_top_left_x, 0, width - 1) &&
+                          between(i_top_left_y + 1, 0, height - 1);
+    bool bottomRightIsIn = between(i_top_left_x + 1, 0, width - 1) &&
+                           between(i_top_left_y + 1, 0, height - 1);
+    if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn && !bottomRightIsIn)
+      continue;
+    // offset of output data
+    o_offset = gn * output_h * output_w * channels + gh * output_w * channels +
+               gw * channels;
+    if (repeat == 0) {
+      if (bin_i < task_bins) {
+        // Store
+        if (bin_i >= 2) {
+          offset = (bin_i - 2) % 2 * c_align * 4;
+          if ((bin_i - 2) % 2 == 0) {
+            __memcpy_async(output + o_offset_ping, nram_ping + offset,
+                           channels * sizeof(T), NRAM2GDRAM);
+          } else {
+            __memcpy_async(output + o_offset_pong, nram_ping + offset,
+                           channels * sizeof(T), NRAM2GDRAM);
+          }
+        }
+        // Compute
+        if (bin_i >= 1) {
+          // C (i-1)
+          offset = (bin_i - 1) % 2 * c_align * 4;
+          __bang_mul_const(nram_ping + offset, nram_ping + offset,
+                           i_top_left_xy_weight_pre, c_align);
+          __bang_mul_const(nram_ping + offset + c_align,
+                           nram_ping + offset + c_align,
+                           i_top_right_xy_weight_pre, c_align);
+          __bang_mul_const(nram_ping + offset + 2 * c_align,
+                           nram_ping + offset + 2 * c_align,
+                           i_bottom_left_xy_weight_pre, c_align);
+          __bang_mul_const(nram_ping + offset + 3 * c_align,
+                           nram_ping + offset + 3 * c_align,
+                           i_bottom_right_xy_weight_pre, c_align);
+          __bang_add(nram_ping + offset, nram_ping + offset,
+                     nram_ping + offset + c_align, c_align);
+          __bang_add(nram_ping + offset + 2 * c_align,
+                     nram_ping + offset + 2 * c_align,
+                     nram_ping + offset + 3 * c_align, c_align);
+          __bang_add(nram_ping + offset, nram_ping + offset,
+                     nram_ping + offset + 2 * c_align, c_align);
+        }
+        // Load
+        // L (bin_index)
+        offset = (bin_i) % 2 * c_align * 4;
+        __nramset(nram_ping + offset, 4 * c_align, 0);
+        __asm__ volatile("sync;\n\t");
+        if (topLeftIsIn) {
+          __memcpy_async(nram_ping + offset, input + i_top_left_offset,
+                         channels * sizeof(T), GDRAM2NRAM);
+        }
+        if (topRightIsIn) {
+          __memcpy_async(nram_ping + offset + c_align,
+                         input + i_top_right_offset, channels * sizeof(T),
+                         GDRAM2NRAM);
+        }
+        if (bottomLeftIsIn) {
+          __memcpy_async(nram_ping + offset + 2 * c_align,
+                         input + i_bottom_left_offset, channels * sizeof(T),
+                         GDRAM2NRAM);
+        }
+        if (bottomRightIsIn) {
+          __memcpy_async(nram_ping + offset + 3 * c_align,
+                         input + i_bottom_right_offset, channels * sizeof(T),
+                         GDRAM2NRAM);
+        }
+      }
+      if (bin_i % 2 == 0) {
+        o_offset_ping = o_offset;
+      } else {
+        o_offset_pong = o_offset;
+      }
+      i_top_left_xy_weight_pre = i_top_left_xy_weight;
+      i_top_right_xy_weight_pre = i_top_right_xy_weight;
+      i_bottom_left_xy_weight_pre = i_bottom_left_xy_weight;
+      i_bottom_right_xy_weight_pre = i_bottom_right_xy_weight;
+      bin_i++;
+      __asm__ volatile("sync;\n\t");
+    } else {
+      for (int i = 0; i < repeat + 2 + rem_num; ++i) {
+        // Store
+        if (i >= 2) {
+          if (i < repeat + 2 + rem_num - 1 || rem_num == 0) {
+            // S (i-2)
+            if (i == repeat + 2 + rem_num - 2 &&
+                bin_index != bins_loop_per - 1) {
+              offset_s = (i - 2) % 2 * nram_limit * 4;
+              o_offset_s = o_offset + (i - 2) * nram_limit;
+            } else {
+              offset = (i - 2) % 2 * nram_limit * 4;
+              __memcpy_async(output + o_offset + (i - 2) * nram_limit,
+                             nram_ping + offset, nram_limit * sizeof(T),
+                             NRAM2GDRAM);
+            }
+          } else if (rem_num == 1) {
+            // S_rem (i-2)
+            if (bin_index == bins_loop_per - 1) {
+              offset = (i - 2) % 2 * nram_limit * 4;
+              __memcpy_async(output + o_offset + (i - 2) * nram_limit,
+                             nram_ping + offset, rem * sizeof(T), NRAM2GDRAM);
+            } else {
+              offset_s_rem = (i - 2) % 2 * nram_limit * 4;
+              o_offset_s_rem = o_offset + (i - 2) * nram_limit;
+            }
+          }
+        }
+        if (i == 0 && bin_index != bins_first_per) {
+          __memcpy_async(output + o_offset_s, nram_ping + offset_s,
+                         nram_limit * sizeof(T), NRAM2GDRAM);
+          // C_rem (i-1)
+          __bang_mul_const(nram_ping + offset_c_rem, nram_ping + offset_c_rem,
+                           i_top_left_xy_weight_pre, rem_align);
+          __bang_mul_const(nram_ping + offset_c_rem + nram_limit,
+                           nram_ping + offset_c_rem + nram_limit,
+                           i_top_right_xy_weight_pre, rem_align);
+          __bang_mul_const(nram_ping + offset_c_rem + 2 * nram_limit,
+                           nram_ping + offset_c_rem + 2 * nram_limit,
+                           i_bottom_left_xy_weight_pre, rem_align);
+          __bang_mul_const(nram_ping + offset_c_rem + 3 * nram_limit,
+                           nram_ping + offset_c_rem + 3 * nram_limit,
+                           i_bottom_right_xy_weight_pre, rem_align);
+          __bang_add(nram_ping + offset_c_rem, nram_ping + offset_c_rem,
+                     nram_ping + offset_c_rem + nram_limit, rem_align);
+          __bang_add(nram_ping + offset_c_rem + 2 * nram_limit,
+                     nram_ping + offset_c_rem + 2 * nram_limit,
+                     nram_ping + offset_c_rem + 3 * nram_limit, rem_align);
+          __bang_add(nram_ping + offset_c_rem, nram_ping + offset_c_rem,
+                     nram_ping + offset_c_rem + 2 * nram_limit, rem_align);
+        }
+        if (i == 1 && bin_index != bins_first_per) {
+          __memcpy_async(output + o_offset_s_rem, nram_ping + offset_s_rem,
+                         rem * sizeof(T), NRAM2GDRAM);
+        }
+        // Compute
+        if (i >= 1 && i < repeat + 1 + rem_num) {
+          if (i < repeat + 1 + rem_num - 1 || rem_num == 0) {
+            // C (i-1)
+            offset = (i - 1) % 2 * nram_limit * 4;
+            __bang_mul_const(nram_ping + offset, nram_ping + offset,
+                             i_top_left_xy_weight, nram_limit);
+            __bang_mul_const(nram_ping + offset + nram_limit,
+                             nram_ping + offset + nram_limit,
+                             i_top_right_xy_weight, nram_limit);
+            __bang_mul_const(nram_ping + offset + 2 * nram_limit,
+                             nram_ping + offset + 2 * nram_limit,
+                             i_bottom_left_xy_weight, nram_limit);
+            __bang_mul_const(nram_ping + offset + 3 * nram_limit,
+                             nram_ping + offset + 3 * nram_limit,
+                             i_bottom_right_xy_weight, nram_limit);
+            __bang_add(nram_ping + offset, nram_ping + offset,
+                       nram_ping + offset + nram_limit, nram_limit);
+            __bang_add(nram_ping + offset + 2 * nram_limit,
+                       nram_ping + offset + 2 * nram_limit,
+                       nram_ping + offset + 3 * nram_limit, nram_limit);
+            __bang_add(nram_ping + offset, nram_ping + offset,
+                       nram_ping + offset + 2 * nram_limit, nram_limit);
+          } else if (rem_num == 1) {
+            if (bin_index == bins_loop_per - 1) {
+              offset = (i - 1) % 2 * nram_limit * 4;
+              __bang_mul_const(nram_ping + offset, nram_ping + offset,
+                               i_top_left_xy_weight, rem_align);
+              __bang_mul_const(nram_ping + offset + nram_limit,
+                               nram_ping + offset + nram_limit,
+                               i_top_right_xy_weight, rem_align);
+              __bang_mul_const(nram_ping + offset + 2 * nram_limit,
+                               nram_ping + offset + 2 * nram_limit,
+                               i_bottom_left_xy_weight, rem_align);
+              __bang_mul_const(nram_ping + offset + 3 * nram_limit,
+                               nram_ping + offset + 3 * nram_limit,
+                               i_bottom_right_xy_weight, rem_align);
+              __bang_add(nram_ping + offset, nram_ping + offset,
+                         nram_ping + offset + nram_limit, rem_align);
+              __bang_add(nram_ping + offset + 2 * nram_limit,
+                         nram_ping + offset + 2 * nram_limit,
+                         nram_ping + offset + 3 * nram_limit, rem_align);
+              __bang_add(nram_ping + offset, nram_ping + offset,
+                         nram_ping + offset + 2 * nram_limit, rem_align);
+            } else {
+              offset_c_rem = (i - 1) % 2 * nram_limit * 4;
+              i_top_left_xy_weight_pre = i_top_left_xy_weight;
+              i_top_right_xy_weight_pre = i_top_right_xy_weight;
+              i_bottom_left_xy_weight_pre = i_bottom_left_xy_weight;
+              i_bottom_right_xy_weight_pre = i_bottom_right_xy_weight;
+            }
+          }
+        }
+        // Load
+        if (i < repeat + rem_num) {
+          if (i < repeat + rem_num - 1 || rem_num == 0) {
+            // L (i)
+            offset = ((bin_index - bins_first_per) * (repeat + rem_num) + i) %
+                     2 * nram_limit * 4;
+            __nramset(nram_ping + offset, 4 * nram_limit, 0);
+            __asm__ volatile("sync;\n\t");
+            if (topLeftIsIn) {
+              __memcpy_async(nram_ping + offset,
+                             input + i_top_left_offset + i * nram_limit,
+                             nram_limit * sizeof(T), GDRAM2NRAM);
+            }
+            if (topRightIsIn) {
+              __memcpy_async(nram_ping + offset + nram_limit,
+                             input + i_top_right_offset + i * nram_limit,
+                             nram_limit * sizeof(T), GDRAM2NRAM);
+            }
+            if (bottomLeftIsIn) {
+              __memcpy_async(nram_ping + offset + 2 * nram_limit,
+                             input + i_bottom_left_offset + i * nram_limit,
+                             nram_limit * sizeof(T), GDRAM2NRAM);
+            }
+            if (bottomRightIsIn) {
+              __memcpy_async(nram_ping + offset + 3 * nram_limit,
+                             input + i_bottom_right_offset + i * nram_limit,
+                             nram_limit * sizeof(T), GDRAM2NRAM);
+            }
+
+          } else if (rem_num == 1) {
+            // L_rem (i-1)
+            offset = ((bin_index - bins_first_per) * (repeat + rem_num) + i) %
+                     2 * nram_limit * 4;
+            __nramset(nram_ping + offset, 4 * nram_limit, 0);
+            __nramset(nram_ping + offset + nram_limit, rem_align, 0);
+            __nramset(nram_ping + offset + 2 * nram_limit, rem_align, 0);
+            __nramset(nram_ping + offset + 3 * nram_limit, rem_align, 0);
+            __asm__ volatile("sync;\n\t");
+            if (topLeftIsIn) {
+              __memcpy_async(nram_ping + offset,
+                             input + i_top_left_offset + i * nram_limit,
+                             rem * sizeof(T), GDRAM2NRAM);
+            }
+            if (topRightIsIn) {
+              __memcpy_async(nram_ping + offset + nram_limit,
+                             input + i_top_right_offset + i * nram_limit,
+                             rem * sizeof(T), GDRAM2NRAM);
+            }
+            if (bottomLeftIsIn) {
+              __memcpy_async(nram_ping + offset + 2 * nram_limit,
+                             input + i_bottom_left_offset + i * nram_limit,
+                             rem * sizeof(T), GDRAM2NRAM);
+            }
+            if (bottomRightIsIn) {
+              __memcpy_async(nram_ping + offset + 3 * nram_limit,
+                             input + i_bottom_right_offset + i * nram_limit,
+                             rem * sizeof(T), GDRAM2NRAM);
+            }
+          }
+        }
+        __asm__ volatile("sync;\n\t");
+      }
+    }
+  }
+  if (repeat == 0 && task_bins > 1) {
+    offset = (bin_i - 2) % 2 * c_align * 4;
+    if ((bin_i - 2) % 2 == 0) {
+      __memcpy_async(output + o_offset_ping, nram_ping + offset,
+                     channels * sizeof(T), NRAM2GDRAM);
+    } else {
+      __memcpy_async(output + o_offset_pong, nram_ping + offset,
+                     channels * sizeof(T), NRAM2GDRAM);
+    }
+  }
+  __asm__ volatile("sync;\n\t");
+  if (repeat == 0 && task_bins > 0) {
+    offset = (bin_i - 1) % 2 * c_align * 4;
+    __bang_mul_const(nram_ping + offset, nram_ping + offset,
+                     i_top_left_xy_weight_pre, c_align);
+    __bang_mul_const(nram_ping + offset + c_align, nram_ping + offset + c_align,
+                     i_top_right_xy_weight_pre, c_align);
+    __bang_mul_const(nram_ping + offset + 2 * c_align,
+                     nram_ping + offset + 2 * c_align,
+                     i_bottom_left_xy_weight_pre, c_align);
+    __bang_mul_const(nram_ping + offset + 3 * c_align,
+                     nram_ping + offset + 3 * c_align,
+                     i_bottom_right_xy_weight_pre, c_align);
+    __bang_add(nram_ping + offset, nram_ping + offset,
+               nram_ping + offset + c_align, c_align);
+    __bang_add(nram_ping + offset + 2 * c_align,
+               nram_ping + offset + 2 * c_align,
+               nram_ping + offset + 3 * c_align, c_align);
+    __bang_add(nram_ping + offset, nram_ping + offset,
+               nram_ping + offset + 2 * c_align, c_align);
+    __asm__ volatile("sync;\n\t");
+    offset = (bin_i - 1) % 2 * c_align * 4;
+    if ((bin_i - 1) % 2 == 0) {
+      __memcpy_async(output + o_offset_ping, nram_ping + offset,
+                     channels * sizeof(T), NRAM2GDRAM);
+    } else {
+      __memcpy_async(output + o_offset_pong, nram_ping + offset,
+                     channels * sizeof(T), NRAM2GDRAM);
+    }
+  }
+}
+
+__mlu_global__ void MLUKernelRoiCropForward(
+    const void *input, const int batch, const int height, const int width,
+    const int channels, const void *grid, const int grid_n, void *output,
+    const int output_h, const int output_w, const mluOpDataType_t data_type) {
+  if (coreId == 0x80) {
+    return;
+  }
+  MLUUnion1RoiCropForward((float *)input, batch, height, width, channels,
+                          (float *)grid, grid_n, (float *)output, output_h,
+                          output_w);
+}
