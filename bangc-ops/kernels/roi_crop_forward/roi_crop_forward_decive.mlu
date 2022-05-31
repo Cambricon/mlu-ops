@@ -27,7 +27,6 @@ __mlu_func__ void getInputTopLeft(const T grid_yx_value, const int input_hw,
   *point = floor(xcoord);
   *weight = 1 - (xcoord - (T)(*point));
 }
-
 __mlu_func__ bool between(const int value, const int lowerBound,
                           const int upperBound) {
   return (value >= lowerBound && value <= upperBound);
