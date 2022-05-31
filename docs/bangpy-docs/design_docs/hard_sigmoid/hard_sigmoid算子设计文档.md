@@ -73,7 +73,7 @@ $hard_sigmoid(x)=\left\{\begin{matrix}0,  x<=3\\1/6*x+1/2,-3<x<3\\1,  x>=3\end{m
 
 #### 1.5.2 性能验收标准
 
-大规模IO效率大于70%。
+见 [MLU-OPS 性能验收标准](../../../MLU-OPS性能验收标准.md)。
 
 ## 2 算子接口设计
 
@@ -111,7 +111,14 @@ data_out_dev = bangpy.Array(np.zeros(data_out.flatten().shape, dtype.as_numpy_dt
 
 
 #device
-# distribute and calculate
+# distribute
+data_each_task = data_total // self.task_num
+data_rem = data_total % self.task_num
+data_each_time = self.nram_size_buffer // self.dtype_sz
+loop = data_each_task // data_each_time
+data_rem_n = data_each_task  % data_each_time
+
+# calculate
 memcpy:GDRAM-->NRAM
 self.tcp.assign(buffer_temp_n,1/6)
 self.tcp.multiply(buffer_io_n,buffer_io_n,buffer_temp_n) # x * 1/6
@@ -154,7 +161,7 @@ NRAM双缓冲对应的流水线如下：
 由以上的图可知，计算时间被访存时间隐藏，并且DRAM的带宽应该已经充分利用。  
 使用cnperf工具检测时，也基本符合上述结论。  
   
-那么还有优化的空间吗？比如：1.引入SRAM/WRAM作为缓存 2.利用IO-DMA和Shared-DMA的并行等等  
+那么还有优化的空间吗？比如：引入SRAM/WRAM作为缓存？利用IO-DMA和Shared-DMA的并行？等等  
 经过尝试，其它结果与分析如下：  
     （1） 该算子在NRAM中计算时，每次拷入NRAM的数据量较大，SRAM或WRAM的空间相对于每次拷入NRAM的数据量来说较小，单纯的引入它们作为缓存并不能起到缓存的作用，并且重复的数据拷贝反而使总的性能降低。   
     （2） 引入SRAM并且利用IO-DMA和Shared-DMA的并行时，该算子**理想的**流水线如下（其中：S//4=N1*3=N2\*3，即每计算3次后SRAM被填满，需拷出到GDRAM）：
@@ -175,11 +182,13 @@ NRAM双缓冲对应的流水线如下：
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：  
-(1, 63), (1, 1, 1, 16, 174680), (1, 1, 1, 1, 1, 1, 16, 2088960), (1234, 4321), (1, 1, 1, 1, 1, 1, 128, 2088960)
+
+(1, 63), (1, 1, 1, 16, 174680), (1, 1, 1, 1, 1, 1, 16, 2088960), (1234, 4321), (1, 1, 1, 1, 1, 1, 128, 2088960)  
+覆盖逻辑分支。
 
 ### 3.7 算子防呆检查
 
-除host端自动生成的部分参数防呆检查外，暂不需要进行其他的防呆检查。
+暂无。
 
 ## 4 算子性能优化记录
 
@@ -199,7 +208,7 @@ NRAM双缓冲对应的流水线如下：
 
 ### 5.1 开发测试计划
 
-xx-xx-xx~2022-03-01 准备工作（学习白皮书，熟悉开发环境等）  
+xx-xx-xx~2022-03-01 准备工作（学习白皮书、熟悉开发环境等）  
 2022-03-01 算子调研与设计文档  
 2022-03-14 开始编写代码  
 2022-03-28 逻辑完善、性能优化与测试  
@@ -208,4 +217,4 @@ xx-xx-xx~2022-03-01 准备工作（学习白皮书，熟悉开发环境等）
 
 ### 5.2 风险分析
 
-暂无。
+1.目前只在MLU290上测试过。
