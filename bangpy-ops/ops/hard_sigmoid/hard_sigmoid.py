@@ -46,7 +46,7 @@ class Hard_sigmoid(object):
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
         # how to set the value of self.nram_size_buffer?(NRAM:512KB)
-        # 3*buffer_n:   1.buffer_io_n*2(double buffering) + buffer_temp_n
+        # 3*buffer_n:   buffer_io_n*2(double buffering) + buffer_temp_n
         # max:  512KB=524288/3=174762.666...(B)
         # actual:  174080                           pass
         #     174080+1*128=174208        current data size is 43552 bytes:not align by 64 bytes
