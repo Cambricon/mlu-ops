@@ -18,17 +18,15 @@
 #include "mlu_op.h"
 #include "log.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpLog(mluOpHandle_t handle,
-                                     const mluOpComputationPreference_t prefer,
-                                     const mluOpLogBase_t base,
-                                     const mluOpTensorDescriptor_t x_desc,
-                                     const void *x,
-                                     const mluOpTensorDescriptor_t y_desc,
-                                     void *y) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
+         const mluOpLogBase_t base, const mluOpTensorDescriptor_t x_desc,
+         const void *x, const mluOpTensorDescriptor_t y_desc, void *y) {
   mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   bool zero_element = false;
   mluOpStatus_t param_check =
-      unaryOpParamCheck("[mluOpLog]", handle, x_desc, x, y_desc, y, support_type, 2, zero_element);
+      unaryOpParamCheck("[mluOpLog]", handle, x_desc, x, y_desc, y,
+                        support_type, 2, zero_element);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
@@ -39,8 +37,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpLog(mluOpHandle_t handle,
   cnrtFunctionType_t k_type;
   cnrtDim3_t k_dim;
   unaryOpPolicyFunc(handle, x_desc, &k_dim, &k_type);
-  VLOG(5) << "[mluOp] Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
-          << "]";
+  VLOG(5) << "[mluOp] Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
+          << ", " << k_dim.z << "]";
 
   float coef = 1.0;
   if (base == mluOpLogBase_t::MLUOP_LOG_E) {
@@ -55,7 +53,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpLog(mluOpHandle_t handle,
 
   size_t element_num = mluOpGetTensorElementNum(x_desc);
 
-  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num, float coef);
+  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num,
+                              float coef);
   MLUBlockKernelUnary = NULL;
   if (handle->arch == MLUOP_MLU270) {
     if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
@@ -84,7 +83,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLog(mluOpHandle_t handle,
       }
     }
   }
-  KERNEL_CHECK(
-      (MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>((void *)x, y, element_num, coef)));
+  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>(
+      (void *)x, y, element_num, coef)));
   return MLUOP_STATUS_SUCCESS;
 }

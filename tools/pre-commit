@@ -1,0 +1,153 @@
+#! /bin/bash
+
+bangc_core="bangc-ops/core|"
+bangc_kernel="bangc-ops/kernels|"
+bangc_test_zoo="bangc-ops/test/mlu_op_gtest/src/zoo"
+check_list=${bangc_core}${bangc_kernel}${bangc_test_zoo}
+
+bangc_core_op_h="bangc-ops/core/mlu_op_core.h"
+exclude_list=${bangc_core_op_h}
+
+if [[ $# -eq 1 ]]; then
+  filenames=$(git diff --name-only ${1} \
+    | grep -v ${exclude_list} \
+    | grep -E ${check_list})
+else
+  filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
+    --diff-filter=R --diff-filter=T --cached --name-only \
+    | grep -v ${exclude_list} \
+    | grep -E ${check_list}) 
+fi
+
+ret=0
+
+if [[ "$(which cpplint)" == "" ]]; then
+  echo "Please pip install cpplint(version>=1.5.5)!"
+  exit -1
+fi
+
+echo "-- [pre-commit] Using cpplint to check patch by .git/hooks/pre-commit..."
+for i in ${filenames} ; do
+  cpplint $i 2>&1 \
+    | grep -v Ignoring \
+    | grep -v "Total errors" \
+    | grep -v "Done processing"
+
+  if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+    ret=1
+  fi
+done
+
+if [[ ${ret} != 0 ]]; then
+  echo "-- [pre-commit] cpplint FAILED: Please fix cpplint errors or use \
+tools/format2google to format the patch."
+  exit ${ret}
+else
+  echo "-- [pre-commit] cpplint PASSED."
+fi
+
+echo "-- [pre-commit] Check __bang_printf or printf or std::cout or \
+assert() in kernel code..."
+for i in ${filenames} ; do
+  include_mlu=$(echo $i | grep -E ".mlu|.cpp")
+  check_dir=$(echo $i | grep -E "^core\/|^kernels\/")
+  #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
+  if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
+    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \ 
+      /\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
+    for line in ${printf_log};
+    do
+      echo $i +${line}
+    done
+    if [[ -n "${printf_log}" ]]; then
+      ret=1
+    fi
+  fi
+done
+
+if [[ ${ret} != 0 ]]; then
+  echo "-- [pre-commit] check print and assert FAILED: Please use \
+MLULOG/ VLOG/ LOG/ PARAM_CHECK."
+  exit ${ret}
+else
+  echo "-- [pre-commit] check print and assert PASSED."
+fi
+
+echo "-- [pre-commit] Check KERNEL_CHECK in kernel code."
+# KERNEL_CHECK in kernel code needs three steps
+# step1: find the line of "<<<.*queue>>";
+# step2: find the starting line of launch kernel; "<<<.*queue>>>" and the
+#        starting line of launch kernel may be on different lines, so the
+#        line getting by step1 may not be the starting line of launch kernel.
+# step3: judge whether KERNEL_CHECK is added in starting line of launch
+#        kernel
+for i in ${filenames} ; do
+  include_mlu=$(echo $i | grep "\.mlu")
+  if [[ -n "${include_mlu}" ]]; then
+    # step1
+    # launch_kernel_indexs represents the line index of "<<<.*queue>>>". 
+    # launch_kenel_indexs is an array, duo to there are many places to launch 
+    # kernel.
+    launch_kernel_indexs=$(sed -n '/<<<.*queue>>>/=' $i)
+    if [[ launch_kernel_indexs ]]; then
+      for launch_kernel_index in ${launch_kernel_indexs}; do
+        forward_line_num=1
+        # step2
+        # forward_line_num represents how many lines before "launch_kenel_index", 
+        # attempting to find the starting line of launch kernel
+        while [[ ${forward_line_num} -le ${launch_kernel_index} ]]; do
+          start_index_launch_kernel=`expr ${launch_kernel_index} - ${forward_line_num}`
+          start_index=$(sed -n -e "${start_index_launch_kernel}p" $i | \
+            sed -n -e '/$[)};.]/=' -e '/^\s*$/=' -e '/[{;)]/=')
+          if [[ -n "${start_index}" ]];then
+            break
+          fi
+          let forward_line_num++
+        done
+        # start_index_launch_kernel indicates the starting line of launch kernel.
+        start_index_launch_kernel=`expr ${launch_kernel_index} - \
+          ${forward_line_num} + 1`
+        # step3
+        kernel_check=$(sed -n -e "${start_index_launch_kernel}, \
+	  ${launch_kernel_index}p" $i | sed -n -e '/KERNEL_CHECK/=')
+        if [[ -z "${kernel_check}" ]]; then
+          echo $i +`expr ${launch_kernel_index} - ${forward_line_num} + 1`
+          ret=1
+        fi
+      done
+    fi
+  fi
+done
+
+if [[ ${ret} != 0 ]]; then
+  echo "-- [pre-commit] check KERNEL_CHECK FAILED: \
+Please add KERNEL_CHECK when launching kernel."
+  exit ${ret}
+else
+  echo "-- [pre-commit] check printf PASSED."
+fi
+
+if [[ "$(which pylint)" == "" ]]; then
+  echo "Please pip install pylint!(pylint==2.9)"
+  exit -1
+fi
+
+echo "-- [pre-commit] Using pylint to check bangpy/ops \
+by .git/hooks/pre-commit..."
+python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
+     | grep -v "Your code" \
+     | grep -v "Module bangpy" \
+     | grep -E ".py"
+
+if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+  ret=1
+fi
+
+if [[ ${ret} != 0 ]]; then
+  echo "-- [pre-commit] pylint FAILED: Please fix pylint errors."
+  exit ${ret}
+else
+  echo "-- [pre-commit] pylint PASSED."
+fi
+
+exit 0

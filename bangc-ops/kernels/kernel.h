@@ -29,8 +29,10 @@
  ******************************************************************************/
 #define CORE_DIM 4
 #if defined(__BANG__)
-#define MAX_NRAM_SIZE (__MLU_NRAM_SIZE__ * 1024 - 128 * 1024)  // 128KB reserved for cncc
-#define MAX_SRAM_SIZE (__MLU_SRAM_SIZE__ * 1024 - 128 * 1024)  // 128KB reserved for cncc
+#define MAX_NRAM_SIZE \
+  (__MLU_NRAM_SIZE__ * 1024 - 128 * 1024)  // 128KB reserved for cncc
+#define MAX_SRAM_SIZE \
+  (__MLU_SRAM_SIZE__ * 1024 - 128 * 1024)  // 128KB reserved for cncc
 #define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024)
 
 __mlu_func__ void pvLock() {

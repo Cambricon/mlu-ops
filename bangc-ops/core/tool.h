@@ -30,21 +30,17 @@
 mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst);
 
 // The API is used for no scling factor quantization.
-mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype, int *position);
+mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
+                          int *position);
 
 // The API is used for scaling factor quantization.
-mluOpStatus_t getPositionAndScale(float *input,
-                                  size_t num,
-                                  mluOpDataType_t datatype,
-                                  int *position,
+mluOpStatus_t getPositionAndScale(float *input, size_t num,
+                                  mluOpDataType_t datatype, int *position,
                                   float *scale);
 // The API is used for asymmetrical quantization.
-mluOpStatus_t getPositionScaleAndOffset(float *input,
-                                        size_t num,
-                                        mluOpDataType_t datatype,
-                                        int *position,
-                                        float *scale,
-                                        int *offset);
+mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
+                                        mluOpDataType_t datatype, int *position,
+                                        float *scale, int *offset);
 
 /**
  * @brief cast int31 data to float32 data
@@ -61,7 +57,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input,
  *         otherwise the error code is returned.
  */
 
-mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num, int position);
+mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
+                                 int position);
 
 int16_t castFloat32ToHalf(float src);
 
@@ -86,12 +83,10 @@ int16_t castFloat32ToHalf(float src);
  *         otherwise the error code is returned.
  */
 template <typename FixedType>
-mluOpStatus_t castFloat32ToFixed(const float *src,
-                                 FixedType *dst,
-                                 const size_t num,
-                                 const int position = 0,
-                                 const float scale  = 1.0,
-                                 const int offset   = 0) {
+mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
+                                 const size_t num, const int position = 0,
+                                 const float scale = 1.0,
+                                 const int offset  = 0) {
   PARAM_CHECK("[castFloat32ToFixed]", src != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", dst != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", num > 0);
@@ -99,7 +94,8 @@ mluOpStatus_t castFloat32ToFixed(const float *src,
   const float max = pow(2, sizeof(FixedType) * 8 - 1) + (-1);
   const float min = pow(2, sizeof(FixedType) * 8 - 1) * (-1);
   for (size_t i = 0; i < num; ++i) {
-    float res = static_cast<float>((src[i] * scale / pow(2, position) + offset));
+    float res =
+        static_cast<float>((src[i] * scale / pow(2, position) + offset));
     if (res > max) {
       res = max;
     } else if (res < min) {
@@ -131,12 +127,10 @@ mluOpStatus_t castFloat32ToFixed(const float *src,
  *         otherwise the error code is returned.
  */
 template <typename FixedType>
-mluOpStatus_t castFixedToFloat32(const FixedType *src,
-                                 float *dst,
-                                 const size_t num,
-                                 const int position = 0,
-                                 const float scale  = 1.0,
-                                 const int offset   = 0) {
+mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
+                                 const size_t num, const int position = 0,
+                                 const float scale = 1.0,
+                                 const int offset  = 0) {
   PARAM_CHECK("[castFixedToFloat32]", src != NULL);
   PARAM_CHECK("[castFixedToFloat32]", dst != NULL);
   PARAM_CHECK("[castFixedToFloat32]", num > 0);

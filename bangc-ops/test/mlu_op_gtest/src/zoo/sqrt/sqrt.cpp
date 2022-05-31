@@ -28,7 +28,9 @@ void SqrtExecutor::compute() {
   auto dev_y = data_vector_[1].device_ptr;
 
   mluOpComputationPreference_t prefer =
-      (mluOpComputationPreference_t)parser_->getProtoNode()->sqrt_param().prefer();
+      (mluOpComputationPreference_t)parser_->getProtoNode()
+          ->sqrt_param()
+          .prefer();
   VLOG(4) << "call mluOpSqrt()";
   interface_timer_.start();
   MLUOP_CHECK(mluOpSqrt(handle_, prefer, tensor_x, dev_x, tensor_y, dev_y));

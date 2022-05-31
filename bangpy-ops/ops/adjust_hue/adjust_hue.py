@@ -30,6 +30,8 @@ from bangpy.tcp.runtime import TaskType
 from bangpy.platform.bang_config import TARGET
 
 NRAM_SIZE_LIMIT = lambda x, y, z, align: x / z / y / align * align
+ACTIVETAB_ELEM_NUM = 128
+CONSTAB_ELEM_NUM = 64
 DTYPES = [bp.float16, bp.float32]
 TARGET_LIST = ["mlu290", "mlu270"]
 KERNEL_NAME = "adjust_hue"
@@ -113,52 +115,52 @@ class AdjustHue(object):
         )
 
         self.active_tab_1 = self.tcp.Constant(
-            value=ACTIVE_TABLE1, shape=(128,), dtype=dtype, name="active_1"
+            value=ACTIVE_TABLE1, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_1"
         )
         self.tab1_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab1_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab1_nram"
         )
         # use for r_c
         self.active_tab_2 = self.tcp.Constant(
-            value=ACTIVE_TABLE2, shape=(128,), dtype=dtype, name="active_2"
+            value=ACTIVE_TABLE2, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_2"
         )
         self.tab2_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab2_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab2_nram"
         )
         # use for r_x
         self.active_tab_3 = self.tcp.Constant(
-            value=ACTIVE_TABLE3, shape=(128,), dtype=dtype, name="active_3"
+            value=ACTIVE_TABLE3, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_3"
         )
         self.tab3_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab3_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab3_nram"
         )
         # use for g_c
         self.active_tab_4 = self.tcp.Constant(
-            value=ACTIVE_TABLE4, shape=(128,), dtype=dtype, name="active_4"
+            value=ACTIVE_TABLE4, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_4"
         )
         self.tab4_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab4_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab4_nram"
         )
         # use for g_x
         self.active_tab_5 = self.tcp.Constant(
-            value=ACTIVE_TABLE5, shape=(128,), dtype=dtype, name="active_5"
+            value=ACTIVE_TABLE5, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_5"
         )
         self.tab5_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab5_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab5_nram"
         )
         # use for b_c
         self.active_tab_6 = self.tcp.Constant(
-            value=ACTIVE_TABLE6, shape=(128,), dtype=dtype, name="active_6"
+            value=ACTIVE_TABLE6, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_6"
         )
         self.tab6_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab6_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab6_nram"
         )
         # use for b_x
         self.active_tab_7 = self.tcp.Constant(
-            value=ACTIVE_TABLE7, shape=(128,), dtype=dtype, name="active_7"
+            value=ACTIVE_TABLE7, shape=(ACTIVETAB_ELEM_NUM,), dtype=dtype, name="active_7"
         )
         self.tab7_nram = self.tcp.Buffer(
-            shape=(1, 128), dtype=self.dtype, scope="nram", name="tab7_nram"
+            shape=(1, ACTIVETAB_ELEM_NUM), dtype=self.dtype, scope="nram", name="tab7_nram"
         )
         self.hsv_nram = self.tcp.Buffer(
             shape=(self.nram_use // self.dtype.bytes,),
@@ -243,14 +245,70 @@ class AdjustHue(object):
 
     def prepare_active_tab(self):
         # memcpy for active table.
-        self.tcp.memcpy(self.tab1_nram, self.active_tab_1)
-        self.tcp.memcpy(self.const1_nram, self.const_tab_1.reinterpret_cast(self.dtype))
-        self.tcp.memcpy(self.tab2_nram, self.active_tab_2)
-        self.tcp.memcpy(self.tab3_nram, self.active_tab_3)
-        self.tcp.memcpy(self.tab4_nram, self.active_tab_4)
-        self.tcp.memcpy(self.tab5_nram, self.active_tab_5)
-        self.tcp.memcpy(self.tab6_nram, self.active_tab_6)
-        self.tcp.memcpy(self.tab7_nram, self.active_tab_7)
+        self.tcp.memcpy(
+            self.tab1_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_1,
+        )
+        self.tcp.memcpy(
+            self.const1_nram.reshape(
+                [
+                    64 // self.dtype.bytes,
+                ]
+            ),
+            self.const_tab_1.reinterpret_cast(self.dtype),
+        )
+        self.tcp.memcpy(
+            self.tab2_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_2,
+        )
+        self.tcp.memcpy(
+            self.tab3_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_3,
+        )
+        self.tcp.memcpy(
+            self.tab4_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_4,
+        )
+        self.tcp.memcpy(
+            self.tab5_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_5,
+        )
+        self.tcp.memcpy(
+            self.tab6_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_6,
+        )
+        self.tcp.memcpy(
+            self.tab7_nram.reshape(
+                [
+                    ACTIVETAB_ELEM_NUM,
+                ]
+            ),
+            self.active_tab_7,
+        )
 
     def divide_h_dim(self, dim, dim_id, dim_num, dim_offset):
         dim_num.assign((self.h + dim - 1) / dim)

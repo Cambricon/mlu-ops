@@ -24,7 +24,8 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR) << "[castFloat32ToInt31]:Intput num is wrong, it must be greater than 0.";
+    LOG(ERROR) << "[castFloat32ToInt31]:Intput num is wrong, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -37,8 +38,7 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
   // get absmax of the float data
   float absmax = std::fabs(src[0]);
   for (size_t i = 0; i < num; ++i) {
-    if (std::fabs(src[i]) > absmax)
-      absmax = std::fabs(src[i]);
+    if (std::fabs(src[i]) > absmax) absmax = std::fabs(src[i]);
   }
 
   // Formula: int31 , position = floor(log2(absmax) - 29))
@@ -74,7 +74,8 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype, int *position) {
+mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
+                          int *position) {
   if (input == NULL) {
     LOG(ERROR) << "[getPosition]:The pointer of input is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -84,7 +85,8 @@ mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype, in
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR) << "[getPosition]:Input num is wrong, it must be greater than 0.";
+    LOG(ERROR) << "[getPosition]:Input num is wrong, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -103,30 +105,29 @@ mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype, in
   // Formula: position = floor(log2(absmax) - (bitwidth - 2)))
   float absmax = std::fabs(input[0]);
   for (size_t index = 0; index < num; ++index) {
-    if (std::fabs(input[index]) > absmax)
-      absmax = std::fabs(input[index]);
+    if (std::fabs(input[index]) > absmax) absmax = std::fabs(input[index]);
   }
 
   if (absmax == 0) {
     *position = 0;
   } else {
-    *position = static_cast<int>(std::floor(std::log2(absmax)) - (bitwidth - 2));
+    *position =
+        static_cast<int>(std::floor(std::log2(absmax)) - (bitwidth - 2));
   }
 
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t getPositionAndScale(float *input,
-                                  size_t num,
-                                  mluOpDataType_t datatype,
-                                  int *position,
+mluOpStatus_t getPositionAndScale(float *input, size_t num,
+                                  mluOpDataType_t datatype, int *position,
                                   float *scale) {
   if (input == NULL) {
     LOG(ERROR) << "[getPositionAndScale]:The pointer of input is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR) << "[getPositionAndScale]:Input num is 0, it must be greater than 0.";
+    LOG(ERROR) << "[getPositionAndScale]:Input num is 0, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (position == NULL) {
@@ -153,39 +154,39 @@ mluOpStatus_t getPositionAndScale(float *input,
   int scale_var = std::pow(2, bitwidth - 1) - 1;
   float max_data = std::fabs(input[0]);
   for (size_t index = 0; index < num; ++index) {
-    if (std::fabs(input[index]) > max_data)
-      max_data = std::fabs(input[index]);
+    if (std::fabs(input[index]) > max_data) max_data = std::fabs(input[index]);
   }
   if (max_data == 0) {
     *position = 0;
     *scale = 1.0;
   } else if (bitwidth != 31) {
-    *position = static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
+    *position =
+        static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
     *scale = static_cast<float>(std::pow(2, *position) * scale_var / max_data);
   } else {
-    *position = static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
+    *position =
+        static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
     *scale = 1.0;
   }
 
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t getPositionScaleAndOffset(float *input,
-                                        size_t num,
-                                        mluOpDataType_t datatype,
-                                        int *position,
-                                        float *scale,
-                                        int *offset) {
+mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
+                                        mluOpDataType_t datatype, int *position,
+                                        float *scale, int *offset) {
   if (input == NULL) {
     LOG(ERROR) << "[getPositionScaleAndOffset]:The pointer of input is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR) << "[getPositionScaleAndOffset]:Input num is 0, it must be greater than 0.";
+    LOG(ERROR) << "[getPositionScaleAndOffset]:Input num is 0, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (position == NULL) {
-    LOG(ERROR) << "[getPositionScaleAndOffset]:The pointer of position is NULL.";
+    LOG(ERROR) << "[getPositionScaleAndOffset]:The pointer of position is "
+                  "NULL.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (scale == NULL) {
@@ -203,7 +204,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input,
   } else if (datatype == MLUOP_DTYPE_INT16) {
     bitwidth = 16;
   } else {
-    LOG(ERROR) << "[getPositionScaleAndOffset]:input data type is not supported.";
+    LOG(ERROR) << "[getPositionScaleAndOffset]:input data type is not "
+                  "supported.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   float max_data = input[0];
@@ -222,15 +224,18 @@ mluOpStatus_t getPositionScaleAndOffset(float *input,
     *offset = 0;
   } else {
     *position = (int)(floorf(log2f(max_data - min_data)) - (bitwidth - 1));
-    *scale = powf(2, *position) * (powf(2, bitwidth) - 1) / (max_data - min_data);
-    *offset = (int)roundf(-powf(2, bitwidth - 1) -
-                          min_data * (powf(2, bitwidth) - 1) / (max_data - min_data));
+    *scale =
+        powf(2, *position) * (powf(2, bitwidth) - 1) / (max_data - min_data);
+    *offset =
+        (int)roundf(-powf(2, bitwidth - 1) -
+                    min_data * (powf(2, bitwidth) - 1) / (max_data - min_data));
   }
 
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num, int position) {
+mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
+                                 int position) {
   if (src == NULL) {
     LOG(ERROR) << "[castInt31ToFloat32]:The pointer of src is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -240,7 +245,8 @@ mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num, int position
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num == 0) {
-    LOG(ERROR) << "[castInt31ToFloat32]:Intput num is wrong, it must be greater than 0.";
+    LOG(ERROR) << "[castInt31ToFloat32]:Intput num is wrong, it must be "
+                  "greater than 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
