@@ -145,8 +145,8 @@ task_num:任务个数
 data_each_task: 每个任务需要计算的数据个数（data_all // task_num）  
 data_rem: 平均分给所有IPU后的余数(data_all % task_num)  
 data_each_time: 每次NRAM计算的数据个数  
-loop:每个task需要拷入NRAM进行计算的次数(data_each_tsk // data_each_time)  
-data_rem_n: 不足一次计算(data_each_tsk % data_each_time)
+loop:每个task需要拷入NRAM进行计算的次数(data_each_task // data_each_time)  
+data_rem_n: 不足一次计算(data_each_task % data_each_time)
 
 ### 3.4 性能优化设计
 
