@@ -1,4 +1,4 @@
-# Adjust_hue 算子开发设计方案
+# Cosine_embedding_loss 算子开发设计方案
 
 - #### 文档基本信息
 
@@ -57,7 +57,7 @@
 | x1       |  输入形状为[N, D]的张量    | 输入              | half, float |   NW   | 无       |
 | x2       |   输入形状为[N, D]的张量   | 输入              | half, float |  NW       | 无       |
 | y      |   输入的形状为N的张量  | 输入              | half, float | N     | {1, -1}       |
-| margin      |   作为边界的标量，默认为0  | 输入              | half, float | 标量     | 无       |
+| margin      |   作为边界的标量，默认为0  | 输入              | half, float | Scalar     | 无       |
 | output      |   输出的形状为N的张量  | 输出              | half, float | N     | 无       |
 
 ### 1.4 算子限制
@@ -94,7 +94,7 @@ torch.nn.CosineEmbeddingLoss(margin=0.0, size_average=None, reduce=None, reducti
 ### 2.2 接口设计
 
 ```python
-mluopCosine_embedding_loss(input_x1, input_x2, y, margin, output)
+mluopCosine_embedding_loss(x1, x2, y, margin, output)
 ```
 
 ## 3 实现方案设计
