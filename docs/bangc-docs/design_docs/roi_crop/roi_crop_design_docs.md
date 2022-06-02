@@ -52,7 +52,7 @@
 | 是否需要支持原位             | 否                                               |
 | 是否需要支持 stride 机制      |否                                               |
 | 是否需要支持广播              | 否                                              |
-| 0 元素检查是否直接返回        | 是（返回:MLUOP_STATUS_BAD_PARAM）                  |
+| 0 元素检查是否直接返回        | 是（返回: MLUOP_STATUS_BAD_PARAM ）                  |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)      |            无               |
 | 本次开发优先支持的规模/模式    | 无规模限制                                      |
 
@@ -60,11 +60,11 @@
 
 #### 1.2.1 roi_crop_forward
 
-**1) roi_crop_forward算子功能**
+**1) roi_crop_forward 算子功能**
 
 ![roi_crop_forward_func](./roi_crop_forward_func.png)
 
-从输入的grid中提取一个（y, x）坐标映射参数, 反映射到input中的（Ax, Ay）处, 在input中对（Ax, Ay）使用向下取整, 得到对应的整数坐标,进而获取对应像数值, 通过邻近区域进行双线性插值计算输出output的像素值;
+从输入的 grid 中提取一个（y, x）坐标映射参数, 反映射到input中的A处得到坐标信息（Ax,Ay），获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值;
 
 **2) 主要计算公式**
 
@@ -74,36 +74,40 @@ Ax =  (x + 1) * (width - 1) / 2;  Ax_weight = 1 - (Ax - floor(Ax));
 
 Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
-双线性插值计算output输出值:
+双线性插值计算 output 输出值:
 
-output[address] = Ax_weight * Ay_weight * InTopLeft
-                  + (1 - Ax_weight) * Ay_weight * InTopRight
-                  + Ax_weight * (1 - Ay_weightt) * InBottomLeft
-                  + (1 - Ax_weight) * (1 - Ay_weightt) * InBottomRight;
+output_value = Ax_weight * Ay_weight * topLeft
+                  + (1 - Ax_weight) * Ay_weight * topRight
+                  + Ax_weight * (1 - Ay_weightt) * bottomLeft
+                  + (1 - Ax_weight) * (1 - Ay_weightt) * bottomRight;
+
+这里的 Ax_weight 和 Ay_weight 是坐标点（Ax,Ay）到 topLeft 左上角点的距离,其它类似。
 
 #### 1.2.2 roi_crop_backward
 
-**1) roi_crop_backward算子功能**
+**1) roi_crop_backward 算子功能**
 
 ![roi_crop_backward](./roi_crop_backward.png)
 
-从输入的grid提取一个（y, x）坐标映射参数, 反映射到gradInput中的（Ax, Ay）处, 在gradInput中对（Ax, Ay）处得到对应的整数坐标和权重, 再把gradOutput下的梯度值根据权重分配给gradInput;
+根据 grid 中 bin 的索引获取 gradOutput 中对应的梯度值，从 grid 中获取的每个（y, x）坐标映射参数, 可以反映射到 gradInput 中的A处得到坐标信息（Ax,Ay），获取 A 点附近四处整数点位偏移地址 topLeftAddress、topRightAddress, bottomLeftAddress、bottomRightAddress;最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
 
 **2) 主要计算公式**
 
-atomicAdd(&gradInput_data[gradInputTopLeftAddress], Ax_weight * Ay_weight * gradOutput_Value);
+反映射:
 
-atomicAdd(&gradInput_data[gradInputTopRightAddress], (1 - Ax_weight) * Ay_weight * gradOutput_Value);
+Ax =  (x + 1) * (width - 1) / 2;  Ax_weight = 1 - (Ax - floor(Ax));
 
-atomicAdd(&gradInput_data[gradInputBottomLeftAddress], Ax_weight * (1 - Ay_weightt) * gradOutput_Value);
+Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
-atomicAdd(&gradInput_data[gradInputBottomRightAddress], (1 - Ax_weight) * (1 - Ay_weight) * gradOutput_Value);
+梯度计算：
+
+![gradoutput](./gradoutput_func.png)
 
 #### 1.2.3 算子主要应用场景
 
-![roi_crop_forward_bg](./roi_crop_forward_bg.png)
+该算子多用在 RPN 提取的 ROI 感兴趣区域和 backbone 提取的 feature_map 特征图的下一步操作, 在 feature_map 特征矩阵中, 对 ROI 感兴趣区域进行采样, 得到固定输出大小的特征矩阵, 用于后续网络的分类与回归任务。
 
-该算子多用在RPN提取的ROI感兴趣区域和backbone提取的feature map特征图的下一步操作, 在feature map特征矩阵中, 对roi感兴趣区域进行采样, 得到固定输出大小的特征矩阵, 用于后续网络的分类与回归任务。
+![roi_crop_forward_bg](./roi_crop_forward_bg.png)
 
 ### 1.3 算子输入输出参数要求
 
@@ -111,25 +115,25 @@ atomicAdd(&gradInput_data[gradInputBottomRightAddress], (1 - Ax_weight) * (1 - A
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |mlu_ops上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
-| input_desc |输入数据input的形状描述结构体，定义了input的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无 |
-| input      |输入tensor input的地址| 输入              | float | NHWC     | 无       |
-| grid_desc |输入数据gird的形状描述结构体，定义了grid的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无    |
-| grid      |输入tensor grid的地址| 输入              | float | ARRAY    | 无       |
-| output_desc |输出数据output的形状描述结构体，定义了output的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| /  | 无 |
-| output      |输出tensor output的地址 | 输出         |    float         | NHWC     | 无       |
+| handle      |MLU-OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
+| input_desc |输入数据 input 的形状描述结构体，定义了 input 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无 |
+| input      |输入 tensor input 的地址| 输入              | float | NHWC     | 无       |
+| grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无    |
+| grid      |输入 tensor grid 的地址| 输入              | float | ARRAY    | 无       |
+| output_desc |输出数据 output 的形状描述结构体，定义了 output 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| /  | 无 |
+| output      |输出 tensor output 的地址 | 输出         |    float         | NHWC     | 无       |
 
 #### 1.3.2 roi_crop_backward
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |mlu_ops上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
-| gradOutput_desc |输入数据gradOutput的形状描述结构体，定义了gradOutput的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t | /        | 无       |
-| gradOutput      |输入tensor gradOutput的地址|输入 |  float    | NHWC     | 无       |
-| grid_desc |输入数据gird的形状描述结构体，定义了grid的数据类型，数据维度和布局| 输入   |mluOpTensorDescriptor_t | /        | 无       |
-| grid      |输入tensor grid的地址| 输入  |float | ARRAY    | 无       |
-| gradInput_desc |输入数据gradInput的形状描述结构体，定义了gradInput的数据类型，数据维度和布局      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
-| gradInput      |输入tensor gradInput的地址      | 输出              | float | NHWC    | 无       |
+| handle      |MLU-OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
+| gradOutput_desc |输入数据 gradOutput 的形状描述结构体，定义了 gradOutput 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t | /        | 无       |
+| gradOutput      |输入 tensor gradOutput 的地址|输入 |  float    | NHWC     | 无       |
+| grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入   |mluOpTensorDescriptor_t | /        | 无       |
+| grid      |输入 tensor grid 的地址| 输入  |float | ARRAY    | 无       |
+| gradInput_desc |输入数据 gradInput 的形状描述结构体，定义了 gradInput 的数据类型，数据维度和布局      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
+| gradInput      |输入 tensor gradInput 的地址      | 输出              | float | NHWC    | 无       |
 
 ### 1.4 算子限制
 
@@ -141,11 +145,11 @@ atomicAdd(&gradInput_data[gradInputBottomRightAddress], (1 - Ax_weight) * (1 - A
 | 布局限制     | input、gradInput、output和gradOutput为NHWC；grid为ARRAY  |
 | 规模限制     | 无限制                            |
 | 功能限制     | 无限制     |
-| 数据范围限制 | grid中数据范围:[-1,1]        |
+| 数据范围限制 | grid 中数据范围:[-1,1]        |
 | 原位限制     | 不支持原位   |
 | stride 限制  | 不支持 stride 机制    |
 | 广播限制     | 不支持广播  |
-|nan/inf限制|grid不支持nan/inf数据|
+|nan/inf 限制|grid 不支持 nan/inf 数据|
 
 ### 1.5 验收标准
 
@@ -163,8 +167,6 @@ atomicAdd(&gradInput_data[gradInputBottomRightAddress], (1 - Ax_weight) * (1 - A
 
 ### 2.1 参考接口
 
-因算子是cuda自定义算子，这里给出网络中调用接口和cuda函数调用接口
-
 #### 2.1.1 roi_crop_forward
 
 - 网络调用接口
@@ -181,8 +183,11 @@ int BilinearSamplerBHWD_updateOutput_cuda(THCudaTensor *inputImages,
 
 - cuda函数接口
 ```c++
-int BilinearSamplerBHWD_updateGradInput_cuda(THCudaTensor *inputImages, THCudaTensor *grids, THCudaTensor *gradInputImages,
-                                        THCudaTensor *gradGrids, THCudaTensor *gradOutput);
+int BilinearSamplerBHWD_updateGradInput_cuda(THCudaTensor *inputImages, 
+                                             THCudaTensor *grids, 
+                                             THCudaTensor *gradInputImages,
+                                             THCudaTensor *gradGrids, 
+                                             THCudaTensor *gradOutput);
 ```
 ### 2.2 接口设计
 
@@ -213,17 +218,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 
 #### 3.1.1 roi_crop_forward
 
-- step1: 根据grid中bin的个数进行任务规模划分，每个IPU分到task_bins份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim;
-- step2: 1个bin需要input下的4个channels得到output下的1个channels,所以拆分NRAM为8等份,每份PAD_DOWN(MAX_NRAM_SIZE/ 8 / sizeof(float),NFU_ALIGN_SIZE / sizeof(float))个数据,用于存储input的8个channels数据量(ping占4个，pong占4个),nram支持原位计算,output可以复用nram的空间。
-- step3: 每个IPU循环获取gw,gh,gn等信息,进而得到input和output的偏移地址,拷贝GDRAM中数据到NRAM;
-- step4: nram下使用三级流水,进行计算。
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim（bin_n = n * out_h * out_w）;
+- step2: 1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE/ 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
+- step3: 每个 IPU 循环获取 gw，gh，gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM;
+- step4: NRAM 下使用三级流水，进行计算。
 
 #### 3.1.2 roi_crop_backward
 
-- step1: 根据grid中bin的个数进行任务规模划分，每个IPU分到task_bins份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim;
-- step2: 1个bin需要gradOutput下的1个channels得到gradOutput下的4个channels,所以拆分NRAM为10等份,每份PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float),NFU_ALIGN_SIZE / sizeof(float))个数据,用于存储gradOutput的2个channels数据量(ping占1个，pong占1个),用于存储gradInput的8个channels数据量(ping占4个，pong占4个),
-- step3: 每个IPU循环获取gw,gh,gn等信息,进而得到gradOutput和gradInput的偏移地址,拷贝GDRAM中数据到NRAM;
-- step4: nram下使用三级流水,进行计算。
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim;
+- step2: 1 个 bin 需要 gradOutput 下的 1 个 channels 得到 gradOutput 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 gradOutput 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 gradInput 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
+- step3: 每个 IPU 循环获取 gw，gh，gn 等信息，进而得到 gradOutput 和 gradInput 的偏移地址，拷贝 GDRAM 中数据到 NRAM;
+- step4: NRAM 下使用三级流水，进行计算。
 
 ### 3.2 伪代码实现（可选）
 
@@ -238,11 +243,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-基本任务类型是U1。根据算子的实现方案可知，roi_crop_forward和roi_crop_backward算子都是依据grid中bin的数据进行拆分的，因此：
-将grid中的n * out_h * out_w作为总元素数分到每个IPU上公式如下：<br>
+基本任务类型是 U1。根据算子的实现方案可知，roi_crop_forward 和roi_crop_backward 算子都是依据 grid 中 bin 的数据进行拆分的，因此：
+将 grid 中的 n * out_h * out_w 作为总元素数分到每个 IPU 上公式如下：<br>
 bin_n = n * out_h * out_w;<br>
 task_bins = (taskId < ( bin_n % taskDim)) ? bin_n / taskDim + 1 : bin_n / taskDim;<br>
-每个IPU要对不同的数据区域做处理，所以需要根据taskId加偏移，获取每个IPU要处理的bin的索引;<br>
+每个 IPU 要对不同的数据区域做处理，所以需要根据 taskId 加偏移，获取每个 IPU 要处理的 bin 的索引;<br>
 rem_bins = bin_n % taskDim;<br>
 bins_first_per = (bin_n / taskDim) * taskId + (taskId > rem_bins ? rem_bins : taskId);<br>
 bins_loop_per = bins_first_per + task_bins;<br>
@@ -253,19 +258,19 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 | 表项            | 分配策略                                |
 | --------------- | -------------------------------------- |
-| NRAM            | 1.roi_crop_forward:<br>NRAM进行8等份拆分（ping占4个，pong占4个）<br>2.roi_crop_backward:<br>NARM进行10等份（ping占5个，pong占5个）|
+| NRAM            | 1.roi_crop_forward:<br>NRAM 进行 8 等份拆分（ping 占 4 个，pong 占 4 个）<br>2.roi_crop_backward:<br>NARM 进行 10 等份（ping 占 5 个，pong 占 5 个）|
 | WRAM            | 未使用                                  |
 | SRAM            | 未使用                                  |
 | DRAM(workspace) | 未使用                                  |
 
 2、流水设计
 
-采用三级流水设计，L C S之间排流水，即GDRAM2NRAM、Compute、NRAM2GDRAM。这里又可以细分为：<br>
-1）通道层面上的流水和bin层面上的流水组合（NRAM的一个等份不能一次性加载一个通道数据）；<br>
-2）bin层面上的流水（NRAM的一个等份可以一次性加载一个通道数据；<br>
+采用三级流水设计，L C S 之间排流水，即 GDRAM2NRAM、Compute、NRAM2GDRAM。这里可以细分为：<br>
+1）bin 的流水（NRAM 等分的每块空间可以一次性加载 bin 中 channels 个数据)；<br>
+2）channels 很大的流水（这里是对bin的流水的补充，当 NRAM 等分到的每块空间不足以一次性加载 bin 中的 channels 个数据，在这种情况下就需对 channels 个数据进行流水计算）；<br>
 计算部分：<br>
-1）roi_crop_forward算子主要使用__bang_mul_const()、_bang_add()；<br>
-2）roi_crop_backward算子主要使用__bang_mlu_const()、atomic_add();<br>
+1）roi_crop_forward 算子主要使用 __bang_mul_const()、_bang_add()；<br>
+2）roi_crop_backward 算子主要使用 __bang_mlu_const()、atomic_add();<br>
 
 ### 3.5 可维护性设计
 
@@ -278,6 +283,7 @@ bins_loop_per = bins_first_per + task_bins;<br>
 ### 3.6 测试用例设计
 
 - 算子在网络中用到的规模：
+
 1、roi_crop_forward
 
 |input、grid、output|source data type |destination data type|
@@ -298,11 +304,17 @@ grid:[-1,1]
 ### 3.7 算子防呆检查
 
 1、指针为空防呆；
-2、0 元素检查防呆，VLOG(5)打印信息，是否返回与框架沟通；
+
+2、0 元素检查防呆，VLOG(5) 打印信息，是否返回与框架沟通；
+
 3、涉及 workspace 算子对于 workspace_size 的检查防呆；
+
 4、是否需要对输入输出支持的 dtype、layout 以及 shape 进行防呆；
+
 5、elementwise 算子则需要保证输入输出的每一个维度都要一样；
+
 6、算子存在的自身的相关参数防呆。
+
 主要是列出 4,5,6 防呆内容，方便 review。
 
 ## 4 算子性能优化记录
@@ -318,27 +330,33 @@ grid:[-1,1]
 ## 5 方案实施
 
 ### 5.1 开发测试计划
+
 1、开发时间不宜过长，但是测试时间要预留充分，建议开发: 测试 = 1 :1
+
 2、调研需求，接口设计之后可以直接开发 gtest，理解原理
+
 3、方案设计 + 代码开发 + 测试是一个连续的过程
+
 #### 5.1.1 roi_crop_forward
+
 - 2022.4.19 ~ 4.21 调研源码+开始设计方案
 - 2022.4.22 设计方案评审：算子功能+接口设计
-- 2022.4.24 算子在mlu_ops下的 gtest代码开发
-- 2022.4.25 ~ 4.29  算子在mlu_ops下的host、kernel代码开发
-- 2022.5.5 算子在红区CNNL下的generator开发
+- 2022.4.24 算子在 MLU-OPS 下的 GTest 代码开发
+- 2022.4.25 ~ 4.29  算子在 MLU-OPS 下的 host、kernel 代码开发
+- 2022.5.5 算子在黄区下的 Generator 开发
 - 2022.5.10 ~ 5.18 大规模测试
-- 2022.5.23 提交交MR+代码review
-- 2022.5.25算子入库
+- 2022.5.23 提交交 MR + 代码 review
+- 2022.5.25 算子入库
 
 #### 5.1.2 roi_crop_backward
+
 - 5.30 ~ 6.1 算子需求分析和方案设计
 - 6.2 算子方案评审
-- 6.6 算子在mlu_ops下的gtest开发
-- 6.7 ~ 6.10算子在mlu_ops下的host、kernel代码开发
-- 6.11 算子在红区CNNL下的generator开发
-- 6.13 - 5.16大规模测试
-- 6.17 提交交MR+代码review
+- 6.6 算子在 MLU-OPS 下的 GTest 开发
+- 6.7 ~ 6.10 算子在 MLU-OPS 下的 host、kernel 代码开发
+- 6.11 算子在黄区下的 Generator开发
+- 6.13 ~ 5.16 大规模测试
+- 6.17 提交交 MR + 代码 review
 - 6.20 算子入库
 
 ### 5.2 风险分析
