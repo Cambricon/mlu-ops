@@ -41,8 +41,7 @@ mluOpStatus_t RoiCropForwardParamCheck(
     const std::string &op_name, const mluOpHandle_t &handle,
     const mluOpTensorDescriptor_t &input_desc, const void *input,
     const mluOpTensorDescriptor_t &grid_desc, const void *grid,
-    const mluOpTensorDescriptor_t &output_desc, const void *output,
-    bool &zero_element) {
+    const mluOpTensorDescriptor_t &output_desc, const void *output) {
   // check descriptor and data
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, input_desc != NULL);
@@ -95,7 +94,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
   bool zero_element = false;
   mluOpStatus_t param_check = RoiCropForwardParamCheck(
       "[mluOpRoiCropForward]", handle, input_desc, input, grid_desc, grid,
-      output_desc, output, zero_element);
+      output_desc, output);
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
   }
