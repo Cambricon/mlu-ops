@@ -100,7 +100,7 @@
 | **workspace**        |   指向额外GDRAM空间的指针          | 输入             |  void *                  | /          | 无       |
 | **workspace_size**   |   输入参数，**workspace**的空间大小   | 输入             |  size_t                  | /          | 无       |
 | **output_desc**      |  输出数据output的形状描述       | 输出       |   /     | /          | 无       |
-| **output**          |  指向output数据的mlu地址的指针    | 输出       |  uint_32_t      | ARRAY     |dim=1，shape[0]=boxes shape[0]       |
+| **output**          |  指向output数据的mlu地址的指针    | 输出       |  uint_32_t      | ARRAY     |dim=1，shape[0]=boxes.shape[0]       |
 | **output_size**          |    输出的设备端指针，输出计算的所有有效输出框的个数。。  | 输出       |  uint_32_t      | /     |一个uint32_t类型的标量    |
 
 ### 1.4 算子限制
@@ -602,20 +602,20 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 空间划分：
 
 ```c++
-  // NRAM N=max_seg_pad
-  // | tranx_box| scores| max_box(max_score,max_box,max_index,max_area)| max_box_tmp| box_area|
-  // |    N*8    |  N     |  COMPUTE_COUNT_ALIGN                       | COMPUTE_COUNT_ALIGN|N|
+  NRAM N=max_seg_pad
+  | tranx_box| scores| max_box(max_score,max_box,max_index,max_area)| max_box_tmp| box_area|
+  |    N*8    |  N     |  COMPUTE_COUNT_ALIGN                       | COMPUTE_COUNT_ALIGN|N|
   
-  // |nram_save| nram_tmp(box,box_area_tmp)            |
-  // | N       |X=213*N（暂定，具体由计算overlap部分决定）|
+  |nram_save| nram_tmp(box,box_area_tmp)            |
+  | N       |X=213*N（暂定，具体由计算overlap部分决定）|
 
-  // | total = X+11*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
+  | total = X+11*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
 ```
 
 ```c++
-// SRAM 
-// |max_score | max_box| max_index| max_box_area|
-// |    1     |    1   |     1    |      1      |
+  SRAM 
+  |max_score | max_box| max_index| max_box_area|
+  |    1     |    1   |     1    |      1      |
 ```
 
 2. 流水设计
