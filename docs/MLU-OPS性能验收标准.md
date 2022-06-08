@@ -42,10 +42,10 @@ compute_efficiency = theory_compute_ops / (latency * peak_compute_force)
 
 该数据需要在测试报告中给出，若无法达标，需要给出分析说明。
 
-### 3. gtest 实现
+### 3. GTest 实现
 
 计算 IO 效率和计算效率时的分母 IO_BANDWIDTH 和 PEAK_COMPUTE_FORCE，与硬件平台和计算数据类型有关。
 
 封装成公共函数，计算时得到硬件平台的版本号，根据计算数据类型通过查找表直接查找，确保支持之后的板卡和平台。
 
-算子开发者需要在 gtest 的`XXXExecutor::getTheoryOps()` 函数中给出算子理论计算量的公式，gtest 会自动根据算子规模计算理论 IO 量，并根据测试规模计算理论 IO 量和理论计算量。
+算子开发者需要在 GTest 的`XXXExecutor::getTheoryOps()` 函数中给出算子理论计算量的公式，GTest 会自动根据算子规模计算理论 IO 量，并根据测试规模计算理论 IO 量和理论计算量。

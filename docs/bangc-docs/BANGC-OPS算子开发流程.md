@@ -80,11 +80,11 @@ $ touch add.h   // add.cpp 以及 kernel entry 函数的声明文件
 
 ### 3. 测试阶段
 
-算子开发者在完成算子开发任务后，需要添加 gtest 测试。具体添加方式及注意事项如下：
+算子开发者在完成算子开发任务后，需要添加 GTest 测试。具体添加方式及注意事项如下：
 
-#### 3.1 添加 gtest
+#### 3.1 添加 GTest
 
-gtest 测试例的添加原则为能够测试到该算子的各种应用场景，包括：
+GTest 测试例的添加原则为能够测试到该算子的各种应用场景，包括：
 
 - 算子输入输出支持的各种数据类型
 
@@ -96,7 +96,7 @@ gtest 测试例的添加原则为能够测试到该算子的各种应用场景�
 
 - 必要的边界测试
 
-添加 gtest 的流程大体分为:
+添加 GTest 的流程大体分为:
 
 1. 在 mlu_op_test.proto 文件中增加算子信息
 3. 增加测试代码
@@ -126,9 +126,9 @@ _注意, 这里说的 proto 仅仅是数据格式的定义, 不同的测例是�
 1. 新建测试代码路径
    `mlu_op_gtest/src/zoo` 下面新建以算子名命名的目录.
 
-在 mlu-ops 仓库中, 代码中的 mluOpXXX 即算子名, 不算 mluOp 前缀的话是大驼峰命名, 而文件夹名用下划线法命名。例如代码中接口名为 mluOpSqrtBackward 的算子，算子文件夹目录名为 sqrt_backward。请保证同一个算子 kernels 下的文件夹和 zoo 下的文件夹名相同。
+在 MLU-OPS 仓库中, 代码中的 mluOpXXX 即算子名, 不算 mluOp 前缀的话是大驼峰命名, 而文件夹名用下划线法命名。例如代码中接口名为 mluOpSqrtBackward 的算子，算子文件夹目录名为 sqrt_backward。请保证同一个算子 kernels 下的文件夹和 zoo 下的文件夹名相同。
 
-并在上述路径添加测试文件的 .cpp 以及 .h 文件(名字不限)。同时添加目录 test_case, test_case 目录下放置 gtest 运行时需读取的 .prototxt 文件。
+并在上述路径添加测试文件的 .cpp 以及 .h 文件(名字不限)。同时添加目录 test_case, test_case 目录下放置 GTest 运行时需读取的 .prototxt 文件。
 
 2. 编写测试代码
 
@@ -137,7 +137,7 @@ _注意, 这里说的 proto 仅仅是数据格式的定义, 不同的测例是�
 ```
 // 这里的XXX是算子文件夹, 以下划线为分隔符, 首字母大写之后的名字.
 // 比如 RMSprop 算子, 文件夹是 rms_prop 这里XXX应为 RmsPropExecutor
-// 之所以有这个限制, 是因为我们约定某测例文件夹内全是对应算子的测例, gtest会根据文件夹名调用下述类中定义的方法.
+// 之所以有这个限制, 是因为我们约定某测例文件夹内全是对应算子的测例, GTest会根据文件夹名调用下述类中定义的方法.
 class XXXExecutor : public Executor {
   void compute();   // 在这里, 从prototxt文件中解析算子参数, 调用mluop接口
   void cpuCompute();  // 在这里, 实现该算子的cpu计算(float32), 用于功能验证.
@@ -151,9 +151,9 @@ class XXXExecutor : public Executor {
 
 ##### 1. 精度验收标准
 
-kernels 下的 bangc 算子实现需要与 gtest 中的 cpuCompute()实现作为 baseline 进行精度对比验证，具体精度标准见 [MLU-OPS 精度验收标准](../MLU-OPS精度验收标准.md)。
+kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为 baseline 进行精度对比验证，具体精度标准见 [MLU-OPS 精度验收标准](../MLU-OPS精度验收标准.md)。
 
-为了方便开发者，上述精度公式和结果对比流程已集成到 gtest 测试框架中，各算子只需要明确使用的精度公式和阈值即可。
+为了方便开发者，上述精度公式和结果对比流程已集成到 GTest 测试框架中，各算子只需要明确使用的精度公式和阈值即可。
 
 ##### 2. 性能验收标准
 
@@ -227,8 +227,9 @@ kernels 下的 bangc 算子实现需要与 gtest 中的 cpuCompute()实现作为
 本地编译测试通过后可以执行以下操作提交修改的代码到远程分支。
 
 ```bash
-1. git add FileName                \\ 将所有修改的文件添加到 git 暂存区。
-2. git commit                      \\ 将添加到暂存区的修改提交。
-3. git pull origin master -r       \\ rebase master, 确保自己的分支领先于最新 master 分支。
-4. git push origin your_branch     \\ 将本地分支推到远程。
+1. source env.sh                   \\ 使能 pre-commit ，在 commit 阶段触发代码格式检查。
+2. git add FileName                \\ 将所有修改的文件添加到 git 暂存区。
+3. git commit                      \\ 将添加到暂存区的修改提交。
+4. git pull origin master -r       \\ rebase master, 确保自己的分支领先于最新 master 分支。
+5. git push origin your_branch     \\ 将本地分支推到远程。
 ```

@@ -1,8 +1,8 @@
-# Cambricon mlu-ops
+# Cambricon MLU-OPS
 
 [![ci](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml/badge.svg)](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml)
 
-mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
+MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
 
 ## 依赖条件
 
@@ -17,9 +17,9 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 - Python环境：
   - 依赖Python-3.8.0版本
 
-## mlu-ops 依赖环境准备
+## MLU-OPS 依赖环境准备
 
-- 获取 mlu-ops 代码
+- 获取 MLU-OPS 代码
 
   ```sh
   git clone https://github.com/Cambricon/mlu-ops.git
