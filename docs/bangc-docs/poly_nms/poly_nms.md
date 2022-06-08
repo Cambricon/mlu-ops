@@ -180,7 +180,7 @@ input2 是float数，是给定的iou的阈值。
 
 - **实现流程图**
 
-![流程图](/pnmsflow.png)
+![流程图](./pnmsflow.png)
 
 
 - **poly_nms实现步骤**
@@ -279,12 +279,13 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
                                  const int input_stride,
                                  const float thresh_iou) {
   // NRAM N=max_seg_pad
-  // | tranx_box | scores | max_box(max_score,max_box,max_index,max_area)| max_box_tmp   |box_area
-  // |nram_save| nram_tmp(box,box_area_tmp)|
-  // |    N*8    |  N      |  COMPUTE_COUNT_ALIGN                       | COMPUTE_COUNT_ALIGN| N
-  // | N       |          213*N        |
-  // | 224*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
+  // | tranx_box| scores| max_box(max_score,max_box,max_index,max_area)| max_box_tmp| box_area|
+  // |    N*8    |  N     |  COMPUTE_COUNT_ALIGN                       | COMPUTE_COUNT_ALIGN|N|
+  
+  // |nram_save| nram_tmp(box,box_area_tmp)            |
+  // | N       |X=213*N（暂定，具体由计算overlap部分决定）|
 
+  // | total = X+11*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
   int input_data_len = input_box_num * input_stride;
   int input_core_len = 0;
   int input_offset = 0;
@@ -415,7 +416,8 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
   }
 }
 
-// 计算四边形overlap，所需空间从nram_tmp中划分
+// 计算四边形overlap，所需空间从nram_tmp中划分, 以下用到的 getIntersectPts(),
+// convexHullGraham(),polygonArea()方法为NL公共函数
 template <typename IN_DT, typename OUT_DT>
 __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/,
                                         const IN_DT *input_score_ptr /*GDRAM*/,
