@@ -58,10 +58,10 @@
 | 应用网络    | FasterRCNN, trans obb                                          |
 | 输入数据类型| float                                                  |
 | 输入Shape   | input1: dim[N, 9]; input2:float |
-| 输入Layout  | input:ARRAY                              |
-| 输出数据类型| float                                                  |
-| 输出Shape   | output:dim[N]            |
-| 输出Layout  | output:ARRAY                                            |
+| 输入Layout  | input1:ARRAY,input2:标量                              |
+| 输出数据类型| uint_32_t                                                  |
+| 输出Shape   | output1:dim[N],长度最大和N相等; output2:float数,表示output1数据长度          |
+| 输出Layout  | output1:ARRAY , output2:标量                                        |
 | 模式(可选） | 否 |
 | 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否 |
 | 是否含有labels/index等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否 |
@@ -113,7 +113,7 @@ def test_nms():
 | **workspace**        |   指向额外GDRAM空间的指针          | 输入             |  void *                  | /          | 无       |
 | **workspace_size**   |   输入参数，**workspace**的空间大小   | 输入             |  size_t                  | /          | 无       |
 | **output_desc**      |  输出数据output的形状描述       | 输出       |   /     | /          | 无       |
-| **output**          |  指向output数据的mlu地址的指针    | 输出       |  uint_32_t      | ARRAY     |dim=1，shape[0]=boxes.shape[0]       |
+| **output**          |  指向output数据的mlu地址的指针    | 输出       |  uint_32_t      | ARRAY     |dim=1，shape[0]<=boxes.shape[0]       |
 | **output_size**          |    输出的设备端指针，输出计算的所有有效输出框的个数  | 输出       |  uint_32_t      | /     |一个uint32_t类型的标量    |
 
 ### 1.4 算子限制
@@ -121,7 +121,7 @@ def test_nms():
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
 | 输入限制     | boxes为二维张量，必须满足boxes.shape[1]=9         |
-| 数据类型限制 | 仅支持float  |
+| 数据类型限制 | 只支持float  |
 | 数据范围限制 | 无 |
 |  原位限制     | 不支持原位                                                 |
 | stride限制   | 不支持stride                                      |
@@ -168,42 +168,53 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPnmsWorkspaceSize(mluOpHandle_t handle, size
 
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpPnms(mluOpHandle_t handle,
-                                  const mluOpTensorDescriptor_t boxes_desc,
-                                  const void *boxes,
-                                  const float pnms_iou_thresh,
-                                  void *workspace,
-                                  size_t workspace_size,
-                                  mluOpTensorDescriptor_t output_desc,
-                                  void *output,
-                                  void *output_size);
+                                      const mluOpTensorDescriptor_t boxes_desc,
+                                      const void *boxes,
+                                      const float pnms_iou_thresh,
+                                      void *workspace,
+                                      size_t workspace_size,
+                                      mluOpTensorDescriptor_t output_desc,
+                                      void *output,
+                                      void *output_size);
 ```
 
 ## 3 实现方案设计
 
 ### 3.1 实现方案
 
-`poly_nms`(polygan nms)算子用于计算多边形非极大值抑制，首先根据scores排序，依次计算每个box和最大score对应box的iou，如果iou大于给定的iou_thresh,则认为该box和最大score对应的box相交，则删除这个box，最终输出去除冗余多边形框后的box对应的index。
+`poly_nms`(polygan nms)算子用于计算多边形非极大值抑制, 删除冗余的多边形框.
+- **竞品计算步骤**
+1. 将scores降序排序;
+2. 用score最大的box分别和其余的box做iou计算,如果iou大于iou_thresh,认为这两个box相交,删除score值小的box;
+3. 选取次大的score, 重复第二步计算;
+4. 输出剩于box的index(按照score降序输出)
+
 
 poly_nms算子有两个输入，input1是2维Tensor，包含四边形的四个顶点坐标及其对应的score，具体信息为：
-
 [[x1, y1, x2, y2, x3, y3, x4, y4, score],...];
-
 input2 是float数，是给定的iou的阈值。
 
-- **实现流程图**
 
-![流程图](./pnmsflow.png)
-
-- **poly_nms实现步骤**
+- **MLU实现步骤**
 1. 借助workspace将输入box_data由NX9转置为9XN
-2. 计算max score: scores = boxes_trans + input_stride X 8，注意block,U1,UX任务计算max_score方式不同;
-3. 计算不规则四边形IOU：计算max_score对应的box和其他的boxes的iou，iou> iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置0；
+![trans_box](./trans_box.png)
+2. 计算max_score: scores = boxes_trans + input_stride X 8，从scores中获取最大max_score;
+3. 计算不规则四边形IOU：计算max_score对应的box和其他的boxes的iou，如果iou > iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置0；
 4. 第2步计算完后，在剩余scores中重新计算max_score，如果max_score <= 0,则计算完成，否则重复第二步；
 5. 按照计算max_score的先后顺序，输出所有的max score对应box的index，还需要输出output_ptr中box的数量，便于取output_ptr中index数据；
 
+- **计算过程示意**
+
+![计算过程图](./pnmsflow1.png)
+
+- **实现流程图**
+
+    ![流程图](./pnmsflow.png)
+
+
 - **计算不规则四边形IOU**
-1. 计算overlap：参考mluOp中 **box_iou_rotated** 中计算两个四边形overlap的计算方法；
-2. 计算四边形面积box1_area1，box2_area：不规则四边形面积计算参考竞品实现；
+1. 计算overlap：参考CNNL中 **box_iou_rotated** 中计算两个四边形overlap的计算方法；
+2. 计算四边形面积box1_area1，box2_area：不规则四边形面积计算使用叉乘方法计算；
 3. iou = overlap / (box1_area + box2_area - overlap);
 
 - **不规则四边形面积计算**
@@ -231,38 +242,6 @@ box_area = ret/2;
 
 ```c++
 ...
-
-// 1. 借助cnnlTranspose_v2完成boxes转置
-static cnnlStatus_t changeLayoutByTranspose(cnnlHandle_t handle,
-                                            cnnlTensorDescriptor_t origin_desc,  // box_desc
-                                            const void *src_data,
-                                            void *dst_data) {
-  cnnlTransposeDescriptor_t trans_desc;
-  cnnlTensorDescriptor_t dst_desc;
-  INTERNAL_CHECK("[pnms]", CNNL_STATUS_SUCCESS == cnnlCreateTensorDescriptor(&dst_desc));
-  cnnlDataType_t dtype = origin_desc->dtype;
-
-  const int dims = 2;
-  int permute[2] = {1, 0};
-  int dst_dim[2];
-  dst_dim[0] = origin_desc->dims[1];
-  dst_dim[1] = origin_desc->dims[0];
-
-  INTERNAL_CHECK("[pnms]",
-                 CNNL_STATUS_SUCCESS ==
-                     cnnlSetTensorDescriptor(dst_desc, CNNL_LAYOUT_ARRAY, dtype, dims, dst_dim));
-  INTERNAL_CHECK("[pnms]", CNNL_STATUS_SUCCESS == cnnlCreateTransposeDescriptor(&trans_desc));
-  INTERNAL_CHECK("[pnms]",
-                 CNNL_STATUS_SUCCESS == cnnlSetTransposeDescriptor(trans_desc, dims, permute));
-  INTERNAL_CHECK("[pnms]",
-                 CNNL_STATUS_SUCCESS == cnnlTranspose_v2(handle, trans_desc, origin_desc, src_data,
-                                                         dst_desc, dst_data, NULL, 0));
-  INTERNAL_CHECK("[pnms]", CNNL_STATUS_SUCCESS == cnnlDestroyTransposeDescriptor(trans_desc));
-  INTERNAL_CHECK("[pnms]", CNNL_STATUS_SUCCESS == cnnlDestroyTensorDescriptor(dst_desc));
-
-  return CNNL_STATUS_SUCCESS;
-}
-
 // 主要实现过程 block or U1
 template <typename IN_DT, typename OUT_DT>
 __mlu_func__ void pnms_detection(uint32_t &output_box_num,
@@ -373,7 +352,7 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
     }    // if coreId == 0
 
     // if the max scores <= 0, end  结束条件
-    if (taskDim == 1) {
+    if (core_limit == 1) {
       if (float(max_box[0]) <= 0) {
         break;
       }
@@ -425,7 +404,7 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/,
                                         const IN_DT *max_box /*NRAM*/,
                                         IN_DT *intersetion_area,
                                         IN_DT *nram_tmp,
-                                        const int box_point_num == 4,
+                                        const int box_point_num ,
                                         const int input_offset,
                                         const int max_seg_pad,
                                         const int repeat,
@@ -467,12 +446,12 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
                                     IN_DT *scores /*NRAM*/,
                                     IN_DT *max_box /*NRAM*/,
                                     IN_DT *max_box_tmp,
-                                    const int box_point_num == 4,
+                                    const int box_point_num ,
                                     const int input_offset,
                                     const int max_seg_pad,
                                     const int repeat,
                                     const int remain,
-                                    const int taskDim,
+                                    const int core_limit,
                                     mluMemcpyDirection_t load_dir,
                                     mluMemcpyDirection_t store_dir) {
   /******FIND MAX START******/
@@ -487,40 +466,33 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
     }
     int seg_len = 0;  // the length every nms compute
     int cpy_len = 0;  // the length every nms memcpy
-    // i == repeat ? seg_len = remain_pad : seg_len = max_seg_pad;
+   
     seg_len = ((i == repeat) ? remain_pad : max_seg_pad);
     __bang_printf("max: seg_len=%d\n", seg_len);
-    // check seg_len exceeds the limit of fp16 or not. 65536 is the largest num
-    // that fp16 could express.
-    if (std::is_same<IN_DT, half>::value && seg_len > 65536) {
-      MLULOG("seg length exceed the max num for fp16 datatype!");
-      return;
-    }
     cpy_len = i == repeat ? remain : max_seg_pad;
     __bang_printf("max: cpy_len=%d\n", cpy_len);
+
     /******NMS LOAD START******/
     __nramset(scores, seg_len, 0);
     __memcpy(scores, input_score_ptr + input_offset + i * max_seg_pad, cpy_len * sizeof(IN_DT),
              load_dir, cpy_len * sizeof(IN_DT), cpy_len * sizeof(IN_DT), 0);
     __bang_printf("max: scores copy ok \n");
     /******NMS LOAD END******/
+
     __bang_max(max_box_tmp, scores, seg_len);
     if (max_box_tmp[0] > max_box[0]) {
       max_box[0] = max_box_tmp[0];
       __bang_printf("max: max_box[0]=%f\n", max_box[0]);
-      if (std::is_same<IN_DT, half>::value) {
-        max_index =
-            ((uint16_t *)max_box_tmp)[1] + i * max_seg_pad;  // offset start from head of input_data
-      } else if (std::is_same<IN_DT, float>::value) {
-        max_index =
+
+      max_index =
             ((uint32_t *)max_box_tmp)[1] + i * max_seg_pad;  // offset start from head of input_data
-      }
+      
     }
   }  // for repeat
 
   __bang_printf("max_index: %d\n", max_index);
 
-  if (taskDim == 1) {
+  if (core_limit == 1) {
     for (int m = 0; m < 8; m++) {
       max_box[m + 1] = ((IN_DT *)(input_box_ptr + i * input_stride))[max_index];
     }
@@ -528,6 +500,7 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
       __bang_printf("max_box[%d]: %f\n", idx, max_box[idx]);
     }
 
+    // cal max_area start
     max_box[9] = max_box[1];
     max_box[10] = max_box[2];
     for (int j = 1; j < 8; j = j + 2) {
@@ -535,11 +508,13 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
     }
     max_area = max_area / 2;
     __bang_printf("max_area: %f\n", max_area);
+    // cal max_area end
+    
     input_score_ptr[max_index] = 0;
     global_max_index = max_index;
     max_box[9] = max_index;  // max_score | max_x1,y1,x2,y2,x3,y3,x4,y4| max_indx| max_area|
     max_box[10] = max_area;
-  } else if (taskDim == 4) {
+  } else if (core_limit == 4) {
     // find the max with sram
     // the max box's on every core
     if (coreId != 0x80) {
@@ -550,24 +525,21 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
     ((uint32_t *)(max_box + 9))[0] = max_index;
     // copy every core's box info to sram, sram： | max_score | max_x1,y1,x2,y2,x3,y3,x4,y4| max_indx
     for (int i = 0; i < 10; i++) {
-      __memcpy(sram + i * taskDim + taskId, max_box + i, 1 * sizeof(IN_DT), NRAM2SRAM);
+      __memcpy(sram + 10 * taskId + i, max_box + i, 1 * sizeof(IN_DT), NRAM2SRAM);
     }
     __sync_cluster();
 
     // copy scores from sram to nram and find the max
-    __nramset(max_box_tmp, 64, 0);
-    __memcpy(max_box_tmp, sram, taskDim * sizeof(IN_DT), SRAM2NRAM);
-    __bang_max(max_box, max_box_tmp, 64);
-    int max_core = 0;
-    if (sizeof(*(input_score_ptr + 0)) == 2) {
-      max_core = ((uint16_t *)max_box)[1];
-    } else if (sizeof(*(input_score_ptr + 0)) == 4) {
-      max_core = ((uint32_t *)max_box)[1];
-    }
+    __nramset(max_box_tmp, COMPUTE_COUNT_ALIGN, 0);
+    __memcpy(max_box_tmp, sram, core_limit * sizeof(IN_DT), SRAM2NRAM);
 
-    // copy the max box to max_box
-    for (int m = 0; m < 8; m++) {
-      __memcpy(max_box + (i + 1), sram + (i + 1) * taskDim + max_core, 1 * sizeof(IN_DT),
+    __bang_max(max_box, max_box_tmp, max_box);
+    int max_core = 0;
+    max_core = ((uint32_t *)max_box)[1];
+    
+    // copy the max_box : SRAM to NRAM
+    for (int m = 0; m < 10; m++) {
+      __memcpy(max_box + (i + 1), sram + 10 * max_core + i, 1 * sizeof(IN_DT),
                SRAM2NRAM);
     }
 
@@ -581,6 +553,7 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
     }
     max_area = max_area / 2;
     __bang_printf("max_area: %f\n", max_area);
+
     input_score_ptr[max_index] = 0;
     global_max_index = max_index;
   }
@@ -591,14 +564,14 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 ### 3.3 拆分(任务拆分，多核拆分)
 
 **拆分策略**
-根据输入boxes数据量的多少分为不同的任务类型：
+
+借鉴CNNL中NMS算子任务划分:每个core中计算box数量不少于256,否则真实带宽会很小. 基于此, 根据输入boxes数据量分block和U1的任务类型：
 1. 对于Block任务，根据NRAM空间计算len_core，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值
 2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram上计算global_max_score，再将global_max_score copy到每个core上进行计算；
-3. 对于UX任务，在每个cluster的core0上计算当前cluster的max_score，再把每个cluster上的max_score copy到cluster0的SRAM，计算global_max_score，之后再将global_max_score copy到每个cluster的sram，再copy到每个core上进行接下来的计算。
 
 ### 3.4 性能优化设计
 
-空间划分：
+1. 空间划分：
 
 ```c++
   NRAM N=max_seg_pad
@@ -613,11 +586,12 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 
 ```c++
   SRAM 
-  |max_score | max_box| max_index| max_box_area|
-  |    1     |    1   |     1    |      1      |
+  |core1_max_box(max_score, max_box, max_index, max_box_are)| core2_max_box | core3_max_box| core4_max_box|
+ 
 ```
 
 2. 流水设计
+
    nram所需分配空间太大，暂不划分乒乓空间，不做流水。
 
 ### 3.5 方案理论性能
@@ -635,8 +609,8 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 ### 3.7 测试用例设计
 
 - 框架在需求列表中给出的算子在网络中用到的规模
-- 测试输入包含nan，inf，-inf的行为
-- 测试不同数据规模下block，U1，UX任务分支
+- 测试输入包含nan，inf，-inf的行为,
+- 测试不同数据规模下block，U1任务分支
 
 ### 3.8 算子防呆检查
  1. 指针为空防呆；
