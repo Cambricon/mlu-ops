@@ -302,9 +302,9 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
 
   boxes = nram_buffer;
   scores = nram_buffer + 8 * max_seg_pad;
-  max_box = scores + NFU_ALIGN_SIZE;       // (max_score,max_box,max_index,max_area) 11 个数
+  max_box = scores + max_seg_pad;       // (max_score,max_box,max_index,max_area) 11 个数
   max_box_tmp = max_box + NFU_ALIGN_SIZE;  // 2个数, 存放__bang_max结果 [max_score, max_index]
-  box_area = max_box_tmp + max_seg_pad;
+  box_area = max_box_tmp + NFU_ALIGN_SIZE;
   intersection_area = box_area + max_seg_pad;
   nram_save = (OUT_DT)((char *)intersection_area + max_seg_pad);
   nram_tmp = (IN_DT)((char *)nram_save + max_seg_pad);
