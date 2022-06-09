@@ -68,7 +68,7 @@
 | 是否需要支持原位        | 否                                                  |
 | 是否需要支持stride机制  | 否                                                 |
 | 是否需要支持广播  | 否                       |
-| 0元素检查是否直接返回  | 是 (返回CNNL_STATUS_SUCCESS)                                              |
+| 0元素检查是否直接返回  | 是 (返回MLUOP_STATUS_SUCCESS)                                              |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)|        无                                                |
 | 本次开发优先支持的规模/模式|   |
 
@@ -85,8 +85,21 @@
 
 **PyTorch 1.9 官方示例：**
 
-```
-
+```py
+def test_nms():
+    nms_thresh = 0.1
+    # #   box1和 box2，box3都有交集,且iou>0.1 输出为 [0]
+    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 1],[0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5, 1]]
+    
+    # #  box1和 box2，box3都没有交集 输出为[0,1,2]
+    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.5, 2],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 1]]
+ 
+    # #  box1和 box2有交集.且iou=0.1428>nms_thresh(0.1)，box1,box2都和box3没交集 输出为[0,2]
+    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 1]]
+   
+    # dets = np.array(dets)
+    keep = py_cpu_nms_poly(dets, nms_thresh)
+    print(keep) 
 ```
 
 ### 1.3 算子输入输出参数要求
@@ -101,7 +114,7 @@
 | **workspace_size**   |   输入参数，**workspace**的空间大小   | 输入             |  size_t                  | /          | 无       |
 | **output_desc**      |  输出数据output的形状描述       | 输出       |   /     | /          | 无       |
 | **output**          |  指向output数据的mlu地址的指针    | 输出       |  uint_32_t      | ARRAY     |dim=1，shape[0]=boxes.shape[0]       |
-| **output_size**          |    输出的设备端指针，输出计算的所有有效输出框的个数。。  | 输出       |  uint_32_t      | /     |一个uint32_t类型的标量    |
+| **output_size**          |    输出的设备端指针，输出计算的所有有效输出框的个数  | 输出       |  uint_32_t      | /     |一个uint32_t类型的标量    |
 
 ### 1.4 算子限制
 
@@ -136,7 +149,6 @@
 - **AerialDetection** https://github.com/dingjiansw101/AerialDetection/blob/master/mmdet/ops/poly_nms/src/poly_nms_cuda.cpp
 ```c++
 at::Tensor poly_nms_cuda(const at::Tensor boxes, float nms_overlap_thresh);
-
 ```
 
 ### 2.2 接口设计
@@ -182,29 +194,20 @@ input2 是float数，是给定的iou的阈值。
 
 ![流程图](./pnmsflow.png)
 
-
 - **poly_nms实现步骤**
 1. 借助workspace将输入box_data由NX9转置为9XN
-
 2. 计算max score: scores = boxes_trans + input_stride X 8，注意block,U1,UX任务计算max_score方式不同;
-
-3. 计算不规则四边形IOU：用max score对应的box分别和其他的boxes做IOU计算，IOU> iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置0；
-
+3. 计算不规则四边形IOU：计算max_score对应的box和其他的boxes的iou，iou> iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置0；
 4. 第2步计算完后，在剩余scores中重新计算max_score，如果max_score <= 0,则计算完成，否则重复第二步；
-
-5. 按照计算max score的先后顺序，输出所有的max score对应box的index，还需要输出output_ptr中box的数量，便于取output_ptr中index数据；
-
-   
+5. 按照计算max_score的先后顺序，输出所有的max score对应box的index，还需要输出output_ptr中box的数量，便于取output_ptr中index数据；
 
 - **计算不规则四边形IOU**
 1. 计算overlap：参考mluOp中 **box_iou_rotated** 中计算两个四边形overlap的计算方法；
 2. 计算四边形面积box1_area1，box2_area：不规则四边形面积计算参考竞品实现；
 3. iou = overlap / (box1_area + box2_area - overlap);
 
-
-
 - **不规则四边形面积计算**
-已知四个顶点坐标（x1,y1），（x2,y2），（x3,y3），（x4,y4）
+已知四边形四个顶点坐标(x1,y1), (x2,y2), (x3,y3), (x4,y4)
 ```c++
 // 向量计算
 box_area = 1/2 * ((x1*y2 - y1*x2) + (x2*y3-y2*x3) + (x3*y4 - y3*x4) + (x4*y1 - y4*x1))
@@ -218,15 +221,11 @@ for(int i = 0;i<4;i++)
 box_area = ret/2;
 ```
 
-
-
 - **NL库中公共模块中overlap部分算子计算过程简单描述**：
 1. 根据boxes坐标点，计算每条边相交与否，是否有互相包含的情况，得到交点坐标（总共24种可能性）；
 2. 如果当前box pair相交的点数大于2个，则计算交叠面积，否则返回当前的`overlap`为0；
 3. 按照 Convex-hull-graham 顶点扫描法，排序、筛选得出凸包形状的顶点集合。
 4. 计算有效的交叠面积`overlap`.
-
-
 
 ### 3.2 伪代码实现
 
@@ -283,7 +282,7 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
   // |    N*8    |  N     |  COMPUTE_COUNT_ALIGN                       | COMPUTE_COUNT_ALIGN|N|
   
   // |nram_save| nram_tmp(box,box_area_tmp)            |
-  // | N       |X=213*N（暂定，具体由计算overlap部分决定）|
+  // | N       |X=213*N（暂定，具体划分由计算overlap部分决定）|
 
   // | total = X+11*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
   int input_data_len = input_box_num * input_stride;
@@ -591,7 +590,7 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-拆分策略:
+**拆分策略**
 根据输入boxes数据量的多少分为不同的任务类型：
 1. 对于Block任务，根据NRAM空间计算len_core，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值
 2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram上计算global_max_score，再将global_max_score copy到每个core上进行计算；
@@ -609,7 +608,7 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
   |nram_save| nram_tmp(box,box_area_tmp)            |
   | N       |X=213*N（暂定，具体由计算overlap部分决定）|
 
-  | total = X+11*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
+  | total = X+11*N +2 *COMPUTE_COUNT_ALIGN|
 ```
 
 ```c++
@@ -619,11 +618,7 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 ```
 
 2. 流水设计
-
    nram所需分配空间太大，暂不划分乒乓空间，不做流水。
-
-
-
 
 ### 3.5 方案理论性能
 
