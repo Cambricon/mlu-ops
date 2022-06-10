@@ -64,11 +64,11 @@
 
 ![roi_crop_forward_func](./roi_crop_forward_func.png)
 
-从输入的 grid 中提取一个（y, x）坐标映射参数, 反映射到input中的A处得到坐标信息（Ax,Ay），获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值;
+从输入的 grid 中提取一个（y, x）坐标映射参数, 反映射到 input 中的A处得到坐标信息（Ax,Ay），获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值;
 
 **2) 主要计算公式**
 
-![gradoutput](./weight.png)
+![weight](./weight.png)
 
 反映射:
 
