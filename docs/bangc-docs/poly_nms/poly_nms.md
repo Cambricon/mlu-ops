@@ -183,33 +183,34 @@ mluOpStatus_t MLUOP_WIN_API mluOpPnms(mluOpHandle_t handle,
 ### 3.1 实现方案
 
 `poly_nms`(polygan nms)算子用于计算多边形非极大值抑制, 删除冗余的多边形框.
-- **竞品计算步骤**
-1. 将scores降序排序;
-2. 用score最大的box分别和其余的box做iou计算,如果iou大于iou_thresh,认为这两个box相交,删除score值小的box;
-3. 选取次大的score, 重复第二步计算;
-4. 输出剩于box的index(按照score降序输出)
-
 
 poly_nms算子有两个输入，input1是2维Tensor，包含四边形的四个顶点坐标及其对应的score，具体信息为：
 [[x1, y1, x2, y2, x3, y3, x4, y4, score],...];
-input2 是float数，是给定的iou的阈值。
+input2 是float数，是给定的iou的阈值iou_thresh。
 
+- **cpu计算方法**
+1. 将scores降序排序;
+2. 用score最大的box分别和其余的box做iou计算, 如果iou大于iou_thresh,认为这两个box相交,删除score值小的box
+3. 再选取次大的score, 重复第二步计算
+4. 输出剩于box的index(按照score降序输出)
 
 - **MLU实现步骤**
-1. 借助workspace将输入box_data由NX9转置为9XN
+1. 借助workspace将输入box_data由Nx9转置为9xN. (提前将所有数据转置,是因为在第二步计算max_score时,需要重复load数据计算最大值,计算过程中每次repeat时load的数据量较小,需要重复多次load并进行转置计算,对性能有损耗,故需提前转置.)
 ![trans_box](./trans_box.png)
-2. 计算max_score: scores = boxes_trans + input_stride X 8，从scores中获取最大max_score;
-3. 计算不规则四边形IOU：计算max_score对应的box和其他的boxes的iou，如果iou > iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置0；
-4. 第2步计算完后，在剩余scores中重新计算max_score，如果max_score <= 0,则计算完成，否则重复第二步；
-5. 按照计算max_score的先后顺序，输出所有的max score对应box的index，还需要输出output_ptr中box的数量，便于取output_ptr中index数据；
-
-- **计算过程示意**
-
-![计算过程图](./pnmsflow1.png)
+2. 计算max_score: scores = boxes_trans + input_stride X 8，从scores中获取score最大值;
+   注意:获取scores中最大socre,该步骤需要load所有input_boxes数据, 获取所有数据中的最大值,不是本次循环计算中加载数据的最大值;对于U1任务,需要计算每个core上最大值, 然后把每个core上最大值加载到sram上计算global_max_score, 再把global_max_score copy到每个core中;
+3. 保存max_score对应的index到nram_save中,保存数量大于nram_save空间时, 将nram_save数据copy到device端.
+4. 计算不规则四边形IOU：计算max_score对应的box和其他的boxes的iou，如果iou > iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置0；
+5. 第4步计算完后，在剩余scores中重新计算max_score，如果max_score <= 0,则计算完成，否则重复第二步；
+6. 按照计算max_score的先后顺序，输出所有的max score对应box的index，还需要输出output_ptr中box的数量，便于取output_ptr中index数据；
 
 - **实现流程图**
 
     ![流程图](./pnmsflow.png)
+
+- **计算过程示意**
+
+    ![计算过程图](./pnmsflow1.png)
 
 
 - **计算不规则四边形IOU**
@@ -218,7 +219,8 @@ input2 是float数，是给定的iou的阈值。
 3. iou = overlap / (box1_area + box2_area - overlap);
 
 - **不规则四边形面积计算**
-已知四边形四个顶点坐标(x1,y1), (x2,y2), (x3,y3), (x4,y4)
+  
+  已知四边形四个顶点坐标(x1,y1), (x2,y2), (x3,y3), (x4,y4)
 ```c++
 // 向量计算
 box_area = 1/2 * ((x1*y2 - y1*x2) + (x2*y3-y2*x3) + (x3*y4 - y3*x4) + (x4*y1 - y4*x1))
@@ -242,7 +244,21 @@ box_area = ret/2;
 
 ```c++
 ...
-// 主要实现过程 block or U1
+// 1. 借助workspace完成input_boxes转置
+_mlu_global_ void MLUPNMSTranspose(const void *input_boxes,
+                                     const int input_num_boxes,
+                                     const int input_stride,
+                                     void *output,
+                                     const cnnlDataType_t data_type_input) {
+  ...
+    __memcpy((char*)boxes, (char*)input_boxes  input_offset  loop  actual_box_num, actual_box_num * 4,
+             GDRAM2NRAM);
+    __bang_transpose((float*)trans_boxes, (float*)boxes, input_num_boxes, input_stride);
+    __memcpy((char*)output  input_offset  loop  actual_box_num, (char)trans_boxes, actual_box_num * 4,
+             NRAM2GDRAM);
+  ...
+}
+// 2. 主要实现过程 block or U1
 template <typename IN_DT, typename OUT_DT>
 __mlu_func__ void pnms_detection(uint32_t &output_box_num,
                                  OUT_DT *output_data,
@@ -323,11 +339,14 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
     }
 
     // 1 get_max_score_index(); output: max_box (max_score,max_box,max_index,max_area) 11 个数
+    // 获取scores中最大socre,该步骤需要load所有input_boxes数据, 获取所有数据中的最大值,不是本次循环计算中加载数据的最大值
+    // 对于U1任务,需要计算每个core上最大值, 然后把每个core上最大值加载到sram上计算global_max_score, 再把global_max_score copy到每个core中
     get_max_score_index(input_box_ptr, input_score_ptr, boxes, scores, max_box, max_box_tmp,
                       box_point_num, input_offset, actual_box_num, repeat, remain, taskDim,
                       load_dir, store_dir);
 
-    // save max_index to nram_save
+    // 获取到max_score后,将其对应的index 保存到nram_save中
+    // 如果nram_save中保存的数据量超过分配空间大小,则将nram_save 先copy到output_ptr
     OUT_DT *save_ptr;
     int save_offset = 0;
     int save_ptr_num = 0;
@@ -351,7 +370,8 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
       }  //  store selected index  NRAM->GDRAM
     }    // if coreId == 0
 
-    // if the max scores <= 0, end  结束条件
+    // 结束条件: if the max_score <= 0, end
+    // 此处有疑问 scores中存在负值如何处理?
     if (core_limit == 1) {
       if (float(max_box[0]) <= 0) {
         break;
@@ -367,13 +387,14 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num,
         break;
       }
     }
+
     // 2 cal_poly_areas(); output: box_area
     cal_poly_areas<IN_DT, IN_DT>(boxes, boxes + actual_box_num, boxes + 2 * actual_box_num,
                                  boxes + 3 * actual_box_num, boxes + 4 * actual_box_num,
                                  boxes + 5 * actual_box_num, boxes + 6 * actual_box_num,
                                  boxes + 7 * actual_box_num, box_area, box_area_tmp, input_stride);
 
-    // 3 cal_intersection_area();
+    // 3 cal_intersection_area(); 所需空间从nram_tmp中分配
     cal_intersection_area(input_box_ptr, input_score_ptr, boxes, max_box, intersetion_area,
                           nram_tmp, box_point_num, input_offset, actual_box_num, repeat, remain,
                           taskDim, load_dir, store_dir);
@@ -413,6 +434,7 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/,
                                         mluMemcpyDirection_t load_dir,
                                         mluMemcpyDirection_t store_dir) {
   // 1. init getIntersectPts params
+  ...
   // 2. getIntersectPts: output:intersect_pts_x,intersect_pts_y
   getIntersectPts((IN_DT *)box_pts_x, (IN_DT *)box_pts_y, (IN_DT *)max_box_pts_x,
                   (IN_DT *)max_box_pts_y, (IN_DT *)vec1_x, (IN_DT *)vec1_y, (IN_DT *)vec2_x,
@@ -422,6 +444,7 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/,
                   (IN_DT *)temp7_ram, (IN_DT *)temp8_ram, (IN_DT *)temp9_ram, (IN_DT *)temp10_ram,
                   seg_len);
   // 3 init convexHullGraham params
+  ...
   // 4 convexHullGraham:  output: ordered_pts_x, ordered_pts_y
   convexHullGraham((IN_DT *)intersect_pts_x, (IN_DT *)intersect_pts_y, (IN_DT *)ordered_pts_x,
                    (IN_DT *)ordered_pts_y, (IN_DT *)dist_ram, (IN_DT *)valid_box,
@@ -430,6 +453,7 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/,
                    (IN_DT *)temp_long_3, input_stride, seg_len);
 
   // 5. init polygonArea params
+  ...
   // 6. polygonArea :  output: intersetion_area
   polygonArea((IN_DT *)ordered_pts_x, (IN_DT *)ordered_pts_y, (IN_DT *)valid_box,
               (IN_DT *)valid_pts, (IN_DT *)nums_in_ram, (IN_DT *)intersetion_area,
@@ -486,7 +510,6 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 
       max_index =
             ((uint32_t *)max_box_tmp)[1] + i * max_seg_pad;  // offset start from head of input_data
-      
     }
   }  // for repeat
 
@@ -566,7 +589,7 @@ __mlu_func__ void get_max_score_index(scores IN_DT *input_box_ptr /*GDRAM*/,
 **拆分策略**
 
 借鉴CNNL中NMS算子任务划分:每个core中计算box数量不少于256,否则真实带宽会很小. 基于此, 根据输入boxes数据量分block和U1的任务类型：
-1. 对于Block任务，根据NRAM空间计算len_core，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值
+1. 对于Block任务，根据NRAM空间计算max_seg_pad，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值
 2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram上计算global_max_score，再将global_max_score copy到每个core上进行计算；
 
 ### 3.4 性能优化设计
