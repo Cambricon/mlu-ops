@@ -68,6 +68,8 @@
 
 **2) 主要计算公式**
 
+![gradoutput](./weight.png)
+
 反映射:
 
 Ax =  (x + 1) * (width - 1) / 2;  Ax_weight = 1 - (Ax - floor(Ax));
@@ -81,7 +83,7 @@ output_value = Ax_weight * Ay_weight * topLeft
                   + Ax_weight * (1 - Ay_weightt) * bottomLeft
                   + (1 - Ax_weight) * (1 - Ay_weightt) * bottomRight;
 
-这里的 Ax_weight 和 Ay_weight 是坐标点（Ax,Ay）到 topLeft 左上角点的距离,其它类似。
+这里的 Ax_weight 和 Ay_weight 是坐标点（Ax,Ay）到 bottomRight 右下角点的距离,其它类似。
 
 #### 1.2.2 roi_crop_backward
 
@@ -89,7 +91,7 @@ output_value = Ax_weight * Ay_weight * topLeft
 
 ![roi_crop_backward](./roi_crop_backward.png)
 
-根据 grid 中 bin 的索引获取 gradOutput 中对应的梯度值，从 grid 中获取的每个（y, x）坐标映射参数, 可以反映射到 gradInput 中的A处得到坐标信息（Ax,Ay），获取 A 点附近四处整数点位偏移地址 topLeftAddress、topRightAddress, bottomLeftAddress、bottomRightAddress;最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
+根据 grid 中 bin 的索引获取 gradOutput 中对应的梯度值 gradOutput_V，从 grid 中获取的每个（y, x）坐标映射参数, 可以反映射到 gradInput 中的A处得到坐标信息（Ax,Ay），获取 A 点附近四处整数点位偏移地址 tl_address、tr_address, bl_address、br_address;最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
 
 **2) 主要计算公式**
 
@@ -101,7 +103,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 梯度计算：
 
-![gradoutput](./gradoutput_func.png)
+![gradoutput](./roi_crop_backward_func.png)
 
 #### 1.2.3 算子主要应用场景
 
@@ -169,10 +171,6 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 #### 2.1.1 roi_crop_forward
 
-- 网络调用接口
-```c++
-output = RoICropFunction()(input1, input2);
-```
 - cuda函数接口
 ```c++
 int BilinearSamplerBHWD_updateOutput_cuda(THCudaTensor *inputImages,
