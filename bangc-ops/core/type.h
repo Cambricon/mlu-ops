@@ -16,4 +16,7 @@
 #include "core/mlu_op_core.h"
 
 size_t getSizeOfDataType(mluOpDataType_t dtype);
+
+cnrtDataType_t toCnrtDataType(mluOpDataType_t dtype);
+
 #endif  // CORE_TYPE_H_

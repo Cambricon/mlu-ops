@@ -16,7 +16,7 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 #include "mlu_op.h"
-#include "sqrt.h"
+#include "mlu_op_kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
                                       const mluOpComputationPreference_t prefer,
@@ -44,37 +44,38 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
           << k_dim.y << ", " << k_dim.z << "]";
 
   int32_t element_num = mluOpGetTensorElementNum(x_desc);
-  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num,
-                              float coef);
-  MLUBlockKernelUnary = NULL;
+  void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                cnrtQueue_t queue, const void *x, void *y,
+                                int element_num);
+  mluOpBlockKernelUnary = nullptr;
   if (handle->arch == MLUOP_MLU270) {
     if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "kernel MLUBlockKernel5StagePipelineSqrtfloatFast";
-      MLUBlockKernelUnary = MLUBlockKernel5StagePipelineSqrtfloatFast;
+      VLOG(5) << "kernel mluOpBlockKernel5StagePipelineSqrtFloatFast";
+      mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineSqrtFloatFast;
     } else {
       if (prefer == MLUOP_COMPUTATION_FAST) {
-        VLOG(5) << "kernel MLUBlockKernel5StagePipelineSqrthalfFast";
-        MLUBlockKernelUnary = MLUBlockKernel5StagePipelineSqrthalfFast;
+        VLOG(5) << "kernel mluOpBlockKernel5StagePipelineSqrtHalfFast";
+        mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineSqrtHalfFast;
       } else {
-        VLOG(5) << "kernel MLUBlockKernel5StagePipelineSqrthalfHighAcc";
-        MLUBlockKernelUnary = MLUBlockKernel5StagePipelineSqrthalfHighAcc;
+        VLOG(5) << "kernel mluOpBlockKernel5StagePipelineSqrtHalfHighAcc";
+        mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineSqrtHalfHighAcc;
       }
     }
   } else {
     if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "kernel MLUBlockKernel3StagePipelineSqrtfloatFast";
-      MLUBlockKernelUnary = MLUBlockKernel3StagePipelineSqrtfloatFast;
+      VLOG(5) << "kernel mluOpBlockKernel3StagePipelineSqrtFloatFast";
+      mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineSqrtFloatFast;
     } else {
       if (prefer == MLUOP_COMPUTATION_FAST) {
-        VLOG(5) << "kernel MLUBlockKernel3StagePipelineSqrthalfFast";
-        MLUBlockKernelUnary = MLUBlockKernel3StagePipelineSqrthalfFast;
+        VLOG(5) << "kernel mluOpBlockKernel3StagePipelineSqrtHalfFast";
+        mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineSqrtHalfFast;
       } else {
-        VLOG(5) << "kernel MLUBlockKernel3StagePipelineSqrthalfHighAcc";
-        MLUBlockKernelUnary = MLUBlockKernel3StagePipelineSqrthalfHighAcc;
+        VLOG(5) << "kernel mluOpBlockKernel3StagePipelineSqrtHalfHighAcc";
+        mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineSqrtHalfHighAcc;
       }
     }
   }
-  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>(
-      (void *)x, (void *)y, element_num, 0.0)));
+  KERNEL_CHECK(
+      (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
   return MLUOP_STATUS_SUCCESS;
 }

@@ -9,10 +9,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <algorithm>
-#include <vector>
-#include <string>
-
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -20,7 +16,7 @@
 #include "core/type.h"
 #include "kernels/binary_op/binary_op_host.h"
 #include "mlu_op.h"
-#include "div.h"
+#include "mlu_op_kernel.h"
 
 // threshold of bytes to be processed by each core
 // according to the actual measurement results
@@ -49,21 +45,23 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   binaryOpPolicyFunc(handle, x_desc, THRESHOLD_SIZE, &k_dim, &k_type);
 
   int element_num = mluOpGetTensorElementNum(x_desc);
-  void (*MLUBlockKernelBinary)(void *a, void *b, void *c, int element_num);
-  MLUBlockKernelBinary = NULL;
+  void (*mluOpBlockKernelBinary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                 cnrtQueue_t queue, const void *x,
+                                 const void *y, void *z, int element_num);
+  mluOpBlockKernelBinary = nullptr;
   if (x_desc->dtype == MLUOP_DTYPE_HALF) {
     if (prefer == MLUOP_COMPUTATION_HIGH_PRECISION) {
-      VLOG(5) << "Kernel MLUKernel3StagePipelineDivhalfHighAcc";
-      MLUBlockKernelBinary = MLUKernel3StagePipelineDivhalfHighAcc;
+      VLOG(5) << "kernel mluOpKernel3StagePipelineDivHalfHighAcc";
+      mluOpBlockKernelBinary = mluOpBlockKernel3StagePipelineDivHalfHighAcc;
     } else {
-      VLOG(5) << "Kernel MLUKernel3StagePipelineDivhalfFast";
-      MLUBlockKernelBinary = MLUKernel3StagePipelineDivhalfFast;
+      VLOG(5) << "kernel mluOpKernel3StagePipelineDivHalfFast";
+      mluOpBlockKernelBinary = mluOpBlockKernel3StagePipelineDivHalfFast;
     }
   } else {
-    VLOG(5) << "Kernel MLUKernel3StagePipelineDivfloatFast";
-    MLUBlockKernelBinary = MLUKernel3StagePipelineDivfloatFast;
+    VLOG(5) << "kernel mluOpKernel3StagePipelineDivFloatFast";
+    mluOpBlockKernelBinary = mluOpBlockKernel3StagePipelineDivFloatFast;
   }
-  KERNEL_CHECK((MLUBlockKernelBinary<<<k_dim, k_type, handle->queue>>>(
-      (void *)x, (void *)y, z, element_num)));
+  KERNEL_CHECK((mluOpBlockKernelBinary(k_dim, k_type, handle->queue, x, y, z,
+                                       element_num)));
   return MLUOP_STATUS_SUCCESS;
 }

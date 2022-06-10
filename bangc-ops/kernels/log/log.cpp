@@ -9,6 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include <algorithm>
+
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -16,7 +18,7 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 #include "mlu_op.h"
-#include "log.h"
+#include "mlu_op_kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
@@ -51,39 +53,40 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
     coef = log10(exp(1));
   }
 
-  size_t element_num = mluOpGetTensorElementNum(x_desc);
+  int element_num = mluOpGetTensorElementNum(x_desc);
 
-  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num,
-                              float coef);
-  MLUBlockKernelUnary = NULL;
+  void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                cnrtQueue_t queue, const void *x, void *y,
+                                int element_num, float coef);
+  mluOpBlockKernelUnary = nullptr;
   if (handle->arch == MLUOP_MLU270) {
     if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "kernel MLUBlockKernel5StagePipelineLogfloatFast";
-      MLUBlockKernelUnary = MLUBlockKernel5StagePipelineLogfloatFast;
+      VLOG(5) << "kernel mluOpBlockKernel5StagePipelineLogFloatFast";
+      mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineLogFloatFast;
     } else {
       if (prefer == MLUOP_COMPUTATION_FAST) {
-        VLOG(5) << "kernel MLUBlockKernel5StagePipelineLoghalfFast";
-        MLUBlockKernelUnary = MLUBlockKernel5StagePipelineLoghalfFast;
+        VLOG(5) << "kernel mluOpBlockKernel5StagePipelineLoghalfFast";
+        mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineLogHalfFast;
       } else {
-        VLOG(5) << "kernel MLUBlockKernel5StagePipelineLoghalfHighAcc";
-        MLUBlockKernelUnary = MLUBlockKernel5StagePipelineLoghalfHighAcc;
+        VLOG(5) << "kernel mluOpBlockKernel5StagePipelineLoghalfHighAcc";
+        mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineLogHalfHighAcc;
       }
     }
   } else {
     if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "kernel MLUBlockKernel3StagePipelineLogfloatFast";
-      MLUBlockKernelUnary = MLUBlockKernel3StagePipelineLogfloatFast;
+      VLOG(5) << "kernel mluOpBlockKernel3StagePipelineLogfloatFast";
+      mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineLogFloatFast;
     } else {
       if (prefer == MLUOP_COMPUTATION_FAST) {
-        VLOG(5) << "kernel MLUBlockKernel3StagePipelineLoghalfFast";
-        MLUBlockKernelUnary = MLUBlockKernel3StagePipelineLoghalfFast;
+        VLOG(5) << "kernel mluOpBlockKernel3StagePipelineLoghalfFast";
+        mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineLogHalfFast;
       } else {
-        VLOG(5) << "kernel MLUBlockKernel3StagePipelineLoghalfHighAcc";
-        MLUBlockKernelUnary = MLUBlockKernel3StagePipelineLoghalfHighAcc;
+        VLOG(5) << "kernel mluOpBlockKernel3StagePipelineLoghalfHighAcc";
+        mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineLogHalfHighAcc;
       }
     }
   }
-  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>(
-      (void *)x, y, element_num, coef)));
+  KERNEL_CHECK((mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y,
+                                      element_num, coef)));
   return MLUOP_STATUS_SUCCESS;
 }

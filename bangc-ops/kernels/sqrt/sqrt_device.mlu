@@ -11,6 +11,7 @@
  *************************************************************************/
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
+#include "mlu_op_kernel.h"
 
 #define SQRT_HIGH_BOUND 1e4
 #define SQRT_SCALE 1e-6
@@ -143,3 +144,45 @@ UNARY_OP_KERNEL_3PIPELINE_IMPLE(Sqrt, half, HighAcc);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, float, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, half, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, half, HighAcc);
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel3StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfHighAcc(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel3StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtFloatFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel3StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel5StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfHighAcc(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel5StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtFloatFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel5StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}

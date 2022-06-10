@@ -17,7 +17,7 @@
 #include "core/type.h"
 #include "kernels/binary_op/binary_op_host.h"
 #include "mlu_op.h"
-#include "sqrt_backward.h"
+#include "mlu_op_kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t y_desc, const void *y,
@@ -41,17 +41,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
   binaryOpPolicyFunc(handle, y_desc, handle->nram_size, &k_dim, &k_type);
 
   size_t num_elem = mluOpGetTensorElementNum(y_desc);
-  void (*MLUBlockKernelBinary)(void *y, void *diff_y, void *diff_x,
-                               int num_elem);
-  MLUBlockKernelBinary = NULL;
+  void (*mluOpBlockKernelBinary)(
+      cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+      const void *y, const void *diff_y, void *diff_x, int num_elem);
+  mluOpBlockKernelBinary = nullptr;
   if (y_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel MLUKernel3StagePipelineSqrtBackwardhalfHighAcc";
-    MLUBlockKernelBinary = MLUKernel3StagePipelineSqrtBackwardhalfHighAcc;
+    VLOG(5) << "Kernel mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc";
+    mluOpBlockKernelBinary =
+        mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc;
   } else {
-    VLOG(5) << "Kernel MLUKernel3StagePipelineSqrtBackwardfloatFast";
-    MLUBlockKernelBinary = MLUKernel3StagePipelineSqrtBackwardfloatFast;
+    VLOG(5) << "Kernel mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast";
+    mluOpBlockKernelBinary =
+        mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast;
   }
-  KERNEL_CHECK((MLUBlockKernelBinary<<<k_dim, k_type, handle->queue>>>(
-      (void *)y, (void *)diff_y, diff_x, num_elem)));
+  KERNEL_CHECK((mluOpBlockKernelBinary(k_dim, k_type, handle->queue, y, diff_y,
+                                       diff_x, num_elem)));
   return MLUOP_STATUS_SUCCESS;
 }

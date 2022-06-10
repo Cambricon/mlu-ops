@@ -35,3 +35,32 @@ size_t getSizeOfDataType(mluOpDataType_t dtype) {
     }
   }
 }
+
+cnrtDataType_t toCnrtDataType(mluOpDataType_t dtype) {
+  switch (dtype) {
+    default: {
+      return cnrtInvalid;
+    }
+    case MLUOP_DTYPE_HALF: {
+      return cnrtFloat16;
+    }
+    case MLUOP_DTYPE_FLOAT: {
+      return cnrtFloat32;
+    }
+    case MLUOP_DTYPE_INT8: {
+      return cnrtInt8;
+    }
+    case MLUOP_DTYPE_INT16: {
+      return cnrtInt16;
+    }
+    case MLUOP_DTYPE_INT32: {
+      return cnrtInt32;
+    }
+    case MLUOP_DTYPE_UINT8: {
+      return cnrtUInt8;
+    }
+    case MLUOP_DTYPE_BOOL: {
+      return cnrtBool;
+    }
+  }
+}
