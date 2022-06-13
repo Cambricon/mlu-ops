@@ -165,6 +165,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPnmsWorkspaceSize(mluOpHandle_t handle,
 
 - `handle`：输入参数。操作句柄，内部绑定device和对应的queue。
 - `size`：输入参数。需要用户申请的额外的空间大小，通过`mluOpGetPnmsWorkspaceSize`获取。
+- `mluOpTensorDescriptor_t`: 输入tensor的形状描述。
 
 #### 2.2.2 poly_nms计算接口
 
@@ -197,7 +198,7 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 4. 输出剩于box的index(按照score降序输出)
 
 - **MLU实现步骤**
-1. 借助workspace将输入box_data由Nx9转置为9xN. (提前将所有数据转置,是因为在第二步计算max_score时,需要重复load所有数据计算scores最大值,计算过程中每次repeat时load的数据量较小,需要重复多次load并进行转置计算,对性能有损耗,故需提前转置.)
+1. 借助workspace将输入box_data由Nx9转置为9xN; (提前将所有数据转置,是因为在第二步计算max_score时,需要重复load所有数据计算scores最大值,计算过程中每次repeat时load的数据量较小,需要重复多次load并进行转置计算,对性能有损耗,故需提前转置。)
 ![trans_box](./trans_box.png)
 2. 计算max_score: scores = boxes_trans + input_stride x 8，从scores中获取score最大值;
    注意:获取scores中最大socre,该步骤需要load所有input_boxes数据, 获取所有数据中的最大值,不是本次循环计算中加载数据的最大值;对于U1任务,需要计算每个core上最大值, 然后把每个core上最大值加载到sram上计算global_max_score, 再把global_max_score copy到每个core中;
@@ -597,9 +598,9 @@ __mlu_func__ void get_max_score_index(IN_DT *input_box_ptr /*GDRAM*/,
 
 **拆分策略**
 
-根据输入boxes数据量分Block和U1的任务类型, 需注意每个core中计算box数量不少于256, 否则真实带宽会很小(借鉴CNNL中NMS算子任务划分).  
-1. 对于Block任务，根据NRAM空间计算max_seg_pad，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值
-2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram上计算global_max_score，再将global_max_score copy到每个core上进行计算；
+根据输入boxes数据量分Block和U1的任务类型, 需注意每个core中计算box数量不少于256, 否则真实带宽会很小(借鉴CNNL中NMS算子任务划分)。 
+1. 对于Block任务，根据NRAM空间计算max_seg_pad，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值;
+2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram上计算global_max_score，再将global_max_score copy到每个core上进行计算。
 
 ### 3.4 性能优化设计
 
@@ -632,23 +633,23 @@ __mlu_func__ void get_max_score_index(IN_DT *input_box_ptr /*GDRAM*/,
 
 ### 3.6 可维护性设计
 
-1、bangc代码中加入必要的 log信息，比如输入的规模、数据类型、layout，任务类型，以及如果出错会导致程序core dump的变量，比如IO指令的data_size、dim xyz的值等，这些信息都是有利于快速定位问题。   
+1、bangc代码中加入必要的 log信息，比如输入的规模、数据类型、layout，任务类型，以及如果出错会导致程序core dump的变量，比如IO指令的data_size、dim xyz的值等，这些信息都是有利于快速定位问题;
 
-2、对每一个函数命名变量命名都有充分的注释
+2、对每一个函数命名变量命名都有充分的注释;
 
-3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代
+3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
 
 ### 3.7 测试用例设计
 
-- 框架在需求列表中给出的算子在网络中用到的规模
-- 测试输入包含nan，inf，-inf的行为,
-- 测试不同数据规模下block，U1任务分支
+- 框架在需求列表中给出的算子在网络中用到的规模;
+- 测试输入包含nan，inf，-inf的行为;
+- 测试不同数据规模下block，U1任务分支。
 
 ### 3.8 算子防呆检查
  1. 指针为空防呆；
  2. 0元素检查防呆，VLOG(5)打印信息；
  3. input，output的数据类型须保持一致，且符合算子类型支持限制；
- 4. 对shape进行防呆，需要保证输入boxes满足要求；
+ 4. 对shape进行防呆，需要保证输入boxes满足要求。
 
 ## 4 算子性能/精度问题 & 优化记录
 
