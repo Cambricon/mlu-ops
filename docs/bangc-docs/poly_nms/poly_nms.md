@@ -88,15 +88,24 @@
 ```py
 def test_nms():
     nms_thresh = 0.1
-    # #   box1和 box2，box3都有交集,且iou>0.1 输出为 [0]
-    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 1],[0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5, 1]]
+
+    # 输出为[0]
+    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3]]
+
+    # #   box3和 box1，box2没有交集，box2和box3有交集,且iou>0.1, 输出结果为[1, 2]
+    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 1], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 2],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 3]]
+
     
-    # #  box1和 box2，box3都没有交集 输出为[0,1,2],按照socre降序输出
-    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.5, 2],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 1]]
+    # #  box1，box2， box3 均无交集，输出为[0, 1, 2]
+    # dets =  [[0, 0, 1, 0, 1, 1, 0, 1, 3], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 2],[0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5, 1]]
+
  
-    # #  box1和 box2有交集.且iou=0.1428 > nms_thresh(0.1)，box1,box2都和box3没交集 输出为[0,2]
-    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 1]]
+    # #  box1和 box2有交集.且iou=0.1428 > nms_thresh(0.1)，box1,box2都和box3没交集 输出为[0, 2]
+    # dets = [[0, 0, 1, 0, 1, 1, 0, 1, 3], [0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 2],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 1]]
    
+    # 输入包含inf: box1和box2相交， box3和box1，box2不相交，输出[0,2]
+    dets = [[0, 0, 2, 0, 2, 2, 0, 2, np.inf], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 3]]
+
     # dets = np.array(dets)
     keep = py_cpu_nms_poly(dets, nms_thresh)
     print(keep) 
@@ -185,17 +194,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpPnms(mluOpHandle_t handle,
 
 ### 3.1 实现方案
 
-`poly_nms`(polygan nms)算子用于计算多边形非极大值抑制, 删除冗余的多边形框.
+`poly_nms`(polygan nms)算子用于计算多边形非极大值抑制, 删除冗余的多边形框。
 
 poly_nms算子有两个输入，input1是2维Tensor，包含四边形的四个顶点坐标及其对应的score，具体信息为：
 [[x1, y1, x2, y2, x3, y3, x4, y4, score],...];
 input2 是float数，是给定的iou的阈值iou_thresh。
 
-- **cpu计算方法**
+- **poly_nms算子CPU实现**
 1. 将scores降序排序;
 2. 用score最大的box分别和其余的box做iou计算, 如果iou大于iou_thresh,认为这两个box相交,删除score值小的box
 3. 再选取次大的score, 重复第二步计算
-4. 输出剩于box的index(按照score降序输出)
+4. 输出剩于box的index(升序输出)
 
 - **MLU实现步骤**
 1. 借助workspace将输入box_data由Nx9转置为9xN; (提前将所有数据转置,是因为在第二步计算max_score时,需要重复load所有数据计算scores最大值,计算过程中每次repeat时load的数据量较小,需要重复多次load并进行转置计算,对性能有损耗,故需提前转置。)
@@ -205,7 +214,7 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 3. 保存max_score对应的index到nram_save中,保存数量大于nram_save空间时, 将nram_save数据copy到device端后重新保存;
 4. 计算不规则四边形iou：计算max_score对应的box和其他的boxes的iou，如果iou > iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置为FLT_MIN；
 5. 第4步计算完后，在剩余scores中重新计算max_score，如果max_score <= FLT_MIN,则计算完成，否则重复第二步；
-6. 按照计算max_score的先后顺序，输出所有的max_score对应box的index，及index的数量；
+6. copy所有的max_score对应的index到output，对output做快速排序，输出排序后的index及index数量
 
 - **实现流程图**
 
