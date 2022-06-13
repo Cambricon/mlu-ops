@@ -339,6 +339,67 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(mluOpHandle_t handle,
                                            const mluOpTensorDescriptor_t dx_desc,
                                            void *diff_x);
 
+/*!
+ * @brief Computes the gradients of images \b gradInput based on the gradients \b gradOutput and coordinate mapping parameter \b grid to 
+ * perform the backpropagation.
+ *
+ * @param[in] handle
+ *   Input. Handle to a MLUOP context that is used to manage MLU devices and queues in ::mluOpRoiCropBackward operation. 
+ *   For detailed information, see ::mluOpHandle_t.
+ * @param[in] gradOutput_desc
+ *   Input. The descriptor of the gradOutput tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] gradOutput
+ *   Input. Pointer to the MLU memory that stores the gradient tensor in the backpropagation process.
+ * @param[in] grid_desc
+ *   Input. The descriptor of the grid tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grid
+ *   Input. Pointer to the MLU memory that stores the coordinate mapping tensor.NaN and INF datas are not supported.
+ * @param[in] gradInput_desc
+ *   Input. The descriptor of the gradInput tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] gridInput
+ *   Output. Pointer to the MLU memory that stores the gradient tensor of the original images.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - See "RoiCropBackward Operation" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - Data types of all tensors must be the same.
+ * - The supported data types of all tensors are as follows:
+ *   - Input tensors: float.
+ *   - Output tensor: float.
+ * @par Data Layout
+ * - The supported data layout of \b gradOutput , \b grad , \b gradInput are as follows.
+ *   - gradOutput tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - grid tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - gradInput tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The gradOutput tensor 、grid tensor and gradInput tensor must have four dimensions.
+ * - Size of the second dimension of grid tensor, gradoutput tensor must be the same.
+ * - Size of the third dimmension of grid tensor, gradoutput tensor must be the same.
+ * - Size of the highest dimension of gradInput tensor is divisible by size of the highest deminsions of grid tensor.
+ *   The following grid data range:
+ *   - Float: [-1.0,1.0].    
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/roi_crop
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(mluOpHandle_t handle,
+                                                const mluOpTensorDescriptor_t gradOutput_desc,
+                                                const void *gradOutput,
+                                                const mluOpTensorDescriptor_t grid_desc,
+                                                const void *grid,
+                                                const mluOpTensorDescriptor_t gradInput_desc,
+                                                void *gradInput);
+
 #if defined(__cplusplus)
 }
 #endif

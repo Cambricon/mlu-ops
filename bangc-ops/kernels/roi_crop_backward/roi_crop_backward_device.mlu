@@ -1,0 +1,380 @@
+/*************************************************************************
+ * Copyright (C) 2022 by Cambricon, Inc. All rights reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "roi_crop_backward.h"
+
+#ifndef PAD_DOWN
+#define PAD_DOWN(x, y) (((x) / (y)) * (y))
+#endif
+#ifndef PAD_UP
+#define PAD_UP(x, y) (((x) / (y) + (int)((x) % (y) > 0)) * (y))
+#endif
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_func__ void getGradInputTopLeft(const T grid_yx_value,
+                                      const int gradInput_hw, T *weight,
+                                      int *point) {
+  T xcoord = (grid_yx_value + 1) * (gradInput_hw - 1) / 2;
+  *point = floor(xcoord);
+  *weight = 1 - (xcoord - (T)(*point));
+}
+__mlu_func__ bool between(const int value, const int lowerBound,
+                          const int upperBound) {
+  return (value >= lowerBound && value <= upperBound);
+}
+
+template <typename T>
+__mlu_func__ void MLUUnion1RoiCropBackward(
+    const T *gradOutput, const int output_h, const int output_w, const T *grid,
+    const int grid_n, T *gradInput, const int batch, const int height,
+    const int width, const int channels) {
+  // evenly distribute BIN to IPU
+  const uint32_t bin_n = grid_n * output_h * output_w;
+  uint32_t task_bins = bin_n / taskDim;
+  uint32_t rem_bins = bin_n % taskDim;
+  if (taskId < rem_bins) {
+    task_bins += 1;
+  }
+  int bins_first_per =
+      (bin_n / taskDim) * taskId + (taskId > rem_bins ? rem_bins : taskId);
+  int bins_loop_per = bins_first_per + task_bins;
+
+  // nram is divided into 8 copies
+  int nram_limit =
+      PAD_DOWN(MAX_NRAM_SIZE / 10 / sizeof(T), NFU_ALIGN_SIZE / sizeof(T));
+  // Data alignment and calculate the number of repeatitions
+  int repeat = channels / nram_limit;
+  const int rem = channels % nram_limit;
+  int rem_num = 0;
+  int rem_align = 0;
+  int bin_i = 0;
+  int c_align = 0;
+  if (repeat == 0) {
+    c_align = PAD_UP(channels, NFU_ALIGN_SIZE / sizeof(T));
+  } else {
+    if (rem != 0) {
+      rem_num += 1;
+      rem_align = PAD_UP(rem, NFU_ALIGN_SIZE / sizeof(T));
+    }
+  }
+  int gw, gh, gn, input_batch_index;
+  int i_tl_x, i_tl_y;
+  T gy, gx;
+  T i_tl_x_weight, i_tl_y_weight;
+  T i_tl_weight, i_tr_weight, i_bl_weight, i_br_weight;
+  T i_tl_weight_pre, i_tr_weight_pre, i_bl_weight_pre, i_br_weight_pre;
+
+  int i_tl_offset, i_tr_offset, i_bl_offset, i_br_offset;
+  int i_tl_offset_pre, i_tr_offset_pre, i_bl_offset_pre, i_br_offset_pre;
+  int go_offset = 0;
+  int offset = 0;
+  int offset_c_rem;
+  T *nram_ping = (T *)nram_buffer;
+
+  for (int bin_index = bins_first_per; bin_index < bins_loop_per; bin_index++) {
+    // coordinates of bin
+    gw = bin_index % output_w;
+    gh = (bin_index / output_w) % output_h;
+    gn = bin_index / output_w / output_h;
+    // batch index under input
+    input_batch_index = gn / (grid_n / batch);
+    // value of grid data
+    gy = grid[gn * output_h * output_w * 2 + gh * output_w * 2 + gw * 2];
+    gx = grid[gn * output_h * output_w * 2 + gh * output_w * 2 + gw * 2 + 1];
+    // coordinates and weights under gradInput data
+    getGradInputTopLeft((T)gx, width, (T *)&i_tl_x_weight, &i_tl_x);
+    getGradInputTopLeft((T)gy, height, (T *)&i_tl_y_weight, &i_tl_y);
+    i_tl_offset = input_batch_index * height * width * channels +
+                  i_tl_y * width * channels + i_tl_x * channels;
+    i_tl_weight = i_tl_x_weight * i_tl_y_weight;
+    i_tr_offset = i_tl_offset + channels;
+    i_tr_weight = (1 - i_tl_x_weight) * i_tl_y_weight;
+    i_bl_offset = i_tl_offset + width * channels;
+    i_bl_weight = i_tl_x_weight * (1 - i_tl_y_weight);
+    i_br_offset = i_tl_offset + width * channels + channels;
+    i_br_weight = (1 - i_tl_x_weight) * (1 - i_tl_y_weight);
+    bool topLeftIsIn =
+        between(i_tl_x, 0, width - 1) && between(i_tl_y, 0, height - 1);
+    bool topRightIsIn =
+        between(i_tl_x + 1, 0, width - 1) && between(i_tl_y, 0, height - 1);
+    bool bottomLeftIsIn =
+        between(i_tl_x, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
+    bool bottomRightIsIn =
+        between(i_tl_x + 1, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
+
+    // offset of gradOutput data
+    go_offset = gn * output_h * output_w * channels + gh * output_w * channels +
+                gw * channels;
+    if (repeat == 0) {
+      if (bin_i < task_bins) {
+        // Compute and store
+        if (bin_i >= 1) {
+          // C (i-1)
+          offset = (bin_i - 1) % 2 * c_align * 5;
+          if (topLeftIsIn) {
+            __bang_mul_const(nram_ping + offset + c_align, nram_ping + offset,
+                             i_tl_weight_pre, c_align);
+            __bang_atomic_add(nram_ping + offset + c_align,
+                              gradInput + i_tl_offset_pre,
+                              nram_ping + offset + c_align, channels);
+          }
+          if (topRightIsIn) {
+            __bang_mul_const(nram_ping + offset + 2 * c_align,
+                             nram_ping + offset, i_tr_weight_pre, c_align);
+            __bang_atomic_add(nram_ping + offset + 2 * c_align,
+                              gradInput + i_tr_offset_pre,
+                              nram_ping + offset + 2 * c_align, channels);
+          }
+          if (bottomLeftIsIn) {
+            __bang_mul_const(nram_ping + offset + 3 * c_align,
+                             nram_ping + offset, i_bl_weight_pre, c_align);
+            __bang_atomic_add(nram_ping + offset + 3 * c_align,
+                              gradInput + i_bl_offset_pre,
+                              nram_ping + offset + 3 * c_align, channels);
+          }
+          if (bottomRightIsIn) {
+            __bang_mul_const(nram_ping + offset + 4 * c_align,
+                             nram_ping + offset, i_br_weight_pre, c_align);
+            __bang_atomic_add(nram_ping + offset + 4 * c_align,
+                              gradInput + i_br_offset_pre,
+                              nram_ping + offset + 4 * c_align, channels);
+          }
+        }
+        // Load
+        // L (bin_index)
+        offset = (bin_i) % 2 * c_align * 5;
+        __memcpy_async(nram_ping + offset, gradOutput + go_offset,
+                       channels * sizeof(T), GDRAM2NRAM);
+      }
+
+      i_tl_offset_pre = i_tl_offset;
+      i_tr_offset_pre = i_tr_offset;
+      i_bl_offset_pre = i_bl_offset;
+      i_br_offset_pre = i_br_offset;
+
+      i_tl_weight_pre = i_tl_weight;
+      i_tr_weight_pre = i_tr_weight;
+      i_bl_weight_pre = i_bl_weight;
+      i_br_weight_pre = i_br_weight;
+
+      bin_i++;
+      __asm__ volatile("sync;\n\t");
+      if (bin_i == task_bins && task_bins > 0) {
+        offset = (bin_i - 1) % 2 * c_align * 5;
+        if (topLeftIsIn) {
+          __bang_mul_const(nram_ping + offset + c_align, nram_ping + offset,
+                           i_tl_weight_pre, c_align);
+          __bang_atomic_add(nram_ping + offset + c_align,
+                            gradInput + i_tl_offset_pre,
+                            nram_ping + offset + c_align, channels);
+        }
+        if (topRightIsIn) {
+          __bang_mul_const(nram_ping + offset + 2 * c_align, nram_ping + offset,
+                           i_tr_weight_pre, c_align);
+          __bang_atomic_add(nram_ping + offset + 2 * c_align,
+                            gradInput + i_tr_offset_pre,
+                            nram_ping + offset + 2 * c_align, channels);
+        }
+        if (bottomLeftIsIn) {
+          __bang_mul_const(nram_ping + offset + 3 * c_align, nram_ping + offset,
+                           i_bl_weight_pre, c_align);
+          __bang_atomic_add(nram_ping + offset + 3 * c_align,
+                            gradInput + i_bl_offset_pre,
+                            nram_ping + offset + 3 * c_align, channels);
+        }
+        if (bottomRightIsIn) {
+          __bang_mul_const(nram_ping + offset + 4 * c_align, nram_ping + offset,
+                           i_br_weight_pre, c_align);
+          __bang_atomic_add(nram_ping + offset + 4 * c_align,
+                            gradInput + i_br_offset_pre,
+                            nram_ping + offset + 4 * c_align, channels);
+        }
+      }
+    } else {
+      for (int i = 0; i < repeat + 1 + rem_num; ++i) {
+        // Compute
+        if (i >= 1 && i < repeat + rem_num + 1) {
+          if (i < repeat + rem_num || rem_num == 0) {
+            // C (i-1)
+            offset =
+                (((bin_index - bins_first_per) * (repeat + rem_num) + i) - 1) %
+                2 * nram_limit * 5;
+            if (topLeftIsIn) {
+              __bang_mul_const(nram_ping + offset + nram_limit,
+                               nram_ping + offset, i_tl_weight, nram_limit);
+              __bang_atomic_add(nram_ping + offset + nram_limit,
+                                gradInput + i_tl_offset + (i - 1) * nram_limit,
+                                nram_ping + offset + nram_limit, nram_limit);
+            }
+            if (topRightIsIn) {
+              __bang_mul_const(nram_ping + offset + 2 * nram_limit,
+                               nram_ping + offset, i_tr_weight, nram_limit);
+              __bang_atomic_add(nram_ping + offset + 2 * nram_limit,
+                                gradInput + i_tr_offset + (i - 1) * nram_limit,
+                                nram_ping + offset + 2 * nram_limit,
+                                nram_limit);
+            }
+            if (bottomLeftIsIn) {
+              __bang_mul_const(nram_ping + offset + 3 * nram_limit,
+                               nram_ping + offset, i_bl_weight, nram_limit);
+              __bang_atomic_add(nram_ping + offset + 3 * nram_limit,
+                                gradInput + i_bl_offset + (i - 1) * nram_limit,
+                                nram_ping + offset + 3 * nram_limit,
+                                nram_limit);
+            }
+            if (bottomRightIsIn) {
+              __bang_mul_const(nram_ping + offset + 4 * nram_limit,
+                               nram_ping + offset, i_br_weight, nram_limit);
+              __bang_atomic_add(nram_ping + offset + 4 * nram_limit,
+                                gradInput + i_br_offset + (i - 1) * nram_limit,
+                                nram_ping + offset + 4 * nram_limit,
+                                nram_limit);
+            }
+          } else if (rem_num == 1) {
+            if (bin_index == bins_loop_per - 1) {
+              offset =
+                  (((bin_index - bins_first_per) * (repeat + rem_num) + i) -
+                   1) %
+                  2 * nram_limit * 5;
+              if (topLeftIsIn) {
+                __bang_mul_const(nram_ping + offset + nram_limit,
+                                 nram_ping + offset, i_tl_weight, rem_align);
+                __bang_atomic_add(
+                    nram_ping + offset + nram_limit,
+                    gradInput + i_tl_offset + (i - 1) * nram_limit,
+                    nram_ping + offset + nram_limit, rem);
+              }
+              if (topRightIsIn) {
+                __bang_mul_const(nram_ping + offset + 2 * nram_limit,
+                                 nram_ping + offset, i_tr_weight, rem_align);
+                __bang_atomic_add(
+                    nram_ping + offset + 2 * nram_limit,
+                    gradInput + i_tr_offset + (i - 1) * nram_limit,
+                    nram_ping + offset + 2 * nram_limit, rem);
+              }
+              if (bottomLeftIsIn) {
+                __bang_mul_const(nram_ping + offset + 3 * nram_limit,
+                                 nram_ping + offset, i_bl_weight, rem_align);
+                __bang_atomic_add(
+                    nram_ping + offset + 3 * nram_limit,
+                    gradInput + i_bl_offset + (i - 1) * nram_limit,
+                    nram_ping + offset + 3 * nram_limit, rem);
+              }
+              if (bottomRightIsIn) {
+                __bang_mul_const(nram_ping + offset + 4 * nram_limit,
+                                 nram_ping + offset, i_br_weight, rem_align);
+                __bang_atomic_add(
+                    nram_ping + offset + 4 * nram_limit,
+                    gradInput + i_br_offset + (i - 1) * nram_limit,
+                    nram_ping + offset + 4 * nram_limit, rem);
+              }
+            } else {
+              offset_c_rem =
+                  (((bin_index - bins_first_per) * (repeat + rem_num) + i) -
+                   1) %
+                  2 * nram_limit * 5;
+              i_tl_offset_pre = i_tl_offset + (i - 1) * nram_limit;
+              i_tr_offset_pre = i_tr_offset + (i - 1) * nram_limit;
+              i_bl_offset_pre = i_bl_offset + (i - 1) * nram_limit;
+              i_br_offset_pre = i_br_offset + (i - 1) * nram_limit;
+              i_tl_weight_pre = i_tl_weight;
+              i_tr_weight_pre = i_tr_weight;
+              i_bl_weight_pre = i_bl_weight;
+              i_br_weight_pre = i_br_weight;
+            }
+          }
+        }
+        if (i == 0 && bin_index != bins_first_per) {
+          if (topLeftIsIn) {
+            __bang_mul_const(nram_ping + offset_c_rem + nram_limit,
+                             nram_ping + offset_c_rem, i_tl_weight, rem_align);
+            __bang_atomic_add(nram_ping + offset_c_rem + nram_limit,
+                              gradInput + i_tl_offset_pre,
+                              nram_ping + offset_c_rem + nram_limit, rem);
+          }
+          if (topRightIsIn) {
+            __bang_mul_const(nram_ping + offset_c_rem + 2 * nram_limit,
+                             nram_ping + offset, i_tr_weight, rem_align);
+            __bang_atomic_add(
+                nram_ping + offset_c_rem + 2 * nram_limit,
+                gradInput + i_tr_offset_pre + (i - 1) * nram_limit,
+                nram_ping + offset_c_rem + 2 * nram_limit, rem);
+          }
+          if (bottomLeftIsIn) {
+            __bang_mul_const(nram_ping + offset_c_rem + 3 * nram_limit,
+                             nram_ping + offset, i_bl_weight, rem_align);
+            __bang_atomic_add(
+                nram_ping + offset_c_rem + 3 * nram_limit,
+                gradInput + i_bl_offset_pre + (i - 1) * nram_limit,
+                nram_ping + offset_c_rem + 3 * nram_limit, rem);
+          }
+          if (bottomRightIsIn) {
+            __bang_mul_const(nram_ping + offset_c_rem + 4 * nram_limit,
+                             nram_ping + offset, i_br_weight, rem_align);
+            __bang_atomic_add(
+                nram_ping + offset_c_rem + 4 * nram_limit,
+                gradInput + i_br_offset_pre + (i - 1) * nram_limit,
+                nram_ping + offset_c_rem + 4 * nram_limit, rem);
+          }
+        }
+        // Load
+        if (i < repeat + rem_num) {
+          if (i < repeat + rem_num - 1 || rem_num == 0) {
+            // L (i)
+            offset = ((bin_index - bins_first_per) * (repeat + rem_num) + i) %
+                     2 * nram_limit * 5;
+            __memcpy_async(nram_ping + offset,
+                           gradOutput + go_offset + i * nram_limit,
+                           nram_limit * sizeof(T), GDRAM2NRAM);
+
+          } else if (rem_num == 1) {
+            // L_rem (i-1)
+            offset = ((bin_index - bins_first_per) * (repeat + rem_num) + i) %
+                     2 * nram_limit * 5;
+            __memcpy_async(nram_ping + offset,
+                           gradOutput + go_offset + i * nram_limit,
+                           rem * sizeof(T), GDRAM2NRAM);
+          }
+        }
+        __asm__ volatile("sync;\n\t");
+      }
+    }
+  }
+}
+
+__mlu_global__ void MLUKernelRoiCropBackward(
+    const void *gradOutput, const int output_h, const int output_w,
+    const void *grid, const int grid_n, void *gradInput, const int batch,
+    const int height, const int width, const int channels,
+    const mluOpDataType_t data_type) {
+  if (coreId == 0x80) {
+    return;
+  }
+  MLUUnion1RoiCropBackward((float *)gradOutput, output_h, output_w,
+                           (float *)grid, grid_n, (float *)gradInput, batch,
+                           height, width, channels);
+}
+
+__mlu_global__ void MLUKernelGdramSetZero(void *gradInput, const int batch,
+                                          const int height, const int width,
+                                          const int channels) {
+  int n = batch * height * width * channels;
+  uint32_t seg_n = n / taskDim;
+  uint32_t rem_n = n % taskDim;
+  if (taskId < rem_n) {
+    seg_n += 1;
+  }
+  int n_first_per = (n / taskDim) * taskId + (taskId > rem_n ? rem_n : taskId);
+  float zero = 0.0;
+  __gdramset((float *)gradInput + n_first_per, seg_n, zero);
+}
