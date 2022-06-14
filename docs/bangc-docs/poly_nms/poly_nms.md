@@ -198,10 +198,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPnmsWorkspaceSize(mluOpHandle_t handle,
 #### 2.2.2 poly_nms计算接口
 
 ```c++
-mluOpStatus_t MLUOP_WIN_API mluOpPnms(mluOpHandle_t handle,
+mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
                                       const mluOpTensorDescriptor_t boxes_desc,
                                       const void *boxes,
-                                      const float nms_overlap_thresh,
+                                      const float iou_thresh,
                                       void *workspace,
                                       size_t workspace_size,
                                       mluOpTensorDescriptor_t output_desc,
