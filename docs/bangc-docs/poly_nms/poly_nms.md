@@ -228,7 +228,7 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 - **MLU实现步骤**
 1. 借助workspace将输入box_data由Nx9转置为9xN; (提前将所有数据转置,是因为在第二步计算max_score时,需要重复load所有数据计算scores最大值,计算过程中每次repeat时load的数据量较小,需要重复多次load并进行转置计算,对性能有损耗,故需提前转置。)
 ![trans_box](./trans_box.png)
-2. 计算max_score: scores = boxes_trans + input_stride x 8，从scores中获取score最大值;
+2. 计算max_score: scores = boxes_trans + N x 8，从scores中获取score最大值;
    注意:获取scores中最大socre,该步骤需要load所有input_boxes数据, 获取所有数据中的最大值,不是本次循环计算中加载数据的最大值;对于U1任务,需要计算每个core上最大值, 然后把每个core上最大值加载到sram上计算global_max_score, 再把global_max_score copy到每个core中;
 3. 保存max_score对应的index到nram_save中,保存数量大于nram_save空间时, 将nram_save数据copy到device端后重新保存;
 4. 计算不规则四边形iou：计算max_score对应的box和其他的boxes的iou，如果iou > iou_thresh, 则认为该box和max_box交集过大，把该box对应的score置为FLT_MIN；
