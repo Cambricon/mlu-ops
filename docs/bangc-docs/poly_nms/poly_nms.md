@@ -201,7 +201,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle，
                                       const float iou_thresh，
                                       void *workspace，
                                       size_t workspace_size，
-                                      mluOpTensorDescriptor_t output_desc，
+                                      const mluOpTensorDescriptor_t output_desc，
                                       void *output，
                                       void *output_size);
 ```
@@ -231,7 +231,9 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 4. 计算不规则四边形iou：计算max_score对应的max_score_box和其他的boxes的iou，如果iou > iou_thresh， 则认为该box和max_score_box交集过大，把box_other对应的score置为FLT_MIN；
 5. 第4步计算完后，在剩余scores中重新计算max_score，如果max_score <= FLT_MIN，则计算完成，否则重复第二步；
 6. copy所有的max_score对应的max_score_index到output，对output做快速排序，输出排序后的index及index数量。
-
+7. 
+- **nram 空间划分**
+  ![nram_space](./space.png)
 - **实现流程图**
 
     ![流程图](./pnmsflow.png)
@@ -300,14 +302,6 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num，
                                  const int input_box_num，
                                  const int input_stride，
                                  const float thresh_iou) {
-  // NRAM N=max_seg_pad
-  // | tranx_box| scores| max_box(max_score，max_box，max_index，max_area)| max_box_tmp| box_area|
-  // |    N*8    |  N     |  COMPUTE_COUNT_ALIGN                       | COMPUTE_COUNT_ALIGN|N|
-  
-  // |nram_save| nram_tmp(box，box_area_tmp)            |
-  // | N       |X=213*N（暂定，具体划分由计算overlap部分决定）|
-
-  // | total = X+11*N +2 *NFU_ALCOMPUTE_COUNT_ALIGNIGN_SIZE|
   int input_data_len = input_box_num * input_stride;
   int input_core_len = 0;
   int input_offset = 0;
