@@ -196,14 +196,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPnmsWorkspaceSize(mluOpHandle_t handle，
 
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle，
-                                      const mluOpTensorDescriptor_t boxes_desc，
-                                      const void *boxes，
-                                      const float iou_thresh，
-                                      void *workspace，
-                                      size_t workspace_size，
-                                      const mluOpTensorDescriptor_t output_desc，
-                                      void *output，
-                                      void *output_size);
+                                         const mluOpTensorDescriptor_t boxes_desc，
+                                         const void *boxes，
+                                         const float iou_thresh，
+                                         void *workspace，
+                                         size_t workspace_size，
+                                         const mluOpTensorDescriptor_t output_desc，
+                                         void *output，
+                                         void *output_size);
 ```
 
 ## 3 实现方案设计
@@ -618,7 +618,7 @@ __mlu_func__ void get_max_score_index(IN_DT *input_box_ptr /*GDRAM*/，
 **拆分策略**
 
 根据输入boxes数据量分Block和U1的任务类型，对于不同的任务类型划分，计算max_score方法有所不同。
-1. 对于Block任务，根据NRAM空间计算max_seg_pad，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值;
+1. 对于Block任务，根据NRAM空间计算max_seg_pad，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值；
 2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram上计算global_max_score，再将global_max_score copy到每个core上进行计算。
 
 ### 3.4 性能优化设计
