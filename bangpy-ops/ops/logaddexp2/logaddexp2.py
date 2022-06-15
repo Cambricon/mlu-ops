@@ -108,18 +108,6 @@ class Logaddexp2(object):
             self.tcp.multiply(out, out, ex1)
             self.tcp.add(out, out, in0)
 
-            # self.tcp.subtract(ex0, in0, in1)
-            # self.tcp.greater(ex1, ex0, 15)
-            # self.tcp.multiply(ex0, ex0, ex1)
-            # self.tcp.exp2(out, ex0)
-            # self.tcp.add(out, out, 1)
-            # self.tcp.log(out, out, high_precision=False)
-            # self.tcp.multiply(out, out, 1/math.log(2))
-            # self.tcp.subtract(ex0, 0, ex0)
-            # self.tcp.multiply(ex0, 0, ex0)
-            # self.tcp.add(out, out, ex0)
-            # self.tcp.add(out, out, in0)
-
         with self.tcp.for_range(0, loop_num, stage=1) as i:
             # declare on-chip buffer
             buffer_in0_n = self.tcp.Buffer( shape=(data_each_time,), name="INPUT0_N",
