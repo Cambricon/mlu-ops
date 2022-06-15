@@ -19,6 +19,8 @@ def cal_diff(result, data_out):
 
 @pytest.mark.parametrize(
     "shape", [(2**10,),(2**12,),(2**20,), (2, 2**20,), (2,4,8,1, 2**12,),],
+    # "shape", [(2**20,),],
+
 )
 
 @pytest.mark.parametrize(
@@ -27,17 +29,24 @@ def cal_diff(result, data_out):
 
 @pytest.mark.parametrize(
     "reduction", [0,1,2,3],
+    # "reduction", [1],
 )
 
 @pytest.mark.parametrize(
     "log_target", [0,1],
 )
 
-def test_kldivloss(target, shape, dtype, reduction, log_target):
+@pytest.mark.parametrize(
+    "repeat", range(1000),
+    # "repeat", [1],
+)
+
+def test_kldivloss(target, shape, dtype, reduction, log_target, repeat):
     if target not in TARGET_LIST:
         return
 
     # 将输入数据的规模转换成（batchNum，length）样式
+    print("shape is :", shape, "reduction is :",reduction, "log_target is :", log_target)
     inputDim = len(shape)
 
     if inputDim > 1: 
@@ -69,8 +78,8 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
         data_out = np. multiply(data_target, np.subtract(np.log(data_target), (data_input)))
     elif log_target == 1 :
         data_out = np.multiply(np.exp(data_target), np.subtract((data_target), (data_input)))
-
-    print('data_out : ', data_out)
+    if reduction == 0:
+        print('data_out : ', data_out)
 
     #如果有归约进行归约操作
     if reduction == 1:
@@ -93,9 +102,13 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
 
     f = load_op_by_type(KERNEL_NAME, dtype.name)
     f(data_input_dev, data_target_dev, reduction, log_target, data_out_dev)
+    
+
+    evaluator = f.time_evaluator(number=100, repeat=repeat, min_repeat_ms=0)
+    t = evaluator(data_input_dev, data_target_dev,reduction, log_target, data_out_dev).mean * 1e3
+    
+
     data_out_dev = data_out_dev.numpy().reshape(shape)
-
-
     if reduction == 0:
         print('data_out_dev : ', data_out_dev)
         cal_diff(data_out_dev, data_out)
@@ -108,5 +121,9 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     elif reduction == 3:
         print('data_out_batchmean_dev : ', data_out_dev[0][0])
         cal_diff(data_out_dev[0][0], data_out_batchmean)
-
+        
+    print(
+        "tutorial : %f ms"
+        % t
+    )
     print("------------------------------------------------------------")
