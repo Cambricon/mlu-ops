@@ -33,7 +33,7 @@ KERNEL_NAME = "hard_sigmoid"
 
 class Hard_sigmoid(object):
     """Operator description
-    tensor-->activate function-->another tensor wof the same shape after activation.
+    tensor-->activation function-->another tensor after activation.
     """
 
     def __init__(self, dtype, target, task_num):
@@ -45,20 +45,10 @@ class Hard_sigmoid(object):
         self.length = self.tcp.SizeVar("length")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        # how to set the value of self.nram_size_buffer?(NRAM:512KB)
         # 3*buffer_n:   buffer_io_n*2(double buffering) + buffer_temp_n
-        # max:  512KB=524288/3=174762.666...(B)
-        # actual:  174080                           pass
-        #     174080+1*128=174208        current data size is 43552 bytes:not align by 64 bytes
-        #     174208+2*128=174336        TVMError: CNDrv Error : CN_QUEUE_ERROR_INVALID
-                                         # (174336/4/128=340.5,not align by 128?)
-        #     174080+3*128=174464        current data size is 43616 bytes:not align by 64 bytes
-        #     174080+4*128=174592        524992>524288(512KB):超过NRAM大小
-        #     174080+5*128=174720        current data size is 43680 bytes:not align by 64 bytes
-        #     174080+6*128=174848        4196352>4194304(bits):超过NRAM大小
-        # note: 174080 to align (128bytes)
-        # align: the number of elements
-        self.nram_size_buffer=174080
+        # align: the amounts of elements (dtype:float32)
+        # 需要按64个float32对齐，也就是256B对齐，然后可能还是很接近NRAM的最大空间，会有错误，所以又减小了1*256
+        self.nram_size_buffer=(((self.nram_size // 3) // 256 - 1) * 256)
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(task_num,1,1)
 
