@@ -37,7 +37,7 @@ def cal_diff(result, data_out):
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
 @pytest.mark.parametrize(
-    "shape", [(2**10),(2**18-1), (2**20), (2**26)],
+    "shape", [(0), (100), (2**10),(2**18-1), (2**20), (2**26)],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -58,4 +58,6 @@ def test_logaddexp2(target, shape, dtype):
     # calculate
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
     f1(data_in0_dev, data_in1_dev, data_out_dev)
-    cal_diff(data_out, data_out_dev.numpy())
+
+    if shape != (0):
+        cal_diff(data_out, data_out_dev.numpy())
