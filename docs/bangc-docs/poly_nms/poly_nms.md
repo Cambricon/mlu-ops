@@ -55,12 +55,12 @@
 | 算子功能简介| 多边形的非极大值抑制，用于删除高度冗余的多边形输入框 |
 |-------------|--------------------------------------------------------------|
 | 需求来源    | PyTorch                                      |
-| 应用网络    | FasterRCNN， trans obb                                          |
+| 应用网络    | FasterRCNN，trans obb                                          |
 | 输入数据类型| float                                                  |
-| 输入Shape   | input1: dim[N, 9]; input2:float |
+| 输入Shape   | input1: dim[N, 9]；input2:float |
 | 输入Layout  | input1:ARRAY，input2:标量                              |
-| 输出数据类型 | output:uint32_t,                                                  |
-| 输出Shape   | output:dim[N]，长度最大和N相等;           |
+| 输出数据类型 | output:uint32_t                                                |
+| 输出Shape   | output:dim[N]，长度最大和N相等          |
 | 输出Layout  | output:ARRAY                                       |
 | 模式(可选） | 否 |
 | 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否 |
@@ -83,7 +83,6 @@
 **AerialDetection 示例：**
 
 ```py
-
 def pnms_test():
     nms_thresh=0.1
     dets = np.asarray(np.random.randn(70，9)， dtype=np.float32)
@@ -102,10 +101,10 @@ dets = [[0， 0， 1， 0， 1， 1， 0， 1， 1]， [0.5， 0.5， 1.5， 0.5
 # box0 和 box1，box2 均有交集，且iou>0.1，输出为[0]
 dets =  [[0， 0， 1， 0， 1， 1， 0， 1， 3]， [0.5， 0.5， 1.5， 0.5， 1.5， 1.5， 0.5， 1.5， 2]，[0， 0， 0.5， 0， 0.5， 0.5， 0， 0.5， 1]]
 
-# box0 和 box1 有交集。且iou=0.1428 > nms_thresh(0.1)，box1，box2 都和 box3 没交集，输出为[0，2]
+# box0 和 box1 有交集，且iou=0.1428 > nms_thresh(0.1)，box0，box1 都和 box2 没交集，输出为[0，2]
 dets = [[0， 0， 1， 0， 1， 1， 0， 1， 3]， [0.5， 0.5， 1.5， 0.5， 1.5， 1.5， 0.5， 1.5， 2]，[0， 0， -0.5， 0， -0.5， -0.5， 0， -0.5， 1]]
 
-# 输入包含inf: box1 和 box2 相交， box3 和 box1，box2 不相交，输出[0，2]
+# 输入包含inf: box0 和 box1 相交， box2 和 box0，box1 不相交，输出[0，2]
 dets = [[0， 0， 2， 0， 2， 2， 0， 2， np.inf]， [1.5， 1.5， 2.5， 1.5， 2.5， 2.5， 1.5， 2.5， 1]，[0， 0， -0.5， 0， -0.5， -0.5， 0， -0.5， 3]]
 ```
 
@@ -209,20 +208,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle，
 
 ### 3.1 实现方案
 
-`poly_nms`(polygan nms)算子用于计算多边形非极大值抑制， 删除冗余的多边形框。
+`poly_nms`(polygon nms)算子用于计算多边形非极大值抑制， 删除冗余的多边形框。
 
 poly_nms算子有两个输入，input1是2维Tensor，包含四边形的四个顶点坐标及其对应的score，具体信息为：
 [[x1， y1， x2， y2， x3， y3， x4， y4， score]，...];
 input2 是float数，是给定的iou的阈值iou_thresh。
 
 - **poly_nms算子CPU实现**
-1. 将scores降序排序;
+1. 将scores降序排序；
 2. 用score最大的box分别和其余的box做iou计算， 如果iou大于iou_thresh，认为这两个box相交，删除score值小的box；
 3. 再选取次大的score，重复第二步计算；
 4. 输出剩于box的index(升序输出)。
 
 - **MLU实现步骤**
-1. 借助workspace将输入input_boxes由Nx9转置为9xN; (提前将所有数据转置，是因为在第二步计算max_score时，需要重复load所有数据计算scores最大值，计算过程中每次repeat时load的数据量较小，需要重复多次load并进行转置计算，对性能有损耗，故需提前转置。)
+1. 借助workspace将输入input_boxes由Nx9转置为9xN(提前将所有数据转置，是因为在第二步计算max_score时，需要重复load所有数据计算scores最大值，计算过程中每次repeat时load的数据量较小，需要重复多次load并进行转置计算，对性能有损耗，故需提前转置。)；
 ![trans_box](./trans_box.png)
 
 2. 计算max_score: scores = boxes_trans + N x 8，从scores中获取score最大值；
@@ -245,17 +244,18 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 - **nram 空间划分**
   
   ![nram_space](./space.png)
+
 - **实现流程图**
 
-    ![流程图](./pnmsflow.png)
+  ![流程图](./pnmsflow.png)
 
 - **计算过程示意**
 
-    ![计算过程图](./pnmsflow1.png)
+  ![计算过程图](./pnmsflow1.png)
 
 
 - **计算不规则四边形IOU**
-1. 计算overlap：参考CNNL中 **box_iou_rotated** 中计算两个四边形overlap的计算方法；
+1. 计算overlap：参考公共模块中计算两个四边形overlap的计算方法；
 2. 计算四边形面积box1_area1，box2_area：不规则四边形面积计算使用叉乘方法计算；
 3. iou = overlap / (box1_area + box2_area - overlap)。
 
@@ -290,7 +290,7 @@ _mlu_global_ void MLUPNMSTranspose(const void *input_boxes，
                                    const int input_num_boxes，
                                    const int input_stride，
                                    void *output，
-                                   const cnnlDataType_t data_type_input) {
+                                   const mluOpsDataType_t data_type_input) {
   ...
     __memcpy((char*)boxes， (char*)input_boxes  input_offset  loop  actual_box_num， actual_box_num * 4，
              GDRAM2NRAM);
@@ -459,7 +459,7 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num，
 }
 
 // 计算四边形overlap，所需空间从nram_tmp中划分， 以下用到的 getIntersectPts()，
-// convexHullGraham()，polygonArea()方法为NL公共函数
+// convexHullGraham()，polygonArea()方法为公共函数
 template <typename IN_DT， typename OUT_DT>
 __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/，
                                         const IN_DT *input_score_ptr /*GDRAM*/，
@@ -504,123 +504,6 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/，
               (IN_DT *)temp6_ram， (IN_DT *)temp7_ram， (IN_DT *)temp8_ram， (IN_DT *)temp9_ram，
               seg_len);
 }
-
-// 获取max_score， 及其对应的box四个点坐标，max_index，计算max_box_area
-template <typename IN_DT， typename OUT_DT>
-__mlu_func__ void get_max_score_index(IN_DT *input_box_ptr /*GDRAM*/，
-                                      IN_DT *input_score_ptr /*GDRAM*/，
-                                      IN_DT *boxes /*NRAM*/，
-                                      IN_DT *scores /*NRAM*/，
-                                      IN_DT *max_box /*NRAM*/，
-                                      IN_DT *max_box_tmp，
-                                      const int box_point_num ，
-                                      const int input_offset，
-                                      const int max_seg_pad，
-                                      const int repeat，
-                                      const int remain，
-                                      const int core_limit，
-                                      mluMemcpyDirection_t load_dir，
-                                      mluMemcpyDirection_t store_dir) {
-  /******FIND MAX START******/
-  int max_index = 0;         // the max scores index
-  int global_max_index = 0;  // for U1
-  float max_area = 0;        // the max socre area
-  max_box[0] = 0;            // init 0
-  __bang_printf("max before\n");
-  for (int i = 0; i <= repeat; i++) {
-    if (i == repeat && remain == 0) {
-      break;
-    }
-    int seg_len = 0;  // the length every nms compute
-    int cpy_len = 0;  // the length every nms memcpy
-   
-    seg_len = ((i == repeat) ? remain_pad : max_seg_pad);
-    __bang_printf("max: seg_len=%d\n"， seg_len);
-    cpy_len = i == repeat ? remain : max_seg_pad;
-    __bang_printf("max: cpy_len=%d\n"， cpy_len);
-
-    /******NMS LOAD START******/
-    __nramset(scores， seg_len， 0);
-    __memcpy(scores， input_score_ptr + input_offset + i * max_seg_pad， cpy_len * sizeof(IN_DT)，
-             load_dir， cpy_len * sizeof(IN_DT)， cpy_len * sizeof(IN_DT)， 0);
-    __bang_printf("max: scores copy ok \n");
-    /******NMS LOAD END******/
-
-    __bang_max(max_box_tmp， scores， seg_len);
-    if (max_box_tmp[0] > max_box[0]) {
-      max_box[0] = max_box_tmp[0];
-      __bang_printf("max: max_box[0]=%f\n"， max_box[0]);
-
-      max_index =
-            ((uint32_t *)max_box_tmp)[1] + i * max_seg_pad;  // offset start from head of input_data
-    }
-  }  // for repeat
-
-  __bang_printf("max_index: %d\n"， max_index);
-
-  if (core_limit == 1) {
-    for (int m = 0; m < 8; m++) {
-      max_box[m + 1] = ((IN_DT *)(input_box_ptr + m * input_stride))[max_index];
-    }
-
-    // cal max_area start
-    max_box[9] = max_box[1];
-    max_box[10] = max_box[2];
-    for (int j = 1; j < 8; j = j + 2) {
-      max_area += max_box[j] * max_box[j + 3] - max_box[j + 1] * max_box[j + 2];
-    }
-    max_area = max_area / 2;
-    __bang_printf("max_area: %f\n"， max_area);
-    // cal max_area end
-    
-    input_score_ptr[max_index] = FLT_MIN;
-    global_max_index = max_index;
-    max_box[9] = max_index;  // max_score | max_x1，y1，x2，y2，x3，y3，x4，y4| max_indx| max_area|
-    max_box[10] = max_area;
-  } else if (core_limit == 4) {
-    // find the max with workspace
-    // the max box's on every core
-    if (coreId != 0x80) {
-      for (int m = 0; m < 8; m++) {
-        max_box[m + 1] = ((IN_DT *)(input_box_ptr + m * input_stride))[max_index];
-      }
-    }
-    ((uint32_t *)(max_box + 9))[0] = max_index;
-    // copy every core's box info to workspace， workspace： | max_score | max_x1，y1，x2，y2，x3，y3，x4，y4| max_indx
-    for (int i = 0; i < 10; i++) {
-      __memcpy(workspace + 10 * taskId + i， max_box + i， 1 * sizeof(IN_DT)， NRAM2GDRAM);
-    }
-    __sync_cluster();
-
-    // copy scores from workspace to nram and find the max
-    __nramset(max_box_tmp， COMPUTE_COUNT_ALIGN， 0);
-    __memcpy(max_box_tmp， workspace， core_limit * sizeof(IN_DT)， NRAM2GDRAM);
-
-    __bang_max(max_box， max_box_tmp， max_box);
-    int max_core = 0;
-    max_core = ((uint32_t *)max_box)[1];
-    
-    // copy the max_box : workspace to NRAM
-    for (int m = 0; m < 10; m++) {
-      __memcpy(max_box + (i + 1)， workspace + 10 * max_core + i， 1 * sizeof(IN_DT)，
-               GDRAM2NRAM);
-    }
-
-    // cal max_box_area
-    max_box[9] = max_box[1];
-    max_box[10] = max_box[2];
-    for (int j = 1; j < 8; j = j + 2) {
-      max_area += max_box[j] * max_box[j + 3] - max_box[j + 1] * max_box[j + 2];
-      max_box[9] = max_index;  // max_score | max_x1，y1，x2，y2，x3，y3，x4，y4| max_indx| max_area|
-      max_box[10] = max_area;
-    }
-    max_area = max_area / 2;
-    __bang_printf("max_area: %f\n"， max_area);
-
-    input_score_ptr[max_index] = FLT_MIN;
-    global_max_index = max_index;
-  }
-}
 ...
 ```
 
@@ -640,7 +523,7 @@ __mlu_func__ void get_max_score_index(IN_DT *input_box_ptr /*GDRAM*/，
 
 ### 3.5 方案理论性能
 
-由于NL库中公共模块的Convex-Hull-Graham排序顶点算法目前设计为标量循环实现，所以性能暂无估计，片上时间复杂度O(24x24xM)，其他部分已做了向量化的优化，时间复杂度为O(M)。片外循环的时间复杂度是O(NxM). 实际由于标量计算占比时间很大，会有额外的寄存器换入换出操作，以及额外的间接寻址时间，造成理论预估时间不准确。 
+由于公共模块的Convex-Hull-Graham排序顶点算法目前设计为标量循环实现，所以性能暂无估计，片上时间复杂度O(24x24xM)，其他部分已做了向量化的优化，时间复杂度为O(M)。片外循环的时间复杂度是O(NxM). 实际由于标量计算占比时间很大，会有额外的寄存器换入换出操作，以及额外的间接寻址时间，造成理论预估时间不准确。 
 
 ### 3.6 可维护性设计
 
