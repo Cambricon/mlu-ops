@@ -8,7 +8,7 @@ WORKDIR /tmp
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
-    apt-get install --no-install-recommends -y apt-transport-https apt-utils build-essential \
+    apt-get install --no-install-recommends -y apt-transport-https apt-utils build-essential lcov html2text\
     	git cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler vim && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -100,8 +100,9 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 
 # Install BANGPy.
-ARG BANGPY_VERSION="1.4.0"
+ARG BANGPY_VERSION="2.0.0"
+ARG RELEASE_VERSION="2.0.0-2"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
-ADD http://daily.software.cambricon.com/release/bangpy/${BANGPY_VERSION}-1/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
+ADD http://daily.software.cambricon.com/release/bangpy/${RELEASE_VERSION}/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \
     rm /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl
