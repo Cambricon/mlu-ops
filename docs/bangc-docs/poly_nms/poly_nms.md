@@ -104,8 +104,24 @@ dets =  [[0， 0， 1， 0， 1， 1， 0， 1， 3]， [0.5， 0.5， 1.5， 0.
 # box0 和 box1 有交集，且iou=0.1428 > nms_thresh(0.1)，box0，box1 都和 box2 没交集，输出为[0，2]
 dets = [[0， 0， 1， 0， 1， 1， 0， 1， 3]， [0.5， 0.5， 1.5， 0.5， 1.5， 1.5， 0.5， 1.5， 2]，[0， 0， -0.5， 0， -0.5， -0.5， 0， -0.5， 1]]
 
-# 输入包含inf: box0 和 box1 相交， box2 和 box0，box1 不相交，输出[0，2]
+# 以下为nan，inf，-inf行为
+# 输入scores包含inf: box0 和 box1 相交， box2 和 box0，box1 不相交，输出[0，2]
 dets = [[0， 0， 2， 0， 2， 2， 0， 2， np.inf]， [1.5， 1.5， 2.5， 1.5， 2.5， 2.5， 1.5， 2.5， 1]，[0， 0， -0.5， 0， -0.5， -0.5， 0， -0.5， 3]]
+
+# 输入scores包含-inf: box0 和 box1 相交， box2 和 box0，box1 不相交，输出[1，2]
+dets = [[0， 0， 2， 0， 2， 2， 0， 2， -np.inf]， [1.5， 1.5， 2.5， 1.5， 2.5， 2.5， 1.5， 2.5， 1]，[0， 0， -0.5， 0， -0.5， -0.5， 0， -0.5， 3]]
+
+# 输入scores有nan，box0 和box1 相交，应该输出较大score的box，最终输出[0,2]
+dets = [[0, 0, 2, 0, 2, 2, 0, 2, np.nan], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 3]]
+
+# 输入boxes坐标包含inf:box1， box2 不相交， 输出[0,1,2] 
+dets = [[np.inf, 0, 2, 0, 2, 2, np.inf, 2, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 3]]
+
+# 输入boxes坐标包含inf: 输出[0,1,2] 
+dets = [[0, 0, np.inf, np.inf, 2, 2, 0, 2, 2], [1.5, 1.5, np.inf, np.inf, 2.5, 2.5, 1.5, 2.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 3]]
+
+# 输入boxes坐标包含nan: 输出[0,1,2] 
+dets = [[0, 0, 2, 0, 2, 2, 0, np.nan, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.5, 1],[0, 0, -0.5, 0, -0.5, -0.5, 0, -0.5, 3]]
 ```
 
 ### 1.3 算子输入输出参数要求
@@ -225,7 +241,7 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 ![trans_box](./trans_box.png)
 
 1. 计算max_score: __bang_max()方法从scores中获取score最大值及对应的max_score_index；
-   注意:获取scores中最大socre，该步骤需要load所有input_boxes数据， 获取所有数据中的最大值，不是本次循环计算中加载数据的最大值;对于U1任务，需要计算每个core上最大值， 然后把每个core上最大值加载到workspace上计算global_max_score， 再把global_max_score copy到每个core中；
+   注意:获取scores中最大socre，该步骤需要load所有input_boxes数据， 获取所有数据中的最大值，不是本次循环计算中加载数据的最大值;对于U1任务，需要计算每个core上最大值， 然后把每个core上最大值加载到sram上计算global_max_score， 再把global_max_score copy到每个core中；
 
 2. 保存max_score_index到nram_save中，保存数量大于nram_save空间时， 将nram_save数据copy到device端后重新保存；
    
@@ -237,10 +253,6 @@ input2 是float数，是给定的iou的阈值iou_thresh。
    
 6. 根据output中max_score_index数量来修改output_desc中dimSize的大小；
  
-- **workspace 空间划分**
-  
-  ![workspace](./workspace.png)
-
 - **nram 空间划分**
   
   ![nram_space](./space.png)
@@ -513,7 +525,7 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/，
 
 根据输入boxes数据量分Block和U1的任务类型，对于不同的任务类型划分，计算max_score方法有所不同。
 1. 对于Block任务，根据NRAM空间计算max_seg_pad，由此计算全部数据的repeat和remain；计算max_score时需要注意max_score是所有input_scores的最大值，不是每次repeat计算量中的最大值；
-2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到workspace上计算global_max_score，再将global_max_score copy到每个core上进行计算。
+2. 对于U1任务，需要计算每个core上的max_score，将每个core上的max_score copy到sram计算global_max_score，再将global_max_score copy到每个core上进行计算。
 
 ### 3.4 性能优化设计
 
@@ -535,7 +547,7 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/，
 
 ### 3.7 测试用例设计
 
-- 框架在需求列表中给出的算子在网络中用到的规模；
+- 测试规模：boxes：(1-2000), iou_thresh：(0.0-1.0)；
 - 测试输入包含nan，inf，-inf的行为；
 - 测试不同数据规模下block，U1任务分支。
 
