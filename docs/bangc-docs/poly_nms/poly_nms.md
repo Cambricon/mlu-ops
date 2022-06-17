@@ -579,3 +579,5 @@ __mlu_func__ void cal_intersection_area(const IN_DT *input_box_ptr /*GDRAM*/，
 - 2022.7.6~2022.7.8 提交MR+代码review、算子入库  4天
 
 ### 5.2 风险分析
+性能： 计算overlap的方法采用公共的`convex_hull_graham`函数，其中对于交点的角度排序,入栈出栈的扫描过程由标量实现，性能较差。
+当input1的boxes数量超过1000时，有超时风险, 故input1.shape[0]范围在[1,1000]。
