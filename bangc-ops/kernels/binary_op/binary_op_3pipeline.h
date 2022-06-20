@@ -15,21 +15,21 @@
 #include "kernels/kernel.h"
 #define BINARY_ALIGN_NUM 64
 
-#define BINARY_OP_3PIPELINE_DECLARE(Op, Dtype, Prefer)            \
-  __mlu_global__ void MLUKernel3StagePipeline##Op##Dtype##Prefer( \
+#define BINARY_OP_3PIPELINE_DECLARE(Op, Dtype, Prefer)                 \
+  __mlu_global__ void MLUBlockKernel3StagePipeline##Op##Dtype##Prefer( \
       void *a, void *b, void *c, int32_t data_num)
 
 #define BINARY_OP_3PIPELINE_IMPLE(Op, Dtype, Prefer)                      \
-  __mlu_global__ void MLUKernel3StagePipeline##Op##Dtype##Prefer(         \
+  __mlu_global__ void MLUBlockKernel3StagePipeline##Op##Dtype##Prefer(    \
       void *x, void *y, void *z, int32_t data_num) {                      \
     int32_t nram_limit = 0;                                               \
-    int32_t pong_x     = 0;                                               \
-    int32_t pong_y     = 0;                                               \
-    Dtype *nram_x      = NULL;                                            \
-    Dtype *nram_y      = NULL;                                            \
-    Dtype *nram_aux1   = NULL;                                            \
-    Dtype *nram_aux2   = NULL;                                            \
-    Dtype *nram_aux3   = NULL;                                            \
+    int32_t pong_x = 0;                                                   \
+    int32_t pong_y = 0;                                                   \
+    Dtype *nram_x = NULL;                                                 \
+    Dtype *nram_y = NULL;                                                 \
+    Dtype *nram_aux1 = NULL;                                              \
+    Dtype *nram_aux2 = NULL;                                              \
+    Dtype *nram_aux3 = NULL;                                              \
     get3Offset##Op##Prefer(nram_limit, pong_x, pong_y, nram_x, nram_y,    \
                            nram_aux1, nram_aux2, nram_aux3, nram_buffer); \
     processBinaryPipe3<Dtype, compute##Op##Prefer>(                       \
@@ -53,20 +53,20 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
   // split data by cores
   // Dtype just use for POWN y inDtype6_t
   int32_t num_per_core = data_num / taskDim;
-  int32_t rem_for_all  = data_num % taskDim;
-  Dtype *base_addr_x   = (Dtype *)x + taskId * num_per_core;
-  Dtype *base_addr_y   = (Dtype *)y + taskId * num_per_core;
-  Dtype *base_addr_z   = (Dtype *)z + taskId * num_per_core;
+  int32_t rem_for_all = data_num % taskDim;
+  Dtype *base_addr_x = (Dtype *)x + taskId * num_per_core;
+  Dtype *base_addr_y = (Dtype *)y + taskId * num_per_core;
+  Dtype *base_addr_z = (Dtype *)z + taskId * num_per_core;
   if (rem_for_all > 0 && taskId == (taskDim - 1)) {
     num_per_core = num_per_core + rem_for_all;
   }
 
-  int32_t repeat    = num_per_core / nram_limit;
-  int32_t rem       = num_per_core % nram_limit;
+  int32_t repeat = num_per_core / nram_limit;
+  int32_t rem = num_per_core % nram_limit;
   int32_t align_rem = CEIL_ALIGN(rem, BINARY_ALIGN_NUM);
 
   int32_t span_handle_size = nram_limit * sizeof(Dtype);
-  int32_t rem_size         = rem * sizeof(Dtype);
+  int32_t rem_size = rem * sizeof(Dtype);
 
   if (repeat > 0) {
     // L

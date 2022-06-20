@@ -16,7 +16,7 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 #include "mlu_op.h"
-#include "abs.h"
+#include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t &handle,
                        const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
@@ -54,18 +54,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   cnrtFunctionType_t k_type;
   policyFunc(handle, x_desc, &k_dim, &k_type);
 
-  int32_t element_num = mluOpGetTensorElementNum(x_desc);
-  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num,
-                              float coef);
-  MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbsfloatFast;
+  int element_num = mluOpGetTensorElementNum(x_desc);
+  void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                cnrtQueue_t queue, const void *x, void *y,
+                                int num);
+  mluOpBlockKernelUnary = nullptr;
   if (x_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "kernel MLUBlockKernel3StagePipelineAbshalfFast";
-    MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbshalfFast;
+    VLOG(5) << "kernel mluOpBlockKernel3StagePipelineAbsHalfFast";
+    mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineAbsHalfFast;
   } else {
-    VLOG(5) << "kernel MLUBlockKernel3StagePipelineAbsfloatFast";
-    MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbsfloatFast;
+    VLOG(5) << "kernel mluOpBlockKernel3StagePipelineAbsFloatFast";
+    mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineAbsFloatFast;
   }
-  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>(
-      (void *)x, (void *)y, element_num, 0.0)));
+  KERNEL_CHECK(
+      (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
+
   return MLUOP_STATUS_SUCCESS;
 }

@@ -73,51 +73,51 @@ else
   echo "-- [pre-commit] check print and assert PASSED."
 fi
 
-echo "-- [pre-commit] Check KERNEL_CHECK in kernel code."
-# KERNEL_CHECK in kernel code needs three steps
-# step1: find the line of "<<<.*queue>>";
-# step2: find the starting line of launch kernel; "<<<.*queue>>>" and the
-#        starting line of launch kernel may be on different lines, so the
-#        line getting by step1 may not be the starting line of launch kernel.
-# step3: judge whether KERNEL_CHECK is added in starting line of launch
-#        kernel
-for i in ${filenames} ; do
-  include_mlu=$(echo $i | grep "\.mlu")
-  if [[ -n "${include_mlu}" ]]; then
-    # step1
-    # launch_kernel_indexs represents the line index of "<<<.*queue>>>". 
-    # launch_kenel_indexs is an array, duo to there are many places to launch 
-    # kernel.
-    launch_kernel_indexs=$(sed -n '/<<<.*queue>>>/=' $i)
-    if [[ launch_kernel_indexs ]]; then
-      for launch_kernel_index in ${launch_kernel_indexs}; do
-        forward_line_num=1
-        # step2
-        # forward_line_num represents how many lines before "launch_kenel_index", 
-        # attempting to find the starting line of launch kernel
-        while [[ ${forward_line_num} -le ${launch_kernel_index} ]]; do
-          start_index_launch_kernel=`expr ${launch_kernel_index} - ${forward_line_num}`
-          start_index=$(sed -n -e "${start_index_launch_kernel}p" $i | \
-            sed -n -e '/$[)};.]/=' -e '/^\s*$/=' -e '/[{;)]/=')
-          if [[ -n "${start_index}" ]];then
-            break
-          fi
-          let forward_line_num++
-        done
-        # start_index_launch_kernel indicates the starting line of launch kernel.
-        start_index_launch_kernel=`expr ${launch_kernel_index} - \
-          ${forward_line_num} + 1`
-        # step3
-        kernel_check=$(sed -n -e "${start_index_launch_kernel}, \
-	  ${launch_kernel_index}p" $i | sed -n -e '/KERNEL_CHECK/=')
-        if [[ -z "${kernel_check}" ]]; then
-          echo $i +`expr ${launch_kernel_index} - ${forward_line_num} + 1`
-          ret=1
-        fi
-      done
-    fi
-  fi
-done
+# echo "-- [pre-commit] Check KERNEL_CHECK in kernel code."
+# # KERNEL_CHECK in kernel code needs three steps
+# # step1: find the line of "<<<.*queue>>";
+# # step2: find the starting line of launch kernel; "<<<.*queue>>>" and the
+# #        starting line of launch kernel may be on different lines, so the
+# #        line getting by step1 may not be the starting line of launch kernel.
+# # step3: judge whether KERNEL_CHECK is added in starting line of launch
+# #        kernel
+# for i in ${filenames} ; do
+#   include_mlu=$(echo $i | grep "\.mlu")
+#   if [[ -n "${include_mlu}" ]]; then
+#     # step1
+#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>". 
+#     # launch_kenel_indexs is an array, duo to there are many places to launch 
+#     # kernel.
+#     launch_kernel_indexs=$(sed -n '/<<<.*queue>>>/=' $i)
+#     if [[ launch_kernel_indexs ]]; then
+#       for launch_kernel_index in ${launch_kernel_indexs}; do
+#         forward_line_num=1
+#         # step2
+#         # forward_line_num represents how many lines before "launch_kenel_index", 
+#         # attempting to find the starting line of launch kernel
+#         while [[ ${forward_line_num} -le ${launch_kernel_index} ]]; do
+#           start_index_launch_kernel=`expr ${launch_kernel_index} - ${forward_line_num}`
+#           start_index=$(sed -n -e "${start_index_launch_kernel}p" $i | \
+#             sed -n -e '/$[)};.]/=' -e '/^\s*$/=' -e '/[{;)]/=')
+#           if [[ -n "${start_index}" ]];then
+#             break
+#           fi
+#           let forward_line_num++
+#         done
+#         # start_index_launch_kernel indicates the starting line of launch kernel.
+#         start_index_launch_kernel=`expr ${launch_kernel_index} - \
+#           ${forward_line_num} + 1`
+#         # step3
+#         kernel_check=$(sed -n -e "${start_index_launch_kernel}, \
+# 	  ${launch_kernel_index}p" $i | sed -n -e '/KERNEL_CHECK/=')
+#         if [[ -z "${kernel_check}" ]]; then
+#           echo $i +`expr ${launch_kernel_index} - ${forward_line_num} + 1`
+#           ret=1
+#         fi
+#       done
+#     fi
+#   fi
+# done
 
 if [[ ${ret} != 0 ]]; then
   echo "-- [pre-commit] check KERNEL_CHECK FAILED: \
