@@ -14,6 +14,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/binary_op/binary_op_host.h"
 #include "kernels/unary_op/unary_op_host.h"
 #include "mlu_op.h"
 #include "mlu_op_kernel.h"
@@ -43,7 +44,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   VLOG(5) << "[mluOpSqrt] launch kernel policyFUnc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "]";
 
-  int32_t element_num = mluOpGetTensorElementNum(x_desc);
+  int element_num = mluOpGetTensorElementNum(x_desc);
   void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                                 cnrtQueue_t queue, const void *x, void *y,
                                 int element_num);
@@ -77,5 +78,45 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   }
   KERNEL_CHECK(
       (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t y_desc, const void *y,
+    const mluOpTensorDescriptor_t dy_desc, const void *diff_y,
+    const mluOpTensorDescriptor_t dx_desc, void *diff_x) {
+  mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
+  int number_of_supported_types = 2;
+  bool zero_element = false;
+  mluOpStatus_t param_check = binaryOpParamCheck(
+      "[mluOpSqrtBackward]", handle, y_desc, y, dy_desc, diff_y, dx_desc,
+      diff_x, support_type, number_of_supported_types, zero_element);
+  if (param_check != MLUOP_STATUS_SUCCESS) {
+    return param_check;
+  }
+  if (zero_element == true) {
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  cnrtDim3_t k_dim;
+  cnrtFunctionType_t k_type;
+  binaryOpPolicyFunc(handle, y_desc, handle->nram_size, &k_dim, &k_type);
+
+  int num_elem = mluOpGetTensorElementNum(y_desc);
+  void (*mluOpBlockKernelBinary)(
+      cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+      const void *y, const void *diff_y, void *diff_x, int num_elem);
+  mluOpBlockKernelBinary = nullptr;
+  if (y_desc->dtype == MLUOP_DTYPE_HALF) {
+    VLOG(5) << "Kernel mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc";
+    mluOpBlockKernelBinary =
+        mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc;
+  } else {
+    VLOG(5) << "Kernel mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast";
+    mluOpBlockKernelBinary =
+        mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast;
+  }
+  KERNEL_CHECK((mluOpBlockKernelBinary(k_dim, k_type, handle->queue, y, diff_y,
+                                       diff_x, num_elem)));
   return MLUOP_STATUS_SUCCESS;
 }
