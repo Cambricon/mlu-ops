@@ -10,12 +10,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "core/type.h"
+#define to_string(a) #a
 
 size_t getSizeOfDataType(mluOpDataType_t dtype) {
   switch (dtype) {
-    default: {
-      return 0;
-    }
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_UINT8: {
@@ -25,7 +23,6 @@ size_t getSizeOfDataType(mluOpDataType_t dtype) {
     case MLUOP_DTYPE_HALF: {
       return 2;
     }
-    case MLUOP_DTYPE_INT31:
     case MLUOP_DTYPE_INT32:
     case MLUOP_DTYPE_FLOAT: {
       return 4;
@@ -33,34 +30,101 @@ size_t getSizeOfDataType(mluOpDataType_t dtype) {
     case MLUOP_DTYPE_INT64: {
       return 8;
     }
+    default: {
+      return 0;
+    }
   }
 }
 
-cnrtDataType_t toCnrtDataType(mluOpDataType_t dtype) {
+std::string getNameOfDataType(const mluOpDataType_t dtype) {
+  std::string dtype_name;
   switch (dtype) {
-    default: {
-      return cnrtInvalid;
-    }
-    case MLUOP_DTYPE_HALF: {
-      return cnrtFloat16;
-    }
-    case MLUOP_DTYPE_FLOAT: {
-      return cnrtFloat32;
-    }
-    case MLUOP_DTYPE_INT8: {
-      return cnrtInt8;
-    }
-    case MLUOP_DTYPE_INT16: {
-      return cnrtInt16;
-    }
-    case MLUOP_DTYPE_INT32: {
-      return cnrtInt32;
-    }
-    case MLUOP_DTYPE_UINT8: {
-      return cnrtUInt8;
-    }
     case MLUOP_DTYPE_BOOL: {
-      return cnrtBool;
+      dtype_name = to_string(DTYPE_BOOL);
+    } break;
+    case MLUOP_DTYPE_INT8: {
+      dtype_name = to_string(DTYPE_INT8);
+    } break;
+    case MLUOP_DTYPE_UINT8: {
+      dtype_name = to_string(DTYPE_UINT8);
+    } break;
+    case MLUOP_DTYPE_INT16: {
+      dtype_name = to_string(DTYPE_INT16);
+    } break;
+    case MLUOP_DTYPE_UINT16: {
+      dtype_name = to_string(DTYPE_UINT16);
+    } break;
+    case MLUOP_DTYPE_INT32: {
+      dtype_name = to_string(DTYPE_INT32);
+    } break;
+    case MLUOP_DTYPE_UINT32: {
+      dtype_name = to_string(DTYPE_UINT32);
+    } break;
+    case MLUOP_DTYPE_INT64: {
+      dtype_name = to_string(DTYPE_INT64);
+    } break;
+    case MLUOP_DTYPE_UINT64: {
+      dtype_name = to_string(DTYPE_UINT64);
+    } break;
+    case MLUOP_DTYPE_HALF: {
+      dtype_name = to_string(DTYPE_HALF);
+    } break;
+    case MLUOP_DTYPE_FLOAT: {
+      dtype_name = to_string(DTYPE_FLOAT);
+    } break;
+    case MLUOP_DTYPE_DOUBLE: {
+      dtype_name = to_string(DTYPE_DOUBLE);
+    } break;
+    case MLUOP_DTYPE_COMPLEX_HALF: {
+      dtype_name = to_string(DTYPE_COMPLEX_HALF);
+    } break;
+    case MLUOP_DTYPE_COMPLEX_FLOAT: {
+      dtype_name = to_string(DTYPE_COMPLEX_FLOAT);
+    } break;
+    default: {
+      dtype_name = "DTYPE_INVALID";
+    } break;
+  }
+  return dtype_name;
+}
+
+std::string getNameOfTensorLayout(const mluOpTensorLayout_t layout) {
+  std::string layout_name;
+  switch (layout) {
+    case MLUOP_LAYOUT_NCHW: {
+      layout_name = to_string(LAYOUT_NCHW);
+    } break;
+    case MLUOP_LAYOUT_NHWC: {
+      layout_name = to_string(LAYOUT_NHWC);
+    } break;
+    case MLUOP_LAYOUT_HWCN: {
+      layout_name = to_string(LAYOUT_HWCN);
+    } break;
+    case MLUOP_LAYOUT_NDHWC: {
+      layout_name = to_string(LAYOUT_NDHWC);
+    } break;
+    case MLUOP_LAYOUT_ARRAY: {
+      layout_name = to_string(LAYOUT_ARRAY);
+    } break;
+    case MLUOP_LAYOUT_NCDHW: {
+      layout_name = to_string(LAYOUT_NCDHW);
+    } break;
+    case MLUOP_LAYOUT_TNC: {
+      layout_name = to_string(LAYOUT_TNC);
+    } break;
+    case MLUOP_LAYOUT_NTC: {
+      layout_name = to_string(LAYOUT_NTC);
+    } break;
+    case MLUOP_LAYOUT_NLC: {
+      layout_name = to_string(LAYOUT_NLC);
+    } break;
+    case MLUOP_LAYOUT_NC: {
+      layout_name = to_string(LAYOUT_NC);
+    } break;
+    default: {
+      layout_name = "LAYOUT_ARRAY";
+      break;
     }
   }
+  return layout_name;
 }

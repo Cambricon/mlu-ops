@@ -13,10 +13,12 @@
 #define CORE_TYPE_H_
 
 #include <string>
+#include "core/logging.h"
 #include "core/mlu_op_core.h"
 
-size_t getSizeOfDataType(mluOpDataType_t dtype);
+size_t getSizeOfDataType(const mluOpDataType_t dtype);
 
-cnrtDataType_t toCnrtDataType(mluOpDataType_t dtype);
+std::string getNameOfDataType(const mluOpDataType_t dtype);
 
+std::string getNameOfTensorLayout(const mluOpTensorLayout_t layout);
 #endif  // CORE_TYPE_H_

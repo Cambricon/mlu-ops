@@ -116,6 +116,7 @@ class NonZero(object):
         self.dim_1 = self.tcp.SizeVar("dim_1")
         self.dim_2 = self.tcp.SizeVar("dim_2")
         self.dim_3 = self.tcp.SizeVar("dim_3")
+        self.task_num_var = self.tcp.SizeVar("task_num")
         self.num_nonzero = self.tcp.SizeVar("num_nonzero")
         self.trans = self.tcp.SizeVar("need_trans")
         self.dim_num = self.tcp.SizeVar("dim_num")
@@ -520,7 +521,7 @@ class NonZero(object):
         )
 
         self.core_count = self.tcp.Buffer(
-            shape=(self.task_num,), dtype=bp.uint32, name="core_count", scope="global"
+            shape=(self.task_num_var,), dtype=bp.uint32, name="core_count", scope="global"
         )
         self.out_buffer = self.tcp.Buffer(
             shape=(self.num_nonzero * self.dim_num,),
