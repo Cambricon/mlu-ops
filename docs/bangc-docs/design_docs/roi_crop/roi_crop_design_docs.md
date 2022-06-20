@@ -41,7 +41,7 @@
 | 需求来源                    | PyTorch                                  |
 | 应用网络                    | faster_rcnn、couplenet                   |
 | 输入数据类型                | float                                    |
-| 输入 Shape                  |1. roi_crop_forward:<br>input: [b,h,w,c]; grid: [n,out_h,out_w,2]<br>2. roi_crop_backward:<br>gradOutput: [n,out_h,out_w,c]；grid: [n,out_h,out_w,2]|
+| 输入 Shape                  |1. roi_crop_forward:<br>input: [b,h,w,c]; grid: [n,out_h,out_w,2]<br>2. roi_crop_backward:<br>gradOutput: [n,out_h,out_w,c]；grid: [n,out_h,out_w,2]<br>注：n是b的整数倍|
 | 输入 Layout                 |1. roi_crop_forward:<br>input: NHWC; grid: ARRAY<br>2. roi_crop_backward:<br>gradOutput: NHWC；grid: ARRAY|
 | 输出数据类型                 | float                                   |
 | 输出 Shape                  |1. roi_crop_forward:<br>output:[n, out_h, out_w, c]<br>2. roi_crop_backward:<br>gradInput:[b,h,w,c]|
@@ -64,7 +64,7 @@
 
 ![roi_crop_forward_func](./roi_crop_forward_func.png)
 
-从输入的 grid 中提取一个（y, x）坐标映射参数, 反映射到 input 中的A处得到坐标信息（Ax,Ay），获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值;
+从输入的 grid 中提取一个（y, x）坐标映射参数, 反映射到 input 中的A处得到坐标信息（Ax,Ay），获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值;
 
 **2) 主要计算公式**
 
@@ -217,14 +217,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 #### 3.1.1 roi_crop_forward
 
 - step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim（bin_n = n * out_h * out_w）;
-- step2: 1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE/ 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
+- step2: 根据双线性插值原理,1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE/ 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
 - step3: 每个 IPU 循环获取 gw，gh，gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM;
 - step4: NRAM 下使用三级流水，进行计算。
 
 #### 3.1.2 roi_crop_backward
 
 - step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim;
-- step2: 1 个 bin 需要 gradOutput 下的 1 个 channels 得到 gradOutput 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 gradOutput 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 gradInput 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
+- step2: 根据双线性插值梯度计算公式知，1 个 bin 需要 gradOutput 下的 1 个 channels 得到 gradOutput 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 gradOutput 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 gradInput 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
 - step3: 每个 IPU 循环获取 gw，gh，gn 等信息，进而得到 gradOutput 和 gradInput 的偏移地址，拷贝 GDRAM 中数据到 NRAM;
 - step4: NRAM 下使用三级流水，进行计算。
 
