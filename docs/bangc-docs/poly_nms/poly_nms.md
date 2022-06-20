@@ -245,9 +245,9 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 
 2. 保存max_score_index到nram_save中，保存数量大于nram_save空间时， 将nram_save数据copy到device端后重新保存；
    
-3. 计算不规则四边形iou：计算max_score对应的max_score_box和其他的boxes的iou，如果iou > iou_thresh， 则认为该box和max_score_box交集过大，把box_other对应的score置为FLT_MIN；
+3. 计算不规则四边形iou：计算max_score对应的max_score_box和其他的boxes的iou，如果iou > iou_thresh， 则认为该box和max_score_box交集过大，把交集过大的box对应的score置为FLT_MIN；
    
-4. 第4步计算完后，在剩余scores中重新计算max_score，如果max_score <= FLT_MIN，则计算完成，否则重复第二步；
+4. 第3步计算完后，在剩余scores中重新计算max_score，如果max_score <= FLT_MIN，则计算完成，否则重复第二步；
    
 5. copy所有的max_score_index到output，对output做升序排序；
    
@@ -325,7 +325,7 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num，
                                  const int taskDim，
                                  const int input_box_num，
                                  const int input_stride，
-                                 const float thresh_iou) {
+                                 const float iou_thresh) {
   int input_data_len = input_box_num * input_stride;
   int input_core_len = 0;
   int input_offset = 0;
@@ -445,12 +445,12 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num，
                           nram_tmp， box_point_num， input_offset， actual_box_num， repeat， remain，
                           taskDim， load_dir， store_dir);
 
-    // 4 compare iou with thresh_iou(); iou>thresh_iou， 将其对应的score置FLT_MIN；
+    // 4 compare iou with iou_thresh(); iou>iou_thresh， 将其对应的score置FLT_MIN；
     // area_U = box_area + max_area - area_I
     __bang_add_const((float *)box_area， (float *)box_area， (float)max_box[10]， actual_box_num);
     __bang_sub((float *)box_area， (float *)box_area， (float *)intersetion_area， actual_box_num);
-    // area_U = area_U * thresh_iou
-    __bang_mul_const((float *)box_area， (float *)box_area， (float)thresh_iou， actual_box_num);
+    // area_U = area_U * iou_thresh
+    __bang_mul_const((float *)box_area， (float *)box_area， (float)iou_thresh， actual_box_num);
     // masked = intersetion_area = area_I <= area_U
     __bang_le((float *)intersetion_area， (float *)intersetion_area， (float *)box_area，
               actual_box_num);
