@@ -308,7 +308,7 @@ _mlu_global_ void MLUPNMSTranspose(const void *input_boxes，
     __memcpy((char*)boxes， (char*)input_boxes + (input_offset + loop * actual_box_num) * 4， actual_box_num * 4，
              GDRAM2NRAM);
     __bang_transpose((float*)trans_boxes， (float*)boxes， input_num_boxes， input_stride);
-    __memcpy((char*)output + (input_offset + loop * actual_box_num) * 4， (char)trans_boxes， actual_box_num * 4，
+    __memcpy((char*)output + (input_offset + loop * actual_box_num) * 4， (char*)trans_boxes， actual_box_num * 4，
              NRAM2GDRAM);
   ...
 }
@@ -455,7 +455,7 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num，
     __bang_le((float *)intersetion_area， (float *)intersetion_area， (float *)box_area，
               actual_box_num);
     // scores = scores * intersetion_area;
-    __bang_mul((float *)scores， (float *)scores， (float)intersetion_area， actual_box_num);
+    __bang_mul((float *)scores， (float *)scores， (float*)intersetion_area， actual_box_num);
 
    // compare scores with 0 ->intersetion_area
     __bang_eq_scalar((float *)intersetion_area， (float *)scores， (float )0.0，
