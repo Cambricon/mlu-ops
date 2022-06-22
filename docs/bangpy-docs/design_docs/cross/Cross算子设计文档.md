@@ -49,20 +49,20 @@ example:
 ```
 >>> a
 tensor([[[ 0  1]
-  		 [ 2  3]
-  		 [ 4  5]]
+  	 [ 2  3]
+  	 [ 4  5]]
 
- 		[[ 6  7]
-  		 [ 8  9]
-  		 [10 11]]])
+ 	[[ 6  7]
+  	 [ 8  9]
+  	 [10 11]]])
 >>> b
 tensor([[[13 12]
-  		 [15 14]
-  		 [17 16]]
+  	 [15 14]
+  	 [17 16]]
 
- 		[[19 20]
-  		 [18 21]
-  		 [23 22]]])
+ 	[[19 20]
+  	 [18 21]
+  	 [23 22]]])
 >>> torch.cross(a, b, dim=1)
 tensor([[[-26, -22],
          [ 52,  44],
@@ -138,7 +138,7 @@ out(Tensor,optional):the output tensor
 ```python
 # 给出BANGPy MLU-OPS算子接口
 # 算子接口名称(module参数)
-MluOp+Cross(inputs=[
+MluOpCross(inputs=[
                 buffer_in0,
                 buffer_in1,
                 shape,
@@ -147,7 +147,6 @@ MluOp+Cross(inputs=[
             outputs=[buffer_out],)
 ```
 
-`注意`: 这里的 `算子接口名称` 的格式是 `MluOp` + `算子名称`(首字母大写)，`module参数` 即执行 `tcp.BuildBANG` 时传入的 `inputs` + `outputs` 参数 
 
 ## 3 实现方案设计
 
@@ -353,12 +352,6 @@ step>data_each_buffer：
 
 一个NRAM的大小是512x1024byte，而流水线至多需要9（axb=c，a,b,c都是三维）x2=18个buffer，其次乘法和减法要128byte对齐，128x18=2304, 512x1024//2304x2304=523008，523008/18=29056，29056可以被128整除，当然也可以被4(byte)和2(byte)整除，所以流水线一个buffer的大小设置为29056byte。
 
-1、对每一个函数命名变量命名都有充分的注释
-
-2、避免魔鬼数字，对于确定的数字尽量使用全局变量来替代
-
-3、代码风格遵守PEP8编码规范
-
 ### 3.6 测试用例设计
 
 - step<data_each_buffer的样例：
@@ -443,5 +436,3 @@ step>data_each_buffer：
 ### 5.2 风险分析
 
 当step>data_each_buffer时，shape规模超过一定范围后运行会出错（详见4.1)，后续需要找出问题，如果在当前BANGPy版本下能解决则加以解决。
-
-对功能、精度、性能问题的影响分析和后续解决计划。
