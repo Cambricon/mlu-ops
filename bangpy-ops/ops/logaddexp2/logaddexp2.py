@@ -44,7 +44,8 @@ class Logaddexp2(object):
         self.length = self.tcp.SizeVar("length")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        # 3*2+2 128 align
+        # 3*2+2=8 buffers: 3 pipeline double buffer(input1, input2, output), and 2 extra buffer.
+        # buffer size need to be 128 aligned
         self.single_buffer_size = (self.nram_size - 128*2**10) // 8
         self.single_buffer_size = self.single_buffer_size // 128 * 128
         self.tcp.launch_task(self.task_num, 1, 1)
