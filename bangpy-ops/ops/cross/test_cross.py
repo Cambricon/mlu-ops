@@ -1,25 +1,3 @@
-# Copyright (C) [2021] by Cambricon, Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
 import numpy as np
 import pytest
 
@@ -31,22 +9,24 @@ from cross import DTYPES, KERNEL_NAME, TARGET_LIST
     "shape,dim",
     [
     ((1, 1, 1, 1, 2, 3, 4, 5),5),
-    # ((2,1,2,1,2,2,2,3),7),
-    # ((2,1,2,1,2,2,3,3),6),
-    # ((3,2,2,1,1,1,1,1),0),
-    # ((2,2,2,3,3,4,4,4),4),
-    # ((1,2,2,2,3,128,1,1),4),
-    # ((1,2,2,2,3,128,1,1),-4),
-    # ((1024,2,2,3,3,4,4,4),4),
-    # ((1,1024,2,4,3,2,3,1024),4),
-    # ((2,1024,4,4,3,2,3,1024),4),
-    # ((1,1024,2,4,3,2,3,1024),6),
-    # ((1,1024,2,4,3,2,8192,2),4),
-    # ((1,3,3,4,3,2,8192,2),1),
-    # ((3,3,3,3,3,3,3,8192),6),
-    # ((1,2,2,2,3,128,1,1),1),  #不合法的输入样例
-    # ((1,2,2,2,3,128,1,1),-9), #不合法的输入样例
-    # ((2,1024,2,4,3,2,8192,2),4),    #step>buffer长度的情况，分支2，报错
+    ((2,1,2,1,2,2,2,3),7),
+    ((2,1,2,1,2,2,3,3),6),
+    ((3,2,2,1,1,1,1,1),0),
+    ((2,2,2,3,3,4,4,4),4),
+    ((1,2,2,2,3,128,1,1),4),
+    ((1,2,2,2,3,128,1,1),-4),
+    ((1024,2,2,3,3,4,4,4),4),
+    ((1,1024,2,4,3,2,3,1024),4),
+    ((2,1024,4,4,3,2,3,1024),4),
+    ((1,1024,2,4,3,2,3,1024),6),
+    ((1,1024,2,4,3,2,8192,2),4),
+    ((1,3,3,4,3,2,8192,2),1),
+    ((3,3,3,3,3,3,3,8192),6),
+    ((1,2,2,2,3,128,1,1),1),  #不合法的输入样例
+    ((1,2,2,2,3,128,1,1),-9), #不合法的输入样例
+    # ((2,1024,2,4,3,2,8192,2),4),    
+        #step>buffer长度的情况，分支2，当group达到这个量级就会报错
+        #原因暂时不明，详见设计文档优化记录和测试文档总结分析部分
     ]
 )
 @pytest.mark.parametrize(
@@ -55,7 +35,6 @@ from cross import DTYPES, KERNEL_NAME, TARGET_LIST
 
 # @pytest.mark.repeat(1000)
 def test_cross(target, shape, dim, dtype):
-# def test_cross(target, shape, dtype):
     if target not in TARGET_LIST:
         return
     data_in0 = np.random.uniform(low=-1, high=1, size=shape)
