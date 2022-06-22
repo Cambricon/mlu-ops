@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -31,7 +31,7 @@ TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "hard_sigmoid"
 
 
-class Hard_sigmoid(object):
+class HardSigmoid(object):
     """Operator description
     tensor-->activation function-->another tensor after activation.
     """
@@ -45,10 +45,12 @@ class Hard_sigmoid(object):
         self.length = self.tcp.SizeVar("length")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        # 3*buffer_n:   buffer_io_n*2(double buffering) + buffer_temp_n
-        # align: the amounts of elements (dtype:float32)
-        # 需要按64个float32对齐，也就是256B对齐，然后可能还是很接近NRAM的最大空间，会有错误，所以又减小了1*256
-        self.nram_size_buffer=(((self.nram_size // 3) // 256 - 1) * 256)
+        # align:
+        # 计算需要按64个数据对齐，然后这里以64个float32为准，也就是256B对齐
+        # 对于float16类型的数据，当float32对齐时float16也是对齐的，但这样导致NRAM有128B的空间空闲
+        # 然后NRAM空间被分成了三份：分别是buffer_io_n*2(双缓冲)和buffer_temp_n
+        # 另外，可能还是很接近NRAM的最大空间，会报错，所以又减小了1*256
+        self.nram_size_each_buffer=(((self.nram_size // 3) // 256 - 1) * 256)
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(task_num,1,1)
 
@@ -70,7 +72,7 @@ class Hard_sigmoid(object):
         data_each_task.assign(data_total // self.task_num)
         data_rem = self.tcp.Scalar(bangpy.int32,"data_rem")
         data_rem.assign(data_total % self.task_num)
-        data_each_time = self.nram_size_buffer // self.dtype_sz
+        data_each_time = self.nram_size_each_buffer // self.dtype_sz
         # data_each_time: can't use Scalar:(error)caanot handle this data type
         loop = self.tcp.Scalar(bangpy.int32,"loop")
         loop.assign(data_each_task // data_each_time)
@@ -80,12 +82,14 @@ class Hard_sigmoid(object):
         # data_total: total number of data
         # self.task_num: number of task(s)
         # data_each_task: number of data to be calculated per task
-        # data_rem: the remainder after averaging over all IPUs
+        # data_rem: the remainder after distributing to each IPU
         # self.nram.size: the calculation size of NRAM (Bytes)
+        # self.nram_size_each_buffer: the space of NRAM was divided into three parts
         # self.dtype_sz: number of bytes occupied by different data types
-        # data_each_time: number of data per time of IPU calculation
+        # data_each_time: number of data of IPU calculation per time
         # loop: number of times each task needs to be copied into NRAM for computation
-        # data_rem_n: less than one calculation
+        # if data_rem_n != 0, we need to copy one more time
+        # data_rem_n: less than one calculation(in last time)
 
         # calculate:
         with self.tcp.for_range(0, loop, stage=1) as i:
@@ -183,5 +187,5 @@ class Hard_sigmoid(object):
 def build_hard_sigmoid(dtype=None, target=None):
     # tasktype fixed in BLOCK
     task_num = 64
-    f = Hard_sigmoid(dtype, target, task_num).compute_body()
+    f = HardSigmoid(dtype, target, task_num).compute_body()
     return f

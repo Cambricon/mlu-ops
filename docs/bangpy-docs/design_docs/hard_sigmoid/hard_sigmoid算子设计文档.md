@@ -88,7 +88,7 @@ nn.hard_sigmoid(input)
 ### 2.2 接口设计
 
 ```python
-MluOpHard_sigmoid(input,output)
+MluOpHardSigmoid(input,output)
 ```
 
 ## 3 实现方案设计
