@@ -94,7 +94,7 @@ torch.nn.CosineEmbeddingLoss(margin=0.0, size_average=None, reduce=None, reducti
 ### 2.2 接口设计
 
 ```python
-mluopCosine_embedding_loss(input_x1, input_x2, y, margin, output)
+MluOpCosineEmbeddingLoss(input_x1, input_x2, y, margin, output)
 ```
 
 ## 3 实现方案设计

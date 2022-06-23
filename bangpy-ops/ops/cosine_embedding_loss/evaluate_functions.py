@@ -1,3 +1,23 @@
+# Copyright (C) [2021] by Cambricon, Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 测试运行算子所需函数，随机数据生成，计时以及准确度
 """
@@ -25,8 +45,6 @@ def cal_diff(result, data_out):
         np.sum(np.power(np.subtract(data_out, result), 2,))
         / np.sum(np.power(result, 2))
     )
-    # assert round(diff1 * 100, 5) < 3e-3 * 100
-    # assert round(diff2 * 100, 5) < 3e-3 * 100
     return diff1, diff2
 
 ###################################################
@@ -148,10 +166,4 @@ def func():
 
 # # 主函数
 if __name__ == "__main__":
-    # pass
     func()
-    # dtype = bangpy.float16
-    # data_amount = 2 ** 20
-    # data_width = 128
-    # f = CosineEmbeddingLoss(dtype, 1, "mlu290", TaskType.UNION16).compute_body()
-    # evaluate(f, dtype, data_amount, data_width)
