@@ -88,8 +88,8 @@ class HardSigmoid(object):
         # self.dtype_sz: number of bytes occupied by different data types
         # data_each_time: number of data of IPU calculation per time
         # loop: number of times each task needs to be copied into NRAM for computation
-        # if data_rem_n != 0, we need to copy one more time
-        # data_rem_n: less than one calculation(in last time)
+        # data_rem_n: less than one calculation
+        # if data_rem_n != 0, we need to copy data into NRAM one more time
 
         # calculate:
         with self.tcp.for_range(0, loop, stage=1) as i:
