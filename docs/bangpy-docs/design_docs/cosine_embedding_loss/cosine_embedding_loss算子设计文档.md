@@ -1,4 +1,4 @@
-# Adjust_hue 算子开发设计方案
+# Cosine_embedding_loss 算子开发设计方案
 
 - #### 文档基本信息
 
@@ -38,7 +38,7 @@
 | 应用网络                                                                     | centerNet                                                                                                                                                                                                                               |
 | 输入数据类型                                                                 | half, float                                                                                                                                                                                                                                |
 | 输入 shape                                                                   | x1, x2: [N, D], y: [N]                                                                                                                                                                                  |
-| 输入 layout                                                                  | x1, x2: [N, W], y: [N]                                                                                                                                                                                                                |
+| 输入 layout                                                                  | x1, x2: NW, y: N                                                                                                                                                                                                                |
 | 输出数据类型                                                                 | half, float                                                                                                                                                                                                                             |
 | 输出 Shape                                                                   | [N]                                                                                                                                                                                                                |
 | 输出 Layout                                                                  | N                                                                                                                                                                                                                                       |
