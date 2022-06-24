@@ -48,6 +48,17 @@ class CosineEmbeddingLoss(object):
     """
 
     def __init__(self, dtype, stage, target, task_type):
+
+        # 检查参数
+        if not (
+            (dtype in DTYPES)
+            and (stage in [0, 1])
+            and (target in TARGET_LIST)
+            and (task_type in TaskType.__dict__.values())
+        ):
+            raise KeyError
+
+        # 设置属性初始值
         self.dtype = dtype
         self.target = target
         self.task_type = task_type

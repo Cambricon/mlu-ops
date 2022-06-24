@@ -32,11 +32,12 @@ from bangpy.tcp.runtime import TaskType
 
 # numpy格式的数据计算。算子的原始逻辑
 def compute_simple_test(x_1, x_2, y, margin):
-    upper = np.sum(np.multiply(x_1, x_2), axis = 1)
-    lower1 = np.sum(np.multiply(x_1, x_1), axis = 1)
-    lower2 = np.sum(np.multiply(x_2, x_2), axis = 1)
-    result = (upper / ((lower1 * lower2) ** 0.5)).reshape((-1, ))
+    upper = np.sum(np.multiply(x_1, x_2), axis=1)
+    lower1 = np.sum(np.multiply(x_1, x_1), axis=1)
+    lower2 = np.sum(np.multiply(x_2, x_2), axis=1)
+    result = (upper / ((lower1 * lower2) ** 0.5)).reshape((-1,))
     return ((y + 1) * (1 - result) + (1 - y) * np.maximum(0, result - margin)) / 2
+
 
 # mlu的数据误差
 def cal_diff(result, data_out):
@@ -46,6 +47,7 @@ def cal_diff(result, data_out):
         / np.sum(np.power(result, 2))
     )
     return diff1, diff2
+
 
 ###################################################
 # 测试参数
@@ -79,18 +81,23 @@ data_widths = [
 # 数据类型，float16, float32
 dtypes = DTYPES[1:2]
 
+
 def evaluate(f, dtype, data_amount, data_width):
     """
     对每种参数进行计算和时间评估
     """
     data_height = data_amount // dtype.bytes // data_width
 
-    data_input_x1 = np.random.rand(data_width * data_height).reshape((data_height, data_width))
-    data_input_x2 = np.random.rand(data_width * data_height).reshape((data_height, data_width))
-    data_input_y = np.random.randint(-1, 1, (data_height, ))
+    data_input_x1 = np.random.rand(data_width * data_height).reshape(
+        (data_height, data_width)
+    )
+    data_input_x2 = np.random.rand(data_width * data_height).reshape(
+        (data_height, data_width)
+    )
+    data_input_y = np.random.randint(-1, 1, (data_height,))
     data_input_y = data_input_y * 2 + 1
     margin = random.random()
-    data_out = np.zeros((data_height, ))
+    data_out = np.zeros((data_height,))
 
     dev = bangpy.device(0)
 
@@ -114,28 +121,31 @@ def evaluate(f, dtype, data_amount, data_width):
     evaluator = f.time_evaluator(dev, 1, 10)
     time = (
         evaluator(
-            data_input_x1_dev,
-            data_input_x2_dev,
-            data_input_y_dev,
-            margin,
-            data_out_dev).mean * 1e3
-        ) # ms
+            data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev
+        ).mean
+        * 1e3
+    )  # ms
     io_speed = (
-        (data_width * data_height * 2 * dtype.bytes + data_height * dtype.bytes) \
-            / time * 1e3 / (2 ** 30)) # GB/s
+        (data_width * data_height * 2 * dtype.bytes + data_height * dtype.bytes)
+        / time
+        * 1e3
+        / (2 ** 30)
+    )  # GB/s
 
     # 输出结果
-    print("data_type: {} data_amount: {:2.4f}GB data_width: \
+    print(
+        "data_type: {} data_amount: {:2.4f}GB data_width: \
         {:7d} time cost: {:3.2f}ms IO speed: {:4.3f}GB/s diff1: \
-        {:1.5f}%, diff2: {:1.5f}%".format (
-        dtype.name,
-        data_amount / (2 ** 30),
-        data_width,
-        time,
-        io_speed,
-        round(diff1 * 100, 5),
-        round(diff2 * 100, 5),
-    ))
+        {:1.5f}%, diff2: {:1.5f}%".format(
+            dtype.name,
+            data_amount / (2 ** 30),
+            data_width,
+            time,
+            io_speed,
+            round(diff1 * 100, 5),
+            round(diff2 * 100, 5),
+        )
+    )
     return [
         dtype.name,
         data_amount / (2 ** 30),
@@ -146,13 +156,22 @@ def evaluate(f, dtype, data_amount, data_width):
         round(diff2 * 100, 5),
     ]
 
+
 def func():
     """
     测试函数，对每种参数组合进行遍历
     对每种数据类型分别编译生成算子核
     """
     results = [
-        ["data_type", "data_amount", "data_width", "time_cost", "IO_speed", "diff1", "diff2"]
+        [
+            "data_type",
+            "data_amount",
+            "data_width",
+            "time_cost",
+            "IO_speed",
+            "diff1",
+            "diff2",
+        ]
     ]
     for dtype in dtypes:
         f = CosineEmbeddingLoss(dtype, 1, "mlu290", TaskType.UNION16).compute_body()
@@ -163,6 +182,7 @@ def func():
     filename = "perfomance_log.json"
     with open(filename, "w") as file_obj:
         json.dump(results, file_obj)
+
 
 # # 主函数
 if __name__ == "__main__":
