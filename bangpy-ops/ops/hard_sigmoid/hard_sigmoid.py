@@ -46,11 +46,21 @@ class HardSigmoid(object):
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
         # align:
-        # 计算需要按64个数据对齐，然后这里以64个float32为准，也就是256B对齐
-        # 对于float16类型的数据，当float32对齐时float16也是对齐的，但这样导致NRAM有128B的空间空闲
+        # 计算需要按64个数据对齐
         # 然后NRAM空间被分成了三份：分别是buffer_io_n*2(双缓冲)和buffer_temp_n
-        # 另外，可能还是很接近NRAM的最大空间，会报错，所以又减小了1*256
-        self.nram_size_each_buffer=(((self.nram_size // 3) // 256 - 1) * 256)
+        # 另外，关于64个数据对齐的计算公式：((self.nram_size // 3) // (dtype.bytes * 64)) * (dtype.bytes * 64)
+        # 对于bangpy.float16，下面情况均报错
+        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128) * 128)
+        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 1) * 128)
+        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 2) * 128)
+        # 对于bangpy.float32，下面情况报错
+        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 256) * 256)
+        # 为了：（1）运行时不报错（2）单行不超过100字符
+        # 改写如下：
+        if dtype.bytes==2: # dtype.bytes==2即bangpy.float16
+            self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 3) * 128)
+        else: # dtype.bytes==4即bangpy.float32
+            self.nram_size_each_buffer=(((self.nram_size // 3) // 256 - 1) * 256)
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(task_num,1,1)
 
