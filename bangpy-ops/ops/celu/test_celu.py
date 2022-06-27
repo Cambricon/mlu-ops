@@ -87,7 +87,6 @@ shape_list = CreatShapeList(
 @pytest.mark.parametrize(
     "shape",
     shape_list,
-    #[(10,256,1024,1024,),]
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -102,17 +101,17 @@ def test_celu(target, shape, dtype, alpha):
         dev = bp.device(0)
         celu_func = load_op_by_type("Celu",dtype.name)
         def celu_inner(input_param):
-            primative = input_param.shape#记录shape
-            data_x_flat = input_param.flatten()#压平
+            primative = input_param.shape
+            data_x_flat = input_param.flatten()
             buffer_alpha_param = bp.Array(np.array([alpha]).astype( dtype=dtype.as_numpy_dtype),dev)
             data_x_dev_param = bp.Array(data_x_flat,dev)
             output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype),dev)
-            celu_func(data_x_dev_param,buffer_alpha_param,inplace,output_dev_param)#计算
-            res = output_dev_param.numpy().reshape(primative)#还原shape
+            celu_func(data_x_dev_param,buffer_alpha_param,inplace,output_dev_param)
+            res = output_dev_param.numpy().reshape(primative)
             if inplace :
-                input_param=res#如果在原位改动
-            return res#返回结果 在原位改动直接拿input 反正俩地址现在一样
-        return celu_inner#返回函数
+                input_param=res
+            return res
+        return celu_inner
     data_x = np.random.uniform(low=-5, high=5, size=shape)
     f1 = celu_out(alpha,False)
     res = f1(data_x.astype(dtype.as_numpy_dtype))

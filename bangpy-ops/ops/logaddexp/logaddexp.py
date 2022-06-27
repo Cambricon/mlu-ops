@@ -25,77 +25,40 @@ from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.util import  round_down
 from bangpy.tcp.runtime import TaskType
-DTYPES = [bangpy.float32] #支持的类型
-TARGET_LIST = ["mlu290"]#支持的设备
-KERNEL_NAME = "LogAddExp" #算子名
+DTYPES = [bangpy.float32]
+TARGET_LIST = ["mlu290"]
+KERNEL_NAME = "LogAddExp"
 
 
 class LogAddExp:
-    """Operator description:
-    Add the data in the two buffers.
-    """
-
-    def __init__(self, dtype, target, task_num):#self 即this指针  dtype 传入的数据类型 target目标芯片的型号
+    def __init__(self, dtype, target, task_num):
         self.dtype = dtype
         self.target = target
         self.task_num = task_num
         self.bp = tcp.TCP(target)
-        self.length = self.bp.SizeVar("length")#得到数据的长度  此处应该是数组的长度
-        self.dtype_sz = dtype.bytes#类型占用空间的大小(字节)
-        self.bp.launch_task(self.task_num, 1, 1)#将任务维度值设置为在此内核中启动。  三个参数其实就是 taskdimx,y,z
-    #根据标记位buffer 从数据buffer中获取指定数值去替换输入中对应位置的数据
-    #changed_buffer 输入数据 等待被替换的数据buffer
-    #value_buffer 数据buffer 标志位buffer将从这里获取对应位数据来准备替换changed_buffer中的数据
-    #marked_buffer 标记位buffer 要准备替换的位置标位0  其余为1
+        self.length = self.bp.SizeVar("length")
+        self.dtype_sz = dtype.bytes
+        self.bp.launch_task(self.task_num, 1, 1)
     def replace_the_marked_value(self,changed_buffer,value_buffer,marked_buffer):
-        #被标记位是0 相乘后使替换位归零
         self.bp.multiply(changed_buffer,changed_buffer,marked_buffer)
-        #对标记位取反 此时所有标记位是1 非标位为0
         self.bp.logical_not(marked_buffer,marked_buffer)
-        #标记与填充值相乘 使所有标记位变为填充值 ，非标位仍是0
         self.bp.multiply(marked_buffer,value_buffer,marked_buffer)
-        #标记位被归零后得原始数据和新得到得标记位数值相加  替换完毕
         self.bp.add(changed_buffer,changed_buffer,marked_buffer)
-    #将input中得数据和阈值比较，在nram_bool_mark对应位置 符合条件为1否则为0
-    #input_buffer 原始输入 将要替换得输入
-    #bool_mark 真值buffer 存储对应位置判断的结果
-    #is_min int值 控制逻辑分支是使用>=还是<=,
-    #threshold_value 要进行判断得阈值
     def mark_value_compare_with_threshold_value(self,input_buffer,bool_mark,is_min,threshold_value):
-         #通过将输入和阈值进行比较 将真值存入nram_temp_bool_res中 符合条件为1 不符为0
-        if is_min == 1: #和最小值比较
-            self.bp.greater_equal(bool_mark,input_buffer,threshold_value,'elemwise') #大于等于阈值返回1
-        else :#和最大值比较
-            self.bp.less_equal(bool_mark,input_buffer,threshold_value,'elemwise') #小于等于阈值返回1
-    #标记不在范围内的数据的位置
-    #input_buffer 原始数据
-    #x承载小于阈值的数据对应位置的buffer 对应位置上
-    #y承载大于阈值的数据对应位置的buffer
+        if is_min == 1:
+            self.bp.greater_equal(bool_mark,input_buffer,threshold_value,'elemwise')
+        else :
+            self.bp.less_equal(bool_mark,input_buffer,threshold_value,'elemwise')
     def mark_the_out_of_range_vlaue(self,input_buffer,x,y):
         max_threshold = self.bp.Scalar(self.dtype,"max_threshold",10)
         min_threshold = self.bp.Scalar(self.dtype,"min_threshold",-7.5)
-        #这些数我是网上查的该类型大于0时的最大最小值 然后取了个ln得到的   这里注释掉的原因是 其exp接口最大范围是[-7.5,10] 并不随类型的范围
-        #当为16位是 max min 采用以下值
-        # if self.dtype == bangpy.float16 :
-        #     max_threshold_valu.assign(11.089866488461016076210728979771)
-        #     min_threshold_valu.assign(-9.703981170988072538409566077448)
-        # #32位时使用以下值
-        # else:
-        #     max_threshold_valu.assign(88.722008965395851698332450562653)
-        #     min_threshold_valu.assign(-87.332719095296162600686375692197)
-        # max_threshold_valu.assign(10)
-        # min_threshold_valu.assign(-7.5)
-        #将输入中小于最小值的在x对应位置标为0
         self.mark_value_compare_with_threshold_value(input_buffer,x,1,min_threshold)
-        #将输入中大于最大值的在y对应位置标为0
         self.mark_value_compare_with_threshold_value(input_buffer,y,0,max_threshold)
     def compute_body(self):
-        # calculate split strategy
-        # gets the data length to be calculated for each task
         one_core_count = self.bp.Scalar(bangpy.int32,"one_core_count",self.length // self.task_num)
         remain =  self.bp.Scalar(bangpy.int32,"remain")
-        current_core_start = self.bp.Scalar(bangpy.int32,"current_core_start") #当前核心数据开始索引
-        current_core_end = self.bp.Scalar(bangpy.int32,"current_core_end") #当前核心数据结束索引
+        current_core_start = self.bp.Scalar(bangpy.int32,"current_core_start")
+        current_core_end = self.bp.Scalar(bangpy.int32,"current_core_end")
         total_count_in_core = self.bp.Scalar(bangpy.int32,"total_count_in_core")
         calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
         once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
@@ -103,16 +66,13 @@ class LogAddExp:
         nram_avable_size = round_down(
             (TARGET(self.target).nram_size - 40* 1024) // 8 ,128
         )
-        remain.assign(self.length % self.task_num)#分任务时的余数
-        process_count = nram_avable_size // self.dtype_sz #核心一次最多计算的长度
-        with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
+        remain.assign(self.length % self.task_num)
+        process_count = nram_avable_size // self.dtype_sz
+        with self.bp.if_scope(self.bp.taskId < remain):
             current_core_start.assign((one_core_count + 1) * self.bp.taskId )
-            #此处应该不需要减1 待验证  python切片会自动将上标减1
             current_core_end.assign((one_core_count + 1) * (self.bp.taskId + 1) - 1)
         with self.bp.else_scope():
-            current_core_start.assign(
-                (one_core_count + 1) * remain + one_core_count * (self.bp.taskId - remain)
-            )
+            current_core_start.assign(one_core_count * self.bp.taskId + remain)
             current_core_end.assign(current_core_start + one_core_count - 1)
         total_count_in_core.assign(current_core_end - current_core_start + 1)
         buffer_in0 = self.bp.Buffer(
@@ -157,7 +117,6 @@ class LogAddExp:
         const_one = self.bp.Scalar(dtype = self.dtype,name = "const_one",value = 1)
         calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
         with self.bp.for_range(0, calc_loop_count) as i:
-            #当前核心数据开始的位置 + 第i次循环所应偏移的长度
             once_loop_start.assign(current_core_start + process_count * i)
             with self.bp.if_scope(i < calc_loop_count - 1):
                 calc_size.assign(process_count)
@@ -175,22 +134,21 @@ class LogAddExp:
                     nram_buffer_in1[0:calc_size],
                     buffer_in1[once_loop_start:once_loop_start + calc_size]
                 )
-            self.bp.subtract(nram_middle_value, nram_buffer_in1, nram_buffer_in0)# y-x
-            # 根据y-x的差 来获取哪些位置超出了当前精度的极限 并标记
+            self.bp.subtract(nram_middle_value, nram_buffer_in1, nram_buffer_in0)
             self.mark_the_out_of_range_vlaue(nram_middle_value,nram_x_bool,nram_y_bool)
-            self.bp.exp(nram_middle_value, nram_middle_value) #计算差值的exp
-            self.bp.add(nram_middle_value,nram_middle_value,const_one) # +1
-            self.bp.log(nram_middle_value, nram_middle_value)  # 取对数
-            self.bp.add(nram_middle_value,nram_buffer_in0,nram_middle_value) # +x
+            self.bp.exp(nram_middle_value, nram_middle_value)
+            self.bp.add(nram_middle_value,nram_middle_value,const_one)
+            self.bp.log(nram_middle_value, nram_middle_value)
+            self.bp.add(nram_middle_value,nram_buffer_in0,nram_middle_value)
             self.replace_the_marked_value(
                 nram_middle_value,
                 nram_buffer_in1,nram_y_bool
-            ) #替换y-x 大于最大值的 为y
+            )
             self.replace_the_marked_value(
                 nram_middle_value,
                 nram_buffer_in0,
                 nram_x_bool
-            ) #替换y-x 小于最小值的 为x
+            )
             self.bp.memcpy(
                 buffer_out[once_loop_start:once_loop_start + calc_size],
                 nram_middle_value[:calc_size]
@@ -204,6 +162,6 @@ class LogAddExp:
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp(dtype=None, target=None):
     task_type=TaskType.UNION16
-    task_num =task_type.value*4 #这里可能是这么理解  一个cluster 4个核   根据union的类型乘4确定投入的core
+    task_num =task_type.value*4
     f = LogAddExp(dtype, target, task_num).compute_body()
     return f
