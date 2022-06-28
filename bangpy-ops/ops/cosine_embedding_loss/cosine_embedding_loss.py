@@ -129,7 +129,7 @@ class CosineEmbeddingLoss(object):
         # nram中存储的数据的row数量
         y_num = self.tcp.Scalar(bangpy.int32, name="y_num")
 
-        kernel_size.assign(self.tcp.scalar_min(self.length_s, self.max_kernel_size))
+        kernel_size.assign(self.max_kernel_size)
 
         kernels_per_line.assign(self.max_buffer_size // self.align_size // kernel_size)
         kernels_nram.assign(kernels_per_line * self.align_size)
@@ -282,6 +282,12 @@ class CosineEmbeddingLoss(object):
                     scope="nram",
                 )
 
+                with self.tcp.block("compute"):
+                    # 初始化内存中的数据
+                    self.tcp.assign(input_buffer_x1, 0.0)
+                    self.tcp.assign(input_buffer_x2, 0.0)
+                    self.tcp.assign(inter_buffer, 0.0)
+
                 with self.tcp.block("data_copy"):
                     # 当次内层循环所需处理的数据行起止位置
                     base = self.tcp.Scalar(name="base", dtype=bangpy.int32)
@@ -312,16 +318,18 @@ class CosineEmbeddingLoss(object):
                         )
 
                         cpy_in_x11 = input_buffer_x1[
-                            : batch_size * self.length
-                        ].reshape((batch_size, self.length))
+                            : batch_size * kernel_size * kernels_per_row
+                        ].reshape((batch_size, kernel_size * kernels_per_row))
                         cpy_in_x21 = input_buffer_x2[
-                            : batch_size * self.length
-                        ].reshape((batch_size, self.length))
+                            : batch_size * kernel_size * kernels_per_row
+                        ].reshape((batch_size, kernel_size * kernels_per_row))
                         self.tcp.memcpy(
-                            cpy_in_x11[: end - base], self.input_x1[base:end]
+                            cpy_in_x11[: end - base, : self.length],
+                            self.input_x1[base:end],
                         )
                         self.tcp.memcpy(
-                            cpy_in_x21[: end - base], self.input_x2[base:end]
+                            cpy_in_x21[: end - base, : self.length],
+                            self.input_x2[base:end],
                         )
 
                     # nram能装下至少align_size(128bytes//dtype.bytes)行数据
@@ -342,18 +350,37 @@ class CosineEmbeddingLoss(object):
                         )
 
                         # 内存错位拷贝
-                        cpy_in_x1 = input_buffer_x2[: batch_size * self.length].reshape(
-                            (batch_size, self.length)
-                        )
-                        cpy_in_x2 = inter_buffer[: batch_size * self.length].reshape(
-                            (batch_size, self.length)
-                        )
-                        self.tcp.memcpy(
-                            cpy_in_x1[: end - base], self.input_x1[base:end]
-                        )
-                        self.tcp.memcpy(
-                            cpy_in_x2[: end - base], self.input_x2[base:end]
-                        )
+                        cpy_in_x1 = input_buffer_x2[
+                            : batch_size * kernel_size * kernels_per_row
+                        ].reshape((batch_size, kernel_size * kernels_per_row))
+                        cpy_in_x2 = inter_buffer[
+                            : batch_size * kernel_size * kernels_per_row
+                        ].reshape((batch_size, kernel_size * kernels_per_row))
+                        # 依据是否对齐采用不同的拷贝方式
+                        with self.tcp.if_scope(
+                            kernel_size * kernels_per_row != self.length
+                        ):
+                            self.tcp.memcpy(
+                                cpy_in_x1[: end - base, : self.length],
+                                self.input_x1[base:end],
+                            )
+                            self.tcp.memcpy(
+                                cpy_in_x2[: end - base, : self.length],
+                                self.input_x2[base:end],
+                            )
+                        with self.tcp.else_scope():
+                            self.tcp.memcpy(
+                                input_buffer_x2[: self.length * batch_size].reshape(
+                                    (batch_size, self.length)
+                                )[: end - base],
+                                self.input_x1[base:end],
+                            )
+                            self.tcp.memcpy(
+                                inter_buffer[: self.length * batch_size].reshape(
+                                    (batch_size, self.length)
+                                )[: end - base],
+                                self.input_x2[base:end],
+                            )
 
                 with self.tcp.block("compute"):
                     # 计算和数据拷入时一样，也依据数据尺寸不同分三种逻辑
@@ -397,11 +424,11 @@ class CosineEmbeddingLoss(object):
                         # nram能装不到align_size行数据
                         with self.tcp.if_scope(rows_per_line == 0):
                             comps_x1 = input_buffer_x1[
-                                : batch_size * self.length
-                            ].reshape((batch_size, self.length))
+                                : batch_size * kernel_size * kernels_per_row
+                            ].reshape((batch_size, kernel_size * kernels_per_row))
                             comps_x2 = input_buffer_x2[
-                                : batch_size * self.length
-                            ].reshape((batch_size, self.length))
+                                : batch_size * kernel_size * kernels_per_row
+                            ].reshape((batch_size, kernel_size * kernels_per_row))
 
                             comp_inter = inter_buffer[
                                 : kernels_per_line_n * self.align_size * kernel_size
@@ -417,7 +444,11 @@ class CosineEmbeddingLoss(object):
 
                             # 计算求和的函数
                             def compute_sum_batch_1(in1, in2, out):
-                                self.tcp.multiply(inter_buffer[: self.length], in1, in2)
+                                self.tcp.multiply(
+                                    inter_buffer[: kernel_size * kernels_per_row],
+                                    in1,
+                                    in2,
+                                )
                                 self.tcp.sumpool(
                                     temp_n[:kernels_per_line_n],
                                     comp_inter,
@@ -463,14 +494,14 @@ class CosineEmbeddingLoss(object):
                         # nram能装下不止align_size行数据
                         with self.tcp.else_scope():
                             comps_x1 = input_buffer_x1[
-                                : self.length * batch_size
-                            ].reshape((self.length, batch_size))
+                                : kernel_size * kernels_per_row * batch_size
+                            ].reshape((kernel_size * kernels_per_row, batch_size))
                             comps_x2 = input_buffer_x2[
-                                : self.length * batch_size
-                            ].reshape((self.length, batch_size))
+                                : kernel_size * kernels_per_row * batch_size
+                            ].reshape((kernel_size * kernels_per_row, batch_size))
                             comps_inter = inter_buffer[
-                                : self.length * batch_size
-                            ].reshape((self.length, batch_size))
+                                : kernel_size * kernels_per_row * batch_size
+                            ].reshape((kernel_size * kernels_per_row, batch_size))
 
                             # 将拷入的数据进行转置
                             self.tcp.transpose(comps_x1, cpy_in_x1)
