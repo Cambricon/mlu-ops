@@ -97,37 +97,23 @@ output = m(input)
 计算max(0,x)+min(0,α∗(exp(x/α)−1))
 将计算分为max(0,x) 与 min(0,α∗(exp(x/α)−1)) 两部分
 min(0,α∗(exp(x/α)−1))中根据alpha是否为0分别讨论
-    当alpha为0时，min直接返回0    
-    不为0时：
-        从min(0,α∗(exp(x/α)−1))可知只有当x小于0时，才会取α∗(exp(x/α)−1)的值作为最小值 ，所以将x大于等于0的直接返回0。
-        当x<0时 max为0 
-        因为x < 0 且 x/a < 0 时 α∗(exp(x/α)−1)才有意义，所以不存在上溢的情况。
-        而exp(x/a)的结果必然大于零，则当exp(x/a)下溢时，返回0，α∗(exp(x/α)−1)此时结果为-a。    
-    计算max(0,x)
-    将max和min相加
-    拷贝至输出
+当alpha为0时，min直接返回0，不为0时正常计算
+计算max(0,x)
+将max和min相加
+拷贝至cpu端
 
 ### 3.2 伪代码实现
 
 ```python
 #计算min
 with self.bp.if_scope(alpha != 0):
-    self.bp.less_equal(nram_marked_zero,nram_buffer_in0,const_zero,'elemwise') #大于等于0的标记为0 小于的标记为1
     self.bp.divide(nram_middle_value,nram_buffer_in0,alpha)#获得x/a 
     self.mark_the_out_of_range_vlaue(nram_middle_value,nram_marked_exp_overrun_the_upper_limit,nram__marked_exp_beyond_the_lower_limit)#标记出所有超出运算范围的值的位置并分别在两个buffer中用0标注
     #前期准备基本完成 开始常规计算
     self.bp.exp(nram_middle_value,nram_middle_value)#计算exp(x/a)
     self.bp.subtract(nram_middle_value, nram_middle_value, const_one)#-1
     self.bp.multiply(nram_middle_value, nram_middle_value, alpha)#*a
-    self.bp.minimum(nram_min,nram_middle_value,const_zero)#min(0,...)
-    #开始替换
-    self.bp.multiply(nram_middle_value, nram_middle_value,nram_marked_zero)#将所有x>=0得位置全部替换成0
-    #另一种情况  当（x/a）< e 的最小次方值时   将所有标记位替换成 -a和0中小的那个
-    with self.bp.if_scope(alpha * -1 > 0):
-        replace_value.assign(0)
-    with self.bp.else_scope():
-        replace_value.assign(alpha * -1)
-    self.replace_the_marked_position_with_the_value_of_the_same_position(nram_middle_value,nram__marked_exp_beyond_the_lower_limit,replace_value)             
+    self.bp.minimum(nram_min,nram_middle_value,const_zero)#min(0,...)  
 with self.bp.else_scope():#当alpha为0时  min全为0
     self.bp.zeros(nram_min)   
 #这里开始计算max           
@@ -135,31 +121,6 @@ self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
 #计算max+min
 self.bp.add(nram_buffer_in0,nram_max,nram_min)         
 self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
-```
-```python
-#标记会造成溢出得指数位置
-def mark_the_out_of_range_vlaue(self,input,x,y):     
-        max_threshold_valu = self.bp.Scalar(self.dtype,"max_threshold_valu",10)
-        min_threshold_valu = self.bp.Scalar(self.dtype,"min_threshold_valu",-7.5)
-        self.mark_the_value_compare_with_threshold_value(input,x,1,min_threshold_valu)
-        self.mark_the_value_compare_with_threshold_value(input,y,0,max_threshold_valu)
-```
-```python
-#采用何种标记办法
-def mark_the_value_compare_with_threshold_value(self,input,nram_bool_mark,is_min,threshold_value):
-         if  is_min == 1:       
-              self.bp.greater_equal(nram_bool_mark,input,threshold_value,'elemwise') #大于等于阈值返回1
-         else :  
-              self.bp.less_equal(nram_bool_mark,input,threshold_value,'elemwise') #小于等于阈值返回1        
-```
-```python
-#相同位置进行替换
-
- def replace_the_marked_position_with_the_value_of_the_same_position(self,waiting_to_be_changed_buffer,value_buffer,marked_bool_buffer):
-        self.bp.multiply(waiting_to_be_changed_buffer,waiting_to_be_changed_buffer,marked_bool_buffer)
-        self.bp.logical_not(marked_bool_buffer,marked_bool_buffer) 
-        self.bp.multiply(marked_bool_buffer,value_buffer,marked_bool_buffer) 
-        self.bp.add(waiting_to_be_changed_buffer,waiting_to_be_changed_buffer,marked_bool_buffer)
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
 
@@ -178,7 +139,7 @@ def mark_the_value_compare_with_threshold_value(self,input,nram_bool_mark,is_min
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：
-  固定测试规模(1,),(2,),128字节对齐,128字节对齐边界,满buffer,满buffer边界
+  固定测试规模(0,)(1,),(2,),128字节对齐,128字节对齐边界,满buffer,满buffer边界
   通过shape随机生成函数 生成若干二维及以上shape 
   并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内 
 

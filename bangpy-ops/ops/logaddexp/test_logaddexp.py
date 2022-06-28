@@ -33,29 +33,27 @@ from logaddexp import DTYPES,TARGET_LIST
 def run(input_x, input_y, dtype, target):
     max_size_buffer = input_x
     min_size_buffer = input_y
-    is_sub = True #是否是子集
-    scale_up = 1 #缩放倍数
-    is_single_element = False #是否存在单元素
-    if len(max_size_buffer.shape) - len(min_size_buffer.shape) < 0 :#不同维度找出高维的
+    is_sub = True
+    scale_up = 1
+    is_single_element = False
+    if max_size_buffer.ndim > min_size_buffer.ndim :
         max_size_buffer = input_y
         min_size_buffer = input_x
 
-    for i in range(len(min_size_buffer.shape)): #倒序比较 shape各元素
-        #循环未结束 出现不同 说明短的不是长的子集  不能进行计算
+    for i in range(min_size_buffer.ndim):
         if max_size_buffer.shape[-1 - i] != min_size_buffer.shape[-1 - i] :
             is_sub = False
             break
 
-    #特殊情况  当短的只有一个元素时是可以计算的
-    if len(min_size_buffer.shape) == 1 and min_size_buffer.shape[0] == 1 :
+    if min_size_buffer.ndim == 1 and min_size_buffer.shape[0] == 1 :
         is_sub = True
         is_single_element =True
 
     if is_sub:
-        if not is_single_element :#如果是多个元素 计算差值部分的乘积作为缩放短的缩放倍数
-            for j in range(len(max_size_buffer.shape) - len(min_size_buffer.shape)) :
-                scale_up *= max_size_buffer.shape[ -1*len(min_size_buffer.shape) -j -1]
-        else:#如果只有一个元素 则缩放倍数为长的shape各元素的乘积
+        if not is_single_element :
+            for j in range(max_size_buffer.ndim - min_size_buffer.mdim) :
+                scale_up *= max_size_buffer.shape[ -1*min_size_buffer.ndim -j -1]
+        else:
             for k in max_size_buffer.shape:
                 scale_up *= k
         dev = bp.device(0)
