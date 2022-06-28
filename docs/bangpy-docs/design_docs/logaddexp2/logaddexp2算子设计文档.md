@@ -120,7 +120,7 @@ if input0 - input1 <= 15, output = input1 + log2(1 + 2^(input0-input1))
 
 if input0 - input1 > 15, output = input0
 
-证明过程省略，其中input0-input1>15的情况使用泰勒展开进行近似
+证明过程省略，其中input0-input1>15的情况使用泰勒展开进行近似。
 
 ### 3.2 伪代码实现（可选）
 
