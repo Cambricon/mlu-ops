@@ -37,17 +37,17 @@
 | 需求来源       |  https://pytorch.org/docs/stable/generated/torch.logaddexp2.html        |
 | 应用场景       |  https://numpy.org/doc/stable/reference/generated/numpy.logaddexp2.html  |
 | 输入数据类型   | half, float                                                              |
-| 输入 Shape    | input1: [length]; input2: [length]                                       |
-| 输入 Layout   | input1: ARRAY; input2: ARRAY                                             |
+| 输入 Shape    | input0: [length]; input1: [length]                                       |
+| 输入 Layout   | input0: ARRAY; input1: ARRAY                                             |
 | 输出数据类型    | half, float                                                             |
 | 输出 Shape    | output: [length]                                                                 |
 | 输出 Layout   | ARRAY                                                                    |
 
 ### 1.2 算子功能和应用场景描述
 
-功能：逐元素计算 out = log2(2^input1 + 2^input2)
+功能：逐元素计算 output = log2(2^input0 + 2^input1)
 
-例如：input1=[1,2,3], input2=[4,5,6], logaddexp2(input1, input2) = [4.169925, 5.169925, 6.169925]
+例如：input0=[1,2,3], input1=[4,5,6], logaddexp2(input0, input1) = [4.169925, 5.169925, 6.169925]
 
 应用场景： 
 
@@ -55,15 +55,15 @@
 
 为了处理基本数据类型无法表示的极小的数，通常取对数存储。这种方式储存的数进行加法运算，则需要调用logaddexp2算子。
 
-比如 input1 = log2(1e-50), input2 = log2(2.5e-50), 则logaddexp2(input1, input2) == log2(3.5e-50)
+比如 input0 = log2(1e-50), input1 = log2(2.5e-50), 则logaddexp2(input0, input1) == log2(3.5e-50)
 
 
 ### 1.3 算子输入输出参数要求
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
+| input0      |  输入的形状为一维的buffer    | 输入              | half, float | ARRAY    | 无       |
 | input1      |  输入的形状为一维的buffer    | 输入              | half, float | ARRAY    | 无       |
-| input2      |  输入的形状为一维的buffer    | 输入              | half, float | ARRAY    | 无       |
 | output      |  输出的形状为一维的buffer    | 输出              | half, float | ARRAY    | 无       |
 
 ### 1.4 算子限制
@@ -96,19 +96,19 @@ torch.logaddexp2(input, other, *, out=None) → Tensor
 ### 2.2 接口设计
 
 ```python
-MluOpLogaddexp2(input1, input2, output)
+MluOpLogaddexp2(input0, input1, output)
 ```
 
 ## 3 实现方案设计
 
 ### 3.1 实现方案
 
-最简单的思路是直接实现log2(2^input1, 2^input2)，伪代码为：
+最简单的思路是直接实现log2(2^input0, 2^input1)，伪代码为：
 
 ```
+input0 = exp2(input0)
 input1 = exp2(input1)
-input2 = exp2(input2)
-output = add(input1, input2)
+output = add(input0, input1)
 output = log2(output)
 ```
 
