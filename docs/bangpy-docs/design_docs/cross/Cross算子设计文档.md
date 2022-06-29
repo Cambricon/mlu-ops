@@ -23,12 +23,12 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介   | 实现Python的torch包中的函数torch.cross的BANGPy版本（在给定的维度上进行向量叉乘计算） |
+| 算子功能简介   | 实现Python的Pytorch包中的函数torch.cross的BANGPy版本（在给定的维度上进行向量叉乘计算） |
 | ------------ | ----------------------------------------------------------- |
 | 需求来源       | torch.cross(https://pytorch.org/docs/stable/generated/torch.cross.html) |
 | 输入数据类型   | half, float                                                 |
 | 输入 Shape    | input1:[dim0,dim1,dim2,...,dim7]; <br/>input2: [dim0,dim1,dim2,...,dim7]; |
-| 输入 Layout | input1: 八维ARRAY; input2: 八维ARRAY;              |
+| 输入 Layout | input1: 八维ARRAY; input2: 八维ARRAY              |
 | 输出数据类型    | half, float                                             |
 | 输出 Shape    | [dim0,dim1,dim2,...,dim7]          |
 | 输出 Layout | 八维ARRAY                                         |
@@ -36,7 +36,7 @@
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否 |
 | 是否需要支持原位          | 否                                             |
 | 是否需要支持 stride 机制 | 否                                         |
-| 是否需要支持广播          | 否 (若是，列清楚具体哪些参数要支持)                          |
+| 是否需要支持广播          | 否                          |
 | 0 元素检查是否直接返回     | 否                                                           |
 | 其他特殊需求(在线量化，融合，转数提前等，可选) | BANGPy版本1.4.0以上 |
 
