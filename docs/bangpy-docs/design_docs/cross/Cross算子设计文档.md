@@ -26,7 +26,7 @@
 | 算子功能简介   | 实现Python的Pytorch包中的函数torch.cross的BANGPy版本（在给定的维度上进行向量叉乘计算） |
 | ------------ | ----------------------------------------------------------- |
 | 需求来源       | torch.cross(https://pytorch.org/docs/stable/generated/torch.cross.html) |
-| 应用网络   | 需要使用三维叉乘计算的网络                                                 |
+| 应用网络   | 需要使用三维向量叉乘计算的网络                                                 |
 | 输入数据类型   | half, float                                                 |
 | 输入 Shape    | input1:[dim0,dim1,dim2,...,dim7]; <br/>input2: [dim0,dim1,dim2,...,dim7]|
 | 输入 Layout | input1: 八维ARRAY; input2: 八维ARRAY              |
