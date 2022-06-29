@@ -395,7 +395,9 @@ step>data_each_buffer：
 
 ### 3.7 算子防呆检查
 
-需要检查输入的(shape,dim)是否符合shape[dim]=3且shape∈[-8,7]。
+需要检查输入的input0/input1的shape是否是八维且其中至少有一维数值为3；
+需要检查输入的数据类型是否是float16/float32；
+需要检查输入的(shape,dim)是否符合shape[dim]=3且dim∈[-8,7]。
 
 ## 4 算子性能优化记录
 
