@@ -25,8 +25,6 @@ import bangpy
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
 from bangpy.platform.bang_config import TARGET
-import numpy as np
-
 
 DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
@@ -44,7 +42,7 @@ class KlDivLoss(object):
                 0 represents "none"
                 1 represents "sum"
                 2 represents "mean"
-                3 represents "batchmean" 
+                3 represents "batchmean"
         log_target : if target has been logged(0:no / 1:yes)
     """
 
