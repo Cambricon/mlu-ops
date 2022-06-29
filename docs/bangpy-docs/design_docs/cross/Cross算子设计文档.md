@@ -155,7 +155,7 @@ MluOpCross(inputs=[
 
 算子的输入包括两个参与计算的buffer_in0和buffer_in1，buffer的规模shape，cross计算所在的维度dim；输出则是一个结果buffer_out；
 
-首先将八维的buffer映射成(group, 3, step)，3就是原来dim所在的维度；
+首先将八维的buffer映射成(group, 3, step)，3就是原来dim所在的维度，由于cross的计算是在这一维度发生的，所以dim之前的所有维度可以映射到一维（group），dim之后的所有维度映射到一维(step)，group就代表有多少组向量要进行叉乘，step代表从当前向量的第一维开始隔多少个数据到下一个向量的第一维。
 
 在流水中设置九个buffer，分别代表三维叉乘中(a0, a1, a2) x (b0, b1, b2) = (c0, c1, c2)九个分量。检测step和流水线buffer能容纳的最大数的量data_each_buffer的关系：
 
