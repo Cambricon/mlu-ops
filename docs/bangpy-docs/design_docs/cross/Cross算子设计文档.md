@@ -258,9 +258,9 @@ if (step > data_each_buffer):		//分支2
 
 循环次数：
 
-当step<=data_each_buffer时，计算每轮循环可以处理的step数量step_each_time，那么循环次数loop_num等于group_each_task整除以step_each_time，如果有余数则loop_num加以并且设置last_loop=1，提醒程序在处理最后一次循环时需要处理的数据量是和之前的一般循环不同的；
+当step<=data_each_buffer时，计算每轮循环可以处理的step数量step_each_time，那么循环次数loop_num等于group_each_task整除以step_each_time，如果有余数则loop_num加1并且设置last_loop=1，提醒程序在处理最后一次循环时需要处理的数据量是和之前的一般循环不同的；
 
-当step>data_each_buffer时，循环次数loop_num等于要计算的数据总量group_each_task * step整除以buffer每次处理的数据量data_each_buffer，同样的如果有余数则loop_num加以并且设置last_loop=1。
+当step>data_each_buffer时，循环次数loop_num等于要计算的数据总量group_each_task * step整除以buffer每次处理的数据量data_each_buffer，同样的如果有余数则loop_num加1并且设置last_loop=1。
 
 数据拆分：
 
