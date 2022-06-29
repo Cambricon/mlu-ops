@@ -53,6 +53,7 @@ def cal_diff(result, data_out):
     "log_target", [0, 1],
 )
 def test_kldivloss(target, shape, dtype, reduction, log_target):
+    """Test kldivloss operator by giving multiple sets of parameters."""
     if target not in TARGET_LIST:
         return
 
