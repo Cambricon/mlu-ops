@@ -43,7 +43,7 @@ typedef enum {
 
 /*!
  * @brief Computes the absolute value for every element of the input tensor \b x
- * and returns in \b y.
+ *   and returns in \b y.
  *
  * @param[in] handle
  *   Input. Handle to a MLUOP context that is used to manage MLU devices and
@@ -98,7 +98,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
 
 /*!
  * @brief Computes logarithm of input tensor \b x, and returns the results in
- * the output tensor \b y.
+ *   the output tensor \b y.
  *
  * @param[in] handle
  *   Input. Handle to a MLUOP context that is used to manage MLU devices and
@@ -156,7 +156,7 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
 
 /*!
  * @brief Computes division on input tensor \b x and \b y, and returns the
- * results in the output tensor \b output.
+ *   results in the output tensor \b output.
  *
  * @param[in] handle
  *   Input. Handle to a MLUOP context that is used to manage MLU devices and
@@ -217,8 +217,70 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpTensorDescriptor_t z_desc, void *z);
 
 /*!
+ * @brief Generates fixed size feature map for each grid. Each value in the
+ *   feature map is interpolated by bilinear sampling.
+ *
+ * @param[in] handle
+ *   Input. Handle to a MLUOP context that is used to manage MLU devices and
+ *   queues in ::mluOpRoiCropForward operation. For detailed information, see
+ *   ::mluOpHandle_t.
+ * @param[in] input_desc
+ *   Input. The descriptor of the input tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] grid_desc
+ *   Input. The descriptor of the grid tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] grid
+ *   Input. Pointer to the MLU memory that stores the grid tensor. NaN and INF
+ *   datas are not supported.
+ * @param[in] output_desc
+ *   Input. The descriptor of the output tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - See "RoI Crop Operation" section in "Cambricon MLUOP User Guide" for
+ *   details.
+ *
+ * @par Data Type
+ * - Data types of input tensors and output tensor must be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - Input tensor: float.
+ *   - Grid tensor: float.
+ *   - Output tensor: float.
+ *
+ * @par Scale Limitation
+ * - The input tensor, grid tensor and ouput tensor must have four dimensions.
+ * - The second dimension of grid tensor and output tensor must be the same
+ *   size.
+ * - The third dimension of grid tensor and output tensor must be the same size.
+ * - Size of the fourth dimension of input tensor is divisibled by size of the
+ *   fourth dimension of grid tensor. Grid tensor \b grid must meet the following
+ *   data range:
+ *   - Float: [-1.0,1.0].
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/roi_crop
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
+    const void *input, const mluOpTensorDescriptor_t grid_desc,
+    const void *grid, const mluOpTensorDescriptor_t output_desc, void *output);
+
+/*!
  * @brief Computes sqrt on input tensor \b x, and returns the results in the
- * output tensor \b y.
+ *   output tensor \b y.
  *
  * @param[in] handle
  *   Input. Handle to a MLUOP context that is used to manage MLU devices and
@@ -273,7 +335,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
 
 /*!
  * @brief Computes gradient of sqrt on input tensor \b y and \b diff_y, and
- * returns the results in the output tensor \b diff_x.
+ *   returns the results in the output tensor \b diff_x.
  *
  * @param[in] handle
  *   Input. Handle to a MLUOP context that is used to manage MLU devices and
@@ -300,7 +362,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
  *
  * @par Formula
  * - See "Sqrt Backward Operation" section in "Cambricon MLUOP User Guide" for
- * details.
+ *   details.
  *
  * @par Data Type
  * - Data types of input tensors and output tensor must be the same.
