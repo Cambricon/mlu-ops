@@ -58,10 +58,11 @@ def test_hard_sigmoid(target, shape, dtype):
         return
     data_in = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
     # hard_sigmoid activation function
-    data_out=data_in*1/6+1/2
-    data_out=np.minimum(data_out,1)
-    data_out=np.maximum(data_out,0)
-    #device
+    data_out = data_in * 1/6 + 1/2
+    data_out = np.minimum(data_out,1)
+    data_out = np.maximum(data_out,0)
+    # data_out = torch.nn.functional.hardsigmoid(data_in)
+    # device
     dev = bangpy.device(0)
     # set I/O data
     data_in_dev = bangpy.Array(data_in.flatten().astype(dtype.as_numpy_dtype), dev)
@@ -77,7 +78,7 @@ def test_hard_sigmoid(target, shape, dtype):
     latency = (evaluator(data_in_dev, data_out_dev).mean * 1e3)
     print( "Hardware time : %f ms" % latency)
 
-    #io_efficiency
+    # io_efficiency
     data_total = len(data_out.flatten())
     theory_io_size = data_total * dtype.bytes * 2
     IO_BANDWIDTH = 2**40 # 1024GB/s

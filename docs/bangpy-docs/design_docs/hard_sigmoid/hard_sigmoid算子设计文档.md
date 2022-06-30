@@ -2,8 +2,8 @@
 
 - #### 文档基本信息
 
-| 算子名称     |    Hard_sigmoid      |
-| ----------- | --------------        |
+| 算子名称     | Hard_sigmoid         |
+| ----------- | -------------------- |
 | 编制人/日期  | pingmu123/2022-06-01 |
 | 审批人/日期  |                      |
 
@@ -21,47 +21,46 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介               | 计算一个张量经该激活函数激活过后的张量  |
+| 算子功能简介               | 按元素应用Hardsigmoid激活函数          |
 | --------------------------| ------------------------------------- |
 | 需求来源                   | Pytorch                               |
 | 应用网络                   |                                       |
 | 输入数据类型               | half, float                           |
 | 输入 Shape                 | 任意shape                             |
-| 输入 Layout                |    \                                  |
+| 输入 Layout                |  ARRAY                                |
 | 输出数据类型               | half, float                            |
-| 输出 Shape                 | 与输入张量的shape相同                   |
-| 输出 Layout                |    \                                   |
+| 输出 Shape                 | 与输入张量的shape相同                  |
+| 输出 Layout                |  ARRAY                                |
 
 
 ### 1.2 算子功能和应用场景描述
 
 hard_sigmoid激活函数定义:  
-$hard_sigmoid(x)=\left\{\begin{matrix}0,  x<=3\\1/6*x+1/2,-3<x<3\\1,  x>=3\end{matrix}\right.$
+$hard\_sigmoid(x)=\left\{\begin{matrix}0, x<=-3\\1, x>=+3\\x/6+1/2,  otherwise\end{matrix}\right.$
 
-算子功能：计算一个张量经该激活函数激活过后的张量。  
-例如：  
-     input= [[[[[[[[-3.5,2.4,4.0],  
-                   [-2.4,0.0,1.8]]]]]]]]  
-     output=[[[[[[[[0.0,0.9,1]  
-                   [0.1,0.5,0.8]]]]]]]]
-
+算子功能：对一个输入张量按元素应用Hardsigmoid激活函数后，得到一个激活过后的张量。  
+例如： 
+```
+input = [[[[[[[[-3.5, 2.4, 4.0], [-2.4, 0.0, 1.8]]]]]]]]  
+output = [[[[[[[[0.0, 0.9, 1.0], [0.1, 0.5, 0.8]]]]]]]]
+```
 应用场景：\
 
 ### 1.3 算子输入输出参数要求
 
-| 参数    | 语义                          | 类型（输入/输出）  | 支持类型     | 物理布局         |      规模限制                               |
-| ------  | ----------------------------- | ------------------| ----------- | -----------------| ------------------------------------------ |
-| input   | 输入任意shape的张量            |       输入         | half, float |   \             | 每次输入张量所占空间大小小于MLU的GDRAM的一半  |
-| output  | 输出同输入张量shape相同的张量  |        输出         | half, float |   \             | 每次输出张量所占空间与输入张量的相同          |
+| 参数    | 语义                          | 类型（输入/输出）  | 支持类型     | 物理布局         | 规模限制          |
+| ------  | ----------------------------- | ------------------| ----------- | -----------------| ---------------- |
+| input   | 输入任意shape的张量            |       输入        | half, float |  ARRAY           |  \               |
+| output  | 输出同输入张量shape相同的张量  |        输出        | half, float |  ARRAY           |  \               |
 
 
 ### 1.4 算子限制
 
-| 限制类型      | 详细说明                                        |
-| ------------  | ---------------------------------------------- |
-| 数据类型限制   | input 和 output 必须同时为同一数据类型          |
-| 布局限制       |               \                               |
-| 规模限制       | 输入/输出张量所占空间大小均小于MLU的GDRAM的一半  |
+| 限制类型      | 详细说明               |
+| ------------  | --------------------- |
+| 数据类型限制   | 仅支持float、half     |
+| 布局限制       | ARRAY                |
+| 规模限制       |  \                   |
 
 ### 1.5 验收标准
 
@@ -69,7 +68,7 @@ $hard_sigmoid(x)=\left\{\begin{matrix}0,  x<=3\\1/6*x+1/2,-3<x<3\\1,  x>=3\end{m
 
 按照[精度验收标准](../../../MLU-OPS精度验收标准.md)的要求明确本算子的精度标准。
 
-本算子属于复合类算子：diff1 <= 3e-3 && diff2 <= 3e-3
+本算子属于复合类算子：diff1 <= 3e-3 && diff2 <= 3e-3。
 
 #### 1.5.2 性能验收标准
 
@@ -82,13 +81,30 @@ $hard_sigmoid(x)=\left\{\begin{matrix}0,  x<=3\\1/6*x+1/2,-3<x<3\\1,  x>=3\end{m
 - Pytorch
 
 ```python
-nn.hard_sigmoid(input)
+# https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py
+def hardsigmoid(input: Tensor,
+                inplace: bool = False) -> Tensor:
+    r"""Applies the element-wise function
+    .. math::
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{if~} x \le -3, \\
+            1 & \text{if~} x \ge +3, \\
+            x / 6 + 1 / 2 & \text{otherwise}
+        \end{cases}
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+    See :class:`~torch.nn.Hardsigmoid` for more details.
+    """
 ```
-
 ### 2.2 接口设计
 
 ```python
-MluOpHardSigmoid(input,output)
+# MluOpHardSigmoid(input, output)
+tcp.BuildBANG(
+    inputs=[buffer_in],
+    outputs=[buffer_out],
+    kernel_name=KERNEL_NAME,
+) 
 ```
 
 ## 3 实现方案设计
@@ -96,9 +112,9 @@ MluOpHardSigmoid(input,output)
 ### 3.1 实现方案
 
 主要步骤：  
-（1）在host端将flatten后的张量数据传到device端，均匀地分给各个IPU计算  
-（2）各个IPU计算之后拷回对应的位置,计算时使用双缓冲技术进行优化  
-（3）将数据从device端传回host端并在host端进行reshape
+（1）在host端将flatten后的张量数据传到device端，均匀地分给各个IPU计算。  
+（2）各个IPU计算之后拷回对应的位置,计算时使用双缓冲技术进行优化。  
+（3）将数据从device端传回host端并在host端进行reshape。
 
 ### 3.2 伪代码实现
 
@@ -110,7 +126,7 @@ data_in_dev = bangpy.Array(data_in.flatten().astype(dtype.as_numpy_dtype), dev)
 data_out_dev = bangpy.Array(np.zeros(data_out.flatten().shape, dtype.as_numpy_dtype), dev)
 
 
-#device
+# device
 # distribute
 data_each_task = data_total // self.task_num
 data_rem = data_total % self.task_num
@@ -151,29 +167,31 @@ data_rem_n: 不足一次计算(data_each_task % data_each_time)
 ### 3.4 性能优化设计
 
 1.进行了向量优化，计算均是向量计算。  
-2.使用for_range中的stage参数来打开双缓冲，以实现访存指令与计算指令的并⾏，即⽤访存时间来隐藏计算时间。  
-NRAM双缓冲对应的流水线如下：
-|       |        |        |        |          |        |        |        |       |        |
-|-------| -------|------- |------- |--------- |------- |------- |------- |-------|------- |
-|G-->N1 | C(N1)  | N1-->G | G-->N1 |  C(N1)   |        | N1-->G | G-->N1 | C(N1) | ...    |
-|       | G-->N2 | C(N2)  |        |  N2-->G  | G-->N2 | C(N2)  |        |       | ...    |
+2.使用for_range中的stage参数来打开双缓冲，以实现访存指令与计算指令的并⾏。  
+NRAM双缓冲对应的流水线如下(假设最后一块是G-->N2)：
+|  time   |  t0_1   |  t0_2  |       t1        |       t2        |       t3        |       ...       |     t(n-1)      |  t(n)_1  |  t(n)_2  |
+|:-------:|:-------:|:------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:--------:|:--------:|
+|  NRAM1  | G-->N1  | C(N1)  | N1-->G   G-->N1 |      C(N1)      | N1-->G   G-->N1 |       ...       |      C(N1)      |  N1-->G  |          |
+|  NRAM2  |         | G-->N2 |      C(N2)      | N2-->G   G-->N2 |      C(N2)      |       ...       | N2-->G   G-->N2 |  C(N2)   |  N2-->G  |
 
 由以上的图可知，计算时间被访存时间隐藏，并且DRAM的带宽应该已经充分利用。  
 使用cnperf工具检测时，也基本符合上述结论。  
-  
-那么还有优化的空间吗？比如：引入SRAM/WRAM作为缓存？利用IO-DMA和Shared-DMA的并行？等等  
+   
+那么还有优化的空间吗？比如：引入SRAM/WRAM作为缓存？利用IO-DMA和Shared-DMA的并行？...  
 经过尝试，其它结果与分析如下：  
-    （1） 该算子在NRAM中计算时，每次拷入NRAM的数据量较大，SRAM或WRAM的空间相对于每次拷入NRAM的数据量来说较小，单纯的引入它们作为缓存并不能起到缓存的作用，并且重复的数据拷贝反而使总的性能降低。   
-    （2） 引入SRAM并且利用IO-DMA和Shared-DMA的并行时，该算子**理想的**流水线如下（其中：S//4=N1*3=N2\*3，即每计算3次后SRAM被填满，需拷出到GDRAM）：
+    （1）该算子在NRAM中计算时，每次拷入NRAM的数据量较大，SRAM或WRAM的空间相对于每次拷入NRAM的数据量来说较小，单纯的引入它们作为缓存并不能起到缓存的作用，并且重复的数据拷贝反而使总的性能降低。   
+    （2）引入SRAM并且利用IO-DMA和Shared-DMA的并行时，该算子**理想的**流水线如下（其中：S//4=N1*3=N2\*3，即每计算3次后SRAM被填满，需拷出到GDRAM）：
 |        |        |         |        |        |        |           |        |        |         |         |           |        |     |
-|--------| -------|-------  |------- |--------|------- |---------- |------- |------- |-------- |-------- | --------- | ------ | --- |
+|:------:|:------:|:-------:|:------:|:------:|:------:|:---------:|:------:|:------:|:-------:|:-------:|:---------:|:------:|:---:|
 | G-->N1 | C(N1)  |  N1-->S | G-->N1 | C(N1)  | N1-->S | **S-->G** | G-->N1 | C(N1)  | N1-->S  | G-->N1  |  C(N1)    | N1-->S | ... |
 |        | G-->N2 |  C(N2)  | N2-->S | G-->N2 |  C(N2) |           | N2-->S | G-->N2 | C(N2)   | N2-->S  | **S-->G** | G-->N2 | ... |
   
     
-    (a)NRAM双缓冲模型是先将数据拷入，然后拷出（计算时间被吃掉了），但是每次拷的数据较少，导致发起IO时产生延迟的次数较多  
-    (b)IO-DMA和Shared-DMA并行的模型与NRAM双缓冲模型相比，流水稳定时，拷出时一次拷出的数据量较大，减少了延迟次数（减少了延迟时间），但每一轮S大小的数据多了一次计算时间  
-    (c)由于for_range中的stage参数并不能实现上述逻辑，所以自己尝试手动实现了一下，在不考虑结果正确的情况下，可能由于其他的通信等开销，导致第二个模型的性能仍然略低于第一个模型，二者虽然性能接近，但第二个逻辑要复杂一些，并且实现较为困难，因此不再考虑
+    (a)NRAM双缓冲模型是先将数据拷入，然后拷出（计算时间被吃掉了），但是每次拷的数据较少，导致发起IO时产生延迟的次数较多。  
+    (b)IO-DMA和Shared-DMA并行的模型与NRAM双缓冲模型相比，流水稳定时，拷出时一次拷出的数据量较大，减少了延迟次数（减少了延迟时间），但每一轮S大小的数据多了一次计算时间。  
+    (c)由于for_range中的stage参数并不能实现上述逻辑，所以自己尝试手动实现了一下，在不考虑结果正确的情况下，可能由于其他的通信等开销，导致第二个模型的性能仍然略低于第一个模型，二者虽然性能接近，但第二个逻辑要复杂一些，并且实现较为困难，因此不再考虑。  
+    (d)该算子每个cluster的4个ipu没有复用IO的部分，使用5级别流水（SRAM）无收益。 
+
 
 ### 3.5 可维护性设计
 
@@ -182,13 +200,26 @@ NRAM双缓冲对应的流水线如下：
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：  
-
-(2**23 + 1,), (1, 2**24 + 1), (1, 1, 2**25 + 1), (1, 1, 1, 2**26 + 1),  
-(1, 1, 1, 1, 2**27 + 1), (1, 1, 1, 1, 1, 2**28 + 1),  
-(1, 1, 1, 1, 1, 1, 2**29 + 1), (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), 
-
-（1）覆盖了逻辑分支  
-（2）只测试了1~8维的张量（理论上支持任意维度）
+```
+case_0: input.shape = (2**23 + 1,), output.shape = (2**23 + 1,), dtype = half;
+case_1: input.shape = (1, 2**24 + 1), output.shape = (1, 2**24 + 1), dtype = half;
+case_2: input.shape = (1, 1, 2**25 + 1), output.shape = (1, 1, 2**25 + 1), dtype = half;
+case_3: input.shape = (1, 1, 1, 2**26 + 1), output.shape = (1, 1, 1, 2**26 + 1), dtype = half;
+case_4: input.shape = (1, 1, 1, 1, 2**27 + 1), output.shape = (1, 1, 1, 1, 2**27 + 1), dtype = half;
+case_5: input.shape = (1, 1, 1, 1, 1, 2**28 + 1), output.shape = (1, 1, 1, 1, 1, 2**28 + 1), dtype = half;
+case_6: input.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), output.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), dtype = half;
+case_7: input.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), output.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), dtype = half;
+case_8: input.shape = (2**23 + 1,), output.shape = (2**23 + 1,), dtype = float;
+case_9: input.shape = (1, 2**24 + 1), output.shape = (1, 2**24 + 1), dtype = float;
+case_10: input.shape = (1, 1, 2**25 + 1), output.shape = (1, 1, 2**25 + 1), dtype = float;
+case_11: input.shape = (1, 1, 1, 2**26 + 1), output.shape = (1, 1, 1, 2**26 + 1), dtype = float;
+case_12: input.shape = (1, 1, 1, 1, 2**27 + 1), output.shape = (1, 1, 1, 1, 2**27 + 1), dtype = float;
+case_13: input.shape = (1, 1, 1, 1, 1, 2**28 + 1), output.shape = (1, 1, 1, 1, 1, 2**28 + 1), dtype = float;
+case_14: input.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), output.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), dtype = float;
+case_15: input.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), output.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), dtype = float.
+```
+（1）测试用例覆盖了逻辑分支。  
+（2）只测试了1~8维的张量（理论上支持任意维度）。
 
 ### 3.7 算子防呆检查
 

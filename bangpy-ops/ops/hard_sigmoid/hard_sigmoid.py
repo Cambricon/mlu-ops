@@ -26,41 +26,40 @@ from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.runtime import TaskType
 
 
-DTYPES = [bangpy.float16,bangpy.float32]
+DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "hard_sigmoid"
 
 
 class HardSigmoid(object):
     """Operator description
-    tensor-->activation function-->another tensor after activation.
+    Applies the Hardsigmoid function element-wise.
     """
 
     def __init__(self, dtype, target, task_num):
         self.dtype = dtype
         self.target = target
-        self.cluster_num=task_num // 4
+        self.cluster_num = task_num // 4
         self.task_num = task_num
         self.tcp = tcp.TCP(target)
         self.length = self.tcp.SizeVar("length")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        # align:
-        # 计算需要按64个数据对齐
-        # 然后NRAM空间被分成了三份：分别是buffer_io_n*2(双缓冲)和buffer_temp_n
-        # 另外，关于64个数据对齐的计算公式：((self.nram_size // 3) // (dtype.bytes * 64)) * (dtype.bytes * 64)
-        # 对于bangpy.float16，下面情况均报错
+        # The space of NRAM was divided into three parts：buffer_io_n * 2 and buffer_temp_n
+        # Calculations need to be aligned to 64 elements
+        # Alignment formula: ((self.nram_size // 3) // (dtype.bytes * 64)) * (dtype.bytes * 64)
+        # For bangpy.float16: the following cases run with an error
         #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128) * 128)
         #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 1) * 128)
         #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 2) * 128)
-        # 对于bangpy.float32，下面情况报错
+        # For bangpy.float32: the following cases run with an error
         #     self.nram_size_each_buffer=(((self.nram_size // 3) // 256) * 256)
-        # 为了：（1）运行时不报错（2）单行不超过100字符
-        # 改写如下：
-        if dtype.bytes==2: # dtype.bytes==2即bangpy.float16
-            self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 3) * 128)
-        else: # dtype.bytes==4即bangpy.float32
-            self.nram_size_each_buffer=(((self.nram_size // 3) // 256 - 1) * 256)
+        # In order to code specification (no more than 100 characters per line) and correctness
+        # We have rewritten it as follows
+        if dtype.bytes == 2: # "dtype.bytes == 2" is equivalent to "bangpy.float16"
+            self.nram_size_each_buffer = (((self.nram_size // 3) // 128 - 3) * 128)
+        else: # "dtype.bytes == 4" is equivalent to "bangpy.float32"
+            self.nram_size_each_buffer = (((self.nram_size // 3) // 256 - 1) * 256)
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(task_num,1,1)
 
@@ -102,7 +101,7 @@ class HardSigmoid(object):
         # if data_rem_n != 0, we need to copy data into NRAM one more time
 
         # calculate:
-        with self.tcp.for_range(0, loop, stage=1) as i:
+        with self.tcp.for_range(0, loop, stage = 1) as i:
             start = task_id * data_each_task + i * data_each_time
             stop = start + data_each_time
             buffer_io_n = self.tcp.Buffer(
@@ -159,7 +158,7 @@ class HardSigmoid(object):
         # if data_rem > 0:
         # 1 <= data_rem <= task_num-1, let master thread to adress it
         with self.tcp.if_scope(data_rem > 0):
-            with self.tcp.if_scope(task_id==0):
+            with self.tcp.if_scope(task_id == 0):
                 stop = data_total
                 start = data_total - data_rem
                 buffer_io_n = self.tcp.Buffer(
@@ -196,6 +195,6 @@ class HardSigmoid(object):
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_hard_sigmoid(dtype=None, target=None):
     # tasktype fixed in BLOCK
-    task_num = 64
+    task_num = TARGET(target).cluster_num * TARGET(target).core_num
     f = HardSigmoid(dtype, target, task_num).compute_body()
     return f
