@@ -53,8 +53,8 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
 
-/* FreeZero*/
-void MLUOP_WIN_API mluOpBlockKernelFreeZero(cnrtDim3_t k_dim,
+/* FillZero*/
+void MLUOP_WIN_API mluOpBlockKernelFillZero(cnrtDim3_t k_dim,
                                             cnrtFunctionType_t k_type,
                                             cnrtQueue_t queue, const int num,
                                             void *gdram_ptr);
