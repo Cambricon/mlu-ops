@@ -122,9 +122,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   // gdram set zero
   int gd_num = channels * width * height * batch;
-  KERNEL_CHECK((mluOpBlockKernelFreeZero(k_dim, k_type, handle->queue, gd_num,
+  KERNEL_CHECK((mluOpBlockKernelFillZero(k_dim, k_type, handle->queue, gd_num,
                                          gradInput)));
-  VLOG(5) << " kernel mluOpBlockKernelFreeZero";
+  VLOG(5) << " kernel mluOpBlockKernelFillZero";
 
   KERNEL_CHECK((mluOpBlockKernelRoiCropBackwardFloat(
       k_dim, k_type, handle->queue, gradOutput, grid, batch, height, width,
