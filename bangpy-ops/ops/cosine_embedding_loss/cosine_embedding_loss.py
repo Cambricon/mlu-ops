@@ -56,7 +56,7 @@ class CosineEmbeddingLoss(object):
             and (target in TARGET_LIST)
             and (task_type in TaskType.__dict__.values())
         ):
-            raise KeyError
+            raise KeyError("请输入正确的参数")
 
         # 设置属性初始值
         self.dtype = dtype
@@ -101,7 +101,8 @@ class CosineEmbeddingLoss(object):
 
         # 数据的128bytes 对齐尺寸
         self.align_size = 128 // self.dtype.bytes
-        self.max_buffer_size = 16 * 512 * 8 // self.dtype.bytes  # TODO: 确定buffer上限
+        # buffer上限，如果应用不同的型号需要修改尺寸
+        self.max_buffer_size = 16 * 512 * 8 // self.dtype.bytes
         # 现只支持mlu290的nram尺寸
         # sumpool时kernel的最大尺寸
         self.max_kernel_size = self.tcp.Scalar(

@@ -106,15 +106,10 @@ def evaluate(f, dtype, data_amount, data_width):
 
     data_out = compute_simple_test(data_input_x1, data_input_x2, data_input_y, margin)
     f(data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev)
-    # bangpy.assert_allclose(data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype))
 
     dev_out = data_out_dev.numpy()
 
     diff1, diff2 = cal_diff(dev_out, data_out)
-
-    # 输出结果的差，调试用
-    # for i in range(data_height):
-    #     print(dev_out[i] - data_out[i], data_input_y[i])
 
     evaluator = f.time_evaluator(dev, 1, 10)
     time = (
