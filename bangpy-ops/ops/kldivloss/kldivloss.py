@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -20,7 +20,6 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
-from asyncio import Task
 import bangpy
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
@@ -70,8 +69,10 @@ class KlDivLoss(object):
         self.task_num = self.task_type.value * 4
         self.tcp.launch_task(self.task_num, 1, 1)
 
+    # 如果target未进行log操作：执行out = target * (log(target) - input)
+    # 如果target已进行log操作：执行out = exp(target) * (target - input)
+    # 根据reduction进行相应的规约操作
     def compute_body(self):
-
         # calculate split strategy
         cluster_num = self.task_type.value
         cluster_id = self.tcp.Scalar(bangpy.int32, name="cluster_id")
@@ -91,19 +92,19 @@ class KlDivLoss(object):
         loop_num.assign(data_calculated_each_task // data_calculated_each_time)
 
         # global的数据buffer
-        input = self.tcp.Buffer(
-            shape=self.inputShape, name="input", dtype=self.dtype, scope="global"
+        inputG = self.tcp.Buffer(
+            shape=self.inputShape, name="inputG", dtype=self.dtype, scope="global"
         )
 
-        input = input.flatten()
+        inputG = inputG.flatten()
 
         target = self.tcp.Buffer(
             shape=self.inputShape, name="target", dtype=self.dtype, scope="global"
         )
         target = target.flatten()
 
-        out = self.tcp.Buffer(
-            shape=self.outShape, name="out", dtype=self.dtype, scope="global"
+        outG = self.tcp.Buffer(
+            shape=self.outShape, name="outG", dtype=self.dtype, scope="global"
         )
 
         reduction = self.tcp.SizeVar(name="reduction")
@@ -171,7 +172,7 @@ class KlDivLoss(object):
                 shape=(1,), name="sum_buf", dtype=self.dtype, scope="nram"
             )
 
-            def compute_sum(in1, out_buf, out):
+            def compute_sum(out_buf, outG):
                 self.tcp.sumpool(
                     temp_buffer_pool,
                     sum_input_pool,
@@ -183,7 +184,7 @@ class KlDivLoss(object):
                         out_buf[0],
                         temp_buffer[i * computed_size : (i + 1) * computed_size],
                     )
-                    out.assign(out + out_buf[0])
+                    outG.assign(outG + out_buf[0])
 
             def numCompute(ou, inp, tar, flag):
                 with self.tcp.if_scope(flag == 0):
@@ -198,30 +199,12 @@ class KlDivLoss(object):
             def compute(ou, inp, tar, flag):
                 numCompute(ou, inp, tar, flag)
                 with self.tcp.if_scope(reduction != 0):
-                    compute_sum(ou, sum_buf, sumvar)
-
-            def computeTail(ou, inp, tar, flag):
-                numCompute(ou, inp, tar, flag)
-                with self.tcp.if_scope(self.batchLength >= 2 ** 20):
-                    compute_sum(ou, sum_buf, sumvar)
-                with self.tcp.else_scope():
-                    with self.tcp.if_scope(reduction != 0):
-                        with self.tcp.if_scope((stop - start) * self.dtype_sz < 128):
-                            with self.tcp.for_range(begin=0, end=stop - start) as k:
-                                sumvar.assign(sumvar + buffer_out[k])
-                        with self.tcp.else_scope():
-                            self.tcp.sum(buffer_out, buffer_out)
-                            with self.tcp.for_range(
-                                begin=0, end=(stop - start) * self.dtype_sz // 128
-                            ) as j:
-                                sumvar.assign(
-                                    sumvar + buffer_out[j * (128 // self.dtype_sz)]
-                                )
+                    compute_sum(sum_buf, sumvar)
 
             with self.tcp.block("data_copy"):
                 self.tcp.memcpy(
                     buffer_input[:data_calculated_each_time],
-                    input[
+                    inputG[
                         start
                         + data_calculated_each_time * i : start
                         + data_calculated_each_time * (i + 1)
@@ -242,7 +225,7 @@ class KlDivLoss(object):
             with self.tcp.block("data_copy"):
                 with self.tcp.if_scope(reduction == 0):
                     self.tcp.memcpy(
-                        out[
+                        outG[
                             start
                             + data_calculated_each_time * i : start
                             + data_calculated_each_time * (i + 1)
@@ -256,13 +239,29 @@ class KlDivLoss(object):
             start.assign(start + data_calculated_each_time * loop_num)
             stop.assign(start + data_calculated_each_task % data_calculated_each_time)
             # data copy
-            self.tcp.memcpy(buffer_input[: stop - start], input[start:stop])
+            self.tcp.memcpy(buffer_input[: stop - start], inputG[start:stop])
             self.tcp.memcpy(buffer_target[: stop - start], target[start:stop])
             # compute
-            computeTail(buffer_out, buffer_input, buffer_target, log_target)
+            numCompute(buffer_out, buffer_input, buffer_target, log_target)
+            with self.tcp.if_scope(self.batchLength >= 2 ** 20):
+                compute_sum(sum_buf, sumvar)
+            with self.tcp.else_scope():
+                with self.tcp.if_scope(reduction != 0):
+                    with self.tcp.if_scope((stop - start) * self.dtype_sz < 128):
+                        with self.tcp.for_range(begin=0, end=stop - start) as k:
+                            sumvar.assign(sumvar + buffer_out[k])
+                    with self.tcp.else_scope():
+                        self.tcp.sum(buffer_out, buffer_out)
+                        with self.tcp.for_range(
+                            begin=0, end=(stop - start) * self.dtype_sz // 128
+                        ) as j:
+                            sumvar.assign(
+                                sumvar + buffer_out[j * (128 // self.dtype_sz)]
+                            )
+
             # data copy
             with self.tcp.if_scope(reduction == 0):
-                self.tcp.memcpy(out[start:stop], buffer_out[: stop - start])
+                self.tcp.memcpy(outG[start:stop], buffer_out[: stop - start])
 
         with self.tcp.if_scope(reduction != 0):
             # 每个task计算的sum总值保存在sumvar变量中
@@ -299,12 +298,12 @@ class KlDivLoss(object):
                 with self.tcp.if_scope(reduction == 3):
                     total.assign(total / self.batchSize)
                 # redunction = sum 直接输出total
-                out[0] = total
+                outG[0] = total
 
         # build a executable module
         f = self.tcp.BuildBANG(
-            inputs=[input, target, reduction, log_target],
-            outputs=[out],
+            inputs=[inputG, target, reduction, log_target],
+            outputs=[outG],
             kernel_name=KERNEL_NAME,
         )
         return f
