@@ -20,6 +20,8 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 测试运行算子所需函数，随机数据生成，计时以及准确度
+function needed when testing operation.
+including generating random data, timing and compute accuracy
 """
 import json
 import random
@@ -30,7 +32,7 @@ from cosine_embedding_loss import CosineEmbeddingLoss, DTYPES
 from bangpy.tcp.runtime import TaskType
 
 
-# numpy格式的数据计算。算子的原始逻辑
+# cpu type of operation
 def compute_simple_test(x_1, x_2, y, margin):
     upper = np.sum(np.multiply(x_1, x_2), axis=1)
     lower1 = np.sum(np.multiply(x_1, x_1), axis=1)
@@ -39,7 +41,7 @@ def compute_simple_test(x_1, x_2, y, margin):
     return ((y + 1) * (1 - result) + (1 - y) * np.maximum(0, result - margin)) / 2
 
 
-# mlu的数据误差
+# diffs
 def cal_diff(result, data_out):
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
     diff2 = np.sqrt(
@@ -50,12 +52,12 @@ def cal_diff(result, data_out):
 
 
 ###################################################
-# 测试参数
+# testing parameters
 ###################################################
-# 数据量 1,2,4,8GB
+# data amounts 1,2,4,8GB
 data_amounts = [2 ** 20 * 10, 2 ** 30, 2 ** 30 * 2, 2 ** 30 * 4, 2 ** 30 * 8]
 
-# 数据宽度，即一行数据的尺寸
+# data width
 data_widths = [
     2 ** 5,
     2 ** 5 + 1,
@@ -76,13 +78,13 @@ data_widths = [
     2 ** 18,
     2 ** 19,
 ]
-# 数据类型，float16, float32
+# data type, float16, float32
 dtypes = DTYPES[1:2]
 
 
 def evaluate(f, dtype, data_amount, data_width):
     """
-    对每种参数进行计算和时间评估
+    evaluate function
     """
     data_height = data_amount // dtype.bytes // data_width
 
@@ -125,7 +127,7 @@ def evaluate(f, dtype, data_amount, data_width):
         / (2 ** 30)
     )  # GB/s
 
-    # 输出结果
+    # output results
     print(
         "data_type: {} data_amount: {:2.4f}GB data_width: \
         {:7d} time cost: {:3.2f}ms IO speed: {:4.3f}GB/s diff1: \
@@ -152,8 +154,7 @@ def evaluate(f, dtype, data_amount, data_width):
 
 def func():
     """
-    测试函数，对每种参数组合进行遍历
-    对每种数据类型分别编译生成算子核
+    test function
     """
     results = [
         [
@@ -171,12 +172,12 @@ def func():
         for data_amount in data_amounts:
             for data_width in data_widths:
                 results.append(evaluate(f, dtype, data_amount, data_width))
-    # 性能及精确度结果存到json
+    # store testing result into json file
     filename = "perfomance_log.json"
     with open(filename, "w") as file_obj:
         json.dump(results, file_obj)
 
 
-# # 主函数
+# main function
 if __name__ == "__main__":
     func()

@@ -61,12 +61,12 @@ np.set_printoptions(threshold=np.inf)
 )
 def test_cosine_embedding_loss(target, data_amount, data_width, dtype):
     """
-    pytest 主逻辑
+    pytest main function
     """
 
     if target not in TARGET_LIST:
         return
-    # float16为64位对齐
+    # float16 is 64 aligned
     if data_width == 32 and dtype == bangpy.float16:
         return
     f = load_op_by_type(KERNEL_NAME, dtype.name)

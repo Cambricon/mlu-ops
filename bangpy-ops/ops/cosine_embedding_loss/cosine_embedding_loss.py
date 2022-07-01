@@ -27,6 +27,9 @@ from bangpy.tcp.runtime import TaskType
 DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "cosine_embedding_loss"
+CORES_PER_CLUSTER = 4
+MLU290_MAX_BUFFER_SIZE = 16 * 512 * 8
+ALIGN_BYTES = 128
 
 
 class CosineEmbeddingLoss(object):
@@ -38,7 +41,7 @@ class CosineEmbeddingLoss(object):
 
     parameters:
     margin: Should be a number from -1 to 1, 0 to 0.5 is suggested.
-    reduction: (string)暂无法处理string类型的数据
+    reduction: (string)cannot handle string parameters at this time.
 
     data shape:
     input1: (N, D)
@@ -49,32 +52,32 @@ class CosineEmbeddingLoss(object):
 
     def __init__(self, dtype, stage, target, task_type):
 
-        # 检查参数
+        # check parameters
         if not (
             (dtype in DTYPES)
             and (stage in [0, 1])
             and (target in TARGET_LIST)
             and (task_type in TaskType.__dict__.values())
         ):
-            raise KeyError("请输入正确的参数")
+            raise KeyError("please pass correct parameters.")
 
-        # 设置属性初始值
+        # initialize attributes
         self.dtype = dtype
         self.target = target
         self.task_type = task_type
         self.tcp = tcp.TCP(target)
         self.tcp.launch_cluster(self.task_type.value)
-        self.tcp.launch_task(self.task_type.value * 4, 1, 1)
-        self.task_num = self.task_type.value * 4
+        self.tcp.launch_task(self.task_type.value * CORES_PER_CLUSTER, 1, 1)
+        self.task_num = self.task_type.value * CORES_PER_CLUSTER
         self.pipeline = stage
 
-        # 数据为二维分布，(H, W)
-        # length = W
-        # data_num = H
+        # 2D data layout，(N, D)
+        # length = N
+        # data_num = D
         self.length = self.tcp.SizeVar("length_v")
         self.data_num_v = self.tcp.SizeVar("data_num_v")
 
-        # 输入输出全局内存
+        # global buffer for input and output.
         self.input_x1 = self.tcp.Buffer(
             shape=(self.data_num_v, self.length),
             name="input_x1",
@@ -95,29 +98,30 @@ class CosineEmbeddingLoss(object):
             shape=(self.data_num_v,), name="output", dtype=dtype, scope="global"
         )
 
-        # 参数的标量形式，因为bangpy中的scalar_min 不允许非标量数据作为参数
+        # Scalar version of SizeVars, cause scalar_min in bangpy does not
+        # allow non-Scalar type parameters.
         self.length_s = self.tcp.Scalar(bangpy.int32, "length_s", value=self.length)
         self.data_num = self.tcp.Scalar(bangpy.int32, "data_num", value=self.data_num_v)
 
-        # 数据的128bytes 对齐尺寸
-        self.align_size = 128 // self.dtype.bytes
-        # buffer上限，如果应用不同的型号需要修改尺寸
-        self.max_buffer_size = 16 * 512 * 8 // self.dtype.bytes
-        # 现只支持mlu290的nram尺寸
-        # sumpool时kernel的最大尺寸
+        # 128 bytes aligned size of data
+        self.align_size = ALIGN_BYTES // self.dtype.bytes
+        # upper bound of buffer, need to be modified when using devices other than MLU-290
+        self.max_buffer_size = MLU290_MAX_BUFFER_SIZE // self.dtype.bytes
+
         self.max_kernel_size = self.tcp.Scalar(
             value=self.align_size, dtype=bangpy.int32, name="max_kernel_size"
         )
-        # 由于bangpy暂时无法动态管理nram内存，因此现暂时假设数据宽度大于等于对齐尺寸，这样只需要声明源数据1/32或1/64尺寸的规约数据空间
+        # According to align constraints of bang platform
         self.max_reduced_buffer_size = self.max_buffer_size // self.align_size
 
     def compute_body(self):
         """
-        算子计算主体，返回build对象
+        compute body of operator, returns bangpy build module
         """
-        # row指源数据的一行
-        # line指nram中的一行数据
-        # 将nram划分为128bytes//dtype.bytes行，每行含有固定数量的kernel数
+        # Row is D size of source data (N, D)
+        # Line is a line of nram
+        # nram buffers are divided into 128bytes//dtype.bytes lines,
+        # and each line has fixed number of kernels
         kernel_size = self.tcp.Scalar(bangpy.int32, name="kernel_size")
         kernels_nram = self.tcp.Scalar(bangpy.int32, name="kernels_nram")
         kernels_per_line = self.tcp.Scalar(bangpy.int32, name="kernels_per_line")
@@ -125,9 +129,10 @@ class CosineEmbeddingLoss(object):
         lines_per_row = self.tcp.Scalar(bangpy.int32, name="lines_per_row")
         rows_per_line = self.tcp.Scalar(bangpy.int32, name="rows_per_line")
 
-        # batch指nram一次能处理的row数量，如果batch == 0则表示需要多一层循环处理这个row
+        # batch means the number of rows can be handled by nram in one memcpy
+        # we need one more layer of iteration if batch == 0 to handle one row of data
         batch_size = self.tcp.Scalar(bangpy.int32, name="batch_size")
-        # nram中存储的数据的row数量
+        # row number can be stored in nram
         y_num = self.tcp.Scalar(bangpy.int32, name="y_num")
 
         kernel_size.assign(self.max_kernel_size)
@@ -136,15 +141,15 @@ class CosineEmbeddingLoss(object):
         kernels_nram.assign(kernels_per_line * self.align_size)
         kernels_per_row.assign((self.length + kernel_size - 1) // kernel_size)
 
-        # 源数据一行所需内存行数
+        # nram lines needed by one row of source data
         lines_per_row.assign(
             (kernels_per_row + kernels_per_line - 1) // kernels_per_line
         )
 
-        # 内存中一行数据能够存储的源数据行数
+        # number of source data rows can be sored in one line of nram
         rows_per_line.assign(kernels_per_line // kernels_per_row)
 
-        # 当一行数据装不满一整个buffer时计算这一行数据需要的kernel数量
+        # compute numbers of kernels needed by one row of source data.
         kernels_per_line_n = self.tcp.Scalar(
             dtype=bangpy.int32, name="kernels_per_line_n"
         )
@@ -152,13 +157,13 @@ class CosineEmbeddingLoss(object):
             (kernels_per_row + self.align_size - 1) // self.align_size
         )
 
-        # nram一次所能装载的数据行数
+        # number of rows of source data can be stored in nram
         with self.tcp.if_scope(rows_per_line > 0):
             batch_size.assign(rows_per_line * self.align_size)
         with self.tcp.else_scope():
             batch_size.assign(self.align_size // lines_per_row)
 
-        # 一个core所需要的处理的任务数量和起止位置
+        # batch num assigned to one IPU core
         task_row_num = self.tcp.Scalar(bangpy.int32, name="cluster_row_num")
         task_row_num.assign(self.data_num // self.task_num)
 
@@ -176,9 +181,9 @@ class CosineEmbeddingLoss(object):
         task_row_end = self.tcp.Scalar(bangpy.int32, name="task_row_end")
         task_row_end.assign(task_row_base + task_row_num)
 
-        # 两层循环的边界条件，如果nram中无法装载下一整行数据，则需要两层循环，外层遍历行，内层在列上遍历处理单行数据
-        # 如果nram可以存储一行或者多行数据，则只需要一层内层遍历，外层bound设为1
-        # 这样是为了在内层循环设置流水线
+        # loop bounds. Need two layers of loop if nram cannot store one single data row.
+        # if nram can store at least one row of data then one layer of loop will be needed.
+        # use this structure to use pipeline at inner loop layer
         inner_loop_bound = self.tcp.Scalar(bangpy.int32, name="inner_loop_bound")
         outer_loop_bound = self.tcp.Scalar(
             bangpy.int32, name="outer_loop_bound", value=1
@@ -196,11 +201,11 @@ class CosineEmbeddingLoss(object):
             y_num.assign(batch_size)
 
         with self.tcp.for_range(0, outer_loop_bound) as i:
-            # batch size == 0 时表示当前处理哪行数据
+            # row id when batch size == 0
             row = self.tcp.Scalar(dtype=bangpy.int32, name="row")
             row.assign(task_row_base + i)
 
-            # 声明标量
+            # Scalars
             # upper_sum = sum(x1 * x2)
             # lower1_sum = sum(x1 * x1)
             # lower2_sum = sum(x2 * x2)
@@ -213,7 +218,7 @@ class CosineEmbeddingLoss(object):
             )
 
             with self.tcp.for_range(0, inner_loop_bound, stage=self.pipeline) as j:
-                # 声明三个存储x1，x2以及中间结果的nram buffer, 这里声明的是展开的形状
+                # nram buffers
                 input_buffer_x1 = self.tcp.Buffer(
                     shape=(self.max_buffer_size,),
                     name="input_buffer_x1",
@@ -233,7 +238,7 @@ class CosineEmbeddingLoss(object):
                     scope="nram",
                 )
 
-                # 声明y相关buffer, 以及规约后所需的标量，直接进行相应的截取
+                # buffers related to input_y.
                 input_buffer_y = self.tcp.Buffer(
                     shape=(self.max_reduced_buffer_size,),
                     name="input_buffer_y",
@@ -275,7 +280,7 @@ class CosineEmbeddingLoss(object):
                     * self.align_size
                 ]
 
-                # sumpool时所需的temp存储
+                # temp memory needed by sumpool
                 temp_buffer = self.tcp.Buffer(
                     shape=(self.max_buffer_size,),
                     name="temp_buffer",
@@ -284,17 +289,16 @@ class CosineEmbeddingLoss(object):
                 )
 
                 with self.tcp.block("compute"):
-                    # 初始化内存中的数据
+                    # initialize buffer
                     self.tcp.assign(input_buffer_x1, 0.0)
                     self.tcp.assign(input_buffer_x2, 0.0)
                     self.tcp.assign(inter_buffer, 0.0)
 
                 with self.tcp.block("data_copy"):
-                    # 当次内层循环所需处理的数据行起止位置
                     base = self.tcp.Scalar(name="base", dtype=bangpy.int32)
                     end = self.tcp.Scalar(name="end", dtype=bangpy.int32)
 
-                    # nram无法装下一整行数据
+                    # nram cannot store one single data row
                     with self.tcp.if_scope(batch_size == 0):
                         base.assign(j * kernels_nram * kernel_size)
                         end.assign(kernels_nram * kernel_size + base)
@@ -306,9 +310,9 @@ class CosineEmbeddingLoss(object):
                             input_buffer_x2[: end - base], self.input_x2[row][base:end]
                         )
 
-                    # nram能装下一行或多行数据，但是无法装下align_size(128bytes//dtype.bytes)
-                    # 行数据，即无法直接批量进行sumpool
-                    # 这里采用的方法是对数据按行分别计算，用了for循环，可寻找优化方式
+                    # nram can store at least one row of data,
+                    # but less than align_size(128bytes//dtype.bytes) rows,
+                    # which means we cannot use sumpool to compute all the sum at one time.
                     with self.tcp.elif_scope(rows_per_line == 0):
                         base.assign(batch_size * j + task_row_base)
                         end.assign(base + batch_size)
@@ -333,14 +337,15 @@ class CosineEmbeddingLoss(object):
                             self.input_x2[base:end],
                         )
 
-                    # nram能装下至少align_size(128bytes//dtype.bytes)行数据
-                    # 由于需要对数据进行批量sumpool，这就要求数据从(H, W)转置为(W, H)
-                    # 以适应sumpool对二维数据输入要求的(H, C)排布
-                    # 由于需要进行转置，bangpy的转置函数要求源和目标地址分处不同内存
-                    # 因此拷入时错位拷贝，
-                    # 拷贝时x1 -> x2, x2 -> inter_buffer
-                    # 转置时x2 -> x1, inter_buffer -> x2
-                    # 在计算时将转置后的数据放入正确的位置
+                    # nram can store at least align_size(128bytes//dtype.bytes) rows of data
+                    # but in order to sumpool at data, we need to transpose the data from
+                    # (N, D) to (D, N)
+                    # moreover, transpose function in pangpy requires that addresses
+                    # of source and destination buffer are different
+                    # so when memcpy:
+                    # x1 -> x2, x2 -> inter_buffer
+                    # when transpose:
+                    # x2 -> x1, inter_buffer -> x2
                     with self.tcp.else_scope():
                         base.assign(batch_size * j + task_row_base)
                         end.assign(base + batch_size)
@@ -350,14 +355,14 @@ class CosineEmbeddingLoss(object):
                             input_buffer_y[: end - base], self.input_y[base:end]
                         )
 
-                        # 内存错位拷贝
                         cpy_in_x1 = input_buffer_x2[
                             : batch_size * kernel_size * kernels_per_row
                         ].reshape((batch_size, kernel_size * kernels_per_row))
                         cpy_in_x2 = inter_buffer[
                             : batch_size * kernel_size * kernels_per_row
                         ].reshape((batch_size, kernel_size * kernels_per_row))
-                        # 依据是否对齐采用不同的拷贝方式
+                        # use different type of memcpy according to whether source
+                        # data is aligned
                         with self.tcp.if_scope(
                             kernel_size * kernels_per_row != self.length
                         ):
@@ -384,8 +389,8 @@ class CosineEmbeddingLoss(object):
                             )
 
                 with self.tcp.block("compute"):
-                    # 计算和数据拷入时一样，也依据数据尺寸不同分三种逻辑
-                    # nram装不下一行数据
+                    # similar to data_copy block
+                    # nram cannot store one single row
                     with self.tcp.if_scope(batch_size == 0):
                         inter_n = inter_buffer[: kernel_size * kernels_nram].reshape(
                             (kernels_per_line * kernel_size, self.align_size)
@@ -394,11 +399,11 @@ class CosineEmbeddingLoss(object):
                             : kernels_per_line * self.align_size
                         ].reshape((kernels_per_line, self.align_size))
 
-                        # 中间数组清零，防止尾部多余数据影响求和结果
+                        # initialize inter_buffer
                         with self.tcp.if_scope(j <= 1):
                             self.tcp.assign(inter_buffer, 0)
 
-                        # 求和函数，两次sumpool
+                        # sum function
                         def compute_sum_batch_0(in1, in2, out):
                             self.tcp.multiply(inter_buffer, in1, in2)
                             self.tcp.sumpool(
@@ -422,7 +427,7 @@ class CosineEmbeddingLoss(object):
                         )
 
                     with self.tcp.else_scope():
-                        # nram能装不到align_size行数据
+                        # nram store at least one row but less than one aligned data
                         with self.tcp.if_scope(rows_per_line == 0):
                             comps_x1 = input_buffer_x1[
                                 : batch_size * kernel_size * kernels_per_row
@@ -443,7 +448,7 @@ class CosineEmbeddingLoss(object):
                             with self.tcp.if_scope(j <= 1):
                                 self.tcp.assign(inter_buffer, 0)
 
-                            # 计算求和的函数
+                            # sum function
                             def compute_sum_batch_1(in1, in2, out):
                                 self.tcp.multiply(
                                     inter_buffer[: kernel_size * kernels_per_row],
@@ -465,7 +470,7 @@ class CosineEmbeddingLoss(object):
                                 self.tcp.sum(comp_inter[0][0], comp_inter[0])
                                 out.assign(comp_inter[0][0].astype(bangpy.float32))
 
-                            # 迭代处理每行数据的求和
+                            # use for loop to compute result of each row
                             with self.tcp.for_range(0, batch_size) as k:
                                 comp_x1 = comps_x1[k]
                                 comp_x2 = comps_x2[k]
@@ -474,7 +479,7 @@ class CosineEmbeddingLoss(object):
                                 compute_sum_batch_1(comp_x1, comp_x1, lower1_sum)
                                 compute_sum_batch_1(comp_x2, comp_x2, lower2_sum)
 
-                                # 求和之后分别计算每行数据的最终结果
+                                # compute final result
                                 with self.tcp.if_scope(
                                     tcp.all(lower1_sum != 0, lower2_sum != 0)
                                 ):
@@ -492,7 +497,7 @@ class CosineEmbeddingLoss(object):
                                     * self.tcp.scalar_max(lower1_sum, lower2_sum)
                                 ) / 2
 
-                        # nram能装下不止align_size行数据
+                        # nram can store more than align_size rows of data
                         with self.tcp.else_scope():
                             comps_x1 = input_buffer_x1[
                                 : kernel_size * kernels_per_row * batch_size
@@ -504,7 +509,7 @@ class CosineEmbeddingLoss(object):
                                 : kernel_size * kernels_per_row * batch_size
                             ].reshape((kernel_size * kernels_per_row, batch_size))
 
-                            # 将拷入的数据进行转置
+                            # transpose
                             self.tcp.transpose(comps_x1, cpy_in_x1)
                             self.tcp.transpose(comps_x2, cpy_in_x2)
 
@@ -515,7 +520,6 @@ class CosineEmbeddingLoss(object):
                                 self.tcp.assign(inter_buffer, 0)
 
                             def compute_sum_batch_2(in1, in2, out):
-                                # 两层sumpool直接得到最终求和结果
                                 self.tcp.multiply(comps_inter, in1, in2)
                                 self.tcp.sumpool(
                                     temp_n[:1],
@@ -530,20 +534,14 @@ class CosineEmbeddingLoss(object):
                                     (kernels_per_row,),
                                 )
 
-                            # 每行数据求和
                             compute_sum_batch_2(comps_x1, comps_x2, upper)
                             compute_sum_batch_2(comps_x1, comps_x1, lower1)
                             compute_sum_batch_2(comps_x2, comps_x2, lower2)
 
-                            # 由于数据可以128bytes对齐，因此使用向量计算提高运行速度
-                            # 使用y与1的差与和，避免if语句
-                            # 原始逻辑可参照numpy检验函数实现或者前面两种情况中的标量计算
+                            # transform the original scalar compute into vector compute
                             self.tcp.multiply(lower1, lower1, lower2)  # lower1 * lower2
                             self.tcp.sqrt(lower1, lower1)  # (lower1 * lower2) ** 0.5
                             self.tcp.maximum(lower2, lower1, 0.004)
-
-                            # 除法这里输出内存必须是新内存，使用与源数据相同的内存会得到
-                            # 错误的结果，基本是0和一个很大的数
 
                             # upper / (lower1 * lower2) ** 0.5
                             # upper <- upper / (lower1 * lower2) ** 0.5
@@ -566,16 +564,13 @@ class CosineEmbeddingLoss(object):
                             self.tcp.multiply(upper, upper, 0.5)
 
                 with self.tcp.block("data_copy"):
-                    # 对于后两种情况，单词内循环可以得到一行或者数行的结果，因此进行结果拷出
-                    # 在另一份代码中尝试了使用sram进行结果缓存，但是可能是由于sync_cluster语句
-                    # 插入，效果不是很理想，遂暂时直接拷出有更好的解决方案了再改
+                    # memcpy of output for the last two cases
                     with self.tcp.if_scope(batch_size > 0):
                         base.assign(batch_size * j + task_row_base)
                         end.assign(base + batch_size)
                         end.assign(self.tcp.scalar_min(end, task_row_end))
                         self.tcp.memcpy(self.output[base:end], upper[: end - base])
-            # 对于第一种情况，在外层循环的每次迭代能够得到一行数据的结果
-            # 在这里拷出
+            # for the first case, transform output data here
             with self.tcp.if_scope(batch_size == 0):
                 with self.tcp.if_scope(tcp.all(lower1_sum != 0, lower2_sum != 0)):
                     lower1_sum.assign(lower1_sum * lower2_sum)
@@ -599,7 +594,7 @@ class CosineEmbeddingLoss(object):
 
 
 ###################################################
-# 注册
+# register
 ###################################################
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_adjust_hue(dtype=None, target=None):
