@@ -39,7 +39,7 @@
 功能：kldivloss算子是用来计算Kullback-Leibler Divergence(KL散度)，衡量两个分布的差异。该算子对标torch.nn.KLDivLoss算子
 
 逐元素计算：
-    如果target已经进行过log操作： out[i] = target[i] * (target[i].log() - input[i])
+    如果target未进行过log操作： out[i] = target[i] * (target[i].log() - input[i])
     否则: out[i] = target[i].exp() * (target[i] - input[i])
 
 然后根据reduction参数对结果进行归约：
