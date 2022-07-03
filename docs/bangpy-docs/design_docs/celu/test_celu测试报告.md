@@ -3,13 +3,13 @@
 # 1. 功能测试
 测试以下输入场景
 
-1.边界测试
+1.边界测试  
     a.128字节对齐 - 1  
     b.128字节对齐  
     c.128字节对齐 + 1  
-    d.nram_single_buffer_size最大元素数 - 1    
-    e.nram_single_buffer_size最大元素数  
-    f.nram_single_buffer_size最大元素数 + 1    
+    d.nram预设单个buffer最大元素数 - 1    
+    e.nram预设单个buffer最大元素数  
+    f.nram预设单个buffer最大元素数 + 1    
     g.满nram最大元素数 - 1  
     h.满nram最大元素数  
     i.满nram最大元素数 + 1  
