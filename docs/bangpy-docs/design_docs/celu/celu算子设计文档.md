@@ -75,7 +75,7 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 ### 2.1 参考接口
 
 - pytorch
-[参考接口](https://pytorch.org/docs/stable/generated/torch.nn.CELU.html?highlight=celu#torch.nn.CELU)
+[torch.nn.CELU文档](https://pytorch.org/docs/stable/generated/torch.nn.CELU.html?highlight=celu#torch.nn.CELU)
 ```python
 m = torch.nn.CELU()
 input = torch.randn(2)
