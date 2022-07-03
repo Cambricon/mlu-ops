@@ -71,10 +71,10 @@ logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.4972
 
 ### 2.1 参考接口
 
-- numpy
-
+- torch
+[torch.logaddexp文档](https://pytorch.org/docs/stable/generated/torch.logaddexp.html?highlight=logaddexp#torch.logaddexp)
 ```python
-numpy.logaddexp(data_x,data_y)
+torch.logaddexp(input1,input2)
 ```
 
 ### 2.2 接口设计
@@ -86,11 +86,11 @@ logaddexp(input1, input2, output)
 ## 3 实现方案设计
 
 ### 3.1 实现方案
-1 将数据分拆，平均分配到多核
-2 在nram上开辟两块内存，用于存放tensor1和tensor2的数据
-3 每个核执行以下操作：从gram中拷贝数据到本地，计算logaddexp结果
-4 计算完毕，将数据拷贝回gram
-5 将gram中数据，拷贝回cpu
+1 将数据分拆，平均分配到多核。
+2 在nram上开辟两块内存，用于存放tensor1和tensor2的数据。
+3 每个核执行以下操作：从gram中拷贝数据到本地，计算logaddexp结果。
+4 计算完毕，将数据拷贝回gram。
+5 将gram中数据，拷贝回cpu。
 
 ### 3.2 伪代码实现
 
@@ -122,8 +122,8 @@ memcpy(output[start:end], nram_tensor1)
 
 - 算子在测试时使用的规模：
   固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，nram空间满占用，nram空间满占用边界。
-  通过shape随机生成函数,生成若干二维及以上shape并随机将input2的规模随机成input1的子集,以测试不同规模的计算.
-  并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内.
+  通过shape随机生成函数，生成若干二维及以上shape并随机将input2的规模随机成input1的子集,以测试不同规模的计算。
+  并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内。
 
 ### 3.7 算子防呆检查    
 | 测试点                        | 验收标准 | 测试结果（出错信息）   |
