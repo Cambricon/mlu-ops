@@ -4,7 +4,7 @@
 
 | 算子名称     | LogAddExp              |
 | ----------- | -------------- |
-| 编制人/日期  | UniqueSquirrel/2022-5-18| 
+| 编制人/日期  | UniqueSquirrel/2022-5-18|
 | 审批人/日期  |              |
 
 - #### 修改记录
@@ -24,23 +24,22 @@
 | 算子功能简介               | 输入的幂和的对数。                        |
 | ------------------------ | ---------------------------------------- |
 | 需求来源                  | 为bangpy-ops提供算子demo                  |  
-| 应用网络                  | ResNet等                                 |
+| 应用网络                  |                                           |
 | 输入数据类型               | float                                   |
-| 输入                      | input1,input2:ARRAY     如果shape不相等 则一个必须是另外一个的子张量，具体参见下面说明|
+| 输入                      | input1,input2:ARRAY     如果shape不相等 则一个必须是另外一个的子张量|
 | 输出数据类型               | float                                    |
 | 输出                      | out:Array    shape为输入的公共形状         |
 
 
 ### 1.2 算子功能和应用场景描述
 
-功能：计算 log(exp(x1) + exp(x2)) 
+功能：计算 log(exp(x1) + exp(x2))
 
 data_x = [[-744.38378411  , 32.08532465 , 259.21401044],[ -65.55983881 ,-783.89169849 , 692.46914092]]
 data_y = [ 205.4972709 , -982.95625446 , 731.07663893]
 logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.49727 , -783.8917 , 731.07666 ]]
 
 
-应用场景：ResNet等
 
 ### 1.3 算子输入输出参数要求
 
@@ -48,13 +47,13 @@ logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.4972
 | ------ | ------------------------------------| ----------------| ----------- | ------ | -------- |
 | input1 | 输入的任意shape的buffer              | 输入             | float      | ARRAY  | 无        |
 | input2 | 输入的任意shape的buffer              | 输入             | float      | ARRAY  | 无        |
-| output | 输出的shape为输入的公共shape的buffer  | 输出             | float      | ARRAY  | 无        |
+| output | 与输入最小公共shape一致的输出buffer   | 输出             | float      | ARRAY  | 无        |
 
 ### 1.4 算子限制
 
 | 限制类型      | 详细说明                 |
 | ------------ | ----------------------- |
-| 数据类型限制   | input 和 output 必须同时为同一数据类型  |
+| 数据类型限制   | input1 和 output 必须同时为同一数据类型  |
 | 布局限制      | 仅支持ARRAY的layout |
 | 规模限制      | 无 |
 
@@ -88,8 +87,8 @@ logaddexp(input1, input2, output)
 
 ### 3.1 实现方案
 1 将数据分拆，平均分配到多核
-2 在nram上开辟两块内存，用于存放tensor1 和 tensor2的数据
-3 每个核执行一下操作：从gram中拷贝数据到本地，计算logaddexp结果
+2 在nram上开辟两块内存，用于存放tensor1和tensor2的数据
+3 每个核执行以下操作：从gram中拷贝数据到本地，计算logaddexp结果
 4 计算完毕，将数据拷贝回gram
 5 将gram中数据，拷贝回cpu
 
@@ -100,7 +99,7 @@ logaddexp(input1, input2, output)
 memcpy(nram_tensor1, gram_tensor1[start:end])
 memcpy(nram_tensor2, gram_tensor2[start:end])
 
-logsumexp(nram_tensor1, gram_tensor1, gram_tensor2)
+logaddexp(nram_tensor1, gram_tensor1, gram_tensor2)
 
 memcpy(output[start:end], nram_tensor1)
 
@@ -111,21 +110,21 @@ memcpy(output[start:end], nram_tensor1)
 
 ### 3.4 性能优化设计
 
-使用290所有核心
+使用mlu290所有核心
 尽可能将数据分摊至各核
 计算均采用向量api
 
 ### 3.5 可维护性设计
 
-添加变量及函数的相关注释，代码风格遵守PEP8编码规范，支持的target有290
+添加变量及函数的相关注释，代码风格遵守PEP8编码规范。
 
 
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：
-  固定测试规模(1,),(2,),128字节对齐,128字节对齐边界,满buffer,满buffer边界
-  通过shape随机生成函数 生成若干二维及以上shape 并随机将input2的规模随机成input1的子集 以测试不同规模的计算
-  并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内 
+  固定测试规模(1,),(2,),128字节对齐,128字节对齐边界,满buffer,满buffer边界.
+  通过shape随机生成函数,生成若干二维及以上shape并随机将input2的规模随机成input1的子集,以测试不同规模的计算.
+  并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内.
 
 ### 3.7 算子防呆检查    
 | 测试点                        | 验收标准 | 测试结果（出错信息）   |

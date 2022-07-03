@@ -77,7 +77,7 @@ def random_int_list(max_dim_length, each_dim_max_length):
     for _ in range(max_dim_length):
         random_list.append(random.randint(2, each_dim_max_length))
     return tuple(random_list)
-# nram_single_buffer_size_by_byte 核上单个buffer得空间单位字节
+# nram_single_buffer_size_by_byte 核上单个buffer的空间单位字节
 # append_test_count 随机生成shape的个数
 # max_dim_length 最大维度数
 # each_dim_max_length 每个维度最大多少个元素

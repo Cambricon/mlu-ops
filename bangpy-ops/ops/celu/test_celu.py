@@ -27,16 +27,12 @@ import pytest
 import bangpy as bp
 from bangpy.common import load_op_by_type
 from celu import DTYPES,TARGET_LIST
-# 生成随机元组
 def random_int_list(max_dim_length, each_dim_max_length):
     random_list = []
     for _ in range(max_dim_length):
         random_list.append(random.randint(2, each_dim_max_length))
     return tuple(random_list)
-# nram_single_buffer_size_by_byte 核上单个buffer得空间单位字节
-# append_test_count 随机生成shape的个数
-# max_dim_length 最大维度数
-# each_dim_max_length 每个维度最大多少个元素
+
 def CreatShapeList(
     nram_single_buffer_size_by_byte, append_test_count=50, max_dim_length=5, each_dim_max_length=64
 ):
@@ -78,6 +74,7 @@ def CreatShapeList(
         test_shape_list.append(random_int_list(random.randint(
             2, max_dim_length), random.randint(2, each_dim_max_length)))
     return test_shape_list
+    
 shape_list = CreatShapeList(
     nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 4,
     append_test_count = 50,
@@ -97,23 +94,23 @@ shape_list = CreatShapeList(
 def test_celu(target, shape, dtype, alpha):
     if target not in TARGET_LIST:
         return
-    def celu_out (alpha = 1,inplace = False):
+    def celu_out (alpha = 1, inplace = False):
         dev = bp.device(0)
-        celu_func = load_op_by_type("Celu",dtype.name)
+        celu_func = load_op_by_type("Celu", dtype.name)
         def celu_inner(input_param):
             primative = input_param.shape
             data_x_flat = input_param.flatten()
-            buffer_alpha_param = bp.Array(np.array([alpha]).astype( dtype=dtype.as_numpy_dtype),dev)
+            buffer_alpha_param = bp.Array(np.array([alpha]).astype( dtype=dtype.as_numpy_dtype), dev)
             data_x_dev_param = bp.Array(data_x_flat,dev)
-            output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype),dev)
-            celu_func(data_x_dev_param,buffer_alpha_param,inplace,output_dev_param)
+            output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype), dev)
+            celu_func(data_x_dev_param, buffer_alpha_param, inplace, output_dev_param)
             res = output_dev_param.numpy().reshape(primative)
             if inplace :
                 input_param=res
             return res
         return celu_inner
     data_x = np.random.uniform(low=-5, high=5, size=shape)
-    f1 = celu_out(alpha,False)
+    f1 = celu_out(alpha, False)
     res = f1(data_x.astype(dtype.as_numpy_dtype))
     torch_value = torch.tensor(data_x)
     m = torch.nn.CELU(alpha)
