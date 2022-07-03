@@ -26,10 +26,10 @@
 | 需求来源                  | 为bangpy-ops提供算子demo                  |
 | 应用网络                  |                                  |
 | 输入数据类型               | float                             |
-| 输入 Shape                | input1: [ length ]; input2: [ length ]  |
+| 输入 Shape                | input1: [ length, N ]; input2: [ length, N ]  |
 | 输入 Layout               | input1: ARRAY; input2: ARRAY            |
 | 输出数据类型               | float                              |
-| 输出 Shape                | [ length ]                               |
+| 输出 Shape                | [ length, N ]                               |
 | 输出 Layout               | ARRAY                                    |
 
 ### 1.2 算子功能和应用场景描述
