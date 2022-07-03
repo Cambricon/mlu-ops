@@ -32,12 +32,6 @@ KERNEL_NAME = "PairwiseDistance"  # 算子名
 
 
 class DataMan:
-    bp = None
-
-    m_current_core_start = None
-    m_current_core_end = None
-    m_total_count_in_core = None
-
     def init(self, bp):
         self.bp = bp
         self.m_current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
@@ -62,7 +56,7 @@ class DataMan:
                 one_core_count * (self.bp.taskId - remain) + one_core_count - 1)
 
         self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
-dman = DataMan()
+
 
 class pd_para:
     len_tensor1 = None
@@ -80,14 +74,15 @@ class PairwiseDistance:
         self.dtype = dtype
         self.target = target
         self.task_num = task_num
-        self.dtype_sz = dtype.bytes
+        self.dtype_size  = dtype.bytes
         self.bp = tcp.TCP(target)
 
         self.PdPara = pd_para()
+        self.dman = DataMan()
 
     def sub_tensor(self, t1, t2, len_t2):
         nram_available_size = round_down((TARGET(self.target).nram_size - 30 * 1024) // 2, 128)
-        nram_process_count = nram_available_size // self.dtype_sz
+        nram_process_count = nram_available_size // self.dtype_size
 
         nram_buffer_in = self.bp.Buffer(
             shape=(2, nram_process_count),
@@ -98,7 +93,7 @@ class PairwiseDistance:
         nram_buffer_in0 = nram_buffer_in[0][:]
         nram_buffer_in1 = nram_buffer_in[1][:]
 
-        total_count_in_core = dman.m_total_count_in_core
+        total_count_in_core = self.dman.m_total_count_in_core
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
 
         calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
@@ -113,7 +108,7 @@ class PairwiseDistance:
                 with self.bp.if_scope(calc_size == 0):
                     calc_size.assign(nram_process_count)
 
-            once_loop_start.assign(dman.m_current_core_start + \
+            once_loop_start.assign(self.dman.m_current_core_start + \
                 nram_process_count * i)  # 当前核心数据开始的位置 + 第i次循环所应偏移的长度
 
             with self.bp.block("data_copy"):
@@ -200,7 +195,7 @@ class PairwiseDistance:
         return self.bp.scalar_pow(value, p)
 
     def compute_body(self):
-        dman.init(self.bp)
+        self.dman.init(self.bp)
         self.bp.launch_task(self.task_num, 1, 1)
 
         self.PdPara.len_tensor1 = self.bp.SizeVar("len_tensor1")
@@ -252,7 +247,7 @@ class PairwiseDistance:
             dtype=self.dtype,
             scope="nram")
 
-        dman.calc_core_process_count(self.PdPara.len_tensor1, self.task_num)
+        self.dman.calc_core_process_count(self.PdPara.len_tensor1, self.task_num)
 
         self.sub_tensor(gram_tensor1, gram_tensor2, self.PdPara.len_tensor2)
         self.bp.sync_all()
@@ -263,7 +258,7 @@ class PairwiseDistance:
         self.bp.sync_all()
 
         nram_available_size = round_down(TARGET(self.target).nram_size - 30 * 1024, 128)
-        self.nram_process_count = nram_available_size // self.dtype_sz
+        self.nram_process_count = nram_available_size // self.dtype_size
         self.nram_calc_buffer = self.bp.Buffer(
             shape=(self.nram_process_count, 1),
             name="nram_calc_buffer",
@@ -315,8 +310,8 @@ class PairwiseDistance:
 
     def calc_pairwise_distance1(self, gram_tensor, border_outputs, \
         idx_outputs, outputs):  # nram 一次还存不下一个元素
-        current_core_start = dman.m_current_core_start
-        total_count_in_core = dman.m_total_count_in_core
+        current_core_start = self.dman.m_current_core_start
+        total_count_in_core = self.dman.m_total_count_in_core
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", \
             (total_count_in_core + self.nram_process_count - 1) // \
             self.nram_process_count)
@@ -415,8 +410,8 @@ class PairwiseDistance:
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1
 
     def calc_pairwise_distance2(self, gram_tensor, border_outputs, idx_outputs, outputs):
-        current_core_start = dman.m_current_core_start
-        total_count_in_core = dman.m_total_count_in_core
+        current_core_start = self.dman.m_current_core_start
+        total_count_in_core = self.dman.m_total_count_in_core
         dim_len = self.PdPara.pd_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
         pw = self.bp.Scalar(self.dtype, "pw", 1 / self.nram_pd_paras[0])
