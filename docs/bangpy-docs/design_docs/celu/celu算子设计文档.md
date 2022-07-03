@@ -50,7 +50,7 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 | buffer_in0    | 输入的任意shape的buffer               | 输入             | float      | ARRAY  | 无        |  
 | buffer_alpha  | CELU公式的α值。 默认值:1.0            | 输入             | float      | /      | 无        |  
 | inplace       | 是否原位替换                          | 输入             | bool      | /      | 无        |  
-| buffer_out    | 与输入shape一致的输出buffer          | 输出             | float      | ARRAY  | 无        |  
+| buffer_out    | 与输入shape一致的输出buffer            | 输出             | float      | ARRAY  | 无        |  
 
 ### 1.4 算子限制
 
@@ -96,7 +96,7 @@ output = m(input)
 计算max(0,x)+min(0,α∗(exp(x/α)−1))
 将计算分为max(0,x) 与 min(0,α∗(exp(x/α)−1)) 两部分
 min(0,α∗(exp(x/α)−1))中根据alpha是否为0分别讨论
-当alpha为0时，min直接返回0，不为0时正常计算
+当α为0时，min直接返回0，不为0时正常计算
 计算max(0,x)
 将max和min相加
 拷贝至cpu端
@@ -105,7 +105,7 @@ min(0,α∗(exp(x/α)−1))中根据alpha是否为0分别讨论
 
 ```python
 # 变量说明
-# alpha             celu表达式中的a
+# buffer_alpha      celu表达式中的a
 # const_one         常量1
 # const_zero        常量0
 # once_loop_start   当前的开始索引
@@ -115,8 +115,8 @@ min(0,α∗(exp(x/α)−1))中根据alpha是否为0分别讨论
 # nram_min          nram中存放计算最小值的buffer
 # nram_max          nram中存放计算最大值的buffer
 # buffer_out        输出buffer
-with self.bp.if_scope(alpha != 0):
-    self.bp.divide(nram_middle_value, nram_buffer_in0, alpha)
+with self.bp.if_scope(buffer_alpha != 0):
+    self.bp.divide(nram_middle_value, nram_buffer_in0, buffer_alpha)
     self.bp.exp(nram_middle_value, nram_middle_value)
     self.bp.subtract(nram_middle_value, nram_middle_value, const_one)
     self.bp.multiply(nram_middle_value, nram_middle_value, alpha)
