@@ -39,32 +39,32 @@ class LogAddExp:
         self.length = self.bp.SizeVar("length")
         self.dtype_sz = dtype.bytes
         self.bp.launch_task(self.task_num, 1, 1)
-    def replace_the_marked_value(self,changed_buffer,value_buffer,marked_buffer):
-        self.bp.multiply(changed_buffer,changed_buffer,marked_buffer)
-        self.bp.logical_not(marked_buffer,marked_buffer)
-        self.bp.multiply(marked_buffer,value_buffer,marked_buffer)
-        self.bp.add(changed_buffer,changed_buffer,marked_buffer)
-    def mark_value_compare_with_threshold_value(self,input_buffer,bool_mark,is_min,threshold_value):
+    def replace_the_marked_value(self,changed_buffer, value_buffer,marked_buffer):
+        self.bp.multiply(changed_buffer,changed_buffer, marked_buffer)
+        self.bp.logical_not(marked_buffer, marked_buffer)
+        self.bp.multiply(marked_buffer, value_buffer, marked_buffer)
+        self.bp.add(changed_buffer, changed_buffer, marked_buffer)
+    def mark_value_compare_with_threshold_value(self, input_buffer, bool_mark, is_min, threshold_value):
         if is_min == 1:
-            self.bp.greater_equal(bool_mark,input_buffer,threshold_value,'elemwise')
+            self.bp.greater_equal(bool_mark, input_buffer, threshold_value, 'elemwise')
         else :
-            self.bp.less_equal(bool_mark,input_buffer,threshold_value,'elemwise')
-    def mark_the_out_of_range_vlaue(self,input_buffer,x,y):
-        max_threshold = self.bp.Scalar(self.dtype,"max_threshold",10)
-        min_threshold = self.bp.Scalar(self.dtype,"min_threshold",-7.5)
-        self.mark_value_compare_with_threshold_value(input_buffer,x,1,min_threshold)
-        self.mark_value_compare_with_threshold_value(input_buffer,y,0,max_threshold)
+            self.bp.less_equal(bool_mark, input_buffer, threshold_value, 'elemwise')
+    def mark_the_out_of_range_vlaue(self,input_buffer, x, y):
+        max_threshold = self.bp.Scalar(self.dtype, "max_threshold", 10)
+        min_threshold = self.bp.Scalar(self.dtype, "min_threshold", -7.5)
+        self.mark_value_compare_with_threshold_value(input_buffer, x, 1, min_threshold)
+        self.mark_value_compare_with_threshold_value(input_buffer, y, 0, max_threshold)
     def compute_body(self):
-        one_core_count = self.bp.Scalar(bangpy.int32,"one_core_count",self.length // self.task_num)
-        remain =  self.bp.Scalar(bangpy.int32,"remain")
-        current_core_start = self.bp.Scalar(bangpy.int32,"current_core_start")
-        current_core_end = self.bp.Scalar(bangpy.int32,"current_core_end")
-        total_count_in_core = self.bp.Scalar(bangpy.int32,"total_count_in_core")
-        calc_loop_count = self.bp.Scalar(bangpy.int32,"calc_loop_count")
-        once_loop_start = self.bp.Scalar(bangpy.int32,"once_loop_start")
-        calc_size = self.bp.Scalar(bangpy.int32,"calc_size")
+        one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count", self.length // self.task_num)
+        remain =  self.bp.Scalar(bangpy.int32, "remain")
+        current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
+        current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")
+        total_count_in_core = self.bp.Scalar(bangpy.int32, "total_count_in_core")
+        calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count")
+        once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
+        calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
         nram_avable_size = round_down(
-            (TARGET(self.target).nram_size - 40* 1024) // 8 ,128
+            (TARGET(self.target).nram_size - 40* 1024) // 8, 128
         )
         remain.assign(self.length % self.task_num)
         process_count = nram_avable_size // self.dtype_sz
@@ -135,11 +135,11 @@ class LogAddExp:
                     buffer_in1[once_loop_start:once_loop_start + calc_size]
                 )
             self.bp.subtract(nram_middle_value, nram_buffer_in1, nram_buffer_in0)
-            self.mark_the_out_of_range_vlaue(nram_middle_value,nram_x_bool,nram_y_bool)
+            self.mark_the_out_of_range_vlaue(nram_middle_value, nram_x_bool, nram_y_bool)
             self.bp.exp(nram_middle_value, nram_middle_value)
-            self.bp.add(nram_middle_value,nram_middle_value,const_one)
+            self.bp.add(nram_middle_value, nram_middle_value, const_one)
             self.bp.log(nram_middle_value, nram_middle_value)
-            self.bp.add(nram_middle_value,nram_buffer_in0,nram_middle_value)
+            self.bp.add(nram_middle_value, nram_buffer_in0, nram_middle_value)
             self.replace_the_marked_value(
                 nram_middle_value,
                 nram_buffer_in1,nram_y_bool

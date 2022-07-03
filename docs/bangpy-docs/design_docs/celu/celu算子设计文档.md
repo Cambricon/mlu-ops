@@ -21,10 +21,10 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介               | 激活函数                      |
+| 算子功能简介               | 根据给定的α值对张量每个元素计算max(0, x) + min(0, α ∗ (exp(x / α) − 1))|
 | ------------------------ | ---------------------------------------- |
-| 需求来源                  | 为bangpy-ops提供算子demo                  | 
-| 应用网络                  | ResNet等                                 |
+| 需求来源                  | 为bangpy-ops提供算子demo                  |
+| 应用网络                  |                                 |
 | 输入数据类型               | float                                   |
 | 输入 Shape                | buffer_in0[任意维度]   buffer_alpha[1]  inplace:bool |
 | 输入 Layout               |buffer_in0:Array     buffer_alpha:Array  inplace:bool |
@@ -35,31 +35,30 @@
 
 ### 1.2 算子功能和应用场景描述
 
-功能：Celu为Elu激活函数的变体。采用负数区间为指数计算，整数区间为线性计算,是更为平滑的激活函数，而不是像 ReLU 这样过渡不够平滑的函数。针对输入的每个元素进行Element-wise操作，计算max(0,x)+min(0,α∗(exp(x/α)−1)) 。
+功能：Celu为Elu激活函数的变体，采用参数在负数区间为指数计算，参数在正数区间为线性计算，是一种更为平滑的激活函数。  
+该函数公式为celu(x) = max(0, x) + min(0, α ∗ (exp(x / α) − 1))。
 
-例如：
-data_x = [  85.20301468, -442.93308314 , 128.46804217]
-fun = Celu(2)
-fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
+例如：  
+data_x = [  85.20301468, -442.93308314 , 128.46804217]  
+fun = Celu(2)  
+fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]  
 
-应用场景：ResNet等
 
 ### 1.3 算子输入输出参数要求
-
-| 参数          | 语义                                | 类型（输入/输出）| 支持类型     | 物理布局 | 规模限制 |
-| ------ -------| ------------------------------------| ----------------| ----------- | ------ | -------- |
-| buffer_in0    | 输入的任意shape的buffer               | 输入             | float      | ARRAY  | 无        |
-| buffer_alpha  | CELU公式的α值。 默认值:1.0            | 输入             | float      | /      | 无        |
-| inplace       | bool值                               | 输入             | float      | /      | 无        |
-| buffer_out    | 输出的shape与输入一致的buffer         | 输出             | float      | ARRAY  | 无        |
+| 参数   | 语义                  | 类型（输入/输出）| 支持类型     | 物理布局 | 规模限制      |
+| ------ | --------------------- | -------------    | -----------  | ------   | --------      |
+| buffer_in0 | 输入的任意shape的buffer | 输入     |  float           | ARRAY        |  无      | --------      |
+| buffer_alpha | CELU公式的α值。默认值为1.0 | 输入     |  float           | ARRAY        |  无      | --------      |
+| inplace | 是否原位替换                | 输入     |  bool           | --------        |  无      | --------      |
+| buffer_out | 与输入shape一致的输出buffer | 输出     |  float           | ARRAY        |  无      | --------      |
 
 ### 1.4 算子限制
 
-| 限制类型      | 详细说明                 |
-| ------------ | ----------------------- |
-| 数据类型限制   | input 和 output 必须同时为同一数据类型  |
-| 布局限制      | 仅支持ARRAY的layout |
-| 规模限制      | 无 |
+| 限制类型      | 详细说明                   |
+| ------------ | -----------------------    |
+| 数据类型限制  | inplace为bool值 其余为float |
+| 布局限制      | 仅支持ARRAY的layout         |
+| 规模限制      | 无                         |
 
 ### 1.5 验收标准
 
@@ -75,8 +74,8 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 
 ### 2.1 参考接口
 
-- torch
-
+- pytorch
+[torch.nn.CELU文档](https://pytorch.org/docs/stable/generated/torch.nn.CELU.html?highlight=celu#torch.nn.CELU)
 ```python
 m = torch.nn.CELU()
 input = torch.randn(2)
@@ -87,39 +86,47 @@ output = m(input)
 
 ```python
 m = Celu()
-input = np.random.uniform(low=-1000, high=1000, size=shape)
+input = np.random.uniform(low = -1000, high = 1000, size = shape)
 output = m(input)
 ```
 
 ## 3 实现方案设计
 
 ### 3.1 实现方案
-计算max(0,x)+min(0,α∗(exp(x/α)−1))
-将计算分为max(0,x) 与 min(0,α∗(exp(x/α)−1)) 两部分
-min(0,α∗(exp(x/α)−1))中根据alpha是否为0分别讨论
-当alpha为0时，min直接返回0，不为0时正常计算
-计算max(0,x)
-将max和min相加
-拷贝至cpu端
+计算max(0, x) + min(0, α ∗ (exp(x / α) − 1))。
+x为输入张量中的值，α为celu公式的参数。  
+将计算分为max(0, x) 与 min(0, α ∗ (exp(x / α) − 1)) 两部分。    
+min(0, α ∗ (exp(x / α) − 1))中根据α是否为0分别讨论：    
+当α为0时，min直接返回0。  
+不为0时正常计算min(0, α ∗ (exp(x / α) − 1))。    
+计算max(0, x)  
+将max和min相加  
+拷贝至cpu端  
 
 ### 3.2 伪代码实现
 
 ```python
-#计算min
-with self.bp.if_scope(alpha != 0):
-    self.bp.divide(nram_middle_value,nram_buffer_in0,alpha)#获得x/a 
-    self.mark_the_out_of_range_vlaue(nram_middle_value,nram_marked_exp_overrun_the_upper_limit,nram__marked_exp_beyond_the_lower_limit)#标记出所有超出运算范围的值的位置并分别在两个buffer中用0标注
-    #前期准备基本完成 开始常规计算
-    self.bp.exp(nram_middle_value,nram_middle_value)#计算exp(x/a)
-    self.bp.subtract(nram_middle_value, nram_middle_value, const_one)#-1
-    self.bp.multiply(nram_middle_value, nram_middle_value, alpha)#*a
-    self.bp.minimum(nram_min,nram_middle_value,const_zero)#min(0,...)  
-with self.bp.else_scope():#当alpha为0时  min全为0
-    self.bp.zeros(nram_min)   
-#这里开始计算max           
-self.bp.maximum(nram_max,nram_buffer_in0,const_zero)
-#计算max+min
-self.bp.add(nram_buffer_in0,nram_max,nram_min)         
+# 变量说明
+# buffer_alpha      celu表达式中的a
+# const_one         常量1
+# const_zero        常量0
+# once_loop_start   当前的开始索引
+# calc_size         本次计算的实际长度
+# nram_middle_value nram中存放计算中间过程的buffer
+# nram_buffer_in0   nram中存放gram中拷贝数据的buffer
+# nram_min          nram中存放计算最小值的buffer
+# nram_max          nram中存放计算最大值的buffer
+# buffer_out        输出buffer
+with self.bp.if_scope(buffer_alpha != 0):
+    self.bp.divide(nram_middle_value, nram_buffer_in0, buffer_alpha)
+    self.bp.exp(nram_middle_value, nram_middle_value)
+    self.bp.subtract(nram_middle_value, nram_middle_value, const_one)
+    self.bp.multiply(nram_middle_value, nram_middle_value, alpha)
+    self.bp.minimum(nram_min, nram_middle_value,const_zero)
+with self.bp.else_scope():
+    self.bp.zeros(nram_min)         
+self.bp.maximum(nram_max, nram_buffer_in0, const_zero)
+self.bp.add(nram_buffer_in0, nram_max, nram_min)         
 self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
@@ -127,21 +134,20 @@ self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buf
 采用的tasktype固定为UNION16，数据拆分到64个核内计算。
 
 ### 3.4 性能优化设计
-使用290所有核心
-尽可能将数据分摊至各核
-计算均采用向量api
+尽可能将数据分摊至各核。
+计算均采用向量api。
 
 ### 3.5 可维护性设计
 
-添加变量及函数的相关注释，代码风格遵守PEP8编码规范，支持的target有290
+添加变量及函数的相关注释，代码风格遵守PEP8编码规范。
 
 
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：
-  固定测试规模(0,)(1,),(2,),128字节对齐,128字节对齐边界,满buffer,满buffer边界
-  通过shape随机生成函数 生成若干二维及以上shape 
-  并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内 
+  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，nram空间满占用，nram空间满占用边界。
+  通过shape随机生成函数 生成若干二维及以上shape。
+  并通过bangpy提供的测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内。
 
 ## 3.7 算子防呆检查  
 
@@ -165,7 +171,7 @@ self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buf
 
 ### 5.1 开发测试计划
 
-2022.4.30 算子入库 
+2022.4.30 算子入库
 
 ### 5.2 风险分析
 

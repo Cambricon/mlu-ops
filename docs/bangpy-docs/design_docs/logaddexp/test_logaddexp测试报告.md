@@ -7,14 +7,14 @@
     a.128字节对齐-1
     b.128字节对齐
     c.128字节对齐+1
-    d.nram_single_buffer_size最大元素数-1  
-    e.nram_single_buffer_size最大元素数
-    f.nram_single_buffer_size最大元素数+1  
+    d.nram预设单个buffer最大元素数-1  
+    e.nram预设单个buffer最大元素数
+    f.nram预设单个buffer最大元素数+1  
     g.满nram最大元素数 -1
     h.满nram最大元素数
     i.满nram最大元素数 +1
 2.特殊用例测试
-    a.(0,)
+    a.空元素
     b.极小shape（1，）
     c.十五维以上测试（此处不随机，因为随机生成shape的可能数据量过大会造成程序吊死被系统kill）
 3.随机二维至5维shape测试（维度可调整）
