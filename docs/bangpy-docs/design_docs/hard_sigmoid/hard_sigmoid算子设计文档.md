@@ -37,10 +37,10 @@
 
 hard_sigmoid激活函数定义:  
 $$
-hard\_sigmoid(x)=\begin{cases}
-0 & x <= -3, \\
-1 & x >= +3, \\
-x/6+1/2 & otherwise.\end{cases}
+\text{hard\_sigmoid}(x)=\begin{cases}
+0 & x \le -3, \\
+1 & x \ge +3, \\
+x/6+1/2 & \text{otherwise}.\end{cases}
 $$
 
 算子功能：对一个输入张量按元素应用Hardsigmoid激活函数后，得到一个激活过后的张量。  
