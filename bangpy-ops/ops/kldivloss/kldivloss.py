@@ -20,6 +20,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """A multi-platform code link example test for BANGPy TCP."""
+
 import bangpy
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
@@ -28,7 +29,6 @@ from bangpy.platform.bang_config import TARGET
 DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "kldivloss"
-
 
 class KlDivLoss(object):
     """Operator description:
@@ -46,6 +46,15 @@ class KlDivLoss(object):
     """
 
     def __init__(self, dtype, target, task_num):
+
+        # Check parameters.
+        if not (
+            (dtype in DTYPES)
+            and (target in TARGET_LIST)
+            and (task_num in [1, 4, 8, 12, 16, 64])
+        ):
+            raise KeyError("please pass correct parameters.")
+
         self.dtype = dtype
         self.target = target
         self.tcp = tcp.TCP(target)
