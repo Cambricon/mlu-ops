@@ -36,13 +36,13 @@
 
 该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU-OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU-OPS 全部支持。
 
-| 算子功能简介                | 简要填写算子功能，详细描述在 1.2 中进行说明|
+| 算子功能简介                | 根据感兴趣区域提取固定大小的输出特征|
 | -------------------------- | ---------------------------------------- |
 | 需求来源                    | PyTorch                                  |
 | 应用网络                    | faster_rcnn、couplenet                   |
 | 输入数据类型                | float                                    |
-| 输入 Shape                  |1. roi_crop_forward:<br>input: [b,h,w,c]; grid: [n,out_h,out_w,2]<br>2. roi_crop_backward:<br>gradOutput: [n,out_h,out_w,c]；grid: [n,out_h,out_w,2]<br>注：n是b的整数倍|
-| 输入 Layout                 |1. roi_crop_forward:<br>input: NHWC; grid: ARRAY<br>2. roi_crop_backward:<br>gradOutput: NHWC；grid: ARRAY|
+| 输入 Shape                  |1. roi_crop_forward:<br>input: [b,h,w,c]; grid: [n,out_h,out_w,2]<br>2. roi_crop_backward:<br>gradOutput: [n,out_h,out_w,c]; grid: [n,out_h,out_w,2]<br>注：n是b的整数倍|
+| 输入 Layout                 |1. roi_crop_forward:<br>input: NHWC; grid: ARRAY<br>2. roi_crop_backward:<br>gradOutput: NHWC; grid: ARRAY|
 | 输出数据类型                 | float                                   |
 | 输出 Shape                  |1. roi_crop_forward:<br>output:[n, out_h, out_w, c]<br>2. roi_crop_backward:<br>gradInput:[b,h,w,c]|
 | 输出 Layout                 |1. roi_crop_forward:<br>ouput:NHWC<br>2. roi_crop_backward:<br>gradInput: NHWC            |
@@ -64,7 +64,7 @@
 
 ![roi_crop_forward_func](./roi_crop_forward_func.png)
 
-从输入的 grid 中提取一个（y, x）坐标映射参数, 反映射到 input 中的A处得到坐标信息（Ax,Ay），获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值;
+从输入的 grid 中提取一个 (y, x) 坐标映射参数，反映射到 input 中的 A 处得到坐标信息(Ax, Ay)，获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值。
 
 **2) 主要计算公式**
 
@@ -76,14 +76,14 @@ Ax =  (x + 1) * (width - 1) / 2;  Ax_weight = 1 - (Ax - floor(Ax));
 
 Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
-双线性插值计算 output 输出值:
+双线性插值计算 output 输出值：
 
 output_value = Ax_weight * Ay_weight * topLeft
                   + (1 - Ax_weight) * Ay_weight * topRight
                   + Ax_weight * (1 - Ay_weightt) * bottomLeft
-                  + (1 - Ax_weight) * (1 - Ay_weightt) * bottomRight;
+                  + (1 - Ax_weight) * (1 - Ay_weightt) * bottomRight；
 
-这里的 Ax_weight 和 Ay_weight 是坐标点（Ax,Ay）到 bottomRight 右下角点的距离,其它类似。
+这里的 Ax_weight 和 Ay_weight 是坐标点 (Ax, Ay) 到 bottomRight 右下角点的距离，其它类似。
 
 #### 1.2.2 roi_crop_backward
 
@@ -91,7 +91,7 @@ output_value = Ax_weight * Ay_weight * topLeft
 
 ![roi_crop_backward](./roi_crop_backward.png)
 
-根据 grid 中 bin 的索引获取 gradOutput 中对应的梯度值 gradOutput_V，从 grid 中获取的每个（y, x）坐标映射参数, 可以反映射到 gradInput 中的A处得到坐标信息（Ax,Ay），获取 A 点附近四处整数点位偏移地址 tl_address、tr_address, bl_address、br_address;最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
+根据 grid 中 bin 的索引获取 gradOutput 中对应的梯度值 gradOutput_V，从 grid 中获取的每个（y, x）坐标映射参数，可以反映射到 gradInput 中的A处得到坐标信息(Ax, Ay) ，获取 A 点附近四处整数点位偏移地址 tl_address、tr_address、bl_address、br_address；最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
 
 **2) 主要计算公式**
 
@@ -107,7 +107,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 #### 1.2.3 算子主要应用场景
 
-该算子多用在 RPN 提取的 ROI 感兴趣区域和 backbone 提取的 feature_map 特征图的下一步操作, 在 feature_map 特征矩阵中, 对 ROI 感兴趣区域进行采样, 得到固定输出大小的特征矩阵, 用于后续网络的分类与回归任务。
+该算子多用在 RPN 提取的 ROI 感兴趣区域和 backbone 提取的 feature_map 特征图的下一步操作，在 feature_map 特征矩阵中，对 ROI 感兴趣区域进行采样，得到固定输出大小的特征矩阵，用于后续网络的分类与回归任务。
 
 ![roi_crop_forward_bg](./roi_crop_forward_bg.png)
 
@@ -144,10 +144,10 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 | 限制类型     | 详细说明  |
 | ------------ | ---------------------------------|
 | 数据类型限制 | input、grid、output、gradOutput和gradInput只支持float    |
-| 布局限制     | input、gradInput、output和gradOutput为NHWC；grid为ARRAY  |
+| 布局限制     | input、gradInput、output和gradOutput为NHWC; grid为ARRAY  |
 | 规模限制     | 无限制                            |
 | 功能限制     | 无限制     |
-| 数据范围限制 | grid 中数据范围:[-1,1]        |
+| 数据范围限制 | grid 中数据范围：[-1,1]        |
 | 原位限制     | 不支持原位   |
 | stride 限制  | 不支持 stride 机制    |
 | 广播限制     | 不支持广播  |
@@ -158,8 +158,8 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 #### 1.5.1 精度验收标准
 
 按照[精度验收标准](../MLU-OPS精度验收标准.md)的要求明确本算子的精度标准。
-- 算子精度验收标准：diff1、diff2;
-- 算子精度阈值描述：diff1 <= 3e-3 && diff2 <=3e-3;
+- 算子精度验收标准：diff1、diff2；
+- 算子精度阈值描述：diff1 <= 3e-3 && diff2 <=3e-3；
 
 #### 1.5.2 性能验收标准
 
@@ -216,16 +216,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 
 #### 3.1.1 roi_crop_forward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim（bin_n = n * out_h * out_w）;
-- step2: 根据双线性插值原理,1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE/ 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
-- step3: 每个 IPU 循环获取 gw，gh，gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM;
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
+- step2: 根据双线性插值原理，1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE / 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
+- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 #### 3.1.2 roi_crop_backward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n/taskDim + 1 : bin_n/taskDim;
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim；
 - step2: 根据双线性插值梯度计算公式知，1 个 bin 需要 gradOutput 下的 1 个 channels 得到 gradOutput 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 gradOutput 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 gradInput 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
-- step3: 每个 IPU 循环获取 gw，gh，gn 等信息，进而得到 gradOutput 和 gradInput 的偏移地址，拷贝 GDRAM 中数据到 NRAM;
+- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 gradOutput 和 gradInput 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 ### 3.2 伪代码实现（可选）
@@ -256,7 +256,7 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 | 表项            | 分配策略                                |
 | --------------- | -------------------------------------- |
-| NRAM            | 1.roi_crop_forward:<br>NRAM 进行 8 等份拆分（ping 占 4 个，pong 占 4 个）<br>2.roi_crop_backward:<br>NARM 进行 10 等份（ping 占 5 个，pong 占 5 个）|
+| NRAM            | 1. roi_crop_forward:<br>NRAM 进行 8 等份拆分（ping 占 4 个，pong 占 4 个）<br>2. roi_crop_backward:<br>NARM 进行 10 等份（ping 占 5 个，pong 占 5 个）|
 | WRAM            | 未使用                                  |
 | SRAM            | 未使用                                  |
 | DRAM(workspace) | 未使用                                  |
@@ -265,16 +265,16 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 采用三级流水设计，L C S 之间排流水，即 GDRAM2NRAM、Compute、NRAM2GDRAM。这里可以细分为：<br>
 1）bin 的流水（NRAM 等分的每块空间可以一次性加载 bin 中 channels 个数据)；<br>
-2）channels 很大的流水（这里是对bin的流水的补充，当 NRAM 等分到的每块空间不足以一次性加载 bin 中的 channels 个数据，在这种情况下就需对 channels 个数据进行流水计算）；<br>
+2）channels 很大的流水 (这里是对bin的流水的补充，当 NRAM 等分到的每块空间不足以一次性加载 bin 中的 channels 个数据，在这种情况下就需对 channels 个数据进行流水计算)；<br>
 计算部分：<br>
 1）roi_crop_forward 算子主要使用 __bang_mul_const()、_bang_add()；<br>
-2）roi_crop_backward 算子主要使用 __bang_mlu_const()、atomic_add();<br>
+2）roi_crop_backward 算子主要使用 __bang_mlu_const()、atomic_add()；<br>
 
 ### 3.5 可维护性设计
 
-1、bangc 代码中加入必要的 log 信息，比如输入的规模、数据类型、layout 这些，以及如果出错会导致程序 core dump 的变量，比如 IO 指令的 data_size、dim xyz 的值等，这些信息都是有利于快速定位问题;
+1、bangc 代码中加入必要的 log 信息，比如输入的规模、数据类型、layout 这些，以及如果出错会导致程序 core dump 的变量，比如 IO 指令的 data_size、dim xyz 的值等，这些信息都是有利于快速定位问题；
 
-2、对每一个函数命名变量命名都有充分的注释;
+2、对每一个函数命名变量命名都有充分的注释；
 
 3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
 
@@ -286,16 +286,15 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 |input、grid、output|source data type |destination data type|
 |----|----|----|
-|[b,h,w,c]、[n,out_h,out_w,2]、[n,out_h,out_w,c]|float |float|
+|[b, h, w, c]、[n, out_h, out_w, 2]、[n, out_h, out_w, c]|float |float|
 
 2、roi_crop_backward
 
 |gradOutput、grid、gradInput|source data type |destination data type|
 |----|----|----|
-|[n,out_h,out_w,c]、[n,out_h,out_w,2]、[n,h,w,c]|float |float|
+|[n, out_h, out_w, c]、[n, out_h, out_w, 2]、[n, h, w, c]|float |float|
 
-- 边界 case：
-grid:[-1,1] 
+- 边界 case: grid:[-1,1] 
 
 其他可根据需要进行补充。算子开发完毕后，补充测试报告链接。
 
@@ -303,7 +302,7 @@ grid:[-1,1]
 
 1、指针为空防呆；
 
-2、0 元素检查防呆，VLOG(5) 打印信息，是否返回与框架沟通；
+2、0 元素检查防呆，LOG(ERROR) 打印信息，是否返回与框架沟通；
 
 3、涉及 workspace 算子对于 workspace_size 的检查防呆；
 
@@ -313,7 +312,7 @@ grid:[-1,1]
 
 6、算子存在的自身的相关参数防呆。
 
-主要是列出 4,5,6 防呆内容，方便 review。
+主要是列出 4, 5, 6 防呆内容，方便 review。
 
 ## 4 算子性能优化记录
 
@@ -329,7 +328,7 @@ grid:[-1,1]
 
 ### 5.1 开发测试计划
 
-1、开发时间不宜过长，但是测试时间要预留充分，建议开发: 测试 = 1 :1
+1、开发时间不宜过长，但是测试时间要预留充分，建议开发: 测试 = 1 : 1
 
 2、调研需求，接口设计之后可以直接开发 gtest，理解原理
 
