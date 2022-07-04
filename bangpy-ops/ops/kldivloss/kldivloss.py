@@ -57,41 +57,40 @@ class KlDivLoss(object):
         self.inputShape = (self.batchSize, self.batchLength)
         self.outShape = (self.totalData,)
 
-        self.nram_size = TARGET(target).nram_size
-        self.dtype_sz = dtype.bytes  # 每个元素所占字节数
-        self.compute_row = 128 // self.dtype_sz  # 128字节表示的元素个数
+        self.nram_size = TARGET(self.target).nram_size
+        self.dtype_sz = dtype.bytes  # Byte of each element
+        self.compute_row = 128 // self.dtype_sz  # How many bytes equals 128 bits
         self.single_buffer_size = (
             64 * 128 // self.dtype_sz * self.compute_row
-        )  # 单个buffer大小
+        )  # size of single bufer
 
-        self.task_type = TaskType.UNION16
-        self.tcp.launch_cluster(self.task_type.value)
-        self.task_num = self.task_type.value * 4
-        self.tcp.launch_task(self.task_num, 1, 1)
+        self.tcp.launch_cluster(TaskType.UNION16)
+        self.tcp.launch_task(task_num, 1, 1)
 
-    # 如果target未进行log操作：执行out = target * (log(target) - input)
-    # 如果target已进行log操作：执行out = exp(target) * (target - input)
-    # 根据reduction进行相应的规约操作
+    # if target has been logged ：out = target * (log(target) - input)
+    # otherwise ：out = exp(target) * (target - input)
+    # perform reduction operation according to the reduction argument
     def compute_body(self):
         # calculate split strategy
-        cluster_num = self.task_type.value
+        cluster_num = self.task_num // 4
         cluster_id = self.tcp.Scalar(bangpy.int32, name="cluster_id")
         cluster_id.assign(self.tcp.clusterId)
         task_id = self.tcp.taskId
 
-        # 每次处理的数据量
+        # gets the data length to be calculated for each calculate
         data_calculated_each_time = self.single_buffer_size // self.dtype_sz
+        # gets the number of cycles required for each task
         data_calculated_each_task = self.totalData // self.task_num
         with self.tcp.if_scope(task_id == self.task_num - 1):
             data_calculated_each_task = (
                 self.totalData // self.task_num + (self.totalData) % self.task_num
             )
 
-        # 每个task需要循环多少次
+        # loop time of eacb task
         loop_num = self.tcp.Scalar(bangpy.int32, name="loop_num")
         loop_num.assign(data_calculated_each_task // data_calculated_each_time)
 
-        # global的数据buffer
+        # declare on-chip buffer
         inputG = self.tcp.Buffer(
             shape=self.inputShape, name="inputG", dtype=self.dtype, scope="global"
         )
@@ -110,9 +109,9 @@ class KlDivLoss(object):
         reduction = self.tcp.SizeVar(name="reduction")
         log_target = self.tcp.SizeVar(name="log_target")
 
-        # sram数据 保存所有 cluster 共享的临时变量
-        cluster_sram = self.tcp.Buffer(
-            shape=(cluster_num,), name="cluster_sram", dtype=self.dtype, scope="sram"
+        # declare sram buffer which saves temporary variables shared between clusters
+        cluster_nram = self.tcp.Buffer(
+            shape=(cluster_num,), name="cluster_nram", dtype=self.dtype, scope="nram"
         )
         tmp_sram = self.tcp.Buffer(
             shape=(4,), name="tmp_sram", dtype=self.dtype, scope="sram"
@@ -121,12 +120,12 @@ class KlDivLoss(object):
             shape=(1,), name="sum_each_cluster", dtype=self.dtype, scope="sram"
         )
 
-        # 分块处理相关变量
+        # variables related to split
         start = self.tcp.Scalar(bangpy.int32, name="start")
         start.assign(task_id * (self.totalData // self.task_num))
         stop = self.tcp.Scalar(bangpy.int32, name="stop")
 
-        # 计算sum 相关变量 后面进行修改
+        # variables related to sum
         computed_size = 128 // self.dtype_sz
 
         sumpool_size = data_calculated_each_time // computed_size
@@ -138,7 +137,7 @@ class KlDivLoss(object):
         sumvar.assign(0)
 
         with self.tcp.for_range(begin=0, end=loop_num, stage=1) as i:
-            # declare on-chip buffer
+            # declare nram buffer
             buffer_input = self.tcp.Buffer(
                 shape=(data_calculated_each_time,),
                 name="INPUT_N",
@@ -158,7 +157,7 @@ class KlDivLoss(object):
                 scope="nram",
             )
 
-            # reduction = sum相关 buffer 变量
+            # variables related to reduction
             sum_input_pool = buffer_out.reshape((computed_size, sumpool_size))
             temp_buffer = self.tcp.Buffer(
                 shape=(computed_size * self.compute_row,),
@@ -264,40 +263,34 @@ class KlDivLoss(object):
                 self.tcp.memcpy(outG[start:stop], buffer_out[: stop - start])
 
         with self.tcp.if_scope(reduction != 0):
-            # 每个task计算的sum总值保存在sumvar变量中
             sum_buf[0] = sumvar
             self.tcp.memcpy(tmp_sram[task_id % 4], sum_buf)
             self.tcp.sync_cluster()
 
-            # 计算每个cluster的sum值
+            # calculate sum of each cluster
             sum_out = self.tcp.Scalar(name="sumout", dtype=self.dtype)
             sum_out.assign(0)
             with self.tcp.for_range(begin=0, end=4) as i:
-                with self.tcp.block("compute"):
-                    sum_out.assign(sum_out + tmp_sram[i])
+                sum_out.assign(sum_out + tmp_sram[i])
             sum_each_cluster[0] = sum_out
 
-            with self.tcp.if_scope(task_id == 0):
-                cluster_sram[0] = sum_out
-
-            # 传输不同cluster的sum值
-            zeroid = self.tcp.Scalar(name="zeroid", dtype=self.dtype, value=0)
-            with self.tcp.if_scope(cluster_id != 0):
-                self.tcp.memcpy(cluster_sram[cluster_id], sum_each_cluster, zeroid)
+            self.tcp.memcpy(outG[cluster_id], sum_each_cluster[0])
             self.tcp.sync_all()
+
+            with self.tcp.for_range(begin=0, end=cluster_num) as i:
+                self.tcp.memcpy(cluster_nram[i], outG[i])
 
             total = self.tcp.Scalar(name="total", dtype=self.dtype)
             total.assign(0)
             with self.tcp.if_scope(cluster_id == 0):
                 with self.tcp.for_range(begin=0, end=cluster_num) as i:
-                    total.assign(total + cluster_sram[i])
+                    total.assign(total + cluster_nram[i])
                 # reduction = mean
                 with self.tcp.if_scope(reduction == 2):
                     total.assign(total / self.totalData)
                 # reduction = batchmen
                 with self.tcp.if_scope(reduction == 3):
                     total.assign(total / self.batchSize)
-                # redunction = sum 直接输出total
                 outG[0] = total
 
         # build a executable module
@@ -311,7 +304,6 @@ class KlDivLoss(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_kldivloss(dtype=None, target=None):
-    # tasktype fixed in UNION1
-    task_num = 64
+    task_num = TARGET(target).cluster_num * TARGET(target).core_num
     f = KlDivLoss(dtype, target, task_num).compute_body()
     return f
