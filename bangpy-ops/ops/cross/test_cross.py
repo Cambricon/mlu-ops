@@ -55,7 +55,6 @@ from cross import DTYPES, KERNEL_NAME, TARGET_LIST
     "dtype", DTYPES,
 )
 
-# @pytest.mark.repeat(1000)
 def test_cross(target, shape, dim, dtype):
     if target not in TARGET_LIST:
         return
@@ -110,8 +109,6 @@ def test_cross(target, shape, dim, dtype):
             if diff3 > maxdiff3:
                 maxdiff3 = diff3
         assert maxdiff3 == 0
-
-        # bangpy.assert_allclose(data_out_dev.numpy(), data_out)
 
     else :
         print("shape or dim are illegal! shape:", end =" ")
