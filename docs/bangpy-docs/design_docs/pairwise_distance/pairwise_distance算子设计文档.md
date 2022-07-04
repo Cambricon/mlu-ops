@@ -1,8 +1,8 @@
-# BANGPy Add 算子开发设计方案
+# BANGPy PairwiseDistance 算子开发设计方案
 
 - #### 文档基本信息
 
-| 算子名称     | pairwise_distance              |
+| 算子名称     | PairwiseDistance              |
 | ----------- | -------------- |
 | 编制人/日期  | UniqueSquirrel/2022-5-18 |
 | 审批人/日期  |              |
@@ -15,7 +15,7 @@
 
 - #### 内容描述
 
-本文档为 `pairwise_distance` 算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
+本文档为 `PairwiseDistance` 算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
 
 ## 1 需求分析
 
@@ -36,10 +36,12 @@
 
 功能：计算两个张量的pairwise_distance
 
-例如：tensor1([[ 0.2135, -1.1229],
+例如：tensor1:
+([[ 0.2135, -1.1229],
         [ 1.7612,  0.5365]])
 
-tensor2([[-0.3812, -1.4980],
+tensor2:
+([[-0.3812, -1.4980],
         [-1.0483,  0.5707]])
 
 output([0.7031, 2.8097])
@@ -60,7 +62,7 @@ output([0.7031, 2.8097])
 | ------------   | -----------------------     |
 | 数据类型限制   | input 和 output 维度可以不同|
 | 布局限制       | 仅支持ARRAY的layout         |
-| 规模限制       |                             |
+| 规模限制       | 和具体硬件相关                            |
 
 ### 1.5 验收标准
 
@@ -85,41 +87,17 @@ torch.nn.PairwiseDistance
 ### 2.2 接口设计
 
 ```python
-MluOpPairwiseDistance(mlu_input1, 
-                      mlu_input2,
-                      mlu_paras, 
-                      shape1_length, 
-                      shape2_length,
-                      pd_len, 
-                      pd_height, 
-                      pd_width, 
-                      output_len,
-                      mlu_border_output, 
-                      mlu_border_idx_output, 
-                      mlu_output)
-				 
-mlu_input1, mlu_input2, 为输入的两个向量
-mlu_paras 为一个类对象，包含eps，p，keepdim 参数 
-shape1_length, shape2_length, 为两个向量的长度，张量1的长度永远不小于张量2
-pd_len 为输入张量最后一个维度的长度
-pd_height, pd_width 为对第一个张量进行reshape后的高度和宽度
+pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
+input1 = torch.randn(100, 128)
+input2 = torch.randn(100, 128)
+output = pdist(input1, input2)
 
-具体算法为：
-shp_len = len(shape1)
-dim_index = shp_len - 1
+p 为计算距离时，指数的值
+eps 为避免除零而给结果加的微小偏移
+keepdim 为bool值，决定是否保留原始数据维度
 
-# mlu 输入参数
-pd_len = shape1[shp_len - 1]
-pd_height = 1
-pd_width = 1
+input1，input1为输入的张量
 
-for i in range(0, dim_index + 1):
-    pd_height *= shape1[i]
-
-output_len,是输出张量长度
-mlu_border_output, mlu_border_idx_output, mlu_output ，因为数据分散到多核中，这几个用于存放中间输出结果，
-在mlu计算完毕后，用cpu加工，得到最终结果
-```
 
 如果一个张量x, 维度是 [2, 3, 4]
 如果要在第二个维度计算子张量，
@@ -130,14 +108,14 @@ x[i, 1, j],
 x[i, 2, j] 
 ]
 
-pairwise_distance中，我们在最后一个维度的基础上计算两个张量的距离，具体算法，参见实现方案一章
-
+PairwiseDistance 中，我们在最后一个维度的基础上计算两个张量的距离，具体算法，参见实现方案一章
+```
 ## 3 实现方案设计
 
 ### 3.1 实现方案
 
-1 将输入数据转为一维向量后，传入mlu，将数据平均分配在多核中。
-首先计算两个向量的差，如果其中a向量比b向量短，则将b连续拷贝多份，变成和a长度相等（a的长度必须是b的整数倍）
+1 将输入数据转为一维张量后，传入mlu，将数据平均分配在多核中。
+首先计算两个张量的差，如果其中a张量比b张量短，则将b连续拷贝多份，变成和a长度相等（a的长度必须是b的整数倍）
 每个核会算出自己要计算的数据起止地址，将数据拷贝到nram中，进行计算。
 
 
@@ -150,10 +128,10 @@ a: |-----------------------|
 b: |-------|-------|-------|
 
 
-2 按照最后一个维度，将该tensor划分，拿到所有子向量
-比如最后一个维度长度为2，张量总长为30，那么子向量就有15个。
+2 按照最后一个维度，将该tensor划分，拿到所有子张量
+比如最后一个维度长度为2，张量总长为30，那么子张量就有15个。
 t: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-将这些子向量平均分配给多核，分别计算(这里可能存在某个子向量过长，以至于分配到了两个，甚至多个核上面)
+将这些子张量平均分配给多核，分别计算(这里可能存在某个子张量过长，以至于分配到了两个，甚至多个核上面)
 
 
 3 每个核计算时候检查一下子张量的长度是不是超过了nram的大小，如果超过了，跳转到4，否则，跳转到6
@@ -192,7 +170,7 @@ t:
 
 subtract_tensor = input_tensor1 - intput_tensor2
 
-sub_tensors = get_last_dim(subtract_tensor)  #按照最后一个维度，讲该tensor划分，拿到所有子向量
+sub_tensors = get_last_dim(subtract_tensor)  #按照最后一个维度，讲该tensor划分，拿到所有子张量
 
 for t in sub_tensors:
     length = calc_distance(t)
