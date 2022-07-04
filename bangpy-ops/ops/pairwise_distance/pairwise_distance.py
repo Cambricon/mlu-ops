@@ -26,9 +26,9 @@ from bangpy.tcp.util import round_down
 from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
 
-DTYPES = [bangpy.float32]  # 支持的类型
-TARGET_LIST = ["mlu290"]  # 支持的设备
-KERNEL_NAME = "PairwiseDistance"  # 算子名
+DTYPES = [bangpy.float32]
+TARGET_LIST = ["mlu290"]
+KERNEL_NAME = "PairwiseDistance"
 
 
 class DataMan:
@@ -45,10 +45,12 @@ class DataMan:
         remain = self.bp.Scalar(bangpy.int32, "remain")
         remain.assign(data_total_len % task_num)
 
-        with self.bp.if_scope(self.bp.taskId < remain):  # 如果存在余数 将其均摊给各核   taskId从0起
+        # If remains exists, averagely assigning remains to cores.
+        # Small taskId cores will has high priority to be assigned.
+        with self.bp.if_scope(self.bp.taskId < remain):
             self.m_current_core_start.assign((one_core_count + 1) * self.bp.taskId )
             self.m_current_core_end.assign((one_core_count + 1) * \
-                (self.bp.taskId + 1) - 1)  # 此处应该不需要减1 待验证  python切片会自动将上标减1
+                (self.bp.taskId + 1) - 1)
         with self.bp.else_scope():
             self.m_current_core_start.assign((one_core_count + 1) * \
                 remain + one_core_count * (self.bp.taskId - remain))
@@ -109,7 +111,7 @@ class PairwiseDistance:
                     calc_size.assign(nram_process_count)
 
             once_loop_start.assign(self.dman.m_current_core_start + \
-                nram_process_count * i)  # 当前核心数据开始的位置 + 第i次循环所应偏移的长度
+                nram_process_count * i)
 
             with self.bp.block("data_copy"):
                 # tensor1 copy
@@ -153,12 +155,11 @@ class PairwiseDistance:
                 self.bp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
                 self.bp.abs(nram_buffer_in0, nram_buffer_in0)
 
-                # 先减去eps
+                # subtract eps
                 eps = self.bp.Scalar(name='input_eps', dtype=self.dtype, \
                     value=-self.nram_pd_paras[1])
                 self.bp.add(nram_buffer_in0, nram_buffer_in0, eps)
 
-                # 求指数
                 self.bp.log(nram_buffer_in0, nram_buffer_in0)
                 p = self.bp.Scalar(name='p', dtype=self.dtype, value=self.nram_pd_paras[0])
                 self.bp.multiply(nram_buffer_in0, nram_buffer_in0, p)
@@ -268,9 +269,9 @@ class PairwiseDistance:
         with self.bp.if_scope(self.PdPara.pd_len > self.nram_process_count):
             self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, \
                 gram_border_idx_out, gram_buffer_out)
-        with self.bp.else_scope():  # nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
+        with self.bp.else_scope():
             with self.bp.if_scope(self.PdPara.len_tensor1 // \
-            self.task_num + 1 < self.PdPara.pd_len):  # 加个1，考虑到不能整除的情况
+            self.task_num + 1 < self.PdPara.pd_len):
                 self.calc_pairwise_distance1(gram_reshape_tensor, \
                     gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
             with self.bp.else_scope():
@@ -279,7 +280,6 @@ class PairwiseDistance:
 
         self.bp.sync_all()
 
-        # 处理边界数据
         with self.bp.if_scope(self.bp.taskId == 0):
             with self.bp.for_range(0, border_array_size) as i:
                 index1 = gram_border_idx_out[2 * i]
@@ -309,7 +309,7 @@ class PairwiseDistance:
         return index - 1
 
     def calc_pairwise_distance1(self, gram_tensor, border_outputs, \
-        idx_outputs, outputs):  # nram 一次还存不下一个元素
+        idx_outputs, outputs):
         current_core_start = self.dman.m_current_core_start
         total_count_in_core = self.dman.m_total_count_in_core
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", \
@@ -333,13 +333,8 @@ class PairwiseDistance:
 
         flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
 
-        # 0 : 要压缩的维度，从中间开始，且比nram还要长
-        # 1 : 要压缩的维度，从中间开始，比nram小
-        # 2 : 要压缩的维度，从头开始
-        # 以上记录一下，是否是从半截开始处理的，如果是，要缓存
-
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
-        # 确认本次循环要从gram拷贝回nram的数量
+
         calc_size = self.bp.Scalar(bangpy.int32, "calc_size", \
             self.nram_process_count)
 
@@ -358,45 +353,38 @@ class PairwiseDistance:
 
             with self.bp.if_scope(expect_cp_len > calc_size):
                 expect_cp_len.assign(calc_size)
-                # 一口气拷贝不完，那就尽可能多的拷贝.
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
                     dim_len, self.PdPara.pd_width, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
-                with self.bp.if_scope(i == calc_loop_count - 1):  # 最后一个循环了
-                    # 缓存一下
+                with self.bp.if_scope(i == calc_loop_count - 1):  # last loop
                     index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
                     with self.bp.if_scope(once_norm_ok == 0):
-                        border_outputs[self.bp.taskId * 2] = \
-                            norm_value  # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                        border_outputs[self.bp.taskId * 2] = norm_value
                         idx_outputs[self.bp.taskId * 2] = index
                     with self.bp.else_scope():
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value
                         idx_outputs[self.bp.taskId * 2 + 1] = index
 
             with self.bp.else_scope():
-                # 这个norm可以拷贝完了
                 self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
                     dim_len, self.PdPara.pd_width, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
                 norm_value.assign(norm_value + seg_norm_value)
 
-                # 标记一下
                 once_norm_ok.assign(1)
-                # 看看这个norm是不是半截
                 index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
                 with self.bp.if_scope(cp_data_len < dim_len):
                     border_outputs[self.bp.taskId * 2] \
-                        = norm_value  # 走到这里了，说明这个core一直在处理一个norm的中间部分
+                        = norm_value
                     idx_outputs[self.bp.taskId * 2] = index
                 with self.bp.else_scope():
-                    outputs[index] = self.scalar_pow(norm_value, pw)  # 一个完整的norm算出来了
+                    outputs[index] = self.scalar_pow(norm_value, pw)  # norm complete
 
                 norm_value.assign(0.0)
 
-                # 接下来，拷贝下一个norm
                 cp_data_len.assign(calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
                     self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
@@ -404,8 +392,7 @@ class PairwiseDistance:
                         self.PdPara.pd_width, cp_data_len)
                     calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
                     norm_value.assign(calc_result)
-                    with self.bp.if_scope(i == calc_loop_count - 1):  # 最后一个循环了
-                        # 肯定没有拷贝完
+                    with self.bp.if_scope(i == calc_loop_count - 1):
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1
 
@@ -418,34 +405,27 @@ class PairwiseDistance:
 
         flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
 
-        # 1 先看看有没有上个norm残留的尾巴
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset", current_core_start % dim_len)
         expect_cp_len = self.bp.Scalar(bangpy.int32, "expect_cp_len", 0)
         with self.bp.if_scope(norm_offset != 0):
-            # 有残留，拷贝过来
             expect_cp_len.assign(dim_len - norm_offset)
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, current_core_start, \
                 dim_len, self.PdPara.pd_width, expect_cp_len)
             calc_result = self.calc_norm(flat_nram, 0, expect_cp_len)
             norm_value.assign(calc_result)
             index = self.get_norm_index(current_core_start + expect_cp_len, dim_len)
-            # 保存一下
             border_outputs[self.bp.taskId * 2] = norm_value
             idx_outputs[self.bp.taskId * 2] = index
 
-        # 开始循环拷贝norm了，先计算开始位置
         norm_start_pos = self.bp.Scalar(bangpy.int32, "norm_start_pos", \
             current_core_start + expect_cp_len)
 
-        # 计算一下一个nram里最多能存多少个
         nram_norm_count = self.bp.Scalar(bangpy.int32, "nram_norm_count", \
             self.nram_process_count // dim_len)
 
-        # 计算一下，这个core能处理的norm总数是多少
         total_norm_in_core = self.bp.Scalar(bangpy.int32, "total_norm_in_core", \
             (total_count_in_core - expect_cp_len) // dim_len)
 
-        # 计算一下，要多少个循环
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count", \
             (total_norm_in_core + \
             nram_norm_count - 1) // nram_norm_count)
@@ -459,32 +439,27 @@ class PairwiseDistance:
                 with self.bp.if_scope(once_loop_norm_count == 0):
                     once_loop_norm_count.assign(nram_norm_count)
 
-            # 这里后续要优化，目前先弄个for循环吧
             start_index = self.bp.Scalar(bangpy.int32, "norm_offset", \
-            once_loop_start // dim_len)  # 肯定可以整除
+            once_loop_start // dim_len)
             with self.bp.for_range(0, once_loop_norm_count) as j:
-                #先拷贝过来
                 self.copy_from_2d_tensor(self.nram_calc_buffer, \
                     0, gram_tensor, once_loop_start + j * \
                     dim_len, dim_len, self.PdPara.pd_width, dim_len)
                 calc_result = self.calc_norm(flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)
-                outputs[start_index + j] = self.scalar_pow(norm_value, pw) # 一个完整的norm算出来了
+                outputs[start_index + j] = self.scalar_pow(norm_value, pw)
 
-        # 再看一下结尾，是不是要缓存下一个norm的前半截
         norm_loop_end_pos = self.bp.Scalar(bangpy.int32, "norm_loop_end_pos", \
             norm_start_pos + total_norm_in_core * dim_len)
         cur_loop_end_pos = self.bp.Scalar(bangpy.int32, "cur_loop_end_pos", \
             current_core_start + total_count_in_core)
         with self.bp.if_scope(norm_loop_end_pos < cur_loop_end_pos):
-            # 拷贝一下数据
             self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, norm_loop_end_pos, \
                 dim_len, \
                 self.PdPara.pd_width, cur_loop_end_pos - norm_loop_end_pos)
             calc_result = self.calc_norm(flat_nram, 0, cur_loop_end_pos - norm_loop_end_pos)
             norm_value.assign(calc_result)
-            index = self.get_norm_index(norm_loop_end_pos + 1, dim_len)  # 加个1，表示跳到下一个了
-            # 保存一下
+            index = self.get_norm_index(norm_loop_end_pos + 1, dim_len)
             border_outputs[self.bp.taskId * 2 + 1] = norm_value
             idx_outputs[self.bp.taskId * 2 + 1] = index
 
