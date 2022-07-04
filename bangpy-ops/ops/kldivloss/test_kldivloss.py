@@ -28,6 +28,7 @@ from kldivloss import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 def cal_diff(result, data_out):
+    """ compute diff """
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
     diff2 = np.sqrt(
         np.sum(np.power(np.subtract(data_out, result), 2,))
