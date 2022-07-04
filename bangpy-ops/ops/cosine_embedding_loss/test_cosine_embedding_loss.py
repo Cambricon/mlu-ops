@@ -61,7 +61,7 @@ np.set_printoptions(threshold=np.inf)
 )
 def test_cosine_embedding_loss(target, data_amount, data_width, dtype):
     """
-    pytest main function
+    Pytest main function
     """
 
     if target not in TARGET_LIST:

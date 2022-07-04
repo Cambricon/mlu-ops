@@ -32,17 +32,29 @@ from cosine_embedding_loss import CosineEmbeddingLoss, DTYPES
 from bangpy.tcp.runtime import TaskType
 
 
-# cpu type of operation
 def compute_simple_test(x_1, x_2, y, margin):
+    """
+    Cpu type of operation.
+    """
+    x_1 = x_1.astype(np.float32)
+    x_2 = x_2.astype(np.float32)
+    y = y.astype(np.float32)
     upper = np.sum(np.multiply(x_1, x_2), axis=1)
     lower1 = np.sum(np.multiply(x_1, x_1), axis=1)
     lower2 = np.sum(np.multiply(x_2, x_2), axis=1)
-    result = (upper / ((lower1 * lower2) ** 0.5)).reshape((-1,))
+    result = (upper / lower1 * upper / lower2) ** 0.5 * (upper / abs(upper)).reshape(
+        (-1,)
+    )
     return ((y + 1) * (1 - result) + (1 - y) * np.maximum(0, result - margin)) / 2
 
 
-# diffs
+# Diffs.
 def cal_diff(result, data_out):
+    """
+    Compute diff1 & 2 between cpu result and mlu result.
+    """
+    result = result.astype(np.float32)
+    data_out = data_out.astype(np.float32)
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
     diff2 = np.sqrt(
         np.sum(np.power(np.subtract(data_out, result), 2,))
@@ -52,12 +64,12 @@ def cal_diff(result, data_out):
 
 
 ###################################################
-# testing parameters
+# Testing Parameters
 ###################################################
-# data amounts 1,2,4,8GB
+# Data amounts 1,2,4,8GB.
 data_amounts = [2 ** 20 * 10, 2 ** 30, 2 ** 30 * 2, 2 ** 30 * 4, 2 ** 30 * 8]
 
-# data width
+# Data width.
 data_widths = [
     2 ** 5,
     2 ** 5 + 1,
@@ -78,13 +90,13 @@ data_widths = [
     2 ** 18,
     2 ** 19,
 ]
-# data type, float16, float32
-dtypes = DTYPES[1:2]
+# Data type, float16, float32.
+dtypes = DTYPES[0:2]
 
 
 def evaluate(f, dtype, data_amount, data_width):
     """
-    evaluate function
+    Evaluate function.
     """
     data_height = data_amount // dtype.bytes // data_width
 
@@ -106,12 +118,17 @@ def evaluate(f, dtype, data_amount, data_width):
     data_input_y_dev = bangpy.Array(data_input_y.astype(dtype.as_numpy_dtype), dev)
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
 
-    data_out = compute_simple_test(data_input_x1, data_input_x2, data_input_y, margin)
+    data_out = compute_simple_test(
+        data_input_x1.astype(dtype.as_numpy_dtype),
+        data_input_x2.astype(dtype.as_numpy_dtype),
+        data_input_y.astype(dtype.as_numpy_dtype),
+        margin,
+    ).astype(dtype.as_numpy_dtype)
     f(data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev)
 
     dev_out = data_out_dev.numpy()
 
-    diff1, diff2 = cal_diff(dev_out, data_out)
+    diff1, diff2 = cal_diff(dev_out, data_out.astype(dtype.as_numpy_dtype))
 
     evaluator = f.time_evaluator(dev, 1, 10)
     time = (
@@ -127,7 +144,7 @@ def evaluate(f, dtype, data_amount, data_width):
         / (2 ** 30)
     )  # GB/s
 
-    # output results
+    # Output results.
     print(
         "data_type: {} data_amount: {:2.4f}GB data_width: \
         {:7d} time cost: {:3.2f}ms IO speed: {:4.3f}GB/s diff1: \
@@ -154,7 +171,7 @@ def evaluate(f, dtype, data_amount, data_width):
 
 def func():
     """
-    test function
+    Test function.
     """
     results = [
         [
@@ -172,12 +189,12 @@ def func():
         for data_amount in data_amounts:
             for data_width in data_widths:
                 results.append(evaluate(f, dtype, data_amount, data_width))
-    # store testing result into json file
+    # Store testing result into json file.
     filename = "perfomance_log.json"
     with open(filename, "w") as file_obj:
         json.dump(results, file_obj)
 
 
-# main function
+# Main function.
 if __name__ == "__main__":
     func()
