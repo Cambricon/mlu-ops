@@ -18,6 +18,7 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""logaddexp2"""
 import math
 import bangpy
 from bangpy import tcp
@@ -32,7 +33,7 @@ KERNEL_NAME = "logaddexp2"
 
 class Logaddexp2():
     """Operator description:
-    Logaddexp2 the data in the two buffers.
+    logaddexp2 the data in the two buffers.
     """
 
     def __init__(self, dtype, target, task_num):
