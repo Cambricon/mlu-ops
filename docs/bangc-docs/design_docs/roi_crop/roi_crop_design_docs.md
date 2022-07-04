@@ -34,7 +34,7 @@
 
 ### 1.1 算子需求分析
 
-该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU-OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU-OPS 全部支持。
+该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU_OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU_OPS 全部支持。
 
 | 算子功能简介                | 根据感兴趣区域提取固定大小的输出特征|
 | -------------------------- | ---------------------------------------- |
@@ -117,29 +117,27 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |MLU-OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
+| handle      |MLU_OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
 | input_desc |输入数据 input 的形状描述结构体，定义了 input 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无 |
 | input      |输入 tensor input 的地址| 输入              | float | NHWC     | 无       |
 | grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无    |
 | grid      |输入 tensor grid 的地址| 输入              | float | ARRAY    | 无       |
-| output_desc |输出数据 output 的形状描述结构体，定义了 output 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| /  | 无 |
+| output_desc |输入数据 output 的形状描述结构体，定义了 output 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| /  | 无 |
 | output      |输出 tensor output 的地址 | 输出         |    float         | NHWC     | 无       |
 
 #### 1.3.2 roi_crop_backward
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |MLU-OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
+| handle      |MLU_OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
 | gradOutput_desc |输入数据 gradOutput 的形状描述结构体，定义了 gradOutput 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t | /        | 无       |
 | gradOutput      |输入 tensor gradOutput 的地址|输入 |  float    | NHWC     | 无       |
 | grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入   |mluOpTensorDescriptor_t | /        | 无       |
 | grid      |输入 tensor grid 的地址| 输入  |float | ARRAY    | 无       |
 | gradInput_desc |输入数据 gradInput 的形状描述结构体，定义了 gradInput 的数据类型，数据维度和布局      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
-| gradInput      |输入 tensor gradInput 的地址      | 输出              | float | NHWC    | 无       |
+| gradInput      |输出 tensor gradInput 的地址      | 输出              | float | NHWC    | 无       |
 
 ### 1.4 算子限制
-
-`注意`：凡是没有在此处列出，但最终被框架检测到的算子限制，均会被视为算子 bug。在此处列出的限制，算子内做好防呆。
 
 | 限制类型     | 详细说明  |
 | ------------ | ---------------------------------|
@@ -157,13 +155,13 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../MLU-OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
 - 算子精度验收标准：diff1、diff2；
 - 算子精度阈值描述：diff1 <= 3e-3 && diff2 <=3e-3；
 
 #### 1.5.2 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../MLU-OPS性能验收标准.md)。
+见 [MLU_OPS 性能验收标准](../MLU_OPS性能验收标准.md)。
 
 ## 2 算子接口设计
 
@@ -274,7 +272,7 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 1、bangc 代码中加入必要的 log 信息，比如输入的规模、数据类型、layout 这些，以及如果出错会导致程序 core dump 的变量，比如 IO 指令的 data_size、dim xyz 的值等，这些信息都是有利于快速定位问题；
 
-2、对每一个函数命名变量命名都有充分的注释；
+2、对重要的函数命名、变量命名要有充分的注释；
 
 3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
 
@@ -284,27 +282,37 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 1、roi_crop_forward
 
-|input、grid、output|source data type |destination data type|
-|----|----|----|
-|[b, h, w, c]、[n, out_h, out_w, 2]、[n, out_h, out_w, c]|float |float|
+|input|grid|output|source data type |destination data type|
+|----|----|----|----|----|
+|1，5，5，1|1，3，1，2|1，3，1，1|float |float|
+|1，32，32，500|1，5，5，2|1，5，5，500|float |float|
+|1，32，32，50000|1，5，5，2|1，5，5，50000|float |float|
+|4，32，32，500|16，3，5，2|16，3，5，500|float |float|
+|4，13，15，5000|16，5，9，2|16，5，9，5000|float |float|
+|8，32，32，500|16，25，25，2|16，25，25，500|float |float|
 
 2、roi_crop_backward
 
-|gradOutput、grid、gradInput|source data type |destination data type|
-|----|----|----|
-|[n, out_h, out_w, c]、[n, out_h, out_w, 2]、[n, h, w, c]|float |float|
+|gradOutput|grid|gradInput|source data type |destination data type|
+|----|----|----|----|----|
+|[1, 3, 1, 1]|[1, 3, 1, 2]|[1, 5, 5, 500]|float |float|
+|[1, 5, 5, 500]|[1, 5, 5, 2]|[1, 32, 32, 500]|float |float|
+|[1, 5, 5, 50000]|[1, 5, 5, 2]|[1, 32, 32, 50000]|float |float|
+|[16, 3, 5, 50000]|[16, 3, 5, 2]|[4, 32, 32, 50000]|float |float|
+|[16, 13, 25, 500]|[16, 13, 25, 2]|[4, 32, 32, 500]|float |float|
+|[16, 25, 25, 500]|[16, 25, 25, 2]|[4, 32, 32, 500]|float |float|
 
 - 边界 case: grid:[-1,1] 
 
 其他可根据需要进行补充。算子开发完毕后，补充测试报告链接。
 
-### 3.7 算子防呆检查
+### 3.7 算子参数检查
 
-1、指针为空防呆；
+1、检查描述符与数据指针是否为空；
 
-2、0 元素检查防呆，LOG(ERROR) 打印信息，是否返回与框架沟通；
+2、检测 tensor 是否为 0 元素；
 
-3、涉及 workspace 算子对于 workspace_size 的检查防呆；
+3、检查输入、输出 tensor 的数据类型、物理布局和规模是否正确；
 
 4、是否需要对输入输出支持的 dtype、layout 以及 shape 进行防呆；
 
@@ -328,18 +336,12 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 ### 5.1 开发测试计划
 
-1、开发时间不宜过长，但是测试时间要预留充分，建议开发: 测试 = 1 : 1
-
-2、调研需求，接口设计之后可以直接开发 gtest，理解原理
-
-3、方案设计 + 代码开发 + 测试是一个连续的过程
-
 #### 5.1.1 roi_crop_forward
 
 - 2022.4.19 ~ 4.21 调研源码+开始设计方案
 - 2022.4.22 设计方案评审：算子功能+接口设计
-- 2022.4.24 算子在 MLU-OPS 下的 GTest 代码开发
-- 2022.4.25 ~ 4.29  算子在 MLU-OPS 下的 host、kernel 代码开发
+- 2022.4.24 算子在 MLU_OPS 下的 GTest 代码开发
+- 2022.4.25 ~ 4.29  算子在 MLU_OPS 下的 host、kernel 代码开发
 - 2022.5.5 算子在黄区下的 Generator 开发
 - 2022.5.10 ~ 5.18 大规模测试
 - 2022.5.23 提交交 MR + 代码 review
@@ -349,8 +351,8 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 - 5.30 ~ 6.1 算子需求分析和方案设计
 - 6.2 算子方案评审
-- 6.6 算子在 MLU-OPS 下的 GTest 开发
-- 6.7 ~ 6.10 算子在 MLU-OPS 下的 host、kernel 代码开发
+- 6.6 算子在 MLU_OPS 下的 GTest 开发
+- 6.7 ~ 6.10 算子在 MLU_OPS 下的 host、kernel 代码开发
 - 6.11 算子在黄区下的 Generator开发
 - 6.13 ~ 5.16 大规模测试
 - 6.17 提交交 MR + 代码 review
