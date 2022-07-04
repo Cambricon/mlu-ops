@@ -123,7 +123,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
 
             dim_index = len(_shape1) - 1
 
-            # mlu 输入参数
+            # mlu input parameters
             _pd_len = _shape1[len(_shape1) - 1]
             _pd_height = 1
             _pd_width = 1
@@ -137,13 +137,13 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
                 for i in range(dim_index + 1, len(_shape1)):
                     _pd_width *= _shape1[i]
 
-            # mlu 输入
+            # mlu input
             _mlu_input1 = bp.Array(a.flatten(), _dev)
             _mlu_input2 = bp.Array(b.flatten(), _dev)
-            paras = np.array([p, eps]).astype(dtype.as_numpy_dtype) # 这里需要考虑
+            paras = np.array([p, eps]).astype(dtype.as_numpy_dtype)
             _mlu_paras = bp.Array(paras, _dev)
 
-            # mlu 输出
+            # mlu output
             _output_len = get_total_size(_shape1) // _shape1[dim_index]
             output_buffer = np.zeros(_output_len, dtype=dtype.as_numpy_dtype)
             _mlu_output = bp.Array(output_buffer, _dev)
@@ -155,7 +155,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             output_buffer3 = -np.ones(output_count, dtype=np.int32)
             _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
 
-            # 调用mlu
+            # call mlu interface
             func = load_op_by_type(KERNEL_NAME, dtype.name)
             func(_mlu_input1, _mlu_input2,
                  _mlu_paras,
@@ -166,7 +166,6 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
             result = _mlu_output.numpy()
             result_border_idx = _mlu_border_idx_output.numpy()
 
-            #收尾
             s = set()
             for i in result_border_idx:
                 s.add(i)
