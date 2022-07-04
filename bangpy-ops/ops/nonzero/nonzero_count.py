@@ -105,6 +105,7 @@ class NonZeroCount(object):
         self.dim_1 = self.tcp.SizeVar("dim_1")
         self.dim_2 = self.tcp.SizeVar("dim_2")
         self.dim_3 = self.tcp.SizeVar("dim_3")
+        self.task_num_var = self.tcp.SizeVar("task_num")
         # 30 * 1024B reserve for stack, need 2 buffers after storage rewrite pass.
         self.nram_size = round_down(
             (TARGET(target).nram_size - 30 * 1024) // bp.int32.bytes // 3, 128
@@ -201,7 +202,7 @@ class NonZeroCount(object):
             scope="global",
         )
         self.core_count = self.tcp.Buffer(
-            shape=(self.task_num,), dtype=bp.uint32, name="core_count", scope="global"
+            shape=(self.task_num_var,), dtype=bp.uint32, name="core_count", scope="global"
         )
 
         elem_size = self.tcp.Scalar(dtype=bp.int32, name="elem_size")

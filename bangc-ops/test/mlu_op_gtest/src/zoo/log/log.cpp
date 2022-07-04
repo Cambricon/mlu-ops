@@ -30,11 +30,13 @@ void LogExecutor::compute() {
   auto output_tensor = tensor_desc_[1].tensor;
   auto output_dev = data_vector_[1].device_ptr;
   VLOG(4) << "call mluOpLog()";
-  mluOpLogBase_t base = (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
-  mluOpComputationPreference_t prefer =
-      (mluOpComputationPreference_t)(parser_->getProtoNode()->log_param().prefer());
+  mluOpLogBase_t base =
+      (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
+  mluOpComputationPreference_t prefer = (mluOpComputationPreference_t)(
+      parser_->getProtoNode()->log_param().prefer());
   interface_timer_.start();
-  MLUOP_CHECK(mluOpLog(handle_, prefer, base, input_tensor, input_dev, output_tensor, output_dev));
+  MLUOP_CHECK(mluOpLog(handle_, prefer, base, input_tensor, input_dev,
+                       output_tensor, output_dev));
   interface_timer_.stop();
 
   data_vector_[1].is_output = true;
@@ -45,7 +47,8 @@ void LogExecutor::cpuCompute() {
   assert(parser_->getOutputNum() == 1);
   auto count = parser_->getInputDataCount(0);
 
-  mluOpLogBase_t base = (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
+  mluOpLogBase_t base =
+      (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
   VLOG(4) << "log base is " << base << " (e -> 0, 2 -> 1, 10 -> 2)";
   if (base == mluOpLogBase_t::MLUOP_LOG_E) {
     for (int i = 0; i < count; ++i) {

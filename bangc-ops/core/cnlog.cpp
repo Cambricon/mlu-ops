@@ -58,14 +58,15 @@ uint64_t warningCnt = 0;                     // counts of warning
 uint64_t errorCnt = 0;                       // counts of error
 int64_t fatalCnt = 0;                        // counts of fatal
 bool is_open_log = false;                    // whether log system is work.
-__attribute__((__unused__)) int logLevel =
-    getLevelEnvVar("MLUOP_MIN_LOG_LEVEL", 0);  // only the level GE this will be print.
+__attribute__((__unused__)) int logLevel = getLevelEnvVar(
+    "MLUOP_MIN_LOG_LEVEL", 0);  // only the level GE this will be print.
 __attribute__((__unused__)) bool is_only_show =
     getBoolEnvVar("MLUOP_LOG_ONLY_SHOW", true);  // whether only show on screen.
 __attribute__((__unused__)) bool g_color_print =
     getBoolEnvVar("MLUOP_LOG_COLOR_PRINT", true);  // whether print with color
-__attribute__((__unused__)) const std::map<std::string, bool> module_print_map = {
-    {"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)},
+__attribute__((__unused__)) const std::map<std::string, bool>
+    module_print_map = {
+        {"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)},
 };
 
 bool isPrintToScreen() {
@@ -86,14 +87,9 @@ bool releasePrint(std::string module_name) {
   return module_print;
 }
 
-LogMessage::LogMessage(std::string file,
-                       int line,
-                       int module,
-                       int severity,
-                       std::string module_name,
-                       bool is_print_head,
-                       bool is_print_tail,
-                       bool is_clear_endl,
+LogMessage::LogMessage(std::string file, int line, int module, int severity,
+                       std::string module_name, bool is_print_head,
+                       bool is_print_tail, bool is_clear_endl,
                        bool release_can_print)
     : logInfoFile_(file),
       logInfoLine_(line),
@@ -142,9 +138,7 @@ void setLevel(int log_level) {
 /**
  * @brief: used by interface macro, use << to get the string content.
  */
-std::stringstream &LogMessage::stream() {
-  return contex_str_;
-}
+std::stringstream &LogMessage::stream() { return contex_str_; }
 
 /**
  * @brief: clear endl in param string.
@@ -216,10 +210,13 @@ LogMessage::~LogMessage() {
           fatalCnt++;
           break;
         }
-        default: { break; }
+        default: {
+          break;
+        }
       }
 #ifndef ANDROID_LOG
-      if ((log_module_ == LOG_SAVE_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
+      if ((log_module_ == LOG_SAVE_ONLY) ||
+          (log_module_ == LOG_SAVE_AND_SHOW)) {
         if (!is_only_show) {
           logFile << file_ss;
           if (is_clear_endl_) {
@@ -227,7 +224,8 @@ LogMessage::~LogMessage() {
           }
         }
       }
-      if ((log_module_ == LOG_SHOW_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
+      if ((log_module_ == LOG_SHOW_ONLY) ||
+          (log_module_ == LOG_SAVE_AND_SHOW)) {
         userStream << cout_ss;
         if (is_clear_endl_) {
           userStream << std::endl;
@@ -253,7 +251,9 @@ LogMessage::~LogMessage() {
           LOGD("%s", file_ss.c_str());
           break;
         }
-        default: { break; }
+        default: {
+          break;
+        }
       }
 #endif
     }
@@ -277,8 +277,8 @@ std::string LogMessage::getTime() {
   std::string hour = std::to_string(systime.wHour);
   std::string min = std::to_string(systime.wMinute);
   std::string second = std::to_string(systime.wSecond);
-  std::string time_stamp =
-      "[" + year + "-" + month + "-" + day + " " + hour + ":" + min + ":" + second + "] ";
+  std::string time_stamp = "[" + year + "-" + month + "-" + day + " " + hour +
+                           ":" + min + ":" + second + "] ";
   return time_stamp;
 #else
   time_t g_time;
@@ -294,8 +294,8 @@ std::string LogMessage::getTime() {
   std::string hour = std::to_string(general_time.tm_hour);
   std::string min = std::to_string(general_time.tm_min);
   std::string second = std::to_string(general_time.tm_sec);
-  std::string time_stamp =
-      "[" + year + "-" + month + "-" + day + " " + hour + ":" + min + ":" + second + "] ";
+  std::string time_stamp = "[" + year + "-" + month + "-" + day + " " + hour +
+                           ":" + min + ":" + second + "] ";
   return time_stamp;
 #endif
 #endif
@@ -334,7 +334,9 @@ void LogMessage::printHead(bool is_colored) {
       file_str_ << "[Vlog]: ";
       break;
     }
-    default: { break; };
+    default: {
+      break;
+    };
   }
   if (is_colored) {
     cout_str_ << getTime();
@@ -360,7 +362,9 @@ void LogMessage::printHead(bool is_colored) {
         cout_str_ << HIGHLIGHT << BLUE << "[Vlog]:" << RESET;
         break;
       }
-      default: { break; }
+      default: {
+        break;
+      }
     }
   } else {
     cout_str_ << file_str_.str();
@@ -390,13 +394,15 @@ void LogMessage::printTail(bool is_colored) {
     realId << "{" << tid << "}";
   }
   file_str_ << "  "
-            << "[ " << logInfoFile_ << ":" << logInfoLine_ << "  pid:" << realId.str() << "]";
+            << "[ " << logInfoFile_ << ":" << logInfoLine_
+            << "  pid:" << realId.str() << "]";
   if (is_colored) {
     cout_str_ << "  " << GREEN << "[ " << logInfoFile_ << ":" << logInfoLine_
               << "  pid:" << realId.str() << "]" << RESET;
   } else {
     cout_str_ << "  "
-              << "[ " << logInfoFile_ << ":" << logInfoLine_ << "  pid:" << realId.str() << "]";
+              << "[ " << logInfoFile_ << ":" << logInfoLine_
+              << "  pid:" << realId.str() << "]";
   }
 #else
   if (releasePrint(module_name_)) {
@@ -414,13 +420,15 @@ void LogMessage::printTail(bool is_colored) {
       realId << "{" << tid << "}";
     }
     file_str_ << "  "
-              << "[ " << logInfoFile_ << ":" << logInfoLine_ << "  pid:" << realId.str() << "]";
+              << "[ " << logInfoFile_ << ":" << logInfoLine_
+              << "  pid:" << realId.str() << "]";
     if (is_colored) {
       cout_str_ << "  " << GREEN << "[ " << logInfoFile_ << ":" << logInfoLine_
                 << "  pid:" << realId.str() << "]" << RESET;
     } else {
       cout_str_ << "  "
-                << "[ " << logInfoFile_ << ":" << logInfoLine_ << "  pid:" << realId.str() << "]";
+                << "[ " << logInfoFile_ << ":" << logInfoLine_
+                << "  pid:" << realId.str() << "]";
     }
   }
 #endif
@@ -489,7 +497,8 @@ bool getBoolEnvVar(const std::string &str, bool default_para) {
   std::string env_var = std::string(env_raw_ptr);
   /// to up case
   std::transform(env_var.begin(), env_var.end(), env_var.begin(), ::toupper);
-  return (env_var == "1" || env_var == "ON" || env_var == "YES" || env_var == "TRUE");
+  return (env_var == "1" || env_var == "ON" || env_var == "YES" ||
+          env_var == "TRUE");
 }
 
 int getLevelEnvVar(const std::string &str, int default_para) {

@@ -27,10 +27,8 @@ class DivExecutor : public Executor {
   void cpuCompute();
   int expand_num_after_first(int num);
   bool canBroadCast(std::vector<int> shape0, std::vector<int> shape1);
-  void expand_compute_cpu(std::vector<int> shape_a,
-                          std::vector<int> shape_b,
-                          float *input,
-                          float *output);
+  void expand_compute_cpu(std::vector<int> shape_a, std::vector<int> shape_b,
+                          float *input, float *output);
   int64_t getTheoryOps() override;
 
  private:

@@ -29,7 +29,8 @@ void SqrtBackwardExecutor::compute() {
   auto dev_dx = data_vector_[2].device_ptr;
   VLOG(4) << "call mlu-ops SqrtBackward()";
   interface_timer_.start();
-  MLUOP_CHECK(mluOpSqrtBackward(handle_, tensor_y, dev_y, tensor_dy, dev_dy, tensor_dx, dev_dx));
+  MLUOP_CHECK(mluOpSqrtBackward(handle_, tensor_y, dev_y, tensor_dy, dev_dy,
+                                tensor_dx, dev_dx));
   interface_timer_.stop();
 }
 
@@ -42,7 +43,8 @@ void SqrtBackwardExecutor::cpuCompute() {
   assert(count1 == count2);
 
   for (int i = 0; i < count1; ++i) {
-    cpu_fp32_output_[0][i] = 0.5 * cpu_fp32_input_[1][i] * (1.0 / cpu_fp32_input_[0][i]);
+    cpu_fp32_output_[0][i] =
+        0.5 * cpu_fp32_input_[1][i] * (1.0 / cpu_fp32_input_[0][i]);
   }
 }
 

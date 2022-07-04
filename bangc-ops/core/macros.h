@@ -76,7 +76,8 @@
 // analysis. Giving it this information can help it optimize for the
 // common case in the absence of better information (ie.
 // -fprofile-arcs).
-#if (MLUOP_HAS_BUILTIN(__builtin_expect) || (defined(__GNUC__) && __GNUC__ >= 3))
+#if (MLUOP_HAS_BUILTIN(__builtin_expect) || \
+     (defined(__GNUC__) && __GNUC__ >= 3))
 #define MLUOP_PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #define MLUOP_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #else

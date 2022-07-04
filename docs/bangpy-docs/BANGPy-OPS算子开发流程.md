@@ -192,8 +192,9 @@ ops 下的 BANGPy 算子实现需要自己使用numpy接口来实现CPU baseline
 本地编译测试通过后可以执行以下操作提交修改的代码到远程分支。
 
 ```bash
-1. git add FileName                \\ 将所有修改的文件添加到 git 暂存区。
-2. git commit                      \\ 将添加到暂存区的修改提交。
-3. git pull origin master -r       \\ rebase master, 确保自己的分支领先于最新 master 分支。
-4. git push origin your_branch     \\ 将本地分支推到远程。
+1. source env.sh                   \\ 使能 pre-commit ，在 commit 阶段触发代码格式检查。
+2. git add FileName                \\ 将所有修改的文件添加到 git 暂存区。
+3. git commit                      \\ 将添加到暂存区的修改提交。
+4. git pull origin master -r       \\ rebase master, 确保自己的分支领先于最新 master 分支。
+5. git push origin your_branch     \\ 将本地分支推到远程。
 ```

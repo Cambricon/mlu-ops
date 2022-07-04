@@ -16,11 +16,10 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 #include "mlu_op.h"
-#include "abs.h"
+#include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t &handle,
-                       const mluOpTensorDescriptor_t &desc,
-                       cnrtDim3_t *k_dim,
+                       const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
   size_t dim = mluOpGetTensorElementNum(desc);
   // Union1 policyFunc
@@ -30,8 +29,7 @@ static void policyFunc(const mluOpHandle_t &handle,
   k_dim->z = 1;
   // if a case is smaller than 2048 , it just need one cluster can work best.
   size_t small_case_thread = 2048;
-  if (dim <= small_case_thread)
-    k_dim->y = 1;
+  if (dim <= small_case_thread) k_dim->y = 1;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
@@ -42,7 +40,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   bool zero_element = false;
   mluOpStatus_t param_check =
-      unaryOpParamCheck("[mluOpAbs]", handle, x_desc, x, y_desc, y, support_type, 2, zero_element);
+      unaryOpParamCheck("[mluOpAbs]", handle, x_desc, x, y_desc, y,
+                        support_type, 2, zero_element);
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
   }
@@ -55,17 +54,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   cnrtFunctionType_t k_type;
   policyFunc(handle, x_desc, &k_dim, &k_type);
 
-  int32_t element_num = mluOpGetTensorElementNum(x_desc);
-  void (*MLUBlockKernelUnary)(void *x, void *y, uint32_t element_num, float coef);
-  MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbsfloatFast;
+  int element_num = mluOpGetTensorElementNum(x_desc);
+  void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                cnrtQueue_t queue, const void *x, void *y,
+                                int num);
+  mluOpBlockKernelUnary = nullptr;
   if (x_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "kernel MLUBlockKernel3StagePipelineAbshalfFast";
-    MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbshalfFast;
+    VLOG(5) << "kernel mluOpBlockKernel3StagePipelineAbsHalfFast";
+    mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineAbsHalfFast;
   } else {
-    VLOG(5) << "kernel MLUBlockKernel3StagePipelineAbsfloatFast";
-    MLUBlockKernelUnary = MLUBlockKernel3StagePipelineAbsfloatFast;
+    VLOG(5) << "kernel mluOpBlockKernel3StagePipelineAbsFloatFast";
+    mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineAbsFloatFast;
   }
-  KERNEL_CHECK((MLUBlockKernelUnary<<<k_dim, k_type, handle->queue>>>((void *)x, (void *)y,
-                                                                      element_num, 0.0)));
+  KERNEL_CHECK(
+      (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
+
   return MLUOP_STATUS_SUCCESS;
 }

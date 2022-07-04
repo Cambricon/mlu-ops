@@ -139,8 +139,7 @@ mluOpStatus_t mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc) {
 
 mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
                                        mluOpTensorLayout_t layout,
-                                       mluOpDataType_t dtype,
-                                       int dimNb,
+                                       mluOpDataType_t dtype, int dimNb,
                                        const int dimSize[]) {
   PARAM_CHECK("[mluOpSetTensorDescriptor]", desc != NULL);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", dimNb > 0);
@@ -185,10 +184,12 @@ mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
         tensor_info << dimSize[i] << ", ";
       }
 
-      tensor_info << dimSize[dimNb - 1] << "), data width:" << getSizeOfDataType(dtype) << ".";
-      LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow tensor size with type 'int'."
-                   << "Currently, mluOp supports tensor size smaller than 2^31, "
-                   << "now tensor " << tensor_info.str();
+      tensor_info << dimSize[dimNb - 1]
+                  << "), data width:" << getSizeOfDataType(dtype) << ".";
+      LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow tensor size with "
+                      "type 'int'. Currently, mluOp supports tensor size "
+                      "smaller than 2^31, now tensor "
+                   << tensor_info.str();
     }
   }
   return MLUOP_STATUS_SUCCESS;
@@ -203,8 +204,7 @@ mluOpStatus_t mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc) {
 
 mluOpStatus_t mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
                                          mluOpTensorLayout_t layout,
-                                         mluOpDataType_t dtype,
-                                         int dimNb,
+                                         mluOpDataType_t dtype, int dimNb,
                                          const int dimSize[],
                                          const int dimStride[]) {
   PARAM_CHECK("[mluOpSetTensorDescriptorEx]", desc != NULL);
@@ -230,24 +230,24 @@ mluOpStatus_t mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc,
-                                                     mluOpDataType_t onchip_dtype) {
+mluOpStatus_t mluOpSetTensorDescriptorOnchipDataType(
+    mluOpTensorDescriptor_t desc, mluOpDataType_t onchip_dtype) {
   PARAM_CHECK("[mluOpSetTensorDescriptorOnchipDataType]", desc != NULL);
 
   desc->onchip_dtype = onchip_dtype;
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position) {
+mluOpStatus_t mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc,
+                                               int position) {
   PARAM_CHECK("[mluOpSetTensorDescriptorPosition]", desc != NULL);
 
   desc->position = position;
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc,
-                                                       int position,
-                                                       float scale) {
+mluOpStatus_t mluOpSetTensorDescriptorPositionAndScale(
+    mluOpTensorDescriptor_t desc, int position, float scale) {
   PARAM_CHECK("[mluOpSetTensorDescriptorPositionAndScale]", desc != NULL);
 
   desc->position = position;
@@ -255,10 +255,8 @@ mluOpStatus_t mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t d
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc,
-                                                             int position,
-                                                             float scale,
-                                                             int offset) {
+mluOpStatus_t mluOpSetTensorDescriptorPositionScaleAndOffset(
+    mluOpTensorDescriptor_t desc, int position, float scale, int offset) {
   PARAM_CHECK("[mluOpSetTensorDescriptorPositionScaleAndOffset]", desc != NULL);
 
   desc->position = position;
@@ -269,10 +267,8 @@ mluOpStatus_t mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescript
 
 mluOpStatus_t mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
                                          mluOpTensorLayout_t *layout,
-                                         mluOpDataType_t *dtype,
-                                         int *dimNb,
-                                         int dimSize[],
-                                         int dimStride[]) {
+                                         mluOpDataType_t *dtype, int *dimNb,
+                                         int dimSize[], int dimStride[]) {
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", layout != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", dtype != NULL);
@@ -293,8 +289,7 @@ mluOpStatus_t mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
 
 mluOpStatus_t mluOpGetTensorDescriptor(const mluOpTensorDescriptor_t desc,
                                        mluOpTensorLayout_t *layout,
-                                       mluOpDataType_t *dtype,
-                                       int *dimNb,
+                                       mluOpDataType_t *dtype, int *dimNb,
                                        int dimSize[]) {
   PARAM_CHECK("[mluOpGetTensorDescriptor]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptor]", layout != NULL);
@@ -312,8 +307,8 @@ mluOpStatus_t mluOpGetTensorDescriptor(const mluOpTensorDescriptor_t desc,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc,
-                                                     mluOpDataType_t *onchip_dtype) {
+mluOpStatus_t mluOpGetTensorDescriptorOnchipDataType(
+    const mluOpTensorDescriptor_t desc, mluOpDataType_t *onchip_dtype) {
   PARAM_CHECK("[mluOpGetTensorDescriptorOnchipDataType]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorOnchipDataType]", onchip_dtype != NULL);
 
@@ -321,7 +316,8 @@ mluOpStatus_t mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *position) {
+mluOpStatus_t mluOpGetTensorDescriptorPosition(
+    const mluOpTensorDescriptor_t desc, int *position) {
   PARAM_CHECK("[mluOpGetTensorDescriptorPosition]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorPosition]", position != NULL);
 
@@ -329,9 +325,8 @@ mluOpStatus_t mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t des
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc,
-                                                       int *position,
-                                                       float *scale) {
+mluOpStatus_t mluOpGetTensorDescriptorPositionAndScale(
+    const mluOpTensorDescriptor_t desc, int *position, float *scale) {
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionAndScale]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionAndScale]", position != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionAndScale]", scale != NULL);
@@ -341,14 +336,16 @@ mluOpStatus_t mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescript
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t desc,
-                                                             int *position,
-                                                             float *scale,
-                                                             int *offset) {
+mluOpStatus_t mluOpGetTensorDescriptorPositionScaleAndOffset(
+    const mluOpTensorDescriptor_t desc, int *position, float *scale,
+    int *offset) {
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]", desc != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]", position != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]", scale != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]", offset != NULL);
+  PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]",
+              position != NULL);
+  PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]",
+              scale != NULL);
+  PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]",
+              offset != NULL);
 
   *position = desc->position;
   *scale = desc->scale;

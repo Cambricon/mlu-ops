@@ -19,7 +19,9 @@ const char *mluOpGetErrorString(mluOpStatus_t status) {
   CHECK_GE(status, 0);
 
   switch (status) {
-    default: { return (char *)"MLUOP_STATUS_UNKNOWN"; }
+    default: {
+      return (char *)"MLUOP_STATUS_UNKNOWN";
+    }
     case MLUOP_STATUS_SUCCESS: {
       return (char *)"MLUOP_STATUS_SUCCESS";
     }

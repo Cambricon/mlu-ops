@@ -116,16 +116,21 @@ typedef enum {
  ******************************************************************************/
 /*! @brief Enumeration variables describing the data types in MLUOP. */
 typedef enum {
-  MLUOP_DTYPE_INVALID = 0, /*!< The data is an invalid data type. */
-  MLUOP_DTYPE_HALF    = 1, /*!< The data is a 16-bit floating-point data type. */
-  MLUOP_DTYPE_FLOAT   = 2, /*!< The data is a 32-bit floating-point data type. */
-  MLUOP_DTYPE_INT8    = 3, /*!< The data is a 8-bit signed integer data type. */
-  MLUOP_DTYPE_INT16   = 4, /*!< The data is a 16-bit signed integer data type. */
-  MLUOP_DTYPE_INT31   = 5, /*!< The data is a 31-bit signed integer data type. */
-  MLUOP_DTYPE_INT32   = 6, /*!< The data is a 32-bit signed integer data type. */
-  MLUOP_DTYPE_INT64   = 9, /*!< The data is a 64-bit signed integer data type. */
-  MLUOP_DTYPE_UINT8   = 7, /*!< The data is a 8-bit unsigned integer data type. */
-  MLUOP_DTYPE_BOOL    = 8, /*!< The data is a BOOL data type. */
+  MLUOP_DTYPE_INVALID         = 0,   /*!< The data is an invalid data type. */
+  MLUOP_DTYPE_HALF            = 1,   /*!< The data is a 16-bit floating-point data type. */
+  MLUOP_DTYPE_FLOAT           = 2,   /*!< The data is a 32-bit floating-point data type. */
+  MLUOP_DTYPE_DOUBLE          = 3,   /*!< The data is a 64-bit floating-point data type. */
+  MLUOP_DTYPE_INT8            = 4,   /*!< The data is an 8-bit signed integer data type. */
+  MLUOP_DTYPE_INT16           = 5,   /*!< The data is a 16-bit signed integer data type. */
+  MLUOP_DTYPE_INT32           = 6,   /*!< The data is a 32-bit signed integer data type. */
+  MLUOP_DTYPE_INT64           = 7,   /*!< The data is a 64-bit signed integer data type. */
+  MLUOP_DTYPE_UINT8           = 8,   /*!< The data is an 8-bit unsigned integer data type. */
+  MLUOP_DTYPE_UINT16          = 9,   /*!< The data is a 16-bit unsigned integer data type. */
+  MLUOP_DTYPE_UINT32          = 10,  /*!< The data is a 32-bit unsigned integer data type. */
+  MLUOP_DTYPE_UINT64          = 11,  /*!< The data is a 64-bit unsigned integer data type. */
+  MLUOP_DTYPE_BOOL            = 12,  /*!< The data is a boolean data type. */
+  MLUOP_DTYPE_COMPLEX_HALF    = 13,  /*!< The data is a 32-bit complex number of two fp16. */
+  MLUOP_DTYPE_COMPLEX_FLOAT   = 14,  /*!< The data is a 64-bit complex number of two fp32. */
 } mluOpDataType_t;
 
 /*!
