@@ -35,15 +35,16 @@
 
 ### 1.2 算子功能和应用场景描述
 
-hard_sigmoid激活函数定义:  
-$$
-\text{hard\_sigmoid}(x)=\begin{cases}
+Hardsigmoid函数定义:  
+
+$$  
+\text{Hardsigmoid}(x)=\begin{cases}
 0 & x \le -3, \\
 1 & x \ge +3, \\
 x/6+1/2 & \text{otherwise}.\end{cases}
 $$
 
-算子功能：对一个输入张量按元素应用Hardsigmoid激活函数后，得到一个激活过后的张量。  
+算子功能：对一个输入张量按元素应用Hardsigmoid激活函数后，得到一个激活后的张量。  
 例如： 
 ```
 input = [[[[[[[[-3.5, 2.4, 4.0], [-2.4, 0.0, 1.8]]]]]]]]  
