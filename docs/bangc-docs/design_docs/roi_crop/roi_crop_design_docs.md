@@ -119,11 +119,11 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
 | handle      |MLU_OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
-| input_desc |输入数据 input 的形状描述结构体，定义了 input 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无 |
+| input_desc |对输入数据 input 的形状描述，包含了 input 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| / | 无 |
 | input      |输入 tensor input 的地址| 输入              | float | NHWC     | 无       |
-| grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| / | 无    |
+| grid_desc |对输入数据 gird 的形状描述，包含了 grid 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| / | 无    |
 | grid      |输入 tensor grid 的地址| 输入              | float | ARRAY    | 无       |
-| output_desc |输入数据 output 的形状描述结构体，定义了 output 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t| /  | 无 |
+| output_desc |对输出数据 output 的形状描述，包含了 output 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| /  | 无 |
 | output      |输出 tensor output 的地址 | 输出         |    float         | NHWC     | 无       |
 
 #### 1.3.2 roi_crop_backward
@@ -131,11 +131,11 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
 | handle      |MLU_OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
-| grad_output_desc |输入数据 grad_output 的形状描述结构体，定义了 grad_output 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t | /        | 无       |
+| grad_output_desc |对输入数据 grad_output 的形状描述，包含了 grad_output 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t | /        | 无       |
 | grad_output      |输入 tensor grad_output 的地址|输入 |  float    | NHWC     | 无       |
-| grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入   |mluOpTensorDescriptor_t | /        | 无       |
+| grid_desc |对输入数据 gird 的形状描述结构体，包含了 grid 的数据类型、数据维度和布局等信息| 输入   |mluOpTensorDescriptor_t | /        | 无       |
 | grid      |输入 tensor grid 的地址| 输入  |float | ARRAY    | 无       |
-| grad_input_desc |输入数据 grad_input 的形状描述结构体，定义了 grad_input 的数据类型，数据维度和布局      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
+| grad_input_desc |对输出数据 grad_input 的形状描述，包含了 grad_input 的数据类型、数据维度和布局等信息      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
 | grad_input      |输出 tensor grad_input 的地址      | 输出              | float | NHWC    | 无       |
 
 ### 1.4 算子限制
@@ -314,14 +314,6 @@ bins_loop_per = bins_first_per + task_bins;<br>
 2、检测 tensor 是否为 0 元素；
 
 3、检查输入、输出 tensor 的数据类型、物理布局和规模是否正确；
-
-4、是否需要对输入输出支持的 dtype、layout 以及 shape 进行防呆；
-
-5、elementwise 算子则需要保证输入输出的每一个维度都要一样；
-
-6、算子存在的自身的相关参数防呆。
-
-主要是列出 4, 5, 6 防呆内容，方便 review。
 
 ## 4 算子性能优化记录
 
