@@ -47,7 +47,7 @@ from cross import DTYPES, KERNEL_NAME, TARGET_LIST
     # ((1,2,2,2,3,128,1,1),-9), #不合法的输入样例
     # ((2,1024,2,4,3,2,8192,2),4),
     # step>buffer长度的情况，分支2，当group达到这个量级就会报错，小于则不会
-    # 原因暂时不明,详见设计文档优化记录和测试文档总结分析部分
+    # 原因可能是数据规模对于在该分支下执行的操作太大了
     ]
 )
 @pytest.mark.parametrize(
