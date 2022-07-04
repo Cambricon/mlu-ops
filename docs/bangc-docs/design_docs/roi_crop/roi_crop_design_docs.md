@@ -5,9 +5,10 @@
 | 算子名称    | roi_crop       |
 | ----------- | -------------- |
 | 编制人/日期 | 涂德江/2022-5-30 |
-| 审批人/日期 | XX/2022-6-2   |
-| 审批人/日期 | XX/2022-6-2   |
-| 审批人/日期 | XX/2022-6-2   |
+| 审批人/日期 | 卜德飞/2022-6-15 |
+| 审批人/日期 | 吴少强/2022-6-19 |
+| 审批人/日期 | 王远/2022-7-1    |
+| 审批人/日期 | 周晨阳/2022-7-4  |
 
 - #### 修改记录
 
@@ -41,11 +42,11 @@
 | 需求来源                    | PyTorch                                  |
 | 应用网络                    | faster_rcnn、couplenet                   |
 | 输入数据类型                | float                                    |
-| 输入 Shape                  |1. roi_crop_forward:<br>input: [b,h,w,c]; grid: [n,out_h,out_w,2]<br>2. roi_crop_backward:<br>gradOutput: [n,out_h,out_w,c]; grid: [n,out_h,out_w,2]<br>注：n是b的整数倍|
-| 输入 Layout                 |1. roi_crop_forward:<br>input: NHWC; grid: ARRAY<br>2. roi_crop_backward:<br>gradOutput: NHWC; grid: ARRAY|
+| 输入 Shape                  |1. roi_crop_forward:<br>input: [b,h,w,c]; grid: [n,out_h,out_w,2]<br>2. roi_crop_backward:<br>grad_output: [n,out_h,out_w,c]; grid: [n,out_h,out_w,2]<br>注：n是b的整数倍|
+| 输入 Layout                 |1. roi_crop_forward:<br>input: NHWC; grid: ARRAY<br>2. roi_crop_backward:<br>grad_output: NHWC; grid: ARRAY|
 | 输出数据类型                 | float                                   |
-| 输出 Shape                  |1. roi_crop_forward:<br>output:[n, out_h, out_w, c]<br>2. roi_crop_backward:<br>gradInput:[b,h,w,c]|
-| 输出 Layout                 |1. roi_crop_forward:<br>ouput:NHWC<br>2. roi_crop_backward:<br>gradInput: NHWC            |
+| 输出 Shape                  |1. roi_crop_forward:<br>output:[n, out_h, out_w, c]<br>2. roi_crop_backward:<br>grad_input:[b,h,w,c]|
+| 输出 Layout                 |1. roi_crop_forward:<br>ouput:NHWC<br>2. roi_crop_backward:<br>grad_input: NHWC            |
 | 模式(可选）                 |            无                                |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 否          |
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否 |
@@ -64,7 +65,7 @@
 
 ![roi_crop_forward_func](./roi_crop_forward_func.png)
 
-从输入的 grid 中提取一个 (y, x) 坐标映射参数，反映射到 input 中的 A 处得到坐标信息(Ax, Ay)，获取A点附近整数点位 topLeft、topRight、bottomLeft、bottomRight 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值。
+从输入的 grid 中提取一个 (y, x) 坐标映射参数，反映射到 input 中的 A 处得到坐标信息(Ax, Ay)，获取A点附近整数点位 top_left、top_right、bottom_left、bottom_right 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值。
 
 **2) 主要计算公式**
 
@@ -78,12 +79,12 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 双线性插值计算 output 输出值：
 
-output_value = Ax_weight * Ay_weight * topLeft
-                  + (1 - Ax_weight) * Ay_weight * topRight
-                  + Ax_weight * (1 - Ay_weightt) * bottomLeft
-                  + (1 - Ax_weight) * (1 - Ay_weightt) * bottomRight；
+output_value = Ax_weight * Ay_weight * top_left
+                  + (1 - Ax_weight) * Ay_weight * top_right
+                  + Ax_weight * (1 - Ay_weightt) * bottom_left
+                  + (1 - Ax_weight) * (1 - Ay_weightt) * bottom_right；
 
-这里的 Ax_weight 和 Ay_weight 是坐标点 (Ax, Ay) 到 bottomRight 右下角点的距离，其它类似。
+这里的 Ax_weight 和 Ay_weight 是坐标点 (Ax, Ay) 到 bottom_right 右下角点的距离，其它类似。
 
 #### 1.2.2 roi_crop_backward
 
@@ -91,7 +92,7 @@ output_value = Ax_weight * Ay_weight * topLeft
 
 ![roi_crop_backward](./roi_crop_backward.png)
 
-根据 grid 中 bin 的索引获取 gradOutput 中对应的梯度值 gradOutput_V，从 grid 中获取的每个（y, x）坐标映射参数，可以反映射到 gradInput 中的A处得到坐标信息(Ax, Ay) ，获取 A 点附近四处整数点位偏移地址 tl_address、tr_address、bl_address、br_address；最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
+根据 grid 中 bin 的索引获取 grad_output 中对应的梯度值 grad_output_v，从 grid 中获取的每个（y, x）坐标映射参数，可以反映射到 grad_input 中的A处得到坐标信息(Ax, Ay) ，获取 A 点附近四处整数点位偏移地址 tl_address、tr_address、bl_address、br_address；最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
 
 **2) 主要计算公式**
 
@@ -103,7 +104,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 梯度计算：
 
-![gradoutput](./roi_crop_backward_func.png)
+![grad_output](./roi_crop_backward_func.png)
 
 #### 1.2.3 算子主要应用场景
 
@@ -130,26 +131,26 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
 | handle      |MLU_OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
-| gradOutput_desc |输入数据 gradOutput 的形状描述结构体，定义了 gradOutput 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t | /        | 无       |
-| gradOutput      |输入 tensor gradOutput 的地址|输入 |  float    | NHWC     | 无       |
+| grad_output_desc |输入数据 grad_output 的形状描述结构体，定义了 grad_output 的数据类型，数据维度和布局| 输入 |mluOpTensorDescriptor_t | /        | 无       |
+| grad_output      |输入 tensor grad_output 的地址|输入 |  float    | NHWC     | 无       |
 | grid_desc |输入数据 gird 的形状描述结构体，定义了 grid 的数据类型，数据维度和布局| 输入   |mluOpTensorDescriptor_t | /        | 无       |
 | grid      |输入 tensor grid 的地址| 输入  |float | ARRAY    | 无       |
-| gradInput_desc |输入数据 gradInput 的形状描述结构体，定义了 gradInput 的数据类型，数据维度和布局      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
-| gradInput      |输出 tensor gradInput 的地址      | 输出              | float | NHWC    | 无       |
+| grad_input_desc |输入数据 grad_input 的形状描述结构体，定义了 grad_input 的数据类型，数据维度和布局      | 输入  | mluOpTensorDescriptor_t  | /   | 无       |
+| grad_input      |输出 tensor grad_input 的地址      | 输出              | float | NHWC    | 无       |
 
 ### 1.4 算子限制
 
 | 限制类型     | 详细说明  |
 | ------------ | ---------------------------------|
-| 数据类型限制 | input、grid、output、gradOutput和gradInput只支持float    |
-| 布局限制     | input、gradInput、output和gradOutput为NHWC; grid为ARRAY  |
+| 数据类型限制 | input、grid、output、grad_output和grad_input只支持float    |
+| 布局限制     | input、grad_input、output和grad_output为NHWC; grid为ARRAY  |
 | 规模限制     | 无限制                            |
 | 功能限制     | 无限制     |
 | 数据范围限制 | grid 中数据范围：[-1,1]        |
 | 原位限制     | 不支持原位   |
 | stride 限制  | 不支持 stride 机制    |
 | 广播限制     | 不支持广播  |
-|nan/inf 限制|grid 不支持 nan/inf 数据|
+|nan / inf 限制|grid 不支持 nan / inf 数据|
 
 ### 1.5 验收标准
 
@@ -179,7 +180,7 @@ int BilinearSamplerBHWD_updateOutput_cuda(THCudaTensor *inputImages,
 
 - cuda函数接口
 ```c++
-int BilinearSamplerBHWD_updateGradInput_cuda(THCudaTensor *inputImages, 
+int BilinearSamplerBHWD_updategradInput_cuda(THCudaTensor *inputImages, 
                                              THCudaTensor *grids, 
                                              THCudaTensor *gradInputImages,
                                              THCudaTensor *gradGrids, 
@@ -201,12 +202,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(const mluOpHandle_t handle,
 #### 2.2.2 roi_crop_backward
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
-                                                 const mluOpTensorDescriptor_t gradOutput_desc,
-                                                 const void *gradOutput,
+                                                 const mluOpTensorDescriptor_t grad_output_desc,
+                                                 const void *grad_output,
                                                  const mluOpTensorDescriptor_t grid_desc,
                                                  const void *grid,
-                                                 const mluOpTensorDescriptor_t gradInput_desc,
-                                                 void *gradInput)
+                                                 const mluOpTensorDescriptor_t grad_input_desc,
+                                                 void *grad_input)
 ```
 ## 3 实现方案设计
 
@@ -222,8 +223,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 #### 3.1.2 roi_crop_backward
 
 - step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim；
-- step2: 根据双线性插值梯度计算公式知，1 个 bin 需要 gradOutput 下的 1 个 channels 得到 gradOutput 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 gradOutput 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 gradInput 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
-- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 gradOutput 和 gradInput 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
+- step2: 根据双线性插值梯度计算公式知，1 个 bin 需要 grad_output 下的 1 个 channels 得到 grad_output 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 grad_output 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 grad_input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
+- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 grad_output 和 grad_input 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 ### 3.2 伪代码实现（可选）
@@ -293,7 +294,7 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 2、roi_crop_backward
 
-|gradOutput|grid|gradInput|source data type |destination data type|
+|grad_output|grid|grad_input|source data type |destination data type|
 |----|----|----|----|----|
 |[1, 3, 1, 1]|[1, 3, 1, 2]|[1, 5, 5, 500]|float |float|
 |[1, 5, 5, 500]|[1, 5, 5, 2]|[1, 32, 32, 500]|float |float|
