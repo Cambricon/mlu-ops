@@ -36,11 +36,12 @@
 ### 1.2 算子功能和应用场景描述
 
 hard_sigmoid激活函数定义:  
-$$ hard\_sigmoid(x)=\begin{cases}
+$$
+hard\_sigmoid(x)=\begin{cases}
 0 & x <= -3, \\
 1 & x >= +3, \\
-x/6+1/2, & otherwise.
-\end{cases} $$
+x/6+1/2 & otherwise.\end{cases}
+$$
 
 算子功能：对一个输入张量按元素应用Hardsigmoid激活函数后，得到一个激活过后的张量。  
 例如： 
