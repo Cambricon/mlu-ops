@@ -19,9 +19,10 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
+
+#cross算子的测试文件
 import numpy as np
 import pytest
-
 import bangpy
 from bangpy.common import load_op_by_type
 from cross import DTYPES, KERNEL_NAME, TARGET_LIST
