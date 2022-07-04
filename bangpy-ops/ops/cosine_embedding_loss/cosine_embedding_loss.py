@@ -107,9 +107,7 @@ class CosineEmbeddingLoss(object):
         # 128 bytes aligned size of data
         self.align_size = ALIGN_BYTES // self.dtype.bytes
         # Upper bound of buffer, need to be modified when using devices other than MLU-290.
-        # self.max_buffer_size = MLU290_MAX_BUFFER_SIZE // self.dtype.bytes
         self.max_buffer_size = TARGET(target).nram_size // 8 // self.dtype.bytes
-        print(self.max_buffer_size)
 
         self.max_kernel_size = self.tcp.Scalar(
             value=self.align_size, dtype=bangpy.int32, name="max_kernel_size"
@@ -119,11 +117,11 @@ class CosineEmbeddingLoss(object):
 
     def compute_body(self):
         """
-        compute body of operator, returns bangpy build module
+        Compute body of operator, returns bangpy build module.
         """
         # Row is D size of source data (N, D)
         # Line is a line of nram
-        # nram buffers are divided into 128bytes//dtype.bytes lines,
+        # Nram buffers are divided into 128bytes//dtype.bytes lines,
         # and each line has fixed number of kernels
         kernel_size = self.tcp.Scalar(bangpy.int32, name="kernel_size")
         kernels_nram = self.tcp.Scalar(bangpy.int32, name="kernels_nram")
@@ -132,10 +130,10 @@ class CosineEmbeddingLoss(object):
         lines_per_row = self.tcp.Scalar(bangpy.int32, name="lines_per_row")
         rows_per_line = self.tcp.Scalar(bangpy.int32, name="rows_per_line")
 
-        # batch means the number of rows can be handled by nram in one memcpy
-        # we need one more layer of iteration if batch == 0 to handle one row of data
+        # Batch means the number of rows can be handled by nram in one memcpy.
+        # We need one more layer of iteration if batch == 0 to handle one row of data.
         batch_size = self.tcp.Scalar(bangpy.int32, name="batch_size")
-        # row number can be stored in nram
+        # Row number can be stored in nram.
         y_num = self.tcp.Scalar(bangpy.int32, name="y_num")
 
         kernel_size.assign(self.max_kernel_size)
@@ -144,15 +142,15 @@ class CosineEmbeddingLoss(object):
         kernels_nram.assign(kernels_per_line * self.align_size)
         kernels_per_row.assign((self.length + kernel_size - 1) // kernel_size)
 
-        # nram lines needed by one row of source data
+        # Nram lines needed by one row of source data.
         lines_per_row.assign(
             (kernels_per_row + kernels_per_line - 1) // kernels_per_line
         )
 
-        # number of source data rows can be sored in one line of nram
+        # Number of source data rows can be sored in one line of nram.
         rows_per_line.assign(kernels_per_line // kernels_per_row)
 
-        # compute numbers of kernels needed by one row of source data.
+        # Compute numbers of kernels needed by one row of source data.
         kernels_per_line_n = self.tcp.Scalar(
             dtype=bangpy.int32, name="kernels_per_line_n"
         )
@@ -160,13 +158,13 @@ class CosineEmbeddingLoss(object):
             (kernels_per_row + self.align_size - 1) // self.align_size
         )
 
-        # number of rows of source data can be stored in nram
+        # Number of rows of source data can be stored in nram.
         with self.tcp.if_scope(rows_per_line > 0):
             batch_size.assign(rows_per_line * self.align_size)
         with self.tcp.else_scope():
             batch_size.assign(self.align_size // lines_per_row)
 
-        # batch num assigned to one IPU core
+        # Batch num assigned to one IPU core.
         task_row_num = self.tcp.Scalar(bangpy.int32, name="cluster_row_num")
         task_row_num.assign(self.data_num // self.task_num)
 
@@ -184,9 +182,9 @@ class CosineEmbeddingLoss(object):
         task_row_end = self.tcp.Scalar(bangpy.int32, name="task_row_end")
         task_row_end.assign(task_row_base + task_row_num)
 
-        # loop bounds. Need two layers of loop if nram cannot store one single data row.
-        # if nram can store at least one row of data then one layer of loop will be needed.
-        # use this structure to use pipeline at inner loop layer
+        # Loop bounds. Need two layers of loop if nram cannot store one single data row.
+        # If nram can store at least one row of data then one layer of loop will be needed.
+        # Use this structure to use pipeline at inner loop layer
         inner_loop_bound = self.tcp.Scalar(bangpy.int32, name="inner_loop_bound")
         outer_loop_bound = self.tcp.Scalar(
             bangpy.int32, name="outer_loop_bound", value=1
@@ -204,7 +202,7 @@ class CosineEmbeddingLoss(object):
             y_num.assign(batch_size)
 
         with self.tcp.for_range(0, outer_loop_bound) as i:
-            # row id when batch size == 0
+            # Row id when batch size == 0
             row = self.tcp.Scalar(dtype=bangpy.int32, name="row")
             row.assign(task_row_base + i)
 

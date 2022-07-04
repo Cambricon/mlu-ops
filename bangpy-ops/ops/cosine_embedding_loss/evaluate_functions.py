@@ -90,9 +90,6 @@ data_widths = [
     2 ** 18,
     2 ** 19,
 ]
-# Data type, float16, float32.
-dtypes = DTYPES[0:2]
-
 
 def evaluate(f, dtype, data_amount, data_width):
     """
@@ -184,7 +181,7 @@ def func():
             "diff2",
         ]
     ]
-    for dtype in dtypes:
+    for dtype in DTYPES:
         f = CosineEmbeddingLoss(dtype, 1, "mlu290", TaskType.UNION16).compute_body()
         for data_amount in data_amounts:
             for data_width in data_widths:
