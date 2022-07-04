@@ -85,31 +85,39 @@ torch.nn.PairwiseDistance
 ### 2.2 接口设计
 
 ```python
-MluOpPairwiseDistance(_mlu_input1, _mlu_input2,
-                 _mlu_paras, 
-                 get_total_size(_shape1), get_total_size(_shape2),
-                 _pd_len, _pd_height, _pd_width, _output_len
-                 , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
+MluOpPairwiseDistance(mlu_input1, 
+                      mlu_input2,
+                      mlu_paras, 
+                      shape1_length, 
+                      shape2_length,
+                      pd_len, 
+                      pd_height, 
+                      pd_width, 
+                      output_len,
+                      mlu_border_output, 
+                      mlu_border_idx_output, 
+                      mlu_output)
 				 
-_mlu_input1, _mlu_input2, 为输入的两个向量
-_mlu_paras 为 eps，p，keepdim 参数 
-get_total_size(_shape1), get_total_size(_shape2), 为两个向量的长度，张量1的长度永远不小于张量2
-_pd_len 为输入张量最后一个维度的长度
-_pd_height, _pd_width 为对第一个张量进行reshape后的高度和宽度
+mlu_input1, mlu_input2, 为输入的两个向量
+mlu_paras 为一个类对象，包含eps，p，keepdim 参数 
+shape1_length, shape2_length, 为两个向量的长度，张量1的长度永远不小于张量2
+pd_len 为输入张量最后一个维度的长度
+pd_height, pd_width 为对第一个张量进行reshape后的高度和宽度
+
 具体算法为：
-shp_len = len(_shape1)
+shp_len = len(shape1)
 dim_index = shp_len - 1
 
 # mlu 输入参数
-_pd_len = _shape1[shp_len - 1]
-_pd_height = 1
-_pd_width = 1
+pd_len = shape1[shp_len - 1]
+pd_height = 1
+pd_width = 1
 
 for i in range(0, dim_index + 1):
-    _pd_height *= _shape1[i]
+    pd_height *= shape1[i]
 
-_output_len,是输出张量长度
-_mlu_border_output, _mlu_border_idx_output, _mlu_output ，因为数据分散到多核中，这几个用于存放中间输出结果，
+output_len,是输出张量长度
+mlu_border_output, mlu_border_idx_output, mlu_output ，因为数据分散到多核中，这几个用于存放中间输出结果，
 在mlu计算完毕后，用cpu加工，得到最终结果
 ```
 
