@@ -18,7 +18,6 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=missing-docstring, invalid-name, too-many-locals
 import math
 import bangpy
 from bangpy import tcp
@@ -31,31 +30,28 @@ TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "logaddexp2"
 
 
-class Logaddexp2(object):
+class Logaddexp2():
     """Operator description:
     Logaddexp2 the data in the two buffers.
     """
 
     def __init__(self, dtype, target, task_num):
         self.dtype = dtype
-        self.target = target
         self.task_num = task_num
         self.tcp = tcp.TCP(target)
         self.length = self.tcp.SizeVar("length")
-        self.nram_size = TARGET(target).nram_size
-        self.dtype_sz = dtype.bytes
         # 3*2+2=8 buffers: 3 pipeline double buffer(input1, input2, output), and 2 extra buffer.
         # buffer size need to be 128 aligned
-        self.single_buffer_size = (self.nram_size - 128*2**10) // 8
+        self.single_buffer_size = (TARGET(target).nram_size - 128*2**10) // 8
         self.single_buffer_size = self.single_buffer_size // 128 * 128
         self.tcp.launch_task(self.task_num, 1, 1)
-        self.tcp.launch_cluster(TaskType.BLOCK)
+        self.tcp.launch_cluster(TaskType.UNION1)
 
     def compute_body(self):
+        """return logaddexp2 function"""
         # calculate split strategy
-
         # gets the data length for each calculation
-        data_each_time = self.single_buffer_size // self.dtype_sz
+        data_each_time = self.single_buffer_size // self.dtype.bytes
         # gets the data length to be calculated for each task
         # the last task need to handle the extra remainder
         data_each_task  = self.tcp.Scalar(bangpy.int32, name="data_each_task")
@@ -139,17 +135,17 @@ class Logaddexp2(object):
             compute(buffer_out_n, buffer_in0_n, buffer_in1_n, buffer_extra0, buffer_extra1)
             self.tcp.memcpy(buffer_out[start:stop], buffer_out_n[:stop-start])
         # build a executable module
-        f = self.tcp.BuildBANG(
+        func = self.tcp.BuildBANG(
             inputs=[buffer_in0, buffer_in1],
             outputs=[buffer_out],
             kernel_name=KERNEL_NAME,
         )
-        return f
+        return func
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp2(dtype=None, target=None):
     # tasktype is BLOCK
-    task_num = 64
-    f = Logaddexp2(dtype, target, task_num).compute_body()
-    return f
+    task_num = TARGET(target).cluster_num * TARGET(target).core_num
+    func = Logaddexp2(dtype, target, task_num).compute_body()
+    return func
