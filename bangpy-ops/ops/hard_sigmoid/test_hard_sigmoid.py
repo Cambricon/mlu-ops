@@ -29,7 +29,7 @@ from hard_sigmoid import DTYPES, KERNEL_NAME, TARGET_LIST
 def cal_diff(result, data_out):
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
     diff2 = np.sqrt(
-        np.sum(np.power(np.subtract(data_out, result), 2,))
+        np.sum(np.power(np.subtract(data_out, result), 2))
         / np.sum(np.power(result, 2))
     )
     assert round(diff1 * 100, 5) < 3e-3 * 100
@@ -59,8 +59,8 @@ def test_hard_sigmoid(target, shape, dtype):
     data_in = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
     # hard_sigmoid activation function
     data_out = data_in * 1/6 + 1/2
-    data_out = np.minimum(data_out,1)
-    data_out = np.maximum(data_out,0)
+    data_out = np.minimum(data_out, 1)
+    data_out = np.maximum(data_out, 0)
     # data_out = torch.nn.functional.hardsigmoid(data_in)
     # device
     dev = bangpy.device(0)
