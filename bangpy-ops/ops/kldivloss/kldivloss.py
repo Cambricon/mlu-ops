@@ -30,19 +30,23 @@ DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "kldivloss"
 
+
 class KlDivLoss(object):
     """Operator description:
         The Kullback-Leibler divergence loss
 
         Parameters
         ----------
-        reduction : Int
-            The kind of reduction:
-                0 represents "none"
-                1 represents "sum"
-                2 represents "mean"
-                3 represents "batchmean"
         log_target : if target has been logged(0:no / 1:yes)
+            if log_target == 0 : out = target * (log(target) - input)
+            if log_target == 1 : out = exp(target) * (target - input)
+
+        reduction : perform reduction operation according to the reduction argument
+            The kind of reduction:
+                0 represents "none": out
+                1 represents "sum" : sum(out)
+                2 represents "mean" : sum(out) // dataSize
+                3 represents "batchmean" : sum(out) // batchSize
     """
 
     def __init__(self, dtype, target, task_num):
@@ -76,9 +80,6 @@ class KlDivLoss(object):
         self.tcp.launch_cluster(TaskType.UNION16)
         self.tcp.launch_task(task_num, 1, 1)
 
-    # if target has been logged ：out = target * (log(target) - input)
-    # otherwise ：out = exp(target) * (target - input)
-    # perform reduction operation according to the reduction argument
     def compute_body(self):
         # calculate split strategy
         cluster_num = self.task_num // 4
