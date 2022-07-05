@@ -206,7 +206,7 @@ class Cross(object):
         with self.tcp.if_scope(step <= data_each_buffer):
             step_each_time = data_each_buffer // step
             # step<= data_each_buffer，branch 1
-            # every time data_each_buffer/step steps can be computed.
+            # every time data_each_buffer//step steps can be computed.
 
             data_calculated_each_time = step_each_time * step
 
