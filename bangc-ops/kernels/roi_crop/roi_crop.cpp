@@ -10,6 +10,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <string>
+
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -75,21 +76,81 @@ mluOpStatus_t RoiCropForwardParamCheck(
   }
   const size_t max_input_num = 2147483648;  // 2^31, 2G num
   if ((mluOpGetTensorElementNum(input_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(grid_desc) >= max_input_num)) {
+      (mluOpGetTensorElementNum(grid_desc) >= max_input_num) ||
+      (mluOpGetTensorElementNum(output_desc) >= max_input_num)) {
     LOG(ERROR) << op_name << " Overflow max tensor num."
-               << "Currently, MLU-OPS supports tensor num smaller than 2^31.";
+               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check zero element
   if ((mluOpGetTensorElementNum(input_desc) == 0) ||
       (mluOpGetTensorElementNum(grid_desc) == 0) ||
       (mluOpGetTensorElementNum(output_desc) == 0)) {
-    VLOG(5) << op_name << " skip zero element tensor.";
+    LOG(ERROR) << op_name << " Zero element tensor failure.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   PARAM_CHECK(op_name, input != NULL);
   PARAM_CHECK(op_name, grid != NULL);
   PARAM_CHECK(op_name, output != NULL);
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t RoiCropBackwardParamCheck(
+    const std::string &op_name, const mluOpHandle_t handle,
+    const mluOpTensorDescriptor_t grad_output_desc, const void *grad_output,
+    const mluOpTensorDescriptor_t grid_desc, const void *grid,
+    const mluOpTensorDescriptor_t grad_input_desc, const void *grad_input) {
+  // check descriptor and data
+  PARAM_CHECK(op_name, handle != NULL);
+  PARAM_CHECK(op_name, grad_output_desc != NULL);
+  PARAM_CHECK(op_name, grid_desc != NULL);
+  PARAM_CHECK(op_name, grad_input_desc != NULL);
+  // check data type
+  PARAM_CHECK(op_name, grad_output_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grad_output_desc->dim == 4);
+  PARAM_CHECK(op_name, grid_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grid_desc->dim == 4);
+  PARAM_CHECK(op_name, grad_input_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grad_input_desc->dim == 4);
+  // check shape and layout
+  PARAM_CHECK(op_name, grad_output_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(op_name, grad_input_desc->layout == MLUOP_LAYOUT_NHWC);
+  for (int i = 0; i < grad_output_desc->dim - 1; ++i) {
+    if (grad_output_desc->dims[i] != grid_desc->dims[i]) {
+      LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i
+                 << "] should be equal to grid_desc->dims[" << i << "].";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
+  if (grad_output_desc->dims[3] != grad_input_desc->dims[3]) {
+    LOG(ERROR) << op_name
+               << " Check failed: grad_output_desc->dims[3] should be "
+                  "equal to grad_input_desc->dims[3].";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (grid_desc->dims[3] != 2) {
+    LOG(ERROR) << op_name
+               << " Check failed: grid_desc->dims[3] should be equal to 2.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  const size_t max_input_num = 2147483648;  // 2^31 2G num
+  if ((mluOpGetTensorElementNum(grad_output_desc) >= max_input_num) ||
+      (mluOpGetTensorElementNum(grid_desc) >= max_input_num) ||
+      (mluOpGetTensorElementNum(grad_input_desc) >= max_input_num)) {
+    LOG(ERROR) << op_name << " Overflow max tensor num."
+               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+  // check zero element
+  if ((mluOpGetTensorElementNum(grad_input_desc) == 0) ||
+      (mluOpGetTensorElementNum(grid_desc) == 0) ||
+      (mluOpGetTensorElementNum(grad_output_desc) == 0)) {
+    LOG(ERROR) << op_name << " Zero element tensor failure.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  PARAM_CHECK(op_name, grad_output != NULL);
+  PARAM_CHECK(op_name, grid != NULL);
+  PARAM_CHECK(op_name, grad_input != NULL);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -124,6 +185,47 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
   KERNEL_CHECK((mluOpBlockKernelRoiCropForwardFloat(
       k_dim, k_type, handle->queue, input, grid, batch, height, width, channels,
       grid_n, output_h, output_w, output)));
-  VLOG(5) << "kernel mluOpBlockKernelRoiCropForwardFloat";
+  VLOG(5) << "Kernel mluOpBlockKernelRoiCropForwardFloat.";
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t grad_output_desc,
+    const void *grad_output, const mluOpTensorDescriptor_t grid_desc,
+    const void *grid, const mluOpTensorDescriptor_t grad_input_desc,
+    void *grad_input) {
+  // check params
+  mluOpStatus_t param_check = RoiCropBackwardParamCheck(
+      "[mluOpRoiCropBackward]", handle, grad_output_desc, grad_output,
+      grid_desc, grid, grad_input_desc, grad_input);
+  if (param_check != MLUOP_STATUS_SUCCESS) {
+    return param_check;
+  }
+
+  uint32_t batch = grad_input_desc->dims[0];
+  uint32_t height = grad_input_desc->dims[1];
+  uint32_t width = grad_input_desc->dims[2];
+  uint32_t channels = grad_input_desc->dims[3];
+  uint32_t grid_n = grid_desc->dims[0];
+  uint32_t output_h = grad_output_desc->dims[1];
+  uint32_t output_w = grad_output_desc->dims[2];
+  uint32_t bin_num = grid_n * output_h * output_w;
+
+  cnrtDim3_t k_dim;
+  cnrtFunctionType_t k_type;
+
+  policyFunc(handle, bin_num, &k_dim, &k_type);
+  VLOG(5) << "[mluOpRoiCropBackward] launch kernel policyFunc[" << k_dim.x
+          << ", " << k_dim.y << ", " << k_dim.z << "].";
+  // gdram set zero
+  int gd_num = channels * width * height * batch;
+  KERNEL_CHECK((mluOpBlockKernelFillZero(k_dim, k_type, handle->queue, gd_num,
+                                         grad_input)));
+  VLOG(5) << "Kernel mluOpBlockKernelFillZero.";
+
+  KERNEL_CHECK((mluOpBlockKernelRoiCropBackwardFloat(
+      k_dim, k_type, handle->queue, grad_output, grid, batch, height, width,
+      channels, grid_n, output_h, output_w, grad_input)));
+  VLOG(5) << "kernel mluOpBlockKernelRoiCropBackwardFloat.";
   return MLUOP_STATUS_SUCCESS;
 }

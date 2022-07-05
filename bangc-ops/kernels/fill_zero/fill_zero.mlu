@@ -1,0 +1,31 @@
+/*************************************************************************
+ * Copyright (C) 2022 by Cambricon, Inc. All rights reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "mlu_op_kernel.h"
+
+__mlu_global__ void MLUBlockKernelGdramFillZero(void *gdram_ptr,
+                                                const int num) {
+  uint32_t seg_n = num / taskDim;
+  uint32_t rem_n = num % taskDim;
+  int n_first_per = seg_n * taskId + (taskId > rem_n ? rem_n : taskId);
+  float zero = 0.0;
+  if (taskId < rem_n) {
+    seg_n += 1;
+  }
+  __gdramset((float *)gdram_ptr + n_first_per, seg_n, zero);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelFillZero(cnrtDim3_t k_dim,
+                                            cnrtFunctionType_t k_type,
+                                            cnrtQueue_t queue, const int num,
+                                            void *gdram_ptr) {
+  MLUBlockKernelGdramFillZero<<<k_dim, k_type, queue>>>(gdram_ptr, num);
+}
