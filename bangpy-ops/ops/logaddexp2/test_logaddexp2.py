@@ -18,7 +18,7 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""logaddexp2 testfile"""
+"""Logaddexp2 testfile for pytest."""
 
 import numpy as np
 import pytest
@@ -44,7 +44,7 @@ def cal_diff(result, data_out):
     "dtype", DTYPES,
 )
 def test_logaddexp2(target, shape, dtype):
-    """use pytest to test logaddexp2"""
+    """Use pytest to test logaddexp2."""
     if target not in TARGET_LIST:
         return
     dev = bangpy.device(0)
