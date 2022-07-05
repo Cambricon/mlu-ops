@@ -35,7 +35,7 @@
 | 算子功能简介  | 计算两组输入数据之间的余弦损失   |
 | --------------------------- | --------------------------- |
 | 需求来源      | Pytorch          |
-| 应用网络      | centerNet   |
+| 应用网络      | 非线性嵌入或半监督学习   |
 | 输入数据类型  | half, float  |
 | 输入 shape  | input_x1, input_x2: [N, D], input_y: [N]  |
 | 输入 layout | input_x1: ARRAY, input_x2: ARRAY, input_y: ARRAY|

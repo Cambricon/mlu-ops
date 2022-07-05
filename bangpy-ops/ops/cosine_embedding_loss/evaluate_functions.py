@@ -20,8 +20,8 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 测试运行算子所需函数，随机数据生成，计时以及准确度
-function needed when testing operation.
-including generating random data, timing and compute accuracy
+Functions needed when testing operation.
+Including generating random data, timing and computing accuracy
 """
 import json
 import random
@@ -93,7 +93,7 @@ data_widths = [
 
 def evaluate(f, dtype, data_amount, data_width):
     """
-    Evaluate function.
+    Evaluate IO efficiency and accuracy of cosineEmbeddingLoss of given parameters
     """
     data_height = data_amount // dtype.bytes // data_width
 
@@ -125,7 +125,7 @@ def evaluate(f, dtype, data_amount, data_width):
 
     dev_out = data_out_dev.numpy()
 
-    diff1, diff2 = cal_diff(dev_out, data_out.astype(dtype.as_numpy_dtype))
+    diff1, diff2 = cal_diff(dev_out, data_out)
 
     evaluator = f.time_evaluator(dev, 1, 10)
     time = (
