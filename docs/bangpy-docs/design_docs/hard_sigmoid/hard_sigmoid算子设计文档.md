@@ -133,23 +133,21 @@ data_out_dev = bangpy.Array(np.zeros(data_out.flatten().shape, dtype.as_numpy_dt
 
 
 # device
-# distribute
+# data distribution
 data_each_task = data_total // self.task_num
 data_rem = data_total % self.task_num
 data_each_time = self.nram_size_buffer // self.dtype_sz
 loop = data_each_task // data_each_time
-data_rem_n = data_each_task  % data_each_time
+data_rem_n = data_each_task % data_each_time
 
-# calculate
+# calculation
 memcpy:GDRAM-->NRAM
-self.tcp.assign(buffer_temp_n,1/6)
-self.tcp.multiply(buffer_io_n,buffer_io_n,buffer_temp_n) # x * 1/6
-self.tcp.assign(buffer_temp_n,1/2)
-self.tcp.add(buffer_io_n,buffer_io_n,buffer_temp_n)      # x * 1/6 + 1/2
-self.tcp.assign(buffer_temp_n,1)
-self.tcp.minimum(buffer_io_n,buffer_io_n,buffer_temp_n)  # min(x * 1/6 + 1/2 , 1)
+self.tcp.multiply(buffer_io_n, buffer_io_n, 1/6) # x * 1/6
+self.tcp.add(buffer_io_n, buffer_io_n, 1/2)      # x * 1/6 + 1/2
+self.tcp.assign(buffer_temp_n, 1)
+self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)  # min(x * 1/6 + 1/2, 1)
 self.tcp.zeros(buffer_temp_n)
-self.tcp.maximum(buffer_io_n,buffer_io_n,buffer_temp_n)  # max(x * 1/6 + 1/2 , 0)
+self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n)  # max(x * 1/6 + 1/2, 0)
 memcpy:NRAM-->GDRAM
 
 

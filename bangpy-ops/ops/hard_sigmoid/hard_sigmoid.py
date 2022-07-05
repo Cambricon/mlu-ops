@@ -54,31 +54,25 @@ class HardSigmoid(object):
         #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 2) * 128)
         # For bangpy.float32: the following cases run with an error
         #     self.nram_size_each_buffer=(((self.nram_size // 3) // 256) * 256)
-        # In order to code specification (no more than 100 characters per line) and correctness
-        # We have rewritten it as follows
-        if dtype.bytes == 2: # "dtype.bytes == 2" is equivalent to "bangpy.float16"
-            self.nram_size_each_buffer = (((self.nram_size // 3) // 128 - 3) * 128)
-        else: # "dtype.bytes == 4" is equivalent to "bangpy.float32"
-            self.nram_size_each_buffer = (((self.nram_size // 3) // 256 - 1) * 256)
+        # So we have the following result
+        self.nram_size_each_buffer = (
+            (((self.nram_size // 3) // 128 - 3) * 128)
+            if dtype.bytes == 2  # dtype is bangpy.float16
+            else (((self.nram_size // 3) // 256 - 1) * 256)  # dtype is bangpy.float32
+        )
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(task_num, 1, 1)
 
     def compute_body(self):
         # declare I/O buffer
         buffer_in = self.tcp.Buffer(
-            shape=(self.length,),
-            name="INPUT",
-            dtype=self.dtype,
-            scope="global",
+            shape=(self.length,), name="INPUT", dtype=self.dtype, scope="global",
         )
         buffer_out = self.tcp.Buffer(
-            shape=(self.length,),
-            name="OUTPUT",
-            dtype=self.dtype,
-            scope="global",
+            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global",
         )
-        task_id=self.tcp.taskId
-        # calculate split strategy
+        task_id = self.tcp.taskId
+        # calculation split strategy
         data_total = self.tcp.Scalar(bangpy.int32, "data_total")
         data_total.assign(self.length)
         data_each_task = self.tcp.Scalar(bangpy.int32, "data_each_task")
@@ -86,10 +80,10 @@ class HardSigmoid(object):
         data_rem = self.tcp.Scalar(bangpy.int32, "data_rem")
         data_rem.assign(data_total % self.task_num)
         data_each_time = self.nram_size_each_buffer // self.dtype_sz
-        # data_each_time: can't use Scalar:(error)caanot handle this data type
-        loop = self.tcp.Scalar(bangpy.int32,"loop")
+        # data_each_time: can't use Scalar:(error)Cannot handle this data type
+        loop = self.tcp.Scalar(bangpy.int32, "loop")
         loop.assign(data_each_task // data_each_time)
-        data_rem_n = self.tcp.Scalar(bangpy.int32,"data_rem_n")
+        data_rem_n = self.tcp.Scalar(bangpy.int32, "data_rem_n")
         data_rem_n.assign(data_each_task % data_each_time)
         # parameters:
         # data_total: total number of data
@@ -104,29 +98,21 @@ class HardSigmoid(object):
         # data_rem_n: less than one calculation
         # if data_rem_n != 0, we need to copy data into NRAM one more time
 
-        # calculate:
-        with self.tcp.for_range(0, loop, stage = 1) as i:
+        # calculation:
+        with self.tcp.for_range(0, loop, stage=1) as i:
             start = task_id * data_each_task + i * data_each_time
             stop = start + data_each_time
             buffer_io_n = self.tcp.Buffer(
-                shape=(data_each_time,),
-                name="IO_N",
-                dtype=self.dtype,
-                scope="nram",
+                shape=(data_each_time,), name="IO_N", dtype=self.dtype, scope="nram",
             )
             buffer_temp_n = self.tcp.Buffer(
-                shape=(data_each_time,),
-                name="TEMP_N",
-                dtype=self.dtype,
-                scope="nram",
+                shape=(data_each_time,), name="TEMP_N", dtype=self.dtype, scope="nram",
             )
             with self.tcp.block("data_copy"):
                 self.tcp.memcpy(buffer_io_n, buffer_in[start:stop])
             with self.tcp.block("compute"):
-                self.tcp.assign(buffer_temp_n, 1/6)
-                self.tcp.multiply(buffer_io_n, buffer_io_n, buffer_temp_n)
-                self.tcp.assign(buffer_temp_n, 1/2)
-                self.tcp.add(buffer_io_n, buffer_io_n, buffer_temp_n)
+                self.tcp.multiply(buffer_io_n, buffer_io_n, 1 / 6)
+                self.tcp.add(buffer_io_n, buffer_io_n, 1 / 2)
                 self.tcp.assign(buffer_temp_n, 1)
                 self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)
                 self.tcp.zeros(buffer_temp_n)
@@ -138,22 +124,14 @@ class HardSigmoid(object):
             start = task_id * data_each_task + loop * data_each_time
             stop = start + data_rem_n
             buffer_io_n = self.tcp.Buffer(
-                shape=(data_each_time,),
-                name="IO_N",
-                dtype=self.dtype,
-                scope="nram",
+                shape=(data_each_time,), name="IO_N", dtype=self.dtype, scope="nram",
             )
             buffer_temp_n = self.tcp.Buffer(
-                shape=(data_each_time,),
-                name="TEMP_N",
-                dtype=self.dtype,
-                scope="nram",
+                shape=(data_each_time,), name="TEMP_N", dtype=self.dtype, scope="nram",
             )
             self.tcp.memcpy(buffer_io_n[0:data_rem_n], buffer_in[start:stop])
-            self.tcp.assign(buffer_temp_n, 1/6)
-            self.tcp.multiply(buffer_io_n, buffer_io_n, buffer_temp_n)
-            self.tcp.assign(buffer_temp_n, 1/2)
-            self.tcp.add(buffer_io_n, buffer_io_n, buffer_temp_n)
+            self.tcp.multiply(buffer_io_n, buffer_io_n, 1 / 6)
+            self.tcp.add(buffer_io_n, buffer_io_n, 1 / 2)
             self.tcp.assign(buffer_temp_n, 1)
             self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)
             self.tcp.zeros(buffer_temp_n)
@@ -178,10 +156,8 @@ class HardSigmoid(object):
                     scope="nram",
                 )
                 self.tcp.memcpy(buffer_io_n[0:data_rem], buffer_in[start:stop])
-                self.tcp.assign(buffer_temp_n, 1/6)
-                self.tcp.multiply(buffer_io_n, buffer_io_n, buffer_temp_n)
-                self.tcp.assign(buffer_temp_n, 1/2)
-                self.tcp.add(buffer_io_n, buffer_io_n, buffer_temp_n)
+                self.tcp.multiply(buffer_io_n, buffer_io_n, 1 / 6)
+                self.tcp.add(buffer_io_n, buffer_io_n, 1 / 2)
                 self.tcp.assign(buffer_temp_n, 1)
                 self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)
                 self.tcp.zeros(buffer_temp_n)
@@ -190,11 +166,10 @@ class HardSigmoid(object):
 
         # build a executable module
         f = self.tcp.BuildBANG(
-            inputs=[buffer_in],
-            outputs=[buffer_out],
-            kernel_name=KERNEL_NAME,
+            inputs=[buffer_in], outputs=[buffer_out], kernel_name=KERNEL_NAME,
         )
         return f
+
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_hard_sigmoid(dtype=None, target=None):
