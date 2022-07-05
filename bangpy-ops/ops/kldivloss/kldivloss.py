@@ -74,7 +74,7 @@ class KlDivLoss(object):
         self.dtype_sz = dtype.bytes  # Byte of each element
         self.compute_row = 128 // self.dtype_sz  # How many bytes equals 128 bits
         self.single_buffer_size = (
-            64 * 128 // self.dtype_sz * self.compute_row
+            TARGET(target).nram_size // 4 // self.dtype.bytes
         )  # size of single bufer
 
         self.tcp.launch_cluster(TaskType.UNION16)
@@ -83,22 +83,23 @@ class KlDivLoss(object):
     def compute_body(self):
         # calculate split strategy
         cluster_num = self.task_num // 4
-        cluster_id = self.tcp.Scalar(bangpy.int32, name="cluster_id")
-        cluster_id.assign(self.tcp.clusterId)
+        cluster_id = self.tcp.clusterId
         task_id = self.tcp.taskId
 
         # gets the data length to be calculated for each calculate
         data_calculated_each_time = self.single_buffer_size // self.dtype_sz
         # gets the number of cycles required for each task
-        data_calculated_each_task = self.totalData // self.task_num
+        data_calculated_each_task = self.tcp.Scalar(
+            bangpy.int32, name="data_calculated_each_task"
+        )
+        data_calculated_each_task.assign(self.totalData // self.task_num)
         with self.tcp.if_scope(task_id == self.task_num - 1):
-            data_calculated_each_task = (
+            data_calculated_each_task.assign(
                 self.totalData // self.task_num + (self.totalData) % self.task_num
             )
 
         # loop time of eacb task
-        loop_num = self.tcp.Scalar(bangpy.int32, name="loop_num")
-        loop_num.assign(data_calculated_each_task // data_calculated_each_time)
+        loop_num = data_calculated_each_task // data_calculated_each_time
 
         # declare on-chip buffer
         inputG = self.tcp.Buffer(
@@ -274,8 +275,7 @@ class KlDivLoss(object):
 
         with self.tcp.if_scope(reduction != 0):
             sum_buf[0] = sumvar
-            self.tcp.memcpy(tmp_sram[task_id % 4], sum_buf)
-            self.tcp.sync_cluster()
+            tmp_sram[task_id % 4] = sum_buf
 
             # calculate sum of each cluster
             sum_out = self.tcp.Scalar(name="sumout", dtype=self.dtype)
@@ -284,11 +284,11 @@ class KlDivLoss(object):
                 sum_out.assign(sum_out + tmp_sram[i])
             sum_each_cluster[0] = sum_out
 
-            self.tcp.memcpy(outG[cluster_id], sum_each_cluster[0])
+            outG[cluster_id] = sum_each_cluster[0]
             self.tcp.sync_all()
 
             with self.tcp.for_range(begin=0, end=cluster_num) as i:
-                self.tcp.memcpy(cluster_nram[i], outG[i])
+                cluster_nram[i] = outG[i]
 
             total = self.tcp.Scalar(name="total", dtype=self.dtype)
             total.assign(0)
