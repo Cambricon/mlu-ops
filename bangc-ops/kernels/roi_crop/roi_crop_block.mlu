@@ -100,7 +100,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       i_bl_offset = i_tl_offset + width * channel;
       i_br_offset = i_tl_offset + width * channel + channel;
       __nramset(nram_ping, 4 * c_limit, 0);
-      __asm__ volatile("sync;\n");
+      __asm__ volatile("sync;\n\t");
       if (topLeftIsIn) {
         __memcpy_async(nram_ping, input + i_tl_offset, c_slice * sizeof(T),
                        GDRAM2NRAM);
@@ -119,7 +119,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       }
     }
     __nramset(nram_pong, 4 * c_limit, 0);
-    __asm__ volatile("sync;\n");
+    __asm__ volatile("sync;\n\t");
     while (c_rem > 0) {
       c_slice = c_slice < c_rem ? c_slice : c_rem;
       // load the next input to nram
@@ -216,7 +216,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       c_offset += c_slice;
       swap(nram_ping, nram_pong);
       __nramset(nram_pong, 4 * c_limit, 0);
-      __asm__ volatile("sync;\n");
+      __asm__ volatile("sync;\n\t");
     }
   }
 }
@@ -340,7 +340,7 @@ __mlu_global__ void MLUKernelRoiCropBackward(
       c_offset += c_slice;
       swap(nram_ping, nram_pong);
       nram_output = nram_ping + c_limit;
-      __asm__ volatile("sync;\n");
+      __asm__ volatile("sync;\n\t");
     }
   }
 }
