@@ -93,14 +93,14 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       continue;
 
     if (is_first_bin) {
-      // load the first inout to nram
+      // load the first input to nram
       is_first_bin = false;
       i_tl_offset = i_offset + i_tl_y * width * channel + i_tl_x * channel;
       i_tr_offset = i_tl_offset + channel;
       i_bl_offset = i_tl_offset + width * channel;
       i_br_offset = i_tl_offset + width * channel + channel;
       __nramset(nram_ping, 4 * c_limit, 0);
-      __asm__ volatile("sync;\n\t");
+      __asm__ volatile("sync;\n");
       if (topLeftIsIn) {
         __memcpy_async(nram_ping, input + i_tl_offset, c_slice * sizeof(T),
                        GDRAM2NRAM);
@@ -119,7 +119,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       }
     }
     __nramset(nram_pong, 4 * c_limit, 0);
-    __asm__ volatile("sync;\n\t");
+    __asm__ volatile("sync;\n");
     while (c_rem > 0) {
       c_slice = c_slice < c_rem ? c_slice : c_rem;
       // load the next input to nram
@@ -216,7 +216,131 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       c_offset += c_slice;
       swap(nram_ping, nram_pong);
       __nramset(nram_pong, 4 * c_limit, 0);
-      __asm__ volatile("sync;");
+      __asm__ volatile("sync;\n");
+    }
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelRoiCropBackward(
+    const T *grad_output, const int output_h, const int output_w, const T *grid,
+    const int grid_n, T *grad_input, const int batch, const int height,
+    const int width, const int channel) {
+  if (coreId == 0x80) {
+    return;
+  }
+  int align_base_128 = NFU_ALIGN_SIZE / sizeof(T);
+  int channel_align = CEIL_ALIGN(channel, align_base_128);
+  int c_limit = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(T) / 10, align_base_128);
+  c_limit = c_limit > channel_align ? channel_align : c_limit;
+
+  T *nram_ping = (T *)nram_buffer;
+  T *nram_pong = nram_ping + c_limit * 5;
+  T *nram_output = nullptr;
+
+  int bin_first = taskId;
+  int bin_end = grid_n * output_h * output_w;
+  bool is_first_bin = true;
+
+  for (int bin_i = bin_first; bin_i < bin_end; bin_i += taskDim) {
+    int i_tl_x, i_tl_y;
+    T i_tl_x_weight, i_tl_y_weight;
+    int c_rem = channel;
+    int c_slice = c_limit < c_rem ? c_limit : c_rem;
+    int c_offset = 0;
+    // bin info
+    int gw = bin_i % output_w;
+    int gh = bin_i / output_w % output_h;
+    int gn = bin_i / output_w / output_h;
+    // batch index under input
+    int i_batch_idx = gn / (grid_n / batch);
+    // value of grid data
+    T gy = grid[gn * output_h * output_w * 2 + gh * output_w * 2 + gw * 2];
+    T gx = grid[gn * output_h * output_w * 2 + gh * output_w * 2 + gw * 2 + 1];
+    // coordinates and weights under grad_input data
+    getTopLeft(gx, width, &i_tl_x_weight, &i_tl_x);
+    getTopLeft(gy, height, &i_tl_y_weight, &i_tl_y);
+
+    int go_offset = gn * output_h * output_w * channel +
+                    gh * output_w * channel + gw * channel;
+    int gi_offset = i_batch_idx * height * width * channel;
+    int gi_tl_offset = gi_offset + i_tl_y * width * channel + i_tl_x * channel;
+    int gi_tr_offset = gi_tl_offset + channel;
+    int gi_bl_offset = gi_tl_offset + width * channel;
+    int gi_br_offset = gi_tl_offset + width * channel + channel;
+
+    bool topLeftIsIn =
+        between(i_tl_x, 0, width - 1) && between(i_tl_y, 0, height - 1);
+    bool topRightIsIn =
+        between(i_tl_x + 1, 0, width - 1) && between(i_tl_y, 0, height - 1);
+    bool bottomLeftIsIn =
+        between(i_tl_x, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
+    bool bottomRightIsIn =
+        between(i_tl_x + 1, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
+    if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn && !bottomRightIsIn)
+      continue;
+
+    // load the first input to nram
+    if (is_first_bin) {
+      is_first_bin = false;
+      __memcpy(nram_ping, grad_output + go_offset, c_slice * sizeof(T),
+               GDRAM2NRAM);
+    }
+    nram_output = nram_ping + c_limit;
+    while (c_rem > 0) {
+      c_slice = c_slice < c_rem ? c_slice : c_rem;
+      // load the next input to nram
+      if (c_rem - c_slice > 0) {
+        // load the rest channel to nram
+        int pongc_slice =
+            (c_rem - c_slice > c_slice) ? c_slice : c_rem - c_slice;
+        __memcpy_async(nram_pong, grad_output + go_offset + c_offset + c_slice,
+                       pongc_slice * sizeof(T), GDRAM2NRAM);
+      } else if (bin_i + taskDim < bin_end) {
+        // load next bin
+        gw = (bin_i + taskDim) % output_w;
+        gh = (bin_i + taskDim) / output_w % output_h;
+        gn = (bin_i + taskDim) / output_w / output_h;
+        go_offset = gn * output_h * output_w * channel +
+                    gh * output_w * channel + gw * channel;
+
+        int pongc_slice = c_limit < channel ? c_limit : channel;
+        __memcpy_async(nram_pong, grad_output + go_offset,
+                       pongc_slice * sizeof(T), GDRAM2NRAM);
+      }
+      // compute
+      if (topLeftIsIn) {
+        __bang_mul_const(nram_output, nram_ping, i_tl_x_weight * i_tl_y_weight,
+                         c_limit);
+        __bang_atomic_add(nram_output, grad_input + gi_tl_offset + c_offset,
+                          nram_output, c_slice);
+      }
+      if (topRightIsIn) {
+        __bang_mul_const(nram_output + c_limit, nram_ping,
+                         (1 - i_tl_x_weight) * i_tl_y_weight, c_limit);
+        __bang_atomic_add(nram_output + c_limit,
+                          grad_input + gi_tr_offset + c_offset,
+                          nram_output + c_limit, c_slice);
+      }
+      if (bottomLeftIsIn) {
+        __bang_mul_const(nram_output + 2 * c_limit, nram_ping,
+                         i_tl_x_weight * (1 - i_tl_y_weight), c_limit);
+        __bang_atomic_add(nram_output + 2 * c_limit,
+                          grad_input + gi_bl_offset + c_offset,
+                          nram_output + 2 * c_limit, c_slice);
+      }
+      if (bottomRightIsIn) {
+        __bang_mul_const(nram_output + 3 * c_limit, nram_ping,
+                         (1 - i_tl_x_weight) * (1 - i_tl_y_weight), c_limit);
+        __bang_atomic_add(nram_output + 3 * c_limit,
+                          grad_input + gi_br_offset + c_offset,
+                          nram_output + 3 * c_limit, c_slice);
+      }
+      c_rem -= c_slice;
+      c_offset += c_slice;
+      swap(nram_ping, nram_pong);
+      nram_output = nram_ping + c_limit;
+      __asm__ volatile("sync;\n");
     }
   }
 }
@@ -229,4 +353,14 @@ void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
   MLUKernelRoiCropForward<<<k_dim, k_type, queue>>>(
       (float *)input, batch, height, width, channels, (float *)grid, grid_n,
       (float *)output, output_h, output_w);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelRoiCropBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *grid, const int batch,
+    const int height, const int width, const int channels, const int grid_n,
+    const int output_h, const int output_w, void *grad_input) {
+  MLUKernelRoiCropBackward<<<k_dim, k_type, queue>>>(
+      (float *)grad_output, output_h, output_w, (float *)grid, grid_n,
+      (float *)grad_input, batch, height, width, channels);
 }

@@ -118,7 +118,6 @@ message Node {
   optional DivParam    div_param                      = 4001;   // param
   optional LogParam    log_param                      = 4002;     // param
   optional SqrtParam   sqrt_param                     = 4003;  // param
-  optional RoiCropForwardParam  roi_crop_forward_param = 4004;  //param
 }
 
 
@@ -189,6 +188,3 @@ message DivParam {
   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
 }
 
-message RoiCropForwardParam {
-  optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
-}
