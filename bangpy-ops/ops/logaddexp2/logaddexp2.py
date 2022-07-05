@@ -18,7 +18,7 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""logaddexp2"""
+"""Logaddexp2 for bangpy tcp."""
 import math
 import bangpy
 from bangpy import tcp
@@ -49,7 +49,7 @@ class Logaddexp2():
         self.tcp.launch_cluster(TaskType.UNION1)
 
     def compute_body(self):
-        """return logaddexp2 function"""
+        """Return logaddexp2 function."""
         # calculate split strategy
         # gets the data length for each calculation
         data_each_time = self.single_buffer_size // self.dtype.bytes
