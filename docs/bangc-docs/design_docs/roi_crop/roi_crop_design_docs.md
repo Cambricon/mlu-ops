@@ -65,7 +65,7 @@
 
 ![roi_crop_forward_func](./roi_crop_forward_func.png)
 
-从输入的 grid 中提取一个 (y, x) 坐标映射参数，反映射到 input 中的 A 处得到坐标信息(Ax, Ay)，获取A点附近整数点位 top_left、top_right、bottom_left、bottom_right 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值。
+从输入的 grid 中提取一个 (y, x) 坐标映射参数，反映射到 input 中的 A 处得到坐标信息(Ax, Ay)，获取A点附近整数点位 top_left, top_right, bottom_left, bottom_right 四处像素值, 根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值。
 
 **2) 主要计算公式**
 
@@ -142,8 +142,8 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 | 限制类型     | 详细说明  |
 | ------------ | ---------------------------------|
-| 数据类型限制 | input、grid、output、grad_output和grad_input只支持float    |
-| 布局限制     | input、grad_input、output和grad_output为NHWC; grid为ARRAY  |
+| 数据类型限制 | input,grid,output,grad_output和grad_input只支持float    |
+| 布局限制     | input,grad_input,output和grad_output为NHWC; grid为ARRAY  |
 | 规模限制     | 无限制                            |
 | 功能限制     | 无限制     |
 | 数据范围限制 | grid 中数据范围：[-1,1]        |
