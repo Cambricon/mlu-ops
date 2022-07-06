@@ -45,17 +45,17 @@ class Cross(object):
         self.target = target
         self.task_num = task_num
         self.tcp = tcp.TCP(target)
-        self.dim = self.tcp.Var("dim", dtype=bangpy.int32)
+        self.dim = self.tcp.Var("_dim", dtype=bangpy.int32)
 
-        self.dim0 = self.tcp.SizeVar("dim0")
-        self.dim1 = self.tcp.SizeVar("dim1")
-        self.dim2 = self.tcp.SizeVar("dim2")
-        self.dim3 = self.tcp.SizeVar("dim3")
-        self.dim4 = self.tcp.SizeVar("dim4")
-        self.dim5 = self.tcp.SizeVar("dim5")
-        self.dim6 = self.tcp.SizeVar("dim6")
-        self.dim7 = self.tcp.SizeVar("dim7")
-        self.dimlength = self.tcp.SizeVar("dimlength")
+        self.dim0 = self.tcp.SizeVar("_dim0")
+        self.dim1 = self.tcp.SizeVar("_dim1")
+        self.dim2 = self.tcp.SizeVar("_dim2")
+        self.dim3 = self.tcp.SizeVar("_dim3")
+        self.dim4 = self.tcp.SizeVar("_dim4")
+        self.dim5 = self.tcp.SizeVar("_dim5")
+        self.dim6 = self.tcp.SizeVar("_dim6")
+        self.dim7 = self.tcp.SizeVar("_dim7")
+        self.dimlength = self.tcp.SizeVar("_dimlength")
         self.dtype_sz = dtype.bytes
         # pipeline needs buffer (a0,a1,a2,b0,b1,b2,c0,c1,c2)
         # to realize cross:(a0,a1,a2)x(b0,b1,b2)=(c0,c1,c2)
