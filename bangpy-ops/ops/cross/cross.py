@@ -19,12 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""Operator description:
-    torch.cross
-    torch.cross(input, other, dim, output)
-    compute the 3D cross product of two tensors: input and other on dimension dim,
-    and output is the result tensor.
-    To learn more, please refer to design docs"""
+"""A multi-platform code link example test for BANGPy TCP."""
 import bangpy
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
@@ -36,6 +31,13 @@ KERNEL_NAME = "cross"
 
 
 class Cross(object):
+    """Operator description:
+    torch.cross
+    torch.cross(input, other, dim, output)
+    compute the 3D cross product of two tensors: input and other on dimension dim,
+    and output is the result tensor.
+    To learn more, please refer to design docs.
+    """
     def __init__(self, dtype, target, task_num):
 
         if not ((dtype in DTYPES) and (target in TARGET_LIST)):
