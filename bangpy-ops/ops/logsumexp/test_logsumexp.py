@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -29,21 +29,22 @@ import bangpy as bp
 from bangpy.common import load_op_by_type
 from logsumexp import DTYPES, KERNEL_NAME, TARGET_LIST
 
+
 def create_random_shape(length, size):
     return np.random.randint(low=1, high=size, size=length)
-
 
 
 ranshp = create_random_shape(2, 10)
 ranshp1 = create_random_shape(5, 3)
 ranshp2 = create_random_shape(10, 2)
 
+
 @pytest.mark.parametrize(
     "shape",
     [
-        (1, 2, 101 * 100 ),
+        (1, 2, 101 * 100),
         (1, 1, 1),
-        (2, 1, 1, 1, 3, 2, 2, 3, 1, 2, 5, 4 ),
+        (2, 1, 1, 1, 3, 2, 2, 3, 1, 2, 5, 4),
         (30000, 1),
         (1, 3),
         (3, 1, 2),
@@ -58,17 +59,12 @@ ranshp2 = create_random_shape(10, 2)
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
-
 @pytest.mark.parametrize(
     "dim", [0, 1, 2, 3, 9, 10, 100, -3, -1000],
 )
-
 @pytest.mark.parametrize(
     "keepdim", [True, False],
 )
-
-
-
 def test_logsumexp(target, shape, dim, dtype, keepdim):
     if target not in TARGET_LIST:
         return
@@ -82,12 +78,12 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
 
         def get_total_size(shp):
             size = 1
-            for s in shp:
-                size *= s
+            for each_size in shp:
+                size *= each_size
             return size
 
-        def check_dim_range(dim, shape):
-            if dim < 0 or dim >= len(shape):
+        def check_dim_range(dim_num, shape_param):
+            if dim_num < 0 or dim_num >= len(shape_param):
                 return False
             return True
 
@@ -132,25 +128,25 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         # 调用mlu
         func = load_op_by_type(KERNEL_NAME, dtype.name)
         func(_mlu_input1,
-             _pd_len, _pd_height, _pd_width, _output_len
-             , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
+             _pd_len, _pd_height, _pd_width, _output_len, _mlu_border_output, _mlu_border_idx_output, _mlu_output)
 
         result = _mlu_output.numpy()
-        def create_reshape(keepdim, dim, shape):
-            outputshape = []
-            if keepdim:
-                for item in shape:
-                    outputshape.append(item)
-                outputshape[dim] = 1
+
+        def create_reshape(is_keepdim, dim_num, shape_param):
+            out_put_shape = []
+            if is_keepdim:
+                for item in shape_param:
+                    out_put_shape.append(item)
+                out_put_shape[dim_num] = 1
             else:
-                i = 0
-                for s in shape:
-                    if i == dim:
-                        i += 1
+                index = 0
+                for each_size in shape_param:
+                    if index == dim_num:
+                        index += 1
                         continue
-                    outputshape.append(s)
-                    i += 1
-            return outputshape
+                    out_put_shape.append(each_size)
+                    index += 1
+            return out_put_shape
 
         outputshape = create_reshape(keepdim, dim, shape)
 
@@ -159,7 +155,7 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         x = torch.Tensor(input_tensor)
         cpu_ret = torch.logsumexp(x, dim, keepdim)
 
-        bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+        bp.assert_allclose(cpu_ret.numpy(), mlu_ret, rtol=0.01, atol=0.01)
 
     except Exception as err:
         strerr = str(err)

@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -28,7 +28,8 @@ from bangpy import tcp
 from bangpy.common import load_op_by_type
 from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.runtime import TaskType
-from logaddexp import DTYPES,TARGET_LIST
+from logaddexp import DTYPES, TARGET_LIST
+
 
 def run(input_x, input_y, dtype, target):
     max_size_buffer = input_x
@@ -36,30 +37,30 @@ def run(input_x, input_y, dtype, target):
     is_sub = True
     scale_up = 1
     is_single_element = False
-    if max_size_buffer.ndim > min_size_buffer.ndim :
+    if max_size_buffer.ndim > min_size_buffer.ndim:
         max_size_buffer = input_y
         min_size_buffer = input_x
 
     for i in range(min_size_buffer.ndim):
-        if max_size_buffer.shape[-1 - i] != min_size_buffer.shape[-1 - i] :
+        if max_size_buffer.shape[-1 - i] != min_size_buffer.shape[-1 - i]:
             is_sub = False
             break
 
-    if min_size_buffer.ndim == 1 and min_size_buffer.shape[0] == 1 :
+    if min_size_buffer.ndim == 1 and min_size_buffer.shape[0] == 1:
         is_sub = True
-        is_single_element =True
+        is_single_element = True
 
     if is_sub:
-        if not is_single_element :
-            for j in range(max_size_buffer.ndim - min_size_buffer.mdim) :
-                scale_up *= max_size_buffer.shape[ -1*min_size_buffer.ndim -j -1]
+        if not is_single_element:
+            for j in range(max_size_buffer.ndim - min_size_buffer.mdim):
+                scale_up *= max_size_buffer.shape[-1 * min_size_buffer.ndim - j - 1]
         else:
             for k in max_size_buffer.shape:
                 scale_up *= k
         dev = bp.device(0)
         x = bp.Array(max_size_buffer.astype(dtype.as_numpy_dtype).flatten(), dev)
         y = bp.Array(
-            np.tile(min_size_buffer.astype(dtype.as_numpy_dtype).flatten(),scale_up),
+            np.tile(min_size_buffer.astype(dtype.as_numpy_dtype).flatten(), scale_up),
             dev
         )
         output_dev = bp.Array(np.zeros(max_size_buffer.size, dtype=dtype.as_numpy_dtype), dev)
@@ -71,18 +72,21 @@ def run(input_x, input_y, dtype, target):
 
     raise Exception("shape err")
 
+
 # 生成随机元组
 def random_int_list(max_dim_length, each_dim_max_length):
     random_list = []
     for _ in range(max_dim_length):
         random_list.append(random.randint(2, each_dim_max_length))
     return tuple(random_list)
+
+
 # nram_single_buffer_size_by_byte 核上单个buffer的空间单位字节
 # append_test_count 随机生成shape的个数
 # max_dim_length 最大维度数
 # each_dim_max_length 每个维度最大多少个元素
-def CreatShapeList(
-    nram_single_buffer_size_by_byte, append_test_count=50, max_dim_length=5, each_dim_max_length=64
+def create_shape_list(
+        nram_single_buffer_size_by_byte, append_test_count=50, max_dim_length=5, each_dim_max_length=64
 ):
     const_float32_128_align_element_count = 32  # float32 下 128字节对应元素个数
     const_float16_128_align_element_count = 64  # float16 下 128字节对应元素个数
@@ -115,29 +119,29 @@ def CreatShapeList(
         (123391,),
         (123392,),
         (123393,),
-        (2,2,3,3,4,3,2,4,2,3,4,4,2,3,5,),
+        (2, 2, 3, 3, 4, 3, 2, 4, 2, 3, 4, 4, 2, 3, 5,),
     ]
     for _ in range(append_test_count):
         test_shape_list.append(random_int_list(random.randint(
             2, max_dim_length), random.randint(2, each_dim_max_length)))
     return test_shape_list
 
-shape_list = CreatShapeList(
-    nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,
-    append_test_count = 50,
-    max_dim_length = 5,
-    each_dim_max_length = 64
+
+shape_list = create_shape_list(
+    nram_single_buffer_size_by_byte=(512 - 40) * 1024 // 8,
+    append_test_count=50,
+    max_dim_length=5,
+    each_dim_max_length=64
 )
+
 
 @pytest.mark.parametrize(
     "shape",
     shape_list,
 )
-
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
-
 def test_logaddexp(target, shape, dtype):
     if target not in TARGET_LIST:
         return
@@ -158,23 +162,22 @@ def test_logaddexp(target, shape, dtype):
 
     cpu_ret = np.logaddexp(data_x, data_y)
     if dtype.name == "float16":
-        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol = 0.01, atol = 0.01)
+        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol=0.01, atol=0.01)
     else:
-        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol = 0.001, atol = 0.01)
+        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol=0.001, atol=0.01)
+
 
 @pytest.mark.parametrize(
     "shapes",
     [
-    [[1, 2, 3], [2, 2]],
-    [[113], [52]],
-    [[14, 4, 3], [2]]
+        [[1, 2, 3], [2, 2]],
+        [[113], [52]],
+        [[14, 4, 3], [2]]
     ]
 )
-
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
-
 def test_logaddexp_shp_err(target, shapes, dtype):
     if target not in TARGET_LIST:
         return

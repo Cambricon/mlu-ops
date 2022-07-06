@@ -1,4 +1,4 @@
-# BANGPy Add 算子开发设计方案
+# BANGPy LogSumExp 算子开发设计方案
 
 - #### 文档基本信息
 
@@ -15,7 +15,7 @@
 
 - #### 内容描述
 
-本文档为 `pairwise_distance` 算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
+本文档为 `LogSumExp` 算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
 
 ## 1 需求分析
 
@@ -86,13 +86,13 @@ torch.nn.PairwiseDistance
 
 ```python
 MluOpPairwiseDistance(_mlu_input1, _mlu_input2,
-                 _mlu_paras, 
+                 _mlu_paras,
                  get_total_size(_shape1), get_total_size(_shape2),
                  _pd_len, _pd_height, _pd_width, _output_len
                  , _mlu_border_output, _mlu_border_idx_output, _mlu_output)
-				 
+
 _mlu_input1, _mlu_input2, 为输入的两个向量
-_mlu_paras 为 eps，p，keepdim 参数 
+_mlu_paras 为 eps，p，keepdim 参数
 get_total_size(_shape1), get_total_size(_shape2), 为两个向量的长度，张量1的长度永远不小于张量2
 _pd_len 为输入张量最后一个维度的长度
 _pd_height, _pd_width 为对第一个张量进行reshape后的高度和宽度
@@ -118,9 +118,9 @@ _mlu_border_output, _mlu_border_idx_output, _mlu_output ，因为数据分散到
 当dim_index为1时，输出张量y的维度为 [2, 4]
 第i, j 个子张量为
 t = [
-x[i, 0, j], 
-x[i, 1, j], 
-x[i, 2, j] 
+x[i, 0, j],
+x[i, 1, j],
+x[i, 2, j]
 ]
 
 y(i, j) = log(exp(t0) + exp(t1) + exp(t2))

@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -41,22 +41,23 @@ class Celu:
         self.length = self.bp.SizeVar("length")
         self.dtype_sz = dtype.bytes
         self.bp.launch_task(self.task_num, 1, 1)
+
     def compute_body(self):
         one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count", self.length // self.task_num)
-        remain =  self.bp.Scalar(bangpy.int32, "remain", self.length % self.task_num)
+        remain = self.bp.Scalar(bangpy.int32, "remain", self.length % self.task_num)
         current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
         current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count")
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
         calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
-        nram_avable_size = round_down((TARGET(self.target).nram_size - 40* 1024) // 4, 128)
+        nram_avable_size = round_down((TARGET(self.target).nram_size - 40 * 1024) // 4, 128)
         process_count = nram_avable_size // self.dtype_sz
         with self.bp.if_scope(self.bp.taskId < remain):
             current_core_start.assign((one_core_count + 1) * self.bp.taskId)
             current_core_end.assign((one_core_count + 1) * (self.bp.taskId + 1) - 1)
         with self.bp.else_scope():
             current_core_start.assign(one_core_count * self.bp.taskId + remain)
-            current_core_end.assign(current_core_start  + one_core_count - 1)
+            current_core_end.assign(current_core_start + one_core_count - 1)
         total_count_in_core = self.bp.Scalar(
             bangpy.int32,
             "total_count_in_core",
@@ -70,7 +71,7 @@ class Celu:
         buffer_out = self.bp.Buffer(
             shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
         )
-        alpha = self.bp.Scalar(dtype = self.dtype, name = "alpha")
+        alpha = self.bp.Scalar(dtype=self.dtype, name="alpha")
         alpha.assign(buffer_alpha[0])
         nram_buffer_in0 = self.bp.Buffer(
             shape=(process_count,),
@@ -96,8 +97,8 @@ class Celu:
             dtype=self.dtype,
             scope="nram",
         )
-        const_zero = self.bp.Scalar(dtype = self.dtype,name = "const_zero", value = 0)
-        const_one = self.bp.Scalar(dtype = self.dtype,name = "const_one", value = 1)
+        const_zero = self.bp.Scalar(dtype=self.dtype, name="const_zero", value=0)
+        const_one = self.bp.Scalar(dtype=self.dtype, name="const_one", value=1)
         calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
         with self.bp.for_range(0, calc_loop_count) as i:
             once_loop_start.assign(current_core_start + process_count * i)
@@ -111,7 +112,7 @@ class Celu:
                 self.bp.memcpy(
                     nram_buffer_in0[0:calc_size],
                     buffer_in0[once_loop_start:once_loop_start + calc_size]
-                    )
+                )
             with self.bp.if_scope(alpha != 0):
                 self.bp.divide(nram_middle_value, nram_buffer_in0, alpha)
                 self.bp.exp(nram_middle_value, nram_middle_value)
@@ -121,18 +122,20 @@ class Celu:
             with self.bp.else_scope():
                 self.bp.zeros(nram_min)
             self.bp.maximum(nram_max, nram_buffer_in0, const_zero)
-            self.bp.add(nram_buffer_in0, nram_max,nram_min)
+            self.bp.add(nram_buffer_in0, nram_max, nram_min)
             self.bp.memcpy(
                 buffer_out[once_loop_start:once_loop_start + calc_size],
                 nram_buffer_in0[:calc_size])
         f = self.bp.BuildBANG(
             inputs=[buffer_in0, buffer_alpha, self.inplace],
             outputs=[buffer_out],
-            kernel_name = KERNEL_NAME,)
+            kernel_name=KERNEL_NAME, )
         return f
+
+
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
-def build_celu(dtype = None, target = None):
+def build_celu(dtype=None, target=None):
     task_type = TaskType.UNION16
-    task_num = task_type.value*4
+    task_num = task_type.value * 4
     f = Celu(dtype, target, task_num).compute_body()
     return f

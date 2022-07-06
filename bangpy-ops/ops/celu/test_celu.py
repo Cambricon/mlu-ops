@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -26,15 +26,18 @@ import numpy as np
 import pytest
 import bangpy as bp
 from bangpy.common import load_op_by_type
-from celu import DTYPES,TARGET_LIST
+from celu import DTYPES, TARGET_LIST
+
+
 def random_int_list(max_dim_length, each_dim_max_length):
     random_list = []
     for _ in range(max_dim_length):
         random_list.append(random.randint(2, each_dim_max_length))
     return tuple(random_list)
 
-def CreatShapeList(
-    nram_single_buffer_size_by_byte, append_test_count=50, max_dim_length=5, each_dim_max_length=64
+
+def create_shape_list(
+        nram_single_buffer_size_by_byte, append_test_count=50, max_dim_length=5, each_dim_max_length=64
 ):
     const_float32_128_align_element_count = 32  # float32 下 128字节对应元素个数
     const_float16_128_align_element_count = 64  # float16 下 128字节对应元素个数
@@ -54,33 +57,36 @@ def CreatShapeList(
         (const_float16_128_align_element_count - 1,),
         (const_float16_128_align_element_count,),
         (const_float16_128_align_element_count + 1,),
-        #nram_buffer边界测试
+        # nram_buffer边界测试
         (const_current_mlu_single_buffer_float32_max_element_size - 1,),  # 比空间大小少一个元素
         (const_current_mlu_single_buffer_float32_max_element_size,),  # 刚好用完空间
         (const_current_mlu_single_buffer_float32_max_element_size + 1,),  # 比空间大小多一个元素
         (const_current_mlu_single_buffer_float16_max_element_size - 1,),
         (const_current_mlu_single_buffer_float16_max_element_size,),
         (const_current_mlu_single_buffer_float16_max_element_size + 1,),
-        #nram边界测试
+        # nram边界测试
         (246783,),
         (246784,),
         (246785,),
         (123391,),
         (123392,),
         (123393,),
-        (2,2,3,3,4,3,2,4,2,3,4,4,2,3,5,),
+        (2, 2, 3, 3, 4, 3, 2, 4, 2, 3, 4, 4, 2, 3, 5,),
     ]
     for _ in range(append_test_count):
         test_shape_list.append(random_int_list(random.randint(
             2, max_dim_length), random.randint(2, each_dim_max_length)))
     return test_shape_list
-    
-shape_list = CreatShapeList(
-    nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 4,
-    append_test_count = 50,
-    max_dim_length = 5 ,
-    each_dim_max_length = 64
+
+
+shape_list = create_shape_list(
+    nram_single_buffer_size_by_byte=(512 - 40) * 1024 // 4,
+    append_test_count=50,
+    max_dim_length=5,
+    each_dim_max_length=64
 )
+
+
 @pytest.mark.parametrize(
     "shape",
     shape_list,
@@ -94,21 +100,23 @@ shape_list = CreatShapeList(
 def test_celu(target, shape, dtype, alpha):
     if target not in TARGET_LIST:
         return
-    def celu_out (alpha = 1, inplace = False):
+
+    def celu_out(alpha_param=1.0, inplace=False):
         dev = bp.device(0)
         celu_func = load_op_by_type("Celu", dtype.name)
+
         def celu_inner(input_param):
             primative = input_param.shape
             data_x_flat = input_param.flatten()
-            buffer_alpha_param = bp.Array(np.array([alpha]).astype( dtype=dtype.as_numpy_dtype), dev)
-            data_x_dev_param = bp.Array(data_x_flat,dev)
+            buffer_alpha_param = bp.Array(np.array([alpha_param]).astype(dtype=dtype.as_numpy_dtype), dev)
+            data_x_dev_param = bp.Array(data_x_flat, dev)
             output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype), dev)
             celu_func(data_x_dev_param, buffer_alpha_param, inplace, output_dev_param)
-            res = output_dev_param.numpy().reshape(primative)
-            if inplace :
-                input_param=res
-            return res
+            celu_res = output_dev_param.numpy().reshape(primative)
+            return celu_res
+
         return celu_inner
+
     data_x = np.random.uniform(low=-5, high=5, size=shape)
     f1 = celu_out(alpha, False)
     res = f1(data_x.astype(dtype.as_numpy_dtype))
@@ -116,6 +124,6 @@ def test_celu(target, shape, dtype, alpha):
     m = torch.nn.CELU(alpha)
     t_res = m(torch_value)
     if dtype.name == "float16":
-        bp.assert_allclose( t_res.numpy(), res,rtol = 0.01, atol = 0.01)
+        bp.assert_allclose(t_res.numpy(), res, rtol=0.01, atol=0.01)
     else:
-        bp.assert_allclose( t_res.numpy(), res,rtol = 0.1, atol = 0.1)
+        bp.assert_allclose(t_res.numpy(), res, rtol=0.1, atol=0.1)

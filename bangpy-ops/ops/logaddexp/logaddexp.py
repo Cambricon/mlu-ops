@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -23,8 +23,9 @@
 import bangpy
 from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
-from bangpy.tcp.util import  round_down
+from bangpy.tcp.util import round_down
 from bangpy.tcp.runtime import TaskType
+
 DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "LogAddExp"
@@ -39,24 +40,28 @@ class LogAddExp:
         self.length = self.bp.SizeVar("length")
         self.dtype_sz = dtype.bytes
         self.bp.launch_task(self.task_num, 1, 1)
-    def replace_the_marked_value(self,changed_buffer, value_buffer,marked_buffer):
-        self.bp.multiply(changed_buffer,changed_buffer, marked_buffer)
+
+    def replace_the_marked_value(self, changed_buffer, value_buffer, marked_buffer):
+        self.bp.multiply(changed_buffer, changed_buffer, marked_buffer)
         self.bp.logical_not(marked_buffer, marked_buffer)
         self.bp.multiply(marked_buffer, value_buffer, marked_buffer)
         self.bp.add(changed_buffer, changed_buffer, marked_buffer)
+
     def mark_value_compare_with_threshold_value(self, input_buffer, bool_mark, is_min, threshold_value):
         if is_min == 1:
             self.bp.greater_equal(bool_mark, input_buffer, threshold_value, 'elemwise')
-        else :
+        else:
             self.bp.less_equal(bool_mark, input_buffer, threshold_value, 'elemwise')
-    def mark_the_out_of_range_vlaue(self,input_buffer, x, y):
+
+    def mark_the_out_of_range_vlaue(self, input_buffer, x, y):
         max_threshold = self.bp.Scalar(self.dtype, "max_threshold", 10)
         min_threshold = self.bp.Scalar(self.dtype, "min_threshold", -7.5)
         self.mark_value_compare_with_threshold_value(input_buffer, x, 1, min_threshold)
         self.mark_value_compare_with_threshold_value(input_buffer, y, 0, max_threshold)
+
     def compute_body(self):
         one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count", self.length // self.task_num)
-        remain =  self.bp.Scalar(bangpy.int32, "remain")
+        remain = self.bp.Scalar(bangpy.int32, "remain")
         current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
         current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")
         total_count_in_core = self.bp.Scalar(bangpy.int32, "total_count_in_core")
@@ -64,12 +69,12 @@ class LogAddExp:
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
         calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
         nram_avable_size = round_down(
-            (TARGET(self.target).nram_size - 40* 1024) // 8, 128
+            (TARGET(self.target).nram_size - 40 * 1024) // 8, 128
         )
         remain.assign(self.length % self.task_num)
         process_count = nram_avable_size // self.dtype_sz
         with self.bp.if_scope(self.bp.taskId < remain):
-            current_core_start.assign((one_core_count + 1) * self.bp.taskId )
+            current_core_start.assign((one_core_count + 1) * self.bp.taskId)
             current_core_end.assign((one_core_count + 1) * (self.bp.taskId + 1) - 1)
         with self.bp.else_scope():
             current_core_start.assign(one_core_count * self.bp.taskId + remain)
@@ -114,7 +119,7 @@ class LogAddExp:
             dtype=self.dtype,
             scope="nram",
         )
-        const_one = self.bp.Scalar(dtype = self.dtype,name = "const_one",value = 1)
+        const_one = self.bp.Scalar(dtype=self.dtype, name="const_one", value=1)
         calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
         with self.bp.for_range(0, calc_loop_count) as i:
             once_loop_start.assign(current_core_start + process_count * i)
@@ -142,7 +147,7 @@ class LogAddExp:
             self.bp.add(nram_middle_value, nram_buffer_in0, nram_middle_value)
             self.replace_the_marked_value(
                 nram_middle_value,
-                nram_buffer_in1,nram_y_bool
+                nram_buffer_in1, nram_y_bool
             )
             self.replace_the_marked_value(
                 nram_middle_value,
@@ -154,14 +159,16 @@ class LogAddExp:
                 nram_middle_value[:calc_size]
             )
         f = self.bp.BuildBANG(
-            inputs=[buffer_in0, buffer_in1,],
+            inputs=[buffer_in0, buffer_in1, ],
             outputs=[buffer_out],
             kernel_name=KERNEL_NAME,
         )
         return f
+
+
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp(dtype=None, target=None):
-    task_type=TaskType.UNION16
-    task_num =task_type.value*4
+    task_type = TaskType.UNION16
+    task_num = task_type.value * 4
     f = LogAddExp(dtype, target, task_num).compute_body()
     return f
