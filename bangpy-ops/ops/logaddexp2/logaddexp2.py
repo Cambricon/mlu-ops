@@ -33,7 +33,8 @@ KERNEL_NAME = "logaddexp2"
 
 class Logaddexp2():
     """Operator description:
-    logaddexp2 the data in the two buffers.
+    logaddexp2 the data in the two buffers, 2 inputs and 1 ouput,
+    output = log2(2^input0 + 2^input1), calculate element-wise.
     """
 
     def __init__(self, dtype, target, task_num):
