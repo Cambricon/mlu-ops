@@ -127,14 +127,11 @@ log(exp(a) + exp(b))
 ### 3.2 伪代码实现
 
 ```python
-
-subtract_tensor = input_tensor1 - intput_tensor2
-
-sub_tensors = get_last_dim(subtract_tensor)  #按照最后一个维度，讲该tensor划分，拿到所有子张量
+sub_tensors = split_sub_tensor(input, dim)
 
 for t in sub_tensors:
-    length = calc_distance(t)
-    _mlu_output.append(length)
+    result = logsumexp(t)
+    _mlu_output.append(result)
 
 ```
 
@@ -167,7 +164,7 @@ for t in sub_tensors:
 
 ### 5.1 开发测试计划
 
-2022.4.30 算子入库
+2022.6.30 算子入库
 
 ### 5.2 风险分析
 
