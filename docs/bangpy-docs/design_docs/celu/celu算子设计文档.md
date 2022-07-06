@@ -2,16 +2,16 @@
 
 - #### 文档基本信息
 
-| 算子名称     | Celu              |
-| ----------- | -------------- |
-| 编制人/日期  | UniqueSquirrel/2022-5-18 |   
-| 审批人/日期  |              |
+| 算子名称   | Celu                     |
+|--------|--------------------------|
+| 编制人/日期 | UniqueSquirrel/2022-5-18 |   
+| 审批人/日期 |                          |
 
 - #### 修改记录
 
-| 修订人           | 修订日期    | 修订描述 |
-| --------------- | ---------- | ------- |
-| UniqueSquirrel  | 2022-5-18 | 首次提交 |  
+| 修订人            | 修订日期      | 修订描述 |
+|----------------|-----------|------|
+| UniqueSquirrel | 2022-5-18 | 首次提交 |  
 
 - #### 内容描述
 
@@ -21,16 +21,16 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介               | 根据给定的α值对张量每个元素计算max(0, x) + min(0, α ∗ (exp(x / α) − 1))|
-| ------------------------ | ---------------------------------------- |
-| 需求来源                  | 为bangpy-ops提供算子demo                  |
-| 应用网络                  |                                 |
-| 输入数据类型               | float                                   |
-| 输入 Shape                | buffer_in0[任意维度]   buffer_alpha[1]  inplace:bool |
-| 输入 Layout               |buffer_in0:Array     buffer_alpha:Array  inplace:bool |
-| 输入                      | input：Array   shape为任意维度             |
-| 输出数据类型               | float                                    |
-| 输出                      | buffer_out:Array      shape同输入                |
+| 算子功能简介    | 根据给定的α值对张量每个元素计算max(0, x) + min(0, α ∗ (exp(x / α) − 1)) |
+|-----------|----------------------------------------------------------|
+| 需求来源      | 为bangpy-ops提供算子demo                                      |
+| 应用网络      |                                                          |
+| 输入数据类型    | float                                                    |
+| 输入 Shape  | buffer_in0[任意维度]   buffer_alpha[1]  inplace:bool         |
+| 输入 Layout | buffer_in0:Array     buffer_alpha:Array  inplace:bool    |
+| 输入        | input：Array   shape为任意维度                                 |
+| 输出数据类型    | float                                                    |
+| 输出        | buffer_out:Array      shape同输入                           |
 
 
 ### 1.2 算子功能和应用场景描述
@@ -45,20 +45,20 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 
 
 ### 1.3 算子输入输出参数要求
-| 参数   | 语义                  | 类型（输入/输出）| 支持类型     | 物理布局 | 规模限制      |
-| ------ | --------------------- | -------------    | -----------  | ------   | --------      |
-| buffer_in0 | 输入的任意shape的buffer | 输入     |  float           | ARRAY        |  无      | --------      |
-| buffer_alpha | CELU公式的α值。默认值为1.0 | 输入     |  float           | ARRAY        |  无      | --------      |
-| inplace | 是否原位替换                | 输入     |  bool           | --------        |  无      | --------      |
-| buffer_out | 与输入shape一致的输出buffer | 输出     |  float           | ARRAY        |  无      | --------      |
+| 参数           | 语义                  | 类型（输入/输出） | 支持类型  | 物理布局     | 规模限制 |
+|--------------|---------------------|-----------|-------|----------|------|
+| buffer_in0   | 输入的任意shape的buffer   | 输入        | float | ARRAY    | 无    | --------      |
+| buffer_alpha | CELU公式的α值。默认值为1.0   | 输入        | float | ARRAY    | 无    | --------      |
+| inplace      | 是否原位替换              | 输入        | bool  | -------- | 无    | --------      |
+| buffer_out   | 与输入shape一致的输出buffer | 输出        | float | ARRAY    | 无    | --------      |
 
 ### 1.4 算子限制
 
-| 限制类型      | 详细说明                   |
-| ------------ | -----------------------    |
-| 数据类型限制  | inplace为bool值 其余为float |
-| 布局限制      | 仅支持ARRAY的layout         |
-| 规模限制      | 无                         |
+| 限制类型   | 详细说明                   |
+|--------|------------------------|
+| 数据类型限制 | inplace为bool值 其余为float |
+| 布局限制   | 仅支持ARRAY的layout        |
+| 规模限制   | 无                      |
 
 ### 1.5 验收标准
 
@@ -75,6 +75,7 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 ### 2.1 参考接口
 
 - pytorch
+- torch.nn.CELU(alpha=1.0, inplace=False)
 [torch.nn.CELU文档](https://pytorch.org/docs/stable/generated/torch.nn.CELU.html?highlight=celu#torch.nn.CELU)
 ```python
 m = torch.nn.CELU()
@@ -99,9 +100,9 @@ x为输入张量中的值，α为celu公式的参数。
 min(0, α ∗ (exp(x / α) − 1))中根据α是否为0分别讨论：    
 当α为0时，min直接返回0。  
 不为0时正常计算min(0, α ∗ (exp(x / α) − 1))。    
-计算max(0, x)  
-将max和min相加  
-拷贝至cpu端  
+计算max(0, x)。  
+将max和min相加。  
+拷贝至cpu端。  
 
 ### 3.2 伪代码实现
 
@@ -134,7 +135,7 @@ self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buf
 采用的tasktype固定为UNION16，数据拆分到64个核内计算。
 
 ### 3.4 性能优化设计
-尽可能将数据分摊至各核。
+尽可能将数据分摊至各核。  
 计算均采用向量api。
 
 ### 3.5 可维护性设计
@@ -157,15 +158,15 @@ self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buf
 
 ### 4.1 当前存在问题的规模说明
 
-| 提交日期  | 问题规模 | 问题描述 | 是否已修复 |
-| --------- | -------- | -------- | ---------- |
-|           |          |          |            |
+| 提交日期 | 问题规模 | 问题描述 | 是否已修复 |
+|------|------|------|-------|
+|      |      |      |       |
 
 ### 4.2 已经过优化的规模说明
 
-| 提交日期  | 修复规模 | 修复问题 |
-| --------- | -------- | -------- |
-|           |          |          |
+| 提交日期 | 修复规模 | 修复问题 |
+|------|------|------|
+|      |      |      |
 
 ## 5 方案实施
 
