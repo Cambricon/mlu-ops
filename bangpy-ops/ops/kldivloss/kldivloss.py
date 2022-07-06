@@ -35,8 +35,6 @@ class KlDivLoss(object):
     """Operator description:
         The Kullback-Leibler divergence loss
 
-        Parameters
-        ----------
         log_target : if target has been logged(0:no / 1:yes)
             if log_target == 0 : out = target * (log(target) - input)
             if log_target == 1 : out = exp(target) * (target - input)
@@ -50,7 +48,60 @@ class KlDivLoss(object):
     """
 
     def __init__(self, dtype, target, task_num):
+        """Construct a new KlDivLoss class.
 
+        Parameters
+        ----------
+        dtype : bangpy.DType
+            The data type of input.
+
+        target : str
+            Target MLU device name.
+
+        task_num : int
+            The task number of runtime.
+
+        Attributes
+        ----------
+        dtype : bangpy.DType
+            The data type of input.
+
+        target : str
+            Target MLU device name.
+
+        tcp : tcp.TCP
+            TCP container.
+
+        task_num : int
+            The task number of runtime.
+
+        batchSize : tcp.SizeVar
+            The batch size of input.
+
+        batchLength : tcp.SizeVar
+            The length of each batch.
+
+        totalData : int
+            The data size of input.
+
+        inputShape :
+            The shape of input.
+
+        outShape :
+            The shape of output.
+
+        nram_size : int
+            The size of nram.
+
+        dtype_sz : int
+            The byte of each element.
+
+        compute_row : int
+            How many bytes equals 128 bits.
+
+        single_buffer_size : int
+            The size of single buffer.
+        """
         # Check parameters.
         if not (
             (dtype in DTYPES)
@@ -71,11 +122,9 @@ class KlDivLoss(object):
         self.outShape = (self.totalData,)
 
         self.nram_size = TARGET(self.target).nram_size
-        self.dtype_sz = dtype.bytes  # Byte of each element
-        self.compute_row = 128 // self.dtype_sz  # How many bytes equals 128 bits
-        self.single_buffer_size = (
-            TARGET(target).nram_size // 4 // self.dtype.bytes
-        )  # size of single bufer
+        self.dtype_sz = dtype.bytes
+        self.compute_row = 128 // self.dtype_sz
+        self.single_buffer_size = self.nram_size // 4 // self.dtype.bytes
 
         self.tcp.launch_cluster(TaskType.UNION16)
         self.tcp.launch_task(task_num, 1, 1)
@@ -108,10 +157,10 @@ class KlDivLoss(object):
 
         inputG = inputG.flatten()
 
-        target = self.tcp.Buffer(
-            shape=self.inputShape, name="target", dtype=self.dtype, scope="global"
+        targetG = self.tcp.Buffer(
+            shape=self.inputShape, name="targetG", dtype=self.dtype, scope="global"
         )
-        target = target.flatten()
+        targetG = targetG.flatten()
 
         outG = self.tcp.Buffer(
             shape=self.outShape, name="outG", dtype=self.dtype, scope="global"
@@ -222,7 +271,7 @@ class KlDivLoss(object):
                 )
                 self.tcp.memcpy(
                     buffer_target[:data_calculated_each_time],
-                    target[
+                    targetG[
                         start
                         + data_calculated_each_time * i : start
                         + data_calculated_each_time * (i + 1)
@@ -250,7 +299,7 @@ class KlDivLoss(object):
             stop.assign(start + data_calculated_each_task % data_calculated_each_time)
             # data copy
             self.tcp.memcpy(buffer_input[: stop - start], inputG[start:stop])
-            self.tcp.memcpy(buffer_target[: stop - start], target[start:stop])
+            self.tcp.memcpy(buffer_target[: stop - start], targetG[start:stop])
             # compute
             numCompute(buffer_out, buffer_input, buffer_target, log_target)
             with self.tcp.if_scope(self.batchLength >= 2 ** 20):
@@ -305,7 +354,7 @@ class KlDivLoss(object):
 
         # build a executable module
         f = self.tcp.BuildBANG(
-            inputs=[inputG, target, reduction, log_target],
+            inputs=[inputG, targetG, reduction, log_target],
             outputs=[outG],
             kernel_name=KERNEL_NAME,
         )
