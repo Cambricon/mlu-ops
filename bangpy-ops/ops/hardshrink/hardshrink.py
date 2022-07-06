@@ -37,7 +37,6 @@ class HardShrink(object):
     An activation function, behaves similar to torch.hardshrink.
     """
     def __init__(self, target, dtype, task_num, task_type, kernel_name = KERNEL_NAME):
-        """Construct a new HardShrink class."""
         """Parameter
         ------
         target : string
@@ -46,7 +45,7 @@ class HardShrink(object):
             The data type of input.
         task_num : int
             The task number of runtime.
-        name : string
+        kernel_name : string
             Kernel entry function name.
         scalar_lambda : Scalar
             The lambda para, default is 0.05, but can not set the default value
@@ -59,11 +58,7 @@ class HardShrink(object):
         self.kernel_name = kernel_name
         self.lambdaPara = self.bp.Var("lambdaPara", dtype = bangpy.float32)
         self.scalar_lambda = self.bp.Scalar(name = "scalar_lambda", value = self.lambdaPara.astype(dtype), dtype = self.dtype) # need attention to the astype, or error: ‘half’ has not been declared
-        """Attributes
-        ------
-        tcp : tcp.TCP
-            TCP container.
-        """
+
         self.dim_0 = self.bp.SizeVar("dim_0")
         self.dim_1 = self.bp.SizeVar("dim_1")
         self.dim_2 = self.bp.SizeVar("dim_2")
@@ -105,14 +100,13 @@ class HardShrink(object):
         task_content = self.element_num // self.task_num # per task need to calculate num
         task_remain = self.element_num % self.task_num # remain num which has no task to deal
 
-        """ global """
         self.tensor_input = self.bp.Buffer(shape = self.tensor_shape, name = "input_tensor", dtype = self.dtype, scope = "global")
         self.tensor_output = self.bp.Buffer(shape = self.tensor_shape, name = "output_tensor", dtype = self.dtype, scope = "global")
-        """ flatten """
+
         self.tensor_input_flatten = self.tensor_input.reshape((self.element_num,)) # the use of reshape has higher effiency, equal use is self.tensor_input.flatten()[]
         self.tensor_output_flatten = self.tensor_output.reshape((self.element_num,))
 
-        """ core computation —— for """
+
         task_start = self.task_id * task_content # self.task_id starts from 0
         task_end = task_start + task_content
         cmpt_times = task_content // self.nram_use_size
@@ -150,16 +144,17 @@ class HardShrink(object):
         with self.bp.if_scope(task_remain != 0):
             with self.bp.if_scope(self.task_id == self.task_num-1):
                 with self.bp.for_range(0, 1, stage = 1) as i:
+                    flatten_end = task_end + task_remain
                     self.tensor_input_small_nram = self.bp.Buffer(shape = (self.base_align,), name = "input_tensor_small_nram", dtype = self.dtype, scope = "nram")
                     self.tensor_output_small_nram = self.bp.Buffer(shape = (self.base_align,),name = "output_tensor_small_nram", dtype = self.dtype, scope = "nram")
                     self.tensor_abs_small_nram = self.bp.Buffer(shape = (self.base_align,), name = "abs_tensor_small_nram", dtype = self.dtype, scope = "nram")
                     self.tensor_greater_small_nram = self.bp.Buffer(shape = (self.base_align,), name = "greater_tensor_small_nram", dtype = self.dtype, scope = "nram")
                     with self.bp.block("data_copy"): 
-                        self.bp.memcpy(self.tensor_input_small_nram[:task_remain], self.tensor_input_flatten[task_end:])
+                        self.bp.memcpy(self.tensor_input_small_nram[:task_remain], self.tensor_input_flatten[task_end:flatten_end])
                     with self.bp.block("compute"):
                         self.small_compute()
                     with self.bp.block("data_copy"):
-                        self.bp.memcpy(self.tensor_output_flatten[task_end:], self.tensor_output_small_nram[:task_remain])
+                        self.bp.memcpy(self.tensor_output_flatten[task_end:flatten_end], self.tensor_output_small_nram[:task_remain])
 
         self.tensor_output = self.tensor_output_flatten.reshape(self.tensor_shape)
         

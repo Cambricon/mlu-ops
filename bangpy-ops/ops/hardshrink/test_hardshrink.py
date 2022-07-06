@@ -36,26 +36,18 @@ import time
 @pytest.mark.parametrize(
     "shape",
     [   
-        # (20, 4, 4096, 4096),
+        (10, 4, 4096, 4096),
         (4, 16, 1024, 1024),
-        # (4,16,1,64), # 4,194,304 1,095,642,089,843
-        (3, 5,197 ,175),
-        # (4,16,4096),
-        # (4,4096),
-        # (4096)
+        (4,16,1,64),
+        (3, 5, 197, 175)
     ],
 )
 @pytest.mark.parametrize(
     "lambdaPara",
     [0.5,]
 )
-# @pytest.mark.parametrize(
-#     "dim_num",
-#     [4,]
-# )
 
 def test_hardshrink(target,shape,dtype,lambdaPara):
-    """Test case."""
     if target not in TARGET_LIST:
         return
     data_in = np.random.uniform(low = -1, high = 1, size = shape)
@@ -70,18 +62,17 @@ def test_hardshrink(target,shape,dtype,lambdaPara):
     f_hardshrink(
         data_in_dev,
         lambdaPara,
+        # 支持原位操作，可替换为data_in_dev
         data_out_dev
     )
-    mlu_end_time = time.time()
 
     # compute the cpu data
     eps = 1e-8
-    cpu_start_time = time.time()
-    cpu_out = np.where((data_in + lambdaPara > -eps) & (data_in - lambdaPara < eps), 0, data_in)
-    cpu_end_time = time.time()
+    cpu_out = np.where((data_in.astype(dtype.as_numpy_dtype) + lambdaPara > -eps) & (data_in - lambdaPara < eps), 0, data_in)
 
-    print("mlu run time:", mlu_end_time - mlu_start_time)
-    print("cpu run time:", cpu_end_time - cpu_start_time)
+    evaluator = f_hardshrink.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
+    run_time = evaluator(data_in_dev, lambdaPara, data_out_dev).mean
+    print("mlu run time: " + str(run_time) + "s")
 
     bp.assert_allclose(
         data_out_dev.numpy(),

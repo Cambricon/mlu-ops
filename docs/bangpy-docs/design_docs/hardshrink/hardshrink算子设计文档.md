@@ -48,18 +48,21 @@
 功能： HardShrink算子是一种激活函数，其功能是逐元素施加强制收缩。
 运算公式描述如下：
 
-
-$$ Hardshrink(x) = \left\{\begin{matrix} 
-  x , x > \lambda  \\  
-  x , x < -\lambda  \\
-0,otherwise
-\end{matrix}\right $$
+$$
+Hardshrink(x) = 
+\begin{cases} 
+  x , &{x > \lambda}  \\  
+  x , &{x < -\lambda}  \\
+  0 , &{otherwise}
+\end{cases}
+$$
+**lambda** – the λ value for the Hardshrink formulation. Default: 0.5
 
 来自[PyTorch HardShrink](https://pytorch.org/docs/stable/_modules/torch/nn/modules/activation.html#Hardshrink)。
 例如： 
 
 ``` python
-m = nn.Hardshrink(lambd=0.5)
+m = nn.Hardshrink(lambda=0.5)
 inputTensor = torch.rand(2)
 outputTensor = m(input)
 # lambda : 0.5 inputTensor =  tensor([0.7286, 0.0830])
@@ -72,7 +75,7 @@ outputTensor = m(input)
 
 | 参数      |             语义         | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | -------- | ------------------------ | -------------- | ---------- | ------- | ------- |
-| input    |输入Tensor                 |   输入         | half,float  |  无限制 | 无限制  |
+| input    |输入Tensor                 |   输入         | half,float  |  Array | \  |
 | lambda    | the \lambda value for the Hardshrink formulation. Default: 0.5| 输入           | float         | 无限制   |  0或1  |
 | output   |输出Tensor                 |  输出          | 同input       | 同input  | 无限制 |
 
@@ -81,7 +84,7 @@ outputTensor = m(input)
 | 限制类型     | 详细说明              |
 | ----------- | ------------------- |
 | 数据类型限制     | input 和 output 必须同时为同一数据类型 |
-| 原位限制     | 不支持原位            |
+| 原位限制     | 支持原位            |
 | stride 限制  | 不支持stride 机制      |
 
 ### 1.5 验收标准
@@ -102,7 +105,7 @@ outputTensor = m(input)
 
 Pytorch 接口：
 ```python
-m = nn.Hardshrink(lambd=0.5)
+m = nn.Hardshrink(lambda=0.5)
 inputTensor = torch.rand(2)
 outputTensor = m(input)
 ```
@@ -113,7 +116,7 @@ outputTensor = m(input)
 - HardShrink计算接口：
 
 ```python
-mluopHardShrink(inputTensor,lambd=0.5,outputTensor)
+mluopHardShrink(inputTensor,lambda=0.5,outputTensor)
 ```
 
 ## 3 实现方案设计
@@ -123,7 +126,7 @@ mluopHardShrink(inputTensor,lambd=0.5,outputTensor)
 **1. HardShrink实现如下：**
 
 目前主要是两种实现思路:
-1.纯张量操作，先 abs ，然后 greater 生成0-1矩阵，然后根据0-1矩阵使用 take_bitindex
+1.纯张量操作，先 abs ，然后 greater 生成0-1矩阵，然后根据0-1矩阵与原矩阵进行 multiply
 优点：效率可能会高一些
 缺点：受限于一些尺寸、对齐的要求
 2.借助控制流语句如 for_range if_scope else_scope 来实现elment-wise的操作
@@ -151,7 +154,7 @@ tensor_temp_abs = bp.Tensor(scope = "nram")
 abs(tensor_in_n,tensor_temp_abs)
 tensor_temp_01 = bp.Tensor(scope = "nram")
 greater(tensor_temp_abs,scalar_lambda_n,tensor_temp_01)
-take_bitindex(tensor_input_n,tensor_temp_01,tensor_out_n)
+multiply(tensor_input_n,tensor_temp_01,tensor_out_n)
 
 memcpy(nram, global)
 ```
@@ -161,7 +164,8 @@ memcpy(nram, global)
 
 ### 3.3 拆分（任务拆分，多核拆分）
 
-暂无
+1、把所有的数据均分给每个core，计算好每个core需要处理多少数据量以及起始位置，多余的数据让最后一个core处理，实现core间并行，每个core自己算完后把结果store到对应位置。（比如总共102个数据，有4个core，core0处理25个数，core1处理25个数，core2处理25个数，core3处理27个数），不过还可以把最后剩余的任务按序分配给core；
+2、如果core自己需要处理的数据量很大，一次处理不完，这个时候需要分批处理，这时候就有多次的Load, compute,store，这部分可以实现流水
 
 ### 3.4 性能优化设计
 
@@ -175,7 +179,7 @@ memcpy(nram, global)
 
 ### 3.6 测试用例设计
 
-根据需要进行补充。详见算子测试文件。
+包括三部分，分别是数据类型、数据规模和硬件支持。数据类型包括：[float16, float32]，数据规模测试任意范围数据（极大、极小、不规则（不对齐）等），包括(10, 4, 4096, 4096)，(4, 16, 1024, 1024)，(4,16,1,64)，(3, 5, 197, 175)，硬件支持包括：["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 
 
 ## 4 算子性能优化记录
