@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""Cross operator implementation using BANGPy TCP API."""
 import bangpy
 from bangpy import tcp
 from bangpy.tcp.runtime import TaskType
