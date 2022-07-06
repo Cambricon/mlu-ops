@@ -1,17 +1,17 @@
-# BANGPy Add 算子开发设计方案
+# BANGPy Renorm 算子开发设计方案
 
 - #### 文档基本信息
 
 | 算子名称     | renorm         |
 | ----------- | -------------- |
-| 编制人/日期  | UniqueSquirrel/2022-5-18 |
+| 编制人/日期  | testouya/2022-5-18 |
 | 审批人/日期  |              |
 
 - #### 修改记录
 
 | 修订人           | 修订日期    | 修订描述 |
 | --------------- | ---------- | ------- |
-| UniqueSquirrel  | 2022-5-18 | 首次提交 |
+| testouya  | 2022-5-18 | 首次提交 |
 
 - #### 内容描述
 
@@ -26,15 +26,15 @@
 | 需求来源                  | 为bangpy-ops提供算子demo                  |
 | 应用网络                  |                                  |
 | 输入数据类型               | float                             |
-| 输入 Shape                | input: [ length ];  |
+| 输入 Shape                | input: [ length, N ];  |
 | 输入 Layout               | input: ARRAY;           |
 | 输出数据类型               | float                              |
-| 输出 Shape                | [ length ]                               |
+| 输出 Shape                | [ length, N]                               |
 | 输出 Layout               | ARRAY                                    |
 
 ### 1.2 算子功能和应用场景描述
 
-功能：对张量进行renorm操作
+功能：对张量进行renorm操作，让子张量的长度不超过maxnorm
 
 ```
 x = tensor([[1., 1., 1.],
@@ -70,7 +70,7 @@ tensor([[1.0000, 1.0000, 1.0000],
 
 #### 1.5.1 精度验收标准
 
-本算子属于 `算术` 类算子，验收标准为 diff3=0。
+本算子属于 `算术` 类算子.
 
 #### 1.5.2 性能验收标准
 
@@ -89,22 +89,12 @@ torch.renorm
 ### 2.2 接口设计
 
 ```python
-MluOpPairwiseRenorm(mlu_input, mlu_paras,
-         h, w, sub_wid
-         , mlu_output)
+Renorm(input, p, dim, maxnorm)
 
-shape 为输入张量维度
-dim 为输入参数
-
-mlu_paras 为一个向量，包含 p，maxnorm
-
-
-h = 1
-for i in range(dim):
-    h *= shape[i]
-w = total_input_len // h
-sub_t_count = shape[dim]
-sub_wid = w // sub_t_count
+input：输入张量
+p：计算长度时，指数取值
+dim：要对哪个维度的子张量进行renorm
+maxnorm：子张量最大长度
 
 ```
 
@@ -187,7 +177,7 @@ for t in sub_tensors:
 
 ### 5.1 开发测试计划
 
-2022.4.30 算子入库
+2022.6.30 算子入库
 
 ### 5.2 风险分析
 
