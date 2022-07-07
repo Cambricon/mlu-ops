@@ -119,7 +119,7 @@ class PairwiseDistance:
                     t1[once_loop_start:once_loop_start + calc_size])
 
                 # tensor2 copy
-                head_offset = self.bp.Scalar(bangpy.int32, "head_len", once_loop_start % len_t2)
+                head_offset = self.bp.Scalar(bangpy.int32, "head_offset", once_loop_start % len_t2)
 
                 with self.bp.if_scope(head_offset == 0):
                     head_len = self.bp.Scalar(bangpy.int32, "head_len", 0)
@@ -174,7 +174,7 @@ class PairwiseDistance:
         big_row = offset_src // (width * dim_len)
         m = offset_src % dim_len + big_row * dim_len
 
-        big_n = (offset_src) % dim_len
+        big_n = offset_src % dim_len
         n = big_n % width
 
         with self.bp.if_scope(offset_dst != offset_dst + cp_len // 2):
