@@ -47,7 +47,9 @@ class LogAddExp:
         self.bp.multiply(marked_buffer, value_buffer, marked_buffer)
         self.bp.add(changed_buffer, changed_buffer, marked_buffer)
 
-    def mark_value_compare_with_threshold_value(self, input_buffer, bool_mark, is_min, threshold_value):
+    def mark_value_compare_with_threshold_value(
+            self, input_buffer, bool_mark, is_min, threshold_value
+    ):
         if is_min == 1:
             self.bp.greater_equal(bool_mark, input_buffer, threshold_value, 'elemwise')
         else:
@@ -60,7 +62,9 @@ class LogAddExp:
         self.mark_value_compare_with_threshold_value(input_buffer, y, 0, max_threshold)
 
     def compute_body(self):
-        one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count", self.length // self.task_num)
+        one_core_count = self.bp.Scalar(
+            bangpy.int32, "one_core_count", self.length // self.task_num
+        )
         remain = self.bp.Scalar(bangpy.int32, "remain")
         current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
         current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")

@@ -81,7 +81,10 @@ def random_int_list(max_dim_length, each_dim_max_length):
 
 
 def create_shape_list(
-        nram_single_buffer_size_by_byte, append_test_count=50, max_dim_length=5, each_dim_max_length=64
+        nram_single_buffer_size_by_byte,
+        append_test_count=50,
+        max_dim_length=5,
+        each_dim_max_length=64
 ):
     const_float32_128_align_element_count = 32
     const_float16_128_align_element_count = 64
