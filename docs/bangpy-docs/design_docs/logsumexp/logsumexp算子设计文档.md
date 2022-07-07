@@ -26,10 +26,10 @@
 | 需求来源                  | https://pytorch.org/docs/stable/generated/torch.logsumexp.html|
 | 应用网络                  |                                  |
 | 输入数据类型               | float                             |
-| 输入 Shape                | input1: [ length, N ]|
-| 输入 Layout               | input1: ARRAY           |
+| 输入 Shape                | input.shape = [S0,S1,...,Sn-1]，input为 n 维张量|
+| 输入 Layout               | input: ARRAY           |
 | 输出数据类型               | float                              |
-| 输出 Shape                | 根据输入的keepdim参数，[ length, N ] 或者 [ length, N - 1 ] |
+| 输出 Shape                | 根据输入的keepdim参数，可能为 n-1维张量或n维张量|
 | 输出 Layout               | ARRAY                                    |
 
 ### 1.2 算子功能和应用场景描述
@@ -45,11 +45,13 @@ output = logsumexp(input, 1)
 
 output: tensor([1.4907, 1.0593, 1.5696])
 
+应用场景：ResNet等
+
 ### 1.3 算子输入输出参数要求
 
 | 参数   | 语义                  | 类型（输入/输出）| 支持类型     | 物理布局 | 规模限制      |
 | ------ | --------------------- | -------------    | -----------  | ------   | --------      |
-| input1 | 多维buffer | 输入     |  float           | ARRAY        |  无      | --------      |
+| input | 多维buffer | 输入     |  float           | ARRAY        |  无      | --------      |
 | output | 多维buffer | 输出     |  float           | ARRAY        |  无      | --------      |
 
 ### 1.4 算子限制
@@ -58,7 +60,7 @@ output: tensor([1.4907, 1.0593, 1.5696])
 | ------------   | -----------------------     |
 | 数据类型限制   | float32|
 | 布局限制       | 仅支持ARRAY的layout         |
-| 规模限制       |                             |
+| 规模限制       | 无                           |
 
 ### 1.5 验收标准
 
