@@ -188,7 +188,7 @@ std::vector<std::string> Collector::list() {
     // for --case_dir
     case_names = list_by_case_dir(global_var.cases_dir_);
   } else {
-    case_names = list_by_case_dir("../../test/mlu_op_gtest/src/zoo/");
+    case_names = list_by_case_dir("../../test/mlu_op_gtest/pb_gtest/src/zoo/");
   }
 
   auto fisher_shuffle = [](std::vector<std::string> res, int n) -> std::vector<std::string> {
