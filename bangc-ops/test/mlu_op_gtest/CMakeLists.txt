@@ -16,9 +16,9 @@ if (STYLE_CHECK)
 endif()
 
 message("[MLUOP GTEST REGISTER OP]: ")
-file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/*case_list.cpp")
+file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*case_list.cpp")
 execute_process(COMMAND rm -f ${CASE_LIST})
-execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
 
 
 ## Try to find libxml2 and protobuf
@@ -74,7 +74,7 @@ else()
 endif()
 
 message("[MLUOP GTEST PROTOC]: ")
-set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/mlu_op_test_proto")
+set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu_op_test_proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
 
 # protoc code
@@ -98,16 +98,16 @@ include_directories("${LIBMLUOP_INCLUDE_DIR}")
 set(GOOGLETEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/googletest"
                        "${CMAKE_CURRENT_SOURCE_DIR}/googletest/include")
 set(GOOGLETEST_SRC     "${CMAKE_CURRENT_SOURCE_DIR}/googletest/src")
-set(MLUOP_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/tests"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/zoo"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/extra_lib/jsoncppDist/json"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+set(MLUOP_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/include"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/tests"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/json"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src"
 )
-set(MLUOP_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/extra_lib/jsoncppDist/*.cpp"
+set(MLUOP_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/*.cpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*.cpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
 )
 
 include_directories("${GOOGLETEST_INCLUDE}")
@@ -122,11 +122,11 @@ file(GLOB MLUOP_TEST_DIR ${MLUOP_GTEST_SRC})
 
 if (MLUOP_BUILD_SPECIFIC_GTEST_OP)
   foreach(op ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
-    file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/zoo/${op}/*.cpp")
+    file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/${op}/*.cpp")
     list(APPEND MLUOP_OP_DIR ${OP_DIR})
   endforeach()
 else()
-  file(GLOB_RECURSE MLUOP_OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/zoo/*/*.cpp")
+  file(GLOB_RECURSE MLUOP_OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/*/*.cpp")
 endif()
 
 add_library(mluop_gtest_obj OBJECT ${MLUOP_TEST_DIR} ${MLUOP_OP_DIR} ${PROTO_HDRS})
@@ -136,7 +136,6 @@ target_link_libraries(mluop_gtest mluops)
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
-
 foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} cnrt cndrv pthread gtest_shared stdc++ m dl)
   target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
@@ -178,13 +177,13 @@ install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
   DESTINATION test/mluop_gtest/tools
 )
 set(CMAKE_INSTALL_MESSAGE LAZY) # do not show `Up-to-date` info
-install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/src/zoo"
+install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/zoo"
   COMPONENT mluop_gtest
-  DESTINATION test/mluop_gtest/src
+  DESTINATION test/mluop_gtest/pb_gtest/src
   FILES_MATCHING PATTERN "*.prototxt"
 )
-install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/tests"
+install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/tests"
   COMPONENT mluop_gtest
-  DESTINATION test/mluop_gtest/
+  DESTINATION test/mluop_gtest/pb_gtest
   FILES_MATCHING PATTERN "*.prototxt"
 )
