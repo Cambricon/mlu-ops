@@ -124,7 +124,8 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
 
         func = load_op_by_type(KERNEL_NAME, dtype.name)
         func(_mlu_input1,
-             _pd_len, _pd_height, _pd_width, _output_len, _mlu_border_output, _mlu_border_idx_output, _mlu_output)
+             _pd_len, _pd_height, _pd_width, _output_len,
+             _mlu_border_output, _mlu_border_idx_output, _mlu_output)
 
         result = _mlu_output.numpy()
 

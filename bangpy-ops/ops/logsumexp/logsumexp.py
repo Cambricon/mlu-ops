@@ -81,7 +81,7 @@ class DataMan:
             self.m_current_core_start.assign((one_core_count + 1) *
                                              remain + one_core_count * (self.bp.taskId - remain))
             self.m_current_core_end.assign((one_core_count + 1) * remain +
-                                           one_core_count * (self.bp.taskId - remain) + one_core_count - 1)
+                one_core_count * (self.bp.taskId - remain) + one_core_count - 1)
 
         self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
 
@@ -102,11 +102,13 @@ class LogSumCalcer:
 
     def calc_value(self, x, y):
         natural_base = self.bp.Scalar(bangpy.float32,
-                                      "natural_base", 2.7182818284590452353602874713526624977572470936999)
+                                      "natural_base", \
+                                            2.7182818284590452353602874713526624977572470936999)
         max_threshold_valu = self.bp.Scalar(bangpy.float32,
                                             "max_threshold_valu", 88.722008965395851698332450562653)
         min_threshold_valu = self.bp.Scalar(bangpy.float32,
-                                            "min_threshold_valu", -87.332719095296162600686375692197)
+                                            "min_threshold_valu", \
+                                                -87.332719095296162600686375692197)
 
         const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
         scalar_res = self.bp.Scalar(bangpy.float32, "scalar_res", y - x)
@@ -383,7 +385,8 @@ class Logsumexp:
                 norm_value.reset()
                 cp_data_len.assign(self.para.calc_size - expect_cp_len)
                 with self.bp.if_scope(cp_data_len > 0):
-                    cp_para = CopyPara(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + expect_cp_len)
+                    cp_para = CopyPara(self.nram_calc_buffer, 0, gram_tensor, \
+                        once_loop_start + expect_cp_len)
                     self.copy_from_2d_tensor(cp_para, self.para.dim_len, self.para.w, cp_data_len)
                     norm_value.add_buffer(self.flat_nram, 0, cp_data_len)
                     with self.bp.if_scope(i == self.get_calc_loop_count(dman) - 1):
@@ -415,7 +418,8 @@ class Logsumexp:
         total_norm_in_core = self.bp.Scalar(bangpy.int32, "total_norm_in_core",
                                             (total_count_in_core - expect_cp_len) // dim_len)
         calc_loop_count = self.bp.Scalar(bangpy.int32, "calc_loop_count",
-                                         (total_norm_in_core + nram_norm_count - 1) // nram_norm_count)
+                                         (total_norm_in_core + nram_norm_count - 1) \
+                                            // nram_norm_count)
         once_loop_norm_count = self.bp.Scalar(bangpy.int32, "nram_norm_count", nram_norm_count)
         with self.bp.for_range(0, calc_loop_count) as i:
             once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start",
@@ -427,7 +431,8 @@ class Logsumexp:
             start_index = self.bp.Scalar(bangpy.int32, "norm_offset",
                                          once_loop_start // dim_len)
             with self.bp.for_range(0, once_loop_norm_count) as j:
-                cp_para = CopyPara(self.nram_calc_buffer, 0, gram_tensor, once_loop_start + j * dim_len)
+                cp_para = CopyPara(self.nram_calc_buffer, 0, gram_tensor, \
+                    once_loop_start + j * dim_len)
                 self.copy_from_2d_tensor(cp_para, dim_len, self.para.w, dim_len)
                 calc_result = lc.calc_buffer(self.flat_nram, 0, dim_len)
                 norm_value.assign(calc_result)

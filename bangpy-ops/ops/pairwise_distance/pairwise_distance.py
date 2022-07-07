@@ -60,7 +60,7 @@ class DataMan:
         self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
 
 
-class pd_para:
+class PairwiseDataPara:
     len_tensor1 = None
     len_tensor2 = None
 
@@ -79,7 +79,7 @@ class PairwiseDistance:
         self.dtype_size  = dtype.bytes
         self.bp = tcp.TCP(target)
 
-        self.PdPara = pd_para()
+        self.PdPara = PairwiseDataPara()
         self.dman = DataMan()
 
     def sub_tensor(self, t1, t2, len_t2):
