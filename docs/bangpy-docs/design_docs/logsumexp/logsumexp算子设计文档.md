@@ -23,13 +23,13 @@
 
 | 算子功能简介               | 对张量计算logsumexp                  |
 | ------------------------ | ----------------------------------------|
-| 需求来源                  | 为bangpy-ops提供算子demo                  |
+| 需求来源                  | https://pytorch.org/docs/stable/generated/torch.logsumexp.html|
 | 应用网络                  |                                  |
 | 输入数据类型               | float                             |
 | 输入 Shape                | input1: [ length, N ]|
 | 输入 Layout               | input1: ARRAY           |
 | 输出数据类型               | float                              |
-| 输出 Shape                | [ length, N ]                               |
+| 输出 Shape                | 根据输入的keepdim参数，[ length, N ] 或者 [ length, N - 1 ] |
 | 输出 Layout               | ARRAY                                    |
 
 ### 1.2 算子功能和应用场景描述
@@ -141,8 +141,14 @@ q = log(exp(g) + exp(h))
 sub_tensors = split_sub_tensor(input, dim)
 
 for t in sub_tensors:
+    #求子张量的值
     result = logsumexp(t)
+
+    #将其保存到输出结果中
     _mlu_output.append(result)
+
+#拷贝回cpu后，重新reshape
+result = _mlu_output.reshape()
 
 ```
 
