@@ -85,6 +85,7 @@ class HardSigmoid(object):
         loop.assign(data_each_task // data_each_time)
         data_rem_n = self.tcp.Scalar(bangpy.int32, "data_rem_n")
         data_rem_n.assign(data_each_task % data_each_time)
+        loop = loop + 1  # for data_rem_n
         # parameters:
         # data_total: total number of data
         # self.task_num: number of task(s)
@@ -96,7 +97,8 @@ class HardSigmoid(object):
         # data_each_time: number of data of IPU calculation per time
         # loop: number of times each task needs to be copied into NRAM for computation
         # data_rem_n: less than one calculation
-        # if data_rem_n != 0, we need to copy data into NRAM one more time
+        # if data_rem_n != 0, we need to copy data into NRAM one more time and calculate it
+        # elif data_rem_n == 0, we just need to calculate it(Although no data was copied into NRAM)
 
         # calculation:
         with self.tcp.for_range(0, loop, stage=1) as i:
@@ -109,7 +111,12 @@ class HardSigmoid(object):
                 shape=(data_each_time,), name="TEMP_N", dtype=self.dtype, scope="nram",
             )
             with self.tcp.block("data_copy"):
-                self.tcp.memcpy(buffer_io_n, buffer_in[start:stop])
+                with self.tcp.if_scope(i < loop - 1):
+                    self.tcp.memcpy(buffer_io_n, buffer_in[start:stop])
+                with self.tcp.elif_scope(i == loop - 1):
+                    self.tcp.memcpy(
+                        buffer_io_n[0:data_rem_n], buffer_in[start : start + data_rem_n]
+                    )
             with self.tcp.block("compute"):
                 self.tcp.multiply(buffer_io_n, buffer_io_n, 1 / 6)
                 self.tcp.add(buffer_io_n, buffer_io_n, 1 / 2)
@@ -118,25 +125,13 @@ class HardSigmoid(object):
                 self.tcp.zeros(buffer_temp_n)
                 self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n)
             with self.tcp.block("data_copy"):
-                self.tcp.memcpy(buffer_out[start:stop], buffer_io_n)
-        # if data_rem_n > 0
-        with self.tcp.if_scope(data_rem_n > 0):
-            start = task_id * data_each_task + loop * data_each_time
-            stop = start + data_rem_n
-            buffer_io_n = self.tcp.Buffer(
-                shape=(data_each_time,), name="IO_N", dtype=self.dtype, scope="nram",
-            )
-            buffer_temp_n = self.tcp.Buffer(
-                shape=(data_each_time,), name="TEMP_N", dtype=self.dtype, scope="nram",
-            )
-            self.tcp.memcpy(buffer_io_n[0:data_rem_n], buffer_in[start:stop])
-            self.tcp.multiply(buffer_io_n, buffer_io_n, 1 / 6)
-            self.tcp.add(buffer_io_n, buffer_io_n, 1 / 2)
-            self.tcp.assign(buffer_temp_n, 1)
-            self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)
-            self.tcp.zeros(buffer_temp_n)
-            self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n)
-            self.tcp.memcpy(buffer_out[start:stop], buffer_io_n[0:data_rem_n])
+                with self.tcp.if_scope(i < loop - 1):
+                    self.tcp.memcpy(buffer_out[start:stop], buffer_io_n)
+                with self.tcp.elif_scope(i == loop - 1):
+                    self.tcp.memcpy(
+                        buffer_out[start : start + data_rem_n],
+                        buffer_io_n[0:data_rem_n],
+                    )
         # if data_rem > 0:
         # 1 <= data_rem <= task_num-1, let master thread to adress it
         with self.tcp.if_scope(data_rem > 0):
