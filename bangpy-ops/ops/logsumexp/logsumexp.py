@@ -109,18 +109,18 @@ class LogSumCalcer:
                                             "min_threshold_valu", -87.332719095296162600686375692197)
 
         const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
-        scalar_res = self.bp.Scalar(bangpy.float32, "scalar_res", y - x)  # 计算结果   初始化为 y-x的差值
+        scalar_res = self.bp.Scalar(bangpy.float32, "scalar_res", y - x)
         with self.bp.if_scope(tcp.all(scalar_res <= max_threshold_valu,
-                                      scalar_res >= min_threshold_valu)):  # 如果差值在合法范围内
-            scalar_res.assign(self.bp.scalar_pow(natural_base, scalar_res))  # 作为e的指数
-            scalar_res.assign(scalar_res + const_one)  # +1
+                                      scalar_res >= min_threshold_valu)):
+            scalar_res.assign(self.bp.scalar_pow(natural_base, scalar_res))
+            scalar_res.assign(scalar_res + const_one)
             scalar_res.assign(self.bp.scalar_log(scalar_res) /
-                              self.bp.scalar_log(natural_base))  # 换底公式 计算自然对数
-            scalar_res.assign(scalar_res + x)  # +x
-        with self.bp.else_scope():  # 如果y-x 后的结果不和法
-            with self.bp.if_scope(scalar_res > max_threshold_valu):  # 超过上限 返回y
+                              self.bp.scalar_log(natural_base))
+            scalar_res.assign(scalar_res + x)
+        with self.bp.else_scope():
+            with self.bp.if_scope(scalar_res > max_threshold_valu):
                 scalar_res.assign(y)
-            with self.bp.else_scope():  # 小于下限 返回 x
+            with self.bp.else_scope():
                 scalar_res.assign(x)
         return scalar_res
 
@@ -135,7 +135,7 @@ class LogSumCalcer:
         data_length = self.bp.Scalar(bangpy.int32, "data_length", end_index - start_index)
         sub_value = self.bp.Scalar(bangpy.float32, "sub_value")
         sum_value = self.bp.Scalar(bangpy.float32, "sum_value",
-                                   buffer[start_index].astype(bangpy.float32))  #
+                                   buffer[start_index].astype(bangpy.float32))
         with self.bp.for_range(0, data_length - 1) as i:
             sub_value.assign(sum_value - buffer[i + 1].astype(bangpy.float32))
             with self.bp.if_scope(tcp.all(sub_value <= max_threshold_valu,
@@ -238,7 +238,6 @@ class Logsumexp:
 
         nram_avable_size = round_down(TARGET(self.para.target).nram_size - 30 * 1024, 128)
         self.nram_process_count = nram_avable_size // self.para.dtype_sz
-        # self.nram_process_count = 2
         self.nram_calc_buffer = self.bp.Buffer(
             shape=(self.nram_process_count, 1),
             name="nram_calc_buffer",
@@ -257,9 +256,9 @@ class Logsumexp:
         with self.bp.if_scope(self.para.dim_len > self.nram_process_count):
             self.calc1(gram_reshape_tensor, gram_border_buf_out,
                        gram_border_idx_out, gram_buffer_out)
-        with self.bp.else_scope():  # nram 虽然够了，但是要计算的数据量很小，以至于分摊到每个core上面的数据，还不够一个norm
+        with self.bp.else_scope():
             with self.bp.if_scope((self.para.h * self.para.w)
-                                  // self.para.task_num + 1 < self.para.dim_len):  # 之所以要加1，因为考虑不能整除情况，有的核会分配的多一些
+                                  // self.para.task_num + 1 < self.para.dim_len):
                 self.calc1(gram_reshape_tensor, gram_border_buf_out,
                            gram_border_idx_out, gram_buffer_out)
             with self.bp.else_scope():
@@ -268,7 +267,6 @@ class Logsumexp:
 
         self.bp.sync_all()
 
-        # 处理边界数据
         lc = LogSumCalcer(self.bp, self.dtype)
         with self.bp.if_scope(self.bp.taskId == 0):
             nset = NramSet()
@@ -318,18 +316,6 @@ class Logsumexp:
 
         big_n = offset_src // dim_len
         n = big_n % width
-
-        # self.bp.print("task id ", self.bp.taskId)
-        # self.bp.print(" bign width n ", big_n, width, n)
-        # self.bp.print("dst offset " + str( offset_dst))
-        # self.bp.print("src offset ", (offset_src))
-        # self.bp.print("big row ", (big_row))
-        # self.bp.print("big_n ", (big_n))
-        # self.bp.print("dim len ", dim_len)
-        # self.bp.print("width ", width)
-        # self.bp.print("cp m ", (m))
-        # self.bp.print("cp n ", (n))
-        # self.bp.print("-----", self.bp.taskId)
 
         with self.bp.if_scope(offset_dst != offset_dst + cp_len // 2):
             self.bp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1],

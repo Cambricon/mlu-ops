@@ -96,7 +96,6 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         if not check_dim_range(dim, shape):
             raise Exception('dim err')
 
-        # mlu 输入参数
         _pd_len = shape[dim]
         _pd_height = 1
         _pd_width = 1
@@ -110,10 +109,8 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
             for i in range(dim + 1, shp_len):
                 _pd_width *= shape[i]
 
-        # mlu 输入
         _mlu_input1 = bp.Array(input_tensor.flatten(), _dev)
 
-        # mlu 输出
         _output_len = get_total_size(shape) // shape[dim]
         output_buffer = -np.ones(_output_len, dtype=dtype.as_numpy_dtype)
         _mlu_output = bp.Array(output_buffer, _dev)
@@ -125,7 +122,6 @@ def test_logsumexp(target, shape, dim, dtype, keepdim):
         output_buffer3 = -np.ones(output_count, dtype=np.int32)
         _mlu_border_idx_output = bp.Array(output_buffer3, _dev)
 
-        # 调用mlu
         func = load_op_by_type(KERNEL_NAME, dtype.name)
         func(_mlu_input1,
              _pd_len, _pd_height, _pd_width, _output_len, _mlu_border_output, _mlu_border_idx_output, _mlu_output)
