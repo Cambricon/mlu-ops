@@ -43,7 +43,8 @@ class Celu:
         self.bp.launch_task(self.task_num, 1, 1)
 
     def compute_body(self):
-        one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count", self.length // self.task_num)
+        one_core_count = self.bp.Scalar(bangpy.int32, "one_core_count",
+                                        self.length // self.task_num)
         remain = self.bp.Scalar(bangpy.int32, "remain", self.length % self.task_num)
         current_core_start = self.bp.Scalar(bangpy.int32, "current_core_start")
         current_core_end = self.bp.Scalar(bangpy.int32, "current_core_end")
