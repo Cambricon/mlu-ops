@@ -4,14 +4,14 @@
 
 | 算子名称     | PairwiseDistance              |
 | ----------- | -------------- |
-| 编制人/日期  | UniqueSquirrel/2022-5-18 |
+| 编制人/日期  | testouya/2022-5-18 |
 | 审批人/日期  |              |
 
 - #### 修改记录
 
 | 修订人           | 修订日期    | 修订描述 |
 | --------------- | ---------- | ------- |
-| UniqueSquirrel  | 2022-5-18 | 首次提交 |
+| testouya  | 2022-5-18 | 首次提交 |
 
 - #### 内容描述
 
@@ -60,7 +60,7 @@ output([0.7031, 2.8097])
 
 | 限制类型       | 详细说明                    |
 | ------------   | -----------------------     |
-| 数据类型限制   | input 和 output 维度可以不同|
+| 数据类型限制   | float32|
 | 布局限制       | 仅支持ARRAY的layout         |
 | 规模限制       | 和具体硬件相关                            |
 
@@ -81,7 +81,7 @@ output([0.7031, 2.8097])
 - pytorch
 
 ```python
-torch.nn.PairwiseDistance
+torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
 ```
 
 ### 2.2 接口设计
