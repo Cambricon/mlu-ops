@@ -25,9 +25,9 @@ from bangpy.tcp.util import round_down
 from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
 
-DTYPES = [bangpy.float32] #支持的类型
-TARGET_LIST = ["mlu290"]#支持的设备
-KERNEL_NAME = "Renorm"#算子名
+DTYPES = [bangpy.float32]
+TARGET_LIST = ["mlu290"]
+KERNEL_NAME = "Renorm"
 
 
 class data_man:
@@ -50,10 +50,10 @@ class data_man:
         remain = self.bp.Scalar(bangpy.int32, "remain")
         remain.assign(data_total_len % task_num)
 
-        with self.bp.if_scope(self.bp.taskId < remain): #如果存在余数 将其均摊给各核   taskId从0起
+        with self.bp.if_scope(self.bp.taskId < remain):
             self.m_current_core_start.assign((one_core_count + 1) * self.bp.taskId )
             self.m_current_core_end.assign((one_core_count + 1) * \
-                (self.bp.taskId + 1) - 1) #此处应该不需要减1 待验证  python切片会自动将上标减1
+                (self.bp.taskId + 1) - 1)
         with self.bp.else_scope():
             self.m_current_core_start.assign((one_core_count + 1) * \
                 remain + one_core_count * (self.bp.taskId - remain))
@@ -99,17 +99,17 @@ class Renorm(object):
                     calc_size.assign(nram_process_count)
 
             once_loop_start.assign(current_core_start + \
-                nram_process_count * i) #当前核心数据开始的位置 + 第i次循环所应偏移的长度
+                nram_process_count * i)
 
             with self.bp.block("data_copy"):
                 self.bp.memcpy(nram_buffer_in[0:calc_size], \
                     gram_tensor[once_loop_start:once_loop_start + calc_size])
 
             with self.bp.block("compute"):
-                # 求绝对值
+                # calc abs
                 self.bp.abs(nram_buffer_in, nram_buffer_in)
 
-                # 求指数
+                # calc exp
                 self.bp.log(nram_buffer_in, nram_buffer_in)
                 pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
                 self.bp.multiply(nram_buffer_in, nram_buffer_in, pw)
@@ -138,8 +138,6 @@ class Renorm(object):
         return result
 
     def scalar_pow(self, value, p):
-        #return self.bp.scalar_pow(value, p) #编译不过，我也不知道咋回事
-
         self.nram_pow_buffer[0] = value
         self.bp.log(self.nram_pow_buffer, self.nram_pow_buffer)
         pw = self.bp.Scalar(name='pw', dtype=self.dtype, value=p)
@@ -148,7 +146,6 @@ class Renorm(object):
         return self.nram_pow_buffer[0]
 
     def process_sub_tensor(self, gram_tensor, p, maxnorm, h, sub_wid, output_tensor):
-        # 先拆分数据
         st_start = self._data_man.m_current_core_start
         st_count = self._data_man.m_total_count_in_core
 
@@ -164,13 +161,12 @@ class Renorm(object):
             (h + self.nram_process_count - 1 ) // self.nram_process_count)
         cp_len = self.bp.Scalar(bangpy.int32, "cp_len", self.nram_process_count)
 
-        with self.bp.for_range(0, st_count) as i: # 这个nram上要处理的子向量个数
+        with self.bp.for_range(0, st_count) as i:
             st_norm_value = self.bp.Scalar(self.dtype, "st_norm_value", 0.0)
             start_col = self.bp.Scalar(bangpy.int32, "start_col", sub_wid * (st_start + i))
             end_col = self.bp.Scalar(bangpy.int32, "end_col", sub_wid * (st_start + i + 1))
-            with self.bp.for_range(0, end_col) as j: #要拷贝的列的起止
-                with self.bp.if_scope(j >= start_col): #不这么写，编译不过，
-                    #一次拷贝一列
+            with self.bp.for_range(0, end_col) as j:
+                with self.bp.if_scope(j >= start_col):
                     with self.bp.for_range(0, cp_row_count) as k:
                         with self.bp.if_scope(k == cp_row_count - 1):
                             cp_len.assign(h % self.nram_process_count)
@@ -182,10 +178,8 @@ class Renorm(object):
                                                  self.nram_process_count * k, j, cp_len)
 
 
-                        # 求绝对值
                         self.bp.abs(self.nram_calc_buffer, self.nram_calc_buffer)
 
-                        # 求指数
                         self.bp.log(self.nram_calc_buffer, self.nram_calc_buffer)
 
                         pw = self.bp.Scalar(name='p', dtype=self.dtype, value=p)
@@ -198,15 +192,13 @@ class Renorm(object):
                         calc_ret = self.calc_norm(self.nram_calc_buffer, 0, cp_len)
                         st_norm_value.assign(st_norm_value + calc_ret)
 
-            #计算一下norm，
             cp_len.assign(self.nram_process_count)
             st_norm_value.assign(self.scalar_pow(st_norm_value, 1 / p))
 
             with self.bp.if_scope(st_norm_value > maxnorm):
                 tmp = self.bp.Scalar(self.dtype, "tmp", maxnorm / st_norm_value)
-                with self.bp.for_range(0, end_col) as j: #要拷贝的列的起止
-                    with self.bp.if_scope(j >= start_col): #不这么写，编译不过，
-                        #一次拷贝一列
+                with self.bp.for_range(0, end_col) as j:
+                    with self.bp.if_scope(j >= start_col):
                         with self.bp.for_range(0, cp_row_count) as k:
                             with self.bp.if_scope(k == cp_row_count - 1):
                                 cp_len.assign(h % self.nram_process_count)
@@ -221,7 +213,6 @@ class Renorm(object):
                             self.bp.multiply(self.nram_calc_buffer, \
                                 self.nram_calc_buffer, scalar_tmp)
 
-                            #拷贝到output里面去
                             self.copy_from_2d_tensor(output_tensor, self.nram_process_count * k, j,
                                                      self.nram_calc_buffer, 0, 0, cp_len)
 

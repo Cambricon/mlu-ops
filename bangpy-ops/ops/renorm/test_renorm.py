@@ -76,13 +76,11 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
 
         input_tensor = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
 
-        # 准备mlu计算
         dev = bp.device(0)
-
 
         flat_input = input_tensor.flatten()
         mlu_input = bp.Array(flat_input, dev)
-        paras = np.array([p, maxnorm]).astype(dtype.as_numpy_dtype) # 这里需要考虑
+        paras = np.array([p, maxnorm]).astype(dtype.as_numpy_dtype)
         mlu_paras = bp.Array(paras, dev)
         mlu_output = bp.Array(flat_input, dev)
 
@@ -117,7 +115,7 @@ def test_renorm(target, shape, p, dim, dtype, maxnorm):
         x = torch.Tensor(input_tensor)
         cpu_ret = torch.renorm(x, p, dim, maxnorm)
 
-        bp.assert_allclose( cpu_ret.numpy(), mlu_ret,rtol = 0.01, atol = 0.01)
+        bp.assert_allclose( cpu_ret.numpy(), mlu_ret, rtol = 0.01, atol = 0.01)
 
     except Exception as err:
         print(str(err))
