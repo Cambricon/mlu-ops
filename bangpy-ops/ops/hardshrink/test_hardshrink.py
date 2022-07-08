@@ -30,27 +30,17 @@ import time
 
 # float16 has poor accuracy
 @pytest.mark.parametrize(
-    "dtype",
-    DTYPES,
+    "dtype", DTYPES,
 )
 @pytest.mark.parametrize(
     "shape",
-    [   
-        (10, 4, 4096, 4096),
-        (4, 16, 1024, 1024),
-        (4,16,1,64),
-        (3, 5, 197, 175)
-    ],
+    [(10, 4, 4096, 4096), (4, 16, 1024, 1024), (4, 16, 1, 64), (3, 5, 197, 175)],
 )
-@pytest.mark.parametrize(
-    "lambdaPara",
-    [0.5,]
-)
-
-def test_hardshrink(target,shape,dtype,lambdaPara):
+@pytest.mark.parametrize("lambdaPara", [0.5,])
+def test_hardshrink(target, shape, dtype, lambdaPara):
     if target not in TARGET_LIST:
         return
-    data_in = np.random.uniform(low = -1, high = 1, size = shape)
+    data_in = np.random.uniform(low=-1, high=1, size=shape)
     data_out = data_in.astype(dtype.as_numpy_dtype)
     dev = bp.device(0)
 
@@ -63,20 +53,22 @@ def test_hardshrink(target,shape,dtype,lambdaPara):
         data_in_dev,
         lambdaPara,
         # 支持原位操作，可替换为data_in_dev
-        data_out_dev
+        data_out_dev,
     )
 
     # compute the cpu data
     eps = 1e-8
-    cpu_out = np.where((data_in.astype(dtype.as_numpy_dtype) + lambdaPara > -eps) & (data_in - lambdaPara < eps), 0, data_in)
+    cpu_out = np.where(
+        (data_in.astype(dtype.as_numpy_dtype) + lambdaPara > -eps)
+        & (data_in - lambdaPara < eps),
+        0,
+        data_in,
+    )
 
     evaluator = f_hardshrink.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
     run_time = evaluator(data_in_dev, lambdaPara, data_out_dev).mean
     print("mlu run time: " + str(run_time) + "s")
 
     bp.assert_allclose(
-        data_out_dev.numpy(),
-        cpu_out.astype(dtype.as_numpy_dtype),
-        rtol=1e-6,
-        atol=1e-6
+        data_out_dev.numpy(), cpu_out.astype(dtype.as_numpy_dtype), rtol=1e-6, atol=1e-6
     )
