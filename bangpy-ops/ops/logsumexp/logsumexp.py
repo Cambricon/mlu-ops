@@ -86,7 +86,7 @@ class DataMan:
         self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
 
 
-dman = DataMan()
+
 
 
 class LogSumCalcer:
@@ -206,8 +206,10 @@ class Logsumexp:
         self.nram_calc_buffer = None
         self.flat_nram = None
 
+        self.dman = DataMan()
+
     def compute_body(self):
-        dman.init(self.bp)
+        self.dman.init(self.bp)
         self.bp.launch_task(self.para.task_num, 1, 1)
 
         self.para.dim_len = self.bp.SizeVar("dim_len")
@@ -253,7 +255,7 @@ class Logsumexp:
 
         self.flat_nram = self.nram_calc_buffer.reshape([self.nram_process_count, ])
 
-        dman.calc_core_process_count(self.para.h * self.para.w, self.para.task_num)
+        self.dman.calc_core_process_count(self.para.h * self.para.w, self.para.task_num)
 
         with self.bp.if_scope(self.para.dim_len > self.nram_process_count):
             self.calc1(gram_reshape_tensor, gram_border_buf_out,
@@ -335,16 +337,16 @@ class Logsumexp:
     def calc1(self, gram_tensor, border_outputs, idx_outputs, outputs):
         once_loop_start = self.bp.Scalar(bangpy.int32, "once_loop_start")
         norm_offset = self.bp.Scalar(bangpy.int32, "norm_offset",
-                                     dman.m_current_core_start % self.para.dim_len)
+                                     self.dman.m_current_core_start % self.para.dim_len)
         norm_value = LogSumCalcer(self.bp, self.dtype)
         self.para.calc_size.assign(self.nram_process_count)
         once_norm_ok = self.bp.Scalar(bangpy.int32, "once_norm_ok", 0)
         cp_data_len = self.bp.Scalar(bangpy.int32, "cp_data_len", 0)
-        with self.bp.for_range(0, self.get_calc_loop_count(dman)) as i:
-            once_loop_start.assign(dman.m_current_core_start
+        with self.bp.for_range(0, self.get_calc_loop_count(self.dman)) as i:
+            once_loop_start.assign(self.dman.m_current_core_start
                                    + self.nram_process_count * i)
-            with self.bp.if_scope(i == self.get_calc_loop_count(dman) - 1):
-                self.para.calc_size.assign(dman.m_total_count_in_core %
+            with self.bp.if_scope(i == self.get_calc_loop_count(self.dman) - 1):
+                self.para.calc_size.assign(self.dman.m_total_count_in_core %
                                            self.nram_process_count)
                 with self.bp.if_scope(self.para.calc_size == 0):
                     self.para.calc_size.assign(self.nram_process_count)
@@ -359,7 +361,7 @@ class Logsumexp:
                 self.copy_from_2d_tensor(cp_para, self.para.dim_len, self.para.w, expect_cp_len)
                 cp_data_len.assign(cp_data_len + expect_cp_len)
                 norm_value.add_buffer(self.flat_nram, 0, expect_cp_len)
-                with self.bp.if_scope(i == self.get_calc_loop_count(dman) - 1):
+                with self.bp.if_scope(i == self.get_calc_loop_count(self.dman) - 1):
                     index = get_norm_index(once_loop_start + expect_cp_len, self.para.dim_len)
                     with self.bp.if_scope(once_norm_ok == 0):
                         border_outputs[self.bp.taskId * 2] = \
@@ -389,13 +391,13 @@ class Logsumexp:
                         once_loop_start + expect_cp_len)
                     self.copy_from_2d_tensor(cp_para, self.para.dim_len, self.para.w, cp_data_len)
                     norm_value.add_buffer(self.flat_nram, 0, cp_data_len)
-                    with self.bp.if_scope(i == self.get_calc_loop_count(dman) - 1):
+                    with self.bp.if_scope(i == self.get_calc_loop_count(self.dman) - 1):
                         border_outputs[self.bp.taskId * 2 + 1] = norm_value.m_value
                         idx_outputs[self.bp.taskId * 2 + 1] = index + 1
 
     def calc2(self, gram_tensor, border_outputs, idx_outputs, outputs):
-        current_core_start = dman.m_current_core_start
-        total_count_in_core = dman.m_total_count_in_core
+        current_core_start = self.dman.m_current_core_start
+        total_count_in_core = self.dman.m_total_count_in_core
         dim_len = self.para.dim_len
         norm_value = self.bp.Scalar(self.dtype, "norm_value", 0.0)
         lc = LogSumCalcer(self.bp, self.dtype)

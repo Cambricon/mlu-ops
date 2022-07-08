@@ -51,6 +51,7 @@ ranshp2 = create_random_shape(10, 2)
         (4, 5, 2),
         (3, 1, 2),
         (1, 482 * 1024),
+        (1, 482 * 1024 - 1),
         ranshp,
         ranshp1,
         ranshp2
