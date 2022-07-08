@@ -112,7 +112,7 @@ keepdim：计算结果是否保持当前维度
 将dim_len个元素组成一个一维子张量[a, b]，对它计算
 o = log(exp(a) + exp(b))
 p = log(exp(c) + exp(d))
-q = log(exp(g) + exp(h))
+q = log(exp(e) + exp(f))
 ...
 
 计算过程参见上图。右边为计算结果。
