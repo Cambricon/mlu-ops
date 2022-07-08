@@ -55,10 +55,9 @@ class Frac(object):
         self.single_buffer_size = (self.nram_size - 52 * 1024) // 8
         self.bp.launch_task(self.task_num, 1, 1)
 
-
     def compute_body(self):
-        #calculate basic data
-        
+        # calculate basic data
+
         data_calculated_each_task = self.length // self.task_num
         data_remain = self.length % self.task_num
         loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
@@ -66,18 +65,21 @@ class Frac(object):
         each_task_remain = data_calculated_each_task % data_calculated_each_time
 
         buffer_original = self.bp.Buffer(
-            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3), 
-            name="INPUT", dtype=self.dtype, scope="global"
+            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
+            name="INPUT",
+            dtype=self.dtype,
+            scope="global",
         )
         buffer_in = buffer_original.reshape((self.length,))
         buffer_final = self.bp.Buffer(
-            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3), 
-            name="OUTPUT", dtype=self.dtype, scope="global"
+            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
+            name="OUTPUT",
+            dtype=self.dtype,
+            scope="global",
         )
         buffer_out = buffer_final.reshape((self.length,))
         task_id = self.bp.taskId
-        
-        
+
         with self.bp.for_range(0, loop_num, stage=self.stage) as i:
             buffer_in_n = self.bp.Buffer(
                 shape=(data_calculated_each_time,),
@@ -125,7 +127,7 @@ class Frac(object):
             stop = start + data_calculated_each_time
             with self.bp.block("data_copy"):
                 self.bp.memcpy(buffer_in_n, buffer_in[start:stop])
-            
+
             with self.bp.block("compute"):
                 self.bp.abs(buffer_abs, buffer_in_n)
                 self.bp.type_convert(buffer_floor, buffer_abs, 0, "tz")
@@ -133,10 +135,10 @@ class Frac(object):
                 self.bp.sign(buffer_sgn, buffer_in_n)
                 self.bp.multiply(buffer_tem, buffer_floor_after, buffer_sgn)
                 self.bp.subtract(buffer_out_n, buffer_in_n, buffer_tem)
-            
+
             with self.bp.block("data_copy"):
                 self.bp.memcpy(buffer_out[start:stop], buffer_out_n)
-        
+
         buffer_in_n = self.bp.Buffer(
             shape=(data_calculated_each_time,),
             name="INPUT_N",
@@ -181,7 +183,10 @@ class Frac(object):
         )
 
         with self.bp.if_scope(each_task_remain != 0):
-            start = task_id * data_calculated_each_task + loop_num * data_calculated_each_time
+            start = (
+                task_id * data_calculated_each_task
+                + loop_num * data_calculated_each_time
+            )
             stop = start + each_task_remain
             offset = stop - start
             self.bp.memcpy(buffer_in_n[0:offset], buffer_in[start:stop])
@@ -192,7 +197,6 @@ class Frac(object):
             self.bp.multiply(buffer_tem, buffer_floor_after, buffer_sgn)
             self.bp.subtract(buffer_out_n, buffer_in_n, buffer_tem)
             self.bp.memcpy(buffer_out[start:stop], buffer_out_n[0:offset])
-            
 
         with self.bp.if_scope(data_remain != 0):
             with self.bp.if_scope(task_id == self.task_num - 1):
@@ -208,12 +212,14 @@ class Frac(object):
                 self.bp.subtract(buffer_out_n, buffer_in_n, buffer_tem)
                 self.bp.memcpy(buffer_out[start:stop], buffer_out_n[0:offset])
 
-        buffer_original = buffer_in.reshape((self.dim_0, self.dim_1, self.dim_2, self.dim_3))
-        buffer_final = buffer_out.reshape((self.dim_0, self.dim_1, self.dim_2, self.dim_3))
+        buffer_original = buffer_in.reshape(
+            (self.dim_0, self.dim_1, self.dim_2, self.dim_3)
+        )
+        buffer_final = buffer_out.reshape(
+            (self.dim_0, self.dim_1, self.dim_2, self.dim_3)
+        )
         f = self.bp.BuildBANG(
-            inputs=[buffer_original],
-            outputs=[buffer_final],
-            kernel_name=KERNEL_NAME,
+            inputs=[buffer_original], outputs=[buffer_final], kernel_name=KERNEL_NAME,
         )
         return f
 
@@ -221,7 +227,7 @@ class Frac(object):
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_frac(dtype=None, target=None):
     # tasktype fixed in UNION1
-    
+
     task_type = TaskType.UNION4
     task_num = 4 * task_type.value
     stage = 1

@@ -32,10 +32,7 @@ from cosine_similarity import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 @pytest.mark.parametrize(
-    "shape", 
-    [
-        (1, 1, 32, 512),
-    ],
+    "shape", [(1, 1, 32, 512),],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -66,28 +63,43 @@ def test_cosine_similarity(target, shape, dtype):
     data_out1_dev = bangpy.Array(np.zeros(shape1, dtype.as_numpy_dtype), dev)
     data_out2_dev = bangpy.Array(np.zeros(shape2, dtype.as_numpy_dtype), dev)
     data_out3_dev = bangpy.Array(np.zeros(shape3, dtype.as_numpy_dtype), dev)
-    
+
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
-    f1(data_in0_dev, data_in1_dev, dim_var, data_out0_dev, data_out1_dev, data_out2_dev, data_out3_dev)
-    
+    f1(
+        data_in0_dev,
+        data_in1_dev,
+        dim_var,
+        data_out0_dev,
+        data_out1_dev,
+        data_out2_dev,
+        data_out3_dev,
+    )
+
     if dim_var == 0:
         bangpy.assert_allclose(
-            data_out0_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), 
-            rtol=3e-3, atol=3e-3
+            data_out0_dev.numpy(),
+            data_out.astype(dtype.as_numpy_dtype),
+            rtol=3e-3,
+            atol=3e-3,
         )
     elif dim_var == 1:
         bangpy.assert_allclose(
-            data_out1_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), 
-            rtol=3e-3, atol=3e-3
+            data_out1_dev.numpy(),
+            data_out.astype(dtype.as_numpy_dtype),
+            rtol=3e-3,
+            atol=3e-3,
         )
     elif dim_var == 2:
         bangpy.assert_allclose(
-            data_out2_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), 
-            rtol=3e-3, atol=3e-3
+            data_out2_dev.numpy(),
+            data_out.astype(dtype.as_numpy_dtype),
+            rtol=3e-3,
+            atol=3e-3,
         )
     else:
         bangpy.assert_allclose(
-            data_out3_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), 
-            rtol=3e-3, atol=3e-3
+            data_out3_dev.numpy(),
+            data_out.astype(dtype.as_numpy_dtype),
+            rtol=3e-3,
+            atol=3e-3,
         )
-    

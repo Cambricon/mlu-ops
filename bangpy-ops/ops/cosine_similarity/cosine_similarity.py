@@ -34,6 +34,7 @@ DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "cosine_similarity"
 
+
 class Cosine_similarity(object):
     """Operator description:
     compute cosine similarity of two given tensors
@@ -50,7 +51,7 @@ class Cosine_similarity(object):
         self.dim_1 = self.bp.SizeVar("dim_1")
         self.dim_2 = self.bp.SizeVar("dim_2")
         self.dim_3 = self.bp.SizeVar("dim_3")
-        
+
         self.length = self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
@@ -58,20 +59,26 @@ class Cosine_similarity(object):
         self.bp.launch_task(self.task_num, 1, 1)
 
     def compute_body(self):
-        #calculate basic data
+        # calculate basic data
         data_calculated_each_task = self.length
         loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
         data_calculated_each_time = self.single_buffer_size // self.dtype_sz
         remain = (data_calculated_each_task * self.dtype_sz) % self.single_buffer_size
-        #each_task_remain = data_calculated_each_task % data_calculated_each_time
+        # each_task_remain = data_calculated_each_task % data_calculated_each_time
 
         buffer_in0 = self.bp.Buffer(
-            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3), name="INPUT0", dtype=self.dtype, scope="global"
+            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
+            name="INPUT0",
+            dtype=self.dtype,
+            scope="global",
         )
         buffer_in1 = self.bp.Buffer(
-            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3), name="INPUT1", dtype=self.dtype, scope="global"
+            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
+            name="INPUT1",
+            dtype=self.dtype,
+            scope="global",
         )
-        
+
         task_id = self.bp.taskId
         dim = self.dim
         buffer_reshape0 = buffer_in0.reshape((self.length,))
@@ -82,9 +89,12 @@ class Cosine_similarity(object):
             dim_m = self.dim_0
             dim_l = self.dim_1 * self.dim_2 * self.dim_3
             total_after = dim_h * dim_l
-            
+
             buffer_out0 = self.bp.Buffer(
-                shape=(self.dim_1, self.dim_2, self.dim_3), name="OUTPUT0", dtype=self.dtype, scope="global"
+                shape=(self.dim_1, self.dim_2, self.dim_3),
+                name="OUTPUT0",
+                dtype=self.dtype,
+                scope="global",
             )
             buffer_out0 = buffer_out0.reshape((1, 1, total_after))
             buffer_in0_n = self.bp.Buffer(
@@ -135,23 +145,25 @@ class Cosine_similarity(object):
             self.bp.assign(buffer_out0_n, 0)
             self.bp.assign(buffer_out1_n, 0)
             self.bp.assign(buffer_out_final, 0)
-            self.bp.memcpy(buffer_in0_n[0:self.length], buffer_reshape0)
-            self.bp.memcpy(buffer_in1_n[0:self.length], buffer_reshape1)
+            self.bp.memcpy(buffer_in0_n[0 : self.length], buffer_reshape0)
+            self.bp.memcpy(buffer_in1_n[0 : self.length], buffer_reshape1)
 
             self.bp.multiply(buffer_mul, buffer_in0_n, buffer_in1_n)
             self.bp.square(buffer_in0_n, buffer_in0_n)
             self.bp.square(buffer_in1_n, buffer_in1_n)
 
-            mul_reshape = buffer_mul[0:self.length].reshape((dim_h, dim_m, dim_l))
-            in_reshape0 = buffer_in0_n[0:self.length].reshape((dim_h, dim_m, dim_l))
-            in_reshape1 = buffer_in1_n[0:self.length].reshape((dim_h, dim_m, dim_l))
+            mul_reshape = buffer_mul[0 : self.length].reshape((dim_h, dim_m, dim_l))
+            in_reshape0 = buffer_in0_n[0 : self.length].reshape((dim_h, dim_m, dim_l))
+            in_reshape1 = buffer_in1_n[0 : self.length].reshape((dim_h, dim_m, dim_l))
             buffer_out_n = buffer_out_n[0:total_after].reshape((dim_h, 1, dim_l))
             buffer_out0_n = buffer_out0_n[0:total_after].reshape((dim_h, 1, dim_l))
             buffer_out1_n = buffer_out1_n[0:total_after].reshape((dim_h, 1, dim_l))
-            buffer_out_final = buffer_out_final[0:total_after].reshape((dim_h, 1, dim_l))
+            buffer_out_final = buffer_out_final[0:total_after].reshape(
+                (dim_h, 1, dim_l)
+            )
             self.bp.sumpool(buffer_out_n, mul_reshape, (dim_h, dim_m), (1, 1))
             self.bp.sumpool(buffer_out0_n, in_reshape0, (dim_h, dim_m), (1, 1))
-            self.bp.sumpool(buffer_out1_n, in_reshape1, (dim_h, dim_m), (1, 1))           
+            self.bp.sumpool(buffer_out1_n, in_reshape1, (dim_h, dim_m), (1, 1))
             self.bp.sqrt(buffer_out0_n, buffer_out0_n)
             self.bp.sqrt(buffer_out1_n, buffer_out1_n)
 
@@ -162,15 +174,18 @@ class Cosine_similarity(object):
             buffer_out0 = buffer_out0.reshape((self.dim_1, self.dim_2, self.dim_3))
 
         with self.bp.if_scope(dim == 1):
-            
+
             dim_h = self.dim_0
             dim_m = self.dim_1
             dim_l = self.dim_2 * self.dim_3
             lim_h = data_calculated_each_time // (dim_m * dim_l)
             total_after = lim_h * dim_l
-            
+
             buffer_out1 = self.bp.Buffer(
-                shape=(self.dim_0, self.dim_2, self.dim_3), name="OUTPUT1", dtype=self.dtype, scope="global"
+                shape=(self.dim_0, self.dim_2, self.dim_3),
+                name="OUTPUT1",
+                dtype=self.dtype,
+                scope="global",
             )
             buffer_out1 = buffer_out1.reshape((dim_h, 1, dim_l))
             buffer_in0_n = self.bp.Buffer(
@@ -238,7 +253,9 @@ class Cosine_similarity(object):
                 buffer_out_n = buffer_out_n[0:total_after].reshape((lim_h, 1, dim_l))
                 buffer_out0_n = buffer_out0_n[0:total_after].reshape((lim_h, 1, dim_l))
                 buffer_out1_n = buffer_out1_n[0:total_after].reshape((lim_h, 1, dim_l))
-                buffer_out_final = buffer_out_final[0:total_after].reshape((lim_h, 1, dim_l))
+                buffer_out_final = buffer_out_final[0:total_after].reshape(
+                    (lim_h, 1, dim_l)
+                )
                 self.bp.sumpool(buffer_out_n, mul_reshape, (1, dim_m), (1, 1))
                 self.bp.sumpool(buffer_out0_n, in_reshape0, (1, dim_m), (1, 1))
                 self.bp.sumpool(buffer_out1_n, in_reshape1, (1, dim_m), (1, 1))
@@ -246,20 +263,25 @@ class Cosine_similarity(object):
                 self.bp.sqrt(buffer_out1_n, buffer_out1_n)
                 self.bp.multiply(buffer_out0_n, buffer_out0_n, buffer_out1_n)
                 self.bp.divide(buffer_out_final, buffer_out_n, buffer_out0_n)
-                self.bp.memcpy(buffer_out1[i*lim_h:(i + 1)*lim_h], buffer_out_final)
+                self.bp.memcpy(
+                    buffer_out1[i * lim_h : (i + 1) * lim_h], buffer_out_final
+                )
 
             buffer_out1 = buffer_out1.reshape((self.dim_0, self.dim_2, self.dim_3))
 
         with self.bp.if_scope(dim == 2):
-            
+
             dim_h = self.dim_0 * self.dim_1
             dim_m = self.dim_2
             dim_l = self.dim_3
             lim_h = data_calculated_each_time // (dim_m * dim_l)
             total_after = lim_h * dim_l
-            
+
             buffer_out2 = self.bp.Buffer(
-                shape=(self.dim_0, self.dim_1, self.dim_3), name="OUTPUT2", dtype=self.dtype, scope="global"
+                shape=(self.dim_0, self.dim_1, self.dim_3),
+                name="OUTPUT2",
+                dtype=self.dtype,
+                scope="global",
             )
             buffer_out2 = buffer_out2.reshape((dim_h, 1, dim_l))
             buffer_in0_n = self.bp.Buffer(
@@ -326,7 +348,9 @@ class Cosine_similarity(object):
                 buffer_out_n = buffer_out_n[0:total_after].reshape((lim_h, 1, dim_l))
                 buffer_out0_n = buffer_out0_n[0:total_after].reshape((lim_h, 1, dim_l))
                 buffer_out1_n = buffer_out1_n[0:total_after].reshape((lim_h, 1, dim_l))
-                buffer_out_final = buffer_out_final[0:total_after].reshape((lim_h, 1, dim_l))
+                buffer_out_final = buffer_out_final[0:total_after].reshape(
+                    (lim_h, 1, dim_l)
+                )
                 self.bp.sumpool(buffer_out_n, mul_reshape, (1, dim_m), (1, 1))
                 self.bp.sumpool(buffer_out0_n, in_reshape0, (1, dim_m), (1, 1))
                 self.bp.sumpool(buffer_out1_n, in_reshape1, (1, dim_m), (1, 1))
@@ -334,7 +358,9 @@ class Cosine_similarity(object):
                 self.bp.sqrt(buffer_out1_n, buffer_out1_n)
                 self.bp.multiply(buffer_out0_n, buffer_out0_n, buffer_out1_n)
                 self.bp.divide(buffer_out_final, buffer_out_n, buffer_out0_n)
-                self.bp.memcpy(buffer_out2[i*lim_h:(i + 1)*lim_h], buffer_out_final)
+                self.bp.memcpy(
+                    buffer_out2[i * lim_h : (i + 1) * lim_h], buffer_out_final
+                )
 
             buffer_out2 = buffer_out2.reshape((self.dim_0, self.dim_1, self.dim_3))
 
@@ -346,7 +372,10 @@ class Cosine_similarity(object):
             total = dim_h * dim_l
 
             buffer_out3 = self.bp.Buffer(
-                shape=(self.dim_0, self.dim_1, self.dim_2), name="OUTPUT3", dtype=self.dtype, scope="global"
+                shape=(self.dim_0, self.dim_1, self.dim_2),
+                name="OUTPUT3",
+                dtype=self.dtype,
+                scope="global",
             )
             buffer_out3 = buffer_out3.reshape((total,))
             buffer_in0_n = self.bp.Buffer(
@@ -415,9 +444,15 @@ class Cosine_similarity(object):
                 buffer_out_final = buffer_out_final[0:lim_h]
 
                 with self.bp.for_range(0, lim_h) as j:
-                    total_sum = self.bp.Scalar(name='total_sum', dtype=self.dtype, value=0)
-                    total_sum0 = self.bp.Scalar(name='total_sum0', dtype=self.dtype, value=0)
-                    total_sum1 = self.bp.Scalar(name='total_sum1', dtype=self.dtype, value=0)
+                    total_sum = self.bp.Scalar(
+                        name="total_sum", dtype=self.dtype, value=0
+                    )
+                    total_sum0 = self.bp.Scalar(
+                        name="total_sum0", dtype=self.dtype, value=0
+                    )
+                    total_sum1 = self.bp.Scalar(
+                        name="total_sum1", dtype=self.dtype, value=0
+                    )
                     with self.bp.for_range(0, dim_m) as k:
                         total_sum += mul_reshape[j][k]
                         total_sum0 += in_reshape0[j][k]
@@ -425,32 +460,29 @@ class Cosine_similarity(object):
                     buffer_out_n[j] = total_sum
                     buffer_out0_n[j] = total_sum0
                     buffer_out1_n[j] = total_sum1
-                
+
                 buffer_out_n = buffer_out_n.reshape((lim_h,))
                 buffer_out0_n = buffer_out0_n.reshape((lim_h,))
                 buffer_out1_n = buffer_out1_n.reshape((lim_h,))
                 buffer_out_final = buffer_out_final.reshape((lim_h,))
                 self.bp.sqrt(buffer_out0_n, buffer_out0_n)
                 self.bp.sqrt(buffer_out1_n, buffer_out1_n)
-                
+
                 self.bp.multiply(buffer_out0_n, buffer_out0_n, buffer_out1_n)
                 self.bp.divide(buffer_out_final, buffer_out_n, buffer_out0_n)
-                self.bp.memcpy(buffer_out3[i*lim_h:(i + 1)*lim_h], buffer_out_final)
+                self.bp.memcpy(
+                    buffer_out3[i * lim_h : (i + 1) * lim_h], buffer_out_final
+                )
 
             buffer_out3 = buffer_out3.reshape((self.dim_0, self.dim_1, self.dim_2))
-            
+
         f = self.bp.BuildBANG(
-            inputs=[buffer_in0,
-                    buffer_in1,
-                    dim,
-                    buffer_out0,
-                    buffer_out1,
-                    buffer_out2],
+            inputs=[buffer_in0, buffer_in1, dim, buffer_out0, buffer_out1, buffer_out2],
             outputs=[buffer_out3],
             kernel_name=KERNEL_NAME,
             dump_ir=True,
         )
-        return f        
+        return f
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
@@ -462,4 +494,3 @@ def build_cosine_similarity(dtype=None, target=None):
     stage = 1
     f = Cosine_similarity(dtype, target, task_num, stage).compute_body()
     return f
-

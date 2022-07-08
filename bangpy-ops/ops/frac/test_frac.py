@@ -33,11 +33,9 @@ from frac import DTYPES, KERNEL_NAME, TARGET_LIST
 import os
 import time
 
+
 @pytest.mark.parametrize(
-    "shape", 
-    [
-        (4, 4, 1024, 1024),
-    ],
+    "shape", [(4, 4, 1024, 1024),],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,
@@ -63,8 +61,7 @@ def test_frac(target, shape, dtype):
     mlu_end_time = time.time()
 
     bangpy.assert_allclose(
-        data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), 
-        rtol=1, atol=1
+        data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype), rtol=1, atol=1
     )
 
     theory_io_size = shape[0] * shape[1] * shape[2] * shape[3] * 4 * 2
