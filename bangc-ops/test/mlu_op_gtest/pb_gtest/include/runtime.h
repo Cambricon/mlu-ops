@@ -9,8 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_INCLUDE_RUNTIME_H_
-#define TEST_MLU_OP_GTEST_INCLUDE_RUNTIME_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
 
 #include <iostream>
 #include <algorithm>
@@ -21,7 +21,7 @@
 #include "cnrt.h"
 #include "mlu_op.h"
 #include "core/logging.h"
-#include "tools.h"
+#include "pb_test_tools.h"
 #include "memory_pool.h"
 
 namespace mluoptest {
@@ -203,4 +203,4 @@ class MLURuntime : public Runtime {
 
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_INCLUDE_RUNTIME_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_

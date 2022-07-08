@@ -9,8 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_INCLUDE_CASE_COLLECTOR_H_
-#define TEST_MLU_OP_GTEST_INCLUDE_CASE_COLLECTOR_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_CASE_COLLECTOR_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_CASE_COLLECTOR_H_
 
 #include <unistd.h>
 #include <dirent.h>
@@ -19,7 +19,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include "tools.h"
+#include "pb_test_tools.h"
 #include "variable.h"
 #include "gtest/gtest.h"
 
@@ -41,4 +41,4 @@ class Collector {
   std::vector<std::string> list_by_case_path(std::string);
 };
 
-#endif  // TEST_MLU_OP_GTEST_INCLUDE_CASE_COLLECTOR_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_CASE_COLLECTOR_H_

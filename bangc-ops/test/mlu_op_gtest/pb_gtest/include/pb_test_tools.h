@@ -9,8 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
-#define TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
 
 #include <algorithm>
 #include <sstream>
@@ -26,21 +26,7 @@
 #include "mlu_op.h"
 #include "core/tensor.h"
 #include "evaluator.h"
-
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
-#define GTEST_CHECK(condition, ...)                                            \
-  if (unlikely(!(condition))) {                                                \
-    ADD_FAILURE() << "Check failed: " #condition ". " #__VA_ARGS__;            \
-    throw std::invalid_argument(std::string(__FILE__) + " +" +                 \
-                                std::to_string(__LINE__));                     \
-  }
-
-#define GTEST_WARNING(condition, ...)                                          \
-  if (unlikely(!(condition))) {                                                \
-    LOG(WARNING) << "Check failed: " #condition ". " #__VA_ARGS__;             \
-  }
+#include "tools.h"
 
 namespace mluoptest {
 
@@ -162,4 +148,4 @@ namespace mluoptest {
 
 } // namespace mluoptest
 
-#endif // TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
+#endif // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_

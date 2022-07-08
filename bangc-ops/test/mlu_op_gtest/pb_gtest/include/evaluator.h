@@ -9,8 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_INCLUDE_EVALUATOR_H_
-#define TEST_MLU_OP_GTEST_INCLUDE_EVALUATOR_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EVALUATOR_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EVALUATOR_H_
 
 #include <algorithm>
 #include <iostream>
@@ -22,7 +22,7 @@
 #include <utility>
 #include <map>
 #include "core/logging.h"
-#include "tools.h"
+#include "pb_test_tools.h"
 #include "perf_test.h"
 
 namespace mluoptest {
@@ -145,4 +145,4 @@ struct EvaluateResult {
 
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_INCLUDE_EVALUATOR_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EVALUATOR_H_
