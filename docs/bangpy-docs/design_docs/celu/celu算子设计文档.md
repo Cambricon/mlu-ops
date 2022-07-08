@@ -132,7 +132,7 @@ self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buf
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
 
-采用的tasktype固定为UNION16，数据拆分到64个核内计算。
+使用当前设备的所有核心，并尽可能的将数据均摊到各核。计算公式近似为：数据总量 /（cluster数量*每个cluster的核心数）。
 
 ### 3.4 性能优化设计
 尽可能将数据分摊至各核。  
