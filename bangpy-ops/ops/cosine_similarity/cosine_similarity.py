@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""Cosine_similarity operator implementation using BANGPy TCP API."""
 import numpy as np
 
 import bangpy
@@ -45,7 +45,6 @@ class Cosine_similarity(object):
         self.task_num = task_num
         self.stage = stage
         self.bp = tcp.TCP(target)
-        #self.length = self.bp.Scalar(dtype=bangpy.int32, name="length")
         self.dim = self.bp.Var(name="dim", dtype=bangpy.int32)
         self.dim_0 = self.bp.SizeVar("dim_0")
         self.dim_1 = self.bp.SizeVar("dim_1")

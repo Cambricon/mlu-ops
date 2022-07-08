@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""Frac operator implementation using BANGPy TCP API."""
 import numpy as np
 
 import bangpy
@@ -63,7 +63,6 @@ class Frac(object):
         data_remain = self.length % self.task_num
         loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
         data_calculated_each_time = self.single_buffer_size // self.dtype_sz
-        #remain = (data_calculated_each_task * self.dtype_sz) % self.single_buffer_size
         each_task_remain = data_calculated_each_task % data_calculated_each_time
 
         buffer_original = self.bp.Buffer(
