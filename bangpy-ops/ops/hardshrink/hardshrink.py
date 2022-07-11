@@ -205,47 +205,92 @@ class HardShrink(object):
             )
         # start the second align
         # only need smaller nrams —— the basic alignment
-        # There has a problem: task_id from 0 or 1 ?
+        # place the remain task in order
         with self.bp.if_scope(task_remain != 0):
-            with self.bp.if_scope(self.task_id == self.task_num - 1):
-                with self.bp.for_range(0, 1, stage=1) as i:
-                    flatten_end = task_end + task_remain
-                    self.tensor_input_small_nram = self.bp.Buffer(
-                        shape=(self.base_align,),
-                        name="input_tensor_small_nram",
-                        dtype=self.dtype,
-                        scope="nram",
+            remain_by_thistask = task_remain // self.task_num
+            with self.bp.if_scope(task_remain % self.task_num > self.task_id):
+                remain_by_thistask += 1
+                remain_task_start = task_end + self.task_id * remain_by_thistask
+                remain_task_end = remain_task_start + remain_by_thistask
+                self.tensor_input_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="input_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                self.tensor_output_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="output_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                self.tensor_abs_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="abs_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                self.tensor_greater_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="greater_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                with self.bp.block("data_copy"):
+                    self.bp.memcpy(
+                        self.tensor_input_small_nram[:remain_by_thistask],
+                        self.tensor_input_flatten[remain_task_start:remain_task_end],
                     )
-                    self.tensor_output_small_nram = self.bp.Buffer(
-                        shape=(self.base_align,),
-                        name="output_tensor_small_nram",
-                        dtype=self.dtype,
-                        scope="nram",
+                with self.bp.block("compute"):
+                    self.small_compute()
+                with self.bp.block("data_copy"):
+                    self.bp.memcpy(
+                        self.tensor_output_flatten[remain_task_start:remain_task_end],
+                        self.tensor_output_small_nram[:remain_by_thistask],
                     )
-                    self.tensor_abs_small_nram = self.bp.Buffer(
-                        shape=(self.base_align,),
-                        name="abs_tensor_small_nram",
-                        dtype=self.dtype,
-                        scope="nram",
+            with self.bp.else_scope():
+                remain_task_end = (
+                    task_end
+                    + task_remain
+                    - (self.task_num - 1 - self.task_id) * remain_by_thistask
+                )
+                remain_task_start = remain_task_end - remain_by_thistask
+                self.tensor_input_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="input_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                self.tensor_output_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="output_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                self.tensor_abs_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="abs_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                self.tensor_greater_small_nram = self.bp.Buffer(
+                    shape=(self.base_align,),
+                    name="greater_tensor_small_nram",
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                with self.bp.block("data_copy"):
+                    self.bp.memcpy(
+                        self.tensor_input_small_nram[:remain_by_thistask],
+                        self.tensor_input_flatten[remain_task_start:remain_task_end],
                     )
-                    self.tensor_greater_small_nram = self.bp.Buffer(
-                        shape=(self.base_align,),
-                        name="greater_tensor_small_nram",
-                        dtype=self.dtype,
-                        scope="nram",
+                with self.bp.block("compute"):
+                    self.small_compute()
+                with self.bp.block("data_copy"):
+                    self.bp.memcpy(
+                        self.tensor_output_flatten[remain_task_start:remain_task_end],
+                        self.tensor_output_small_nram[:remain_by_thistask],
                     )
-                    with self.bp.block("data_copy"):
-                        self.bp.memcpy(
-                            self.tensor_input_small_nram[:task_remain],
-                            self.tensor_input_flatten[task_end:flatten_end],
-                        )
-                    with self.bp.block("compute"):
-                        self.small_compute()
-                    with self.bp.block("data_copy"):
-                        self.bp.memcpy(
-                            self.tensor_output_flatten[task_end:flatten_end],
-                            self.tensor_output_small_nram[:task_remain],
-                        )
 
         self.tensor_output = self.tensor_output_flatten.reshape(self.tensor_shape)
 
