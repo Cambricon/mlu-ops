@@ -49,7 +49,7 @@ mluOpStatus_t RoiCropForwardParamCheck(
   PARAM_CHECK(op_name, input_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(op_name, input_desc->dim == 4);
   PARAM_CHECK(op_name, grid_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, output_desc->dim == 4);
+  PARAM_CHECK(op_name, grid_desc->dim == 4);
   PARAM_CHECK(op_name, output_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(op_name, output_desc->dim == 4);
   // check shape and layout

@@ -254,6 +254,11 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  *   - Input tensor: float.
  *   - Grid tensor: float.
  *   - Output tensor: float.
+ * @par Data Layout
+ * - The supported data layout of \b input , \b grid , \b output are as follows:
+ *   - Input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Grid tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor: \p MLUOP_LAYOUT_NHWC.
  *
  * @par Scale Limitation
  * - The input tensor, grid tensor and ouput tensor must have four dimensions.
