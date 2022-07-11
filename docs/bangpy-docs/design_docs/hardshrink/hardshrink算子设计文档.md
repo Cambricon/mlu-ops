@@ -48,13 +48,11 @@
 功能： HardShrink算子是一种激活函数，其功能是逐元素施加强制收缩。
 运算公式描述如下：
 
-$
-Hardshrink(x)=\begin{cases}
+$$Hardshrink(x)=\begin{cases}
  x,&x>\lambda \\
  x,&x<-\lambda \\
  0,&otherwise 
-\end{cases}
-$
+\end{cases}$$
 
 **lambda** – the λ value for the Hardshrink formulation. Default: 0.5
 
