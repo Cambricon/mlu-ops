@@ -246,6 +246,8 @@ namespace mluoptest {
 
     Evaluator::Formula cvtProtoEvaluationCriterion(EvaluationCriterion c);
     bool readMessageFromFile(const std::string &filename, Node *proto);
+    size_t getTensorSize(Tensor *pt);
+    void setCurPbPath(const std::string &file);
   };
 
 } // namespace mluoptest
