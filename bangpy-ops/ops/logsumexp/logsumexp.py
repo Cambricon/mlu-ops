@@ -25,7 +25,7 @@ from bangpy.tcp.util import round_down
 from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
 
-DTYPES = [bangpy.float32]
+DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "Logsumexp"
 
@@ -93,7 +93,7 @@ class LogSumCalcer:
     def __init__(self, bp, dtype):
         self.dtype = dtype
         self.bp = bp
-        self.m_value = self.bp.Scalar(bangpy.float32, "m_value", 0.0)
+        self.m_value = self.bp.Scalar(self.dtype, "m_value", 0.0)
         self._oper_count = self.bp.Scalar(bangpy.int32, "_oper_count", 0)
 
     def reset(self):
@@ -109,22 +109,21 @@ class LogSumCalcer:
         min_threshold_valu = self.bp.Scalar(bangpy.float32,
                                             "min_threshold_valu", \
                                                 -87.332719095296162600686375692197)
-
         const_one = self.bp.Scalar(bangpy.float32, "const_one", 1)
-        scalar_res = self.bp.Scalar(bangpy.float32, "scalar_res", y - x)
+        scalar_res = self.bp.Scalar(bangpy.float32, "scalar_res", (y - x).astype(bangpy.float32))
         with self.bp.if_scope(tcp.all(scalar_res <= max_threshold_valu,
                                       scalar_res >= min_threshold_valu)):
             scalar_res.assign(self.bp.scalar_pow(natural_base, scalar_res))
             scalar_res.assign(scalar_res + const_one)
             scalar_res.assign(self.bp.scalar_log(scalar_res) /
                               self.bp.scalar_log(natural_base))
-            scalar_res.assign(scalar_res + x)
+            scalar_res.assign(scalar_res + x.astype(bangpy.float32))
         with self.bp.else_scope():
             with self.bp.if_scope(scalar_res > max_threshold_valu):
-                scalar_res.assign(y)
+                scalar_res.assign(y.astype(bangpy.float32))
             with self.bp.else_scope():
-                scalar_res.assign(x)
-        return scalar_res
+                scalar_res.assign(x.astype(bangpy.float32))
+        return scalar_res.astype(self.dtype)
 
     def calc_buffer(self, buffer, start_index, end_index):
         natural_base = self.bp.Scalar(bangpy.float32, "natural_base",
@@ -144,20 +143,21 @@ class LogSumCalcer:
                                           sub_value >= min_threshold_valu)):
                 sum_value.assign(self.bp.scalar_pow(natural_base, sub_value) + const_one)
                 sum_value.assign(self.bp.scalar_log(sum_value) / self.bp.scalar_log(natural_base))
-                sum_value.assign(sum_value + buffer[i + 1])
+                sum_value.assign(sum_value + buffer[i + 1].astype(bangpy.float32))
             with self.bp.else_scope():
                 with self.bp.if_scope(sub_value < min_threshold_valu):
-                    sum_value.assign(buffer[i + 1])
-        return sum_value
+                    sum_value.assign(buffer[i + 1].astype(bangpy.float32))
+        return sum_value.astype(self.dtype)
 
     def add_buffer(self, buffer, start_index, end_index):
         with self.bp.if_scope(self._oper_count == 0):
             self.m_value.assign(self.calc_buffer(buffer, start_index, end_index))
         with self.bp.else_scope():
             ret_value = self.calc_buffer(buffer, start_index, end_index)
-            tmp_calc_value = self.bp.Scalar(bangpy.float32, "tmp_calc_value", self.m_value)
+            tmp_calc_value = self.bp.Scalar(bangpy.float32, "tmp_calc_value",
+                self.m_value.astype(bangpy.float32))
             tmp_ret = self.calc_value(tmp_calc_value, ret_value)
-            self.m_value.assign(tmp_ret)
+            self.m_value.assign(tmp_ret.astype(self.dtype))
 
         self._oper_count.assign(self._oper_count + 1)
         return self.m_value
