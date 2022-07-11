@@ -126,6 +126,6 @@ def test_celu(target, shape, dtype, alpha):
     m = torch.nn.CELU(alpha)
     t_res = m(torch_value)
     if dtype.name == "float16":
-        bp.assert_allclose(t_res.numpy(), res, rtol=0.01, atol=0.01)
+        bp.assert_allclose(t_res.numpy(), res, rtol=0.1, atol=0.1)
     else:
         bp.assert_allclose(t_res.numpy(), res, rtol=0.1, atol=0.1)

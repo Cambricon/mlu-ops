@@ -26,7 +26,7 @@ from bangpy.platform.bang_config import TARGET
 from bangpy.tcp.util import round_down
 from bangpy.tcp.runtime import TaskType
 
-DTYPES = [bangpy.float32]
+DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "Celu"
 
