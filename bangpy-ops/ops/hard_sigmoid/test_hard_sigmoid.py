@@ -41,6 +41,7 @@ def cal_diff(result, data_out):
 @pytest.mark.parametrize(
     "shape",
     [
+        # These test cases cover the logical branches
         (2 ** 23 + 1,),
         (1, 2 ** 24 + 1),
         (1, 1, 2 ** 25 + 1),
@@ -49,6 +50,9 @@ def cal_diff(result, data_out):
         (1, 1, 1, 1, 1, 2 ** 28 + 1),
         (1, 1, 1, 1, 1, 1, 2 ** 29 + 1),
         (1, 1, 1, 1, 1, 1, 1, 2 ** 30 + 1),
+        # special test cases
+        (66777500,),
+        (67077500,),
     ],
 )
 @pytest.mark.parametrize(
@@ -59,7 +63,6 @@ def test_hard_sigmoid(target, shape, dtype):
     if target not in TARGET_LIST:
         return
     data_in = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
-    data_out = data_in
     # Hardsigmoid function
     data_out = data_in * 1 / 6 + 1 / 2
     data_out = np.minimum(data_out, 1)
@@ -79,8 +82,8 @@ def test_hard_sigmoid(target, shape, dtype):
     cal_diff(data_out_dev2host, data_out.astype(dtype.as_numpy_dtype))
     # bangpy.assert_allclose(data_out_dev2host, data_out.astype(dtype.as_numpy_dtype))
 
-    evaluator = f.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
-    latency = evaluator(data_in_dev, data_out_dev).mean * 1e3
+    evaluator = f.time_evaluator(number=1, repeat=100, min_repeat_ms=0)
+    latency = evaluator(data_in_dev, data_out_dev).median * 1e3
     print("Hardware time : %f ms" % latency)
 
     # io_efficiency

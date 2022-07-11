@@ -45,21 +45,11 @@ class HardSigmoid(object):
         self.length = self.tcp.SizeVar("length")
         self.nram_size = TARGET(target).nram_size
         self.dtype_sz = dtype.bytes
-        # The space of NRAM was divided into three parts：buffer_io_n * 2 and buffer_temp_n
-        # Calculations need to be aligned to 64 elements
-        # Alignment formula: ((self.nram_size // 3) // (dtype.bytes * 64)) * (dtype.bytes * 64)
-        # For bangpy.float16: the following cases run with an error
-        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128) * 128)
-        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 1) * 128)
-        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 128 - 2) * 128)
-        # For bangpy.float32: the following cases run with an error
-        #     self.nram_size_each_buffer=(((self.nram_size // 3) // 256) * 256)
-        # So we have the following result
-        self.nram_size_each_buffer = (
-            (((self.nram_size // 3) // 128 - 3) * 128)
-            if dtype.bytes == 2  # dtype is bangpy.float16
-            else (((self.nram_size // 3) // 256 - 1) * 256)  # dtype is bangpy.float32
-        )
+        # Note:
+        # (1)The space of NRAM was divided into three parts：buffer_io_n * 2 and buffer_temp_n
+        # (2)Buffer size must be 128-byte aligned
+        # (3)NRAM needs to reserve a little space(here it is 1KB)
+        self.nram_size_each_buffer = ((self.nram_size - 1 * 2 ** 10) // 3) // 128 * 128
         self.tcp.launch_cluster(TaskType.BLOCK)
         self.tcp.launch_task(task_num, 1, 1)
 
@@ -79,6 +69,8 @@ class HardSigmoid(object):
         data_each_task.assign(data_total // self.task_num)
         data_rem = self.tcp.Scalar(bangpy.int32, "data_rem")
         data_rem.assign(data_total % self.task_num)
+        with self.tcp.if_scope(task_id == 0):  # give the data_rem to master thread
+            data_each_task.assign(data_each_task + data_rem)
         data_each_time = self.nram_size_each_buffer // self.dtype_sz
         # data_each_time: can't use Scalar:(error)Cannot handle this data type
         loop = self.tcp.Scalar(bangpy.int32, "loop")
@@ -132,32 +124,6 @@ class HardSigmoid(object):
                         buffer_out[start : start + data_rem_n],
                         buffer_io_n[0:data_rem_n],
                     )
-        # if data_rem > 0:
-        # 1 <= data_rem <= task_num-1, let master thread to adress it
-        with self.tcp.if_scope(data_rem > 0):
-            with self.tcp.if_scope(task_id == 0):
-                stop = data_total
-                start = data_total - data_rem
-                buffer_io_n = self.tcp.Buffer(
-                    shape=(data_each_time,),
-                    name="IO_N",
-                    dtype=self.dtype,
-                    scope="nram",
-                )
-                buffer_temp_n = self.tcp.Buffer(
-                    shape=(data_each_time,),
-                    name="TEMP_N",
-                    dtype=self.dtype,
-                    scope="nram",
-                )
-                self.tcp.memcpy(buffer_io_n[0:data_rem], buffer_in[start:stop])
-                self.tcp.multiply(buffer_io_n, buffer_io_n, 1 / 6)
-                self.tcp.add(buffer_io_n, buffer_io_n, 1 / 2)
-                self.tcp.assign(buffer_temp_n, 1)
-                self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)
-                self.tcp.zeros(buffer_temp_n)
-                self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n)
-                self.tcp.memcpy(buffer_out[start:stop], buffer_io_n[0:data_rem])
 
         # build a executable module
         f = self.tcp.BuildBANG(

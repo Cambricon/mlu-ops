@@ -119,7 +119,7 @@ tcp.BuildBANG(
 
 主要步骤：  
 （1）在host端将flatten后的张量数据传到device端，均匀地分给各个IPU计算。  
-（2）各个IPU计算之后拷回对应的位置,计算时使用双缓冲技术进行优化。  
+（2）各个IPU计算之后拷回对应的位置，计算时使用双缓冲技术进行优化。  
 （3）将数据从device端传回host端并在host端进行reshape。
 
 ### 3.2 伪代码实现
@@ -205,25 +205,37 @@ NRAM双缓冲对应的流水线如下(假设最后一块是G-->N2)：
 
 - 算子在测试时使用的规模：  
 ```
-case_0: input.shape = (2**23 + 1,), output.shape = (2**23 + 1,), dtype = half;
-case_1: input.shape = (1, 2**24 + 1), output.shape = (1, 2**24 + 1), dtype = half;
-case_2: input.shape = (1, 1, 2**25 + 1), output.shape = (1, 1, 2**25 + 1), dtype = half;
-case_3: input.shape = (1, 1, 1, 2**26 + 1), output.shape = (1, 1, 1, 2**26 + 1), dtype = half;
-case_4: input.shape = (1, 1, 1, 1, 2**27 + 1), output.shape = (1, 1, 1, 1, 2**27 + 1), dtype = half;
-case_5: input.shape = (1, 1, 1, 1, 1, 2**28 + 1), output.shape = (1, 1, 1, 1, 1, 2**28 + 1), dtype = half;
-case_6: input.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), output.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), dtype = half;
-case_7: input.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), output.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), dtype = half;
-case_8: input.shape = (2**23 + 1,), output.shape = (2**23 + 1,), dtype = float;
-case_9: input.shape = (1, 2**24 + 1), output.shape = (1, 2**24 + 1), dtype = float;
-case_10: input.shape = (1, 1, 2**25 + 1), output.shape = (1, 1, 2**25 + 1), dtype = float;
-case_11: input.shape = (1, 1, 1, 2**26 + 1), output.shape = (1, 1, 1, 2**26 + 1), dtype = float;
-case_12: input.shape = (1, 1, 1, 1, 2**27 + 1), output.shape = (1, 1, 1, 1, 2**27 + 1), dtype = float;
-case_13: input.shape = (1, 1, 1, 1, 1, 2**28 + 1), output.shape = (1, 1, 1, 1, 1, 2**28 + 1), dtype = float;
-case_14: input.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), output.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), dtype = float;
-case_15: input.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), output.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), dtype = float.
+# dtype = half
+case_0: input.shape = (2**23 + 1,), output.shape = (2**23 + 1,), dtype = half
+case_1: input.shape = (1, 2**24 + 1), output.shape = (1, 2**24 + 1), dtype = half
+case_2: input.shape = (1, 1, 2**25 + 1), output.shape = (1, 1, 2**25 + 1), dtype = half
+case_3: input.shape = (1, 1, 1, 2**26 + 1), output.shape = (1, 1, 1, 2**26 + 1), dtype = half
+case_4: input.shape = (1, 1, 1, 1, 2**27 + 1), output.shape = (1, 1, 1, 1, 2**27 + 1), dtype = half
+case_5: input.shape = (1, 1, 1, 1, 1, 2**28 + 1), output.shape = (1, 1, 1, 1, 1, 2**28 + 1), dtype = half
+case_6: input.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), output.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), dtype = half
+case_7: input.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), output.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), dtype = half
+# special test cases
+case_8: input.shape = (66777500,), output.shape = (66777500,), dtype = half
+case_9: input.shape = (67077500,), output.shape = (67077500,), dtype = half
+
+# dtype = float
+case_10: input.shape = (2**23 + 1,), output.shape = (2**23 + 1,), dtype = float
+case_11: input.shape = (1, 2**24 + 1), output.shape = (1, 2**24 + 1), dtype = float
+case_12: input.shape = (1, 1, 2**25 + 1), output.shape = (1, 1, 2**25 + 1), dtype = float
+case_13: input.shape = (1, 1, 1, 2**26 + 1), output.shape = (1, 1, 1, 2**26 + 1), dtype = float
+case_14: input.shape = (1, 1, 1, 1, 2**27 + 1), output.shape = (1, 1, 1, 1, 2**27 + 1), dtype = float
+case_15: input.shape = (1, 1, 1, 1, 1, 2**28 + 1), output.shape = (1, 1, 1, 1, 1, 2**28 + 1), dtype = float
+case_16: input.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), output.shape = (1, 1, 1, 1, 1, 1, 2**29 + 1), dtype = float
+case_17: input.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), output.shape = (1, 1, 1, 1, 1, 1, 1, 2**30 + 1), dtype = float
+# special test cases
+case_18: input.shape = (66777500,), output.shape = (66777500,), dtype = float
+case_19: input.shape = (67077500,), output.shape = (67077500,), dtype = float
 ```
+注：
 （1）测试用例覆盖了逻辑分支。  
-（2）只测试了1~8维的张量（理论上支持任意维度）。
+（2）对于dtype = half：case_3的IO效率突然降低；对于dtype = float：case_12的IO效率突然降低。  
+（3）case_8与case_9规模相近，但后者的IO效率比前者低了很多。 
+（4）只测试了1~8维的张量（理论上支持任意维度）。
 
 ### 3.7 算子防呆检查
 
@@ -257,4 +269,6 @@ xx-xx-xx~2022-03-01 准备工作（学习白皮书、熟悉开发环境等）
 ### 5.2 风险分析
 
 1.目前只在MLU290上测试过。
-2.对于NARM的空间，实现时的原则是尽量使用。理论上规模相近的张量IO效率类似，可实际上却差别明显。
+2.理论上随着数据规模的增大，流水线也越来越有效利用，对应的IO效率也应该越来越高，可一些数据规模的结果不符合。
+3.理论上规模相近的张量IO效率类似，可实际上却差别明显。
+注：2和3可能有重叠，它们应该都是由于受到硬件的IO限制的影响，具体见3.6处。
