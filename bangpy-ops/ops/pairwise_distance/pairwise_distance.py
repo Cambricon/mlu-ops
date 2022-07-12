@@ -26,7 +26,7 @@ from bangpy.tcp.util import round_down
 from bangpy import tcp
 from bangpy.platform.bang_config import TARGET
 
-DTYPES = [bangpy.float32]
+DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "PairwiseDistance"
 
@@ -193,7 +193,8 @@ class PairwiseDistance:
         return result
 
     def scalar_pow(self, value, p):
-        return self.bp.scalar_pow(value, p)
+        return self.bp.scalar_pow(value.astype(bangpy.float32), \
+            p.astype(bangpy.float32)).astype(self.dtype)
 
     def compute_body(self):
         self.dman.init(self.bp)
