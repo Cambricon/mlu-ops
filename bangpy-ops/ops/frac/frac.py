@@ -44,7 +44,7 @@ class Frac(object):
         self.task_num = task_num
         self.stage = stage
         self.bp = tcp.TCP(target)
-        # self.length = self.bp.Scalar(dtype=bangpy.int32, name="length")
+
         self.dim_0 = self.bp.SizeVar("dim_0")
         self.dim_1 = self.bp.SizeVar("dim_1")
         self.dim_2 = self.bp.SizeVar("dim_2")

@@ -64,7 +64,6 @@ class Cosine_similarity(object):
         loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
         data_calculated_each_time = self.single_buffer_size // self.dtype_sz
         remain = (data_calculated_each_task * self.dtype_sz) % self.single_buffer_size
-        # each_task_remain = data_calculated_each_task % data_calculated_each_time
 
         buffer_in0 = self.bp.Buffer(
             shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
