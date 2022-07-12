@@ -48,14 +48,12 @@
 功能： HardShrink算子是一种激活函数，其功能是逐元素施加强制收缩。
 运算公式描述如下：
 
-$$
-Hardshrink(x) = 
-\begin{cases} 
-  x , &{x > \lambda}  \\  
-  x , &{x < -\lambda}  \\
-  0 , &{otherwise}
-\end{cases}
-$$
+$$Hardshrink(x)=\begin{cases}
+ x,&x>\lambda \\
+ x,&x<-\lambda \\
+ 0,&otherwise 
+\end{cases}$$
+
 **lambda** – the λ value for the Hardshrink formulation. Default: 0.5
 
 来自[PyTorch HardShrink](https://pytorch.org/docs/stable/_modules/torch/nn/modules/activation.html#Hardshrink)。
@@ -164,7 +162,7 @@ memcpy(nram, global)
 
 ### 3.3 拆分（任务拆分，多核拆分）
 
-1、把所有的数据均分给每个core，计算好每个core需要处理多少数据量以及起始位置，多余的数据让最后一个core处理，实现core间并行，每个core自己算完后把结果store到对应位置。（比如总共102个数据，有4个core，core0处理25个数，core1处理25个数，core2处理25个数，core3处理27个数），不过还可以把最后剩余的任务按序分配给core；
+1、把所有的数据均分给每个core，计算好每个core需要处理多少数据量以及起始位置，多余的数据有两种处理方式：(1)让最后一个core处理，实现core间并行，每个core自己算完后把结果store到对应位置（比如总共102个数据，有4个core，core0处理25个数，core1处理25个数，core2处理25个数，core3处理27个数）；(2)剩余的任务按序分配给core(core0处理26个数，core1处理26个数，core2处理25个数，core3处理25个数)，为了实现硬件负载均衡，采用第二种方案；
 2、如果core自己需要处理的数据量很大，一次处理不完，这个时候需要分批处理，这时候就有多次的Load, compute,store，这部分可以实现流水
 
 ### 3.4 性能优化设计
@@ -179,7 +177,7 @@ memcpy(nram, global)
 
 ### 3.6 测试用例设计
 
-包括三部分，分别是数据类型、数据规模和硬件支持。数据类型包括：[float16, float32]，数据规模测试任意范围数据（极大、极小、不规则（不对齐）等），包括(10, 4, 4096, 4096)，(4, 16, 1024, 1024)，(4,16,1,64)，(3, 5, 197, 175)，硬件支持包括：["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
+包括三部分，分别是数据类型、数据规模和硬件支持。数据类型包括：[float16, float32]，数据规模测试任意范围数据（极大、极小、不规则（不对齐）等），包括(10, 4, 4096, 4096)，(4, 16, 1024, 1024)，(4,16,1,64)，(3, 5, 197, 175)，硬件支持包括：["mlu370", "mlu290"]
 
 
 ## 4 算子性能优化记录
