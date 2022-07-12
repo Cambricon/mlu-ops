@@ -9,7 +9,7 @@ WORKDIR /tmp
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install --no-install-recommends -y apt-transport-https apt-utils build-essential lcov html2text\
-    	git cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler vim && \
+    	git cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler vim libreadline-dev clang-format&& \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
@@ -33,11 +33,23 @@ RUN apt-get update && \
 # Install python3.8.0.
 # NOTE: the url below is only for internal usage, you could replace with your own python-3.8.0 package.
 ADD http://daily.software.cambricon.com/download/python/3.8.0/Python-3.8.0.tgz /tmp/
+ADD http://daily.software.cambricon.com/download/python/3.8.0/_sqlite3.cpython-38-x86_64-linux-gnu.so /tmp/
+ADD http://daily.software.cambricon.com/download/openssl/openssl-1.1.1p.tar.gz /tmp/
+RUN tar -xzvf /tmp/openssl-1.1.1p.tar.gz -C /tmp/ && \
+    cd /tmp/openssl-1.1.1p && \
+    ./config --prefix=/usr/local/openssl && \
+    make -j24 && make install && \
+    ln -s /usr/local/openssl/bin/openssl /usr/bin/openssl && \
+    ln -s /usr/local/openssl/include/openssl /usr/include/openssl && \
+    echo "/usr/local/openssl/lib" >> /etc/ld.so.conf && \
+    ldconfig && \
+    rm /tmp/openssl-1.1.1p* -rf
 RUN tar -xvf /tmp/Python-3.8.0.tgz -C /tmp/ && \
     cd /tmp/Python-3.8.0 && \
-    ./configure && \
+    ./configure --with-openssl=/usr/local/openssl --enable-shared --enable-optimizations && \
     make -j24 && \
     make install && \
+    cp /usr/local/lib/libpython3.8.so.1.0 /usr/lib/ && \
     cd - && \
     rm /tmp/Python-3.8.0* -rf
 
@@ -97,11 +109,13 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     wcwidth==0.2.5                     \
     wrapt==1.12.1                      \
     xgboost==0.7.post3                 \
-    -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+    -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com && \
+    cp /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so /usr/local/lib/python3.8/site-packages/ && \
+    rm /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so
 
 # Install BANGPy.
-ARG BANGPY_VERSION="2.0.0"
-ARG RELEASE_VERSION="2.0.0-2"
+ARG BANGPY_VERSION="2.0.1"
+ARG RELEASE_VERSION="2.0.1"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
 ADD http://daily.software.cambricon.com/release/bangpy/${RELEASE_VERSION}/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \
