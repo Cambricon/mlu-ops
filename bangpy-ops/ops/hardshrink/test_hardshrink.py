@@ -52,7 +52,6 @@ def test_hardshrink(target, shape, dtype, lambdaPara):
     f_hardshrink(
         data_in_dev,
         lambdaPara,
-        # 支持原位操作，可替换为data_in_dev
         data_out_dev,
     )
 
