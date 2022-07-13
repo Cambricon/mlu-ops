@@ -13,13 +13,12 @@
 #include <vector>
 #include <string>
 #include <tuple>
-
-#include "gtest/gtest.h"
-#include "mlu_op.h"
+#include "api_test_tools.h"
 #include "core/context.h"
 #include "core/tensor.h"
 #include "core/logging.h"
-#include "api_test_tools.h"
+#include "gtest/gtest.h"
+#include "mlu_op.h"
 
 namespace mluopapitest {
 typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
@@ -78,7 +77,7 @@ class roi_crop_forward_general
 
   bool compute() {
     if (!(device_ == MLUOP_UNKNOWN_DEVICE || device_ == handle_->arch)) {
-      VLOG(4) << "Device does not match, skip testing";
+      VLOG(4) << "Device does not match, skip testing.";
       return true;
     }
     mluOpStatus_t status = mluOpRoiCropForward(
@@ -89,7 +88,7 @@ class roi_crop_forward_general
 
  protected:
   void destroy() {
-    VLOG(4) << "Destroy parameters";
+    VLOG(4) << "Destroy parameters.";
     if (handle_) {
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;

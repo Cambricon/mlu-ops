@@ -13,12 +13,11 @@
 #include <vector>
 #include <string>
 #include <tuple>
-
-#include "gtest/gtest.h"
-#include "mlu_op.h"
+#include "api_test_tools.h"
 #include "core/logging.h"
 #include "core/tensor.h"
-#include "api_test_tools.h"
+#include "gtest/gtest.h"
+#include "mlu_op.h"
 
 namespace mluopapitest {
 class roi_crop_forward : public testing::Test {
@@ -78,7 +77,7 @@ class roi_crop_forward : public testing::Test {
 
  protected:
   void destroy() {
-    VLOG(4) << "Destroy parameters";
+    VLOG(4) << "Destroy parameters.";
     if (handle_) {
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
