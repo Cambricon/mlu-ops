@@ -23,24 +23,25 @@
 namespace mluopapitest {
 typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
                    mluOpDevType_t, mluOpStatus_t>
-    ROICropForwardParam;
-class roi_crop_forward_general
-    : public testing::TestWithParam<ROICropForwardParam> {
+    ROICropBackwardParam;
+class roi_crop_backward_general
+    : public testing::TestWithParam<ROICropBackwardParam> {
  public:
   void SetUp() {
     MLUOP_CHECK(mluOpCreate(&handle_));
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
-    MLUOpTensorParam input_params = std::get<0>(GetParam());
-    mluOpTensorLayout_t i_layout = input_params.get_layout();
-    mluOpDataType_t i_dtype = input_params.get_dtype();
-    int i_dim = input_params.get_dim_nb();
-    std::vector<int> i_dim_size = input_params.get_dim_size();
-    MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, i_layout, i_dtype, i_dim,
-                                         i_dim_size.data()));
-    uint64_t i_ele_num = mluOpGetTensorElementNum(input_desc_);
-    uint64_t i_bytes = mluOpDataTypeBytes(i_dtype) * i_ele_num;
-    if (i_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, i_bytes))
+
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_output_desc_));
+    MLUOpTensorParam output_params = std::get<0>(GetParam());
+    mluOpTensorLayout_t o_layout = output_params.get_layout();
+    mluOpDataType_t o_dtype = output_params.get_dtype();
+    int o_dim = output_params.get_dim_nb();
+    std::vector<int> o_dim_size = output_params.get_dim_size();
+    MLUOP_CHECK(mluOpSetTensorDescriptor(grad_output_desc_, o_layout, o_dtype,
+                                         o_dim, o_dim_size.data()));
+    uint64_t o_ele_num = mluOpGetTensorElementNum(grad_output_desc_);
+    uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
+    if (o_bytes > 0) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_output_, o_bytes));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&grid_desc_));
@@ -57,18 +58,18 @@ class roi_crop_forward_general
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grid_, g_bytes));
     }
 
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-    MLUOpTensorParam output_params = std::get<2>(GetParam());
-    mluOpTensorLayout_t o_layout = output_params.get_layout();
-    mluOpDataType_t o_dtype = output_params.get_dtype();
-    int o_dim = output_params.get_dim_nb();
-    std::vector<int> o_dim_size = output_params.get_dim_size();
-    MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, o_layout, o_dtype, o_dim,
-                                         o_dim_size.data()));
-    uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
-    uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
-    if (o_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_input_desc_));
+    MLUOpTensorParam input_params = std::get<2>(GetParam());
+    mluOpTensorLayout_t i_layout = input_params.get_layout();
+    mluOpDataType_t i_dtype = input_params.get_dtype();
+    int i_dim = input_params.get_dim_nb();
+    std::vector<int> i_dim_size = input_params.get_dim_size();
+    MLUOP_CHECK(mluOpSetTensorDescriptor(grad_input_desc_, i_layout, i_dtype,
+                                         i_dim, i_dim_size.data()));
+    uint64_t i_ele_num = mluOpGetTensorElementNum(grad_input_desc_);
+    uint64_t i_bytes = mluOpDataTypeBytes(i_dtype) * i_ele_num;
+    if (i_bytes > 0) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_input_, i_bytes))
     }
 
     device_ = std::get<3>(GetParam());
@@ -80,8 +81,9 @@ class roi_crop_forward_general
       VLOG(4) << "Device does not match, skip testing.";
       return true;
     }
-    mluOpStatus_t status = mluOpRoiCropForward(
-        handle_, input_desc_, input_, grid_desc_, grid_, output_desc_, output_);
+    mluOpStatus_t status =
+        mluOpRoiCropBackward(handle_, grad_output_desc_, grad_output_,
+                             grid_desc_, grid_, grad_input_desc_, grad_input_);
     destroy();
     return expected_status_ == status;
   }
@@ -93,89 +95,89 @@ class roi_crop_forward_general
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }
-    if (input_desc_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_desc_));
-      input_desc_ = NULL;
+    if (grad_output_desc_) {
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(grad_output_desc_));
+      grad_output_desc_ = NULL;
     }
     if (grid_desc_) {
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(grid_desc_));
       grid_desc_ = NULL;
     }
-    if (output_desc_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_desc_));
-      output_desc_ = NULL;
+    if (grad_input_desc_) {
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(grad_input_desc_));
+      grad_input_desc_ = NULL;
     }
-    if (input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
-      input_ = NULL;
+    if (grad_output_) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      grad_output_ = NULL;
     }
     if (grid_) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grid_));
       grid_ = NULL;
     }
-    if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
-      output_ = NULL;
+    if (grad_input_) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      grad_input_ = NULL;
     }
   }
 
  private:
   mluOpHandle_t handle_ = NULL;
-  mluOpTensorDescriptor_t input_desc_ = NULL;
+  mluOpTensorDescriptor_t grad_input_desc_ = NULL;
   mluOpTensorDescriptor_t grid_desc_ = NULL;
-  mluOpTensorDescriptor_t output_desc_ = NULL;
-  void* input_ = NULL;
+  mluOpTensorDescriptor_t grad_output_desc_ = NULL;
+  void* grad_input_ = NULL;
   void* grid_ = NULL;
-  void* output_ = NULL;
+  void* grad_output_ = NULL;
   mluOpDevType_t device_ = MLUOP_UNKNOWN_DEVICE;
   mluOpStatus_t expected_status_ = MLUOP_STATUS_BAD_PARAM;
 };
 
-TEST_P(roi_crop_forward_general, api_test) { EXPECT_TRUE(compute()); }
+TEST_P(roi_crop_backward_general, api_test) { EXPECT_TRUE(compute()); }
 
 INSTANTIATE_TEST_CASE_P(
-    zero_element_0, roi_crop_forward_general,
+    zero_element_0, roi_crop_backward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({0, 7, 7, 9}))),
+                                         4, std::vector<int>({0, 3, 3, 9}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({0, 3, 3, 2}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({0, 3, 3, 9}))),
+                                         4, std::vector<int>({0, 7, 7, 9}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_input_layout_dtype_0, roi_crop_forward_general,
+    bad_input_layout_dtype_0, roi_crop_backward_general,
     testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 3, 3, 9}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 3, 3, 2}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NCHW, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({2, 7, 7, 9})),
                         MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_HALF, 4,
                                          std::vector<int>({2, 7, 7, 9}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 3, 3, 2}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 3, 3, 9}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_dtype_0, roi_crop_forward_general,
+    bad_dtype_0, roi_crop_backward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({2, 7, 7, 9}))),
+                                         4, std::vector<int>({2, 3, 3, 9}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          4, std::vector<int>({2, 3, 3, 2}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({2, 3, 3, 9}))),
+                                         4, std::vector<int>({2, 7, 7, 9}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_grid_dtype_shape_0, roi_crop_forward_general,
+    bad_grid_dtype_shape_0, roi_crop_backward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 7, 7, 9}))),
+                                         4, std::vector<int>({2, 3, 3, 9}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_HALF,
                                          4, std::vector<int>({2, 3, 3, 2})),
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
@@ -191,17 +193,13 @@ INSTANTIATE_TEST_CASE_P(
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          5, std::vector<int>({2, 3, 3, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 3, 3, 9}))),
+                                         4, std::vector<int>({2, 7, 7, 9}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_output_layout_dtype_shape_0, roi_crop_forward_general,
+    bad_output_layout_dtype_shape_0, roi_crop_backward_general,
     testing::Combine(
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 7, 7, 9}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 3, 3, 2}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NCHW, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({2, 3, 3, 9})),
                         MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_HALF, 4,
@@ -210,6 +208,10 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({1, 3, 3, 9})),
                         MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({2, 3, 3, 7}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 3, 3, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 7, 7, 9}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // mluopapitest
