@@ -19,10 +19,10 @@
 #include <string>
 #include <cstring>
 #include "cnrt.h"
-#include "mlu_op.h"
 #include "core/logging.h"
-#include "pb_test_tools.h"
 #include "memory_pool.h"
+#include "mlu_op.h"
+#include "pb_test_tools.h"
 
 namespace mluoptest {
 

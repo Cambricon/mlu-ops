@@ -21,11 +21,11 @@
 #include <thread> 
 #include <vector>
 #include <unordered_map>
+#include "core/tensor.h"
+#include "evaluator.h"
 #include "gtest/gtest.h"
 #include "mlu_op_test.pb.h"
 #include "mlu_op.h"
-#include "core/tensor.h"
-#include "evaluator.h"
 #include "tools.h"
 
 namespace mluoptest {

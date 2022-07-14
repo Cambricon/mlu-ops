@@ -22,17 +22,17 @@
 #include <memory>
 #include <unordered_set>
 #include <set>
-#include "gtest/gtest.h"
-#include "mlu_op.h"
 #include "core/tensor.h"
 #include "core/tool.h"
 #include "core/type.h"
 #include "core/context.h"
-#include "pb_test_tools.h"
-#include "parser.h"
 #include "evaluator.h"
-#include "runtime.h"
+#include "gtest/gtest.h"
 #include "memory_pool.h"
+#include "mlu_op.h"
+#include "parser.h"
+#include "pb_test_tools.h"
+#include "runtime.h"
 
 namespace mluoptest {
 

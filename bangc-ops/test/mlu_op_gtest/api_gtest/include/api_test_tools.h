@@ -16,9 +16,9 @@
 #include <tuple>
 #include <string>
 
-#include "gtest/gtest.h"
 #include "core/mlu_op_core.h"
 #include "core/context.h"
+#include "gtest/gtest.h"
 #include "tools.h"
 
 namespace mluopapitest {

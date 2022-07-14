@@ -22,9 +22,9 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
-#include "mlu_op_test.pb.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "mlu_op_test.pb.h"
 
 namespace mluoptest {
 

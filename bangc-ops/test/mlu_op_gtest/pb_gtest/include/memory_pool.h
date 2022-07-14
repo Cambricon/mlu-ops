@@ -20,8 +20,8 @@
 #include <list>
 #include <mutex>               //NOLINT
 #include <condition_variable>  //NOLINT
-#include "gtest/gtest.h"
 #include "cnrt.h"
+#include "gtest/gtest.h"
 #include "pb_test_tools.h"
 
 namespace mluoptest {
