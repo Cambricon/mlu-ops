@@ -139,15 +139,16 @@ data_rem = data_total % self.task_num
 data_each_time = self.nram_size_buffer // self.dtype_sz
 loop = data_each_task // data_each_time
 data_rem_n = data_each_task % data_each_time
+loop = loop + 1 # for data_rem_n
 
 # calculation
 memcpy:GDRAM-->NRAM
-self.tcp.multiply(buffer_io_n, buffer_io_n, 1/6) # x * 1/6
-self.tcp.add(buffer_io_n, buffer_io_n, 1/2)      # x * 1/6 + 1/2
+self.tcp.multiply(buffer_io_n, buffer_io_n, 1/6)          # x * 1/6
+self.tcp.add(buffer_io_n, buffer_io_n, 1/2)               # x * 1/6 + 1/2
 self.tcp.assign(buffer_temp_n, 1)
-self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n)  # min(x * 1/6 + 1/2, 1)
+self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n) # min(x * 1/6 + 1/2, 1)
 self.tcp.zeros(buffer_temp_n)
-self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n)  # max(x * 1/6 + 1/2, 0)
+self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n) # max(x * 1/6 + 1/2, 0)
 memcpy:NRAM-->GDRAM
 
 
@@ -165,7 +166,7 @@ task_num:任务个数
 data_each_task: 每个任务需要计算的数据个数（data_all // task_num）  
 data_rem: 平均分给所有IPU后的余数(data_all % task_num)  
 data_each_time: 每次NRAM计算的数据个数  
-loop:每个task需要拷入NRAM进行计算的次数(data_each_task // data_each_time)  
+loop:每个task需要拷入NRAM进行计算的次数(data_each_task // data_each_time + 1)  
 data_rem_n: 不足一次计算(data_each_task % data_each_time)
 
 ### 3.4 性能优化设计

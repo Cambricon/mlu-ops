@@ -69,10 +69,13 @@ class HardSigmoid(object):
         data_each_task.assign(data_total // self.task_num)
         data_rem = self.tcp.Scalar(bangpy.int32, "data_rem")
         data_rem.assign(data_total % self.task_num)
-        with self.tcp.if_scope(task_id == 0):  # give the data_rem to master thread
-            data_each_task.assign(data_each_task + data_rem)
-        data_each_time = self.nram_size_each_buffer // self.dtype_sz
-        # data_each_time: can't use Scalar:(error)Cannot handle this data type
+        with self.tcp.if_scope(task_id == 0):
+            data_each_task.assign(
+                data_each_task + data_rem
+            )  # give the data_rem to master thread
+        data_each_time = (
+            self.nram_size_each_buffer // self.dtype_sz
+        )  # data_each_time: cannot use Scalar: (error)cannot handle this data type
         loop = self.tcp.Scalar(bangpy.int32, "loop")
         loop.assign(data_each_task // data_each_time)
         data_rem_n = self.tcp.Scalar(bangpy.int32, "data_rem_n")
@@ -89,8 +92,6 @@ class HardSigmoid(object):
         # data_each_time: number of data of IPU calculation per time
         # loop: number of times each task needs to be copied into NRAM for computation
         # data_rem_n: less than one calculation
-        # if data_rem_n != 0, we need to copy data into NRAM one more time and calculate it
-        # elif data_rem_n == 0, we just need to calculate it(Although no data was copied into NRAM)
 
         # calculation:
         with self.tcp.for_range(0, loop, stage=1) as i:
