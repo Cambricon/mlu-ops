@@ -45,7 +45,7 @@ x/6+1/2 & \text{otherwise}.\end{cases}
 $$
 
 算子功能：对一个输入张量按元素应用Hardsigmoid激活函数后，得到一个激活后的张量。  
-例如： 
+例如：
 ```
 input = [[[[[[[[-3.5, 2.4, 4.0], [-2.4, 0.0, 1.8]]]]]]]]  
 output = [[[[[[[[0.0, 0.9, 1.0], [0.1, 0.5, 0.8]]]]]]]]
@@ -118,9 +118,10 @@ tcp.BuildBANG(
 ### 3.1 实现方案
 
 主要步骤：  
-（1）在host端将flatten后的张量数据传到device端，均匀地分给各个IPU计算。  
-（2）各个IPU计算之后拷回对应的位置，计算时使用双缓冲技术进行优化。  
-（3）将数据从device端传回host端并在host端进行reshape。
+（1）在host端将flatten后的张量数据传到device端。  
+（2）均匀地分给各个IPU。  
+（3）各个IPU计算时使用双缓冲技术进行优化，计算完毕后拷回GDRAM对应的位置。  
+（4）将数据从device端传回host端并在host端进行reshape操作。
 
 ### 3.2 伪代码实现
 
@@ -133,15 +134,16 @@ data_out_dev = bangpy.Array(np.zeros(data_out.flatten().shape, dtype.as_numpy_dt
 
 
 # device
-# data distribution
+# calculate split strategy
 data_each_task = data_total // self.task_num
 data_rem = data_total % self.task_num
 data_each_time = self.nram_size_buffer // self.dtype_sz
 loop = data_each_task // data_each_time
 data_rem_n = data_each_task % data_each_time
-loop = loop + 1 # for data_rem_n
+if data_rem_n > 0 :
+    loop = loop + 1
 
-# calculation
+# calculate
 memcpy:GDRAM-->NRAM
 self.tcp.multiply(buffer_io_n, buffer_io_n, 1/6)          # x * 1/6
 self.tcp.add(buffer_io_n, buffer_io_n, 1/2)               # x * 1/6 + 1/2
@@ -160,14 +162,15 @@ data_out_dev2host = data_out_dev.numpy().reshape(shape)
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-首先需要将张量压成flatten成一维传入，然后相关参数如下：  
+首先需要将张量flatten成一维传入，然后相关参数如下：  
 data_total：张量的数据总个数  
-task_num:任务个数  
-data_each_task: 每个任务需要计算的数据个数（data_all // task_num）  
-data_rem: 平均分给所有IPU后的余数(data_all % task_num)  
-data_each_time: 每次NRAM计算的数据个数  
-loop:每个task需要拷入NRAM进行计算的次数(data_each_task // data_each_time + 1)  
-data_rem_n: 不足一次计算(data_each_task % data_each_time)
+task_num：任务个数  
+data_each_task：每个任务需要计算的数据个数(data_total // task_num)  
+data_rem：平均分给所有IPU后的余数(data_total % task_num)  
+data_each_time：每次NRAM计算的数据个数  
+loop：每个data_each_task需要拷入NRAM进行计算的次数(data_each_task // data_each_time)  
+data_rem_n：不足一次计算(data_each_task % data_each_time)
+loop = loop + 1：当data_rem_n > 0 时
 
 ### 3.4 性能优化设计
 
