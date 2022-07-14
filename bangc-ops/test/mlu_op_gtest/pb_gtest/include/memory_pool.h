@@ -9,8 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_INCLUDE_MEMORY_POOL_H_
-#define TEST_MLU_OP_GTEST_INCLUDE_MEMORY_POOL_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_MEMORY_POOL_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_MEMORY_POOL_H_
 
 #include <iostream>
 #include <set>
@@ -20,9 +20,9 @@
 #include <list>
 #include <mutex>               //NOLINT
 #include <condition_variable>  //NOLINT
-#include "gtest/gtest.h"
 #include "cnrt.h"
-#include "tools.h"
+#include "gtest/gtest.h"
+#include "pb_test_tools.h"
 
 namespace mluoptest {
 
@@ -68,4 +68,4 @@ class MLUMemoryPool : public MemoryPool {
 };
 
 }  // namespace mluoptest
-#endif  // TEST_MLU_OP_GTEST_INCLUDE_MEMORY_POOL_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_MEMORY_POOL_H_

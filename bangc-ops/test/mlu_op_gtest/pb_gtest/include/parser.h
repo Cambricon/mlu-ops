@@ -9,8 +9,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_INCLUDE_PARSER_H_
-#define TEST_MLU_OP_GTEST_INCLUDE_PARSER_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_
 
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -22,9 +22,9 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
-#include "mlu_op_test.pb.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "mlu_op_test.pb.h"
 
 namespace mluoptest {
 
@@ -251,4 +251,4 @@ namespace mluoptest {
   };
 
 } // namespace mluoptest
-#endif // TEST_MLU_OP_GTEST_INCLUDE_PARSER_H_
+#endif // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_

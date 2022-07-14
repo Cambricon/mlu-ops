@@ -16,7 +16,7 @@
 #include <unordered_map>
 #include <utility>
 #include <functional>
-#include "tools.h"
+#include "pb_test_tools.h"
 #include "parser.h"
 
 namespace mluoptest {
