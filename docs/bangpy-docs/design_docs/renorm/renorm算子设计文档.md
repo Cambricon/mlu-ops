@@ -29,7 +29,7 @@
 | 输入 Shape                | input: [ length, N ];  |
 | 输入 Layout               | input: ARRAY;           |
 | 输出数据类型               | float                              |
-| 输出 Shape                | [ length, N - 1]                               |
+| 输出 Shape                | [ length, N ]                               |
 | 输出 Layout               | ARRAY                                    |
 
 ### 1.2 算子功能和应用场景描述
@@ -103,7 +103,7 @@ maxnorm：子张量最大范数
 ```
 
 如果一个张量x, 维度是 [2, 3, 4]
-当dim为1时，输出张量y的维度为 [2, 4]
+当dim为1时，
 第i, j 个子张量为
 t = [
 x[i, 0, j], 
@@ -142,7 +142,7 @@ x[i, 2, j]
 
 ```python
 
-sub_tensors = get_last_dim(input)  #按照最后一个维度，讲该tensor划分，拿到所有子向量
+sub_tensors = get_last_dim(input)  #按照最后一个维度，将该tensor划分，拿到所有子向量
 
 for t in sub_tensors:
     length = calc_distance(t)

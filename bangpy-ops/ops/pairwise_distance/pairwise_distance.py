@@ -46,7 +46,7 @@ class DataMan:
         remain.assign(data_total_len % task_num)
 
         # If remains exists, averagely assigning remains to cores.
-        # Small taskId cores will has high priority to be assigned.
+        # Small taskId cores will have high priority to be assigned.
         with self.bp.if_scope(self.bp.taskId < remain):
             self.m_current_core_start.assign((one_core_count + 1) * self.bp.taskId )
             self.m_current_core_end.assign((one_core_count + 1) * \
