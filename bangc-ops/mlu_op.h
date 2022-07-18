@@ -217,6 +217,134 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpTensorDescriptor_t z_desc, void *z);
 
 /*!
+ *  @brief Generate fixed size feature map for each Roi(Regions of Interest).
+ *
+ *  @param[in] handle
+ *    Input.  Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the psroipool_forward operation.
+ *  @param[in] spatial_scale
+ *    Input. The spatial_scale data.
+ *  @param[in] group_size
+ *    Input. The group_size data.
+ *  @param[in] input_data_desc
+ *    Input. The descriptor of the input_data tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] input_data
+ *    Input. Pointer to the MLU memory that stores the input_data tensor.
+ *  @param[in] input_rois_desc
+ *    Input. The descriptor of the input_roi tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] input_rois
+ *    Input. Pointer to the MLU memory that stores the input_rois tensor. 
+ *    NaN and INF datas are not supported.
+ *  @param[in] workspace
+ *    Input. Pointer to the MLU memory that stores the extra workspace.
+ *  @param[in] workspace_size
+ *    Input. The size of extra space.
+ *  @param[in] output_data_desc
+ *    Input. The descriptor of the output_data tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] output_data
+ *    Output. Pointer to the MLU memory that stores the output_data tensor.
+ *  @param[in] mapping_channel_desc
+ *    Input. The descriptor of the mapping_channel tensor. For detailed
+ *    information, see ::mluOpTensorDescriptor_t.
+ *  @param[out] mapping_channel
+ *    Output. Pointer to the MLU memory that stores the mapping_channel
+ *    tensor.
+ * 
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @par Formula
+ *  - See "psroipool_forward Operation" section in "Cambricon MLUOP User
+ *    Guide" for details.
+ * 
+ *  @par Data Type
+ *  - The supported data types of input and output tensors are as follows:
+ *     - Input_data tensor: float.
+ *     - Input_rois tensor: float.
+ *     - Output_data tensor: float.
+ *     - Mapping_channel tensor: int.
+ * 
+ *  @par Data Layout
+ *  - The supported data layout of \b input_data, \b input_rois,
+ *    \b output_data, \b mapping_channel are as follows:
+ * 
+ *   - Input_data tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Input_rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output_data tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
+ * 
+ *  @par Scale Limitation
+ *  - The spatial_scale should be greater than 0.
+ *  - The group_size should be greater than 1.
+ *  - THe output_dim should be greater than 1.
+ *  - The group_size should be equal to pooled_height.
+ *  - The pooled_height should be equal to pooled_width.
+ *  - The channels should be equal to pooled_height * pooled_width * output_dim.
+ *  - The dim of input_data should be equal to 4.
+ *  - The dim of input_rois should be equal to 2.
+ *  - The dim of output should be equal to 4.
+ *  - The dim of mapping_channel should be equal to 4.
+ *  - The rois_offset should be equal to 5.
+ *  - The shape of roi should be [batch_id, roi_start_h, roi_start_w,
+ *    roi_end_h, roi_end_w], and the batch_id must between 0
+ *    and batch, the batch come from input_data.
+ *  - The output_dims[0] should be equal to mapping_channel_dims[0].
+ *  - The output_dims[1] should be equal to mapping_channel_dims[1].
+ *  - The output_dims[2] should be equal to mapping_channel_dims[2].
+ *  - The output_dims[3] should be equal to mapping_channel_dims[3].
+ *  - 
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * 
+ *  @par Note
+ *  - On MLU300 series, because input_rois use ceil/floor function,
+ *    so input_rois do not support NAN/INF.
+ * 
+ * @par Reference
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/
+ *   lib/model/psroi_pooling
+ */
+mluOpStatus_t MLUOP_WIN_API 
+mluOpPsRoiPoolForward(mluOpHandle_t handle,
+                      const float spatial_scale, const int group_size,
+                      const mluOpTensorDescriptor_t input_data_desc,
+                      const void *input_data,
+                      const mluOpTensorDescriptor_t input_rois_desc,
+                      const void *input_rois,
+                      void *workspace,
+                      const size_t workspace_size,
+                      const mluOpTensorDescriptor_t output_data_desc,
+                      void *output_data,
+                      const mluOpTensorDescriptor_t mapping_channel_desc,
+                      void *mapping_channel);
+
+/*!
+ *  @brief Get extra space size that needed in psroipool_forward operation.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the psroipool_forward operation.
+ *  @param[in] output_dim
+ *    Input. The output_dim data.
+ *  @param[out] size
+ *    Output. Size of workspace.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *  @par Scale Limitation
+ *  - The output_dim should be greater than 1.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
+                               const int output_dim,
+                               size_t *size);
+
+/*!
  * @brief Generates fixed size feature map for each grid. Each value in the
  *   feature map is interpolated by bilinear sampling.
  *
