@@ -34,7 +34,7 @@ static void policyFuncPsroipoolForward(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 }
 
 static void policyFuncPsroipoolBackward(mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                                       cnrtFunctionType_t *k_type) {
+                                        cnrtFunctionType_t *k_type) {
   size_t union_number = mluop::runtime::getClusterLimitCapability(handle);
   size_t core_in_cluster = handle->core_num_per_cluster;
   *k_type = CNRT_FUNC_TYPE_UNION1;  // default func type
@@ -122,8 +122,8 @@ static mluOpStatus_t psroipool_forward_check(
 }
 
 static mluOpStatus_t psroipool_backward_check(
-    const std::string &api, const float spatial_scale, 
-    const void *top_grad, const void *input_rois, const void *mapping_channel,
+    const std::string &api, const float spatial_scale, const void *top_grad,
+    const void *input_rois, const void *mapping_channel,
     const void *bottom_grad, const mluOpTensorDescriptor_t top_grad_desc,
     const mluOpTensorDescriptor_t input_rois_desc,
     const mluOpTensorDescriptor_t mapping_channel_desc,
@@ -158,13 +158,14 @@ static mluOpStatus_t psroipool_backward_check(
   PARAM_CHECK(api, top_grad_desc->dims[0] == input_rois_desc->dims[0]);
   // channels == pooled_height * pooled_width * output_dim
   PARAM_CHECK(api, bottom_grad_desc->dims[3] == top_grad_desc->dims[1] *
-                                                   top_grad_desc->dims[2] *
-                                                   top_grad_desc->dims[3]);
+                                                    top_grad_desc->dims[2] *
+                                                    top_grad_desc->dims[3]);
   PARAM_CHECK(api, top_grad_desc->dims[0] == mapping_channel_desc->dims[0]);
   PARAM_CHECK(api, top_grad_desc->dims[1] == mapping_channel_desc->dims[1]);
   PARAM_CHECK(api, top_grad_desc->dims[2] == mapping_channel_desc->dims[2]);
   PARAM_CHECK(api, top_grad_desc->dims[3] == mapping_channel_desc->dims[3]);
-  if (mluOpGetTensorElementNum(top_grad_desc) == 0 && mluOpGetTensorElementNum(mapping_channel_desc) == 0 ) {
+  if (mluOpGetTensorElementNum(top_grad_desc) == 0 &&
+      mluOpGetTensorElementNum(mapping_channel_desc) == 0) {
     VLOG(5) << api << " Input_data skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -226,8 +227,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
     const mluOpTensorDescriptor_t top_grad_desc, const void *top_grad,
     const mluOpTensorDescriptor_t input_rois_desc, const void *input_rois,
     const mluOpTensorDescriptor_t mapping_channel_desc,
-    const mluOpTensorDescriptor_t bottom_grad_desc,
-    const void *mapping_channel, void *bottom_grad) {
+    const mluOpTensorDescriptor_t bottom_grad_desc, const void *mapping_channel,
+    void *bottom_grad) {
   const std::string api = "[mluOpPsRoiPoolBackward]";
   PARAM_CHECK(api, handle != NULL);
   const int batch_size = bottom_grad_desc->dims[0];
@@ -257,7 +258,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolBackward(
       k_dim, k_type, handle->queue, (void *)top_grad, (void *)input_rois,
       (void *)bottom_grad, (void *)mapping_channel, channels, height, width,
-      pooled_height, pooled_width, rois_sum, output_dim, 
-      rois_offset, spatial_scale, batch_size)));
+      pooled_height, pooled_width, rois_sum, output_dim, rois_offset,
+      spatial_scale, batch_size)));
   return MLUOP_STATUS_SUCCESS;
 }
