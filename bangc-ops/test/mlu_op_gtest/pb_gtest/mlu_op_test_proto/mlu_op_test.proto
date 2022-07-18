@@ -118,6 +118,7 @@ message Node {
   optional DivParam    div_param                      = 4001;   // param
   optional LogParam    log_param                      = 4002;     // param
   optional SqrtParam   sqrt_param                     = 4003;  // param
+  optional PsroipoolBackwardParam psroipool_backward_param  = 4005;  //param
 }
 
 
@@ -186,5 +187,12 @@ message SqrtParam {
 
 message DivParam {
   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
+}
+
+message PsroipoolBackwardParam{
+  optional int32 output_dim = 2 [default = 8];
+  optional int32 pooled_height = 3 [default = 7];
+  optional int32 pooled_width = 4 [default = 7];
+  optional float spatial_scale = 6 [default = 0.0625];
 }
 
