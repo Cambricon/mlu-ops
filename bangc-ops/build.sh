@@ -24,6 +24,10 @@ if [ $# != 0 ]; then
           shift
           export BUILD_COVERAGE_TEST="ON"
           ;;
+      --asan)
+          shift
+          export MLUOP_BUILD_ASAN_CHECK="ON"
+          ;;
       -h | --help)
           usage
           exit 0
@@ -61,5 +65,10 @@ pushd ${BUILD_PATH} > /dev/null
     echo "-- Build cambricon release test cases."
     ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}"
   fi 
+
+  if [[ ${MLUOP_BUILD_ASAN_CHECK} == "ON" ]]; then
+    echo "-- Build cambricon ASAN leak check."
+    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}"
+  fi
 popd > /dev/null
 ${CMAKE} --build build --  -j
