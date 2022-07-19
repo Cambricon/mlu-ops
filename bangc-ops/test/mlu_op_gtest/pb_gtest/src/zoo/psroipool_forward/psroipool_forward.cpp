@@ -42,9 +42,9 @@ void PsroipoolForwardExecutor::paramCheck() {
 }
 
 void PsroipoolForwardExecutor::workspaceMalloc() {
-  mluOpTensorDescriptor_t output_desc = tensor_desc_[2].tensor;
+  int output_dim = parser_->getProtoNode()->psroipool_forward_param().output_dim();
   size_t workspace_size = 0;
-  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_desc, &workspace_size));
+  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim, &workspace_size));
   VLOG(4) << "Malloc workspace space.";
 
   void *temp = mlu_runtime_.allocate(workspace_size);
@@ -123,12 +123,12 @@ void PsroipoolForwardExecutor::compute() {
   auto output = data_vector_[2].device_ptr;
   auto mapping_channel = data_vector_[3].device_ptr;
   size_t workspace_size = 0;
-  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_desc, &workspace_size));
+  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim_, &workspace_size));
   interface_timer_.start();
   MLUOP_CHECK(mluOpPsRoiPoolForward(
-      handle_, spatial_scale_, group_size_, input_desc, input,
-      rois_desc, rois, workspace_[0], workspace_size,
-      output_desc, output, mapping_channel_desc, mapping_channel));
+      handle_, pooled_height_, pooled_width_, spatial_scale_, group_size_,
+      output_dim_, input_desc, input, rois_desc, rois, workspace_[0],
+      workspace_size, output_desc, output, mapping_channel_desc, mapping_channel));
   interface_timer_.stop();
 }
 

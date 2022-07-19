@@ -130,7 +130,9 @@ int psroi_pooling_forward_cuda(int pooled_height,
 ```c++
 mluOpStatus_t MLUOP_WIN_API 
 mluOpPsRoiPoolForward(mluOpHandle_t handle,
+                      const int pooled_height, const int pooled_width,
                       const float spatial_scale, const int group_size,
+                      const int output_dim,
                       const mluOpTensorDescriptor_t input_desc,
                       const void *input,
                       const mluOpTensorDescriptor_t rois_desc,

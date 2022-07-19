@@ -226,6 +226,12 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  *    Input. The spatial_scale data.
  *  @param[in] group_size
  *    Input. The group_size data.
+ *  @param[in] pooled_height
+ *    Input. The pooled_height data.
+ *  @param[in] pooled_width
+ *    Input. The pooled_width data.
+ *  @param[in] output_dim
+ *    Input. The output_dim data.
  *  @param[in] input_desc
  *    Input. The descriptor of the input tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
@@ -310,7 +316,9 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  */
 mluOpStatus_t MLUOP_WIN_API 
 mluOpPsRoiPoolForward(mluOpHandle_t handle,
+                      const int pooled_height, const int pooled_width,
                       const float spatial_scale, const int group_size,
+                      const int output_dim,
                       const mluOpTensorDescriptor_t input_desc,
                       const void *input,
                       const mluOpTensorDescriptor_t rois_desc,
@@ -329,19 +337,18 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  *  @param[in] handle
  *    Input. Handle to a MLUOP context that is used to manage MLU devices
  *    and queues in the psroipool_forward operation.
- *  @param[in] output_desc
- *    Input. The descriptor of the output tensor. For detailed information,
- *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] output_dim
+ *    Input. The size of output_dim data. 
  *  @param[out] size
  *    Output. The size of extra space is output_dim * sizeof(uint32_t).
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *  @par Scale Limitation
- *  - The output_desc->dims[3] should be greater than 1.
+ *  - The output_dim should be greater than 1.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
-                               const mluOpTensorDescriptor_t output_desc,
+                               const int output_dim,
                                size_t *size);
 
 /*!
