@@ -46,7 +46,7 @@ class Logaddexp2():
         self.single_buffer_size = (TARGET(target).nram_size - 128*2**10) // 8
         self.single_buffer_size = self.single_buffer_size // 128 * 128
         self.tcp.launch_task(self.task_num, 1, 1)
-        self.tcp.launch_cluster(TaskType.UNION1)
+        self.tcp.launch_cluster(TaskType.BLOCK)
 
     def compute_body(self):
         """Return logaddexp2 function."""
