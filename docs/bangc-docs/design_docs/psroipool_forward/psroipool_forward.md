@@ -36,18 +36,18 @@
 | 需求来源               | Pytorch                              |
 | 应用网络               | R-FCN                            |
 | 输入数据类型           |  float                             |
-| 输入 Shape            | input_data: [batches, hi, wi，channels]; input_rois: [rois_num，rois_offset]   |
-| 输入 Layout           | input_data: NHWC; input_rois: ARRAY              |
-| 输出数据类型            |  output_data: float; mapping_channel: int                                |
-| 输出 Shape            | output_data: [rois_num, ho, wo，output_dims]; mapping_channel: [rois_num, ho, wo，output_dims]        |
-| 输出 Layout              | output_data: NHWC; mapping_channel: NHWC                                  |
+| 输入 Shape            | input: [batches, hi, wi，channels]; rois: [rois_num，rois_offset]   |
+| 输入 Layout           | input: NHWC; rois: ARRAY              |
+| 输出数据类型            |  output: float; mapping_channel: int                                |
+| 输出 Shape            | output: [rois_num, ho, wo，output_dims]; mapping_channel: [rois_num, ho, wo，output_dims]        |
+| 输出 Layout              | output: NHWC; mapping_channel: NHWC                                  |
 | 模式(可选）                      |                                           |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理              | 无                         |
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无                           |
 | 是否需要支持原位                                                             | 否         |
 | 是否需要支持 stride 机制                                                     | 否                                                           |
 | 是否需要支持广播                                                             | 否                                                           |
-| 0 元素检查是否直接返回                                                       | input_data(是, return MLUOP_STATUS_SUCCESS) input_rois(否，return MLUOP_STATUS_BAD_PARAM)                               |
+| 0 元素检查是否直接返回                                                       | input(是, return MLUOP_STATUS_SUCCESS) rois(否，return MLUOP_STATUS_BAD_PARAM)                               |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)                               |                                                                |
 | 本次开发优先支持的规模/模式                                                  |                                |
 
@@ -66,10 +66,10 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 | 参数             | 语义                               | 类型（输入/输出） | 支持类型    | 物理布局   | 规模限制 |
 | ---------------- | ---------------------------------- | ----------------- | ----------- | ---------- | -------- |
 | handle           | 算子上下文信息                     | /                 | /           | /          | 无       |
-| input_data_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
-| input_data       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
-| input_rois_desc  | 输入roi的描述符                    | 输入              | mluOpTensorDescriptor_t | /          | 无       |
-| input_rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
+| input_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
+| input       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
+| rois_desc  | 输入roi的描述符                    | 输入              | mluOpTensorDescriptor_t | /          | 无       |
+| rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
 | workspace        | 用于辅助的GDRAM空间的指针          | 输入              | /           | /          | 无       |
 | workspace_size   | workspace空间的大小                | 输入              | size_t           | /          | 无       |
 | pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
@@ -77,8 +77,8 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 | group_size       |  组的大小                        | 输入             | uint32_t      | /       | 无       |
 | spatial_scale    | 变换的尺度                     | 输入              | float      |   /       | 无       |
 | output_dims      | 输出的channel                      | 输入              | uint32_t          | /          | 无       |
-| output_data_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
-| output_data      | 输出数据的指针                     | 输出              | float      | NHWC       | 无       |
+| output_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
+| output      | 输出数据的指针                     | 输出              | float      | NHWC       | 无       |
 | mapping_channel_desc | 输出mapping_channel的描述符            | 输入              | mluOpTensorDescriptor_t          | /          | 无       |
 | mapping_channel      | 输出mapping_channel数据的指针           | 输出              | int32_t      | NHWC       | 无       |
 
@@ -86,14 +86,14 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 
 | 限制类型     | 详细说明                                                                                                        |
 | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 数据类型限制 | 输入数据（包括input_data和intput_rois）和输出数据（output_data）的类型必须相同，而且仅支持float。输出数据（mapping_channel）类型必须是int。           |
-| 布局限制     | 对于input_data不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模，</br>roi的首位必须是batch_id。 |
+| 数据类型限制 | 输入数据（包括input和intput_rois）和输出数据（output）的类型必须相同，而且仅支持float。输出数据（mapping_channel）类型必须是int。           |
+| 布局限制     | 对于input不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模，</br>roi的首位必须是batch_id。 |
 | 数据规模限制 | 无                                                            |
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
 | 输入参数限制 | group_size=pooled_height=pooled_width,rois_offset=5,</br>group_size>=1,output_dim>=1,spatial_scale>0,</br>channels = pooled_height *pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batch - 1 |
-| nan/inf限制 | input_data支持nan/inf测例， input_rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
+| nan/inf限制 | input支持nan/inf测例， rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
 
 ### 1.5 验收标准
 
@@ -131,14 +131,14 @@ int psroi_pooling_forward_cuda(int pooled_height,
 mluOpStatus_t MLUOP_WIN_API 
 mluOpPsRoiPoolForward(mluOpHandle_t handle,
                       const float spatial_scale, const int group_size,
-                      const mluOpTensorDescriptor_t input_data_desc,
-                      const void *input_data,
-                      const mluOpTensorDescriptor_t input_rois_desc,
-                      const void *input_rois,
+                      const mluOpTensorDescriptor_t input_desc,
+                      const void *input,
+                      const mluOpTensorDescriptor_t rois_desc,
+                      const void *rois,
                       void *workspace,
                       const size_t workspace_size,
-                      const mluOpTensorDescriptor_t output_data_desc,
-                      void *output_data,
+                      const mluOpTensorDescriptor_t output_desc,
+                      void *output,
                       const mluOpTensorDescriptor_t mapping_channel_desc,
                       void *mapping_channel);
 ```
@@ -151,7 +151,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 
 ​	由上图可以看出，psroipool_forward的计算过程可以总结为：
 
-（1)step1，在原始图像Input_data:[batches,hi,wi,C]上计算出当前roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]的起始位置和终止位置。
+（1)step1，在原始图像input:[batches,hi,wi,C]上计算出当前roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]的起始位置和终止位置。
 
 （2)step2，通过roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]和output:[num_rois,pooled_height,pooled_width,output_dims]中pooled_height/pooled_width的比例，将当前roi平均划分为若干个bin，并且循环处理每一个bin.
 
@@ -245,12 +245,12 @@ nram划分如下：
 ### 3.6 测试用例设计
 
 ```c++
-(1)input_data:[1, 14, 14, 392], LAYOUT_NHWC, DTYPE_FLOAT
-   input_rois:[320，5], LAYOUT_ARRAY, DTYPE_FLOAT
+(1)input:[1, 14, 14, 392], LAYOUT_NHWC, DTYPE_FLOAT
+   rois:[320，5], LAYOUT_ARRAY, DTYPE_FLOAT
    output:[320, 7, 7, 8], LAYOUT_NHWC, DTYPE_FLOAT
    mapping_channels:[320, 7, 7, 8], LAYOUT_NHWC, DTYPE_INT32
    psroipool_forward_param{spatial_scale=1, group_size=7, output_dim=8, pooled_height=7, pooled_width=7}
-(2)input_data:[2, 14, 14,198], LAYOUT_NHWC, DTYPE_FLOAT
+(2)input:[2, 14, 14,198], LAYOUT_NHWC, DTYPE_FLOAT
    input:[493, 5], LAYOUT_ARRAY, DTYPE_FLOAT
    output:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_FLOAT
    mapping_channels:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_INT32
@@ -264,17 +264,17 @@ nram划分如下：
 
 1. handle != NULL
 
-2. input_data_desc != NULL
+2. input_desc != NULL
 
-3. input_data != NULL
+3. input != NULL
 
-4. input_rois_desc != NULL
+4. rois_desc != NULL
 
-5. input_rois != NULL
+5. rois != NULL
 
-6. output_data_desc != NULL    
+6. output_desc != NULL    
 
-7. output_data != NULL
+7. output != NULL
 
 8. mapping_channels_desc != NULL    
 
@@ -282,9 +282,9 @@ nram划分如下：
 
 - 针对零元素
 
-1. input_data: return MLUOP_STATUS_SUCCESS
+1. input: return MLUOP_STATUS_SUCCESS
 
-2. input_rois: return MLUOP_STATUS_BAD_PARAM
+2. rois: return MLUOP_STATUS_BAD_PARAM
 
 - 算子参数防呆
 
@@ -314,11 +314,11 @@ nram划分如下：
 
 13. channels == pooled_height * pooled_width * output_dim （channels指的是输入图像的C)
 
-14. input_data_desc->dim == 4
+14. input_desc->dim == 4
 
-15. input_rois_desc->dim == 2
+15. rois_desc->dim == 2
 
-16. output_data_desc->dim == 4
+16. output_desc->dim == 4
 
 17. mapping_channel_desc->dim == 4
 
