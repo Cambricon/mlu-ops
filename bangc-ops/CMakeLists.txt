@@ -20,6 +20,17 @@ if(${BUILD_COVERAGE_TEST} MATCHES "ON")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fprofile-instr-generate -fcoverage-mapping -D COVERAGE")
 endif()
 
+################################################################################
+# ASAN Check and memcheck
+################################################################################
+# -- leak detector
+if(${MLUOP_BUILD_ASAN_CHECK} MATCHES "ON")
+  message("--Address sanitizer enabled")
+  set(CMAKE_ASAN_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_ASAN_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_ASAN_FLAGS}")
+endif()
+
 # check `NEUWARE_HOME` env
 message(${NEUWARE_HOME})
 if(EXISTS ${NEUWARE_HOME})
