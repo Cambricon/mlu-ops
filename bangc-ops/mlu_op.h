@@ -243,7 +243,7 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  *  @param[in] rois
  *    Input. Pointer to the MLU memory that stores the rois tensor.
  *  @param[in] workspace
- *    Input. Pointer to the CPU memory that stores the extra workspace.
+ *    Input. Pointer to the MLU memory that stores the extra workspace.
  *  @param[in] workspace_size
  *    Input. The size of extra space is output_dim * sizeof(uint32_t).
  *  @param[in] output_desc
@@ -324,7 +324,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
                       const mluOpTensorDescriptor_t rois_desc,
                       const void *rois,
                       void *workspace,
-                      const size_t workspace_size,
+                      size_t workspace_size,
                       const mluOpTensorDescriptor_t output_desc,
                       void *output,
                       const mluOpTensorDescriptor_t mapping_channel_desc,

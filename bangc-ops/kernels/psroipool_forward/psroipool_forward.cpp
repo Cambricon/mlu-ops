@@ -53,7 +53,7 @@ static mluOpStatus_t paramCheck(
     const mluOpTensorDescriptor_t rois_desc,
     const mluOpTensorDescriptor_t output_desc,
     const mluOpTensorDescriptor_t mapping_channel_desc, void *workspace,
-    const size_t workspace_size) {
+    size_t workspace_size) {
   PARAM_CHECK(api, input_desc != NULL);
   PARAM_CHECK(api, rois_desc != NULL);
   PARAM_CHECK(api, output_desc != NULL);
@@ -120,7 +120,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
     const float spatial_scale, const int group_size, const int output_dim,
     const mluOpTensorDescriptor_t input_desc, const void *input,
     const mluOpTensorDescriptor_t rois_desc, const void *rois, void *workspace,
-    const size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
+    size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
     void *output, const mluOpTensorDescriptor_t mapping_channel_desc,
     void *mapping_channel) {
   const std::string api = "[mluOpPsRoiPoolForward]";
