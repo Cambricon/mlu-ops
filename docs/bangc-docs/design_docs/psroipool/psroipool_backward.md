@@ -205,7 +205,8 @@ tensor([[[[8., 0., 0.],
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
-| 输入参数限制 | pooled_height = pooled_width,rois_offset = 5,</br>output_dim >= 1,spatial_scale > 0,</br>channels = pooled_height * pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batches - 1 |
+| 输入参数限制 | pooled_height = pooled_width,rois_offset = 5,</br>output_dim >= 1,spatial_scale > 0,</br>channels = pooled_height * pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batches - 1, </br> mapping_channel的shape必须与top_grad的shape保持一致，并且其每个batches均要满足对channels间隔pooled_height * pooled_width的遍历，</br>
+例如：假设batches = 2, pooled_height = 2, pooled_width =2, output_dim = 3, channels = 2 * 2 * 3, 则mapping_channel为: [[[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]], [[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]]] |
 | nan/inf限制 | top_grad支持nan/inf测例，mapping_channel支持nan/inf, input_rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
 
 ### 1.5 验收标准
