@@ -345,6 +345,119 @@ mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
                                size_t *size);
 
 /*!
+ *  @brief Generate fixed size feature map for each Roi(Regions of Interest).
+ *
+ *  @param[in] handle
+ *    Input.  Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the psroipool_forward operation.
+ *  @param[in] pooled_height
+ *    Input. The pooled_height data.
+ *  @param[in] pooled_width
+ *    Input. The pooled_width data.
+ *  @param[in] output_dim
+ *    Input. The output_dim data.
+ *  @param[in] spatial_scale
+ *    Input. The spatial_scale data.
+ *  @param[in] top_grad_desc
+ *    Input. The descriptor of the top_grad tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] top_grad
+ *    Input. Pointer to the MLU memory that stores the top_grad tensor.
+ *  @param[in] rois_desc
+ *    Input. The descriptor of the rois tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] rois
+ *    Input. Pointer to the MLU memory that stores the rois tensor. 
+ *    NaN and INF datas are not supported.
+ *  @param[in] mapping_channel_desc
+ *    Input. The descriptor of the mapping_channel tensor. For detailed
+ *    information, see ::mluOpTensorDescriptor_t.
+ *  @param[in] mapping_channel
+ *    Input. Pointer to the MLU memory that stores the mapping_channel
+ *    tensor.
+ *  @param[in] workspace
+ *    Input. Pointer to the CPU memory that stores the extra workspace.
+ *  @param[in] workspace_size
+ *    Input. The size of extra space is batches * height * width * channels.
+ *  @param[in] bottom_grad_desc
+ *    Input. The descriptor of the bottom_grad tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] bottom_grad
+ *    Output. Pointer to the MLU memory that stores the bottom_grad tensor.
+ * 
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @par Formula
+ *  - See "psroipool_backward Operation" section in "Cambricon MLUOP User
+ *    Guide" for details.
+ * 
+ *  @par Data Type
+ *  - The supported data types of input and output tensors are as follows:
+ *     - Top_grad tensor: float.
+ *     - Rois tensor: float.
+ *     - Mapping_channel tensor: int.
+ *     - Bottom_grad tensor: float.
+ * 
+ *  @par Data Layout
+ *  - The supported data layout of \b top_grad, \b rois,
+ *    \b bottom_grad, \b mapping_channel are as follows:
+ * 
+ *   - Top_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Bottom_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
+ * 
+ *  @par Scale Limitation
+ *  - The spatial_scale should be greater than 0.
+ *  - THe output_dim should be greater than 1.
+ *  - The pooled_height should be equal to pooled_width.
+ *  - The channels should be equal to pooled_height * pooled_width * output_dim.
+ *  - The dimension of top_grad should be equal to 4.
+ *  - The dimension of rois should be equal to 2.
+ *  - The dimension of bottom_grad should be equal to 4.
+ *  - The dimension of mapping_channel should be equal to 4.
+ *  - The rois_offset should be equal to 5.
+ *  - The shape of roi should be [batch_id, roi_start_h, roi_start_w,
+ *    roi_end_h, roi_end_w], and the batch_id must between 0
+ *    and batch, the batch comes from top_grad.
+ *  - The top_grad[1] should be equal to pooled_height.
+ *  - The top_grad[2] should be equal to pooled_width.
+ *  - The top_grad[3] should be equal to output_dim.
+ *  - The top_grad[0] should be equal to mapping_channel_dims[0].
+ *  - The top_grad[1] should be equal to mapping_channel_dims[1].
+ *  - The top_grad[2] should be equal to mapping_channel_dims[2].
+ *  - The top_grad[3] should be equal to mapping_channel_dims[3].
+ *  - 
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * 
+ *  @par Note
+ *  - On MLU300 series, rois do not support NAN/INF.
+ * 
+ * @par Reference
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/
+ *   lib/model/psroi_pooling
+ */
+mluOpStatus_t MLUOP_WIN_API 
+mluOpPsRoiPoolBackward(mluOpHandle_t handle,
+                       const float spatial_scale, const int pooled_height,
+                       const float pooled_width, const int output_dim,
+                       const mluOpTensorDescriptor_t input_data_desc,
+                       const void *input_data,
+                       const mluOpTensorDescriptor_t input_rois_desc,
+                       const void *input_rois,
+                       void *workspace,
+                       const size_t workspace_size,
+                       const mluOpTensorDescriptor_t output_data_desc,
+                       void *output_data,
+                       const mluOpTensorDescriptor_t mapping_channel_desc,
+                       void *mapping_channel);
+
+/*!
  * @brief Generates fixed size feature map for each grid. Each value in the
  *   feature map is interpolated by bilinear sampling.
  *
@@ -407,6 +520,7 @@ mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/roi_crop
  */
+
 mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, const mluOpTensorDescriptor_t grid_desc,

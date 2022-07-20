@@ -81,12 +81,18 @@ void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogFloatFast(
     const void *x, void *y, int num, float coef);
 
 /* Psroipool */
-void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
+void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *bottom_data, void *bottom_rois, void *top_data, void *mapping_channel,
     int channels, int height, int width, int pooled_height, int pooled_width,
     int rois_num, int output_dim, int group_size, int rois_offset,
     float spatial_scale, int batch_size);
+void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *bottom_data, void *bottom_rois, void *top_data, void *mapping_channel,
+    int batch_size, int height, int width, int channels, int pooled_height,
+    int pooled_width, int output_dim, int rois_num, int rois_offset,
+    int group_size, float spatial_scale);
     
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
