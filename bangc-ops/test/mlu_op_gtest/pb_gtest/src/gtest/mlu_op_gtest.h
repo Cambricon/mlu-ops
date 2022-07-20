@@ -27,7 +27,7 @@
 #include "evaluator.h"
 #include "case_collector.h"
 #include "thread_pool.h"
-#include "tools.h"
+#include "pb_test_tools.h"
 
 using namespace ::testing;  // NOLINT
 

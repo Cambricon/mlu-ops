@@ -20,7 +20,10 @@ __mlu_global__ void MLUBlockKernelGdramFillZero(void *gdram_ptr,
   if (taskId < rem_n) {
     seg_n += 1;
   }
-  __gdramset((float *)gdram_ptr + n_first_per, seg_n, zero);
+
+  if (seg_n != 0) {
+    __gdramset((float *)gdram_ptr + n_first_per, seg_n, zero);
+  }
 }
 
 void MLUOP_WIN_API mluOpBlockKernelFillZero(cnrtDim3_t k_dim,

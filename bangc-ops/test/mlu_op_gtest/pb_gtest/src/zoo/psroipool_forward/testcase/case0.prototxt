@@ -1,0 +1,73 @@
+op_name: "psroipool_forward"
+input {
+  id: "input1"
+  shape: {
+    dims: 4
+    dims: 10
+    dims: 10
+    dims: 90
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 15
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 2
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 0.0000
+  value_f: 2.0000
+  value_f: 3.0000
+  value_f: 6.0000
+  value_f: 9.0000
+  value_f: 1.0000
+  value_f: 2.0000
+  value_f: 3.0000
+  value_f: 6.0000
+  value_f: 9.0000
+}
+output {
+  id: "output1"
+  shape: {
+    dims: 2
+    dims: 3
+    dims: 3
+    dims: 10
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "output2"
+  shape: {
+    dims: 2
+    dims: 3
+    dims: 3
+    dims: 10
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+}
+psroipool_forward_param {
+  output_dim: 10
+  pooled_height: 3
+  pooled_width: 3
+  spatial_scale: 0.0625
+  group_size: 3
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

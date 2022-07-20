@@ -16,7 +16,7 @@
 #include <unordered_map>
 #include <utility>
 #include <functional>
-#include "tools.h"
+#include "pb_test_tools.h"
 #include "parser.h"
 
 namespace mluoptest {
@@ -30,6 +30,7 @@ namespace mluoptest {
 
   void Parser::parse(const std::string &file) {
     proto_node_ = new Node;
+    setCurPbPath(file);
     GTEST_CHECK(readMessageFromFile(file, proto_node_),
                 "Parser: parse *pb/*prototxt failed.");
     GTEST_CHECK(proto_node_->has_op_name(),
@@ -175,18 +176,22 @@ namespace mluoptest {
           checkRandomParam(pt);
         }
         break;
-      case VALUE_PATH:
-        // if found path(only) in pb, but can't access this path, throw.
-        GTEST_CHECK((access(pt->path().c_str(), 4) == -1),
+      case VALUE_PATH: {
+        // if found path(only) in pb, but can't access this
+        // path, throw.
+        auto cur_pb_path = pb_path_ + pt->path();
+        GTEST_CHECK((access(cur_pb_path.c_str(), 4) != -1),
                     "Parser: open path saved in *prototxt failed.");
         break;
+      }
       case VALUE_INVALID:
         // check output, if may shape empty, value is empty, and not random
         // param, so don't need check.
         break;
-      default:
+      default: {
         GTEST_CHECK(false,
                     "Parser: got unsupported value type, parse tensor failed.");
+      }
     }
   }
 
@@ -405,17 +410,22 @@ namespace mluoptest {
   }
 
   // get value by random data param
-  void Parser::getTensorValueRandom(Tensor *pt,
-                                    float *data,
-                                    size_t count) {
+  void Parser::getTensorValueRandom(Tensor *pt, float *data, size_t count) {
     generateRandomData(data, count, pt->mutable_random_data(), pt->dtype());
   }
 
   // get value by random data param
-  void Parser::getTensorValueByFile(Tensor *pt,
-                                    float *data,
-                                    size_t count) {
-    readDataFromFile(pt->path(), data, count);
+  void Parser::getTensorValueByFile(Tensor *pt, float *data, size_t count) {
+    // readDataFromFile(pt->path(), data, count);
+    auto cur_pb_path = pb_path_ + pt->path();
+    std::ifstream fin(cur_pb_path, std::ios::in | std::ios::binary);
+    size_t tensor_length = count * getTensorSize(pt);
+    fin.read((char *)data, tensor_length);
+    if (!fin) {
+      LOG(ERROR) << "read data in file failed.";
+      throw std::invalid_argument(std::string(__FILE__) + "+" +
+                                  std::to_string(__LINE__));
+    }
   }
 
   // set value in proto to meta_tensor.ptr
@@ -694,6 +704,38 @@ namespace mluoptest {
     } else {
       return outputs_.at(index - inputs_.size());
     }
+  }
+
+  void Parser::setCurPbPath(const std::string &filename) {
+    if (filename.find("/") == std::string::npos) {
+      pb_path_ = filename;
+    } else {
+      auto pos_pb = filename.find_last_of("/");
+      pb_path_    = filename.substr(0, pos_pb + 1);
+    }
+  }
+
+  size_t Parser::getTensorSize(Tensor *pt) {
+#define GET_WIDTH_TENSOR_TYPE(TENSOR_DTYPE, WIDTH)                             \
+  case TENSOR_DTYPE:                                                           \
+    return WIDTH;
+    switch (pt->dtype()) {
+      GET_WIDTH_TENSOR_TYPE(DTYPE_DOUBLE, 8);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_INT64, 8);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_UINT64, 8);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_FLOAT, 4);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_INT32, 4);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_UINT32, 4);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_INT16, 2);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_UINT16, 2);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_INT8, 1);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_UINT8, 1);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_HALF, 2);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_BOOL, 1);
+      default:
+        GTEST_CHECK(false, "Parser: Unknown tensor DTYPE.");
+    }
+#undef GET_WIDTH_TENSOR_TYPE
   }
 
 } // namespace mluoptest
