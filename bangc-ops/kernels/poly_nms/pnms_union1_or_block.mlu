@@ -1,0 +1,112 @@
+/*************************************************************************
+ * Copyright (C) [2019-2022] by Cambricon, Inc.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "mlu.h"
+#include "kernels/kernel.h"
+#include "core/mlu_op_core.h"
+#include "kernels/poly_nms/pnms.h"
+#include "pnms_detection.h"
+
+#define NRAM_BUF_SIZE (MAX_NRAM_SIZE)
+// #define SIZE_SRAM_BUF (MAX_SRAM_SIZE + 128 * 1024)
+#define SIZE_SRAM_BUF (128 * 1024)
+
+__nram__ char nram_buffer[NRAM_BUF_SIZE];
+__mlu_shared__ char sram_buffer[SIZE_SRAM_BUF];
+
+__mlu_func__ void MLUPNMSTranspose(const void *input_boxes,
+                                   const int input_num_boxes,
+                                   const int input_stride, void *output,
+                                   const mluOpDataType_t data_type_input) {
+  __bang_printf("launch MLUPNMSTranspose start \n");
+
+  if (coreId == 0) {
+    uint32_t task_dim = 1;
+    uint32_t task_id = 0;
+
+    uint32_t input_boxes_num = input_num_boxes;
+    uint32_t boxes_per_core = input_num_boxes / task_dim;
+    uint32_t boxes_last_core = boxes_per_core + input_num_boxes % task_dim;
+    uint32_t input_offset = task_id * boxes_per_core * input_stride;
+
+    input_boxes_num =
+        (task_id == (task_dim - 1)) ? boxes_last_core : boxes_per_core;
+
+    uint32_t max_seg_box_num = FLOOR_ALIGN(
+        NRAM_BUF_SIZE / 2 / sizeof(float) / input_stride, NFU_ALIGN_SIZE);
+
+    uint32_t repeat = boxes_per_core / max_seg_box_num;
+    uint32_t remain = boxes_per_core % max_seg_box_num;
+    uint32_t remain_data_num = remain * input_stride;
+    uint32_t max_seg_data_num = max_seg_box_num * input_stride;
+
+    float *trans_boxes;
+    float *boxes;
+    boxes = (float *)nram_buffer;
+    trans_boxes = boxes + max_seg_data_num;
+
+    for (int loop = 0; loop <= repeat; loop++) {
+      if (loop == repeat && remain == 0) {
+        break;
+      }
+      int actual_box_num = loop == repeat ? remain_data_num : max_seg_data_num;
+
+      __bang_printf("trans before:input_offset=%d, actual_box_num=%d\n",
+                    input_offset, actual_box_num);
+      __memcpy((char *)boxes, (char *)input_boxes + input_offset * 4 +
+                                  loop * actual_box_num * 4,
+               actual_box_num * 4, GDRAM2NRAM);
+      __bang_transpose((float *)trans_boxes, (float *)boxes,
+                       actual_box_num / input_stride, input_stride);
+
+      __memcpy((char *)output + input_offset * 4 + loop * actual_box_num * 4,
+               (char *)trans_boxes, actual_box_num * 4, NRAM2GDRAM);
+    }
+  }
+  __sync_cluster();
+  __bang_printf("launch MLUPNMSTranspose end\n");
+}
+
+__mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
+                                         int input_num_boxes, int input_stride,
+                                         const float iou_thresh,
+                                         void *result_num, void *output,
+                                         const mluOpDataType_t data_type_input,
+                                         void *workspace) {
+  __bang_printf("mluPolyNms: iou_threshold: %f \n", iou_thresh);
+
+  // workspace: loop_stop_flag |  trans_boxes
+  void *trans_boxes = (char *)workspace + 1 * sizeof(int32_t);
+
+  __bang_printf("[cnnlPolyNms] launch transpose kernel start.\n");
+  MLUPNMSTranspose(input_boxes, input_num_boxes, input_stride, trans_boxes,
+                   data_type_input);
+  __bang_printf("[cnnlPolyNms] launch transpose kernel end.\n");
+
+  uint32_t input_data_num = input_stride * input_num_boxes;  // N*P
+  input_stride = input_num_boxes;                            // N
+  // PERF_TIME_BEGIN();
+
+  uint32_t *out_data = (uint32_t *)output;
+  switch (data_type_input) {
+    default: {
+      __bang_printf("[cnnlPolyNms] Not Implemented.\n");
+    }
+    case MLUOP_DTYPE_FLOAT: {
+      pnms_detection<float, uint32_t>(
+          (uint32_t *)result_num, out_data, (float *)trans_boxes,
+          (float *)nram_buffer, NRAM_BUF_SIZE, (float *)sram_buffer, workspace,
+          taskDim, input_data_num, input_stride, iou_thresh);
+    }; break;
+  }
+  // PERF_TIME_END();
+}

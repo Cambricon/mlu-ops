@@ -119,6 +119,7 @@ message Node {
   optional LogParam    log_param                      = 4002;     // param
   optional SqrtParam   sqrt_param                     = 4003;  // param
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
+  optional PolyNmsParam poly_nms_param = 1244;
 }
 
 
@@ -196,4 +197,9 @@ message PsRoiPoolForwardParam{
   optional int32 output_dim = 3 [default = 8];
   optional int32 pooled_height = 4 [default = 7];
   optional int32 pooled_width = 5 [default = 7];
+}
+
+// param to call mluOpPolyNms()
+message PolyNmsParam {
+  required float iou_threshold = 1 [default = 0.2];
 }
