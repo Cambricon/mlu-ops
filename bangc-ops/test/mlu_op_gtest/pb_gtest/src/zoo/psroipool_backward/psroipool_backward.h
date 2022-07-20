@@ -21,6 +21,8 @@ class PsroipoolBackwardExecutor : public Executor {
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
+  void workspaceMalloc() override;
+  void workspaceFree() override;
   int64_t getTheoryOps() override;
 
  private:
@@ -31,9 +33,15 @@ class PsroipoolBackwardExecutor : public Executor {
   void transposeNhwcToNchw(const float *in, const uint32_t dim0,
                            const uint32_t dim1, const uint32_t dim2,
                            const uint32_t dim3, float *out);
-  int output_dim_;
+  int batch_size_;
+  int height_;
+  int width_;
+  int channels_;
   int pooled_height_;
   int pooled_width_;
+  int output_dim_;
+  int rois_num_;
+  int rois_offset_;
   float spatial_scale_;
 };
 }  // namespace mluoptest

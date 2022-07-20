@@ -354,11 +354,11 @@ __mlu_func__ void psRoiAvgPoolBackward(
 template <typename T>
 __mlu_func__ void psRoiAvgPoolBackwardKernel(
     T *nram_buffer, T *top_grad, T *input_rois, T *bottom_grad,
-    int *mapping_channel, int channels, int height, int width,
-    int pooled_height, int pooled_width, int rois_num, int output_dim,
-    int rois_offset, T spatial_scale, int batch_size) {
+    int *mapping_channel, int batch_size, int height, int width, int channels,
+    int pooled_height, int pooled_width, int output_dim, int rois_num,
+    int rois_offset, T spatial_scale) {
   int num_deal = rois_num * pooled_height * pooled_width * output_dim;
-  int num_per_core = num_deal / taskDim;  // every core deal with
+  int num_per_core = num_deal / taskDim;
   int pre_data_for_task = taskId * num_per_core;
   int remainder = num_deal % taskDim;
   T *top_grad_ptr = top_grad;
@@ -383,26 +383,25 @@ __mlu_func__ void psRoiAvgPoolBackwardKernel(
 
 __mlu_global__ void MLUKernelPsroipoolBackward(
     void *top_grad, void *input_rois, void *bottom_grad, void *mapping_channel,
-    int channels, int height, int width, int pooled_height, int pooled_width,
-    int rois_num, int output_dim, int rois_offset, float spatial_scale,
-    int batch_size) {
+    int batch_size, int height, int width, int channels, int pooled_height,
+    int pooled_width, int output_dim, int rois_num, int rois_offset,
+    float spatial_scale) {
   __nram__ uint8_t nram_buffer[NRAM_BYTE_CNT];
   psRoiAvgPoolBackwardKernel((float *)nram_buffer, (float *)top_grad,
                              (float *)input_rois, (float *)bottom_grad,
-                             (int *)mapping_channel, channels, height, width,
+                             (int *)mapping_channel, batch_size, height, width,
                              pooled_height, pooled_width, rois_num, output_dim,
-                             rois_offset, spatial_scale, batch_size);
+                             rois_offset, spatial_scale);
 }
 
 void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *top_grad, void *input_rois, void *bottom_grad, void *mapping_channel,
-    int channels, int height, int width, int pooled_height, int pooled_width,
-    int rois_num, int output_dim, int rois_offset, float spatial_scale,
-    int batch_size) {
+    int batch_size, int height, int width, int channels, int pooled_height,
+    int pooled_width, int output_dim, int rois_num, int rois_offset,
+    float spatial_scale) {
   MLUKernelPsroipoolBackward<<<k_dim, k_type, queue>>>(
-      (float *)top_grad, (float *)input_rois, (float *)bottom_grad,
-      (int *)mapping_channel, channels, height, width, pooled_height,
-      pooled_width, rois_num, output_dim, rois_offset, spatial_scale,
-      batch_size);
+      top_grad, input_rois, bottom_grad, mapping_channel, batch_size, height,
+      width, channels, pooled_height, pooled_width, output_dim, rois_num,
+      rois_offset, spatial_scale);
 }

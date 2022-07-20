@@ -43,6 +43,26 @@ static void policyFuncPsroipoolBackward(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
 }
 
+// transpose [batch_size, height, width, output_dim * (pooled_height *
+// pooled_width)]
+// -> [batch_size, height, width, (pooled_height * pooled_width) * output_dim]
+static void transposeFunc(const float *in, const int batch_size,
+                          const int height, const int width,
+                          const int output_dim, const int pooled_height,
+                          const int pooled_width, float *workspace,
+                          size_t workspace_size) {
+  for (int n = 0; n < dim0; n++) {
+    for (int c = 0; c < dim1; c++) {
+      for (int h = 0; h < dim2; h++) {
+        for (int w = 0; w < dim3; w++) {
+          out[n * dim1 * dim2 * dim3 + h * dim1 * dim3 + w * dim1 + c] =
+              in[n * dim1 * dim2 * dim3 + c * dim2 * dim3 + h * dim3 + w];
+        }
+      }
+    }
+  }
+}
+
 mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
                                                            const int output_dim,
                                                            size_t *size) {
@@ -55,7 +75,31 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t psroipool_forward_check(
+mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
+                                                           const int output_dim,
+                                                           size_t *size) {
+  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", handle != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", size != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", output_dim >= 1);
+  *size = output_dim * sizeof(uint32_t);  // the offset of each pixel
+
+  VLOG(5) << "workspace size = " << *size << ".";
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolBackwardWorkspaceSize(
+    mluOpHandle_t handle, const int bootom_grad_count, size_t *size) {
+  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", handle != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", size != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]",
+              bootom_grad_count >= 1);
+  *size = bootom_grad_count * sizeof(float);  // the offset of each pixel
+
+  VLOG(5) << "workspace size = " << *size << ".";
+  return MLUOP_STATUS_SUCCESS;
+}
+
+static mluOpStatus_t psRoiPoolForwardCheck(
     const std::string &api, const float spatial_scale, const int group_size,
     const void *input_data, const void *input_rois, const void *output_data,
     const void *mapping_channel, const mluOpTensorDescriptor_t input_data_desc,
@@ -121,7 +165,7 @@ static mluOpStatus_t psroipool_forward_check(
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t psroipool_backward_check(
+static mluOpStatus_t psRoiPoolForwardCheck(
     const std::string &api, const float spatial_scale, const void *top_grad,
     const void *input_rois, const void *mapping_channel,
     const void *bottom_grad, const mluOpTensorDescriptor_t top_grad_desc,
@@ -180,6 +224,69 @@ static mluOpStatus_t psroipool_backward_check(
   return MLUOP_STATUS_SUCCESS;
 }
 
+static mluOpStatus_t psRoiPoolBackwardCheck(
+    const std::string &api, const int pooled_height, const float pooled_width,
+    const int output_dim, const float spatial_scale, const void *top_grad,
+    const void *rois, const const void *mapping_channel, void *bottom_grad,
+    const mluOpTensorDescriptor_t top_grad_desc,
+    const mluOpTensorDescriptor_t rois_desc,
+    const mluOpTensorDescriptor_t mapping_channel_desc,
+    const mluOpTensorDescriptor_t bottom_grad_desc) {
+  PARAM_CHECK(api, top_grad_desc != NULL);
+  PARAM_CHECK(api, rois_desc != NULL);
+  PARAM_CHECK(api, bottom_grad_desc != NULL);
+  PARAM_CHECK(api, mapping_channel_desc != NULL);
+  PARAM_CHECK(api, top_grad_desc->dim == 4);
+  PARAM_CHECK(api, rois_desc->dim == 2);
+  PARAM_CHECK(api, bottom_grad_desc->dim == 4);
+  PARAM_CHECK(api, mapping_channel_desc->dim == 4);
+  // check the input and output datatype
+  PARAM_CHECK(api, top_grad_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, rois_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, bottom_grad_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, mapping_channel_desc->dtype == MLUOP_DTYPE_INT32);
+  // check layout
+  PARAM_CHECK(api, top_grad_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, bottom_grad_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, mapping_channel_desc->layout == MLUOP_LAYOUT_NHWC);
+  // param check
+  PARAM_CHECK(api, pooled_height == top_grad_desc->dims[1]);
+  PARAM_CHECK(api, pooled_width == top_grad_desc->dims[2]);
+  PARAM_CHECK(api, output_dim == top_grad_desc->dims[3]);
+  // pooled_height == pooled_width
+  PARAM_CHECK(api, top_grad_desc->dims[1] == top_grad_desc->dims[2]);
+  // output_dim >= 1.
+  PARAM_CHECK(api, top_grad_desc->dims[3] >= 1);
+  // spatial_scale > 0
+  PARAM_CHECK(api, spatial_scale > 0);
+  // rois_offset = 5.
+  PARAM_CHECK(api, rois_desc->dims[1] == 5);
+  // roi_num check
+  PARAM_CHECK(api, top_grad_desc->dims[0] == rois_desc->dims[0]);
+  // channels == pooled_height * pooled_width * output_dim
+  PARAM_CHECK(api, bottom_grad_desc->dims[3] == top_grad_desc->dims[1] *
+                                                    top_grad_desc->dims[2] *
+                                                    top_grad_desc->dims[3]);
+  PARAM_CHECK(api, top_grad_desc->dims[0] == mapping_channel_desc->dims[0]);
+  PARAM_CHECK(api, top_grad_desc->dims[1] == mapping_channel_desc->dims[1]);
+  PARAM_CHECK(api, top_grad_desc->dims[2] == mapping_channel_desc->dims[2]);
+  PARAM_CHECK(api, top_grad_desc->dims[3] == mapping_channel_desc->dims[3]);
+  if (mluOpGetTensorElementNum(top_grad_desc) == 0 &&
+      mluOpGetTensorElementNum(mapping_channel_desc) == 0) {
+    VLOG(5) << api << " Input_data skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
+  }
+  if (mluOpGetTensorElementNum(input_rois_desc) == 0) {
+    LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  PARAM_CHECK(api, top_grad != NULL);
+  PARAM_CHECK(api, rois != NULL);
+  PARAM_CHECK(api, bottom_grad != NULL);
+  PARAM_CHECK(api, mapping_channel != NULL);
+  return MLUOP_STATUS_SUCCESS;
+}
+
 mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
     mluOpHandle_t handle, const float spatial_scale, const int group_size,
     const mluOpTensorDescriptor_t input_data_desc, const void *input_data,
@@ -214,6 +321,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   policyFuncPsroipoolForward(handle, &k_dim, &k_type, rois_sum);
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
+
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForward(
       k_dim, k_type, handle->queue, (void *)input_data, (void *)input_rois,
       (void *)output_data, (void *)mapping_channel, channels, height, width,
@@ -223,27 +331,29 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
-    mluOpHandle_t handle, const float spatial_scale,
+    mluOpHandle_t handle, const int pooled_height, const float pooled_width,
+    const int output_dim, const float spatial_scale,
     const mluOpTensorDescriptor_t top_grad_desc, const void *top_grad,
-    const mluOpTensorDescriptor_t input_rois_desc, const void *input_rois,
+    const mluOpTensorDescriptor_t rois_desc, const void *rois,
     const mluOpTensorDescriptor_t mapping_channel_desc,
     const mluOpTensorDescriptor_t bottom_grad_desc, const void *mapping_channel,
-    void *bottom_grad) {
+    void *bottom_grad, void *workspace, size_t workspace_size) {
   const std::string api = "[mluOpPsRoiPoolBackward]";
   PARAM_CHECK(api, handle != NULL);
   const int batch_size = bottom_grad_desc->dims[0];
   const int height = bottom_grad_desc->dims[1];
   const int width = bottom_grad_desc->dims[2];
   const int channels = bottom_grad_desc->dims[3];
-  const int rois_sum = top_grad_desc->dims[0];
   const int pooled_height = top_grad_desc->dims[1];
   const int pooled_width = top_grad_desc->dims[2];
   const int output_dim = top_grad_desc->dims[3];
-  const int rois_offset = input_rois->dims[1];
+  const int rois_num = rois_desc->dims[0];
+  const int rois_offset = rois->dims[1];
 
-  mluOpStatus_t ret = psroipool_backward_check(
-      api, spatial_scale, top_grad, input_rois, mapping_channel, bottom_grad,
-      top_grad_desc, input_rois_desc, mapping_channel_desc, bottom_grad_desc);
+  mluOpStatus_t ret = psRoiPoolBackwardCheck(
+      api, pooled_height, pooled_width, output_dim, spatial_scale, top_grad,
+      rois, mapping_channel, bottom_grad, top_grad_desc, rois_desc,
+      mapping_channel_desc, bottom_grad_desc);
   if (ret != MLUOP_STATUS_SUCCESS) {
     LOG(ERROR) << api
                << " Error found during element verification, please check.";
@@ -255,10 +365,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   policyFuncPsroipoolBackward(handle, &k_dim, &k_type);
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
+
+  // gdram set zero
+  int gd_num = batch_size * height * width * channels;
+  KERNEL_CHECK((mluOpBlockKernelFillZero(k_dim, k_type, handle->queue, gd_num,
+                                         bottom_grad)));
+  VLOG(5) << "Kernel mluOpBlockKernelFillZero.";
+
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolBackward(
-      k_dim, k_type, handle->queue, (void *)top_grad, (void *)input_rois,
-      (void *)bottom_grad, (void *)mapping_channel, channels, height, width,
-      pooled_height, pooled_width, rois_sum, output_dim, rois_offset,
-      spatial_scale, batch_size)));
+      k_dim, k_type, handle->queue, top_grad, rois, bottom_grad,
+      mapping_channel, batch_size, height, width, channels, pooled_height,
+      pooled_width, output_dim, rois_num, rois_offset, spatial_scale)));
+
   return MLUOP_STATUS_SUCCESS;
 }
