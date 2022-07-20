@@ -45,7 +45,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t param_and_pointer_check(
+static mluOpStatus_t paramCheck(
     const std::string &api, const int pooled_height, const int pooled_width,
     const float spatial_scale, const int group_size, const int output_dim,
     const void *input, const void *rois, const void *output,
@@ -132,7 +132,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   const int rois_sum = output_desc->dims[0];
   const int rois_offset = rois_desc->dims[1];
 
-  mluOpStatus_t ret = param_and_pointer_check(
+  mluOpStatus_t ret = paramCheck(
       api, pooled_height, pooled_width, spatial_scale, group_size, output_dim,
       input, rois, output, mapping_channel, input_desc, rois_desc, output_desc,
       mapping_channel_desc, workspace, workspace_size);
@@ -148,9 +148,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForward(
-      k_dim, k_type, handle->queue, (void *)input, (void *)rois, (void *)output,
-      (void *)mapping_channel, batch_size, height, width, channels,
-      pooled_height, pooled_width, output_dim, group_size, rois_sum,
-      rois_offset, spatial_scale)));
+      k_dim, k_type, handle->queue, input, rois, output, mapping_channel,
+      batch_size, height, width, channels, pooled_height, pooled_width,
+      output_dim, group_size, rois_sum, rois_offset, spatial_scale)));
   return MLUOP_STATUS_SUCCESS;
 }

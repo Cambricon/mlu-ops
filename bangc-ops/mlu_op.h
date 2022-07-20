@@ -267,18 +267,18 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  * 
  *  @par Data Type
  *  - The supported data types of input and output tensors are as follows:
- *     - input tensor: float.
- *     - rois tensor: float.
- *     - output tensor: float.
+ *     - Input tensor: float.
+ *     - Rois tensor: float.
+ *     - Output tensor: float.
  *     - Mapping_channel tensor: int32.
  * 
  *  @par Data Layout
  *  - The supported data layout of \b input, \b rois,
  *    \b output, \b mapping_channel are as follows:
  * 
- *   - input tensor: \p MLUOP_LAYOUT_NHWC.
- *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - Rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor: \p MLUOP_LAYOUT_NHWC.
  *   - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
  * 
  *  @par Scale Limitation
@@ -288,10 +288,10 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  *  - The group_size should be equal to pooled_height.
  *  - The pooled_height should be equal to pooled_width.
  *  - The channels should be equal to pooled_height * pooled_width * output_dim.
- *  - The dimension of input should be equal to 4.
- *  - The dimension of rois should be equal to 2.
- *  - The dimension of output should be equal to 4.
- *  - The dimension of mapping_channel should be equal to 4.
+ *  - The dimension of \b input should be equal to 4.
+ *  - The dimension of \b rois should be equal to 2.
+ *  - The dimension of \b output should be equal to 4.
+ *  - The dimension of \b mapping_channel should be equal to 4.
  *  - The rois_offset should be equal to 5.
  *  - The shape of roi should be [batch_id, roi_start_h, roi_start_w,
  *    roi_end_h, roi_end_w], and the batch_id must between 0
@@ -308,7 +308,7 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
  *  - None.
  * 
  *  @par Note
- *  - On MLU300 series, rois do not support NAN/INF.
+ *  - On MLU300 series, \b rois does not support NAN/INF.
  * 
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/
@@ -331,16 +331,15 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
                       void *mapping_channel);
 
 /*!
- *  @brief Get extra space size that is needed in psroipool_forward operation,
-      the extra space size is output_dim * sizeof(uint32_t).
+ *  @brief Gets extra space size that is needed in psroipool_forward operation.
  *
  *  @param[in] handle
  *    Input. Handle to a MLUOP context that is used to manage MLU devices
  *    and queues in the psroipool_forward operation.
  *  @param[in] output_dim
- *    Input. The size of output_dim data. 
+ *    Input. An integer which indicates the channel of output.  
  *  @param[out] size
- *    Output. The size of extra space is output_dim * sizeof(uint32_t).
+ *    Output. A host pointer to the returned size of extra space in bytes.
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *  @par Scale Limitation
