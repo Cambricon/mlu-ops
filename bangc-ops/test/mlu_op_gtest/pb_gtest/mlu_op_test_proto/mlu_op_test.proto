@@ -191,10 +191,10 @@ message DivParam {
 }
 
 message PsroipoolBackwardParam{
-  optional int32 output_dim = 2 [default = 8];
-  optional int32 pooled_height = 3 [default = 7];
-  optional int32 pooled_width = 4 [default = 7];
-  optional float spatial_scale = 6 [default = 0.0625];
+  optional int32 output_dim = 1 [default = 8];
+  optional int32 pooled_height = 2 [default = 7];
+  optional int32 pooled_width = 3 [default = 7];
+  optional float spatial_scale = 4 [default = 0.0625];
 }
 
 // param to call mluOpPsRoiPoolForward()
