@@ -47,7 +47,7 @@
 | 是否需要支持原位           | 否         |
 | 是否需要支持 stride 机制   | 否                                                           |
 | 是否需要支持广播           | 否                                                           |
-| 0 元素检查是否直接返回      | top_grad: (是, return MLUOP_STATUS_SUCCESS); mapping_channel:</br>(是, return MLUOP_STATUS_SUCCESS); </br>rois: (否，return MLUOP_STATUS_BAD_PARAM)                                |
+| 0 元素检查是否直接返回      | top_grad: (是, return MLUOP_STATUS_SUCCESS); </br>mapping_channel:(是, return MLUOP_STATUS_SUCCESS); </br>rois: (否，return MLUOP_STATUS_BAD_PARAM); </br>bottom_grad: (是, return MLUOP_STATUS_SUCCESS)         |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)                               |                                                                |
 | 本次开发优先支持的规模/模式                                                  |                                |
 
@@ -62,23 +62,27 @@
 竞品中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与竞品对齐。
 
 ```
-top_grad: shape is  [2, 2, 2, 1]
-          tensor([[[1., 1.],
-                   [1., 1.]],
-                  [[1., 1.],
-                   [1., 1.]]], device='cuda:0')
-mapping_channel: shape is [2, 2, 2, 1]
-                 tensor([[[0, 1],
-                          [2, 3]],
-                         [[0, 1],
-                          [2, 3]]], device='cuda:0')
+
+接口：
+psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, self.pooled_width, self.spatial_scale, self.output_dim,  \
+        self.output, self.rois, grad_input, self.mappingchannel)
+
+{pooled_height = 2, pooled_width = 2, spatial_scale = 0.25, output_dim = 1}
+top_grad: shape is  [2, 1, 2, 2]
+          tensor([[[[1., 1.],
+                    [1., 1.]]],
+                  [[[1., 1.],
+                    [1., 1.]]]], device='cuda:0')
+mapping_channel: shape is [2, 1, 2, 2]
+                 tensor([[[[0, 1],
+                           [2, 3]]],
+                         [[[0, 1],
+                          [2, 3]]]], device='cuda:0')
 rois: shape is [2, 5]
       tensor([[0.0000, 1.0000, 2.0000, 2.0000, 3.0000],
               [0.0000, 1.0000, 2.0000, 2.0000, 3.0000]],
               device='cuda:0')
-
-{pooled_height = 2, pooled_width = 2, spatial_scale = 0.25, output_dim = 1}
-
+print(bottom_grad)
 bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
              tensor([[[[2., 0., 0.],
                        [0., 0., 0.]],
@@ -88,9 +92,11 @@ bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
                        [0., 0., 0.]],
                       [[2., 0., 0.],
                        [0., 0., 0.]]]], device='cuda:0')
+
 ```
 
 ```
+
 # 0元素检查
 # 1. rois为0，报错
 
@@ -124,15 +130,13 @@ tensor([[[[8., 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
 
-# 4. bottom_grad不作为入参，无法测试0元素
-
 # inf/nan检查
 # 1. rois支持inf
 rois = torch.from_numpy(np.array(
                         [[np.inf, np.inf, np.inf, np.inf, np.inf],
                          [np.inf, np.inf, np.inf, np.inf, np.inf]])).float().cuda()
 print(bottom_grad)
-tensor([[[[8., 0., 0.],
+tensor([[[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
           [0., 0., 0.]],
@@ -143,10 +147,10 @@ tensor([[[[8., 0., 0.],
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
 
 # 2. top_grad支持inf
-top_grad = torch.from_numpy(np.array([[[np.inf, np.inf],
-                                       [np.inf, np.inf]],
-                                      [[np.inf, np.inf],
-                                       [np.inf, np.inf]]])).float().cuda()
+top_grad = torch.from_numpy(np.array([[[[np.inf, np.inf],
+                                       [np.inf, np.inf]]],
+                                     [[[np.inf, np.inf],
+                                       [np.inf, np.inf]]]])).float().cuda()
 
 print(bottom_grad)
 tensor([[[[inf, 0., 0.],
@@ -159,14 +163,12 @@ tensor([[[[inf, 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
 
-# 3. mapping_channel支持inf
-mappingchannel = torch.from_numpy(np.array([[[np.inf, np.inf],
-                                             [np.inf, np.inf]],
-                                            [[np.inf, np.inf],
-                                            [np.inf, np.inf]]])).int().cuda()
-
+# 3. rois支持nan
+rois = torch.from_numpy(np.array(
+                        [[np.nan, np.nan, np.nan, np.nan, np.nan],
+                         [np.nan, np.inf, np.nan, np.nan, np.nan]])).float().cuda()
 print(bottom_grad)
-tensor([[[[8., 0., 0.],
+tensor([[[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
           [0., 0., 0.]],
@@ -175,6 +177,24 @@ tensor([[[[8., 0., 0.],
          [[0., 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
+
+# 4. top_grad支持nan
+top_grad = torch.from_numpy(np.array([[[[np.nan, np.nan],
+                                        [np.nan, np.nan]]],
+                                      [[[np.nan, np.nan],
+                                        [np.nan, np.nan]]]])).float().cuda()
+
+print(bottom_grad)
+tensor([[[[nan, 0., 0.],
+          [0., 0., 0.]],
+         [[nan, 0., 0.],
+          [0., 0., 0.]],
+        [[[nan, 0., 0.],
+          [0., 0., 0.]],
+         [[nan, 0., 0.],
+          [0., 0., 0.]]]], device='cuda:0')
+[torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
+
 ```
 
 ### 1.3 算子输入输出参数要求
@@ -186,7 +206,7 @@ tensor([[[[8., 0., 0.],
 | top_grad       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
 | rois_desc  | 输入roi的描述符                | 输入              | mluOpTensorDescriptor_t | /          | 无       |
 | rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
-| mapping_channel_desc | 输入mapping_channel的描述   | 输入              | mluOpTensorDescriptor_t          | /       | 无       |
+| mapping_channel_desc | 输入mapping_channel的描述符 | 输入              | mluOpTensorDescriptor_t          | /       | 无       |
 | mapping_channel      | 输入mapping_channel数据的指针| 输入              | int32_t      | NHWC       | 无       |
 | pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
 | pooled_width    | 池化后的宽度                      | 输入              | uint32_t           | /          | 无       |
@@ -199,14 +219,14 @@ tensor([[[[8., 0., 0.],
 
 | 限制类型     | 详细说明                                                                                                        |
 | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持float。输入数据（mapping_channel）类型必须是int。         |
-| 布局限制     | 对于top_grad、mapping_channel不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模，roi的首位必须是batch_id。 |
+| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持float。输入数据（mapping_channel）类型必须是int32_t。         |
+| 布局限制     | 对于top_grad、mapping_channel不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模。 |
 | 数据规模限制 | 无                                                            |
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
 | 输入参数限制 | pooled_height = pooled_width,rois_offset = 5,</br>output_dim >= 1,spatial_scale > 0,</br>channels = pooled_height * pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1, </br> mapping_channel的shape必须与top_grad的shape保持一致，并且其每个batches均要满足对channels间隔pooled_height * pooled_width的遍历。</br>例如：假设batches = 2, pooled_height = 2, pooled_width =2, output_dim = 3, channels = 2 * 2 * 3, 则mapping_channel为: [[[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]], [[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]]]。 |
-| nan/inf限制 | top_grad支持nan/inf测例，mapping_channel不支持nan/inf, rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
+| nan/inf限制 | top_grad支持nan/inf测例，rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
 
 ### 1.5 验收标准
 
