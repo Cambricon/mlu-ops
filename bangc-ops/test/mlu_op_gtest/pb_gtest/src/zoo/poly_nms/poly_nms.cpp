@@ -16,11 +16,12 @@ using namespace PNMS;
 namespace mluoptest {
 void PolyNmsExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_poly_nms_param()) {
-    LOG(ERROR) << "Lose pnms param. ";
+    LOG(ERROR) << "Lose poly_nms_param. ";
   }
-  // if (parser_->getInputNum() != 2) {
-  //   LOG(ERROR) << "nms tensor input number is wrong. ";
-  // }
+  GTEST_CHECK(parser_->inputs().size() == 1,
+              "[PolyNmsExecutor] input number is wrong. ");
+  GTEST_CHECK(parser_->outputs().size() == 2,
+              "[PolyNmsExecutor] output number is wrong. ");
 }
 
 void PolyNmsExecutor::workspaceMalloc() {
@@ -46,7 +47,7 @@ void PolyNmsExecutor::workspaceFree() {
 
 void PolyNmsExecutor::compute() {
   float iou_threshold = parser_->getProtoNode()->poly_nms_param().iou_threshold();
-  VLOG(4) << "[mluPolyNms] iou_threshold=" << iou_threshold;
+  VLOG(4) << "[mluPolyNms] iou_threshold: " << iou_threshold;
 
   // get tensor by name (in prototxt)
   auto tensor_boxes = parser_->getMetaTensor("input1").tensor;
@@ -56,30 +57,15 @@ void PolyNmsExecutor::compute() {
   auto result_num = parser_->getMetaTensor("output2").dev_ptr;
 
   VLOG(4) << "[mluPolyNms] call cnnlGetPnmsWorkspaceSize()";
-
   size_t workspace_size = 0;
   MLUOP_CHECK(mluGetPolyNmsWorkspaceSize(handle_, tensor_boxes, &workspace_size));
-
-  // struct timeval tstart;
-  // struct timeval tend;
-
-  // gettimeofday(&tstart, NULL);
   interface_timer_.start();
 
   VLOG(4) << "[mluPolyNms] call mluPolyNms()";
   MLUOP_CHECK(mluPolyNms(handle_, tensor_boxes, boxes_ptr, iou_threshold, workspace_[0],
                       workspace_size, tensor_output, output_ptr, result_num));
-
-  // cnrtQueueSync(handle_->queue);
-  // VLOG(4) << "[mluPolyNms] parser_->getOutputDimSize(0):"
-  //         << ((int32_t*)result_num)[0];
-
   interface_timer_.stop();
-  // gettimeofday(&tend, NULL);
   VLOG(4) << "[mluPolyNms] mluPolyNms end.";
-
-  // uint32_t time_usec = (uint32_t)tend.tv_usec - (uint32_t)tstart.tv_usec;
-  // uint32_t time_sec = (uint32_t)tend.tv_sec - (uint32_t)tstart.tv_sec;
 }
 
 void PolyNmsExecutor::pnms_detection_cpu(float *output_data,
@@ -121,33 +107,15 @@ void PolyNmsExecutor::cpuCompute() {
 }
 
 int64_t PolyNmsExecutor::getTheoryOps() {
-  // VLOG(4) << "getTheoryOps";
-  // int cp_count = 24;//??
-  // int theory_ops = parser_->getMetaTensor("input1").tensor->dims[0];
-  // theory_ops *= parser_->getMetaTensor("input1").tensor->dims[1];
+  VLOG(4) << "getTheoryOps";
+  int theory_ops = parser_->getMetaTensor("input1").tensor->dims[0];
+  theory_ops *= parser_->getMetaTensor("input1").tensor->dims[1];
 
-  // int actual_output_boxes = parser_->getMetaTensor("output1").tensor->dims[0];
-  // VLOG(4) << "get the output boxes num:" << actual_output_boxes;
-  // cp_count *= actual_output_boxes;
-  // theory_ops *= cp_count;
-  // VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
-  // return theory_ops;
+  int actual_output_boxes = parser_->getMetaTensor("output1").tensor->dims[0];
+  VLOG(4) << "get the output boxes num:" << actual_output_boxes;
+  theory_ops *= actual_output_boxes;
+  VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
+  return theory_ops;
 }
 
-int64_t PolyNmsExecutor::getTheoryIoSize() {
-  // int64_t theory_ios = 0;
-  // int cp_count = 24;//??
-  // int theory_ops = parser_->getMetaTensor("input1").tensor->dims[0];
-  // theory_ops *= parser_->getMetaTensor("input1").tensor->dims[1];
-
-  // int actual_output_boxes = parser_->getMetaTensor("output1").tensor->dims[0];
-  // VLOG(4) << "get the output boxes num:" << actual_output_boxes;
-  // cp_count *= actual_output_boxes;
-  // theory_ops *= cp_count;
-  // theory_ios =theory_ops;
-  // VLOG(4) << "getTheoryIOs: " << theory_ios << " ops";
-  // return theory_ios;
-}
-
-
-}  // namespace mluoptest
+} // namespace mluoptest

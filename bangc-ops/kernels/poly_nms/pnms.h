@@ -16,7 +16,6 @@
 
 #include "mlu_op.h"
 #include "kernels/kernel.h"
-// #include "kernels/debug.h"
 
 __mlu_global__ void MLUPNMSTranspose(const void *input_boxes,
                                      const int input_num_boxes,

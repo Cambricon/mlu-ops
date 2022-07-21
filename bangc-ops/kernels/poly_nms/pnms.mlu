@@ -14,10 +14,8 @@
 
 #include <cnrt.h>
 #include <mlu_op.h>
-
 #include <iostream>
 #include <string>
-
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -59,10 +57,6 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
     case CN_KERNEL_CLASS_UNION8:
     case CN_KERNEL_CLASS_UNION16: {
       int use_job = selectUnionType(job_limit, box_num_per_core);
-      VLOG(5) << "use_job: " << use_job;
-      //  k_dim->x = 1;
-      // *k_type = CNRT_FUNC_TYPE_BLOCK;
-
       if (use_job < 4) {
         k_dim->x = 1;
         *k_type = CNRT_FUNC_TYPE_BLOCK;
@@ -75,7 +69,7 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
       LOG(WARNING) << "[cnnlPolyNms]: got unsupported job limit number."
                    << " Use default CN_KERNEL_CLASS_UNION1 with UNION1 task.";
   }
-  VLOG(5) << " k_dim->x : " << k_dim->x;
+  VLOG(5) << "k_dim->x: " << k_dim->x;
   VLOG(5) << "k_type: " << *k_type;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -120,8 +114,6 @@ mluOpStatus_t MLUOP_WIN_API mluPolyNms(mluOpHandle_t handle,
   KERNEL_CHECK((MLUUnion1OrBlockPNMS<<<k_dim, k_type, handle->queue>>>(
       (void *)boxes, input_num_boxes, input_stride, iou_threshold, result_num,
       output, data_type_input, workspace)));
-
-  // GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
 

@@ -17,6 +17,8 @@
 
 #define PNMS_MIN (-(float)FLT_MAX)
 
+const int BOX_SHAPE = 9;
+
 template <typename IN_DT>
 __mlu_func__ void quickSort(IN_DT *arr, int low, int high) {
   if (high <= low) return;
@@ -87,27 +89,19 @@ __mlu_func__ void calculateMaxScoreBoxArea(IN_DT *max_box) {
   }
 }
 
-// >0 = 1, <0 = -1, ==0 = 0
+
 // const float eps = 1E-8;  return (d > eps) - (d < -eps);
 template <typename IN_DT>
 __mlu_func__ void sig(IN_DT *output, IN_DT *input, IN_DT *tmp1, IN_DT *tmp2,
                       const int actual_box_num) {
   int length = actual_box_num;
-  __bang_write_value(output, length, float(0.0));
-  __bang_write_value(tmp1, length, float(0.0));
+  __bang_write_value(output, length, float(1E-8));
+  __bang_write_value(tmp1, length, float(-1E-8));
   __bang_write_value(tmp2, length, float(0.0));
 
-  __bang_gt(tmp1, input, output, length);
-  __bang_lt(tmp2, input, output, length);
-  __bang_sub(output, tmp1, tmp2, length);
-
-  // __bang_write_value(output, length, float(1E-8));
-  // __bang_write_value(tmp1, length, float(-1E-8));
-  // __bang_write_value(tmp2, length, float(0.0));
-
-  // __bang_gt(tmp2, input, output, length);
-  // __bang_lt(output, input, tmp1, length);
-  // __bang_sub(output, tmp2, output, length);
+  __bang_gt(tmp2, input, output, length);
+  __bang_lt(output, input, tmp1, length);
+  __bang_sub(output, tmp2, output, length);
 }
 
 template <typename IN_DT>
@@ -143,8 +137,7 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
                                    IN_DT *py_ram, IN_DT *buffer,
                                    const int pp_count, const int max_seg_num,
                                    const int actual_box_num,
-                                   int align_actual_box_num) {
-  align_actual_box_num = max_seg_num;
+                                   const int align_actual_box_num) {
   // n = 0;
   // for (int i = 0; i < m; i++)
   //     if (!i || !(pp[i] == pp[i - 1]))
@@ -248,7 +241,6 @@ template <typename IN_DT>
 __mlu_func__ void points_swap(IN_DT *boxes_pts_x0, IN_DT *boxes_pts_y0,
                               IN_DT *boxes_pts_x1, IN_DT *boxes_pts_y1,
                               const int idx) {
-  // __bang_printf("points_swap:%d\n", idx);
   auto tmp = boxes_pts_x0[idx];
   boxes_pts_x0[idx] = boxes_pts_x1[idx];
   boxes_pts_x1[idx] = tmp;
@@ -322,12 +314,7 @@ __mlu_func__ void lineCross(IN_DT *a_x, IN_DT *a_y, IN_DT *b_x, IN_DT *b_y,
                             IN_DT *sig_cross_s1, IN_DT *sig_cross_s2,
                             IN_DT *nram_tmp, const int max_seg_num,
                             const int actual_box_num,
-                            int align_actual_box_num) {
-  align_actual_box_num = max_seg_num;
-  // 7
-  // __bang_printf("line cross start, a(%f, %f), b(%f, %f), c(%f, %f)m, d(%f,
-  // %f)\n", a_x[0],
-  // a_y[0], b_x[0], b_y[0],p1_x[0], p1_y[0],p2_x[0], p2_y[0]);
+                            const int align_actual_box_num) {
   IN_DT *p_tmp1;
   IN_DT *p_tmp2;
   IN_DT *p_melo;
@@ -367,8 +354,8 @@ __mlu_func__ void lineCross(IN_DT *a_x, IN_DT *a_y, IN_DT *b_x, IN_DT *b_y,
 
   // s2 - s1
   __bang_sub(p_denom, cross_s2, cross_s1, align_actual_box_num);
-  // set 1 with (s2 -s1 == 0)
-  // //s2-s1=0的box无效，计算时候先让s2-s1=0，然后再用mask把这部分去掉
+
+  // set 1 with (s2 -s1 = 0)
   __bang_eq(p_denom_tmp, p_denom, tmp_zero, align_actual_box_num);
   __bang_add(p_denom, p_denom, p_denom_tmp, align_actual_box_num);
 
@@ -392,7 +379,6 @@ __mlu_func__ void polygon_cut(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
                               IN_DT *pp_x, IN_DT *pp_y, IN_DT *buffer,
                               const int max_seg_num, const int actual_box_num,
                               int align_actual_box_num) {
-  //  align_actual_box_num= max_seg_num;
   IN_DT *cross_s1;      // 1
   IN_DT *cross_s2;      // 1
   IN_DT *sig_cross_s1;  // 1
@@ -426,13 +412,11 @@ __mlu_func__ void polygon_cut(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
   uint32_t p_count_max = 0;
   __bang_max(tmp1, p_count, align_actual_box_num);
   p_count_max = uint32_t(((float *)tmp1)[0]);
-  // __bang_printf("p_count_max=%d\n", p_count_max);
   int pp_count = 0;
 
-  // 按照p_count最大值取循环，保证每个位置对应的点都计算在内。
-  // 需要考虑的是pp_count都不相同, 需要把无效值置为PNMS_MIN
+  // Loop according to the maximum value of p_count.
+  // Invalid pp value is set to PNMS_MIN.
   for (int n = 0; n < p_count_max; n++) {
-    // __bang_printf("polygon_cut loop:%d \n",n);
     // cross(a,b,p[i])
     crossP3(cross_s1, a_x, a_y, b_x, b_y, p_x[n], p_y[n], align_actual_box_num,
             s1_tmp1, s1_tmp2);
@@ -489,25 +473,23 @@ __mlu_func__ void polygon_cut(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
                invalid_pts, align_actual_box_num);
     pp_count++;
   }  // for(int n = 0;n<p_count;n++)
-  // __bang_printf("--polygon cut out, p_count[0]=%d\n",  uint32_t(p_count[0]));
+
   updatePAndPCount(p_x, p_y, p_count, pp_x, pp_y, px_ram, py_ram, nram_tmp,
                    pp_count, max_seg_num, actual_box_num, align_actual_box_num);
-  // __bang_printf("--11polygon cut out, p_count[0]=%d\n",
-  // uint32_t(p_count[0]));
 }
 
 template <typename IN_DT>
 __mlu_func__ void intersectArea(
-    IN_DT *area, const IN_DT *max_box_pts_x0_tmp,
-    const IN_DT *max_box_pts_y0_tmp, const IN_DT *max_box_pts_x1_tmp,
-    const IN_DT *max_box_pts_y1_tmp, const IN_DT *box_pts_x0_tmp,
-    const IN_DT *box_pts_y0_tmp, const IN_DT *box_pts_x1_tmp,
-    const IN_DT *box_pts_y1_tmp, IN_DT *buffer, const int max_seg_num,
+    IN_DT *area, const IN_DT *const_max_box_pts_x0,
+    const IN_DT *const_max_box_pts_y0, const IN_DT *const_max_box_pts_x1,
+    const IN_DT *const_max_box_pts_y1, const IN_DT *const_box_pts_x0,
+    const IN_DT *const_box_pts_y0, const IN_DT *const_box_pts_x1,
+    const IN_DT *const_box_pts_y1, IN_DT *buffer, const int max_seg_num,
     const int actual_box_num, const int align_actual_box_num) {
   // 14 + 60 + buffer
   IN_DT *o_x;             // 1
   IN_DT *o_y;             // 1
-  IN_DT *box_pts_x0;      // 1 数值需要交换
+  IN_DT *box_pts_x0;      // 1
   IN_DT *box_pts_y0;      // 1
   IN_DT *box_pts_x1;      // 1
   IN_DT *box_pts_y1;      // 1
@@ -564,15 +546,15 @@ __mlu_func__ void intersectArea(
 
   __bang_write_value(o_x, 74 * max_seg_num, float(0.0));
 
-  __memcpy(box_pts_x0, box_pts_x0_tmp, max_seg_num * 4, NRAM2NRAM);
-  __memcpy(box_pts_y0, box_pts_y0_tmp, max_seg_num * 4, NRAM2NRAM);
-  __memcpy(box_pts_x1, box_pts_x1_tmp, max_seg_num * 4, NRAM2NRAM);
-  __memcpy(box_pts_y1, box_pts_y1_tmp, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(box_pts_x0, const_box_pts_x0, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(box_pts_y0, const_box_pts_y0, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(box_pts_x1, const_box_pts_x1, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(box_pts_y1, const_box_pts_y1, max_seg_num * 4, NRAM2NRAM);
 
-  __memcpy(max_box_pts_x0, max_box_pts_x0_tmp, max_seg_num * 4, NRAM2NRAM);
-  __memcpy(max_box_pts_y0, max_box_pts_y0_tmp, max_seg_num * 4, NRAM2NRAM);
-  __memcpy(max_box_pts_x1, max_box_pts_x1_tmp, max_seg_num * 4, NRAM2NRAM);
-  __memcpy(max_box_pts_y1, max_box_pts_y1_tmp, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(max_box_pts_x0, const_max_box_pts_x0, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(max_box_pts_y0, const_max_box_pts_y0, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(max_box_pts_x1, const_max_box_pts_x1, max_seg_num * 4, NRAM2NRAM);
+  __memcpy(max_box_pts_y1, const_max_box_pts_y1, max_seg_num * 4, NRAM2NRAM);
 
   // a b max_box_pts, cd  box_pts
   // corss_oab
@@ -632,10 +614,7 @@ __mlu_func__ void intersectArea(
 
   polygon_cut(p_x, p_y, p_count, a_x, a_y, b_x, b_y, pp_x, pp_y, nram_tmp,
               max_seg_num, actual_box_num, align_actual_box_num);
-  // for(int i = 0;i< p_count[1];i++){
-  //   __bang_printf("- polygon_cut -all end- p[%f, %f]\n", p_x[i][1],
-  //   p_y[i][1]);
-  // }
+
   a_x = box_pts_x0;
   a_y = box_pts_y0;
   b_x = box_pts_x1;
@@ -733,7 +712,6 @@ __mlu_func__ void calculateOverlapArea(
     IN_DT *max_box_pts_x, IN_DT *max_box_pts_y, IN_DT *boxes_area,
     IN_DT *intersection_area, IN_DT *nram_tmp, const int max_seg_num,
     const int actual_box_num, const int align_actual_box_num) {
-  // align_actual_box_num = max_seg_num;
 
   // nram_tmp
   // |area_tmp| buffer
@@ -763,7 +741,6 @@ __mlu_func__ void calculateOverlapArea(
     for (int j = 0; j < 4; j++) {
       int m = i == 3 ? 0 : (i + 1);
       int n = j == 3 ? 0 : (j + 1);
-      // res += intersectArea(ps1[i], ps1[i + 1], ps2[j], ps2[j + 1]);
       intersectArea<float>(
           area_tmp, max_box_pts_x + i * max_seg_num,
           max_box_pts_y + i * max_seg_num, max_box_pts_x + m * max_seg_num,
@@ -773,8 +750,6 @@ __mlu_func__ void calculateOverlapArea(
           align_actual_box_num);
       __bang_add(intersection_area, intersection_area, area_tmp,
                  align_actual_box_num);
-      // __bang_printf("area_tmp = %f, intersection_area=%f \n", area_tmp[0],
-      // intersection_area[0]);
     }
   }
 }
@@ -828,15 +803,11 @@ __mlu_func__ void getMaxScoreIndex(IN_DT *input_box_ptr, IN_DT *input_score_ptr,
     }
   }  // for repeat
 
-  // __bang_printf("---coreid: %d, max_score_index1: %d, max_score1: %f\n",
-  // coreId,
-  // (uint32_t)(max_box[1]), max_box[0]);
-
   if (core_limit == 1) {
     // get max_score_box coordinate
-    // max_box = | max_score| max_score_index | max_box_coordinate |
-    // max_score_box_area|
-    //           | 1        |       1         |          8         |     1 |
+    // max_box
+    // | max_score| max_score_index | max_box_coordinate | max_score_box_area|
+    // | 1        |       1         |          8         |     1 |
     // input_box_ptr:x1---, y1---, x2---, y2---, x3---, y3---, x4---,
     // y4---,scores---
     __memcpy(max_box + 2, input_box_ptr + max_index, 1 * INPUT_TYPE_SIZE,
@@ -847,8 +818,6 @@ __mlu_func__ void getMaxScoreIndex(IN_DT *input_box_ptr, IN_DT *input_score_ptr,
     // output: max_score| index | coordinate | sign box area | box area
     calculateMaxScoreBoxArea(max_box);
     input_score_ptr[uint32_t(max_box[1])] = PNMS_MIN;
-    // __bang_printf("core id = %d, max_index = %d,  score=%f\n", coreId,
-    // max_index, max_box[0]);
   } else {
     // sram_buffer: max_score1 | index1 | max_score2 | index2 ...
     __memcpy(sram_buffer + 2 * taskId, max_box, 2 * INPUT_TYPE_SIZE, NRAM2SRAM);
@@ -870,12 +839,6 @@ __mlu_func__ void getMaxScoreIndex(IN_DT *input_box_ptr, IN_DT *input_score_ptr,
     __memcpy(max_box + 2, input_box_ptr + max_index, 1 * INPUT_TYPE_SIZE,
              GDRAM2NRAM, 1 * sizeof(uint32_t), input_stride * sizeof(uint32_t),
              8);
-
-    // __bang_printf("core id = %d, max_index = %d, global max_index:%d,
-    // max_box[x2]=%f,
-    // score=%f\n",
-    //               coreId, max_index, uint32_t(max_box[1]), max_box[4],
-    //               max_box[0]);
     calculateMaxScoreBoxArea(max_box);
   }  // if (core_limit == 4)
 }
@@ -890,15 +853,13 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
   __bang_printf("launch pnms_detection\n");
   uint32_t output_box_num = 0;
   // NRAM N=max_seg_pad
-  // |nram_save| max_box(max_score,max_box,max_index,+-max_area, max_area)|
-  // tranx_box | scores |
-  // max_box_tmp
-  // |box_area|| nram_tmp(box,box_area_tmp)|
-  // |  NFU_ALIGN_SIZE                         |    N*8    |  N     |
-  // NFU_ALIGN_SIZE|
-  // N|
-  // N
-  // |          213*N        |
+  // max_box(max_score, max_box_coordinate, max_index,+-max_area, max_area)
+
+  // |nram_save | max_box |max_box_pts_x|max_box_pts_y| box_pts_x |
+  // |  N |NFU_ALIGN_SIZE |    N*4      |  N*4        |   N*4     |
+
+  //  box_pts_y | scores | box_area |intersection_area| nram_save |
+  //  N*4     | N      |   N      |     N           | overlap   |
 
   const int INPUT_TYPE_SIZE = sizeof(IN_DT);
 
@@ -913,24 +874,15 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
     input_boxes_num = avg_core + (taskId < rem ? 1 : 0);
     input_offset_num = avg_core * taskId + (taskId <= rem ? taskId : rem);
   }
-  // 保证每次repeat的数是9的倍数
-  int limit = (buffer_size - NFU_ALIGN_SIZE) / 137;  // 133+12-8
-  int max_seg_pad = FLOOR_ALIGN(limit, NFU_ALIGN_SIZE * 9);
+
+  const int memory_block = 137;
+  int limit = (buffer_size - NFU_ALIGN_SIZE) / memory_block;
+  int max_seg_pad = FLOOR_ALIGN(limit, NFU_ALIGN_SIZE * BOX_SHAPE);
   int max_seg_num = max_seg_pad / INPUT_TYPE_SIZE;
 
   int repeat = input_boxes_num / max_seg_num;
   int remain_num = input_boxes_num % max_seg_num;
   int remain_align_num = CEIL_ALIGN(remain_num, NFU_ALIGN_SIZE / 4);
-
-  __bang_printf("coreId: %d \n", coreId);
-  __bang_printf("input_offset: %d \n", input_offset_num);
-  __bang_printf("buffer_size: %d \n", buffer_size);
-  __bang_printf("limit: %d \n", limit);
-  __bang_printf("max_seg_pad: %d \n", max_seg_pad);
-  __bang_printf("max_seg_num: %d \n", max_seg_num);
-
-  __bang_printf("repeat: %d \n", repeat);
-  __bang_printf("remain_num: %d \n", remain_num);
 
   // gdram
   IN_DT *input_box_ptr;
@@ -976,7 +928,6 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
   const int nram_save_limit_count = max_seg_num;
   int max_output_size = input_stride;
   int output_save_count = 0;
-  __bang_printf("max_output_size = %d\n", max_output_size);
 
   // max_output_size   = 2; //debug
   for (int loop = 0; loop < max_output_size; loop++) {
@@ -1020,19 +971,13 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
       if (float(max_box[0]) <= PNMS_MIN || (loop == max_output_size - 1)) {
         __memcpy(output_data + output_save_count * nram_save_limit_count,
                  nram_save, nram_save_count * sizeof(uint32_t), NRAM2GDRAM);
-        __bang_printf("pnms end:nram_save_count = %d\n", nram_save_count);
         break;
       }
     } else {
       if (float(max_box[0]) <= PNMS_MIN || (loop == max_output_size - 1)) {
-        __bang_printf("coreId = %d, mx_box[0]=%f \n", coreId,
-                      float(max_box[0]));
         if (coreId == 0) {
           __memcpy(output_data + output_save_count * nram_save_limit_count,
                    nram_save, nram_save_count * sizeof(uint32_t), NRAM2GDRAM);
-          __bang_printf(
-              "2 end condition :coreId == 0, mx_box[0]=%f <=PNMS_MIN\n",
-              float(max_box[0]));
           loop_end_flag[0] = 1;
         }
       }
@@ -1042,7 +987,7 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
       }
     }
 
-    // max_score_box 扩维 max_box_pts_x,y, 提前copy好，减少在repeat中copy次数
+    // max_score_box -> max_box_pts_x,y,  1*9->9*N
     // max_box: max_score, max_score_index, max_score_box coordinate(x1, y1, x2,
     // y2, x3, y3, x4,
     // y4), sign max_score_box_area, unsign max_score_box_area
@@ -1068,7 +1013,6 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
 
       actual_box_num = (i == repeat) ? remain_num : max_seg_num;
       align_actual_box_num = CEIL_ALIGN(actual_box_num, NFU_ALIGN_SIZE / 4);
-      // align_actual_box_num = max_seg_num;
 
       // input_box_ptr: x1---, y1---, x2---, y2---, x3---, y3---, x4---, y4---,
       // scores---
@@ -1105,17 +1049,7 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
       __bang_active_abs((float *)box_area, (float *)box_area,
                         align_actual_box_num);
 
-      //  // scores为pnms_min的areai无效
-      // __bang_write_value((float *)nram_tmp, align_actual_box_num,
-      // (float)PNMS_MIN);
-      // __bang_ne((float *)(nram_tmp + align_actual_box_num), (float *)scores,
-      // nram_tmp,
-      //           align_actual_box_num);
-      // __bang_mul(intersection_area, intersection_area, (float *)(nram_tmp +
-      // align_actual_box_num),
-      //            actual_box_num);
-
-      // 4 compare iou with thresh_iou(); iou>thresh_iou, 将其对应的score置0；
+      // 4 compare iou with thresh_iou(); iou>thresh_iou, score set pnms_min；
       // area_U = box_area + max_area - area_I
       __bang_add_const((float *)box_area, (float *)box_area, (float)max_box[11],
                        align_actual_box_num);
@@ -1132,32 +1066,19 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
                  (float *)box_area, nram_tmp + align_actual_box_num,
                  nram_tmp + 2 * align_actual_box_num,
                  nram_tmp + 3 * align_actual_box_num, align_actual_box_num);
-      //  __bang_printf("---loo:%d--index, scores:(%d, %f),iou=:\n", loop,
-      //  (uint32_t)(max_box[1]),max_box[0]);
-      // for(int j = 0;j<actual_box_num; j++){
-      //       __bang_printf("-%f-",intersection_area[j]);
-      // }
-      // __bang_printf("\n");
+
       // masked = intersection_area = iou <= thresh_iou
       __bang_write_value(nram_tmp, align_actual_box_num, (float)thresh_iou);
       __bang_le((float *)intersection_area, (float *)intersection_area,
                 (float *)nram_tmp, align_actual_box_num);
 
-      // __bang_printf("---loo:%d--index, scores:(%d, %f)\n", loop,
-      // (uint32_t)(max_box[1]),
-      // max_box[0]);
-      // for(int j = 0;j<actual_box_num; j++){
-      //       __bang_printf("-%d-", j);
-      // }
-      // __bang_printf("\n");
-
-      // scores = scores * intersection_area; >iou_thresh的scores置为0
+      // scores = scores * intersection_area; iou>iou_thresh, score set pnms_min
       __bang_mul((float *)scores, (float *)scores, (float *)intersection_area,
                  align_actual_box_num);
 
       // compare scores with float 0 -> intersection_area
       __bang_write_value(nram_tmp, align_actual_box_num,
-                         (float)0.0);  // actual_box_num * INPUT_TYPE_SIZE
+                         (float)0.0);
       __bang_eq((float *)intersection_area, (float *)scores, (float *)nram_tmp,
                 align_actual_box_num);
 
@@ -1173,17 +1094,11 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
     }  // for repeat
   }    // for loop : max_output_size
 
-  __bang_printf("--end-- coreId = %d\n", coreId);
-
   if (coreId == 0) {
-    __bang_printf("result_num1 = %d\n", output_box_num);
     ((uint32_t *)result_num)[0] = output_box_num;
-    __bang_printf("result_num 2 = %d, result_box_num=%d \n",
-                  ((uint32_t *)result_num)[0], output_box_num);
     __memcpy(buffer, output_data, output_box_num * 4, GDRAM2NRAM);
     quickSort((uint32_t *)buffer, 0, output_box_num - 1);
     __memcpy(output_data, buffer, output_box_num * 4, NRAM2GDRAM);
-    __bang_printf("--end--\n");
   }
 }
 #endif  // KERNELS_NMS_NMS_DETECTION_H_

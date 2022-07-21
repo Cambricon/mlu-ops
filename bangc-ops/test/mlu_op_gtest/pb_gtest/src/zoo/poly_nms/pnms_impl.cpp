@@ -86,56 +86,27 @@ float intersectArea(Point a, Point b, Point c, Point d) {
   Point p[10] = {o, a, b};
   int n = 3;
   Point pp[maxn];
-  // // printf("polygon_cut before:\n");
-  // for(int i = 0;i<10;i++)
-  // {
-  //     printf("p[%d]:(%f, %f) ,", i, p[i].x, p[i].y);
-  // }
-  //  printf("\n");
+
   polygon_cut(p, n, o, c, pp);
   polygon_cut(p, n, c, d, pp);
   polygon_cut(p, n, d, o, pp);
-  // printf("polygon_cut after:\n");
-  // for(int i = 0;i<10;i++)
-  // {
-  //     printf("p[%d]:(%f, %f) ,", i, p[i].x, p[i].y);
-  // }
-  // printf("\n");
+
   float res = fabs(area(p, n));
   if (s1 * s2 == -1)
     res = -res;
-  // printf("res=:%lf\n",res);
   return res;
 }
 bool falg = false;
 //求两多边形的交面积
 float intersectArea(Point *ps1, int n1, Point *ps2, int n2) {
   float area1 = area(ps1, n1);
-  // printf("area1 = %f\n", area1);
-  // printf("area2 = %f\n", area(ps2, n2));
   if (area(ps1, n1) < 0) {
-    //falg = true;
-    auto f1 = area(ps1, n1);
-    // printf("reverse ps1 before:area1:%f\n", area(ps1, n1));
-    // for(int i = 0;i<n1;i++)
-    // {
-    //     printf("(%f, %f), ", ps1[i].x, ps1[i].y);
-    // }
     reverse(ps1, ps1 + n1);
-    // printf("\n reverse area1 after:\n");
-    //  for(int i = 0;i<n1;i++)
-    // {
-    //     printf("(%f, %f), ", ps1[i].x, ps1[i].y);
-    // }
-    auto f2 = area(ps1, n1);
-    // if(fabs(f1) != fabs(f2)){
-    //   printf("reverse ps1 before:area1:%f\n", f1);
-    //   printf("reverse ps1 after:area1:%f\n", f2);
-    // }
   }
 
-  if (area(ps2, n2) < 0)
+  if (area(ps2, n2) < 0){
     reverse(ps2, ps2 + n2);
+  }
 
   ps1[n1] = ps1[0];
   ps2[n2] = ps2[0];
@@ -143,7 +114,6 @@ float intersectArea(Point *ps1, int n1, Point *ps2, int n2) {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
       res += intersectArea(ps1[i], ps1[i + 1], ps2[j], ps2[j + 1]);
-      // printf("intersectArea 11 res:%f\n", res);
     }
   }
   return res;  // assumeresispositive!
@@ -161,15 +131,9 @@ float iou_poly(vector<float> p, vector<float> q) {
     ps2[i].y = q[i * 2 + 1];
   }
 
- 
   float inter_area = intersectArea(ps1, n1, ps2, n2);
   float union_area = fabs(area(ps1, n1)) + fabs(area(ps2, n2)) - inter_area;
  
-  // printf("fabs(area1 (ps1, n1)): %f \n", fabs(area(ps1, n1)));
-  // printf("fabs(area2 (ps2, n2)): %f \n", fabs(area(ps2, n2)));
-  // printf("areaI: %f \n", inter_area);
-  // printf("areaU: %f \n", union_area);
-  // printf("-------\n");
   float iou = 0;
   if (union_area == 0) {
     iou = (inter_area + 1) / (union_area + 1);
@@ -197,15 +161,8 @@ vector<int> pnms_impl(vector<vector<float>> &p, const float thresh) {
   }
 
   sort(vp.begin(), vp.end(), cmp_value);
-  //  printf("after soft: \n");
-  // for(int i = 0;i<vp.size(); i++)
-  // {
-  //    printf("%d ", vp[i].second);
-  // }
-  // printf("\n");
-  vector<int> keep;
-  vector<int> test;
 
+  vector<int> keep;
   while (vp.size()) {
     // printf("vp.size()=%ld, index=%d\n", vp.size(), vp.begin()->second);
     keep.push_back(vp.begin()->second);
@@ -215,39 +172,14 @@ vector<int> pnms_impl(vector<vector<float>> &p, const float thresh) {
     // printf("-----(p, scores):(%d:%f) ----------\n",box_index, box[8]);
     for (int i = 0; i < vp.size(); i++) {
       float iou = iou_poly(box, vp[i].first);
-      if(box_index == 134 && vp[i].second == 0){
-        printf(" -134 && 0-iou=%f\n", iou);
-      }
-      // printf("(%d, %f), iou=%f\n", vp[i].second, vp[i].first[8], iou);
       if (iou > thresh) {
-        test.push_back(vp[i].second);
         vp.erase(vp.begin() + i);
         i--;
       }
     }
-    sort(test.begin(), test.end(), [&](int a,int b){return a<b;});
-    // for(int i = 0;i<test.size();i++){
-    //     printf("%d, ", test[i]);
-    // }
-    // printf("\n");
-    test.clear();
   }
-  //  printf("before keep sort: \n");
-  //  for(int i = 0;i< keep.size(); i++)
-  // {
-  //    printf("%d ", keep[i]);
-  // }
-  //  printf("\n after keep sort: \n");
+
   sort(keep.begin(), keep.end(), [&](int a, int b) { return a < b; });
-  // printf("\n");
-
-  // for(int i = 0;i< keep.size(); i++)
-  // {
-  //    printf("%d ", keep[i]);
-  // }
-  // printf("\n");
-
-  // cout << "keep:" << keep.size() << endl;
   return keep;
 }
 

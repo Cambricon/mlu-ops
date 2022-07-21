@@ -31,15 +31,8 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
 
   if (coreId == 0) {
     if (input_num_boxes * input_stride * 4 > buffer_size) {
-      // error
+      __bang_printf("transpose failed. input num is over large.\n");
       return;
-    }
-    for (int i = 0; i < 3; i++) {
-      __bang_printf("--transpose bsfore-- %d\n", i);
-      for (int j = 0; j < 9; j++) {
-        __bang_printf("%f, ", ((float *)input_boxes)[i * input_stride + j]);
-      }
-      __bang_printf("\n");
     }
 
 // Trans boxes: Nx9 -> 9xN
@@ -96,10 +89,6 @@ __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
                                          void *result_num, void *output,
                                          const mluOpDataType_t data_type_input,
                                          void *workspace) {
-  __bang_printf("mluPolyNms: iou_threshold: %f \n", iou_thresh);
-
-  // workspace: trans_boxes
-
   void *trans_boxes = (char *)workspace;
   __bang_printf("[cnnlPolyNms] launch transpose kernel start.\n");
   boxesTranspose(input_boxes, input_num_boxes, input_stride, trans_boxes,

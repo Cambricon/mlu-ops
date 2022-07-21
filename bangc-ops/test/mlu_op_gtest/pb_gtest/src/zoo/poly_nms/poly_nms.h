@@ -29,11 +29,7 @@ class PolyNmsExecutor : public Executor {
                           float *input_data,
                           int input_box_num,
                           float thresh_iou);
-  int64_t getTheoryOps();
-  int64_t getTheoryIoSize();
- private:
-  int output_boxes_;
-  int theory_ops = 0;
+  int64_t getTheoryOps() override;
 };
 
 }  // namespace mluoptest
