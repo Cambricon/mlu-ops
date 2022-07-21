@@ -17,7 +17,7 @@ namespace mluoptest {
 class PsroipoolForwardExecutor : public Executor {
  public:
   PsroipoolForwardExecutor() {}
-  ~PsroipoolForwardExecutor() {}
+  ~PsroipoolForwardExecutor() { workspaceFree(); }
   void workspaceMalloc() override;
   void paramCheck() override;
   void compute() override;

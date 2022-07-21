@@ -21,7 +21,7 @@
 #include "mlu_op_kernel.h"
 
 // policy function
-static void policyFuncPsroipoolForward(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+static void policyFuncPsRoiPoolForward(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                        cnrtFunctionType_t *k_type,
                                        const int rois_num) {
   size_t union_number = mluop::runtime::getClusterLimitCapability(handle);
@@ -39,100 +39,102 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
   PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", handle != NULL);
   PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", size != NULL);
   PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", output_dim >= 1);
-  *size = output_dim * sizeof(uint32_t);  // the offset of each pixel
+  *size = output_dim * sizeof(uint32_t);
 
   VLOG(5) << "workspace size = " << *size << ".";
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t param_and_pointer_check(
-    const std::string &api, const float spatial_scale, const int group_size,
-    const void *input_data, const void *input_rois, const void *output_data,
-    const void *mapping_channel, const mluOpTensorDescriptor_t input_data_desc,
-    const mluOpTensorDescriptor_t input_rois_desc,
-    const mluOpTensorDescriptor_t output_data_desc,
+static mluOpStatus_t paramCheck(
+    const std::string &api, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int group_size, const int output_dim,
+    const void *input, const void *rois, const void *output,
+    const void *mapping_channel, const mluOpTensorDescriptor_t input_desc,
+    const mluOpTensorDescriptor_t rois_desc,
+    const mluOpTensorDescriptor_t output_desc,
     const mluOpTensorDescriptor_t mapping_channel_desc, void *workspace,
-    const size_t workspace_size) {
-  PARAM_CHECK(api, input_data_desc != NULL);
-  PARAM_CHECK(api, input_rois_desc != NULL);
-  PARAM_CHECK(api, output_data_desc != NULL);
+    size_t workspace_size) {
+  PARAM_CHECK(api, input_desc != NULL);
+  PARAM_CHECK(api, rois_desc != NULL);
+  PARAM_CHECK(api, output_desc != NULL);
   PARAM_CHECK(api, mapping_channel_desc != NULL);
-  PARAM_CHECK(api, input_data_desc->dim == 4);
-  PARAM_CHECK(api, input_rois_desc->dim == 2);
-  PARAM_CHECK(api, output_data_desc->dim == 4);
+  PARAM_CHECK(api, input_desc->dim == 4);
+  PARAM_CHECK(api, rois_desc->dim == 2);
+  PARAM_CHECK(api, output_desc->dim == 4);
   PARAM_CHECK(api, mapping_channel_desc->dim == 4);
   // check the input and output datatype
-  PARAM_CHECK(api, input_data_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, input_rois_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, output_data_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, input_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, rois_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, output_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(api, mapping_channel_desc->dtype == MLUOP_DTYPE_INT32);
   // check layout
-  PARAM_CHECK(api, input_data_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(api, output_data_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, input_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, output_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(api, mapping_channel_desc->layout == MLUOP_LAYOUT_NHWC);
   // param check
+  PARAM_CHECK(api, pooled_height == output_desc->dims[1]);
+  PARAM_CHECK(api, pooled_width == output_desc->dims[2]);
+  PARAM_CHECK(api, output_dim == output_desc->dims[3]);
   // group_size == pooled_height
-  PARAM_CHECK(api, group_size == output_data_desc->dims[1]);
+  PARAM_CHECK(api, group_size == output_desc->dims[1]);
   // pooled_height == pooled_width
-  PARAM_CHECK(api, output_data_desc->dims[1] == output_data_desc->dims[2]);
+  PARAM_CHECK(api, output_desc->dims[1] == output_desc->dims[2]);
   // group_size >= 1.
   PARAM_CHECK(api, group_size >= 1);
   // output_dim >= 1.
-  PARAM_CHECK(api, output_data_desc->dims[3] >= 1);
+  PARAM_CHECK(api, output_desc->dims[3] >= 1);
   // spatial_scale > 0
   PARAM_CHECK(api, spatial_scale > 0);
   // rois_offset = 5.
-  PARAM_CHECK(api, input_rois_desc->dims[1] == 5);
+  PARAM_CHECK(api, rois_desc->dims[1] == 5);
   // roi_num check
-  PARAM_CHECK(api, output_data_desc->dims[0] == input_rois_desc->dims[0]);
+  PARAM_CHECK(api, output_desc->dims[0] == rois_desc->dims[0]);
   // channels == pooled_height * pooled_width * output_dim
-  PARAM_CHECK(api, input_data_desc->dims[3] == output_data_desc->dims[1] *
-                                                   output_data_desc->dims[2] *
-                                                   output_data_desc->dims[3]);
-  PARAM_CHECK(api, output_data_desc->dims[0] == mapping_channel_desc->dims[0]);
-  PARAM_CHECK(api, output_data_desc->dims[1] == mapping_channel_desc->dims[1]);
-  PARAM_CHECK(api, output_data_desc->dims[2] == mapping_channel_desc->dims[2]);
-  PARAM_CHECK(api, output_data_desc->dims[3] == mapping_channel_desc->dims[3]);
-  if (mluOpGetTensorElementNum(input_data_desc) == 0) {
-    VLOG(5) << api << " Input_data skip zero element tensor.";
+  PARAM_CHECK(api, input_desc->dims[3] == output_desc->dims[1] *
+                                              output_desc->dims[2] *
+                                              output_desc->dims[3]);
+  PARAM_CHECK(api, output_desc->dims[0] == mapping_channel_desc->dims[0]);
+  PARAM_CHECK(api, output_desc->dims[1] == mapping_channel_desc->dims[1]);
+  PARAM_CHECK(api, output_desc->dims[2] == mapping_channel_desc->dims[2]);
+  PARAM_CHECK(api, output_desc->dims[3] == mapping_channel_desc->dims[3]);
+  if (mluOpGetTensorElementNum(input_desc) == 0) {
+    VLOG(5) << api << " input skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
-  if (mluOpGetTensorElementNum(input_rois_desc) == 0) {
+  if (mluOpGetTensorElementNum(rois_desc) == 0) {
     LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (workspace_size > 0) {
     PARAM_CHECK(api, workspace != NULL);
   }
-  PARAM_CHECK(api, input_data != NULL);
-  PARAM_CHECK(api, input_rois != NULL);
-  PARAM_CHECK(api, output_data != NULL);
+  PARAM_CHECK(api, input != NULL);
+  PARAM_CHECK(api, rois != NULL);
+  PARAM_CHECK(api, output != NULL);
   PARAM_CHECK(api, mapping_channel != NULL);
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
-    mluOpHandle_t handle, const float spatial_scale, const int group_size,
-    const mluOpTensorDescriptor_t input_data_desc, const void *input_data,
-    const mluOpTensorDescriptor_t input_rois_desc, const void *input_rois,
-    void *workspace, const size_t workspace_size,
-    const mluOpTensorDescriptor_t output_data_desc, void *output_data,
-    const mluOpTensorDescriptor_t mapping_channel_desc, void *mapping_channel) {
+    mluOpHandle_t handle, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int group_size, const int output_dim,
+    const mluOpTensorDescriptor_t input_desc, const void *input,
+    const mluOpTensorDescriptor_t rois_desc, const void *rois, void *workspace,
+    size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
+    void *output, const mluOpTensorDescriptor_t mapping_channel_desc,
+    void *mapping_channel) {
   const std::string api = "[mluOpPsRoiPoolForward]";
   PARAM_CHECK(api, handle != NULL);
-  const int batch_size = input_data_desc->dims[0];
-  const int height = input_data_desc->dims[1];
-  const int width = input_data_desc->dims[2];
-  const int channels = input_data_desc->dims[3];
-  const int rois_sum = output_data_desc->dims[0];
-  const int pooled_height = output_data_desc->dims[1];
-  const int pooled_width = output_data_desc->dims[2];
-  const int output_dim = output_data_desc->dims[3];
-  const int rois_offset = input_rois_desc->dims[1];
+  const int batch_size = input_desc->dims[0];
+  const int height = input_desc->dims[1];
+  const int width = input_desc->dims[2];
+  const int channels = input_desc->dims[3];
+  const int rois_sum = output_desc->dims[0];
+  const int rois_offset = rois_desc->dims[1];
 
-  mluOpStatus_t ret = param_and_pointer_check(
-      api, spatial_scale, group_size, input_data, input_rois, output_data,
-      mapping_channel, input_data_desc, input_rois_desc, output_data_desc,
+  mluOpStatus_t ret = paramCheck(
+      api, pooled_height, pooled_width, spatial_scale, group_size, output_dim,
+      input, rois, output, mapping_channel, input_desc, rois_desc, output_desc,
       mapping_channel_desc, workspace, workspace_size);
   if (ret != MLUOP_STATUS_SUCCESS) {
     LOG(ERROR) << api
@@ -142,13 +144,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  policyFuncPsroipoolForward(handle, &k_dim, &k_type, rois_sum);
+  policyFuncPsRoiPoolForward(handle, &k_dim, &k_type, rois_sum);
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForward(
-      k_dim, k_type, handle->queue, (void *)input_data, (void *)input_rois,
-      (void *)output_data, (void *)mapping_channel, channels, height, width,
-      pooled_height, pooled_width, rois_sum, output_dim, group_size,
-      rois_offset, spatial_scale, batch_size)));
+      k_dim, k_type, handle->queue, input, rois, output, mapping_channel,
+      batch_size, height, width, channels, pooled_height, pooled_width,
+      output_dim, group_size, rois_sum, rois_offset, spatial_scale)));
   return MLUOP_STATUS_SUCCESS;
 }
