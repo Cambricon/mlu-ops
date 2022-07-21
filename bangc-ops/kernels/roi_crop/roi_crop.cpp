@@ -218,10 +218,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
   VLOG(5) << "[mluOpRoiCropBackward] launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   // gdram set zero
-  int gd_num = channels * width * height * batch;
-  KERNEL_CHECK((mluOpBlockKernelFillZero(k_dim, k_type, handle->queue, gd_num,
-                                         grad_input)));
-  VLOG(5) << "Kernel mluOpBlockKernelFillZero.";
+  int gd_num =
+      channels * width * height * batch * sizeof(float);
+  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
+                                             gd_num, grad_input)));
+  VLOG(5) << "Kernel mluOpBlockKernelFillZeroByte.";
 
   KERNEL_CHECK((mluOpBlockKernelRoiCropBackwardFloat(
       k_dim, k_type, handle->queue, grad_output, grid, batch, height, width,
