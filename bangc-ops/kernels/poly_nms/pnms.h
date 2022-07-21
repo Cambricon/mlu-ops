@@ -9,8 +9,8 @@
  * TORvoid OR OTHERWISE, ARISING FROM, OUKType OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_NMS_NMS_H_
-#define KERNELS_NMS_NMS_H_
+#ifndef KERNELS_POLY_NMS_PNMS_H_
+#define KERNELS_POLY_NMS_PNMS_H_
 
 #include <stdint.h>
 
@@ -27,4 +27,4 @@ __mlu_global__ void MLUUnion1OrBlockPNMS(
     const void *input_boxes, const int input_num_boxes, const int input_stride,
     const float iou_threshold, void *result_num, void *output,
     const mluOpDataType_t data_type_input, void *workspace);
-#endif  // KERNELS_NMS_NMS_H_
+#endif  // KERNELS_POLY_NMS_PNMS_H_

@@ -141,11 +141,16 @@ mluOpStatus_t MLUOP_WIN_API mluGetPolyNmsWorkspaceSize(
 
   PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, boxes_desc->layout == MLUOP_LAYOUT_ARRAY);
+// workspace stores the transposed input data[9, N].
+#if __BANG_ARCH__ >= 300
+  *size = input_num_boxes * input_stride * sizeof(float);
+#else
+  int align_num = 128 / sizeof(float);
+  int align_box_num = CEIL_ALIGN(input_num_boxes, align_num);
+  int align_stride = CEIL_ALIGN(input_stride, align_num);
+  *size = align_box_num * align_stride * sizeof(float);
+#endif
 
-  // workspace stores the input data and a global flag, the input data was the
-  // transposed data with
-  // layout of [9, N].
-  *size = input_num_boxes * input_stride * sizeof(float) + 1 * sizeof(int32_t);
   VLOG(5) << "[mluGetPolyNmsWorkspaceSize] size = :" << *size;
   return MLUOP_STATUS_SUCCESS;
 }

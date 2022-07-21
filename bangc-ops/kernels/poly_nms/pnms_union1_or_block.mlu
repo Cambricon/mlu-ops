@@ -11,69 +11,83 @@
  *************************************************************************/
 
 #include "mlu.h"
-#include "kernels/kernel.h"
 #include "core/mlu_op_core.h"
 #include "kernels/poly_nms/pnms.h"
 #include "pnms_detection.h"
 
 #define NRAM_BUF_SIZE (MAX_NRAM_SIZE)
-// #define SIZE_SRAM_BUF (MAX_SRAM_SIZE + 128 * 1024)
+// #define SIZE_SRAM_BUF (MAX_SRAM_SIZE)
 #define SIZE_SRAM_BUF (128 * 1024)
 
 __nram__ char nram_buffer[NRAM_BUF_SIZE];
 __mlu_shared__ char sram_buffer[SIZE_SRAM_BUF];
 
-__mlu_func__ void MLUPNMSTranspose(const void *input_boxes,
-                                   const int input_num_boxes,
-                                   const int input_stride, void *output,
-                                   const mluOpDataType_t data_type_input) {
-  __bang_printf("launch MLUPNMSTranspose start \n");
+__mlu_func__ void boxesTranspose(const void *input_boxes,
+                                 const int input_num_boxes,
+                                 const int input_stride, void *output,
+                                 void *buffer, const int buffer_size,
+                                 const mluOpDataType_t data_type_input) {
+  __bang_printf("launch boxesTranspose start \n");
 
   if (coreId == 0) {
-    uint32_t task_dim = 1;
-    uint32_t task_id = 0;
-
-    uint32_t input_boxes_num = input_num_boxes;
-    uint32_t boxes_per_core = input_num_boxes / task_dim;
-    uint32_t boxes_last_core = boxes_per_core + input_num_boxes % task_dim;
-    uint32_t input_offset = task_id * boxes_per_core * input_stride;
-
-    input_boxes_num =
-        (task_id == (task_dim - 1)) ? boxes_last_core : boxes_per_core;
-
-    uint32_t max_seg_box_num = FLOOR_ALIGN(
-        NRAM_BUF_SIZE / 2 / sizeof(float) / input_stride, NFU_ALIGN_SIZE);
-
-    uint32_t repeat = boxes_per_core / max_seg_box_num;
-    uint32_t remain = boxes_per_core % max_seg_box_num;
-    uint32_t remain_data_num = remain * input_stride;
-    uint32_t max_seg_data_num = max_seg_box_num * input_stride;
-
-    float *trans_boxes;
-    float *boxes;
-    boxes = (float *)nram_buffer;
-    trans_boxes = boxes + max_seg_data_num;
-
-    for (int loop = 0; loop <= repeat; loop++) {
-      if (loop == repeat && remain == 0) {
-        break;
-      }
-      int actual_box_num = loop == repeat ? remain_data_num : max_seg_data_num;
-
-      __bang_printf("trans before:input_offset=%d, actual_box_num=%d\n",
-                    input_offset, actual_box_num);
-      __memcpy((char *)boxes, (char *)input_boxes + input_offset * 4 +
-                                  loop * actual_box_num * 4,
-               actual_box_num * 4, GDRAM2NRAM);
-      __bang_transpose((float *)trans_boxes, (float *)boxes,
-                       actual_box_num / input_stride, input_stride);
-
-      __memcpy((char *)output + input_offset * 4 + loop * actual_box_num * 4,
-               (char *)trans_boxes, actual_box_num * 4, NRAM2GDRAM);
+    if (input_num_boxes * input_stride * 4 > buffer_size) {
+      // error
+      return;
     }
+    for (int i = 0; i < 3; i++) {
+      __bang_printf("--transpose bsfore-- %d\n", i);
+      for (int j = 0; j < 9; j++) {
+        __bang_printf("%f, ", ((float *)input_boxes)[i * input_stride + j]);
+      }
+      __bang_printf("\n");
+    }
+
+// Trans boxes: Nx9 -> 9xN
+#if __BANG_ARCH__ >= 300
+    __bang_printf("transpose:__BANG_ARCH__ >=300\n");
+
+    float *boxes;
+    float *trans_boxes;
+    boxes = (float *)buffer;
+    trans_boxes = boxes + input_num_boxes * input_stride;
+    // Transpose no need to align
+    __memcpy((float *)boxes, (float *)input_boxes,
+             input_num_boxes * input_stride * 4, GDRAM2NRAM);
+    __bang_transpose((float *)trans_boxes, (float *)boxes, input_num_boxes,
+                     input_stride);
+    __memcpy((float *)output, (float *)trans_boxes,
+             input_num_boxes * input_stride * 4, NRAM2GDRAM);
+#else
+    __bang_printf("transpose:__BANG_ARCH__ < 300\n");
+    const int ALIGN_SIZE = 128;
+    const int align_num = ALIGN_SIZE / 4;
+    // align input_stride->align_stride, align  input_num_boxes->align_box_num
+    int align_box_num = CEIL_ALIGN(input_num_boxes, align_num);
+    int align_stride = CEIL_ALIGN(input_stride, align_num);
+    int transpose_num = align_box_num * align_stride;
+    if (transpose_num * 2 * 4 > buffer_size) {
+      __bang_printf("transpose failed. input num is over large.\n");
+      return;
+    }
+    float *boxes;
+    float *trans_boxes;
+    boxes = (float *)buffer;
+    trans_boxes = (float *)boxes + transpose_num;
+    __memcpy((float *)boxes, (float *)input_boxes, input_stride * sizeof(float),
+             GDRAM2NRAM, align_stride * sizeof(float),
+             input_stride * sizeof(float), input_num_boxes);
+
+    __bang_transpose((float *)trans_boxes, (float *)boxes, align_box_num,
+                     align_stride);
+
+    __memcpy((float *)output, (float *)trans_boxes,
+             input_num_boxes * sizeof(float), NRAM2GDRAM,
+             input_num_boxes * sizeof(float), align_box_num * sizeof(float),
+             input_stride);
+#endif  // BANG_ARCH if
   }
   __sync_cluster();
-  __bang_printf("launch MLUPNMSTranspose end\n");
+  __bang_printf("launch boxesTranspose end\n");
 }
 
 __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
@@ -84,12 +98,12 @@ __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
                                          void *workspace) {
   __bang_printf("mluPolyNms: iou_threshold: %f \n", iou_thresh);
 
-  // workspace: loop_stop_flag |  trans_boxes
-  void *trans_boxes = (char *)workspace + 1 * sizeof(int32_t);
+  // workspace: trans_boxes
 
+  void *trans_boxes = (char *)workspace;
   __bang_printf("[cnnlPolyNms] launch transpose kernel start.\n");
-  MLUPNMSTranspose(input_boxes, input_num_boxes, input_stride, trans_boxes,
-                   data_type_input);
+  boxesTranspose(input_boxes, input_num_boxes, input_stride, trans_boxes,
+                 nram_buffer, NRAM_BUF_SIZE, data_type_input);
   __bang_printf("[cnnlPolyNms] launch transpose kernel end.\n");
 
   uint32_t input_data_num = input_stride * input_num_boxes;  // N*P
@@ -98,15 +112,13 @@ __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
 
   uint32_t *out_data = (uint32_t *)output;
   switch (data_type_input) {
-    default: {
-      __bang_printf("[cnnlPolyNms] Not Implemented.\n");
-    }
     case MLUOP_DTYPE_FLOAT: {
       pnms_detection<float, uint32_t>(
           (uint32_t *)result_num, out_data, (float *)trans_boxes,
-          (float *)nram_buffer, NRAM_BUF_SIZE, (float *)sram_buffer, workspace,
-          taskDim, input_data_num, input_stride, iou_thresh);
+          (float *)nram_buffer, NRAM_BUF_SIZE, (float *)sram_buffer, taskDim,
+          input_data_num, input_stride, iou_thresh);
     }; break;
+    default: { __bang_printf("Not Implemented.\n"); }
   }
   // PERF_TIME_END();
 }
