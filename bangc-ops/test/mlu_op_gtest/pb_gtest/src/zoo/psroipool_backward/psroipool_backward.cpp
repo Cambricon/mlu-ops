@@ -96,11 +96,12 @@ void PsroipoolBackwardExecutor::workspaceFree() {
 }
 
 void PsroipoolBackwardExecutor::initData() {
-  output_dim_ = parser_->getProtoNode()->psroipool_backward_param().output_dim();
   pooled_height_ =
       parser_->getProtoNode()->psroipool_forward_param().pooled_height();
   pooled_width_ =
       parser_->getProtoNode()->psroipool_forward_param().pooled_width();
+
+  output_dim_ = parser_->getProtoNode()->psroipool_backward_param().output_dim();
   spatial_scale_ =
       parser_->getProtoNode()->psroipool_forward_param().spatial_scale();
   rois_num_ = tensor_desc_[1].tensor->dims[0];
@@ -127,6 +128,7 @@ void PsroipoolBackwardExecutor::compute() {
       handle_, pooled_height_, pooled_width_, output_dim_, spatial_scale_,
       top_grad_desc, top_grad, rois_desc, rois, mapping_channel_desc,
       mapping_channel, bottom_grad_desc, bottom_grad));
+  
   interface_timer_.stop();
 }
 

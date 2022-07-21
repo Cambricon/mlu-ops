@@ -63,25 +63,24 @@ static void transposeFunc(const float *in, const int batch_size,
   }
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
-                                                           const int output_dim,
-                                                           size_t *size) {
-  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", handle != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", size != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", output_dim >= 1);
+mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolForwardWorkspaceSize(
+    mluOpHandle_t handle, const int output_dim, size_t *size) {
+  PARAM_CHECK("[mluOpGetPsRoiPoolForwardWorkspaceSize]", handle != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolForwardWorkspaceSize]", size != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolForwardWorkspaceSize]", output_dim >= 1);
   *size = output_dim * sizeof(uint32_t);  // the offset of each pixel
 
   VLOG(5) << "workspace size = " << *size << ".";
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
-                                                           const int output_dim,
-                                                           size_t *size) {
-  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", handle != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", size != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolWorkspaceSize]", output_dim >= 1);
-  *size = output_dim * sizeof(uint32_t);  // the offset of each pixel
+mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolBackwardWorkspaceSize(
+    mluOpHandle_t handle, const int bootom_grad_count, size_t *size) {
+  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", handle != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", size != NULL);
+  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]",
+              bootom_grad_count >= 0);
+  *size = bootom_grad_count * sizeof(float);
 
   VLOG(5) << "workspace size = " << *size << ".";
   return MLUOP_STATUS_SUCCESS;
@@ -376,6 +375,5 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
       k_dim, k_type, handle->queue, top_grad, rois, bottom_grad,
       mapping_channel, batch_size, height, width, channels, pooled_height,
       pooled_width, output_dim, rois_num, rois_offset, spatial_scale)));
-
   return MLUOP_STATUS_SUCCESS;
 }

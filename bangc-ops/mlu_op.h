@@ -346,9 +346,9 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  *  - The output_dim should be greater than 1.
  */
 mluOpStatus_t MLUOP_WIN_API
-mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
-                               const int output_dim,
-                               size_t *size);
+mluOpGetPsRoiPoolForwardWorkspaceSize(mluOpHandle_t handle,
+                                      const int output_dim,
+                                      size_t *size);
 
 /*!
  *  @brief Generate fixed size feature map for each Roi(Regions of Interest).
@@ -479,8 +479,8 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetPsRoiPoolBackwardWorkspaceSize(mluOpHandle_t handle,
-                                      const int bootom_grad_count,
-                                      size_t *size);
+                                       const int bootom_grad_count,
+                                       size_t *size);
 
 /*!
  * @brief Generates fixed size feature map for each grid. Each value in the
