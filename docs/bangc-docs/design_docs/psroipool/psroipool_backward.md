@@ -36,7 +36,7 @@
 | 需求来源               | Pytorch                              |
 | 应用网络               | R-FCN                            |
 | 输入数据类型           |  top_grad: float; mapping_channel: int; </br>rois: float                              |
-| 输入 Shape            | top_grad: [rois_num, hi, wi，output_dim]; </br>mapping_channel: [rois_num, hi, wi，output_dim]; </br>rois: [rois_num，rois_offset]  |
+| 输入 Shape            | top_grad: [rois_num, hi, wi, output_dim]; </br>mapping_channel: [rois_num, hi, wi, output_dim]; </br>rois: [rois_num, rois_offset]  |
 | 输入 Layout           | top_grad: NHWC; mapping_channel: NHWC; </br>rois: ARRAY             |
 | 输出数据类型            | bottom_grad: float|
 | 输出 Shape            | bottom_grad: [batches, ho, wo, channels]         |
