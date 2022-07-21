@@ -35,9 +35,9 @@
 | ---------------------------------------------------------------------------- | --------------------------------------- |
 | 需求来源               | Pytorch                              |
 | 应用网络               | R-FCN                            |
-| 输入数据类型           |  top_grad: float; mapping_channel: int; </br>input_rois: float                              |
-| 输入 Shape            | top_grad: [rois_num, hi, wi，output_dim]; </br>mapping_channel: [rois_num, hi, wi，output_dim]; </br>input_rois: [rois_num，rois_offset]  |
-| 输入 Layout           | top_grad: NHWC; mapping_channel: NHWC; </br>input_rois: ARRAY             |
+| 输入数据类型           |  top_grad: float; mapping_channel: int; </br>rois: float                              |
+| 输入 Shape            | top_grad: [rois_num, hi, wi，output_dim]; </br>mapping_channel: [rois_num, hi, wi，output_dim]; </br>rois: [rois_num，rois_offset]  |
+| 输入 Layout           | top_grad: NHWC; mapping_channel: NHWC; </br>rois: ARRAY             |
 | 输出数据类型            | bottom_grad: float|
 | 输出 Shape            | bottom_grad: [batches, ho, wo, channels]         |
 | 输出 Layout              |bottom_grad: NHWC  |
@@ -47,7 +47,7 @@
 | 是否需要支持原位           | 否         |
 | 是否需要支持 stride 机制   | 否                                                           |
 | 是否需要支持广播           | 否                                                           |
-| 0 元素检查是否直接返回      | top_grad: (是, return MLUOP_STATUS_SUCCESS); mapping_channel:</br>(是, return MLUOP_STATUS_SUCCESS); </br>input_rois: (否，return MLUOP_STATUS_BAD_PARAM)                                |
+| 0 元素检查是否直接返回      | top_grad: (是, return MLUOP_STATUS_SUCCESS); mapping_channel:</br>(是, return MLUOP_STATUS_SUCCESS); </br>rois: (否，return MLUOP_STATUS_BAD_PARAM)                                |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)                               |                                                                |
 | 本次开发优先支持的规模/模式                                                  |                                |
 
@@ -59,7 +59,7 @@
 
 - example:
 
-竞品中top_grad、mapping_channel、bottom_grad都是NCHW的layout，因此此example与竞品对齐。
+竞品中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与竞品对齐。
 
 ```
 top_grad: shape is  [2, 2, 2, 1]
@@ -72,10 +72,10 @@ mapping_channel: shape is [2, 2, 2, 1]
                           [2, 3]],
                          [[0, 1],
                           [2, 3]]], device='cuda:0')
-input_rois: shape is [2, 5]
-            tensor([[0.0000, 1.0000, 2.0000, 2.0000, 3.0000],
-                   [0.0000, 1.0000, 2.0000, 2.0000, 3.0000]],
-                   device='cuda:0')
+rois: shape is [2, 5]
+      tensor([[0.0000, 1.0000, 2.0000, 2.0000, 3.0000],
+              [0.0000, 1.0000, 2.0000, 2.0000, 3.0000]],
+              device='cuda:0')
 
 {pooled_height = 2, pooled_width = 2, spatial_scale = 0.25, output_dim = 1}
 
@@ -92,7 +92,7 @@ bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
 
 ```
 # 0元素检查
-# 1. input_rois为0，报错
+# 1. rois为0，报错
 
 torch.FatalError: invalid argument 2: out of range at /opt/pytorch/pytorch/torch/lib/THC/generic/THCTensor.c:23
 
@@ -127,7 +127,7 @@ tensor([[[[8., 0., 0.],
 # 4. bottom_grad不作为入参，无法测试0元素
 
 # inf/nan检查
-# 1. intput_rois支持inf
+# 1. rois支持inf
 rois = torch.from_numpy(np.array(
                         [[np.inf, np.inf, np.inf, np.inf, np.inf],
                          [np.inf, np.inf, np.inf, np.inf, np.inf]])).float().cuda()
@@ -182,31 +182,31 @@ tensor([[[[8., 0., 0.],
 | 参数             | 语义                               | 类型（输入/输出） | 支持类型    | 物理布局   | 规模限制 |
 | ---------------- | ---------------------------------- | ----------------- | ----------- | ---------- | -------- |
 | handle           | 算子上下文信息                    | /                 | /           | /          | 无       |
-| top_grad_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
+| top_grad_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t    | /     | 无       |
 | top_grad       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
-| input_rois_desc  | 输入roi的描述符                | 输入              | mluOpTensorDescriptor_t | /          | 无       |
-| input_rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
-| mapping_channel_desc | 输入mapping_channel的描述   | 输入              | mluOpTensorDescriptor_t          | /          | 无       |
+| rois_desc  | 输入roi的描述符                | 输入              | mluOpTensorDescriptor_t | /          | 无       |
+| rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
+| mapping_channel_desc | 输入mapping_channel的描述   | 输入              | mluOpTensorDescriptor_t          | /       | 无       |
 | mapping_channel      | 输入mapping_channel数据的指针| 输入              | int32_t      | NHWC       | 无       |
 | pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
 | pooled_width    | 池化后的宽度                      | 输入              | uint32_t           | /          | 无       |
 | spatial_scale    | 变换的尺度                     | 输入              | float      |   /       | 无       |
 | output_dim      | 输出的channel                      | 输入              | uint32_t          | /          | 无       |
-| bottom_grad_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
+| bottom_grad_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t       | /     | 无       |
 | bottom_grad      | 输出数据的指针                     | 输出              | float      | NHWC       | 无       |
 
 ### 1.4 算子限制
 
 | 限制类型     | 详细说明                                                                                                        |
 | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 数据类型限制 | 输入数据（包括top_grad、input_rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持float。输入数据（mapping_channel）类型必须是int。         |
+| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持float。输入数据（mapping_channel）类型必须是int。         |
 | 布局限制     | 对于top_grad、mapping_channel不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模，roi的首位必须是batch_id。 |
 | 数据规模限制 | 无                                                            |
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
 | 输入参数限制 | pooled_height = pooled_width,rois_offset = 5,</br>output_dim >= 1,spatial_scale > 0,</br>channels = pooled_height * pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1, </br> mapping_channel的shape必须与top_grad的shape保持一致，并且其每个batches均要满足对channels间隔pooled_height * pooled_width的遍历。</br>例如：假设batches = 2, pooled_height = 2, pooled_width =2, output_dim = 3, channels = 2 * 2 * 3, 则mapping_channel为: [[[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]], [[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]]]。 |
-| nan/inf限制 | top_grad支持nan/inf测例，mapping_channel支持nan/inf, input_rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
+| nan/inf限制 | top_grad支持nan/inf测例，mapping_channel不支持nan/inf, rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
 
 ### 1.5 验收标准
 
@@ -242,11 +242,14 @@ int psroi_pooling_backward_cuda(int pooled_height,
 ```c++
 mluOpStatus_t MLUOP_WIN_API 
 mluOpPsRoiPoolBackward(mluOpHandle_t handle,
+                       const int pooled_height,
+                       const int pooled_width,
                        const float spatial_scale,
+                       const int output_dim, 
                        const mluOpTensorDescriptor_t top_grad_desc,
                        const void *top_grad,
-                       const mluOpTensorDescriptor_t input_rois_desc,
-                       const void *input_rois,
+                       const mluOpTensorDescriptor_t rois_desc,
+                       const void *rois,
                        const mluOpTensorDescriptor_t mapping_channel_desc,
                        const void *mapping_channel,
                        const mluOpTensorDescriptor_t bottom_grad_desc,
@@ -267,7 +270,7 @@ step2: 遍历top_grad和mapping_channel中各个点(一次处理output_dim个数
 
 step3: 计算出step2得到的bin区域面积bin_area，结合step2得到的value_temp计算出value = value_temp / bin_area. 根据value、C、bin区域找到bottom_grad中对应的bin区域，对这块区域值通过atomic_add将value值添加。
 
-考虑到数据每次处理的bottom_grad过于离散，在实际计算时候先将结果保存成（batches, ho, wo, pooled_height * pooled_width, output_dim），这样可以保证一个output_dim中的数据是连续的。最后再借助workspace将计算结果transpose成（batches, ho, wo, output_dim, pooled_height * pooled_width）形式输出。
+考虑到数据每次处理的bottom_grad过于离散，在实际计算时候先将结果保存成（batches, ho, wo, pooled_height * pooled_width, output_dim），这样可以保证一个output_dim中的数据是连续的。最后再借助workspace将计算结果transpose成（batches, ho, wo, output_dim, pooled_height * pooled_width）形式输出。（这种方案不需要使用mapping_channel参数，mapping_channel参数为前向保存input中的C，是有序的，因此为了与竞品对齐，mapping_channel参数需要保证有序，详细规律见1.4 算子输入限制）。
 
 ### 3.2 伪代码实现（可选）
 
@@ -284,7 +287,7 @@ for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++
     ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
     pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
 
-    roi_batch_ind = input_rois[roi_num * 5]
+    roi_batch_ind = rois[roi_num * 5]
     // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
     is_empty = (hend <= hstart) || (wend <= wstart);
     if (is_empty){
@@ -302,7 +305,7 @@ for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++
     } 
 }
 
-// 所有计算之后
+// 所有计算之后对bottom_grad做transpose
 最后通过workspace对bottom_grad做transpose，将(batches, ho, wo, output_dim * (pooled_height * pooled_width))\
 转成(batches, ho, wo, (pooled_height * pooled_width) * output_dim);
 
@@ -328,7 +331,7 @@ nram空间划分：
 
 ```c++
 (1)top_grad:[320, 7, 7, 8], LAYOUT_NHWC, DTYPE_FLOAT
-   input_rois:[320，5], LAYOUT_ARRAY, DTYPE_FLOAT
+   rois:[320，5], LAYOUT_ARRAY, DTYPE_FLOAT
    mapping_channel:[320, 7, 7, 8], LAYOUT_NHWC, DTYPE_INT32
    bottom_grad:[2, 14, 14, 392], LAYOUT_NHWC, DTYPE_FLOAT
    psroipool_backward_param{spatial_scale=1, output_dim=8, pooled_height=7, pooled_width=7}
@@ -350,9 +353,9 @@ nram空间划分：
 
 3. top_grad != NULL
 
-4. input_rois_desc != NULL
+4. rois_desc != NULL
 
-5. input_rois != NULL
+5. rois != NULL
 
 6. bottom_grad_desc != NULL    
 
@@ -364,9 +367,11 @@ nram空间划分：
 
 - 针对零元素
 
-1. top_grad/mapping_channel: return MLUOP_STATUS_SUCCESS
+1. top_grad: return MLUOP_STATUS_SUCCESS
 
-2. input_rois: return MLUOP_STATUS_BAD_PARAM
+2. rois: return MLUOP_STATUS_BAD_PARAM
+
+3. mapping_channel: return MLUOP_STATUS_SUCCESS
 
 - 算子参数防呆
 
@@ -376,37 +381,45 @@ nram空间划分：
 
 3. mapping_channel_layout == MLUOP_LAYOUT_NHWC
 
-4. output_dim >= 1
+4. bottom_grad_layout = MLUOP_LAYOUT_NHWC
 
-5. spatial_scale > 0
+5. output_dim >= 1
 
-6. rois_offset == 5
+6. spatial_scale > 0
 
-7. top_grad_dtype == MLUOP_DTYPE_FLOAT
+7. rois_offset == 5
 
-8. intput_rois_dtype == MLUOP_DTYPE_FLOAT
+8. top_grad_dtype == MLUOP_DTYPE_FLOAT
 
-9. bottom_grad_dtype == MLUOP_DTYPE_FLOAT
+9. rois_dtype == MLUOP_DTYPE_FLOAT
 
-10. mapping_channel_dtype == MLUOP_DTYPE_INT32
+10. bottom_grad_dtype == MLUOP_DTYPE_FLOAT
 
-11. channels == pooled_height * pooled_width * output_dim
+11. mapping_channel_dtype == MLUOP_DTYPE_INT32
 
-12. top_grad_desc->dim == 4
+12. channels == pooled_height * pooled_width * output_dim
 
-13. input_rois_desc->dim == 2
+13. top_grad_desc->dim == 4
 
-14. bottom_grad_desc->dim == 4
+14. rois_desc->dim == 2
 
-15. mapping_channel_desc->dim == 4
+15. bottom_grad_desc->dim == 4
 
-16. top_grad_desc->dim[0] = mapping_channel_desc->dim[0]
+16. mapping_channel_desc->dim == 4
 
-17. top_grad_desc->dim[1] = mapping_channel_desc->dim[1]
+17. top_grad_desc->dim[0] = mapping_channel_desc->dim[0]
 
-18. top_grad_desc->dim[0] = mapping_channel_desc->dim[2]
+18. top_grad_desc->dim[1] = mapping_channel_desc->dim[1]
 
-19. top_grad_desc->dim[0] = mapping_channel_desc->dim[3]
+19. top_grad_desc->dim[2] = mapping_channel_desc->dim[2]
+
+20. top_grad_desc->dim[3] = mapping_channel_desc->dim[3]
+
+21. pooled_height = top_grad_desc->dim[1]
+
+22. pooled_width = top_grad_desc->dim[2]
+
+23. output_dim = top_grad_desc->dim[3]
 
 ## 4 算子性能优化记录
 
