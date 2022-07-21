@@ -53,11 +53,11 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
 
-/* FillZero*/
-void MLUOP_WIN_API mluOpBlockKernelFillZero(cnrtDim3_t k_dim,
-                                            cnrtFunctionType_t k_type,
-                                            cnrtQueue_t queue, const int num,
-                                            void *gdram_ptr);
+/* FillZero */
+void MLUOP_WIN_API mluOpBlockKernelFillZeroByte(cnrtDim3_t k_dim,
+                                                cnrtFunctionType_t k_type,
+                                                cnrtQueue_t queue,
+                                                const int num_byte, void *x);
 
 /* Log */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineLogHalfFast(
@@ -102,9 +102,9 @@ void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
     const int output_w, void *output);
 void MLUOP_WIN_API mluOpBlockKernelRoiCropBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *grad_output, const void *grid, const int batch, const int height,
-    const int width, const int channels, const int grid_n, const int output_h,
-    const int output_w, void *grad_input);
+    const void *grad_output, const void *grid, const int batch,
+    const int height, const int width, const int channels, const int grid_n,
+    const int output_h, const int output_w, void *grad_input);
 
 /* Sqrt */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfFast(
