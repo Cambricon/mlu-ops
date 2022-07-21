@@ -289,21 +289,24 @@ __mlu_func__ void computeDiv(IN_DT *result, const IN_DT *melo,
                              const IN_DT *denom, IN_DT *denom_tmp, IN_DT *tmp1,
                              IN_DT *tmp2, const int actual_box_num) {
   __bang_write_value(result, actual_box_num, float(0.0));
-
 #if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
   __bang_div((float *)result, (float *)melo, (float *)denom, actual_box_num);
 #else
-  __bang_active_sign((float *)tmp1, (float *)denom, actual_box_num);
-  __bang_active_abs((float *)tmp2, (float *)denom, actual_box_num);
-#if __BANG_ARCH__ == 372
-  __bang_recip((float *)denom_tmp, (float *)tmp2, actual_box_num);
-#else
-  __bang_active_reciphp((float *)denom_tmp, (float *)tmp2, actual_box_num);
-#endif
-  __bang_mul((float *)result, (float *)melo, (float *)denom_tmp,
-             actual_box_num);
-  __bang_mul((float *)result, (float *)result, (float *)tmp1, actual_box_num);
-#endif
+  // Calculation error when denominator is large
+  for (int i = 0; i < actual_box_num; i++) {
+    result[i] = melo[i] / denom[i];
+  }
+//   __bang_active_sign((float *)tmp1, (float *)denom, actual_box_num);
+//   __bang_active_abs((float *)tmp2, (float *)denom, actual_box_num);
+// #if __BANG_ARCH__ == 372
+//   __bang_recip((float *)denom_tmp, (float *)tmp2, actual_box_num);
+// #else
+//   __bang_active_reciphp((float *)denom_tmp, (float *)tmp2, actual_box_num);
+// #endif
+//   __bang_mul((float *)result, (float *)melo, (float *)denom_tmp,
+//              actual_box_num);
+//   __bang_mul((float *)result, (float *)result, (float *)tmp1, actual_box_num);
+// #endif
 }
 
 template <typename IN_DT>
@@ -619,7 +622,6 @@ __mlu_func__ void intersectArea(
   a_y = box_pts_y0;
   b_x = box_pts_x1;
   b_y = box_pts_y1;
-  //  __bang_printf("- polygon_cut -2-\n");
   polygon_cut(p_x, p_y, p_count, a_x, a_y, b_x, b_y, pp_x, pp_y, nram_tmp,
               max_seg_num, actual_box_num, align_actual_box_num);
 
@@ -627,10 +629,8 @@ __mlu_func__ void intersectArea(
   a_y = box_pts_y1;
   b_x = o_x;
   b_y = o_y;
-  //  __bang_printf("- polygon_cut -3-\n");
   polygon_cut(p_x, p_y, p_count, a_x, a_y, b_x, b_y, pp_x, pp_y, nram_tmp,
               max_seg_num, actual_box_num, align_actual_box_num);
-  // __bang_printf("- polygon_cut -all end-\n");
 
   calPolygonSignArea<float>((float *)area, p_x, p_y, p_count,
                             align_actual_box_num);
@@ -703,7 +703,6 @@ __mlu_func__ void calculateBoxesArea(const IN_DT *x1, const IN_DT *y1,
   // (x1*y2 - y1*x2 + x2*y3-y2*x3) + x3*y4 - y3*x4 + x4*y1 - y4*x1)*0.5
   __bang_mul_scalar((IN_DT *)area, (IN_DT *)area, (IN_DT)0.5,
                     calculate_num * sizeof(IN_DT));
-  // __bang_printf("calculateBoxesArea end\n");
 }
 
 template <typename IN_DT>
@@ -850,7 +849,6 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
                                  const int core_limit, const int input_data_num,
                                  const int input_stride,
                                  const float thresh_iou) {
-  __bang_printf("launch pnms_detection\n");
   uint32_t output_box_num = 0;
   // NRAM N=max_seg_pad
   // max_box(max_score, max_box_coordinate, max_index,+-max_area, max_area)
@@ -946,7 +944,6 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
                      get_max_score_buffer, sram_space, scoreIndexBufSize,
                      input_boxes_num, input_offset_num, input_stride,
                      core_limit);
-
     // store max_score_index to nram_save, and store nram_save to
     // output_data(gdram).
     if (coreId == 0) {
@@ -956,8 +953,6 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
         output_box_num++;
 
         if (nram_save_count == nram_save_limit_count) {
-          __bang_printf("nram_save_count == nram_save_limit_count=%d\n",
-                        nram_save_count);
           __memcpy(output_data + output_save_count * nram_save_limit_count,
                    nram_save, nram_save_count * sizeof(uint32_t), NRAM2GDRAM);
           output_save_count++;
