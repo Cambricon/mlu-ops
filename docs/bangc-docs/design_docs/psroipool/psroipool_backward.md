@@ -275,16 +275,13 @@ step3: 计算出step2得到的bin区域面积bin_area，结合step2得到的valu
 
 ```c++
 
-// 考虑先不拆output_dim: 3 * output_dim < nram_size
+// 考虑先不拆output_dim: 2 * output_dim < nram_size
 top_grad_buffer = nram_src;
-mapping_channel = top_grad_buffer + output_dim;
-nram_buffer = mapping_channel + output_dim;
+nram_buffer = top_grad_buffer + output_dim;
 // 每个核的output_dim的遍历
 for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++){
     __nramset((T *)top_grad_buffer, output_dim, (float)0);
-    __nramset((T *)mapping_channel, output_dim, (int)0);
     __memcpy(top_grad_buffer, top_grad, output_dim * sizeof(float), GDRAM2NRAM);
-    __memcpy(mapping_channel_buffer, mapping_channel, output_dim * sizeof(int), GDRAM2NRAM);
     roi_num = output_dim_index / (pooled_width * pooled_height);
     ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
     pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
