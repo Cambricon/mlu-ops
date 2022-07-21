@@ -108,12 +108,10 @@ void PolyNmsExecutor::cpuCompute() {
 
 int64_t PolyNmsExecutor::getTheoryOps() {
   VLOG(4) << "getTheoryOps";
-  int theory_ops = parser_->getMetaTensor("input1").tensor->dims[0];
-  theory_ops *= parser_->getMetaTensor("input1").tensor->dims[1];
+  int64_t theory_ops = 21650; 
+  int dims = parser_->getMetaTensor("input1").tensor->dims[0];
 
-  int actual_output_boxes = parser_->getMetaTensor("output1").tensor->dims[0];
-  VLOG(4) << "get the output boxes num:" << actual_output_boxes;
-  theory_ops *= actual_output_boxes;
+  theory_ops = theory_ops * dims * dims;
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
 }
