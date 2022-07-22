@@ -207,7 +207,7 @@ static mluOpStatus_t psRoiPoolForwardCheck(
   PARAM_CHECK(api, top_grad_desc->dims[1] == mapping_channel_desc->dims[1]);
   PARAM_CHECK(api, top_grad_desc->dims[2] == mapping_channel_desc->dims[2]);
   PARAM_CHECK(api, top_grad_desc->dims[3] == mapping_channel_desc->dims[3]);
-  if (mluOpGetTensorElementNum(top_grad_desc) == 0 &&
+  if (mluOpGetTensorElementNum(top_grad_desc) == 0 ||
       mluOpGetTensorElementNum(mapping_channel_desc) == 0) {
     VLOG(5) << api << " Input_data skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
@@ -305,7 +305,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   const int output_dim = output_data_desc->dims[3];
   const int rois_offset = input_rois_desc->dims[1];
 
-  mluOpStatus_t ret = param_and_pointer_check(
+  mluOpStatus_t ret = psRoiPoolForwardCheck(
       api, spatial_scale, group_size, input_data, input_rois, output_data,
       mapping_channel, input_data_desc, input_rois_desc, output_data_desc,
       mapping_channel_desc, workspace, workspace_size);
