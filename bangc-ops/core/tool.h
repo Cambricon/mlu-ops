@@ -19,7 +19,7 @@
 #include <string>
 
 #include "core/logging.h"
-#include "mlu_op.h"
+#include "mlu_op_core.h"
 
 /**
  * @brief cast float32 data to int31 data
