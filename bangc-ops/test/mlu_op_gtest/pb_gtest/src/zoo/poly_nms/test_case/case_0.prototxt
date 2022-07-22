@@ -33,7 +33,7 @@ output {
   dtype: DTYPE_INT32
 }
 poly_nms_param: {
-  iou_threshold: 0.15
+  iou_threshold: 0.2
 }
 test_param: {
   error_func: DIFF3

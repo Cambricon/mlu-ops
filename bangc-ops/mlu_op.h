@@ -216,17 +216,17 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpTensorDescriptor_t y_desc, const void *y,
          const mluOpTensorDescriptor_t z_desc, void *z);
 
-mluOpStatus_t MLUOP_WIN_API mluGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
+mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
                                                       const mluOpTensorDescriptor_t boxes_desc,
                                                       size_t *size);
 
-mluOpStatus_t MLUOP_WIN_API mluPolyNms(mluOpHandle_t handle,
+mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
                                       const mluOpTensorDescriptor_t boxes_desc,
                                       const void *boxes,
                                       float iou_threshold,
                                       void *workspace,
                                       size_t workspace_size,
-                                      mluOpTensorDescriptor_t output_desc,
+                                      const mluOpTensorDescriptor_t output_desc,
                                       void *output,
                                       void *result_num);
 

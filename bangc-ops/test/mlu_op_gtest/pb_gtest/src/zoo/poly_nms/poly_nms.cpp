@@ -27,7 +27,7 @@ void PolyNmsExecutor::paramCheck() {
 void PolyNmsExecutor::workspaceMalloc() {
   size_t workspace_size = 0;
   auto tensor_box = parser_->getMetaTensor("input1").tensor;
-  MLUOP_CHECK(mluGetPolyNmsWorkspaceSize(handle_, tensor_box, &workspace_size));
+  MLUOP_CHECK(mluOpGetPolyNmsWorkspaceSize(handle_, tensor_box, &workspace_size));
   VLOG(4) << "Malloc workspace space.";
   void *temp = mlu_runtime_.allocate(workspace_size);
   workspace_.push_back(temp);
@@ -47,7 +47,7 @@ void PolyNmsExecutor::workspaceFree() {
 
 void PolyNmsExecutor::compute() {
   float iou_threshold = parser_->getProtoNode()->poly_nms_param().iou_threshold();
-  VLOG(4) << "[mluPolyNms] iou_threshold: " << iou_threshold;
+  VLOG(4) << "[mluOpPolyNms] iou_threshold: " << iou_threshold;
 
   // get tensor by name (in prototxt)
   auto tensor_boxes = parser_->getMetaTensor("input1").tensor;
@@ -56,16 +56,16 @@ void PolyNmsExecutor::compute() {
   auto output_ptr = parser_->getMetaTensor("output1").dev_ptr;
   auto result_num = parser_->getMetaTensor("output2").dev_ptr;
 
-  VLOG(4) << "[mluPolyNms] call cnnlGetPnmsWorkspaceSize()";
+  VLOG(4) << "[mluOpPolyNms] call cnnlGetPnmsWorkspaceSize()";
   size_t workspace_size = 0;
-  MLUOP_CHECK(mluGetPolyNmsWorkspaceSize(handle_, tensor_boxes, &workspace_size));
+  MLUOP_CHECK(mluOpGetPolyNmsWorkspaceSize(handle_, tensor_boxes, &workspace_size));
   interface_timer_.start();
 
-  VLOG(4) << "[mluPolyNms] call mluPolyNms()";
-  MLUOP_CHECK(mluPolyNms(handle_, tensor_boxes, boxes_ptr, iou_threshold, workspace_[0],
+  VLOG(4) << "[mluOpPolyNms] call mluOpPolyNms()";
+  MLUOP_CHECK(mluOpPolyNms(handle_, tensor_boxes, boxes_ptr, iou_threshold, workspace_[0],
                       workspace_size, tensor_output, output_ptr, result_num));
   interface_timer_.stop();
-  VLOG(4) << "[mluPolyNms] mluPolyNms end.";
+  VLOG(4) << "[mluOpPolyNms] mluOpPolyNms end.";
 }
 
 void PolyNmsExecutor::pnms_detection_cpu(float *output_data,
@@ -94,7 +94,7 @@ void PolyNmsExecutor::cpuCompute() {
   auto input_box_desc = tensor_desc_[0].tensor;
   int input_boxes_num = input_box_desc->dims[0];
 
-  VLOG(4) << "[mluPolyNms] cpu compute start, input_boxes_num:" << input_boxes_num;
+  VLOG(4) << "[mluOpPolyNms] cpu compute start, input_boxes_num:" << input_boxes_num;
   auto input_boxes = parser_->getMetaTensor(0).cpu_ptr;
   auto output_ptr = parser_->getMetaTensor(1).cpu_ptr;
 
@@ -103,7 +103,7 @@ void PolyNmsExecutor::cpuCompute() {
                      input_boxes_num, iou_thresh);
   auto output_size = parser_->getMetaTensor(2).cpu_ptr;
   output_size[0] = total_output_boxes_num;
-  VLOG(4) << "[mluPolyNms] cpu compute end, total_output_boxes_num:" << total_output_boxes_num;
+  VLOG(4) << "[mluOpPolyNms] cpu compute end, total_output_boxes_num:" << total_output_boxes_num;
 }
 
 int64_t PolyNmsExecutor::getTheoryOps() {

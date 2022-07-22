@@ -306,7 +306,7 @@ __mlu_func__ void computeDiv(IN_DT *result, const IN_DT *melo,
 //   __bang_mul((float *)result, (float *)melo, (float *)denom_tmp,
 //              actual_box_num);
 //   __bang_mul((float *)result, (float *)result, (float *)tmp1, actual_box_num);
-// #endif
+#endif
 }
 
 template <typename IN_DT>

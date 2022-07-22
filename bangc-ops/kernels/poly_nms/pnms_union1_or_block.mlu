@@ -13,11 +13,11 @@
 #include "mlu.h"
 #include "core/mlu_op_core.h"
 #include "kernels/poly_nms/pnms.h"
+#include "kernels/kernel.h"
 #include "pnms_detection.h"
 
 #define NRAM_BUF_SIZE (MAX_NRAM_SIZE)
-// #define SIZE_SRAM_BUF (MAX_SRAM_SIZE)
-#define SIZE_SRAM_BUF (128 * 1024)
+#define SIZE_SRAM_BUF (NRAM_BUF_SIZE)
 
 __nram__ char nram_buffer[NRAM_BUF_SIZE];
 __mlu_shared__ char sram_buffer[SIZE_SRAM_BUF];
@@ -27,18 +27,9 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
                                  const int input_stride, void *output,
                                  void *buffer, const int buffer_size,
                                  const mluOpDataType_t data_type_input) {
-  __bang_printf("launch boxesTranspose start \n");
-
   if (coreId == 0) {
-    if (input_num_boxes * input_stride * 4 > buffer_size) {
-      __bang_printf("transpose failed. input num is over large.\n");
-      return;
-    }
-
-// Trans boxes: Nx9 -> 9xN
+    // Trans boxes: Nx9 -> 9xN
 #if __BANG_ARCH__ >= 300
-    __bang_printf("transpose:__BANG_ARCH__ >=300\n");
-
     float *boxes;
     float *trans_boxes;
     boxes = (float *)buffer;
@@ -51,17 +42,13 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
     __memcpy((float *)output, (float *)trans_boxes,
              input_num_boxes * input_stride * 4, NRAM2GDRAM);
 #else
-    __bang_printf("transpose:__BANG_ARCH__ < 300\n");
     const int ALIGN_SIZE = 128;
     const int align_num = ALIGN_SIZE / 4;
     // align input_stride->align_stride, align  input_num_boxes->align_box_num
     int align_box_num = CEIL_ALIGN(input_num_boxes, align_num);
     int align_stride = CEIL_ALIGN(input_stride, align_num);
     int transpose_num = align_box_num * align_stride;
-    if (transpose_num * 2 * 4 > buffer_size) {
-      __bang_printf("transpose failed. input num is over large.\n");
-      return;
-    }
+
     float *boxes;
     float *trans_boxes;
     boxes = (float *)buffer;
@@ -80,7 +67,6 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
 #endif  // BANG_ARCH if
   }
   __sync_cluster();
-  __bang_printf("launch boxesTranspose end\n");
 }
 
 __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
@@ -90,14 +76,11 @@ __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
                                          const mluOpDataType_t data_type_input,
                                          void *workspace) {
   void *trans_boxes = (char *)workspace;
-  __bang_printf("[cnnlPolyNms] launch transpose kernel start.\n");
   boxesTranspose(input_boxes, input_num_boxes, input_stride, trans_boxes,
                  nram_buffer, NRAM_BUF_SIZE, data_type_input);
-  __bang_printf("[cnnlPolyNms] launch transpose kernel end.\n");
 
   uint32_t input_data_num = input_stride * input_num_boxes;  // N*P
   input_stride = input_num_boxes;                            // N
-  // PERF_TIME_BEGIN();
 
   uint32_t *out_data = (uint32_t *)output;
   switch (data_type_input) {
