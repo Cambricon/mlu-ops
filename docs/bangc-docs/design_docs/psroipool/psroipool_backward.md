@@ -290,19 +290,21 @@ step2: 遍历top_grad和mapping_channel中各个点(一次处理output_dim个数
 
 step3: 计算出step2得到的bin区域面积bin_area，结合step2得到的value_temp计算出value = value_temp / bin_area. 根据value、C、bin区域找到bottom_grad中对应的bin区域，对这块区域值通过atomic_add将value值添加。
 
-考虑到数据每次处理的bottom_grad过于离散，在实际计算时候先将结果保存成（batches, ho, wo, pooled_height * pooled_width, output_dim），这样可以保证一个output_dim中的数据是连续的。最后再借助workspace将计算结果transpose成（batches, ho, wo, output_dim, pooled_height * pooled_width）形式输出。（这种方案不需要使用mapping_channel参数，mapping_channel参数为前向保存input中的C，是有序的，因此为了与竞品对齐，mapping_channel参数需要保证有序，详细规律见1.4 算子输入限制）。
-
 ### 3.2 伪代码实现（可选）
 
 ```c++
 
-// 考虑先不拆output_dim: 2 * output_dim < nram_size
+// 考虑先不拆output_dim: 2 * output_dim + height * width < nram_size
 top_grad_buffer = nram_src;
-nram_buffer = top_grad_buffer + output_dim;
+mapping_channel_buffer = top_grad_buffer + output_dim;
+nram_buffer = mapping_channel_buffer + output_dim;
+
 // 每个核的output_dim的遍历
 for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++){
     __nramset((T *)top_grad_buffer, output_dim, (float)0);
+    __nramset((T *)mapping_channel_buffer, output_dim, (int)0);
     __memcpy(top_grad_buffer, top_grad, output_dim * sizeof(float), GDRAM2NRAM);
+    __memcpy(mapping_channel_buffer, top_grad, output_dim * sizeof(int), GDRAM2NRAM);
     roi_num = output_dim_index / (pooled_width * pooled_height);
     ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
     pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
@@ -315,19 +317,20 @@ for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++
         bin_area_rechip = 1 / bin_area;
         offset_bottom_grad = bottom_grad +
                 roi_batch_ind * channels * height * width;
-        for (h = hstart; h < hend; h++) {
-            for (w = wstart; w < wend; w++) {
-                bottom_index = (h * width + w) * channels + (ph * pooled_height + pw) * ouput_dim;
-                __bang_mul_const(nram_buffer, top_grad_buffer, bin_area_recip, output_dim);
-                __bang_atomic_add(nram_buffer, offset_bottom_grad + bottom_index, nram_buffer, output_dim);
+        for (int i = 0; i < output_dim; i ++){
+            __nramset((T *)nram_buffer, height * width, (float)0);
+            c = mapping_channel_buffer[i];
+            value = top_grad_buffer[i] * bin_area_rechip;
+            for (h = hstart; h < hend; h++) {
+                for (w = wstart; w < wend; w++) {
+                    bottom_offset = (h * width + w) * channels + c;
+                    nram_offset = (h - hstart) * (hend - hstart) + (w - wstart);
+                    __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
+                }
             }
         }
     } 
 }
-
-// 所有计算之后对bottom_grad做transpose
-最后通过workspace对bottom_grad做transpose，将(batches, ho, wo, output_dim * (pooled_height * pooled_width))\
-转成(batches, ho, wo, (pooled_height * pooled_width) * output_dim);
 
 ```
 
