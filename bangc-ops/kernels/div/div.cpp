@@ -10,6 +10,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "core/context.h"
+#include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
@@ -40,6 +41,15 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
     return MLUOP_STATUS_SUCCESS;
   }
 
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("div");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "x", x, x_desc, 10, 0);
+    GEN_CASE_DATA(true, "y", y, y_desc, 10, 0);
+    GEN_CASE_DATA(false, "z", z, z_desc, 0, 0);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
+  }
+
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   binaryOpPolicyFunc(handle, x_desc, THRESHOLD_SIZE, &k_dim, &k_type);
@@ -63,5 +73,6 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   }
   KERNEL_CHECK((mluOpBlockKernelBinary(k_dim, k_type, handle->queue, x, y, z,
                                        element_num)));
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

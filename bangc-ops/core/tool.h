@@ -13,8 +13,14 @@
 #define CORE_TOOL_H_
 
 #include <stdint.h>
+
+#include <algorithm>
 #include <cmath>
+#include <string>
+
 #include "core/logging.h"
+#include "mlu_op_core.h"
+
 /**
  * @brief cast float32 data to int31 data
  *
@@ -61,6 +67,14 @@ mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
                                  int position);
 
 int16_t castFloat32ToHalf(float src);
+float castHalfToFloat32(int16_t src);
+
+int mkdirIfNotExist(const char *pathname);
+int mkdirRecursive(const char *pathname);
+uint64_t getUintEnvVar(const std::string &str, uint64_t default_para = 0);
+std::string getStringEnvVar(const std::string &str,
+                            std::string default_para = "");
+bool getBoolEnvVar(const std::string &str, bool default_para = false);
 
 /**
  * @brief Casts data from float32 to int8/int16. If you would like to
@@ -86,7 +100,7 @@ template <typename FixedType>
 mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
                                  const size_t num, const int position = 0,
                                  const float scale = 1.0,
-                                 const int offset  = 0) {
+                                 const int offset = 0) {
   PARAM_CHECK("[castFloat32ToFixed]", src != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", dst != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", num > 0);
@@ -130,7 +144,7 @@ template <typename FixedType>
 mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
                                  const size_t num, const int position = 0,
                                  const float scale = 1.0,
-                                 const int offset  = 0) {
+                                 const int offset = 0) {
   PARAM_CHECK("[castFixedToFloat32]", src != NULL);
   PARAM_CHECK("[castFixedToFloat32]", dst != NULL);
   PARAM_CHECK("[castFixedToFloat32]", num > 0);

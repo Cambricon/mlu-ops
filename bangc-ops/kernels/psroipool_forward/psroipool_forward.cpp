@@ -12,6 +12,7 @@
 #include <string>
 
 #include "core/context.h"
+#include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
@@ -142,6 +143,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("psroipool_forward");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "input", input, input_desc, 1, 0);
+    GEN_CASE_DATA(true, "rois", rois, rois_desc, 0, -10);
+    GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
+    GEN_CASE_DATA(false, "mapping_channel", mapping_channel,
+                  mapping_channel_desc, 0, 0);
+    GEN_CASE_OP_PARAM_SINGLE(0, "psroipool_forward", "output_dim", output_dim);
+    GEN_CASE_OP_PARAM_SINGLE(1, "psroipool_forward", "pooled_height",
+                             pooled_height);
+    GEN_CASE_OP_PARAM_SINGLE(1, "psroipool_forward", "pooled_width",
+                             pooled_width);
+    GEN_CASE_OP_PARAM_SINGLE(1, "psroipool_forward", "spatial_scale",
+                             spatial_scale);
+    GEN_CASE_OP_PARAM_SINGLE(2, "psroipool_forward", "group_size", group_size);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
+  }
+
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFuncPsRoiPoolForward(handle, &k_dim, &k_type, rois_sum);
@@ -151,5 +171,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
       k_dim, k_type, handle->queue, input, rois, output, mapping_channel,
       batch_size, height, width, channels, pooled_height, pooled_width,
       output_dim, group_size, rois_sum, rois_offset, spatial_scale)));
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
