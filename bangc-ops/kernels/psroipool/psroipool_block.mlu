@@ -159,7 +159,7 @@ __mlu_func__ void psRoiAvgPool(
 }
 
 template <typename T>
-__mlu_func__ void psRoiAvgPoolKernel(
+__mlu_func__ void psRoiAvgPoolForwardKernel(
     T *nram_buffer, T *bottom_data, T *bottom_rois, T *top_data,
     int *mapping_channel, int batch_size, int height, int width, int channels,
     int pooled_height, int pooled_width, int output_dim, int group_size,
@@ -234,7 +234,163 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
     int channels, int pooled_height, int pooled_width, int output_dim,
     int group_size, int rois_num, int rois_offset, float spatial_scale) {
   MLUKernelPsroipoolForward<<<k_dim, k_type, queue>>>(
-      bottom_data, bottom_rois, top_data, mapping_channel, batch_size,
-      height, width, channels, pooled_height, pooled_width, output_dim,
-      group_size, rois_num, rois_offset, spatial_scale);
+      bottom_data, bottom_rois, top_data, mapping_channel, batch_size, height,
+      width, channels, pooled_height, pooled_width, output_dim, group_size,
+      rois_num, rois_offset, spatial_scale);
+}
+
+template <typename T>
+__mlu_func__ void psRoiAvgPoolBackward(
+    T *buffer_nram, T *top_grad, T *input_rois, T *bottom_grad,
+    int *mapping_channel, const int batch_size, const int height,
+    const int width, const int channels, const int pooled_height,
+    const int pooled_width, const int output_dim, const int rois_offset,
+    const T spatial_scale, const int num_per_core,
+    const int pre_data_for_task) {
+  int hw_align = CEIL_ALIGN(height * width, 64);
+  T *nram_src = buffer_nram;
+  T *bottom_grad_ptr = bottom_grad;
+  T *top_grad_ptr = top_grad;
+  int *mapping_channel_ptr = mapping_channel;
+
+  for (int n = pre_data_for_task; n < pre_data_for_task + num_per_core; ++n) {
+    int bidx = 0;
+    T roi_start_w, roi_start_h, roi_end_w, roi_end_h;
+    T *ptr_bottom_rois = bottom_rois + n * rois_offset;
+    // batch_id, x1, y1, x2, y2
+    bidx = (int)ptr_bottom_rois[0];
+    roi_start_w =
+        static_cast<T>(scalarRound(ptr_bottom_rois[1])) * ((T)spatial_scale);
+    roi_start_h =
+        static_cast<T>(scalarRound(ptr_bottom_rois[2])) * ((T)spatial_scale);
+    roi_end_w = static_cast<T>(scalarRound(ptr_bottom_rois[3]) + 1.) *
+                ((T)spatial_scale);
+    roi_end_h = static_cast<T>(scalarRound(ptr_bottom_rois[4]) + 1.) *
+                ((T)spatial_scale);
+
+    if (bidx < 0 || bidx > (batch_size - 1)) {
+      return;
+    }
+    T roi_height = std::max(roi_end_h - roi_start_h, (T)0.1);
+    T roi_width = std::max(roi_end_w - roi_start_w, (T)0.1);
+    T bin_size_h = (T)roi_height / (T)(pooled_height);
+    T bin_size_w = (T)roi_width / (T)(pooled_width);
+    T *ptr_nram_des = nram_des;
+    T *dst_transpose =
+        (T *)ptr_nram_des + output_dim_num_deal * group_square_align;
+    int hstart, wstart, hend, wend;
+    int is_empty;
+    __nramset((T *)nram_src, hw_align, (T)0);
+    hstart = floor(static_cast<T>(ph) * bin_size_h + roi_start_h);
+    wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
+    hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
+    wend = ceil(static_cast<T>(pw + 1) * bin_size_w + roi_start_w);
+    hstart = std::min(std::max(hstart, 0), height);
+    hend = std::min(std::max(hend, 0), height);
+    wstart = std::min(std::max(wstart, 0), width);
+    wend = std::min(std::max(wend, 0), width);
+    is_empty = (hend <= hstart) || (wend <= wstart);
+
+    int ph = n / (output_dim * pooled_width);
+    int pw = index % (output_dim * pooled_width) / output_dim;
+    // vector version
+    if (!is_empty) {
+      int c_offset = (ph * group_size + pw) * output_dim_num_deal;
+      T bin_area_recip = 1.0 / ((hend - hstart) * (wend - wstart));
+
+      // load each pixel of bin
+      for (int h = hstart; h < hend; ++h) {
+        for (int w = wstart; w < wend; ++w) {
+          // load part channels, that channels = group_size * group_size *
+          // output_dim_num_real
+          int load_offset = bidx * height * width * channels +
+                            (h * width + w) * channels +
+                            max_deal * current_deal * group_square;
+          __memcpy(ptr_nram_des, bottom_data_ptr + load_offset,
+                   group_square * sizeof(T), GDRAM2NRAM,
+                   group_square_align * sizeof(T), group_square * sizeof(T),
+                   output_dim_num_real - 1);
+          // [output_dim_num_deal, group_square_align] ->
+          // [group_square_align, output_dim_num_deal]
+          __bang_transpose(dst_transpose, ptr_nram_des, output_dim_num_deal,
+                           group_square_align);
+          // add
+          __bang_add(nram_src, nram_src, dst_transpose + c_offset,
+                     output_dim_num_deal);
+        }
+      }
+      // average
+      __bang_mul_const(nram_src, nram_src, bin_area_recip, output_dim_num_deal);
+    }
+
+    // compute mapping channels
+    for (int j = 0; j < output_dim_num_real; j++) {
+      nram_mapping_channel[j] =
+          ph * group_size + pw + j * group_size * group_size +
+          current_deal * max_deal * group_size * group_size;
+      __asm__ volatile("sync;\n");
+    }
+
+    int offset =
+        (ph * group_size + pw) * output_dim + max_deal * current_deal +
+        (n - pre_data_for_task) * pooled_height * pooled_width * output_dim;
+    __memcpy(mapping_channel_ptr + offset, nram_mapping_channel,
+             output_dim_num_real * sizeof(int), NRAM2GDRAM);
+    __memcpy(top_data_ptr + offset, nram_src, output_dim_num_real * sizeof(T),
+             NRAM2GDRAM);
+  }
+}
+
+template <typename T>
+__mlu_func__ void psRoiAvgPoolBackwardKernel(
+    T *nram_buffer, T *top_grad, T *rois, T *bottom_grad, int *mapping_channel,
+    int batch_size, int height, int width, int channels, int pooled_height,
+    int pooled_width, int output_dim, int rois_num, int rois_offset,
+    T spatial_scale) {
+  int num_deal = rois_num * pooled_height * pooled_width * output_dim;
+  int num_per_core = num_deal / taskDim;
+  int pre_data_for_task = taskId * num_per_core;
+  int remainder = num_deal % taskDim;
+  T *top_grad_ptr = top_grad;
+  int *mapping_channel_ptr = mapping_channel;
+  if (taskId < remainder) {
+    num_per_core++;
+    pre_data_for_task += taskId;
+    top_data_ptr += taskId * num_per_core;
+    mapping_channel_ptr += taskId * num_per_core;
+  } else {
+    pre_data_for_task += remainder;
+    top_data_ptr += taskId * num_per_core + remainder;
+    mapping_channel_ptr += taskId * num_per_core + remainder;
+  }
+
+  psRoiAvgPoolBackward(nram_buffer, top_grad_ptr, input_rois, bottom_grad,
+                       mapping_channel_ptr, batch_size, height, width, channels,
+                       pooled_height, pooled_width, output_dim, rois_offset,
+                       spatial_scale, num_per_core, pre_data_for_task);
+}
+
+__mlu_global__ void MLUKernelPsroipoolBackward(
+    void *top_grad, void *rois, void *bottom_grad, void *mapping_channel,
+    int batch_size, int height, int width, int channels, int pooled_height,
+    int pooled_width, int output_dim, int rois_num, int rois_offset,
+    float spatial_scale) {
+  __nram__ uint8_t nram_buffer[NRAM_BYTE_CNT];
+  psRoiAvgPoolBackwardKernel((float *)nram_buffer, (float *)top_grad,
+                             (float *)rois, (float *)bottom_grad,
+                             (int *)mapping_channel, batch_size, height, width,
+                             channels, pooled_height, pooled_width, output_dim,
+                             rois_num, rois_offset, spatial_scale);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *top_grad, void *rois, void *bottom_grad, void *mapping_channel,
+    int batch_size, int height, int width, int channels, int pooled_height,
+    int pooled_width, int output_dim, int rois_num, int rois_offset,
+    float spatial_scale) {
+  MLUKernelPsroipoolBackward<<<k_dim, k_type, queue>>>(
+      top_grad, rois, bottom_grad, mapping_channel, batch_size, height, width,
+      channels, pooled_height, pooled_width, output_dim, rois_num, rois_offset,
+      spatial_scale);
 }
