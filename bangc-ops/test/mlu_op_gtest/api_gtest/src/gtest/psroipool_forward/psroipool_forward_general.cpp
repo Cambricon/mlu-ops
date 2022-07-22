@@ -45,6 +45,7 @@ class psroipool_forward_general
     mluOpDataType_t i_dtype = i_params.get_dtype();
     int i_dim = i_params.get_dim_nb();
     std::vector<int> i_dim_size = i_params.get_dim_size();
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
     MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, i_layout, i_dtype, i_dim,
                                          i_dim_size.data()));
     uint64_t i_ele_num = mluOpGetTensorElementNum(input_desc_);
@@ -58,6 +59,7 @@ class psroipool_forward_general
     mluOpDataType_t r_dtype = r_params.get_dtype();
     int r_dim = r_params.get_dim_nb();
     std::vector<int> r_dim_size = r_params.get_dim_size();
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&rois_desc_));
     MLUOP_CHECK(mluOpSetTensorDescriptor(rois_desc_, r_layout, r_dtype, r_dim,
                                          r_dim_size.data()));
     uint64_t r_ele_num = mluOpGetTensorElementNum(rois_desc_);
@@ -71,6 +73,7 @@ class psroipool_forward_general
     mluOpDataType_t o_dtype = o_params.get_dtype();
     int o_dim = o_params.get_dim_nb();
     std::vector<int> o_dim_size = o_params.get_dim_size();
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
     MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, o_layout, o_dtype, o_dim,
                                          o_dim_size.data()));
     uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
@@ -84,6 +87,7 @@ class psroipool_forward_general
     mluOpDataType_t m_dtype = m_params.get_dtype();
     int m_dim = m_params.get_dim_nb();
     std::vector<int> m_dim_size = m_params.get_dim_size();
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&mapping_channel_desc_));
     MLUOP_CHECK(mluOpSetTensorDescriptor(mapping_channel_desc_, m_layout,
                                          m_dtype, m_dim, m_dim_size.data()));
     uint64_t m_ele_num = mluOpGetTensorElementNum(mapping_channel_desc_);
