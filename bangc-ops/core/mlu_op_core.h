@@ -358,12 +358,12 @@ const char *mluOpGetErrorString(mluOpStatus_t status);
 // Group:QuantizeRoundMode
 /*!
  *  @brief Updates the specific rounding mode of MLUOP context information that holds by the \b handle. This function
- *  should be called if you want to change the cnnl rounding mode that used to cumulate the results.
+ *  should be called if you want to change the mluop rounding mode that used to cumulate the results.
  *  For detailed information, see Cambricon Driver API Developer Guide.
  *
  *  @param[in] handle
  *    Input. Pointer to the MLUOP context that is used to manage MLU devices and
- *    queues. For detailed information, see ::cnnlHandle_t.
+ *    queues. For detailed information, see ::mluopHandle_t.
  *  @param[in] round_mode
  *    Input. The rounding mode of quantization conversion to be set to the MLUOP handle.
  *  @par Return
@@ -388,7 +388,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(mluOpHandle_t handle,
  *
  *  @param[in] handle
  *    Input. Pointer to the MLUOP context that is used to manage MLU devices and
- *    queues. For detailed information, see ::cnnlHandle_t.
+ *    queues. For detailed information, see ::mluopHandle_t.
  *
  *  @param[out] round_mode
  *    Output. the rounding mode of quantization conversion that was previously set to the specified handle.
@@ -397,7 +397,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(mluOpHandle_t handle,
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  *  @note
- *  - The default round mode of default initialized cnnlHandle_t is MLUOP_ROUND_TO_EVEN.
+ *  - The default round mode of default initialized mluopHandle_t is MLUOP_ROUND_TO_EVEN.
  *
  *  @par Requirements
  *  - None.
