@@ -10,6 +10,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "core/context.h"
+#include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
@@ -49,6 +50,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
     return param_check;
   }
 
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("abs");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "x", x, x_desc, 10, 0);
+    GEN_CASE_DATA(false, "y", y, y_desc, 0, 0);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
+  }
+
   // Choose the best task dimension.
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -68,6 +77,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   }
   KERNEL_CHECK(
       (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
-
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
