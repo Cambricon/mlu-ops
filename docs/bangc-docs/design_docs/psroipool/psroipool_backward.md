@@ -293,43 +293,83 @@ step3: 计算出step2得到的bin区域面积bin_area，结合step2得到的valu
 ### 3.2 伪代码实现（可选）
 
 ```c++
+// 首先拆按照taskId拆rois_num * pooled_height * pooled_width
+// 下面为一个core上的计算逻辑，core上分到的output_dim数量为：core_output_dim
+// 为了打满nram，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
+hw_align = CEIL_ALIGN(height * width, ALIGN_SIZE_64);
+output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_64);
+// nram上最多可以存放的output_dim数量 
+nram_output_dim = (NRAM_BYTE_CNT - hw_align * sizeof(float)) / (output_dim_align * sizeof(float) + \
+                   output_dim_align * sizeof(int));
+// 如果nram上一个output_dim都放不下，则需要拆output_dim
+type = 0;
+offset = 0;
+if (num_output_dim < 1){
+  // nram是最多可以存放的数量
+  deal_num = FLOOR_ALIGN(
+      (NRAM_BYTE_CNT - hw_align * sizeof(float)) / (sizeof(float) + sizeof(int)), ALIGN_SIZE_64);
+  repeat = output_dim / deal_num;
+  remain = output_dim % deal_num;
+  offset = deal_num;
+}
+else{
+  // 计算repeat/remain
+  repeat = core_output_dim / nram_output_dim;
+  remain = core_output_dim % nram_output_dim;
+  type = 1;
+  offset = nram_output_dim * output_dim;
+}
 
-// 考虑先不拆output_dim: 2 * output_dim + height * width < nram_size
-top_grad_buffer = nram_src;
-mapping_channel_buffer = top_grad_buffer + output_dim;
-nram_buffer = mapping_channel_buffer + output_dim;
+for (int i = 0; i < repeat; i++){
+  func(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
+       batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
+       rois_num, rois_offset, group_size, spatial_scale, offset, i, remain, type, false);
+}
 
-// 每个核的output_dim的遍历
-for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++){
-    __nramset((T *)top_grad_buffer, output_dim, (float)0);
-    __nramset((T *)mapping_channel_buffer, output_dim, (int)0);
-    __memcpy(top_grad_buffer, top_grad, output_dim * sizeof(float), GDRAM2NRAM);
-    __memcpy(mapping_channel_buffer, top_grad, output_dim * sizeof(int), GDRAM2NRAM);
-    roi_num = output_dim_index / (pooled_width * pooled_height);
-    ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
-    pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
+if (remain != 0){
+  func(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
+       batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
+       rois_num, rois_offset, group_size, spatial_scale, offset, repeat, remain, type, true);
+}
 
-    roi_batch_ind = rois[roi_num * 5]
-    // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
-    is_empty = (hend <= hstart) || (wend <= wstart);
-    if (is_empty){
-        bin_area = (hend - hstart) * (wend * wstart);
-        bin_area_rechip = 1 / bin_area;
-        offset_bottom_grad = bottom_grad +
-                roi_batch_ind * channels * height * width;
-        for (int i = 0; i < output_dim; i ++){
-            __nramset((T *)nram_buffer, height * width, (float)0);
-            c = mapping_channel_buffer[i];
-            value = top_grad_buffer[i] * bin_area_rechip;
-            for (h = hstart; h < hend; h++) {
-                for (w = wstart; w < wend; w++) {
-                    bottom_offset = (h * width + w) * channels + c;
-                    nram_offset = (h - hstart) * (hend - hstart) + (w - wstart);
-                    __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
-                }
-            }
-        }
-    } 
+void func(...){
+  nram_buffer = nram_src;
+  top_grad_buffer = nram_buffer + hw_align;
+  mapping_channel_buffer = top_grad_buffer + offset;
+
+  // 每个核的output_dim的遍历
+  for (output_dim_index = output_dim_begin; index < output_dim_end; output_index++){
+      __nramset((T *)top_grad_buffer, output_dim, (float)0);
+      __nramset((T *)mapping_channel_buffer, output_dim, (int)0);
+      __memcpy(top_grad_buffer, top_grad, output_dim * sizeof(float), GDRAM2NRAM);
+      __memcpy(mapping_channel_buffer, top_grad, output_dim * sizeof(int), GDRAM2NRAM);
+      roi_num = output_dim_index / (pooled_width * pooled_height);
+      ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
+      pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
+
+      roi_batch_ind = rois[roi_num * 5]
+      // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
+      is_empty = (hend <= hstart) || (wend <= wstart);
+      if (is_empty){
+          bin_area = (hend - hstart) * (wend * wstart);
+          bin_area_rechip = 1 / bin_area;
+          offset_bottom_grad = bottom_grad +
+                  roi_batch_ind * channels * height * width;
+          //value = top_grad_buffer[i] * bin_area_rechip;
+          __bang_mul_const(nram_buffer, top_grad_buffer, bin_area_recip, output_dim);
+          for (int i = 0; i < output_dim; i ++){
+              __nramset((T *)nram_buffer, height * width, (float)0);
+              c = mapping_channel_buffer[i];
+              for (h = hstart; h < hend; h++) {
+                  for (w = wstart; w < wend; w++) {
+                      bottom_offset = (h * width + w) * channels + c;
+                      nram_offset = (h - hstart) * (hend - hstart) + (w - wstart);
+                      __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
+                  }
+              }
+          }
+      } 
+  }
 }
 
 ```
