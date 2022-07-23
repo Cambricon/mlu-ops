@@ -58,9 +58,9 @@
 | 应用网络    | FasterRCNN，trans obb                                          |
 | 输入数据类型| float                                                  |
 | 输入Shape   | boxes:dim[N, 9], iou_threshold:float |
-| 输入Layout  | boxes:iou_threshold:标量                              |
+| 输入Layout  | boxes:ARRAY, iou_threshold:标量                              |
 | 输出数据类型 | int32_t                                         |
-| 输出Shape   | output:dim[N]，实际输出有效长度为result_num; result_num:dim=1      |
+| 输出Shape   | output:dim[N]，输出实际长度为result_num; result_num:dim=1      |
 | 输出Layout  | output:ARRAY，result_num::ARRAY                                     |
 | 模式(可选） | 否 |
 | 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否 |
@@ -260,7 +260,7 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 - **nram 空间划分**
   
   ![nram_space](./space.png)
-  nram_space暂划分为（COMPUTE_COUNT_ALIGN + 137*N）份，具体划分块数由计算overlap部分决定
+  nram_space暂划分为（COMPUTE_COUNT_ALIGN + 213*N）份，具体划分块数由计算overlap部分决定
 
 - **实现流程图**
 
@@ -529,6 +529,6 @@ __mlu_func__ void pnms_detection(uint32_t &output_box_num，
 - 2022.7.6~2022.7.8 提交MR+代码review、算子入库  4天
 
 ### 5.2 风险分析
-- 性能风险：poly_nms算子中计算overlap部分算法复杂，无法全部使用向量化计算，有部分操作不得不适用标量代替，比如输出数据的排序，200系列上除法运算以及其他算法本身的计算限制，所以性能会有影响。
+- 性能风险：poly_nms算子中计算overlap部分算法复杂，无法全部使用向量化计算，有部分操作不得不使用标量代替，比如输出数据的排序，200系列上的除法运算以及其他算法本身的计算限制，所以性能会有影响。
 - 规模限制：当input1的boxes数量超过500时，有超时风险, 输入boxes个数，限制在[0-500]，超出规模会有计算超时风险。
 - 本次提交不支持输入包含nan和inf的case。
