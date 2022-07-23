@@ -22,20 +22,18 @@ void PsroipoolForwardExecutor::paramCheck() {
   VLOG(4) << "psroipool_forward param check";
   if (parser_->getInputNum() != 2) {
     LOG(ERROR) << "psroipool_forward input number is wrong, it should be 2, "
-                  "but now is "
-               << parser_->getInputNum();
+               << "but now is " << parser_->getInputNum();
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 2) {
     LOG(ERROR) << "psroipool_forward output number is wrong, it should be 2, "
-                  "but now is"
-               << parser_->getOutputNum();
+               << "but now is" << parser_->getOutputNum();
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   for (int i = 0; i < parser_->getInputNum(); i++) {
-    if (parser_->inputIsNull(i)) {
+    if (i == 1 && parser_->inputIsNull(i)) {
       LOG(ERROR) << "psroipool_forward input [" << i << "] is nullptr.";
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
@@ -44,10 +42,9 @@ void PsroipoolForwardExecutor::paramCheck() {
 }
 
 void PsroipoolForwardExecutor::workspaceMalloc() {
-  int output_dim =
-      parser_->getProtoNode()->psroipool_forward_param().output_dim();
+  int output_dim = parser_->getProtoNode()->psroipool_forward_param().output_dim();
   size_t workspace_size = 0;
-  mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim, &workspace_size);
+  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim, &workspace_size));
   VLOG(4) << "Malloc workspace space.";
 
   void *temp = mlu_runtime_.allocate(workspace_size);
@@ -59,6 +56,7 @@ void PsroipoolForwardExecutor::workspaceFree() {
   if (workspace_[0]) {
     VLOG(4) << "Free device workspace space.";
     GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+    workspace_[0] = nullptr;
   }
 }
 
@@ -107,89 +105,86 @@ void PsroipoolForwardExecutor::initData() {
 
 void PsroipoolForwardExecutor::compute() {
   initData();
-  mluOpTensorDescriptor_t input_data_desc = tensor_desc_[0].tensor;
+  mluOpTensorDescriptor_t input_desc = tensor_desc_[0].tensor;
   mluOpTensorLayout_t input_layout;
   mluOpDataType_t input_dtype;
   int input_dim = 0;
   int input_dims[8] = {0};
-  mluOpGetTensorDescriptor(input_data_desc, &input_layout, &input_dtype,
+  mluOpGetTensorDescriptor(input_desc, &input_layout, &input_dtype,
                            &input_dim, input_dims);
   int channels = input_dims[3];
   int height = input_dims[1];
   int width = input_dims[2];
-  mluOpTensorDescriptor_t input_rois_desc = tensor_desc_[1].tensor;
-  mluOpTensorDescriptor_t output_data_desc = tensor_desc_[2].tensor;
+  mluOpTensorDescriptor_t rois_desc = tensor_desc_[1].tensor;
+  mluOpTensorDescriptor_t output_desc = tensor_desc_[2].tensor;
   mluOpTensorDescriptor_t mapping_channel_desc = tensor_desc_[3].tensor;
-  void *input_data = data_vector_[0].device_ptr;
-  void *input_rois = data_vector_[1].device_ptr;
-  auto output_data = data_vector_[2].device_ptr;
+  auto input = data_vector_[0].device_ptr;
+  auto rois = data_vector_[1].device_ptr;
+  auto output = data_vector_[2].device_ptr;
   auto mapping_channel = data_vector_[3].device_ptr;
   size_t workspace_size = 0;
-  mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim_, &workspace_size);
+  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim_, &workspace_size));
   interface_timer_.start();
   MLUOP_CHECK(mluOpPsRoiPoolForward(
-      handle_, spatial_scale_, group_size_, input_data_desc, input_data,
-      input_rois_desc, input_rois, workspace_[0], workspace_size,
-      output_data_desc, output_data, mapping_channel_desc, mapping_channel));
+      handle_, pooled_height_, pooled_width_, spatial_scale_, group_size_,
+      output_dim_, input_desc, input, rois_desc, rois, workspace_[0],
+      workspace_size, output_desc, output, mapping_channel_desc, mapping_channel));
   interface_timer_.stop();
 }
 
 void PsroipoolForwardExecutor::cpuCompute() {
-  assert(parser_->getInputNum() > 0);
-  assert(parser_->getOutputNum() > 0);
-  mluOpTensorDescriptor_t input_data_desc = tensor_desc_[0].tensor;
+  mluOpTensorDescriptor_t input_desc = tensor_desc_[0].tensor;
   mluOpTensorLayout_t input_layout;
   mluOpDataType_t input_dtype;
   int input_dim = 0;
   int input_dims[8] = {0};
-  mluOpGetTensorDescriptor(input_data_desc, &input_layout, &input_dtype,
-                           &input_dim, input_dims);
+  MLUOP_CHECK(mluOpGetTensorDescriptor(input_desc, &input_layout, &input_dtype,
+                           &input_dim, input_dims));
   int channels = input_dims[3];
   int height = input_dims[1];
   int width = input_dims[2];
-  mluOpTensorDescriptor_t input_rois_desc = tensor_desc_[1].tensor;
+  mluOpTensorDescriptor_t rois_desc = tensor_desc_[1].tensor;
   int desc_dim = 0;
   int desc_dims[8] = {0};
   mluOpTensorLayout_t desc_layout;
   mluOpDataType_t desc_datatype;
-  mluOpGetTensorDescriptor(input_rois_desc, &desc_layout, &desc_datatype,
-                           &desc_dim, desc_dims);
-  float *input_data = cpu_fp32_input_[0];
-  float *output_data = cpu_fp32_output_[0];
+  MLUOP_CHECK(mluOpGetTensorDescriptor(rois_desc, &desc_layout, &desc_datatype,
+                           &desc_dim, desc_dims));
+  auto input = cpu_fp32_input_[0];
+  auto output = cpu_fp32_output_[0];
   auto *mapping_channel = cpu_fp32_output_[1];
-  int input_data_count = batch_size_ * height * width * channels;
+  int input_count = batch_size_ * height * width * channels;
   // tans input data
-  float *input_data_trans =
-      (float *)cpu_runtime_.allocate(new float[input_data_count]);
-  transposeNhwcToNchw(input_data, batch_size_, height, width, channels,
-                      input_data_trans);
-  float *input_rois = cpu_fp32_input_[1];
+  float *input_trans =
+      (float *)cpu_runtime_.allocate(new float[input_count]);
+  transposeNhwcToNchw(input, batch_size_, height, width, channels,
+                      input_trans);
+  auto rois = cpu_fp32_input_[1];
   int rois_num = desc_dims[0] * desc_dims[1] / rois_offset_;
-  int input_rois_count = rois_num * rois_offset_;  // cur batch
-
+  int rois_count = rois_num * rois_offset_;  // cur batch
   // output
   int top_data_count = rois_num * pooled_height_ * pooled_width_ * output_dim_;
-  std::vector<float> output_data_vec(top_data_count, -65504.0);
-  float *output_pre = output_data_vec.data();
+  std::vector<float> output_vec(top_data_count, -65504.0);
+  float *output_pre = output_vec.data();
   // mapping_channel
   std::vector<float> mapping_channel_vec(top_data_count, -65504.0);
   float *mapping_channel_pre = mapping_channel_vec.data();
-  float *input_rois_trans =
-      (float *)cpu_runtime_.allocate(new float[input_rois_count]);
-  memcpy(input_rois_trans, input_rois, input_rois_count * sizeof(float));
+  float *rois_trans =
+      (float *)cpu_runtime_.allocate(new float[rois_count]);
+  memcpy(rois_trans, rois, rois_count * sizeof(float));
   for (int rois_id = 0; rois_id < rois_num; rois_id++) {
     int roi_add = rois_id * 5;
     int rois_batch_ind;
     float roi_start_w, roi_start_h, roi_end_w, roi_end_h;
 
-    rois_batch_ind = input_rois_trans[roi_add];
-    roi_start_w = static_cast<float>(round(input_rois_trans[roi_add + 1])) *
+    rois_batch_ind = rois_trans[roi_add];
+    roi_start_w = static_cast<float>(round(rois_trans[roi_add + 1])) *
                   spatial_scale_;
-    roi_start_h = static_cast<float>(round(input_rois_trans[roi_add + 2])) *
+    roi_start_h = static_cast<float>(round(rois_trans[roi_add + 2])) *
                   spatial_scale_;
-    roi_end_w = static_cast<float>(round(input_rois_trans[roi_add + 3]) + 1.) *
+    roi_end_w = static_cast<float>(round(rois_trans[roi_add + 3]) + 1.) *
                 spatial_scale_;
-    roi_end_h = static_cast<float>(round(input_rois_trans[roi_add + 4]) + 1.) *
+    roi_end_h = static_cast<float>(round(rois_trans[roi_add + 4]) + 1.) *
                 spatial_scale_;
 
     float roi_width = std::max(roi_end_w - roi_start_w, (float)0.1);
@@ -224,7 +219,7 @@ void PsroipoolForwardExecutor::cpuCompute() {
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
               int bottom_index = h * width + w;
-              out_sum += input_data_trans[(rois_batch_ind * channels + c) *
+              out_sum += input_trans[(rois_batch_ind * channels + c) *
                                               height * width +
                                           bottom_index];
             }
@@ -240,10 +235,10 @@ void PsroipoolForwardExecutor::cpuCompute() {
       }
     }
   }
-
-  cpu_runtime_.deallocate(input_rois_trans);
+  cpu_runtime_.deallocate(input_trans);
+  cpu_runtime_.deallocate(rois_trans);
   transposeNchwToNhwc(output_pre, rois_num, output_dim_, pooled_height_,
-                      pooled_width_, output_data);
+                      pooled_width_, output);
   transposeNchwToNhwc(mapping_channel_pre, rois_num, output_dim_,
                       pooled_height_, pooled_width_, mapping_channel);
 }
@@ -254,61 +249,59 @@ int64_t PsroipoolForwardExecutor::getTheoryOps() {
   }
 
   int64_t theory_ops = 0;
-  mluOpTensorDescriptor_t input_data_desc = tensor_desc_[0].tensor;
+  mluOpTensorDescriptor_t input_desc = tensor_desc_[0].tensor;
   mluOpTensorLayout_t input_layout;
   mluOpDataType_t input_dtype;
   int input_dim = 0;
   int input_dims[8] = {0};
-  mluOpGetTensorDescriptor(input_data_desc, &input_layout, &input_dtype,
-                           &input_dim, input_dims);
+  MLUOP_CHECK(mluOpGetTensorDescriptor(input_desc, &input_layout, &input_dtype,
+                           &input_dim, input_dims));
   int channels = input_dims[3];
   int height = input_dims[1];
   int width = input_dims[2];
-  mluOpTensorDescriptor_t input_rois_desc = tensor_desc_[1].tensor;
+  mluOpTensorDescriptor_t rois_desc = tensor_desc_[1].tensor;
   int desc_dim = 0;
   int desc_dims[8] = {0};
   mluOpTensorLayout_t desc_layout;
   mluOpDataType_t desc_datatype;
-  mluOpGetTensorDescriptor(input_rois_desc, &desc_layout, &desc_datatype,
-                           &desc_dim, desc_dims);
-  printf("----001-----\n");
-  float *input_data = cpu_fp32_input_[0];
-  printf("----002-----\n");
-  float *output_data = cpu_fp32_output_[0];
+  MLUOP_CHECK(mluOpGetTensorDescriptor(rois_desc, &desc_layout, &desc_datatype,
+                           &desc_dim, desc_dims));
+  float *input = cpu_fp32_input_[0];
+  float *output = cpu_fp32_output_[0];
   auto *mapping_channel = cpu_fp32_output_[1];
-  int input_data_count = batch_size_ * height * width * channels;
+  int input_count = batch_size_ * height * width * channels;
   // tans input data
-  float *input_data_trans =
-      (float *)cpu_runtime_.allocate(new float[input_data_count]);
-  transposeNhwcToNchw(input_data, batch_size_, height, width, channels,
-                      input_data_trans);
-  float *input_rois = cpu_fp32_input_[1];
+  float *input_trans =
+      (float *)cpu_runtime_.allocate(new float[input_count]);
+  transposeNhwcToNchw(input, batch_size_, height, width, channels,
+                      input_trans);
+  float *rois = cpu_fp32_input_[1];
   int rois_num = desc_dims[0] * desc_dims[1] / rois_offset_;
-  int input_rois_count = rois_num * rois_offset_;  // cur batch
+  int rois_count = rois_num * rois_offset_;  // cur batch
 
   // output
   int top_data_count = rois_num * pooled_height_ * pooled_width_ * output_dim_;
-  std::vector<float> output_data_vec(top_data_count, -65504.0);
-  float *output_pre = output_data_vec.data();
+  std::vector<float> output_vec(top_data_count, -65504.0);
+  float *output_pre = output_vec.data();
   // mapping_channel
   std::vector<float> mapping_channel_vec(top_data_count, -65504.0);
   float *mapping_channel_pre = mapping_channel_vec.data();
-  float *input_rois_trans =
-      (float *)cpu_runtime_.allocate(new float[input_rois_count]);
-  memcpy(input_rois_trans, input_rois, input_rois_count * sizeof(float));
+  float *rois_trans =
+      (float *)cpu_runtime_.allocate(new float[rois_count]);
+  memcpy(rois_trans, rois, rois_count * sizeof(float));
   for (int rois_id = 0; rois_id < rois_num; rois_id++) {
     int roi_add = rois_id * 5;
     int rois_batch_ind;
     float roi_start_w, roi_start_h, roi_end_w, roi_end_h;
 
-    rois_batch_ind = input_rois_trans[roi_add];
-    roi_start_w = static_cast<float>(rint(input_rois_trans[roi_add + 1])) *
+    rois_batch_ind = rois_trans[roi_add];
+    roi_start_w = static_cast<float>(rint(rois_trans[roi_add + 1])) *
                   spatial_scale_;
-    roi_start_h = static_cast<float>(rint(input_rois_trans[roi_add + 2])) *
+    roi_start_h = static_cast<float>(rint(rois_trans[roi_add + 2])) *
                   spatial_scale_;
-    roi_end_w = static_cast<float>(rint(input_rois_trans[roi_add + 3]) + 1.) *
+    roi_end_w = static_cast<float>(rint(rois_trans[roi_add + 3]) + 1.) *
                 spatial_scale_;
-    roi_end_h = static_cast<float>(rint(input_rois_trans[roi_add + 4]) + 1.) *
+    roi_end_h = static_cast<float>(rint(rois_trans[roi_add + 4]) + 1.) *
                 spatial_scale_;
 
     float roi_width = std::max<float>(roi_end_w - roi_start_w, 0.1);
@@ -349,7 +342,9 @@ int64_t PsroipoolForwardExecutor::getTheoryOps() {
       }
     }
   }
-  cpu_runtime_.deallocate(input_rois_trans);
+
+  cpu_runtime_.deallocate(input_trans);
+  cpu_runtime_.deallocate(rois_trans);
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
 }

@@ -9,21 +9,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <math.h>
-
-#include <algorithm>
-
 #include "kernels/kernel.h"
 #include "mlu.h"
 #include "mlu_op_kernel.h"
 
-#define NRAM_BYTE_CNT \
-  (__MLU_NRAM_SIZE__ * 480 * 2)  // NRAM_ELEM_CNT <= nram.bytes
-#define BLOCK 256
-#define ASSERT(x)                 \
-  if (!(x)) {                     \
-    __breakdump_scalar(__LINE__); \
-  }
 #define ALIGN_SIZE 64
 
 // This function is used to align the round_rn
@@ -50,11 +39,11 @@ __mlu_func__ T scalarRound(T key) {
 template <typename T>
 __mlu_func__ void psRoiAvgPool(
     T *buffer_nram, T *bottom_data, T *bottom_rois, T *top_data,
-    int *mapping_channel, const int channels, const int height, const int width,
-    const int pooled_height, const int pooled_width,
-    const int rois_loop_per_core, const int init_rois_num, const int output_dim,
-    const int group_size, const int rois_offset, const T spatial_scale,
-    const int pre_data_for_task, const int batch_size, int output_dim_num_deal,
+    int *mapping_channel, const int batch_size, const int height,
+    const int width, const int channels, const int pooled_height,
+    const int pooled_width, const int rois_loop_per_core, const int output_dim,
+    const int group_size, const int init_rois_num, const int rois_offset,
+    const T spatial_scale, const int pre_data_for_task, int output_dim_num_deal,
     const int current_deal, const int remain, bool is_remain) {
   // get segment rois
   int group_square = group_size * group_size;
@@ -172,9 +161,9 @@ __mlu_func__ void psRoiAvgPool(
 template <typename T>
 __mlu_func__ void psRoiAvgPoolKernel(
     T *nram_buffer, T *bottom_data, T *bottom_rois, T *top_data,
-    int *mapping_channel, int channels, int height, int width,
-    int pooled_height, int pooled_width, int rois_num, int output_dim,
-    int group_size, int rois_offset, T spatial_scale, int batch_size) {
+    int *mapping_channel, int batch_size, int height, int width, int channels,
+    int pooled_height, int pooled_width, int output_dim, int group_size,
+    int rois_num, int rois_offset, T spatial_scale) {
   int rois_loop = rois_num;
 
   // multicore related,the rois number on each core
@@ -202,50 +191,50 @@ __mlu_func__ void psRoiAvgPoolKernel(
 
   int group_square_align = CEIL_ALIGN(group_size * group_size, ALIGN_SIZE);
   int output_dim_num_deal = FLOOR_ALIGN(
-      NRAM_BYTE_CNT / ((2 + 2 * group_square_align) * sizeof(T)), ALIGN_SIZE);
+      MAX_NRAM_SIZE / ((2 + 2 * group_square_align) * sizeof(T)), ALIGN_SIZE);
   const int repeat = output_dim / output_dim_num_deal;
   const int remain = output_dim % output_dim_num_deal;
   if (roi_num_per_core > 0) {
     for (int current_deal = 0; current_deal < repeat; current_deal++) {
       psRoiAvgPool(nram_buffer, bottom_data, bottom_rois, top_data_ptr,
-                   mapping_channel_ptr, channels, height, width, pooled_height,
-                   pooled_width, roi_num_per_core, rois_num, output_dim,
-                   group_size, rois_offset, spatial_scale, pre_data_for_task,
-                   batch_size, output_dim_num_deal, current_deal, remain,
+                   mapping_channel_ptr, batch_size, height, width, channels,
+                   pooled_height, pooled_width, roi_num_per_core, output_dim,
+                   group_size, rois_num, rois_offset, spatial_scale,
+                   pre_data_for_task, output_dim_num_deal, current_deal, remain,
                    false);
     }
     if (remain) {
       psRoiAvgPool(nram_buffer, bottom_data, bottom_rois, top_data_ptr,
-                   mapping_channel_ptr, channels, height, width, pooled_height,
-                   pooled_width, roi_num_per_core, rois_num, output_dim,
-                   group_size, rois_offset, spatial_scale, pre_data_for_task,
-                   batch_size, output_dim_num_deal, repeat, remain, true);
+                   mapping_channel_ptr, batch_size, height, width, channels,
+                   pooled_height, pooled_width, roi_num_per_core, output_dim,
+                   group_size, rois_num, rois_offset, spatial_scale,
+                   pre_data_for_task, output_dim_num_deal, repeat, remain,
+                   true);
     }
   }
 }
 
 __mlu_global__ void MLUKernelPsroipoolForward(
-    void *bottom_data, void *bottom_rois, void *top_data, void *mapping_channel,
-    int channels, int height, int width, int pooled_height, int pooled_width,
-    int rois_num, int output_dim, int group_size, int rois_offset,
-    float spatial_scale, int batch_size) {
-  __nram__ uint8_t nram_buffer[NRAM_BYTE_CNT];
+    const void *bottom_data, const void *bottom_rois, const void *top_data,
+    const void *mapping_channel, int batch_size, int height, int width,
+    int channels, int pooled_height, int pooled_width, int output_dim,
+    int group_size, int rois_num, int rois_offset, float spatial_scale) {
+  __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
   psRoiAvgPoolKernel((float *)nram_buffer, (float *)bottom_data,
                      (float *)bottom_rois, (float *)top_data,
-                     (int *)mapping_channel, channels, height, width,
-                     pooled_height, pooled_width, rois_num, output_dim,
-                     group_size, rois_offset, spatial_scale, batch_size);
+                     (int *)mapping_channel, batch_size, height, width,
+                     channels, pooled_height, pooled_width, output_dim,
+                     group_size, rois_num, rois_offset, spatial_scale);
 }
 
 void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *bottom_data, void *bottom_rois, void *top_data, void *mapping_channel,
-    int channels, int height, int width, int pooled_height, int pooled_width,
-    int rois_num, int output_dim, int group_size, int rois_offset,
-    float spatial_scale, int batch_size) {
+    const void *bottom_data, const void *bottom_rois, const void *top_data,
+    const void *mapping_channel, int batch_size, int height, int width,
+    int channels, int pooled_height, int pooled_width, int output_dim,
+    int group_size, int rois_num, int rois_offset, float spatial_scale) {
   MLUKernelPsroipoolForward<<<k_dim, k_type, queue>>>(
-      (float *)bottom_data, (float *)bottom_rois, (float *)top_data,
-      (int *)mapping_channel, channels, height, width, pooled_height,
-      pooled_width, rois_num, output_dim, group_size, rois_offset,
-      spatial_scale, batch_size);
+      bottom_data, bottom_rois, top_data, mapping_channel, batch_size,
+      height, width, channels, pooled_height, pooled_width, output_dim,
+      group_size, rois_num, rois_offset, spatial_scale);
 }
