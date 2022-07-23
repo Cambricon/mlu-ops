@@ -26,7 +26,7 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
                                  const int input_stride, void *output,
                                  void *buffer, const int buffer_size) {
   if (coreId == 0) {
-    // Trans boxes: Nx9 -> 9xN
+// Trans boxes: Nx9 -> 9xN
 #if __BANG_ARCH__ >= 300
     float *boxes;
     float *trans_boxes;

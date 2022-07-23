@@ -25,11 +25,10 @@
 #include "core/tool.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                                cnrtFunctionType_t *k_type,
-                                const int input_boxes_num) {
+                       cnrtFunctionType_t *k_type, const int input_boxes_num) {
   uint32_t job_limit = mluop::runtime::getJobLimitCapability(handle);
   // when current MLU arch only support Block type job
-  if(job_limit == CN_KERNEL_CLASS_BLOCK){
+  if (job_limit == CN_KERNEL_CLASS_BLOCK) {
     *k_type = CNRT_FUNC_TYPE_BLOCK;
     k_dim->x = 1;
     k_dim->y = 1;
@@ -47,12 +46,11 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   return;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
-                                        const mluOpTensorDescriptor_t boxes_desc,
-                                        const void *boxes, float iou_threshold,
-                                        void *workspace, size_t workspace_size,
-                                        const mluOpTensorDescriptor_t output_desc,
-                                        void *output, void *result_num) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+             const void *boxes, float iou_threshold, void *workspace,
+             size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
+             void *output, void *result_num) {
   const std::string API = "[mluOpPolyNms]";
   // check inputs/outputs
   PARAM_CHECK(API, handle != NULL);
@@ -79,7 +77,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
   }
 
   PARAM_CHECK(API, boxes != NULL);
-  if(workspace_size>0){
+  if (workspace_size > 0) {
     PARAM_CHECK(API, workspace != NULL);
   }
 
@@ -96,10 +94,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
-                            const mluOpTensorDescriptor_t boxes_desc,
-                            size_t *size) {
+mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+    size_t *size) {
   const std::string API = "[mluOpGetPolyNmsWorkspaceSize]";
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, boxes_desc != NULL);
@@ -110,7 +107,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
 
   PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, boxes_desc->layout == MLUOP_LAYOUT_ARRAY);
-// workspace stores the transposed input data[9, N].
+  // workspace stores the transposed input data[9, N].
   uint32_t input_boxes_num = boxes_desc->dims[0];  // N
   uint32_t input_stride = boxes_desc->dims[1];     // 9
 #if __BANG_ARCH__ >= 300

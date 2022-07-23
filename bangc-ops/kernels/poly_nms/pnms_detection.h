@@ -90,7 +90,6 @@ __mlu_func__ void calculateMaxScoreBoxArea(IN_DT *max_box) {
   }
 }
 
-
 // const float eps = 1E-8;  return (d > eps) - (d < -eps);
 template <typename IN_DT>
 __mlu_func__ void sig(IN_DT *output, IN_DT *input, IN_DT *tmp1, IN_DT *tmp2,
@@ -306,7 +305,8 @@ __mlu_func__ void computeDiv(IN_DT *result, const IN_DT *melo,
 // #endif
 //   __bang_mul((float *)result, (float *)melo, (float *)denom_tmp,
 //              actual_box_num);
-//   __bang_mul((float *)result, (float *)result, (float *)tmp1, actual_box_num);
+//   __bang_mul((float *)result, (float *)result, (float *)tmp1,
+//   actual_box_num);
 #endif
 }
 
@@ -442,8 +442,7 @@ __mlu_func__ void polygon_cut(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
 
     // s1 <= 0, set PNMS_MIN with unvailds pp_x, pp_y
     __bang_eq(invalid_pts, valid_pts, tmp_zero, align_actual_box_num);
-    __bang_mul_const(invalid_pts, invalid_pts, PNMS_MIN,
-                     align_actual_box_num);
+    __bang_mul_const(invalid_pts, invalid_pts, PNMS_MIN, align_actual_box_num);
     __bang_add(pp_x + pp_count * max_seg_num, pp_x + pp_count * max_seg_num,
                invalid_pts, align_actual_box_num);
     __bang_add(pp_y + pp_count * max_seg_num, pp_y + pp_count * max_seg_num,
@@ -469,8 +468,7 @@ __mlu_func__ void polygon_cut(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
 
     // set PNMS_MIN with unvailds pp_x, pp_y
     __bang_eq(invalid_pts, valid_pts, tmp_zero, align_actual_box_num);
-    __bang_mul_const(invalid_pts, invalid_pts, PNMS_MIN,
-                     align_actual_box_num);
+    __bang_mul_const(invalid_pts, invalid_pts, PNMS_MIN, align_actual_box_num);
     __bang_add(pp_x + pp_count * max_seg_num, pp_x + pp_count * max_seg_num,
                invalid_pts, align_actual_box_num);
     __bang_add(pp_y + pp_count * max_seg_num, pp_y + pp_count * max_seg_num,
@@ -712,7 +710,6 @@ __mlu_func__ void calculateOverlapArea(
     IN_DT *max_box_pts_x, IN_DT *max_box_pts_y, IN_DT *boxes_area,
     IN_DT *intersection_area, IN_DT *nram_tmp, const int max_seg_num,
     const int actual_box_num, const int align_actual_box_num) {
-
   // nram_tmp
   // |area_tmp| buffer
   // |  1      |
@@ -791,7 +788,8 @@ __mlu_func__ void getMaxScoreIndex(IN_DT *input_box_ptr, IN_DT *input_score_ptr,
     int actual_scores_num = (i == repeat) ? remain : max_seg_num;
     int actual_scores_pad = (i == repeat) ? remain_pad : max_seg_pad;
 
-    __bang_write_value((IN_DT *)scores, actual_scores_pad / INPUT_TYPE_SIZE, PNMS_MIN);
+    __bang_write_value((IN_DT *)scores, actual_scores_pad / INPUT_TYPE_SIZE,
+                       PNMS_MIN);
     __memcpy(scores, input_score_ptr + input_offset + i * max_seg_num,
              actual_scores_num * INPUT_TYPE_SIZE, GDRAM2NRAM);
 
@@ -989,7 +987,8 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
     // y4), sign max_score_box_area, unsign max_score_box_area
     // max_box_pts_x: x1---, x2---, x3---, x4---
     // max_box_pts_y: y1---, y2---, y3---, y4---
-    __bang_write_value(max_box_pts_x, max_seg_num * BOX_COORDINATE_NUM, IN_DT(0));
+    __bang_write_value(max_box_pts_x, max_seg_num * BOX_COORDINATE_NUM,
+                       IN_DT(0));
     int max_box_count = repeat == 0 ? remain_align_num : max_seg_num;
 
     for (int j = 0; j < 4; j++) {
@@ -1073,8 +1072,7 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
                  align_actual_box_num);
 
       // compare scores with float 0 -> intersection_area
-      __bang_write_value(nram_tmp, align_actual_box_num,
-                         (IN_DT)0);
+      __bang_write_value(nram_tmp, align_actual_box_num, (IN_DT)0);
       __bang_eq((IN_DT *)intersection_area, (IN_DT *)scores, (IN_DT *)nram_tmp,
                 align_actual_box_num);
 
