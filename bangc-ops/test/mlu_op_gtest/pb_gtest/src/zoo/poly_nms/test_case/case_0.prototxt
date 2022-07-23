@@ -2,7 +2,7 @@ op_name: "poly_nms"
 input {
   id: "input1"
   shape: {
-    dims: 10
+    dims: 8
     dims: 9
   }
   layout: LAYOUT_ARRAY
@@ -19,7 +19,7 @@ input {
 output {
   id: "output1"
   shape: {
-    dims: 10
+    dims: 8
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
@@ -33,7 +33,7 @@ output {
   dtype: DTYPE_INT32
 }
 poly_nms_param: {
-  iou_threshold: 0.2
+  iou_threshold: 0.5
 }
 test_param: {
   error_func: DIFF3

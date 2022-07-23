@@ -110,8 +110,7 @@ int64_t PolyNmsExecutor::getTheoryOps() {
   VLOG(4) << "getTheoryOps";
   int64_t theory_ops = 21650; 
   int dims = parser_->getMetaTensor("input1").tensor->dims[0];
-
-  theory_ops = theory_ops * dims * dims;
+  theory_ops = (theory_ops + dims *dims) * dims * dims;
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
 }
