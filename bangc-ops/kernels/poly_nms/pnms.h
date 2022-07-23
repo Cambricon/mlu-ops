@@ -9,18 +9,12 @@
  * TORvoid OR OTHERWISE, ARISING FROM, OUKType OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
 #ifndef KERNELS_POLY_NMS_PNMS_H_
 #define KERNELS_POLY_NMS_PNMS_H_
 
-#include <stdint.h>
-
 #include "mlu_op.h"
 #include "kernels/kernel.h"
-
-__mlu_global__ void MLUPNMSTranspose(const void *input_boxes,
-                                     const int input_num_boxes,
-                                     const int input_stride, void *output,
-                                     const mluOpDataType_t data_type_input);
 
 __mlu_global__ void MLUUnion1OrBlockPNMS(
     const void *input_boxes, const int input_num_boxes, const int input_stride,

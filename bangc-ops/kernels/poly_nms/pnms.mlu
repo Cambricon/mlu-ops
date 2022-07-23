@@ -67,7 +67,7 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
       }
     }; break;
     default:
-      LOG(WARNING) << "[cnnlPolyNms]: got unsupported job limit number."
+      LOG(WARNING) << "[mluOpPolyNms]: got unsupported job limit number."
                    << " Use default CN_KERNEL_CLASS_UNION1 with UNION1 task.";
   }
   VLOG(5) << "k_dim->x: " << k_dim->x;
@@ -81,25 +81,28 @@ mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
                                         void *workspace, size_t workspace_size,
                                         const mluOpTensorDescriptor_t output_desc,
                                         void *output, void *result_num) {
-  const std::string API = "[cnnlPolyNms]";
+  const std::string API = "[mluOpPolyNms]";
   // check inputs/outputs
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, boxes_desc != NULL);
   PARAM_CHECK(API, output_desc != NULL);
   PARAM_CHECK(API, result_num != NULL);
-
+  // check inputs/outputs data type
   PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_INT32);
+  // check inputs layout
   PARAM_CHECK(API, boxes_desc->layout == MLUOP_LAYOUT_ARRAY);
-
+  // check inputs shape
   PARAM_CHECK_EQ(API, boxes_desc->dim, 2);
   PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
-  PARAM_CHECK(API, boxes_desc->dims[0] >= output_desc->dims[0]);
+  PARAM_CHECK(API, boxes_desc->dims[0] <= output_desc->dims[0]);
 
   uint32_t input_boxes_num = boxes_desc->dims[0];
   uint32_t input_stride = boxes_desc->dims[1];
 
   if (input_boxes_num == 0) {
     VLOG(5) << API << " skip zero element tensor.";
+    CNRT_CHECK(cnrtMemset(result_num, 0, sizeof(int32_t)));
     return MLUOP_STATUS_SUCCESS;
   }
 
