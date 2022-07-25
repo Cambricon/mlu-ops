@@ -14,6 +14,7 @@
 
 #include "core/mlu_op_core.h"
 #include "cn_api.h"
+#include "mlu_op_core.h"
 
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
 #define CONTEXT_DEVICENAME_LEAST_SIZE 6
@@ -61,11 +62,12 @@ struct mluOpContext {
   int32_t sram_size;
   int32_t capability_cluster_num;
   int32_t capability_job_limit;
+  mluOpQuantizeRoundMode_t round_mode;
 };
 
 typedef enum {
   WARNING = 1,
-  ERROR   = 2,
+  ERROR = 2,
 } DepCheckLevel;  // related to include/cnlog.h
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,

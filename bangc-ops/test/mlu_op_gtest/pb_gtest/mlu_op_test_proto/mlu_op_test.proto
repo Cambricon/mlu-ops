@@ -168,6 +168,18 @@ enum ComputationPreference {
   COMPUTATION_HIGH_PRECISION  = 1;
 }
 
+// param to call mluopSetQuantizeRoundMode()/mluopGetQuantizeRoundMode()
+enum QuantizeRoundMode {
+  ROUND_TO_EVEN = 0;
+  ROUND_HALF_UP = 1;
+  ROUND_OFF_ZERO = 2;
+}
+
+// some params for handle
+message HandleParam {
+  optional QuantizeRoundMode round_mode = 1 [default = ROUND_OFF_ZERO];
+}
+
 enum mluOpLogBase {
   MLUOP_LOG_E  = 0; /**< base is e*/
   MLUOP_LOG_2  = 1; /**< base is 2*/
