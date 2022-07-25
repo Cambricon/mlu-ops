@@ -382,7 +382,9 @@ void func1(...){
   // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
   bool is_empty = (hend <= hstart) || (wend <= wstart);
   if (is_empty){
-      float bin_area = (hend - hstart) * (wend * wstart);
+      int h_offset = hend - hstart;
+      int w_offset = wend - wstart;
+      float bin_area = h_offset * w_offset;
       float bin_area_rechip = 1 / bin_area;
       int offset_bottom_grad = bottom_grad +
               roi_batch_ind * channels * height * width;
@@ -392,7 +394,6 @@ void func1(...){
           int c_offset = repeat * deal_num + i;
           int c = mapping_channel_buffer[c_offset];
           float value = top_grad_buffer[c_offset];
-          int h_offset = hend - hstart;
           for (h = hstart; h < hend; h++) {
               for (w = wstart; w < wend; w++) {
                   int bottom_offset = (h * width + w) * channels + c;
@@ -430,7 +431,9 @@ void func2(...){
       // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
       bool is_empty = (hend <= hstart) || (wend <= wstart);
       if (is_empty){
-          float bin_area = (hend - hstart) * (wend * wstart);
+          int h_offset = hend - hstart;
+          int w_offset = wend - wstart;
+          float bin_area = h_offset * w_offset;
           float bin_area_rechip = 1 / bin_area;
           int offset_bottom_grad = bottom_grad +
                   roi_batch_ind * channels * height * width;
@@ -439,7 +442,6 @@ void func2(...){
               __nramset((T *)nram_buffer, height * width, (float)0);
               float value = top_grad_buffer[i];
               int c = mapping_channel_buffer[i];
-              int h_offset = hend - hstart;
               for (h = hstart; h < hend; h++) {
                   for (w = wstart; w < wend; w++) {
                       int bottom_offset = (h * width + w) * channels + c;
