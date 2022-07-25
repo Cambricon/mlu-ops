@@ -364,9 +364,9 @@ else{
 
 void func1(...){
   real_deal_num_align = CEIL_ALIGN(real_deal_num, ALIGN_SIZE_64);
-  nram_buffer = nram_src;
-  top_grad_buffer = nram_buffer + height * width;
+  top_grad_buffer = nram_src;
   mapping_channel_buffer = top_grad_buffer + real_deal_num_align;
+  nram_buffer = mapping_channel_buffer + real_deal_num_align;
 
   offset = pre_data_for_task * output_dim + n * output_dim + repeat * deal_num; 
   __memcpy(top_grad_buffer, top_grad + offset, real_deal_num_align * sizeof(float), GDRAM2NRAM);
