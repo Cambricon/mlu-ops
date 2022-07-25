@@ -329,7 +329,7 @@ if (nram_output_dim < 1){
   int n = 0;
   while (n++ < num_per_core){
     for (int i = 0; i < repeat; i++){
-      // 最后一个变量实际处理的数据量real_deal_num
+      // 最后一个变量实际处理的数据量deal_num
       func1(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
           rois_num, rois_offset, group_size, spatial_scale, task_offset,
@@ -386,10 +386,10 @@ void func1(...){
       float bin_area_rechip = 1 / bin_area;
       int offset_bottom_grad = bottom_grad +
               roi_batch_ind * channels * height * width;
-      __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, real_deal_num);
-      for (int i = 0; i < real_deal_num; i ++){
+      __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, deal_num);
+      for (int i = 0; i < deal_num; i ++){
           __nramset((T *)nram_buffer, height * width, (float)0);
-          int c_offset = repeat * real_deal_num + i;
+          int c_offset = repeat * deal_num + i;
           int c = mapping_channel_buffer[c_offset];
           float value = top_grad_buffer[c_offset];
           int h_offset = hend - hstart;
@@ -419,7 +419,7 @@ void func2(...){
                 GDRAM2NRAM);
   
   int begin_offset = task_offset + repeat * deal_num;
-  int end_offset = begin_offset + real_deal_num;
+  int end_offset = begin_offset + deal_num;
   // 每个核的output_dim的遍历
   for (output_dim_index = begin_offset; output_dim_index < end_offset; output_dim_index++){
       int roi_num = output_dim_index / (pooled_width * pooled_height);
