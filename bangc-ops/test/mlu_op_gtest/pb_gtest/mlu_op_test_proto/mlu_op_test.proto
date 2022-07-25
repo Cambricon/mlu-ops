@@ -73,8 +73,8 @@ message Tensor {
   optional DataType onchip_dtype  = 13;
 
   optional int32 position         = 5;
-  optional float scale            = 6;     
-  optional int32 offset           = 14;    
+  optional float scale            = 6;
+  optional int32 offset           = 14;
 
   // data
   repeated float value_f          = 7;
@@ -119,6 +119,7 @@ message Node {
   optional LogParam    log_param                      = 4002;     // param
   optional SqrtParam   sqrt_param                     = 4003;  // param
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
+  optional PolyNmsParam poly_nms_param = 1244;
 }
 
 
@@ -157,7 +158,7 @@ message TestParam {
   repeated EvaluationCriterion error_func = 1;
   repeated double error_threshold         = 2;
   repeated double error_threshold_imag    = 3;
-  
+
   optional double latency                 = 5;    //   latency
   optional double efficiency              = 6;    //   efficiency
   optional Device baseline_device         = 7;
@@ -208,4 +209,9 @@ message PsRoiPoolForwardParam{
   optional int32 output_dim = 3 [default = 8];
   optional int32 pooled_height = 4 [default = 7];
   optional int32 pooled_width = 5 [default = 7];
+}
+
+// param to call mluOpPolyNms()
+message PolyNmsParam {
+  required float iou_threshold = 1 [default = 0.2];
 }
