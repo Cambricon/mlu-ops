@@ -22,7 +22,7 @@ if [ $# != 0 ]; then
     case "$1" in
       -c | --coverage)
           shift
-          export BUILD_COVERAGE_TEST="ON"
+          export MLUOP_BUILD_COVERAGE_TEST="ON"
           ;;
       --asan)
           shift
@@ -58,9 +58,9 @@ fi
 
 pushd ${BUILD_PATH} > /dev/null
   rm -rf *
-  if [[ ${BUILD_COVERAGE_TEST} == "ON" ]]; then
+  if [[ ${MLUOP_BUILD_COVERAGE_TEST} == "ON" ]]; then
     echo "-- Build cambricon coverage test cases."
-    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" -DBUILD_COVERAGE_TEST="${BUILD_COVERAGE_TEST}"
+    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}"
   else
     echo "-- Build cambricon release test cases."
     ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}"
