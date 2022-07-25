@@ -13,7 +13,8 @@
 #include "mlu.h"
 #include "mlu_op_kernel.h"
 
-#define ALIGN_SIZE 64
+#define ALIGN_SIZE_64 64
+#define ALIGN_SIZE_128 128
 
 // This function is used to align the round_rn
 template <typename T>
@@ -47,13 +48,13 @@ __mlu_func__ void psRoiAvgPool(
     const int current_deal, const int remain, bool is_remain) {
   // get segment rois
   int group_square = group_size * group_size;
-  int group_square_align = CEIL_ALIGN(group_square, ALIGN_SIZE);
+  int group_square_align = CEIL_ALIGN(group_square, ALIGN_SIZE_64);
 
   T *nram_src = buffer_nram;  // size is output_dim_align * sizeof(T)
   int max_deal = output_dim_num_deal;
   int output_dim_num_real = output_dim_num_deal;
   if (is_remain) {
-    output_dim_num_deal = CEIL_ALIGN(remain, ALIGN_SIZE);
+    output_dim_num_deal = CEIL_ALIGN(remain, ALIGN_SIZE_64);
     output_dim_num_real = remain;
   }
 
@@ -189,9 +190,10 @@ __mlu_func__ void psRoiAvgPoolForwardKernel(
                            output_dim * pooled_width * pooled_height;
   }
 
-  int group_square_align = CEIL_ALIGN(group_size * group_size, ALIGN_SIZE);
-  int output_dim_num_deal = FLOOR_ALIGN(
-      MAX_NRAM_SIZE / ((2 + 2 * group_square_align) * sizeof(T)), ALIGN_SIZE);
+  int group_square_align = CEIL_ALIGN(group_size * group_size, ALIGN_SIZE_64);
+  int output_dim_num_deal =
+      FLOOR_ALIGN(MAX_NRAM_SIZE / ((2 + 2 * group_square_align) * sizeof(T)),
+                  ALIGN_SIZE_64);
   const int repeat = output_dim / output_dim_num_deal;
   const int remain = output_dim % output_dim_num_deal;
   if (roi_num_per_core > 0) {
@@ -220,11 +222,11 @@ __mlu_global__ void MLUKernelPsroipoolForward(
     int channels, int pooled_height, int pooled_width, int output_dim,
     int group_size, int rois_num, int rois_offset, float spatial_scale) {
   __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
-  psRoiAvgPoolKernel((float *)nram_buffer, (float *)bottom_data,
-                     (float *)bottom_rois, (float *)top_data,
-                     (int *)mapping_channel, batch_size, height, width,
-                     channels, pooled_height, pooled_width, output_dim,
-                     group_size, rois_num, rois_offset, spatial_scale);
+  psRoiAvgPoolForwardKernel((float *)nram_buffer, (float *)bottom_data,
+                            (float *)bottom_rois, (float *)top_data,
+                            (int *)mapping_channel, batch_size, height, width,
+                            channels, pooled_height, pooled_width, output_dim,
+                            group_size, rois_num, rois_offset, spatial_scale);
 }
 
 void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
@@ -245,11 +247,11 @@ __mlu_func__ void psRoiAvgPoolBackwardPartOutputdim(
     const int batch_size, const int height, const int width, const int channels,
     const int pooled_height, const int pooled_width, const int output_dim,
     const int rois_num, const int rois_offset, const T spatial_scale,
-    const int task_offset, const int num_per_core, const int repeat,
-    const int max_deal_num, const deal_num) {
+    const int task_offset, const int current_output_dim, const int repeat,
+    const int max_deal_num, const int deal_num) {
   int deal_num_align = CEIL_ALIGN(deal_num, ALIGN_SIZE_64);
-  float *top_grad_buffer = nram_src;
-  int *mapping_channel_buffer = top_grad_buffer + deal_num_align;
+  float *top_grad_buffer = buffer_nram;
+  int *mapping_channel_buffer = (int *)(top_grad_buffer + deal_num_align);
   float *nram_buffer = mapping_channel_buffer + deal_num_align;
 
   int offset = task_offset * output_dim + n * output_dim + repeat * deal_num;
@@ -298,10 +300,11 @@ __mlu_func__ void psRoiAvgPoolBackwardWholeOutputdim(
     const int pooled_height, const int pooled_width, const int output_dim,
     const int rois_num, const int rois_offset, const T spatial_scale,
     const int task_offset, const int num_per_core, const int repeat,
-    const int max_deal_num, const deal_num) {
+    const int max_deal_num, const int deal_num) {
   int output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
-  float *top_grad_buffer = nram_src;
-  int *mapping_channel_buffer = top_grad_buffer + output_dim_align * deal_num;
+  float *top_grad_buffer = buffer_nram;
+  int *mapping_channel_buffer =
+      (int *)(top_grad_buffer + output_dim_align * deal_num);
   float *nram_buffer = mapping_channel_buffer + output_dim_align * deal_num;
 
   __nramset((float *)top_grad_buffer, output_dim_align * deal_num, (float)0);
