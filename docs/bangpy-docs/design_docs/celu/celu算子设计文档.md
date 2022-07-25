@@ -78,7 +78,11 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 - torch.nn.CELU(alpha=1.0, inplace=False)
 [torch.nn.CELU文档](https://pytorch.org/docs/stable/generated/torch.nn.CELU.html?highlight=celu#torch.nn.CELU)
 ```python
-m = torch.nn.CELU()
+# https://github.com/pytorch/pytorch/blob/master/torch/nn/quantized/functional.py
+def celu(input: Tensor,
+         scale: float,
+         zero_point: int, 
+         alpha: float = 1.) -> Tensor:
 input = torch.randn(2)
 output = m(input)
 ```
