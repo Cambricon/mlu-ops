@@ -116,7 +116,7 @@ float intersectArea(Point *ps1, int n1, Point *ps2, int n2) {
       res += intersectArea(ps1[i], ps1[i + 1], ps2[j], ps2[j + 1]);
     }
   }
-  return res;  // assumeresispositive!
+  return res;
 }
 
 float iou_poly(vector<float> p, vector<float> q) {
@@ -240,8 +240,6 @@ vector<int> pnms_impl(vector<vector<float>> &p, const float thresh) {
 //         }
 //         printf("\n new :");
 //     }
-
-// // return 0;
 
 //     vector<int> ret_index = pnms(m,thresh);
 //    // printf("iou_poly: %f\n", ret);

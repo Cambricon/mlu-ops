@@ -11,11 +11,12 @@
  *************************************************************************/
 
 #include <cnrt.h>
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #include <iostream>
 #include <string>
+
+#include "mlu_op.h"
+#include "mlu_op_kernel.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -51,13 +52,13 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
              const void *boxes, float iou_threshold, void *workspace,
              size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
-             void *output, void *result_num) {
+             void *output, void *output_size) {
   const std::string API = "[mluOpPolyNms]";
   // check inputs/outputs
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, boxes_desc != NULL);
   PARAM_CHECK(API, output_desc != NULL);
-  PARAM_CHECK(API, result_num != NULL);
+  PARAM_CHECK(API, output_size != NULL);
   // check inputs/outputs data type
   PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_INT32);
@@ -73,7 +74,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
 
   if (input_boxes_num == 0) {
     VLOG(5) << API << " skip zero element tensor.";
-    CNRT_CHECK(cnrtMemset(result_num, 0, sizeof(int32_t)));
+    CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int32_t)));
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -88,7 +89,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", boxes, boxes_desc, 10, 0);
     GEN_CASE_DATA(false, "output1", output, output_desc, 0, 0);
-    GEN_CASE_DATA_UNFOLD(false, "output2", result_num, 1, {1},
+    GEN_CASE_DATA_UNFOLD(false, "output2", output_size, 1, {1},
                          MLUOP_DTYPE_INT32, MLUOP_LAYOUT_ARRAY, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "poly_nms", "iou_threshold", iou_threshold);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 3e-3, 3e-3, 0);
@@ -104,7 +105,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
 
   KERNEL_CHECK((mluOpUnion1OrBlockKernelPolyNmsFloat(
       k_dim, k_type, handle->queue, (void *)boxes, input_boxes_num,
-      input_stride, iou_threshold, output, result_num, workspace)));
+      input_stride, iou_threshold, output, output_size, workspace)));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

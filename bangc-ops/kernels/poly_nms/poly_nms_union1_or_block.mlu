@@ -1150,7 +1150,7 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
 __mlu_global__ void MLUKernelPolyNms(const void *input_boxes,
                                      int input_boxes_num, int input_stride,
                                      const float iou_thresh, void *output,
-                                     void *result_num, void *workspace) {
+                                     void *output_size, void *workspace) {
   void *trans_boxes = (char *)workspace;
   boxesTranspose(input_boxes, input_boxes_num, input_stride, trans_boxes,
                  nram_buffer, NRAM_BUF_SIZE);
@@ -1160,7 +1160,7 @@ __mlu_global__ void MLUKernelPolyNms(const void *input_boxes,
 
   int32_t *out_data = (int32_t *)output;
 
-  pnms_detection<float, int32_t>((int32_t *)result_num, out_data,
+  pnms_detection<float, int32_t>((int32_t *)output_size, out_data,
                                  (float *)trans_boxes, (float *)nram_buffer,
                                  NRAM_BUF_SIZE, (float *)sram_buffer, taskDim,
                                  input_data_num, input_stride, iou_thresh);
@@ -1169,8 +1169,8 @@ __mlu_global__ void MLUKernelPolyNms(const void *input_boxes,
 void MLUOP_WIN_API mluOpUnion1OrBlockKernelPolyNmsFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input_boxes, int input_boxes_num, int input_stride,
-    const float iou_thresh, void *output, void *result_num, void *workspace) {
+    const float iou_thresh, void *output, void *output_size, void *workspace) {
   MLUKernelPolyNms<<<k_dim, k_type, queue>>>(
       (void *)input_boxes, input_boxes_num, input_stride, iou_thresh, output,
-      result_num, workspace);
+      output_size, workspace);
 }
