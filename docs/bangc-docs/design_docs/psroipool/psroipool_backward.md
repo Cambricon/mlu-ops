@@ -294,7 +294,7 @@ step3: 计算出step2得到的bin区域面积bin_area，结合step2得到的valu
 
 ```c++
 
-total_output_dim = rois_num * pooled_height * pooled_width * output_dim;
+total_output_dim = rois_num * pooled_height * pooled_width;
 num_per_core = total_output_dim / taskDim;
 pre_data_for_task = taskId * num_per_core;
 remainder = total_output_dim % taskDim;
@@ -311,22 +311,22 @@ if (taskId < remainder) {
   mapping_channel_ptr += taskId * num_per_core + remainder;
 }
 // height * width < nram_size
-// 首先拆按照taskId拆rois_num * pooled_height * pooled_width
+// 首先拆按照taskDim拆rois_num * pooled_height * pooled_width
 // 下面为一个core上的计算逻辑，core上分到的output_dim数量为：num_per_core
-// 为了打满nram，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
+// 为了充分利用nram空间，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
 output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_64);
 // nram上最多可以存放的output_dim数量 
-nram_output_dim = (NRAM_BYTE_CNT - hw_align * sizeof(float)) / (output_dim_align * sizeof(float) + \
+nram_output_dim = (NRAM_BYTE_CNT - height * width * sizeof(float)) / (output_dim_align * sizeof(float) + \
                    output_dim_align * sizeof(int));
 // 如果nram上一个output_dim都放不下，则需要拆output_dim
-deal_num = 0;
+int deal_num = 0;
 if (nram_output_dim < 1){
-  // output_dim一个一个处理
-  // nram是最多可以存放的数量
+  // nram可以存放的部分output_dim大小
   deal_num = FLOOR_ALIGN(
-      (NRAM_BYTE_CNT - hw_align * sizeof(float)) / (sizeof(float) + sizeof(int)), ALIGN_SIZE_64);
+      (NRAM_BYTE_CNT - height * width * sizeof(float)) / (sizeof(float) + sizeof(int)), ALIGN_SIZE_64);
   repeat = output_dim / deal_num;
   remain = output_dim % deal_num;
+  int n = 0;
   while (n++ < num_per_core){
     for (int i = 0; i < repeat; i++){
       func1(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
@@ -368,8 +368,6 @@ void func1(...){
   top_grad_buffer = nram_buffer + height * width;
   mapping_channel_buffer = top_grad_buffer + real_deal_num_align;
 
-  __nramset((T *)top_grad_buffer, real_deal_num_align, (float)0);
-  __nramset((T *)mapping_channel_buffer, real_deal_num_align, (int)0);
   offset = pre_data_for_task * output_dim + n * output_dim + repeat * deal_num; 
   __memcpy(top_grad_buffer, top_grad + offset, real_deal_num_align * sizeof(float), GDRAM2NRAM);
   __memcpy(mapping_channel_buffer, mapping_channel + offset, real_deal_num_align * sizeof(int), GDRAM2NRAM);
@@ -386,16 +384,17 @@ void func1(...){
       bin_area_rechip = 1 / bin_area;
       offset_bottom_grad = bottom_grad +
               roi_batch_ind * channels * height * width;
-      //value = top_grad_buffer[i] * bin_area_rechip;
-      __bang_mul_const(nram_buffer, top_grad_buffer, bin_area_recip, real_deal_num);
+      __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, real_deal_num);
       for (int i = 0; i < real_deal_num; i ++){
           __nramset((T *)nram_buffer, height * width, (float)0);
           c_offset = repeat * real_deal_num + i;
           c = mapping_channel_buffer[c_offset];
+          float value = top_grad_buffer[c_offset];
+          h_offset = hend - hstart;
           for (h = hstart; h < hend; h++) {
               for (w = wstart; w < wend; w++) {
                   bottom_offset = (h * width + w) * channels + c;
-                  nram_offset = (h - hstart) * (hend - hstart) + (w - wstart);
+                  nram_offset = (h - hstart) * h_offset + (w - wstart);
                   __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
               }
           }
@@ -404,10 +403,10 @@ void func1(...){
 }
 
 void func2(...){
-  nram_buffer = nram_src;
-  top_grad_buffer = nram_buffer + height * width;
   offset_align = CEIL_ALIGN(real_deal_num * output_dim, ALIGN_SIZE_64);
+  top_grad_buffer = nram_src；
   mapping_channel_buffer = top_grad_buffer + offset_align;
+  nram_buffer = mapping_channel_buffer + offset_align；
 
   __nramset((T *)top_grad_buffer, offset_align, (float)0);
   __nramset((T *)mapping_channel_buffer, offset_align, (int)0);
@@ -432,15 +431,16 @@ void func2(...){
           bin_area_rechip = 1 / bin_area;
           offset_bottom_grad = bottom_grad +
                   roi_batch_ind * channels * height * width;
-          //value = top_grad_buffer[i] * bin_area_rechip;
-          __bang_mul_const(nram_buffer, top_grad_buffer, bin_area_recip, output_dim);
+          __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, output_dim)
           for (int i = 0; i < output_dim; i ++){
               __nramset((T *)nram_buffer, height * width, (float)0);
+              float value = top_grad_buffer[i];
               c = mapping_channel_buffer[i];
+              h_offset = hend - hstart;
               for (h = hstart; h < hend; h++) {
                   for (w = wstart; w < wend; w++) {
                       bottom_offset = (h * width + w) * channels + c;
-                      nram_offset = (h - hstart) * (hend - hstart) + (w - wstart);
+                      nram_offset = (h - hstart) * h_offset + (w - wstart);
                       __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
                   }
               }
