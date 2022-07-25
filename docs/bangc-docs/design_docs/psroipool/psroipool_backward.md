@@ -204,8 +204,8 @@ tensor([[[[nan, 0., 0.],
 | handle           | 算子上下文信息                    | /                 | /           | /          | 无       |
 | top_grad_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t    | /     | 无       |
 | top_grad       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
-| rois_desc  | 输入roi的描述符                | 输入              | mluOpTensorDescriptor_t | /          | 无       |
-| rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
+| rois_desc  | 输入rois的描述符                | 输入              | mluOpTensorDescriptor_t | /          | 无       |
+| rois       | 输入rois的指针                  | 输入              | float       |  ARRAY      | 无       |
 | mapping_channel_desc | 输入mapping_channel的描述符 | 输入              | mluOpTensorDescriptor_t          | /       | 无       |
 | mapping_channel      | 输入mapping_channel数据的指针| 输入              | int32_t      | NHWC       | 无       |
 | pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
@@ -310,11 +310,10 @@ if (taskId < remainder) {
   top_data_ptr += taskId * num_per_core + remainder;
   mapping_channel_ptr += taskId * num_per_core + remainder;
 }
-// hw_align < nram_size
+// height * width < nram_size
 // 首先拆按照taskId拆rois_num * pooled_height * pooled_width
 // 下面为一个core上的计算逻辑，core上分到的output_dim数量为：num_per_core
 // 为了打满nram，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
-hw_align = CEIL_ALIGN(height * width, ALIGN_SIZE_64);
 output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_64);
 // nram上最多可以存放的output_dim数量 
 nram_output_dim = (NRAM_BYTE_CNT - hw_align * sizeof(float)) / (output_dim_align * sizeof(float) + \
@@ -349,24 +348,24 @@ else{
   remain = num_per_core % nram_output_dim;
   deal_num = nram_output_dim;
   for (int i = 0; i < repeat; i++){
+    // 最后一个变量实际处理的数据量real_deal_num
     func2(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
         rois_num, rois_offset, group_size, spatial_scale, pre_data_for_task,
-        num_per_core,i, deal_num, remain, false);
+        num_per_core,i, deal_num, deal_num);
   }
   if (remain != 0){
     func2(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
         rois_num, rois_offset, group_size, spatial_scale, pre_data_for_task,
-        num_per_core, repeat, deal_num, remain, true);
+        num_per_core, repeat, deal_num, remain);
   }
 }
 
 void func1(...){
-  real_deal_num = is_remain ? remain : deal_num;
   real_deal_num_align = CEIL_ALIGN(real_deal_num, ALIGN_SIZE_64);
   nram_buffer = nram_src;
-  top_grad_buffer = nram_buffer + hw_align;
+  top_grad_buffer = nram_buffer + height * width;
   mapping_channel_buffer = top_grad_buffer + real_deal_num_align;
 
   __nramset((T *)top_grad_buffer, real_deal_num_align, (float)0);
@@ -405,17 +404,16 @@ void func1(...){
 }
 
 void func2(...){
-  real_deal_num = is_remain ? remain : deal_num;
-  real_deal_num_align = CEIL_ALIGN(real_deal_num, ALIGN_SIZE_64);
   nram_buffer = nram_src;
-  top_grad_buffer = nram_buffer + hw_align;
-  mapping_channel_buffer = top_grad_buffer + real_deal_num_align * output_dim;
+  top_grad_buffer = nram_buffer + height * width;
+  offset_align = CEIL_ALIGN(real_deal_num * output_dim, ALIGN_SIZE_64);
+  mapping_channel_buffer = top_grad_buffer + offset_align;
 
-  __nramset((T *)top_grad_buffer, real_deal_num_align * output_dim, (float)0);
-  __nramset((T *)mapping_channel_buffer, real_deal_num_align * output_dim, (int)0);
+  __nramset((T *)top_grad_buffer, offset_align, (float)0);
+  __nramset((T *)mapping_channel_buffer, offset_align, (int)0);
   offset = pre_data_for_task * output_dim + repeat * output_dim; 
-  __memcpy(top_grad_buffer, top_grad + offset, real_deal_num_align * output_dim * sizeof(float), GDRAM2NRAM);
-  __memcpy(mapping_channel_buffer, mapping_channel + offset, real_deal_num_align * output_dim * sizeof(int), GDRAM2NRAM);
+  __memcpy(top_grad_buffer, top_grad + offset, offset_align * sizeof(float), GDRAM2NRAM);
+  __memcpy(mapping_channel_buffer, mapping_channel + offset, offset_align * sizeof(int), GDRAM2NRAM);
   
   // 
   begin_offset = pre_data_for_task + repeat * deal_num;
