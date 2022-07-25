@@ -298,7 +298,7 @@ int total_output_dim = rois_num * pooled_height * pooled_width;
 int num_per_core = total_output_dim / taskDim;
 int task_offset = taskId * num_per_core;
 int remainder = total_output_dim % taskDim;
-T *top_grad_ptr = top_grad;
+float *top_grad_ptr = top_grad;
 int *mapping_channel_ptr = mapping_channel;
 if (taskId < remainder) {
   num_per_core++;
@@ -347,31 +347,32 @@ else{
   // 计算repeat/remain
   int repeat = num_per_core / nram_output_dim;
   int remain = num_per_core % nram_output_dim;
-  int deal_num = nram_output_dim;
+  int max_deal_num = nram_output_dim;
   for (int i = 0; i < repeat; i++){
-    // 最后一个变量实际处理的数据量real_deal_num
+    // 最后一个变量实际处理的数据量deal_num
     func2(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
         rois_num, rois_offset, group_size, spatial_scale, task_offset,
-        num_per_core,i, deal_num, deal_num);
+        num_per_core,i, max_deal_num, deal_num);
   }
   if (remain != 0){
+    int deal_num = remain;
     func2(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
         rois_num, rois_offset, group_size, spatial_scale, task_offset,
-        num_per_core, repeat, deal_num, remain);
+        num_per_core, repeat, max_deal_num, deal_num);
   }
 }
 
 void func1(...){
-  int real_deal_num_align = CEIL_ALIGN(real_deal_num, ALIGN_SIZE_64);
+  int deal_num_align = CEIL_ALIGN(deal_num, ALIGN_SIZE_64);
   float *top_grad_buffer = nram_src;
-  int *mapping_channel_buffer = top_grad_buffer + real_deal_num_align;
-  float *nram_buffer = mapping_channel_buffer + real_deal_num_align;
+  int *mapping_channel_buffer = top_grad_buffer + deal_num_align;
+  float *nram_buffer = mapping_channel_buffer + deal_num_align;
 
   int offset = task_offset * output_dim + n * output_dim + repeat * deal_num; 
-  __memcpy(top_grad_buffer, top_grad + offset, real_deal_num_align * sizeof(float), GDRAM2NRAM);
-  __memcpy(mapping_channel_buffer, mapping_channel + offset, real_deal_num_align * sizeof(int), GDRAM2NRAM);
+  __memcpy(top_grad_buffer, top_grad + offset, real_deal_num * sizeof(float), GDRAM2NRAM);
+  __memcpy(mapping_channel_buffer, mapping_channel + offset, deal_num_align * sizeof(int), GDRAM2NRAM);
   
   int roi_num = (task_offset + n) / (pooled_width * pooled_height);
   int ph = (task_offset + n) % (pooled_width * pooled_height) / pooled_width;
@@ -404,16 +405,18 @@ void func1(...){
 }
 
 void func2(...){
-  int offset_align = CEIL_ALIGN(real_deal_num * output_dim, ALIGN_SIZE_64);
+  int output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
   float *top_grad_buffer = nram_src；
-  int *mapping_channel_buffer = top_grad_buffer + offset_align;
-  float *nram_buffer = mapping_channel_buffer + offset_align；
+  int *mapping_channel_buffer = top_grad_buffer + output_dim_align * deal_num;
+  float *nram_buffer = mapping_channel_buffer + output_dim_align * deal_num;
 
-  __nramset((T *)top_grad_buffer, offset_align, (float)0);
-  __nramset((T *)mapping_channel_buffer, offset_align, (int)0);
+  __nramset((float *)top_grad_buffer, output_dim_align * deal_num, (float)0);
+  __nramset((int *)mapping_channel_buffer, output_dim_align * deal_num, (int)0);
   int offset = task_offset * output_dim + repeat * output_dim; 
-  __memcpy(top_grad_buffer, top_grad + offset, offset_align * sizeof(float), GDRAM2NRAM);
-  __memcpy(mapping_channel_buffer, mapping_channel + offset, offset_align * sizeof(int), GDRAM2NRAM);
+  __memcpy(top_grad_buffer, top_grad + offset, output_dim * sizeof(float), 
+                GDRAM2NRAM, output_dim_align * sizeof(float), output_dim * sizeof(float), deal_num - 1);
+  __memcpy(mapping_channel_buffer, mapping_channel + offset, output_dim * deal_num * sizeof(int),
+                GDRAM2NRAM);
   
   int begin_offset = task_offset + repeat * deal_num;
   int end_offset = begin_offset + real_deal_num;
@@ -431,7 +434,7 @@ void func2(...){
           float bin_area_rechip = 1 / bin_area;
           int offset_bottom_grad = bottom_grad +
                   roi_batch_ind * channels * height * width;
-          __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, output_dim)
+          __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, output_dim_align)
           for (int i = 0; i < output_dim; i ++){
               __nramset((T *)nram_buffer, height * width, (float)0);
               float value = top_grad_buffer[i];
