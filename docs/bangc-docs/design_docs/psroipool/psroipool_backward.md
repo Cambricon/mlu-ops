@@ -330,16 +330,14 @@ if (nram_output_dim < 1){
   while (n++ < num_per_core){
     for (int i = 0; i < repeat; i++){
       // 最后一个变量实际处理的数据量deal_num
-      func1(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
+      func1(nram_buffer, top_grad_ptr, rois, bottom_grad, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
-          rois_num, rois_offset, group_size, spatial_scale, task_offset,
-          n,i, deal_num, deal_num);
+          rois_num, rois_offset, spatial_scale, task_offset, n,i, deal_num, deal_num);
     }
     if (remain != 0){
-      func1(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
+      func1(nram_buffer, top_grad_ptr, rois, bottom_grad, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
-          rois_num, rois_offset, group_size, spatial_scale, task_offset,
-          n,repeat, deal_num, remain);
+          rois_num, rois_offset, spatial_scale, task_offset, n,repeat, deal_num, remain);
     }
   }
 }
@@ -350,17 +348,17 @@ else{
   int max_deal_num = nram_output_dim;
   for (int i = 0; i < repeat; i++){
     // 最后一个变量实际处理的数据量deal_num
-    func2(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
+    func2(nram_buffer, top_grad_ptr, rois, bottom_grad, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
-        rois_num, rois_offset, group_size, spatial_scale, task_offset,
-        num_per_core,i, max_deal_num, deal_num);
+        rois_num, rois_offset, spatial_scale, task_offset, num_per_core,i,
+        max_deal_num, deal_num);
   }
   if (remain != 0){
     int deal_num = remain;
-    func2(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
+    func2(nram_buffer, top_grad_ptr, rois, bottom_grad, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
-        rois_num, rois_offset, group_size, spatial_scale, task_offset,
-        num_per_core, repeat, max_deal_num, deal_num);
+        rois_num, rois_offset, spatial_scale, task_offset, num_per_core, repeat,
+        max_deal_num, deal_num);
   }
 }
 
@@ -407,7 +405,7 @@ void func1(...){
 
 void func2(...){
   int output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
-  float *top_grad_buffer = nram_src；
+  float *top_grad_buffer = nram_src;
   int *mapping_channel_buffer = top_grad_buffer + output_dim_align * deal_num;
   float *nram_buffer = mapping_channel_buffer + output_dim_align * deal_num;
 
@@ -427,7 +425,7 @@ void func2(...){
       int ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
       int pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
 
-      int roi_batch_ind = rois[roi_num * 5]
+      int roi_batch_ind = rois[roi_num * 5];
       // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
       bool is_empty = (hend <= hstart) || (wend <= wstart);
       if (is_empty){
