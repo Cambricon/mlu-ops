@@ -87,6 +87,6 @@ __mlu_global__ void MLUUnion1OrBlockPNMS(const void *input_boxes,
           (float *)nram_buffer, NRAM_BUF_SIZE, (float *)sram_buffer, taskDim,
           input_data_num, input_stride, iou_thresh);
     }; break;
-    default: { __bang_printf("Not Implemented.\n"); }
+    default: break;
   }
 }

@@ -144,6 +144,8 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
   //         p[n++] = pp[i];
   // while (n > 1 && p[n - 1] == p[0])
   //     n--;
+
+  // if(pp_x, pp_y == PNMS_MIN) this piont is invaild;
   __bang_write_value(p_count, max_seg_num, float(0.0));
   __bang_write_value(px_ram, 30 * max_seg_num, float(0.0));
   __bang_write_value(py_ram, 30 * max_seg_num, float(0.0));
@@ -221,9 +223,7 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
       p_count[i] = p_count[i] - 1;
       n--;
     }
-  }
-  for (int i = 0; i < actual_box_num; ++i) {
-    int n = int32_t(p_count[i]);
+
     px_ram[n * max_seg_num + i] = px_ram[i];
     py_ram[n * max_seg_num + i] = py_ram[i];
   }
@@ -292,7 +292,7 @@ __mlu_func__ void computeDiv(IN_DT *result, const IN_DT *melo,
 #if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
   __bang_div((float *)result, (float *)melo, (float *)denom, actual_box_num);
 #else
-  // Calculation error when denominator is large
+  // Calculation error when denominator is large，so use scalar div instead.
   for (int i = 0; i < actual_box_num; i++) {
     result[i] = melo[i] / denom[i];
   }
