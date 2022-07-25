@@ -62,10 +62,10 @@ output {
   dtype: DTYPE_INT32
 }
 poly_nms_param: {
-  iou_threshold: 0.0
+  iou_threshold: 0.1
 }
 test_param: {
   error_func: DIFF3
-  error_threshold: 0.005
+  error_threshold: 0.0
   baseline_device: CPU
 }
