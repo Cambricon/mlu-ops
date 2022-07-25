@@ -329,16 +329,17 @@ if (nram_output_dim < 1){
   int n = 0;
   while (n++ < num_per_core){
     for (int i = 0; i < repeat; i++){
+      // 最后一个变量实际处理的数据量real_deal_num
       func1(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
           rois_num, rois_offset, group_size, spatial_scale, pre_data_for_task,
-          n,i, deal_num, remain, false);
+          n,i, deal_num, deal_num);
     }
     if (remain != 0){
       func1(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
           rois_num, rois_offset, group_size, spatial_scale, pre_data_for_task,
-          n,repeat, deal_num, remain, true);
+          n,repeat, deal_num, remain);
     }
   }
 }
