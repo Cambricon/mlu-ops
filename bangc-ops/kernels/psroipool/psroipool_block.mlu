@@ -240,104 +240,108 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
 }
 
 template <typename T>
-__mlu_func__ void psRoiAvgPoolBackward(
-    T *buffer_nram, T *top_grad, T *input_rois, T *bottom_grad,
-    int *mapping_channel, const int batch_size, const int height,
+__mlu_func__ void psRoiAvgPoolBackwardPartOutputdim(
+    T *buffer_nram, T *top_grad, T *rois, T *bottom_grad,
+    int *mapping_channel, const int batch_size, const int height, 
     const int width, const int channels, const int pooled_height,
-    const int pooled_width, const int output_dim, const int rois_offset,
-    const T spatial_scale, const int num_per_core,
-    const int pre_data_for_task) {
-  int hw_align = CEIL_ALIGN(height * width, 64);
-  T *nram_src = buffer_nram;
-  T *bottom_grad_ptr = bottom_grad;
-  T *top_grad_ptr = top_grad;
-  int *mapping_channel_ptr = mapping_channel;
+    const int pooled_width, const int output_dim, const int rois_num,
+    const int rois_offset, const T spatial_scale, const int task_offset,
+    const int num_per_core, const int repeat, const int max_deal_num,
+    const deal_num) {
+  int deal_num_align = CEIL_ALIGN(deal_num, ALIGN_SIZE_64);
+  float *top_grad_buffer = nram_src;
+  int *mapping_channel_buffer = top_grad_buffer + deal_num_align;
+  float *nram_buffer = mapping_channel_buffer + deal_num_align;
 
-  for (int n = pre_data_for_task; n < pre_data_for_task + num_per_core; ++n) {
-    int bidx = 0;
-    T roi_start_w, roi_start_h, roi_end_w, roi_end_h;
-    T *ptr_bottom_rois = bottom_rois + n * rois_offset;
-    // batch_id, x1, y1, x2, y2
-    bidx = (int)ptr_bottom_rois[0];
-    roi_start_w =
-        static_cast<T>(scalarRound(ptr_bottom_rois[1])) * ((T)spatial_scale);
-    roi_start_h =
-        static_cast<T>(scalarRound(ptr_bottom_rois[2])) * ((T)spatial_scale);
-    roi_end_w = static_cast<T>(scalarRound(ptr_bottom_rois[3]) + 1.) *
-                ((T)spatial_scale);
-    roi_end_h = static_cast<T>(scalarRound(ptr_bottom_rois[4]) + 1.) *
-                ((T)spatial_scale);
+  int offset = task_offset * output_dim + n * output_dim + repeat * deal_num; 
+  __memcpy(top_grad_buffer, top_grad + offset, deal_num_align * sizeof(float), GDRAM2NRAM);
+  __memcpy(mapping_channel_buffer, mapping_channel + offset, deal_num * sizeof(int), GDRAM2NRAM);
+  
+  int roi_num = (task_offset + n) / (pooled_width * pooled_height);
+  int ph = (task_offset + n) % (pooled_width * pooled_height) / pooled_width;
+  int pw = (task_offset + n) % (pooled_width * pooled_height) % pooled_width;
 
-    if (bidx < 0 || bidx > (batch_size - 1)) {
-      return;
-    }
-    T roi_height = std::max(roi_end_h - roi_start_h, (T)0.1);
-    T roi_width = std::max(roi_end_w - roi_start_w, (T)0.1);
-    T bin_size_h = (T)roi_height / (T)(pooled_height);
-    T bin_size_w = (T)roi_width / (T)(pooled_width);
-    T *ptr_nram_des = nram_des;
-    T *dst_transpose =
-        (T *)ptr_nram_des + output_dim_num_deal * group_square_align;
-    int hstart, wstart, hend, wend;
-    int is_empty;
-    __nramset((T *)nram_src, hw_align, (T)0);
-    hstart = floor(static_cast<T>(ph) * bin_size_h + roi_start_h);
-    wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
-    hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
-    wend = ceil(static_cast<T>(pw + 1) * bin_size_w + roi_start_w);
-    hstart = std::min(std::max(hstart, 0), height);
-    hend = std::min(std::max(hend, 0), height);
-    wstart = std::min(std::max(wstart, 0), width);
-    wend = std::min(std::max(wend, 0), width);
-    is_empty = (hend <= hstart) || (wend <= wstart);
-
-    int ph = n / (output_dim * pooled_width);
-    int pw = index % (output_dim * pooled_width) / output_dim;
-    // vector version
-    if (!is_empty) {
-      int c_offset = (ph * group_size + pw) * output_dim_num_deal;
-      T bin_area_recip = 1.0 / ((hend - hstart) * (wend - wstart));
-
-      // load each pixel of bin
-      for (int h = hstart; h < hend; ++h) {
-        for (int w = wstart; w < wend; ++w) {
-          // load part channels, that channels = group_size * group_size *
-          // output_dim_num_real
-          int load_offset = bidx * height * width * channels +
-                            (h * width + w) * channels +
-                            max_deal * current_deal * group_square;
-          __memcpy(ptr_nram_des, bottom_data_ptr + load_offset,
-                   group_square * sizeof(T), GDRAM2NRAM,
-                   group_square_align * sizeof(T), group_square * sizeof(T),
-                   output_dim_num_real - 1);
-          // [output_dim_num_deal, group_square_align] ->
-          // [group_square_align, output_dim_num_deal]
-          __bang_transpose(dst_transpose, ptr_nram_des, output_dim_num_deal,
-                           group_square_align);
-          // add
-          __bang_add(nram_src, nram_src, dst_transpose + c_offset,
-                     output_dim_num_deal);
-        }
+  int roi_batch_ind = rois[roi_num * 5]
+  // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
+  bool is_empty = (hend <= hstart) || (wend <= wstart);
+  if (is_empty){
+      int h_offset = hend - hstart;
+      int w_offset = wend - wstart;
+      float bin_area = h_offset * w_offset;
+      float bin_area_rechip = 1 / bin_area;
+      int offset_bottom_grad = bottom_grad +
+              roi_batch_ind * channels * height * width;
+      __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, deal_num);
+      for (int i = 0; i < deal_num; i ++){
+          __nramset((T *)nram_buffer, height * width, (float)0);
+          int c_offset = repeat * deal_num + i;
+          int c = mapping_channel_buffer[c_offset];
+          float value = top_grad_buffer[c_offset];
+          for (h = hstart; h < hend; h++) {
+              for (w = wstart; w < wend; w++) {
+                  int bottom_offset = (h * width + w) * channels + c;
+                  int nram_offset = (h - hstart) * h_offset + (w - wstart);
+                  __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
+              }
+          }
       }
-      // average
-      __bang_mul_const(nram_src, nram_src, bin_area_recip, output_dim_num_deal);
-    }
+  }  
+}
 
-    // compute mapping channels
-    for (int j = 0; j < output_dim_num_real; j++) {
-      nram_mapping_channel[j] =
-          ph * group_size + pw + j * group_size * group_size +
-          current_deal * max_deal * group_size * group_size;
-      __asm__ volatile("sync;\n");
-    }
+template <typename T>
+__mlu_func__ void psRoiAvgPoolBackwardWholeOutputdim(
+    T *buffer_nram, T *top_grad, T *rois, T *bottom_grad,
+    int *mapping_channel, const int batch_size, const int height, 
+    const int width, const int channels, const int pooled_height,
+    const int pooled_width, const int output_dim, const int rois_num,
+    const int rois_offset, const T spatial_scale, const int task_offset,
+    const int num_per_core, const int repeat, const int max_deal_num,
+    const deal_num) {
+  int output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
+  float *top_grad_buffer = nram_src;
+  int *mapping_channel_buffer = top_grad_buffer + output_dim_align * deal_num;
+  float *nram_buffer = mapping_channel_buffer + output_dim_align * deal_num;
 
-    int offset =
-        (ph * group_size + pw) * output_dim + max_deal * current_deal +
-        (n - pre_data_for_task) * pooled_height * pooled_width * output_dim;
-    __memcpy(mapping_channel_ptr + offset, nram_mapping_channel,
-             output_dim_num_real * sizeof(int), NRAM2GDRAM);
-    __memcpy(top_data_ptr + offset, nram_src, output_dim_num_real * sizeof(T),
-             NRAM2GDRAM);
+  __nramset((float *)top_grad_buffer, output_dim_align * deal_num, (float)0);
+  __nramset((int *)mapping_channel_buffer, output_dim_align * deal_num, (int)0);
+  int offset = task_offset * output_dim + repeat * output_dim; 
+  __memcpy(top_grad_buffer, top_grad + offset, output_dim * sizeof(float), 
+                GDRAM2NRAM, output_dim_align * sizeof(float), output_dim * sizeof(float), deal_num - 1);
+  __memcpy(mapping_channel_buffer, mapping_channel + offset, output_dim * deal_num * sizeof(int),
+                GDRAM2NRAM);
+  
+  int begin_offset = task_offset + repeat * deal_num;
+  int end_offset = begin_offset + deal_num;
+  // 每个核的output_dim的遍历
+  for (output_dim_index = begin_offset; output_dim_index < end_offset; output_dim_index++){
+      int roi_num = output_dim_index / (pooled_width * pooled_height);
+      int ph = (output_dim_index % (pooled_width * pooled_height)) / pooled_width;
+      int pw = (output_dim_index % (pooled_width * pooled_height)) % pooled_width;
+
+      int roi_batch_ind = rois[roi_num * 5]
+      // 计算出每一个点(ph,pw)对应在roi_num中大小，计算出hstart,wstart,hend,wend
+      bool is_empty = (hend <= hstart) || (wend <= wstart);
+      if (is_empty){
+          int h_offset = hend - hstart;
+          int w_offset = wend - wstart;
+          float bin_area = h_offset * w_offset;
+          float bin_area_rechip = 1 / bin_area;
+          int offset_bottom_grad = bottom_grad +
+                  roi_batch_ind * channels * height * width;
+          __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, output_dim_align)
+          for (int i = 0; i < output_dim; i ++){
+              __nramset((T *)nram_buffer, height * width, (float)0);
+              float value = top_grad_buffer[i];
+              int c = mapping_channel_buffer[i];
+              for (h = hstart; h < hend; h++) {
+                  for (w = wstart; w < wend; w++) {
+                      int bottom_offset = (h * width + w) * channels + c;
+                      int nram_offset = (h - hstart) * h_offset + (w - wstart);
+                      __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
+                  }
+              }
+          }
+      } 
   }
 }
 
@@ -347,27 +351,75 @@ __mlu_func__ void psRoiAvgPoolBackwardKernel(
     int batch_size, int height, int width, int channels, int pooled_height,
     int pooled_width, int output_dim, int rois_num, int rois_offset,
     T spatial_scale) {
-  int num_deal = rois_num * pooled_height * pooled_width * output_dim;
-  int num_per_core = num_deal / taskDim;
-  int pre_data_for_task = taskId * num_per_core;
-  int remainder = num_deal % taskDim;
-  T *top_grad_ptr = top_grad;
+  int total_output_dim = rois_num * pooled_height * pooled_width;
+  int num_per_core = total_output_dim / taskDim;
+  int task_offset = taskId * num_per_core;
+  int remainder = total_output_dim % taskDim;
+  float *top_grad_ptr = top_grad;
   int *mapping_channel_ptr = mapping_channel;
   if (taskId < remainder) {
     num_per_core++;
-    pre_data_for_task += taskId;
-    top_data_ptr += taskId * num_per_core;
+    task_offset += taskId;
+    top_grad_ptr += taskId * num_per_core;
     mapping_channel_ptr += taskId * num_per_core;
   } else {
-    pre_data_for_task += remainder;
-    top_data_ptr += taskId * num_per_core + remainder;
+    task_offset += remainder;
+    top_grad_ptr += taskId * num_per_core + remainder;
     mapping_channel_ptr += taskId * num_per_core + remainder;
   }
-
-  psRoiAvgPoolBackward(nram_buffer, top_grad_ptr, input_rois, bottom_grad,
-                       mapping_channel_ptr, batch_size, height, width, channels,
-                       pooled_height, pooled_width, output_dim, rois_offset,
-                       spatial_scale, num_per_core, pre_data_for_task);
+  // height * width < nram_size
+  // 首先拆按照taskDim拆rois_num * pooled_height * pooled_width
+  // 下面为一个core上的计算逻辑，core上分到的output_dim数量为：num_per_core
+  // 为了充分利用nram空间，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
+  int output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_64);
+  // nram上最多可以存放的output_dim数量 
+  int nram_output_dim = (NRAM_BYTE_CNT - height * width * sizeof(float)) / (output_dim_align * sizeof(float) + \
+                    output_dim_align * sizeof(int));
+  // 如果nram上一个output_dim都放不下，则需要拆output_dim
+  int deal_num = 0;
+  if (nram_output_dim < 1){
+    // nram可以存放的部分output_dim大小
+    max_deal_num = FLOOR_ALIGN(
+        (NRAM_BYTE_CNT - height * width * sizeof(float)) / (sizeof(float) + sizeof(int)), ALIGN_SIZE_64);
+    int repeat = output_dim / deal_num;
+    int remain = output_dim % deal_num;
+    int n = 0;
+    while (n++ < num_per_core){
+      for (int i = 0; i < repeat; i++){
+        // 最后一个变量实际处理的数据量deal_num
+        psRoiAvgPoolBackwardPartOutputdim(nram_buffer, top_grad_ptr, rois, bottom_grad,
+            mapping_channel_ptr, batch_size, height, width, channels, pooled_height,
+            pooled_width, output_dim, rois_num, rois_offset, spatial_scale, task_offset,
+            n, i, max_deal_num, deal_num);
+      }
+      if (remain != 0){
+        psRoiAvgPoolBackwardPartOutputdim(nram_buffer, bottom_data, rois, top_grad_ptr,
+            mapping_channel_ptr, batch_size, height, width, channels, pooled_height,
+            pooled_width, output_dim, rois_num, rois_offset, spatial_scale, task_offset,
+            n, repeat, max_deal_num, remain);
+      }
+    }
+  }
+  else{
+    // 计算repeat/remain
+    int repeat = num_per_core / nram_output_dim;
+    int remain = num_per_core % nram_output_dim;
+    int max_deal_num = nram_output_dim;
+    for (int i = 0; i < repeat; i++){
+      // 最后一个变量实际处理的数据量deal_num
+      psRoiAvgPoolBackwardWholeOutputdim(nram_buffer, bottom_data, rois, top_grad_ptr,
+          mapping_channel_ptr, batch_size, height, width, channels, pooled_height,
+          pooled_width, output_dim, rois_num, rois_offset, spatial_scale, task_offset,
+          num_per_core,i, max_deal_num, deal_num);
+    }
+    if (remain != 0){
+      int deal_num = remain;
+      psRoiAvgPoolBackwardWholeOutputdim(nram_buffer, bottom_data, rois, top_grad_ptr,
+          mapping_channel_ptr, batch_size, height, width, channels, pooled_height, pooled_width,
+          output_dim, rois_num, rois_offset, spatial_scale, task_offset, num_per_core,
+          repeat, max_deal_num, deal_num);
+    }
+  }
 }
 
 __mlu_global__ void MLUKernelPsroipoolBackward(
