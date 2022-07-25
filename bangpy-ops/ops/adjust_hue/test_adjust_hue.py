@@ -92,7 +92,7 @@ def test_adjust_hue(target, shape, delta, dtype):
     data_out_handle = bp.Array(data_out.astype(dtype.name), dev)
     f = load_op_by_type(KERNEL_NAME, dtype.name)
     f(
-        data_in_handle, delta, data_out_handle,
+        data_in_handle, delta, data_out_handle, n, h, w, c, delta
     )
     # convert all output to float for diff comparison
     mlu_result = np.zeros((n, h, w, c), dtype="float32")
