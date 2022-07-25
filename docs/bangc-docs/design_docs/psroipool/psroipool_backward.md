@@ -371,8 +371,8 @@ void func1(...){
   float *nram_buffer = mapping_channel_buffer + deal_num_align;
 
   int offset = task_offset * output_dim + n * output_dim + repeat * deal_num; 
-  __memcpy(top_grad_buffer, top_grad + offset, real_deal_num * sizeof(float), GDRAM2NRAM);
-  __memcpy(mapping_channel_buffer, mapping_channel + offset, deal_num_align * sizeof(int), GDRAM2NRAM);
+  __memcpy(top_grad_buffer, top_grad + offset, deal_num_align * sizeof(float), GDRAM2NRAM);
+  __memcpy(mapping_channel_buffer, mapping_channel + offset, deal_num * sizeof(int), GDRAM2NRAM);
   
   int roi_num = (task_offset + n) / (pooled_width * pooled_height);
   int ph = (task_offset + n) % (pooled_width * pooled_height) / pooled_width;
