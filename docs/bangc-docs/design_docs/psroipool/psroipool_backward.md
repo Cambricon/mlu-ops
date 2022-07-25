@@ -303,11 +303,11 @@ int *mapping_channel_ptr = mapping_channel;
 if (taskId < remainder) {
   num_per_core++;
   task_offset += taskId;
-  top_data_ptr += taskId * num_per_core;
+  top_grad_ptr += taskId * num_per_core;
   mapping_channel_ptr += taskId * num_per_core;
 } else {
   task_offset += remainder;
-  top_data_ptr += taskId * num_per_core + remainder;
+  top_grad_ptr += taskId * num_per_core + remainder;
   mapping_channel_ptr += taskId * num_per_core + remainder;
 }
 // height * width < nram_size
@@ -330,13 +330,13 @@ if (nram_output_dim < 1){
   while (n++ < num_per_core){
     for (int i = 0; i < repeat; i++){
       // 最后一个变量实际处理的数据量real_deal_num
-      func1(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
+      func1(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
           rois_num, rois_offset, group_size, spatial_scale, task_offset,
           n,i, deal_num, deal_num);
     }
     if (remain != 0){
-      func1(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
+      func1(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
           batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
           rois_num, rois_offset, group_size, spatial_scale, task_offset,
           n,repeat, deal_num, remain);
@@ -350,13 +350,13 @@ else{
   int deal_num = nram_output_dim;
   for (int i = 0; i < repeat; i++){
     // 最后一个变量实际处理的数据量real_deal_num
-    func2(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
+    func2(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
         rois_num, rois_offset, group_size, spatial_scale, task_offset,
         num_per_core,i, deal_num, deal_num);
   }
   if (remain != 0){
-    func2(nram_buffer, bottom_data, bottom_rois, top_data_ptr, mapping_channel_ptr,
+    func2(nram_buffer, bottom_data, bottom_rois, top_grad_ptr, mapping_channel_ptr,
         batch_size, height, width, channels, pooled_height, pooled_width, output_dim,
         rois_num, rois_offset, group_size, spatial_scale, task_offset,
         num_per_core, repeat, deal_num, remain);
