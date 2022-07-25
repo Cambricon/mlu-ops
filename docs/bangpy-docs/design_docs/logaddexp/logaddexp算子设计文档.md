@@ -25,9 +25,9 @@
 |--------|---------------------------------------------------|
 | 需求来源   | 为bangpy-ops提供算子demo                               |  
 | 应用网络   |                                                   |
-| 输入数据类型 | float                                             |
+| 输入数据类型 | float,half                                            |
 | 输入     | input1,input2:ARRAY     如果shape不相等 则一个必须是另外一个的子张量 |
-| 输出数据类型 | float                                             |
+| 输出数据类型 | 与输入数据类型一致                                             |
 | 输出     | out:Array    shape为输入的公共形状                        |
 
 
@@ -45,15 +45,15 @@ logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.4972
 
 | 参数     | 语义                      | 类型（输入/输出） | 支持类型  | 物理布局  | 规模限制 |
 |--------|-------------------------|-----------|-------|-------|------|
-| input1 | 输入的任意shape的buffer       | 输入        | float | ARRAY | 无    |
-| input2 | 输入的任意shape的buffer       | 输入        | float | ARRAY | 无    |
-| output | 与输入最小公共shape一致的输出buffer | 输出        | float | ARRAY | 无    |
+| input1 | 输入的任意shape的buffer       | 输入        | float,half | ARRAY | 无    |
+| input2 | 输入的任意shape的buffer       | 输入        | float,half | ARRAY | 无    |
+| output | 与输入最小公共shape一致的输出buffer | 输出        | float,half | ARRAY | 无    |
 
 ### 1.4 算子限制
 
 | 限制类型   | 详细说明                        |
 |--------|-----------------------------|
-| 数据类型限制 | input1 和 output 必须同时为同一数据类型 |
+| 数据类型限制 | input1,input2 和 output 必须同时为同一数据类型 |
 | 布局限制   | 仅支持ARRAY的layout             |
 | 规模限制   | 无                           |
 
@@ -121,7 +121,7 @@ memcpy(output[start:end], nram_tensor1)
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：
-  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，nram空间满占用，nram空间满占用边界。
+  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，片上nram空间满占用，片上nram空间满占用边界。
   通过shape随机生成函数，生成若干二维及以上shape并随机将input2的规模随机成input1的子集,以测试不同规模的计算。
   并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内。
 

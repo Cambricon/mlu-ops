@@ -25,11 +25,11 @@
 |-----------|----------------------------------------------------------|
 | 需求来源      | 为bangpy-ops提供算子demo                                      |
 | 应用网络      |                                                          |
-| 输入数据类型    | float                                                    |
+| 输入数据类型    | float,half                                                    |
 | 输入 Shape  | buffer_in0[任意维度]   buffer_alpha[1]  inplace:bool         |
 | 输入 Layout | buffer_in0:Array     buffer_alpha:Array  inplace:bool    |
-| 输入        | input：Array   shape为任意维度                                 |
-| 输出数据类型    | float                                                    |
+
+| 输出数据类型    | 与输入数据类型一致                                                  |
 | 输出        | buffer_out:Array      shape同输入                           |
 
 
@@ -47,16 +47,16 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 ### 1.3 算子输入输出参数要求
 | 参数           | 语义                  | 类型（输入/输出） | 支持类型  | 物理布局     | 规模限制 |
 |--------------|---------------------|-----------|-------|----------|------|
-| buffer_in0   | 输入的任意shape的buffer   | 输入        | float | ARRAY    | 无    | --------      |
-| buffer_alpha | CELU公式的α值。默认值为1.0   | 输入        | float | ARRAY    | 无    | --------      |
+| buffer_in0   | 输入的任意shape的buffer   | 输入        | float,half | ARRAY    | 无    | --------      |
+| buffer_alpha | CELU公式的α值。默认值为1.0   | 输入        | float,half | ARRAY    | 无    | --------      |
 | inplace      | 是否原位替换              | 输入        | bool  | -------- | 无    | --------      |
-| buffer_out   | 与输入shape一致的输出buffer | 输出        | float | ARRAY    | 无    | --------      |
+| buffer_out   | 与输入shape一致的输出buffer | 输出        | float,half | ARRAY    | 无    | --------      |
 
 ### 1.4 算子限制
 
 | 限制类型   | 详细说明                   |
 |--------|------------------------|
-| 数据类型限制 | inplace为bool值 其余为float |
+| 数据类型限制 | inplace为bool值 其余为float或half |
 | 布局限制   | 仅支持ARRAY的layout        |
 | 规模限制   | 无                      |
 
@@ -101,7 +101,7 @@ output = m(input)
 计算max(0, x) + min(0, α ∗ (exp(x / α) − 1))。
 x为输入张量中的值，α为celu公式的参数。  
 将计算分为max(0, x) 与 min(0, α ∗ (exp(x / α) − 1)) 两部分。    
-min(0, α ∗ (exp(x / α) − 1))中根据α是否为0分别讨论：    
+min(0, α ∗ (exp(x / α) − 1))中因为α做分母，当为0时无意义，所以根据α是否为0分别讨论：    
 当α为0时，min直接返回0。  
 不为0时正常计算min(0, α ∗ (exp(x / α) − 1))。    
 计算max(0, x)。  
@@ -126,7 +126,7 @@ with self.bp.if_scope(buffer_alpha != 0):
     self.bp.divide(nram_middle_value, nram_buffer_in0, buffer_alpha)
     self.bp.exp(nram_middle_value, nram_middle_value)
     self.bp.subtract(nram_middle_value, nram_middle_value, const_one)
-    self.bp.multiply(nram_middle_value, nram_middle_value, alpha)
+    self.bp.multiply(nram_middle_value, nram_middle_value, buffer_alpha)
     self.bp.minimum(nram_min, nram_middle_value,const_zero)
 with self.bp.else_scope():
     self.bp.zeros(nram_min)         
