@@ -400,9 +400,6 @@ void psRoiAvgPoolBackwardWholeOutputdim(...){
   float *top_grad_buffer = nram_src;
   int *mapping_channel_buffer = top_grad_buffer + output_dim_align_128 * deal_num;
   float *nram_buffer = mapping_channel_buffer + output_dim * deal_num;
-
-  __nramset((float *)top_grad_buffer, output_dim_align_128 * deal_num, (float)0);
-  __nramset((int *)mapping_channel_buffer, output_dim * deal_num, (int)0);
   int offset = task_offset * output_dim + repeat * output_dim; 
   __memcpy(top_grad_buffer, top_grad + offset, output_dim * sizeof(float), 
                 GDRAM2NRAM, output_dim_align_128 * sizeof(float), output_dim * sizeof(float), deal_num - 1);
