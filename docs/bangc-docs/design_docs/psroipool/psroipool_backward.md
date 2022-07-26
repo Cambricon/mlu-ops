@@ -456,11 +456,19 @@ void func2(...){
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-针对psroipool_backward的拆分是根据taskId拆rois_num * hi * wi，下图中num_deal为nram可以处理的output_dim数量。
+针对psroipool_backward的拆分是根据taskId拆rois_num * hi * wi。
+
+1、下图划分为nram可以放下一个output_dim的情况，其中N为nram可以处理的output_dim数量。
 
 nram空间划分：
 
-![image](psroipool_backward_nram.jpg)
+![image](psroipool_backward_nram1.jpg)
+
+2、下图给nram放不下一个output_dim的情况，需要拆output_dim,其中deal_num为实际可以存放到nram的数据量。
+
+nram空间划分：
+
+![image](psroipool_backward_nram2.jpg)
 
 ### 3.4 性能优化设计
 
