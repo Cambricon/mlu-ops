@@ -21,8 +21,6 @@ class PsroipoolBackwardExecutor : public Executor {
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
-  void workspaceMalloc() override;
-  void workspaceFree() override;
   int64_t getTheoryOps() override;
 
  private:

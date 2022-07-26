@@ -43,56 +43,12 @@ static void policyFuncPsroipoolBackward(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
 }
 
-// transpose [batch_size, height, width, output_dim * (pooled_height *
-// pooled_width)]
-// -> [batch_size, height, width, (pooled_height * pooled_width) * output_dim]
-static void transposeFunc(const float *in, const int batch_size,
-                          const int height, const int width,
-                          const int output_dim, const int pooled_height,
-                          const int pooled_width, float *workspace,
-                          size_t workspace_size) {
-  for (int n = 0; n < dim0; n++) {
-    for (int c = 0; c < dim1; c++) {
-      for (int h = 0; h < dim2; h++) {
-        for (int w = 0; w < dim3; w++) {
-          out[n * dim1 * dim2 * dim3 + h * dim1 * dim3 + w * dim1 + c] =
-              in[n * dim1 * dim2 * dim3 + c * dim2 * dim3 + h * dim3 + w];
-        }
-      }
-    }
-  }
-}
-
 mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolForwardWorkspaceSize(
     mluOpHandle_t handle, const int output_dim, size_t *size) {
   PARAM_CHECK("[mluOpGetPsRoiPoolForwardWorkspaceSize]", handle != NULL);
   PARAM_CHECK("[mluOpGetPsRoiPoolForwardWorkspaceSize]", size != NULL);
   PARAM_CHECK("[mluOpGetPsRoiPoolForwardWorkspaceSize]", output_dim >= 1);
   *size = output_dim * sizeof(uint32_t);  // the offset of each pixel
-
-  VLOG(5) << "workspace size = " << *size << ".";
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolBackwardWorkspaceSize(
-    mluOpHandle_t handle, const int bootom_grad_count, size_t *size) {
-  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", handle != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", size != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]",
-              bootom_grad_count >= 0);
-  *size = bootom_grad_count * sizeof(float);
-
-  VLOG(5) << "workspace size = " << *size << ".";
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpGetPsRoiPoolBackwardWorkspaceSize(
-    mluOpHandle_t handle, const int bootom_grad_count, size_t *size) {
-  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", handle != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]", size != NULL);
-  PARAM_CHECK("[mluOpGetPsRoiPoolBackwardWorkspaceSize]",
-              bootom_grad_count >= 1);
-  *size = bootom_grad_count * sizeof(float);  // the offset of each pixel
 
   VLOG(5) << "workspace size = " << *size << ".";
   return MLUOP_STATUS_SUCCESS;
@@ -226,7 +182,7 @@ static mluOpStatus_t psRoiPoolForwardCheck(
 static mluOpStatus_t psRoiPoolBackwardCheck(
     const std::string &api, const int pooled_height, const float pooled_width,
     const int output_dim, const float spatial_scale, const void *top_grad,
-    const void *rois, const const void *mapping_channel, void *bottom_grad,
+    const void *rois, const void *mapping_channel, void *bottom_grad,
     const mluOpTensorDescriptor_t top_grad_desc,
     const mluOpTensorDescriptor_t rois_desc,
     const mluOpTensorDescriptor_t mapping_channel_desc,
@@ -275,7 +231,7 @@ static mluOpStatus_t psRoiPoolBackwardCheck(
     VLOG(5) << api << " Input_data skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
-  if (mluOpGetTensorElementNum(input_rois_desc) == 0) {
+  if (mluOpGetTensorElementNum(rois_desc) == 0) {
     LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -321,7 +277,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForward(
+  KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForwardFloat(
       k_dim, k_type, handle->queue, (void *)input_data, (void *)input_rois,
       (void *)output_data, (void *)mapping_channel, channels, height, width,
       pooled_height, pooled_width, rois_sum, output_dim, group_size,
@@ -331,23 +287,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
 
 mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
     mluOpHandle_t handle, const int pooled_height, const float pooled_width,
-    const int output_dim, const float spatial_scale,
+    const float spatial_scale, const int output_dim,
     const mluOpTensorDescriptor_t top_grad_desc, const void *top_grad,
     const mluOpTensorDescriptor_t rois_desc, const void *rois,
     const mluOpTensorDescriptor_t mapping_channel_desc,
-    const mluOpTensorDescriptor_t bottom_grad_desc, const void *mapping_channel,
-    void *bottom_grad, void *workspace, size_t workspace_size) {
+    const void *mapping_channel, const mluOpTensorDescriptor_t bottom_grad_desc,
+    void *bottom_grad) {
   const std::string api = "[mluOpPsRoiPoolBackward]";
   PARAM_CHECK(api, handle != NULL);
   const int batch_size = bottom_grad_desc->dims[0];
   const int height = bottom_grad_desc->dims[1];
   const int width = bottom_grad_desc->dims[2];
   const int channels = bottom_grad_desc->dims[3];
-  const int pooled_height = top_grad_desc->dims[1];
-  const int pooled_width = top_grad_desc->dims[2];
-  const int output_dim = top_grad_desc->dims[3];
   const int rois_num = rois_desc->dims[0];
-  const int rois_offset = rois->dims[1];
+  const int rois_offset = rois_desc->dims[1];
 
   mluOpStatus_t ret = psRoiPoolBackwardCheck(
       api, pooled_height, pooled_width, output_dim, spatial_scale, top_grad,
@@ -366,12 +319,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
           << ", " << k_dim.z << "].";
 
   // gdram set zero
-  int gd_num = batch_size * height * width * channels;
-  KERNEL_CHECK((mluOpBlockKernelFillZero(k_dim, k_type, handle->queue, gd_num,
-                                         bottom_grad)));
+  int gd_num = channels * width * height * batch_size * sizeof(float);
+  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
+                                             gd_num, bottom_grad)));
   VLOG(5) << "Kernel mluOpBlockKernelFillZero.";
 
-  KERNEL_CHECK((mluOpBlockKernelPsRoiPoolBackward(
+  KERNEL_CHECK((mluOpBlockKernelPsRoiPoolBackwardFloat(
       k_dim, k_type, handle->queue, top_grad, rois, bottom_grad,
       mapping_channel, batch_size, height, width, channels, pooled_height,
       pooled_width, output_dim, rois_num, rois_offset, spatial_scale)));

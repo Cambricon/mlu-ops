@@ -360,10 +360,10 @@ mluOpGetPsRoiPoolForwardWorkspaceSize(mluOpHandle_t handle,
  *    Input. The pooled_height data.
  *  @param[in] pooled_width
  *    Input. The pooled_width data.
- *  @param[in] output_dim
- *    Input. The output_dim data.
  *  @param[in] spatial_scale
  *    Input. The spatial_scale data.
+ *  @param[in] output_dim
+ *    Input. The output_dim data.
  *  @param[in] top_grad_desc
  *    Input. The descriptor of the top_grad tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
@@ -386,10 +386,6 @@ mluOpGetPsRoiPoolForwardWorkspaceSize(mluOpHandle_t handle,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[out] bottom_grad
  *    Output. Pointer to the MLU memory that stores the bottom_grad tensor.
-  *  @param[in] workspace
- *    Input. Pointer to the CPU memory that stores the extra workspace.
- *  @param[in] workspace_size
- *    Input. The size of extra space is batches * height * width * channels.
  * 
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -407,7 +403,7 @@ mluOpGetPsRoiPoolForwardWorkspaceSize(mluOpHandle_t handle,
  * 
  *  @par Data Layout
  *  - The supported data layout of \b top_grad, \b rois,
- *    \b bottom_grad, \b mapping_channel are as follows:
+ *    \b mapping_channel, \b bottom_grad are as follows:
  * 
  *   - Top_grad tensor: \p MLUOP_LAYOUT_NHWC.
  *   - Rois tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -451,36 +447,15 @@ mluOpGetPsRoiPoolForwardWorkspaceSize(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API 
 mluOpPsRoiPoolBackward(mluOpHandle_t handle,
                        const int pooled_height, const float pooled_width,
-                       const int output_dim, const float spatial_scale, 
-                       const mluOpTensorDescriptor_t input_data_desc,
-                       const void *input_data,
-                       const mluOpTensorDescriptor_t input_rois_desc,
-                       const void *input_rois,
-                       const mluOpTensorDescriptor_t output_data_desc,
-                       void *output_data,
+                       const float spatial_scale, const int output_dim, 
+                       const mluOpTensorDescriptor_t top_grad_desc,
+                       const void *top_grad,
+                       const mluOpTensorDescriptor_t rois_desc,
+                       const void *rois,
                        const mluOpTensorDescriptor_t mapping_channel_desc,
-                       void *mapping_channel,
-                       void *workspace, size_t workspace_size);
-
-/*!
- *  @brief Gets extra space size that is needed in psroipool_backward operation.
- *
- *  @param[in] handle
- *    Input. Handle to a MLUOP context that is used to manage MLU devices
- *    and queues in the psroipool_backward operation.
- *  @param[in] bootom_grad_count
- *    Input. An integer which indicates the count of bootom_grad. 
- *  @param[out] size
- *    Output. A host pointer to the returned size of extra space in bytes.
- *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *  @par Scale Limitation
- *  - The bootom_grad_count should be greater than 1.
- */
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetPsRoiPoolBackwardWorkspaceSize(mluOpHandle_t handle,
-                                       const int bootom_grad_count,
-                                       size_t *size);
+                       const void *mapping_channel,
+                       const mluOpTensorDescriptor_t bottom_grad_desc,
+                       void *bottom_grad);
 
 /*!
  * @brief Generates fixed size feature map for each grid. Each value in the

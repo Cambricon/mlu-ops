@@ -73,28 +73,6 @@ void PsroipoolBackwardExecutor::transposeNhwcToNchw(
   }
 }
 
-void PsroipoolBackwardExecutor::workspaceMalloc() {
-  size_t workspace_size = 0;
-  int batch_size = tensor_desc_[3].tensor->dims[0];
-  int height = tensor_desc_[3].tensor->dims[1];
-  int width = tensor_desc_[3].tensor->dims[2];
-  int channels = tensor_desc_[3].tensor->dims[3];
-  int bottom_grad_count = batch_size * height * width * channels;
-  mluOpGetPsRoiPoolBackwardWorkspaceSize(handle_, bottom_grad_count, &workspace_size);
-  VLOG(4) << "Malloc workspace space.";
-
-  void *temp = mlu_runtime_.allocate(workspace_size);
-  workspace_.push_back(temp);
-  VLOG(4) << "Malloc addr: " << temp << " , size: " << workspace_size;
-}
-
-void PsroipoolBackwardExecutor::workspaceFree() {
-  if (workspace_[0]) {
-    VLOG(4) << "Free device workspace space.";
-    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
-  }
-}
-
 void PsroipoolBackwardExecutor::initData() {
   pooled_height_ =
       parser_->getProtoNode()->psroipool_forward_param().pooled_height();
@@ -125,7 +103,7 @@ void PsroipoolBackwardExecutor::compute() {
   
   interface_timer_.start();
   MLUOP_CHECK(mluOpPsRoiPoolBackward(
-      handle_, pooled_height_, pooled_width_, output_dim_, spatial_scale_,
+      handle_, pooled_height_, pooled_width_, spatial_scale_, output_dim_,
       top_grad_desc, top_grad, rois_desc, rois, mapping_channel_desc,
       mapping_channel, bottom_grad_desc, bottom_grad));
   
@@ -134,10 +112,10 @@ void PsroipoolBackwardExecutor::compute() {
 
 void PsroipoolBackwardExecutor::cpuCompute() {
   int input_rois_count = rois_num_ * rois_offset_;
-  float *top_grad_data = cpu_fp32_input_[0];
-  float *input_rois = cpu_fp32_input_[1];
-  int *mapping_channel = cpu_fp32_input_[2];
-  float *bottom_grad = cpu_fp32_output_[0];
+  auto top_grad_data = cpu_fp32_input_[0];
+  auto input_rois = cpu_fp32_input_[1];
+  auto mapping_channel = cpu_fp32_input_[2];
+  auto bottom_grad = cpu_fp32_output_[0];
 
   // tans top_grad/mapping_channel
   int top_grad_count = rois_num_ * pooled_height_ * pooled_width_ * output_dim_;
