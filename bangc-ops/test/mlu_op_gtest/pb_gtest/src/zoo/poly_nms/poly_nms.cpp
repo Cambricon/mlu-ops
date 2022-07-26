@@ -41,8 +41,11 @@ void PolyNmsExecutor::workspaceMalloc() {
 }
 
 void PolyNmsExecutor::workspaceFree() {
-  VLOG(4) << "Free device workspace space.";
-  mlu_runtime_.deallocate(workspace_[0]);
+ if (workspace_[0]) {
+    VLOG(4) << "Free device workspace space.";
+    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+    workspace_[0] = nullptr;
+  }
 }
 
 void PolyNmsExecutor::compute() {
@@ -70,9 +73,9 @@ void PolyNmsExecutor::compute() {
 
 void PolyNmsExecutor::pnms_detection_cpu(float *output_data,
                                          int &output_box_num,
-                                         float *input_data,
-                                         int input_box_num,
-                                         float iou_thresh) {
+                                         const float *input_data,
+                                         const int input_box_num,
+                                         const float iou_thresh) {
   vector<vector<float>> input_vvec;
   for (int i = 0; i < input_box_num; i++) {
     vector<float> tmp_vec;
@@ -110,7 +113,9 @@ int64_t PolyNmsExecutor::getTheoryOps() {
   VLOG(4) << "getTheoryOps";
   int64_t theory_ops = 21650; 
   int dims = parser_->getMetaTensor("input1").tensor->dims[0];
-  theory_ops = (theory_ops + dims *dims) * dims * dims;
+  theory_ops = (theory_ops) * dims * dims;
+  int64_t sort_ops = dims * dims - dims;
+  theory_ops += sort_ops;
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
 }
