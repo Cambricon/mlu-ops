@@ -9,7 +9,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <core/tool.h>
+#include "core/tool.h"
+
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define INT31_BITWIDTH 31
 #define INT16_BITWIDTH 16
@@ -29,17 +33,16 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  int position    = 0;
-  int var         = std::pow(2, INT31_BITWIDTH - 1) - 1;
-  float temp      = 0.0f;
+  int position = 0;
+  int var = std::pow(2, INT31_BITWIDTH - 1) - 1;
+  float temp = 0.0f;
   float temp_high = 0.0f;
-  float temp_low  = 0.0f;
+  float temp_low = 0.0f;
 
   // get absmax of the float data
   float absmax = std::fabs(src[0]);
   for (size_t i = 0; i < num; ++i) {
-    if (std::fabs(src[i]) > absmax)
-      absmax = std::fabs(src[i]);
+    if (std::fabs(src[i]) > absmax) absmax = std::fabs(src[i]);
   }
 
   // Formula: int31 , position = floor(log2(absmax) - 29))
@@ -64,10 +67,10 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
       temp = (temp >= 0) ? (temp + 0.5f) : (temp - 0.5f);
 
       // high int16 data
-      temp_high                 = temp / var;
+      temp_high = temp / var;
       ((int16_t *)dst)[i + num] = static_cast<int16_t>(temp_high);
       // low int16 data
-      temp_low            = temp - ((int16_t *)dst)[i + num] * var;
+      temp_low = temp - ((int16_t *)dst)[i + num] * var;
       ((int16_t *)dst)[i] = static_cast<int16_t>(temp_low);
     }
   }
@@ -75,9 +78,7 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t getPosition(float *input,
-                          size_t num,
-                          mluOpDataType_t datatype,
+mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
                           int *position) {
   if (input == NULL) {
     LOG(ERROR) << "[getPosition]:The pointer of input is NULL.";
@@ -106,8 +107,7 @@ mluOpStatus_t getPosition(float *input,
   // Formula: position = floor(log2(absmax) - (bitwidth - 2)))
   float absmax = std::fabs(input[0]);
   for (size_t index = 0; index < num; ++index) {
-    if (std::fabs(input[index]) > absmax)
-      absmax = std::fabs(input[index]);
+    if (std::fabs(input[index]) > absmax) absmax = std::fabs(input[index]);
   }
 
   if (absmax == 0) {
@@ -120,10 +120,8 @@ mluOpStatus_t getPosition(float *input,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t getPositionAndScale(float *input,
-                                  size_t num,
-                                  mluOpDataType_t datatype,
-                                  int *position,
+mluOpStatus_t getPositionAndScale(float *input, size_t num,
+                                  mluOpDataType_t datatype, int *position,
                                   float *scale) {
   if (input == NULL) {
     LOG(ERROR) << "[getPositionAndScale]:The pointer of input is NULL.";
@@ -153,15 +151,14 @@ mluOpStatus_t getPositionAndScale(float *input,
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  int scale_var  = std::pow(2, bitwidth - 1) - 1;
+  int scale_var = std::pow(2, bitwidth - 1) - 1;
   float max_data = std::fabs(input[0]);
   for (size_t index = 0; index < num; ++index) {
-    if (std::fabs(input[index]) > max_data)
-      max_data = std::fabs(input[index]);
+    if (std::fabs(input[index]) > max_data) max_data = std::fabs(input[index]);
   }
   if (max_data == 0) {
     *position = 0;
-    *scale    = 1.0;
+    *scale = 1.0;
   } else if (bitwidth != 31) {
     *position =
         static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
@@ -175,12 +172,9 @@ mluOpStatus_t getPositionAndScale(float *input,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t getPositionScaleAndOffset(float *input,
-                                        size_t num,
-                                        mluOpDataType_t datatype,
-                                        int *position,
-                                        float *scale,
-                                        int *offset) {
+mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
+                                        mluOpDataType_t datatype, int *position,
+                                        float *scale, int *offset) {
   if (input == NULL) {
     LOG(ERROR) << "[getPositionScaleAndOffset]:The pointer of input is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -226,8 +220,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input,
 
   if (max_data == min_data) {
     *position = 0;
-    *scale    = 1;
-    *offset   = 0;
+    *scale = 1;
+    *offset = 0;
   } else {
     *position = (int)(floorf(log2f(max_data - min_data)) - (bitwidth - 1));
     *scale =
@@ -240,8 +234,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t
-    castInt31ToFloat32(void *src, float *dst, size_t num, int position) {
+mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
+                                 int position) {
   if (src == NULL) {
     LOG(ERROR) << "[castInt31ToFloat32]:The pointer of src is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -257,12 +251,12 @@ mluOpStatus_t
   }
 
   // Formula: f = (high * 2^15 + low) * 2^position.
-  int16_t *low  = (int16_t *)src;
+  int16_t *low = (int16_t *)src;
   int16_t *high = (int16_t *)(low + num);
-  float tmp     = 0.0f;
+  float tmp = 0.0f;
   for (size_t i = 0; i < num; i++) {
-    tmp    = high[i] * std::pow(2, INT16_BITWIDTH - 1);
-    tmp    = tmp + low[i];
+    tmp = high[i] * std::pow(2, INT16_BITWIDTH - 1);
+    tmp = tmp + low[i];
     dst[i] = tmp * std::pow(2, position);
   }
 
@@ -280,36 +274,153 @@ int16_t castFloat32ToHalf(float src) {
    * **/
   const int fs_shift = 31;
   const int fe_shift = 23;
-  const int fe_mark  = 0xff;
+  const int fe_mark = 0xff;
   const int hs_shift = 15;
   const int he_shift = 10;
-  int *in1           = (int *)&src;
-  int in             = *in1;
-  int sign           = in >> fs_shift;
-  int exp            = ((in >> fe_shift) & fe_mark) - 127;
-  int denorm         = 0;
-  int eff            = 0;
-  int g              = 0;  // for round
+  int *in1 = (int *)&src;
+  int in = *in1;
+  int sign = in >> fs_shift;
+  int exp = ((in >> fe_shift) & fe_mark) - 127;
+  int denorm = 0;
+  int eff = 0;
+  int g = 0;  // for round
   if (exp >= 16) {
     exp = 0xf;
     eff = 0x3ff;
   } else if (exp >= -14) {
-    g   = (in >> 12) & 1;
+    g = (in >> 12) & 1;
     eff = (in >> 13) & 0x3ff;
   } else if (exp >= -24) {
-    g      = (((in & 0x7fffff) | 0x800000) >> (-exp - 2)) & 1;
-    eff    = (((in & 0x7fffff) | 0x800000) >> (-exp - 1)) & 0x3ff;
+    g = (((in & 0x7fffff) | 0x800000) >> (-exp - 2)) & 1;
+    eff = (((in & 0x7fffff) | 0x800000) >> (-exp - 1)) & 0x3ff;
     denorm = 1;
-    exp    = 0;
+    exp = 0;
   } else {
-    exp    = 0;
+    exp = 0;
     denorm = 1;
-    eff    = in ? 1 : 0;
+    eff = in ? 1 : 0;
   }
   eff += g;  // round
-  exp        = (denorm == 1) ? exp : (exp + 15);
+  exp = (denorm == 1) ? exp : (exp + 15);
   int result = (sign << hs_shift) + (exp << he_shift) + eff;
   return result;
+}
+
+float castHalfToFloat32(int16_t src) {
+  if (sizeof(int16_t) == 2) {
+    int re = src;
+    float f = 0.;
+    int sign = (re >> 15) ? (-1) : 1;
+    int exp = (re >> 10) & 0x1f;
+    int eff = re & 0x3ff;
+    float half_max = 65504.;
+    float half_min = -65504.;  // or to be defined as infinity
+    if (exp == 0x1f && eff) {
+      // when half is nan, float also return nan, reserve sign bit
+      int tmp = (sign > 0) ? 0xffffffff : 0x7fffffff;
+      return *(float *)&tmp;
+    } else if (exp == 0x1f && sign == 1) {
+      // add upper bound of half. 0x7bff： 0 11110 1111111111 =  65504
+      return half_max;
+    } else if (exp == 0x1f && sign == -1) {
+      // add lower bound of half. 0xfbff： 1 11110 1111111111 = -65504
+      return half_min;
+    }
+    if (exp > 0) {
+      exp -= 15;
+      eff = eff | 0x400;
+    } else {
+      exp = -14;
+    }
+    int sft;
+    sft = exp - 10;
+    if (sft < 0) {
+      f = (float)sign * eff / (1 << (-sft));
+    } else {
+      f = ((float)sign) * (1 << sft) * eff;
+    }
+    return f;
+  } else if (sizeof(int16_t) == 4) {
+    // using float
+    return src;
+  }
+}
+
+int mkdirIfNotExist(const char *pathname) {
+  struct stat dir_stat = {};
+  if (stat(pathname, &dir_stat) != 0) {
+    if (mkdir(pathname, 0777) != 0) {
+      return errno;
+    }
+    return 0;
+  } else if (!S_ISDIR(dir_stat.st_mode)) {
+    return ENOTDIR;
+  }
+  return 0;
+}
+
+int mkdirRecursive(const char *pathname) {
+  // let caller ensure pathname is not null
+  const char path_token = '/';
+  size_t pos = 0;
+  const std::string pathname_view(pathname);
+  while (pos < pathname_view.size()) {
+    auto find_path_token = pathname_view.find(path_token, pos);
+    if (find_path_token == std::string::npos) {
+      return mkdirIfNotExist(pathname_view.c_str());
+    }
+    int ret =
+        mkdirIfNotExist(pathname_view.substr(0, find_path_token + 1).c_str());
+    if (ret) return ret;
+    pos = find_path_token + 1;
+  }
+  return 0;
+}
+
+uint64_t getUintEnvVar(const std::string &str, uint64_t default_para) {
+  const char *env_raw_ptr = std::getenv(str.c_str());
+  if (env_raw_ptr == nullptr) {
+    return default_para;
+  }
+
+  uint64_t env_int_var = default_para;
+  bool is_digital = true;
+  for (size_t i = 0; env_raw_ptr[i] != '\0'; i++) {
+    if (i == 0 && (env_raw_ptr[0] == '-' || env_raw_ptr[0] == '+')) continue;
+    if (std::isdigit(env_raw_ptr[i]) == 0) {
+      is_digital = false;
+      break;
+    }
+  }
+  if (!is_digital) {
+    LOG(WARNING) << str << ": " << env_raw_ptr
+                 << " is not digital, uses default value " << default_para
+                 << ".";
+  } else {
+    env_int_var = strtoull(env_raw_ptr, nullptr, 10);
+  }
+
+  return env_int_var;
+}
+
+std::string getStringEnvVar(const std::string &str, std::string default_para) {
+  const char *env_raw_ptr = std::getenv(str.c_str());
+  if (env_raw_ptr == nullptr) {
+    return default_para;
+  }
+  std::string env_var = std::string(env_raw_ptr);
+  return env_var;
+}
+
+bool getBoolEnvVar(const std::string &str, bool default_para) {
+  const char *env_raw_ptr = std::getenv(str.c_str());
+  if (env_raw_ptr == nullptr) {
+    return default_para;
+  }
+  std::string env_var = std::string(env_raw_ptr);
+  std::transform(env_var.begin(), env_var.end(), env_var.begin(), ::toupper);
+  return (env_var == "1" || env_var == "ON" || env_var == "YES" ||
+          env_var == "TRUE");
 }
 #undef INT31_BITWIDTH
 #undef INT16_BITWIDTH

@@ -243,9 +243,10 @@ static mluOpStatus_t psRoiPoolBackwardCheck(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
-    mluOpHandle_t handle, const float spatial_scale, const int group_size,
+    mluOpHandle_t handle, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int group_size,
     const mluOpTensorDescriptor_t input_data_desc, const void *input_data,
-    const mluOpTensorDescriptor_t input_rois_desc, const void *input_rois,
+    const mluOpTensorDescriptor_t rois_desc, const void *rois,
     void *workspace, const size_t workspace_size,
     const mluOpTensorDescriptor_t output_data_desc, void *output_data,
     const mluOpTensorDescriptor_t mapping_channel_desc, void *mapping_channel) {
@@ -256,14 +257,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   const int width = input_data_desc->dims[2];
   const int channels = input_data_desc->dims[3];
   const int rois_sum = output_data_desc->dims[0];
-  const int pooled_height = output_data_desc->dims[1];
-  const int pooled_width = output_data_desc->dims[2];
   const int output_dim = output_data_desc->dims[3];
-  const int rois_offset = input_rois_desc->dims[1];
+  const int rois_offset = rois_desc->dims[1];
 
   mluOpStatus_t ret = psRoiPoolForwardCheck(
-      api, spatial_scale, group_size, input_data, input_rois, output_data,
-      mapping_channel, input_data_desc, input_rois_desc, output_data_desc,
+      api, spatial_scale, group_size, input_data, rois, output_data,
+      mapping_channel, input_data_desc, rois_desc, output_data_desc,
       mapping_channel_desc, workspace, workspace_size);
   if (ret != MLUOP_STATUS_SUCCESS) {
     LOG(ERROR) << api
@@ -278,7 +277,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
           << ", " << k_dim.z << "].";
 
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForwardFloat(
-      k_dim, k_type, handle->queue, (void *)input_data, (void *)input_rois,
+      k_dim, k_type, handle->queue, (void *)input_data, (void *)rois,
       (void *)output_data, (void *)mapping_channel, channels, height, width,
       pooled_height, pooled_width, rois_sum, output_dim, group_size,
       rois_offset, spatial_scale, batch_size)));

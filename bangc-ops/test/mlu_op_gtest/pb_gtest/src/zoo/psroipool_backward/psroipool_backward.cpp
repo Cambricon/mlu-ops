@@ -43,9 +43,10 @@ void PsroipoolBackwardExecutor::paramCheck() {
   }
 }
 
+template <typename T1, typename T2>
 void PsroipoolBackwardExecutor::transposeNchwToNhwc(
-    const float *in, const uint32_t dim0, const uint32_t dim1,
-    const uint32_t dim2, const uint32_t dim3, float *out) {
+    const T1 *in, const T2 dim0, const T2 dim1,
+    const T2 dim2, const T2 dim3, T1 *out) {
   for (int n = 0; n < dim0; n++) {
     for (int c = 0; c < dim1; c++) {
       for (int h = 0; h < dim2; h++) {
@@ -58,9 +59,10 @@ void PsroipoolBackwardExecutor::transposeNchwToNhwc(
   }
 }
 
+template <typename T1, typename T2>
 void PsroipoolBackwardExecutor::transposeNhwcToNchw(
-    const float *in, const uint32_t dim0, const uint32_t dim1,
-    const uint32_t dim2, const uint32_t dim3, float *out) {
+    const T1 *in, const T2 dim0, const T2 dim1,
+    const T2 dim2, const T2 dim3, T1 *out) {
   for (int n = 0; n < dim0; n++) {
     for (int h = 0; h < dim1; h++) {
       for (int w = 0; w < dim2; w++) {
@@ -112,8 +114,8 @@ void PsroipoolBackwardExecutor::compute() {
 
 void PsroipoolBackwardExecutor::cpuCompute() {
   int input_rois_count = rois_num_ * rois_offset_;
-  auto top_grad_data = cpu_fp32_input_[0];
-  auto input_rois = cpu_fp32_input_[1];
+  auto top_grad = cpu_fp32_input_[0];
+  auto rois = cpu_fp32_input_[1];
   auto mapping_channel = cpu_fp32_input_[2];
   auto bottom_grad = cpu_fp32_output_[0];
 
@@ -121,31 +123,31 @@ void PsroipoolBackwardExecutor::cpuCompute() {
   int top_grad_count = rois_num_ * pooled_height_ * pooled_width_ * output_dim_;
   int mapping_channel_count = top_grad_count;
   float *top_grad_trans = (float *)cpu_runtime_.allocate(new float[top_grad_count]);
-  int *mapping_channel_trans = (float *)cpu_runtime_.allocate(new int[mapping_channel_count]);
-  transposeNhwcToNchw(top_grad_data, rois_num_, pooled_height_, pooled_width_, output_dim_,
+  int *mapping_channel_trans = (int *)cpu_runtime_.allocate(new int[mapping_channel_count]);
+  transposeNhwcToNchw(top_grad, rois_num_, pooled_height_, pooled_width_, output_dim_,
                       top_grad_trans);
-  transposeNhwcToNchw(mapping_channel, rois_num_, pooled_height_, pooled_width_, output_dim_,
-                      mapping_channel_trans);
+  transposeNhwcToNchw((int *)mapping_channel, rois_num_, pooled_height_, pooled_width_, output_dim_,
+                      (int *)mapping_channel_trans);
 
   int bottom_grad_count = batch_size_ * height_ * width_ * channels_;
   std::vector<float> bottom_grad_vec(top_grad_count, -65504.0);
   float *bottom_grad_pre = bottom_grad_vec.data();
-  float *input_rois_trans =
+  float *rois_trans =
       (float *)cpu_runtime_.allocate(new float[input_rois_count]);
-  memcpy(input_rois_trans, input_rois, input_rois_count * sizeof(float));
+  memcpy(rois_trans, rois, input_rois_count * sizeof(float));
   for (int rois_id = 0; rois_id < rois_num_; rois_id++) {
     int roi_add = rois_id * 5;
     int rois_batch_ind;
     float roi_start_w, roi_start_h, roi_end_w, roi_end_h;
 
-    rois_batch_ind = input_rois_trans[roi_add];
-    roi_start_w = static_cast<float>(round(input_rois_trans[roi_add + 1])) *
+    rois_batch_ind = rois_trans[roi_add];
+    roi_start_w = static_cast<float>(round(rois_trans[roi_add + 1])) *
                   spatial_scale_;
-    roi_start_h = static_cast<float>(round(input_rois_trans[roi_add + 2])) *
+    roi_start_h = static_cast<float>(round(rois_trans[roi_add + 2])) *
                   spatial_scale_;
-    roi_end_w = static_cast<float>(round(input_rois_trans[roi_add + 3]) + 1.) *
+    roi_end_w = static_cast<float>(round(rois_trans[roi_add + 3]) + 1.) *
                 spatial_scale_;
-    roi_end_h = static_cast<float>(round(input_rois_trans[roi_add + 4]) + 1.) *
+    roi_end_h = static_cast<float>(round(rois_trans[roi_add + 4]) + 1.) *
                 spatial_scale_;
 
     float roi_width = std::max(roi_end_w - roi_start_w, (float)0.1);
@@ -187,7 +189,7 @@ void PsroipoolBackwardExecutor::cpuCompute() {
     }
   }
 
-  cpu_runtime_.deallocate(input_rois_trans);
+  cpu_runtime_.deallocate(rois_trans);
   cpu_runtime_.deallocate(top_grad_trans);
   cpu_runtime_.deallocate(mapping_channel_trans);
   transposeNchwToNhwc(bottom_grad_pre, batch_size_, channels_, height_, width_, bottom_grad);
@@ -199,41 +201,41 @@ int64_t PsroipoolBackwardExecutor::getTheoryOps() {
   }
 
   int64_t theory_ops = 0;
-  int input_rois_count = rois_num_ * rois_offset_;
-  float *top_grad_data = cpu_fp32_input_[0];
-  float *input_rois = cpu_fp32_input_[1];
-  int *mapping_channel = cpu_fp32_input_[2];
-  float *bottom_grad = cpu_fp32_output_[0];
+  int rois_count = rois_num_ * rois_offset_;
+  auto top_grad = cpu_fp32_input_[0];
+  auto input_rois = cpu_fp32_input_[1];
+  auto mapping_channel = cpu_fp32_input_[2];
+  auto bottom_grad = cpu_fp32_output_[0];
 
   // tans top_grad/mapping_channel
   int top_grad_count = rois_num_ * pooled_height_ * pooled_width_ * output_dim_;
   int mapping_channel_count = top_grad_count;
   float *top_grad_trans = (float *)cpu_runtime_.allocate(new float[top_grad_count]);
-  int *mapping_channel_trans = (float *)cpu_runtime_.allocate(new int[mapping_channel_count]);
-  transposeNhwcToNchw(top_grad_data, rois_num_, pooled_height_, pooled_width_, output_dim_,
+  int *mapping_channel_trans = (int *)cpu_runtime_.allocate(new int[mapping_channel_count]);
+  transposeNhwcToNchw(top_grad, rois_num_, pooled_height_, pooled_width_, output_dim_,
                       top_grad_trans);
-  transposeNhwcToNchw(mapping_channel, rois_num_, pooled_height_, pooled_width_, output_dim_,
-                      mapping_channel_trans);
+  transposeNhwcToNchw((int *)mapping_channel, rois_num_, pooled_height_, pooled_width_, output_dim_,
+                      (int *)mapping_channel_trans);
 
   int bottom_grad_count = batch_size_ * height_ * width_ * channels_;
   std::vector<float> bottom_grad_vec(top_grad_count, -65504.0);
   float *bottom_grad_pre = bottom_grad_vec.data();
-  float *input_rois_trans =
-      (float *)cpu_runtime_.allocate(new float[input_rois_count]);
-  memcpy(input_rois_trans, input_rois, input_rois_count * sizeof(float));
+  float *rois_trans =
+      (float *)cpu_runtime_.allocate(new float[rois_count]);
+  memcpy(rois_trans, input_rois, rois_count * sizeof(float));
   for (int rois_id = 0; rois_id < rois_num_; rois_id++) {
     int roi_add = rois_id * 5;
     int rois_batch_ind;
     float roi_start_w, roi_start_h, roi_end_w, roi_end_h;
 
-    rois_batch_ind = input_rois_trans[roi_add];
-    roi_start_w = static_cast<float>(round(input_rois_trans[roi_add + 1])) *
+    rois_batch_ind = rois_trans[roi_add];
+    roi_start_w = static_cast<float>(round(rois_trans[roi_add + 1])) *
                   spatial_scale_;
-    roi_start_h = static_cast<float>(round(input_rois_trans[roi_add + 2])) *
+    roi_start_h = static_cast<float>(round(rois_trans[roi_add + 2])) *
                   spatial_scale_;
-    roi_end_w = static_cast<float>(round(input_rois_trans[roi_add + 3]) + 1.) *
+    roi_end_w = static_cast<float>(round(rois_trans[roi_add + 3]) + 1.) *
                 spatial_scale_;
-    roi_end_h = static_cast<float>(round(input_rois_trans[roi_add + 4]) + 1.) *
+    roi_end_h = static_cast<float>(round(rois_trans[roi_add + 4]) + 1.) *
                 spatial_scale_;
 
     float roi_width = std::max(roi_end_w - roi_start_w, (float)0.1);
@@ -275,7 +277,7 @@ int64_t PsroipoolBackwardExecutor::getTheoryOps() {
     }
   }
 
-  cpu_runtime_.deallocate(input_rois_trans);
+  cpu_runtime_.deallocate(rois_trans);
   cpu_runtime_.deallocate(top_grad_trans);
   cpu_runtime_.deallocate(mapping_channel_trans);
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";

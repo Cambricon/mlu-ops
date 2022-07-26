@@ -22,15 +22,16 @@ class PsroipoolBackwardExecutor : public Executor {
   void compute() override;
   void cpuCompute() override;
   int64_t getTheoryOps() override;
-
+  template <typename T1, typename T2>
+  void transposeNchwToNhwc(const T1 *in, const T2 dim0,
+                           const T2 dim1, const T2 dim2,
+                           const T2 dim3, T1 *out);
+  template <typename T1, typename T2>                   
+  void transposeNhwcToNchw(const T1 *in, const T2 dim0,
+                           const T2 dim1, const T2 dim2,
+                           const T2 dim3, T1 *out);
  private:
   void initData();
-  void transposeNchwToNhwc(const float *in, const uint32_t dim0,
-                           const uint32_t dim1, const uint32_t dim2,
-                           const uint32_t dim3, float *out);
-  void transposeNhwcToNchw(const float *in, const uint32_t dim0,
-                           const uint32_t dim1, const uint32_t dim2,
-                           const uint32_t dim3, float *out);
   int batch_size_;
   int height_;
   int width_;
