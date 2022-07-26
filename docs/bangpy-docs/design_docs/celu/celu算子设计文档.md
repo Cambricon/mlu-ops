@@ -28,7 +28,6 @@
 | 输入数据类型    | float,half                                                    |
 | 输入 Shape  | buffer_in0[任意维度]   buffer_alpha[1]  inplace:bool         |
 | 输入 Layout | buffer_in0:Array     buffer_alpha:Array  inplace:bool    |
-
 | 输出数据类型    | 与输入数据类型一致                                                  |
 | 输出        | buffer_out:Array      shape同输入                           |
 
@@ -81,7 +80,7 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 # https://github.com/pytorch/pytorch/blob/master/torch/nn/quantized/functional.py
 def celu(input: Tensor,
          alpha: float = 1.0,
-         inplace：bool = False, 
+         inplace：bool = False,
          ) -> Tensor:
 ```
 
