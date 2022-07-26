@@ -26,7 +26,7 @@
 | 需求来源   | 为bangpy-ops提供算子demo                               |  
 | 应用网络   |                                                   |
 | 输入数据类型 | float,half                                            |
-| 输入     | input1,input2:ARRAY     如果shape不相等 则一个必须是另外一个的子张量 |
+| 输入     | input1,input2:ARRAY     两张量满足广播条件 |
 | 输出数据类型 | 与输入数据类型一致                                             |
 | 输出     | out:Array    shape为输入的公共形状                        |
 
@@ -35,9 +35,9 @@
 
 功能：计算 log(exp(x1) + exp(x2))
 
-data_x = [[-744.38378411  , 32.08532465 , 259.21401044],[ -65.55983881 ,-783.89169849 , 692.46914092]]
-data_y = [ 205.4972709 , -982.95625446 , 731.07663893]
-logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.49727 , -783.8917 , 731.07666 ]]
+data_x = [  [-744.38378411,  32.08532465,   259.21401044  ],  [   -65.55983881,  -783.89169849,  692.46914092  ]  ]  
+data_y = [  205.4972709,  -982.95625446,  731.07663893  ]  
+logaddexp(data_x,data_y) == [  [  205.49727,  32.085323,  731.07666  ],  [  205.49727,  -783.8917,  731.07666  ]  ]
 
 
 
@@ -98,10 +98,13 @@ logaddexp(input1, input2, output)
 
 memcpy(nram_tensor1, gram_tensor1[start:end])
 memcpy(nram_tensor2, gram_tensor2[start:end])
+subtract(nram_tensor2, nram_tensor1, nram_tensor2)
+exp(nram_tensor2, nram_tensor2)
+add(nram_tensor2, nram_tensor2, 1)
+log(nram_tensor2, nram_tensor2)
+add(nram_tensor2, nram_buffer_in0, nram_tensor2)
 
-logaddexp(nram_tensor1, gram_tensor1, gram_tensor2)
-
-memcpy(output[start:end], nram_tensor1)
+memcpy(output[start:end], nram_tensor2)
 
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
