@@ -310,10 +310,10 @@ if (taskId < remainder) {
   top_grad_ptr += taskId * num_per_core + remainder;
   mapping_channel_ptr += taskId * num_per_core + remainder;
 }
-// 首先拆按照taskDim拆rois_num * pooled_height * pooled_width
+// 首先按照taskDim拆rois_num * pooled_height * pooled_width
 // 下面为一个core上的计算逻辑，core上分到的output_dim数量为：num_per_core
 // 为了充分利用nram空间，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
-int output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_128);
+int output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
 // nram上最多可以存放的output_dim数量，128是为atomic_add使用
 int nram_output_dim = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + output_dim * sizeof(int));
 // 如果nram上一个output_dim都放不下，则需要拆output_dim
