@@ -310,20 +310,19 @@ if (taskId < remainder) {
   top_grad_ptr += taskId * num_per_core + remainder;
   mapping_channel_ptr += taskId * num_per_core + remainder;
 }
-// height * width < nram_size
 // 首先拆按照taskDim拆rois_num * pooled_height * pooled_width
 // 下面为一个core上的计算逻辑，core上分到的output_dim数量为：num_per_core
 // 为了充分利用nram空间，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
 int output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_128);
-// nram上最多可以存放的output_dim数量 
-int nram_output_dim = (NRAM_BYTE_CNT - height * width * sizeof(float)) / (output_dim_align * sizeof(float) + \
+// nram上最多可以存放的output_dim数量，128是为atomic_add使用
+int nram_output_dim = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + \
                    output_dim * sizeof(int));
 // 如果nram上一个output_dim都放不下，则需要拆output_dim
 int max_deal_num = 0;
 if (nram_output_dim < 1){
   // nram可以存放的部分output_dim大小
   max_deal_num = 
-      FLOOR_ALIGN((NRAM_BYTE_CNT - height * width * sizeof(float)) / (sizeof(float) + sizeof(int)) * sizeof(float),             ALIGN_SIZE_128);  
+      FLOOR_ALIGN((NRAM_BYTE_CNT - 128) / (sizeof(float) + sizeof(int)) * sizeof(float),             ALIGN_SIZE_128);  
   int repeat = output_dim / max_deal_num;
   int remain = output_dim % max_deal_num;
   int n = 0;
@@ -361,7 +360,6 @@ else{
 
 void psRoiAvgPoolBackwardPartOutputdim(...){
   int deal_num_align_128 = CEIL_ALIGN(deal_num * sizeof(float), ALIGN_SIZE_128);
-  int hw_align_128 = CEIL_ALIGN(height * width * sizeof(float), ALIGN_SIZE_128);
   float *top_grad_buffer = nram_src;
   int *mapping_channel_buffer = top_grad_buffer + deal_num_align_128;
   float *nram_buffer = mapping_channel_buffer + deal_num_align_128;
@@ -385,15 +383,13 @@ void psRoiAvgPoolBackwardPartOutputdim(...){
       int offset_bottom_grad = bottom_grad + roi_batch_ind * channels * height * width;
       __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, deal_num_align_128);
       for (int i = 0; i < deal_num; i ++){
-          __nramset((T *)nram_buffer, hw_align_128, (float)0);
           int c_offset = repeat * deal_num + i;
           int c = mapping_channel_buffer[c_offset];
           float value = top_grad_buffer[c_offset];
           for (h = hstart; h < hend; h++) {
               for (w = wstart; w < wend; w++) {
                   int bottom_offset = (h * width + w) * channels + c;
-                  int nram_offset = (h - hstart) * h_offset + (w - wstart);
-                  __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
+                  __bang_atomic_add(nram_buffer, bottom_grad + bottom_index, value);
               }
           }
       }
@@ -402,7 +398,6 @@ void psRoiAvgPoolBackwardPartOutputdim(...){
 
 void psRoiAvgPoolBackwardWholeOutputdim(...){
   int output_dim_align_128 = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
-  int hw_align_128 = CEIL_ALIGN(height * width * sizeof(float), ALIGN_SIZE_128);
   float *top_grad_buffer = nram_src;
   int *mapping_channel_buffer = top_grad_buffer + output_dim_align_128 * deal_num;
   float *nram_buffer = mapping_channel_buffer + output_dim * deal_num;
@@ -434,14 +429,12 @@ void psRoiAvgPoolBackwardWholeOutputdim(...){
           int offset_bottom_grad = bottom_grad + roi_batch_ind * channels * height * width;
           __bang_mul_const(top_grad_buffer, top_grad_buffer, bin_area_recip, output_dim_align_128)
           for (int i = 0; i < output_dim; i ++){
-              __nramset((T *)nram_buffer, hw_align_128, (float)0);
               float value = top_grad_buffer[i];
               int c = mapping_channel_buffer[i];
               for (h = hstart; h < hend; h++) {
                   for (w = wstart; w < wend; w++) {
                       int bottom_offset = (h * width + w) * channels + c;
-                      int nram_offset = (h - hstart) * h_offset + (w - wstart);
-                      __bang_atomic_add(nram_buffer + nram_offset, bottom_grad + bottom_index, value);
+                      __bang_atomic_add(nram_buffer, bottom_grad + bottom_index, value);
                   }
               }
           }
