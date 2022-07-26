@@ -464,7 +464,7 @@ nram空间划分：
 
 ![image](psroipool_backward_nram1.jpg)
 
-2、下图给nram放不下一个output_dim的情况，需要拆output_dim,其中deal_num为实际可以存放到nram的数据量。
+2、下图给nram放不下一个output_dim的情况，需要拆output_dim，其中deal_num为实际可以存放到nram的数据量。
 
 nram空间划分：
 
