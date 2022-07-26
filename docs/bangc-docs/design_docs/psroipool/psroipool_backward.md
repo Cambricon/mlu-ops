@@ -284,15 +284,15 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
 
 由上图可以看出，psroipool_backward的计算过程可以总结为：
 
-step1: 首先计算nram上最多可以处理的output_dim数量nram_output_dim。如果nram_output_dim >= 1，执行step2，否则执行step3。
+step1: 首先计算nram上最多可以处理的output_dim数量nram_output_dim_num。如果nram_output_dim_num >= 1，执行step2，否则执行step3。
 ```c++
 
 output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
 // nram上最多可以存放的output_dim数量，128是为atomic_add使用
-nram_output_dim = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + output_dim * sizeof(int));
+nram_output_dim_num = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + output_dim * sizeof(int));
 
 ```
-step2: 根据nram_output_dim拆core上分到的output_dim数量num_per_core。remain的output_dim单独处理，执行step4。
+step2: 根据nram_output_dim_num拆core上分到的output_dim数量num_per_core。remain的output_dim单独处理，执行step4。
 
 step3: 计算出nram上最多可以处理的数据量max_deal_num，remain部分单独处理，遍历执行num_per_core次，将core上分配的output_dim处理后执行step4。
 ```c++
