@@ -35,7 +35,7 @@
 
 ### 1.2 算子功能和应用场景描述
 
-功能：Celu为Elu激活函数的变体，采用参数在负数区间为指数计算min(0, α ∗ (exp(x / α) − 1))，参数在正数区间为线性计算max(0, x) ，是一种更为平滑的激活函数。  
+功能：激活函数是来向神经网络中引入非线性因素的，通过激活函数，神经网络就可以拟合各种曲线。
 该函数公式为celu(x) = max(0, x) + min(0, α ∗ (exp(x / α) − 1))。
 
 例如：  
@@ -80,19 +80,19 @@ fun(data_x) == [ 85.20302 , -1.9999999, 128.46805  ]
 ```python
 # https://github.com/pytorch/pytorch/blob/master/torch/nn/quantized/functional.py
 def celu(input: Tensor,
-         scale: float,
-         zero_point: int, 
-         alpha: float = 1.) -> Tensor:
-input = torch.randn(2)
-output = m(input)
+         alpha: float = 1.0,
+         inplace：bool = False, 
+         ) -> Tensor:
 ```
 
 ### 2.2 接口设计
 
 ```python
-m = Celu()
-input = np.random.uniform(low = -1000, high = 1000, size = shape)
-output = m(input)
+
+def celu(input: Tensor,
+         alpha: float = 1.0,
+         inplace：bool = False,
+         output:Tensor)
 ```
 
 ## 3 实现方案设计
@@ -150,7 +150,7 @@ self.bp.memcpy(buffer_out[once_loop_start:once_loop_start + calc_size], nram_buf
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：
-  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，nram空间满占用，nram空间满占用边界。
+  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，片上nram空间满占用，片上nram空间满占用边界。
   通过shape随机生成函数 生成若干二维及以上shape。
   并通过bangpy提供的测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内。
 
