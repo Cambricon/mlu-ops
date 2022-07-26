@@ -315,14 +315,13 @@ if (taskId < remainder) {
 // 为了充分利用nram空间，计算nram最多可以处理多少个output_dim, 如果一个output_dim都放不下，则继续拆output_dim
 int output_dim_align = CEIL_ALIGN(output_dim, ALIGN_SIZE_128);
 // nram上最多可以存放的output_dim数量，128是为atomic_add使用
-int nram_output_dim = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + \
-                   output_dim * sizeof(int));
+int nram_output_dim = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + output_dim * sizeof(int));
 // 如果nram上一个output_dim都放不下，则需要拆output_dim
 int max_deal_num = 0;
 if (nram_output_dim < 1){
   // nram可以存放的部分output_dim大小
   max_deal_num = 
-      FLOOR_ALIGN((NRAM_BYTE_CNT - 128) / (sizeof(float) + sizeof(int)) * sizeof(float),             ALIGN_SIZE_128);  
+      FLOOR_ALIGN((NRAM_BYTE_CNT - 128) / (sizeof(float) + sizeof(int)) * sizeof(float), ALIGN_SIZE_128);  
   int repeat = output_dim / max_deal_num;
   int remain = output_dim % max_deal_num;
   int n = 0;
