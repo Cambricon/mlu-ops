@@ -303,10 +303,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-             const void *boxes, float iou_threshold, void *workspace,
+             const void *boxes, const float iou_threshold, void *workspace,
              size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
              void *output, void *output_size);
-
 
 /*!
  *  @brief Generate fixed size feature map for each RoI(Regions of Interest).

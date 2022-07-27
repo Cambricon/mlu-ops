@@ -15,8 +15,6 @@
 #include <iostream>
 #include <string>
 
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -24,6 +22,8 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "core/gen_case.h"
+#include "mlu_op.h"
+#include "mlu_op_kernel.h"
 #include "kernels/kernel.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -74,7 +74,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-             const void *boxes, float iou_threshold, void *workspace,
+             const void *boxes, const float iou_threshold, void *workspace,
              size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
              void *output, void *output_size) {
   const std::string API = "[mluOpPolyNms]";
@@ -83,6 +83,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   PARAM_CHECK(API, boxes_desc != NULL);
   PARAM_CHECK(API, output_desc != NULL);
   PARAM_CHECK(API, output_size != NULL);
+
   // check inputs/outputs data type
   PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_INT32);
@@ -103,6 +104,8 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   }
 
   PARAM_CHECK(API, boxes != NULL);
+  PARAM_CHECK(API, output != NULL);
+
   if (workspace_size > 0) {
     PARAM_CHECK(API, workspace != NULL);
   }
@@ -119,7 +122,6 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 3e-3, 3e-3, 0);
   }
 
-  mluOpDataType_t data_type_input = boxes_desc->dtype;
   cnrtDim3_t k_dim;
   cnrtJobType_t k_type;
   policyFunc(handle, &k_dim, &k_type, input_boxes_num);
@@ -155,7 +157,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
   if (handle->arch == MLUOP_MLU370) {
     *size = input_boxes_num * input_stride * sizeof(float);
   } else {
-    int align_num = 128 / sizeof(float);
+    int align_num = NFU_ALIGN_SIZE / sizeof(float);
     int align_box_num = CEIL_ALIGN(input_boxes_num, align_num);
     int align_stride = CEIL_ALIGN(input_stride, align_num);
     *size = align_box_num * align_stride * sizeof(float);

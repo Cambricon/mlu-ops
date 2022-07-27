@@ -9,10 +9,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <sys/time.h>
+
 #include "poly_nms.h"
 #include "pnms_impl.h"
+
 using namespace PNMS;
+
 namespace mluoptest {
 void PolyNmsExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_poly_nms_param()) {
@@ -59,7 +61,7 @@ void PolyNmsExecutor::compute() {
   auto output_ptr = parser_->getMetaTensor("output1").dev_ptr;
   auto result_num = parser_->getMetaTensor("output2").dev_ptr;
 
-  VLOG(4) << "[mluOpPolyNms] call cnnlGetPnmsWorkspaceSize()";
+  VLOG(4) << "[mluOpPolyNms] call mluOpGetPolyNmsWorkspaceSize()";
   size_t workspace_size = 0;
   MLUOP_CHECK(mluOpGetPolyNmsWorkspaceSize(handle_, tensor_boxes, &workspace_size));
   interface_timer_.start();
@@ -71,7 +73,7 @@ void PolyNmsExecutor::compute() {
   VLOG(4) << "[mluOpPolyNms] mluOpPolyNms end.";
 }
 
-void PolyNmsExecutor::pnms_detection_cpu(float *output_data,
+void PolyNmsExecutor::pnmsComputeCPU(float *output_data,
                                          int &output_box_num,
                                          const float *input_data,
                                          const int input_box_num,
@@ -85,7 +87,7 @@ void PolyNmsExecutor::pnms_detection_cpu(float *output_data,
     input_vvec.push_back(tmp_vec);
   }
 
-  vector<int> pnms_ret = pnms_impl(input_vvec, iou_thresh);
+  vector<int> pnms_ret = PolyNmsImpl(input_vvec, iou_thresh);
   output_box_num = pnms_ret.size();
   for (int i = 0; i < pnms_ret.size(); i++) {
     output_data[i] = pnms_ret[i];
@@ -97,16 +99,16 @@ void PolyNmsExecutor::cpuCompute() {
   auto input_box_desc = tensor_desc_[0].tensor;
   int input_boxes_num = input_box_desc->dims[0];
 
-  VLOG(4) << "[mluOpPolyNms] cpu compute start, input_boxes_num:" << input_boxes_num;
+  VLOG(4) << "[mluOpPolyNms] cpu compute start, input_boxes_num: " << input_boxes_num;
   auto input_boxes = parser_->getMetaTensor(0).cpu_ptr;
   auto output_ptr = parser_->getMetaTensor(1).cpu_ptr;
 
   int total_output_boxes_num = 0;
-  pnms_detection_cpu((float *)output_ptr, total_output_boxes_num, (float *)input_boxes,
+  pnmsComputeCPU((float *)output_ptr, total_output_boxes_num, (float *)input_boxes,
                      input_boxes_num, iou_thresh);
   auto output_size = parser_->getMetaTensor(2).cpu_ptr;
   output_size[0] = total_output_boxes_num;
-  VLOG(4) << "[mluOpPolyNms] cpu compute end, total_output_boxes_num:" << total_output_boxes_num;
+  VLOG(4) << "[mluOpPolyNms] cpu compute end, total_output_boxes_num: " << total_output_boxes_num;
 }
 
 int64_t PolyNmsExecutor::getTheoryOps() {

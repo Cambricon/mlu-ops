@@ -1,14 +1,13 @@
 #include "pnms_impl.h"
-#include <cstdio>
-#include <iostream>
+
 #include <algorithm>
-#include <cmath>
 #include <vector>
+
 using namespace std;
 
 namespace PNMS {
 
-#define maxn 51
+#define MAXN 51
 const float eps = 1E-8;
 int sig(float d) {
   return (d > eps) - (d < -eps);
@@ -48,7 +47,7 @@ int lineCross(Point a, Point b, Point c, Point d, Point &p) {
 }
 
 
-void polygon_cut(Point *p, int &n, Point a, Point b, Point *pp) {
+void polygonCut(Point *p, int &n, Point a, Point b, Point *pp) {
   int m = 0;
   p[n] = p[0];
   for (int i = 0; i < n; i++) {
@@ -80,11 +79,11 @@ float intersectArea(Point a, Point b, Point c, Point d) {
     swap(c, d);
   Point p[10] = {o, a, b};
   int n = 3;
-  Point pp[maxn];
+  Point pp[MAXN];
 
-  polygon_cut(p, n, o, c, pp);
-  polygon_cut(p, n, c, d, pp);
-  polygon_cut(p, n, d, o, pp);
+  polygonCut(p, n, o, c, pp);
+  polygonCut(p, n, c, d, pp);
+  polygonCut(p, n, d, o, pp);
 
   float res = fabs(area(p, n));
   if (s1 * s2 == -1)
@@ -113,8 +112,8 @@ float intersectArea(Point *ps1, int n1, Point *ps2, int n2) {
   return res;
 }
 
-float iou_poly(vector<float> p, vector<float> q) {
-  Point ps1[maxn], ps2[maxn];
+float iouPoly(vector<float> p, vector<float> q) {
+  Point ps1[MAXN], ps2[MAXN];
   int n1 = 4;
   int n2 = 4;
   for (int i = 0; i < 4; i++) {
@@ -137,17 +136,17 @@ float iou_poly(vector<float> p, vector<float> q) {
   return iou;
 }
 
-bool cmp_value(const pair<vector<float>, int> &a, pair<vector<float>, int> &b) {
+bool campareValue(const pair<vector<float>, int> &a, const pair<vector<float>, int> &b) {
   return (*(a.first.end() - 1) > *(b.first.end() - 1));
 }
 
-vector<int> pnms_impl(vector<vector<float>> &p, const float thresh) {
+vector<int> PolyNmsImpl(vector<vector<float>> &p, const float thresh) {
   vector<pair<vector<float>, int>> vp;
   for (int i = 0; i < p.size(); i++) {
     vp.push_back(make_pair(p[i], i));
   }
 
-  sort(vp.begin(), vp.end(), cmp_value);
+  sort(vp.begin(), vp.end(), campareValue);
 
   vector<int> keep;
   while (vp.size()) {
@@ -156,7 +155,7 @@ vector<int> pnms_impl(vector<vector<float>> &p, const float thresh) {
     auto box_index = vp.begin()->second;
     vp.erase(vp.begin());
     for (int i = 0; i < vp.size(); i++) {
-      float iou = iou_poly(box, vp[i].first);
+      float iou = iouPoly(box, vp[i].first);
       if (iou > thresh) {
         vp.erase(vp.begin() + i);
         i--;
