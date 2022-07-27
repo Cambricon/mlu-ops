@@ -9,12 +9,30 @@ input {
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 15
-    upper_bound: 10
-    lower_bound: 0
-    distribution: UNIFORM
-  }
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 4.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
+  value_f: 8.0000
 }
 input {
   id: "input2"
@@ -26,14 +44,14 @@ input {
   dtype: DTYPE_FLOAT
   value_f: 0.0000
   value_f: 2.0000
-  value_f: 3.0000
+  value_f: 2.0000
   value_f: 6.0000
-  value_f: 9.0000
+  value_f: 6.0000
   value_f: 1.0000
   value_f: 2.0000
-  value_f: 3.0000
+  value_f: 2.0000
   value_f: 6.0000
-  value_f: 9.0000
+  value_f: 6.0000
 }
 input {
   id: "input3"
@@ -45,35 +63,47 @@ input {
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_INT32
-  value_f: 0
-  value_f: 4
-  value_f: 8
-  value_f: 1
-  value_f: 5
-  value_f: 9
-  value_f: 2
-  value_f: 6
-  value_f: 10
-  value_f: 3
-  value_f: 7
-  value_f: 11
+  value_i: 0
+  value_i: 4
+  value_i: 8
+  value_i: 1
+  value_i: 5
+  value_i: 9
+  value_i: 2
+  value_i: 6
+  value_i: 10
+  value_i: 3
+  value_i: 7
+  value_i: 11
+  value_i: 0
+  value_i: 4
+  value_i: 8
+  value_i: 1
+  value_i: 5
+  value_i: 9
+  value_i: 2
+  value_i: 6
+  value_i: 10
+  value_i: 3
+  value_i: 7
+  value_i: 11
 }
 output {
   id: "output1"
   shape: {
     dims: 2
-    dims: 10
-    dims: 10
+    dims: 12
+    dims: 12
     dims: 12
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
 }
 psroipool_backward_param {
-  output_dim: 10
-  pooled_height: 3
-  pooled_width: 3
-  spatial_scale: 0.0625
+  output_dim: 3
+  pooled_height: 2
+  pooled_width: 2
+  spatial_scale: 1
 }
 test_param: {
   error_func: DIFF1
