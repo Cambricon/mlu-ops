@@ -44,11 +44,11 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  int position = 0;
-  int var = std::pow(2, INT31_BITWIDTH - 1) - 1;
-  float temp = 0.0f;
+  int position    = 0;
+  int var         = std::pow(2, INT31_BITWIDTH - 1) - 1;
+  float temp      = 0.0f;
   float temp_high = 0.0f;
-  float temp_low = 0.0f;
+  float temp_low  = 0.0f;
 
   // get absmax of the float data
   float absmax = std::fabs(src[0]);
@@ -78,10 +78,10 @@ mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
       temp = (temp >= 0) ? (temp + 0.5f) : (temp - 0.5f);
 
       // high int16 data
-      temp_high = temp / var;
+      temp_high                 = temp / var;
       ((int16_t *)dst)[i + num] = static_cast<int16_t>(temp_high);
       // low int16 data
-      temp_low = temp - ((int16_t *)dst)[i + num] * var;
+      temp_low            = temp - ((int16_t *)dst)[i + num] * var;
       ((int16_t *)dst)[i] = static_cast<int16_t>(temp_low);
     }
   }
@@ -162,14 +162,14 @@ mluOpStatus_t getPositionAndScale(float *input, size_t num,
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  int scale_var = std::pow(2, bitwidth - 1) - 1;
+  int scale_var  = std::pow(2, bitwidth - 1) - 1;
   float max_data = std::fabs(input[0]);
   for (size_t index = 0; index < num; ++index) {
     if (std::fabs(input[index]) > max_data) max_data = std::fabs(input[index]);
   }
   if (max_data == 0) {
     *position = 0;
-    *scale = 1.0;
+    *scale    = 1.0;
   } else if (bitwidth != 31) {
     *position =
         static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
@@ -231,8 +231,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
 
   if (max_data == min_data) {
     *position = 0;
-    *scale = 1;
-    *offset = 0;
+    *scale    = 1;
+    *offset   = 0;
   } else {
     *position = (int)(floorf(log2f(max_data - min_data)) - (bitwidth - 1));
     *scale =
@@ -262,12 +262,12 @@ mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
   }
 
   // Formula: f = (high * 2^15 + low) * 2^position.
-  int16_t *low = (int16_t *)src;
+  int16_t *low  = (int16_t *)src;
   int16_t *high = (int16_t *)(low + num);
-  float tmp = 0.0f;
+  float tmp     = 0.0f;
   for (size_t i = 0; i < num; i++) {
-    tmp = high[i] * std::pow(2, INT16_BITWIDTH - 1);
-    tmp = tmp + low[i];
+    tmp    = high[i] * std::pow(2, INT16_BITWIDTH - 1);
+    tmp    = tmp + low[i];
     dst[i] = tmp * std::pow(2, position);
   }
 
@@ -285,45 +285,45 @@ int16_t castFloat32ToHalf(float src) {
    * **/
   const int fs_shift = 31;
   const int fe_shift = 23;
-  const int fe_mark = 0xff;
+  const int fe_mark  = 0xff;
   const int hs_shift = 15;
   const int he_shift = 10;
-  int *in1 = (int *)&src;
-  int in = *in1;
-  int sign = in >> fs_shift;
-  int exp = ((in >> fe_shift) & fe_mark) - 127;
-  int denorm = 0;
-  int eff = 0;
-  int g = 0;  // for round
+  int *in1           = (int *)&src;
+  int in             = *in1;
+  int sign           = in >> fs_shift;
+  int exp            = ((in >> fe_shift) & fe_mark) - 127;
+  int denorm         = 0;
+  int eff            = 0;
+  int g              = 0;  // for round
   if (exp >= 16) {
     exp = 0xf;
     eff = 0x3ff;
   } else if (exp >= -14) {
-    g = (in >> 12) & 1;
+    g   = (in >> 12) & 1;
     eff = (in >> 13) & 0x3ff;
   } else if (exp >= -24) {
-    g = (((in & 0x7fffff) | 0x800000) >> (-exp - 2)) & 1;
-    eff = (((in & 0x7fffff) | 0x800000) >> (-exp - 1)) & 0x3ff;
+    g      = (((in & 0x7fffff) | 0x800000) >> (-exp - 2)) & 1;
+    eff    = (((in & 0x7fffff) | 0x800000) >> (-exp - 1)) & 0x3ff;
     denorm = 1;
-    exp = 0;
+    exp    = 0;
   } else {
-    exp = 0;
+    exp    = 0;
     denorm = 1;
-    eff = in ? 1 : 0;
+    eff    = in ? 1 : 0;
   }
   eff += g;  // round
-  exp = (denorm == 1) ? exp : (exp + 15);
+  exp        = (denorm == 1) ? exp : (exp + 15);
   int result = (sign << hs_shift) + (exp << he_shift) + eff;
   return result;
 }
 
 float castHalfToFloat32(int16_t src) {
   if (sizeof(int16_t) == 2) {
-    int re = src;
-    float f = 0.;
-    int sign = (re >> 15) ? (-1) : 1;
-    int exp = (re >> 10) & 0x1f;
-    int eff = re & 0x3ff;
+    int re         = src;
+    float f        = 0.;
+    int sign       = (re >> 15) ? (-1) : 1;
+    int exp        = (re >> 10) & 0x1f;
+    int eff        = re & 0x3ff;
     float half_max = 65504.;
     float half_min = -65504.;  // or to be defined as infinity
     if (exp == 0x1f && eff) {
@@ -373,7 +373,7 @@ int mkdirIfNotExist(const char *pathname) {
 int mkdirRecursive(const char *pathname) {
   // let caller ensure pathname is not null
   const char path_token = '/';
-  size_t pos = 0;
+  size_t pos            = 0;
   const std::string pathname_view(pathname);
   while (pos < pathname_view.size()) {
     auto find_path_token = pathname_view.find(path_token, pos);
@@ -395,7 +395,7 @@ uint64_t getUintEnvVar(const std::string &str, uint64_t default_para) {
   }
 
   uint64_t env_int_var = default_para;
-  bool is_digital = true;
+  bool is_digital      = true;
   for (size_t i = 0; env_raw_ptr[i] != '\0'; i++) {
     if (i == 0 && (env_raw_ptr[0] == '-' || env_raw_ptr[0] == '+')) continue;
     if (std::isdigit(env_raw_ptr[i]) == 0) {

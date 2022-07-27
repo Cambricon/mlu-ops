@@ -26,6 +26,7 @@
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
+#include "core/tool.h"
 #include "kernels/kernel.h"
 
 #define DEP_CHECK_LOG(level)                                                 \
@@ -121,13 +122,13 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
   }
 
   CNdev mlu_dev;
-  int32_t cluster_num = 0;
-  int32_t core_num_per_cluster = 0;
-  int32_t nram_size = 0;
-  int32_t wram_size = 0;
-  int32_t sram_size = 0;
+  int32_t cluster_num                              = 0;
+  int32_t core_num_per_cluster                     = 0;
+  int32_t nram_size                                = 0;
+  int32_t wram_size                                = 0;
+  int32_t sram_size                                = 0;
   char device_name[CONTEXT_DEVICENAME_BUFFER_SIZE] = "";
-  mluOpContext *ctx = new mluOpContext();
+  mluOpContext *ctx                                = new mluOpContext();
   CNcontext drv_ctx;
   CNctxConfigParam ctx_conf_param;
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetCurrent(&drv_ctx));
@@ -174,12 +175,12 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
       CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
                                         &ctx_conf_param));
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
-  ctx->device = mlu_dev;
-  ctx->cluster_num = cluster_num;
+  ctx->device               = mlu_dev;
+  ctx->cluster_num          = cluster_num;
   ctx->core_num_per_cluster = core_num_per_cluster;
-  ctx->nram_size = nram_size - REM_FOR_STACK;
-  ctx->wram_size = wram_size;
-  ctx->sram_size = sram_size - REM_FOR_STACK;
+  ctx->nram_size            = nram_size - REM_FOR_STACK;
+  ctx->wram_size            = wram_size;
+  ctx->sram_size            = sram_size - REM_FOR_STACK;
   ctx->arch =
       convertDeviceName(device_name);  // warning: possible return unknown.
   *handle = ctx;
@@ -206,6 +207,16 @@ mluOpStatus_t mluOpUpdateContextInformation(mluOpHandle_t handle) {
   return MLUOP_STATUS_SUCCESS;
 }
 
+mluOpStatus_t mluOpSetAtomicsMode(mluOpHandle_t handle,
+                                  mluOpAtomicsMode_t *atomics_mode) {
+  PARAM_CHECK("[mluOpGetAtomicsMode]", handle != NULL);
+  PARAM_CHECK("[mluOpGetAtomicsMode]", atomics_mode != NULL);
+
+  *atomics_mode = handle->atomics_mode;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
 mluOpStatus_t mluOpDestroy(mluOpHandle_t handle) {
   PARAM_CHECK("[mluOpDestroy]", handle != NULL);
 
@@ -228,6 +239,15 @@ mluOpStatus_t mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue) {
   PARAM_CHECK("[mluOpGetQueue]", queue != NULL);
 
   *queue = handle->queue;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t mluOpGetDevice(mluOpHandle_t handle, CNdev *device) {
+  PARAM_CHECK("[mluOpGetDevice]", handle != NULL);
+  PARAM_CHECK("[mluOpGetDevice]", device != NULL);
+
+  *device = handle->device;
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -260,4 +280,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeRoundMode(
   *round_mode = handle->round_mode;
 
   return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t mluOpGetReservedMemSize(uint64_t *mem_size) {
+  PARAM_CHECK("[mluOpGetReservedMemSize]", mem_size != NULL);
+
+  uint64_t default_reserved_size = 2081ULL * 1024 * 1024;
+  uint64_t env_size =
+      getUintEnvVar("MLUOP_MEM_POOL_SIZE", default_reserved_size);
+  *mem_size = static_cast<uint64_t>(env_size);
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t mluOpGetContextParam(mluOpHandle_t handle,
+                                   CNctxConfigParamType type,
+                                   CNctxConfigParam *param) {
+  PARAM_CHECK("[mluOpGetReservedMemSize]", handle != NULL);
+  PARAM_CHECK("[mluOpGetReservedMemSize]", param != NULL);
+  PARAM_CHECK("[mluOpGetReservedMemSize]",
+              type == CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM ||
+                  type == CN_CTX_CONFIG_UNION_LIMIT);
+
+  if (type == CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM) {
+    param->visibleClusterNumber = handle->capability_cluster_num;
+  } else if (type == CN_CTX_CONFIG_UNION_LIMIT) {
+    param->unionLimit = static_cast<KernelClass>(handle->capability_job_limit);
+  } else {
+    LOG(ERROR) << "[mluOpGetContextParam] Unsupported type";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+void mluOpGetLibVersion(int *major, int *minor, int *patch) {
+  *major = MLUOP_MAJOR;
+  *minor = MLUOP_MINOR;
+  *patch = MLUOP_PATCHLEVEL;
 }

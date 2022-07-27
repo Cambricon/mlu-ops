@@ -23,13 +23,14 @@
 #ifndef CORE_TOOL_H_
 #define CORE_TOOL_H_
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <string>
 
 #include "core/logging.h"
+#include "core/type.h"
+
 #include "mlu_op_core.h"
 
 /**
@@ -79,6 +80,33 @@ mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
 
 int16_t castFloat32ToHalf(float src);
 float castHalfToFloat32(int16_t src);
+size_t getMemorySize(const void *ptr);
+mluOpStatus_t checkMemorySize(mluOpTensorDescriptor_t tensor, const void *ptr);
+
+inline bool isTensorDimsEqual(mluOpTensorDescriptor_t a,
+                              mluOpTensorDescriptor_t b) {
+  int a_dim;
+  int b_dim;
+  int a_dims[MLUOP_DIM_MAX];
+  int b_dims[MLUOP_DIM_MAX];
+  mluOpGetTensorDescriptor(a, nullptr, nullptr, &a_dim, a_dims);
+  mluOpGetTensorDescriptor(b, nullptr, nullptr, &b_dim, b_dims);
+
+  if (a_dim == b_dim) {
+    if (0 == memcmp(a_dims, b_dims, a_dim * sizeof(int))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <typename T>
+inline bool isTwoArraysEqual(T *a, T *b, int num) {
+  if (0 == memcmp(a, b, num * sizeof(T))) {
+    return true;
+  }
+  return false;
+}
 
 int mkdirIfNotExist(const char *pathname);
 int mkdirRecursive(const char *pathname);
@@ -111,7 +139,7 @@ template <typename FixedType>
 mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
                                  const size_t num, const int position = 0,
                                  const float scale = 1.0,
-                                 const int offset = 0) {
+                                 const int offset  = 0) {
   PARAM_CHECK("[castFloat32ToFixed]", src != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", dst != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", num > 0);
@@ -155,7 +183,7 @@ template <typename FixedType>
 mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
                                  const size_t num, const int position = 0,
                                  const float scale = 1.0,
-                                 const int offset = 0) {
+                                 const int offset  = 0) {
   PARAM_CHECK("[castFixedToFloat32]", src != NULL);
   PARAM_CHECK("[castFixedToFloat32]", dst != NULL);
   PARAM_CHECK("[castFixedToFloat32]", num > 0);

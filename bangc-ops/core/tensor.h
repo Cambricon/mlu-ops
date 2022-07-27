@@ -129,6 +129,152 @@ struct mluOpTensorStruct {
   }
 };
 
+// dim_set(rnn)     [layer_num, direction, cap_of_cell]
+// dim_offset_base  [direction * cap_of_cell, cap_of_cell, 1]
+// tensor_set       [l1.forward.filter1, ..., l1.forward.filter9,
+//                   l1.backward.filter1, ..., l1.backward.filter9,
+//                   l2.forward.filter1, ..., l2.forward.filter9
+//                   ...                                       ]
+struct mluOpTensorSetStruct {
+  mluOpTensorSetStruct() : tensor_num(0), dim_num(0) {
+    /* explicit set initial values for document use.
+     */
+  }
+  ~mluOpTensorSetStruct() {
+    /* please do NOT implement any codes here.
+     * a state-less struct should not hold any resources.
+     */
+  }
+  /* methods */
+  inline size_t getSize() {
+    CHECK(!this->tensor_set.empty());
+    size_t tensor_set_size = 0;
+    for (int i = 0; i < tensor_set.size(); i++) {
+      size_t size = 0;
+      tensor_set[i]->tensorSize(size);
+      tensor_set_size += size;
+    }
+    return tensor_set_size;
+  }
+  // tensor set (eg: rnn)
+  inline int getIndex(const int tensorIndex[]) const {
+    int index = 0;
+    for (int i = 0; i < this->dim_set.size(); i++) {
+      index += tensorIndex[i] * this->dim_offset_base[i];
+    }
+    return index;
+  }
+
+  inline size_t getOffset(const int tensorIndex[]) {
+    int64_t offset = 0;
+    int index      = this->getIndex(tensorIndex);
+    for (int i = 0; i < index; i++) {
+      size_t ts_size = 0;
+      this->tensor_set[i]->tensorSize(ts_size);
+      offset += ts_size;
+    }
+    data_offset[index] = offset;
+    return offset;
+  }
+
+  inline mluOpTensorDescriptor_t getTensor(const int tensorIndex[]) const {
+    auto index = this->getIndex(tensorIndex);
+    auto ts    = this->tensor_set[index].get();
+    return ts;
+  }
+
+  inline mluOpDataType_t getDatatype() const {
+    CHECK(!this->tensor_set.empty());
+    return this->tensor_set[0]->dtype;
+  }
+
+  inline mluOpTensorLayout_t getLayout() const {
+    CHECK(!this->tensor_set.empty());
+    return this->tensor_set[0]->layout;
+  }
+
+  inline void checkDataOffset() const {
+    auto data_offset_array = data_offset.size();
+    for (int i = 0; i < data_offset_array; i++) {
+      if (i != 0 && data_offset[i] == 0) {
+        LOG(ERROR) << "tensorSet's data not set, index:" << i << " of "
+                   << tensor_num;
+      }
+    }
+  }
+
+  inline void dataOffsetInit(int set_size) {
+    this->data_offset.resize(set_size);
+  }
+
+  inline std::vector<size_t> getDataOffsets() {
+    if (data_offset.size() == 0) {
+      return data_offset;
+    }
+    int offset     = 0;
+    data_offset[0] = offset;
+    for (int i = 0; i < tensor_num - 1; i++) {
+      size_t ts_size = 0;
+      this->tensor_set[i]->tensorSize(ts_size);
+      offset += ts_size;
+      data_offset[i + 1] = offset;
+    }
+    return data_offset;
+  }
+  /* struct */
+  int tensor_num = 0;
+  int dim_num    = 0;                // dimension number
+  std::vector<int> dim_set;          // the number for each dimension
+  std::vector<int> dim_offset_base;  // offset for each dimension
+  std::vector<std::shared_ptr<mluOpTensorStruct>>
+      tensor_set;  // vector of tensorDesc
+
+  std::vector<std::vector<int>> user_indices;  // releated tensor's index
+  std::vector<size_t> data_offset;             // data's offset
+};
+
+#ifndef MLUOP_TENSOR_QUEUE_ENABLE
+#define MLUOP_TENSOR_QUEUE_ENABLE 1
+#endif
+
+#if MLUOP_TENSOR_QUEUE_ENABLE
+struct mluOpTensorDescriptorQueueStruct {
+  mluOpTensorDescriptorQueueStruct() {
+    extend(extend_num);
+    extend_num *= 2;
+  }
+  explicit mluOpTensorDescriptorQueueStruct(size_t n) {
+    extend_num = n;
+    extend(extend_num);
+    extend_num *= 2;
+  }
+  ~mluOpTensorDescriptorQueueStruct() {
+    for (auto it : this->headers) {
+      delete[] it;
+    }
+  }
+  std::queue<mluOpTensorDescriptor_t> queue;
+  std::list<mluOpTensorStruct *> headers;
+  std::atomic_flag flag = ATOMIC_FLAG_INIT;
+  inline void lock() {
+    while (flag.test_and_set(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+  }
+  inline void unlock() { flag.clear(std::memory_order_release); }
+  inline void extend(size_t n) {
+    mluOpTensorStruct *header = new (std::nothrow) mluOpTensorStruct[n];
+    headers.emplace_back(header);
+    for (size_t i = 0; i < n; ++i) {
+      mluOpTensorStruct *desc = header + i;
+      desc->init();  // reset random value.
+      queue.emplace(desc);
+    }
+  }
+  size_t extend_num = 100;
+};
+#endif
+
 inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
   switch (dt) {
     case MLUOP_DTYPE_HALF:

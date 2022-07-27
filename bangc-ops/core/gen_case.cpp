@@ -88,7 +88,7 @@ int genCaseModeGet(bool first) {
     std::lock_guard<std::mutex> guard(stacks_mutex_);
     std::string tid(std::to_string(syscall(SYS_gettid)));
     int mode = dump_internal_ ? gen_case_mode_ : 0;
-    auto it = mode_stacks_.find(tid);
+    auto it  = mode_stacks_.find(tid);
     if (it != mode_stacks_.end()) {
       auto &mode_stack = it->second;
       // the top of mode_stack store the gen_case mode for current thread
@@ -276,10 +276,10 @@ void genCaseEnd() {
   // serialize protxt and restore gen case mode
   if (gen_case_mode_ > 0) {
     std::string tid(std::to_string(syscall(SYS_gettid)));
-    auto it = mode_stacks_.find(tid);
+    auto it          = mode_stacks_.find(tid);
     auto &mode_stack = it->second;
     if (mode_stack.back() > 0) {
-      auto nodes_it = nodes_.find(tid);
+      auto nodes_it      = nodes_.find(tid);
       auto &nodes_vector = nodes_it->second;
       // find the last used slot
       int slot_num = 0;
@@ -336,13 +336,13 @@ void PbNode::getHandleParam() {
 std::string PbNode::getFileName() {
   // Get current time for file name.
   static platform::EnvTime *env_time = platform::EnvTime::Default();
-  uint64_t now_micros = env_time->NowMicros();
+  uint64_t now_micros                = env_time->NowMicros();
   int32_t micros_remainder = static_cast<int32_t>(now_micros % 1000000);
-  time_t current_time = time(NULL);
+  time_t current_time      = time(NULL);
   char char_current_time[64];
   strftime(char_current_time, sizeof(char_current_time), "%Y%m%d_%H_%M_%S_",
            localtime(&current_time));
-  std::string string_current_time = char_current_time;
+  std::string string_current_time     = char_current_time;
   std::string string_micros_remainder = std::to_string(micros_remainder);
   while (string_micros_remainder.size() < 6) {
     string_micros_remainder = "0" + string_micros_remainder;
@@ -369,7 +369,7 @@ std::string PbNode::getFolderName() {
     return "NULL";
   }
   std::string folder_name = current_dir;
-  folder_name = folder_name + "/gen_case/" + op_name;
+  folder_name             = folder_name + "/gen_case/" + op_name;
   return folder_name;
 }
 
@@ -408,14 +408,14 @@ void PbNode::printOnScreen() {
 
 void PbNode::dumpToFile() {
   std::string folder_name = getFolderName();
-  int error_number = mkdir();
+  int error_number        = mkdir();
   // use lock to ensure mkdir not conflict
   if (error_number != 0) {
     LOG(ERROR) << "[gen_case]: mkdir folder failed for " << folder_name
                << " ! (" << errno << ": " << strerror(errno) << ")";
     return;
   }
-  std::string file_name = getFileName();
+  std::string file_name      = getFileName();
   std::string case_file_name = folder_name + "/" + file_name + ".prototxt";
   LOG(INFO) << "[gen_case] Generate " + case_file_name;
   std::ofstream case_file;

@@ -83,27 +83,33 @@ namespace cnlog {
  */
 #define CLOG(module, severity)                                               \
   LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
-             true, true, true, true).stream()
+             true, true, true, true)                                         \
+      .stream()
 
 #define DCLOG(module, severity)                                              \
   LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
-             true, true, true, false).stream()
+             true, true, true, false)                                        \
+      .stream()
 
 #define PLOG(module, severity)                                                \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             true, true).stream()
+             true, true)                                                      \
+      .stream()
 
 #define DPLOG(module, severity)                                               \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             true, false).stream()
+             true, false)                                                     \
+      .stream()
 
 #define SCOUT(module, severity)                                               \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             false, true).stream()
+             false, true)                                                     \
+      .stream()
 
 #define DSCOUT(module, severity)                                              \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             false, false).stream()
+             false, false)                                                    \
+      .stream()
 
 /**
  * @brief: the log class to realize the log system.

@@ -62,3 +62,13 @@ const char *mluOpGetErrorString(mluOpStatus_t status) {
     }
   }
 }
+
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line) {
+  if (result) {
+    std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
+                        " in " + std::string(func) + "\"";
+    LOG(ERROR) << error;
+    throw std::runtime_error(error);
+  }
+}
