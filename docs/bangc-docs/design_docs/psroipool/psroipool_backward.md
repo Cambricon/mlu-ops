@@ -35,7 +35,7 @@
 | ---------------------------------------------------------------------------- | --------------------------------------- |
 | 需求来源               | Pytorch                              |
 | 应用网络               | R-FCN                            |
-| 输入数据类型           |  top_grad: float; mapping_channel: int; </br>rois: float                              |
+| 输入数据类型           |  top_grad: float; mapping_channel: int32_t; </br>rois: float                              |
 | 输入 Shape            | top_grad: [rois_num, hi, wi, output_dim]; </br>mapping_channel: [rois_num, hi, wi, output_dim]; </br>rois: [rois_num, rois_offset]  |
 | 输入 Layout           | top_grad: NHWC; mapping_channel: NHWC; </br>rois: ARRAY             |
 | 输出数据类型            | bottom_grad: float|
@@ -59,10 +59,10 @@
 
 - example:
 
-竞品中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与竞品对齐。
+参考接口中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与参考对齐。
 
 ```
-接口：
+// 接口
 psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, self.pooled_width, self.spatial_scale, self.output_dim,  \
         self.output, self.rois, grad_input, self.mappingchannel)
 
@@ -91,17 +91,14 @@ bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
                        [0., 0., 0.]],
                       [[2., 0., 0.],
                        [0., 0., 0.]]]], device='cuda:0')
-
 ```
 
 ```
 # 0元素检查
 # 1. rois为0，报错
-
 torch.FatalError: invalid argument 2: out of range at /opt/pytorch/pytorch/torch/lib/THC/generic/THCTensor.c:23
 
 # 2. top_grad为0，未报错
-
 top_grad = torch.from_numpy(np.array((0,0,0,0))).float().cuda()
 print(bottom_grad)
 tensor([[[[0., 0., 0.],
@@ -115,7 +112,6 @@ tensor([[[[0., 0., 0.],
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
 
 # 3. mapping_channel为0，未报错
-
 mappingchannel = torch.from_numpy(np.array((0,0,0,0))).int().cuda()
 print(bottom_grad)
 tensor([[[[8., 0., 0.],
@@ -149,7 +145,6 @@ top_grad = torch.from_numpy(np.array([[[[np.inf, np.inf],
                                        [np.inf, np.inf]]],
                                      [[[np.inf, np.inf],
                                        [np.inf, np.inf]]]])).float().cuda()
-
 print(bottom_grad)
 tensor([[[[inf, 0., 0.],
           [0., 0., 0.]],
@@ -181,7 +176,6 @@ top_grad = torch.from_numpy(np.array([[[[np.nan, np.nan],
                                         [np.nan, np.nan]]],
                                       [[[np.nan, np.nan],
                                         [np.nan, np.nan]]]])).float().cuda()
-
 print(bottom_grad)
 tensor([[[[nan, 0., 0.],
           [0., 0., 0.]],
@@ -192,7 +186,6 @@ tensor([[[[nan, 0., 0.],
          [[nan, 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
-
 ```
 
 ### 1.3 算子输入输出参数要求
@@ -223,8 +216,8 @@ tensor([[[[nan, 0., 0.],
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
-| 输入参数限制 | pooled_height = pooled_width, rois_offset = 5, </br>output_dim >= 1, spatial_scale > 0, </br>channels = pooled_height * pooled_width * output_dim, </br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1, </br> mapping_channel的shape必须与top_grad的shape保持一致，并且其每个batches均要满足对channels间隔pooled_height * pooled_width的遍历。</br>例如：假设batches = 2, pooled_height = 2, pooled_width =2, output_dim = 3, channels = 2 * 2 * 3, 则mapping_channel为: [[[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]], [[[0, 4, 8], [1, 5, 9]], [[2, 6, 10], [3, 7 ,11]]]]。 |
-| nan/inf限制 | top_grad支持nan/inf测例，rois参数由于在计算过程中参与了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
+| 输入参数限制 | pooled_height = pooled_width, rois_offset = 5, </br>output_dim >= 1, spatial_scale > 0, </br>channels = pooled_height * pooled_width * output_dim, </br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1
+| nan/inf限制 | top_grad支持nan/inf测例，rois由于在计算过程中参与了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
 
 ### 1.5 验收标准
 
@@ -395,13 +388,13 @@ nram空间划分：
 
 - 算子参数防呆
 
-1. pooled_width = pooled_height
+1. pooled_width == pooled_height
 
-2. top_grad_layout = MLUOP_LAYOUT_NHWC
+2. top_grad_layout == MLUOP_LAYOUT_NHWC
 
 3. mapping_channel_layout == MLUOP_LAYOUT_NHWC
 
-4. bottom_grad_layout = MLUOP_LAYOUT_NHWC
+4. bottom_grad_layout == MLUOP_LAYOUT_NHWC
 
 5. output_dim >= 1
 
@@ -427,19 +420,19 @@ nram空间划分：
 
 16. mapping_channel_desc->dim == 4
 
-17. top_grad_desc->dim[0] = mapping_channel_desc->dim[0]
+17. top_grad_desc->dim[0] == mapping_channel_desc->dim[0]
 
-18. top_grad_desc->dim[1] = mapping_channel_desc->dim[1]
+18. top_grad_desc->dim[1] == mapping_channel_desc->dim[1]
 
-19. top_grad_desc->dim[2] = mapping_channel_desc->dim[2]
+19. top_grad_desc->dim[2] == mapping_channel_desc->dim[2]
 
-20. top_grad_desc->dim[3] = mapping_channel_desc->dim[3]
+20. top_grad_desc->dim[3] == mapping_channel_desc->dim[3]
 
-21. pooled_height = top_grad_desc->dim[1]
+21. pooled_height == top_grad_desc->dim[1]
 
-22. pooled_width = top_grad_desc->dim[2]
+22. pooled_width == top_grad_desc->dim[2]
 
-23. output_dim = top_grad_desc->dim[3]
+23. output_dim == top_grad_desc->dim[3]
 
 ## 4 算子性能优化记录
 
