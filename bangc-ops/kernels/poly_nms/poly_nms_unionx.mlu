@@ -179,8 +179,8 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
 
       if (first_loop) {
         first_loop = false;
-        px_ram[int32_t(p_count[i]) * max_seg_num + i] = valid_pp0_x;
-        py_ram[int32_t(p_count[i]) * max_seg_num + i] = valid_pp0_y;
+        px_ram[int(p_count[i]) * max_seg_num + i] = valid_pp0_x;
+        py_ram[int(p_count[i]) * max_seg_num + i] = valid_pp0_y;
         p_count[i] = p_count[i] + 1;
         j--;
         continue;
@@ -212,8 +212,8 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
       }
 
       if (valid_pp0_x != valid_pp1_x || valid_pp0_y != valid_pp1_y) {
-        px_ram[int32_t(p_count[i]) * max_seg_num + i] = valid_pp1_x;
-        py_ram[int32_t(p_count[i]) * max_seg_num + i] = valid_pp1_y;
+        px_ram[int(p_count[i]) * max_seg_num + i] = valid_pp1_x;
+        py_ram[int(p_count[i]) * max_seg_num + i] = valid_pp1_y;
         p_count[i] = p_count[i] + 1;
       }
       j--;
@@ -222,7 +222,7 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
 
   // while (n > 1 && p[n - 1] == p[0]) n--;
   for (int i = 0; i < actual_box_num; ++i) {
-    int n = int32_t(p_count[i]);
+    int n = int(p_count[i]);
     while (n > 1 && px_ram[(n - 1) * max_seg_num + i] == px_ram[i] &&
            py_ram[(n - 1) * max_seg_num + i] == py_ram[i]) {
       p_count[i] = p_count[i] - 1;
@@ -233,9 +233,9 @@ __mlu_func__ void updatePAndPCount(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
     py_ram[n * max_seg_num + i] = py_ram[i];
   }
 
-  int32_t p_count_max = 0;
+  int p_count_max = 0;
   __bang_max(buffer, p_count, align_actual_box_num);
-  p_count_max = int32_t(((IN_DT *)buffer)[0]);
+  p_count_max = int(((IN_DT *)buffer)[0]);
   for (int j = 0; j < p_count_max + 1; ++j) {
     p_x[j] = px_ram + j * max_seg_num;
     p_y[j] = py_ram + j * max_seg_num;
@@ -278,7 +278,7 @@ __mlu_func__ void calPolygonSignArea(IN_DT *ret, IN_DT *p_x[], IN_DT *p_y[],
                                      IN_DT *count, const int actual_box_num) {
   __bang_write_value(ret, actual_box_num, IN_DT(0));
   for (int j = 0; j < actual_box_num; j++) {
-    int32_t n = int32_t(count[j]);
+    int n = int(count[j]);
     p_x[n][j] = p_x[0][j];
     p_y[n][j] = p_y[0][j];
 
@@ -319,7 +319,7 @@ template <typename IN_DT>
 __mlu_func__ void lineCross(IN_DT *a_x, IN_DT *a_y, IN_DT *b_x, IN_DT *b_y,
                             IN_DT *p1_x, IN_DT *p1_y, IN_DT *p2_x, IN_DT *p2_y,
                             IN_DT *pp_x, IN_DT *pp_y, IN_DT *valid_pts,
-                            int32_t pp_count, IN_DT *cross_s1, IN_DT *cross_s2,
+                            int pp_count, IN_DT *cross_s1, IN_DT *cross_s2,
                             IN_DT *sig_cross_s1, IN_DT *sig_cross_s2,
                             IN_DT *nram_tmp, const int max_seg_num,
                             const int actual_box_num,
@@ -418,9 +418,9 @@ __mlu_func__ void polygon_cut(IN_DT *p_x[], IN_DT *p_y[], IN_DT *p_count,
   invalid_pts = cross_s1 + 30 * max_seg_num;
   nram_tmp = cross_s1 + 31 * max_seg_num;
 
-  int32_t p_count_max = 0;
+  int p_count_max = 0;
   __bang_max(tmp1, p_count, align_actual_box_num);
-  p_count_max = int32_t(((float *)tmp1)[0]);
+  p_count_max = int(((float *)tmp1)[0]);
   int pp_count = 0;
 
   // Loop according to the maximum value of p_count.
@@ -766,17 +766,17 @@ __mlu_func__ void getMaxScoreIndex(
   const int INPUT_TYPE_SIZE = sizeof(IN_DT);
   int align_num = NFU_ALIGN_SIZE / INPUT_TYPE_SIZE;
 
-  int32_t max_buffer_num = (buffer_size - NFU_ALIGN_SIZE) / INPUT_TYPE_SIZE;
-  int32_t max_seg_num = FLOOR_ALIGN(max_buffer_num, align_num);
-  int32_t max_seg_pad = max_seg_num * INPUT_TYPE_SIZE;
-  int32_t repeat = input_boxes_num / max_seg_num;
-  int32_t remain = input_boxes_num % max_seg_num;
-  int32_t remain_pad = CEIL_ALIGN(remain * INPUT_TYPE_SIZE, NFU_ALIGN_SIZE);
+  int max_buffer_num = (buffer_size - NFU_ALIGN_SIZE) / INPUT_TYPE_SIZE;
+  int max_seg_num = FLOOR_ALIGN(max_buffer_num, align_num);
+  int max_seg_pad = max_seg_num * INPUT_TYPE_SIZE;
+  int repeat = input_boxes_num / max_seg_num;
+  int remain = input_boxes_num % max_seg_num;
+  int remain_pad = CEIL_ALIGN(remain * INPUT_TYPE_SIZE, NFU_ALIGN_SIZE);
 
   IN_DT *max_box_tmp = buffer;
   IN_DT *scores = max_box_tmp + align_num;
 
-  int32_t max_index = 0;
+  int max_index = 0;
   max_box[0] = PNMS_MIN;
 
   for (int i = 0; i <= repeat; i++) {
@@ -794,7 +794,7 @@ __mlu_func__ void getMaxScoreIndex(
     __bang_max(max_box_tmp, scores, actual_scores_pad / INPUT_TYPE_SIZE);
     if (max_box_tmp[0] > max_box[0]) {
       max_box[0] = max_box_tmp[0];
-      max_index = ((int32_t *)max_box_tmp)[1] + input_offset + i * max_seg_num;
+      max_index = ((int *)max_box_tmp)[1] + input_offset + i * max_seg_num;
       max_box[1] = max_index;
     }
   }  // for repeat
@@ -807,13 +807,13 @@ __mlu_func__ void getMaxScoreIndex(
     // input_box_ptr:x1---, y1---, x2---, y2---, x3---, y3---, x4---,
     // y4---,scores---
     __memcpy(max_box + 2, input_box_ptr + max_index, 1 * INPUT_TYPE_SIZE,
-             GDRAM2NRAM, 1 * sizeof(int32_t), input_stride * sizeof(int32_t),
+             GDRAM2NRAM, 1 * sizeof(int), input_stride * sizeof(int),
              BOX_COORDINATE_NUM);
 
     // calculate max_score_box_area
     // output: max_score| index | coordinate | sign box area | box area
     calculateMaxScoreBoxArea(max_box);
-    input_score_ptr[int32_t(max_box[1])] = PNMS_MIN;
+    input_score_ptr[int(max_box[1])] = PNMS_MIN;
   } else {
     // sram_space: max_score1 | index1 | max_score2 | index2 ...
     __memcpy(sram_space + 2 * coreId, max_box, 2 * INPUT_TYPE_SIZE, NRAM2SRAM);
@@ -825,8 +825,8 @@ __mlu_func__ void getMaxScoreIndex(
     }
     __bang_max(max_box_tmp, scores, NFU_ALIGN_SIZE / INPUT_TYPE_SIZE);
     max_box[0] = max_box_tmp[0];
-    max_index = ((int32_t *)max_box_tmp)[1];
-    max_box[1] = (int32_t)(sram_space[max_index * 2 + 1]);
+    max_index = ((int *)max_box_tmp)[1];
+    max_box[1] = (int)(sram_space[max_index * 2 + 1]);
 
     // reduce_buffer == workspace, copy core0 maxscore -> workspace
     if (clusterDim != 1) {
@@ -845,21 +845,21 @@ __mlu_func__ void getMaxScoreIndex(
 
       __bang_max(max_box_tmp, scores, NFU_ALIGN_SIZE * 2 / INPUT_TYPE_SIZE);
       max_box[0] = max_box_tmp[0];
-      max_index = ((int32_t *)max_box_tmp)[1];
-      max_box[1] = (int32_t)(reduce_buffer[max_index * 2 + 1]);
+      max_index = ((int *)max_box_tmp)[1];
+      max_box[1] = (int)(reduce_buffer[max_index * 2 + 1]);
 
-      max_index = int32_t(max_box[1]);
+      max_index = int(max_box[1]);
       input_score_ptr[max_index] = PNMS_MIN;
       __memcpy(max_box + 2, input_box_ptr + max_index, 1 * INPUT_TYPE_SIZE,
-               GDRAM2NRAM, 1 * sizeof(int32_t), input_stride * sizeof(int32_t),
+               GDRAM2NRAM, 1 * sizeof(int), input_stride * sizeof(int),
                BOX_COORDINATE_NUM);
       calculateMaxScoreBoxArea(max_box);
     } else {
-      max_index = int32_t(max_box[1]);
+      max_index = int(max_box[1]);
       input_score_ptr[max_index] = PNMS_MIN;
 
       __memcpy(max_box + 2, input_box_ptr + max_index, 1 * INPUT_TYPE_SIZE,
-               GDRAM2NRAM, 1 * sizeof(int32_t), input_stride * sizeof(int32_t),
+               GDRAM2NRAM, 1 * sizeof(int), input_stride * sizeof(int),
                BOX_COORDINATE_NUM);
       calculateMaxScoreBoxArea(max_box);
     }
@@ -882,7 +882,7 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
   //  box_pts_y | scores | box_area |intersection_area| nram_save |
   //  N*4     | N      |   N      |     N           | overlap   |
 
-  int32_t output_box_num = 0;
+  int output_box_num = 0;
   const int INPUT_TYPE_SIZE = sizeof(IN_DT);
 
   int input_boxes_num = input_stride;
@@ -919,8 +919,8 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
   IN_DT *input_score_ptr = input_box_ptr + BOX_COORDINATE_NUM * input_boxes_num;
 
   // sram space
-  int32_t *loop_end_flag = (int32_t *)((char *)workspace);
-  IN_DT *reduce_buffer = (IN_DT *)((char *)loop_end_flag + sizeof(int32_t));
+  int *loop_end_flag = (int *)((char *)workspace);
+  IN_DT *reduce_buffer = (IN_DT *)((char *)loop_end_flag + sizeof(int));
   IN_DT *sram_space = (IN_DT *)((char *)sram_buffer);
 
   loop_end_flag[0] = 0;
@@ -954,7 +954,7 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
     // 1 get_max_box_index();
     // output: max_box (max_score, max_index, max_box_coordinate, sign
     // max_score_box_area, max_score_box_area)
-    int32_t scoreIndexBufSize =
+    int scoreIndexBufSize =
         buffer_size - max_seg_pad -
         2 * NFU_ALIGN_SIZE;  // nram size - nram_save - max_box
     getMaxScoreIndex(input_box_ptr, input_score_ptr, max_box,
@@ -966,13 +966,13 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
     // output_data(gdram).
     if (taskId == 0) {
       if (float(max_box[0]) > (float)PNMS_MIN) {
-        nram_save[nram_save_count] = (int32_t)(max_box[1]);
+        nram_save[nram_save_count] = (int)(max_box[1]);
         nram_save_count++;
         output_box_num++;
 
         if (nram_save_count == nram_save_limit_count) {
           __memcpy(output_data + output_save_count * nram_save_limit_count,
-                   nram_save, nram_save_count * sizeof(int32_t), NRAM2GDRAM);
+                   nram_save, nram_save_count * sizeof(int), NRAM2GDRAM);
           output_save_count++;
           nram_save_count = 0;
         }
@@ -983,14 +983,14 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
     if (taskDim == 1) {
       if (float(max_box[0]) <= PNMS_MIN || (loop == max_output_size - 1)) {
         __memcpy(output_data + output_save_count * nram_save_limit_count,
-                 nram_save, nram_save_count * sizeof(int32_t), NRAM2GDRAM);
+                 nram_save, nram_save_count * sizeof(int), NRAM2GDRAM);
         break;
       }
     } else {
       if (float(max_box[0]) <= PNMS_MIN || (loop == max_output_size - 1)) {
         if (taskId == 0) {
           __memcpy(output_data + output_save_count * nram_save_limit_count,
-                   nram_save, nram_save_count * sizeof(int32_t), NRAM2GDRAM);
+                   nram_save, nram_save_count * sizeof(int), NRAM2GDRAM);
           loop_end_flag[0] = 1;
         }
       }
@@ -1110,9 +1110,9 @@ __mlu_func__ void pnms_detection(OUT_DT *result_num, OUT_DT *output_data,
   }    // for loop : max_output_size
 
   if (taskId == 0) {
-    ((int32_t *)result_num)[0] = output_box_num;
+    ((int *)result_num)[0] = output_box_num;
     __memcpy(buffer, output_data, output_box_num * 4, GDRAM2NRAM);
-    quickSort((int32_t *)buffer, 0, output_box_num - 1);
+    quickSort((int *)buffer, 0, output_box_num - 1);
     __memcpy(output_data, buffer, output_box_num * 4, NRAM2GDRAM);
   }
 }
@@ -1122,7 +1122,7 @@ __mlu_func__ void boxesTranspose(const void *input_boxes,
                                  const int input_stride, void *output,
                                  void *buffer, const int buffer_size) {
   if (taskId == 0) {
-// Trans boxes: Nx9 -> 9xN
+    // Trans boxes: Nx9 -> 9xN
 #if __BANG_ARCH__ >= 300
     float *boxes;
     float *trans_boxes;
@@ -1177,12 +1177,12 @@ __mlu_global__ void MLUKernelPolyNms(const void *input_boxes,
   boxesTranspose(input_boxes, input_boxes_num, input_stride, trans_boxes,
                  nram_buffer, MAX_NRAM_SIZE);
 
-  int32_t input_data_num = input_boxes_num * input_stride;  // N*9
+  int input_data_num = input_boxes_num * input_stride;  // N*9
   input_stride = input_boxes_num;                           // N
-  int32_t *out_data = (int32_t *)output;
+  int *out_data = (int *)output;
 
-  pnms_detection<float, int32_t>(
-      (int32_t *)output_size, out_data, (float *)trans_boxes,
+  pnms_detection<float, int>(
+      (int *)output_size, out_data, (float *)trans_boxes,
       (float *)nram_buffer, MAX_NRAM_SIZE, (float *)sram_buffer,
       (float *)reduce_buffer, input_data_num, input_stride, iou_thresh);
 }

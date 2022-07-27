@@ -93,12 +93,12 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
   PARAM_CHECK(API, boxes_desc->dims[0] == output_desc->dims[0]);
 
-  int32_t input_boxes_num = boxes_desc->dims[0];
-  int32_t input_stride = boxes_desc->dims[1];
+  int input_boxes_num = boxes_desc->dims[0];
+  int input_stride = boxes_desc->dims[1];
 
   if (input_boxes_num == 0) {
     VLOG(5) << API << " skip zero element tensor.";
-    CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int32_t)));
+    CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int)));
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -149,8 +149,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
   PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, boxes_desc->layout == MLUOP_LAYOUT_ARRAY);
   // workspace stores the transposed input data[9, N].
-  int32_t input_boxes_num = boxes_desc->dims[0];  // N
-  int32_t input_stride = boxes_desc->dims[1];     // 9
+  int input_boxes_num = boxes_desc->dims[0];  // N
+  int input_stride = boxes_desc->dims[1];     // 9
 
   if (handle->arch == MLUOP_MLU370) {
     *size = input_boxes_num * input_stride * sizeof(float);
@@ -162,7 +162,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
   }
 
   *size += handle->capability_job_limit * 2 * sizeof(float);
-  *size += sizeof(int32_t);
+  *size += sizeof(int);
   VLOG(5) << "[mluOpGetPolyNmsWorkspaceSize] size = :" << *size;
   return MLUOP_STATUS_SUCCESS;
 }
