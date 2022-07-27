@@ -62,7 +62,6 @@
 竞品中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与竞品对齐。
 
 ```
-
 接口：
 psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, self.pooled_width, self.spatial_scale, self.output_dim,  \
         self.output, self.rois, grad_input, self.mappingchannel)
@@ -96,7 +95,6 @@ bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
 ```
 
 ```
-
 # 0元素检查
 # 1. rois为0，报错
 
@@ -305,7 +303,7 @@ step4: 根据top_grad的index计算出当前处理的roi_num、ph、pw，根据r
 
 step5: 遍历当前index下top_grad和mapping_channel中各个点(index必须一致)，从top_grad取出value_temp，从mapping_channel取出C。
 
-step6: 根据bin_area和value_temp计算出当前value值, 根据value、C、bin区域找到bottom_grad中对应的bin区域各个点的位置bottom_index，对这块区域值通过atomic_add将value值添加。
+step6: 根据bin_area和value_temp计算出当前value值, 根据value、C、bin区域找到bottom_grad中对应的bin区域各个点的位置bottom_offset，对这块区域值通过atomic_add将value值添加。
 ```c++
 // deal_num为实际处理的数据量，hstart、hend、wstart、wend为bin区域坐标，width、channels分为bottom_grad的width、channels
 value = value_temp / bin_area; 
@@ -313,8 +311,7 @@ for (int i = 0; i < deal_num; i ++){
     int c = mapping_channel_buffer[index];
     for (h = hstart; h < hend; h++) {
         for (w = wstart; w < wend; w++) {
-            int bottom_offset = (h * width + w) * channels + c;
-            __bang_atomic_add(nram_buffer, bottom_grad + bottom_index, value);
+            __bang_atomic_add(nram_buffer, bottom_grad + bottom_offset, value);
         }
     }
 }
@@ -360,7 +357,7 @@ nram空间划分：
    input:[493, 5], LAYOUT_ARRAY, DTYPE_FLOAT
    mapping_channel:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_INT32
    bottom_grad:[8, 14, 14,198], LAYOUT_NHWC, DTYPE_FLOAT
-   psroipool_backward_param{spatial_scale=0.0625, output_dim=21, pooled_height=3,pooled_width=3} 
+   psroipool_backward_param{spatial_scale=0.0625, output_dim=21, pooled_height=3, pooled_width=3} 
 
 ```
 
@@ -393,6 +390,8 @@ nram空间划分：
 2. rois: return MLUOP_STATUS_BAD_PARAM
 
 3. mapping_channel: return MLUOP_STATUS_SUCCESS
+
+4. bottom_grad: return MLUOP_STATUS_SUCCESS
 
 - 算子参数防呆
 
