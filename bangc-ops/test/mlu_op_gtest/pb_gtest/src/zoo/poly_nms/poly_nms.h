@@ -26,9 +26,9 @@ class PolyNmsExecutor : public Executor {
   void cpuCompute();
   void pnms_detection_cpu(float *output_data,
                           int &output_box_num,
-                          float *input_data,
-                          int input_box_num,
-                          float thresh_iou);
+                          const float *input_data,
+                          const int input_box_num,
+                          const float thresh_iou);
   int64_t getTheoryOps() override;
 };
 

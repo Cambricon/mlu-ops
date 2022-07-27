@@ -26,69 +26,46 @@
 #include "core/gen_case.h"
 #include "kernels/kernel.h"
 
-static cnrtFunctionType_t caseCnKernelClassTOCnrtFuncType(KernelClass jobType){
-  // return CNRT_FUNC_TYPE_UNION1;
-  switch (jobType)
-  {
-  case CN_KERNEL_CLASS_BLOCK:
-    return CNRT_FUNC_TYPE_BLOCK;
-  case CN_KERNEL_CLASS_UNION:
-    return CNRT_FUNC_TYPE_UNION1;
-  case CN_KERNEL_CLASS_UNION2:
-    return CNRT_JOB_TYPE_UNION2;
-  case CN_KERNEL_CLASS_UNION4:
-    return CNRT_JOB_TYPE_UNION4;
-  case CNRT_FUNC_TYPE_UNION8:
-    return CNRT_FUNC_TYPE_UNION8;
-  case CNRT_FUNC_TYPE_UNION16:
-    return CNRT_FUNC_TYPE_UNION16;
-  default:
-    return CNRT_FUNC_TYPE_MUTABLE;
-  }
-}
-
-static int32_t getCoreNumOfJobLimitCapability(mluOpHandle_t handle){
-  switch(handle->capability_job_limit){
-    default:
-    return handle->core_num_per_cluster * handle->capability_job_limit;
-    case CN_KERNEL_CLASS_BLOCK:
-      return 1;
-    case CN_KERNEL_CLASS_UNION:
-      return handle->core_num_per_cluster;
-    case CN_KERNEL_CLASS_UNION2:
-      return handle->core_num_per_cluster * 2;
-    case CN_KERNEL_CLASS_UNION4:
-      return handle->core_num_per_cluster * 4;
-    case CN_KERNEL_CLASS_UNION8:
-      return handle->core_num_per_cluster * 8;
-    case CN_KERNEL_CLASS_UNION16:
-      return handle->core_num_per_cluster * 16;
-  }
-}
-
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type, const int input_boxes_num) {
-
-  KernelClass job_limit = static_cast<KernelClass>(mluop::runtime::getJobLimitCapability(handle));
-  // when current MLU arch only support Block type job
-  if (job_limit == CN_KERNEL_CLASS_BLOCK) {
-    *k_type = CNRT_FUNC_TYPE_BLOCK;
-    k_dim->x = 1;
-    k_dim->y = 1;
-    k_dim->z = 1;
-    return;
-  }
-
   int job = mluop::runtime::getJobLimitCapability(handle);
-  k_dim->x = getCoreNumOfJobLimitCapability(handle);
-  while(input_boxes_num < job){
-    if(job == 4){
+  while (input_boxes_num < job) {
+    if (job == 4) {
       break;
     }
-    job = job/2;
-    k_dim->x = k_dim->x/2;
+    job = job / 2;
   }
-  *k_type = caseCnKernelClassTOCnrtFuncType(static_cast<KernelClass>(job));
+
+  switch (static_cast<KernelClass>(job)) {
+    case CN_KERNEL_CLASS_BLOCK:
+      *k_type = CNRT_FUNC_TYPE_BLOCK;
+      k_dim->x = 1;
+      break;
+    case CN_KERNEL_CLASS_UNION:
+      *k_type = CNRT_FUNC_TYPE_UNION1;
+      k_dim->x = handle->core_num_per_cluster;
+      break;
+    case CN_KERNEL_CLASS_UNION2:
+      *k_type = CNRT_FUNC_TYPE_UNION2;
+      k_dim->x = handle->core_num_per_cluster * 2;
+      break;
+    case CN_KERNEL_CLASS_UNION4:
+      *k_type = CNRT_FUNC_TYPE_UNION4;
+      k_dim->x = handle->core_num_per_cluster * 4;
+      break;
+    case CNRT_FUNC_TYPE_UNION8:
+      *k_type = CNRT_FUNC_TYPE_UNION8;
+      k_dim->x = handle->core_num_per_cluster * 8;
+      break;
+    case CNRT_FUNC_TYPE_UNION16:
+      *k_type = CNRT_FUNC_TYPE_UNION16;
+      k_dim->x = handle->core_num_per_cluster * 16;
+      break;
+    default:
+      *k_type = CNRT_FUNC_TYPE_MUTABLE;
+      k_dim->x = handle->core_num_per_cluster * handle->capability_job_limit;
+      break;
+  }
 
   k_dim->y = 1;
   k_dim->z = 1;
@@ -150,7 +127,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   VLOG(5) << "Launch Kernel MLUUnion1OrBlockPNMS<<<k_dim: " << k_type << ", "
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
 
-  KERNEL_CHECK((mluOpUnion1OrBlockKernelPolyNmsFloat(
+  KERNEL_CHECK((mluOpUnionXKernelPolyNmsFloat(
       k_dim, k_type, handle->queue, (void *)boxes, input_boxes_num,
       input_stride, iou_threshold, output, output_size, workspace)));
 
@@ -175,19 +152,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
   int32_t input_boxes_num = boxes_desc->dims[0];  // N
   int32_t input_stride = boxes_desc->dims[1];     // 9
 
-  if(handle->arch == MLUOP_MLU370){
+  if (handle->arch == MLUOP_MLU370) {
     *size = input_boxes_num * input_stride * sizeof(float);
-  }else{
+  } else {
     int align_num = 128 / sizeof(float);
     int align_box_num = CEIL_ALIGN(input_boxes_num, align_num);
     int align_stride = CEIL_ALIGN(input_stride, align_num);
     *size = align_box_num * align_stride * sizeof(float);
   }
 
-  int job = mluop::runtime::getJobLimitCapability(handle);
-  int core_num = getCoreNumOfJobLimitCapability(handle);
-  *size += job * core_num * sizeof(float);
-  
+  *size += handle->capability_job_limit * 2 * sizeof(float);
   *size += sizeof(int32_t);
   VLOG(5) << "[mluOpGetPolyNmsWorkspaceSize] size = :" << *size;
   return MLUOP_STATUS_SUCCESS;
