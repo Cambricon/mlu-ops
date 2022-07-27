@@ -87,7 +87,7 @@ torch.nn.functional.cosine_similarity(x1, x2, dim=1, eps=1e-08)
 ```
 ### 2.2 接口设计
 ```
-MluOp_cosine_similarity(input0, input1, dim, output)
+MluOpCosineSimilarity(input0, input1, dim, output)
 ```
 
 ## 3. 实现方案设计
