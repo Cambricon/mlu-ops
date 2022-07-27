@@ -166,7 +166,7 @@ struct mluOpTensorSetStruct {
 
   inline size_t getOffset(const int tensorIndex[]) {
     int64_t offset = 0;
-    int index = this->getIndex(tensorIndex);
+    int index      = this->getIndex(tensorIndex);
     for (int i = 0; i < index; i++) {
       size_t ts_size = 0;
       this->tensor_set[i]->tensorSize(ts_size);
@@ -178,7 +178,7 @@ struct mluOpTensorSetStruct {
 
   inline mluOpTensorDescriptor_t getTensor(const int tensorIndex[]) const {
     auto index = this->getIndex(tensorIndex);
-    auto ts = this->tensor_set[index].get();
+    auto ts    = this->tensor_set[index].get();
     return ts;
   }
 
@@ -210,7 +210,7 @@ struct mluOpTensorSetStruct {
     if (data_offset.size() == 0) {
       return data_offset;
     }
-    int offset = 0;
+    int offset     = 0;
     data_offset[0] = offset;
     for (int i = 0; i < tensor_num - 1; i++) {
       size_t ts_size = 0;
@@ -222,7 +222,7 @@ struct mluOpTensorSetStruct {
   }
   /* struct */
   int tensor_num = 0;
-  int dim_num = 0;                   // dimension number
+  int dim_num    = 0;                // dimension number
   std::vector<int> dim_set;          // the number for each dimension
   std::vector<int> dim_offset_base;  // offset for each dimension
   std::vector<std::shared_ptr<mluOpTensorStruct>>

@@ -29,9 +29,9 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-#define DEP_CHECK_LOG(level)                                                 \
-  cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, true, \
-                    true)                                                    \
+#define DEP_CHECK_LOG(level)                                         \
+  cnlog::LogMessage(                                                 \
+      __FILE__, __LINE__, 4, level, "MLUOP", true, true, true, true) \
       .stream()
 
 // see cnrt_function.c deviceCoreVersion for more info.
@@ -66,7 +66,8 @@ mluOpDevType_t convertDeviceName(char *name) {
   return MLUOP_UNKNOWN_DEVICE;
 }
 
-mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
+mluOpStatus_t mluOpCheckDependency(bool need_check_min,
+                                   bool need_check_max,
                                    DepCheckLevel level) {
   int cnrt_major = 0, cnrt_minor = 0, cnrt_patch = 0;
   cnrtGetLibVersion(&cnrt_major, &cnrt_minor, &cnrt_patch);
@@ -122,13 +123,13 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
   }
 
   CNdev mlu_dev;
-  int32_t cluster_num = 0;
-  int32_t core_num_per_cluster = 0;
-  int32_t nram_size = 0;
-  int32_t wram_size = 0;
-  int32_t sram_size = 0;
+  int32_t cluster_num                              = 0;
+  int32_t core_num_per_cluster                     = 0;
+  int32_t nram_size                                = 0;
+  int32_t wram_size                                = 0;
+  int32_t sram_size                                = 0;
   char device_name[CONTEXT_DEVICENAME_BUFFER_SIZE] = "";
-  mluOpContext *ctx = new mluOpContext();
+  mluOpContext *ctx                                = new mluOpContext();
   CNcontext drv_ctx;
   CNctxConfigParam ctx_conf_param;
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetCurrent(&drv_ctx));
@@ -144,16 +145,16 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
           cnDeviceGetAttribute(&core_num_per_cluster,
                                CN_DEVICE_ATTRIBUTE_MAX_CORE_COUNT_PER_CLUSTER,
                                mlu_dev));
-  INTERNAL_CHECK(
-      "[mluOpCreate]",
-      CN_SUCCESS == cnDeviceGetAttribute(
-                        &nram_size,
-                        CN_DEVICE_ATTRIBUTE_NEURAL_RAM_SIZE_PER_CORE, mlu_dev));
-  INTERNAL_CHECK(
-      "[mluOpCreate]",
-      CN_SUCCESS == cnDeviceGetAttribute(
-                        &wram_size,
-                        CN_DEVICE_ATTRIBUTE_WEIGHT_RAM_SIZE_PER_CORE, mlu_dev));
+  INTERNAL_CHECK("[mluOpCreate]",
+                 CN_SUCCESS == cnDeviceGetAttribute(
+                                   &nram_size,
+                                   CN_DEVICE_ATTRIBUTE_NEURAL_RAM_SIZE_PER_CORE,
+                                   mlu_dev));
+  INTERNAL_CHECK("[mluOpCreate]",
+                 CN_SUCCESS == cnDeviceGetAttribute(
+                                   &wram_size,
+                                   CN_DEVICE_ATTRIBUTE_WEIGHT_RAM_SIZE_PER_CORE,
+                                   mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
       CN_SUCCESS == cnDeviceGetAttribute(
@@ -162,25 +163,26 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
                         mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
-      CN_SUCCESS == cnDeviceGetName(device_name, CONTEXT_DEVICENAME_BUFFER_SIZE,
-                                    mlu_dev));
+      CN_SUCCESS == cnDeviceGetName(
+                        device_name, CONTEXT_DEVICENAME_BUFFER_SIZE, mlu_dev));
   //  ClusterLimitCapability and JobLimitCapability
-  INTERNAL_CHECK("[mluOpCreate]",
-                 CN_SUCCESS == cnGetCtxConfigParam(
-                                   drv_ctx, CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM,
-                                   &ctx_conf_param));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
+      CN_SUCCESS == cnGetCtxConfigParam(drv_ctx,
+                                        CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM,
+                                        &ctx_conf_param));
   ctx->capability_cluster_num = (int32_t)ctx_conf_param.visibleClusterNumber;
   INTERNAL_CHECK(
       "[mluOpCreate]",
-      CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
-                                        &ctx_conf_param));
+      CN_SUCCESS == cnGetCtxConfigParam(
+                        drv_ctx, CN_CTX_CONFIG_UNION_LIMIT, &ctx_conf_param));
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
-  ctx->device = mlu_dev;
-  ctx->cluster_num = cluster_num;
+  ctx->device               = mlu_dev;
+  ctx->cluster_num          = cluster_num;
   ctx->core_num_per_cluster = core_num_per_cluster;
-  ctx->nram_size = nram_size - REM_FOR_STACK;
-  ctx->wram_size = wram_size;
-  ctx->sram_size = sram_size - REM_FOR_STACK;
+  ctx->nram_size            = nram_size - REM_FOR_STACK;
+  ctx->wram_size            = wram_size;
+  ctx->sram_size            = sram_size - REM_FOR_STACK;
   ctx->arch =
       convertDeviceName(device_name);  // warning: possible return unknown.
   *handle = ctx;
@@ -194,15 +196,16 @@ mluOpStatus_t mluOpUpdateContextInformation(mluOpHandle_t handle) {
   INTERNAL_CHECK(
       "[mluOpUpdateContextInformation]",
       CN_SUCCESS == cnQueueGetContext((CNqueue)(handle->queue), &drv_ctx));
-  INTERNAL_CHECK("[mluOpUpdateContextInformation]",
-                 CN_SUCCESS == cnGetCtxConfigParam(
-                                   drv_ctx, CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM,
-                                   &ctx_conf_param));
+  INTERNAL_CHECK(
+      "[mluOpUpdateContextInformation]",
+      CN_SUCCESS == cnGetCtxConfigParam(drv_ctx,
+                                        CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM,
+                                        &ctx_conf_param));
   handle->capability_cluster_num = (int32_t)ctx_conf_param.visibleClusterNumber;
   INTERNAL_CHECK(
       "[mluOpUpdateContextInformation]",
-      CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
-                                        &ctx_conf_param));
+      CN_SUCCESS == cnGetCtxConfigParam(
+                        drv_ctx, CN_CTX_CONFIG_UNION_LIMIT, &ctx_conf_param));
   handle->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
   return MLUOP_STATUS_SUCCESS;
 }

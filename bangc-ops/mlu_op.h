@@ -1693,6 +1693,162 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
              void *output, void *output_size);
 
 /*!
+ *  @brief Generates prior boxes for SSD(Single Shot MultiBox Detector) algorithm.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the poly_nms operation.
+ *  @param[in] min_sizes_desc
+ *    Input. The descriptor of the min_sizes tensor. the min sizes of generated 
+ *    prior boxes.
+ *  @param[in] min_sizes
+ *    Pointer to the MLU memory that stores the min_sizes tensor.
+ *  @param[in] aspect_ratios_desc
+ *    Input. The descriptor of the aspect_ratios tensor. the aspect ratios of 
+ *    generated prior boxes.  
+ *  @param[in] aspect_ratios
+ *    Input. Pointer to the MLU memory that stores the aspect_ratios tensor.
+ *  @param[in] variances_desc
+ *    Input. The descriptor of the variances tensor. the variances to be 
+ *    encoded in prior boxes. 
+ *  @param[in] variances
+ *    Input. Pointer to the MLU memory that stores the variances tensor.
+ *  @param[in] max_sizes_desc
+ *    Input. The descriptor of the max_sizes tensor. the max sizes of generated
+ *    prior boxes.
+ *  @param[in] max_sizes
+ *    Input. Pointer to the MLU memory that stores the max_sizes tensor.
+ *  @param[in] height
+ *    Input. The height of the \b input feature_map.
+ *  @param[in] width
+ *    Input. The width of the \b input feature_map.
+ *  @param[in] im_height
+ *    Input. The height of the \b input image.
+ *  @param[in] im_width
+ *    Input. The width of the \b input image.
+ *  @param[in] step_h
+ *    Input. The prior boxes step in height.
+ *  @param[in] step_w
+ *    Input. The prior boxes step in width.
+ *  @param[in] offset
+ *    Input. The prior boxes center offset.
+ *  @param[in] clip
+ *    Input. Whether to clip out-of-boundary boxes.
+ *  @param[in] min_max_aspect_ratios_order
+ *    Input. If set True, the \b output prior box is in order of 
+ *    [min, max, aspect_ratios],else is [min,aspect_ratios,max].
+ *  @param[in] output_desc
+ *    Input. The descriptor of the \b output tensor. the \b output prior boxes of 
+ *    PriorBox.
+ *  @param[out] output
+ *    Output. Pointer to the MLU memory that stores the \b output tensor.
+ *  @param[in] var_desc
+ *    Input. The descriptor of the var tensor, the expanded variances of 
+ *    PriorBox.
+ *  @param[out] var
+ *    Output. Pointer to the MLU memory that stores the var tensor.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *    ::MLUOP_STATUS_NOT_SUPPORTED
+ * 
+ *  @par Formula
+ *  - See "PriorBox Operation" section in "Cambricon MLUOP User
+ *    Guide" for details.
+ * 
+ *  @par Data Type
+ *  - The supported data types of \b input and \b output are as follows:
+ *     - min_sizes tensor: float.
+ *     - aspect_ratios tensor: float.
+ *     - variances tensor: float.
+ *     - max_sizes tensor: float.
+ *     - height: int.
+ *     - width: int.
+ *     - im_height: int.
+ *     - im_width: int.
+ *     - step_h: float.
+ *     - step_w: float.
+ *     - offset: float.
+ *     - clip: bool.
+ *     - min_max_aspect_ratios_order: bool.
+ *     - output: float.
+ *     - var: float.
+ * 
+ *  @par Data Layout
+ *  - The supported data layout of \b input, \b output, 
+ *    are as follows:
+ * 
+ *   - Input tensor: 
+ *     - min_sizes: \p MLUOP_LAYOUT_ARRAY.
+ *     - aspect_ratios: \p MLUOP_LAYOUT_ARRAY.
+ *     - variances: \p MLUOP_LAYOUT_ARRAY.
+ *     - max_sizes: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor: 
+ *     - output: \p MLUOP_LAYOUT_ARRAY.
+ *     - var: \p MLUOP_LAYOUT_ARRAY.
+ * 
+ *  @par Scale Limitation
+ *  - The dimension of \b min_sizes should be equal to 1.
+ *  - The dimension of \b aspect_ratios should be equal to 1.
+ *  - The dimension of \b variances should be equal to 1.
+ *  - The dimension of \b max_sizes should be equal to 1.
+ *  - The dimension of \b output should be equal to 1.
+ *  - The dimension of \b var should be equal to 1.
+ *  - The shape[0] of \b variances shoule be equal to 4.
+ *  - The shape[0] of \b min_sizes shoule be larger than 0.
+ *  - The shape[0] of \b aspect_ratios shoule be larger than 0.
+ *  - The shape of \b output should be equal with \b var.
+ *  - The shape[2] of the \b ouput and \b var must be small than 2100 
+ *    in MLU200 series,be small than 2900 in MLU300 series.
+ *  - The shape[0] of \b aspect_ratios should be equal with 
+ *    the product of the shape[0] of \b min_sizes and the shape[0]
+ *    of \b aspect_ratios add the shape[0] of the \b max_sizes.
+ *  - The height should be larger than 0.
+ *  - The width should be larger than 0.
+ *  - The im_height should be larger than 0.
+ *  - The im_width should be larger than 0.
+ *  - The step_h should be larger than 0.
+ *  - The step_w should be larger than 0.
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * 
+ *  @par Note
+ *  - On MLU200 series. The shape[2] of the \b ouput and \b var must be 
+ *    small than 2100.
+ *  - On MLU300 series. The shape[2] of the \b ouput and \b var must be 
+ *    small than 2900.
+ * 
+ * @par Reference
+ * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/
+ *   gpu/prior_box_kernel.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPriorBox(mluOpHandle_t handle,
+              const mluOpTensorDescriptor_t min_sizes_desc,
+              const void *min_sizes,
+              const mluOpTensorDescriptor_t aspect_ratios_desc,
+              const void *aspect_ratios,
+              const mluOpTensorDescriptor_t variances_desc,
+              const void *variances,
+              const mluOpTensorDescriptor_t max_sizes_desc,
+              const void *max_sizes,
+              const int height,
+              const int width,
+              const int im_height,
+              const int im_width,
+              const float step_h,
+              const float step_w,
+              const float offset,
+              bool clip,
+              bool min_max_aspect_ratios_order,
+              const mluOpTensorDescriptor_t output_desc,
+              void *output,
+              const mluOpTensorDescriptor_t var_desc,
+              void *var);
+              
+/*!
  *  @brief Generate fixed size feature map for each RoI(Regions of Interest).
  *
  *  @param[in] handle

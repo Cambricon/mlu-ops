@@ -34,6 +34,9 @@
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
+#define LARGE_TENSOR_NUM ((uint64_t)2147483648)
+#define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
+
 #define LOG(severity) cnlog::CLOG(MLUOP, severity)
 
 #define TOKENPASTE(x, y, z) x##y##z
@@ -103,8 +106,7 @@
     LOG(ERROR) << api << " An internal error occured. " #__VA_ARGS__; \
     return MLUOP_STATUS_INTERNAL_ERROR;                               \
   }
-
-// CHECK if return value equals MLUOP_STATUS_SUCCESS
+// CHECK if return value equals CNNL_STATUS_SUCCESS
 #define CHECK_RETURN(api, status, ...)                                     \
   {                                                                        \
     mluOpStatus_t __status__ = (status);                                   \
@@ -177,8 +179,10 @@
     return MLUOP_STATUS_SUCCESS;                                          \
   }
 
-void mluOpCheck(mluOpStatus_t result, char const *const func,
-                const char *const file, int const line);
+void mluOpCheck(mluOpStatus_t result,
+                char const *const func,
+                const char *const file,
+                int const line);
 
 #define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
@@ -291,7 +295,8 @@ struct CheckOpString {
 
 // Build the error message string. Specify no inlining for code size.
 template <typename T1, typename T2>
-std::string *MakeCheckOpString(const T1 &v1, const T2 &v2,
+std::string *MakeCheckOpString(const T1 &v1,
+                               const T2 &v2,
                                const char *exprtext) MLUOP_ATTRIBUTE_NOINLINE;
 
 // A helper class for formatting "expr (V1 vs. V2)" in a CHECK_XX
@@ -318,7 +323,8 @@ class CheckOpMessageBuilder {
 };
 
 template <typename T1, typename T2>
-std::string *MakeCheckOpString(const T1 &v1, const T2 &v2,
+std::string *MakeCheckOpString(const T1 &v1,
+                               const T2 &v2,
                                const char *exprtext) {
   CheckOpMessageBuilder comb(exprtext);
   MakeCheckOpValueString(comb.ForVar1(), v1);
@@ -334,8 +340,8 @@ std::string *MakeCheckOpString(const T1 &v1, const T2 &v2,
 // comparison errors while still being thorough with the comparison.
 #define MLUOP_DEFINE_CHECK_OP_IMPL(name, op)                             \
   template <typename T1, typename T2>                                    \
-  inline std::string *name##Impl(const T1 &v1, const T2 &v2,             \
-                                 const char *exprtext) {                 \
+  inline std::string *name##Impl(                                        \
+      const T1 &v1, const T2 &v2, const char *exprtext) {                \
     if (MLUOP_PREDICT_TRUE(v1 op v2))                                    \
       return NULL;                                                       \
     else                                                                 \
@@ -344,15 +350,15 @@ std::string *MakeCheckOpString(const T1 &v1, const T2 &v2,
   inline std::string *name##Impl(int v1, int v2, const char *exprtext) { \
     return name##Impl<int, int>(v1, v2, exprtext);                       \
   }                                                                      \
-  inline std::string *name##Impl(const size_t v1, const int v2,          \
-                                 const char *exprtext) {                 \
+  inline std::string *name##Impl(                                        \
+      const size_t v1, const int v2, const char *exprtext) {             \
     if (MLUOP_PREDICT_FALSE(v2 < 0)) {                                   \
       return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);     \
     }                                                                    \
     return name##Impl<size_t, size_t>(v1, v2, exprtext);                 \
   }                                                                      \
-  inline std::string *name##Impl(const int v1, const size_t v2,          \
-                                 const char *exprtext) {                 \
+  inline std::string *name##Impl(                                        \
+      const int v1, const size_t v2, const char *exprtext) {             \
     if (MLUOP_PREDICT_FALSE(v2 >= std::numeric_limits<int>::max())) {    \
       return ::mluop::internal::MakeCheckOpString(v1, v2, exprtext);     \
     }                                                                    \
@@ -413,8 +419,8 @@ inline unsigned long GetReferenceableValue(unsigned long t) {  // NOLINT
 inline long long GetReferenceableValue(long long t) {  // NOLINT
   return t;
 }
-inline unsigned long long                      // NOLINT
-GetReferenceableValue(unsigned long long t) {  // NOLINT
+inline unsigned long long // NOLINT
+GetReferenceableValue(unsigned long long t ) {// NOLINT
   return t;
 }
 

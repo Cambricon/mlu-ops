@@ -125,6 +125,17 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackwardFloat(
     const int output_dim, const int rois_num, const int rois_offset,
     const float spatial_scale);
 
+/*PriorBox*/
+void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
+    cnrtDim3_t k_dim_box, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *min_sizes, const int min_sizes_num, const void *aspect_ratios,
+    const int aspect_ratios_num, const void *variances, const int variances_num,
+    const void *max_sizes, const int max_sizes_num, const int height,
+    const int width, const int im_height, const int im_width,
+    const float step_h, const float step_w, const float offset,
+    const int num_priors, bool clip, bool min_max_aspect_ratios_order,
+    void *output, const int output_size, void *var, const int var_size);
+
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

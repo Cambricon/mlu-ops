@@ -30,7 +30,8 @@
 
 #include "core/logging.h"
 #include "core/type.h"
-#include "mlu_op.h"
+
+#include "mlu_op_core.h"
 
 /**
  * @brief cast float32 data to int31 data
@@ -47,17 +48,24 @@
 mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst);
 
 // The API is used for no scling factor quantization.
-mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
+mluOpStatus_t getPosition(float *input,
+                          size_t num,
+                          mluOpDataType_t datatype,
                           int *position);
 
 // The API is used for scaling factor quantization.
-mluOpStatus_t getPositionAndScale(float *input, size_t num,
-                                  mluOpDataType_t datatype, int *position,
+mluOpStatus_t getPositionAndScale(float *input,
+                                  size_t num,
+                                  mluOpDataType_t datatype,
+                                  int *position,
                                   float *scale);
 // The API is used for asymmetrical quantization.
-mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
-                                        mluOpDataType_t datatype, int *position,
-                                        float *scale, int *offset);
+mluOpStatus_t getPositionScaleAndOffset(float *input,
+                                        size_t num,
+                                        mluOpDataType_t datatype,
+                                        int *position,
+                                        float *scale,
+                                        int *offset);
 
 /**
  * @brief cast int31 data to float32 data
@@ -74,7 +82,9 @@ mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
  *         otherwise the error code is returned.
  */
 
-mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
+mluOpStatus_t castInt31ToFloat32(void *src,
+                                 float *dst,
+                                 size_t num,
                                  int position);
 
 int16_t castFloat32ToHalf(float src);
@@ -135,10 +145,12 @@ bool getBoolEnvVar(const std::string &str, bool default_para = false);
  *         otherwise the error code is returned.
  */
 template <typename FixedType>
-mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
-                                 const size_t num, const int position = 0,
-                                 const float scale = 1.0,
-                                 const int offset = 0) {
+mluOpStatus_t castFloat32ToFixed(const float *src,
+                                 FixedType *dst,
+                                 const size_t num,
+                                 const int position = 0,
+                                 const float scale  = 1.0,
+                                 const int offset   = 0) {
   PARAM_CHECK("[castFloat32ToFixed]", src != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", dst != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", num > 0);
@@ -179,10 +191,12 @@ mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
  *         otherwise the error code is returned.
  */
 template <typename FixedType>
-mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
-                                 const size_t num, const int position = 0,
-                                 const float scale = 1.0,
-                                 const int offset = 0) {
+mluOpStatus_t castFixedToFloat32(const FixedType *src,
+                                 float *dst,
+                                 const size_t num,
+                                 const int position = 0,
+                                 const float scale  = 1.0,
+                                 const int offset   = 0) {
   PARAM_CHECK("[castFixedToFloat32]", src != NULL);
   PARAM_CHECK("[castFixedToFloat32]", dst != NULL);
   PARAM_CHECK("[castFixedToFloat32]", num > 0);
