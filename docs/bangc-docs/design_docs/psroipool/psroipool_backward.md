@@ -64,7 +64,7 @@
 ```
 // 接口
 psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, self.pooled_width, self.spatial_scale, self.output_dim,  \
-        self.output, self.rois, grad_input, self.mappingchannel)
+        self.top_grad, self.rois, bottom_grad, self.mappingchannel)
 
 {pooled_height = 2, pooled_width = 2, spatial_scale = 0.25, output_dim = 1}
 top_grad: shape is  [2, 1, 2, 2]
