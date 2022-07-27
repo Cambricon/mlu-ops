@@ -67,7 +67,7 @@ output {
     dims: 12
   }
   layout: LAYOUT_NHWC
-  dtype: DTYPE_INT32
+  dtype: DTYPE_FLOAT
 }
 psroipool_backward_param {
   output_dim: 10
