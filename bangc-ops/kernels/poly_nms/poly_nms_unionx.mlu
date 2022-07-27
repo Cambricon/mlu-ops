@@ -12,7 +12,6 @@
 
 #include <float.h>
 
-#include <cnrt.h>
 #include "mlu_op_kernel.h"
 #include "kernels/kernel.h"
 #include "core/mlu_op_core.h"
@@ -98,14 +97,16 @@ __mlu_func__ void calculateMaxScoreBoxArea(IN_DT *max_box) {
 // const float eps = 1E-8;  return (d > eps) - (d < -eps);
 template <typename IN_DT>
 __mlu_func__ void sig(IN_DT *output, IN_DT *input, IN_DT *tmp1, IN_DT *tmp2,
-                      const int actual_box_num) {
-  int length = actual_box_num;
-  __bang_write_value(output, length, float(1E-8));
+                      const int length) {
+#if __BANG_ARCH__ >= 322
+  __bang_gt_scalar(tmp2, input, float(-1E-8), length);
+  __bang_lt_scalar(output, input, float(-1E-8), length);
+#else
   __bang_write_value(tmp1, length, float(-1E-8));
-  __bang_write_value(tmp2, length, float(0.0));
 
-  __bang_gt(tmp2, input, output, length);
+  __bang_gt(tmp2, input, tmp1, length);
   __bang_lt(output, input, tmp1, length);
+#endif
   __bang_sub(output, tmp2, output, length);
 }
 
