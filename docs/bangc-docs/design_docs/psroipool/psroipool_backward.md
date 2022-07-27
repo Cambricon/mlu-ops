@@ -273,7 +273,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
 
 ![image](psroipool_backward.jpg)
 
-由上图可以看出，psroipool_backward的计算过程可以总结为：
+由上图可以看出，psroipool_backward的计算过程可以总结为（为了简化下文提到的ph/pw分别代表pooled_height/pooled_width）：
 
 step1: 首先计算nram上最多可以处理的output_dim数量nram_output_dim_num。如果nram_output_dim_num >= 1，执行step2，否则执行step3。
 ```c++
@@ -292,7 +292,7 @@ max_deal_num =
       FLOOR_ALIGN((NRAM_BYTE_CNT - 128) / (sizeof(float) + sizeof(int)) * sizeof(float), ALIGN_SIZE_128);
 
 ```
-step4: 根据top_grad的index计算出当前处理的roi_num、ph、pw，根据roi_num、ph、pw找到当前roi中bin区域，求出bin区域的坐标以及bin_area。
+step4: 根据top_grad的index计算出当前处理的roi_num、ph、pw，根据roi_num、ph、pw找到当前roi中bin区域，求出bin区域的坐标以及bin区域面积bin_area。
 
 step5: 遍历当前index下top_grad和mapping_channel中各个点(index必须一致)，从top_grad取出value_temp，从mapping_channel取出C。
 
