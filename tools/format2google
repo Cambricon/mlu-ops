@@ -31,8 +31,17 @@ fi
 file_list=$(find ${input} -name "*.cc" -or -name "*.cpp" \
   -or -name "*.mlu" -or -name "*.cu" -or -name "*.h" \
   -or -name "*.hpp")
+mluOp_name="mlu_op_core.h"
 for file in ${file_list}; do
   echo "clang-formating ${file} ..."
-  clang-format -style="{BasedOnStyle: google, PointerAlignment: Right, \
-    SortIncludes: false, ColumnLimit: 80}" -i ${file}
+  if [[ $file == *$mluOp_name ]]; then
+    clang-format -style="{BasedOnStyle: google, PointerAlignment: Right, \
+      SortIncludes: false, ColumnLimit: 80,
+      AlignConsecutiveAssignments: true,
+      AlwaysBreakAfterDefinitionReturnType: TopLevel}" -i ${file}
+  else
+    clang-format -style="{BasedOnStyle: google, PointerAlignment: Right, \
+      SortIncludes: false, ColumnLimit: 80,
+      AlignConsecutiveAssignments: true}" -i ${file}
+  fi
 done
