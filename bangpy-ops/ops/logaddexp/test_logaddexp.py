@@ -63,7 +63,7 @@ def run(input_x, input_y, dtype, target):
             np.tile(min_size_buffer.astype(dtype.as_numpy_dtype).flatten(), scale_up),
             dev
         )
-        output_dev = bp.Array(np.zeros(max_size_buffer.size, dtype=dtype.as_numpy_dtype), dev)
+        output_dev = bp.Array(np.zeros(max_size_buffer.size, dtype = dtype.as_numpy_dtype), dev)
         task_type = TaskType(TARGET(target).cluster_num)
         log_add_exp_func = load_op_by_type("LogAddExp", dtype.name)
         with tcp.runtime.Run(task_type):
@@ -82,9 +82,9 @@ def random_int_list(max_dim_length, each_dim_max_length):
 
 def create_shape_list(
         nram_single_buffer_size_by_byte,
-        append_test_count=50,
-        max_dim_length=5,
-        each_dim_max_length=64
+        append_test_count = 50,
+        max_dim_length = 5,
+        each_dim_max_length = 64
 ):
     const_float32_128_align_element_count = 32
     const_float16_128_align_element_count = 64
@@ -125,10 +125,10 @@ def create_shape_list(
 
 
 shape_list = create_shape_list(
-    nram_single_buffer_size_by_byte=(512 - 40) * 1024 // 8,
-    append_test_count=50,
-    max_dim_length=5,
-    each_dim_max_length=64
+    nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,
+    append_test_count = 50,
+    max_dim_length = 5,
+    each_dim_max_length = 64
 )
 
 
@@ -145,8 +145,8 @@ def test_logaddexp(target, shape, dtype):
 
     # origin input
     sub_shape = shape[random.randint(0, len(shape) - 1):len(shape)]
-    data_x = np.random.uniform(low=-1000, high=1000, size=shape)
-    data_y = np.random.uniform(low=-1000, high=1000, size=sub_shape)
+    data_x = np.random.uniform(low = -1000, high = 1000, size = shape)
+    data_y = np.random.uniform(low = -1000, high = 1000, size = sub_shape)
 
     try:
         mlu_ret = run(data_x, data_y, dtype, target)
@@ -159,6 +159,6 @@ def test_logaddexp(target, shape, dtype):
 
     cpu_ret = np.logaddexp(data_x, data_y)
     if dtype.name == "float16":
-        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol=0.1, atol=0.1)
+        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol = 0.1, atol = 0.1)
     else:
-        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol=0.001, atol=0.01)
+        bp.assert_allclose(mlu_ret, cpu_ret.astype(dtype.as_numpy_dtype), rtol = 0.001, atol = 0.01)
