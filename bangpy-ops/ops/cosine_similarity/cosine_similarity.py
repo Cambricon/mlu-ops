@@ -30,8 +30,8 @@ from bangpy.tcp.runtime import TaskType
 import os
 import shutil
 
-DTYPES = [bangpy.float32]
-TARGET_LIST = ["mlu290"]
+DTYPES = [bangpy.float32, bangpy.float16]
+TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "cosine_similarity"
 
 
@@ -488,7 +488,6 @@ class Cosine_similarity(object):
 def build_cosine_similarity(dtype=None, target=None):
     # tasktype fixed in UNION4
     task_type = TaskType.UNION4
-    task_num = 4 * task_type.value
     task_num = 1
     stage = 1
     f = Cosine_similarity(dtype, target, task_num, stage).compute_body()

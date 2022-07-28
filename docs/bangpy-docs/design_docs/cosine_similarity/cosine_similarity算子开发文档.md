@@ -58,8 +58,8 @@ example:
 ### 1.3 算子输入输出参数要求
 | 参数 | 类型（输入/输出） | 支持类型 | 物理布局 | 规模限制
 | ------ | ------ | ------ |------ | ------ |
-| input0 | 输入 | half，float | NHWC | 无 |
-| input1 | 输入 | half，float | NHWC | 无 |
+| input0 | 输入 | float | NHWC | 无 |
+| input1 | 输入 | float | NHWC | 无 |
 | output | 输出 | float | ARRAY | 无 |
 
 ### 1.4 算子限制
@@ -92,7 +92,11 @@ MluOpCosineSimilarity(input0, input1, dim, output)
 
 ## 3. 实现方案设计
 ### 3.1 实现方案
-对于输入的2个tensor，首先计算其在指定维度上的内积，得到buffer_mul，然后计算两个tensor在指定维度上的二阶范数，分别得到buffer_out_0和buffer_out_1。然后用buffer_mul除以两个二阶范数的成绩乘积，得到最终结果。
+对于输入的2个tensor，第一步计算其在指定维度上的内积，得到buffer_mul。
+
+第二步计算两个tensor在指定维度上的二阶范数，分别得到buffer_out_0和buffer_out_1。
+
+第三步用buffer_mul除以两个二阶范数的成绩乘积，得到最终结果。
 
 公式为：
 $similarity = \dfrac{x_1 \cdot x_2}{\max(\Vert x_1 \Vert _2 \cdot \Vert x_2 \Vert _2, \epsilon)}$
