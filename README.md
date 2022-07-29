@@ -45,6 +45,7 @@ MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 - 准备 BANGPy 环境
 
   ```sh
+  wget --content-disposition 'https://cair.cambricon.com/sharecloud-boot/file/tarball_download?id=UWtGT1IxQjVYM1l5TGpBdU1DMHlMMkpoYm1kd2VTMHlMakF1TUMxd2VUTXRibTl1WlMxaGJua3VkMmhz&editionId=ff412f38964a401211e7b880689a68a6&apiToken=null' -O 'bangpy-2.0.0-py3-none-any.whl'
   pip3.8 install bangpy-x.x.x-py3-none-any.whl
   ```
 
