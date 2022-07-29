@@ -37,6 +37,7 @@ class Celu:
         self.target = target
         self.task_num = task_num
         self.bp = tcp.TCP(target)
+        self.alpha_param = self.bp.Var("alpha_param",bangpy.float32)
         self.inplace = self.bp.Var("inplace")
         self.length = self.bp.SizeVar("length")
         self.dtype_sz = dtype.bytes
@@ -73,7 +74,7 @@ class Celu:
             shape = (self.length,), name = "OUTPUT", dtype = self.dtype, scope = "global"
         )
         alpha = self.bp.Scalar(dtype = self.dtype, name = "alpha")
-        alpha.assign(buffer_alpha[0])
+        alpha.assign(self.alpha_param.astype(self.dtype))
         nram_buffer_in0 = self.bp.Buffer(
             shape = (process_count,),
             name = "INPUT0_N",
@@ -128,7 +129,7 @@ class Celu:
                 buffer_out[once_loop_start:once_loop_start + calc_size],
                 nram_buffer_in0[:calc_size])
         f = self.bp.BuildBANG(
-            inputs = [buffer_in0, buffer_alpha, self.inplace],
+            inputs = [buffer_in0, self.alpha_param, self.inplace],
             outputs = [buffer_out],
             kernel_name = KERNEL_NAME, )
         return f
