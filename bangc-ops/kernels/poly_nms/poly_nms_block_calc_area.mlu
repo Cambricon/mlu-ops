@@ -66,9 +66,12 @@ __mlu_func__ static inline void Area(float *__restrict__ nram_tile_beg,
   __bang_active_abs(area_buffer, area_buffer, i_tile_size);
 }
 }  // namespace
+
 __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
                                 int input_boxes_num, int real_width,
                                 float *__restrict__ boxes_area) {
+  // nram: | load_buffer(area_buffer) | transpose_buffer |
+
   // each input_box has 8 points
   const int box_points_num = 8;
   // A core will handle at most core_box_num data

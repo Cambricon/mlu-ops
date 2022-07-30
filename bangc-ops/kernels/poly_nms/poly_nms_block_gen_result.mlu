@@ -31,7 +31,7 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
                                     const int *__restrict__ p_sort_info,
                                     int *o_index, int *o_num) {
 
-  // | final_mask_buffer | mask_row_buffer | sort_buffer(o_index_buffer)|
+  // nram: | final_mask_buffer | mask_row_buffer | sort_buffer(o_index_buffer)|
   int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
   int mas_col_num_align = mask_col_num;
 
