@@ -1,0 +1,108 @@
+/*************************************************************************
+ * Copyright (C) [2019-2022] by Cambricon, Inc.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "kernels/kernel.h"
+
+#include "kernels/poly_nms/poly_nms.h"
+
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define CALC_AREA_NRAM_SIZE MAX_NRAM_SIZE
+#define CALC_AREA_NRAM_FLT_CAP CALC_AREA_NRAM_SIZE / sizeof(float)
+namespace {
+__nram__ static float nram_mlu_calc_area[CALC_AREA_NRAM_FLT_CAP];
+
+__mlu_func__ static inline void Area(float *__restrict__ nram_tile_beg,
+                                     int i_tile_size,
+                                     float *__restrict__ area_buffer) {
+  // Each row of tile is
+  // xA ...
+  // yA ...
+  // xB ...
+  // yB ...
+  // ...
+
+  float *ptrx = nram_tile_beg;
+  float *ptry = nram_tile_beg + i_tile_size;
+  float *ptr0 = nram_tile_beg + 2 * i_tile_size;
+  float *ptr1 = nram_tile_beg + 3 * i_tile_size;
+  float *ptr2 = nram_tile_beg + 4 * i_tile_size;
+  float *ptr3 = nram_tile_beg + 5 * i_tile_size;
+  int stride = 2 * i_tile_size;
+
+#pragma unroll 2
+  for (int i = 1; i < 3; i++) {
+    if (i == 1) {
+      __bang_sub(ptr0, ptr0, ptrx, i_tile_size);
+      __bang_sub(ptr1, ptr1, ptry, i_tile_size);
+    }
+    __bang_sub(ptr2, ptr2, ptrx, i_tile_size);
+    __bang_sub(ptr3, ptr3, ptry, i_tile_size);
+
+    __bang_mul(ptr0, ptr0, ptr3, i_tile_size);
+    __bang_mul(ptr1, ptr1, ptr2, i_tile_size);
+    if (i == 1) {
+      __bang_sub(area_buffer, ptr0, ptr1, i_tile_size);
+    } else {
+      __bang_sub(ptr0, ptr0, ptr1, i_tile_size);
+      __bang_add(area_buffer, ptr0, area_buffer, i_tile_size);
+    }
+    ptr0 = ptr2;
+    ptr1 = ptr3;
+    ptr2 = ptr2 + stride;
+    ptr3 = ptr3 + stride;
+  }
+
+  __bang_mul_scalar(area_buffer, area_buffer, 0.5, i_tile_size);
+  // __bang_abs(area_buffer, area_buffer, i_tile_size);
+  __bang_active_abs(area_buffer, area_buffer, i_tile_size);  // guzh
+}
+}  // namespace
+__mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
+                                int input_boxes_num, int real_width,
+                                float *__restrict__ boxes_area) {
+  // A core will handle at most core_box_num data
+  int core_box_num = 0;
+  int box_i_beg = 0;
+  GetCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+
+  // split nram to two equal part, half for loading, half for transpose
+  int i_tile_size = CALC_AREA_NRAM_FLT_CAP / 8 / 2;
+  float *load_buffer = nram_mlu_calc_area;
+  float *transpose_buffer = load_buffer + i_tile_size * 8;
+
+  // We will divide `core_box_num * 8` data by row,  into K tiles of
+  // `i_tile_size * 8`
+  i_tile_size = MIN(i_tile_size, core_box_num);
+
+  // reuse load_buffer after transpose
+  float *area_buffer = load_buffer;
+
+  // todo: use pipeline may get better performance
+  for (int i_beg = box_i_beg; i_beg < input_boxes_num; i_beg += i_tile_size) {
+    int i_end = MIN(input_boxes_num, i_beg + i_tile_size);
+    int this_i_tile_size = i_end - i_beg;
+    const float *tile_dev_beg = input_boxes + i_beg * real_width;
+#ifdef _DEBUG
+    __bang_printf("task_i: %d offset_i_beg: %d tile size:%d \n", taskId,
+                  offset_i_beg, this_i_tile_size);
+#endif
+
+    // load boxes data into nram and remove padding
+    __memcpy(load_buffer, tile_dev_beg, 8 * sizeof(float), GDRAM2NRAM,
+             8 * sizeof(float), real_width * sizeof(float),
+             this_i_tile_size - 1);
+    __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size, 8);
+    Area(transpose_buffer, this_i_tile_size, area_buffer);
+    __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
+             NRAM2GDRAM);
+  }
+}
