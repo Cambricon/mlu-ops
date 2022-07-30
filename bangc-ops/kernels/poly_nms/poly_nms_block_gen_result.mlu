@@ -30,13 +30,22 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
                                     const uint32_t *__restrict__ p_mask,
                                     const int *__restrict__ p_sort_info,
                                     int *o_index, int *o_num) {
-  int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
-  uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
-  __bang_write_value(final_mask_buffer, mask_col_num, (int)0xFFFFFFFF);
 
-  uint32_t *mask_row_buffer = (uint32_t *)final_mask_buffer + mask_col_num;
+  // | final_mask_buffer | mask_row_buffer | sort_buffer(o_index_buffer)|
+  int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
+  int mas_col_num_align = mask_col_num;
+
+#if __BANG_ARCH__ < 300
+  const int align_num = NFU_ALIGN_SIZE / sizeof(float);
+  mas_col_num_align = CEIL_ALIGN(mask_col_num, align_num);
+#endif
+
+  uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
+  __bang_write_value(final_mask_buffer, mas_col_num_align, (int)0xFFFFFFFF);
+
+  uint32_t *mask_row_buffer = (uint32_t *)final_mask_buffer + mas_col_num_align;
   int *sort_buffer = (int *)mask_row_buffer +
-                     mask_col_num;    // len of input_boxes_num will be used
+                     mas_col_num_align;    // len of input_boxes_num will be used
   int *o_index_buffer = sort_buffer;  // reuse sort buffer
 
   __memcpy(sort_buffer, p_sort_info, sizeof(int) * input_boxes_num, GDRAM2NRAM);
@@ -55,7 +64,7 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
     // __bang_band((int *) final_mask_buffer, (int *) final_mask_buffer, (int *)
     // mask_row_buffer, mask_col_num);
     __bang_band((char *)final_mask_buffer, (char *)final_mask_buffer,
-                (char *)mask_row_buffer, mask_col_num);
+                (char *)mask_row_buffer, mas_col_num_align); // guzh
   }
   *o_num = n;
   __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);

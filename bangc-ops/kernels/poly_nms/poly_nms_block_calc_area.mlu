@@ -63,7 +63,7 @@ __mlu_func__ static inline void Area(float *__restrict__ nram_tile_beg,
 
   __bang_mul_scalar(area_buffer, area_buffer, 0.5, i_tile_size);
   // __bang_abs(area_buffer, area_buffer, i_tile_size);
-  __bang_active_abs(area_buffer, area_buffer, i_tile_size);  // guzh
+  __bang_active_abs(area_buffer, area_buffer, i_tile_size);
 }
 }  // namespace
 __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
@@ -113,7 +113,6 @@ __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
   int transpose_height = CEIL_ALIGN(this_i_tile_size, align_num);
   int transpose_width = CEIL_ALIGN(box_points_num, align_num); 
 
-
   load_buffer = nram_mlu_calc_area;
   transpose_buffer = load_buffer + transpose_width * transpose_height;
   area_buffer = load_buffer + i_tile_size * box_points_num;
@@ -130,7 +129,7 @@ __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
           this_i_tile_size * sizeof(float), transpose_height * sizeof(float),
           transpose_width);
 
-  Area(load_buffer, this_i_tile_size, area_buffer);
+  Area(load_buffer, transpose_height, area_buffer);
   __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
              NRAM2GDRAM);      
 #endif

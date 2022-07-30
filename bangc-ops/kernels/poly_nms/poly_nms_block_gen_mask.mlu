@@ -56,6 +56,9 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   // support larger size.
   int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
 
+  // nram: | box_buffer    | area_buffer | mask_buffer  | mask_buffer_swap |
+  // size: | ipt_box_num*9 | ipt_box_num | mask_col_num |  mask_col_num    |
+
   // load boxes data into nram and remove padding
   float *box_buffer = nram_gen_mask;
   __memcpy_async(box_buffer, input_boxes, 9 * sizeof(float), GDRAM2NRAM,
@@ -71,9 +74,16 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   constexpr uint32_t allones = 0xFFFFFFFF;
   constexpr int default_mask_v = allones;
 
+  int mask_buffer_num = mask_col_num;
+
+#if __BANG_ARCH__ < 300
+  const int align_num = NFU_ALIGN_SIZE / sizeof(uint32_t);
+  mask_buffer_num = CEIL_ALIGN(mask_col_num, align_num);
+#endif
+
   uint32_t *mask_buffer = (uint32_t *)area_buffer + input_boxes_num;
-  uint32_t *mask_buffer_swap = mask_buffer + mask_col_num;
-  __bang_write_value(mask_buffer, mask_col_num * 2, default_mask_v);
+  uint32_t *mask_buffer_swap = mask_buffer + mask_buffer_num;
+  __bang_write_value(mask_buffer, mask_buffer_num * 2, default_mask_v);
 
   // get the rows this core should handle
   int core_box_num = 0;
@@ -120,7 +130,7 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
     uint32_t *tmp = mask_buffer;
     mask_buffer = mask_buffer_swap;
     mask_buffer_swap = tmp;
-    __bang_write_value(mask_buffer_swap, mask_col_num,
+    __bang_write_value(mask_buffer_swap, mask_buffer_num,
                        default_mask_v);  // reset to all 1
   }
 }
