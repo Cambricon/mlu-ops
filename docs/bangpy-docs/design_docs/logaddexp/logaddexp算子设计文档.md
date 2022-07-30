@@ -53,9 +53,9 @@ logaddexp(data_x,data_y) == [
 
 | 参数     | 语义                      | 类型（输入/输出） | 支持类型  | 物理布局  | 规模限制 |
 |--------|-------------------------|-----------|-------|-------|------|
-| input1 | 输入的任意shape的buffer       | 输入        | float,half | ARRAY | 无    |
-| input2 | 输入的任意shape的buffer       | 输入        | float,half | ARRAY | 无    |
-| output | 与输入最小公共shape一致的输出buffer | 输出        | float,half | ARRAY | 无    |
+| input1 | 输入Tensor       | 输入        | float,half | ARRAY | 无    |
+| input2 | 输入Tensor       | 输入        | float,half | ARRAY | 无    |
+| output | 输出Tensor | 输出        | float,half | ARRAY | 无    |
 
 ### 1.4 算子限制
 
@@ -63,7 +63,7 @@ logaddexp(data_x,data_y) == [
 |--------|-----------------------------|
 | 数据类型限制 | input1,input2 和 output 必须同时为同一数据类型 |
 | 布局限制   | 仅支持ARRAY的layout             |
-| 规模限制   | 无                           |
+| 规模限制   | 两输入规模需一致                           |
 
 ### 1.5 验收标准
 
@@ -148,7 +148,7 @@ memcpy(output[start:end], nram_tensor2)
 
 | 提交日期 | 问题规模 | 问题描述 | 是否已修复 |
 |------|------|------|-------|
-|      |      |      |       |
+|  2022-5-18    |  输入张量规模不一致    | 需要张量广播功能的支持，测试文件中进行了简单的广播处理但不完整     |   否    |
 
 ### 4.2 已经过优化的规模说明
 
