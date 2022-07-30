@@ -58,13 +58,9 @@ elseif (NOT BANG_CNCC_EXECUTABLE)
 endif()
 
 # setup cncc flags
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fPIC -Wall -Werror -std=c++11 -pthread")
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fPIC -Wall -std=c++11 -pthread")
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3")
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
-                                         "--bang-mlu-arch=mtp_270"
-                                         "--bang-mlu-arch=mtp_290"
-                                         "--bang-mlu-arch=mtp_372"
-)
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}"  "--bang-mlu-arch=mtp_372")
 
 file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.mlu" "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
@@ -80,3 +76,6 @@ if(${MLU_OP_BUILD_GTEST} MATCHES "ON")
   message("-- Build MLUOP Gtest")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test/mlu_op_gtest" "mlu_op_gtest")
 endif()
+
+add_executable(poly_nms_launcher poly_nms_launcher.cpp kernels/poly_nms/poly_nms.h kernels/poly_nms/intersect_area.h)
+target_link_libraries(poly_nms_launcher mluops cnrt cndrv)
