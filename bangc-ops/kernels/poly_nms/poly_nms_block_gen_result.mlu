@@ -1,0 +1,61 @@
+/*************************************************************************
+* Copyright (C) [2019-2022] by Cambricon, Inc.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*************************************************************************/
+
+#include "kernels/kernel.h"
+
+#include "kernels/poly_nms/poly_nms.h"
+
+#define GEN_RESLUT_NRAM_SIZE MAX_NRAM_SIZE
+
+namespace {
+__nram__ uint8_t
+nram_gen_result[GEN_RESLUT_NRAM_SIZE];
+
+__mlu_func__ static inline bool IsSuppressed(uint32_t *mask_row, int j) {
+  int pos_j = j / MASK_T_BITWIDTH;
+  int offset = j % MASK_T_BITWIDTH;
+  constexpr uint32_t DEFAULT_MASK = 0x80000000;// 0b 1000 0000 0000 0000
+  return !(mask_row[pos_j] & (DEFAULT_MASK >> offset));
+}
+}
+__mlu_global__ void MLUGenNMSResult(int input_boxes_num,
+                                    const uint32_t *__restrict__ p_mask,
+                                    const int *__restrict__ p_sort_info,
+                                    int *o_index,
+                                    int *o_num) {
+  int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
+  uint32_t *final_mask_buffer = (uint32_t *) nram_gen_result;
+  __bang_write_value(final_mask_buffer, mask_col_num, (int) 0xFFFFFFFF);
+
+  uint32_t *mask_row_buffer = (uint32_t *) final_mask_buffer + mask_col_num;
+  int *sort_buffer = (int *) mask_row_buffer + mask_col_num; // len of input_boxes_num will be used
+  int *o_index_buffer = sort_buffer;// reuse sort buffer
+
+  __memcpy(sort_buffer, p_sort_info, sizeof(int) * input_boxes_num, GDRAM2NRAM);
+  int n = 0;
+  for (int i = 0; i < input_boxes_num; ++i) {
+    int box_id = sort_buffer[i]; // i is the ith large, sort_buffer[i] is its id
+    if (IsSuppressed(final_mask_buffer, box_id)) {
+      continue;
+    } else {
+      o_index_buffer[n] = box_id;
+      ++n;
+    }
+    __memcpy(mask_row_buffer,
+             (uint32_t *) p_mask + box_id * mask_col_num,
+             sizeof(uint32_t) * (mask_col_num),
+             GDRAM2NRAM);
+    __bang_band((int *) final_mask_buffer, (int *) final_mask_buffer, (int *) mask_row_buffer, mask_col_num);
+  }
+  *o_num = n;
+  __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);
+}

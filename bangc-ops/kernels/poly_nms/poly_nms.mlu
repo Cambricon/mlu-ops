@@ -1,0 +1,77 @@
+/*************************************************************************
+* Copyright (C) [2019-2022] by Cambricon, Inc.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*************************************************************************/
+
+#include <cassert>
+
+#include "kernels/poly_nms/poly_nms.h"
+
+#include "mlu_op.h"
+#include "kernels/kernel.h"
+namespace {
+static inline int64_t GetMaskColNum(int box_num) {
+  return (box_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
+}
+
+static inline int64_t GetMaskMatrixByteSize(int box_num) {
+  return box_num * GetMaskColNum(box_num) * sizeof(uint32_t);
+}
+}
+mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+    size_t *size) {
+  int box_num = boxes_desc->dims[0];
+  auto mask_sz = GetMaskMatrixByteSize(box_num);
+  auto sort_info_sz = box_num * sizeof(int);
+  auto area_sz = box_num * sizeof(int);
+  *size = mask_sz + sort_info_sz + area_sz;
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+             const void *boxes, float iou_threshold, void *workspace,
+             void *output, void *output_size) {
+  int box_num = boxes_desc->dims[0];
+  int real_width = boxes_desc->strides[0];
+  auto mask_col_num = GetMaskColNum(box_num);
+  assert((10 * box_num + mask_col_num * 2) <= (MAX_NRAM_SIZE / sizeof(float))
+             && "Too many input boxes, MLUGenNMSMask cannot work");
+
+  float *dev_area = (float *) workspace;
+  int *dev_sort_info = (int *) dev_area + box_num;
+  uint32_t *dev_mask = (uint32_t *) dev_sort_info + box_num;
+  MLUCalcAreaLaunchConfig area_launch_cfg(handle, box_num);
+
+  MLUCalcArea<<<area_launch_cfg.dim, area_launch_cfg.kernel_type, handle->queue>>>(
+      (float *) boxes,
+          box_num,
+          real_width,
+          dev_area);
+  MLUGenNMSMaskLaunchConfig mask_launch_cfg(handle, box_num);
+  MLUGenNMSMask<<<mask_launch_cfg.dim, mask_launch_cfg.kernel_type, handle->queue>>>(
+      (float *) boxes,
+      box_num,
+      real_width,
+      iou_threshold,
+      dev_area,
+      dev_mask,
+      dev_sort_info);
+  cnrtDim3_t dim_gen_result{1, 1, 1};
+  MLUGenNMSResult<<<dim_gen_result, cnrtFunctionType_t::cnrtFuncTypeBlock, handle->queue>>>(
+      box_num,
+          dev_mask,
+          dev_sort_info,
+          (int *) output,
+          (int *) output_size);
+
+  return MLUOP_STATUS_SUCCESS;
+}
