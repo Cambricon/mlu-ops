@@ -15,7 +15,6 @@
 
 #include "kernels/poly_nms/enums.h"
 
-namespace POLY_NMS {
 struct Point2D {
   float x;
   float y;
@@ -214,5 +213,4 @@ __mlu_func__ inline float IntersectArea(
 
   return area > 0 ? area : -area;
 }
-}  // namespace POLY_NMS
 #endif  // BANGC_OPS_KERNELS_POLY_NMS_INTERSECT_AREA_H

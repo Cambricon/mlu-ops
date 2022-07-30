@@ -15,7 +15,6 @@
 #include "kernels/poly_nms/intersect_area.h"
 #include "kernels/poly_nms/poly_nms.h"
 
-using namespace POLY_NMS;
 
 #define CALC_GENMASK_NRAM_SIZE MAX_NRAM_SIZE
 #define CALC_GENMASK_NRAM_FLT_CAP CALC_GENMASK_NRAM_SIZE / sizeof(float)
