@@ -16,7 +16,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
     size_t *size);
 
-
 mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
              const void *boxes, float iou_threshold, void *workspace,
@@ -30,8 +29,13 @@ bool readMask(uint32_t *mask, int i, int j, int mask_col_num) {
 }
 
 struct BoxData {
-  BoxData(int n, bool cw = true, bool all_convex = true) {
+  BoxData(int n, bool cw = true, bool all_convex = true,
+          bool discreate_offset = true) {
     host.resize(n * 9);
+    float offset = 1.0 / n;
+    if (discreate_offset) {
+      offset = 0.6;
+    }
     for (auto i = 0; i < n; ++i) {
       float *line = host.data() + 9 * i;
 
@@ -44,8 +48,9 @@ struct BoxData {
       }
 
       line[8] = i;
+
       for (int j = 0; j < 8; ++j) {
-        line[j] += 0.6 * i;
+        line[j] += offset * i;
       }
     }
     mluOpCreateTensorDescriptor(&desc);
@@ -108,7 +113,8 @@ struct BoxData {
 };
 
 int RunTest(mluOpHandle_t handle, int NBox, BoxData &box, size_t workspace_size,
-            void *workspace, void *dev_output_index, void *dev_output_count) {
+            void *workspace, void *dev_output_index, void *dev_output_count,
+            bool check_result) {
   cnrtMemset(dev_output_index, 0, NBox * sizeof(int));
   cnrtMemset(dev_output_count, 0, sizeof(int));
   cnrtMemset(workspace, 0, workspace_size);
@@ -122,7 +128,10 @@ int RunTest(mluOpHandle_t handle, int NBox, BoxData &box, size_t workspace_size,
   printf("input size: %d host latency : %f us\n", NBox,
          (toc.tv_sec - tic.tv_sec) * 1e6 + toc.tv_usec - tic.tv_usec);
   fflush(stdout);
-
+  if (!check_result) {
+    printf("Check Ignored \n");
+    return 0;
+  }
   std::vector<float> area(NBox);
   float *dev_area = (float *)workspace;
   cnrtMemcpy(area.data(), dev_area, NBox * sizeof(float), cnrtMemcpyDevToHost);
@@ -194,13 +203,11 @@ int RunTest(mluOpHandle_t handle, int NBox, BoxData &box, size_t workspace_size,
 EXIT:
   return -1;
 }
-int main(int argc, char **argv) {
-  cnrtSetDevice(0);
-  mluOpHandle_t handle;
-  mluOpCreate(&handle);
 
-  int NBox = 2000;
-  BoxData box(NBox);
+int Test(int NBox, mluOpHandle_t handle, bool test_worst_case) {
+  const char *extramark = test_worst_case ? "Worst case" : "Average case";
+
+  BoxData box(NBox, true, true, !test_worst_case);
   void *workspace = nullptr;
   size_t wkspace_size;
   mluOpGetPolyNmsWorkspaceSize(handle, box.desc, &wkspace_size);
@@ -210,28 +217,44 @@ int main(int argc, char **argv) {
   void *dev_output_count = nullptr;
   cnrtMalloc(&dev_output_count, sizeof(int));
 
-    printf("Testing CW, all convex\n");
-    if (RunTest(handle, NBox, box, wkspace_size, workspace, dev_output_index,
-                dev_output_count)) {
-      return -1;
-    }
-    printf("Testing CCW,all convex\n");
-    BoxData box_ccw(NBox, false);
-    if (RunTest(handle, NBox, box_ccw, wkspace_size, workspace,
-    dev_output_index,
-                dev_output_count)) {
-      return -1;
-    }
-  BoxData box_cw_half(NBox, true, false);
-  printf("Testing CW, half convex\n");
-  if (RunTest(handle, NBox, box_cw_half, wkspace_size, workspace,
-              dev_output_index, dev_output_count)) {
+  printf("Testing %s CW, all convex,\n", extramark);
+  if (RunTest(handle, NBox, box, wkspace_size, workspace, dev_output_index,
+              dev_output_count, !test_worst_case)) {
     return -1;
   }
-  BoxData box_ccw_half(NBox, false, false);
-  printf("Testing CCW, half convex\n");
+  printf("Testing %s CCW,all convex\n", extramark);
+  BoxData box_ccw(NBox, false, true, !test_worst_case);
+  if (RunTest(handle, NBox, box_ccw, wkspace_size, workspace, dev_output_index,
+              dev_output_count, !test_worst_case)) {
+    return -1;
+  }
+  BoxData box_cw_half(NBox, true, false, !test_worst_case);
+  printf("Testing %s CW, half convex\n", extramark);
+  if (RunTest(handle, NBox, box_cw_half, wkspace_size, workspace,
+              dev_output_index, dev_output_count, !test_worst_case)) {
+    return -1;
+  }
+  BoxData box_ccw_half(NBox, false, false, !test_worst_case);
+  printf("Testing %s CCW, half convex\n", extramark);
   if (RunTest(handle, NBox, box_ccw_half, wkspace_size, workspace,
-              dev_output_index, dev_output_count)) {
+              dev_output_index, dev_output_count, !test_worst_case)) {
+    return -1;
+  }
+  cnrtFree(workspace);
+  cnrtFree(dev_output_count);
+  cnrtFree(dev_output_index);
+  return 0;
+}
+int main(int argc, char **argv) {
+  cnrtSetDevice(0);
+  mluOpHandle_t handle;
+  mluOpCreate(&handle);
+
+  int NBox = 2000;
+  if (Test(NBox, handle, false)) {
+    return -1;
+  }
+  if (Test(NBox, handle, true)) {
     return -1;
   }
   return 0;
