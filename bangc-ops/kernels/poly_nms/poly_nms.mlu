@@ -9,10 +9,9 @@
 * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *************************************************************************/
+#include "kernels/poly_nms/poly_nms.h"
 
 #include <cassert>
-
-#include "kernels/poly_nms/poly_nms.h"
 
 #include "mlu_op.h"
 #include "kernels/kernel.h"
@@ -43,14 +42,15 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   int box_num = boxes_desc->dims[0];
   int real_width = boxes_desc->strides[0];
   auto mask_col_num = GetMaskColNum(box_num);
-  assert((10 * box_num + mask_col_num * 2) <= (MAX_NRAM_SIZE / sizeof(float))
-             && "Too many input boxes, MLUGenNMSMask cannot work");
+  if((10 * box_num + mask_col_num * 2) > (MAX_NRAM_SIZE / sizeof(float))){
+    assert(false && "Too many input boxes, MLUGenNMSMask cannot work");
+    return MLUOP_STATUS_EXECUTION_FAILED;
+  }
 
   float *dev_area = (float *) workspace;
   int *dev_sort_info = (int *) dev_area + box_num;
   uint32_t *dev_mask = (uint32_t *) dev_sort_info + box_num;
   MLUCalcAreaLaunchConfig area_launch_cfg(handle, box_num);
-
   MLUCalcArea<<<area_launch_cfg.dim, area_launch_cfg.kernel_type, handle->queue>>>(
       (float *) boxes,
           box_num,
