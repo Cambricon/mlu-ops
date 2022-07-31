@@ -86,9 +86,6 @@ class DataMan:
         self.m_total_count_in_core.assign(self.m_current_core_end - self.m_current_core_start + 1)
 
 
-
-
-
 class LogSumCalcer:
     def __init__(self, bp, dtype):
         self.dtype = dtype
@@ -199,24 +196,20 @@ class Logsumexp:
         self.para.dtype_sz = dtype.bytes
         self.para.target = target
         self.para.calc_size = self.bp.Scalar(bangpy.int32, "calc_size")
-
         self.dtype = dtype
         self.output_len = 0
         self.nram_process_count = None
         self.nram_calc_buffer = None
         self.flat_nram = None
-
         self.dman = DataMan()
 
     def compute_body(self):
         self.dman.init(self.bp)
         self.bp.launch_task(self.para.task_num, 1, 1)
-
         self.para.dim_len = self.bp.SizeVar("dim_len")
         self.para.h = self.bp.SizeVar("h")
         self.para.w = self.bp.SizeVar("w")
         self.output_len = self.bp.SizeVar("output_len")
-
         gram_tensor = self.bp.Buffer(
             shape=(self.para.h * self.para.w,),
             name="gram_tensor", dtype=self.dtype, scope="global"
