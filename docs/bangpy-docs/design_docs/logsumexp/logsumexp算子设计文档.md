@@ -104,7 +104,7 @@ def logsumexp(input: Tensor, dim: int, keepdim: bool=false, output:Tensor)
 1 将输入数据压平后，传入mlu，将数据平均分配在多核中。
 
 2 根据输入参数dim，将张量reshape成二维数组，比如张量的维度是 dims = [2, 2, 3, 1]，dim为1，
-那么，二维数组高度就是 2 * 2，宽度是 3 * 1，定义 dim_len 为 dims[1]，也就是 2
+那么，二维数组高度就是 2 * 2，宽度是 3 * 1，定义 dim_len 为 dims[1]，也就是 2。
 
 |a|c|e|  
 |b|d|f|   &emsp;&emsp;&emsp;&emsp;&emsp;|o|p|q|       
@@ -112,7 +112,7 @@ def logsumexp(input: Tensor, dim: int, keepdim: bool=false, output:Tensor)
 |g|i|k|   &emsp;&emsp;&emsp;&emsp;&emsp;|r|s|t|  
 |h|j|l|
 
-将dim_len个元素组成一个一维子张量[a, b]，对它计算  
+将dim_len个元素组成一个一维子张量[a, b]，对它计算 。
 o = log(exp(a) + exp(b))  
 p = log(exp(c) + exp(d))  
 q = log(exp(e) + exp(f))  
@@ -120,17 +120,17 @@ q = log(exp(e) + exp(f))
 
 计算过程参见上图。右边为计算结果。
 
-3 检查一下dim_len是不是超过了nram的大小，如果超过了，跳转到4，否则，跳转到6
+3 检查一下dim_len是不是超过了nram的大小，如果超过了，跳转到4，否则，跳转到6。
 
-4 将该子张量的部分数据拷贝到nram中，计算logsumexp，缓存，然后再拷贝下一段，直到一个子张量计算完毕
+4 将该子张量的部分数据拷贝到nram中，计算logsumexp，缓存，然后再拷贝下一段，直到一个子张量计算完毕。
 
-5 子张量可能很长，需要多个核才能存储，某个核可能只会计算一个子张量的前半部分，中间，或者后半部分。将没有计算完的结果缓存到一个gram数组中，跳到8
+5 子张量可能很长，需要多个核才能存储，某个核可能只会计算一个子张量的前半部分，中间，或者后半部分。将没有计算完的结果缓存到一个gram数组中，跳到8。
 
-6 将若干子张量拷贝到nram中，计算长度
+6 将若干子张量拷贝到nram中，计算长度。
 
-7 某些子张量可能跨越了核，将这部分数据缓存到一个gram数组
+7 某些子张量可能跨越了核，将这部分数据缓存到一个gram数组。
 
-8 统一处理，将gram缓存数组中的数据拼接起来
+8 统一处理，将gram缓存数组中的数据拼接起来。
 
 9 拷贝回cpu，执行reshape操作。
 
