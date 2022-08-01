@@ -17,6 +17,7 @@
 #include "mlu_op.h"
 #include "kernels/kernel.h"
 #include "core/gen_case.h"
+#include "kernels/poly_nms/enums.h"
 
 namespace {
 static inline int64_t GetMaskColNum(int box_num) {
@@ -107,8 +108,8 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
                                    iou_threshold, dev_area, dev_mask,
                                    dev_sort_info);
   cnrtDim3_t dim_gen_result{1, 1, 1};
-  MLUGenNMSResult<<<dim_gen_result, cnrtFunctionType_t::cnrtFuncTypeBlock,
-                    handle->queue>>>(box_num, dev_mask, dev_sort_info,
-                                     (int *)output, (int *)output_size);
+  MLUGenNMSResult<OutputOrder::LOW_BOX_ID_FIRST><<<
+      dim_gen_result, cnrtFunctionType_t::cnrtFuncTypeBlock, handle->queue>>>(
+      box_num, dev_mask, dev_sort_info, (int *)output, (int *)output_size);
   return MLUOP_STATUS_SUCCESS;
 }

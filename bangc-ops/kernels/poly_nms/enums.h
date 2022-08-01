@@ -17,4 +17,9 @@ enum class PointDirection {
   CCW,
 };
 
+enum class OutputOrder {
+  HIGH_SCORE_FIRST,
+  LOW_BOX_ID_FIRST,
+};
+
 #endif  // BANGC_OPS_KERNELS_POLY_NMS_ENUMS_H

@@ -1,0 +1,53 @@
+op_name: "poly_nms"
+input {
+  id: "input1"
+  shape {
+    dims: 2
+    dims: 9
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: -62
+  value_f: 93
+  value_f: 20
+  value_f: 32
+  value_f: 34
+  value_f: -52
+  value_f: -27
+  value_f: -40
+  value_f: -50
+  value_f: -85
+  value_f: 66
+  value_f: 16
+  value_f: 40
+  value_f: 29
+  value_f: -30
+  value_f: -39
+  value_f: -1
+  value_f: 7
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output2"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+poly_nms_param: {
+  iou_threshold: 0
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.0
+  baseline_device: CPU
+}

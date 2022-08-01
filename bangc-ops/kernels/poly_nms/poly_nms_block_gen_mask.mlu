@@ -72,7 +72,7 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   // create mask_buffer for a single row
   constexpr uint32_t allones = 0xFFFFFFFF;
   constexpr int default_mask_v = allones;
- int mask_buffer_num = mask_col_num;
+  int mask_buffer_num = mask_col_num;
 
 #if __BANG_ARCH__ < 300
   const int align_num = NFU_ALIGN_SIZE / sizeof(uint32_t);

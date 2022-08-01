@@ -9,21 +9,21 @@ input {
   dtype: DTYPE_FLOAT
   value_f:0
   value_f:0
+  value_f:1
   value_f:0
-  value_f:4
   value_f:1
   value_f:1
-  value_f:4
   value_f:0
-  value_f:4.4444
-  value_f:-1
-  value_f:3
-  value_f:3
-  value_f:3
-  value_f:-1
-  value_f:3
+  value_f:1
+  value_f:6.4444
   value_f:2
+  value_f:0
+  value_f:3
+  value_f:0
+  value_f:3
+  value_f:1
   value_f:2
+  value_f:1
   value_f:5.555
 }
 

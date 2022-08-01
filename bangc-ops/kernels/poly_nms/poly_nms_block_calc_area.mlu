@@ -64,7 +64,7 @@ __mlu_func__ static inline void Area(float *__restrict__ nram_tile_beg,
   __bang_mul_scalar(area_buffer, area_buffer, 0.5, i_tile_size);
   __bang_active_abs(area_buffer, area_buffer, i_tile_size);
 }
-} // namespace
+}  // namespace
 
 __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
                                 int input_boxes_num, int real_width,
@@ -102,38 +102,40 @@ __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
 
 #if __BANG_ARCH__ >= 300
     // load boxes data into nram and remove padding
-    __memcpy(load_buffer, tile_dev_beg, box_points_num * sizeof(float), GDRAM2NRAM,
-             box_points_num * sizeof(float), real_width * sizeof(float),
-             this_i_tile_size - 1);
-    __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size, box_points_num);
+    __memcpy(load_buffer, tile_dev_beg, box_points_num * sizeof(float),
+             GDRAM2NRAM, box_points_num * sizeof(float),
+             real_width * sizeof(float), this_i_tile_size - 1);
+    __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size,
+                     box_points_num);
     Area(transpose_buffer, this_i_tile_size, area_buffer);
     __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
              NRAM2GDRAM);
 #else
-  const int align_num = NFU_ALIGN_SIZE / sizeof(float);
-  // align this_i_tile_size->width, align  box_points_num->height
-  int transpose_height = CEIL_ALIGN(this_i_tile_size, align_num);
-  int transpose_width = CEIL_ALIGN(box_points_num, align_num); 
+    const int align_num = NFU_ALIGN_SIZE / sizeof(float);
+    // align this_i_tile_size->width, align  box_points_num->height
+    int transpose_height = CEIL_ALIGN(this_i_tile_size, align_num);
+    int transpose_width = CEIL_ALIGN(box_points_num, align_num);
 
-  load_buffer = nram_mlu_calc_area;
-  transpose_buffer = load_buffer + transpose_width * transpose_height;
-  area_buffer = load_buffer + i_tile_size * box_points_num;
+    load_buffer = nram_mlu_calc_area;
+    transpose_buffer = load_buffer + transpose_width * transpose_height;
+    area_buffer = load_buffer + i_tile_size * box_points_num;
 
-  __memcpy((float *)load_buffer, (float *)tile_dev_beg, box_points_num * sizeof(float),
-          GDRAM2NRAM, transpose_width * sizeof(float),
-          box_points_num * sizeof(float), this_i_tile_size);
+    __memcpy((float *)load_buffer, (float *)tile_dev_beg,
+             box_points_num * sizeof(float), GDRAM2NRAM,
+             transpose_width * sizeof(float), box_points_num * sizeof(float),
+             this_i_tile_size);
 
-  __bang_transpose((float *)transpose_buffer, (float *)load_buffer, transpose_height,
-                  transpose_width);
+    __bang_transpose((float *)transpose_buffer, (float *)load_buffer,
+                     transpose_height, transpose_width);
 
-  __memcpy((float *)load_buffer, (float *)transpose_buffer,
-          this_i_tile_size * sizeof(float), NRAM2GDRAM,
-          this_i_tile_size * sizeof(float), transpose_height * sizeof(float),
-          transpose_width);
+    __memcpy((float *)load_buffer, (float *)transpose_buffer,
+             this_i_tile_size * sizeof(float), NRAM2GDRAM,
+             this_i_tile_size * sizeof(float), transpose_height * sizeof(float),
+             transpose_width);
 
-  Area(load_buffer, transpose_height, area_buffer);
-  __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
-             NRAM2GDRAM);      
+    Area(load_buffer, transpose_height, area_buffer);
+    __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
+             NRAM2GDRAM);
 #endif
   }
 }

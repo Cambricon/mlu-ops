@@ -13,6 +13,7 @@
 #include "kernels/kernel.h"
 
 #include "kernels/poly_nms/poly_nms.h"
+#include "kernels/poly_nms/enums.h"
 
 #define GEN_RESLUT_NRAM_SIZE MAX_NRAM_SIZE
 
@@ -25,8 +26,9 @@ __mlu_func__ static inline bool IsSuppressed(uint32_t *mask_row, int j) {
   constexpr uint32_t DEFAULT_MASK = 0x80000000;  // 0b 1000 0000 0000 0000
   return !(mask_row[pos_j] & (DEFAULT_MASK >> offset));
 }
-}
+} // namespace
 
+template <OutputOrder OUTPUT_ORDER>
 __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
                                     const uint32_t *__restrict__ p_mask,
                                     const int *__restrict__ p_sort_info,
@@ -39,13 +41,13 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
   const int align_num = NFU_ALIGN_SIZE / sizeof(float);
   mas_col_num_align = CEIL_ALIGN(mask_col_num, align_num);
 #endif
- uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
+  uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
   __bang_write_value(final_mask_buffer, mas_col_num_align, (int)0xFFFFFFFF);
 
   uint32_t *mask_row_buffer = (uint32_t *)final_mask_buffer + mas_col_num_align;
   int *sort_buffer = (int *)mask_row_buffer +
-                     mas_col_num_align;    // len of input_boxes_num will be used
-  int *o_index_buffer = sort_buffer;  // reuse sort buffer
+                     mas_col_num_align;  // len of input_boxes_num will be used
+  int *o_index_buffer = sort_buffer;     // reuse sort buffer
   __memcpy(sort_buffer, p_sort_info, sizeof(int) * input_boxes_num, GDRAM2NRAM);
   int n = 0;
   for (int i = 0; i < input_boxes_num; ++i) {
@@ -54,7 +56,9 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
     if (IsSuppressed(final_mask_buffer, box_id)) {
       continue;
     } else {
-      o_index_buffer[n] = box_id;
+      if (OUTPUT_ORDER == OutputOrder::HIGH_SCORE_FIRST) {
+        o_index_buffer[n] = box_id;
+      }
       ++n;
     }
     __memcpy(mask_row_buffer, (uint32_t *)p_mask + box_id * mask_col_num,
@@ -62,6 +66,25 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
     __bang_band((char *)final_mask_buffer, (char *)final_mask_buffer,
                 (char *)mask_row_buffer, 4 * mas_col_num_align);
   }
+  if (OUTPUT_ORDER == OutputOrder::LOW_BOX_ID_FIRST) {
+    int found = 0;
+    int j = 0;
+    while (found < n) {
+      if (!IsSuppressed(final_mask_buffer, j)) {
+        sort_buffer[found] = j;
+        ++found;
+      }
+      ++j;
+    }
+  }
   *o_num = n;
   __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);
 }
+
+template __mlu_global__ void MLUGenNMSResult<OutputOrder::HIGH_SCORE_FIRST>(
+    int input_boxes_num, const uint32_t *__restrict__ p_mask,
+    const int *__restrict__ p_sort_info, int *o_index, int *o_num);
+
+template __mlu_global__ void MLUGenNMSResult<OutputOrder::LOW_BOX_ID_FIRST>(
+    int input_boxes_num, const uint32_t *__restrict__ p_mask,
+    const int *__restrict__ p_sort_info, int *o_index, int *o_num);

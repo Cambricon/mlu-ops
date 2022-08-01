@@ -1,0 +1,125 @@
+op_name: "poly_nms"
+input {
+  id: "input1"
+  shape {
+    dims: 10
+    dims: 9
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: -99
+value_f: 56
+value_f: 50
+value_f: 14
+value_f: 50
+value_f: -84
+value_f: -17
+value_f: -74
+value_f: -11
+value_f: -100
+value_f: 51
+value_f: 18
+value_f: 96
+value_f: 24
+value_f: -59
+value_f: -41
+value_f: -29
+value_f: 78
+value_f: -86
+value_f: 26
+value_f: 36
+value_f: 50
+value_f: 22
+value_f: -97
+value_f: -31
+value_f: -28
+value_f: -60
+value_f: -54
+value_f: 19
+value_f: 36
+value_f: 33
+value_f: 32
+value_f: -76
+value_f: -29
+value_f: -3
+value_f: -56
+value_f: -79
+value_f: 73
+value_f: 34
+value_f: 77
+value_f: 37
+value_f: -29
+value_f: -40
+value_f: -26
+value_f: -17
+value_f: -95
+value_f: 13
+value_f: 15
+value_f: 67
+value_f: 46
+value_f: -90
+value_f: -46
+value_f: -34
+value_f: -44
+value_f: -89
+value_f: 25
+value_f: 38
+value_f: 64
+value_f: 45
+value_f: -14
+value_f: -31
+value_f: -84
+value_f: 23
+value_f: -52
+value_f: 18
+value_f: 33
+value_f: 93
+value_f: 18
+value_f: -82
+value_f: -35
+value_f: -65
+value_f: -75
+value_f: -85
+value_f: 80
+value_f: 25
+value_f: 57
+value_f: 16
+value_f: -28
+value_f: -36
+value_f: -84
+value_f: 86
+value_f: -58
+value_f: 24
+value_f: 16
+value_f: 27
+value_f: 25
+value_f: -31
+value_f: -22
+value_f: -55
+value_f: -68
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output2"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+poly_nms_param: {
+  iou_threshold: 1
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.0
+  baseline_device: CPU
+}
