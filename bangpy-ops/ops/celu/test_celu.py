@@ -108,12 +108,9 @@ def test_celu(target, shape, dtype, alpha):
         def celu_inner(input_param):
             primative = input_param.shape
             data_x_flat = input_param.flatten()
-            buffer_alpha_param = bp.Array(
-                np.array([alpha_param]).astype(dtype=dtype.as_numpy_dtype),
-                dev)
             data_x_dev_param = bp.Array(data_x_flat, dev)
             output_dev_param = bp.Array(np.zeros(len(data_x_flat), dtype=dtype.as_numpy_dtype), dev)
-            celu_func(data_x_dev_param, buffer_alpha_param, inplace, output_dev_param)
+            celu_func(data_x_dev_param, alpha_param, inplace, output_dev_param)
             celu_res = output_dev_param.numpy().reshape(primative)
             return celu_res
 

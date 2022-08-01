@@ -37,6 +37,7 @@ class Celu:
         self.target = target
         self.task_num = task_num
         self.bp = tcp.TCP(target)
+        self.alpha_param = self.bp.Var("alpha_param",bangpy.float32)
         self.inplace = self.bp.Var("inplace")
         self.length = self.bp.SizeVar("length")
         self.dtype_sz = dtype.bytes
@@ -64,42 +65,42 @@ class Celu:
             "total_count_in_core",
             current_core_end - current_core_start + 1)
         buffer_in0 = self.bp.Buffer(
-            shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
+            shape = (self.length,), name = "INPUT0", dtype = self.dtype, scope = "global"
         )
         buffer_alpha = self.bp.Buffer(
-            shape=(1,), name="ALPHA_PARAM", dtype=self.dtype, scope="global"
+            shape = (1,), name = "ALPHA_PARAM", dtype = self.dtype, scope = "global"
         )
         buffer_out = self.bp.Buffer(
-            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
+            shape = (self.length,), name = "OUTPUT", dtype = self.dtype, scope = "global"
         )
-        alpha = self.bp.Scalar(dtype=self.dtype, name="alpha")
-        alpha.assign(buffer_alpha[0])
+        alpha = self.bp.Scalar(dtype = self.dtype, name = "alpha")
+        alpha.assign(self.alpha_param.astype(self.dtype))
         nram_buffer_in0 = self.bp.Buffer(
-            shape=(process_count,),
-            name="INPUT0_N",
-            dtype=self.dtype,
-            scope="nram",
+            shape = (process_count,),
+            name = "INPUT0_N",
+            dtype = self.dtype,
+            scope = "nram",
         )
         nram_middle_value = self.bp.Buffer(
-            shape=(process_count,),
-            name="N_MAX",
-            dtype=self.dtype,
-            scope="nram",
+            shape = (process_count,),
+            name = "N_MAX",
+            dtype = self.dtype,
+            scope = "nram",
         )
         nram_max = self.bp.Buffer(
-            shape=(process_count,),
-            name="N_MAX",
-            dtype=self.dtype,
-            scope="nram",
+            shape = (process_count,),
+            name = "N_MAX",
+            dtype = self.dtype,
+            scope = "nram",
         )
         nram_min = self.bp.Buffer(
-            shape=(process_count,),
-            name="N_MIN",
-            dtype=self.dtype,
-            scope="nram",
+            shape = (process_count,),
+            name = "N_MIN",
+            dtype = self.dtype,
+            scope = "nram",
         )
-        const_zero = self.bp.Scalar(dtype=self.dtype, name="const_zero", value=0)
-        const_one = self.bp.Scalar(dtype=self.dtype, name="const_one", value=1)
+        const_zero = self.bp.Scalar(dtype = self.dtype, name = "const_zero", value = 0)
+        const_one = self.bp.Scalar(dtype = self.dtype, name = "const_one", value = 1)
         calc_loop_count.assign((total_count_in_core + process_count - 1) // process_count)
         with self.bp.for_range(0, calc_loop_count) as i:
             once_loop_start.assign(current_core_start + process_count * i)
@@ -128,9 +129,9 @@ class Celu:
                 buffer_out[once_loop_start:once_loop_start + calc_size],
                 nram_buffer_in0[:calc_size])
         f = self.bp.BuildBANG(
-            inputs=[buffer_in0, buffer_alpha, self.inplace],
-            outputs=[buffer_out],
-            kernel_name=KERNEL_NAME, )
+            inputs = [buffer_in0, self.alpha_param, self.inplace],
+            outputs = [buffer_out],
+            kernel_name = KERNEL_NAME, )
         return f
 
 
