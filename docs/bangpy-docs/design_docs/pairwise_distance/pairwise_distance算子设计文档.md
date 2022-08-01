@@ -25,10 +25,10 @@
 | ------------------------ | ----------------------------------------|
 | 需求来源                  | 为bangpy-ops提供算子demo                  |
 | 应用网络                  |                                  |
-| 输入数据类型               | float                             |
+| 输入数据类型               | 支持float和half                            |
 | 输入 Shape                | input1: [ length, N ]; input2: [ length, N ]  |
 | 输入 Layout               | input1: ARRAY; input2: ARRAY            |
-| 输出数据类型               | float                              |
+| 输出数据类型               | float,half                             |
 | 输出 Shape                | [ length, N ]                               |
 | 输出 Layout               | ARRAY                                    |
 
@@ -42,23 +42,23 @@
 
 | 参数   | 语义                  | 类型（输入/输出）| 支持类型     | 物理布局 | 规模限制      |
 | ------ | --------------------- | -------------    | -----------  | ------   | --------      |
-| input1 | 多维buffer | 输入     |  float           | ARRAY        |  无      | --------      |
-| input2 | 多维buffer | 输入     |  float           | ARRAY        |  无      | --------      |
-| output | 多维buffer | 输出     |  float           | ARRAY        |  无      | --------      |
+| input1 | 多维buffer | 输入     |  float,half              | ARRAY        |  无      | --------      |
+| input2 | 多维buffer | 输入     |  float,half              | ARRAY        |  无      | --------      |
+| output | 多维buffer | 输出     |  float,half              | ARRAY        |  无      | --------      |
 
 ### 1.4 算子限制
 
 | 限制类型       | 详细说明                    |
 | ------------   | -----------------------     |
-| 数据类型限制   | float32|
+| 数据类型限制   | float,half   |
 | 布局限制       | 仅支持ARRAY的layout         |
-| 规模限制       | 和具体硬件相关                            |
+| 规模限制       | 无                            |
 
 ### 1.5 验收标准
 
 #### 1.5.1 精度验收标准
 
-本算子属于 `算术` 类算子。
+本算子属于 `算术` 类算子，验收标准为 diff3=3e-3。
 
 #### 1.5.2 性能验收标准
 

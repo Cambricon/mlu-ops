@@ -23,12 +23,12 @@
 
 | 算子功能简介               | 对张量计算logsumexp                  |
 | ------------------------ | ----------------------------------------|
-| 需求来源                  | https://pytorch.org/docs/stable/generated/torch.logsumexp.html|
+| 需求来源                  | 为bangpy-ops提供算子demo 
 | 应用网络                  |                                  |
-| 输入数据类型               | float                             |
-| 输入 Shape                | input.shape = [S0,S1,...,Sn-1]，input为 n 维张量|
+| 输入数据类型               | 支持float和half                             |
+| 输入 Shape                | input.shape = [S0,S1,...,Sn-1]，input为 n 维张量，无长度限制|
 | 输入 Layout               | input: ARRAY           |
-| 输出数据类型               | float                              |
+| 输出数据类型               | float,half                              |
 | 输出 Shape                | 根据输入的keepdim参数，可能为 n-1维张量或n维张量|
 | 输出 Layout               | ARRAY                                    |
 
@@ -37,6 +37,8 @@
 功能：计算张量的logsumexp
 
 例如：
+```python
+
 intput = tensor([[-0.8576,  0.6675, -2.2474],
         [-3.6767,  1.0610, -1.7070],
         [ 1.2433, -0.2909, -1.1211]])
@@ -44,6 +46,7 @@ intput = tensor([[-0.8576,  0.6675, -2.2474],
 output = logsumexp(input, 1)
 
 output: tensor([1.4907, 1.0593, 1.5696])
+```
 
 应用场景：ResNet等
 
@@ -51,14 +54,14 @@ output: tensor([1.4907, 1.0593, 1.5696])
 
 | 参数   | 语义                  | 类型（输入/输出）| 支持类型     | 物理布局 | 规模限制      |
 | ------ | --------------------- | -------------    | -----------  | ------   | --------      |
-| input | 多维buffer | 输入     |  float           | ARRAY        |  无      | --------      |
-| output | 多维buffer | 输出     |  float           | ARRAY        |  无      | --------      |
+| input | 多维buffer | 输入     |  float,half                   | ARRAY        |  无      | --------      |
+| output | 多维buffer | 输出     |  float,half                  | ARRAY        |  无      | --------      |
 
 ### 1.4 算子限制
 
 | 限制类型       | 详细说明                    |
 | ------------   | -----------------------     |
-| 数据类型限制   | float32|
+| 数据类型限制   | float,half|
 | 布局限制       | 仅支持ARRAY的layout         |
 | 规模限制       | 无                           |
 
@@ -66,11 +69,10 @@ output: tensor([1.4907, 1.0593, 1.5696])
 
 #### 1.5.1 精度验收标准
 
-本算子属于 `算术` 类算子.
+本算子属于 `算术` 类算子，验收标准为 diff3=3e-3。
 
 #### 1.5.2 性能验收标准
 
-待定。
 
 ## 2 算子接口设计
 
@@ -80,18 +82,18 @@ output: tensor([1.4907, 1.0593, 1.5696])
 
 ```python
 torch.logsumexp(input, dim, keepdim)
-input： 输入张量，多维
-dim： 要计算的维度
-keepdim：计算结果是否保持当前维度
+#input： 输入张量，多维
+#dim： 要计算的维度
+#keepdim：计算结果是否保持当前维度
 ```
 
 ### 2.2 接口设计
 
 ```python
 logsumexp(input, dim, keepdim)
-input： 输入张量，多维
-dim： 要计算的维度
-keepdim：计算结果是否保持当前维度
+#input： 输入张量，多维
+#dim： 要计算的维度
+#keepdim：计算结果是否保持当前维度
 ```
 
 ## 3 实现方案设计
@@ -129,7 +131,7 @@ q = log(exp(e) + exp(f))
 
 8 统一处理，将gram缓存数组中的数据拼接起来
 
-9 拷贝回cpu，执行reshape操作。
+9 拷贝回cpu，执行reshape操作
 
 
 ### 3.3 拆分(任务拆分，多核拆分)
@@ -144,7 +146,11 @@ sub_tensors = split_sub_tensor(input, dim)
 
 for t in sub_tensors:
     #求子张量的值
-    result = logsumexp(t)
+
+    result = 0
+    for item in t:
+        result += exp(item)
+    result = log(result)
 
     #将其保存到输出结果中
     _mlu_output.append(result)
