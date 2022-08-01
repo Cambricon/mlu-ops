@@ -7,24 +7,24 @@ input {
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  value_f: 0.0
-  value_f: 0.0
-  value_f: 1.0
-  value_f: 0.0
-  value_f: 1.0
-  value_f: 1.0
-  value_f: 0.0
-  value_f: 1.0
-  value_f: 6.4555
-  value_f: 0.5
-  value_f: 0.5
-  value_f: 1.5
-  value_f: 0.5
-  value_f: 1.5
-  value_f: 1.5
-  value_f: 0.5
-  value_f: 1.5
-  value_f: 20.6903019
+  value_f:0
+  value_f:0
+  value_f:2
+  value_f:0
+  value_f:2
+  value_f:5
+  value_f:1
+  value_f:1
+  value_f:5.55
+  value_f:3
+  value_f:0
+  value_f:1
+  value_f:1
+  value_f:0
+  value_f:5
+  value_f:0
+  value_f:0
+  value_f:2.2
 }
 
 output {

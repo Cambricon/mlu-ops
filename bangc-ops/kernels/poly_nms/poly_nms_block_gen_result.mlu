@@ -26,11 +26,11 @@ __mlu_func__ static inline bool IsSuppressed(uint32_t *mask_row, int j) {
   return !(mask_row[pos_j] & (DEFAULT_MASK >> offset));
 }
 }
+
 __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
                                     const uint32_t *__restrict__ p_mask,
                                     const int *__restrict__ p_sort_info,
                                     int *o_index, int *o_num) {
-
   // nram: | final_mask_buffer | mask_row_buffer | sort_buffer(o_index_buffer)|
   int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
   int mas_col_num_align = mask_col_num;
@@ -39,15 +39,13 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
   const int align_num = NFU_ALIGN_SIZE / sizeof(float);
   mas_col_num_align = CEIL_ALIGN(mask_col_num, align_num);
 #endif
-
-  uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
+ uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
   __bang_write_value(final_mask_buffer, mas_col_num_align, (int)0xFFFFFFFF);
 
   uint32_t *mask_row_buffer = (uint32_t *)final_mask_buffer + mas_col_num_align;
   int *sort_buffer = (int *)mask_row_buffer +
                      mas_col_num_align;    // len of input_boxes_num will be used
   int *o_index_buffer = sort_buffer;  // reuse sort buffer
-
   __memcpy(sort_buffer, p_sort_info, sizeof(int) * input_boxes_num, GDRAM2NRAM);
   int n = 0;
   for (int i = 0; i < input_boxes_num; ++i) {
@@ -61,10 +59,8 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
     }
     __memcpy(mask_row_buffer, (uint32_t *)p_mask + box_id * mask_col_num,
              sizeof(uint32_t) * (mask_col_num), GDRAM2NRAM);
-    // __bang_band((int *) final_mask_buffer, (int *) final_mask_buffer, (int *)
-    // mask_row_buffer, mask_col_num);
     __bang_band((char *)final_mask_buffer, (char *)final_mask_buffer,
-                (char *)mask_row_buffer, mas_col_num_align); // guzh
+                (char *)mask_row_buffer, 4 * mas_col_num_align);
   }
   *o_num = n;
   __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);

@@ -2,53 +2,44 @@ op_name: "poly_nms"
 input {
   id: "input1"
   shape {
-    dims: 4
+    dims: 3
     dims: 9
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  value_f: 30.0
-  value_f: 20.0
-  value_f: 32.0
-  value_f: 59.0
-  value_f: 65.0
-  value_f: 48.0
-  value_f: 64.0
-  value_f: 22.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 1.0
+  value_f: 0.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 0.0
+  value_f: 1.0
   value_f: 6.4555
-  value_f: 98.0
-  value_f: 30.0
-  value_f: 96.0
-  value_f: 29.0
-  value_f: 90.0
-  value_f: 40.0
-  value_f: 99.0
-  value_f: 87.0
+  value_f: 0.5
+  value_f: 0.5
+  value_f: 1.5
+  value_f: 0.5
+  value_f: 1.5
+  value_f: 1.5
+  value_f: 0.5
+  value_f: 1.5
   value_f: 20.6903019
-  value_f: 70.0
-  value_f: 18.0
-  value_f: 68.0
-  value_f: 41.0
-  value_f: 76.0
-  value_f: 26.0
-  value_f: 75.0
-  value_f: 20.0
-  value_f: 68.4519577
-  value_f: 35.0
-  value_f: 20.0
-  value_f: 50.0
-  value_f: 97.0
-  value_f: 57.0
-  value_f: 67.0
-  value_f: 36.0
-  value_f: 23.0
-  value_f: 60.44560623
+  value_f: 0.5
+  value_f: 0.5
+  value_f: 1.5
+  value_f: 0.5
+  value_f: 1.5
+  value_f: 1.5
+  value_f: 0.5
+  value_f: 1.5
+  value_f: 21.6903019
 }
 
 output {
   id: "output1"
   shape: {
-    dims: 4
+    dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32

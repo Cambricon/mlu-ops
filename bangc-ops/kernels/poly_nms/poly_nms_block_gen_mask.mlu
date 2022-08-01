@@ -15,7 +15,6 @@
 #include "kernels/poly_nms/intersect_area.h"
 #include "kernels/poly_nms/poly_nms.h"
 
-
 #define CALC_GENMASK_NRAM_SIZE MAX_NRAM_SIZE
 #define CALC_GENMASK_NRAM_FLT_CAP CALC_GENMASK_NRAM_SIZE / sizeof(float)
 
@@ -73,8 +72,7 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   // create mask_buffer for a single row
   constexpr uint32_t allones = 0xFFFFFFFF;
   constexpr int default_mask_v = allones;
-
-  int mask_buffer_num = mask_col_num;
+ int mask_buffer_num = mask_col_num;
 
 #if __BANG_ARCH__ < 300
   const int align_num = NFU_ALIGN_SIZE / sizeof(uint32_t);
@@ -93,15 +91,14 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   box_i_end = box_i_end < input_boxes_num ? box_i_end : input_boxes_num;
 
   // __sync_io();
-  __asm__ __volatile("sync;");  // guzh
+  __asm__ volatile("sync;");
 
   for (int i = box_i_beg; i < box_i_end; i += 1) {
     int i_pos = 0;
     float *box_i = &box_buffer[i * 9];
     QuadClipBox<POINT_DIR> clip_box;
-    // clip_box.AddLines(reinterpret_cast<const Point2D *>(box_i)); //guzh
-
-    clip_box.AddLines((const Point2D *)((void *)box_i));  // guzh
+    clip_box.AddLines((const Point2D *)((void *)box_i));
+    // clip_box.AddLines(reinterpret_cast<const Point2D *>(box_i));
 
     float score_i = box_i[8];
     for (int j = 0; j < input_boxes_num; ++j) {
@@ -126,7 +123,7 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
     }
     __memcpy(mask + i * mask_col_num, mask_buffer,
              mask_col_num * sizeof(uint32_t), NRAM2GDRAM);
-    __memcpy_async(sort_info + i_pos, &i, sizeof(int), NRAM2GDRAM);
+    ((int *)sort_info)[i_pos] = i;
     uint32_t *tmp = mask_buffer;
     mask_buffer = mask_buffer_swap;
     mask_buffer_swap = tmp;
