@@ -45,7 +45,7 @@ intput = tensor([[-0.8576,  0.6675, -2.2474],
 
 output = logsumexp(input, 1)
 
-output: tensor([1.4907, 1.0593, 1.5696])
+#output: tensor([1.4907, 1.0593, 1.5696])
 ```
 
 
@@ -107,11 +107,7 @@ logsumexp(input, dim, keepdim)
 2 根据输入参数dim，将张量reshape成二维数组，比如张量的维度是 dims = [2, 2, 3, 1]，dim为1，
 那么，二维数组高度就是 2 * 2，宽度是 3 * 1，定义 dim_len 为 dims[1]，也就是 2
 
-|a|c|e|  
-|b|d|f|   &emsp;&emsp;&emsp;&emsp;&emsp;|o|p|q|       
-—————   -->  
-|g|i|k|   &emsp;&emsp;&emsp;&emsp;&emsp;|r|s|t|  
-|h|j|l|
+![](logsumexp.png)
 
 将dim_len个元素组成一个一维子张量[a, b]，对它计算
 o = log(exp(a) + exp(b))
