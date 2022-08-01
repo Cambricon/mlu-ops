@@ -20,6 +20,38 @@ namespace {
 __nram__ uint8_t
 nram_gen_result[GEN_RESLUT_NRAM_SIZE];
 
+template <typename T>
+__mlu_func__ void quickSort(T *arr, int low, int high) {
+  if (high <= low) return;
+  int i = low;
+  int j = high;
+  int key = arr[low];
+  while (true) {
+    while (arr[i] <= key) {
+      i++;
+      if (i == high) {
+        break;
+      }
+    }
+    while (arr[j] >= key) {
+      j--;
+      if (j == low) {
+        break;
+      }
+    }
+
+    if (i >= j) break;
+    int temp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = temp;
+  }
+
+  arr[low] = arr[j];
+  arr[j] = key;
+  quickSort(arr, low, j - 1);
+  quickSort(arr, j + 1, high);
+}
+
 __mlu_func__ static inline bool IsSuppressed(uint32_t *mask_row, int j) {
   int pos_j = j / MASK_T_BITWIDTH;
   int offset = j % MASK_T_BITWIDTH;
@@ -54,8 +86,9 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
              (uint32_t *) p_mask + box_id * mask_col_num,
              sizeof(uint32_t) * (mask_col_num),
              GDRAM2NRAM);
-    __bang_band((int *) final_mask_buffer, (int *) final_mask_buffer, (int *) mask_row_buffer, mask_col_num);
+    __bang_band((char *) final_mask_buffer, (char *) final_mask_buffer, (char *) mask_row_buffer, mask_col_num);
   }
   *o_num = n;
+  quickSort((int *)o_index_buffer, 0, n - 1);
   __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);
 }

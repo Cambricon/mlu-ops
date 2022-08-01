@@ -62,7 +62,7 @@ __mlu_func__ static inline void Area(float *__restrict__ nram_tile_beg,
   }
 
   __bang_mul_scalar(area_buffer, area_buffer, 0.5, i_tile_size);
-  __bang_abs(area_buffer, area_buffer, i_tile_size);
+  __bang_active_abs(area_buffer, area_buffer, i_tile_size);
 }
 
 }

@@ -217,6 +217,97 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpTensorDescriptor_t z_desc, void *z);
 
 /*!
+ *  @brief Gets extra space size that is needed in poly_nms operation.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the psroipool_forward operation.
+ *  @param[in] boxes_desc
+ *    Input. The descriptor of the boxes tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t. 
+ *  @param[out] size
+ *    Output. A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+    size_t *size);
+
+/*!
+ *  @brief Polygon Non Maximum Suppression.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the poly_nms operation.
+ *  @param[in] boxes_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] boxes
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] iou_threshold
+ *    Input. The iou_threshold data.
+ *  @param[in] workspace
+ *    Input. Pointer to the MLU memory that stores the extra workspace.
+ *  @param[in] workspace_size
+ *    Input. The size of extra space.
+ *  @param[in] output_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] output
+ *    Output. Pointer to the MLU memory that stores the output tensor.
+ *  @param[in] output_size
+ *    Output. Pointer to the MLU memory that stores the output tensor. Indicates
+ *    the number of return values of output.
+ * 
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @par Formula
+ *  - See "poly_nms Operation" section in "Cambricon MLUOP User
+ *    Guide" for details.
+ * 
+ *  @par Data Type
+ *  - The supported data types of input and output tensors are as follows:
+ *     - Input tensor: float.
+ *     - iou_threshold: float.
+ *     - Output tensor: int32.
+ *     - output_size tensor: int32.
+ * 
+ *  @par Data Layout
+ *  - The supported data layout of \b input, \b output, 
+ *     \b output_size are as follows:
+ * 
+ *   - Input tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output_size tensor: \p MLUOP_LAYOUT_ARRAY.
+ * 
+ *  @par Scale Limitation
+ *  - The dimension of \b input should be equal to 2.
+ *  - The dimension of \b output should be equal to 1.
+ *  - The dimension of \b output_size should be equal to 1.
+ *  - The shape[0] of output should be equal input shape[0].
+ *  - The shape[1] of input should be equal 9.
+ *  - 
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * 
+ *  @par Note
+ *  - This commit does not support nan/inf.
+ * 
+ * @par Reference
+ * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+             const void *boxes, const float iou_threshold, void *workspace,
+             size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
+             void *output, void *output_size);
+
+/*!
  *  @brief Generate fixed size feature map for each RoI(Regions of Interest).
  *
  *  @param[in] handle

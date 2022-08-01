@@ -80,6 +80,12 @@ void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
 
+/* poly_nms */
+void MLUOP_WIN_API mluOpUnionXKernelPolyNmsFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input_boxes, int input_boxes_num, int input_stride,
+    const float iou_thresh, void *output, void *result_num, void *workspace);
+
 /* PSRoIPool */
 void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

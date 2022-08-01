@@ -128,7 +128,7 @@ __mlu_func__ static inline float Area(const Point2D *__restrict__ points,
     float y1 = points[i + 1].y - p0->y;
     area += (x0 * y1 - y0 * x1);
     x0 = x1;
-    y1 = y1;
+    // y1 = y1;
   }
   return area / 2;
 }

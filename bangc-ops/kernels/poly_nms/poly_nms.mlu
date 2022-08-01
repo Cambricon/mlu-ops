@@ -15,6 +15,8 @@
 
 #include "mlu_op.h"
 #include "kernels/kernel.h"
+#include "core/gen_case.h"
+
 namespace {
 static inline int64_t GetMaskColNum(int box_num) {
   return (box_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
@@ -37,8 +39,53 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-             const void *boxes, float iou_threshold, void *workspace,
+             const void *boxes, const float iou_threshold, void *workspace,
+             size_t workspace_size, const mluOpTensorDescriptor_t output_desc,
              void *output, void *output_size) {
+  const std::string API = "[mluOpPolyNms]";
+  // check inputs/outputs
+  PARAM_CHECK(API, handle != NULL);
+  PARAM_CHECK(API, boxes_desc != NULL);
+  PARAM_CHECK(API, output_desc != NULL);
+  PARAM_CHECK(API, output_size != NULL);
+
+  // check inputs/outputs data type
+  PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_INT32);
+  // check inputs layout
+  PARAM_CHECK(API, boxes_desc->layout == MLUOP_LAYOUT_ARRAY);
+  // check inputs shape
+  PARAM_CHECK_EQ(API, boxes_desc->dim, 2);
+  PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
+  PARAM_CHECK(API, boxes_desc->dims[0] == output_desc->dims[0]);
+
+  int input_boxes_num = boxes_desc->dims[0];
+
+  if (input_boxes_num == 0) {
+    VLOG(5) << API << " skip zero element tensor.";
+    CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int)));
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  PARAM_CHECK(API, boxes != NULL);
+  PARAM_CHECK(API, output != NULL);
+
+  if (workspace_size > 0) {
+    PARAM_CHECK(API, workspace != NULL);
+  }
+
+  // generate prototxt
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("poly_nms");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "input1", boxes, boxes_desc, 10, 0);
+    GEN_CASE_DATA(false, "output1", output, output_desc, 0, 0);
+    GEN_CASE_DATA_UNFOLD(false, "output2", output_size, 1, {1},
+                         MLUOP_DTYPE_INT32, MLUOP_LAYOUT_ARRAY, 0, 0);
+    GEN_CASE_OP_PARAM_SINGLE(0, "poly_nms", "iou_threshold", iou_threshold);
+    GEN_CASE_TEST_PARAM_NEW(false, false, true, 3e-3, 3e-3, 0);
+  }
+
   int box_num = boxes_desc->dims[0];
   int real_width = boxes_desc->strides[0];
   auto mask_col_num = GetMaskColNum(box_num);
@@ -72,6 +119,5 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
           dev_sort_info,
           (int *) output,
           (int *) output_size);
-
   return MLUOP_STATUS_SUCCESS;
 }
