@@ -66,7 +66,7 @@ template <PointDirection POINT_DIR> struct QuadClipBox {
       }
       Point2D centerBD = {(A[1].x + A[3].x) / 2, (A[1].y + A[3].y) / 2};
       line[1].Update(A + 1, A + 2);
-      if (IsInner<POINT_DIR>(&line[0], &centerBD) &&
+      if (ACFine && IsInner<POINT_DIR>(&line[0], &centerBD) &&
           IsInner<POINT_DIR>(&line[1], &centerBD)) {
         is_convex = true;
         return NoSplit(A);
