@@ -121,7 +121,7 @@ class KlDivLoss(object):
         self.nram_size = TARGET(self.target).nram_size
         self.dtype_sz = dtype.bytes
         self.compute_row = 128 // self.dtype_sz
-        self.single_buffer_size = self.nram_size // 8 // self.dtype.bytes
+        self.single_buffer_size = self.nram_size // 4 // self.dtype.bytes
 
         self.tcp.launch_task(self.task_num, 1, 1)
         self.tcp.launch_cluster(task_type.value)
