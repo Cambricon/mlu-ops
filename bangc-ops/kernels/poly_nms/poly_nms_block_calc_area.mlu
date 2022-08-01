@@ -113,27 +113,34 @@ __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
 #else
     const int align_num = NFU_ALIGN_SIZE / sizeof(float);
     // align this_i_tile_size->width, align  box_points_num->height
-    int transpose_height = CEIL_ALIGN(this_i_tile_size, align_num);
+    int real_num = this_i_tile_size -1;
+    int transpose_height = CEIL_ALIGN(real_num, align_num);
     int transpose_width = CEIL_ALIGN(box_points_num, align_num);
+     int align_this_i_tile_size = CEIL_ALIGN(this_i_tile_size, align_num);
 
     load_buffer = nram_mlu_calc_area;
-    transpose_buffer = load_buffer + transpose_width * transpose_height;
-    area_buffer = load_buffer + i_tile_size * box_points_num;
+    transpose_buffer = load_buffer + transpose_height * align_this_i_tile_size;
+    area_buffer = load_buffer;
 
     __memcpy((float *)load_buffer, (float *)tile_dev_beg,
              box_points_num * sizeof(float), GDRAM2NRAM,
-             transpose_width * sizeof(float), box_points_num * sizeof(float),
-             this_i_tile_size);
-
+             transpose_height * sizeof(float), real_width * sizeof(float),
+             real_num);
+ 
     __bang_transpose((float *)transpose_buffer, (float *)load_buffer,
-                     transpose_height, transpose_width);
+                     align_this_i_tile_size, transpose_width);
 
     __memcpy((float *)load_buffer, (float *)transpose_buffer,
-             this_i_tile_size * sizeof(float), NRAM2GDRAM,
+             this_i_tile_size * sizeof(float), NRAM2NRAM,
              this_i_tile_size * sizeof(float), transpose_height * sizeof(float),
-             transpose_width);
+             box_points_num);
 
-    Area(load_buffer, transpose_height, area_buffer);
+    // 8*this_i_tile_size==> 8*align_this_i_tile_size
+    __memcpy((float *)transpose_buffer, (float *)load_buffer,
+            this_i_tile_size * sizeof(float), NRAM2NRAM,
+             align_this_i_tile_size * sizeof(float), this_i_tile_size * sizeof(float),
+             box_points_num);
+    Area(transpose_buffer, align_this_i_tile_size, area_buffer);
     __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
              NRAM2GDRAM);
 #endif

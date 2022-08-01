@@ -67,19 +67,20 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   // load box area into nram
   float *area_buffer = box_buffer + input_boxes_num * 9;
   __memcpy_async(area_buffer, boxes_area, input_boxes_num * sizeof(float),
-                 GDRAM2NRAM);
+                 GDRAM2NRAM); // _async
 
   // create mask_buffer for a single row
   constexpr uint32_t allones = 0xFFFFFFFF;
   constexpr int default_mask_v = allones;
   int mask_buffer_num = mask_col_num;
-
+  int area_buffer_num = input_boxes_num;
 #if __BANG_ARCH__ < 300
   const int align_num = NFU_ALIGN_SIZE / sizeof(uint32_t);
   mask_buffer_num = CEIL_ALIGN(mask_col_num, align_num);
+  area_buffer_num = CEIL_ALIGN(area_buffer_num, align_num);
 #endif
-
-  uint32_t *mask_buffer = (uint32_t *)area_buffer + input_boxes_num;
+  
+  uint32_t *mask_buffer = (uint32_t *)area_buffer + area_buffer_num;
   uint32_t *mask_buffer_swap = mask_buffer + mask_buffer_num;
   __bang_write_value(mask_buffer, mask_buffer_num * 2, default_mask_v);
 
@@ -90,7 +91,6 @@ __mlu_func__ static inline void MLUGenNMSMaskImpl(
   int box_i_end = box_i_beg + core_box_num;
   box_i_end = box_i_end < input_boxes_num ? box_i_end : input_boxes_num;
 
-  // __sync_io();
   __asm__ volatile("sync;");
 
   for (int i = box_i_beg; i < box_i_end; i += 1) {
