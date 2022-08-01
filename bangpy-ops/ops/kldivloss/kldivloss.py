@@ -29,6 +29,7 @@ from bangpy.platform.bang_config import TARGET
 DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
 KERNEL_NAME = "kldivloss"
+CORES_PER_CLUSTER = 4
 
 
 class KlDivLoss(object):
@@ -47,7 +48,7 @@ class KlDivLoss(object):
                 3 represents "batchmean" : sum(out) // batchSize
     """
 
-    def __init__(self, dtype, target, task_num):
+    def __init__(self, dtype, target, task_type):
         """Construct a new KlDivLoss class.
 
         Parameters
@@ -58,8 +59,8 @@ class KlDivLoss(object):
         target : str
             Target MLU device name.
 
-        task_num : int
-            The task number of runtime.
+        task_type : str
+            The task type of runtime.
 
         Attributes
         ----------
@@ -103,17 +104,13 @@ class KlDivLoss(object):
             The size of single buffer.
         """
         # Check parameters.
-        if not (
-            (dtype in DTYPES)
-            and (target in TARGET_LIST)
-            and (task_num in [1, 4, 8, 12, 16, 64])
-        ):
+        if not ((dtype in DTYPES) and (target in TARGET_LIST)):
             raise KeyError("please pass correct parameters.")
 
         self.dtype = dtype
         self.target = target
         self.tcp = tcp.TCP(target)
-        self.task_num = task_num
+        self.task_num = task_type.value * CORES_PER_CLUSTER
 
         self.batchSize = self.tcp.SizeVar("batchSize")
         self.batchLength = self.tcp.SizeVar("batchLength")
@@ -124,10 +121,10 @@ class KlDivLoss(object):
         self.nram_size = TARGET(self.target).nram_size
         self.dtype_sz = dtype.bytes
         self.compute_row = 128 // self.dtype_sz
-        self.single_buffer_size = self.nram_size // 4 // self.dtype.bytes
+        self.single_buffer_size = self.nram_size // 8 // self.dtype.bytes
 
-        self.tcp.launch_cluster(TaskType.UNION16)
-        self.tcp.launch_task(task_num, 1, 1)
+        self.tcp.launch_task(self.task_num, 1, 1)
+        self.tcp.launch_cluster(task_type.value)
 
     def compute_body(self):
         # calculate split strategy
@@ -363,6 +360,6 @@ class KlDivLoss(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_kldivloss(dtype=None, target=None):
-    task_num = TARGET(target).cluster_num * TARGET(target).core_num
-    f = KlDivLoss(dtype, target, task_num).compute_body()
+    task_type = TaskType.UNION1
+    f = KlDivLoss(dtype, target, task_type).compute_body()
     return f
