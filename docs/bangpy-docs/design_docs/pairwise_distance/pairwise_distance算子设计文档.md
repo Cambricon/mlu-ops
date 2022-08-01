@@ -71,16 +71,13 @@
 - pytorch
 
 ```python
-torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)
+torch.nn.PairwiseDistance(p=2.0, eps=1e-06, keepdim=False)
 ```
 
 ### 2.2 接口设计
 
 ```python
-pdist = mlu_pairwise_distance(p=p, eps=eps, keepdim=keepdim)
-input1 = torch.randn(100, 128)
-input2 = torch.randn(100, 128)
-output = pdist(input1, input2)
+pdist = mlu_pairwise_distance(p=2.0, eps=1e-06, keepdim=False)
 ```
 
 p 为计算范数时，指数的值
@@ -124,7 +121,7 @@ tensor([1.6574, 1.5112, 1.2867])
 ### 3.1 实现方案
 
 1 将输入数据转为一维张量后，传入mlu，将数据平均分配在多核中。
-首先计算两个张量的差，如果其中a张量比b张量短，则将b连续拷贝多份，变成和a长度相等（a的长度必须是b的整数倍）
+首先计算两个张量的差，如果其中a张量比b张量长，则将b连续拷贝多份，变成和a长度相等（a的长度必须是b的整数倍）
 每个核会算出自己要计算的数据起止地址，将数据拷贝到nram中，进行计算。
 
 
