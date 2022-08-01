@@ -13,6 +13,7 @@
 #include "kernels/kernel.h"
 
 #include "kernels/poly_nms/poly_nms.h"
+#include "kernels/poly_nms/enums.h"
 
 #define GEN_RESLUT_NRAM_SIZE MAX_NRAM_SIZE
 
@@ -27,6 +28,7 @@ __mlu_func__ static inline bool IsSuppressed(uint32_t *mask_row, int j) {
   return !(mask_row[pos_j] & (DEFAULT_MASK >> offset));
 }
 }
+template<OutputOrder OUTPUT_ORDER>
 __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
                                     const uint32_t *__restrict__ p_mask,
                                     const int *__restrict__ p_sort_info,
@@ -47,7 +49,9 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
     if (IsSuppressed(final_mask_buffer, box_id)) {
       continue;
     } else {
-      o_index_buffer[n] = box_id;
+      if(OUTPUT_ORDER == OutputOrder::HIGH_SCORE_FIRST){
+        o_index_buffer[n] = box_id;
+      }
       ++n;
     }
     __memcpy(mask_row_buffer,
@@ -56,6 +60,31 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
              GDRAM2NRAM);
     __bang_band((int *) final_mask_buffer, (int *) final_mask_buffer, (int *) mask_row_buffer, mask_col_num);
   }
+  if (OUTPUT_ORDER == OutputOrder::LOW_BOX_ID_FIRST) {
+    int found = 0;
+    int j = 0;
+    while (found < n) {
+      if (!IsSuppressed(final_mask_buffer, j)) {
+        sort_buffer[found] = j;
+        ++found;
+      }
+      ++j;
+    }
+  }
   *o_num = n;
   __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);
 }
+
+template
+__mlu_global__ void MLUGenNMSResult<OutputOrder::HIGH_SCORE_FIRST>(int input_boxes_num,
+                                    const uint32_t *__restrict__ p_mask,
+                                    const int *__restrict__ p_sort_info,
+                                    int *o_index,
+                                    int *o_num);
+
+template
+__mlu_global__ void MLUGenNMSResult<OutputOrder::LOW_BOX_ID_FIRST>(int input_boxes_num,
+                                    const uint32_t *__restrict__ p_mask,
+                                    const int *__restrict__ p_sort_info,
+                                    int *o_index,
+                                    int *o_num);
