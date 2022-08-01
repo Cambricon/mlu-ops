@@ -12,14 +12,6 @@
 #include "core/context.h"
 #include "mlu_op.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-    size_t *size);
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-             const void *boxes, float iou_threshold, void *workspace,
-             void *output, void *output_size);
 
 bool readMask(uint32_t *mask, int i, int j, int mask_col_num) {
   int pos_j = j / 32;
@@ -115,13 +107,18 @@ struct BoxData {
 int RunTest(mluOpHandle_t handle, int NBox, BoxData &box, size_t workspace_size,
             void *workspace, void *dev_output_index, void *dev_output_count,
             bool check_result) {
+  mluOpTensorDescriptor_t out_desc;
+  mluOpCreateTensorDescriptor(&out_desc);
+  int shape[]={NBox};
+  mluOpSetTensorDescriptor(out_desc, mluOpTensorLayout_t::MLUOP_LAYOUT_ARRAY,
+                           mluOpDataType_t::MLUOP_DTYPE_INT32, 1, shape);
   cnrtMemset(dev_output_index, 0, NBox * sizeof(int));
   cnrtMemset(dev_output_count, 0, sizeof(int));
   cnrtMemset(workspace, 0, workspace_size);
   timeval tic;
   timeval toc;
   gettimeofday(&tic, NULL);
-  mluOpPolyNms(handle, box.desc, box.dev_data, 0.0, workspace, dev_output_index,
+  mluOpPolyNms(handle, box.desc, box.dev_data, 0.0, workspace,1,out_desc, dev_output_index,
                dev_output_count);
   cnrtQueueSync(handle->queue);
   gettimeofday(&toc, NULL);
