@@ -82,16 +82,13 @@ MLUGenNMSMaskImpl(const float *__restrict__ input_boxes, int input_boxes_num,
   int box_i_end = box_i_beg + core_box_num;
   box_i_end = box_i_end < input_boxes_num ? box_i_end : input_boxes_num;
 
-  // __sync_io();
-  __asm__ __volatile("sync;");
+  __sync_io();
 
   for (int i = box_i_beg; i < box_i_end; i += 1) {
     int i_pos = 0;
     float *box_i = &box_buffer[i * 9];
     QuadClipBox<POINT_DIR> clip_box;
-    // clip_box.AddLines(reinterpret_cast<const Point2D *>(box_i));
-    clip_box.AddLines((const Point2D *)((void*)box_i));
-
+    clip_box.AddLines(reinterpret_cast<const Point2D *>(box_i));
     float score_i = box_i[8];
     for (int j = 0; j < input_boxes_num; ++j) {
       if (i == j) {
@@ -115,9 +112,7 @@ MLUGenNMSMaskImpl(const float *__restrict__ input_boxes, int input_boxes_num,
     }
     __memcpy(mask + i * mask_col_num, mask_buffer,
              mask_col_num * sizeof(uint32_t), NRAM2GDRAM);
-    // __memcpy_async(sort_info + i_pos, &i, sizeof(int), NRAM2GDRAM);
-    ((int*)sort_info)[i_pos] = i;
-
+    __memcpy_async(sort_info + i_pos, &i, sizeof(int), NRAM2GDRAM);
     uint32_t *tmp = mask_buffer;
     mask_buffer = mask_buffer_swap;
     mask_buffer_swap = tmp;
