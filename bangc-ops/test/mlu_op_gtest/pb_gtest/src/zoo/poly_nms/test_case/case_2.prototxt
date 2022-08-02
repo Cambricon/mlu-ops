@@ -1,0 +1,42 @@
+op_name: "poly_nms"
+input {
+  id: "input1"
+  shape: {
+    dims: 50
+    dims: 9
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: -100
+    distribution: UNIFORM
+  }
+}
+
+
+output {
+  id: "output1"
+  shape: {
+    dims: 50
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output2"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+poly_nms_param: {
+  iou_threshold: 1
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.0
+  baseline_device: CPU
+}
