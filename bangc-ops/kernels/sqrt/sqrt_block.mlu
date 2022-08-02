@@ -67,18 +67,20 @@ __mlu_func__ void computeSqrtFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
                                   T *nram_aux_b, int deal_num, int actual_num,
                                   float coef) {
   if (sizeof(T) == sizeof(float)) {
-    __nramset((float *)nram_tmp, UNARY_ALIGN_NUM, (float)SQRT_HIGH_BOUND);
+    __bang_write_value((float *)nram_tmp, UNARY_ALIGN_NUM,
+                       (float)SQRT_HIGH_BOUND);
     // scale x
     __bang_cycle_lt((float *)nram_aux_a, (float *)nram_x_half,
                     (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
-    __bang_mul_const(nram_aux_a, nram_aux_a, (float)(1 - SQRT_SCALE), deal_num);
-    __bang_add_const(nram_aux_a, nram_aux_a, (float)SQRT_SCALE, deal_num);
+    __bang_mul_scalar(nram_aux_a, nram_aux_a, (float)(1 - SQRT_SCALE),
+                      deal_num);
+    __bang_add_scalar(nram_aux_a, nram_aux_a, (float)SQRT_SCALE, deal_num);
     // recover x
     __bang_cycle_lt((float *)nram_aux_b, (float *)nram_x_half,
                     (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
-    __bang_mul_const(nram_aux_b, nram_aux_b, (float)(1 - SQRT_RECOVER),
-                     deal_num);
-    __bang_add_const(nram_aux_b, nram_aux_b, (float)SQRT_RECOVER, deal_num);
+    __bang_mul_scalar(nram_aux_b, nram_aux_b, (float)(1 - SQRT_RECOVER),
+                      deal_num);
+    __bang_add_scalar(nram_aux_b, nram_aux_b, (float)SQRT_RECOVER, deal_num);
     // sqrt x
     __bang_mul(nram_x, nram_x_half, nram_aux_a, deal_num);
     __bang_active_sqrthp(nram_x, nram_x, deal_num);
@@ -177,7 +179,7 @@ __mlu_func__ void computeSqrtBackwardFast(T *nram_y, T *nram_dy, T *nram_aux1,
                                           T *nram_aux2, T *nram_aux3,
                                           const int32_t actual_num,
                                           const int32_t deal_num) {
-  __bang_mul_const(nram_dy, nram_dy, (T)0.5, deal_num);
+  __bang_mul_scalar(nram_dy, nram_dy, (T)0.5, deal_num);
   __bang_active_reciphp((float *)nram_y, (float *)nram_y, deal_num);
   __bang_mul(nram_y, nram_dy, nram_y, deal_num);
 }
@@ -193,7 +195,7 @@ __mlu_func__ void computeSqrtBackwardHighAcc(T *nram_y, T *nram_dy,
   __bang_half2float(nram_fp_y, nram_y, deal_num);
   __bang_active_reciphp(nram_fp_y, nram_fp_y, deal_num);
   __bang_float2half_rd((half *)nram_fp_y, (float *)nram_fp_y, deal_num);
-  __bang_mul_const(nram_dy, nram_dy, (T)0.5, deal_num);
+  __bang_mul_scalar(nram_dy, nram_dy, (T)0.5, deal_num);
   __bang_mul(nram_y, (half *)nram_fp_y, nram_dy, deal_num);
 }
 

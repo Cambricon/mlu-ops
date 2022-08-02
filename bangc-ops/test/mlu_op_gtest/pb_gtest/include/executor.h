@@ -106,26 +106,26 @@ namespace mluoptest {
   struct ExecuteContext {
     ~ExecuteContext() { destroy(); }
     void init() {
-      ASSERT_EQ(cnrtCreateQueue(&queue), CNRT_RET_SUCCESS);
+      ASSERT_EQ(cnrtQueueCreate(&queue), CNRT_RET_SUCCESS);
       ASSERT_EQ(mluOpCreate(&handle), MLUOP_STATUS_SUCCESS);
       ASSERT_EQ(mluOpSetQueue(handle, queue), MLUOP_STATUS_SUCCESS);
-      ASSERT_EQ(cnrtCreateNotifier(&n_start), CNRT_RET_SUCCESS);
-      ASSERT_EQ(cnrtCreateNotifier(&n_stop), CNRT_RET_SUCCESS);
+      ASSERT_EQ(cnrtNotifierCreate(&n_start), CNRT_RET_SUCCESS);
+      ASSERT_EQ(cnrtNotifierCreate(&n_stop), CNRT_RET_SUCCESS);
     }
     // reserve for memory pool
     std::shared_ptr<CPUMemoryPool> cmp = nullptr;
     std::shared_ptr<MLUMemoryPool> mmp = nullptr;
     void destroy() {
       if (n_start != nullptr) {
-        ASSERT_EQ(cnrtDestroyNotifier(&n_start), CNRT_RET_SUCCESS);
+        ASSERT_EQ(cnrtNotifierDestroy(n_start), CNRT_RET_SUCCESS);
         n_start = nullptr;
       }
       if (n_stop != nullptr) {
-        ASSERT_EQ(cnrtDestroyNotifier(&n_stop), CNRT_RET_SUCCESS);
+        ASSERT_EQ(cnrtNotifierDestroy(n_stop), CNRT_RET_SUCCESS);
         n_stop = nullptr;
       }
       if (queue != nullptr) {
-        ASSERT_EQ(cnrtDestroyQueue(queue), CNRT_RET_SUCCESS);
+        ASSERT_EQ(cnrtQueueDestroy(queue), CNRT_RET_SUCCESS);
         queue = nullptr;
       }
       if (handle != nullptr) {

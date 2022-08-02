@@ -210,9 +210,7 @@ void TestSuite::ThreadX() {
     std::lock_guard<std::mutex> lk(ctx->mtx);
     auto it = ctx->been_initialized.find(std::this_thread::get_id());
     if (it == ctx->been_initialized.end()) {  // if current thread has not been set device.
-      cnrtDev_t dev = 0;
-      ASSERT_EQ(cnrtGetDeviceHandle(&dev, global_var.dev_id_), CNRT_RET_SUCCESS);
-      ASSERT_EQ(cnrtSetCurrentDevice(dev), CNRT_RET_SUCCESS);
+      ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
       ctx->been_initialized.insert(std::this_thread::get_id());
     }
   };
