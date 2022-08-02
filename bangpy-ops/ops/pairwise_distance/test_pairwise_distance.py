@@ -33,8 +33,6 @@ from pairwise_distance import DTYPES
 def create_random_shape(length, size):
     return np.random.randint(low=1, high=size, size=length)
 
-
-
 ranshp = create_random_shape(2, 512)
 ranshp1 = create_random_shape(5, 3)
 ranshp2 = create_random_shape(10, 2)
@@ -57,7 +55,6 @@ ranshp2 = create_random_shape(10, 2)
     ],
 )
 
-
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
@@ -73,8 +70,6 @@ ranshp2 = create_random_shape(10, 2)
 @pytest.mark.parametrize(
     "keepdim", [False, True],
 )
-
-
 
 def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     if target not in TARGET_LIST:
