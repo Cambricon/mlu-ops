@@ -80,7 +80,7 @@ def test_pairwise_distance(target, shape, p, eps, keepdim, dtype):
     if target not in TARGET_LIST:
         return
 
-    def mlu_pairwise_distance(p, eps, keepdim):
+    def mlu_pairwise_distance(p=2.0, eps=1e-06, keepdim=False):
         def get_total_size(shp):
             size = 1
             for s in shp:
