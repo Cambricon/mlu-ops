@@ -96,8 +96,9 @@ __mlu_func__ void psRoiAvgPool(
     for (int ph = 0; ph < pooled_height; ++ph) {
       for (int pw = 0; pw < pooled_width; ++pw) {
         // initiate the sum area/nram_mapping_channells
-        __nramset((T *)nram_src, output_dim_num_deal, (T)0);
-        __nramset((int *)nram_mapping_channel, output_dim_num_deal, (int)0);
+        __bang_write_value((T *)nram_src, output_dim_num_deal, (T)0);
+        __bang_write_value((int *)nram_mapping_channel, output_dim_num_deal,
+                           (int)0);
         hstart = floor(static_cast<T>(ph) * bin_size_h + roi_start_h);
         wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
         hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
@@ -134,8 +135,8 @@ __mlu_func__ void psRoiAvgPool(
             }
           }
           // average
-          __bang_mul_const(nram_src, nram_src, bin_area_recip,
-                           output_dim_num_deal);
+          __bang_mul_scalar(nram_src, nram_src, bin_area_recip,
+                            output_dim_num_deal);
         }
 
         // compute mapping channels
@@ -234,7 +235,7 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
     int channels, int pooled_height, int pooled_width, int output_dim,
     int group_size, int rois_num, int rois_offset, float spatial_scale) {
   MLUKernelPsroipoolForward<<<k_dim, k_type, queue>>>(
-      bottom_data, bottom_rois, top_data, mapping_channel, batch_size,
-      height, width, channels, pooled_height, pooled_width, output_dim,
-      group_size, rois_num, rois_offset, spatial_scale);
+      bottom_data, bottom_rois, top_data, mapping_channel, batch_size, height,
+      width, channels, pooled_height, pooled_width, output_dim, group_size,
+      rois_num, rois_offset, spatial_scale);
 }

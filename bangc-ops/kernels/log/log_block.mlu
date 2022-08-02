@@ -65,11 +65,12 @@ __mlu_func__ void computeLogFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
                                  T *nram_aux_b, int deal_num, int actual_num,
                                  float coef) {
   if (sizeof(T) == sizeof(float)) {
-    __nramset((float *)nram_tmp, UNARY_ALIGN_NUM, (float)LOG_LOW_BOUND);
+    __bang_write_value((float *)nram_tmp, UNARY_ALIGN_NUM,
+                       (float)LOG_LOW_BOUND);
     // scale x
     __bang_cycle_lt((float *)nram_aux_b, (float *)nram_x_half,
                     (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
-    __bang_mul_const(nram_aux_b, nram_aux_b, (float)LOG_SCALE, deal_num);
+    __bang_mul_scalar(nram_aux_b, nram_aux_b, (float)LOG_SCALE, deal_num);
     __bang_cycle_gt((float *)nram_aux_a, (float *)nram_x_half,
                     (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
     __bang_add(nram_aux_a, nram_aux_a, nram_aux_b, deal_num);
@@ -77,17 +78,17 @@ __mlu_func__ void computeLogFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
     // recover x
     __bang_cycle_lt((float *)nram_aux_b, (float *)nram_x_half,
                     (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
-    __bang_mul_const(nram_aux_b, nram_aux_b, (float)(LOG_RECOVER * coef),
-                     deal_num);
+    __bang_mul_scalar(nram_aux_b, nram_aux_b, (float)(LOG_RECOVER * coef),
+                      deal_num);
 
     // log x
     __bang_mul(nram_x, nram_x_half, nram_aux_a, deal_num);
     __bang_active_loghp((T *)nram_x, (T *)nram_x, deal_num);
-    __bang_mul_const(nram_x, nram_x, (T)coef, deal_num);
+    __bang_mul_scalar(nram_x, nram_x, (T)coef, deal_num);
     __bang_add(nram_x, nram_x, nram_aux_b, deal_num);
   } else {
     __bang_active_loghp((T *)nram_x, (T *)nram_x, deal_num);
-    __bang_mul_const(nram_x, nram_x, (T)coef, deal_num);
+    __bang_mul_scalar(nram_x, nram_x, (T)coef, deal_num);
   }
 }
 
@@ -137,7 +138,7 @@ __mlu_func__ void computeLogHighAcc(T *nram_x, T *nram_x_half, T *nram_aux_a,
                                     float coef) {
   __bang_half2float((float *)nram_x, (half *)nram_x_half, deal_num);
   __bang_active_loghp((float *)nram_x, (float *)nram_x, deal_num);
-  __bang_mul_const((float *)nram_x, (float *)nram_x, coef, deal_num);
+  __bang_mul_scalar((float *)nram_x, (float *)nram_x, coef, deal_num);
   __bang_float2half_rd((half *)nram_x, (float *)nram_x, deal_num);
 }
 

@@ -13,17 +13,17 @@ jobs:
       - uses: actions/checkout@v2
       - name: bangc_build
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.9-ubuntu1604
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.1-ubuntu1604
           bash -c "cd bangc-ops && ./build.sh -c"
 
       - name: bangc_test
         run: >
           idx=$(hostname | cut -d'-' -f3);docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev${idx}:/dev/cambricon_dev0
-          --device /dev/commu${idx}:/dev/commu0 -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.9-ubuntu1604
+          --device /dev/commu${idx}:/dev/commu0 -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.1-ubuntu1604
           bash -c "cd bangc-ops/build/test/ && bash ../../../tools/coverage.sh "./mluop_gtest""
 
       - name: bangc_clean
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v0.9-ubuntu1604
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.1-ubuntu1604
           bash -c "rm -rf bangc-ops/build"
 

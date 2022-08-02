@@ -266,7 +266,7 @@ bins_loop_per = bins_first_per + task_bins;<br>
 1）bin 的流水（NRAM 等分的每块空间可以一次性加载 bin 中 channels 个数据)；<br>
 2）channels 很大的流水 (这里是对bin的流水的补充，当 NRAM 等分到的每块空间不足以一次性加载 bin 中的 channels 个数据，在这种情况下就需对 channels 个数据进行流水计算)；<br>
 计算部分：<br>
-1）roi_crop_forward 算子主要使用 __bang_mul_const()、_bang_add()；<br>
+1）roi_crop_forward 算子主要使用 __bang_mul_scalar()、_bang_add()；<br>
 2）roi_crop_backward 算子主要使用 __bang_mlu_const()、atomic_add()；<br>
 
 ### 3.5 可维护性设计
