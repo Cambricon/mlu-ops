@@ -14,7 +14,7 @@
 
 #include "kernels/poly_nms/poly_nms.h"
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define MIN(x, y) ((x)<(y)?(x):(y))
 #define CALC_AREA_NRAM_SIZE MAX_NRAM_SIZE
 #define CALC_AREA_NRAM_FLT_CAP CALC_AREA_NRAM_SIZE / sizeof(float)
 namespace {
@@ -62,29 +62,25 @@ __mlu_func__ static inline void Area(float *__restrict__ nram_tile_beg,
   }
 
   __bang_mul_scalar(area_buffer, area_buffer, 0.5, i_tile_size);
-  __bang_active_abs(area_buffer, area_buffer, i_tile_size);
+  __bang_abs(area_buffer, area_buffer, i_tile_size);
 }
-}  // namespace
 
+}
 __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
-                                int input_boxes_num, int real_width,
+                                int input_boxes_num,
+                                int real_width,
                                 float *__restrict__ boxes_area) {
-  // nram: | load_buffer(area_buffer) | transpose_buffer |
-
-  // each input_box has 8 points
-  const int box_points_num = 8;
   // A core will handle at most core_box_num data
   int core_box_num = 0;
   int box_i_beg = 0;
   GetCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
 
   // split nram to two equal part, half for loading, half for transpose
-  int i_tile_size = CALC_AREA_NRAM_FLT_CAP / box_points_num / 2;
+  int i_tile_size = CALC_AREA_NRAM_FLT_CAP / 8 / 2;
   float *load_buffer = nram_mlu_calc_area;
-  float *transpose_buffer = load_buffer + i_tile_size * box_points_num;
+  float *transpose_buffer = load_buffer + i_tile_size * 8;
 
-  // We will divide `core_box_num * 8` data by row,  into K tiles of
-  // `i_tile_size * 8`
+  // We will divide `core_box_num * 8` data by row,  into K tiles of `i_tile_size * 8`
   i_tile_size = MIN(i_tile_size, core_box_num);
 
   // reuse load_buffer after transpose
@@ -96,54 +92,20 @@ __mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
     int this_i_tile_size = i_end - i_beg;
     const float *tile_dev_beg = input_boxes + i_beg * real_width;
 #ifdef _DEBUG
-    __bang_printf("task_i: %d offset_i_beg: %d tile size:%d \n", taskId,
-                  offset_i_beg, this_i_tile_size);
+    __bang_printf("task_i: %d offset_i_beg: %d tile size:%d \n", taskId, offset_i_beg, this_i_tile_size);
 #endif
- __bang_printf("task_i: %d tile size:%d \n", taskId, this_i_tile_size);
-#if __BANG_ARCH__ >= 300
+
     // load boxes data into nram and remove padding
-    __memcpy(load_buffer, tile_dev_beg, box_points_num * sizeof(float),
-             GDRAM2NRAM, box_points_num * sizeof(float),
-             real_width * sizeof(float), this_i_tile_size - 1);
-    __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size,
-                     box_points_num);
+    __memcpy(load_buffer,
+             tile_dev_beg,
+             8 * sizeof(float),
+             GDRAM2NRAM,
+             8 * sizeof(float),
+             real_width * sizeof(float),
+             this_i_tile_size - 1);
+    __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size, 8);
     Area(transpose_buffer, this_i_tile_size, area_buffer);
-    __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
-             NRAM2GDRAM);
-#else
-    const int align_num = NFU_ALIGN_SIZE / sizeof(float);
-    // align this_i_tile_size->width, align  box_points_num->height
-    int real_num = this_i_tile_size -1;
-    int transpose_height = CEIL_ALIGN(real_num, align_num);
-    int transpose_width = CEIL_ALIGN(box_points_num, align_num);
-    int align_this_i_tile_size = CEIL_ALIGN(this_i_tile_size, align_num);
-
-    load_buffer = nram_mlu_calc_area;
-    transpose_buffer = load_buffer + align_this_i_tile_size * transpose_width;
-    area_buffer = load_buffer;
-    // N*9 --> N*8
-    __memcpy((float *)load_buffer, (float *)tile_dev_beg,
-             box_points_num * sizeof(float), GDRAM2NRAM,
-             transpose_height * sizeof(float), real_width * sizeof(float),
-             real_num);
-    // N*8 ---> 8*N
-    __bang_transpose((float *)transpose_buffer, (float *)load_buffer,
-                     align_this_i_tile_size, transpose_width);
-   
-    // // align (8)* align(this_i_tile_size) --> 8 * align(this_i_tile_size)
-    // __memcpy((float *)load_buffer, (float *)transpose_buffer,
-    //          this_i_tile_size * sizeof(float), NRAM2NRAM,
-    //          align_this_i_tile_size * sizeof(float), transpose_height * sizeof(float),
-    //          box_points_num);
-
-    
-    Area(transpose_buffer, align_this_i_tile_size, area_buffer);
-    for(int j = 0; j < this_i_tile_size; j++){
-      __bang_printf("---area_buffer[%d]:%f \n", j,  area_buffer[j]);
-    }
-    __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
-             NRAM2GDRAM);
-
-#endif
+    __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float), NRAM2GDRAM);
   }
+
 }
