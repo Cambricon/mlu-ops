@@ -186,7 +186,9 @@ int RunTest(mluOpHandle_t handle, int NBox, BoxData &box, size_t workspace_size,
   final_boxes.resize(n_box[0]);
   cnrtMemcpy(final_boxes.data(), dev_output_index, n_box[0] * sizeof(int),
              cnrtMemcpyDevToHost);
-
+  std::sort(final_boxes.begin(),final_boxes.end(),[](const  int lhs,const int rhs){
+    return lhs > rhs;
+  });
   for (auto v : final_boxes) {
     if (should_id != v) {
       printf("Err output\n");
