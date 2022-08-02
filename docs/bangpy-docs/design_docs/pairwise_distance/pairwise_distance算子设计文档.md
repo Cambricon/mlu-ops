@@ -77,7 +77,7 @@ torch.nn.PairwiseDistance(p=2.0, eps=1e-06, keepdim=False)
 ### 2.2 接口设计
 
 ```python
-pdist = mlu_pairwise_distance(p=2.0, eps=1e-06, keepdim=False)
+pdist = PairwiseDistance(p=2.0, eps=1e-06, keepdim=False)
 ```
 
 p 为计算范数时，指数的值
