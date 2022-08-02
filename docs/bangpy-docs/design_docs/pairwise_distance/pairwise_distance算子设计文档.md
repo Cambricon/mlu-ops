@@ -146,7 +146,7 @@ x[i, 2, j]
 
 subtract_tensor = input_tensor1 - intput_tensor2
 
-sub_tensors = get_last_dim(subtract_tensor)  #按照最后一个维度，讲该tensor划分，拿到所有子张量
+sub_tensors = get_last_dim(subtract_tensor)  #按照最后一个维度，将该tensor划分，拿到所有子张量
 
 for t in sub_tensors:
     length = calc_distance(t)
@@ -156,9 +156,8 @@ for t in sub_tensors:
 ### 3.5 可维护性设计
 
 
-### 3.6 测试用例设
-
-
+### 3.6 测试用例设计
+参见test_pairwise_distance测试报告
 
 ### 3.7 算子防呆检查
 
