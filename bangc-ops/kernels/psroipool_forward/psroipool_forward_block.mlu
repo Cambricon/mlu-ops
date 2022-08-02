@@ -235,7 +235,7 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
     int channels, int pooled_height, int pooled_width, int output_dim,
     int group_size, int rois_num, int rois_offset, float spatial_scale) {
   MLUKernelPsroipoolForward<<<k_dim, k_type, queue>>>(
-      bottom_data, bottom_rois, top_data, mapping_channel, batch_size,
-      height, width, channels, pooled_height, pooled_width, output_dim,
-      group_size, rois_num, rois_offset, spatial_scale);
+      bottom_data, bottom_rois, top_data, mapping_channel, batch_size, height,
+      width, channels, pooled_height, pooled_width, output_dim, group_size,
+      rois_num, rois_offset, spatial_scale);
 }

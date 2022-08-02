@@ -310,10 +310,10 @@ __mlu_global__ void MLUKernelRoiCropBackward(
       }
       // compute
       if (topLeftIsIn) {
-        __bang_mul_scalar(nram_output, nram_ping,
-                          i_tl_x_weight * i_tl_y_weight, c_limit);
+        __bang_mul_scalar(nram_output, nram_ping, i_tl_x_weight * i_tl_y_weight,
+                          c_limit);
         __bang_atomic_add(nram_output, grad_input + gi_tl_offset + c_offset,
-                            nram_output, c_slice);
+                          nram_output, c_slice);
       }
       if (topRightIsIn) {
         __bang_mul_scalar(nram_output + c_limit, nram_ping,
