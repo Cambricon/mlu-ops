@@ -18,6 +18,7 @@
 #include "kernels/poly_nms/enums.h"
 
 #define EPSILON 1e-12
+namespace {
 struct Point2D {
   float x;
   float y;
@@ -35,22 +36,22 @@ struct Line {
   float c;
 };
 
-template <PointDirection DIR>
+template<PointDirection DIR>
 __mlu_func__ static inline bool IsInner(const Line *__restrict__ line,
                                         const Point2D *__restrict__ c);
 
-template <>
+template<>
 __mlu_func__ inline bool IsInner<PointDirection::CW>(
     const Line *__restrict__ line, const Point2D *__restrict__ c) {
   return (line->b * c->y + line->a * c->x - line->c + EPSILON) > 0;
 }
 
-template <>
+template<>
 __mlu_func__ inline bool IsInner<PointDirection::CCW>(
     const Line *__restrict__ line, const Point2D *__restrict__ c) {
   return (line->b * c->y + line->a * c->x - line->c - EPSILON) < 0;
 }
-template <PointDirection POINT_DIR>
+template<PointDirection POINT_DIR>
 struct QuadClipBox {
   __mlu_func__ void AddLines(const Point2D *__restrict__ A) {
     line[0].Update(A, A + 1);
@@ -130,7 +131,7 @@ __mlu_func__ static inline float Area(const Point2D *__restrict__ points,
   return area / 2;
 }
 
-template <int CUTLINE_N, PointDirection POINT_DIR>
+template<int CUTLINE_N, PointDirection POINT_DIR>
 __mlu_func__ static inline float ClipArea(
     const float *__restrict__ box_i, const Line *__restrict__ clip_box_lines) {
   constexpr int MAX_POINT = CUTLINE_N + 4;
@@ -182,7 +183,7 @@ __mlu_func__ static inline float ClipArea(
   return Area(p_next, n);
 }
 
-template <PointDirection POINT_DIR>
+template<PointDirection POINT_DIR>
 __mlu_func__ inline float IntersectArea(
     const float *__restrict__ box_i,
     const QuadClipBox<POINT_DIR> *__restrict__ clip_box) {
@@ -196,5 +197,5 @@ __mlu_func__ inline float IntersectArea(
 
   return area > 0 ? area : -area;
 }
-
+} // namespace
 #endif  // BANGC_OPS_KERNELS_POLY_NMS_INTERSECT_AREA_H
