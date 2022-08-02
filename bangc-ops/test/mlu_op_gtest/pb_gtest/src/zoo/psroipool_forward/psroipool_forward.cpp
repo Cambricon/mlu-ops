@@ -9,343 +9,154 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "psroipool_forward.h"
+
 #include <algorithm>
 #include <string>
 #include <vector>
 
 #include "mlu_op.h"
 
-#include "psroipool_forward.h"
-
 namespace mluoptest {
 void PsroipoolForwardExecutor::paramCheck() {
-  VLOG(4) << "psroipool_forward param check";
+  VLOG(4) << "[PsroipoolForwardExecutor] param check.";
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "psroipool_forward input number is wrong, it should be 2, "
-               << "but now is " << parser_->getInputNum();
+    LOG(ERROR)
+        << "[PsroipoolForwardExecutor] input number is wrong. It should be 2, "
+        << "but now is " << parser_->getInputNum();
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 2) {
-    LOG(ERROR) << "psroipool_forward output number is wrong, it should be 2, "
-               << "but now is" << parser_->getOutputNum();
+    LOG(ERROR)
+        << "[PsroipoolForwardExecutor] output number is wrong. It should be 2, "
+        << "but now is" << parser_->getOutputNum();
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   for (int i = 0; i < parser_->getInputNum(); i++) {
     if (i == 1 && parser_->inputIsNull(i)) {
-      LOG(ERROR) << "psroipool_forward input [" << i << "] is nullptr.";
+      LOG(ERROR) << "[PsroipoolForwardExecutor] input [" << i
+                 << "] is nullptr.";
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
     }
   }
 }
 
-void PsroipoolForwardExecutor::workspaceMalloc() {
-  int output_dim = parser_->getProtoNode()->psroipool_forward_param().output_dim();
-  size_t workspace_size = 0;
-  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim, &workspace_size));
-  VLOG(4) << "Malloc workspace space.";
-
-  void *temp = mlu_runtime_.allocate(workspace_size);
-  workspace_.push_back(temp);
-  VLOG(4) << "Malloc addr: " << temp << " , size: " << workspace_size;
-}
-
-void PsroipoolForwardExecutor::workspaceFree() {
-  if (workspace_[0]) {
-    VLOG(4) << "Free device workspace space.";
-    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
-    workspace_[0] = nullptr;
-  }
-}
-
-void PsroipoolForwardExecutor::transposeNchwToNhwc(
-    const float *in, const uint32_t dim0, const uint32_t dim1,
-    const uint32_t dim2, const uint32_t dim3, float *out) {
-  for (int n = 0; n < dim0; n++) {
-    for (int c = 0; c < dim1; c++) {
-      for (int h = 0; h < dim2; h++) {
-        for (int w = 0; w < dim3; w++) {
-          out[n * dim1 * dim2 * dim3 + h * dim1 * dim3 + w * dim1 + c] =
-              in[n * dim1 * dim2 * dim3 + c * dim2 * dim3 + h * dim3 + w];
-        }
-      }
-    }
-  }
-}
-
-void PsroipoolForwardExecutor::transposeNhwcToNchw(
-    const float *in, const uint32_t dim0, const uint32_t dim1,
-    const uint32_t dim2, const uint32_t dim3, float *out) {
-  for (int n = 0; n < dim0; n++) {
-    for (int h = 0; h < dim1; h++) {
-      for (int w = 0; w < dim2; w++) {
-        for (int c = 0; c < dim3; c++) {
-          out[n * dim1 * dim2 * dim3 + c * dim1 * dim2 + h * dim2 + w] =
-              in[n * dim1 * dim2 * dim3 + h * dim2 * dim3 + w * dim3 + c];
-        }
-      }
-    }
-  }
-}
-
-void PsroipoolForwardExecutor::initData() {
-  output_dim_ = parser_->getProtoNode()->psroipool_forward_param().output_dim();
-  pooled_height_ =
-      parser_->getProtoNode()->psroipool_forward_param().pooled_height();
-  pooled_width_ =
-      parser_->getProtoNode()->psroipool_forward_param().pooled_width();
+void PsroipoolForwardExecutor::compute() {
   spatial_scale_ =
       parser_->getProtoNode()->psroipool_forward_param().spatial_scale();
   group_size_ = parser_->getProtoNode()->psroipool_forward_param().group_size();
-  batch_size_ = tensor_desc_[0].tensor->dims[0];
-  rois_offset_ = tensor_desc_[1].tensor->dims[1];
-}
+  auto input_desc = tensor_desc_[0].tensor;
+  auto rois_desc = tensor_desc_[1].tensor;
+  auto output_desc = tensor_desc_[2].tensor;
+  auto mapping_channel_desc = tensor_desc_[3].tensor;
 
-void PsroipoolForwardExecutor::compute() {
-  initData();
-  mluOpTensorDescriptor_t input_desc = tensor_desc_[0].tensor;
-  mluOpTensorLayout_t input_layout;
-  mluOpDataType_t input_dtype;
-  int input_dim = 0;
-  int input_dims[8] = {0};
-  mluOpGetTensorDescriptor(input_desc, &input_layout, &input_dtype,
-                           &input_dim, input_dims);
-  int channels = input_dims[3];
-  int height = input_dims[1];
-  int width = input_dims[2];
-  mluOpTensorDescriptor_t rois_desc = tensor_desc_[1].tensor;
-  mluOpTensorDescriptor_t output_desc = tensor_desc_[2].tensor;
-  mluOpTensorDescriptor_t mapping_channel_desc = tensor_desc_[3].tensor;
-  auto input = data_vector_[0].device_ptr;
-  auto rois = data_vector_[1].device_ptr;
-  auto output = data_vector_[2].device_ptr;
-  auto mapping_channel = data_vector_[3].device_ptr;
-  size_t workspace_size = 0;
-  MLUOP_CHECK(mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim_, &workspace_size));
+  const void* input = data_vector_[0].device_ptr;
+  const void* rois = data_vector_[1].device_ptr;
+  void* output = data_vector_[2].device_ptr;
+  void* mapping_channel = data_vector_[3].device_ptr;
+
   interface_timer_.start();
   MLUOP_CHECK(mluOpPsRoiPoolForward(
-      handle_, pooled_height_, pooled_width_, spatial_scale_, group_size_,
-      output_dim_, input_desc, input, rois_desc, rois, workspace_[0],
-      workspace_size, output_desc, output, mapping_channel_desc, mapping_channel));
+      handle_, spatial_scale_, group_size_, input_desc, input, rois_desc, rois,
+      output_desc, output, mapping_channel_desc, mapping_channel));
   interface_timer_.stop();
 }
 
 void PsroipoolForwardExecutor::cpuCompute() {
-  mluOpTensorDescriptor_t input_desc = tensor_desc_[0].tensor;
-  mluOpTensorLayout_t input_layout;
-  mluOpDataType_t input_dtype;
-  int input_dim = 0;
-  int input_dims[8] = {0};
-  MLUOP_CHECK(mluOpGetTensorDescriptor(input_desc, &input_layout, &input_dtype,
-                           &input_dim, input_dims));
-  int channels = input_dims[3];
-  int height = input_dims[1];
-  int width = input_dims[2];
-  mluOpTensorDescriptor_t rois_desc = tensor_desc_[1].tensor;
-  int desc_dim = 0;
-  int desc_dims[8] = {0};
-  mluOpTensorLayout_t desc_layout;
-  mluOpDataType_t desc_datatype;
-  MLUOP_CHECK(mluOpGetTensorDescriptor(rois_desc, &desc_layout, &desc_datatype,
-                           &desc_dim, desc_dims));
-  auto input = cpu_fp32_input_[0];
-  auto output = cpu_fp32_output_[0];
-  auto *mapping_channel = cpu_fp32_output_[1];
-  int input_count = batch_size_ * height * width * channels;
-  // tans input data
-  float *input_trans =
-      (float *)cpu_runtime_.allocate(new float[input_count]);
-  transposeNhwcToNchw(input, batch_size_, height, width, channels,
-                      input_trans);
-  auto rois = cpu_fp32_input_[1];
-  int rois_num = desc_dims[0] * desc_dims[1] / rois_offset_;
-  int rois_count = rois_num * rois_offset_;  // cur batch
-  // output
-  int top_data_count = rois_num * pooled_height_ * pooled_width_ * output_dim_;
-  std::vector<float> output_vec(top_data_count, -65504.0);
-  float *output_pre = output_vec.data();
-  // mapping_channel
-  std::vector<float> mapping_channel_vec(top_data_count, -65504.0);
-  float *mapping_channel_pre = mapping_channel_vec.data();
-  float *rois_trans =
-      (float *)cpu_runtime_.allocate(new float[rois_count]);
-  memcpy(rois_trans, rois, rois_count * sizeof(float));
-  for (int rois_id = 0; rois_id < rois_num; rois_id++) {
-    int roi_add = rois_id * 5;
-    int rois_batch_ind;
-    float roi_start_w, roi_start_h, roi_end_w, roi_end_h;
+  auto input_desc = tensor_desc_[0].tensor;
+  auto rois_desc = tensor_desc_[1].tensor;
+  auto output_desc = tensor_desc_[2].tensor;
 
-    rois_batch_ind = rois_trans[roi_add];
-    roi_start_w = static_cast<float>(round(rois_trans[roi_add + 1])) *
-                  spatial_scale_;
-    roi_start_h = static_cast<float>(round(rois_trans[roi_add + 2])) *
-                  spatial_scale_;
-    roi_end_w = static_cast<float>(round(rois_trans[roi_add + 3]) + 1.) *
-                spatial_scale_;
-    roi_end_h = static_cast<float>(round(rois_trans[roi_add + 4]) + 1.) *
-                spatial_scale_;
+  auto input_cpu = cpu_fp32_input_[0];
+  auto rois_cpu = cpu_fp32_input_[1];
+  auto output_cpu = cpu_fp32_output_[0];
+  auto mapping_channel_cpu = cpu_fp32_output_[1];
+
+  const int input_n = input_desc->dims[0];
+  const int input_h = input_desc->dims[1];
+  const int input_w = input_desc->dims[2];
+  const int input_c = input_desc->dims[3];
+
+  const int rois_n = rois_desc->dims[0];
+  const int rois_offset = rois_desc->dims[1];
+
+  const int output_h = output_desc->dims[1];
+  const int output_w = output_desc->dims[2];
+  const int output_c = output_desc->dims[3];
+
+  for (int roi_id = 0; roi_id < rois_n; roi_id++) {
+    int out_batch_offset = roi_id * output_c * output_h * output_w;
+    int roi_add = roi_id * rois_offset;
+    int batch_i = rois_cpu[roi_add];
+    int input_add = batch_i * input_h * input_w * input_c;
+
+    float roi_start_w =
+        static_cast<float>(round(rois_cpu[roi_add + 1])) * spatial_scale_;
+    float roi_start_h =
+        static_cast<float>(round(rois_cpu[roi_add + 2])) * spatial_scale_;
+    float roi_end_w =
+        static_cast<float>(round(rois_cpu[roi_add + 3]) + 1.) * spatial_scale_;
+    float roi_end_h =
+        static_cast<float>(round(rois_cpu[roi_add + 4]) + 1.) * spatial_scale_;
 
     float roi_width = std::max(roi_end_w - roi_start_w, (float)0.1);
     float roi_height = std::max(roi_end_h - roi_start_h, (float)0.1);
-    float bin_size_h = (float)roi_height / (float)(pooled_height_);
-    float bin_size_w = (float)roi_width / (float)(pooled_width_);
+    float bin_size_h = (float)roi_height / (float)(output_h);
+    float bin_size_w = (float)roi_width / (float)(output_w);
 
-    for (int ctop = 0; ctop < output_dim_; ctop++) {
-      for (int ph = 0; ph < pooled_height_; ph++) {
-        for (int pw = 0; pw < pooled_width_; pw++) {
-          int index = rois_id * output_dim_ * pooled_height_ * pooled_width_ +
-                      ctop * pooled_height_ * pooled_width_ +
-                      ph * pooled_width_ + pw;
-          int hstart = floor(static_cast<float>(ph) * bin_size_h + roi_start_h);
-          int wstart = floor(static_cast<float>(pw) * bin_size_w + roi_start_w);
+    for (int out_c = 0; out_c < output_c; out_c++) {
+      for (int out_h = 0; out_h < output_h; out_h++) {
+        for (int out_w = 0; out_w < output_w; out_w++) {
+          int out_index = out_batch_offset + out_h * output_w * output_c +
+                          out_w * output_c + out_c;
+          int hstart =
+              floor(static_cast<float>(out_h) * bin_size_h + roi_start_h);
+          int wstart =
+              floor(static_cast<float>(out_w) * bin_size_w + roi_start_w);
           int hend =
-              ceil(static_cast<float>(ph + 1) * bin_size_h + roi_start_h);
+              ceil(static_cast<float>(out_h + 1) * bin_size_h + roi_start_h);
           int wend =
-              ceil(static_cast<float>(pw + 1) * bin_size_w + roi_start_w);
+              ceil(static_cast<float>(out_w + 1) * bin_size_w + roi_start_w);
 
-          hstart = std::min(std::max(hstart, 0), height);
-          hend = std::min(std::max(hend, 0), height);
-          wstart = std::min(std::max(wstart, 0), width);
-          wend = std::min(std::max(wend, 0), width);
+          hstart = std::min(std::max(hstart, 0), input_h);
+          hend = std::min(std::max(hend, 0), input_h);
+          wstart = std::min(std::max(wstart, 0), input_w);
+          wend = std::min(std::max(wend, 0), input_w);
 
           bool is_empty = (hend <= hstart) || (wend <= wstart);
-
-          int gw = pw;
-          int gh = ph;
-          int c = (ctop * group_size_ + gh) * group_size_ + gw;
+          int gw = out_w;
+          int gh = out_h;
+          int c = out_c * group_size_ * group_size_ + gh * group_size_ + gw;
           float out_sum = 0;
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              int bottom_index = h * width + w;
-              out_sum += input_trans[(rois_batch_ind * channels + c) *
-                                              height * width +
-                                          bottom_index];
+              int bottom_index = h * w * input_c + w * input_c + c;
+              out_sum += input_cpu[bottom_index + input_add];
+              theory_ops_ += 7;
             }
           }
           float bin_area = (hend - hstart) * (wend - wstart);
           if (is_empty) {
-            output_pre[index] = 0;
+            output_cpu[out_index] = 0;
           } else {
-            output_pre[index] = out_sum / bin_area;
+            output_cpu[out_index] = out_sum / bin_area;
+            theory_ops_ += 1;
           }
-          mapping_channel_pre[index] = c;
+          mapping_channel_cpu[out_index] = c;
         }
       }
     }
   }
-  cpu_runtime_.deallocate(input_trans);
-  cpu_runtime_.deallocate(rois_trans);
-  transposeNchwToNhwc(output_pre, rois_num, output_dim_, pooled_height_,
-                      pooled_width_, output);
-  transposeNchwToNhwc(mapping_channel_pre, rois_num, output_dim_,
-                      pooled_height_, pooled_width_, mapping_channel);
 }
 
 int64_t PsroipoolForwardExecutor::getTheoryOps() {
   if (parser_->device() != CPU) {
     return -1;
   }
-
-  int64_t theory_ops = 0;
-  mluOpTensorDescriptor_t input_desc = tensor_desc_[0].tensor;
-  mluOpTensorLayout_t input_layout;
-  mluOpDataType_t input_dtype;
-  int input_dim = 0;
-  int input_dims[8] = {0};
-  MLUOP_CHECK(mluOpGetTensorDescriptor(input_desc, &input_layout, &input_dtype,
-                           &input_dim, input_dims));
-  int channels = input_dims[3];
-  int height = input_dims[1];
-  int width = input_dims[2];
-  mluOpTensorDescriptor_t rois_desc = tensor_desc_[1].tensor;
-  int desc_dim = 0;
-  int desc_dims[8] = {0};
-  mluOpTensorLayout_t desc_layout;
-  mluOpDataType_t desc_datatype;
-  MLUOP_CHECK(mluOpGetTensorDescriptor(rois_desc, &desc_layout, &desc_datatype,
-                           &desc_dim, desc_dims));
-  float *input = cpu_fp32_input_[0];
-  float *output = cpu_fp32_output_[0];
-  auto *mapping_channel = cpu_fp32_output_[1];
-  int input_count = batch_size_ * height * width * channels;
-  // tans input data
-  float *input_trans =
-      (float *)cpu_runtime_.allocate(new float[input_count]);
-  transposeNhwcToNchw(input, batch_size_, height, width, channels,
-                      input_trans);
-  float *rois = cpu_fp32_input_[1];
-  int rois_num = desc_dims[0] * desc_dims[1] / rois_offset_;
-  int rois_count = rois_num * rois_offset_;  // cur batch
-
-  // output
-  int top_data_count = rois_num * pooled_height_ * pooled_width_ * output_dim_;
-  std::vector<float> output_vec(top_data_count, -65504.0);
-  float *output_pre = output_vec.data();
-  // mapping_channel
-  std::vector<float> mapping_channel_vec(top_data_count, -65504.0);
-  float *mapping_channel_pre = mapping_channel_vec.data();
-  float *rois_trans =
-      (float *)cpu_runtime_.allocate(new float[rois_count]);
-  memcpy(rois_trans, rois, rois_count * sizeof(float));
-  for (int rois_id = 0; rois_id < rois_num; rois_id++) {
-    int roi_add = rois_id * 5;
-    int rois_batch_ind;
-    float roi_start_w, roi_start_h, roi_end_w, roi_end_h;
-
-    rois_batch_ind = rois_trans[roi_add];
-    roi_start_w = static_cast<float>(rint(rois_trans[roi_add + 1])) *
-                  spatial_scale_;
-    roi_start_h = static_cast<float>(rint(rois_trans[roi_add + 2])) *
-                  spatial_scale_;
-    roi_end_w = static_cast<float>(rint(rois_trans[roi_add + 3]) + 1.) *
-                spatial_scale_;
-    roi_end_h = static_cast<float>(rint(rois_trans[roi_add + 4]) + 1.) *
-                spatial_scale_;
-
-    float roi_width = std::max<float>(roi_end_w - roi_start_w, 0.1);
-    float roi_height = std::max<float>(roi_end_h - roi_start_h, 0.1);
-    float bin_size_h = roi_height / static_cast<float>(pooled_height_);
-    float bin_size_w = roi_width / static_cast<float>(pooled_width_);
-
-    for (int ctop = 0; ctop < output_dim_; ctop++) {
-      for (int ph = 0; ph < pooled_height_; ph++) {
-        for (int pw = 0; pw < pooled_width_; pw++) {
-          int index = rois_id * output_dim_ * pooled_height_ * pooled_width_ +
-                      ctop * pooled_height_ * pooled_width_ +
-                      ph * pooled_width_ + pw;
-          int hstart = floor(static_cast<float>(ph) * bin_size_h + roi_start_h);
-          int wstart = floor(static_cast<float>(pw) * bin_size_w + roi_start_w);
-          int hend =
-              ceil(static_cast<float>(ph + 1) * bin_size_h + roi_start_h);
-          int wend =
-              ceil(static_cast<float>(pw + 1) * bin_size_w + roi_start_w);
-
-          hstart = std::min(std::max(hstart, 0), height);
-          hend = std::min(std::max(hend, 0), height);
-          wstart = std::min(std::max(wstart, 0), width);
-          wend = std::min(std::max(wend, 0), width);
-
-          bool is_empty = (hend <= hstart) || (wend <= wstart);
-
-          int gw = pw;
-          int gh = ph;
-          int c = (ctop * group_size_ + gh) * group_size_ + gw;
-          float out_sum = 0;
-          for (int h = hstart; h < hend; ++h) {
-            for (int w = wstart; w < wend; ++w) {
-              theory_ops += 8;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  cpu_runtime_.deallocate(input_trans);
-  cpu_runtime_.deallocate(rois_trans);
-  VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
-  return theory_ops;
+  VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
+  return theory_ops_;
 }
 }  // namespace mluoptest

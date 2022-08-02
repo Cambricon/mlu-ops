@@ -70,13 +70,8 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 | input       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
 | rois_desc  | 输入roi的描述符                    | 输入              | mluOpTensorDescriptor_t | /          | 无       |
 | rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
-| workspace        | 用于辅助的GDRAM空间的指针          | 输入              | /           | /          | 无       |
-| workspace_size   | workspace空间的大小                | 输入              | size_t           | /          | 无       |
-| pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
-| pooled_width    | 池化后的宽度                      | 输入              | uint32_t           | /          | 无       |
 | group_size       |  组的大小                        | 输入             | uint32_t      | /       | 无       |
 | spatial_scale    | 变换的尺度                     | 输入              | float      |   /       | 无       |
-| output_dims      | 输出的channel                      | 输入              | uint32_t          | /          | 无       |
 | output_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
 | output      | 输出数据的指针                     | 输出              | float      | NHWC       | 无       |
 | mapping_channel_desc | 输出mapping_channel的描述符            | 输入              | mluOpTensorDescriptor_t          | /          | 无       |
@@ -92,7 +87,7 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
-| 输入参数限制 | group_size=pooled_height=pooled_width,rois_offset=5,</br>group_size>=1,output_dim>=1,spatial_scale>0,</br>channels = pooled_height *pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batch - 1 |
+| 输入参数限制 | group_size = ho = wo,rois_offset=5,</br>group_size>=1,output_dim>=1,spatial_scale>0,</br>channels = ho *wo * output_dims,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batch - 1 |
 | nan/inf限制 | input支持nan/inf测例， rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
 
 ### 1.5 验收标准
@@ -130,15 +125,11 @@ int psroi_pooling_forward_cuda(int pooled_height,
 ```c++
 mluOpStatus_t MLUOP_WIN_API 
 mluOpPsRoiPoolForward(mluOpHandle_t handle,
-                      const int pooled_height, const int pooled_width,
                       const float spatial_scale, const int group_size,
-                      const int output_dim,
                       const mluOpTensorDescriptor_t input_desc,
                       const void *input,
                       const mluOpTensorDescriptor_t rois_desc,
                       const void *rois,
-                      void *workspace,
-                      const size_t workspace_size,
                       const mluOpTensorDescriptor_t output_desc,
                       void *output,
                       const mluOpTensorDescriptor_t mapping_channel_desc,
@@ -155,7 +146,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 
 （1)step1，在原始图像input:[batches,hi,wi,C]上计算出当前roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]的起始位置和终止位置。
 
-（2)step2，通过roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]和output:[num_rois,pooled_height,pooled_width,output_dims]中pooled_height/pooled_width的比例，将当前roi平均划分为若干个bin，并且循环处理每一个bin.
+（2)step2，通过roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]和output:[num_rois,ho,wo,output_dims]中ho/hw的比例，将当前roi平均划分为若干个bin，并且循环处理每一个bin.
 
 （3)step3，针对当前的bin，计算出当前bin的起始位置和终止位置。对bin_h和bin_w每一个点进行循环处理，一次处理c方向上的数据，共计output_dim。对取出的bin_h * bin_w 个output_dim像素进行对位相加后进行取平均，即为输出图像上对应的c方向上的数据，并记录保存当前C到mapping_channels，过程在对步骤3进行循环，即可处理下一个bin(如果output_dim超过nram上最多能处理的数量max_deal,则需要拆分output_dim)。
 
@@ -169,9 +160,9 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 // 每一个核的roi循环
 for (roi_id = roi_begin;roi_id < roi_end;roi_id++) {
 // 按照输出数据的height方向进行循环
-    for (ph = 0; ph <pooled_height; ph++) {
+    for (ph = 0; ph <ho; ph++) {
 // 按照输出数据的width方向进行循环
-        for (pw = 0; pw < pooled_iwdth; pw++) {
+        for (pw = 0; pw < wo; pw++) {
             // 计算出每一个点(ph,pw)对应在roi中大小，计算出hstart,wstart,hend,wend
             // 针对每一个映射点进行循环处理
             for (h = hstart; h < hend; h++) {
@@ -251,12 +242,12 @@ nram划分如下：
    rois:[320，5], LAYOUT_ARRAY, DTYPE_FLOAT
    output:[320, 7, 7, 8], LAYOUT_NHWC, DTYPE_FLOAT
    mapping_channels:[320, 7, 7, 8], LAYOUT_NHWC, DTYPE_INT32
-   psroipool_forward_param{spatial_scale=1, group_size=7, output_dim=8, pooled_height=7, pooled_width=7}
+   psroipool_forward_param{spatial_scale=1, group_size=7}
 (2)input:[2, 14, 14,198], LAYOUT_NHWC, DTYPE_FLOAT
    input:[493, 5], LAYOUT_ARRAY, DTYPE_FLOAT
    output:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_FLOAT
    mapping_channels:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_INT32
-   psroipool_forward_param{spatial_scale=0.0625, group_size=3,output_dim=21, pooled_height=3,pooled_width=3} 
+   psroipool_forward_param{spatial_scale=0.0625, group_size=3} 
 
 ```
 
@@ -290,23 +281,21 @@ nram划分如下：
 
 - 算子参数防呆
 
-1. group_size = pooled_height
+1. group_size = ho = wo
 
-2. pooled_width = pooled_height
+2. input_layout = MLUOP_LAYOUT_NHWC
 
-3. input_layout = MLUOP_LAYOUT_NHWC
+3. group_size >= 1
 
-4. group_size >= 1
+4. output_dim >= 1
 
-5. output_dim >= 1
+5. spatial_scale > 0
 
-6. spatial_scale > 0
+6. rois_offset == 5
 
-7. rois_offset == 5
+7. mapping_channels_layout == MLUOP_LAYOUT_NHWC
 
-8. mapping_channels_layout == MLUOP_LAYOUT_NHWC
-
-9. input_dtype == MLUOP_DTYPE_FLOAT
+8. input_dtype == MLUOP_DTYPE_FLOAT
 
 10. rois_dtype == MLUOP_DTYPE_FLOAT
 
@@ -314,7 +303,7 @@ nram划分如下：
 
 12. mapping_channels_dtype == MLUOP_DTYPE_INT32
 
-13. channels == pooled_height * pooled_width * output_dim （channels指的是输入图像的C)
+13. channels == ho * wo * output_dims （channels指的是输入图像的C)
 
 14. input_desc->dim == 4
 

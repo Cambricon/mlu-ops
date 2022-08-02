@@ -58,9 +58,6 @@ output {
   dtype: DTYPE_INT32
 }
 psroipool_forward_param {
-  output_dim: 10
-  pooled_height: 3
-  pooled_width: 3
   spatial_scale: 0.0625
   group_size: 3
 }
