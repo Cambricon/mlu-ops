@@ -205,7 +205,4 @@ message DivParam {
 message PsRoiPoolForwardParam{
   optional float spatial_scale = 1 [default = 0.0625];
   optional int32 group_size = 2 [default = 7];
-  optional int32 output_dim = 3 [default = 8];
-  optional int32 pooled_height = 4 [default = 7];
-  optional int32 pooled_width = 5 [default = 7];
 }
