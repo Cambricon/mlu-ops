@@ -61,8 +61,8 @@
 
 参考接口中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与参考对齐。
 
-```
-// 接口
+```python
+# 接口
 psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, self.pooled_width, self.spatial_scale, self.output_dim,  \
         self.top_grad, self.rois, bottom_grad, self.mappingchannel)
 {pooled_height = 2, pooled_width = 2, spatial_scale = 0.25, output_dim = 1}
@@ -82,7 +82,7 @@ rois: shape is [2, 5]
               device='cuda:0')
 print(bottom_grad)
 bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
-             tensor([[[[2., 0., 0.],
+             tensor([[[2., 0., 0.],
                        [0., 0., 0.]],
                       [[2., 0., 0.],
                        [0., 0., 0.]],
@@ -92,7 +92,7 @@ bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
                        [0., 0., 0.]]]], device='cuda:0')
 ```
 
-```
+```python
 # 0元素检查
 # 1. rois为0，报错
 torch.FatalError: invalid argument 2: out of range at /opt/pytorch/pytorch/torch/lib/THC/generic/THCTensor.c:23
@@ -102,7 +102,7 @@ print(bottom_grad)
 tensor([[[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
-          [0., 0., 0.]],
+          [0., 0., 0.]]],
         [[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
@@ -114,7 +114,7 @@ print(bottom_grad)
 tensor([[[[8., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
-          [0., 0., 0.]],
+          [0., 0., 0.]]],
         [[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
@@ -129,7 +129,7 @@ print(bottom_grad)
 tensor([[[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
-          [0., 0., 0.]],
+          [0., 0., 0.]]],
         [[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
@@ -144,7 +144,7 @@ print(bottom_grad)
 tensor([[[[inf, 0., 0.],
           [0., 0., 0.]],
          [[inf, 0., 0.],
-          [0., 0., 0.]],
+          [0., 0., 0.]]],
         [[[inf, 0., 0.],
           [0., 0., 0.]],
          [[inf, 0., 0.],
@@ -158,7 +158,7 @@ print(bottom_grad)
 tensor([[[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
-          [0., 0., 0.]],
+          [0., 0., 0.]]],
         [[[0., 0., 0.],
           [0., 0., 0.]],
          [[0., 0., 0.],
@@ -173,7 +173,7 @@ print(bottom_grad)
 tensor([[[[nan, 0., 0.],
           [0., 0., 0.]],
          [[nan, 0., 0.],
-          [0., 0., 0.]],
+          [0., 0., 0.]]],
         [[[nan, 0., 0.],
           [0., 0., 0.]],
          [[nan, 0., 0.],
