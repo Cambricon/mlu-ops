@@ -15,10 +15,8 @@ extern mluoptest::GlobalVar global_var;
 void TestEnvironment::SetUp() {
   // 1. set up cnrt env
   VLOG(4) << "SetUp CNRT environment.";
-  ASSERT_EQ(cnrtInit(0), CNRT_RET_SUCCESS);
 
   // 2. get device num
-  cnrtDev_t dev = 0;  // not ptr, it's long unsigned int
   unsigned int dev_num = 0;
   ASSERT_EQ(cnrtGetDeviceCount(&dev_num), CNRT_RET_SUCCESS);
   if (dev_num <= 0) {  // dev_num_ should > 0
@@ -38,18 +36,17 @@ void TestEnvironment::SetUp() {
   if (global_var.thread_num_ == 1) {
     // if single thread is 1, set current device.
     // if multi thread set current in each thread.
-    ASSERT_EQ(cnrtGetDeviceHandle(&dev, global_var.dev_id_), CNRT_RET_SUCCESS);
-    ASSERT_EQ(cnrtSetCurrentDevice(dev), CNRT_RET_SUCCESS);
+    ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
   }
 }
 
 void TestEnvironment::TearDown() {
   VLOG(4) << "TearDown CNRT environment.";
-  cnrtDestroy();
 
   auto summary = global_var.summary_;
   std::cout << "[ SUMMARY  ] "
-            << "Total " << summary.case_count << " cases of " << summary.suite_count << " op(s).\n";
+            << "Total " << summary.case_count << " cases of "
+            << summary.suite_count << " op(s).\n";
   if (summary.failed_list.empty()) {
     std::cout << "ALL PASSED.\n";
   } else {

@@ -99,7 +99,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       i_tr_offset = i_tl_offset + channel;
       i_bl_offset = i_tl_offset + width * channel;
       i_br_offset = i_tl_offset + width * channel + channel;
-      __nramset(nram_ping, 4 * c_limit, 0);
+      __bang_write_value(nram_ping, 4 * c_limit, 0);
       __asm__ volatile("sync;\n\t");
       if (topLeftIsIn) {
         __memcpy_async(nram_ping, input + i_tl_offset, c_slice * sizeof(T),
@@ -118,7 +118,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
                        c_slice * sizeof(T), GDRAM2NRAM);
       }
     }
-    __nramset(nram_pong, 4 * c_limit, 0);
+    __bang_write_value(nram_pong, 4 * c_limit, 0);
     __asm__ volatile("sync;\n\t");
     while (c_rem > 0) {
       c_slice = c_slice < c_rem ? c_slice : c_rem;
@@ -196,14 +196,14 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
         }
       }
       // compute
-      __bang_mul_const(nram_ping, nram_ping, i_tl_x_weight * i_tl_y_weight,
-                       c_limit);
-      __bang_mul_const(nram_ping + c_limit, nram_ping + c_limit,
-                       (1 - i_tl_x_weight) * i_tl_y_weight, c_limit);
-      __bang_mul_const(nram_ping + 2 * c_limit, nram_ping + 2 * c_limit,
-                       i_tl_x_weight * (1 - i_tl_y_weight), c_limit);
-      __bang_mul_const(nram_ping + 3 * c_limit, nram_ping + 3 * c_limit,
-                       (1 - i_tl_x_weight) * (1 - i_tl_y_weight), c_limit);
+      __bang_mul_scalar(nram_ping, nram_ping, i_tl_x_weight * i_tl_y_weight,
+                        c_limit);
+      __bang_mul_scalar(nram_ping + c_limit, nram_ping + c_limit,
+                        (1 - i_tl_x_weight) * i_tl_y_weight, c_limit);
+      __bang_mul_scalar(nram_ping + 2 * c_limit, nram_ping + 2 * c_limit,
+                        i_tl_x_weight * (1 - i_tl_y_weight), c_limit);
+      __bang_mul_scalar(nram_ping + 3 * c_limit, nram_ping + 3 * c_limit,
+                        (1 - i_tl_x_weight) * (1 - i_tl_y_weight), c_limit);
       __bang_add(nram_ping, nram_ping, nram_ping + c_limit, c_limit);
       __bang_add(nram_ping + 2 * c_limit, nram_ping + 2 * c_limit,
                  nram_ping + 3 * c_limit, c_limit);
@@ -215,7 +215,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       c_rem -= c_slice;
       c_offset += c_slice;
       swap(nram_ping, nram_pong);
-      __nramset(nram_pong, 4 * c_limit, 0);
+      __bang_write_value(nram_pong, 4 * c_limit, 0);
       __asm__ volatile("sync;\n\t");
     }
   }
@@ -310,28 +310,28 @@ __mlu_global__ void MLUKernelRoiCropBackward(
       }
       // compute
       if (topLeftIsIn) {
-        __bang_mul_const(nram_output, nram_ping, i_tl_x_weight * i_tl_y_weight,
-                         c_limit);
+        __bang_mul_scalar(nram_output, nram_ping, i_tl_x_weight * i_tl_y_weight,
+                          c_limit);
         __bang_atomic_add(nram_output, grad_input + gi_tl_offset + c_offset,
                           nram_output, c_slice);
       }
       if (topRightIsIn) {
-        __bang_mul_const(nram_output + c_limit, nram_ping,
-                         (1 - i_tl_x_weight) * i_tl_y_weight, c_limit);
+        __bang_mul_scalar(nram_output + c_limit, nram_ping,
+                          (1 - i_tl_x_weight) * i_tl_y_weight, c_limit);
         __bang_atomic_add(nram_output + c_limit,
                           grad_input + gi_tr_offset + c_offset,
                           nram_output + c_limit, c_slice);
       }
       if (bottomLeftIsIn) {
-        __bang_mul_const(nram_output + 2 * c_limit, nram_ping,
-                         i_tl_x_weight * (1 - i_tl_y_weight), c_limit);
+        __bang_mul_scalar(nram_output + 2 * c_limit, nram_ping,
+                          i_tl_x_weight * (1 - i_tl_y_weight), c_limit);
         __bang_atomic_add(nram_output + 2 * c_limit,
                           grad_input + gi_bl_offset + c_offset,
                           nram_output + 2 * c_limit, c_slice);
       }
       if (bottomRightIsIn) {
-        __bang_mul_const(nram_output + 3 * c_limit, nram_ping,
-                         (1 - i_tl_x_weight) * (1 - i_tl_y_weight), c_limit);
+        __bang_mul_scalar(nram_output + 3 * c_limit, nram_ping,
+                          (1 - i_tl_x_weight) * (1 - i_tl_y_weight), c_limit);
         __bang_atomic_add(nram_output + 3 * c_limit,
                           grad_input + gi_br_offset + c_offset,
                           nram_output + 3 * c_limit, c_slice);
