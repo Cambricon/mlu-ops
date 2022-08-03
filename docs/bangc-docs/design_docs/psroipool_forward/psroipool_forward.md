@@ -70,8 +70,6 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 | input       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
 | rois_desc  | 输入roi的描述符                    | 输入              | mluOpTensorDescriptor_t | /          | 无       |
 | rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
-| workspace        | 用于辅助的GDRAM空间的指针          | 输入              | /           | /          | 无       |
-| workspace_size   | workspace空间的大小                | 输入              | size_t           | /          | 无       |
 | pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
 | pooled_width    | 池化后的宽度                      | 输入              | uint32_t           | /          | 无       |
 | group_size       |  组的大小                        | 输入             | uint32_t      | /       | 无       |
@@ -137,8 +135,6 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
                       const void *input,
                       const mluOpTensorDescriptor_t rois_desc,
                       const void *rois,
-                      void *workspace,
-                      const size_t workspace_size,
                       const mluOpTensorDescriptor_t output_desc,
                       void *output,
                       const mluOpTensorDescriptor_t mapping_channel_desc,

@@ -17,29 +17,20 @@ namespace mluoptest {
 class PsroipoolForwardExecutor : public Executor {
  public:
   PsroipoolForwardExecutor() {}
-  ~PsroipoolForwardExecutor() { workspaceFree(); }
-  void workspaceMalloc() override;
+  ~PsroipoolForwardExecutor() {}
   void paramCheck() override;
   void compute() override;
-  void workspaceFree() override;
   void cpuCompute() override;
   int64_t getTheoryOps() override;
 
  private:
   void initData();
-  void transposeNchwToNhwc(const float *in, const uint32_t dim0,
-                           const uint32_t dim1, const uint32_t dim2,
-                           const uint32_t dim3, float *out);
-  void transposeNhwcToNchw(const float *in, const uint32_t dim0,
-                           const uint32_t dim1, const uint32_t dim2,
-                           const uint32_t dim3, float *out);
-  int batch_size_;
-  int rois_offset_;
   int output_dim_;
   int pooled_height_;
   int pooled_width_;
   float spatial_scale_;
   int group_size_;
+  int64_t theory_ops_ = 0;
 };
 }  // namespace mluoptest
 #endif  // TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_FORWARD_PSROIPOOL_FORWARD_H_
