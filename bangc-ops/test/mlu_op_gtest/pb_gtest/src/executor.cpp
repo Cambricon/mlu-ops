@@ -1344,7 +1344,7 @@ namespace mluoptest {
   // after compute
   void Executor::syncQueueAndGetHardwareTime(int repeat) {
     float hwtime = 0.0f;
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtSyncQueue(exe_context_->queue));
+    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtQueueSync(exe_context_->queue));
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtNotifierDuration(exe_context_->n_start,
                                                          exe_context_->n_stop,
                                                          &hwtime));

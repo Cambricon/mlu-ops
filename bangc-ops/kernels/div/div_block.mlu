@@ -40,10 +40,10 @@ __mlu_func__ void get3OffsetDivFast(int32_t &nram_limit, int32_t &pong_x,
     nram_aux1 = nram_y + nram_limit * 3;     // scaling
     nram_aux2 = nram_aux1 + nram_limit * 4;  // nram_aux2
     nram_aux3 = nram_aux2 + nram_limit * 4;  // zero
-    __nramset((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
-              (float)HIGH_BOUND);
-    __nramset((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
-              (float)LOW_BOUND);
+    __bang_write_value((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+                       (float)HIGH_BOUND);
+    __bang_write_value((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM,
+                       BINARY_ALIGN_NUM, (float)LOW_BOUND);
   } else {
     // nram: x - x_pong - y - y_pong - scaling - zoom - zero - factor
     nram_limit = (DIV_NRAM_USED / sizeof(T) - 3 * BINARY_ALIGN_NUM) / 8;
@@ -55,10 +55,10 @@ __mlu_func__ void get3OffsetDivFast(int32_t &nram_limit, int32_t &pong_x,
     nram_aux1 = nram_y + nram_limit * 2;
     nram_aux2 = nram_aux1 + nram_limit * 2;
     nram_aux3 = nram_aux2 + nram_limit * 2;
-    __nramset(nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
-              (float)HIGH_BOUND);
-    __nramset(nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
-              (float)LOW_BOUND);
+    __bang_write_value(nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+                       (float)HIGH_BOUND);
+    __bang_write_value(nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+                       (float)LOW_BOUND);
   }
 }
 
@@ -80,10 +80,10 @@ __mlu_func__ void get3OffsetDivHighAcc(int32_t &nram_limit, int32_t &pong_x,
   nram_aux1 = nram_y + nram_limit * 3;     // scaling
   nram_aux2 = nram_aux1 + nram_limit * 4;  // nram_aux2
   nram_aux3 = nram_aux2 + nram_limit * 4;  // zero
-  __nramset((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
-            (float)HIGH_BOUND);
-  __nramset((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
-            (float)LOW_BOUND);
+  __bang_write_value((float *)nram_aux3 + BINARY_ALIGN_NUM, BINARY_ALIGN_NUM,
+                     (float)HIGH_BOUND);
+  __bang_write_value((float *)nram_aux3 + 2 * BINARY_ALIGN_NUM,
+                     BINARY_ALIGN_NUM, (float)LOW_BOUND);
 }
 
 template <typename T>
@@ -97,21 +97,21 @@ __mlu_func__ void computeDivFast(T *nram_x, T *nram_y, T *nram_scaling,
   __bang_write_zero(nram_zero, BINARY_ALIGN_NUM);
   // ensure all the input are larger than 0
   __bang_cycle_gt(nram_scaling, nram_y, nram_zero, deal_num, BINARY_ALIGN_NUM);
-  __bang_mul_const(nram_scaling, nram_scaling, (T)(2), deal_num);
-  __bang_add_const(nram_scaling, nram_scaling, (T)(-1), deal_num);
+  __bang_mul_scalar(nram_scaling, nram_scaling, (T)(2), deal_num);
+  __bang_add_scalar(nram_scaling, nram_scaling, (T)(-1), deal_num);
   __bang_mul(nram_y, nram_y, nram_scaling, deal_num);
   if (sizeof(T) == sizeof(float)) {
     // ZOOM
     __bang_cycle_lt(nram_zoom, nram_y, nram_factor, deal_num, BINARY_ALIGN_NUM);
-    __bang_mul_const((float *)nram_zoom, (float *)nram_zoom, (float)(1 - SCALE),
-                     deal_num);
-    __bang_add_const((float *)nram_zoom, (float *)nram_zoom, (float)SCALE,
-                     deal_num);
+    __bang_mul_scalar((float *)nram_zoom, (float *)nram_zoom,
+                      (float)(1 - SCALE), deal_num);
+    __bang_add_scalar((float *)nram_zoom, (float *)nram_zoom, (float)SCALE,
+                      deal_num);
     __bang_mul(nram_y, nram_y, nram_zoom, deal_num);
 
     __bang_cycle_lt(nram_aux2, nram_y, nram_bound, deal_num, BINARY_ALIGN_NUM);
-    __bang_mul_const((float *)nram_aux4, (float *)nram_aux2, (float)LOW_SCALE,
-                     deal_num);
+    __bang_mul_scalar((float *)nram_aux4, (float *)nram_aux2, (float)LOW_SCALE,
+                      deal_num);
     __bang_cycle_eq(nram_aux2, nram_aux2, nram_zero, deal_num,
                     BINARY_ALIGN_NUM);
     __bang_add(nram_aux2, nram_aux2, nram_aux4, deal_num);
@@ -150,17 +150,17 @@ __mlu_func__ void computeDivHighAcc(T *nram_x, T *nram_y, T *nram_scaling,
   __bang_write_zero(zero, BINARY_ALIGN_NUM);
   // ensure all the input are larger than 0
   __bang_cycle_gt(scale, nram_fp_y, zero, deal_num, BINARY_ALIGN_NUM);
-  __bang_mul_const(scale, scale, (float)(2), deal_num);
-  __bang_add_const(scale, scale, (float)(-1), deal_num);
+  __bang_mul_scalar(scale, scale, (float)(2), deal_num);
+  __bang_add_scalar(scale, scale, (float)(-1), deal_num);
   __bang_mul(nram_fp_y, nram_fp_y, scale, deal_num);
 
   __bang_cycle_lt(zoom, nram_fp_y, factor, deal_num, BINARY_ALIGN_NUM);
-  __bang_mul_const(zoom, zoom, (float)(1 - SCALE), deal_num);
-  __bang_add_const(zoom, zoom, (float)SCALE, deal_num);
+  __bang_mul_scalar(zoom, zoom, (float)(1 - SCALE), deal_num);
+  __bang_add_scalar(zoom, zoom, (float)SCALE, deal_num);
   __bang_mul(nram_fp_y, nram_fp_y, zoom, deal_num);
 
   __bang_cycle_lt(aux2, nram_fp_y, bound, deal_num, BINARY_ALIGN_NUM);
-  __bang_mul_const(aux4, aux2, (float)LOW_SCALE, deal_num);
+  __bang_mul_scalar(aux4, aux2, (float)LOW_SCALE, deal_num);
   __bang_cycle_eq(aux2, aux2, zero, deal_num, BINARY_ALIGN_NUM);
   __bang_add(aux2, aux2, aux4, deal_num);
   __bang_mul(nram_fp_y, nram_fp_y, aux2, deal_num);

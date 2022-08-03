@@ -10,6 +10,6 @@ cd bangc-ops
 cd ..
 
 # 2.build BANGPy ops
-cd bangpy-ops/utils
-./build_operators.sh
-cd ../..
+#cd bangpy-ops/utils
+#./build_operators.sh
+#cd ../..
