@@ -5,6 +5,8 @@
 | 算子名称    | psroipool_backward       |
 | ----------- | -------------- |
 | 编制人/日期 | 涂德江/2022-8-2 |
+| 审批人/日期 | 卜德飞/2022-8-3 |
+| 审批人/日期 | 王远/2022-8-3   |
 
 - #### 修改记录
 
@@ -53,50 +55,76 @@
 
 ### 1.2 算子功能和应用场景描述
 
-算子功能： psroipool算子的反向
+算子功能： psroipool 算子的反向
 
 应用场景： 该算子应用于R-FCN网络。
 
 - example:
 
-参考接口中top_grad、mapping_channel、bottom_grad都是NCHW的layout，下面example与参考对齐。
+参考接口中 top_grad、mapping_channel、bottom_grad 都是 NCHW 的 layout，下面 example 与参考对齐。
 
 ```python
 # 接口
-psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, self.pooled_width, self.spatial_scale, self.output_dim,  \
-        self.top_grad, self.rois, bottom_grad, self.mappingchannel)
+psroi_pooling.psroi_pooling_backward_cuda(self.pooled_height, 
+                                          self.pooled_width, 
+                                          self.spatial_scale, 
+                                          self.output_dim,
+                                          self.top_grad, 
+                                          self.rois, 
+                                          bottom_grad, 
+                                          self.mappingchannel)
 {pooled_height = 2, pooled_width = 2, spatial_scale = 0.25, output_dim = 1}
+
 top_grad: shape is  [2, 1, 2, 2]
           tensor([[[[1., 1.],
                     [1., 1.]]],
                   [[[1., 1.],
                     [1., 1.]]]], device='cuda:0')
+
 mapping_channel: shape is [2, 1, 2, 2]
                  tensor([[[[0, 1],
                            [2, 3]]],
                          [[[0, 1],
                           [2, 3]]]], device='cuda:0')
+
 rois: shape is [2, 5]
       tensor([[0.0000, 1.0000, 2.0000, 2.0000, 3.0000],
               [0.0000, 1.0000, 2.0000, 2.0000, 3.0000]],
               device='cuda:0')
-print(bottom_grad)
+
 bottom_grad: shape is  [2, 2 * 2 * 1, 3, 3]
              tensor([[[2., 0., 0.],
+                       [0., 0., 0.],
                        [0., 0., 0.]],
                       [[2., 0., 0.],
+                       [0., 0., 0.],
+                       [0., 0., 0.]],
+                       [[2., 0., 0.],
+                       [0., 0., 0.],
+                       [0., 0., 0.]],
+                       [[2., 0., 0.],
+                       [0., 0., 0.],
                        [0., 0., 0.]],
                      [[[2., 0., 0.],
+                       [0., 0., 0.],
+                       [0., 0., 0.]],
+                       [[2., 0., 0.],
+                       [0., 0., 0.],
+                       [0., 0., 0.]],
+                       [[2., 0., 0.],
+                       [0., 0., 0.],
                        [0., 0., 0.]],
                       [[2., 0., 0.],
+                       [0., 0., 0.],
                        [0., 0., 0.]]]], device='cuda:0')
 ```
 
 ```python
 # 0元素检查
-# 1. rois为0，报错
+# 1) rois为0，报错
 torch.FatalError: invalid argument 2: out of range at /opt/pytorch/pytorch/torch/lib/THC/generic/THCTensor.c:23
-# 2. top_grad为0，未报错
+
+# 2) top_grad为0，未报错
 top_grad = torch.from_numpy(np.array((0,0,0,0))).float().cuda()
 print(bottom_grad)
 tensor([[[[0., 0., 0.],
@@ -108,6 +136,7 @@ tensor([[[[0., 0., 0.],
          [[0., 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
+
 # 3. mapping_channel为0，未报错
 mappingchannel = torch.from_numpy(np.array((0,0,0,0))).int().cuda()
 print(bottom_grad)
@@ -120,8 +149,9 @@ tensor([[[[8., 0., 0.],
          [[0., 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
+
 # inf/nan检查
-# 1. rois支持inf
+# 1) rois支持inf
 rois = torch.from_numpy(np.array(
                         [[np.inf, np.inf, np.inf, np.inf, np.inf],
                          [np.inf, np.inf, np.inf, np.inf, np.inf]])).float().cuda()
@@ -135,7 +165,8 @@ tensor([[[[0., 0., 0.],
          [[0., 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
-# 2. top_grad支持inf
+
+# 2) top_grad支持inf
 top_grad = torch.from_numpy(np.array([[[[np.inf, np.inf],
                                        [np.inf, np.inf]]],
                                      [[[np.inf, np.inf],
@@ -150,7 +181,8 @@ tensor([[[[inf, 0., 0.],
          [[inf, 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
-# 3. rois支持nan
+
+# 3) rois支持nan
 rois = torch.from_numpy(np.array(
                         [[np.nan, np.nan, np.nan, np.nan, np.nan],
                          [np.nan, np.inf, np.nan, np.nan, np.nan]])).float().cuda()
@@ -164,7 +196,8 @@ tensor([[[[0., 0., 0.],
          [[0., 0., 0.],
           [0., 0., 0.]]]], device='cuda:0')
 [torch.cuda.FloatTensor of size 2x2x2x3 (GPU 0)]
-# 4. top_grad支持nan
+
+# 4) top_grad支持nan
 top_grad = torch.from_numpy(np.array([[[[np.nan, np.nan],
                                         [np.nan, np.nan]]],
                                       [[[np.nan, np.nan],
@@ -186,49 +219,49 @@ tensor([[[[nan, 0., 0.],
 | 参数             | 语义                               | 类型（输入/输出） | 支持类型    | 物理布局   | 规模限制 |
 | ---------------- | ---------------------------------- | ----------------- | ----------- | ---------- | -------- |
 | handle           | 算子上下文信息                    | /                 | /           | /          | 无       |
-| top_grad_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t    | /     | 无       |
-| top_grad       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
-| rois_desc  | 输入rois的描述符                | 输入              | mluOpTensorDescriptor_t | /          | 无       |
-| rois       | 输入rois的指针                  | 输入              | float       |  ARRAY      | 无       |
-| mapping_channel_desc | 输入mapping_channel的描述符 | 输入              | mluOpTensorDescriptor_t          | /       | 无       |
-| mapping_channel      | 输入mapping_channel数据的指针| 输入              | int32_t      | NHWC       | 无       |
-| pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
-| pooled_width    | 池化后的宽度                      | 输入              | uint32_t           | /          | 无       |
-| spatial_scale    | 变换的尺度                     | 输入              | float      |   /       | 无       |
-| output_dim      | 输出的channel                      | 输入              | uint32_t          | /          | 无       |
-| bottom_grad_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t       | /     | 无       |
-| bottom_grad      | 输出数据的指针                     | 输出              | float      | NHWC       | 无       |
+| top_grad_desc  | 输入数据 top_grad 的描述符，包含了 top_grad 的数据类型、数据维度和布局等信息| 输入 | mluOpTensorDescriptor_t | /     | 无       |
+| top_grad       | 输入数据 top_grad 的指针                 | 输入              |  float      | NHWC       | 无       |
+| rois_desc  | 输入数据 rois 的描述符，包含了 rois 的数据类型、数据维度和布局等信息| 输入 | mluOpTensorDescriptor_t | /  | 无       |
+| rois       | 输入数据 rois 的指针                  | 输入              | float       |  ARRAY      | 无       |
+| mapping_channel_desc | 输入数据 mapping_channel 的描述符，包含了 mapping_channel 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t          | /       | 无       |
+| mapping_channel      | 输入数据 mapping_channel 的指针| 输入              | int32_t      | NHWC       | 无       |
+| pooled_height    | 特征图池化后的高                      | 输入              | uint32_t          | /          | 无       |
+| pooled_width    | 特征图池化后的宽                     | 输入              | uint32_t           | /          | 无       |
+| spatial_scale    | 输出 image 的大小相对原始图像的比例，也是 rois 在相应的 image 中的大小比例| 输入              | float      |   /       | 无       |
+| output_dim      | 特征图池化后输出的 channel   | 输入              | uint32_t          | /          | 无       |
+| bottom_grad_desc | 输出数据 bottom_grad 的描述符，包含了 bottom_grad 的数据类型、数据维度和布局等信息  | 输入              | mluOpTensorDescriptor_t       | /     | 无       |
+| bottom_grad      | 输出数据 bottom_grad 的指针          | 输出              | float      | NHWC       | 无       |
 
 ### 1.4 算子限制
 
-| 限制类型     | 详细说明                                                                                                        |
+| 限制类型     | 详细说明 |
 | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持float。输入数据（mapping_channel）类型必须是int32_t。         |
-| 布局限制     | 对于top_grad、mapping_channel不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模。 |
+| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持 float。输入数据（mapping_channel）类型必须是 int32_t。         |
+| 布局限制     | 对于 top_grad、mapping_channel 不支持 NCHW 的 layout，并且每个 roi 只支持 [batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end] 规模。 |
 | 数据规模限制 | 无                                                            |
 | 原位限制     | 不支持原位                                                                                                      |
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
-| 输入参数限制 | pooled_height = pooled_width, rois_offset = 5, </br>output_dim >= 1, spatial_scale > 0, </br>channels = pooled_height * pooled_width * output_dim, </br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1
-| nan/inf限制 | top_grad支持nan/inf测例，rois由于在计算过程中参与了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
+| 输入参数限制 | pooled_height = pooled_width, rois_offset = 5, </br>output_dim >= 1, spatial_scale > 0, </br>channels = pooled_height * pooled_width * output_dim, </br>每个 roi 只支持 [batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1
+| nan/inf限制 | top_grad 支持 nan/inf 测例，rois 由于在计算过程中参与了 ceil/floor 函数，硬件指令功能限制无法与竞品对齐。已在 mlu_ops.h 中说明。|
 
 ### 1.5 验收标准
 
 #### 1.5.1 精度验收标准
 
-  DIFF1<=0.003
-
-  DIFF2<=0.003
+按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+- 算子精度验收标准：diff1、diff2；
+- 算子精度阈值描述：diff1 <= 3e-3 && diff2 <= 3e-3；
 
 #### 1.5.2 性能验收标准
 
-- 无
+见 [MLU_OPS 性能验收标准](../MLU_OPS性能验收标准.md)。
 
 ## 2 算子接口设计
 
 #### 2.1 参考接口
 
-- PyTorch
+- cuda接口
 
 ```c++
 int psroi_pooling_backward_cuda(int pooled_height,
@@ -264,28 +297,28 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
 
 ![image](psroipool_backward.jpg)
 
-由上图可以看出，psroipool_backward的计算过程可以总结为（为了简化下文提到的ph/pw分别代表pooled_height/pooled_width）：
+由上图可以看出，psroipool_backward 的计算过程可以总结为（为了简化下文提到的 ph/pw 分别代表 pooled_height/pooled_width）：
 
-step1: 首先计算nram上最多可以处理的output_dim数量nram_output_dim_num。如果nram_output_dim_num >= 1，执行step2，否则执行step3。
+step1: 首先计算nram上最多可以处理的 output_dim 数量 nram_output_dim_num。如果 nram_output_dim_num >= 1，执行 step2，否则执行 step3。
 ```c++
 output_dim_align = CEIL_ALIGN(output_dim * sizeof(float), ALIGN_SIZE_128);
-// nram上最多可以存放的output_dim数量，128是为atomic_add使用
+// nram 上最多可以存放的 output_dim 数量，128 是为 atomic_add 使用
 nram_output_dim_num = (NRAM_BYTE_CNT - 128) / (output_dim_align * sizeof(float) + output_dim * sizeof(int));
 ```
-step2: 根据nram_output_dim_num拆core上分到的output_dim数量num_per_core。remain的output_dim单独处理，执行step4。
+step2: 根据 nram_output_dim_num 拆 core 上分到的 output_dim 数量 num_per_core。remain 的 output_dim 单独处理，执行 step4。
 
-step3: 计算出nram上最多可以处理的数据量max_deal_num，remain部分单独处理，遍历执行num_per_core次，将core上分配的output_dim处理后执行step4。
+step3: 计算出 nram 上最多可以处理的数据量 max_deal_num，remain 部分单独处理，遍历执行 num_per_core 次，将 core 上分配的 output_dim 处理后执行 step4。
 ```c++
 max_deal_num = 
       FLOOR_ALIGN((NRAM_BYTE_CNT - 128) / (sizeof(float) + sizeof(int)) * sizeof(float), ALIGN_SIZE_128);
 ```
-step4: 根据top_grad的index计算出当前处理的roi_num、ph、pw，根据roi_num、ph、pw找到当前roi中bin区域，求出bin区域的坐标以及bin区域面积bin_area。
+step4: 根据 top_grad 的 index 计算出当前处理的 roi_num、ph、pw，根据 roi_num、ph、pw 找到当前 roi 中 bin 区域，求出 bin 区域的坐标以及 bin 区域面积 bin_area。
 
-step5: 遍历当前index下top_grad和mapping_channel中各个点(index必须一致)，从top_grad取出value_temp，从mapping_channel取出C。
+step5: 遍历当前 index 下 top_grad 和 mapping_channel 中各个点(index 必须一致)，从 top_grad 取出 value_temp，从 mapping_channel 取出 C。
 
-step6: 根据bin_area和value_temp计算出当前value值, 根据value、C、bin区域找到bottom_grad中对应的bin区域各个点的位置bottom_offset，对这块区域值通过atomic_add将value值添加。
+step6: 根据 bin_area 和 value_temp 计算出当前 value 值, 根据 value、C、bin 区域找到 bottom_grad 中对应的 bin 区域各个点的位置bottom_offset，对这块区域值通过 atomic_add 将 value 值添加。
 ```c++
-// deal_num为实际处理的数据量，hstart、hend、wstart、wend为bin区域坐标，width、channels分为bottom_grad的width、channels
+// deal_num 为实际处理的数据量，hstart、hend、wstart、wend 为 bin 区域坐标，width、channels 分为 bottom_grad 的 width、channels
 value = value_temp / bin_area; 
 for (int i = 0; i < deal_num; i ++){
     int c = mapping_channel_buffer[index];
@@ -297,23 +330,23 @@ for (int i = 0; i < deal_num; i ++){
 }
 ```
 
-### 3.2 伪代码实现（可选）
+### 3.2 伪代码实现
 
 见3.1
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-针对psroipool_backward的拆分是根据taskId拆rois_num * hi * wi。
+针对 psroipool_backward 的拆分是根据 taskId 拆 rois_num * hi * wi。
 
-1、下图划分为nram可以放下一个output_dim的情况，其中N为nram可以处理的output_dim数量。
+1、下图划分为 nram 可以放下一个 output_dim 的情况，其中 N 为 nram 可以处理的 output_dim 数量。
 
-nram空间划分：
+nram 空间划分：
 
 ![image](psroipool_backward_nram1.jpg)
 
-2、下图给nram放不下一个output_dim的情况，需要拆output_dim，其中deal_num为实际可以存放到nram的数据量。
+2、下图给 nram 放不下一个 output_dim 的情况，需要拆 output_dim，其中 deal_num 为实际可以存放到 nram 的数据量。
 
-nram空间划分：
+nram 空间划分：
 
 ![image](psroipool_backward_nram2.jpg)
 
@@ -323,7 +356,11 @@ nram空间划分：
 
 ### 3.5 可维护性设计
 
-算子中已经加入了用于快速定位的调试信息。
+1、bangc 代码中加入必要的 log 信息，比如输入的规模、数据类型、layout 这些，以及如果出错会导致程序 core dump 的变量，比如 IO 指令的 data_size、dim xyz 的值等，这些信息都是有利于快速定位问题；
+
+2、对重要的函数命名、变量命名要有充分的注释；
+
+3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
 
 ### 3.6 测试用例设计
 
@@ -436,18 +473,18 @@ nram空间划分：
 
 2022.7.12～2022.8.2 完成竞品源码测试调研。
 
-2022.8.2～2022.8.3 psroipool_backward设计文档。
+2022.8.2～2022.8.3 psroipool_backward 设计文档。
 
-2022.8.4～2022.8.5 完成generator开发。
+2022.8.4～2022.8.5 完成 generator 开发。
 
-2022.8.8～2022.8.9 完成gtest开发。
+2022.8.8～2022.8.9 完成 gtest 开发。
 
-2022.8.10～2022.8.12 完成host/device开发。
+2022.8.10～2022.8.12 完成 host/device 开发。
 
 2022.8.15～2022.8.17 完成测试报告。
 
-2022.8.18～2022.8.19 review代码合入。
+2022.8.18～2022.8.19 review 代码合入。
 
 ### 5.2 风险分析
 
-1、与前向一样，也存在fma问题。
+1、与前向一样，也存在 fma 问题。
