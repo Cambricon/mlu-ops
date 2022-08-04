@@ -22,7 +22,7 @@
 """A multi-platform code link example test for BANGPy TCP."""
 import bangpy
 from bangpy import tcp
-from bangpy.platform.bang_config import TARGET
+from bangpy.script import ty, build_module
 
 
 DTYPES = [bangpy.float16, bangpy.float32]
@@ -34,76 +34,55 @@ class Add(object):
     """Operator description:
     Add the data in the two buffers.
     """
-
-    def __init__(self, dtype, target, task_num):
+    def __init__(self, cluster_num: ty.int32, buffer_size: ty.int32, dtype: ty.string) -> None:
         self.dtype = dtype
-        self.target = target
-        self.task_num = task_num
-        self.bp = tcp.TCP(target)
-        self.length = self.bp.SizeVar("length")
-        self.nram_size = TARGET(target).nram_size
-        self.dtype_sz = dtype.bytes
-        self.single_buffer_size = 1024
-        self.bp.launch_task(self.task_num, 1, 1)
+        self.single_buffer_size = buffer_size
+        self.cluster_num = cluster_num
 
-    def compute_body(self):
+    def add_body(
+        self,
+        local_a: ty.Buffer("nram"),  # type: ignore
+        local_b: ty.Buffer("nram"),  # type: ignore
+        local_c: ty.Buffer("nram"),  # type: ignore
+    ) -> None:
+        # The body of add function
+        tcp.add(local_a, local_b, local_c)
+
+    def main(self, a: ty.handle, b: ty.handle, c: ty.handle, length: ty.int32) -> None:
+        A = tcp.match_buffer(a, [length], dtype=self.dtype)
+        B = tcp.match_buffer(b, [length], dtype=self.dtype)
+        C = tcp.match_buffer(c, [length], dtype=self.dtype)
+        tgt = tcp.target()
         # calculate split strategy
         # gets the data length to be calculated for each task
-        data_calculated_each_task = self.length // self.task_num
+        data_calculated_each_task = length // (self.cluster_num * tgt.core_num)
         # gets the number of cycles required for each task
-        loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
-        # gets the data length for each calculation
-        data_calculated_each_time = self.single_buffer_size // self.dtype_sz
-        # declare I/O buffer
-        buffer_in0 = self.bp.Buffer(
-            shape=(self.length,), name="INPUT0", dtype=self.dtype, scope="global"
+        loop_num = data_calculated_each_task // self.single_buffer_size
+
+        buffer_in0 = tcp.alloc_buffer(
+            [self.single_buffer_size], dtype=self.dtype, scope="nram"
         )
-        buffer_in1 = self.bp.Buffer(
-            shape=(self.length,), name="INPUT1", dtype=self.dtype, scope="global"
+        buffer_in1 = tcp.alloc_buffer(
+            [self.single_buffer_size], dtype=self.dtype, scope="nram"
         )
-        buffer_out = self.bp.Buffer(
-            shape=(self.length,), name="OUTPUT", dtype=self.dtype, scope="global"
+        buffer_out = tcp.alloc_buffer(
+            [self.single_buffer_size], dtype=self.dtype, scope="nram"
         )
-        task_id = self.bp.taskId
-        # declare on-chip buffer
-        buffer_in0_n = self.bp.Buffer(
-            shape=(data_calculated_each_time,),
-            name="INPUT0_N",
-            dtype=self.dtype,
-            scope="nram",
-        )
-        buffer_in1_n = self.bp.Buffer(
-            shape=(data_calculated_each_time,),
-            name="INPUT1_N",
-            dtype=self.dtype,
-            scope="nram",
-        )
-        buffer_out_n = self.bp.Buffer(
-            shape=(data_calculated_each_time,),
-            name="OUTPUT_N",
-            dtype=self.dtype,
-            scope="nram",
-        )
-        # split and compute
-        with self.bp.for_range(0, loop_num) as i:
-            start = task_id * data_calculated_each_task + i * data_calculated_each_time
-            stop = start + data_calculated_each_time
-            self.bp.memcpy(buffer_in0_n, buffer_in0[start:stop])
-            self.bp.memcpy(buffer_in1_n, buffer_in1[start:stop])
-            self.bp.add(buffer_out_n, buffer_in0_n, buffer_in1_n)
-            self.bp.memcpy(buffer_out[start:stop], buffer_out_n)
-        # build a executable module
-        f = self.bp.BuildBANG(
-            inputs=[buffer_in0, buffer_in1],
-            outputs=[buffer_out],
-            kernel_name=KERNEL_NAME,
-        )
-        return f
+        for cluster_id in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
+            for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
+                for i in range(loop_num):
+                    task_id = cluster_id * tgt.core_num + core_id
+                    start = task_id * data_calculated_each_task + i * self.single_buffer_size
+                    stop = start + self.single_buffer_size
+                    tcp.memcpy(buffer_in0, A[start:stop])
+                    tcp.memcpy(buffer_in1, B[start:stop])
+                    self.add_body(buffer_out, buffer_in0, buffer_in1)
+                    tcp.memcpy(C[start:stop], buffer_out)
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_add(dtype=None, target=None):
-    # tasktype fixed in UNION1
-    task_num = 4
-    f = Add(dtype, target, task_num).compute_body()
+    f = build_module.build(
+        Add(1, 256, dtype.name), target_tag=target, name=KERNEL_NAME
+    )
     return f

@@ -48,5 +48,5 @@ def test_add(target, shape, dtype):
     data_in1_dev = bangpy.Array(data_in1.astype(dtype.as_numpy_dtype), dev)
     data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
     f1 = load_op_by_type(KERNEL_NAME, dtype.name)
-    f1(data_in0_dev, data_in1_dev, data_out_dev)
+    f1(data_in0_dev, data_in1_dev, data_out_dev, data_in0.shape[0])
     bangpy.assert_allclose(data_out_dev.numpy(), data_out.astype(dtype.as_numpy_dtype))
