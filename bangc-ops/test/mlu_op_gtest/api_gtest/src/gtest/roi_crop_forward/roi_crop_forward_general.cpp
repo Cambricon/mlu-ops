@@ -89,6 +89,7 @@ class roi_crop_forward_general
   bool compute() {
     if (!(device_ == MLUOP_UNKNOWN_DEVICE || device_ == handle_->arch)) {
       VLOG(4) << "Device does not match, skip testing.";
+      destroy();
       return true;
     }
     mluOpStatus_t status = mluOpRoiCropForward(
