@@ -141,6 +141,7 @@ message Node {
   optional LogParam    log_param                      = 4002;     // param
   optional SqrtParam   sqrt_param                     = 4003;  // param
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
+  optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
 }
 
 
@@ -230,4 +231,12 @@ message PsRoiPoolForwardParam{
   optional int32 output_dim = 3 [default = 8];
   optional int32 pooled_height = 4 [default = 7];
   optional int32 pooled_width = 5 [default = 7];
+}
+
+// param to call mluOpPsRoiPoolbackward()
+message PsRoiPoolBackwardParam{
+  optional int32 output_dim = 1 [default = 8];
+  optional int32 pooled_height = 2 [default = 7];
+  optional int32 pooled_width = 3 [default = 7];
+  optional float spatial_scale = 4 [default = 0.0625];
 }
