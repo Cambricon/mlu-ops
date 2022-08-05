@@ -28,7 +28,7 @@ from bangpy.tcp.runtime import TaskType
 from bangpy.tcp.util import round_up, round_down
 
 
-TARGET_LIST = ["mlu270", "mlu290"]
+TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "nms"
 DTYPES = [bp.float16]
 NMS_SIZE = 64

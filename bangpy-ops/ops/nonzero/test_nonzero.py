@@ -24,8 +24,6 @@ import numpy as np
 import pytest
 from nonzero import TARGET_LIST
 import bangpy as bp
-from bangpy import tcp
-from bangpy.tcp.runtime import TaskType
 from bangpy.platform.bang_config import TARGET
 from bangpy.common import load_op_by_type
 
@@ -34,7 +32,7 @@ from bangpy.common import load_op_by_type
     "trans", [0, 1],
 )
 @pytest.mark.parametrize(
-    "dtype", [bp.float16],
+    "dtype", [bp.float16, bp.float32],
 )
 @pytest.mark.parametrize(
     "shape",
@@ -55,7 +53,7 @@ def test_nonzero(target, trans, dtype, shape):
     """Test case."""
     if target not in TARGET_LIST:
         return
-    task_num = TARGET(target).cluster_num * TARGET(target).core_num
+    task_num = TARGET(target).core_num
     dim_num = 4
     in_np = np.random.randint(0, 2, size=shape).astype(dtype.name)
 
@@ -64,12 +62,9 @@ def test_nonzero(target, trans, dtype, shape):
     in_data = bp.Array(in_np, dev)
     count_data = bp.Array(count_np, dev)
 
-    task_type = TaskType(TARGET(target).cluster_num)
-
     def nonzero_count_compute():
         f_nonzero_count = load_op_by_type("NonZeroCount", dtype.name)
-        with tcp.runtime.Run(task_type):
-            f_nonzero_count(in_data, shape[0], shape[1], shape[2], shape[3], count_data)
+        f_nonzero_count(in_data, shape[0], shape[1], shape[2], shape[3], count_data)
 
     nonzero_count_compute()
 
@@ -78,19 +73,18 @@ def test_nonzero(target, trans, dtype, shape):
     out_np = np.ones((dim_num * num_nonzero,), dtype="int64")
     out_data = bp.Array(out_np.astype("int64"), dev)
 
-    with tcp.runtime.Run(task_type):
-        f_nonzero(
-            in_data,
-            count_data,
-            shape[0],
-            shape[1],
-            shape[2],
-            shape[3],
-            dim_num,
-            num_nonzero,
-            trans,
-            out_data,
-        )
+    f_nonzero(
+        in_data,
+        count_data,
+        shape[0],
+        shape[1],
+        shape[2],
+        shape[3],
+        dim_num,
+        num_nonzero,
+        trans,
+        out_data,
+    )
 
     cpu_out = np.nonzero(in_np.reshape((shape[-dim_num:])))
     cpu_out = np.array(list(cpu_out)).astype("int64")

@@ -39,16 +39,30 @@ def adjust_hue_cpu(image, delta):
     image = matplotlib.colors.hsv_to_rgb(image)
     return image
 
-
 def cal_diff(result, data_out):
-    diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
-    diff2 = np.sqrt(
-        np.sum(np.power(np.subtract(data_out, result), 2,))
-        / np.sum(np.power(result, 2))
-    )
+    temp_l = 0
+    temp_r = 0
+    for i in range(result.shape[0]):
+        temp = np.subtract(result[i], data_out[i])
+        temp = np.abs(temp)
+        temp_l += np.sum(temp)
+        temp_r += np.sum(result)
+        del temp
+    diff1 = temp_l / temp_r
     assert round(diff1 * 100, 5) < 3e-3 * 100
-    assert round(diff2 * 100, 5) < 3e-3 * 100
     print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
+    temp_l = 0
+    temp_r = 0
+    for i in range(result.shape[0]):
+        temp = np.subtract(data_out[i], result[i])
+        temp = np.power(temp, 2)
+        temp_l += np.sum(temp)
+        temp = np.power(result[i], 2)
+        temp_r += np.sum(temp)
+        del temp
+    diff2 = temp_l / temp_r
+    diff2 = np.sqrt(diff2)
+    assert round(diff2 * 100, 5) < 3e-3 * 100
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
 
@@ -58,12 +72,12 @@ def cal_diff(result, data_out):
         (4, 64, 64, 3),
         (1, 339, 576, 3),
         (4, 480, 720, 3),
-        (6, 2160, 4096, 3),
+        # (6, 2160, 4096, 3),
         (1, 512, 512, 3),
         (6, 720, 1080, 3),
         (4, 1080, 1920, 3),
-        (6, 1080, 2048, 3),
-        (1, 4320, 7680, 3),
+        # (6, 1080, 2048, 3),
+        # (1, 4320, 7680, 3),
     ],
 )
 @pytest.mark.parametrize(
@@ -92,7 +106,7 @@ def test_adjust_hue(target, shape, delta, dtype):
     data_out_handle = bp.Array(data_out.astype(dtype.name), dev)
     f = load_op_by_type(KERNEL_NAME, dtype.name)
     f(
-        data_in_handle, delta, data_out_handle,
+        data_in_handle, data_out_handle, n, h, w, c, delta
     )
     # convert all output to float for diff comparison
     mlu_result = np.zeros((n, h, w, c), dtype="float32")
@@ -103,3 +117,6 @@ def test_adjust_hue(target, shape, delta, dtype):
         cpu_result[i] = adjust_hue_cpu(data_in_handle.numpy()[i, :, :, :], delta)
     # calculate difference between cpu and mlu results
     cal_diff(cpu_result, mlu_result)
+    del cpu_result
+    del data_out
+    del data_in
