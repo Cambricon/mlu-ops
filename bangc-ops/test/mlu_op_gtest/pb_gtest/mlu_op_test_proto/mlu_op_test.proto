@@ -135,7 +135,7 @@ message Node {
   repeated double threshold_rate                      = 21;   // determine the magnification of dynamic threshold
   repeated MLUPlatform supported_mlu_platform         = 22;
 
-  extensions 3000 to 4000;
+  // extensions 3000 to 4000;
 
   optional DivParam    div_param                      = 4001;   // param
   optional LogParam    log_param                      = 4002;     // param
