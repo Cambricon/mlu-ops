@@ -32,7 +32,7 @@
 namespace {
 __nram__ static float nram_mlu_calc_area[CALC_AREA_NRAM_FLT_CAP];
 
-__mlu_func__ static void area(float *__restrict__ nram_tile_beg,
+__mlu_func__ static void polyArea(float *__restrict__ nram_tile_beg,
                               int i_tile_size,
                               float *__restrict__ area_buffer) {
   // Each row of tile is
@@ -115,7 +115,7 @@ __mlu_func__ static void mluCalcArea300(const float *__restrict__ input_boxes,
              this_i_tile_size - 1);
     __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size,
                      box_pts_num);
-    area(transpose_buffer, this_i_tile_size, area_buffer);
+    polyArea(transpose_buffer, this_i_tile_size, area_buffer);
     __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
              NRAM2GDRAM);
   }
@@ -175,7 +175,7 @@ __mlu_func__ static void mluCalcArea200(const float *__restrict__ input_boxes,
       if (this_load_box_num <= 0) {
         break;
       }
-      area(transpose_buffer + j * transpose_width * box_pts_num,
+      polyArea(transpose_buffer + j * transpose_width * box_pts_num,
            transpose_width, area_buffer);
       __memcpy(boxes_area + i_beg + j * I_LIMIT, area_buffer,
                this_load_box_num * sizeof(float), NRAM2GDRAM);

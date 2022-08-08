@@ -129,7 +129,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
       area_launch_cfg.dim, area_launch_cfg.kernel_type, handle->queue,
       (float *)boxes, box_num, real_width, dev_area);
 
-  MLUGenNMSMaskLaunchConfig mask_launch_cfg(handle, box_num);
+  MLUGenNmsMaskLaunchConfig mask_launch_cfg(handle, box_num);
   mluOpBlockKernelPolyNmsGenMaskFloat(
       mask_launch_cfg.dim, mask_launch_cfg.kernel_type, handle->queue,
       (float *)boxes, box_num, real_width, iou_threshold, dev_area, dev_mask,

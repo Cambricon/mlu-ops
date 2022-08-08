@@ -33,8 +33,8 @@
 #define MASK_T_BITWIDTH 32  // mask will be stored in an uint32_t value
 
 template <int MIN_BOX_NUM_PER_CORE>
-struct _BlockConfig {
-  _BlockConfig(mluOpHandle_t handle, int box_num, int core_num_limit = 0) {
+struct BlockConfig {
+  BlockConfig(mluOpHandle_t handle, int box_num, int core_num_limit = 0) {
     int core_num_to_use = mluop::runtime::getJobLimitCapability(handle);
     if (core_num_limit > 0) {
       core_num_to_use = std::min(core_num_limit, core_num_to_use);
@@ -54,8 +54,8 @@ struct _BlockConfig {
  * Generate launch config for mluCalcArea. By default, we will launch as many
  * BLOCKs as we can.
  */
-struct MLUCalcAreaLaunchConfig : public _BlockConfig<128> {
-  using _BlockConfig::_BlockConfig;
+struct MLUCalcAreaLaunchConfig : public BlockConfig<128> {
+  using BlockConfig::BlockConfig;
 };
 
 /**
@@ -84,8 +84,8 @@ __mlu_global__ void mluCalcArea(const float *__restrict__ input_boxes,
  * Generate launch config for mluCalcArea. By default, we will launch as many
  * BLOCKs as we can.
  */
-struct MLUGenNMSMaskLaunchConfig : public _BlockConfig<8> {
-  using _BlockConfig::_BlockConfig;
+struct MLUGenNmsMaskLaunchConfig : public BlockConfig<8> {
+  using BlockConfig::BlockConfig;
 };
 
 /**

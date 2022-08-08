@@ -128,7 +128,7 @@ __mlu_func__ static void cross(const Line *__restrict__ line,
   *o_y = ratio * d->y + m_ratio * c->y;
 }
 
-__mlu_func__ static float area(const Point2D *__restrict__ points, int n) {
+__mlu_func__ static float polyArea(const Point2D *__restrict__ points, int n) {
   const Point2D *p0 = points;
   float area = 0;
   float x0 = points[1].x - p0->x;
@@ -192,7 +192,7 @@ __mlu_func__ static float clipArea(const float *__restrict__ box_i,
       return 0;
     }
   }
-  return area(p_next, n);
+  return polyArea(p_next, n);
 }
 
 template <PointDirection POINT_DIR>
