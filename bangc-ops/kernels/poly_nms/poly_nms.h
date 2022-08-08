@@ -1,0 +1,153 @@
+/*******************************************************************************
+* Copyright (C) [2022] by Cambricon, Inc.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall self.tcp included
+* in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*******************************************************************************/
+
+#ifndef BANGC_OPS_KERNELS_POLY_NMS_POLY_NMS_H
+#define BANGC_OPS_KERNELS_POLY_NMS_POLY_NMS_H
+
+#include <algorithm>
+
+#include "core/mlu_op_core.h"
+#include "core/runtime/device.h"
+#include "kernels/poly_nms/enums.h"
+
+#define MASK_T_BITWIDTH 32  // mask will be stored in an uint32_t value
+
+template <int MIN_BOX_NUM_PER_CORE>
+struct BlockConfig {
+  BlockConfig(mluOpHandle_t handle, int box_num, int core_num_limit = 0) {
+    int core_num_to_use = mluop::runtime::getJobLimitCapability(handle);
+    if (core_num_limit > 0) {
+      core_num_to_use = std::min(core_num_limit, core_num_to_use);
+    }
+    core_num_to_use =
+        std::min(core_num_to_use,
+                 (box_num + MIN_BOX_NUM_PER_CORE - 1) / MIN_BOX_NUM_PER_CORE);
+    dim.x = core_num_to_use;
+    dim.y = 1;
+    dim.z = 1;
+  }
+  cnrtFunctionType_t kernel_type = cnrtFunctionType_t::cnrtFuncTypeBlock;
+  cnrtDim3_t dim;
+};
+
+/**
+ * Generate launch config for mluCalcArea. By default, we will launch as many
+ * BLOCKs as we can.
+ */
+struct MLUCalcAreaLaunchConfig : public BlockConfig<128> {
+  using BlockConfig::BlockConfig;
+};
+
+/**
+ * Generate launch config for MLUGenResult. By default, we will launch one BLOCK
+ * task.
+ */
+struct MLUGenResultLaunchConfig {
+  cnrtFunctionType_t kernel_type = cnrtFunctionType_t::cnrtFuncTypeBlock;
+  cnrtDim3_t dim = {1, 1, 1};
+};
+
+/**
+ * A block kernel that convert an [N,9] array of input_boxes into [N,1] array of
+ * boxes_area
+ * @param input_boxes device pointer to boxes
+ * @param input_boxes_num the value of N
+ * @param real_width the stride on dim 0 (the row may have padded, if no
+ * padding, it should be 9)
+ * @param boxes_area[out] device pointer to boxes_area
+ */
+__mlu_global__ void mluCalcArea(const float *__restrict__ input_boxes,
+                                int input_boxes_num, int real_width,
+                                float *__restrict__ boxes_area);
+
+/**
+ * Generate launch config for mluCalcArea. By default, we will launch as many
+ * BLOCKs as we can.
+ */
+struct MLUGenNmsMaskLaunchConfig : public BlockConfig<8> {
+  using BlockConfig::BlockConfig;
+};
+
+/**
+ * A kernel to generate mask and sort_info, see genResult Kernel to get how mask
+ * and sort_info are used.
+ *
+ * Given that input_boxes is a [N,9] array, boxes_area a [N,1] array
+ * The `mask` will be a [N,N] matrix, with initial value of 0, if mask[i,j] ==
+ * 1,
+ * it means ith box is allowed to suppress jth box, but whether the suppression
+ * will happen is decided by genResult Kernel
+ *
+ * Note that, to reduce the memory usage, the row of `mask` will be stored as
+ * bit in a uint32_t container.
+ *
+ * The sort_info is an [N,1] int array, given k = sort_info[i] , it means the
+ * kth box is the ith largest score box,
+ * e.g. if sort_info[0] == 22 , then, the 22th box will be the box with the
+ * highest score
+ *
+ * @param input_boxes device pointer to boxes
+ * @param input_boxes_num the value of N
+ * @param real_width the stride on dim 0 (the row may have padded, if no
+ * padding, it should be 9)
+ * @param threshold the IOU threshold
+ * @param boxes_area device pointer to boxes' area
+ * @param mask[out] device pointer to mask
+ * @param sort_info[out] device pointer to sort info
+ * @return
+ */
+__mlu_global__ void mluGenNmsMask(const float *__restrict__ input_boxes,
+                                  int input_boxes_num, int real_width,
+                                  float threshold,
+                                  const float *__restrict__ boxes_area,
+                                  uint32_t *mask, int *sort_info);
+
+/**
+ * Gen result by reduce the masks generated by mluGenNmsMask
+ *
+ * @tparam OUTPUT_ORDER which output order to use
+ *
+ * @param input_boxes_num the value of N
+ * @param p_mask device pointer to mask
+ * @param p_sort_info device pointer to sort info
+ * @param o_index device pointer to output indexes
+ * @param o_num device pointer to output number
+ * @return
+ */
+template <OutputOrder OUTPUT_ORDER>
+__mlu_global__ void mluGenNmsResult(int input_boxes_num,
+                                    const uint32_t *__restrict__ p_mask,
+                                    const int *__restrict__ p_sort_info,
+                                    int *o_index, int *o_num);
+
+extern template __mlu_global__ void
+mluGenNmsResult<OutputOrder::HIGH_SCORE_FIRST>(
+    int input_boxes_num, const uint32_t *__restrict__ p_mask,
+    const int *__restrict__ p_sort_info, int *o_index, int *o_num);
+
+extern template __mlu_global__ void
+mluGenNmsResult<OutputOrder::LOW_BOX_ID_FIRST>(
+    int input_boxes_num, const uint32_t *__restrict__ p_mask,
+    const int *__restrict__ p_sort_info, int *o_index, int *o_num);
+
+#endif  // BANGC_OPS_KERNELS_POLY_NMS_POLY_NMS_H

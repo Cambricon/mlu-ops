@@ -1,0 +1,101 @@
+/*******************************************************************************
+* Copyright (C) [2022] by Cambricon, Inc.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall self.tcp included
+* in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*******************************************************************************/
+
+#include "kernels/poly_nms/enums.h"
+#include "kernels/poly_nms/poly_nms.h"
+
+#include "kernels/kernel.h"
+
+#define GEN_RESLUT_NRAM_SIZE MAX_NRAM_SIZE
+
+namespace {
+__nram__ uint8_t nram_gen_result[GEN_RESLUT_NRAM_SIZE];
+
+__mlu_func__ static bool isSuppressed(uint32_t *mask_row, int j) {
+  int pos_j = j / MASK_T_BITWIDTH;
+  int offset = j % MASK_T_BITWIDTH;
+  constexpr uint32_t DEFAULT_MASK = 0x80000000;  // 0b 1000 0000 0000 0000
+  return !(mask_row[pos_j] & (DEFAULT_MASK >> offset));
+}
+}  // namespace
+
+template <OutputOrder OUTPUT_ORDER>
+__mlu_global__ void mluGenNmsResult(int input_boxes_num,
+                                    const uint32_t *__restrict__ p_mask,
+                                    const int *__restrict__ p_sort_info,
+                                    int *o_index, int *o_num) {
+  // nram: | final_mask_buffer | mask_row_buffer | sort_buffer(o_index_buffer)|
+  int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
+  int mas_col_num_align = mask_col_num;
+
+#if __BANG_ARCH__ < 300
+  const int align_num = NFU_ALIGN_SIZE / sizeof(float);
+  mas_col_num_align = CEIL_ALIGN(mask_col_num, align_num);
+#endif
+  uint32_t *final_mask_buffer = (uint32_t *)nram_gen_result;
+  __bang_write_value(final_mask_buffer, mas_col_num_align, (int)0xFFFFFFFF);
+
+  uint32_t *mask_row_buffer = (uint32_t *)final_mask_buffer + mas_col_num_align;
+  int *sort_buffer = (int *)mask_row_buffer +
+                     mas_col_num_align;  // len of input_boxes_num will be used
+  int *o_index_buffer = sort_buffer;     // reuse sort buffer
+  __memcpy(sort_buffer, p_sort_info, sizeof(int) * input_boxes_num, GDRAM2NRAM);
+  int n = 0;
+  for (int i = 0; i < input_boxes_num; ++i) {
+    int box_id =
+        sort_buffer[i];  // i is the ith large, sort_buffer[i] is its id
+    if (isSuppressed(final_mask_buffer, box_id)) {
+      continue;
+    } else {
+      if (OUTPUT_ORDER == OutputOrder::HIGH_SCORE_FIRST) {
+        o_index_buffer[n] = box_id;
+      }
+      ++n;
+    }
+    __memcpy(mask_row_buffer, (uint32_t *)p_mask + box_id * mask_col_num,
+             sizeof(uint32_t) * (mask_col_num), GDRAM2NRAM);
+    __bang_band((char *)final_mask_buffer, (char *)final_mask_buffer,
+                (char *)mask_row_buffer, 4 * mas_col_num_align);
+  }
+  if (OUTPUT_ORDER == OutputOrder::LOW_BOX_ID_FIRST) {
+    int found = 0;
+    int j = 0;
+    while (found < n) {
+      if (!isSuppressed(final_mask_buffer, j)) {
+        sort_buffer[found] = j;
+        ++found;
+      }
+      ++j;
+    }
+  }
+  *o_num = n;
+  __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);
+}
+
+template __mlu_global__ void mluGenNmsResult<OutputOrder::HIGH_SCORE_FIRST>(
+    int input_boxes_num, const uint32_t *__restrict__ p_mask,
+    const int *__restrict__ p_sort_info, int *o_index, int *o_num);
+
+template __mlu_global__ void mluGenNmsResult<OutputOrder::LOW_BOX_ID_FIRST>(
+    int input_boxes_num, const uint32_t *__restrict__ p_mask,
+    const int *__restrict__ p_sort_info, int *o_index, int *o_num);
