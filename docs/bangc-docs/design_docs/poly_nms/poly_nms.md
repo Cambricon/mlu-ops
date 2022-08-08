@@ -126,9 +126,9 @@ dets = [[0, 0, 2, 0, 2, 2, 0, np.nan, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
 | 输入限制     |  输入boxes必须满足dim=2，shape[1]=9；输入input1必须满足格式:[[x1， y1， x2， y2， x3， y3， x4， y4， score]，..]  |
-| 输入限制     |  输入boxes的坐标必须全部是顺时针排序或者逆时针排序，boxes坐标乱序情况不保证计算结果且与竞品算子计算结果不保持一致。 |
+| 输入限制     |  输入boxes的坐标必须全部是顺时针排序或者逆时针排序，boxes坐标乱序情况不保证计算结果且与竞品算子计算结果一致。 |
 | 输入限制     |  输入不支持nan,inf |
-| 输入限制     |  输入box的score值相同时，两个box都会输出，不会出现其他score值相同的box被抑制的情况，这点不与竞品算子保持一致。 |
+| 输入限制     |  输入boxes中有相同的score的case，输出结果可能与竞品结果不一致。比如输入两个box且其score值相同，假定其iou不大于给定的iou阈值，此时两个box都是满足输出条件，则两个box的index都会输出，此时竞品只输出一个box的index。 |
 | 数据类型限制 | 只支持float输入  |
 | 数据范围限制 | 无 |
 |  原位限制     | 不支持原位                                                 |
@@ -235,7 +235,7 @@ box_area = ret/2;
 ```c++
 ...
 // 1. 计算四边形面积
-_mlu_func__ static void Area(float *__restrict__ nram_tile_beg,
+_mlu_func__ static void polyArea(float *__restrict__ nram_tile_beg,
                             int i_tile_size,
                             float *__restrict__ area_buffer) {
   float *ptrx = nram_tile_beg;
@@ -273,7 +273,7 @@ _mlu_func__ static void Area(float *__restrict__ nram_tile_beg,
 
 // 2. 计算不规则四边形overlap，并生成每个box的iou是否大于iou_threshold的mask矩阵
 template <PointDirection POINT_DIR>
-__mlu_func__ static void MLUGenNMSMaskImpl(
+__mlu_func__ static void MLUGenNmsMaskImpl(
     const float *__restrict__ input_boxes, int input_boxes_num, int real_width,
     float threshold, const float *__restrict__ boxes_area, uint32_t *mask,
     int *sort_info) {
@@ -354,7 +354,7 @@ __mlu_func__ static void MLUGenNMSMaskImpl(
 
 // 3. 根据输入boxes的score顺序，从mask中选取符合阈值条件的box，并输出对应的index。
 template <OutputOrder OUTPUT_ORDER>
-__mlu_global__ void MLUGenNMSResult(int input_boxes_num,
+__mlu_global__ void MLUGenNmsResult(int input_boxes_num,
                                     const uint32_t *__restrict__ p_mask,
                                     const int *__restrict__ p_sort_info,
                                     int *o_index, int *o_num) {
