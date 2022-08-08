@@ -1,5 +1,4 @@
 # poly_nms 算子开发设计方案
-
 * #### 文档基本信息
 |     |   |
 | ----------- | ----------------- |
@@ -10,7 +9,6 @@
 | 审批人/日期	|  王远/2022-06-15 |
 
 * #### 修改记录
-
 | 版本号| 修订人 | 修订日期 | 修订描述 |
 | ----- | ------ | -------  | -------  |
 | V1.0  | 谷中豪   | 2022-05-31 | 首次提交 |
@@ -19,9 +17,7 @@
 本文档为`poly_nms`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
 
 * #### 算子需求checklist
-
 算子需求提出者需要`提供`的信息如下：
-
 - 框架负责人
 - 算子接口描述
 - 功能描述
@@ -36,7 +32,6 @@
 - 确认算子需求是否已经过框架层review（滤除mluOp已支持的算子）
 
 算子需求提出者需要`check`的部分如下：
-
 - 1.1 算子需求分析
 - 1.2 算子功能和应用场景描述
 - 1.3 算子输入输出参数要求
@@ -46,7 +41,6 @@
 - 3.5 测试用例（需求提出者check算子需求表中所给规模是否列出）
 
 ## 1 需求分析
-
 ### 1.1 算子需求分析
 | 算子功能简介| 多边形的非极大值抑制，用于删除高度冗余的多边形输入框 |
 |-------------|--------------------------------------------------------------|
@@ -69,9 +63,7 @@
 | 本次开发优先支持的规模/模式|   |
 
 ### 1.2 算子功能和应用场景描述
-
 **算子功能：** `poly_nms`(polygon nms)算子用于计算多边形非极大值抑制，删除高度冗余的多边形框。
-
 **应用场景：** `poly_nms`算子应用于`FasterRCNN`，`trans obb`网络。
 
 **AerialDetection 示例：**
@@ -119,7 +111,6 @@ dets = [[0, 0, 2, 0, 2, 2, 0, np.nan, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.
 ```
 
 ### 1.3 算子输入输出参数要求
-
 | 参数             | 语义                           | 类型（输入/输出） | 支持类型               | 物理布局 | 规模限制 |
 | ---------------- | ------------------------------ | ----------------- | ---------------------- | -------- | -------- |
 | **handle**           |        操作句柄                        | 输入              |    mluOpHandle_t   | /        | 无       |
@@ -133,7 +124,6 @@ dets = [[0, 0, 2, 0, 2, 2, 0, np.nan, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.
 | **result_num**      |  指向result_num数据的mlu地址的指针,表示output实际输出index的个数    | 输出       |  int32_t      | ARRAY     |dim=1，shape[0]=1 |
 
 ### 1.4 算子限制
-
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
 | 输入限制     |  输入boxes必须满足dim=2，shape[1]=9；输入input1必须满足格式:[[x1， y1， x2， y2， x3， y3， x4， y4， score]，..]  |
@@ -149,24 +139,19 @@ dets = [[0, 0, 2, 0, 2, 2, 0, np.nan, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.
 
 
 ### 1.5 验收标准
-
 #### 1.5.1 精度验收标准
 该算子为算术类算子，采用当前的 diff3 评价公式，验收标准为：
 - 静态阈值 diff3 == 0
 
 #### 1.5.2 性能验收标准
-
 - 网络中使用到的规模性能优于或至少与竞品性能持平。
 - 部分与竞品差距过大的规模在4.算子性能优化记录中进行说明。
 - 附上算子测试报告链接，测试报告必须包括框架给出的网络中规模的性能数据以及对应效率值。
 
 **竞品性能测试**
-
 在Tesla V100-SXM2-16GB平台上测试poly_nms算子性能；
 需求未提供的网络中算子规模， 借鉴nms算子规模([70，9]，[119，9])，并补充规模（[500，9] [1000，9] [2000，9]）进行性能分析，循环调用算子100次取得平均性能结果如下：
-
 测试规模[70，9]，[119，9] [500，9] [1000，9] [2000，9]，iou_thresh=1.0
-
 测试环境： Tesla V100-SXM2-16GB +  PyTorch 1.6.0
 
 | 平台                 | 框架版本      | 数据类型 | 规模     | 计算效率  | IO效率    | Hardware time(us) |
@@ -178,27 +163,21 @@ dets = [[0, 0, 2, 0, 2, 2, 0, np.nan, 2], [1.5, 1.5, 2.5, 1.5, 2.5, 2.5, 1.5, 2.
 |                      |               | float    | [2000， 9] | 21.691825%    | 45.542830% |  41368.463          |
 
 ## 2 算子接口设计
-
 ### 2.1 参考接口
-
 - **AerialDetection** https://github.com/dingjiansw101/AerialDetection/blob/master/mmdet/ops/poly_nms/src/poly_nms_cuda.cpp
 ```c++
 at::Tensor poly_nms_cuda(const at::Tensor boxes， float nms_overlap_thresh);
 ```
 
 ### 2.2 接口设计
-
 #### 2.2.1 poly_nms获取额外申请空间大小
-
 ```c++
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
                              const mluOpTensorDescriptor_t boxes_desc,
                              size_t *size);
 ```
-
 **参数描述：**
-
 - `handle`：输入参数。操作句柄，内部绑定device和对应的queue。
 - `size`：输入参数。需要用户申请的额外的空间大小，通过`mluOpGetPnmsWorkspaceSize`获取。
 - `mluOpTensorDescriptor_t`: 输入tensor的形状描述。
@@ -218,15 +197,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
 ```
 
 ## 3 实现方案设计
-
 ### 3.1 实现方案
-
 `poly_nms`(polygon nms)算子用于计算多边形非极大值抑制， 删除冗余的多边形框。
-
 poly_nms算子有两个输入，input1是2维Tensor，包含四边形的四个顶点坐标及其对应的score，具体信息为：
 [[x1， y1， x2， y2， x3， y3， x4， y4， score]，...];
 input2 是float数，是给定的iou的阈值iou_thresh。
-
 - **poly_nms算子CPU实现**
 1. 将scores降序排序；
 2. 用score最大的box分别和其余的box做iou计算， 如果iou大于iou_thresh，认为这两个box相交，删除score值小的box；
@@ -245,7 +220,6 @@ input2 是float数，是给定的iou的阈值iou_thresh。
 3. iou = overlap / (box1_area + box2_area - overlap)。
 
 - **不规则四边形面积计算**
-  
   已知四边形四个顶点坐标(x1，y1)， (x2，y2)， (x3，y3)， (x4，y4)
 ```c++
 // 向量计算
@@ -259,15 +233,13 @@ for(int i = 0;i<4;i++)
 }
 box_area = ret/2;
 ```
-
 ### 3.2 伪代码实现
-
 ```c++
 ...
 // 1. 计算四边形面积
 _mlu_func__ static void Area(float *__restrict__ nram_tile_beg,
-                              int i_tile_size,
-                              float *__restrict__ area_buffer) {
+                            int i_tile_size,
+                            float *__restrict__ area_buffer) {
   float *ptrx = nram_tile_beg;
   float *ptry = nram_tile_beg + i_tile_size;
   float *ptr0 = nram_tile_beg + 2 * i_tile_size;
@@ -422,34 +394,25 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
 ```
 
 ### 3.3 拆分(任务拆分，多核拆分)
-
 **拆分策略**
-
 计算过程使用Block任务，launch尽可能多core进行计算。
 
 ### 3.4 性能优化设计
-
 1. 流水设计
   计算overlap过程复杂，暂不划分乒乓空间，不做流水。
 
 ### 3.5 方案理论性能
 
-
 ### 3.6 可维护性设计
-
 1、bangc代码中加入必要的 log信息，比如输入的规模、数据类型、layout，任务类型，以及如果出错会导致程序core dump的变量，比如IO指令的data_size、dim xyz的值等，这些信息都是有利于快速定位问题；
-
 2、对每一个函数命名变量命名都有充分的注释；
-
 3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
 
 ### 3.7 测试用例设计
-
 - 测试输入boxes的顶点坐标全是顺时针情况的case；
 - 测试输入boxes的顶点坐标全是逆时针情况的case;
 - 测试规模：测试不同规模下的计算结果；
 
-  
 ### 3.8 算子防呆检查
  1. 指针为空防呆；
  2. 0元素检查防呆，VLOG(5)打印信息；
@@ -458,19 +421,13 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
  5. workspace防呆
 
 ## 4 算子性能/精度问题 & 优化记录
-
 ### 4.1 当前存在问题的规模说明
-
 无
-
 ### 4.2 已经过优化的规模说明
-
-
 
 ## 5 方案实施
 
 ### 5.1 开发测试计划
-
 - **总体计划**：2022.5.31-2022.07.8  poly_nms算子开发 共6周
 - **开发计划**：2022.5.31~2022. 6.10  需求分析以及设计文档撰写 10天
 - 2022.6.13~2022.6.15 generator、gtest开发  3天 
