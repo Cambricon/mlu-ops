@@ -181,7 +181,7 @@ message TestParam {
   repeated EvaluationCriterion error_func = 1;
   repeated double error_threshold         = 2;
   repeated double error_threshold_imag    = 3;
-
+  
   optional double latency                 = 5;    //   latency
   optional double efficiency              = 6;    //   efficiency
   optional Device baseline_device         = 7;
