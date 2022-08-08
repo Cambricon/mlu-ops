@@ -91,6 +91,23 @@ void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
 
+/* poly_nms */
+void MLUOP_WIN_API mluOpBlockKernelPolyNmsCalcAreaFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *boxes, const int box_num, const int real_width,
+    float *dev_area);
+
+void MLUOP_WIN_API mluOpBlockKernelPolyNmsGenMaskFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *boxes, const int box_num, const int real_width,
+    const float iou_threshold, float *dev_area, uint32_t *dev_mask,
+    int *dev_sort_info);
+
+void MLUOP_WIN_API mluOpBlockKernelPolyNmsGenResultFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int box_num, uint32_t *dev_mask, int *dev_sort_info, int *output,
+    int *output_size);
+
 /* PSRoIPool */
 void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
