@@ -12,8 +12,8 @@
 | 版本号| 修订人 | 修订日期 | 修订描述 |
 | ----- | ------ | -------  | -------  |
 | V1.0  | 谷中豪   | 2022-05-31 | 首次提交 |
-* #### 内容描述
 
+* #### 内容描述
 本文档为`poly_nms`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
 
 * #### 算子需求checklist
@@ -67,7 +67,6 @@
 **应用场景：** `poly_nms`算子应用于`FasterRCNN`，`trans obb`网络。
 
 **AerialDetection 示例：**
-
 ```py
 def pnms_test():
     nms_thresh=0.1
@@ -183,7 +182,6 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
 - `mluOpTensorDescriptor_t`: 输入tensor的形状描述。
 
 #### 2.2.2 poly_nms计算接口
-
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpPolyNms(mluOpHandle_t handle,
                                         const mluOpTensorDescriptor_t boxes_desc,
@@ -426,7 +424,6 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
 ### 4.2 已经过优化的规模说明
 
 ## 5 方案实施
-
 ### 5.1 开发测试计划
 - **总体计划**：2022.5.31-2022.07.8  poly_nms算子开发 共6周
 - **开发计划**：2022.5.31~2022. 6.10  需求分析以及设计文档撰写 10天
