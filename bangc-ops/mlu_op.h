@@ -330,42 +330,43 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *
  *  @param[in] handle
  *    Input. Handle to a MLUOP context that is used to manage MLU devices
- *    and queues in the psroipool_forward operation.
+ *    and queues in the psroipool_forward operation. For detailed information,
+ *    see::mluOpHandle_t.
  *  @param[in] spatial_scale
- *    Input. The spatial_scale data.
+ *    Input. The spatial scale of each regions of interest in the output.
  *  @param[in] group_size
- *    Input. The group_size data.
+ *    Input. Used to set the number of \b rois to be divided equally in each direction.
  *  @param[in] pooled_height
  *    Input. The pooled_height data.
  *  @param[in] pooled_width
  *    Input. The pooled_width data.
  *  @param[in] output_dim
  *    Input. The output_dim data.
- *  @param[in] input_desc
- *    Input. The descriptor of the input tensor. For detailed information,
- *    see ::mluOpTensorDescriptor_t.
+*  @param[in] input_desc
+ *    Input. Descriptor of input tensor, containing dimension and the layout of input.
+ *    For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[in] input
- *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Input. Pointer to the MLU memory that stores the input tensor. The shape of \b input is
+ *    [batch_num, H, W, C].
  *  @param[in] rois_desc
- *    Input. The descriptor of the input_roi tensor. For detailed information,
- *    see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of rois tensor, containing dimension and the layout of rois.
+ *    For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[in] rois
- *    Input. Pointer to the MLU memory that stores the rois tensor.
- *  @param[in] workspace
- *    Input. Pointer to the MLU memory that stores the extra workspace.
- *  @param[in] workspace_size
- *    Input. The size of extra space is output_dim * sizeof(uint32_t).
+ *    Input. Pointer to the MLU memory that stores the rois tensor. \b rois[1] consists of
+ *    [batch_id, roi_start_w, roi_start_h, roi_end_w, roi_end_h], where \p batch_id is the ID
+ *    of the batch.
  *  @param[in] output_desc
- *    Input. The descriptor of the output tensor. For detailed information,
- *    see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of output tensor, containing dimension and the layout of output.
+ *    For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[out] output
- *    Output. Pointer to the MLU memory that stores the output tensor.
+ *    Output. Pointer to the MLU memory that stores the output tensor. The shape of \b output is
+ *    [rois[0], pooled_height, pooled_width, output_dim].
  *  @param[in] mapping_channel_desc
- *    Input. The descriptor of the mapping_channel tensor. For detailed
- *    information, see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of the mapping_channel tensor, containing dimension and the layout of 
+ *    mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[out] mapping_channel
- *    Output. Pointer to the MLU memory that stores the mapping_channel
- *    tensor.
+ *    Output. Pointer to the MLU memory that stores the mapping_channel tensor. The shape of 
+ *    \b mapping_channel is [rois[0], pooled_height, pooled_width, output_dim].
  * 
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -382,34 +383,29 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *     - Mapping_channel tensor: int32.
  * 
  *  @par Data Layout
- *  - The supported data layout of \b input, \b rois,
- *    \b output, \b mapping_channel are as follows:
- * 
- *   - Input tensor: \p MLUOP_LAYOUT_NHWC.
- *   - Rois tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - Output tensor: \p MLUOP_LAYOUT_NHWC.
- *   - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
+ *  - The supported data layout of \b input, \b rois, \b output, and \b mapping_channel 
+ *    are as follows:
+ *     - Input tensor: \p MLUOP_LAYOUT_NHWC.
+ *     - Rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *     - Output tensor: \p MLUOP_LAYOUT_NHWC.
+ *     - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
  * 
  *  @par Scale Limitation
+ *  - The input tensor, mapping_channel tensor and ouput tensor must have four dimensions.
+ *  - The \b rois tensor should be 2-D array.
+ *  - The shape of \b rois should be [rois_num, 5].
+ *  - \p batch_id should be in the range of [0, \p batch_num - 1].
  *  - The spatial_scale should be greater than 0.
  *  - The group_size should be greater than 1.
  *  - THe output_dim should be greater than 1.
  *  - The group_size should be equal to pooled_height.
  *  - The pooled_height should be equal to pooled_width.
- *  - The channels should be equal to pooled_height * pooled_width * output_dim.
- *  - The dimension of \b input should be equal to 4.
- *  - The dimension of \b rois should be equal to 2.
- *  - The dimension of \b output should be equal to 4.
- *  - The dimension of \b mapping_channel should be equal to 4.
- *  - The rois_offset should be equal to 5.
- *  - The shape of roi should be [batch_id, roi_start_h, roi_start_w,
- *    roi_end_h, roi_end_w], and the batch_id must between 0
- *    and batch, the batch comes from input.
- *  - The output_dims[0] should be equal to mapping_channel_dims[0].
- *  - The output_dims[1] should be equal to mapping_channel_dims[1].
- *  - The output_dims[2] should be equal to mapping_channel_dims[2].
- *  - The output_dims[3] should be equal to mapping_channel_dims[3].
- *  - 
+ *  - The fourth dimension of input tensor should be equal to pooled_height * pooled_width * output_dim.
+ *  - The first dimension of output tensor and mapping_channel tensor must be the same size.
+ *  - The second dimension of output tensor and mapping_channel tensor must be the same size.
+ *  - The third dimension of output tensor and mapping_channel tensor must be the same size.
+ *  - The fourth dimension of output tensor and mapping_channel tensor must be the same size.
+ *  
  *  @par Requirements
  *  - None.
  *
@@ -432,32 +428,10 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
                       const void *input,
                       const mluOpTensorDescriptor_t rois_desc,
                       const void *rois,
-                      void *workspace,
-                      size_t workspace_size,
                       const mluOpTensorDescriptor_t output_desc,
                       void *output,
                       const mluOpTensorDescriptor_t mapping_channel_desc,
                       void *mapping_channel);
-
-/*!
- *  @brief Gets extra space size that is needed in psroipool_forward operation.
- *
- *  @param[in] handle
- *    Input. Handle to a MLUOP context that is used to manage MLU devices
- *    and queues in the psroipool_forward operation.
- *  @param[in] output_dim
- *    Input. An integer which indicates the channel of output.  
- *  @param[out] size
- *    Output. A host pointer to the returned size of extra space in bytes.
- *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *  @par Scale Limitation
- *  - The output_dim should be greater than 1.
- */
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetPsRoiPoolWorkspaceSize(mluOpHandle_t handle,
-                               const int output_dim,
-                               size_t *size);
 
 /*!
  * @brief Generates fixed size feature map for each grid. Each value in the
