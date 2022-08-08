@@ -198,10 +198,10 @@ void mluOpCheck(mluOpStatus_t result, char const *const func,
 
 namespace mluop {
 
-const int INFO    = 0;  // base_logging::INFO;
+const int INFO = 0;     // base_logging::INFO;
 const int WARNING = 1;  // base_logging::WARNING;
-const int ERROR   = 2;  // base_logging::ERROR;
-const int FATAL   = 3;  // base_logging::FATAL;
+const int ERROR = 2;    // base_logging::ERROR;
+const int FATAL = 3;    // base_logging::FATAL;
 
 namespace internal {
 

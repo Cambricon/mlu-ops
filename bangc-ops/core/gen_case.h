@@ -363,7 +363,7 @@ class PbNode {
     mluOpGetTensorDescriptor(tensors[index].desc, nullptr, &dtype, nullptr,
                              nullptr);
     uint64_t data_size = total_num * getSizeOfDataType(dtype);
-    void *data         = malloc(data_size);
+    void *data = malloc(data_size);
     if (CNRT_RET_SUCCESS ==
         cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),
                    data_size, CNRT_MEM_TRANS_DIR_DEV2HOST)) {
@@ -508,7 +508,7 @@ template <typename paramType>
 void genCaseOpParamSub(PbNode *node, std::string param_name,
                        paramType param_value, int num,
                        std::string param_node_name = "",
-                       bool new_child              = false) {
+                       bool new_child = false) {
   node->appendOpParamSub(param_name, param_value, num, param_node_name,
                          new_child);
 }

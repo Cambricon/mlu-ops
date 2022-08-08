@@ -122,13 +122,13 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
   }
 
   CNdev mlu_dev;
-  int32_t cluster_num                              = 0;
-  int32_t core_num_per_cluster                     = 0;
-  int32_t nram_size                                = 0;
-  int32_t wram_size                                = 0;
-  int32_t sram_size                                = 0;
+  int32_t cluster_num = 0;
+  int32_t core_num_per_cluster = 0;
+  int32_t nram_size = 0;
+  int32_t wram_size = 0;
+  int32_t sram_size = 0;
   char device_name[CONTEXT_DEVICENAME_BUFFER_SIZE] = "";
-  mluOpContext *ctx                                = new mluOpContext();
+  mluOpContext *ctx = new mluOpContext();
   CNcontext drv_ctx;
   CNctxConfigParam ctx_conf_param;
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetCurrent(&drv_ctx));
@@ -175,12 +175,12 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
       CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
                                         &ctx_conf_param));
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
-  ctx->device               = mlu_dev;
-  ctx->cluster_num          = cluster_num;
+  ctx->device = mlu_dev;
+  ctx->cluster_num = cluster_num;
   ctx->core_num_per_cluster = core_num_per_cluster;
-  ctx->nram_size            = nram_size - REM_FOR_STACK;
-  ctx->wram_size            = wram_size;
-  ctx->sram_size            = sram_size - REM_FOR_STACK;
+  ctx->nram_size = nram_size - REM_FOR_STACK;
+  ctx->wram_size = wram_size;
+  ctx->sram_size = sram_size - REM_FOR_STACK;
   ctx->arch =
       convertDeviceName(device_name);  // warning: possible return unknown.
   *handle = ctx;

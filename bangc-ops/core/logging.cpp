@@ -56,7 +56,7 @@ struct StringData {
   struct Hasher {
     size_t operator()(const StringData &sdata) const {
       // For dependency reasons, we cannot use hash.h here. Use DBJHash instead.
-      size_t hash      = 5381;
+      size_t hash = 5381;
       const char *data = sdata.data;
       for (const char *top = data + sdata.size; data < top; ++data) {
         hash = ((hash << 5) + hash) + (*data);
@@ -73,7 +73,7 @@ struct StringData {
   }
 
   const char *data = nullptr;
-  size_t size      = 0;
+  size_t size = 0;
 };
 
 using VmoduleMap = std::unordered_map<StringData, int, StringData::Hasher>;
@@ -94,7 +94,7 @@ VmoduleMap *VmodulesMapFromEnv() {
   // setenv() calls. And since we keep references to it in the VmoduleMap in
   // form of StringData objects, make a copy of it.
   const char *env_data = strdup(env);
-  VmoduleMap *result   = new VmoduleMap();
+  VmoduleMap *result = new VmoduleMap();
   while (true) {
     const char *eq = strchr(env_data, '=');
     if (eq == nullptr) {
@@ -107,7 +107,7 @@ VmoduleMap *VmodulesMapFromEnv() {
     const char *comma = strchr(after_eq, ',');
     const char *new_env_data;
     if (comma == nullptr) {
-      comma        = strchr(after_eq, '\0');
+      comma = strchr(after_eq, '\0');
       new_env_data = comma;
     } else {
       new_env_data = comma + 1;
@@ -141,9 +141,9 @@ int64_t LogMessage::MinVLogLevel() {
 
 void LogMessage::GenerateLogMessage() {
   static platform::EnvTime *env_time = platform::EnvTime::Default();
-  uint64_t now_micros                = env_time->NowMicros();
-  time_t now_seconds            = static_cast<time_t>(now_micros / 1000000);
-  int32_t micros_remainder      = static_cast<int32_t>(now_micros % 1000000);
+  uint64_t now_micros = env_time->NowMicros();
+  time_t now_seconds = static_cast<time_t>(now_micros / 1000000);
+  int32_t micros_remainder = static_cast<int32_t>(now_micros % 1000000);
   const size_t time_buffer_size = 30;
   char time_buffer[time_buffer_size];  // NOLINT
 
@@ -172,9 +172,9 @@ bool LogMessage::VmoduleActivated(const char *fname, int level) {
   if (MLUOP_PREDICT_TRUE(vmodules == nullptr)) {
     return false;
   }
-  const char *last_slash   = strrchr(fname, '/');
+  const char *last_slash = strrchr(fname, '/');
   const char *module_start = last_slash == nullptr ? fname : last_slash + 1;
-  const char *dot_after    = strchr(module_start, '.');
+  const char *dot_after = strchr(module_start, '.');
   const char *module_limit =
       dot_after == nullptr ? strchr(fname, '\0') : dot_after;
   StringData module(module_start, module_limit - module_start);

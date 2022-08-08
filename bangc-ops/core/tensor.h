@@ -69,17 +69,17 @@ struct mluOpTensorStruct {
   }
 
   /* struct */
-  int dim               = 0;
+  int dim = 0;
   int total_element_num = 0;
   int total_tensor_size = 0;
   // if dimNb > MLUOP_DIM_MAX (8), using larger_dims, malloc it and dims point
   // it. else, using normal_dims, dont need malloc and free.
   int normal_dims[MLUOP_DIM_MAX] = {-1};
-  int *larger_dims               = NULL;
+  int *larger_dims = NULL;
   int *dims = normal_dims;  // point the normal dims as default
 
   int normal_strides[MLUOP_DIM_MAX] = {-1};
-  int *larger_strides               = NULL;
+  int *larger_strides = NULL;
   int *strides = normal_strides;  // point the normal strides as default
 
   mluOpDataType_t dtype;
@@ -95,14 +95,14 @@ struct mluOpTensorStruct {
   inline void init() {  // reset random value after malloc.
     // init these pointer.
     // if not, when call reset() will free invalid pointer.
-    larger_dims    = NULL;
+    larger_dims = NULL;
     larger_strides = NULL;
 
-    dim               = 0;
+    dim = 0;
     total_element_num = 0;
     total_tensor_size = 0;
-    dims              = normal_dims;
-    strides           = normal_strides;
+    dims = normal_dims;
+    strides = normal_strides;
   }
   inline void reset() {  // reset variable as default.
     if (MLUOP_PREDICT_FALSE(larger_dims != NULL)) {
@@ -113,17 +113,17 @@ struct mluOpTensorStruct {
       delete[] larger_strides;
       larger_strides = NULL;
     }
-    dims         = normal_dims;
-    strides      = normal_strides;
-    dtype        = MLUOP_DTYPE_FLOAT;
+    dims = normal_dims;
+    strides = normal_strides;
+    dtype = MLUOP_DTYPE_FLOAT;
     onchip_dtype = MLUOP_DTYPE_INVALID;
-    layout       = MLUOP_LAYOUT_ARRAY;
+    layout = MLUOP_LAYOUT_ARRAY;
 
     position = 0;
-    scale    = 1.0f;
-    offset   = 0;
+    scale = 1.0f;
+    offset = 0;
 
-    dim               = 0;
+    dim = 0;
     total_element_num = 0;
     total_tensor_size = 0;
   }
@@ -167,7 +167,7 @@ struct mluOpTensorSetStruct {
 
   inline size_t getOffset(const int tensorIndex[]) {
     int64_t offset = 0;
-    int index      = this->getIndex(tensorIndex);
+    int index = this->getIndex(tensorIndex);
     for (int i = 0; i < index; i++) {
       size_t ts_size = 0;
       this->tensor_set[i]->tensorSize(ts_size);
@@ -179,7 +179,7 @@ struct mluOpTensorSetStruct {
 
   inline mluOpTensorDescriptor_t getTensor(const int tensorIndex[]) const {
     auto index = this->getIndex(tensorIndex);
-    auto ts    = this->tensor_set[index].get();
+    auto ts = this->tensor_set[index].get();
     return ts;
   }
 
@@ -211,7 +211,7 @@ struct mluOpTensorSetStruct {
     if (data_offset.size() == 0) {
       return data_offset;
     }
-    int offset     = 0;
+    int offset = 0;
     data_offset[0] = offset;
     for (int i = 0; i < tensor_num - 1; i++) {
       size_t ts_size = 0;
@@ -223,7 +223,7 @@ struct mluOpTensorSetStruct {
   }
   /* struct */
   int tensor_num = 0;
-  int dim_num    = 0;                // dimension number
+  int dim_num = 0;                   // dimension number
   std::vector<int> dim_set;          // the number for each dimension
   std::vector<int> dim_offset_base;  // offset for each dimension
   std::vector<std::shared_ptr<mluOpTensorStruct>>

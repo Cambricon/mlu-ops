@@ -133,7 +133,7 @@ struct mluOpContext {
 
 typedef enum {
   WARNING = 1,
-  ERROR   = 2,
+  ERROR = 2,
 } DepCheckLevel;  // related to include/cnlog.h
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,

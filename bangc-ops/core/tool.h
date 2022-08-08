@@ -139,7 +139,7 @@ template <typename FixedType>
 mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
                                  const size_t num, const int position = 0,
                                  const float scale = 1.0,
-                                 const int offset  = 0) {
+                                 const int offset = 0) {
   PARAM_CHECK("[castFloat32ToFixed]", src != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", dst != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", num > 0);
@@ -183,7 +183,7 @@ template <typename FixedType>
 mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
                                  const size_t num, const int position = 0,
                                  const float scale = 1.0,
-                                 const int offset  = 0) {
+                                 const int offset = 0) {
   PARAM_CHECK("[castFixedToFloat32]", src != NULL);
   PARAM_CHECK("[castFixedToFloat32]", dst != NULL);
   PARAM_CHECK("[castFixedToFloat32]", num > 0);
