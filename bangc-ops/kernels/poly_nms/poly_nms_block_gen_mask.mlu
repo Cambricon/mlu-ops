@@ -39,21 +39,21 @@ __nram__ float nram_gen_mask[CALC_GENMASK_NRAM_FLT_CAP];
  * temporarily use `noinline` to workaround.
  */
 template <PointDirection POINT_DIR>
-__mlu_device__ __attribute__((noinline)) static float IOU(
+__mlu_device__ __attribute__((noinline)) static float polyIou(
     const QuadClipBox<POINT_DIR> *__restrict__ clipbox,
     const float *__restrict__ box_j, float area_i, float area_j) {
-  float intersect = IntersectArea<POINT_DIR>(box_j, clipbox);
+  float intersect = intersectArea<POINT_DIR>(box_j, clipbox);
   return intersect / (area_i + area_j - intersect);
 }
 
-__mlu_func__ static void MaySuppress(uint32_t *mask, int j) {
+__mlu_func__ static void maySuppress(uint32_t *mask, int j) {
   int pos_j = j / MASK_T_BITWIDTH;
   int offset = j % MASK_T_BITWIDTH;
   constexpr uint32_t DEFAULT_MASK = 0x80000000;  // 0b 1000 0000 0000 0000
   mask[pos_j] &= ~(DEFAULT_MASK >> offset);
 }
 
-__mlu_func__ static bool IsCW(const float *__restrict__ dev_A) {
+__mlu_func__ static bool isCW(const float *__restrict__ dev_A) {
   Point2D *A = (Point2D *)nram_gen_mask;
   __memcpy(A, dev_A, 8 * sizeof(float), GDRAM2NRAM);
   float x0 = A[2].x - A[0].x;
@@ -64,7 +64,7 @@ __mlu_func__ static bool IsCW(const float *__restrict__ dev_A) {
 }
 
 template <PointDirection POINT_DIR>
-__mlu_func__ static void MLUGenNMSMaskImpl(
+__mlu_func__ static void mluGenNmsMaskImpl(
     const float *__restrict__ input_boxes, int input_boxes_num, int real_width,
     float threshold, const float *__restrict__ boxes_area, uint32_t *mask,
     int *sort_info) {
@@ -104,7 +104,7 @@ __mlu_func__ static void MLUGenNMSMaskImpl(
   // get the rows this core should handle
   int core_box_num = 0;
   int box_i_beg = 0;
-  GetCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+  getCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
   int box_i_end = box_i_beg + core_box_num;
   box_i_end = box_i_end < input_boxes_num ? box_i_end : input_boxes_num;
 
@@ -114,7 +114,7 @@ __mlu_func__ static void MLUGenNMSMaskImpl(
     int i_pos = 0;
     float *box_i = &box_buffer[i * 9];
     QuadClipBox<POINT_DIR> clip_box;
-    clip_box.AddLines(reinterpret_cast<const Point2D *>(box_i));
+    clip_box.addLines(reinterpret_cast<const Point2D *>(box_i));
 
     float score_i = box_i[8];
     for (int j = 0; j < input_boxes_num; ++j) {
@@ -130,9 +130,9 @@ __mlu_func__ static void MLUGenNMSMaskImpl(
         if (score_i == score_j) {
           i_pos += (j < i);
         } else {
-          float iou = IOU(&clip_box, box_j, area_buffer[i], area_buffer[j]);
+          float iou = polyIou(&clip_box, box_j, area_buffer[i], area_buffer[j]);
           if (iou > threshold) {
-            MaySuppress(mask_buffer, j);
+            maySuppress(mask_buffer, j);
           }
         }
       }
@@ -154,17 +154,17 @@ __mlu_func__ static void MLUGenNMSMaskImpl(
 
 }  // namespace
 
-__mlu_global__ void MLUGenNMSMask(const float *__restrict__ input_boxes,
+__mlu_global__ void mluGenNmsMask(const float *__restrict__ input_boxes,
                                   int input_boxes_num, int real_width,
                                   float threshold,
                                   const float *__restrict__ boxes_area,
                                   uint32_t *mask, int *sort_info) {
-  if (IsCW(input_boxes)) {
-    return MLUGenNMSMaskImpl<PointDirection::CW>(input_boxes, input_boxes_num,
+  if (isCW(input_boxes)) {
+    return mluGenNmsMaskImpl<PointDirection::CW>(input_boxes, input_boxes_num,
                                                  real_width, threshold,
                                                  boxes_area, mask, sort_info);
   } else {
-    return MLUGenNMSMaskImpl<PointDirection::CCW>(input_boxes, input_boxes_num,
+    return mluGenNmsMaskImpl<PointDirection::CCW>(input_boxes, input_boxes_num,
                                                   real_width, threshold,
                                                   boxes_area, mask, sort_info);
   }

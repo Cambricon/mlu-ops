@@ -36,7 +36,7 @@ struct Point2D {
 };
 
 struct Line {
-  __mlu_func__ void Update(const Point2D *__restrict__ A,
+  __mlu_func__ void update(const Point2D *__restrict__ A,
                            const Point2D *__restrict__ B) {
     a = B->y - A->y;
     b = A->x - B->x;
@@ -48,71 +48,71 @@ struct Line {
 };
 
 template <PointDirection DIR>
-__mlu_func__ static bool IsInner(const Line *__restrict__ line,
+__mlu_func__ static bool isInner(const Line *__restrict__ line,
                                  const Point2D *__restrict__ c);
 
 template <>
-__mlu_func__ bool IsInner<PointDirection::CW>(const Line *__restrict__ line,
+__mlu_func__ bool isInner<PointDirection::CW>(const Line *__restrict__ line,
                                               const Point2D *__restrict__ c) {
   return (line->b * c->y + line->a * c->x - line->c + EPSILON) > 0;
 }
 
 template <>
-__mlu_func__ bool IsInner<PointDirection::CCW>(const Line *__restrict__ line,
+__mlu_func__ bool isInner<PointDirection::CCW>(const Line *__restrict__ line,
                                                const Point2D *__restrict__ c) {
   return (line->b * c->y + line->a * c->x - line->c - EPSILON) < 0;
 }
 
 template <PointDirection POINT_DIR>
 struct QuadClipBox {
-  __mlu_func__ void AddLines(const Point2D *__restrict__ A) {
-    line[0].Update(A, A + 1);
+  __mlu_func__ void addLines(const Point2D *__restrict__ A) {
+    line[0].update(A, A + 1);
     Point2D centerAC = {(A[0].x + A[2].x) / 2, (A[0].y + A[2].y) / 2};
     bool ACFine = false;
 
-    if (IsInner<POINT_DIR>(&line[0], &centerAC)) {
-      line[5].Update(A + 3, A);
-      if (IsInner<POINT_DIR>(&line[5], &centerAC)) {
+    if (isInner<POINT_DIR>(&line[0], &centerAC)) {
+      line[5].update(A + 3, A);
+      if (isInner<POINT_DIR>(&line[5], &centerAC)) {
         ACFine = true;
       }
       Point2D centerBD = {(A[1].x + A[3].x) / 2, (A[1].y + A[3].y) / 2};
-      line[1].Update(A + 1, A + 2);
-      if (ACFine && IsInner<POINT_DIR>(&line[0], &centerBD) &&
-          IsInner<POINT_DIR>(&line[1], &centerBD)) {
+      line[1].update(A + 1, A + 2);
+      if (ACFine && isInner<POINT_DIR>(&line[0], &centerBD) &&
+          isInner<POINT_DIR>(&line[1], &centerBD)) {
         is_convex = true;
-        return NoSplit(A);
+        return noSplit(A);
       }
     }
     if (ACFine) {
-      SplitByAC(A);
+      splitByAC(A);
     } else {
-      SplitByBD(A);
+      splitByBD(A);
     }
   }
 
-  __mlu_func__ void SplitByAC(const Point2D *__restrict__ A) {
-    line[2].Update(A + 2, A);
-    line[3].Update(A, A + 2);
-    line[4].Update(A + 2, A + 3);
+  __mlu_func__ void splitByAC(const Point2D *__restrict__ A) {
+    line[2].update(A + 2, A);
+    line[3].update(A, A + 2);
+    line[4].update(A + 2, A + 3);
   }
 
-  __mlu_func__ void NoSplit(const Point2D *__restrict__ A) {
-    line[2].Update(A + 2, A + 3);
-    line[3].Update(A + 3, A);
+  __mlu_func__ void noSplit(const Point2D *__restrict__ A) {
+    line[2].update(A + 2, A + 3);
+    line[3].update(A + 3, A);
   }
 
-  __mlu_func__ void SplitByBD(const Point2D *__restrict__ A) {
-    line[1].Update(A + 1, A + 3);
-    line[2].Update(A + 3, A);
-    line[3].Update(A + 1, A + 2);
-    line[4].Update(A + 2, A + 3);
-    line[5].Update(A + 3, A + 1);
+  __mlu_func__ void splitByBD(const Point2D *__restrict__ A) {
+    line[1].update(A + 1, A + 3);
+    line[2].update(A + 3, A);
+    line[3].update(A + 1, A + 2);
+    line[4].update(A + 2, A + 3);
+    line[5].update(A + 3, A + 1);
   }
   Line line[6];
   bool is_convex = false;
 };
 
-__mlu_func__ static void Cross(const Line *__restrict__ line,
+__mlu_func__ static void cross(const Line *__restrict__ line,
                                const Point2D *__restrict__ c,
                                const Point2D *__restrict__ d,
                                float *__restrict__ o_x,
@@ -128,7 +128,7 @@ __mlu_func__ static void Cross(const Line *__restrict__ line,
   *o_y = ratio * d->y + m_ratio * c->y;
 }
 
-__mlu_func__ static float Area(const Point2D *__restrict__ points, int n) {
+__mlu_func__ static float area(const Point2D *__restrict__ points, int n) {
   const Point2D *p0 = points;
   float area = 0;
   float x0 = points[1].x - p0->x;
@@ -144,7 +144,7 @@ __mlu_func__ static float Area(const Point2D *__restrict__ points, int n) {
 }
 
 template <int CUTLINE_N, PointDirection POINT_DIR>
-__mlu_func__ static float ClipArea(const float *__restrict__ box_i,
+__mlu_func__ static float clipArea(const float *__restrict__ box_i,
                                    const Line *__restrict__ clip_box_lines) {
   constexpr int MAX_POINT = CUTLINE_N + 4;
   Point2D p_swap0[MAX_POINT];
@@ -166,14 +166,14 @@ __mlu_func__ static float ClipArea(const float *__restrict__ box_i,
     p = tmp;
     int new_n = 0;
     const Line *cut_line = &clip_box_lines[i];
-    bool prev_inner = IsInner<POINT_DIR>(cut_line, p + n - 1);
+    bool prev_inner = isInner<POINT_DIR>(cut_line, p + n - 1);
     for (int j = 0; j < n; ++j) {
       Point2D *current_point = p + j;
       Point2D *prev_point = p + (j - 1 + n) % n;
-      bool current_inner = IsInner<POINT_DIR>(cut_line, current_point);
+      bool current_inner = isInner<POINT_DIR>(cut_line, current_point);
       if (current_inner) {
         if (!prev_inner) {
-          Cross(cut_line, prev_point, current_point, &p_next[new_n].x,
+          cross(cut_line, prev_point, current_point, &p_next[new_n].x,
                 &p_next[new_n].y);
           ++new_n;
         }
@@ -181,7 +181,7 @@ __mlu_func__ static float ClipArea(const float *__restrict__ box_i,
         p_next[new_n].y = current_point->y;
         ++new_n;
       } else if (prev_inner) {
-        Cross(cut_line, prev_point, current_point, &p_next[new_n].x,
+        cross(cut_line, prev_point, current_point, &p_next[new_n].x,
               &p_next[new_n].y);
         ++new_n;
       }
@@ -192,19 +192,19 @@ __mlu_func__ static float ClipArea(const float *__restrict__ box_i,
       return 0;
     }
   }
-  return Area(p_next, n);
+  return area(p_next, n);
 }
 
 template <PointDirection POINT_DIR>
-__mlu_func__ float IntersectArea(
+__mlu_func__ float intersectArea(
     const float *__restrict__ box_i,
     const QuadClipBox<POINT_DIR> *__restrict__ clip_box) {
   float area = 0;
   if (clip_box->is_convex) {
-    area = ClipArea<4, POINT_DIR>(box_i, clip_box->line);
+    area = clipArea<4, POINT_DIR>(box_i, clip_box->line);
   } else {
-    area = ClipArea<3, POINT_DIR>(box_i, clip_box->line);
-    area += ClipArea<3, POINT_DIR>(box_i, &clip_box->line[3]);
+    area = clipArea<3, POINT_DIR>(box_i, clip_box->line);
+    area += clipArea<3, POINT_DIR>(box_i, &clip_box->line[3]);
   }
 
   return area > 0 ? area : -area;

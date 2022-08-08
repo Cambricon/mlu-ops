@@ -31,7 +31,7 @@
 namespace {
 __nram__ uint8_t nram_gen_result[GEN_RESLUT_NRAM_SIZE];
 
-__mlu_func__ static bool IsSuppressed(uint32_t *mask_row, int j) {
+__mlu_func__ static bool isSuppressed(uint32_t *mask_row, int j) {
   int pos_j = j / MASK_T_BITWIDTH;
   int offset = j % MASK_T_BITWIDTH;
   constexpr uint32_t DEFAULT_MASK = 0x80000000;  // 0b 1000 0000 0000 0000
@@ -40,7 +40,7 @@ __mlu_func__ static bool IsSuppressed(uint32_t *mask_row, int j) {
 }  // namespace
 
 template <OutputOrder OUTPUT_ORDER>
-__mlu_global__ void MLUGenNMSResult(int input_boxes_num,
+__mlu_global__ void mluGenNmsResult(int input_boxes_num,
                                     const uint32_t *__restrict__ p_mask,
                                     const int *__restrict__ p_sort_info,
                                     int *o_index, int *o_num) {
@@ -64,7 +64,7 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
   for (int i = 0; i < input_boxes_num; ++i) {
     int box_id =
         sort_buffer[i];  // i is the ith large, sort_buffer[i] is its id
-    if (IsSuppressed(final_mask_buffer, box_id)) {
+    if (isSuppressed(final_mask_buffer, box_id)) {
       continue;
     } else {
       if (OUTPUT_ORDER == OutputOrder::HIGH_SCORE_FIRST) {
@@ -81,7 +81,7 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
     int found = 0;
     int j = 0;
     while (found < n) {
-      if (!IsSuppressed(final_mask_buffer, j)) {
+      if (!isSuppressed(final_mask_buffer, j)) {
         sort_buffer[found] = j;
         ++found;
       }
@@ -92,10 +92,10 @@ __mlu_global__ void MLUGenNMSResult(int input_boxes_num,
   __memcpy(o_index, o_index_buffer, n * sizeof(int), NRAM2GDRAM);
 }
 
-template __mlu_global__ void MLUGenNMSResult<OutputOrder::HIGH_SCORE_FIRST>(
+template __mlu_global__ void mluGenNmsResult<OutputOrder::HIGH_SCORE_FIRST>(
     int input_boxes_num, const uint32_t *__restrict__ p_mask,
     const int *__restrict__ p_sort_info, int *o_index, int *o_num);
 
-template __mlu_global__ void MLUGenNMSResult<OutputOrder::LOW_BOX_ID_FIRST>(
+template __mlu_global__ void mluGenNmsResult<OutputOrder::LOW_BOX_ID_FIRST>(
     int input_boxes_num, const uint32_t *__restrict__ p_mask,
     const int *__restrict__ p_sort_info, int *o_index, int *o_num);

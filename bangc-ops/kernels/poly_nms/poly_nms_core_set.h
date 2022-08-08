@@ -33,7 +33,7 @@
  * @param o_box_num[out] the number of boxes current core should processed
  * @param o_beg [out] the beginning box id of current core
  */
-__mlu_func__ static void GetCoreWorkingSet(int input_boxes_num, int *o_box_num,
+__mlu_func__ static void getCoreWorkingSet(int input_boxes_num, int *o_box_num,
                                            int *o_beg) {
   int core_box_num = input_boxes_num / taskDim;
   int rem = input_boxes_num % taskDim;

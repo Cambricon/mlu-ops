@@ -32,7 +32,7 @@
 namespace {
 __nram__ static float nram_mlu_calc_area[CALC_AREA_NRAM_FLT_CAP];
 
-__mlu_func__ static void Area(float *__restrict__ nram_tile_beg,
+__mlu_func__ static void area(float *__restrict__ nram_tile_beg,
                               int i_tile_size,
                               float *__restrict__ area_buffer) {
   // Each row of tile is
@@ -82,7 +82,7 @@ __mlu_func__ static void Area(float *__restrict__ nram_tile_beg,
 }
 
 #if __BANG_ARCH__ >= 300
-__mlu_func__ static void MLUCalcArea300(const float *__restrict__ input_boxes,
+__mlu_func__ static void mluCalcArea300(const float *__restrict__ input_boxes,
                                         int input_boxes_num, int real_width,
                                         float *__restrict__ boxes_area) {
   // nram: | load_buffer(area_buffer) | transpose_buffer |
@@ -90,7 +90,7 @@ __mlu_func__ static void MLUCalcArea300(const float *__restrict__ input_boxes,
   const int box_pts_num = 8;
   int core_box_num = 0;
   int box_i_beg = 0;
-  GetCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+  getCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
   // split nram to two equal part, half for loading, half for transpose
   int i_tile_size = CALC_AREA_NRAM_FLT_CAP / box_pts_num / 2;
   float *load_buffer = nram_mlu_calc_area;
@@ -115,7 +115,7 @@ __mlu_func__ static void MLUCalcArea300(const float *__restrict__ input_boxes,
              this_i_tile_size - 1);
     __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size,
                      box_pts_num);
-    Area(transpose_buffer, this_i_tile_size, area_buffer);
+    area(transpose_buffer, this_i_tile_size, area_buffer);
     __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
              NRAM2GDRAM);
   }
@@ -125,14 +125,14 @@ __mlu_func__ static void MLUCalcArea300(const float *__restrict__ input_boxes,
 #define FLT_ALIGN_CEIL(v) \
   ((v + (NFU_ALIGN_FLT_NUM - 1)) / NFU_ALIGN_FLT_NUM * NFU_ALIGN_FLT_NUM)
 
-__mlu_func__ static void MLUCalcArea200(const float *__restrict__ input_boxes,
+__mlu_func__ static void mluCalcArea200(const float *__restrict__ input_boxes,
                                         int input_boxes_num, int real_width,
                                         float *__restrict__ boxes_area) {
   // A core will handle at most core_box_num data
   const int box_pts_num = 8;
   int core_box_num = 0;
   int box_i_beg = 0;
-  GetCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+  getCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
 
   constexpr int NFU_ALIGN_FLT_NUM = NFU_ALIGN_SIZE / sizeof(float);
   constexpr int I_LIMIT = CALC_AREA_NRAM_SIZE / NFU_ALIGN_SIZE /
@@ -175,7 +175,7 @@ __mlu_func__ static void MLUCalcArea200(const float *__restrict__ input_boxes,
       if (this_load_box_num <= 0) {
         break;
       }
-      Area(transpose_buffer + j * transpose_width * box_pts_num,
+      area(transpose_buffer + j * transpose_width * box_pts_num,
            transpose_width, area_buffer);
       __memcpy(boxes_area + i_beg + j * I_LIMIT, area_buffer,
                this_load_box_num * sizeof(float), NRAM2GDRAM);
@@ -186,12 +186,12 @@ __mlu_func__ static void MLUCalcArea200(const float *__restrict__ input_boxes,
 #endif
 }  // namespace
 
-__mlu_global__ void MLUCalcArea(const float *__restrict__ input_boxes,
+__mlu_global__ void mluCalcArea(const float *__restrict__ input_boxes,
                                 int input_boxes_num, int real_width,
                                 float *__restrict__ boxes_area) {
 #if __BANG_ARCH__ >= 300
-  return MLUCalcArea300(input_boxes, input_boxes_num, real_width, boxes_area);
+  return mluCalcArea300(input_boxes, input_boxes_num, real_width, boxes_area);
 #else
-  return MLUCalcArea200(input_boxes, input_boxes_num, real_width, boxes_area);
+  return mluCalcArea200(input_boxes, input_boxes_num, real_width, boxes_area);
 #endif
 }

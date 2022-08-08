@@ -32,12 +32,12 @@
 #include "mlu_op_kernel.h"
 
 namespace {
-static inline int64_t GetMaskColNum(int box_num) {
+static inline int64_t getMaskColNum(int box_num) {
   return (box_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
 }
 
-static inline int64_t GetMaskMatrixByteSize(int box_num) {
-  return box_num * GetMaskColNum(box_num) * sizeof(uint32_t);
+static inline int64_t getMaskMatrixByteSize(int box_num) {
+  return box_num * getMaskColNum(box_num) * sizeof(uint32_t);
 }
 }  // namespace
 
@@ -55,7 +55,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
   PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
 
   int box_num = boxes_desc->dims[0];
-  auto mask_sz = GetMaskMatrixByteSize(box_num);
+  auto mask_sz = getMaskMatrixByteSize(box_num);
   auto sort_info_sz = box_num * sizeof(int);
   auto area_sz = box_num * sizeof(int);
   *size = mask_sz + sort_info_sz + area_sz;
@@ -103,10 +103,10 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
 
   int box_num = boxes_desc->dims[0];
   int real_width = boxes_desc->strides[0];
-  auto mask_col_num = GetMaskColNum(box_num);
+  auto mask_col_num = getMaskColNum(box_num);
   if ((10 * box_num + mask_col_num * 2) > (MAX_NRAM_SIZE / sizeof(float))) {
     VLOG(5) << API << " Too many input boxes, kernel cannot work.";
-    return MLUOP_STATUS_EXECUTION_FAILED;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // generate prototxt

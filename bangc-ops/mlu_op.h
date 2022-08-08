@@ -272,7 +272,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  *    the number of return values of output.
  * 
  *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *    ::MLUOP_STATUS_NOT_SUPPORTED
  * 
  *  @par Formula
  *  - See "poly_nms Operation" section in "Cambricon MLUOP User
