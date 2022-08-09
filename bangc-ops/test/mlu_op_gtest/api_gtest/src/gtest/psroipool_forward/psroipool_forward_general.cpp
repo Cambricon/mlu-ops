@@ -103,19 +103,10 @@ class psroipool_forward_general
       destroy();
       return true;
     }
-    mluOpStatus_t status =
-        mluOpGetPsRoiPoolWorkspaceSize(handle_, output_dim_, &workspace_size_);
-    if (MLUOP_STATUS_SUCCESS != status) {
-      return status == expected_status_;
-    }
-    if (workspace_size_ != 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_))
-    }
-    status = mluOpPsRoiPoolForward(
+    mluOpStatus_t status = mluOpPsRoiPoolForward(
         handle_, pooled_height_, pooled_width_, spatial_scale_, group_size_,
-        output_dim_, input_desc_, input_, rois_desc_, rois_, workspace_,
-        workspace_size_, output_desc_, output_, mapping_channel_desc_,
-        mapping_channel_);
+        output_dim_, input_desc_, input_, rois_desc_, rois_, output_desc_,
+        output_, mapping_channel_desc_, mapping_channel_);
     destroy();
     return status == expected_status_;
   }
@@ -158,10 +149,6 @@ class psroipool_forward_general
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mapping_channel_));
       mapping_channel_ = NULL;
     }
-    if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
-      workspace_ = NULL;
-    }
   }
 
  private:
@@ -174,8 +161,6 @@ class psroipool_forward_general
   void* rois_ = NULL;
   void* output_ = NULL;
   void* mapping_channel_ = NULL;
-  size_t workspace_size_ = 10;
-  void* workspace_ = NULL;
   int pooled_height_ = 3;
   int pooled_width_ = 3;
   float spatial_scale_ = 0.25;

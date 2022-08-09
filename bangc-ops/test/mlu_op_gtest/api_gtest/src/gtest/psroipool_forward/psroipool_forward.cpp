@@ -24,7 +24,7 @@ class psroipool_forward : public testing::Test {
  public:
   void setParam(bool handle, bool input_desc, bool rois_desc, bool output_desc,
                 bool mapping_channel_desc, bool input, bool rois, bool output,
-                bool mapping_channel, bool workspace) {
+                bool mapping_channel) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
@@ -78,17 +78,13 @@ class psroipool_forward : public testing::Test {
       size_t m_bytes = m_ele_num * m_dtype_bytes;
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&mapping_channel_, m_bytes));
     }
-    if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
-    }
   }
 
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpPsRoiPoolForward(
         handle_, pooled_height_, pooled_width_, spatial_scale_, group_size_,
-        output_dim_, input_desc_, input_, rois_desc_, rois_, workspace_,
-        workspace_size_, output_desc_, output_, mapping_channel_desc_,
-        mapping_channel_);
+        output_dim_, input_desc_, input_, rois_desc_, rois_, output_desc_,
+        output_, mapping_channel_desc_, mapping_channel_);
     destroy();
     return status;
   }
@@ -131,10 +127,6 @@ class psroipool_forward : public testing::Test {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mapping_channel_));
       mapping_channel_ = NULL;
     }
-    if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
-      workspace_ = NULL;
-    }
   }
 
  private:
@@ -147,8 +139,6 @@ class psroipool_forward : public testing::Test {
   void* rois_ = NULL;
   void* output_ = NULL;
   void* mapping_channel_ = NULL;
-  size_t workspace_size_ = 10;
-  void* workspace_ = NULL;
   int pooled_height_ = 3;
   int pooled_width_ = 3;
   float spatial_scale_ = 0.25;
@@ -158,7 +148,7 @@ class psroipool_forward : public testing::Test {
 
 TEST_F(psroipool_forward, BAD_PARAM_handle_null) {
   try {
-    setParam(false, true, true, true, true, true, true, true, true, true);
+    setParam(false, true, true, true, true, true, true, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -167,7 +157,7 @@ TEST_F(psroipool_forward, BAD_PARAM_handle_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_input_desc_null) {
   try {
-    setParam(true, false, true, true, true, true, true, true, true, true);
+    setParam(true, false, true, true, true, true, true, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -176,7 +166,7 @@ TEST_F(psroipool_forward, BAD_PARAM_input_desc_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_rois_desc_null) {
   try {
-    setParam(true, true, false, true, true, true, true, true, true, true);
+    setParam(true, true, false, true, true, true, true, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -185,7 +175,7 @@ TEST_F(psroipool_forward, BAD_PARAM_rois_desc_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_output_desc_null) {
   try {
-    setParam(true, true, true, false, true, true, true, true, true, true);
+    setParam(true, true, true, false, true, true, true, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -194,7 +184,7 @@ TEST_F(psroipool_forward, BAD_PARAM_output_desc_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_mapping_desc_null) {
   try {
-    setParam(true, true, true, true, false, true, true, true, true, true);
+    setParam(true, true, true, true, false, true, true, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -203,7 +193,7 @@ TEST_F(psroipool_forward, BAD_PARAM_mapping_desc_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_input_null) {
   try {
-    setParam(true, true, true, true, true, false, true, true, true, true);
+    setParam(true, true, true, true, true, false, true, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -212,7 +202,7 @@ TEST_F(psroipool_forward, BAD_PARAM_input_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_rois_null) {
   try {
-    setParam(true, true, true, true, true, true, false, true, true, true);
+    setParam(true, true, true, true, true, true, false, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -221,7 +211,7 @@ TEST_F(psroipool_forward, BAD_PARAM_rois_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_output_null) {
   try {
-    setParam(true, true, true, true, true, true, true, false, true, true);
+    setParam(true, true, true, true, true, true, true, false, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
@@ -230,16 +220,7 @@ TEST_F(psroipool_forward, BAD_PARAM_output_null) {
 
 TEST_F(psroipool_forward, BAD_PARAM_mapping_null) {
   try {
-    setParam(true, true, true, true, true, true, true, true, false, true);
-    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
-  } catch (const std::exception& e) {
-    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
-  }
-}
-
-TEST_F(psroipool_forward, BAD_PARAM_workspace_null) {
-  try {
-    setParam(true, true, true, true, true, true, true, true, true, false);
+    setParam(true, true, true, true, true, true, true, true, false);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
