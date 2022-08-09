@@ -25,9 +25,9 @@
 |--------|---------------------------------------------------|
 | 需求来源   | 为bangpy-ops提供算子demo                               |  
 | 应用网络   |                                                   |
-| 输入数据类型 | float                                             |
-| 输入     | input1,input2:ARRAY     如果shape不相等 则一个必须是另外一个的子张量 |
-| 输出数据类型 | float                                             |
+| 输入数据类型 | float,half                                            |
+| 输入     | input1,input2:ARRAY |
+| 输出数据类型 | 与输入数据类型一致                                             |
 | 输出     | out:Array    shape为输入的公共形状                        |
 
 
@@ -35,9 +35,17 @@
 
 功能：计算 log(exp(x1) + exp(x2))
 
-data_x = [[-744.38378411  , 32.08532465 , 259.21401044],[ -65.55983881 ,-783.89169849 , 692.46914092]]
-data_y = [ 205.4972709 , -982.95625446 , 731.07663893]
-logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.49727 , -783.8917 , 731.07666 ]]
+data_x = [  
+    &ensp;[  -744.38378411,  32.08532465,   259.21401044  ],    
+    &ensp;[     -65.55983881,  -783.89169849,  692.46914092]  
+]   
+
+data_y = [  205.4972709,  -982.95625446,  731.07663893]  
+
+logaddexp(data_x,data_y) == [  
+    &ensp;[  205.49727,  32.085323,  731.07666  ],      
+    &ensp;[  205.49727,  -783.8917,  731.07666  ]  
+]
 
 
 
@@ -45,23 +53,23 @@ logaddexp(data_x,data_y) == [[ 205.49727  , 32.085323 , 731.07666 ] , [ 205.4972
 
 | 参数     | 语义                      | 类型（输入/输出） | 支持类型  | 物理布局  | 规模限制 |
 |--------|-------------------------|-----------|-------|-------|------|
-| input1 | 输入的任意shape的buffer       | 输入        | float | ARRAY | 无    |
-| input2 | 输入的任意shape的buffer       | 输入        | float | ARRAY | 无    |
-| output | 与输入最小公共shape一致的输出buffer | 输出        | float | ARRAY | 无    |
+| input1 | 输入Tensor       | 输入        | float,half | ARRAY | 无    |
+| input2 | 输入Tensor       | 输入        | float,half | ARRAY | 无    |
+| output | 输出Tensor | 输出        | float,half | ARRAY | 无    |
 
 ### 1.4 算子限制
 
 | 限制类型   | 详细说明                        |
 |--------|-----------------------------|
-| 数据类型限制 | input1 和 output 必须同时为同一数据类型 |
+| 数据类型限制 | input1,input2 和 output 必须同时为同一数据类型 |
 | 布局限制   | 仅支持ARRAY的layout             |
-| 规模限制   | 无                           |
+| 规模限制   | 两输入规模需一致                           |
 
 ### 1.5 验收标准
 
 #### 1.5.1 精度验收标准
 
-本算子属于 `算术` 类算子，验收标准为 diff3=0。   
+本算子属于 `算术` 类算子，验收标准为 diff1<= 3e-3 && diff2 <= 3e-3。   
 
 #### 1.5.2 性能验收标准
 
@@ -98,10 +106,13 @@ logaddexp(input1, input2, output)
 
 memcpy(nram_tensor1, gram_tensor1[start:end])
 memcpy(nram_tensor2, gram_tensor2[start:end])
+subtract(nram_tensor2, nram_tensor1, nram_tensor2)
+exp(nram_tensor2, nram_tensor2)
+add(nram_tensor2, nram_tensor2, 1)
+log(nram_tensor2, nram_tensor2)
+add(nram_tensor2, nram_buffer_in0, nram_tensor2)
 
-logaddexp(nram_tensor1, gram_tensor1, gram_tensor2)
-
-memcpy(output[start:end], nram_tensor1)
+memcpy(output[start:end], nram_tensor2)
 
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
@@ -121,7 +132,7 @@ memcpy(output[start:end], nram_tensor1)
 ### 3.6 测试用例设计
 
 - 算子在测试时使用的规模：
-  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，nram空间满占用，nram空间满占用边界。
+  固定测试规模0元素、单个元素、两个元素，128字节对齐，128字节对齐边界，片上nram空间满占用，片上nram空间满占用边界。
   通过shape随机生成函数，生成若干二维及以上shape并随机将input2的规模随机成input1的子集,以测试不同规模的计算。
   并通过bangpy提供得测试接口比较每次计算后cpu计算结果和mlu结算结果得误差是否在精度得误差范围内。
 
@@ -137,7 +148,7 @@ memcpy(output[start:end], nram_tensor1)
 
 | 提交日期 | 问题规模 | 问题描述 | 是否已修复 |
 |------|------|------|-------|
-|      |      |      |       |
+|  2022-5-18    |  输入张量规模不一致    | 需要张量广播功能的支持，测试文件中进行了简单的广播处理但不完整     |   否    |
 
 ### 4.2 已经过优化的规模说明
 
