@@ -67,9 +67,6 @@ class Celu:
         buffer_in0 = self.bp.Buffer(
             shape = (self.length,), name = "INPUT0", dtype = self.dtype, scope = "global"
         )
-        buffer_alpha = self.bp.Buffer(
-            shape = (1,), name = "ALPHA_PARAM", dtype = self.dtype, scope = "global"
-        )
         buffer_out = self.bp.Buffer(
             shape = (self.length,), name = "OUTPUT", dtype = self.dtype, scope = "global"
         )
