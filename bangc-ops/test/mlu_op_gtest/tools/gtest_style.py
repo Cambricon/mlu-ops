@@ -84,7 +84,7 @@ def check_macro(line):
 
 if __name__ == "__main__":
     file_path = os.path.dirname(os.path.abspath(__file__))
-    zoo_path = os.path.join(file_path, "../src/zoo")
+    zoo_path = os.path.join(file_path, "../pb_gtest/src/zoo")
 
     all_cpps = []
     if len(sys.argv) == 1:

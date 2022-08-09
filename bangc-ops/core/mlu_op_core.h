@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -144,6 +155,21 @@ typedef enum {
   MLUOP_COMPUTATION_HIGH_PRECISION = 1,
   /*!< Implementation with the high-precision algorithm regardless the performance.*/
 } mluOpComputationPreference_t;
+
+/*!
+ * @brief Enumeration variables describing that the rounding mode of quantization conversion.
+ */
+typedef enum {
+  MLUOP_ROUND_HALF_TO_EVEN = 0,
+  /*!< The rounding mode to round towards the nearest even neighbor
+   *   is used for quantization conversion.*/
+  MLUOP_ROUND_HALF_UP = 1,
+  /*!< The rounding mode to round up towards the nearest neighbor is
+   *   used for quantization conversion.*/
+  MLUOP_ROUND_HALF_OFF_ZERO = 2,
+  /*!< The rounding mode to round half away from zero is
+   *   used for quantization conversion.*/
+} mluOpQuantizeRoundMode_t;
 
 /******************************************************************************
  * MLUOP Runtime Management
@@ -340,6 +366,59 @@ const char *mluOpGetErrorString(mluOpStatus_t status);
  *  function to set the tensor information to the descriptor. Also, you need to destroy
  *  the MLUOP context at the end with the ::mluOpDestroyTensorDescriptor function.
  */
+// Group:QuantizeRoundMode
+/*!
+ *  @brief Updates the specific rounding mode of MLUOP context information that holds by the \b handle. This function
+ *  should be called if you want to change the mluop rounding mode that used to cumulate the results.
+ *  For detailed information, see Cambricon Driver API Developer Guide.
+ *
+ *  @param[in] handle
+ *    Input. Pointer to the MLUOP context that is used to manage MLU devices and
+ *    queues. For detailed information, see ::mluopHandle_t.
+ *  @param[in] round_mode
+ *    Input. The rounding mode of quantization conversion to be set to the MLUOP handle.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - On MLU200 series:
+ *    You can't set MLUOP_ROUND_HALF_TO_EVEN for the rounding mode because the hardware does not support it.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(mluOpHandle_t handle,
+                                                      mluOpQuantizeRoundMode_t round_mode);
+
+// Group:QuantizeRoundMode
+/*!
+ *  @brief Retrieves the rounding mode of a specific MLUOP context.
+ *
+ *  @param[in] handle
+ *    Input. Pointer to the MLUOP context that is used to manage MLU devices and
+ *    queues. For detailed information, see ::mluopHandle_t.
+ *
+ *  @param[out] round_mode
+ *    Output. the rounding mode of quantization conversion that was previously set to the specified handle.
+ *
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - The default round mode of default initialized mluopHandle_t is MLUOP_ROUND_TO_EVEN.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeRoundMode(mluOpHandle_t handle,
+                                                      mluOpQuantizeRoundMode_t *round_mode);
+
 typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 
 /*!

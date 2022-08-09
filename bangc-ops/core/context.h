@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -14,6 +25,7 @@
 
 #include "core/mlu_op_core.h"
 #include "cn_api.h"
+#include "mlu_op_core.h"
 
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
 #define CONTEXT_DEVICENAME_LEAST_SIZE 6
@@ -61,11 +73,12 @@ struct mluOpContext {
   int32_t sram_size;
   int32_t capability_cluster_num;
   int32_t capability_job_limit;
+  mluOpQuantizeRoundMode_t round_mode;
 };
 
 typedef enum {
   WARNING = 1,
-  ERROR   = 2,
+  ERROR = 2,
 } DepCheckLevel;  // related to include/cnlog.h
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,

@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -10,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "core/context.h"
+#include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
@@ -35,6 +47,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   }
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
+  }
+
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("sqrt");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "x", x, x_desc, 100, 0.1);
+    GEN_CASE_DATA(true, "y", y, y_desc, 0, 0);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
   // Choose the best task dimension.
@@ -78,6 +98,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   }
   KERNEL_CHECK(
       (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -96,6 +117,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
   }
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
+  }
+
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("sqrt_backward");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "y", y, y_desc, 10, 0.1);
+    GEN_CASE_DATA(true, "diff_y", diff_y, dy_desc, -10, 10);
+    GEN_CASE_DATA(false, "diff_x", diff_x, dx_desc, 0, 0);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
   cnrtDim3_t k_dim;
@@ -118,5 +148,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
   }
   KERNEL_CHECK((mluOpBlockKernelBinary(k_dim, k_type, handle->queue, y, diff_y,
                                        diff_x, num_elem)));
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2021] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -202,7 +202,7 @@ struct RuntimeDeviceName {
 };
 
 struct RuntimeContext {
-  cnrtDev_t device;
+  CNdev device;
   cnrtQueue_t queue;
   RuntimeDevType_t arch;  // return arch type. e.g. RUNTIME_MLU270
   int32_t cluster_num;
@@ -216,14 +216,6 @@ struct RuntimeContext {
 
 typedef struct RuntimeContext *RuntimeHandle_t;
 
-RuntimeDevType_t RuntimeConvertDeviceName(char *name);
-
-RuntimeStatus_t RuntimeSetContext(RuntimeHandle_t *handle);
-
-RuntimeStatus_t RuntimeSetQueue(RuntimeHandle_t handle, cnrtQueue_t queue);
-
-RuntimeStatus_t RuntimeGetQueue(RuntimeHandle_t handle, cnrtQueue_t *queue);
-
 size_t GetSizeOfDataType(RuntimeDataType_t dtype);
 
 union BangArgUnion32 {
@@ -232,4 +224,3 @@ union BangArgUnion32 {
   float v_float32;
 };
 #endif  // TOC_RUNTIME_RUNTIME_TENSOR_H_
-

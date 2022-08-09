@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -19,7 +30,8 @@
 
 #define DEP_CHECK_LOG(level)                                                 \
   cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, true, \
-                    true).stream()
+                    true)                                                    \
+      .stream()
 
 // see cnrt_function.c deviceCoreVersion for more info.
 struct deviceName name_list_table[] = {
@@ -216,6 +228,36 @@ mluOpStatus_t mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue) {
   PARAM_CHECK("[mluOpGetQueue]", queue != NULL);
 
   *queue = handle->queue;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(
+    mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_mode) {
+  PARAM_CHECK("[mluopSetQuantizeRoundMode]", handle != NULL);
+  PARAM_CHECK("[mluopSetQuantizeRoundMode]",
+              round_mode == MLUOP_ROUND_HALF_TO_EVEN ||
+                  round_mode == MLUOP_ROUND_HALF_OFF_ZERO ||
+                  round_mode == MLUOP_ROUND_HALF_UP);
+  if (handle->arch < 322) {
+    if (round_mode == MLUOP_ROUND_HALF_TO_EVEN) {
+      LOG(ERROR)
+          << "[mluopSetQuantizeRoundMode] Unsupported rounding mode on MLU200";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
+
+  handle->round_mode = round_mode;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeRoundMode(
+    mluOpHandle_t handle, mluOpQuantizeRoundMode_t *round_mode) {
+  PARAM_CHECK("[mluopGetQuantizeRoundMode]", handle != NULL);
+  PARAM_CHECK("[mluopGetQuantizeRoundMode]", round_mode != NULL);
+
+  *round_mode = handle->round_mode;
 
   return MLUOP_STATUS_SUCCESS;
 }

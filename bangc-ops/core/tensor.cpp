@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -292,18 +303,21 @@ mluOpStatus_t mluOpGetTensorDescriptor(const mluOpTensorDescriptor_t desc,
                                        mluOpDataType_t *dtype, int *dimNb,
                                        int dimSize[]) {
   PARAM_CHECK("[mluOpGetTensorDescriptor]", desc != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptor]", layout != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptor]", dtype != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptor]", dimNb != NULL);
-  PARAM_CHECK("[mluOpGetTensorDescriptor]", dimSize != NULL);
 
-  *layout = desc->layout;
-  *dtype = desc->dtype;
-  *dimNb = desc->dim;
-  for (int i = 0; i < *dimNb; ++i) {
-    dimSize[i] = desc->dims[i];
+  if (layout != nullptr) {
+    *layout = desc->layout;
   }
-
+  if (dtype != nullptr) {
+    *dtype = desc->dtype;
+  }
+  if (dimNb != nullptr) {
+    *dimNb = desc->dim;
+  }
+  if (dimSize != nullptr) {
+    for (int i = 0; i < *dimNb; ++i) {
+      dimSize[i] = desc->dims[i];
+    }
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
