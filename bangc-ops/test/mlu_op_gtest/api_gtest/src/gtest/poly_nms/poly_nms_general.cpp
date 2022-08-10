@@ -162,7 +162,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({2}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_output_dtype_shape, poly_nms_general,
@@ -176,5 +176,5 @@ INSTANTIATE_TEST_CASE_P(
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({2, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // namespace mluopapitest
