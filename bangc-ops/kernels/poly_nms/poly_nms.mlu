@@ -84,6 +84,9 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   // check inputs shape
   PARAM_CHECK_EQ(API, boxes_desc->dim, 2);
   PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
+  // check output shape
+  PARAM_CHECK_EQ(API, output_desc->dim, 1);
+
   PARAM_CHECK(API, boxes_desc->dims[0] == output_desc->dims[0]);
 
   int input_boxes_num = boxes_desc->dims[0];
