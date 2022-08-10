@@ -316,7 +316,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  *  - If there are cases with the same score in the input boxes, the output
  *    results may be inconsistent with the results of competing products.
  *  - The number of input boxes on mlu270, mlu290 and mlu370 does not exceed
- *    9770, and an error log will be printed if the size limit is exceeded.
+ *    9770.
  * 
  * @par Reference
  * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
