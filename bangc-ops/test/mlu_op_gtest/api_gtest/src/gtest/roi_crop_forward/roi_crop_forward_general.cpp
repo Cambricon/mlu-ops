@@ -39,6 +39,8 @@ class roi_crop_forward_general
     : public testing::TestWithParam<ROICropForwardParam> {
  public:
   void SetUp() {
+    device_ = std::get<3>(GetParam());
+    expected_status_ = std::get<4>(GetParam());
     MLUOP_CHECK(mluOpCreate(&handle_));
     device_ = std::get<3>(GetParam());
     expected_status_ = std::get<4>(GetParam());
@@ -87,7 +89,7 @@ class roi_crop_forward_general
     uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
     if (o_bytes > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
-    }
+    }    
   }
 
   bool compute() {
