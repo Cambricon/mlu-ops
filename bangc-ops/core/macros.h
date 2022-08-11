@@ -35,6 +35,9 @@
 #if defined(__GNUC__)
 
 // Compiler supports GCC-style attributes
+#define MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN __attribute__((visibility("hidden")))
+#define MLUOP_ATTRIBUTE_CONSTRUCTOR __attribute__((constructor))
+#define MLUOP_ATTRIBUTE_DESTRUCTOR __attribute__((destructor))
 #define MLUOP_ATTRIBUTE_NORETURN __attribute__((noreturn))
 #define MLUOP_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
 #define MLUOP_ATTRIBUTE_NOINLINE __attribute__((noinline))
@@ -51,6 +54,8 @@
 // Non-GCC equivalents
 #define MLUOP_ATTRIBUTE_NORETURN __declspec(noreturn)
 #define MLUOP_ATTRIBUTE_ALWAYS_INLINE __forceinline
+#define MLUOP_ATTRIBUTE_CONSTRUCTOR
+#define MLUOP_ATTRIBUTE_DESTRUCTOR
 #define MLUOP_ATTRIBUTE_NOINLINE
 #define MLUOP_ATTRIBUTE_UNUSED
 #define MLUOP_ATTRIBUTE_COLD

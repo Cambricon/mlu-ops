@@ -8,6 +8,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
 ################################################################################
+# Build Evironment
+################################################################################
+option(MLUOP_BUILD_ENABLE_TENSOR_QUEUE "define MLUOP_TENSOR_QUEUE_ENABLE 1/0" ON) 
+message(STATUS "MLUOP_BUILD_ENABLE_TENSOR_QUEUE=${MLUOP_BUILD_ENABLE_TENSOR_QUEUE}")
+
+################################################################################
 # Neuware Evironment and BANG Setup
 ################################################################################
 
