@@ -40,6 +40,12 @@ class roi_crop_backward_general
  public:
   void SetUp() {
     MLUOP_CHECK(mluOpCreate(&handle_));
+    device_ = std::get<3>(GetParam());
+    expected_status_ = std::get<4>(GetParam());
+    if (!(device_ == MLUOP_UNKNOWN_DEVICE || device_ == handle_->arch)) {
+      VLOG(4) << "Device does not match, skip testing.";
+      return;
+    }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_output_desc_));
     MLUOpTensorParam output_params = std::get<0>(GetParam());
@@ -82,14 +88,12 @@ class roi_crop_backward_general
     if (i_bytes > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_input_, i_bytes))
     }
-
-    device_ = std::get<3>(GetParam());
-    expected_status_ = std::get<4>(GetParam());
   }
 
   bool compute() {
     if (!(device_ == MLUOP_UNKNOWN_DEVICE || device_ == handle_->arch)) {
       VLOG(4) << "Device does not match, skip testing.";
+      destroy();
       return true;
     }
     mluOpStatus_t status =
