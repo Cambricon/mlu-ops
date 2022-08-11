@@ -42,6 +42,8 @@ class roi_crop_forward_general
     device_ = std::get<3>(GetParam());
     expected_status_ = std::get<4>(GetParam());
     MLUOP_CHECK(mluOpCreate(&handle_));
+    device_ = std::get<3>(GetParam());
+    expected_status_ = std::get<4>(GetParam());
     if (!(device_ == MLUOP_UNKNOWN_DEVICE || device_ == handle_->arch)) {
       VLOG(4) << "Device does not match, skip testing.";
       return;
