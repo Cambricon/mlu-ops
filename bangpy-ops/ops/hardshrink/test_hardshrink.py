@@ -31,9 +31,9 @@ from bangpy.common import load_op_by_type
 @pytest.mark.parametrize(
     "dtype", DTYPES,
 )
-@pytest.mark.parametrize( # pylint: disable=no-member
-    "shape", [(4, 16, 1024, 1024), (4, 16, 1, 64), (3, 5, 197, 255),], # ptlint: disable=no-member
-) # pylint: disable=no-member
+@pytest.mark.parametrize(
+    "shape", [(4, 16, 1024, 1024), (4, 16, 1, 64), (3, 5, 197, 255),],
+)
 
 @pytest.mark.parametrize("lambda_para", [0.5,])
 
