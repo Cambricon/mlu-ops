@@ -58,7 +58,7 @@ def test_cosine(target, shape, dtype):
 
     dev = bangpy.device(0)
     # set I/O data
-    
+
     data_in0_dev = bangpy.Array(data_in0.astype(dtype.as_numpy_dtype), dev)
     data_in1_dev = bangpy.Array(data_in1.astype(dtype.as_numpy_dtype), dev)
     data_out0_dev = bangpy.Array(np.zeros(shape0, dtype.as_numpy_dtype), dev)
@@ -78,7 +78,7 @@ def test_cosine(target, shape, dtype):
         shape[0],
         shape[1],
         shape[2],
-        shape[3]
+        shape[3],
     )
 
     if dim_var == 0:
