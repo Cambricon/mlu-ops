@@ -309,14 +309,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  * 
  *  @par Note
  *  - This commit does not support nan/inf.
- *  - The coordinates of the input boxes must all be sorted clockwise or 
+ *  - The coordinates of the input boxes must be sorted clockwise or 
  *    counterclockwise. If the coordinates of the boxes are out of order,
  *    the calculation result is not guaranteed and is consistent with the
  *    calculation result of the competitor operator.
  *  - If there are cases with the same score in the input boxes, the output
  *    results may be inconsistent with the results of competing products.
- *  - The number of input boxes on mlu270, mlu290 and mlu370 does not exceed
- *    9770.
+ *  - The number of input boxes on mlu270, mlu290 and mlu370 should be less
+ *    than 9770.
  * 
  * @par Reference
  * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
