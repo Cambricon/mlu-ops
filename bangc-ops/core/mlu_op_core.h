@@ -23,6 +23,10 @@
 #ifndef CORE_MLU_OP_CORE_H_
 #define CORE_MLU_OP_CORE_H_
 
+#define MLUOP_MAJOR 0
+#define MLUOP_MINOR 1
+#define MLUOP_PATCHLEVEL 0
+
 #include <stdint.h>
 #include "cnrt.h"
 
@@ -157,7 +161,18 @@ typedef enum {
 } mluOpComputationPreference_t;
 
 /*!
- * @brief Enumeration variables describing that the rounding mode of quantization conversion.
+ * @brief Enumeration variables describing that the atomics mode in MLUOP.
+ */
+typedef enum {
+  MLUOP_ATOMICS_NOT_ALLOWED = 1,
+  /*!< The atomics is not allowed to cumulate results.*/
+  MLUOP_ATOMICS_ALLOWED = 2,
+  /*!< The atomics is allowed to cumulate results */
+} mluOpAtomicsMode_t;
+
+/*!
+ * @brief Enumeration variables describing that the rounding mode of
+ * quantization conversion.
  */
 typedef enum {
   MLUOP_ROUND_HALF_TO_EVEN = 0,
@@ -198,14 +213,14 @@ struct mluOpContext;
 typedef struct mluOpContext *mluOpHandle_t;
 
 /*! The descriptor of the collection of tensor which is used in the RNN operation, such as weight,
- * bias, etc.
+ *  bias, etc.
  *  You need to call the ::mluOpCreateTensorSetDescriptor function to create a descriptor, and
  *  call the ::mluOpInitTensorSetMemberDescriptor to set the information about each tensor in
  *  the tensor set. If the data type of the tensor in the tensor set is in fixed-point data type,
  *  call ::mluOpInitTensorSetMemberDescriptorPositionAndScale function to set quantization
- * parameters.
+ *  parameters.
  *  At last, you need to destroy the descriptor at the end with the
- * ::mluOpDestroyTensorSetDescriptor
+ *  ::mluOpDestroyTensorSetDescriptor
  *  function. */
 typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
 
@@ -330,12 +345,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *que
 /*!
  *  @brief Converts the MLUOP enumerated status code to ASCIIZ static string and returns
  *  a pointer to the MLU memory that holds information about ASCIIZ static string with the status
- * name.
+ *  name.
  *  For example, when the input argument is
  *  ::MLUOP_STATUS_SUCCESS, the returned string is MLUOP_STATUS_SUCCESS. When an invalid status
- * value
- * is passed
- *  to the function, the returned string is ::MLUOP_STATUS_BAD_PARAM.
+ *  value is passed to the function, the returned string is ::MLUOP_STATUS_BAD_PARAM.
  *
  *  @param[in] status
  *    Input. The MLUOP enumerated status code.
@@ -353,6 +366,57 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *que
  *
  */
 const char *mluOpGetErrorString(mluOpStatus_t status);
+
+// Group:Tensor
+/*!
+ *  @brief Get the size of a data type in ::mluOpDataType_t.
+ *
+ *  @param[in] data_type
+ *    Input. The data type. For detailed information, see ::mluOpDataType_t.
+ *  @param[out] size
+ *    Output. Host pointer to the size of the data type.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetSizeOfDataType(mluOpDataType_t data_type,
+                                                   size_t *size);
+
+// Group:Version Management
+/*!
+ *  @brief Retrieves the version of MLUOP library. The version of MLUOP
+ *  is composed of \b major, \b minor and \b patch. For instance, major = 1,
+ *  minor = 2, patch = 3, the version of MLUOP library is 1.2.3.
+ *
+ *  @param[in] major
+ *    Input. A pointer to scale factor that gets the major version of MLUOP
+ *    library.
+ *  @param[in] minor
+ *    Input. A pointer to scale factor that gets the minor version of MLUOP
+ *    library.
+ *  @param[in] patch
+ *    Input. A pointer to scale factor that gets the patch version of MLUOP
+ *    library.
+ *
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * */
+void mluOpGetLibVersion(int *major, int *minor, int *patch);
 
 /******************************************************************************
  * MLUOP Data Structure: Descriptor
@@ -425,7 +489,7 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  *  @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, data type,
  *  and layout of input tensor. If the input tensor is in fixed-point data type,
  *  the ::mluOpSetTensorDescriptorPositionAndScale function or the
- * ::mluOpSetTensorDescriptorPosition
+ *  ::mluOpSetTensorDescriptorPosition
  *  function needs to be called to set quantization parameters.
  *
  *  The ::mluOpDestroyTensorDescriptor function needs to be called to destroy the
@@ -447,10 +511,46 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  */
 mluOpStatus_t MLUOP_WIN_API mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 
+// Group:Tensor
 /*!
- *  @brief Initializes the tensor descriptor pointed by \b desc that is previously created
- *  with the ::mluOpCreateTensorDescriptor function, and sets the information about
- *  the dimensions, data type, and layout of the input tensor.
+ *  @brief Creates a group of tensor descriptor stored by \b group_desc that
+ *  holds the dimensions, data_type, and layout of input tensors. If the input
+ *  tensor is in fixed-point data type, the
+ *  ::mluOpSetTensorDescriptorPositionAndScale function or the
+ *  ::mluOpSetTensorDescriptorPosition function need to be called to set
+ *  quantization parameters.
+ *
+ *  @param[in] group_desc
+ *    Input. An array of pointers to the structs that hold information about the
+ *    tensor descriptor.
+ *  @param[in] desc_num
+ *    Input. The length of the input array \b group_desc.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @par API Dependency
+ *  - The ::mluOpDestoryTensorDescriptor function needs to be called for each
+ *    descriptor to destory all tensors in group_desc or the
+ *    ::mluOpDestoryGroupTensorDescriptors needs to be called to destory the all
+ *    tensor descriptors in group_desc later.
+ *
+ *  @note
+ *  - None
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpCreateGroupTensorDescriptors(
+    mluOpTensorDescriptor_t *group_desc[], const int desc_num);
+
+/*!
+ *  @brief Initializes the tensor descriptor pointed by \b desc that is
+ *  previously created with the ::mluOpCreateTensorDescriptor function, and sets
+ *  the information about the dimensions, data type, and layout of the input
+ *  tensor.
  *
  *  If ::mluOpSetTensorDescriptor is called, you do not need to specify the strides of all
  *  dimensions. The strides are inferred by parameters passed to this function. Also, the data
@@ -490,14 +590,68 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptor(mluOpTensorDescriptor_t des
                                                      int dimNb,
                                                      const int dimSize[]);
 
+// Group:Tensor
 /*!
- *  @brief Resets the tensor descriptor pointed by \b desc that is previously created
- *  with the ::mluOpCreateTensorDescriptor function.
+ *  @brief Initializes the group of tensor descriptors stored by \b group_desc
+ *  that is previously created with the ::mluOpCreateTensorDescriptor function or
+ *  ::mluOpCreateGroupTensorDescriptors function, and sets the information about
+ *  the dimensions, data type, and layout of all the input tensors.
  *
+ *  If ::mluOpSetTensorDescriptor or ::mluOpSetGroupTensorDescriptors is called,
+ *  you do not need to specify the strides of all dimensions. The strides are
+ *  inferred by parameters passed to this function. Also, the data will be
+ *  treated as contiguous in memory with no padding between dimensions. To
+ *  specify the strides of all dimensions, you can call
+ *  ::mluOpSetTensorDescriptorEx. But the data might not be treated as contiguous
+ *  in memory.
+ *
+ *  @param[in] group_desc
+ *    Input. An array of pointers to the struct that hold information about the
+ *    tensor descriptor.
+ *  @param[in] group_layout
+ *    Input. An array that stores the layouts of all input tensors. For detailed
+ *    information, see ::mluOpTensorLayout_t.
+ *  @param[in] group_dtype
+ *    Input. An array that stores the data types of all input tensors. For
+ *    detailed information, see ::mluOpDataType_t.
+ *  @param[in] group_dimNb
+ *    Input. An array that stores the dimensions of all input tensors.
+ *  @param[in] group_dimSize
+ *    Input. An array that stores the size of each dimension of all tensors.
+ *  @param[in] desc_num
+ *    Input. The length of the input array \b group_desc.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *  
+ *  @note
+ *  - The group_dimSize includes dimensions of all tensors. You need to store
+ *    the dimension of each tensor one by one in order. For example, If we have
+ *    three tensors, the first tensor dimension is [3,4,5,6], the second tensor
+ *    dimension is [9,7,8], and the third tensor dimension is [4,7], the
+ *    group_dimSize should be [3,4,5,6,9,7,8,4,7].
+ *  - For better performance, there is no overflow check in this function.
+ *    Please make sure that the size of each tensor is in the range of [0, 2^31].
+ *    Otherwise, you will get wrong result.
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[],
+                               const mluOpTensorLayout_t group_layout[],
+                               const mluOpDataType_t group_dtype[],
+                               const int group_dimNb[],
+                               const int group_dimSize[],
+                               const int desc_num);
+
+/*!
+ *  @brief Resets the tensor descriptor pointed by \b desc that is previously
+ *  created with the ::mluOpCreateTensorDescriptor function.
  *  If ::mluOpResetTensorDescriptor is called, all the information about the tensor will be reset to
  *  initial value, which means layout is MLUOP_LAYOUT_ARRAY, dtype is MLUOP_DTYPE_FLOAT, dimsNb is
- * 0,
- *  and dimSize points to an \b MLUOP_DIM_MAX-dimension array.
+ *  0, and dimSize points to an \b MLUOP_DIM_MAX-dimension array.
  *
  *  @param[in] desc
  *    Input. The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -566,7 +720,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t d
 /*!
  *  @brief Sets the on-chip data type to the descriptor of a tensor \b desc.
  *  The on-chip data type \b onchip_dtype can be different from the off-chip data type of the
- * tensor.
+ *  tensor.
  *  This function is optional. If the on-chip data type is not set with this function, the
  *  ::MLUOP_STATUS_BAD_PARAM data type is used by default.
  *
@@ -575,7 +729,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t d
  *    see ::mluOpTensorDescriptor_t.
  *  @param[in] onchip_dtype
  *    Input. The on-chip data type of the tensor used in the operations that support fixed-point
- * computing.
+ *    computing.
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -583,8 +737,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t d
  *  - The on-chip data type is only used on the operations that support fixed-point computing. It
  *    has no effect on other operations. If you call this function to get on-chip data type for an
  *    operation that does not support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned.
- * To check
- *    if an operation supports fixed-point computing, see the detailed description of the operation.
+ *    To check if an operation supports fixed-point computing, see the detailed description of the 
+ *    operation.
  *
  *  @par Requirements
  *  - None.
@@ -594,84 +748,84 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t d
  */
 mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc,
                                                                    mluOpDataType_t onchip_dtype);
-
-/*!
- * @brief Sets the \b position factor to the descriptor \b desc of fixed-point data in
- * fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION mode.
- *
- * @param[in] desc
- *   Input. The descriptor of the tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
- * @param[in] position
- *   Input. A scalar of fixed position factor that is used for quantization.
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @note
- * - None.
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - None.
- *
-*/
+ 
+/*! 
+ *  @brief Sets the \b position factor to the descriptor \b desc of fixed-point data in
+ *  fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION mode.
+ * 
+ *  @param[in] desc
+ *    Input. The descriptor of the tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] position
+ *    Input. A scalar of fixed position factor that is used for quantization.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @note
+ *  - None.
+ * 
+ *  @par Requirements
+ *  - None.
+ * 
+ *  @par Example
+ *  - None.
+ * 
+*/ 
 mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc,
                                                              int position);
 
-/*!
- * @brief Sets the \b position and \b scale factors to the descriptor of fixed-point data in
- * fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE mode.
- *
- * @param[in] desc
- *   Input. The descriptor of the tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
- * @param[in] position
- *   Input. A scalar of fixed position factor that is used for quantization.
- * @param[in] scale
- *   Input. A scalar of scale factor that is used for quantization.
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @note
- * - None.
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - None.
- *
-*/
+/*! 
+ *  @brief Sets the \b position and \b scale factors to the descriptor of fixed-point data in
+ *  fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE mode.
+ * 
+ *  @param[in] desc
+ *    Input. The descriptor of the tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] position
+ *    Input. A scalar of fixed position factor that is used for quantization.
+ *  @param[in] scale
+ *    Input. A scalar of scale factor that is used for quantization.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @note
+ *  - None.
+ * 
+ *  @par Requirements
+ *  - None.
+ * 
+ *  @par Example
+ *  - None.
+ * 
+*/ 
 mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc,
                                                                      int position,
                                                                      float scale);
-/*!
- * @brief Sets the \b position, \b scale and \b offset factors to the descriptor of fixed-point
- * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE_OFFSET mode.
- *
- * @param[in] desc
- *   Input. The descriptor of the tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
- * @param[in] position
- *   Input. A scalar of fixed position factor that is used for quantization.
- * @param[in] scale
- *   Input. A scalar of scale factor that is used for quantization.
- * @param[in] offset
- *   Input. A scalar of offset factor that is used for quantization.
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @note
- * - None.
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - None.
- *
+/*! 
+ *  @brief Sets the \b position, \b scale and \b offset factors to the descriptor of fixed-point
+ *  data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE_OFFSET mode.
+ * 
+ *  @param[in] desc
+ *    Input. The descriptor of the tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] position
+ *    Input. A scalar of fixed position factor that is used for quantization.
+ *  @param[in] scale
+ *    Input. A scalar of scale factor that is used for quantization.
+ *  @param[in] offset
+ *    Input. A scalar of offset factor that is used for quantization.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @note
+ *  - None.
+ * 
+ *  @par Requirements
+ *  - None.
+ * 
+ *  @par Example
+ *  - None.
+ * 
 */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc,
@@ -689,12 +843,12 @@ mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[out] layout
  *    Output. Pointer to the host memory that holds information about the layout of the input
- * tensor.
- *  For detailed information, see ::mluOpTensorLayout_t.
+ *    tensor.
+ *    For detailed information, see ::mluOpTensorLayout_t.
  *  @param[out] dtype
  *    Output. Pointer to the host memory that holds information about the data type of the input
- * tensor.
- *  For detailed information, see ::mluOpDataType_t.
+ *    tensor.
+ *    For detailed information, see ::mluOpDataType_t.
  *  @param[out] dimNb
  *    Output. Pointer to the host memory that holds information about the dimension of input tensor.
  *  @param[out] dimSize
@@ -728,12 +882,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptor(const mluOpTensorDescriptor
  *    see ::mluOpTensorDescriptor_t.
  *  @param[out] layout
  *    Output. Pointer to the host memory that holds information about the layout of the input
- * tensor.
- *  For detailed information, see ::mluOpTensorLayout_t.
+ *    tensor.
+ *    For detailed information, see ::mluOpTensorLayout_t.
  *  @param[out] dtype
  *    Output. Pointer to the host memory that holds information about the data type of the input
- * tensor.
- *  For detailed information, see ::mluOpDataType_t.
+ *    tensor.
+ *    For detailed information, see ::mluOpDataType_t.
  *  @param[out] dimNb
  *    Output. Pointer to the host memory that holds information about the dimension of input tensor.
  *  @param[out] dimSize
@@ -802,7 +956,7 @@ size_t MLUOP_WIN_API mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc
  *    see ::mluOpTensorDescriptor_t.
  *  @param[in] onchip_dtype
  *    Input. Pointer to the MLU memory that holds information about the on-chip data type of the
- * tensor.
+ *    tensor.
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -810,8 +964,8 @@ size_t MLUOP_WIN_API mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc
  *  - The on-chip data type is only used on the operations that support fixed-point computing. It
  *    has no effect on other operations. If you call this function to get on-chip data type for an
  *    operation that does support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned. To
- * check
- *    if an operation supports fixed-point computing, see the detailed description of the operation.
+ *    check if an operation supports fixed-point computing, see the detailed description of the
+ *    operation.
  *
  *  @par Requirements
  *  - None.
@@ -825,25 +979,25 @@ mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc,
                                        mluOpDataType_t *onchip_dtype);
 
 /*!
- * @brief Gets the \b position factor to the descriptor \b desc of fixed-point data in
- * fixed-point quantization.
- *
- * @param[in] desc
- *   Input. The descriptor of the tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
- * @param[out] position
- *   Output. A host pointer of fixed position factor that is used for quantization.
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @note
- * - None.
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - None.
+ *  @brief Gets the \b position factor to the descriptor \b desc of fixed-point data in
+ *  fixed-point quantization.
+ * 
+ *  @param[in] desc
+ *    Input. The descriptor of the tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] position
+ *    Output. A host pointer of fixed position factor that is used for quantization.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @note
+ *  - None.
+ * 
+ *  @par Requirements
+ *  - None.
+ * 
+ *  @par Example
+ *  - None.
  *
 */
 mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc,
@@ -877,34 +1031,34 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorPosition(const mluOpTensorDe
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc,
-                                         int *position,
-                                         float *scale);
-/*!
- * @brief Gets the \b position, \b scale and \b offset factors to the descriptor \b desc of
- * fixed-point data in fixed-point quantization.
- *
- * @param[in] desc
- *   Input. The descriptor of the tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
- * @param[out] position
- *   Output. A host pointer of fixed position factor that is used for quantization.
- * @param[out] scale
- *   Output. A host pointer of scale factor that is used for quantization.
- * @param[in] offset
- *   Output. A host pointer of offset factor that is used for quantization.
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @note
- * - None.
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - None.
- *
-*/
+                                          int *position,
+                                          float *scale);
+/*! 
+ *  @brief Gets the \b position, \b scale and \b offset factors to the descriptor \b desc of
+ *  fixed-point data in fixed-point quantization.
+ * 
+ *  @param[in] desc
+ *    Input. The descriptor of the tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] position
+ *    Output. A host pointer of fixed position factor that is used for quantization.
+ *  @param[out] scale
+ *    Output. A host pointer of scale factor that is used for quantization.
+ *  @param[in] offset
+ *    Output. A host pointer of offset factor that is used for quantization.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * 
+ *  @note
+ *  - None.
+ * 
+ *  @par Requirements
+ *  - None.
+ * 
+ *  @par Example
+ *  - None.
+ * 
+*/ 
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t desc,
                                                int *position,
@@ -912,8 +1066,8 @@ mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t des
                                                int *offset);
 
 /*!
- *  @brief Destroies a tensor descriptor that was created by
- *         ::mluOpCreateTensorDescriptor.
+ *  @brief Destroies a tensor descriptor that was created by 
+ *  ::mluOpCreateTensorDescriptor.
  *
  *  @param[in] desc
  *    Input. A tensor descriptor created by ::mluOpCreateTensorDescriptor.
@@ -929,10 +1083,297 @@ mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t des
  *  @par Example
  *  - None.
  */
-mluOpStatus_t MLUOP_WIN_API mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
+ mluOpStatus_t MLUOP_WIN_API mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
+// Group:Tensor
+/*!
+ *  @brief Destroys a group of tensor descriptors that was created by
+ *  ::mluOpCreateTensorDescriptor or ::mluOpCreateGroupTensorDescriptors.
+ *
+ *  @param[in] group_desc
+ *    Input. An array of pointers to the struct that hold information about the
+ *    tensor descriptor.
+ *  @param[in] desc_num
+ *    Input. The length of the input array \b group_desc.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpDestroyGroupTensorDescriptors(
+    mluOpTensorDescriptor_t *group_desc[], const int desc_num);
+
+// Group:TensorSet
+/*!
+ *  @brief Creates a descriptor \b tensorSetDesc of tensor set that holds a
+ *  series of tensors. The number of tensors of tensor set is jointly determined
+ *  by \b setDimNb and \b setDimSize. Use ::mluOpInitTensorSetMemberDescriptor to
+ *  set information for descriptor and ::mluOpDestroySeqDataDescriptor function
+ *  to destroy the tensor set descriptor.
+ *
+ *  @param[out] tensorSetDesc
+ *    Input. Pointer to the memory that holds information about the descriptor
+ *    of tensor set.
+ *  @param[in] setDimNb
+ *    Input. The number of dimensions of the tensor set.
+ *  @param[in] setDimSize
+ *    Input. An array that contains the number of the tensors for each dimension
+ *    of the tensor set.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - After calling this function, you can call the
+ *    ::mluOpInitTensorSetMemberDescriptor function to initialize and set the
+ *    information to the tensor set descriptor.
+ *  - You need to call the ::mluOpDestroyTensorSetDescriptor function to destroy
+ *    the descriptor.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet,
+                               const int setDimNb,
+                               const int setDimSize[]);
+
+// Group:TensorSet
+/*!
+ *  @brief Retrieves a tensor set descriptor \b tensorSetDesc that is previously
+ *  created with the ::mluOpCreateTensorSetDescriptor function.
+ *
+ *  @param[in] tensorSetDesc
+ *    Input. The descriptor of the tensor set. For detailed information,
+ *    see ::mluOpSeqDataDescriptor_t.
+ *  @param[out] setDimNb
+ *    Output. The number of dimensions of the tensor set.
+ *  @param[out] setDimSize
+ *    Output. An array that contains the number of the tensor for each dimension
+ *    of the tensor set.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @par API Dependency
+ *  - Before calling this function, ::mluOpCreateTensorSetDescriptor should be
+ *    called.
+ *
+ *  @note
+ *  - setDimSize[0] represents the highest dimension, and dimSize[dimNb - 1]
+ *    represents the lowest dimension.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetTensorSetDescriptor(
+    mluOpTensorSetDescriptor_t tensorSetDesc, int *setdimNb, int setDimSize[]);
+
+// Group:TensorSet
+/*!
+ *  @brief Destroys a tensor set descriptor \b tensorSetDesc that is previously
+ *  created by ::mluOpCreateTensorSetDescriptor.
+ *
+ *  @param[in] desc
+ *    Input. A tensor descriptor created by ::mluOpCreateTensorSetDescriptor.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - This function should be called to destroy the tensor set descriptor.
+ *    Otherwise, the memory leak may occur.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
+
+// Group:TensorSet
+/*!
+ *  @brief Initializes a member tensor in the tensor set descriptors pointed by
+ *  \b desc that is previously created with the ::mluOpCreateTensorSetDescriptor
+ *  function, and sets the information about the dimensions, data type, and
+ *  layout.
+ *
+ *  @param[in] tensorSetDesc
+ *    Input. The descriptor of the tensor set. For detailed information,
+ *    see ::mluOpTensorSetDescriptor_t.
+ *  @param[in] setDimNb
+ *    Input. The number of dimensions of the tensor set.
+ *  @param[in] tensorIndex
+ *    Input. An array that contains the index of each dimension of a member
+ *    tensor to be initialized in the tensor set.
+ *  @param[in] layout
+ *    Input. The layout of the member tensor. For detailed information, see
+ *    ::mluOpTensorLayout_t.
+ *  @param[in] dtype
+ *    Input. The data type of the member tensor. For detailed information, see
+ *    ::mluOpDataType_t.
+ *  @param[in] dimNb
+ *    Input. The number of dimensions in the member tensor.
+ *  @param[in] dimSize
+ *    Input. An array that contains the size of the member tensor for each
+ *    dimension.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - Before calling this function,
+ *    You need to call the ::mluOpCreateTensorSetDescriptor functions to create
+ *    the tensor descriptors \b tensorSetDesc.
+ *  - All member tensors in the tensor set need to call this function to
+ *    initialize related properties.
+ *  - dimSize[0] and dimSize[DIM_MAX - 1] represent the highest and lowest
+ *    dimension respectively, where DIM_MAX is the number of dimensions in the
+ *    input tensor.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
+                                   const int setDimNb,
+                                   const int tensorIndex[],
+                                   mluOpTensorLayout_t layout,
+                                   mluOpDataType_t dtype,
+                                   const int dimNb,
+                                   const int dimSize[]);
+
+// Group:TensorSet
+/*!
+ *  @brief Sets the position and scale factors used in fixed-point quantization.
+ *  It is only used if you have quantized the input data with the symmetric
+ *  fixed-point quantization with scale factor quantization method. For more
+ *  information about quantization, see "Cambricon mluOp User Guide".
+ *
+ *  @param[in] tensorSetDesc
+ *    Input. The descriptor of tensor set. For detailed information,
+ *    see ::mluOpTensorSetDescriptor_t.
+ *  @param[in] setDimNb
+ *    Input. The number of dimensions of the tensor set.
+ *  @param[in] tensorIndex
+ *    Input. An array that contains the position index information of the member
+ *    tensor in the tensor set.
+ *  @param[in] position
+ *    Input. A position of fixed position factor that is used for
+ *    quantification.
+ *  @param[in] scale
+ *    Input. A scalar of scale factor that is used for quantification.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - If the member tensor is in floating-point data type, and  you need to call
+ *    this function.
+ *  - If the member tensor is in fixed-point data type, and  you need to call
+ *    this function.
+ *  - Before calling this function,
+ *    You need to call the ::mluOpCreateTensorSetDescriptor functions to create
+ *    the tensor descriptors \b tensorSetDesc.
+ *  - The \b position should be limited in [-128, 127], otherwise the result is
+ *    undefined.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API 
+mluOpInitTensorSetMemberDescriptorPositionAndScale(mluOpTensorSetDescriptor_t tensorSetDesc,
+                                                   const int setDimNb,
+                                                   const int tensorIndex[],
+                                                   const int position,
+                                                   const float scale);
+
+// Group:TensorSet
+/*!
+ *  @brief Retrieves the size of tensor set according to the input descriptor \b
+ *  tensorSetDesc. You need to call the ::mluOpInitTensorSetMemberDescriptor
+ *  function first to create a tensor set descriptor before calling this
+ *  function.
+ *
+ *  @param[in] desc
+ *    Input. The descriptor of tensor set. For detailed information,
+ *    see ::mluOpTensorSetDescriptor_t.
+ *  @param[Out] sizeInBytes
+ *    Output. Size in bytes of tensor set.
+ *    You can allocate MLU memory for the tensor set with this value.
+ *
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API 
+mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, 
+                                int *sizeInBytes);
+
+// Group:TensorSet
+/*!
+ *  @brief Retrieves the tensor descriptor in the tensor set and the
+ *  corresponding offset address based on the entire block of MLU memory through
+ *  the index \b tensorIndex.
+ *
+ *  @param[in] tensorSetDesc
+ *    Input. The descriptor of tensor set. For detailed information,
+ *    see ::mluOpTensorSetDescriptor_t.
+ *  @param[in] tensorIndex
+ *    Input. An array that contains the position information of the member
+ *    tensor in the tensor set.
+ *  @param[in] data
+ *    Input. Pointer to the MLU memory that is described by \b tensorSetDesc.
+ *  @param[out] tensorDesc
+ *    Output. Pointer to the host member. It is member tensor descriptor that
+ *    indexed by \b tensorIndex in the tensor set. \b *tensorDesc contains tensor
+ *    member information about dimensions, layout, data type, position and scale.
+ *  @param[out] dataAddrInDevice
+ *    Output. Pointer to the MLU memory that indexed by \b tensorIndex in the
+ *    whole block of data \b dataAddrInDevice.
+ *
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
+                                   const int setDimNb,
+                                   const int tensorIndex[],
+                                   void *data,
+                                   mluOpTensorDescriptor_t *tensorDesc,
+                                   void **dataAddrInDevice);
 
 #if defined(__cplusplus)
 }
 #endif
 
 #endif  // CORE_MLU_OP_CORE_H_
+
