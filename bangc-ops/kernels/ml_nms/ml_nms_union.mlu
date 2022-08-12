@@ -1,0 +1,201 @@
+#include "bang.h"
+#include "mlu_op_kernel.h"
+#include "kernels/unary_op/unary_op_union.h"
+
+#define MLU_VERSION 270
+#if MLU_VERSION == 220
+#undef MLU_VERSION
+#define MLU_VERSION 220
+#elif MLU_VERSION == 270
+#undef MLU_VERSION
+#define MLU_VERSION 270
+#elif MLU_VERSION == 290
+#undef MLU_VERSION
+#define MLU_VERSION 290
+#elif MLU_VERSION == 322
+#undef MLU_VERSION
+#define MLU_VERSION 322
+#elif MLU_VERSION == 372
+#undef MLU_VERSION
+#define MLU_VERSION 372
+#endif
+
+__mlu_func__ void setSetoff(mluOpDataType_t data_type, int input_boxes_num, int min_cell, int cord_num, int* setoff){
+	switch (data_type){
+		case MLUOP_DTYPE_HALF:
+			if((input_boxes_num % (min_cell / 2 * cord_num)) != 0){
+				*setoff = (min_cell / 2) * (input_boxes_num / (min_cell / 2 * cord_num) + 1);
+			}else{
+				*setoff = (min_cell / 2) * (input_boxes_num / (min_cell / 2 * cord_num));
+			}
+		case MLUOP_DTYPE_FLOAT:
+			if ((input_boxes_num % (min_cell / 4 * cord_num)) != 0){
+				*setoff = (min_cell / 4) * (input_boxes_num / (min_cell / 4 * cord_num) + 1);
+			} else {
+				*setoff = (min_cell / 4) * (input_boxes_num / (min_cell / 4 * cord_num));
+			}
+		default:break;
+	}
+}
+
+__mlu_func__ void getOffsetNumMlNmsFast(int input_boxes_num, mluOpDataType_t data_type, int* setoff, cnrtFunctionType_t k_type){
+	if(k_type == CNRT_FUNC_TYPE_UNION1){
+		if (MLU_VERSION < 200){
+			setSetoff(data_type, input_boxes_num, 64, 4, setoff);
+		} else if (MLU_VERSION > 200 && MLU_VERSION < 300){
+			setSetoff(data_type, input_boxes_num, 128, 4, setoff);
+		} else if (MLU_VERSION > 300 && MLU_VERSION < 400){
+			setSetoff(data_type, input_boxes_num, 128, 4, setoff);
+		} 
+	} else if(k_type == CNRT_FUNC_TYPE_UNION2){
+		if (MLU_VERSION < 200){
+			setSetoff(data_type, input_boxes_num, 64, 8, setoff);
+		} else if (MLU_VERSION > 250 && MLU_VERSION < 300){
+			setSetoff(data_type, input_boxes_num, 128, 8, setoff);
+		} else if (MLU_VERSION > 300 && MLU_VERSION < 400){
+			setSetoff(data_type, input_boxes_num, 128, 8, setoff);
+		} 
+	} else if(k_type == CNRT_FUNC_TYPE_UNION4){
+		if (MLU_VERSION < 200){
+			setSetoff(data_type, input_boxes_num, 64, 16, setoff);
+		} else if (MLU_VERSION > 250 && MLU_VERSION < 300){
+			setSetoff(data_type, input_boxes_num, 128, 16, setoff);
+		} else if (MLU_VERSION > 300 && MLU_VERSION < 400){
+			setSetoff(data_type, input_boxes_num, 128, 16, setoff);
+		}  
+	} else if(k_type == CNRT_FUNC_TYPE_UNION8){
+		if (MLU_VERSION < 200){
+			setSetoff(data_type, input_boxes_num, 64, 32, setoff);
+		} 
+	}
+}
+
+
+
+template <typename T>
+__mlu_func__ void computeMlNmsFast(T* boxes_data_ptr, T* scores_max_boxes_data_ptr, T nms_thres, int setoff, int input_boxes_num, uint8_t* output_boxes_index){
+
+	__nram__ T scores_max_boxes[4];
+	__nram__ T scores_max_boxes_area;
+	__nram__ T boxes_data[512];
+	__nram__ T x1[512];
+	__nram__ T y1[512];
+	__nram__ T x2[512];
+	__nram__ T y2[512];
+	__nram__ T w[512];
+	__nram__ T h[512];
+	__nram__ T area_ptr[512];
+	__nram__ T interarea_ptr[512];
+	__nram__ T scores_max_boxes_area_ptr[512];
+	__nram__ T nms_thres_ptr[512];
+	__nram__ T scores_max_boxes_ptr[512];
+	__nram__ T tem[512];
+	__nram__ uint8_t result[512];
+	
+	if (input_boxes_num % taskDim != 0){
+		__memcpy(boxes_data, boxes_data_ptr + (taskId * (input_boxes_num / taskDim) * 4), (input_boxes_num / taskDim) * 4 * sizeof(T), GDRAM2NRAM);
+	} else {
+		if (taskId == (taskDim - 1)){
+			__memcpy(boxes_data, boxes_data_ptr + (taskId * (input_boxes_num / taskDim) * 4), ((input_boxes_num / taskDim) + (input_boxes_num % taskDim)) * 4 * sizeof(T), GDRAM2NRAM); 
+		} else {
+			__memcpy(boxes_data, boxes_data_ptr + (taskId * (input_boxes_num / taskDim) * 4), (input_boxes_num / taskDim) * 4 * sizeof(T), GDRAM2NRAM);
+		}
+	}
+	__memcpy(scores_max_boxes, scores_max_boxes_data_ptr, 4 * sizeof(T), GDRAM2NRAM);
+		
+	int j,i;
+	for(i = 0, j = 0; i < setoff; i++, j+=4){
+		x1[i] = boxes_data[j + 0];
+		y1[i] = boxes_data[j + 1];
+		x2[i] = boxes_data[j + 2];
+		y2[i] = boxes_data[j + 3];
+	}
+
+	//-----------------iou detect--------------------
+	//fing all boxes area
+	__bang_sub(h, y1, y2, setoff);
+	__bang_sub(w, x2, x1, setoff);
+	__bang_mul(area_ptr, h, w, setoff);
+
+	//max x1
+	__bang_write_value(scores_max_boxes_ptr, setoff, scores_max_boxes[0]);
+	__bang_cycle_sub(x1, x1, scores_max_boxes_ptr, setoff, setoff);
+	__bang_active_relu(x1, x1, setoff);
+	__bang_cycle_add(x1, x1, scores_max_boxes_ptr, setoff, setoff);
+	
+	//min y1
+	__bang_write_value(scores_max_boxes_ptr, setoff, scores_max_boxes[1]);
+	__bang_write_zero(tem, setoff);
+	__bang_cycle_add(tem, tem, scores_max_boxes_ptr, setoff, setoff);
+	__bang_sub(tem, y1, scores_max_boxes_ptr, setoff);
+	__bang_active_relu(tem, tem, setoff);
+	__bang_sub(y1, y1, tem, setoff);
+
+	//min x2
+	__bang_write_value(scores_max_boxes_ptr, setoff, scores_max_boxes[2]);
+	__bang_write_zero(tem, setoff);
+	__bang_cycle_add(tem, tem, scores_max_boxes_ptr, setoff, setoff);
+	__bang_sub(tem, x2, scores_max_boxes_ptr, setoff);
+	__bang_active_relu(tem, tem, setoff);
+	__bang_sub(x2, x2, tem, setoff);
+
+	//max y2
+	__bang_write_value(scores_max_boxes_ptr, setoff, scores_max_boxes[3]);
+	__bang_cycle_sub(y2, y2, scores_max_boxes_ptr, setoff, setoff);
+	__bang_active_relu(y2, y2, setoff);
+	__bang_cycle_add(y2, y2, scores_max_boxes_ptr, setoff, setoff);
+
+	//--------- intesection-------
+	//fing W
+	__bang_sub(w, x2, x1, setoff);
+	__bang_active_relu(w, w, setoff);
+
+	//find H
+	__bang_sub(h, y1, y2, setoff);
+	__bang_active_relu(h, h, setoff);
+
+	//fing intersection
+	__bang_mul(interarea_ptr, h, w, setoff);
+
+	//fing scores max boxes area
+	scores_max_boxes_area=(scores_max_boxes[1] - scores_max_boxes[3]) * (scores_max_boxes[2] - scores_max_boxes[0]);
+	__bang_write_value(scores_max_boxes_area_ptr, setoff, scores_max_boxes_area);
+	__bang_cycle_add(tem, area_ptr, scores_max_boxes_area_ptr, setoff, setoff);
+	__bang_sub(tem, tem, interarea_ptr, setoff);
+	__bang_write_value(nms_thres_ptr, setoff, nms_thres);
+	__bang_cycle_mul(tem, tem, nms_thres_ptr, setoff, setoff);
+	__bang_gt(tem, interarea_ptr, tem, setoff);
+	
+	for(int i =0; i < setoff; i++){
+		result[i] = (int)(tem[i]);
+	}
+
+	if (input_boxes_num % taskDim !=0){
+		if (taskId == (taskDim - 1)){
+			__memcpy(output_boxes_index + (taskId * (input_boxes_num / taskDim)), result, (input_boxes_num / taskDim + input_boxes_num % taskDim) * sizeof(uint8_t), NRAM2GDRAM);
+		} else {
+			__memcpy(output_boxes_index + (taskId * (input_boxes_num / taskDim)), result, (input_boxes_num / taskDim) * sizeof(uint8_t), NRAM2GDRAM);
+		}
+	} else {
+		__memcpy(output_boxes_index + (taskId * (input_boxes_num / taskDim)), result, (input_boxes_num / taskDim) * sizeof(uint8_t), NRAM2GDRAM);
+	}
+
+}
+
+	
+UNION_OP_KERNEL_IMPLE(MlNms, float, Fast);
+UNION_OP_KERNEL_IMPLE(MlNms, half, Fast);
+
+void MLUOP_WIN_API mluUnionKernelMlNmsFloatFast(
+	cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+	mluOpDataType_t data_type, void* boxes_data_ptr, void* scores_max_boxes_data_ptr, float nms_thres, int input_boxes_num, uint8_t* output_boxes_index){
+	MLUUnionKernelMlNmsfloatFast<<<k_dim, k_type, queue>>>(
+		k_type, data_type, boxes_data_ptr, scores_max_boxes_data_ptr, nms_thres, input_boxes_num, output_boxes_index);
+}
+
+void MLUOP_WIN_API mluUnionKernelMlNmsHalfFast(
+	cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+	mluOpDataType_t data_type, void* boxes_data_ptr, void* scores_max_boxes_data_ptr, float nms_thres, int input_boxes_num, uint8_t* output_boxes_index){
+	MLUUnionKernelMlNmshalfFast<<<k_dim, k_type, queue>>>(
+		k_type, data_type, boxes_data_ptr, scores_max_boxes_data_ptr, nms_thres, input_boxes_num, output_boxes_index);
+}
