@@ -51,7 +51,7 @@ struct Line {
   float c;
 };
 
-__mlu_func__ static uint32_t GetDirection(const Point2D *__restrict__ A) {
+__mlu_func__ static uint32_t getDirection(const Point2D *__restrict__ A) {
   float x0 = A[2].x - A[0].x;
   float y0 = A[2].y - A[0].y;
   float x1 = A[3].x - A[1].x;
@@ -82,7 +82,7 @@ __mlu_func__ static bool isInner(const Line *__restrict__ line,
 
 struct QuadClipBox {
   __mlu_func__ void addLines(const Point2D *__restrict__ A) {
-    direction = GetDirection(A);
+    direction = getDirection(A);
     line[0].update(A, A + 1);
     Point2D centerAC = {(A[0].x + A[2].x) / 2, (A[0].y + A[2].y) / 2};
     bool ACFine = false;
@@ -170,7 +170,7 @@ template <int CUTLINE_N>
 __mlu_func__ static float clipArea(const float *__restrict__ box_i,
                                    const Line *__restrict__ clip_box_lines,
                                    uint32_t direction) {
-  constexpr int MAX_POINT = CUTLINE_N + 4;
+  constexpr int MAX_POINT = CUTLINE_N + 5;
   Point2D p_swap0[MAX_POINT];
   Point2D p_swap1[MAX_POINT];
   Point2D *p = p_swap0;
