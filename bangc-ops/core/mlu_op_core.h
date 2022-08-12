@@ -23,8 +23,8 @@
 #ifndef CORE_MLU_OP_CORE_H_
 #define CORE_MLU_OP_CORE_H_
 
-#define MLUOP_MAJOR 1
-#define MLUOP_MINOR 0
+#define MLUOP_MAJOR 0
+#define MLUOP_MINOR 1
 #define MLUOP_PATCHLEVEL 0
 
 #include <stdint.h>
