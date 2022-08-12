@@ -126,3 +126,14 @@ mluOpStatus_t unaryOpNmsParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
+ #endif
+  // check 0 element
+  if (mluOpGetTensorElementNum(x_desc) == 0) {
+    VLOG(5) << op_name << "skip zero element tensor.";
+    zero_element = true;
+    return MLUOP_STATUS_SUCCESS;
+  }
+  PARAM_CHECK(op_name, x != NULL);
+  PARAM_CHECK(op_name, y != NULL);
+  return MLUOP_STATUS_SUCCESS;
+}
