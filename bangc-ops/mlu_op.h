@@ -309,7 +309,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  * 
  *  @par Note
  *  - This commit does not support nan/inf.
- *  - The coordinates of the input boxes must be sorted clockwise or 
+ *  - The coordinates of the input boxes must be sorted clockwise or
  *    counterclockwise. If the coordinates of the boxes are out of order,
  *    the calculation result is not guaranteed and is consistent with the
  *    calculation result of the competitor operator.
