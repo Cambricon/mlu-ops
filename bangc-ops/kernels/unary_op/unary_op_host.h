@@ -41,4 +41,11 @@ mluOpStatus_t unaryOpParamCheck(const std::string &op_name,
                                 const void *y,
                                 const mluOpDataType_t support_type[],
                                 const int &type_len, bool &zero_element);
+
+mluOpStatus_t unaryOpNmsParamCheck(const std::string &op_name,
+                                const mluOpTensorDescriptor_t &x_desc,
+                                const void *x,
+                                const void *y,
+                                const mluOpDataType_t support_type[],
+                                const int &type_len, bool &zero_element);
 #endif  // KERNELS_UNARY_OP_UNARY_OP_HOST_H_
