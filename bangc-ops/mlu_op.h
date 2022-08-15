@@ -51,7 +51,26 @@ typedef enum {
   MLUOP_LOG_2 = 1,  /*!< The base 2 is used.*/
   MLUOP_LOG_10 = 2, /*!< The base 10 is used.*/
 } mluOpLogBase_t;
+/*
+ *
+ * @param handle : Set the handle to the MLU
+ *
+ * @param mluOpTensorDescriptor_t : Properties of the input data
+ *
+ * @param boxesDataPtr : The coordinates of the input box
+ *
+ * @param scoresMaxBoxesDataPtr : Coordin of the box with maximum accuracy
+ *
+ * @param inputBoxesNum : input box number
+ *
+ * @param iouThreshold : Threshold of intersection and union ratio
+ *
+ * @param outputBoxesIndex : Index of the output box
+ *
+ */
 
+mluOpStatus_t MLUOP_WIN_API mluOpMlNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_dataPtr_desc, void* boxes_data_ptr,
+		void* scores_max_boxes_data_ptr, int input_boxes_num, float iou_threshold, uint8_t* output_boxes_index);
 /*!
  * @brief Computes the absolute value for every element of the input tensor \b x
  *   and returns in \b y.
