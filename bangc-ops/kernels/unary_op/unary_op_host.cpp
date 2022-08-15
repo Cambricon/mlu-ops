@@ -102,9 +102,9 @@ mluOpStatus_t unaryOpParamCheck(
 }
 
 mluOpStatus_t unaryOpNmsParamCheck(
-    const std::string &op_name, 
-    const mluOpTensorDescriptor_t &x_desc, const void *x, const void *y,
-    const mluOpDataType_t support_type[], const int &len, bool &zero_element) {
+  const std::string &op_name,
+  const mluOpTensorDescriptor_t &x_desc, const void *x, const void *y,
+  const mluOpDataType_t support_type[], const int &len, bool &zero_element) {
   // check descriptor
   PARAM_CHECK(op_name, x_desc != NULL);
 #if 0
@@ -127,7 +127,7 @@ mluOpStatus_t unaryOpNmsParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
- #endif
+#endif
   // check 0 element
   if (mluOpGetTensorElementNum(x_desc) == 0) {
     VLOG(5) << op_name << "skip zero element tensor.";
