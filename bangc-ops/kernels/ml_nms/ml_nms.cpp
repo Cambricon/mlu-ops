@@ -22,7 +22,6 @@
 #include "mlu_op_kernel.h"
 #include "kernels/unary_op/unary_op_host.h"
 #include "cnrt.h"
-#include "cndev.h"
 
 typedef uint16_t half;
 
