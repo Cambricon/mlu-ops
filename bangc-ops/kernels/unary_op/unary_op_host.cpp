@@ -100,3 +100,41 @@ mluOpStatus_t unaryOpParamCheck(
   PARAM_CHECK(op_name, y != NULL);
   return MLUOP_STATUS_SUCCESS;
 }
+
+mluOpStatus_t unaryOpNmsParamCheck(
+    const std::string &op_name, 
+    const mluOpTensorDescriptor_t &x_desc, const void *x, const void *y,
+    const mluOpDataType_t support_type[], const int &len, bool &zero_element) {
+  // check descriptor
+  PARAM_CHECK(op_name, x_desc != NULL);
+#if 0
+  // check dim and dtype
+  PARAM_CHECK_EQ(op_name, x_desc->dtype, y_desc->dtype);
+  PARAM_CHECK_EQ(op_name, x_desc->dim, y_desc->dim);
+#endif
+  // check data type
+  if (!isSupportType(x_desc->dtype, support_type, len)) {
+    LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+#if 0
+  for (int i = 0; i < x_desc->dim; i++) {
+    if (x_desc->dims[i] != y_desc->dims[i]) {
+      LOG(ERROR) << op_name << ":The shape of x should be equal to y"
+                 << ". But now x_desc's shape[" << i << "] is "
+                 << x_desc->dims[i] << ", y_desc's shape[" << i << "] is "
+                 << y_desc->dims[i] << ".";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
+ #endif
+  // check 0 element
+  if (mluOpGetTensorElementNum(x_desc) == 0) {
+    VLOG(5) << op_name << "skip zero element tensor.";
+    zero_element = true;
+    return MLUOP_STATUS_SUCCESS;
+  }
+  PARAM_CHECK(op_name, x != NULL);
+  PARAM_CHECK(op_name, y != NULL);
+  return MLUOP_STATUS_SUCCESS;
+}
