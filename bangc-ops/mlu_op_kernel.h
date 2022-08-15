@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include "cnrt.h"
+#include "core/mlu_op_core.h"
 
 #ifndef MLUOP_WIN_API
 #ifdef _WIN32
