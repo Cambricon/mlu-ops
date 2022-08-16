@@ -116,6 +116,13 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolForwardFloat(
     const int width, const int channels, const int pooled_height,
     const int pooled_width, const int output_dim, const int group_size,
     const int rois_num, const int rois_offset, const float spatial_scale);
+void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_grad, const void *mapping_channel, const void *rois,
+    void *bottom_grad, const int batch_size, const int height, const int width,
+    const int channels, const int pooled_height, const int pooled_width,
+    const int output_dim, const int rois_num, const int rois_offset,
+    const float spatial_scale);
     
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
