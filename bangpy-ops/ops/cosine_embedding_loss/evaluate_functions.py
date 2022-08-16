@@ -19,7 +19,6 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-测试运行算子所需函数，随机数据生成，计时以及准确度
 Functions needed when testing operation.
 Including generating random data, timing and computing accuracy
 """
