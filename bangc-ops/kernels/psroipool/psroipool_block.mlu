@@ -356,12 +356,14 @@ __mlu_func__ void psRoiAvgPoolBackwardWholeOutputdim(
     hend = std::min(std::max(hend, 0), height);
     wstart = std::min(std::max(wstart, 0), width);
     wend = std::min(std::max(wend, 0), width);
+
     bool is_empty = (hend <= hstart) || (wend <= wstart);
     int bin_area = (hend - hstart) * (wend - wstart);
     T bin_area_recip = 1.0 / bin_area;
     int bottom_add = batch_id * channels * height * width;
     T *top_grad_c = top_grad_buffer + bin_n * c_align;
     int *mapping_channel_c = mapping_channel_buffer + bin_n * output_dim;
+    // __bang_write_value(atomic_buffer, c_align, 0);
     __bang_mul_scalar(top_grad_c, top_grad_c, bin_area_recip, c_align);
     for (int i = 0; i < output_dim; i++) {
       T diff_val = is_empty ? 0. : top_grad_c[i];
@@ -387,8 +389,8 @@ __mlu_global__ void MLUKernelPsroipoolBackward(
   int total_bins = rois_num * pooled_height * pooled_width;
   int remainder = total_bins % taskDim;
   int bins_per_core = total_bins / taskDim + (int)(taskId < remainder);
-  int bins_offset =
-      taskId * bins_per_core + (taskId < remainder ? taskId : remainder);
+  int bins_offset = taskId * (total_bins / taskDim) +
+                    (taskId < remainder ? taskId : remainder);
   int align_128 = NFU_ALIGN_SIZE / sizeof(T);
   int c_align = CEIL_ALIGN(output_dim, align_128);
   int nram_deal_bins = (MAX_NRAM_SIZE - c_align * sizeof(T)) /
