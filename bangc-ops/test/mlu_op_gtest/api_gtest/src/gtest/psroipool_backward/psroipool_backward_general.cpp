@@ -220,6 +220,21 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
+    zero_element_2, psroipool_backward_general,
+    testing::Combine(
+        testing::Values(PsRoiPoolBackwardDescParam{3, 3, 1.0, 1}),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({1, 4, 4, 0}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 0, 0, 1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({2, 0, 0, 1}))),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_SUCCESS)));
+
+INSTANTIATE_TEST_CASE_P(
     bad_input_dtype_shape_layout_0, psroipool_backward_general,
     testing::Combine(
         testing::Values(PsRoiPoolBackwardDescParam{3, 3, 1.0, 1}),
@@ -309,7 +324,6 @@ INSTANTIATE_TEST_CASE_P(
     bad_params_0, psroipool_backward_general,
     testing::Combine(
         testing::Values(PsRoiPoolBackwardDescParam{3, 3, 1.0, 2},
-                        PsRoiPoolBackwardDescParam{3, 3, 1.0, 1},
                         PsRoiPoolBackwardDescParam{3, 3, 0, 1},
                         PsRoiPoolBackwardDescParam{3, 2, 1.0, 1},
                         PsRoiPoolBackwardDescParam{2, 3, 1.0, 1}),
@@ -321,6 +335,21 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({2, 3, 3, 1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
                                          4, std::vector<int>({2, 3, 3, 1}))),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_params_1, psroipool_backward_general,
+    testing::Combine(
+        testing::Values(PsRoiPoolBackwardDescParam{3, 3, 1.0, 1}),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({1, 4, 4, 9}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 3, 3, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({2, 3, 3, 2}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // mluopapitest
