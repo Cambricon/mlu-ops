@@ -34,7 +34,8 @@ CORES_PER_CLUSTER = 4
 
 class KlDivLoss(object):
     """Operator description:
-        The Kullback-Leibler divergence loss
+        The Kullback-Leibler divergence loss is used to measure the distance
+        between two distributions (discrete and continuous)
 
         log_target : if target has been logged(0:no / 1:yes)
             if log_target == 0 : out = target * (log(target) - input)
@@ -127,6 +128,10 @@ class KlDivLoss(object):
         self.tcp.launch_cluster(task_type.value)
 
     def compute_body(self):
+        """Function description:
+            Split data for each buffer, and calculate formula mentioned above
+            If reduction is not equal 0, do the corresponding reduction operation
+        """
         # calculate split strategy
         cluster_num = self.task_num // 4
         cluster_id = self.tcp.clusterId
