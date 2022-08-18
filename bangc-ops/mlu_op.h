@@ -437,82 +437,77 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 
 /*!
  *  @brief Computes the gradients of feature map \b bottom_grad based on the 
- *    input \b top_grad 、\b rois and \b mapping_channel to perform the backpropagation 
+ *    inputs \b top_grad , \b rois and \b mapping_channel to perform the backpropagation 
  *    of the ::mluOpPsRoiPoolForward operator.
  *
  *  @param[in] handle
  *    Input. Handle to a MLUOP context that is used to manage MLU devices and queues in the 
  *    psroipool_forward operation. For detailed information, see ::mluOpHandle_t.
  *  @param[in] pooled_height
- *    Input. The height of \b top_grad.
+ *    Input. An integer value which is the height of the output after pooling.
  *  @param[in] pooled_width
- *    Input. The width of \b top_grad.
+ *    Input. An integer value which is the width of the output after pooling.
  *  @param[in] spatial_scale
- *    Input. The spatial scale of each regions of interest in the output.
+ *    Input. A float value which is the scale factor of coordinates of rois.
  *  @param[in] output_dim
- *    Input. The channel of \b top_grad.
+ *    Input. An integer value which is the channel of the output after pooling.
  *  @param[in] top_grad_desc
- *    Input. The descriptor of the gradient tensor int the backpropagation process. 
- *    For detailed information, see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of the top_grad tensor, which contains the dimension and the layout 
+ *    of top_grad tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[in] top_grad
  *    Input. Pointer to the MLU memory that stores the top_grad tensor.
  *  @param[in] rois_desc
- *    Input. The descriptor of the rois tensor. For detailed information,
- *    see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of the rois tensor, which contains the dimension and the layout 
+ *    of rois tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[in] rois
- *    Input. Pointer to the MLU memory that stores the rois tensor. NaN and INF datas are not
- *    supported. \b rois[1] consists of [batch_id, roi_start_w, roi_start_h, roi_end_w, roi_end_h], 
- *    where \p batch_id is the ID of the batch.
+ *    Input. Pointer to the MLU memory that stores the rois tensor.
  *  @param[in] mapping_channel_desc
- *    Input. Descriptor of the mapping_channel tensor, containing dimension and the layout of 
- *    mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of the mapping_channel tensor, which contains the dimension and the 
+ *    layout of mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[in] mapping_channel
- *    Input. Pointer to the MLU memory that stores the mapping_channel tensor. The shape of 
- *    \b mapping_channel is [rois[0], pooled_height, pooled_width, output_dim].
+ *    Input. Pointer to the MLU memory that stores the mapping_channel tensor. 
  *  @param[in] bottom_grad_desc
- *    Input. Descriptor of the gradient tensor of the origin feature map. For detailed information,
- *    see ::mluOpTensorDescriptor_t.
+ *    Input. Descriptor of the bottom_grad tensor, which contains the dimension and the 
+ *    layout of mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  *  @param[out] bottom_grad
- *    Output. Pointer to the MLU memory that stores the bottom_grad tensor. The shape of bottom_grad is
- *    [batch_num, H，W, C].
+ *    Output. Pointer to the MLU memory that stores the bottom_grad tensor. 
  * 
  *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- * 
- *  @par Formula
- *  - See "psroipool_backward Operation" section in "Cambricon MLUOP User Guide" for details.
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
  * 
  *  @par Data Type
- *  - The supported data layout of \b top_grad, \b rois, \b mapping_channel, and \b bottom_grad 
+ *  - The supported data types of top_grad tensor \b top_grad, rois tensor \b rois, 
+ *    mapping_channel tensor \b mapping_channel and bottom_grad tensor \b bottom_grad 
  *    are as follows:
- *     - Top_grad tensor: float.
- *     - Rois tensor: float.
- *     - Mapping_channel tensor: int.
- *     - Bottom_grad tensor: float.
+ *    - top_grad tensor: float.
+ *    - rois tensor: float.
+ *    - mapping_channel tensor: int.
+ *    - bottom_grad tensor: float.
  * 
  *  @par Data Layout
- *  - The supported data layout of \b top_grad, \b rois, \b mapping_channel, and \b bottom_grad 
+ *  - The supported data layouts of top_grad tensor \b top_grad, rois tensor \b rois, 
+ *    mapping_channel tensor \b mapping_channel and bottom_grad tensor \b bottom_grad 
  *    are as follows:
- *     - Top_grad tensor: \p MLUOP_LAYOUT_NHWC.
- *     - Rois tensor: \p MLUOP_LAYOUT_ARRAY.
- *     - Bottom_grad tensor: \p MLUOP_LAYOUT_NHWC.
- *     - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
+ *    - top_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *    - rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *    - mapping_channel tensor: \p MLUOP_LAYOUT_NHWC.
+ *    - bottom_grad tensor: \p MLUOP_LAYOUT_NHWC.
  * 
  *  @par Scale Limitation
- *  - The \b top_grad tensor, mapping_channel tensor and \b bottom_grad tensor must have four dimensions.
- *  - The \b rois tensor should be 2-D array.
+ *  - The top_grad tensor, mapping_channel tensor and bottom_grad tensor must be 4-D.
+ *  - The size of top_grad tensor and mapping_channel tensor must be the same.
+ *  - The rois tensor be be 2-D.
+ *  - The shape of \b top_grad should be [rois_num, pooled_height, pooled_width, output_dim].
  *  - The shape of \b rois should be [rois_num, 5].
- *  - \p batch_id should be in the range of [0, batch_num - 1].
- *  - The \b spatial_scale > 0.
- *  - The \b output_dim >=1.
+ *  - The shape of \b mapping_channel should be [rois_num, pooled_height, pooled_width, output_dim].
+ *  - the shape of \b bottom_grad should be [batch_num, height, width, channels].
+ *  - \b rois[i] consists of [batch_id, roi_start_w, roi_start_h, roi_end_w, roi_end_h].
+ *    \p batch_id should be in the range of [0, batch_num -1].
+ *  - The \b spatial_scale should be larger than 0.
+ *  - The \b output_dim should be larger than or equal to 1.
  *  - The \b pooled_height should be equal to \b pooled_width.
- *  - The \b channels should be equal to \b pooled_height * \b pooled_width * \b output_dim.
- *  - The shape of \b top_grad tensor and \b mapping_channel tensor must be the same value.
- *  - The first dimension of \b top_grad tensor and \b rois tensor must be the same size.
- *  - The second dimension of \b top_grad should be equal to pooled_height.
- *  - The third dimension of \b top_grad should be equal to pooled_width.
- *  - The fourth dimension of \b top_grad should be equal to output_dim.
- *  - 
+ *  - The \p channels should be equal to \b pooled_height * \b pooled_width * \b output_dim.
+ *  
  *  @par Requirements
  *  - None.
  *
@@ -520,7 +515,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  *  - None.
  * 
  *  @par Note
- *  - On MLU300 series, rois do not support NAN/INF.
+ *  - On MLU300 series, rois does not support NAN/INF.
  * 
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/

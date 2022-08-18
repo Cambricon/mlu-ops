@@ -110,7 +110,7 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0) {
-    VLOG(5) << api << " input skip zero element tensor.";
+    VLOG(5) << api << " Input skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
   if (mluOpGetTensorElementNum(rois_desc) == 0) {
@@ -186,15 +186,15 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluOpGetTensorElementNum(top_grad_desc) == 0) {
-    VLOG(5) << api << " input skip zero element tensor.";
+    VLOG(5) << api << " Input skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
   if (mluOpGetTensorElementNum(mapping_channel_desc) == 0) {
-    VLOG(5) << api << " input skip zero element tensor.";
+    VLOG(5) << api << " Input skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
   if (mluOpGetTensorElementNum(bottom_grad_desc) == 0) {
-    VLOG(5) << api << " output skip zero element tensor.";
+    VLOG(5) << api << " Output skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
   if (mluOpGetTensorElementNum(rois_desc) == 0) {
@@ -319,9 +319,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
           << ", " << k_dim.z << "].";
 
   // gdram set zero
-  int gd_num = channels * width * height * batch_size * sizeof(float);
+  int gdramset_size = channels * width * height * batch_size * sizeof(float);
   KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             gd_num, bottom_grad)));
+                                             gdramset_size, bottom_grad)));
   VLOG(5) << "Kernel mluOpBlockKernelFillZero.";
 
   KERNEL_CHECK((mluOpBlockKernelPsRoiPoolBackwardFloat(
