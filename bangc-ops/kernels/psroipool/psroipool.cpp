@@ -185,18 +185,13 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
                << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (mluOpGetTensorElementNum(top_grad_desc) == 0) {
+  if (mluOpGetTensorElementNum(top_grad_desc) == 0 ||
+      mluOpGetTensorElementNum(mapping_channel_desc) == 0 ||
+      mluOpGetTensorElementNum(bottom_grad_desc) == 0) {
     VLOG(5) << api << " Input skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
-  if (mluOpGetTensorElementNum(mapping_channel_desc) == 0) {
-    VLOG(5) << api << " Input skip zero element tensor.";
-    return MLUOP_STATUS_SUCCESS;
-  }
-  if (mluOpGetTensorElementNum(bottom_grad_desc) == 0) {
-    VLOG(5) << api << " Output skip zero element tensor.";
-    return MLUOP_STATUS_SUCCESS;
-  }
+
   if (mluOpGetTensorElementNum(rois_desc) == 0) {
     LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -224,7 +219,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   if (ret != MLUOP_STATUS_SUCCESS) {
     LOG(ERROR) << api
                << " Error found during element verification, please check.";
-    return MLUOP_STATUS_BAD_PARAM;
+    return ret;
   }
 
   const int batch_size = input_desc->dims[0];
