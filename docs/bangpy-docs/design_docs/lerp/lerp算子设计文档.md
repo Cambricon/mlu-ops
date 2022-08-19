@@ -100,7 +100,7 @@ out = torch.lerp(input, end, weight)
 ### 2.2 接口设计
 
 ```python
-mluopLerp(input_start, input_end, input_weight, shape[0], shape[1], shape[2], shape[3], output)
+MluOpLerp(input_start, input_end, input_weight, shape[0], shape[1], shape[2], shape[3], output)
 ```
 
 ## 3 实现方案设计
