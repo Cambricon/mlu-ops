@@ -49,7 +49,7 @@
 
 功能：基于权重的线性插值。
 运算公式描述如下：
-    $$out_i = start_i + wight_i * (end_i - start_i)$$
+    $$out_i = start_i + weight_i * (end_i - start_i)$$
 	weight默认为标量，值为0.5
 
 例如：
@@ -127,7 +127,7 @@ tensor_out_n = tcp.alloc_buffer(shape, name = "OUTPUT" , dtype = dtype, scope = 
 tensor_weight_n = tcp.alloc_buffer(shape, name = "WEIGHT_N", dtype = dtype, scope = "nram")
 memcpy(gloabl, nram)
 # tensor_in_end_n 复用
-abs(tensor_in_end_n, tensor_in_end_n, tensor_in_start_n)
+subtract(tensor_in_end_n, tensor_in_end_n, tensor_in_start_n)
 multiply(tensor_in_end_n, tensor_weight_n, tensor_in_end_n)
 add(tensor_out_n, tensor_in_start_n, tensor_in_end_n)
 memcpy(nram, global)
