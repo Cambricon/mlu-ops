@@ -7,9 +7,9 @@ MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 ## 依赖条件
 
 - 操作系统：
-  - 目前只支持 Ubuntu 16.04 x86_64
+  - 目前支持 X86_64 下 Ubuntu16.04 Ubuntu18.04 Centos7.6 
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v2.6.1 版本
+  - 编译和运行时依赖 CNToolkit v3.0.1 版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v4.15.3 或更高版本
 - 外部链接库：

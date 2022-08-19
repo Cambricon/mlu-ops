@@ -37,10 +37,8 @@ void TestEnvironment::SetUp() {
 
   // 3. random device id [0, dev_num)
   // [a, b] => (rand() % (b - a + 1)) + a
-  std::random_device rd;
-  std::mt19937 mt(rd());
-  std::uniform_int_distribution<int> dis(0, dev_num - 1);
-  int dev_id = dis(mt);
+  unsigned int seed = time(0);
+  int dev_id = (rand_r(&seed) % (dev_num - 1 - 0 + 1)) + 0;
 
   // cnrt set current device using CNRT_DEFAULT_DEVICE
   // in cnrtGetDevice() CNRT_DEFAULT_DEVICE > id

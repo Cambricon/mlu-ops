@@ -24,11 +24,6 @@
 #ifndef BANGC_OPS_KERNELS_POLY_NMS_ENUMS_H
 #define BANGC_OPS_KERNELS_POLY_NMS_ENUMS_H
 
-enum class PointDirection {
-  CW,   // clock wise
-  CCW,  // counter clock wise
-};
-
 enum class OutputOrder {
   HIGH_SCORE_FIRST,  // high score first output
   LOW_BOX_ID_FIRST,  // low box id first output
