@@ -37,7 +37,7 @@
 | 需求来源          |      PyTorch                          |
 | 应用网络          |         rarely used                 |
 | 输入数据类型       |      half,float                    |
-| 输入shape        |      无shape限制                         |
+| 输入shape        |      input.dim = 4                  |
 | 输入layout       |      无layout限制                    |
 | 输出数据类型       |      同输入类型                         |
 | 输出shape         |      同输入类型   |
@@ -84,6 +84,8 @@ outputTensor = m(input)
 | 数据类型限制     | input 和 output 必须同时为同一数据类型 |
 | 原位限制     | 支持原位            |
 | stride 限制  | 不支持stride 机制      |
+| 输入数据input shape限制 | 目前仅支持dim=4 |
+| lambda默认限制 | 目前需要显示声明lambda大小 |
 
 ### 1.5 验收标准
 
@@ -114,7 +116,7 @@ outputTensor = m(input)
 - HardShrink计算接口：
 
 ```python
-mluopHardShrink(inputTensor,lambda=0.5,shape[0],shape[1],shape[2],shape[3],outputTensor)
+MluOpHardShrink(inputTensor,lambda=0.5,shape[0],shape[1],shape[2],shape[3],outputTensor)
 ```
 
 ## 3 实现方案设计
@@ -177,7 +179,7 @@ memcpy(nram, global)
 
 ### 3.6 测试用例设计
 
-包括三部分，分别是数据类型、数据规模和硬件支持。数据类型包括：[float16, float32]，数据规模测试任意范围数据（极大、极小、不规则（不对齐）等），包括(4, 16, 1024, 1024)，(4,16,1,64)，(3, 5, 197, 175)，硬件支持包括：["mlu370", "mlu290"]
+包括三部分，分别是数据类型、数据规模和硬件支持。数据类型包括：[half, float32]，数据规模测试任意范围数据（极大、极小、不规则（不对齐）等），包括(4, 16, 1024, 1024)，(4,16,1,64)，(3, 5, 197, 175)，硬件支持包括：["mlu370", "mlu290"]
 
 
 ## 4 算子性能优化记录
