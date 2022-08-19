@@ -76,6 +76,7 @@
 | 广播限制 | 不支持广播 |
 | stride限制 | 不支持stride机制 |
 | 输入shape | 目前不支持任意shape，只支持dim = 4 |
+| input_weight类型 | 目前仅支持input_weight类型为tensor |
 
 ### 1.5 验收标准
 
