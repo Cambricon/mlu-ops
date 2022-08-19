@@ -30,6 +30,7 @@ DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "hardshrink"
 
+
 class HardShrink(object):
     """Operator description:
     An activation function, behaves similar to torch.hardshrink.
@@ -47,26 +48,19 @@ class HardShrink(object):
         tensor_greater_nram: ty.Buffer("nram"),
         tensor_output_nram: ty.Buffer("nram"),
     ) -> None:
-        """include the main compute"""
+        """Include the main compute"""
         tcp.abs(tensor_abs_nram, tensor_input_nram)
         tcp.greater(tensor_greater_nram, tensor_abs_nram, tensor_lambda_nram)
         tcp.multiply(tensor_output_nram, tensor_input_nram, tensor_greater_nram)
 
-    # the compute pipeline
     def hardshrink_compute(self):
-        """the main compute pipeline"""
+        """The main compute pipeline"""
         self.task_num = self.cluster_num * self.core_num
 
-        task_content = (
-            self.element_num // self.task_num
-        )  # per task need to calculate num
-        task_remain = (
-            self.element_num % self.task_num
-        )  # remain num which has no task to deal
+        task_content = self.element_num // self.task_num
+        task_remain = self.element_num % self.task_num
 
-        tensor_input_flatten = self.tensor_input.reshape(
-            (self.element_num,)
-        )  # the use of reshape has higher effiency, equal use is self.tensor_input.flatten()[]
+        tensor_input_flatten = self.tensor_input.reshape((self.element_num,))
         tensor_output_flatten = self.tensor_output.reshape((self.element_num,))
 
         cmpt_times = task_content // self.nram_use_size
@@ -186,7 +180,6 @@ class HardShrink(object):
                                 ],
                                 tensor_output_small_nram[:remain_by_thistask],
                             )
-        # get the output
         self.tensor_output = tensor_output_flatten.reshape(self.tensor_shape)
 
     def main(
@@ -199,7 +192,7 @@ class HardShrink(object):
         dim_3: ty.int32,
         data_out_dev: ty.handle,
     ) -> None:
-        """the main entry"""
+        """The main entry"""
         tgt = tcp.target()
 
         self.lambda_para = lambda_para
@@ -223,6 +216,7 @@ class HardShrink(object):
         )
 
         self.hardshrink_compute()
+
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_hardshrink(dtype=None, target=None):

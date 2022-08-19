@@ -34,9 +34,7 @@ from bangpy.common import load_op_by_type
 @pytest.mark.parametrize(
     "shape", [(4, 16, 1024, 1024), (4, 16, 1, 64), (3, 5, 197, 255),],
 )
-
 @pytest.mark.parametrize("lambda_para", [0.5,])
-
 def test_hardshrink(target, shape, dtype, lambda_para):
     if target not in TARGET_LIST:
         return
@@ -53,7 +51,6 @@ def test_hardshrink(target, shape, dtype, lambda_para):
         data_in_dev, lambda_para, shape[0], shape[1], shape[2], shape[3], data_out_dev,
     )
 
-    # compute the cpu data
     eps = 1e-8
     cpu_out = np.where(
         (data_in.astype(dtype.as_numpy_dtype) + lambda_para > -eps)
