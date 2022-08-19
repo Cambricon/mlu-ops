@@ -39,7 +39,7 @@
 | 需求来源       | PyTorch                                     |
 | 应用网络       | 未知                                  |
 | 输入数据类型   | half, float                                 |
-| 输入 Shape    | 目前均为(4,)        |
+| 输入 Shape    | input_start.dim = 4, input_end.dim = 4, input_weight.dim = 4        |
 | 输入 Layout   | 无layout限制                               |
 | 输出数据类型    | 同输入类型                                 |
 | 输出 Shape    | 同输入类型                  |
