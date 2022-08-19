@@ -74,21 +74,14 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
   PARAM_CHECK(api, pooled_height == output_desc->dims[1]);
   PARAM_CHECK(api, pooled_width == output_desc->dims[2]);
   PARAM_CHECK(api, output_dim == output_desc->dims[3]);
-  // group_size == pooled_height
   PARAM_CHECK(api, group_size == output_desc->dims[1]);
-  // pooled_height == pooled_width
   PARAM_CHECK(api, output_desc->dims[1] == output_desc->dims[2]);
-  // group_size >= 1.
   PARAM_CHECK(api, group_size >= 1);
-  // output_dim >= 1.
   PARAM_CHECK(api, output_desc->dims[3] >= 1);
-  // spatial_scale > 0
   PARAM_CHECK(api, spatial_scale > 0);
-  // rois_offset = 5.
   PARAM_CHECK(api, rois_desc->dims[1] == 5);
   // roi_num check
   PARAM_CHECK(api, output_desc->dims[0] == rois_desc->dims[0]);
-  // channels == pooled_height * pooled_width * output_dim
   PARAM_CHECK(api, input_desc->dims[3] == output_desc->dims[1] *
                                               output_desc->dims[2] *
                                               output_desc->dims[3]);
@@ -155,17 +148,12 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   PARAM_CHECK(api, pooled_height == top_grad_desc->dims[1]);
   PARAM_CHECK(api, pooled_width == top_grad_desc->dims[2]);
   PARAM_CHECK(api, output_dim == top_grad_desc->dims[3]);
-  // pooled_height == pooled_width
   PARAM_CHECK(api, top_grad_desc->dims[1] == top_grad_desc->dims[2]);
-  // output_dim >= 1.
   PARAM_CHECK(api, top_grad_desc->dims[3] >= 1);
-  // spatial_scale > 0
   PARAM_CHECK(api, spatial_scale > 0);
-  // rois_offset = 5.
   PARAM_CHECK(api, rois_desc->dims[1] == 5);
   // roi_num check
   PARAM_CHECK(api, top_grad_desc->dims[0] == rois_desc->dims[0]);
-  // channels == pooled_height * pooled_width * output_dim
   PARAM_CHECK(api, bottom_grad_desc->dims[3] ==
                        output_dim * pooled_width * pooled_height);
   for (int i = 0; i < top_grad_desc->dim; ++i) {

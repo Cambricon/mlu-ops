@@ -495,7 +495,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * 
  *  @par Scale Limitation
  *  - The top_grad tensor, mapping_channel tensor and bottom_grad tensor must be 4-D.
- *  - The size of top_grad tensor and mapping_channel tensor must be the same.
+ *  - Each dimension of the top_grad tensor and the mapping_channel tensor must be the same.
  *  - The rois tensor be be 2-D.
  *  - The shape of \b top_grad should be [rois_num, pooled_height, pooled_width, output_dim].
  *  - The shape of \b rois should be [rois_num, 5].

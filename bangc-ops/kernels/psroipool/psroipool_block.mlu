@@ -235,7 +235,7 @@ __mlu_func__ void psRoiAvgPoolBackwardCompute(
     T *top_grad_buffer, int *mapping_channel_buffer, T *atomic_buffer,
     const T *rois, T *bottom_grad, const int batch_size, const int height,
     const int width, const int channels, const int pooled_height,
-    const int pooled_width, const float spatial_scale, const int bin_index,
+    const int pooled_width, const T spatial_scale, const int bin_index,
     const int bin_n, const int deal_num, const int c_align) {
   // the coordinates of bin
   int pw = bin_index % pooled_width;
@@ -245,14 +245,12 @@ __mlu_func__ void psRoiAvgPoolBackwardCompute(
   T roi_start_w, roi_start_h, roi_end_w, roi_end_h;
   // batch_id, x1, y1, x2, y2
   int batch_id = (int)rois[rois_add];
-  roi_start_w =
-      static_cast<T>(scalarRound(rois[rois_add + 1])) * ((T)spatial_scale);
-  roi_start_h =
-      static_cast<T>(scalarRound(rois[rois_add + 2])) * ((T)spatial_scale);
+  roi_start_w = static_cast<T>(scalarRound(rois[rois_add + 1])) * spatial_scale;
+  roi_start_h = static_cast<T>(scalarRound(rois[rois_add + 2])) * spatial_scale;
   roi_end_w =
-      static_cast<T>(scalarRound(rois[rois_add + 3]) + 1.) * ((T)spatial_scale);
+      static_cast<T>(scalarRound(rois[rois_add + 3]) + 1.) * spatial_scale;
   roi_end_h =
-      static_cast<T>(scalarRound(rois[rois_add + 4]) + 1.) * ((T)spatial_scale);
+      static_cast<T>(scalarRound(rois[rois_add + 4]) + 1.) * spatial_scale;
 
   if (batch_id < 0 || batch_id > (batch_size - 1)) {
     return;
@@ -295,16 +293,17 @@ __mlu_func__ void psRoiAvgPoolBackwardPartOutputdim(
     const T *top_grad, const T *rois, const int *mapping_channel,
     T *bottom_grad, const int batch_size, const int height, const int width,
     const int channels, const int pooled_height, const int pooled_width,
-    const int output_dim, const float spatial_scale, const int bin_index,
+    const int output_dim, const T spatial_scale, const int bin_index,
     const int repeat, const int max_deal_c, const int deal_c) {
   int align_128 = NFU_ALIGN_SIZE / sizeof(int);
   int c_align = CEIL_ALIGN(deal_c, align_128);
   T *top_grad_buffer = (T *)nram_ptr;
   int *mapping_channel_buffer = (int *)(top_grad_buffer + c_align);
-  T *atomic_buffer = (T *)mapping_channel_buffer + c_align;
+  T *atomic_buffer = (T *)(mapping_channel_buffer + c_align);
   int top_offset = bin_index * output_dim + repeat * max_deal_c;
   // load data
   __bang_write_value(top_grad_buffer, c_align, 0);
+  __asm__ volatile("sync;\n\t");
   __memcpy(top_grad_buffer, top_grad + top_offset, deal_c * sizeof(T),
            GDRAM2NRAM);
   __memcpy(mapping_channel_buffer, mapping_channel + top_offset,
@@ -322,7 +321,7 @@ __mlu_func__ void psRoiAvgPoolBackwardWholeOutputdim(
     const T *top_grad, const T *rois, const int *mapping_channel,
     T *bottom_grad, const int batch_size, const int height, const int width,
     const int channels, const int pooled_height, const int pooled_width,
-    const int output_dim, const float spatial_scale, const int bins_per_core,
+    const int output_dim, const T spatial_scale, const int bins_per_core,
     const int bins_offset, const int repeat, const int max_deal_bin,
     const int deal_bin) {
   int align_128 = NFU_ALIGN_SIZE / sizeof(T);
@@ -330,10 +329,11 @@ __mlu_func__ void psRoiAvgPoolBackwardWholeOutputdim(
   T *top_grad_buffer = (T *)nram_ptr;
   int *mapping_channel_buffer =
       (int *)(nram_ptr + c_align * deal_bin * sizeof(T));
-  T *atomic_buffer = (T *)mapping_channel_buffer + output_dim * deal_bin;
+  T *atomic_buffer = (T *)(mapping_channel_buffer + output_dim * deal_bin);
 
   int top_offset = (bins_offset + repeat * max_deal_bin) * output_dim;
   __bang_write_value(top_grad_buffer, deal_bin * c_align, 0);
+  __asm__ volatile("sync;\n\t");
   __memcpy(top_grad_buffer, top_grad + top_offset, output_dim * sizeof(T),
            GDRAM2NRAM, c_align * sizeof(T), output_dim * sizeof(T),
            deal_bin - 1);
@@ -359,7 +359,7 @@ __mlu_global__ void MLUKernelPsroipoolBackward(
     T *bottom_grad, const int batch_size, const int height, const int width,
     const int channels, const int pooled_height, const int pooled_width,
     const int output_dim, const int rois_num, const int rois_offset,
-    const float spatial_scale) {
+    const T spatial_scale) {
   int total_bins = rois_num * pooled_height * pooled_width;
   int remainder = total_bins % taskDim;
   int bins_per_core = total_bins / taskDim + (int)(taskId < remainder);
@@ -377,8 +377,7 @@ __mlu_global__ void MLUKernelPsroipoolBackward(
                                   NFU_ALIGN_SIZE / sizeof(int));
     int repeat = output_dim / nram_deal_c;
     int remain = output_dim % nram_deal_c;
-    int n = 0;
-    while (n < bins_per_core) {
+    for (int n = 0; n < bins_per_core; n++) {
       int bin_index = bins_offset + n;
       for (int i = 0; i < repeat; i++) {
         psRoiAvgPoolBackwardPartOutputdim(
@@ -392,7 +391,6 @@ __mlu_global__ void MLUKernelPsroipoolBackward(
             width, channels, pooled_height, pooled_width, output_dim,
             spatial_scale, bin_index, repeat, nram_deal_c, remain);
       }
-      ++n;
     }
   } else {
     // little c situation
