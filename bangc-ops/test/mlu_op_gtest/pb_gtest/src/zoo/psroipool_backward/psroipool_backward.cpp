@@ -25,28 +25,12 @@
 namespace mluoptest {
 void PsroipoolBackwardExecutor::paramCheck() {
   VLOG(4) << "[PsroipoolBackwardExecutor] param check.";
-  if (parser_->getInputNum() != 3) {
-    LOG(ERROR)
-        << "[PsroipoolBackwardExecutor] input number is wrong. It should be 3, "
-        << "but now is " << parser_->getInputNum();
-    throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                std::to_string(__LINE__));
-  }
-  if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "[PsroipoolBackwardExecutor] output number is wrong. It "
-                  "should be 3, "
-               << "but now is" << parser_->getOutputNum();
-    throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                std::to_string(__LINE__));
-  }
-  for (int i = 0; i < parser_->getInputNum(); i++) {
-    if (parser_->inputIsNull(i)) {
-      LOG(ERROR) << "[PsroipoolBackwardExecutor] input [" << i
-                 << "] is nullptr.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                  std::to_string(__LINE__));
-    }
-  }
+  GTEST_CHECK(parser_->getInputNum() == 3,
+              "[PsroipoolBackwardExecutor] Input number is wrong.");
+  GTEST_CHECK(parser_->getOutputNum() == 1,
+              "[PsroipoolBackwardExecutor] Output number is wrong.");
+  GTEST_CHECK(parser_->getProtoNode()->has_psroipool_backward_param(),
+              "[PsroipoolBackwardExecutor] Missing param");
 }
 
 void PsroipoolBackwardExecutor::initData() {
@@ -159,9 +143,6 @@ void PsroipoolBackwardExecutor::cpuCompute() {
 }
 
 int64_t PsroipoolBackwardExecutor::getTheoryOps() {
-  if (parser_->device() != CPU) {
-    return -1;
-  }
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;
 }
