@@ -47,16 +47,15 @@ class Lerp(object):
         tensor_weight_nram: ty.Buffer("nram"),
         tensor_output_nram: ty.Buffer("nram"),
     ) -> None:
-        """include the main compute"""
+        """Include the main compute"""
         tcp.subtract(
             tensor_input_end_nram, tensor_input_end_nram, tensor_input_start_nram
         )
         tcp.multiply(tensor_input_end_nram, tensor_input_end_nram, tensor_weight_nram)
         tcp.add(tensor_output_nram, tensor_input_start_nram, tensor_input_end_nram)
 
-    # the compute pipeline
     def lerp_compute(self):
-        """ the main compute pipeline"""
+        """The main compute pipeline"""
         self.task_num = self.cluster_num * self.core_num
 
         task_content = self.element_num // self.task_num
@@ -214,7 +213,7 @@ class Lerp(object):
         dim_3: ty.int32,
         data_out_dev: ty.handle,
     ) -> None:
-        """the main entry"""
+        """The main entry"""
         tgt = tcp.target()
 
         self.data_weight_dev = data_weight_dev
