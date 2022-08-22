@@ -63,6 +63,7 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     click==8.0.1                       \
     cpplint==1.5.5                     \
     cycler==0.10.0                     \
+    cloudpickle                        \
     decorator==4.4.2                   \
     flake8==3.9.2                      \
     flatbuffers==1.12                  \
@@ -114,8 +115,8 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     rm /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so
 
 # Install BANGPy.
-ARG BANGPY_VERSION="2.0.3"
-ARG RELEASE_VERSION="2.0.3-1"
+ARG BANGPY_VERSION="2.1.0"
+ARG RELEASE_VERSION="2.1.0-1"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
 ADD http://daily.software.cambricon.com/release/bangpy/${RELEASE_VERSION}/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \
