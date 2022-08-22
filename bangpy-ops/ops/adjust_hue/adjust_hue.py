@@ -187,9 +187,9 @@ class AdjustHue(object):
         line_align: ty.int32,
         nram_limit: ty.int32,
     ):
-        rgb = self.rgb_nram[: nram_limit * self.c]
-        hsv = self.hsv_nram[: nram_limit * self.c]
-        aux = self.aux_nram[: nram_limit * self.c]
+        rgb = self.rgb_nram[: (nram_limit / r_w) * r_w* self.c]
+        hsv = self.hsv_nram[: (nram_limit / r_w) * r_w* self.c]
+        aux = self.aux_nram[: (nram_limit / r_w) * r_w* self.c]
         aux_int = self.aux_nram[nram_limit * 2 : nram_limit * 3].reinterpret_cast(
             "int16"
         )
@@ -197,7 +197,7 @@ class AdjustHue(object):
             tcp.memcpy(
                 rgb.reshape(
                     (
-                        nram_limit / r_w / self.c,
+                        nram_limit / r_w,
                         r_w,
                         self.c,
                     )
@@ -211,7 +211,7 @@ class AdjustHue(object):
             )
         with tcp.block("compute"):
             tcp.transpose(
-                hsv[: r_hw * self.c].reshape(
+                hsv[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         r_hw / line_align * self.c,
@@ -219,7 +219,7 @@ class AdjustHue(object):
                         line_align,
                     )
                 ),
-                rgb[: r_hw * self.c].reshape(
+                rgb[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         line_align,
@@ -230,7 +230,7 @@ class AdjustHue(object):
                 (0, 3, 1, 2),
             )
             tcp.transpose(
-                rgb[: r_hw * self.c].reshape(
+                rgb[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         line_align * self.c,
@@ -238,7 +238,7 @@ class AdjustHue(object):
                         r_hw / line_align,
                     )
                 ),
-                hsv[: r_hw * self.c].reshape(
+                hsv[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         r_hw / line_align,
@@ -277,7 +277,7 @@ class AdjustHue(object):
             self.hsv2rgb(h, s, v, r, g, b, aux_nram, aux1_nram, aux_int_nram)
             tcp.add(rgb_reshape[0:3], rgb_reshape[0:3], s)
             tcp.transpose(
-                hsv[: r_hw * self.c].reshape(
+                hsv[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         r_hw / line_align,
@@ -285,7 +285,7 @@ class AdjustHue(object):
                         line_align * self.c,
                     )
                 ),
-                rgb[: r_hw * self.c].reshape(
+                rgb[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         line_align * self.c,
@@ -296,7 +296,7 @@ class AdjustHue(object):
                 (0, 2, 3, 1),
             )
             tcp.transpose(
-                rgb[: r_hw * self.c].reshape(
+                rgb[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         line_align,
@@ -304,7 +304,7 @@ class AdjustHue(object):
                         r_hw / line_align * self.c,
                     )
                 ),
-                hsv[: r_hw * self.c].reshape(
+                hsv[: (r_hw / line_align) * line_align * self.c].reshape(
                     (
                         1,
                         r_hw / line_align * self.c,
@@ -324,7 +324,7 @@ class AdjustHue(object):
                 ],
                 rgb.reshape(
                     (
-                        nram_limit / r_w / self.c,
+                        nram_limit / r_w,
                         r_w,
                         self.c,
                     )
@@ -534,7 +534,6 @@ class AdjustHue(object):
                                 line_align,
                                 nram_limit_size,
                             )
-
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_adjust_hue(dtype=None, target=None):

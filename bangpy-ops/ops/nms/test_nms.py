@@ -102,14 +102,14 @@ def verify_operator(
         "nms : %f ms"
         % (
             evaluator(
-                score_temp,
                 score,
+                score_temp,
                 box,
+                output,
                 box_num,
                 max_output_size,
                 iou_threshold,
                 score_threshold,
-                output,
             ).mean
             * 1e3
         )
@@ -134,7 +134,7 @@ def verify_operator(
     "score_threshold", [0.5],
 )
 @pytest.mark.parametrize(
-    "dtype", [bp.float16],
+    "dtype", [bp.float32, bp.float16],
 )
 def test_nms(target, box_num, max_output_size, iou_threshold, score_threshold, dtype):
     """Test nms operator by giving multiple sets of parameters."""
