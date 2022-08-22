@@ -59,7 +59,7 @@ def test_logaddexp2(target, shape, dtype):
 
     # calculate
     func = load_op_by_type(KERNEL_NAME, dtype.name)
-    func(data_in0_dev, data_in1_dev, data_out_dev)
+    func(data_in0_dev, data_in1_dev, data_out_dev, shape)
 
     if shape != (0):
         cal_diff(data_out, data_out_dev.numpy())

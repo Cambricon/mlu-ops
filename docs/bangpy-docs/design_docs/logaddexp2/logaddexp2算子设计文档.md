@@ -38,7 +38,7 @@
 | 应用场景       |  https://numpy.org/doc/stable/reference/generated/numpy.logaddexp2.html  |
 | 输入数据类型   | half, float                                                              |
 | 输入 Shape    | input0: [length]; input1: [length]                                       |
-| 输入 Layout   | input0: ARRAY; input1: ARRAY                                             |
+| 输入 Layout   | input0: ARRAY; input1: ARRAY;                                            |
 | 输出数据类型    | half, float                                                             |
 | 输出 Shape    | output: [length]                                                                 |
 | 输出 Layout   | ARRAY                                                                    |
@@ -64,6 +64,7 @@
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
 | input0      |  输入的形状为一维的buffer    | 输入              | half, float | ARRAY    | 无       |
 | input1      |  输入的形状为一维的buffer    | 输入              | half, float | ARRAY    | 无       |
+| length      |  输入的形状为标量           | 输入              | int32       | SCALAR   | 无       |
 | output      |  输出的形状为一维的buffer    | 输出              | half, float | ARRAY    | 无       |
 
 ### 1.4 算子限制
@@ -125,9 +126,7 @@ if input0 - input1 > 15, output = input0
 ### 3.2 伪代码实现（可选）
 
 ```bangpy
-# swap in0 and in1 to make sure in0 >= in1 (anthor implemention, use active_relu?)
-# in0 = max(in0, in1)
-# in1 = min(in0, in1)
+# swap in0 and in1 to make sure in0 >= in1
 minimum(ex0, in0, in1)
 maximum(in0, in0, in1)
 in1, ex0 = ex0, in1 # equal to self.tcp.memcpy(in1, ex0), but reduce copy time
