@@ -24,5 +24,11 @@ else
   echo "-- pre-commit hook inserted to ${PWD}/.git/hooks."
   echo "-- Use git commit -n to bypass pre-commit hook."
   ln -sf ${PWD}/tools/pre-commit ${PWD}/.git/hooks
-fi
 
+  if [[ -f "${PWD}/.git/hooks/commit-msg" ]]; then
+    rm ${PWD}/.git/hooks/commit-msg
+  fi
+  echo "-- commit-msg hook inserted to ${PWD}/.git/hooks."
+  ln -sf ${PWD}/tools/commit-msg ${PWD}/.git/hooks
+  echo "Ready for mlu-ops-building."
+fi
