@@ -1,0 +1,663 @@
+# poly_nms 算子开发设计方案
+* #### 文档基本信息
+| 算子名称    | generator_proposals_v2     |
+| ----------- | ----------------- |
+| 编制人/日期 |  谷中豪/2022-08-16 |
+| 审批人/日期	|  杜泽坤/2022-08-16|
+| 审批人/日期	|  董成威/2022-08-16|
+| 审批人/日期	|  王远/2022-08-16 |
+
+* #### 修改记录
+| 版本号| 修订人 | 修订日期 | 修订描述 |
+| ----- | ------ | -------  | -------  |
+| V1.0  | 谷中豪   | 2022-08-16 | 首次提交 |
+
+* #### 内容描述
+本文档为`generator_proposals_v2`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
+
+* #### 算子需求checklist
+算子需求提出者需要`提供`的信息如下：
+- 框架负责人
+- 算子接口描述
+- 功能描述
+- 框架版本 + 对应源码路径
+- 需求对应网络
+- 网络中用到的规模
+- 常用规模下的竞品性能（可选）
+- 是否需要支持原位
+- 是否需要支持stride机制
+- 框架单元测试阈值指标（可选）
+- 其他特殊需求（在线量化/融合/转数提前等，可选）
+- 确认算子需求是否已经过框架层review（滤除mluOp已支持的算子）
+
+算子需求提出者需要`check`的部分如下：
+- 1.1 算子需求分析
+- 1.2 算子功能和应用场景描述
+- 1.3 算子输入输出参数要求
+- 1.4 算子限制
+- 1.5 验收标准
+- 2.2 接口设计
+- 3.5 测试用例（需求提出者check算子需求表中所给规模是否列出）
+
+## 1 需求分析
+### 1.1 算子需求分析
+| 算子功能简介|该OP根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。|
+|------------- | -------------------------------------------------------------- |
+| 需求来源    | TensorFlow                                     |
+| 应用网络    | maskrcnn                                        |
+| 输入数据类型| scores: float <br>bbox_deltas: float <br>im_shape: float <br>anchors: float <br>variances: float <br>pre_nms_top_n: int <br>post_nms_top_n: int <br>nms_thresh: float <br>min_size: float <br>eta: float <br>pixel_offset:bool                                            |
+| 输入Shape   | scores: [N，A，H，W]<br>bbox_deltas: [N，4 * A，H，W]<br>im_shape: [N, 2]<br>anchors: [H, W, A, 4] <br>variances: [H, W, A, 4]<br>pre_nms_top_n: scalar <br>post_nms_top_n: scalar <br>nms_thresh: scalar <br>min_size: scalar <br>eta: scalar <br>pixel_offset: scalar|
+| 输入Layout  | scores:NHWC<br>bbox_deltas:NHWC<br>im_shape:ARRAY<br>anchors:NHWC<br>variances:NHWC <br>pre_nms_top_n: scalar <br>post_nms_top_n: scalar <br>nms_thresh: scalar <br>min_size: scalar <br>eta: scalar <br>pixel_offset: scalar                             |
+| 输出数据类型 | rpn_rois:float <br> rpn_roi_probs:float  <br>rpn_rois_num: int <br>rpn_rois_batch_size：int         |
+| 输出Shape   | rpn_rois: [B, 4]<br>rpn_roi_probs: [B, 1]<br>rpn_rois_num: [N, 1] <br>rpn_rois_batch_size: dim=1,shape[0]=1  |
+| 输出Layout  | rpn_rois: ARRAY <br>rpn_roi_probs: ARRAY<br> rpn_rois_num: ARRAY  <br> rpn_rois_batch_size: ARRAY                                    |
+| 模式(可选） | 否 |
+| 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否 |
+| 是否含有labels/index等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否 |
+| 是否需要支持原位        | 否                                                  |
+| 是否需要支持stride机制  | 否                                                 |
+| 是否需要支持广播  | 否                       |
+| 0元素检查是否直接返回  |  对于scores，bbox_deltas，im_shape，anchors，variances参数<br>N=0  时正常返回MLUOP_STATUS_SUCCESS <br>A,W,H任一为0时返回MLUOP_BAD_PARAM  |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)|        无                                                |
+| 本次开发优先支持的规模/模式|   |
+
+### 1.2 算子功能和应用场景描述
+**算子功能：** `generate_proposals_v2`根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。<br>
+**应用场景：** `generate_proposals_v2`算子应用于`maskrcnn`。
+
+**paddle 示例：**
+```py
+import paddle.fluid as fluid
+import numpy as np
+import paddle
+print(paddle.__version__)
+paddle.disable_static()
+
+N = 2
+A = 15
+H = 54
+W = 40
+
+scores = paddle.rand((N, A, H, W), dtype=paddle.float32)
+bbox_deltas = paddle.rand((N, 4*A, H, W), dtype=paddle.float32)
+img_size = paddle.to_tensor([[10.0, 10.0], [5.0, 5.0]])
+anchors = paddle.rand((H, W, A, 4), dtype=paddle.float32)
+variances = paddle.rand((H, W, A, 4), dtype=paddle.float32)
+
+pre_nms_top_n = 2000
+post_nms_top_n = 1000
+nms_thresh = 0.5
+min_size = 0.
+eta = 1.0
+pixel_offset = False
+return_rois_num = True
+
+rpn_rois, rpn_roi_probs, rpn_rois_num = paddle.vision.ops.generate_proposals(
+        scores,
+        bbox_deltas,
+        img_size,
+        anchors,
+        variances,
+        pre_nms_top_n=pre_nms_top_n,
+        post_nms_top_n=post_nms_top_n,
+        nms_thresh=nms_thresh,
+        min_size=min_size,
+        eta=eta,
+        pixel_offset=pixel_offset,
+        return_rois_num=return_rois_num)
+print(rpn_rois, rpn_roi_probs, rpn_rois_num)
+
+output:
+rpn_rois： Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
+            [[0.        , 0.        , 0.        , 0.        ],
+            [0.27896869, 0.27956927, 1.38735509, 1.82488048]])
+rpn_roi_probs：Tensor(shape=[2, 1], dtype=float32, place=Place(gpu:0), stop_gradient=True,
+            [[0.        ],
+            [0.96731776]])
+rpn_rois_num：Tensor(shape=[2], dtype=int32, place=Place(gpu:0), stop_gradient=True,
+            [1, 1])
+##--------------------------------------------------------------------
+# 0元素行为分析
+# N=0 正常返回
+Tensor(shape=[0, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
+       []) 
+ensor(shape=[0, 1], dtype=float32, place=Place(gpu:0), stop_gradient=True,
+       [])
+Tensor(shape=[0], dtype=int32, place=Place(gpu:0), stop_gradient=True,
+       [])
+
+# A,W,H 任意为0, core dump
+Error Message Summary:
+FatalError: `Erroneous arithmetic operation` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1660893422 (unix time) try "date -d @1660893422" if you are using GNU date ***]
+  [SignalInfo: *** SIGFPE (@0x7fa513bc2049) received by PID 3171 (TID 0x7fa5cdf56700) from PID 331096137 ***]
+Floating point exception (core dumped)
+
+# N=0  且 A,W,h 任意为0时, core dump
+Error Message Summary:
+FatalError: `Erroneous arithmetic operation` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1660893422 (unix time) try "date -d @1660893422" if you are using GNU date ***]
+  [SignalInfo: *** SIGFPE (@0x7fa513bc2049) received by PID 3171 (TID 0x7fa5cdf56700) from PID 331096137 ***]
+Floating point exception (core dumped)
+##--------------------------------------------------------------------
+# nan和inf行为分析
+# img_size的图片宽高存在nan，inf行为, nan和inf按最大值处理，-inf按最小值处理, 正常返回
+
+## scores中nan和inf按最大值处理，-inf按最小值处理
+N = 2
+A = 1
+H = 1
+W = 2
+
+scores = paddle.to_tensor(np.array([[[[0.2, np.nan]]], [[[0.5, -np.inf]]]]), dtype=paddle.float32)
+bbox_deltas = paddle.to_tensor(np.array([[[[0.0, 0.0, 2.0, 2.0],[0.0, 0.0, 2.0, 2.0]]], [[[0.0, 0.0, 2.0, 2.0],[0.0, 0.0, 2.0, 2.0]]]]), dtype=paddle.float32)
+img_size = paddle.to_tensor([[5.0, 5.0], [5.0, 5.0]])
+anchors = paddle.to_tensor(np.array([[[[1.0, 1.0, 3.0, 3.0], [1.0, 1.0, 3.0, 3.0]]], [[[1.0, 1.0, 3.0, 3.0], [1.0, 1.0, 3.0, 3.0]]]]), dtype=paddle.float32)
+variances = paddle.to_tensor(np.array([[[[1.0, 1.0, 3.0, 3.0],[1.0, 1.0, 3.0, 3.0]]], [[[1.0, 1.0, 3.0, 3.0],[1.0, 1.0, 3.0, 3.0]]]]), dtype=paddle.float32)
+
+Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
+       [[0., 0., 5., 5.],
+        [0., 0., 5., 5.]]) Tensor(shape=[2, 1], dtype=float32, place=Place(gpu:0), stop_gradient=True,
+       [[nan       ],
+        [0.50000000]]) Tensor(shape=[2], dtype=int32, place=Place(gpu:0), stop_gradient=True,
+       [1, 1])
+```
+### 1.3 算子输入输出参数要求
+| 参数             | 语义                           | 类型（输入/输出） | 支持类型               | 物理布局 | 规模限制 |
+| ---------------- | ------------------------------ | ----------------- | ---------------------- | -------- | -------- |
+| **handle**           |        操作句柄。                        | 输入              |    mluOpHandle_t   | /        | 无       |
+| **pre_nms_top_n**         |  每张图在NMS操作之前要保留的总框数，数据类型仅支持int，缺省值为6000。       | 输入              | int            | scalar   | |
+| **post_nms_top_n**         |  每个图在NMS后要保留的总框数，数据类型仅支持int，缺省值为1000。      | 输入              | int             | scalar   | |
+| **nms_thresh**         |   NMS中的阈值，数据类型仅支持float，缺省值为0.5。       | 输入              | float             | scalar   | |
+| **min_size**         |   根据宽和高过滤候选框的阈值，宽或高小于该阈值的候选框将被过滤掉，数据类型仅支持float，缺省值为0.1。       | 输入              | float             | scalar   | |
+| **eta**         |   自适应阈值的衰减系数，仅在自适应NMS中且自适应阈值大于0.5时生效，在每次迭代中 adaptive_threshold = adaptive_treshold * eta ，缺省值为1.0，**自适应nms当前不支持**。        | 输入              | float             | scalar   | |
+| **pixel_offset**         | pixel_offset默认为true，表示img_size的像素偏移，offset = pixel_offset ？1：0。        | 输入              | bool             |    | |
+| **scores_desc**      |    输入scores的形状描述。             | 输入              |           /             | /        | 无       |
+| **scores**         |   表示每个框包含object的概率，shape是[N, A, H ,W]，N是batch大小，A是achors数量，H，W是feature map的高和宽。        | 输入              | float             | NCHW   | |
+| **bbox_deltas_desc**      |    输入bbox_deltas的形状描述。             | 输入              |           /             |        | 无       |
+| **bbox_deltas**         |   表示预测出的候选框的位置和anchor的位置之间的距离。        | 输入              | float             | NCHW    |  |
+| **img_size_desc**      |    输入img_size的形状描述。             | 输入              |           /             | /        | 无       |
+| **img_size**         |    表示原始图像的大小信息，每个img_size以（height, width）表示    | 输入              | float             | NCHW  |
+| **anchors_desc**      |    输入anchors的形状描述。             | 输入              |           /             | /        | 无       |
+| **anchors**         |    每个anchor以（xmin，ymin，xmax，ymax）的格式表示，其中，xmin 和 ymin 为左上角的坐标，xmax 和 ymax 为右下角的坐标。       | 输入              | float             | NCHW    |  |
+| **variances_desc**      |    输入variances的形状描述。             | 输入              |           /             | /        | 无       |
+| **variances**         |    表示 anchors 的方差，每个anchor的方差都是(xcenter，ycenter，w，h)的格式表示。    | 输入              | float    | NCHW    | / |
+| **workspace**        |   指向额外GDRAM空间的指针。         | 输入             |  void *                  | /          | 无       |
+| **workspace_size**   |   输入参数，workspace的空间大小。   | 输入             |  size_t                  | /          | 无       |
+| **rpn_rois_desc**      |    输入rpn_rois的形状描述。             | 输出              |           /             | /        | 无       |
+| **rpn_rois**         |    表示产出的RoIs，shape是[B, 4]，B表示Rois的数量，传入的B等于post_nms_top_n的大小，实际的计算返回的Rois的batch等于`rpn_rois_batch_size`。       | 输出             | float             | NCHW   | /|
+| **rpn_roi_probs_desc**      |    输入rpn_roi_probs的形状描述。            | 输出              |           /             | /        | 无       |
+| **rpn_roi_probs**         |   RoIs的得分，shape是[B, 1]，B表示Rois的数量，传入的B等于post_nms_top_n的大小，实际的计算返回的rpn_roi_probs的batch等于`rpn_rois_batch_size`。        | 输出              | float             | NCHW    |  /|
+| **rpn_rois_num_desc**      |    输入rpn_rois_num的形状描述。             | 输出              |           /             | /        | 无       |
+| **rpn_rois_num**         | 每张图片对应的RoIs的数量，数组中每个值的累加和等于rpn_rois的dim[0]，shape是[N]，N是batch的大小，表示输入图片个数。        | 输出              | int             | ARRAY    | /|
+| **rpn_rois_batch_size**  | 表示输出的Rois，rpn_roi_probs的实际输出的batch大小。 | 输出              | int             | ARRAY    |dim=1, shape[0]=1|
+
+
+### 1.4 算子限制
+| 限制类型     | 详细说明                                                     |
+| ------------ | ------------------------------------------------------------ |
+| 输入限制     |  输入参数shape必须满足要求:<br>scores：[N, A, H, W]<br>bbox_deltas:[N, 4*A, H, W]<br>img_size: [N, 2]  <br>anchors[H, W, A, 4] <br>variances[H, W, A, 4] |
+| 输入限制     |  输出参数shape必须满足要求:<br>rpn_rois:[post_nms_top_n, 4]，实际输出的维度信息为[rpn_rois_batch_size,4<br>rpn_roi_probs:[N, 1]<br>rpn_rois_num:[post_nms_top_n, 1]，实际输出的维度信息为[rpn_rois_batch_size, 1] <br>rpn_rois_num: 一维数组 <br>rpn_rois_batch_size: dim=1, shape[0]=1|
+| 输入限制     |  输入参数eta表示自适应NMS，当前不支持，和竞品保持一致，参数保留，输入eta必须等于1.0 |
+| 数据类型限制 | scores，bbox_deltas，anchors，variances只支持float输入; <br> pre_nms_top_n，post_nms_top_n只支持int类型输入 <br >nms_thresh，min_size必须是float类型|
+| 数据范围限制 | 无 |
+|  原位限制     | 不支持原位                                                 |
+| stride限制   | 不支持stride                                      |
+| 广播限制     | 不支持广播                                                   |
+
+
+### 1.5 验收标准
+#### 1.5.1 精度验收标准
+
+按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+`generator_proposals_v2` 复合类算子。<br>
+`rpn_rois`参数精度设为 diff1 <= 3e-3 && diff2 <=3e-3。<br>
+`rpn_roi_probs`，`rpn_rois_num`的精度设置为 diff3=0。
+
+#### 1.5.2 性能验收标准
+- 网络中使用到的规模性能优于或至少与竞品性能持平。
+- 部分与竞品差距过大的规模在4.算子性能优化记录中进行说明。
+- 附上算子测试报告链接，测试报告必须包括框架给出的网络中规模的性能数据以及对应效率值。
+
+[给定的网络规模](./network_scale.txt)
+
+
+**竞品性能测试**
+无
+
+## 2 算子接口设计
+### 2.1 参考接口
+- **paddlepaddle** :https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/generate_proposals_v2_kernel.h#L22
+```c++
+template <typename T, typename Context>
+void GenerateProposalsV2Kernel(const Context& ctx,
+                               const DenseTensor& scores,
+                               const DenseTensor& bbox_deltas,
+                               const DenseTensor& im_shape,
+                               const DenseTensor& anchors,
+                               const DenseTensor& variances,
+                               int pre_nms_top_n,
+                               int post_nms_top_n,
+                               float nms_thresh,
+                               float min_size,
+                               float eta,
+                               bool pixel_offset,
+                               DenseTensor* rpn_rois,
+                               DenseTensor* rpn_roi_probs,
+                               DenseTensor* rpn_rois_num);
+```
+
+### 2.2 接口设计
+#### 2.2.1 poly_nms获取额外申请空间大小
+```c++
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t scores_desc,
+                             size_t *size);
+```
+**参数描述：**
+- `handle`：输入参数。操作句柄，内部绑定device和对应的queue。
+- `size`：输入参数。需要用户申请的额外的空间大小，通过`mluOpGetPnmsWorkspaceSize`获取。
+- `mluOpTensorDescriptor_t`: 输入tensor的形状描述。
+
+#### 2.2.2 poly_nms计算接口
+```c++
+mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
+                                                    const int pre_nms_top_n,
+                                                    const int post_nms_top_n,
+                                                    const float nms_thresh,
+                                                    const float min_size,
+                                                    const float eta,
+                                                    bool pixel_offset,
+                                                    const mluOpTensorDescriptor_t scores_desc,
+                                                    const void *scores,
+                                                    const mluOpTensorDescriptor_t bbox_deltas_desc,
+                                                    const void *bbox_deltas,
+                                                    const mluOpTensorDescriptor_t im_shape_desc,
+                                                    const void *im_shape,
+                                                    const mluOpTensorDescriptor_t anchors_desc,
+                                                    const void *anchors,
+                                                    const mluOpTensorDescriptor_t variances_desc,
+                                                    const void *variances,
+                                                    const mluOpTensorDescriptor_t rpn_rois_desc,
+                                                    void *rpn_rois,
+                                                    const mluOpTensorDescriptor_t rpn_roi_probs_desc,
+                                                    void *rpn_roi_probs,
+                                                    const mluOpTensorDescriptor_t rpn_rois_num_desc,
+                                                    void *rpn_rois_num,      
+                                                    void *rpn_rois_batch_size);
+```
+
+## 3 实现方案设计
+### 3.1 实现方案
+
+`generate_proposals_v2`根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。
+
+- **竞品实现过程：**
+1. 通过转置操作将 scores和 bbox_deltas 的大小分别调整为[H * W * A，1] 和 [H * W * A，4]；
+2. 根据 anchors 和 bbox_deltas 计算出候选框的位置；
+3. Clip boxes to image；
+4. 删除面积较小的候选框；
+5. 通过NMS选出满足条件的候选框作为结果。
+
+- **MLU实现步骤**
+<br>按照 block 规模实现，拆N，每个 core 上处理相同量的N，每次循环处理一个 batch ，即每次循环生成一张图片的 proposals ,对每张图片生成 proposals 的步骤如下：
+1. 对 scores 进行 topK 操作， 取 scores 前 pre_nms_top_n 个数据，并根据 scores topK 的 index，从 anchors ，bbox_deltas ，variances 中取数；
+2. creatbox：根据 topK 的取数后的 anchor ，detals ，variances 的坐标，创建 proposals ；
+```c++
+  // 1 根据anchor 两个点坐标计算 box_anchor的中心点坐标（cx， cy）;
+    T axmin = anchor[k];
+    T aymin = anchor[k + 1];
+    T axmax = anchor[k + 2];
+    T aymax = anchor[k + 3];
+    T offset = pixel_offset ? static_cast<T>(1.0) : 0;
+    T w = axmax - axmin + offset;
+    T h = aymax - aymin + offset;
+    T cx = axmin + 0.5 * w;
+    T cy = aymin + 0.5 * h;
+// 2 根据（cx, cy和deltal的两点的坐标计算的box_deltal中心点坐标和宽高；
+    T dxmin = deltas[k];
+    T dymin = deltas[k + 1];
+    T dxmax = deltas[k + 2];
+    T dymax = deltas[k + 3];
+ 
+    T d_cx, d_cy, d_w, d_h;
+    if (var) {
+      d_cx = cx + dxmin * w * var[k];
+      d_cy = cy + dymin * h * var[k + 1];
+      d_w = exp(Min(dxmax * var[k + 2], bbox_clip_default)) * w;
+      d_h = exp(Min(dymax * var[k + 3], bbox_clip_default)) * h;
+    } else {
+      d_cx = cx + dxmin * w;
+      d_cy = cy + dymin * h;
+      d_w = exp(Min(dxmax, bbox_clip_default)) * w;
+      d_h = exp(Min(dymax, bbox_clip_default)) * h;
+    }
+// 3 .根据box_deltal中心点坐标和宽高计算proposals的两个点的坐标；
+    T oxmin = d_cx - d_w * 0.5;
+    T oymin = d_cy - d_h * 0.5;
+    T oxmax = d_cx + d_w * 0.5 - offset;
+    T oymax = d_cy + d_h * 0.5 - offset;
+// 4. 通过min，max把proposal的坐标约束到[0，img_size.w], [0，img_size.h]
+    proposals[i * 4] = Max(Min(oxmin, im_info[1] - offset), 0.);
+    proposals[i * 4 + 1] = Max(Min(oymin, im_info[0] - offset), 0.);
+    proposals[i * 4 + 2] = Max(Min(oxmax, im_info[1] - offset), 0.);
+    proposals[i * 4 + 3] = Max(Min(oymax, im_info[0] - offset), 0.);
+```
+3. removeSmallBox：移除 proposals 中，宽或高小于 min_size 的 proposals；
+4. 对剩余的 proposals 进行nms筛选，并将一张图片的 proposals ，scores ，num 结果保存；
+
+- **输入数据预处理**
+1. scores shape为[N, A, H, W]， 计算过程中按照[N, 1, 1, A * H * W]方式取数；
+2. bbox_deltas shape为[N，4 * A，H，W]， 计算过程中按照[N, 4, 1, A * H * W]方式取数；
+3. anchors shape为 [H, W, A, 4], 计算过程中按照[N， 4, 1, A * H * W]方式取数，需要转置；
+4. variances shape为 [H, W, A, 4], 计算过程中按照[N， 4, 1, A * H * W]方式取数，需要转置；
+
+### 3.2 伪代码实现
+
+- **kernel 实现逻辑**
+  每个core上计算相同量的 batch ，每次循环计算一个 batch ，即每次循环计算一张图片的 proposals 。
+```c++
+...
+template <typename T>
+__mlu_func__ void mluOpsGeneratorProposalsV2Kernel(T *rois,
+                                                  T* rois_scores,
+                                                  T* rois_num,
+                                                  const T *input_scores,
+                                                  const T *input_anchors,
+                                                  const T *bbox_deltas,
+                                                  const T *input_variances,
+                                                  const T *im_size,
+                                                  const T * workspace,
+                                                  const int batch_size,
+                                                  const int height,
+                                                  const int width,
+                                                  const int anchor_num,
+                                                  const int pre_nms_top_n,
+                                                  const int post_nms_top_n,
+                                                  const float nms_thresh,
+                                                  const float min_size,
+                                                  const float eta,
+                                                  const bool pixel_offset){
+  if (coreId == 0x80){
+    return;
+  }
+
+  ...
+  for(int batchId = batch_cluster_start; batchId < batch_cluster_end; ++batchId){
+    topk();
+    creatBox();
+    removeSmallBox();
+    nms()
+  }
+  ...
+}
+
+```
+- **TopK 实现**
+1. 使用二分法，获取scores中最大值，最小值和中位数，用bang_ge获取scores中大于mid的mask，在__bang_count统计大于mid_score的个数count是否等于pre_nms_top_n；
+2. 更新up_score, bottom_Score，mid_score, 直到count等于pre_nms_top_n；
+3. 使用__bang_collect, 按照最后用__bang_ge获取的mask，把scores，anchors，bbox_deltas，variances中的数值取出；
+伪代码：
+
+```c++
+__mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *variances, const int topk_num, const int scores_num){
+  if(scores_num < topk_num){
+    return;
+  }
+
+#if __BANG_ARCH__ >= 300
+  __bang_argmax(result, scores, scores_num);
+#else
+ __bang_max(result, scores, scores_num);
+#endif
+
+  T dn = NE_TNF;
+  T up = result[0];
+  T mid = dn + (up - dn) * 0.5;
+  int count  = 0
+  
+  while(1){
+    __bang_ge_scalar(tmp, scores, mid, scores_num);
+    
+    // 获取当前大于mid的数量
+    count = __bang_count(tmp, scores_num);
+
+    if(count == topk_num){
+      break;
+    } else if (count > topk_num && (mid == up || mid =dn)){
+      break;
+    }
+    // update up, dn, mid
+    if(count > topk_num){
+      dn = (dn == mid) ? up : mid;
+    } else if(count < topk_num){
+      up = (up == mid) ? dn : mid;
+    }
+    mid = up + (up - dn) * 0.5;
+  }
+
+ __bang_collect(scores, scores, tmp, deal_size);
+ __bang_collect(bbox_deltas, bbox_deltas, tmp, deal_size);
+ __bang_collect(anchors, anchors, tmp, deal_size);
+ __bang_collect(variances, variances, tmp, deal_size);
+}
+
+```
+- **creatbox实现**
+`creatbox`根据输入anchor，detals，variances的坐标，生成proposals;
+伪代码：
+```c++
+// output = exp(input)
+__mlu__func void calcExp(T * output, const T * input, cpnst int length){
+#if __BANG_ARCH__ >=322
+#define LOG_2_E (1.44269504088f)
+  __bang_mul_scalar(output, input, (float)LOG_2_E, length);
+  __bang_pow2(output, output, length);
+#else
+  __bang_active(output, input, length);
+#endif
+}
+
+__mlu__func void creatBox(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){
+  T *axmin = anchor;
+  T *aymin = anchor + deal_size;
+  T *axmax= anchor + 2 * deal_size;
+  T *aymax = anchor + 3 * deal_size;
+
+  T offset = pixes_offset? static_cast<T>(1.0) : 0;
+
+  T *w = nram_temp;
+  T *h = nram_temp + deal_size;
+  T *cx = nram_temp + 2 * deal_size;
+  T *cy = nram_temp + 3 * deal_size;
+
+  // w = axmax - axmin + offset
+  __bang_sub(w, axmax, axmin, deal_size);
+  // h = aymax - aymin + offset；
+  __bang_sub(h, aymax, aymin, deal_size);
+  if(pixes_offset){
+    __bang_add_scalar(w, w, T(1.0), deal_size);
+    __bang_add_scalar(h, h, T(1.0), deal_size);
+  }
+  // T cx = axmin + 0.5 * w;
+  __bang_mul_scalar(cx, w, T(0.5), deal_size);
+  __bang_add(cx, cx, axmin, deal_size);
+
+  // T cy = aymin + 0.5 * h;
+  __bang_mul_scalar(cy, h, T(0.5), deal_size);
+  __bang_add(cy, cy, aymin, deal_size);
+
+  T *dxmin = deltas;
+  T *dymin = deltas + deal_size;
+  T *dxmax= deltas + 2 * deal_size;
+  T *dymax = deltas + 3 * deal_size;
+
+  T *d_w = nram_temp + 4 * deal_siz
+  T *d_h = nram_temp + 5 * deal_size;
+  T *d_cx =nram_temp + 6 * deal_size;
+  T *d_cy = nram_temp + 7 * deal_size;
+  T *tmp_exp = nram_temp + 8 * deal_size;
+
+ __bang_mul(d_w, dxmin, w, deal_size);
+ __bang_mul(d_h, dymin, h, deal_size);
+
+ if(var){
+  __bang_mul(d_w, d_w, var, deal_size);
+  __bang_mul(d_h, d_h, var + deal_size, deal_size);
+
+  __bang_mul(dxmax, dxmax, var + 2 * deal_size, deal_size);
+  __bang_mul(dymax, dymax, var + 3 * deal_size, deal_size);
+
+  static const double bbox_clip_default = std::log(1000.0 / 16.0);
+  __bang_mineq_scalar(dxmax, tmp_exp, (T)bbox_clip_default, deal_size);
+  __bang_mineq_scalar(dymax, dymax, (T)bbox_clip_default, deal_size);
+ }
+
+  __bang_add(d_cx, cx, d_w, deal_size)
+  __bang_add(d_cy, cy, d_h, deal_size)
+
+  calcExp(d_w, dxmax, deal_size);
+  calcExp(d_h, dymax, deal_size);
+
+  __bang_mul(d_w, d_w, w, deal_size);
+  __bang_mul(d_h, d_h, h, deal_size);
+
+  T *oxmin = nram_temp + 9 * deal_siz;
+  T *oymin = nram_temp + 10 * deal_size;
+  T *oxmax = nram_temp + 11 * deal_size;
+  T *oymax = nram_temp + 12 * deal_size;
+  T *tmp_o = nram_temp + 13 * deal_size;
+
+  __bang_mul_scalar(tmp_o, d_w, (T)0.5, deal_size);
+  __bang_sub(oxmin, d_cx, tmp_o, deal_size);
+  __bang_add(oxmax, d_cx, tmp_o, deal_size);
+
+  __bang_mul_scalar(tmp_o, d_h, (T)0.5, deal_size);
+  __bang_sub(oymin, d_cy, tmp_o, deal_size);
+  __bang_add(oymax, d_cy, tmp_o, deal_size);
+
+   if(pixes_offset){
+    __bang_sub_scalar(oxmax, oxmax, T(1.0), deal_size);
+    __bang_sub_scalar(oymax, oymax, T(1.0), deal_size);
+  }
+
+  __bang_mineq_scalar(oxmin, oxmin, (T)(im_info[1] - offset), deal_size);
+  __bang_mineq_scalar(oymin, oymin, (T)(im_info[0] - offset), deal_size);
+  __bang_mineq_scalar(oxmax, oxmax, (T)(im_info[1] - offset), deal_size);
+  __bang_mineq_scalar(oymax, oymax, (T)(im_info[0] - offset), deal_size);
+
+  __bang_relu(box, oxmin, deal_size);
+  __bang_relu(box + deal_size, oymin, deal_size);
+  __bang_relu(box + 2 * deal_size, oxmax, deal_size);
+  __bang_relu(box + 3 * deal_size, oymax, deal_size);
+
+}
+```
+
+- **removeSmallBox:**
+`removeSmallBox`： 移除box长和宽比min_size小的box，pixel_offset=1时需要计算偏移。
+
+```c++
+__mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
+        const T min_size, T *nram_buffer, const  int deal_size, unsigned int * count, bool pixel_offset){
+
+  T *w = nram_buffer;
+  T *h = nram_buffer + deal_size;
+  T *cx = nram_buffer + deal_size;
+  T *cy = nram_buffer + deal_size;
+
+  // w = box[2] - box[0];
+  __bang_sub(w, boxes + 2 * deal_size, boxes, deal_size);
+  // h = box[3] - box[1];
+  __bang_sub(h, boxes + 3 * deal_size, boxes + 1 * deal_size, deal_size);
+
+  if(pixel_offset){
+    T offset = pixel_offset ? 1.0 : 0;
+    // w = w - offset
+    __bang_add_scalar(w, w, offset, deal_size);
+    // h = h - offset
+    __bang_add_scalar(h, h, offset, deal_size);
+  }
+
+  // cx = box[0] + 0.5 * w
+  __bang_mul_scalar(cx, w, (T)0.5, deal_size);
+  __bang_add(cx, boxes, cx, dea;_size);
+
+  // cy = box[1] + 0.5 * h
+  __bang_mul_scalar(cy, h, (T)0.5, deal_size);
+  __bang_add(cy, boxes + deal_size, cy, deal_size);
+
+  // mask_tmp1 = w >= min_size ? 1 : 0;
+ __bang_ge_scalar(mask_tmp1, w, min_size, deal_size);
+  // mask_tmp2 = h >= min_size ? 1 : 0;
+ __bang_ge_scalar(mask_tmp2, h, min_size, deal_size);
+  // mask_result = mask_tmp1 & mask_tmp2
+ __bang_and(mask_result, mask_tmp1, mask_tmp2, deal_size);
+
+ if(pixel_offset){
+  T im_h = im_size[0];
+  T im_w = im_size[1];
+  // mask_tmp1 = cx <= im_w ? 1 : 0;
+  __bang_le_scalar(mask_tmp1, cx, im_w, deal_size);
+  // mask_tmp2 = cy <= im_h ? 1 : 0;
+  __bang_le_scalar(mask_tmp2, cy, im_h, deal_size);
+  // mask_result = mask_result & mask_tmp1 & mask_tmp2
+  __bang_and(mask_result, mask_result, mask_tmp1, deal_size);
+  __bang_and(mask_result, mask_result, mask_tmp2, deal_size);
+ }
+
+ // count nan-zero value in mask_result
+ *count = __bang_count(mask_result, deal_size);
+
+// collect and store box and scores
+ __bang_collect(box + 0 * deal_size, box + 0 * deal_size, mask_result, deal_size);
+ __bang_collect(box + 1 * deal_size, box + 1 * deal_size, mask_result, deal_size);
+ __bang_collect(box + 2 * deal_size, box + 2 * deal_size, mask_result, deal_size);
+ __bang_collect(box + 3 * deal_size, box + 3 * deal_size, mask_result, deal_size);
+ __bang_collect(scores, scores, mask_result, deal_size);
+}
+```
+- **nms实现**
+1. 获取socres中的最大值；
+2. 计算最大值位置box与其他box的iou；
+3. 把iou>iou_thresh位置的scores置为0；
+4. 重复循环pre_nms_top_n次或者取到的max_score的值等于0时结束。
+
+### 3.3 拆分(任务拆分，多核拆分)
+**拆分策略**
+计算过程使用block任务，把N平均拆分到每个core上计算。
+
+### 3.4 性能优化设计
+1. 流水设计
+ 无
+
+### 3.5 方案理论性能
+
+### 3.6 可维护性设计
+1. bangc代码中加入必要的 log 信息，比如输入的规模、数据类型、layout，任务类型，以及如果出错会导致程序core dump的变量，比如IO指令的data_size、dim xyz的值等，这些信息都是有利于快速定位问题；
+2. 对每一个函数命名变量命名都有充分的注释；
+3. 避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
+
+### 3.7 测试用例设计
+
+### 3.8 算子防呆检查
+ 1. 指针为空防呆；
+ 2. 0元素检查防呆，VLOG(5)打印信息；
+ 3. input，output的数据类型须保持一致，且符合算子类型支持限制；
+ 4. 对shape进行防呆，需要保证输入boxes满足要求。
+ 5. workspace防呆
+
+## 4 算子性能/精度问题 & 优化记录
+### 4.1 当前存在问题的规模说明
+无
+### 4.2 已经过优化的规模说明
+
+### 4.3 优化记录
+
+## 5 方案实施
+### 5.1 开发测试计划
+- 2022.8.16-2022.8.19：算子调研，竞品行为分析，cnnl_extra proposals算子学习，方案设计撰写
+- 2022.8.22-2022.8.26：方案设计评审，generator和gtest代码开发
+- 2022.8.29-2022.9.2：算子host/device代码实现、功能调试，大规模测试
+- 2022.9.5-2022.9.9：输出测试报告，PR
