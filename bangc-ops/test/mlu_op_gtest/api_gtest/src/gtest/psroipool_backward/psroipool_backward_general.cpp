@@ -57,13 +57,13 @@ class psroipool_backward_general
     mluOpDataType_t i_dtype = i_params.get_dtype();
     int i_dim = i_params.get_dim_nb();
     std::vector<int> i_dim_size = i_params.get_dim_size();
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
-    MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, i_layout, i_dtype, i_dim,
-                                         i_dim_size.data()));
-    uint64_t i_ele_num = mluOpGetTensorElementNum(input_desc_);
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&bottom_grad_desc_));
+    MLUOP_CHECK(mluOpSetTensorDescriptor(bottom_grad_desc_, i_layout, i_dtype,
+                                         i_dim, i_dim_size.data()));
+    uint64_t i_ele_num = mluOpGetTensorElementNum(bottom_grad_desc_);
     uint64_t i_bytes = mluOpDataTypeBytes(i_dtype) * i_ele_num;
     if (i_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, i_bytes))
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&bottom_grad_, i_bytes))
     }
 
     MLUOpTensorParam r_params = std::get<2>(GetParam());
@@ -85,13 +85,13 @@ class psroipool_backward_general
     mluOpDataType_t o_dtype = o_params.get_dtype();
     int o_dim = o_params.get_dim_nb();
     std::vector<int> o_dim_size = o_params.get_dim_size();
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-    MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, o_layout, o_dtype, o_dim,
-                                         o_dim_size.data()));
-    uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
+    MLUOP_CHECK(mluOpCreateTensorDescriptor(&top_grad_desc_));
+    MLUOP_CHECK(mluOpSetTensorDescriptor(top_grad_desc_, o_layout, o_dtype,
+                                         o_dim, o_dim_size.data()));
+    uint64_t o_ele_num = mluOpGetTensorElementNum(top_grad_desc_);
     uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
     if (o_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes))
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&top_grad_, o_bytes))
     }
 
     MLUOpTensorParam m_params = std::get<4>(GetParam());
@@ -117,8 +117,8 @@ class psroipool_backward_general
     }
     mluOpStatus_t status = mluOpPsRoiPoolBackward(
         handle_, pooled_height_, pooled_width_, spatial_scale_, output_dim_,
-        output_desc_, output_, rois_desc_, rois_, mapping_channel_desc_,
-        mapping_channel_, input_desc_, input_);
+        top_grad_desc_, top_grad_, rois_desc_, rois_, mapping_channel_desc_,
+        mapping_channel_, bottom_grad_desc_, bottom_grad_);
     destroy();
     return status == expected_status_;
   }
@@ -129,13 +129,13 @@ class psroipool_backward_general
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }
-    if (input_desc_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_desc_));
-      input_desc_ = NULL;
+    if (bottom_grad_desc_) {
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(bottom_grad_desc_));
+      bottom_grad_desc_ = NULL;
     }
-    if (input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
-      input_ = NULL;
+    if (bottom_grad_) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(bottom_grad_));
+      bottom_grad_ = NULL;
     }
     if (rois_desc_) {
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(rois_desc_));
@@ -145,13 +145,13 @@ class psroipool_backward_general
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
       rois_ = NULL;
     }
-    if (output_desc_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_desc_));
-      output_desc_ = NULL;
+    if (top_grad_desc_) {
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(top_grad_desc_));
+      top_grad_desc_ = NULL;
     }
-    if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
-      output_ = NULL;
+    if (top_grad_) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(top_grad_));
+      top_grad_ = NULL;
     }
     if (mapping_channel_desc_) {
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(mapping_channel_desc_));
@@ -165,13 +165,13 @@ class psroipool_backward_general
 
  private:
   mluOpHandle_t handle_ = NULL;
-  mluOpTensorDescriptor_t input_desc_ = NULL;
+  mluOpTensorDescriptor_t bottom_grad_desc_ = NULL;
   mluOpTensorDescriptor_t rois_desc_ = NULL;
-  mluOpTensorDescriptor_t output_desc_ = NULL;
+  mluOpTensorDescriptor_t top_grad_desc_ = NULL;
   mluOpTensorDescriptor_t mapping_channel_desc_ = NULL;
-  void* input_ = NULL;
+  void* bottom_grad_ = NULL;
   void* rois_ = NULL;
-  void* output_ = NULL;
+  void* top_grad_ = NULL;
   void* mapping_channel_ = NULL;
   int pooled_height_ = 3;
   int pooled_width_ = 3;
@@ -235,7 +235,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_input_dtype_shape_layout_0, psroipool_backward_general,
+    bad_bottom_grad_dtype_shape_layout_0, psroipool_backward_general,
     testing::Combine(
         testing::Values(PsRoiPoolBackwardDescParam{3, 3, 1.0, 1}),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_HALF, 4,
@@ -273,7 +273,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_output_dtype_shape_layout_0, psroipool_backward_general,
+    bad_top_grad_dtype_shape_layout_0, psroipool_backward_general,
     testing::Combine(
         testing::Values(PsRoiPoolBackwardDescParam{3, 3, 1.0, 1}),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
