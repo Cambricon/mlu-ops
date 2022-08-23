@@ -153,62 +153,62 @@ def nms_compute_body(self，output_box_num，output，input_score，input_box，
 #计算得到相交部分的面积:area_I=(inter_x2−inter_x1)*(inter_y2−inter_y1)
 #alignment:参与NmsIoU计算的框的个数
 #用当前score最大的边界框A的x1坐标值填充inter_y1张量
-self.tcp.assign(self.inter_y1[:alignment], self.max_box[1])
+tcp.assign(self.inter_y1[:alignment], max_box[1])
 #获取边界框A与其他候选框相交部分的左上角横坐标值，存储到inter_x1张量
-self.tcp.maximum(self.inter_x1[:alignment], self.x1[:alignmemt]， self.inter_y1[:alignment])
+tcp.maximum(self.inter_x1[:alignment], self.x1[:alignmemt]， self.inter_y1[:alignment])
 #用边界框A的x2坐标值填充inter_y2张量
-self.tcp.assign(self.inter_y2[:alignment], self.max_box[3])
+tcp.assign(self.inter_y2[:alignment], max_box[3])
 #获取边界框A与其他框相交部分的左上角横坐标值，存储到inter_x2张量
-self.tcp.minimum(self.inter_x2[:alignment], self.x2[:alignmemt], self.inter_y2[:alignment])
+tcp.minimum(self.inter_x2[:alignment], self.x2[:alignmemt], self.inter_y2[:alignment])
 #计算inter_x2−inter_x1
-self.tcp.subtract(self.inter_x1[:alignment], self.inter_x2[:alignmemt], self.inter_x1[:alignmemt])
+tcp.subtract(self.inter_x1[:alignment], self.inter_x2[:alignmemt], self.inter_x1[:alignmemt])
 #相交部分的宽度inter_w=(inter_x2−inter_x1)>0?(inter_x2−inter_x1) : 0
 #复用inter_x1张量存储inter_w
-self.tcp.relu(self.inter_x1[:alignment], self.inter_x1[:alignment])
+tcp.relu(self.inter_x1[:alignment], self.inter_x1[:alignment])
 #用边界框A的y1坐标值填充inter_x2张量
-self.tcp.assign(self.inter_x2[:alignment], self.max_box[2])
+tcp.assign(self.inter_x2[:alignment], max_box[2])
 #获取边界框A与其他框相交部分的左上角纵坐标值，存储到inter_y1张量
-self.tcp.maximum(self.inter_y1[:alignment], self.y1[:alignmemt], self.inter_x2[:alignment])
+tcp.maximum(self.inter_y1[:alignment], self.y1[:alignmemt], self.inter_x2[:alignment])
 #用边界框A的y2坐标值填充inter_x2张量
-self.tcp.assign(self.inter_x2[:alignment], self.max_box[4])
+tcp.assign(self.inter_x2[:alignment], max_box[4])
 #获取边界框A与其他框相交部分的左上角纵坐标值，存储到inter_y2张量
-self.tcp.minimum(self.inter_y2[:alignment], self.y2[:alignmemt], self.inter_x2[:alignment])
+tcp.minimum(self.inter_y2[:alignment], self.y2[:alignmemt], self.inter_x2[:alignment])
 #计算inter_y2−inter_y1
-self.tcp.subtract(self.inter_y1[:alignment], self.inter_y2[:alignmemt], self.inter_y1[:alignmemt])
+tcp.subtract(self.inter_y1[:alignment], self.inter_y2[:alignmemt], self.inter_y1[:alignmemt])
 #相交部分的高度inter_h=(inter_y2−inter_y1)>0?(inter_y2−inter_y1):0
 #复用inter_y1张量存储inter_h
-self.tcp.relu(self.inter_y1[:alignment], self.inter_y1[:alignment])
+tcp.relu(self.inter_y1[:alignment], self.inter_y1[:alignment])
 #相交部分的面积area_I=inter_w * inter_h
-self.tcp.multiply(self.inter_x1[:alignment], self.inter_x1[:alignment], self.inter_y1[:alignment])
+tcp.multiply(self.inter_x1[:alignment], self.inter_x1[:alignment], self.inter_y1[:alignment])
 ```
 
 ```python
 #计算每个候选框的面积:area=(x2−x1)*(y2−y1):
 #计算x2−x1，将结果存储到inter_y1张量
-self.tcp.subtract(self.inter_y1[:alignment], self.x2[:alignmemt], self.x1[:alignment])
+tcp.subtract(self.inter_y1[:alignment], self.x2[:alignmemt], self.x1[:alignment])
 #计算y2−y1，将结果存储到inter_y2张量
-self.tcp.subtract(self.inter_y2[:alignment], self.y2[:alignmemt], self.y1[:alignment])
+tcp.subtract(self.inter_y2[:alignment], self.y2[:alignmemt], self.y1[:alignment])
 #area=(x2−x1)*(y2−y1)=inter_y1*inter_y2
 #area的计算结果存储到inter_x2张量
-self.tcp.multiply(self.inter_x2[:alignment], self.inter_y1[:alignment], self.inter_y2[:alignment])
+tcp.multiply(self.inter_x2[:alignment], self.inter_y1[:alignment], self.inter_y2[:alignment])
 ```
 
 ```python
 #计算得到相并部分的面积area_U: area+max_area−area_I:
 #max_area:边界框A的面积
 #使用max_area填充inter_y1张量
-self.tcp.assign(self.inter_y1[:alignment], max_area)
+tcp.assign(self.inter_y1[:alignment], max_area)
 #计算area+max_area，将结果存储到inter_x2张量
-self.tcp.add(self.inter_x2[:alignment], self.inter_x2[:alignmemt], self.inter_y1[:alignmemt])
+tcp.add(self.inter_x2[:alignment], self.inter_x2[:alignmemt], self.inter_y1[:alignmemt])
 #计算inter_x2−area_I，将结果存储到inter_x2张量
-self.tcp.subtract(self.inter_x2[:alignment], self.inter_x2[:alignmemt], self.iou_threshold)
+tcp.subtract(self.inter_x2[:alignment], self.inter_x2[:alignmemt], self.iou_threshold)
 ```
 ```python
 #如果IoU大于等于阈值(即area_U*t_iou>area_I)，则将相应候选框的score置为0
 #计算area_U*t_iou，将结果存储到interx_2张量
-self.tcp.multiply(self.inter_x2[:alignment], self.inter_x2[:alignmemt], self.iou_threshold)
-self.tcp.greater(self.inter_x1[:alignment], self.inter_x2[:alignmemt], self.inter_x1[:alignmemt])
-self.tcp.multiply(self.score[:alignment], self.score[:alignmemt], self.inter_x1[:alignmemt])
+tcp.multiply(self.inter_x2[:alignment], self.inter_x2[:alignmemt], self.iou_threshold)
+tcp.greater(self.inter_x1[:alignment], self.inter_x2[:alignmemt], self.inter_x1[:alignmemt])
+tcp.multiply(score[:alignment], score[:alignmemt], self.inter_x1[:alignmemt])
 # update the score
   max_box[0] = zero_scalar
   max_index = score_sort(input_offset, Nms_loop, remain, remain_pad)
