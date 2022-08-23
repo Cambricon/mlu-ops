@@ -45,7 +45,7 @@
 | :------------- | :-------------------------------------------------------------- |
 | 需求来源    | TensorFlow                                     |
 | 应用网络    | maskrcnn                                        |
-| 输入数据类型| scores: float <br>bbox_deltas: float <br>im_shape: float <br>anchors: float <br>variances: float <br>pre_nms_top_n: int <br>post_nms_top_n: int <br>nms_thresh: float <br>min_size: float <br>eta: float <br>pixel_offset:bool                                            |
+| 输入数据类型| scores: float <br>bbox_deltas: float  <br>im_shape: float  <br>anchors: float <br>variances: float <br>pre_nms_top_n: int <br>post_nms_top_n: int <br>nms_thresh: float <br>min_size: float <br>eta: float <br>pixel_offset:bool                                            |
 | 输入Shape   | scores: [N，A，H，W]<br>bbox_deltas: [N，4 * A，H，W]<br>im_shape: [N, 2]<br>anchors: [H, W, A, 4] <br>variances: [H, W, A, 4]<br>pre_nms_top_n: scalar <br>post_nms_top_n: scalar <br>nms_thresh: scalar <br>min_size: scalar <br>eta: scalar <br>pixel_offset: scalar|
 | 输入Layout  | scores:NHWC<br>bbox_deltas:NHWC<br>im_shape:ARRAY<br>anchors:NHWC<br>variances:NHWC <br>pre_nms_top_n: scalar <br>post_nms_top_n: scalar <br>nms_thresh: scalar <br>min_size: scalar <br>eta: scalar <br>pixel_offset: scalar                             |
 | 输出数据类型 | rpn_rois:float <br> rpn_roi_probs:float  <br>rpn_rois_num: int <br>rpn_rois_batch_size：int         |
@@ -63,7 +63,57 @@
 
 ### 1.2 算子功能和应用场景描述
 **算子功能：** `generate_proposals_v2`根据每个检测框为 foreground 对象的概率，推选生成用于后续检测网络的 RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。<br>
-- 在检测网络中， anchor 为 foreground 对象表示可能有一个目标存在在 anchor box 中，前景 anchor 可能并没有完美的位于目标中心， 需使用`bbox_deltas`对其位置和尺寸进行精调， 使得anchor box能更好的拟合目标， 如果有多个 anchor 互相重叠，将保留拥有最高前景分数的 anchor，并舍弃余下的anchor（非极大值抑制)， 最终输出用于后续检测网络的 RoIs。
+-  anchors 是在 feature_map 的每一个位置生成多个不同大小不同长宽比的矩形框。每个 anchor 以（xmin，ymin，xmax，ymax）的格式表示，其中，xmin 和 ymin 为左上角的坐标，xmax 和 ymax 为右下角的坐标。
+- 在检测网络中， anchor 为 foreground 类型的对象表示可能有一个目标存在在 anchor box 中，前景 anchor 可能并没有完美的位于目标中心， 需使用`bbox_deltas`对其位置和尺寸进行精调， 使得anchor box能更好的拟合目标， 如果有多个 anchor 互相重叠，将保留拥有最高前景分数的 anchor，并舍弃余下的anchor（非极大值抑制)， 最终输出用于后续检测网络的 RoIs。
+
+- 计算过程描述:
+  1. 取topK, 根据anchors的scores获取前`pre_nms_top_n`个`scores`值以及对应的`bbox_deltas`、`anchors`、`variances`;
+  2. 创建proposals: 根据获取到的bbox_deltas、anchors、variances来创建 proposals；
+  3. 对第二步创建好的porposals 进行筛选, 移除 proposals 中宽或者高小于`min_size`的 box;
+  4. 对剩余的 proposals 进行nms筛选，输出`post_nms_top_n`个proposals及其对应的scores值（实际输出的proposals个数可能比`post_nms_top_n`少）。
+
+- 创建 proposals 的具体计算过程及伪代码
+```c++
+  // creatbox计算方法
+  // 1 根据anchor 两个点坐标（xmin，ymin，xmax，ymax）计算 box_anchor的中心点坐标（cx， cy）及 anchor的宽高; 
+    T axmin = anchor[k];
+    T aymin = anchor[k + 1];
+    T axmax = anchor[k + 2];
+    T aymax = anchor[k + 3];
+    T offset = pixel_offset ? static_cast<T>(1.0) : 0;
+    T w = axmax - axmin + offset; // anchor 的宽
+    T h = aymax - aymin + offset; // anchor 的高
+    T cx = axmin + 0.5 * w; // 中心点坐标（cx， cy）
+    T cy = aymin + 0.5 * h;
+
+// 2 根据 (cx, cy) 和 deltal 的两点的坐标计算的 box_deltal 中心点坐标和宽高；
+//  deltas表示预测出的候选框的位置和 anchor 的位置之间的距离（xmin，ymin，xmax，ymax）
+    static const float bbox_clip_default = std::log(1000.0 / 16.0);
+
+    T dxmin = deltas[k]; 
+    T dymin = deltas[k + 1];
+    T dxmax = deltas[k + 2];
+    T dymax = deltas[k + 3];
+ 
+    T d_cx, d_cy, d_w, d_h; // box_deltal 中心点坐标和宽高；
+    //  var 表示 anchor 的方差，每个 anchor 的方差都是(xcenter，ycenter，w，h)的格式表示 
+    d_cx = cx + dxmin * w * var[k];
+    d_cy = cy + dymin * h * var[k + 1];
+    d_w = exp(Min(dxmax * var[k + 2], bbox_clip_default)) * w;
+    d_h = exp(Min(dymax * var[k + 3], bbox_clip_default)) * h;
+  
+// 3 .根据box_deltal中心点坐标和宽高计算proposals的两个点的坐标；
+    T oxmin = d_cx - d_w * 0.5;
+    T oymin = d_cy - d_h * 0.5;
+    T oxmax = d_cx + d_w * 0.5 - offset;
+    T oymax = d_cy + d_h * 0.5 - offset;
+
+// 4. 通过min，max把proposal的坐标约束到[0，img_size.w], [0，img_size.h]
+    proposals[i * 4] = Max(Min(oxmin, im_info[1] - offset), 0.);
+    proposals[i * 4 + 1] = Max(Min(oymin, im_info[0] - offset), 0.);
+    proposals[i * 4 + 2] = Max(Min(oxmax, im_info[1] - offset), 0.);
+    proposals[i * 4 + 3] = Max(Min(oymax, im_info[0] - offset), 0.);
+```
 
 **应用场景：** `generate_proposals_v2`算子应用于`maskrcnn`。
 
@@ -301,48 +351,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 - **MLU实现步骤**
 <br>按照 block 任务规模实现，拆N，每个 core 上处理相同量的N，每次循环处理一个 batch ，即每次循环生成一张图片的 proposals ,对每张图片生成 proposals 的步骤如下：
 1. 对 scores 进行 topK 操作， 取 scores 前 pre_nms_top_n 个数据，并根据 scores topK 的 index，从 anchors 、bbox_deltas 、variances 中取数；
-2. creatbox：根据 topK 的取数后的 anchor 、detals 的坐标，创建 proposals ；
-```c++
-  // creatbox计算方法
-  // 1 根据anchor 两个点坐标计算 box_anchor的中心点坐标（cx， cy）;
-    T axmin = anchor[k];
-    T aymin = anchor[k + 1];
-    T axmax = anchor[k + 2];
-    T aymax = anchor[k + 3];
-    T offset = pixel_offset ? static_cast<T>(1.0) : 0;
-    T w = axmax - axmin + offset;
-    T h = aymax - aymin + offset;
-    T cx = axmin + 0.5 * w;
-    T cy = aymin + 0.5 * h;
-// 2 根据 (cx, cy) 和 deltal 的两点的坐标计算的 box_deltal 中心点坐标和宽高；
-    T dxmin = deltas[k];
-    T dymin = deltas[k + 1];
-    T dxmax = deltas[k + 2];
-    T dymax = deltas[k + 3];
- 
-    T d_cx, d_cy, d_w, d_h;
-    if (var) {
-      d_cx = cx + dxmin * w * var[k];
-      d_cy = cy + dymin * h * var[k + 1];
-      d_w = exp(Min(dxmax * var[k + 2], bbox_clip_default)) * w;
-      d_h = exp(Min(dymax * var[k + 3], bbox_clip_default)) * h;
-    } else {
-      d_cx = cx + dxmin * w;
-      d_cy = cy + dymin * h;
-      d_w = exp(Min(dxmax, bbox_clip_default)) * w;
-      d_h = exp(Min(dymax, bbox_clip_default)) * h;
-    }
-// 3 .根据box_deltal中心点坐标和宽高计算proposals的两个点的坐标；
-    T oxmin = d_cx - d_w * 0.5;
-    T oymin = d_cy - d_h * 0.5;
-    T oxmax = d_cx + d_w * 0.5 - offset;
-    T oymax = d_cy + d_h * 0.5 - offset;
-// 4. 通过min，max把proposal的坐标约束到[0，img_size.w], [0，img_size.h]
-    proposals[i * 4] = Max(Min(oxmin, im_info[1] - offset), 0.);
-    proposals[i * 4 + 1] = Max(Min(oymin, im_info[0] - offset), 0.);
-    proposals[i * 4 + 2] = Max(Min(oxmax, im_info[1] - offset), 0.);
-    proposals[i * 4 + 3] = Max(Min(oymax, im_info[0] - offset), 0.);
-```
+2. creatbox：根据 topK 的取数后的 anchors 、bbox_deltas 的坐标，创建 proposals ；
 3. removeSmallBox：移除 proposals 中，宽或高小于 min_size 的 proposals；
 4. 对剩余的 proposals 进行nms筛选，并将一张图片的 proposals 、scores 、num 结果保存；
 
