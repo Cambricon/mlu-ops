@@ -1,4 +1,4 @@
-# poly_nms 算子开发设计方案
+# generate_proposals_v2 算子开发设计方案
 * #### 文档基本信息
 | 算子名称    | generate_proposals_v2     |
 | ----------- | ----------------- |
@@ -41,8 +41,8 @@
 
 ## 1 需求分析
 ### 1.1 算子需求分析
-| 算子功能简介|该OP根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。|
-|------------- | -------------------------------------------------------------- |
+| 算子功能简介| 该OP根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。|
+| :------------- | :-------------------------------------------------------------- |
 | 需求来源    | TensorFlow                                     |
 | 应用网络    | maskrcnn                                        |
 | 输入数据类型| scores: float <br>bbox_deltas: float <br>im_shape: float <br>anchors: float <br>variances: float <br>pre_nms_top_n: int <br>post_nms_top_n: int <br>nms_thresh: float <br>min_size: float <br>eta: float <br>pixel_offset:bool                                            |
@@ -57,13 +57,13 @@
 | 是否需要支持原位        | 否                                                  |
 | 是否需要支持stride机制  | 否                                                 |
 | 是否需要支持广播  | 否                       |
-| 0元素检查是否直接返回  |  对于scores、bbox_deltas、im_shape、anchors、variances参数<br>N=0 时正常返回 MLUOP_STATUS_SUCCESS <br>A、W、H 任一为0时返回 MLUOP_BAD_PARAM  |
+| 0元素检查是否直接返回  |  对于scores、bbox_deltas、im_shape、anchors、variances参数<br>N=0 时返回 MLUOP_STATUS_SUCCESS <br>A、W、H 任一为0时返回 MLUOP_BAD_PARAM  |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)|        无                                                |
 | 本次开发优先支持的规模/模式|   |
 
 ### 1.2 算子功能和应用场景描述
-**算子功能：** `generate_proposals_v2`根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。<br>
-- 在检测网络中， anchor 为 foreground 对象表示可能有一个目标存在在anchor box中，前景 anchor 可能并没有完美的位于目标中心， 需使用`bbox_deltas`对其位置和尺寸进行精调， 使得anchor box能更好的拟合目标， 如果有多个 anchor 互相重叠，将保留拥有最高前景分数的 anchor，并舍弃余下的anchor（非极大值抑制)， 最终输出用于后续检测网络的RoIs。
+**算子功能：** `generate_proposals_v2`根据每个检测框为 foreground 对象的概率，推选生成用于后续检测网络的 RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。<br>
+- 在检测网络中， anchor 为 foreground 对象表示可能有一个目标存在在 anchor box 中，前景 anchor 可能并没有完美的位于目标中心， 需使用`bbox_deltas`对其位置和尺寸进行精调， 使得anchor box能更好的拟合目标， 如果有多个 anchor 互相重叠，将保留拥有最高前景分数的 anchor，并舍弃余下的anchor（非极大值抑制)， 最终输出用于后续检测网络的 RoIs。
 
 **应用场景：** `generate_proposals_v2`算子应用于`maskrcnn`。
 
@@ -246,7 +246,7 @@ void GenerateProposalsV2Kernel(const Context& ctx,
 ```
 
 ### 2.2 接口设计
-#### 2.2.1 poly_nms获取额外申请空间大小
+#### 2.2.1 `generate_proposals_v2` 获取额外申请空间大小
 ```c++
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
@@ -258,7 +258,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
 - `size`：输入参数。需要用户申请的额外的空间大小，通过`mluOpGetPnmsWorkspaceSize`获取。
 - `mluOpTensorDescriptor_t`: 输入tensor的形状描述。
 
-#### 2.2.2 poly_nms计算接口
+#### 2.2.2 `generate_proposals_v2` 计算接口
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
                                                     const int pre_nms_top_n,
@@ -289,7 +289,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 ## 3 实现方案设计
 ### 3.1 实现方案
 
-`generate_proposals_v2`根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。
+`generate_proposals_v2`根据每个检测框为 foreground 对象的概率，推选生成用于后续检测网络的 RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。
 
 - **竞品实现过程：**
 1. 通过转置操作将 scores 和 bbox_deltas 的大小分别调整为 [H * W * A，1] 和 [H * W * A，4]；
@@ -299,7 +299,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 5. 通过NMS选出满足条件的候选框作为结果。
 
 - **MLU实现步骤**
-<br>按照 block 规模实现，拆N，每个 core 上处理相同量的N，每次循环处理一个 batch ，即每次循环生成一张图片的 proposals ,对每张图片生成 proposals 的步骤如下：
+<br>按照 block 任务规模实现，拆N，每个 core 上处理相同量的N，每次循环处理一个 batch ，即每次循环生成一张图片的 proposals ,对每张图片生成 proposals 的步骤如下：
 1. 对 scores 进行 topK 操作， 取 scores 前 pre_nms_top_n 个数据，并根据 scores topK 的 index，从 anchors 、bbox_deltas 、variances 中取数；
 2. creatbox：根据 topK 的取数后的 anchor 、detals 的坐标，创建 proposals ；
 ```c++
@@ -354,7 +354,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
 ### 3.2 伪代码实现
 - **kernel 实现逻辑**
-
   每个core上计算相同量的 batch ，每次循环计算一个 batch ，即每次循环生成一张图片的 proposals 。
 ```c++
 ...
@@ -426,6 +425,7 @@ __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *varianc
 
 ```
 - **creatbox实现**
+  
 `creatbox` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
 伪代码：
 ```c++
@@ -439,7 +439,7 @@ __mlu__func void calcExp(T * output, const T * input, cpnst int length){
   __bang_active(output, input, length);
 #endif
 }
-// 根据anchor, deltas和ar来生成proposals
+// 生成proposals
 __mlu__func void creatBox(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){
   T *axmin = anchor;
   T *aymin = anchor + deal_size;
@@ -537,6 +537,7 @@ __mlu__func void creatBox(const T* anchor, const T *deltas, const T *var, const 
 ```
 
 - **removeSmallBox:**
+  
 `removeSmallBox`： 移除box长和宽比min_size小的box，pixel_offset=1时需要计算偏移。
 
 ```c++
