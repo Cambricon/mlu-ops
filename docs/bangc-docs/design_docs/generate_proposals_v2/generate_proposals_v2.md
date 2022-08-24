@@ -343,13 +343,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 2. job内每次循环计算一个batch， 把一个batch的AHW的平均拆分到每个core计算， 每个core上计算 AHW / coreDim 组数据；
 
 每次循环计算一个batch，即每次循环生成一张图片的 proposals ，对每张图片生成 proposals 的步骤如下：
-1. 对 `scores` 进行 向量topK 操作，生成 topK 的 mask，并根据 mask，使用 bang_collect, 把scores、anchors、bbox_deltas、variances中的对应的数值取出；<br>
+1. 对 `scores` 进行 向量topK 操作，获取第K大的score值 k_score，生成比k_score大的 mask，使用 bang_collect, 把scores、anchors、bbox_deltas、variances中的对应的数值取出；<br>
    **topk实现**<br>
-   a. 使用二分法，获取scores中最大值up_score，最小值down_score设置为-FLT_MAX，mid_score = 0.5 * (up_score - down_score);<br>
-   b. 用bang_ge获取scores中大于mid_score的mask，使用bang_count统计大于mid_score的个数count，并把这个count规模计算totol_count;<br>
-   c. 比较totol_count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 直到 totol_count 等于 pre_nms_top_n；<br>
-   d. 根据最后用 __bang_ge 获取的mask，使用__bang_collect, 把scores、anchors、bbox_deltas、variances中的对应位置的数值取出；<br>
+   a. 往nram上load足够多的scores，使用二分法，先获取scores中最大值up_score，和最小值down_score，mid_score = 0.5 * (up_score - down_score);<br>
+   b. 用bang_ge获取scores中大于mid_score的mask，使用bang_count统计大于mid_score的个数count，并把每个cluster上每个core上的count规约计算出totol_count;<br>
+   c. 比较totol_count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 直到 totol_count 等于 pre_nms_top_n，此时，第K大的score值k_score等于mid_score；<br>
+   d. 使用 __bang_ge 比较 scores 和 k_score，生成比 k_score 大的 mask，使用bang_collect把scores、anchors、bbox_deltas、variances值取出放到workspace上,数量是pre_nms_top_n，pre_nms_top_n<=AHW。
+   e. 需要注意，每个core上collect后的数量不同，为保证每个core上存放在workspace上数据的连续，需要做多核的同步操作，具体过程是：在worksacpe 上开辟 coreNum大小的空间，每个core在对应taskId位置存放自己当前的collect数量，__sync_all同步后，每个core上计算自己存放在workspce上的数据偏移，按照这个偏移往worksapce上存放collect后的数值。<br>
 
+  **topK实现nram空间和workspace的划分**<br>
+  ```c++
+    // 1. topK
+    // nram: 从 GDRAM 的 input 数据中load scores、anchors、bbox_deltas、variances，N = max_nram_size / (14*N)
+    // |  scores | anchors | bbox_deltas | variances | ge_mask |
+    // |   N     |  4 * N  | 4 * N       | 4 * N     |    N    |
+
+    // workspace: 把 topK 后用 _bang_collect 拿出来的有效数据存放到workspace中
+    // | collect_num |collect_scores  | collect_anchors   | collect_deltas  | collect_variances|
+    // | taskDim     | pre_nms_top_n  |   4*pre_nms_top_n | 4*pre_nms_top_n |  4*pre_nms_top_n |
+  ```
 2. creatbox：根据 topK 的取数后的 anchors 、bbox_deltas 的坐标，创建 proposals ；<br>
     **creatbox 计算过程**<br>
     a. 根据anchor 两个点坐标 (xmin，ymin，xmax，ymax) 计算 box_anchor的中心点坐标 (cx， cy) 及 anchor的宽高；<br>
@@ -382,14 +394,33 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       proposals[2] = Max(Min(oxmax, im_shape[1] - offset), 0.);
       proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
       ```
-3. removeSmallBox：移除 proposals 中，宽或高小于 min_size 的 proposals；
+3. removeSmallBoxs：移除 proposals 中，宽或高小于 min_size 的 proposals；<br>
+    **creatBox & removeSmallBoxs的nram空间和workspace划分**
+    ```c++
+      // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， N= max_nram_size / (13*N + X)
+      // |  scores | anchors | bbox_deltas | variances | nram_temp |
+      // |   N     |  4 * N  | 4 * N       | 4 * N     |    X      |
+
+      // workspace : 创建好的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
+      // | collect_num | scores        | proposals       |
+      // | taskDim     | pre_nms_top_n | 4*pre_nms_top_n | 
+    ```
 4. 对剩余的 proposals 进行nms筛选，并将一张图片的 proposals 、scores 、num 结果保存；<br>
     **nms实现**<br>
     a. 获取socres中的最大值；<br>
     b. 计算最大值位置box与其他box的iou；<br>
     c. 把iou>iou_thresh位置的scores置为 -FLT_MAX；<br>
     d. 重复循环pre_nms_top_n次或者取到的max_score的值等于0时结束。<br>
+    **nms的nram空间和workspace划分**
+    ```c++
+      // nram： 从workspace中loadscores和proposals
+      // | scores | proposals | nram_temp |
+      // | N      | 4*N       |   X       |  
 
+      // workspace：用于规约nms过程中每个core上的最大score值及其index
+      // | max_score | max_index |
+      // |  taskDim  |  taskDim  |
+    ```
 
 - **输入数据预处理**
 1. scores shape为[N, A, H, W]， 计算过程中按照[N, 1, 1, A * H * W]方式取数；
@@ -409,7 +440,7 @@ __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
     return;
   }
 
-  //  split batch for cluster
+  // split batch for cluster
   int rem = N % taskDimY;
   int n_deal = N / takDimY + (int)(taskIdY < rem);
   int n_start = taskIdY * n_deal + ((taskIdY < rem) ? 0: rem);
@@ -432,10 +463,9 @@ __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
 
 // TopK 实现
 __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *variances, const int topk_num, const int scores_num){
-  if(scores_num < topk_num){
+    if(scores_num < topk_num){
     return;
   }
-
 #if __BANG_ARCH__ >= 300
   __bang_argmax(result, scores, scores_num);
 #else
