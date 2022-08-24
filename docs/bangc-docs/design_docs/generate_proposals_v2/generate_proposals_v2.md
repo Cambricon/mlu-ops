@@ -353,10 +353,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
   **topK实现nram空间和workspace的划分**<br>
   ```c++
-    // 1. topK
-    // nram: 从 GDRAM 的 input 数据中load scores、anchors、bbox_deltas、variances，N = max_nram_size / (14*N)
-    // |  scores | anchors | bbox_deltas | variances | ge_mask |
-    // |   N     |  4 * N  | 4 * N       | 4 * N     |    N    |
+    // nram: 从 GDRAM 的 input 数据中load scores、anchors、bbox_deltas、variances，seg_pad = max_nram_size / 14
+    // |  scores   |     anchors   | bbox_deltas   | variances     | ge_mask   |
+    // | seg_pad_0 | 4 * seg_pad_0 | 4 * seg_pad_0 | 4 * seg_pad_0 | seg_pad_0 |
 
     // workspace: 把 topK 后用 _bang_collect 拿出来的有效数据存放到workspace中
     // | collect_num |collect_scores  | collect_anchors   | collect_deltas  | collect_variances|
@@ -397,9 +396,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 3. removeSmallBoxs：移除 proposals 中，宽或高小于 min_size 的 proposals；<br>
     **creatBox & removeSmallBoxs的nram空间和workspace划分**
     ```c++
-      // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， N= max_nram_size / (13*N + X)
-      // |  scores | anchors | bbox_deltas | variances | nram_temp |
-      // |   N     |  4 * N  | 4 * N       | 4 * N     |    X      |
+      // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
+      // |  scores   | anchors       | bbox_deltas   | variances     | nram_temp     |
+      // | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
 
       // workspace : 创建好的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
       // | collect_num | scores        | proposals       |
@@ -410,12 +409,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
     a. 获取socres中的最大值；<br>
     b. 计算最大值位置box与其他box的iou；<br>
     c. 把iou>iou_thresh位置的scores置为 -FLT_MAX；<br>
-    d. 重复循环pre_nms_top_n次或者取到的max_score的值等于0时结束。<br>
+    d. 重复循环pre_nms_top_n次或者取到的max_score的值等于-FLT_MAX时结束。<br>
     **nms的nram空间和workspace划分**
     ```c++
-      // nram： 从workspace中loadscores和proposals
-      // | scores | proposals | nram_temp |
-      // | N      | 4*N       |   X       |  
+      // nram： 从workspace中loadscores和proposals, seg_pad_2 = max_nram_size / (5 + X)
+      // | scores    | proposals     | nram_temp     | 
+      // | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |  
 
       // workspace：用于规约nms过程中每个core上的最大score值及其index
       // | max_score | max_index |
