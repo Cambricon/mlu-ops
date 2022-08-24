@@ -173,7 +173,7 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
                << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  
+
   return MLUOP_STATUS_SUCCESS;
 }
 
