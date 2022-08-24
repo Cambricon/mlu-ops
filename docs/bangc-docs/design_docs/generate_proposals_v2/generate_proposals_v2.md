@@ -331,7 +331,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
 `generate_proposals_v2`根据每个检测框为 foreground 对象的概率，推选生成用于后续检测网络的 RoIs。其中的检测框根据`anchors`和`bbox_deltas`计算得到。
 
-- **竞品实现过程：**
+- **参考算子的实现过程：**
 1. 通过转置操作将 scores 和 bbox_deltas 的大小分别调整为 [H * W * A，1] 和 [H * W * A，4]；
 2. 根据 anchors 和 bbox_deltas 计算出候选框的位置；
 3. Clip boxes to image；
@@ -356,11 +356,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
     // | taskDim     | pre_nms_top_n  |   4*pre_nms_top_n | 4*pre_nms_top_n |  4*pre_nms_top_n |
   ```
   **topk实现**<br>
-  a. 往nram上load数量为seg_pad_0的scores，使用二分法，先获取scores中最大值up_score，和最小值down_score，mid_score = 0.5 * (up_score - down_score);<br>
-  b. 用bang_ge获取scores中大于mid_score的mask，使用bang_count统计大于mid_score的个数count，并把每个cluster上每个core上的count规约计算出totol_count;<br>
-  c. 比较totol_count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 直到 totol_count 等于 pre_nms_top_n，此时，第K大的score值k_score等于mid_score；<br>
-  d. 使用 __bang_ge 比较 scores 和 k_score，生成比 k_score 大的 mask，使用bang_collect把scores、anchors、bbox_deltas、variances值取出copy到workspace上,数量是pre_nms_top_n，pre_nms_top_n<=AHW；<br>
-  e. 需要注意，每个core上collect后的数量不同，为保证每个core上存放在workspace上数据的连续，需要做多核的同步操作，具体过程是：在worksacpe 上开辟 coreNum大小的空间，每个core在对应taskId位置存放自己当前的collect数量，__sync_all同步后，每个core上计算自己存放在workspce上的数据偏移，按照这个偏移往worksapce上存放collect后的数值。<br>
+    a. 往nram上load数量为seg_pad_0的scores，使用二分法，先获取scores中最大值up_score，和最小值down_score，mid_score = 0.5 * (up_score - down_score);<br>
+    b. 用bang_ge获取scores中大于mid_score的mask，使用bang_count统计大于mid_score的个数count，并把每个cluster上每个core上的count规约计算出totol_count;<br>
+    c. 比较totol_count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 直到 totol_count 等于 pre_nms_top_n，此时，第K大的score值k_score等于mid_score；<br>
+    d. 使用 __bang_ge 比较 scores 和 k_score，生成比 k_score 大的 mask，使用bang_collect把scores、anchors、bbox_deltas、variances值取出copy到workspace上,数量是pre_nms_top_n，pre_nms_top_n<=AHW；<br>
+    e. 需要注意，每个core上collect后的数量不同，为保证每个core上存放在workspace上数据的连续，需要做多核的同步操作，具体过程是：在worksacpe 上开辟 coreNum大小的空间，每个core在对应taskId位置存放自己当前的collect数量，__sync_all同步后，每个core上计算自己存放在workspce上的数据偏移，按照这个偏移往worksapce上存放collect后的数值。<br>
 
 2. creatbox：根据 topK 的取数后的 anchors 、bbox_deltas 的坐标，创建 proposals ；<br>
     **creatbox 计算过程**<br>
