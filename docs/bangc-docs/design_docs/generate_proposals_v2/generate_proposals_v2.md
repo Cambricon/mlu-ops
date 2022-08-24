@@ -96,14 +96,14 @@
     oymin = d_cy - d_h * 0.5;
     oxmax = d_cx + d_w * 0.5 - offset;
     oymax = d_cy + d_h * 0.5 - offset;
-  ```
+   ```
   4. 通过min，max把proposal的坐标约束到[im_shape.w], [im_shape.h]
    ```c++
     proposals[0] = Max(Min(oxmin, im_shape[1] - offset), 0.);
     proposals[1] = Max(Min(oymin, im_shape[0] - offset), 0.);
     proposals[2] = Max(Min(oxmax, im_shape[1] - offset), 0.);
     proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
-  ```
+   ```
 
 **应用场景：** `generate_proposals_v2`算子应用于`maskrcnn`。
 
@@ -339,59 +339,57 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 5. 通过NMS选出满足条件的候选框作为结果。
 
 - **MLU实现步骤**
-1. `generate_proposals_v2` job类型为U1，job间拆分为N维度拆分，即对batches进行拆分； 当N维度很小时，比如等于1时，对AHW进行拆分；
-2. cluster内的拆分为AHW的拆分，每个core计算 AHW/core_dim组数据；
+1. `generate_proposals_v2` job类型设为Ubest，尽可能的launch多个cluster去参与计算。
+2. job内每次循环计算一个batch， 把一个batch的AHW的平均拆分到每个core计算， 每个core上计算 AHW / coreDim 组数据；
 
-每个cluster上每次循环计算一个batch，即每次循环生成一张图片的 proposals ，对每张图片生成 proposals 的步骤如下：
-1. 对 `scores` 进行 向量topK 操作，生成topK的mask，并根据mask，使用__bang_collect, 把scores、anchors、bbox_deltas、variances中的对应的数值取出；
-   1. 使用二分法，取每个core上scores的最大值、最小值和中位数，用__bang_ge获取scores中大于mid的mask，使用__bang_count统计大于mid_score的个数count，并对count进行规约，计算总的count数；
-   2. 比较count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 重复第1步，直到 count 等于 pre_nms_top_n；
-   3. 根据最后用 __bang_ge 获取的mask，使用__bang_collect, 把scores、anchors、bbox_deltas、variances中的对应的数值取出；
+每次循环计算一个batch，即每次循环生成一张图片的 proposals ，对每张图片生成 proposals 的步骤如下：
+1. 对 `scores` 进行 向量topK 操作，生成 topK 的 mask，并根据 mask，使用 bang_collect, 把scores、anchors、bbox_deltas、variances中的对应的数值取出；<br>
+   **topk实现**<br>
+   a. 使用二分法，获取scores中最大值up_score，最小值down_score设置为-FLT_MAX，mid_score = 0.5 * (up_score - down_score);<br>
+   b. 用bang_ge获取scores中大于mid_score的mask，使用bang_count统计大于mid_score的个数count，并把这个count规模计算totol_count;<br>
+   c. 比较totol_count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 直到 totol_count 等于 pre_nms_top_n；<br>
+   d. 根据最后用 __bang_ge 获取的mask，使用__bang_collect, 把scores、anchors、bbox_deltas、variances中的对应位置的数值取出；<br>
 
-2. creatbox：根据 topK 的取数后的 anchors 、bbox_deltas 的坐标，创建 proposals ；
-```c++
-  // creatbox计算方法
-  // 1 根据anchor 两个点坐标（xmin，ymin，xmax，ymax）计算 box_anchor的中心点坐标（cx， cy）及 anchor的宽高; 
-  T axmin = anchor[k];
-  T aymin = anchor[k + 1];
-  T axmax = anchor[k + 2];
-  T aymax = anchor[k + 3];
-  T offset = pixel_offset ? static_cast<T>(1.0) : 0;
-  T w = axmax - axmin + offset; // anchor 的宽
-  T h = aymax - aymin + offset; // anchor 的高
-  T cx = axmin + 0.5 * w; // 中心点坐标（cx， cy）
-  T cy = aymin + 0.5 * h;
-
-  // 2 根据 (cx, cy) 和 deltal 的两点的坐标计算的 box_deltal 中心点坐标和宽高；
-  //  deltas表示预测出的候选框的位置和 anchor 的位置之间的距离（xmin，ymin，xmax，ymax）
-  static const float bbox_clip_default = std::log(1000.0 / 16.0);
-
-  T dxmin = deltas[k]; 
-  T dymin = deltas[k + 1];
-  T dxmax = deltas[k + 2];
-  T dymax = deltas[k + 3];
-
-  T d_cx, d_cy, d_w, d_h; // box_deltal 中心点坐标和宽高；
-  //  var 表示 anchor 的方差，每个 anchor 的方差都是(xcenter，ycenter，w，h)的格式表示 
-  d_cx = cx + dxmin * w * var[k];
-  d_cy = cy + dymin * h * var[k + 1];
-  d_w = exp(Min(dxmax * var[k + 2], bbox_clip_default)) * w;
-  d_h = exp(Min(dymax * var[k + 3], bbox_clip_default)) * h;
-
-  // 3 .根据box_deltal中心点坐标和宽高计算proposals的两个点的坐标；
-  T oxmin = d_cx - d_w * 0.5;
-  T oymin = d_cy - d_h * 0.5;
-  T oxmax = d_cx + d_w * 0.5 - offset;
-  T oymax = d_cy + d_h * 0.5 - offset;
-
-  // 4. 通过min，max把proposal的坐标约束到[0，img_size.w], [0，img_size.h]
-  proposals[i * 4] = Max(Min(oxmin, im_info[1] - offset), 0.);
-  proposals[i * 4 + 1] = Max(Min(oymin, im_info[0] - offset), 0.);
-  proposals[i * 4 + 2] = Max(Min(oxmax, im_info[1] - offset), 0.);
-  proposals[i * 4 + 3] = Max(Min(oymax, im_info[0] - offset), 0.);
-```
+2. creatbox：根据 topK 的取数后的 anchors 、bbox_deltas 的坐标，创建 proposals ；<br>
+    **creatbox 计算过程**<br>
+    a. 根据anchor 两个点坐标 (xmin，ymin，xmax，ymax) 计算 box_anchor的中心点坐标 (cx， cy) 及 anchor的宽高；<br>
+    ```c++
+      offset = pixes_offset? 1.0 : 0;
+      w = xmax -xmin + offset;
+      h = ymax -ymin + offset;
+      cx = xmin + 0.5 * w;
+      cy = ymin + 0.5 * h;
+    ```
+    b. 根据 (cx， cy) 和 deltal 的两点的坐标 (xmin，ymin，xmax，ymax) 计算的 box_deltal 中心点坐标和宽高 (d_cx，d_cy，d_w，d_h)；
+    ```c++
+      bbox_clip_default = std::log(1000.0 / 16.0);
+      d_cx = cx + dxmin * w * var[0];
+      d_cy = cy + dymin * h * var[1];
+      d_w = exp(Min(dxmax * var[2], bbox_clip_default)) * w;
+      d_h = exp(Min(dymax * var[3], bbox_clip_default)) * h;
+    ```
+    c. 根据box_deltal中心点坐标和宽高计算proposal的两个点的坐标 (oxmin，oymin，oxmax，oymax)；
+      ```c++
+      oxmin = d_cx - d_w * 0.5;
+      oymin = d_cy - d_h * 0.5;
+      oxmax = d_cx + d_w * 0.5 - offset;
+      oymax = d_cy + d_h * 0.5 - offset;
+      ```
+    d. 通过min，max把proposal的坐标约束到[im_shape.w], [im_shape.h]
+      ```c++
+      proposals[0] = Max(Min(oxmin, im_shape[1] - offset), 0.);
+      proposals[1] = Max(Min(oymin, im_shape[0] - offset), 0.);
+      proposals[2] = Max(Min(oxmax, im_shape[1] - offset), 0.);
+      proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
+      ```
 3. removeSmallBox：移除 proposals 中，宽或高小于 min_size 的 proposals；
-4. 对剩余的 proposals 进行nms筛选，并将一张图片的 proposals 、scores 、num 结果保存；
+4. 对剩余的 proposals 进行nms筛选，并将一张图片的 proposals 、scores 、num 结果保存；<br>
+    **nms实现**<br>
+    a. 获取socres中的最大值；<br>
+    b. 计算最大值位置box与其他box的iou；<br>
+    c. 把iou>iou_thresh位置的scores置为 -FLT_MAX；<br>
+    d. 重复循环pre_nms_top_n次或者取到的max_score的值等于0时结束。<br>
+
 
 - **输入数据预处理**
 1. scores shape为[N, A, H, W]， 计算过程中按照[N, 1, 1, A * H * W]方式取数；
@@ -400,10 +398,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 4. variances shape为 [A, H, W, 4], 计算过程中按照[1， 4, 1, A * H * W]方式取数，需要转置；
 
 ### 3.2 伪代码实现
-- **kernel 实现逻辑**
-每个cluster上每次循环计算一个batch，即每次循环生成一张图片的 proposals 。
+
 ```c++
 ...
+// kernel 实现逻辑
+// 每个cluster上每次循环计算一个batch，即每次循环生成一张图片的 proposals 。
 template <typename T>
 __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
   if (coreId == 0x80){
@@ -431,14 +430,7 @@ __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
   }
 }
 
-```
-- **TopK 实现**
-1. 使用二分法，获取scores中最大值、最小值和中位数，用__bang_ge获取scores中大于mid的mask，使用__bang_count统计大于mid_score的个数count;；
-2. 比较count是否等于pre_nms_top_n， 并更新up_score 、down_score、 mid_score, 直到 count 等于 pre_nms_top_n；
-3. 根据最后用 __bang_ge 获取的mask，使用__bang_collect, 把scores、anchors、bbox_deltas、variances中的对应的数值取出；
-伪代码：
-
-```c++
+// TopK 实现
 __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *variances, const int topk_num, const int scores_num){
   if(scores_num < topk_num){
     return;
@@ -481,12 +473,9 @@ __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *varianc
  __bang_collect(variances, variances, tmp, deal_size);
 }
 
-```
-- **creatbox实现**
-  
-`creatbox` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
-伪代码：
-```c++
+// creatbox实现
+// `creatbox` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
+
 // output = exp(input)
 __mlu__func void calcExp(T * output, const T * input, cpnst int length){
 #if __BANG_ARCH__ >=322
@@ -592,13 +581,9 @@ __mlu__func void creatBox(const T* anchor, const T *deltas, const T *var, const 
   __bang_relu(box + 3 * deal_size, oymax, deal_size);
 
 }
-```
 
-- **removeSmallBox:**
-  
-`removeSmallBox`： 移除box长和宽比min_size小的box，pixel_offset=1时需要计算偏移。
-
-```c++
+// removeSmallBox
+// `removeSmallBox`： 移除box长和宽比min_size小的box，pixel_offset=1时需要计算偏移。
 __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
         const T min_size, T *nram_buffer, const  int deal_size, unsigned int * count, bool pixel_offset){
 
@@ -658,16 +643,11 @@ __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
  __bang_collect(scores, scores, mask_result, deal_size);
 }
 ```
-- **nms实现**
-1. 获取socres中的最大值；
-2. 计算最大值位置box与其他box的iou；
-3. 把iou>iou_thresh位置的scores置为0；
-4. 重复循环pre_nms_top_n次或者取到的max_score的值等于0时结束。
 
 ### 3.3 拆分(任务拆分，多核拆分)
 **拆分策略**
-1. `generate_proposals_v2` job类型为U1，job间拆分为N维度拆分，即对batches进行拆分；当N维度很小时，比如等于1时，对AHW进行拆分；
-2. cluster内的拆分为AHW的拆分，每个core计算 AHW/core_dim 组数据；
+1. `generate_proposals_v2` job类型设为Ubest，尽可能的launch多个cluster去参与计算。
+2. job内每次循环计算一个batch， 把一个batch的AHW的平均拆分到每个core计算， 每个core上计算 AHW / coreDim 组数据；
 
 ### 3.4 性能优化设计
 1. 流水设计
