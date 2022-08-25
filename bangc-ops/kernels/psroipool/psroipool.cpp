@@ -277,15 +277,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
     return ret;
   }
 
+  if (mluOpGetTensorElementNum(rois_desc) == 0) {
+    LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
   if (mluOpGetTensorElementNum(top_grad_desc) == 0 ||
       mluOpGetTensorElementNum(mapping_channel_desc) == 0 ||
       mluOpGetTensorElementNum(bottom_grad_desc) == 0) {
     VLOG(5) << api << " Input skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
-  }
-  if (mluOpGetTensorElementNum(rois_desc) == 0) {
-    LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
-    return MLUOP_STATUS_BAD_PARAM;
   }
 
   PARAM_CHECK(api, top_grad != NULL);
