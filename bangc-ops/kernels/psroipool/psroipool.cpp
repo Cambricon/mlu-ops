@@ -93,6 +93,22 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
+  if ((mluOpGetTensorElementNum(output_desc) *
+           getSizeOfDataType(output_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(input_desc) *
+           getSizeOfDataType(input_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(rois_desc) *
+           getSizeOfDataType(rois_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(mapping_channel_desc) *
+           getSizeOfDataType(mapping_channel_desc->dtype) >=
+       LARGE_TENSOR_SIZE)) {
+    LOG(ERROR) << api << " Overflow max tensor size."
+               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
   const size_t max_input_num = 2147483648;  // 2^31 2G num
   if ((mluOpGetTensorElementNum(output_desc) >= max_input_num) ||
       (mluOpGetTensorElementNum(input_desc) >= max_input_num) ||
@@ -164,13 +180,21 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  const size_t max_input_num = 2147483648;  // 2^31 2G num
-  if ((mluOpGetTensorElementNum(top_grad_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(bottom_grad_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(rois_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(mapping_channel_desc) >= max_input_num)) {
-    LOG(ERROR) << api << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+
+  if ((mluOpGetTensorElementNum(top_grad_desc) *
+           getSizeOfDataType(top_grad_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(bottom_grad_desc) *
+           getSizeOfDataType(bottom_grad_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(rois_desc) *
+           getSizeOfDataType(rois_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(mapping_channel_desc) *
+           getSizeOfDataType(mapping_channel_desc->dtype) >=
+       LARGE_TENSOR_SIZE)) {
+    LOG(ERROR) << api << " Overflow max tensor size."
+               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
