@@ -93,6 +93,22 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
+  if ((mluOpGetTensorElementNum(output_desc) *
+           getSizeOfDataType(output_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(input_desc) *
+           getSizeOfDataType(input_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(rois_desc) *
+           getSizeOfDataType(rois_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(mapping_channel_desc) *
+           getSizeOfDataType(mapping_channel_desc->dtype) >=
+       LARGE_TENSOR_SIZE)) {
+    LOG(ERROR) << api << " Overflow max tensor size."
+               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
   const size_t max_input_num = 2147483648;  // 2^31 2G num
   if ((mluOpGetTensorElementNum(output_desc) >= max_input_num) ||
       (mluOpGetTensorElementNum(input_desc) >= max_input_num) ||
@@ -164,31 +180,24 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  const size_t max_input_num = 2147483648;  // 2^31 2G num
-  if ((mluOpGetTensorElementNum(top_grad_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(bottom_grad_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(rois_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(mapping_channel_desc) >= max_input_num)) {
-    LOG(ERROR) << api << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+
+  if ((mluOpGetTensorElementNum(top_grad_desc) *
+           getSizeOfDataType(top_grad_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(bottom_grad_desc) *
+           getSizeOfDataType(bottom_grad_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(rois_desc) *
+           getSizeOfDataType(rois_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(mapping_channel_desc) *
+           getSizeOfDataType(mapping_channel_desc->dtype) >=
+       LARGE_TENSOR_SIZE)) {
+    LOG(ERROR) << api << " Overflow max tensor size."
+               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (mluOpGetTensorElementNum(top_grad_desc) == 0 ||
-      mluOpGetTensorElementNum(mapping_channel_desc) == 0 ||
-      mluOpGetTensorElementNum(bottom_grad_desc) == 0) {
-    VLOG(5) << api << " Input skip zero element tensor.";
-    return MLUOP_STATUS_SUCCESS;
-  }
 
-  if (mluOpGetTensorElementNum(rois_desc) == 0) {
-    LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
-
-  PARAM_CHECK(api, top_grad != NULL);
-  PARAM_CHECK(api, rois != NULL);
-  PARAM_CHECK(api, bottom_grad != NULL);
-  PARAM_CHECK(api, mapping_channel != NULL);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -265,8 +274,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   if (ret != MLUOP_STATUS_SUCCESS) {
     LOG(ERROR) << api
                << " Error found during element verification, please check.";
+    return ret;
+  }
+
+  if (mluOpGetTensorElementNum(rois_desc) == 0) {
+    LOG(ERROR) << api << " Roi_data can not be zero element tensor.";
     return MLUOP_STATUS_BAD_PARAM;
   }
+  if (mluOpGetTensorElementNum(top_grad_desc) == 0 ||
+      mluOpGetTensorElementNum(mapping_channel_desc) == 0 ||
+      mluOpGetTensorElementNum(bottom_grad_desc) == 0) {
+    VLOG(5) << api << " Input skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  PARAM_CHECK(api, top_grad != NULL);
+  PARAM_CHECK(api, rois != NULL);
+  PARAM_CHECK(api, bottom_grad != NULL);
+  PARAM_CHECK(api, mapping_channel != NULL);
 
   const int batch_size = bottom_grad_desc->dims[0];
   const int height = bottom_grad_desc->dims[1];
