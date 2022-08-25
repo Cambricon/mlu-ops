@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <iostream>
-#include <vector>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #include "api_test_tools.h"
 #include "core/logging.h"
@@ -35,23 +35,23 @@ namespace mluopapitest {
 class psroipool_backward : public testing::Test {
  public:
   void setParam(bool handle, bool bottom_grad_desc, bool rois_desc,
-                bool top_grad_desc, bool mapping_channel_desc, bool input,
+                bool top_grad_desc, bool mapping_channel_desc, bool bottom_grad,
                 bool rois, bool top_grad, bool mapping_channel) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
     if (bottom_grad_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&bottom_grad_desc_));
-      std::vector<int> i_dims = {1, 5, 5, 9};
+      std::vector<int> b_dims = {1, 5, 5, 9};
       MLUOP_CHECK(mluOpSetTensorDescriptor(bottom_grad_desc_, MLUOP_LAYOUT_NHWC,
                                            MLUOP_DTYPE_FLOAT, 4,
-                                           i_dims.data()));
+                                           b_dims.data()));
     }
-    if (input) {
-      size_t i_ele_num = 1 * 5 * 5 * 9;
-      size_t i_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
-      size_t i_bytes = i_ele_num * i_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&bottom_grad_, i_bytes));
+    if (bottom_grad) {
+      size_t b_ele_num = 1 * 5 * 5 * 9;
+      size_t b_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
+      size_t b_bytes = b_ele_num * b_dtype_bytes;
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&bottom_grad_, b_bytes));
     }
     if (rois_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&rois_desc_));

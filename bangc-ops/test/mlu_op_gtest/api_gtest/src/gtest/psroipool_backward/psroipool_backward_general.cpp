@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <iostream>
-#include <vector>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #include "api_test_tools.h"
 #include "core/logging.h"
@@ -52,18 +52,18 @@ class psroipool_backward_general
     std::tie(pooled_height_, pooled_width_, spatial_scale_, output_dim_) =
         op_param;
 
-    MLUOpTensorParam i_params = std::get<1>(GetParam());
-    mluOpTensorLayout_t i_layout = i_params.get_layout();
-    mluOpDataType_t i_dtype = i_params.get_dtype();
-    int i_dim = i_params.get_dim_nb();
-    std::vector<int> i_dim_size = i_params.get_dim_size();
+    MLUOpTensorParam b_params = std::get<1>(GetParam());
+    mluOpTensorLayout_t b_layout = b_params.get_layout();
+    mluOpDataType_t b_dtype = b_params.get_dtype();
+    int b_dim = b_params.get_dim_nb();
+    std::vector<int> b_dim_size = b_params.get_dim_size();
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&bottom_grad_desc_));
-    MLUOP_CHECK(mluOpSetTensorDescriptor(bottom_grad_desc_, i_layout, i_dtype,
-                                         i_dim, i_dim_size.data()));
-    uint64_t i_ele_num = mluOpGetTensorElementNum(bottom_grad_desc_);
-    uint64_t i_bytes = mluOpDataTypeBytes(i_dtype) * i_ele_num;
-    if (i_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&bottom_grad_, i_bytes))
+    MLUOP_CHECK(mluOpSetTensorDescriptor(bottom_grad_desc_, b_layout, b_dtype,
+                                         b_dim, b_dim_size.data()));
+    uint64_t b_ele_num = mluOpGetTensorElementNum(bottom_grad_desc_);
+    uint64_t b_bytes = mluOpDataTypeBytes(b_dtype) * b_ele_num;
+    if (b_bytes > 0) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&bottom_grad_, b_bytes))
     }
 
     MLUOpTensorParam r_params = std::get<2>(GetParam());
