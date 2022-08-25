@@ -418,7 +418,7 @@ int rem = pre_nms_top_n % taskDimY;
 int cluster_deal = pre_nms_top_n / takDimY + (int)(taskIdY < rem);
 int n_start = taskIdY * cluster_deal + ((taskIdY < rem) ? 0: rem);
 
-//  计算每个core上的计算量和偏移
+// 计算每个core上的计算量和偏移
 int rem_core = cluster_deal % coreDim;
 int per_core = (coreId < rem_core) ? cluster_deal / coreDim + 1 : cluster_deal / coreDim;
 int core_offset = (coreId < rem_core) ? coreId * per_core : coreId * per_core + rem_core;
@@ -429,51 +429,51 @@ int repeat =  per_core / seg_pad_1;
 int rem = per_core % seg_pad_1;
 ```
 ##### 3.1.2.3 creatAndRemoveBox 的nram空间和workspace划分
-  ```c++
-  // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
-  // |  scores   | anchors       | bbox_deltas   | variances     | nram_temp     |
-  // | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
+```c++
+// nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
+// |  scores   | anchors       | bbox_deltas   | variances     | nram_temp     |
+// | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
 
-  // workspace : creatAndRemoveBox 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
-  // proposals的个数 proposal_num = pre_nms_top_n- remove_count, remove_count表示removeSmallBox的个数
-  // | collect_num | scores       | proposals    |
-  // | taskDim     | proposal_num | proposal_num | 
-  ```
+// workspace : creatAndRemoveBox 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
+// proposals的个数 proposal_num = pre_nms_top_n- remove_count, remove_count表示removeSmallBox的个数
+// | collect_num | scores       | proposals    |
+// | taskDim     | proposal_num | proposal_num | 
+```
 
 ##### 3.1.2.4 creatbox 计算过程
 a. 根据anchor 两个点坐标 (xmin，ymin，xmax，ymax) 计算 box_anchor的中心点坐标 (cx， cy) 及 anchor的宽高；<br>
-  ```c++
-  offset = pixes_offset? 1.0 : 0;
-  w = xmax -xmin + offset;
-  h = ymax -ymin + offset;
-  cx = xmin + 0.5 * w;
-  cy = ymin + 0.5 * h;
-  ```
+```c++
+offset = pixes_offset? 1.0 : 0;
+w = xmax -xmin + offset;
+h = ymax -ymin + offset;
+cx = xmin + 0.5 * w;
+cy = ymin + 0.5 * h;
+```
 
 b. 根据 (cx， cy) 和 deltal 的两点的坐标 (xmin，ymin，xmax，ymax) 计算的 box_deltal 中心点坐标和宽高 (d_cx，d_cy，d_w，d_h)；
-  ```c++
-  bbox_clip_default = std::log(1000.0 / 16.0);
-  d_cx = cx + dxmin * w * var[0];
-  d_cy = cy + dymin * h * var[1];
-  d_w = exp(Min(dxmax * var[2], bbox_clip_default)) * w;
-  d_h = exp(Min(dymax * var[3], bbox_clip_default)) * h;
-  ```
+```c++
+bbox_clip_default = std::log(1000.0 / 16.0);
+d_cx = cx + dxmin * w * var[0];
+d_cy = cy + dymin * h * var[1];
+d_w = exp(Min(dxmax * var[2], bbox_clip_default)) * w;
+d_h = exp(Min(dymax * var[3], bbox_clip_default)) * h;
+```
 
 c. 根据box_deltal中心点坐标和宽高计算proposal的两个点的坐标 (oxmin，oymin，oxmax，oymax)；
-  ```c++
-  oxmin = d_cx - d_w * 0.5;
-  oymin = d_cy - d_h * 0.5;
-  oxmax = d_cx + d_w * 0.5 - offset;
-  oymax = d_cy + d_h * 0.5 - offset;
-  ```
+```c++
+oxmin = d_cx - d_w * 0.5;
+oymin = d_cy - d_h * 0.5;
+oxmax = d_cx + d_w * 0.5 - offset;
+oymax = d_cy + d_h * 0.5 - offset;
+```
 
 d. 通过min，max把proposal的坐标约束到[im_shape.w], [im_shape.h]；
-  ```c++
-  proposals[0] = Max(Min(oxmin, im_shape[1] - offset), 0.);
-  proposals[1] = Max(Min(oymin, im_shape[0] - offset), 0.);
-  proposals[2] = Max(Min(oxmax, im_shape[1] - offset), 0.);
-  proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
-  ```
+```c++
+proposals[0] = Max(Min(oxmin, im_shape[1] - offset), 0.);
+proposals[1] = Max(Min(oymin, im_shape[0] - offset), 0.);
+proposals[2] = Max(Min(oxmax, im_shape[1] - offset), 0.);
+proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
+```
 ##### 3.1.2.5 removeSmallBoxs 计算过程
 1. 通过proposals的两点坐标计算 proposal的宽 box_w和高 box_h；
 
