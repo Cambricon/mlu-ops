@@ -367,7 +367,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       // |  taskDim  |  taskDim  |
       ```
     **topK实现时中每个core上的数据量和偏移的计算**
-    ```c++
+      ```c++
       // 计算每个cluster上的数据量
       int rem = AHW % taskDimY;
       int cluster_deal = AHW / takDimY + (int)(taskIdY < rem);
@@ -382,7 +382,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       int seg_pad_0 = CEIL_ALIGN(max_nram_size / 2, align_num);
       int repeat =  per_core / seg_pad_0;
       int rem = per_core % seg_pad_0;
-    ```
+      ```
 
     **使用bang_collect把 AHW 个 scores 大于 k_score 的值集中到一起，存放在 worksapce 上**<br>
     a. 把 GDRAM 上的 input 数据 scores、anchors、bbox_deltas、variances load到 nram 上， 每个core上分配 per_core 份数据，per_core份数据按照seg_pad_0大小分为repeat次load完;
@@ -405,7 +405,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       int seg_pad_0 = CEIL_ALIGN(max_nram_size / 14, align_num);
       int repeat =  per_core / seg_pad_0;
       int rem = per_core % seg_pad_0;
-    ```
+      ```
 
 2. **creatAndRemoveBox**<br>
     a. 从 workspace 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core, core 上每次循环load seg_pad_1 个数据; 
@@ -415,7 +415,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
     c. 根据 removeSmallBox 的计算方法，移除 proposal中宽和高小于min_size的proposl，此时，单次循环内的计算过程结束；
 
     d. 把单次循环时创建好 proposal数据，保存到workspace空间内；<br>
-    
+
     **creatbox 计算过程**<br>
     a. 根据anchor 两个点坐标 (xmin，ymin，xmax，ymax) 计算 box_anchor的中心点坐标 (cx， cy) 及 anchor的宽高；<br>
       ```c++
@@ -456,14 +456,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
     
     b. 用bang_ge方法，分别获取box_w 和 box_h 和 min_size 比较的mask，记为mask_w 和 mask_h;
 
-    c. 用bang_add 计算 mask_w 和 mask_h 的对位与的结果 mask_res；
+    c. 用bang_and 计算 mask_w 和 mask_h 的与的结果 mask_res；
 
     d. 根据mask_res，用bang_collect，把proposals中对应位置的值取出集中到一起；
 
     e. 把collect后的proposal数据存放到worksapce上， 先在worksacpe 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all同步后，每个 core 上计算自己存放在 workspce 上的数据偏移，按照这个偏移往worksapce上存放collect后的数值。
 
     **creatAndRemoveBox 的nram空间和workspace划分**
-    ```c++
+      ```c++
       // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
       // |  scores   | anchors       | bbox_deltas   | variances     | nram_temp     |
       // | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
@@ -472,9 +472,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       // proposals的个数 proposal_num = pre_nms_top_n- remove_count, remove_count表示removeSmallBox的个数
       // | collect_num | scores       | proposals    |
       // | taskDim     | proposal_num | proposal_num | 
-    ```
+      ```
     **creatAndRemoveBoxs过程中每个core上的数据量和偏移的计算**
-    ```c++
+      ```c++
       // 计算每个cluster上的数据量
       int rem = pre_nms_top_n % taskDimY;
       int cluster_deal = pre_nms_top_n / takDimY + (int)(taskIdY < rem);
@@ -489,7 +489,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       int seg_pad_1 = CEIL_ALIGN(max_nram_size / (13 + X), align_num);
       int repeat =  per_core / seg_pad_1;
       int rem = per_core % seg_pad_1;
-    ```
+      ```
 3. 对剩余的proposal_num 个 proposals 进行nms筛选，nms阈值设为 nms_thresh, nms筛选输出 min(proposal_num, post_nms_top_n) 个proposals及其对应的scores值;<br>
     **nms实现**<br>
     a. 获取scores中的最大值， 此时需要规约每个core上的 max_score 值，计算得到 global_max_score；<br>
@@ -497,7 +497,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
     c. 把 iou>iou_thresh 位置的scores置为 -FLT_MAX；<br>
     d. 重复循环 min(proposal_num, post_nms_top_n) 次或者单次循环取到的global_max_score的值等于-FLT_MAX时结束。<br>
     **nms的nram空间和workspace划分**
-    ```c++
+      ```c++
       // nram： 从workspace中loadscores和proposals, seg_pad_2 = max_nram_size / (5 + X)
       // | scores    | proposals     | nram_temp     | 
       // | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |  
@@ -505,9 +505,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       // workspace：用于规约nms过程中每个core上的最大score值及其index
       // | max_score | max_index |
       // |  taskDim  |  taskDim  |
-    ```
+      ```
     **nms过程中每个core上的数据量和偏移的计算**
-    ```c++
+      ```c++
       // nms前计算proposal的总数，作为nms的循环次数
       int proposal_num = min(proposal_num, post_nms_top_n);
       // 计算每个cluster上的数据量
@@ -524,7 +524,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
       int seg_pad_2 = CEIL_ALIGN(max_nram_size / (5 + X), align_num);
       int repeat =  per_core / seg_pad_2;
       int rem = per_core % seg_pad_2;
-    ```
+      ```
 
 - **输入数据预处理**
 1. scores shape为[N, A, H, W]， 计算过程中按照[N, 1, 1, A * H * W]方式取数；
