@@ -340,7 +340,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 4. 删除面积较小的候选框；
 5. 通过NMS选出满足条件的候选框作为结果。
 
-- **MLU实现步骤**
+- **MLU多核拆分策略**
 1. 网络规模中，一般情况下，`N`的值小于`AHW`，因此这里 MLU core 间选择不对`N`进行拆分，MLU core 间选择拆分`AHW`；
 2. `generate_proposals_v2` job类型设为Ubest，尽可能的launch多个 MLU cluster 去参与计算;
 3. MLU core 内以 batch 作为最外层循环，每次循环计算一个batch， 因第1步中的 MLU core 间拆分， 每个 MLU core上计算 AHW / taskDim 数量的数据。
