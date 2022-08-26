@@ -417,17 +417,17 @@ int rem_num = per_core_num % seg_pad_1;
 ```
 
 ##### 3.1.2.2 createAndRemoveBox 实现过程
-1. 从 workspace 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core_num, core 上每次循环load seg_pad_1 个数据; 
+1. 从 GDRAM 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core_num, core 上每次循环load seg_pad_1 个数据; 
 
 2. 单次循环load完数据后，使用bang_ge 获取 nram 上 scores 大于等于 k_score 的mask;
 
-3. 使用 bang_collect，根据 b 步骤的mask， 把mask等于1位置的scores、anchors、bbox_deltas、variances值collect到一起;
+3. 使用 bang_collect，根据 第2步的mask， 把 mask 等于1位置的`scores`、`anchors`、`bbox_deltas`、`variances`值collect到一起;
 
 4. 用 collect 后的数据，根据 creatbox 计算过程创建 proposals;
 
-5. 根据 removeSmallBox 的计算方法，移除 proposal中宽和高小于min_size的proposl，此时，单次循环内的计算过程结束；
+5. 根据 removeSmallBox 的计算方法，生成新的 mask2， 用 bang_collect 操作移除proposal中宽和高小于min_size的proposl，把有效的 proposals 集中到一起，此时，单次循环内的计算过程结束；
 
-6. 把单次循环时创建好 proposal数据，保存到workspace空间内；<br>
+6. 把单次循环时创建好 proposal 数据，保存到 workspace 空间内， 若单 core 内数据未处理完，回到第 2 步；<br>
 
 ##### 3.1.2.3 creatAndRemoveBox 的nram空间和workspace划分
 ```c++
@@ -484,36 +484,11 @@ proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
 
 4. 根据mask_res，用bang_collect，把proposals中对应位置的值取出集中到一起；
 
-5. 把collect后的proposal数据存放到worksapce上， 先在worksacpe 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all同步后，每个 core 上计算自己存放在 workspce 上的数据偏移，按照这个偏移往worksapce上存放collect后的数值。
+5. 把 collect 后的 proposal 数据存放到 worksapce 上， 先在 worksacpe 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all 同步后，每个 core 上计算自己存放在 workspce 上的数据偏移，按照这个偏移往 worksapce 上存放 collect 后的数值（由于3.1.3 nms筛选中会对乱序数据进行排序操作，本节中存放在 workspace 中的数据相对顺序与 input tensors 可能会不同，但不影响最终算子结果）。
 
 #### 3.1.3 nms筛选
 对剩余的 proposal_num 个 proposals 进行nms筛选，nms阈值设为 nms_thresh，nms筛选按照 scores 从大到小顺序输出输出 min(proposal_num，post_nms_top_n) 个proposals及其对应的scores值。<br>
-##### 3.1.3.1 nms实现
-1. load workspace上全部的 proposal 到片上，计算出 box_area 并将结果存放到 workspace 上，box_area 在计算iou时会用到;
-
-2. load scores 到 nram 上，通过 bang_max 获取当前 core 上 scores 的最大值 local_max_score， 再利用 workspace 对每个 core 上的 local_max_score 进行规约，计算得到 global_max_score，并将 workspace 上 scores global_max_score 对应位置的score置为 -FLT_MAX；<br>
-
-3. 根据 global_max_score 的 global_max_score_index，从 workspace 的 proposals 中拿到 global_max_score_box 的坐标，及对应的box_area的值, 并保存 global_max_score 和 global_max_score_box 到 nram 的output rois，roi_probs 空间内;<br>
-
-4. 把 worksapce 上的 scores、proposals、box_area 数据load到 nram，计算 global_max_score_box 与 其余 boxes 的 iou, 整个过程为向量运算;
-    
-5. 通过 bang_ge 获取 iou 比 iou_thresh 大的 mask，并将 mask 为 1 的位置的scores置为 -FLT_MAX；<br>
-   
-6. 重复循环 2,3,4,5步，循环 min(proposal_num，post_nms_top_n) 次或者单次循环取到的 global_max_score 的值等于 -FLT_MAX 时循环结束;<br>
-   
-7. copy nram 上的output_rois、output_roi_probs 数据到 GDARAM的 output 空间。
-
-##### 3.1.3.2 nms的nram空间和workspace划分
-```c++
-// nram： 从workspace中loadscores和proposals, seg_pad_2 = max_nram_size / (5 + X)
-// |  output_rois   | output_roi_probs | scores    | proposals     | nram_temp     |  
-// | post_nms_top_n | post_nms_top_n   | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |  
-
-// workspace：用于规约nms过程中每个core上的最大score值及其index
-// | max_score | max_index | scores       | proposals    |
-// |  taskDim  |  taskDim  | proposal_num | proposal_num | 
-```
-##### 3.1.3.3 nms过程中每个core上的数据量和偏移的计算
+##### 3.1.3.1 nms过程中每个core上的数据量和偏移的计算
 ```c++
 // nms前计算proposal的总数，作为nms的循环次数
 int proposal_num = min(proposal_num, post_nms_top_n);
@@ -532,7 +507,31 @@ int seg_pad_2 = CEIL_ALIGN(max_nram_size / (5 + X), align_num);
 int repeat =  per_core_num / seg_pad_2;
 int rem_num = per_core_num % seg_pad_2;
 ```
+##### 3.1.3.2 nms实现
+1. load workspace上全部的 proposal 到片上，计算出 box_area 并将结果存放到 workspace 上，box_area 在计算iou时会用到，（如果 nram 空间不足，正常在 MLU core 内循环处理）；
 
+2. load scores 到 nram 上，通过 bang_max 获取当前 core 上 scores 的最大值 local_max_score， 再利用 workspace（max_score 这块空间，详见 3.1.3.3） 对每个 core 上的 local_max_score 进行规约，计算得到 global_max_score，并将 workspace 上 scores global_max_score 对应位置的score置为 -FLT_MAX；<br>
+
+3. 根据 global_max_score 的 global_max_score_index，从 workspace 的 proposals 中拿到 global_max_score_box 的坐标，及对应的box_area的值, 并保存 global_max_score 和 global_max_score_box 到 nram 的output rois，roi_probs 空间内;<br>
+
+4. 把 worksapce 上的 scores、proposals、box_area 数据load到 nram，计算 global_max_score_box 与 其余 boxes 的 iou, 整个过程为向量运算;
+    
+5. 通过 bang_ge 获取 iou 比 iou_thresh 大的 mask，并将 mask 为 1 的位置的scores置为 -FLT_MAX（如果 nram 空间不足，4、5 两步需要增加循环处理）；<br>
+   
+6. 重复循环 2,3,4,5步，循环 min(proposal_num，post_nms_top_n) 次或者单次循环取到的 global_max_score 的值等于 -FLT_MAX 时循环结束;<br>
+   
+7. copy nram 上的output_rois、output_roi_probs 数据到 GDARAM的 output 空间。
+   
+##### 3.1.3.3 nms的nram空间和workspace划分
+```c++
+// nram： 从workspace中loadscores和proposals, seg_pad_2 = max_nram_size / (5 + X)
+// |  output_rois   | output_roi_probs | scores    | proposals     | nram_temp     |  
+// | post_nms_top_n | post_nms_top_n   | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |  
+
+// workspace：用于规约nms过程中每个core上的最大score值及其index
+// | max_score | scores       | proposals    | box_ares     | max_index |
+// |  taskDim  | proposal_num | proposal_num | proposal_num | taskDim   |
+```
 ### 3.2 伪代码实现
 
 ```c++
