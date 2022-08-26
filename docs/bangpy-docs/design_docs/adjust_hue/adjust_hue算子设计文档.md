@@ -57,6 +57,10 @@
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
 | input       |  输入的形状为NHWC的图像张量    | 输入              | half, float | NHWC     | 无       |
+| n           |   输入的图像张量形状中的N参数   | 输入              | int32       |  /       | 无       |
+| h           |   输入的图像张量形状中的H参数   | 输入              | int32       |  /       | 无       |
+| w           |   输入的图像张量形状中的W参数   | 输入              | int32       |  /       | 无       |
+| c           |   输入的图像张量形状中的C参数   | 输入              | int32       |  /       | 无       |
 | delta       |   存放图像色度的修改值   | 输入              | half, float |  /       | 无       |
 | output      |   输出的形状为NHWC的图像张量  | 输出              | half, float | NHWC     | 无       |
 
@@ -194,84 +198,112 @@ b += m
 RGB -> HSV
 
 ```python
-def rgb2hsv(self, h, s, v, r, g, b, aux, aux1, aux2):
-    #get max, min, mid
-    #use v to save max
-    #use s to save min
-    self.tcp.maximum(v, r, g)
-    self.tcp.minimum(s, r, g)
-    self.tcp.maximum(v, v, b)
-    self.tcp.minimum(s, s, b)
-    self.tcp.equal(aux, v, s)
-    self.tcp.subtract(h, v, s)
-    self.tcp.add(h, h, aux)
-    self.tcp.reciprocal(h, h, mode="hp")
-    # #free s
-
-    self.tcp.subtract(aux, g, b) # g-b
-    self.tcp.subtract(aux1, b, r)  # b-r
-    self.tcp.subtract(aux2, r, g) # r-g
-    self.tcp.multiply(aux_full, aux_full, h)
-
-    #r==max
-    self.tcp.equal(r, r, v)
-    #g==max
-    self.tcp.equal(g, g, v)
-    #b==max
-    self.tcp.logical_or(b, r, g)
-    self.tcp.subtract(g, b, r)
-    self.tcp.logical_not(b, b)
-
-    self.tcp.add(aux1, aux1, 2)
-    self.tcp.add(aux2, aux2, 4)
-
-    self.tcp.multiply(r, r, aux)
-    self.tcp.multiply(g, g, aux1)
-    self.tcp.multiply(b, b, aux2)
-
-    self.tcp.add(h, r, g)
-    self.tcp.add(h, h, b)
+def rgb2hsv(
+    self,
+    aux_full: ty.Buffer("nram"),  # type: ignore
+    h: ty.Buffer("nram"),  # type: ignore
+    s: ty.Buffer("nram"),  # type: ignore
+    v: ty.Buffer("nram"),  # type: ignore
+    r: ty.Buffer("nram"),  # type: ignore
+    g: ty.Buffer("nram"),  # type: ignore
+    b: ty.Buffer("nram"),  # type: ignore
+    aux: ty.Buffer("nram"),  # type: ignore
+    aux1: ty.Buffer("nram"),  # type: ignore
+    aux2: ty.Buffer("nram"),  # type: ignore
+    r_hw: ty.int32,
+):
+    # get max, min, mid
+    # use v to save max
+    # use s to save min
+    tcp.maximum(v, r, g)
+    tcp.minimum(s, r, g)
+    tcp.maximum(v, v, b)
+    tcp.minimum(s, s, b)
+    tcp.equal(aux, v, s)
+    tcp.subtract(h, v, s)
+    tcp.add(h, h, aux)
+    if self.dtype == "float16":
+        tcp.type_convert(aux[: 2 * r_hw].reinterpret_cast("float32"), h, 0)
+        tcp.reciprocal(
+            aux[: 2 * r_hw].reinterpret_cast("float32"),
+            aux[: 2 * r_hw].reinterpret_cast("float32"),
+            mode="hp",
+        )
+        tcp.type_convert(h, aux[: 2 * r_hw].reinterpret_cast("float32"), 0, "rd")
+    else:
+        tcp.reciprocal(h, h, mode="hp")
+    tcp.subtract(aux, g, b)  # g-b
+    tcp.subtract(aux1, b, r)  # b-r
+    tcp.subtract(aux2, r, g)  # r-g
+    tcp.multiply(aux_full, aux_full, h)
+    # r==max
+    tcp.equal(r, r, v)
+    # g==max
+    tcp.equal(g, g, v)
+    # b==max
+    tcp.logic_or(b, r, g)
+    tcp.subtract(g, b, r)
+    tcp.logic_not(b, b)
+    tcp.add(aux1, aux1, 2)
+    tcp.add(aux2, aux2, 4)
+    tcp.multiply(r, r, aux)
+    tcp.multiply(g, g, aux1)
+    tcp.multiply(b, b, aux2)
+    tcp.add(h, r, g)
+    tcp.add(h, h, b)
 
 ```
 APPLY DELTA
 ```python
-def add_delta(self, h, delta, aux):
-    self.tcp.add(h, h, delta)
+def add_delta(self, h: ty.Buffer("nram"), delta: ty.float16):  # type: ignore
+    tcp.add(h, h, delta)
 ```
 HSV TO RGB
 ```python
-def hsv2rgb(self, h, s, v, r, g, b, aux, aux1, aux2, aux_int):
-   self.tcp.subtract(v, v, s)
-    self.tcp.type_convert(aux_int, h, 0, "dn")
-    self.tcp.type_convert(aux, aux_int, 0)
-    self.tcp.type_convert(aux_int, h, 0, "tz")
-    self.tcp.type_convert(aux1, aux_int, 0)
-    self.tcp.lut_active(aux1, aux1, self.tab1_nram, self.const1_nram)
-    self.tcp.subtract(h, h, aux1)
-    self.tcp.abs(h, h)
-    self.tcp.multiply(h, h, v)
-    #aux:h_category
-    #h:ratio
-    #s:vmin
-    #v:vmax-min
-    #r
-    self.tcp.lut_active(r, aux, self.tab2_nram, self.const1_nram)
-    self.tcp.lut_active(aux1, aux, self.tab3_nram, self.const1_nram)
-    self.tcp.multiply(r, r, v)
-    self.tcp.multiply(aux1, aux1, h)
-    self.tcp.add(r, r, aux1)  
-    #g
-    self.tcp.lut_active(g, aux, self.tab4_nram, self.const1_nram)
-    self.tcp.lut_active(aux1, aux, self.tab5_nram, self.const1_nram)
-    self.tcp.multiply(g, g, v)
-    self.tcp.multiply(aux1, aux1, h)
-    self.tcp.add(g, g, aux1)  
-    #b
-    self.tcp.lut_active(b, aux, self.tab6_nram, self.const1_nram)
-    self.tcp.lut_active(aux1, aux, self.tab7_nram, self.const1_nram)
-    self.tcp.multiply(b, b, v)
-    self.tcp.multiply(aux1, aux1, h)
-    self.tcp.add(b, b, aux1)
+def hsv2rgb(
+    self,
+    h: ty.Buffer("nram"),  # type: ignore
+    s: ty.Buffer("nram"),  # type: ignore
+    v: ty.Buffer("nram"),  # type: ignore
+    r: ty.Buffer("nram"),  # type: ignore
+    g: ty.Buffer("nram"),  # type: ignore
+    b: ty.Buffer("nram"),  # type: ignore
+    aux: ty.Buffer("nram"),  # type: ignore
+    aux1: ty.Buffer("nram"),  # type: ignore
+    aux_int: ty.Buffer("nram"),  # type: ignore
+):
+    tcp.subtract(v, v, s)
+    tcp.type_convert(aux_int, h, 0, "dn")
+    tcp.type_convert(aux, aux_int, 0)
+    tcp.type_convert(aux_int, h, 0, "tz")
+    tcp.type_convert(aux1, aux_int, 0)
+    tcp.lut_active(aux1, aux1, self.tab1_nram, self.const1_nram)
+    tcp.subtract(h, h, aux1)
+    tcp.abs(h, h)
+    tcp.multiply(h, h, v)
+    # aux:h_category
+    # h:ratio
+    # s:vmin
+    # v:vmax-min
+    # r
+    tcp.lut_active(r, aux, self.tab2_nram, self.const1_nram)
+    tcp.lut_active(aux1, aux, self.tab3_nram, self.const1_nram)
+    tcp.multiply(r, r, v)
+    tcp.multiply(aux1, aux1, h)
+    tcp.add(r, r, aux1)
+    # g
+    tcp.lut_active(g, aux, self.tab4_nram, self.const1_nram)
+    tcp.lut_active(aux1, aux, self.tab5_nram, self.const1_nram)
+    tcp.multiply(g, g, v)
+    tcp.multiply(aux1, aux1, h)
+    tcp.add(g, g, aux1)
+    # b
+    tcp.lut_active(b, aux, self.tab6_nram, self.const1_nram)
+    tcp.lut_active(aux1, aux, self.tab7_nram, self.const1_nram)
+    tcp.multiply(b, b, v)
+    tcp.multiply(aux1, aux1, h)
+    tcp.add(b, b, aux1)
+
 ```
 
 ### 3.3 拆分(任务拆分，多核拆分)
