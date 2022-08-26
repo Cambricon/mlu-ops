@@ -239,7 +239,7 @@ Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
 | 输入限制     |  输入参数shape必须满足要求:<br>scores：[N, A, H, W]<br>bbox_deltas:[N, 4*A, H, W]<br>img_size: [N, 2]  <br>anchors[A, H, W, 4] <br>variances[A, H, W, 4] |
-| 输入限制     |  输出参数shape必须满足要求:<br>rpn_rois:[post_nms_top_n, 4]，实际输出的维度信息为[rpn_rois_batch_size, 4] <br>rpn_roi_probs:[N, 1]<br>rpn_rois_num:[post_nms_top_n, 1]，实际输出的维度信息为[rpn_rois_batch_size, 1]  <br>rpn_rois_batch_size:[N], dim=1, shape[0]=1|
+| 输入限制     |  输出参数shape必须满足要求:<br>rpn_rois:[post_nms_top_n, 4]，实际输出的维度信息为[rpn_rois_batch_size, 4] <br>rpn_roi_probs:[post_nms_top_n, 1]<br>rpn_rois_num:[N, 1]，实际输出的维度信息为[rpn_rois_batch_size, 1]  <br>rpn_rois_batch_size:[N], dim=1, shape[0]=1|
 | 输入限制     |  输入参数eta表示自适应NMS，当前不支持，和竞品保持一致，参数保留，输入满足 eta >=1.0 |
 | 数据类型限制 | scores、bbox_deltas、anchors、variances只支持 float 输入 <br> pre_nms_top_n、post_nms_top_n只支持int类型输入 <br >nms_thresh、min_size只支持 float 输入|
 | 数据范围限制 | 无 |
@@ -252,7 +252,7 @@ Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
 #### 1.5.1 精度验收标准
 
 按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
-`generate_proposals_v2` 复合类算子。<br>
+`generate_proposals_v2` 是复合类算子。<br>
 `rpn_rois`参数精度设为 diff1 <= 3e-3 && diff2 <=3e-3。<br>
 `rpn_roi_probs`、`rpn_rois_num`的精度设置为 diff3=0。
 
@@ -295,7 +295,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
 ```
 **参数描述：**
 - `handle`：输入参数。操作句柄，内部绑定device和对应的queue。
-- `size`：输入参数。需要用户申请的额外的空间大小，通过`mluOpGetPnmsWorkspaceSize`获取。
+- `size`：输入参数。需要用户申请的额外的空间大小，通过`mluOpGetGenerateProposalsV2WorkspaceSize`获取。
 - `mluOpTensorDescriptor_t`: 输入tensor的形状描述。
 
 #### 2.2.2 `generate_proposals_v2` 计算接口
@@ -353,38 +353,38 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
 每次循环计算一个batch，即每次循环生成一张图片的 proposals ，对每张图片生成 proposals 的步骤总结为以下三步：
 1. topK 计算, 获取到scores中 第`pre_nms_top_n`大的score值 k_score;
-2. creatAndRemoveSmallBox;
+2. createAndRemoveSmallBox;
 3. nms筛选;
 
 #### 3.1.1 topK实现
 
-首先比较`pre_nms_top_n`和`AHW`的值，`pre_nms_top_n` >= `AHW`时，跳过这个步骤， `pre_nms_top_n` < `AHW`时， 对 `scores` 进行 向量topK 操作，获取第K大的score值 k_score。<br>
+首先比较`pre_nms_top_n`和`AHW`的值，`pre_nms_top_n` >= `AHW`时，跳过 topK 步骤; `pre_nms_top_n` < `AHW`时， 对 `scores` 进行 向量topK 操作，获取第 `pre_nms_top_n` 大的 score 值 k_score。<br>
 
 ##### 3.1.1.1 topK实现时中每个core上的数据量和偏移的计算
 ```c++
 // 计算每个cluster上的数据量
-int rem = AHW % taskDimY;
-int cluster_deal = AHW / takDimY + (int)(taskIdY < rem);
-int n_start = taskIdY * cluster_deal + ((taskIdY < rem) ? 0: rem);
+int rem_num = AHW % taskDimY;
+int cluster_deal_num = AHW / takDimY + (int)(taskIdY < rem_num);
+int n_start = taskIdY * cluster_deal_num + ((taskIdY < rem_num) ? 0: rem_num);
 
 //  计算每个core上的计算量和偏移
-int rem_core = cluster_deal % coreDim;
-int per_core = (coreId < rem_core) ? cluster_deal / coreDim + 1 : cluster_deal / coreDim;
-int core_offset = (coreId < rem_core) ? coreId * per_core : coreId * per_core + rem_core;
+int rem_core_num = cluster_deal_num % coreDim;
+int per_core_num = (coreId < rem_core_num) ? cluster_deal_num / coreDim + 1 : cluster_deal_num / coreDim;
+int core_offset = (coreId < rem_core_num) ? coreId * per_core_num : coreId * per_core_num + rem_core_num;
 
 // 根据nram空间大小，计算core上需要循环的次数；
-int seg_pad_0 = CEIL_ALIGN(max_nram_size / 2, align_num);
-int repeat =  per_core / seg_pad_0;
-int rem = per_core % seg_pad_0;
+int seg_pad_k = CEIL_ALIGN(max_nram_size / 2, align_num);
+int repeat =  per_core_num / seg_pad_k;
+int rem_num = per_core_num % seg_pad_k;
 ```
 ##### 3.1.1.2 topK实现过程
-1. 对`AHW`按照core的数量平均分配到每个core上，每个core上计算per_core份，在core上循环repeat次，每次循环加载seg_pad_k份 scores数据，用 bang_max找出单个 core 上最大值，并进行规约，找到 cluster 间的 global_max_score;<br>
+1. 对`AHW`按照 core 的数量平均分配到每个 core 上，每个 core 上计算 per_core_num 份，在 core 上循环 repeat 次，每次循环加载 seg_pad_k 份 `scores` 数据，用 bang_max 找出单个 core 上最大值，并进行规约，找到 cluster 间的 global_max_score;<br>
 
 2. 设置 up_score = global_max_score, down_score = -FLT_MAX, mid_score = 0.5 * (up_score - down_score);<br>
 
-3. 循环加载每个 core 上的所有`scores`数据，每次循环中用 bang_ge 获取 scores 中大于 mid_score 的 mask，使用 bang_count 统计大于 mid_score 的个数count，把每次循环统计到的 count 累加起来，得到单 core 上所有 scores 大于 mid_score 的数量， 再把每个 cluster 上每个 core 上的 count 规约累加计算出 AHW 个 scores 中大于mid_score的数量 totol_count;<br>
+3. 循环加载每个 core 上的所有`scores`数据，每次循环中用 bang_ge 获取 scores 中大于 mid_score 的 mask，使用 bang_count 统计大于 mid_score 的个数count，把每次循环统计到的 count 累加起来，得到单 core 上所有 `scores` 大于 mid_score 的数量， 再把每个 cluster 上每个 core 上的 count 规约累加计算出 AHW 个 `scores` 中大于 mid_score 的数量 totol_count;<br>
 
-4. 比较 totol_count 是否等于 pre_nms_top_n，并更新 up_score 、down_score、 mid_score, 重复setp 3、 4，直到 totol_count 等于 pre_nms_top_n，此时，第K大的 score 值 k_score 等于 mid_score， 此时topK结束。<br>
+4. 比较 totol_count 是否等于 pre_nms_top_n，并更新 up_score 、down_score、 mid_score, 重复setp 3、 4，直到 totol_count 等于 pre_nms_top_n，此时，第K大的 score 值 k_score 等于 mid_score， topK结束。<br>
 
 ##### 3.1.1.3 topK实现nram空间和workspace的划分
 ```c++
@@ -398,8 +398,26 @@ int rem = per_core % seg_pad_0;
 ```
 
 #### 3.1.2 createAndRemoveBox 实现
-##### 3.1.2.1 createAndRemoveBox 实现过程
-1. 从 workspace 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core, core 上每次循环load seg_pad_1 个数据; 
+##### 3.1.2.1 creatAndRemoveBoxs过程中每个core上的数据量和偏移的计算
+```c+
+// 计算每个cluster上的数据量
+int rem_num = pre_nms_top_n % taskDimY;
+int cluster_deal_num = pre_nms_top_n / takDimY + (int)(taskIdY < rem_num);
+int n_start = taskIdY * cluster_deal_num + ((taskIdY < rem_num) ? 0: rem_num);
+
+// 计算每个core上的计算量和偏移
+int rem_core_num = cluster_deal_num % coreDim;
+int per_core_num = (coreId < rem_core_num) ? cluster_deal_num / coreDim + 1 : cluster_deal_num / coreDim;
+int core_offset = (coreId < rem_core_num) ? coreId * per_core_num : coreId * per_core_num + rem_core_num;
+
+// 根据nram空间大小，计算core上需要循环的次数；
+int seg_pad_1 = CEIL_ALIGN(max_nram_size / (13 + X), align_num);
+int repeat =  per_core_num / seg_pad_1;
+int rem_num = per_core_num % seg_pad_1;
+```
+
+##### 3.1.2.2 createAndRemoveBox 实现过程
+1. 从 workspace 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core_num, core 上每次循环load seg_pad_1 个数据; 
 
 2. 单次循环load完数据后，使用bang_ge 获取 nram 上 scores 大于等于 k_score 的mask;
 
@@ -411,23 +429,6 @@ int rem = per_core % seg_pad_0;
 
 6. 把单次循环时创建好 proposal数据，保存到workspace空间内；<br>
 
-##### 3.1.2.2 creatAndRemoveBoxs过程中每个core上的数据量和偏移的计算
-```c+
-// 计算每个cluster上的数据量
-int rem = pre_nms_top_n % taskDimY;
-int cluster_deal = pre_nms_top_n / takDimY + (int)(taskIdY < rem);
-int n_start = taskIdY * cluster_deal + ((taskIdY < rem) ? 0: rem);
-
-// 计算每个core上的计算量和偏移
-int rem_core = cluster_deal % coreDim;
-int per_core = (coreId < rem_core) ? cluster_deal / coreDim + 1 : cluster_deal / coreDim;
-int core_offset = (coreId < rem_core) ? coreId * per_core : coreId * per_core + rem_core;
-
-// 根据nram空间大小，计算core上需要循环的次数；
-int seg_pad_1 = CEIL_ALIGN(max_nram_size / (13 + X), align_num);
-int repeat =  per_core / seg_pad_1;
-int rem = per_core % seg_pad_1;
-```
 ##### 3.1.2.3 creatAndRemoveBox 的nram空间和workspace划分
 ```c++
 // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
@@ -486,16 +487,16 @@ proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
 5. 把collect后的proposal数据存放到worksapce上， 先在worksacpe 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all同步后，每个 core 上计算自己存放在 workspce 上的数据偏移，按照这个偏移往worksapce上存放collect后的数值。
 
 #### 3.1.3 nms筛选
-对剩余的proposal_num 个 proposals 进行nms筛选，nms阈值设为 nms_thresh，nms筛选按照 scores 从大到小顺序输出输出 min(proposal_num，post_nms_top_n) 个proposals及其对应的scores值。<br>
+对剩余的 proposal_num 个 proposals 进行nms筛选，nms阈值设为 nms_thresh，nms筛选按照 scores 从大到小顺序输出输出 min(proposal_num，post_nms_top_n) 个proposals及其对应的scores值。<br>
 ##### 3.1.3.1 nms实现
-1. load workspace上全部的 proposal 到片上，计算出 box_area 并将结果存放到workspace上，box_area在计算iou时会用到;
+1. load workspace上全部的 proposal 到片上，计算出 box_area 并将结果存放到 workspace 上，box_area 在计算iou时会用到;
 
-2. load scores 到 nram 上，通过bang_max获取当前 core 上scores的最大值local_max_score， 再利用 workspace 对每个 core 上的 local_max_score 进行规约，计算得到 global_max_score，并将 workspace 上 global_max_score 对应位置的score置为 -FLT_MAX；<br>
+2. load scores 到 nram 上，通过 bang_max 获取当前 core 上 scores 的最大值 local_max_score， 再利用 workspace 对每个 core 上的 local_max_score 进行规约，计算得到 global_max_score，并将 workspace 上 scores global_max_score 对应位置的score置为 -FLT_MAX；<br>
 
-3. 根据 global_max_score 的 global_max_score_index，从 workspace 的 proposals 中拿到 global_max_score_box 的坐标，此时保存 global_max_score 和 global_max_score_box到 nram 的output rois，roi_probs 空间内;<br>
+3. 根据 global_max_score 的 global_max_score_index，从 workspace 的 proposals 中拿到 global_max_score_box 的坐标，及对应的box_area的值, 并保存 global_max_score 和 global_max_score_box 到 nram 的output rois，roi_probs 空间内;<br>
 
-4. 把worksapce上的 scores、proposals、box_area 数据load到 nram，计算 global_max_score_box 与 其余 box 的 iou,整个过程为向量运算;
-   
+4. 把 worksapce 上的 scores、proposals、box_area 数据load到 nram，计算 global_max_score_box 与 其余 boxes 的 iou, 整个过程为向量运算;
+    
 5. 通过 bang_ge 获取 iou 比 iou_thresh 大的 mask，并将 mask 为 1 的位置的scores置为 -FLT_MAX；<br>
    
 6. 重复循环 2,3,4,5步，循环 min(proposal_num，post_nms_top_n) 次或者单次循环取到的 global_max_score 的值等于 -FLT_MAX 时循环结束;<br>
@@ -517,19 +518,19 @@ proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
 // nms前计算proposal的总数，作为nms的循环次数
 int proposal_num = min(proposal_num, post_nms_top_n);
 // 计算每个cluster上的数据量
-int rem = proposal_num % taskDimY;
-int cluster_deal = proposal_num / takDimY + (int)(taskIdY < rem);
-int n_start = taskIdY * cluster_deal + ((taskIdY < rem) ? 0: rem);
+int rem_num = proposal_num % taskDimY;
+int cluster_deal_num = proposal_num / takDimY + (int)(taskIdY < rem_num);
+int n_start = taskIdY * cluster_deal_num + ((taskIdY < rem_num) ? 0: rem_num);
 
 //  计算每个core上的计算量和偏移
-int rem_core = cluster_deal % coreDim;
-int per_core = (coreId < rem_core) ? cluster_deal / coreDim + 1 : cluster_deal / coreDim;
-int core_offset = (coreId < rem_core) ? coreId * per_core : coreId * per_core + rem_core;
+int rem_core_num = cluster_deal_num % coreDim;
+int per_core_num = (coreId < rem_core_num) ? cluster_deal_num / coreDim + 1 : cluster_deal_num / coreDim;
+int core_offset = (coreId < rem_core_num) ? coreId * per_core_num : coreId * per_core_num + rem_core_num;
 
 // 根据nram空间大小，计算core上需要循环的次数；
 int seg_pad_2 = CEIL_ALIGN(max_nram_size / (5 + X), align_num);
-int repeat =  per_core / seg_pad_2;
-int rem = per_core % seg_pad_2;
+int repeat =  per_core_num / seg_pad_2;
+int rem_num = per_core_num % seg_pad_2;
 ```
 
 ### 3.2 伪代码实现
@@ -545,17 +546,17 @@ __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
   }
 
   // split batch for cluster
-  int rem = N % taskDimY;
-  int n_deal = N / takDimY + (int)(taskIdY < rem);
-  int n_start = taskIdY * n_deal + ((taskIdY < rem) ? 0: rem);
+  int rem_num = N % taskDimY;
+  int n_deal = N / takDimY + (int)(taskIdY < rem_num);
+  int n_start = taskIdY * n_deal + ((taskIdY < rem_num) ? 0: rem_num);
   if(n_deal <= 0){
     return;
   }
 
   for(int idx_n = n_start; idx_n < n_start + n_deal; ++idx_n){
-    int rem_core = AHW % coreDim;
-    int per_core = (coreId < rem_core) ? AHW / coreDim + 1 : AHW / coreDim;
-    int core_offset =(coreId < rem_core) ? coreId * per_core : coreId * per_core + rem_core;
+    int rem_core_num = AHW % coreDim;
+    int per_core_num = (coreId < rem_core_num) ? AHW / coreDim + 1 : AHW / coreDim;
+    int core_offset =(coreId < rem_core_num) ? coreId * per_core_num : coreId * per_core_num + rem_core_num;
     ...
     getTopKVal();
     creatBox();
