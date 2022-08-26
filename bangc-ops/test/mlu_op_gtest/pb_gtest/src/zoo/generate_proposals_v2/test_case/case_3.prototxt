@@ -1,0 +1,139 @@
+op_name: "generate_proposals_v2"
+input {
+  id: "input1"
+  shape: {
+    dims: 1
+    dims: 15
+    dims: 54
+    dims: 40
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 1
+    dims: 60
+    dims: 54
+    dims: 40
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input3"
+  shape: {
+    dims: 15
+    dims: 54
+    dims: 40
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input4"
+  shape: {
+    dims: 15
+    dims: 54
+    dims: 40
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input5"
+  shape: {
+    dims: 1
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 2000
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+output {
+  id: "output2"
+  shape: {
+    dims: 2000
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+output {
+  id: "output3"
+  shape: {
+    dims: 2
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+
+output {
+  id: "output4"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+
+
+generate_proposals_v2_param: {
+  pre_nms_top_n: 12000
+  post_nms_top_n: 2000
+  nms_thresh: 0.5
+  min_size: 0.1
+  eta: 1.0
+  pixel_offset: true
+}
+
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.0
+  baseline_device: CPU
+}

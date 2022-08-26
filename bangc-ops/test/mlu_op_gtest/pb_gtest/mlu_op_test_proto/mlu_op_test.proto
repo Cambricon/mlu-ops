@@ -20,229 +20,241 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-syntax = "proto2";
-package mluoptest;
-
-// mluOpTensorLayout_t;
-enum TensorLayout {
-  LAYOUT_NCHW  = 0;
-  LAYOUT_NHWC  = 1;
-  LAYOUT_HWCN  = 2;
-  LAYOUT_NDHWC = 3;
-  LAYOUT_ARRAY = 4;
-  LAYOUT_NCDHW = 5;
-  LAYOUT_TNC   = 6;
-  LAYOUT_NTC   = 7;
-  LAYOUT_NC    = 8;
-  LAYOUT_NLC   = 9;
-}
-
-// mluOpDataType_t;
-enum DataType {
-  DTYPE_INVALID         = 0;
-  DTYPE_HALF            = 1;
-  DTYPE_FLOAT           = 2;
-  DTYPE_DOUBLE          = 3;
-  DTYPE_INT8            = 4;
-  DTYPE_INT16           = 5;
-  DTYPE_INT32           = 6;
-  DTYPE_INT64           = 7;
-  DTYPE_UINT8           = 8;
-  DTYPE_UINT16          = 9;
-  DTYPE_UINT32          = 10;
-  DTYPE_UINT64          = 11;
-  DTYPE_BOOL            = 12;
-  DTYPE_COMPLEX_HALF    = 13;
-  DTYPE_COMPLEX_FLOAT   = 14;
-}
-
-enum Device {
-  CPU           = 1;
-  GPU           = 2;
-}
-
-enum EvaluationCriterion {
-  DIFF1   = 1;
-  DIFF2   = 2;
-  DIFF3   = 3;
-  DIFF3_2 = 4;
-  DIFF4   = 5;
-}
-
-enum MLUPlatform {
-  MLU200 = 1;
-  MLU370 = 2;
-}
-
-message Shape {
-  repeated int32 dims       = 1;
-  repeated int32 dim_stride = 2;
-}
-
-message Thresholds {
-  repeated double evaluation_threshold      = 1;
-  repeated double evaluation_threshold_imag = 2;
-}
-
-// mluOpTensorDescriptor_t
-message Tensor {
-  required string id              = 1;
-  required Shape shape            = 2;
-  required TensorLayout layout    = 3 [default = LAYOUT_ARRAY];
-  required DataType dtype         = 4 [default = DTYPE_FLOAT];
-
-  optional DataType mlu_dtype     = 12;
-  optional DataType onchip_dtype  = 13;
-
-  optional int32 position         = 5;
-  optional float scale            = 6;     
-  optional int32 offset           = 14;    
-
-  // data
-  repeated float value_f          = 7;
-  repeated int32 value_i          = 8;
-  repeated int64 value_l          = 17;
-  repeated string value_h         = 9;
-  // else data source
-  optional string path            = 11;
-  // random data = delete
-  optional RandomData random_data = 10;
-  // dynamic threshold
-  optional Thresholds thresholds  = 15;
-  optional int32 threshold_use    = 16;
-}
-
-message Node {
-  optional string valid                               = 1 [default = "True"];
-  optional string pattern                             = 2 [default = "random"];
-  optional Device device                              = 3 [default = CPU];
-
-  required string op_name                             = 5 [default = "unknown"];    // op_name
-  repeated Tensor input                               = 6;
-  repeated Tensor output                              = 7;
-
-  // evaluation
-  optional TestParam test_param                       = 10;    // remove this param later = delete
-  optional double latency                             = 11;    // latency
-  optional double io_efficiency                       = 12;    // efficiency
-  optional double efficiency                          = 13;    // efficiency
-  repeated EvaluationCriterion evaluation_criterion   = 14;
-  repeated double evaluation_threshold                = 15;
-  repeated double evaluation_threshold_imag           = 23;
-  optional double theory_io_size                      = 16;
-  optional double theory_compute_ops                  = 17;
-  optional double workspace_size                      = 18;
-  repeated double threshold_rate                      = 21;   // determine the magnification of dynamic threshold
-  repeated MLUPlatform supported_mlu_platform         = 22;
-
-  extensions 3000 to 4000;
-
-  optional DivParam    div_param                      = 4001;   // param
-  optional LogParam    log_param                      = 4002;     // param
-  optional SqrtParam   sqrt_param                     = 4003;  // param
-  optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
-  optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
-  optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
-}
-
-
-// --------------------
-// OP PARAMS
-// --------------------
-
-// random data
-enum RandomDistribution {
-  UNIFORM  = 1;
-  GAUSSIAN = 2;
-  SAMPLE   = 3;
-  BINOMIAL = 4;
-}
-
-message RandomData {
-  optional int32 seed                      = 1;
-  // only for uniform
-  optional float lower_bound               = 2 [default = -1.0];
-  optional float upper_bound               = 3 [default = 1.0];
-  optional float lower_bound_double        = 8 [default = -1.0];
-  optional float upper_bound_double        = 9 [default = 1.0];
-
-  // only for gaussian
-  optional float mu                        = 6 [default = 0.0];
-  optional float sigma                     = 7 [default = 1.0];
-  optional double mu_double                = 10 [default = 0.0];
-  optional double sigma_double             = 11 [default = 1.0];
-
-  optional RandomDistribution distribution = 4 [default = UNIFORM];
-  optional bool convert_dtype = 5 [default = false];  // convert float to int
-}
-
-// remove this param later
-message TestParam {
-  repeated EvaluationCriterion error_func = 1;
-  repeated double error_threshold         = 2;
-  repeated double error_threshold_imag    = 3;
-  
-  optional double latency                 = 5;    //   latency
-  optional double efficiency              = 6;    //   efficiency
-  optional Device baseline_device         = 7;
-}
-
-enum ComputationPreference {
-  COMPUTATION_FAST            = 0;
-  COMPUTATION_HIGH_PRECISION  = 1;
-}
-
-// param to call mluopSetQuantizeRoundMode()/mluopGetQuantizeRoundMode()
-enum QuantizeRoundMode {
-  ROUND_TO_EVEN = 0;
-  ROUND_HALF_UP = 1;
-  ROUND_OFF_ZERO = 2;
-}
-
-// some params for handle
-message HandleParam {
-  optional QuantizeRoundMode round_mode = 1 [default = ROUND_OFF_ZERO];
-}
-
-enum mluOpLogBase {
-  MLUOP_LOG_E  = 0; /**< base is e*/
-  MLUOP_LOG_2  = 1; /**< base is 2*/
-  MLUOP_LOG_10 = 2; /**< base is 10*/
-}
-
-// param to call mluOpLog()
-message LogParam {
-  required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
-  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];
-}
-
-// param to call mluOpSqrt()
-message SqrtParam {
-  optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
-}
-
-message DivParam {
-  optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
-}
-
-// param to call mluOpPsRoiPoolForward()
-message PsRoiPoolForwardParam{
-  optional float spatial_scale = 1 [default = 0.0625];
-  optional int32 group_size = 2 [default = 7];
-  optional int32 output_dim = 3 [default = 8];
-  optional int32 pooled_height = 4 [default = 7];
-  optional int32 pooled_width = 5 [default = 7];
-}
-
-// param to call mluOpPsRoiPoolbackward()
-message PsRoiPoolBackwardParam{
-  optional int32 output_dim = 1 [default = 8];
-  optional int32 pooled_height = 2 [default = 7];
-  optional int32 pooled_width = 3 [default = 7];
-  optional float spatial_scale = 4 [default = 0.0625];
-}
-
-// param to call mluOpPolyNms()
-message PolyNmsParam {
-  required float iou_threshold = 1 [default = 0.2];
-}
+ syntax = "proto2";
+ package mluoptest;
+ 
+ // mluOpTensorLayout_t;
+ enum TensorLayout {
+   LAYOUT_NCHW  = 0;
+   LAYOUT_NHWC  = 1;
+   LAYOUT_HWCN  = 2;
+   LAYOUT_NDHWC = 3;
+   LAYOUT_ARRAY = 4;
+   LAYOUT_NCDHW = 5;
+   LAYOUT_TNC   = 6;
+   LAYOUT_NTC   = 7;
+   LAYOUT_NC    = 8;
+   LAYOUT_NLC   = 9;
+ }
+ 
+ // mluOpDataType_t;
+ enum DataType {
+   DTYPE_INVALID         = 0;
+   DTYPE_HALF            = 1;
+   DTYPE_FLOAT           = 2;
+   DTYPE_DOUBLE          = 3;
+   DTYPE_INT8            = 4;
+   DTYPE_INT16           = 5;
+   DTYPE_INT32           = 6;
+   DTYPE_INT64           = 7;
+   DTYPE_UINT8           = 8;
+   DTYPE_UINT16          = 9;
+   DTYPE_UINT32          = 10;
+   DTYPE_UINT64          = 11;
+   DTYPE_BOOL            = 12;
+   DTYPE_COMPLEX_HALF    = 13;
+   DTYPE_COMPLEX_FLOAT   = 14;
+ }
+ 
+ enum Device {
+   CPU           = 1;
+   GPU           = 2;
+ }
+ 
+ enum EvaluationCriterion {
+   DIFF1   = 1;
+   DIFF2   = 2;
+   DIFF3   = 3;
+   DIFF3_2 = 4;
+   DIFF4   = 5;
+ }
+ 
+ enum MLUPlatform {
+   MLU200 = 1;
+   MLU370 = 2;
+ }
+ 
+ message Shape {
+   repeated int32 dims       = 1;
+   repeated int32 dim_stride = 2;
+ }
+ 
+ message Thresholds {
+   repeated double evaluation_threshold      = 1;
+   repeated double evaluation_threshold_imag = 2;
+ }
+ 
+ // mluOpTensorDescriptor_t
+ message Tensor {
+   required string id              = 1;
+   required Shape shape            = 2;
+   required TensorLayout layout    = 3 [default = LAYOUT_ARRAY];
+   required DataType dtype         = 4 [default = DTYPE_FLOAT];
+ 
+   optional DataType mlu_dtype     = 12;
+   optional DataType onchip_dtype  = 13;
+ 
+   optional int32 position         = 5;
+   optional float scale            = 6;     
+   optional int32 offset           = 14;    
+ 
+   // data
+   repeated float value_f          = 7;
+   repeated int32 value_i          = 8;
+   repeated int64 value_l          = 17;
+   repeated string value_h         = 9;
+   // else data source
+   optional string path            = 11;
+   // random data = delete
+   optional RandomData random_data = 10;
+   // dynamic threshold
+   optional Thresholds thresholds  = 15;
+   optional int32 threshold_use    = 16;
+ }
+ 
+ message Node {
+   optional string valid                               = 1 [default = "True"];
+   optional string pattern                             = 2 [default = "random"];
+   optional Device device                              = 3 [default = CPU];
+ 
+   required string op_name                             = 5 [default = "unknown"];    // op_name
+   repeated Tensor input                               = 6;
+   repeated Tensor output                              = 7;
+ 
+   // evaluation
+   optional TestParam test_param                       = 10;    // remove this param later = delete
+   optional double latency                             = 11;    // latency
+   optional double io_efficiency                       = 12;    // efficiency
+   optional double efficiency                          = 13;    // efficiency
+   repeated EvaluationCriterion evaluation_criterion   = 14;
+   repeated double evaluation_threshold                = 15;
+   repeated double evaluation_threshold_imag           = 23;
+   optional double theory_io_size                      = 16;
+   optional double theory_compute_ops                  = 17;
+   optional double workspace_size                      = 18;
+   repeated double threshold_rate                      = 21;   // determine the magnification of dynamic threshold
+   repeated MLUPlatform supported_mlu_platform         = 22;
+ 
+   extensions 3000 to 4000;
+ 
+   optional DivParam    div_param                      = 4001;   // param
+   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
+   optional LogParam    log_param                      = 4002;     // param
+   optional SqrtParam   sqrt_param                     = 4003;  // param
+   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
+   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
+   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
+ }
+ 
+ 
+ // --------------------
+ // OP PARAMS
+ // --------------------
+ 
+ // random data
+ enum RandomDistribution {
+   UNIFORM  = 1;
+   GAUSSIAN = 2;
+   SAMPLE   = 3;
+   BINOMIAL = 4;
+ }
+ 
+ message RandomData {
+   optional int32 seed                      = 1;
+   // only for uniform
+   optional float lower_bound               = 2 [default = -1.0];
+   optional float upper_bound               = 3 [default = 1.0];
+   optional float lower_bound_double        = 8 [default = -1.0];
+   optional float upper_bound_double        = 9 [default = 1.0];
+ 
+   // only for gaussian
+   optional float mu                        = 6 [default = 0.0];
+   optional float sigma                     = 7 [default = 1.0];
+   optional double mu_double                = 10 [default = 0.0];
+   optional double sigma_double             = 11 [default = 1.0];
+ 
+   optional RandomDistribution distribution = 4 [default = UNIFORM];
+   optional bool convert_dtype = 5 [default = false];  // convert float to int
+ }
+ 
+ // remove this param later
+ message TestParam {
+   repeated EvaluationCriterion error_func = 1;
+   repeated double error_threshold         = 2;
+   repeated double error_threshold_imag    = 3;
+   
+   optional double latency                 = 5;    //   latency
+   optional double efficiency              = 6;    //   efficiency
+   optional Device baseline_device         = 7;
+ }
+ 
+ enum ComputationPreference {
+   COMPUTATION_FAST            = 0;
+   COMPUTATION_HIGH_PRECISION  = 1;
+ }
+ 
+ // param to call mluopSetQuantizeRoundMode()/mluopGetQuantizeRoundMode()
+ enum QuantizeRoundMode {
+   ROUND_TO_EVEN = 0;
+   ROUND_HALF_UP = 1;
+   ROUND_OFF_ZERO = 2;
+ }
+ 
+ // some params for handle
+ message HandleParam {
+   optional QuantizeRoundMode round_mode = 1 [default = ROUND_OFF_ZERO];
+ }
+ 
+ enum mluOpLogBase {
+   MLUOP_LOG_E  = 0; /**< base is e*/
+   MLUOP_LOG_2  = 1; /**< base is 2*/
+   MLUOP_LOG_10 = 2; /**< base is 10*/
+ }
+ 
+ // param to call mluOpLog()
+ message LogParam {
+   required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
+   optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];
+ }
+ 
+ // param to call mluOpSqrt()
+ message SqrtParam {
+   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
+ }
+ 
+ message DivParam {
+   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
+ }
+ 
+ // param to call mluOpGenerateProposalsV2()
+ message GenerateProposalsV2Param {
+   required int32 pre_nms_top_n = 1 [default = 6000];
+   required int32 post_nms_top_n = 2 [default = 2000];
+   required float nms_thresh = 3 [default = 0.5];
+   required float min_size = 4 [default = 0.1];
+   required float eta = 5 [default = 1.0];
+   required bool pixel_offset = 6 [default = true];
+ }
+ 
+ // param to call mluOpPsRoiPoolForward()
+ message PsRoiPoolForwardParam{
+   optional float spatial_scale = 1 [default = 0.0625];
+   optional int32 group_size = 2 [default = 7];
+   optional int32 output_dim = 3 [default = 8];
+   optional int32 pooled_height = 4 [default = 7];
+   optional int32 pooled_width = 5 [default = 7];
+ }
+ 
+ // param to call mluOpPsRoiPoolbackward()
+ message PsRoiPoolBackwardParam{
+   optional int32 output_dim = 1 [default = 8];
+   optional int32 pooled_height = 2 [default = 7];
+   optional int32 pooled_width = 3 [default = 7];
+   optional float spatial_scale = 4 [default = 0.0625];
+ }
+ 
+ // param to call mluOpPolyNms()
+ message PolyNmsParam {
+   required float iou_threshold = 1 [default = 0.2];
+ }
+ 
