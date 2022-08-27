@@ -151,7 +151,7 @@ void PsroipoolForwardExecutor::cpuCompute() {
           float out_sum = 0;
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              int bottom_index = h * w * input_c + w * input_c + c;
+              int bottom_index = h * input_w * input_c + w * input_c + c;
               out_sum += input_cpu[bottom_index + input_add];
               theory_ops_ += 7;
             }

@@ -20,34 +20,27 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "test_env.h"
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_BACKWARD_PSROIPOOL_BACKWARD_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_BACKWARD_PSROIPOOL_BACKWARD_H_
+#include "executor.h"
 
-void TestEnvironment::SetUp() {
-  // 1. set up cnrt env
-  VLOG(4) << "SetUp CNRT environment.";
+namespace mluoptest {
+class PsroipoolBackwardExecutor : public Executor {
+ public:
+  PsroipoolBackwardExecutor() {}
+  ~PsroipoolBackwardExecutor() {}
+  void paramCheck() override;
+  void compute() override;
+  void cpuCompute() override;
+  int64_t getTheoryOps() override;
 
-  // 2. get device num
-  unsigned int dev_num = 0;
-  ASSERT_EQ(cnrtGetDeviceCount(&dev_num), CNRT_RET_SUCCESS);
-  if (dev_num <= 0) {  // dev_num_ should > 0
-    FAIL() << "Can't find device";
-  } else {
-    VLOG(4) << "Found " << dev_num << " devices.";
-  }
-
-  // 3. random device id [0, dev_num)
-  // [a, b] => (rand() % (b - a + 1)) + a
-  unsigned int seed = time(0);
-  int dev_id = (rand_r(&seed) % (dev_num - 1 - 0 + 1)) + 0;
-
-  // cnrt set current device using CNRT_DEFAULT_DEVICE
-  // in cnrtGetDevice() CNRT_DEFAULT_DEVICE > id
-  VLOG(4) << "Set current device as device: " << dev_id;
-  ASSERT_EQ(cnrtGetDevice(&dev_id), CNRT_RET_SUCCESS);
-  ASSERT_EQ(cnrtSetDevice(dev_id), CNRT_RET_SUCCESS);
-}
-
-void TestEnvironment::TearDown() {
-  // destroy cnrt env
-  VLOG(4) << "TearDown CNRT environment.";
-}
+ private:
+  void initData();
+  int output_dim_ = 0;
+  int pooled_height_ = 0;
+  int pooled_width_ = 0;
+  float spatial_scale_ = 0;
+  int64_t theory_ops_ = 0;
+};
+}  // namespace mluoptest
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_BACKWARD_PSROIPOOL_BACKWARD_H_

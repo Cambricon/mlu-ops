@@ -84,6 +84,9 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   // check inputs shape
   PARAM_CHECK_EQ(API, boxes_desc->dim, 2);
   PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
+  // check output shape
+  PARAM_CHECK_EQ(API, output_desc->dim, 1);
+
   PARAM_CHECK(API, boxes_desc->dims[0] == output_desc->dims[0]);
 
   int input_boxes_num = boxes_desc->dims[0];
@@ -105,7 +108,10 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   int real_width = boxes_desc->strides[0];
   auto mask_col_num = getMaskColNum(box_num);
   if ((10 * box_num + mask_col_num * 2) > (MAX_NRAM_SIZE / sizeof(float))) {
-    VLOG(5) << API << " Too many input boxes, kernel cannot work.";
+    LOG(ERROR) << API << " Too many input boxes, kernel cannot work."
+               << " The number of input boxes on mlu270, mlu290 and mlu370 "
+                  "shoule be less than 9770,"
+               << " current input box num is " << box_num << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

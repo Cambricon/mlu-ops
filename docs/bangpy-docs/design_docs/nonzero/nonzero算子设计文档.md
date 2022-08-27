@@ -121,31 +121,26 @@ cudaError_t NonZeroOutputPositions(
 - NonZeroCount计算接口：
 
 ```python
-tcp.BuildBANG(
-    inputs=[in_buffer, dim_0, dim_1, dim_2, dim_3],
-    outputs=[core_count],
-    kernel_name="NonZeroCount",
-    )
+f_nonzero_count = build_module.build(
+    NonZeroCount(dtype.name, align_size),
+    target,
+    "NonZeroCount",
+)
 ```
 
 - NonZero计算接口：
 
 ```python
-tcp.BuildBANG(
-        inputs=[
-            in_buffer,
-            core_count,
-            dim_0,
-            dim_1,
-            dim_2,
-            dim_3,
-            dim_num,
-            num_nonzero,
-            trans,
-        ],
-        outputs=[out_buffer],
-        kernel_name="NonZero",
-    )
+f_nonzero = build_module.build(
+    NonZero(
+        target[:6],
+        dtype.name,
+        dtype.bytes,
+        align_size,
+    ),
+    target,
+    "NonZero",
+)
 
 ```
 

@@ -75,10 +75,8 @@ __attribute__((__unused__)) bool is_only_show =
     getBoolEnvVar("MLUOP_LOG_ONLY_SHOW", true);  // whether only show on screen.
 __attribute__((__unused__)) bool g_color_print =
     getBoolEnvVar("MLUOP_LOG_COLOR_PRINT", true);  // whether print with color
-__attribute__((__unused__)) const std::map<std::string, bool>
-    module_print_map = {
-        {"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)},
-};
+__attribute__((__unused__)) const std::map<std::string, bool> module_print_map =
+    {{"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)}};
 
 bool isPrintToScreen() {
   if (userStream.rdbuf() == std::cout.rdbuf()) {
