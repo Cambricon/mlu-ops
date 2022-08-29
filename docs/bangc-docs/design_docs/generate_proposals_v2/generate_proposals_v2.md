@@ -353,8 +353,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
 每次循环计算一个batch，即每次循环生成一张图片的 proposals ，对每张图片生成 proposals 的步骤总结为以下三步：
 1. topK 计算, 获取到scores中 第`pre_nms_top_n`大的score值 k_score;
-2. createAndRemoveSmallBox;
-3. nms筛选;
+2. createAndRemoveSmallBox: 根据计算规则创建 proposals 并移除其中不满足条件的 proposals;
+3. nms筛选: 对第二步的生成 proposals 进行 nms 筛选后输出;
 
 #### 3.1.1 topK实现
 
