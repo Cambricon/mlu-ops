@@ -30,7 +30,7 @@
 #include <thread>  // NOLINT
 #include <atomic>
 #include <cstring>
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 #include "core/macros.h"
 #include "core/logging.h"
 #include "core/type.h"

@@ -26,7 +26,7 @@
 
 #include <algorithm>
 
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 #include "core/runtime/device.h"
 #include "kernels/poly_nms/enums.h"
 

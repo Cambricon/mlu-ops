@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <string>
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 #include "kernels/kernel.h"
 #include "core/logging.h"
 #include "core/tensor.h"
