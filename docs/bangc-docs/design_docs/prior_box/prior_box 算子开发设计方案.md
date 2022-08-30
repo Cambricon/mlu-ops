@@ -195,28 +195,12 @@ box, var = fluid.layers.prior_box(
 place = fluid.CUDAPlace()
 exe = fluid.Executor(place)
 exe.run(fluid.default_startup_program())
-
 input_data = np.random.rand(1,3,4,4).astype("float32")
 image_data = np.random.rand(1,3,4,4).astype("float32")
-
 box_out, var_out = exe.run(fluid.default_main_program(),
         feed={"input":input_data,"image":image_data},
         fetch_list=[box,var],
         return_numpy=True)
-print(box_out)
-print(box_out.shape)
-'''
-[[[[0.    0.    0.375 0.375]]
-  [[0.125 0.    0.625 0.375]]
-  [[0.375 0.    0.875 0.375]]
-  [[0.625 0.    1.    0.375]]]
-
- [[[0.    0.375 0.375 0.875]]
-  [[0.125 0.375 0.625 0.875]]
-  [[0.375 0.375 0.875 0.875]]
-  [[0.625 0.375 1.    0.875]]]
-(4, 4, 1, 4)
-'''
 ```
 
 
@@ -254,10 +238,10 @@ print(box_out.shape)
 
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
-| 数据类型限制 | is_clip、min_max_aspect_ratios_order 只支持 bool 类型<br />height、width、im_height、im_width只支持int类型<br />除了 handle 以外其他Tensor的输入输出只支持 float32 类型 |
-| 布局限制     | 输入输出Tensor只支持 ARRAY                                   |
+| 数据类型限制 | 输入输出的Tensor只支持 float32 类型                          |
+| 布局限制     | 输入输出的Tensor只支持 ARRAY 类型                            |
 | 规模限制     | min_sizes、aspect_ratios的维度必须为1维 <br />variance 的 shape[0]  为4且variance的维度必须为1维<br />output 和 var 的维度必须为4维且每个维度都相等<br />min_sizes 至少包含一个元素<br />若max_sizes 非空，max_sizes 的 shape[0] 和 min_sizes 的 shape[0] 需相等<br />output的第三个维度num_priors需满足：num_priors等于min_sizes的shape[0]乘以aspect_ratios的shape[0]再加max_size的shape[0] |
-| 数据范围限制 | height、width、im_height、im_width都大于0<br />min_sizes、aspect_ratios、variances 中的元素必须大于0<br />step_h、step_w 必须大于0<br />max_sizes 中对应位置的元素必须比 min_sizes 中的元素大，即max_sizes[i] > min_sizes[i] |
+| 数据范围限制 | height、width、im_height、im_width都大于0<br />min_sizes、aspect_ratios、variance 中的元素必须大于0<br />step_h、step_w 必须大于0<br />max_sizes 中对应位置的元素必须比 min_sizes 中的元素大，即max_sizes[i] > min_sizes[i] |
 | 原位限制     | 不支持原位                                                   |
 | stride限制   | 不支持 stride 机制                                           |
 | 广播限制     | 不支持广播                                                   |
