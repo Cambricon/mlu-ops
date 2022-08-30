@@ -105,10 +105,11 @@ def hardsigmoid(input: Tensor,
 ### 2.2 接口设计
 
 ```python
-# MluOpHardSigmoid(input, output)
+# MluOpHardSigmoid(input, output, data_total)
 tcp.BuildBANG(
     inputs=[buffer_in],
     outputs=[buffer_out],
+    data_total, # data_total: len(data_in.flatten())
     kernel_name=KERNEL_NAME,
 ) 
 ```
@@ -137,20 +138,20 @@ data_out_dev = bangpy.Array(np.zeros(data_out.flatten().shape, dtype.as_numpy_dt
 # calculate split strategy
 data_each_task = data_total // self.task_num
 data_rem = data_total % self.task_num
-data_each_time = self.nram_size_buffer // self.dtype_sz
-loop = data_each_task // data_each_time
+data_each_time = self.nram_size_buffer // self.dtype_sz # float16: self.dtype_sz = 2, float32: self.dtype_sz = 4
+loop_num = data_each_task // data_each_time
 data_rem_n = data_each_task % data_each_time
 if data_rem_n > 0 :
-    loop = loop + 1
+    loop_num = loop_num + 1
 
 # calculate
 memcpy:GDRAM-->NRAM
-self.tcp.multiply(buffer_io_n, buffer_io_n, 1/6)          # x * 1/6
-self.tcp.add(buffer_io_n, buffer_io_n, 1/2)               # x * 1/6 + 1/2
-self.tcp.assign(buffer_temp_n, 1)
-self.tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n) # min(x * 1/6 + 1/2, 1)
-self.tcp.zeros(buffer_temp_n)
-self.tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n) # max(x * 1/6 + 1/2, 0)
+tcp.multiply(buffer_io_n, buffer_io_n, 1/6)          # x * 1/6
+tcp.add(buffer_io_n, buffer_io_n, 1/2)               # x * 1/6 + 1/2
+tcp.assign(buffer_temp_n, 1)
+tcp.minimum(buffer_io_n, buffer_io_n, buffer_temp_n) # min(x * 1/6 + 1/2, 1)
+tcp.zeros(buffer_temp_n)
+tcp.maximum(buffer_io_n, buffer_io_n, buffer_temp_n) # max(x * 1/6 + 1/2, 0)
 memcpy:NRAM-->GDRAM
 
 
@@ -164,18 +165,18 @@ data_out_dev2host = data_out_dev.numpy().reshape(shape)
 
 首先需要将张量flatten成一维传入，然后相关参数如下：  
 data_total：张量的数据总个数  
-task_num：任务个数  
-data_each_task：每个任务需要计算的数据个数(data_total // task_num)  
-data_rem：平均分给所有IPU后的余数(data_total % task_num)  
+self.task_num：MLU任务个数  
+data_each_task：每个任务需要计算的数据个数(data_total // self.task_num)  
+data_rem：平均分给所有IPU后的余数(data_total % self.task_num)  
 data_each_time：每次NRAM计算的数据个数  
-loop：每个data_each_task需要拷入NRAM进行计算的次数(data_each_task // data_each_time)  
+loop_num：每个data_each_task需要拷入NRAM进行计算的次数(data_each_task // data_each_time)  
 data_rem_n：不足一次计算(data_each_task % data_each_time)
-loop = loop + 1：当data_rem_n > 0 时
+loop_num = loop_num + 1：当data_rem_n > 0 时
 
 ### 3.4 性能优化设计
 
 1.进行了向量优化，计算均是向量计算。  
-2.使用for_range中的stage参数来打开双缓冲，以实现访存指令与计算指令的并⾏。  
+2.使用pipeline参数来打开双缓冲，以实现访存指令与计算指令的并⾏。  
 NRAM双缓冲对应的流水线如下(假设最后一块是G-->N2)：
 |  time   |  t0_1   |  t0_2  |       t1        |       t2        |       t3        |       ...       |     t(n-1)      |  t(n)_1  |  t(n)_2  |
 |:-------:|:-------:|:------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:--------:|:--------:|
@@ -237,7 +238,7 @@ case_19: input.shape = (67077500,), output.shape = (67077500,), dtype = float
 ```
 注：  
 （1）测试用例覆盖了逻辑分支。  
-（2）对于dtype = half：case_3的IO效率突然降低；对于dtype = float：case_12的IO效率突然降低。  
+（2）随着数据量的增加，对于dtype = half：case_3的IO效率突然降低；对于dtype = float：case_12的IO效率突然降低。  
 （3）case_8与case_9规模相近，但后者的IO效率比前者低了很多。  
 （4）只测试了1~8维的张量（理论上支持任意维度）。
 
@@ -272,7 +273,6 @@ xx-xx-xx~2022-03-01 准备工作（学习白皮书、熟悉开发环境等）
 
 ### 5.2 风险分析
 
-1.目前只在MLU290上测试过。  
-2.理论上随着数据规模的增大，流水线也越来越有效利用，对应的IO效率也应该越来越高，可一些数据规模的结果不符合。  
-3.理论上规模相近的张量IO效率类似，可实际上却差别明显。  
-注：2和3可能有重叠，它们应该都是由于受到硬件的IO限制的影响，具体见3.6处。
+1.理论上随着数据规模的增大，流水线也越来越有效利用，对应的IO效率也应该越来越高，可一些数据规模的结果不符合。  
+2.理论上规模相近的张量IO效率类似，可实际上却差别明显。  
+注：二者可能有重叠，它们应该都是由于受到硬件的IO限制的影响，具体见3.6处。
