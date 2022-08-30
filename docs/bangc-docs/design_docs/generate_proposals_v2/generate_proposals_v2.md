@@ -261,7 +261,7 @@ Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
 - 部分与竞品差距过大的规模在4.算子性能优化记录中进行说明。
 - 附上算子测试报告链接，测试报告必须包括框架给出的网络中规模的性能数据以及对应效率值。
 
-[给定的网络规模](./network_scale.txt)
+[给定的网络规模](./network_scale.txt) 
 
 ## 2 算子接口设计
 ### 2.1 参考接口
@@ -397,8 +397,8 @@ int rem_num = per_core_num % seg_pad_k;
 // |  taskDim  |  taskDim  |
 ```
 
-#### 3.1.2 createAndRemoveBox 实现
-##### 3.1.2.1 creatAndRemoveBoxs过程中每个core上的数据量和偏移的计算
+#### 3.1.2 createAndRemoveBoxes 实现
+##### 3.1.2.1 createAndRemoveBoxes 过程中每个core上的数据量和偏移的计算
 ```c+
 // 计算每个cluster上的数据量
 int rem_num = pre_nms_top_n % taskDimY;
@@ -421,27 +421,27 @@ int rem_num = per_core_num % seg_pad_1;
 
 2. 单次循环load完数据后，使用bang_ge 获取 nram 上 scores 大于等于 k_score 的mask;
 
-3. 使用 bang_collect，根据 第2步的mask， 把 mask 等于1位置的`scores`、`anchors`、`bbox_deltas`、`variances`值collect到一起;
+3. 使用 bang_collect，根据 第2步的mask， 把 mask 等于1位置的`scores`、`anchors`、`bbox_deltas`、`variances`值collect到一起, `scores` 需要collect一次, `anchors`、`bbox_deltas`、`variances`需要对四个值分别进行collect, 每次循环 collect 数量为seg_pad_1;
 
-4. 用 collect 后的数据，根据 creatbox 计算过程创建 proposals;
+4. 用 collect 后的数据，根据 createbox 计算过程创建 proposals;
 
-5. 根据 removeSmallBox 的计算方法，生成新的 mask2， 用 bang_collect 操作移除proposal中宽和高小于min_size的proposl，把有效的 proposals 集中到一起，此时，单次循环内的计算过程结束；
+5. 根据 removeSmallBox 的计算方法，生成新的 mask2， 用 bang_collect 操作移除proposal中宽和高小于 min_size 的 proposal，把有效的 proposals 集中到一起，此时，单次循环内的计算过程结束；
 
 6. 把单次循环时创建好 proposal 数据，保存到 workspace 空间内， 若单 core 内数据未处理完，回到第 2 步；<br>
 
-##### 3.1.2.3 creatAndRemoveBox 的nram空间和workspace划分
+##### 3.1.2.3 createAndRemoveBox 的nram空间和workspace划分
 ```c++
 // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
 // |  scores   | anchors       | bbox_deltas   | variances     | nram_temp     |
 // | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
 
-// workspace : creatAndRemoveBox 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
+// workspace : createAndRemoveBox 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
 // proposals的个数 proposal_num = pre_nms_top_n- remove_count, remove_count表示removeSmallBox的个数
-// | collect_num | scores       | proposals    |
-// | taskDim     | proposal_num | proposal_num | 
+// | collect_num | scores       | proposals        |
+// | taskDim     | proposal_num | proposal_num * 4 | 
 ```
 
-##### 3.1.2.4 creatbox 计算过程
+##### 3.1.2.4 createbox 计算过程
 a. 根据anchor 两个点坐标 (xmin，ymin，xmax，ymax) 计算 box_anchor的中心点坐标 (cx， cy) 及 anchor的宽高；<br>
 ```c++
 offset = pixes_offset? 1.0 : 0;
@@ -484,7 +484,7 @@ proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
 
 4. 根据mask_res，用bang_collect，把proposals中对应位置的值取出集中到一起；
 
-5. 把 collect 后的 proposal 数据存放到 worksapce 上， 先在 worksacpe 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all 同步后，每个 core 上计算自己存放在 workspce 上的数据偏移，按照这个偏移往 worksapce 上存放 collect 后的数值（由于3.1.3 nms筛选中会对乱序数据进行排序操作，本节中存放在 workspace 中的数据相对顺序与 input tensors 可能会不同，但不影响最终算子结果）。
+5. 把 collect 后的 proposal 数据存放到 workspace 上， 先在 workspace 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all 同步后，每个 core 上计算自己存放在 workspace 上的数据偏移，按照这个偏移往 workspace 上存放 collect 后的数值（由于3.1.3 nms筛选中会对乱序数据进行排序操作，本节中存放在 workspace 中的数据相对顺序与 input tensors 可能会不同，但不影响最终算子结果）。
 
 #### 3.1.3 nms筛选
 对剩余的 proposal_num 个 proposals 进行nms筛选，nms阈值设为 nms_thresh，nms筛选按照 scores 从大到小顺序输出输出 min(proposal_num，post_nms_top_n) 个proposals及其对应的scores值。<br>
@@ -529,8 +529,8 @@ int rem_num = per_core_num % seg_pad_2;
 // | post_nms_top_n | post_nms_top_n   | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |  
 
 // workspace：用于规约nms过程中每个core上的最大score值及其index
-// | max_score | scores       | proposals    | box_ares     | max_index |
-// |  taskDim  | proposal_num | proposal_num | proposal_num | taskDim   |
+// | max_score | scores       | proposals      | box_ares     | max_index |
+// |  taskDim  | proposal_num | proposal_num*4 | proposal_num | taskDim   |
 ```
 ### 3.2 伪代码实现
 
@@ -558,7 +558,7 @@ __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
     int core_offset =(coreId < rem_core_num) ? coreId * per_core_num : coreId * per_core_num + rem_core_num;
     ...
     getTopKVal();
-    creatBox();
+    createBox();
     removeSmallBox();
     nms();
     ...
@@ -602,8 +602,8 @@ __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *varianc
   }
 }
 
-// creatbox实现
-// `creatbox` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
+// createbox实现
+// `createbox` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
 
 // output = exp(input)
 __mlu__func void calcExp(T * output, const T * input, cpnst int length){
@@ -616,7 +616,7 @@ __mlu__func void calcExp(T * output, const T * input, cpnst int length){
 #endif
 }
 // 生成proposals
-__mlu__func void creatBox(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){
+__mlu__func void createBox(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){
   T *axmin = anchor;
   T *aymin = anchor + deal_size;
   T *axmax= anchor + 2 * deal_size;
