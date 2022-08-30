@@ -28,10 +28,9 @@
 #include <cstring>
 #include <string>
 
+#include "mlu_op.h"
 #include "core/logging.h"
 #include "core/type.h"
-
-#include "mlu_op_core.h"
 
 /**
  * @brief cast float32 data to int31 data

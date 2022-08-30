@@ -23,7 +23,7 @@
 
 #include <string>
 #include <stdexcept>
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 #include "core/logging.h"
 
 const char *mluOpGetErrorString(mluOpStatus_t status) {

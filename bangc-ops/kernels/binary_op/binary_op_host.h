@@ -24,7 +24,7 @@
 #define KERNELS_BINARY_OP_BINARY_OP_HOST_H_
 
 #include <string>
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 
 void binaryOpPolicyFunc(const mluOpHandle_t &handle,
                         const mluOpTensorDescriptor_t &desc,

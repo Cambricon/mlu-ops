@@ -43,7 +43,6 @@
 #include "mlu_op.h"
 #include "core/type.h"
 #include "core/logging.h"
-#include "core/mlu_op_core.h"
 #include "core/tool.h"
 #include "core/platform/env_time.h"
 

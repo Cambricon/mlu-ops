@@ -25,8 +25,8 @@
 
 #include <pthread.h>
 #include <string>
-#include "core/mlu_op_core.h"
 #include "cn_api.h"
+#include "mlu_op.h"
 #include "core/context.h"
 #include "core/tensor.h"
 #include "core/type.h"
