@@ -23,8 +23,9 @@
 
 #include <string>
 #include <stdexcept>
-#include "mlu_op.h"
+
 #include "core/logging.h"
+#include "mlu_op.h"
 
 const char *mluOpGetErrorString(mluOpStatus_t status) {
   CHECK_GE(status, 0);

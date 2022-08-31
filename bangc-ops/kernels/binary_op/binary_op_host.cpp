@@ -20,15 +20,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "binary_op_host.h"
+
 #include <string>
-#include "mlu_op.h"
+
 #include "kernels/kernel.h"
 #include "core/tensor.h"
 #include "core/type.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
-#include "binary_op_host.h"
+#include "mlu_op.h"
 
 
 void binaryOpPolicyFunc(const mluOpHandle_t &handle,
