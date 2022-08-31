@@ -101,7 +101,7 @@
 
 3. 粒度要细，一个 `PR` 只做一件事情，避免超大的 `PR`
 
-   - Bad：给 MLU-OPS 添加一个 Add 算子,同时修改了 Div 算子的接口  
+   - Bad：给 MLU-OPS 添加一个 Add 算子，同时修改了 Div 算子的接口  
    - Acceptable：给 MLU-OPS 添加一个 Add 算子并添加 Add 算子的设计文档
    - Good：提交两个`PR`，分别为：提交 Add 算子的设计文档，提交 Add 算子的代码
 
