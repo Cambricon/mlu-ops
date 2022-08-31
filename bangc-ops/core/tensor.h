@@ -30,10 +30,11 @@
 #include <thread>  // NOLINT
 #include <atomic>
 #include <cstring>
-#include "core/mlu_op_core.h"
+
 #include "core/macros.h"
 #include "core/logging.h"
 #include "core/type.h"
+#include "mlu_op.h"
 
 #define QUEUE_ARRAY_LENGTH 4
 

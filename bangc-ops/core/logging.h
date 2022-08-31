@@ -27,9 +27,10 @@
 #include <string>
 #include <limits>
 #include <sstream>
+
 #include "core/macros.h"
 #include "core/cnlog.h"
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)

@@ -10,26 +10,29 @@ on:
 
 jobs:
   test:
-    runs-on: [self-hosted, mlu270-x5k]
+    strategy:
+      matrix:
+        runner: [mlu270-x5k, mlu290-m5, mlu370-m8]
+    runs-on: ${{matrix.runner}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: bangc_lint_check
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.3
           ./tools/pre-commit origin/master
 
       - name: build
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
-          ./build.sh
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.3
+          bash -c "./build.sh --sub_module=bangc && ./build.sh --sub_module=bangpy"
 
       - name: test
         run: >
-          idx=$(hostname | cut -d'-' -f3);docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev${idx}:/dev/cambricon_dev0 
-          --device /dev/commu${idx}:/dev/commu0 -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
-          ./test.sh --target=mlu270
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.3
+          bash -c "./test.sh --sub_module=bangc && ./test.sh --sub_module=bangpy --target=mlu270"
 
       - name: clean
-        run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
-          bash -c "rm -rf bangc-ops/build && rm -rf bangpy-ops/outs"
+        run: |
+          rm -rf bangc-ops/build
+          rm -rf bangpy-ops/outs
