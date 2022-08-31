@@ -103,7 +103,7 @@
 
    - Bad：给 MLU-OPS 添加一个 Add 算子,同时修改了 Div 算子的接口  
    - Acceptable：给 MLU-OPS 添加一个 Add 算子并添加 Add 算子的设计文档
-   - Good：提交两个`PR`，分别为：提交 Add 算子的设计文档；提交 Add 算子的代码
+   - Good：提交两个`PR`，分别为：提交 Add 算子的设计文档，提交 Add 算子的代码
 
 4. `commit` 需要提供清晰且有意义的 `commit` 信息
 
