@@ -67,7 +67,7 @@ rm -rf $RPM_BUILD_DIR
 %defattr (-, root, root)
 %{neuware_dir}/include/mlu_op.h
 %{neuware_dir}/include/mlu_op_kernel.h
-%{neuware_dir}/lib64/libmluops.h
+%{neuware_dir}/lib64/libmluops.so
 /etc/ld.so.conf.d/neuware-env.conf
 
 %post -p /sbin/ldconfig
