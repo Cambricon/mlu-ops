@@ -48,7 +48,7 @@ The Machine Lerning Unit OPerators.
 %setup -q
 
 %build
-./build.sh --sub_module=bangc
+bash independent_build.sh -t %{_packagetype}
 
 %install
 install -d $RPM_BUILD_ROOT%{neuware_dir}/lib64
