@@ -16,7 +16,7 @@ If you want to know how to do operator testing, you can see [GTest-User-Guide-zh
 
 #### 3.1.1 Accuracy Acceptance Standard
 
-For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standard](../docs/MLU-OPS精度验收标准.md)
+For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standard](../docs/MLU-OPS精度验收标准.md).
 
 - [ ] diff1, diff1 <= 3e-3
 - [ ] diff2, diff2 <= 3e-3
