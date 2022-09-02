@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""The hard_sigmoid op for BANGPy TCP."""
+"""HardSigmoid operator implementation using BANGPy TCP Script API."""
 
 import bangpy
 from bangpy import tcp

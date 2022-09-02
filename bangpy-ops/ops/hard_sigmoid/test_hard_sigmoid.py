@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""Test hardSigmoid operator with multi-platform code link."""
 import numpy as np
 import pytest
 import bangpy
@@ -44,15 +44,15 @@ def cal_diff(result, data_out):
         # These test cases cover the logical branches
         (2 ** 23 + 1,),
         (1, 2 ** 24 + 1),
-        # (1, 1, 2 ** 25 + 1),
-        # (1, 1, 1, 2 ** 26 + 1),
-        # (1, 1, 1, 1, 2 ** 27 + 1),
-        # (1, 1, 1, 1, 1, 2 ** 28 + 1),
-        # (1, 1, 1, 1, 1, 1, 2 ** 29 + 1),
-        # (1, 1, 1, 1, 1, 1, 1, 2 ** 30 + 1),
-        # # special test cases
-        # (66777500,),
-        # (67077500,),
+        (1, 1, 2 ** 25 + 1),
+        (1, 1, 1, 2 ** 26 + 1),
+        (1, 1, 1, 1, 2 ** 27 + 1),
+        (1, 1, 1, 1, 1, 2 ** 28 + 1),
+        (1, 1, 1, 1, 1, 1, 2 ** 29 + 1),
+        (1, 1, 1, 1, 1, 1, 1, 2 ** 30 + 1),
+        # special test cases
+        (66777500,),
+        (67077500,),
     ],
 )
 @pytest.mark.parametrize(
