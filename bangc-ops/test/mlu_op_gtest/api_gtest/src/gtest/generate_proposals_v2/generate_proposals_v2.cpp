@@ -161,7 +161,8 @@ class generate_proposals_v2 : public testing::Test {
     }
     if (rpn_rois_batch_size) {
       size_t rpn_rois_batch_size_ele_num = 1;
-      size_t rpn_rois_batch_size_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
+      size_t rpn_rois_batch_size_dtype_bytes =
+          mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t rpn_rois_batch_size_bytes =
           rpn_rois_batch_size_ele_num * rpn_rois_batch_size_dtype_bytes;
       GTEST_CHECK(CNRT_RET_SUCCESS ==
@@ -232,31 +233,31 @@ class generate_proposals_v2 : public testing::Test {
       workspace_ = NULL;
     }
     if (rpn_rois_desc_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_desc_));
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_rois_desc_));
       rpn_rois_desc_ = NULL;
     }
     if (rpn_rois_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_rois_));
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_));
       rpn_rois_ = NULL;
     }
     if (rpn_roi_probs_desc_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_roi_probs_desc_));
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_roi_probs_desc_));
       rpn_roi_probs_desc_ = NULL;
     }
     if (rpn_roi_probs_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_roi_probs_));
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_roi_probs_));
       rpn_roi_probs_ = NULL;
     }
     if (rpn_rois_num_desc_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_num_desc_));
+      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_rois_num_desc_));
       rpn_rois_num_desc_ = NULL;
     }
     if (rpn_rois_num_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_rois_num_));
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_num_));
       rpn_rois_num_ = NULL;
     }
     if (rpn_rois_batch_size_) {
-      MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_rois_batch_size_));
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_batch_size_));
       rpn_rois_batch_size_ = NULL;
     }
   }
