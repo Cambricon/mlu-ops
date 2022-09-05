@@ -23,15 +23,15 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 
 #### 3.1.2 Operator Scheme checklist
 
-|      Serial Number     |           Demand            |      Demand For Details       |
+|     No.      |           Details            |      Check Results       |
 |----------------|---------------------------|---------------------|
-|        1       |          support hardware         | MLU270 <br> MLU290 <br>MLU370|
-|        2       |          job type          |    block <br> U1 <br> U4    |
-|        3       |         layout            |  NHWC 、NCHW、ARRAY etc    |
-|        4       |         multidimensional              |       Whether multi-dimensions are supported         |
-|        5       |         zero elements             |       Whether element zero is supported         |
-|        6       |         data type       |         half / float etc           |
-|        7      |        size limit           |       If so, please explain the restrictions and reasons      |
+|        1       |          Supported hardware         | MLU270 <br> MLU290 <br>MLU370|
+|        2       |          Job types          |    block <br> U1 <br> U4    |
+|        3       |         Layouts            |  NHWC 、NCHW、ARRAY etc    |
+|        4       |         Whether multi-dimensions are supported              |                |
+|        5       |          Whether element zero is supported             |               |
+|        6       |         Data type(half/float)       |         half / float etc           |
+|        7      |        Whether there is size limit           |             |
 
 #### 3.1.3 New Feature Test
 
