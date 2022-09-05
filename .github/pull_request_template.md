@@ -2,7 +2,7 @@ Thanks for your contribution and we appreciate it a lot.
 
 ## 1. Motivation
 
-Please describe the motivation of this pull request and the goal you want to achieve through this pull request.
+Please describe your motivation and the goal you want to achieve through this pull request.
 
 ## 2. Modification
 
@@ -12,7 +12,7 @@ Please briefly describe what modification is made in this pull request, and indi
 
 If you want to know how to do operator testing, you can see [GTest-User-Guide-zh](../docs/GTest-User-Guide-zh.md).
 
-### 3.1 The Description of modification
+### 3.1 Modification Details
 
 #### 3.1.1 Accuracy Acceptance Standard
 
@@ -35,7 +35,7 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 
 #### 3.1.3 New Feature Test
 
-If you have checked the following items, please put a check mark in front of the corresponding items.
+If you have checked the following items, please tick the relevant box.
 
 - [ ] Data type test
 - [ ] Multidimensional tensor test
@@ -48,7 +48,7 @@ If you have checked the following items, please put a check mark in front of the
 - [ ] Nan/INF tests 
 - [ ] For memory leak check details, see[GTest-User-Guide-zh](../docs/GTest-User-Guide-zh.md).
 - [ ] For code coverage check details, see: [GTest-User-Guide-zh](../docs/GTest-User-Guide-zh.md).
-- [ ] For I/O calculation efficiency check details see: [MLU-OPS Performance Acceptance Criteria](../docs/MLU-OPS性能验收标准.md).
+- [ ] For I/O calculation efficiency check details, see: [MLU-OPS Performance Acceptance Criteria](../docs/MLU-OPS性能验收标准.md).
 
 #### 3.1.4 Parameter Check
 
@@ -86,4 +86,4 @@ Platform：MLU370
 
 ### 3.3 Summary Analysis
 
-Please give a brief overview here, if any need to note and summarize the content.
+Please give a brief overview here, if you want to note and summarize the content.
