@@ -47,7 +47,7 @@ class generate_proposals_v2 : public testing::Test {
     if (scores_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&scores_desc_));
       std::vector<int> scores_dims = {2, 8, 16, 16};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, MLUOP_LAYOUT_NHWC,
+      MLUOP_CHECK(mluOpSetTensorDescriptor(scores_desc_, MLUOP_LAYOUT_NHWC,
                                            MLUOP_DTYPE_FLOAT, 4,
                                            scores_dims.data()));
     }
@@ -161,7 +161,7 @@ class generate_proposals_v2 : public testing::Test {
     }
     if (rpn_rois_batch_size) {
       size_t rpn_rois_batch_size_ele_num = 1;
-      size_t rpn_rois_batch_size_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
+      size_t rpn_rois_batch_size_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t rpn_rois_batch_size_bytes =
           rpn_rois_batch_size_ele_num * rpn_rois_batch_size_dtype_bytes;
       GTEST_CHECK(CNRT_RET_SUCCESS ==
@@ -247,9 +247,9 @@ class generate_proposals_v2 : public testing::Test {
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_roi_probs_));
       rpn_roi_probs_ = NULL;
     }
-    if (rrpn_rois_num_desc_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rrpn_rois_num_desc_));
-      rrpn_rois_num_desc_ = NULL;
+    if (rpn_rois_num_desc_) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_num_desc_));
+      rpn_rois_num_desc_ = NULL;
     }
     if (rpn_rois_num_) {
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(rpn_rois_num_));
@@ -285,7 +285,7 @@ class generate_proposals_v2 : public testing::Test {
   void* rpn_rois_ = NULL;
   mluOpTensorDescriptor_t rpn_roi_probs_desc_ = NULL;
   void* rpn_roi_probs_ = NULL;
-  mluOpTensorDescriptor_t rrpn_rois_num_desc_ = NULL;
+  mluOpTensorDescriptor_t rpn_rois_num_desc_ = NULL;
   void* rpn_rois_num_ = NULL;
   void* rpn_rois_batch_size_ = NULL;
 };
