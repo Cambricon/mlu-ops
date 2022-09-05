@@ -67,11 +67,11 @@ void GenerateProposalsV2Executor::workspaceMalloc() {
 }
 
 void GenerateProposalsV2Executor::workspaceFree() {
-  if (workspace_[0]) {
-    VLOG(4) << "Free device workspace space.";
-    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
-    workspace_[0] = nullptr;
-  }
+  // if (workspace_[0]) {
+  //   VLOG(4) << "Free device workspace space.";
+  //   GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+  //   workspace_[0] = nullptr;
+  // }
 }
 
 void GenerateProposalsV2Executor::compute() {
