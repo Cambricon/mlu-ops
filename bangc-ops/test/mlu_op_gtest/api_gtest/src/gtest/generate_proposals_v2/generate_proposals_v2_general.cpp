@@ -34,11 +34,12 @@
 namespace mluopapitest {
 typedef std::tuple<int, int, float, float, float, bool>
     GenerateProposalsV2Param;
+typedef std::tuple<mluOpDevType_t, mluOpStatus_t> PublicParam;
 
 typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
                    MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
                    MLUOpTensorParam, MLUOpTensorParam, GenerateProposalsV2Param,
-                   mluOpDevType_t, mluOpStatus_t>
+                   PublicParam>
     GenerateProposalsV2;
 class generate_proposals_v2_general
     : public testing::TestWithParam<GenerateProposalsV2> {
@@ -191,8 +192,8 @@ class generate_proposals_v2_general
     std::tie(pre_nms_top_n_, post_nms_top_n_, nms_thresh_, min_size_, eta_,
              pixel_offset_) = generateProposalsV2Param;
 
-    device_ = std::get<9>(GetParam());
-    expected_status_ = std::get<10>(GetParam());
+    PublicParam publicParam = std::get<9>(GetParam());
+    std::tie(pdevice_, expected_status_) = publicParam;
   }
 
   bool compute() {
@@ -338,5 +339,28 @@ TEST_P(generate_proposals_v2_general, api_test) {
            << " in generate_proposals_v2";
   }
 }
+
+INSTANTIATE_TEST_CASE_P(
+    zero_element_0, generate_proposals_v2_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 8, 16, 16}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 32, 16, 16}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({8, 16, 16, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({8, 16, 16, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({5, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         2, std::vector<int>({5, 1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({2}))),
+        testing::Values(GenerateProposalsV2Param{0, 5, 0.5, 4, 3, 0}),
+        testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
+                                    MLUOP_STATUS_SUCCESS})));
 
 }  // namespace mluopapitest
