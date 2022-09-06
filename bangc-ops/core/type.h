@@ -25,8 +25,9 @@
 #define CORE_TYPE_H_
 
 #include <string>
+
 #include "core/logging.h"
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 
 size_t getSizeOfDataType(const mluOpDataType_t dtype);
 

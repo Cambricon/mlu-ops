@@ -40,12 +40,11 @@
 #include <mutex>  // NOLINT
 #include <iterator>
 #include <utility>
-#include "mlu_op.h"
 #include "core/type.h"
 #include "core/logging.h"
-#include "core/mlu_op_core.h"
 #include "core/tool.h"
 #include "core/platform/env_time.h"
+#include "mlu_op.h"
 
 // macro function for user
 #define MLUOP_GEN_CASE_ON (mluop::gen_case::isGenCaseOn())
