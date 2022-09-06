@@ -37,7 +37,6 @@ class AdjustHue(object):
     def __init__(
         self,
         dtype: ty.string,
-        cluster_num: ty.int32,
         dtype_bits: ty.int32,
         stage: ty.boolean,
         active_tab1: ty.Tuple,
@@ -53,7 +52,6 @@ class AdjustHue(object):
         self.dtype = dtype
         self.dtype_bits = dtype_bits
         self.stage = stage
-        self.cluster_num = cluster_num
         self.active_tab1 = active_tab1
         self.active_tab2 = active_tab2
         self.active_tab3 = active_tab3
@@ -349,7 +347,7 @@ class AdjustHue(object):
         self.delta = tcp.cast(delta, self.dtype) * tcp.cast(6.0, self.dtype)
         self.src_gdram = tcp.match_buffer(inputs, [n, h, w, c], self.dtype)
         self.dst_gdram = tcp.match_buffer(outputs, [n, h, w, c], self.dtype)
-        for i in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
+        for i in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
             for j in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 if self.dtype == "float16":
                     self.const_tab_1 = tcp.alloc_const(
@@ -457,7 +455,7 @@ class AdjustHue(object):
                 self.prepare_active_tab()
 
                 # diveide h dim
-                task_dim = self.cluster_num * tgt.core_num
+                task_dim = tgt.cluster_num * tgt.core_num
                 task_id = i * 4 + j
                 real_task_num = (self.h + task_dim - 1) / task_dim
                 core_offset = real_task_num * task_id
@@ -541,7 +539,6 @@ def build_adjust_hue(dtype=None, target=None):
     f = build_module.build(
         AdjustHue(
             dtype.name,
-            1 if target == "mlu220-m2" else 4,
             4 if dtype.name == "float32" else 2,
             stage,
             ACTIVE_TABLE1,

@@ -34,10 +34,9 @@ class Add(object):
     """Operator description:
     Add the data in the two buffers.
     """
-    def __init__(self, cluster_num: ty.int32, buffer_size: ty.int32, dtype: ty.string) -> None:
+    def __init__(self, buffer_size: ty.int32, dtype: ty.string) -> None:
         self.dtype = dtype
         self.single_buffer_size = buffer_size
-        self.cluster_num = cluster_num
 
     def add_body(
         self,
@@ -55,7 +54,7 @@ class Add(object):
         tgt = tcp.target()
         # calculate split strategy
         # gets the data length to be calculated for each task
-        data_calculated_each_task = length // (self.cluster_num * tgt.core_num)
+        data_calculated_each_task = length // (tgt.cluster_num * tgt.core_num)
         # gets the number of cycles required for each task
         loop_num = data_calculated_each_task // self.single_buffer_size
 
@@ -68,7 +67,7 @@ class Add(object):
         buffer_out = tcp.alloc_buffer(
             [self.single_buffer_size], dtype=self.dtype, scope="nram"
         )
-        for cluster_id in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
+        for cluster_id in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 for i in range(loop_num):
                     task_id = cluster_id * tgt.core_num + core_id
@@ -83,6 +82,6 @@ class Add(object):
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_add(dtype=None, target=None):
     f = build_module.build(
-        Add(1, 256, dtype.name), target_tag=target, name=KERNEL_NAME
+        Add(64, dtype.name), target_tag=target, name=KERNEL_NAME
     )
     return f
