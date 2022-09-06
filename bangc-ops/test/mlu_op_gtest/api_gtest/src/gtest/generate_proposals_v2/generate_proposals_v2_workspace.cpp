@@ -41,7 +41,7 @@ class generate_proposals_v2_workspace : public testing::Test {
     if (scores_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&scores_desc_));
       std::vector<int> dim_size = {2, 8, 16, 16};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, MLUOP_LAYOUT_ARRAY,
+      MLUOP_CHECK(mluOpSetTensorDescriptor(scores_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 4,
                                            dim_size.data()));
     }

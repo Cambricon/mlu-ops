@@ -32,13 +32,14 @@
 #include "mlu_op.h"
 
 namespace mluopapitest {
-typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
-                   MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
-                   MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
-                   mluOpDevType_t, mluOpStatus_t>
-    GenerateProposalsV2;
 typedef std::tuple<int, int, float, float, float, bool>
     GenerateProposalsV2Param;
+
+typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
+                   MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
+                   MLUOpTensorParam, MLUOpTensorParam, GenerateProposalsV2Param,
+                   mluOpDevType_t, mluOpStatus_t>
+    GenerateProposalsV2;
 class generate_proposals_v2_general
     : public testing::TestWithParam<GenerateProposalsV2> {
  public:
@@ -182,38 +183,16 @@ class generate_proposals_v2_general
                   cnrtMalloc(&rpn_rois_num_, rpn_rois_num_bytes))
     }
 
-    MLUOpTensorParam rpn_rois_batch_size_params = std::get<8>(GetParam());
-    mluOpTensorLayout_t rpn_rois_batch_size_layout =
-        rpn_rois_batch_size_params.get_layout();
-    mluOpDataType_t rpn_rois_batch_size_dtype =
-        rpn_rois_batch_size_params.get_dtype();
-    int rpn_rois_batch_size_dim = rpn_rois_batch_size_params.get_dim_nb();
-    std::vector<int> rpn_rois_batch_size_dim_size =
-        rpn_rois_batch_size_params.get_dim_size();
-    MLUOP_CHECK(mluOpSetTensorDescriptor(
-        rpn_rois_batch_size_desc_, rpn_rois_batch_size_layout,
-        rpn_rois_batch_size_dtype, rpn_rois_batch_size_dim,
-        rpn_rois_batch_size_dim_size.data()));
-    uint64_t rpn_rois_batch_size_ele_num =
-        mluOpGetTensorElementNum(rpn_rois_batch_size_desc_);
-    uint64_t rpn_rois_batch_size_bytes =
-        mluOpDataTypeBytes(rpn_rois_batch_size_dtype) *
-        rpn_rois_batch_size_ele_num;
-    if (rpn_rois_batch_size_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMalloc(&rpn_rois_batch_size_, rpn_rois_batch_size_bytes))
-    }
+    GTEST_CHECK(CNRT_RET_SUCCESS ==
+                cnrtMalloc(&rpn_rois_batch_size_,
+                           mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
 
-    // GTEST_CHECK(
-    //     CNRT_RET_SUCCESS ==
-    //     cnrtMalloc(&rpn_rois_batch_size_,
-    //     mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
+    GenerateProposalsV2Param generateProposalsV2Param = std::get<8>(GetParam());
+    std::tie(pre_nms_top_n_, post_nms_top_n_, nms_thresh_, min_size, eta_,
+             pixel_offset_) = generateProposalsV2Param;
 
-    GenerateProposalsV2Param generateProposalsV2Param = std::get<9>(GetParam());
-    std::tie(pre_nms_top_n, post_nms_top_n, nms_thresh, min_size, eta,
-             pixel_offset) = generateProposalsV2Param;
-    device_ = std::get<10>(GetParam());
-    expected_status_ = std::get<11>(GetParam());
+    device_ = std::get<9>(GetParam());
+    expected_status_ = std::get<10>(GetParam());
   }
 
   bool compute() {
@@ -379,8 +358,6 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({5, 1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          1, std::vector<int>({2}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({1}))),
         testing::Values(GenerateProposalsV2Param{0, 5, 0.5, 4, 3, 0}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_SUCCESS)));
