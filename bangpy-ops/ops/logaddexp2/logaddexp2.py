@@ -182,7 +182,7 @@ class Logaddexp2:
 
 @bangpy.tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp2(dtype=None, target=None):
-    # build a executable module
+    """build a executable module"""
     func = build_module.build(
         Logaddexp2(dtype.name, target), target_tag=target, name=KERNEL_NAME
     )
