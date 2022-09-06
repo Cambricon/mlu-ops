@@ -26,8 +26,8 @@
 #include <string>
 
 #include "cn_api.h"
-#include "mlu_op.h"
 #include "core/logging.h"
+#include "mlu_op.h"
 
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
 #define CONTEXT_DEVICENAME_LEAST_SIZE 6
