@@ -32,6 +32,7 @@ namespace GenerateProposalsV2 {
 
 #define PNMS_MIN (-(float)FLT_MAX)
 static const double kBBoxClipDefault = std::log(1000.0 / 16.0);
+// static const float kBBoxClipDefault = 4.135166556742356f;
 
 template <typename T>
  void quickSort(T *arr, int low, int high) {
@@ -71,15 +72,10 @@ bool isRealBox(const T xmin, const T ymin, const T xmax, const T ymax, const T i
     T offset = pixel_offset ? static_cast<T>(1.0) : 0;
     T w = xmax - xmin + offset;
     T h = ymax - ymin + offset;
-  
     
     if (pixel_offset) {
       T cx = xmin + w / 2.;
       T cy = ymin + h / 2.;
-      if(g_count < 6){
-        g_count++;
-        printf("coor(%f, %f, %f, %f),wh(%f, %f), cx,xy:(%f, %f)\n", xmin, ymin, xmax, ymax, w, h,cx, cy);
-      }
    
       if (w >= min_size && h >= min_size && cx <= im_w && cy <= im_h) {
         is_real_box = true;
@@ -95,6 +91,7 @@ bool isRealBox(const T xmin, const T ymin, const T xmax, const T ymax, const T i
     }
     return is_real_box;
 }
+
 bool testf = true;
 template <typename T>
 void creatAndFilterProposalsBox(T *anchors_slice,
@@ -112,12 +109,10 @@ void creatAndFilterProposalsBox(T *anchors_slice,
                                 int * proposals_num){
     // if(testf){
     //   testf = false;
-    //       int test_indx = 4;
-    // printf("anchors[%d] (%f, %f, %f, %f)\n",test_indx, anchors_slice[4*test_indx], anchors_slice[4*test_indx+1], anchors_slice[4*test_indx + 2], anchors_slice[4*test_indx+3] );
-    // printf("variances_slice[%d] (%f, %f, %f, %f)\n",test_indx, variances_slice[4*test_indx], variances_slice[4*test_indx+1], variances_slice[4*test_indx + 2], variances_slice[4*test_indx+3] );
-
-    // printf("bbox_deltals[%d] (%f, %f, %f, %f)\n", test_indx,bbox_deltas_slice[test_indx], bbox_deltas_slice[1 * AHW +test_indx], bbox_deltas_slice[2 * AHW +test_indx], bbox_deltas_slice[3 * AHW +test_indx] );
-
+    //   int test_indx = 4;
+    //   printf("anchors[%d] (%f, %f, %f, %f)\n",test_indx, anchors_slice[4*test_indx], anchors_slice[4*test_indx+1], anchors_slice[4*test_indx + 2], anchors_slice[4*test_indx+3] );
+    //   printf("variances_slice[%d] (%f, %f, %f, %f)\n",test_indx, variances_slice[4*test_indx], variances_slice[4*test_indx+1], variances_slice[4*test_indx + 2], variances_slice[4*test_indx+3] );
+    //   printf("bbox_deltals[%d] (%f, %f, %f, %f)\n", test_indx,bbox_deltas_slice[test_indx], bbox_deltas_slice[1 * AHW +test_indx], bbox_deltas_slice[2 * AHW +test_indx], bbox_deltas_slice[3 * AHW +test_indx] );
     // }
 
     int k = max_score_id;
@@ -146,10 +141,6 @@ void creatAndFilterProposalsBox(T *anchors_slice,
       d_cy = cy + dymin * h * variances_slice[4 * k + 1];
       d_w = exp(std::min(dxmax * variances_slice[4 * k + 2], bbox_clip_default)) * w;
       d_h = exp(std::min(dymax * variances_slice[4 * k + 3], bbox_clip_default)) * h;
-      // if(max_score_id == 4){
-      //   printf("dw: = %f, w = %f\n", d_w, w);
-      //   printf("dh: = %f, h = %f\n", d_h, h);
-      // }
 
     } else {
       d_cx = cx + dxmin * w;
@@ -163,16 +154,12 @@ void creatAndFilterProposalsBox(T *anchors_slice,
     T oxmax = d_cx + d_w * 0.5 - offset;
     T oymax = d_cy + d_h * 0.5 - offset;
 
-    T p_xmin = std::max(std::min(oxmin, im_shape_slice[1] - offset), (T)0.);
+    T p_xmin = std::max(std::min(oxmin, (im_shape_slice[1] - offset)), (T)0.);
     T p_ymin = std::max(std::min(oymin, im_shape_slice[0] - offset), (T)0.);
     T p_xmax = std::max(std::min(oxmax, im_shape_slice[1] - offset), (T)0.);
     T p_ymax = std::max(std::min(oymax, im_shape_slice[0] - offset), (T)0.);
 
-    // if ( k == 81 || k == 115) {
-    //   printf(" k = %d , p(%f, %f, %f, %f)\n", k,  p_xmin, p_ymin, p_xmax, p_ymax);
-    // }
-
-
+  
     T area = 0;
     // h =im_shape_slice[0], w = im_shape_slice[1]
     bool isValidBox = isRealBox(p_xmin, p_ymin, p_xmax, p_ymax, im_shape_slice[0], im_shape_slice[1], pixel_offset, min_size, &area);
@@ -191,7 +178,6 @@ void creatAndFilterProposalsBox(T *anchors_slice,
         *proposals_num = *proposals_num + 1;
     }
 }
-
 
 template <typename T>
 void findMaxScore(T *h_scores_buf,
@@ -212,6 +198,23 @@ void findMaxScore(T *h_scores_buf,
   *max_score = max_score_local;
   *max_score_id = max_score_id_local;
   return;
+}
+
+template <typename T>
+T calcIoU(T *a, T *b, bool pixel_offset) {
+  float offset = pixel_offset ? static_cast<float>(1.0) : 0;
+  float left = max(a[0], b[0]), right = min(a[2], b[2]);
+  float top = max(a[1], b[1]), bottom = min(a[3], b[3]);
+  float width = max(right - left + offset, 0.f),
+        height = max(bottom - top + offset, 0.f);
+  float inter_s = width * height;
+  float s_a = (a[2] - a[0] + offset) * (a[3] - a[1] + offset);
+  float s_b = (b[2] - b[0] + offset) * (b[3] - b[1] + offset);
+  return inter_s / (s_a + s_b - inter_s);
+}
+
+bool equal(float a, float b) {
+  return abs(a-b) < 0.001;
 }
 
 template <typename T>
@@ -240,37 +243,29 @@ void  ProposalForOneImage(T *scores_slice,
   if(post_nms_num > pre_nms_num){
     post_nms_num = pre_nms_num;
   }
+  printf("kBBoxClipDefault = %lf \n", kBBoxClipDefault);
 
-  bool is_need_topk = (AHW > pre_nms_top_n) && (pre_nms_top_n > 0);
+//   bool need_sort = (AHW > pre_nms_top_n && pre_nms_top_n > );
+//   if(need_sort) {
+//     // 排序的话，需要把index也排序， 不然取socre和proposal 对不上
+//     quickSort(temp_scores, 0, pre_nms_top_n-1);
+//   }
+// // 
 
-  printf("cpu: is_need_topk = %d,  AHW= %d, pre_nms_top_n = %d , pre_nms_num = %d\n", is_need_topk, AHW, pre_nms_top_n, pre_nms_num);
+  printf("cpu: AHW= %d, pre_nms_top_n = %d , pre_nms_num = %d\n",  AHW, pre_nms_top_n, pre_nms_num);
   T k_score = 0.0f;
-  // is_need_topk = false;
-  if(is_need_topk){
-    T * temp_scores = new T [AHW];
-    memcpy(temp_scores, scores_slice, AHW * sizeof(T));
-
-    quickSort<float>(temp_scores, 0, AHW - 1);
-    // for(int i = 0; i < AHW; i++){
-    //   printf("%d: %f, %f \n",i, scores_slice[i], temp_scores[i]);
-    // }
-    k_score = temp_scores[AHW - pre_nms_num + 1];
-    printf("cpu: k_scores = %f \n", k_score);
-    delete [] temp_scores;
-  }
-
   T *out_scores_buf = new T [pre_nms_num]; // 设置四个buf, 从最上层接口传过来
   T *out_box_buf = new T [pre_nms_num*4];
   T *out_area_buf  = new T [pre_nms_num];
+  T * temp_scores = new T [AHW];
+  memcpy(temp_scores, scores_slice, AHW * sizeof(T));
   // top k, creatbox, filter box
   for (int top_id = 0; top_id < pre_nms_num; ++top_id) {
     int max_score_id = top_id;
     T max_score = scores_slice[max_score_id];
-    if(is_need_topk){
-      if(max_score < k_score){
-        continue;
-      }
-    }
+ 
+    findMaxScore(temp_scores, AHW, &max_score, &max_score_id);
+    temp_scores[max_score_id] = PNMS_MIN;
 
     creatAndFilterProposalsBox<T>(anchors_slice,
                                   bbox_deltas_slice,
@@ -286,7 +281,7 @@ void  ProposalForOneImage(T *scores_slice,
                                   pixel_offset,
                                   &proposals_num);
   }
-  //  printf("creatAndFilterProposalsBox: proposals_num: %d \n", proposals_num);
+  // printf("creatAndFilterProposalsBox: proposals_num: %d \n", proposals_num);
   // for( int i = 0; i < proposals_num; ++i){
   //   printf("b ox[%d]: corrd: (%f, %f, %f, %f) \n", i, out_box_buf[i*4 + 0],out_box_buf[i*4 + 1],out_box_buf[i*4+2],out_box_buf[i*4+3]);  
   // }
@@ -305,85 +300,68 @@ void  ProposalForOneImage(T *scores_slice,
   int real_proposal_num = 0;
   int nms_num = std::min(proposals_num, post_nms_top_n);
   printf("cpu nms_num: %d ,proposals_num:%d\n", nms_num, proposals_num);
-  // nms_num = 10;
   for (int nms_id = 0; nms_id < nms_num; ++nms_id) {
     // Find max score
     float max_score = 0.0f;
     int max_score_id = 0;
     findMaxScore(out_scores_buf, proposals_num, &max_score, &max_score_id);
     out_scores_buf[max_score_id] = PNMS_MIN;
-    if (max_score <= PNMS_MIN) {
+
+    // max_score < k_score
+    if (max_score <= PNMS_MIN) { /**/
       break;
     }
-
-    // continue;
-    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 0] = out_box_buf[max_score_id * 4 + 0];
-    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 1] = out_box_buf[max_score_id * 4 + 1];
-    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 2] = out_box_buf[max_score_id * 4 + 2];
-    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 3] = out_box_buf[max_score_id * 4 + 3];
-
-    rpn_roi_probs[rpn_rois_batch_num + real_proposal_num] = max_score;
-    real_proposal_num++;
-
-
     // Compute max area
     float max_score_x0 = out_box_buf[max_score_id * 4 + 0];
     float max_score_y0 = out_box_buf[max_score_id * 4 + 1];
     float max_score_x1 = out_box_buf[max_score_id * 4 + 2];
     float max_score_y1 = out_box_buf[max_score_id * 4 + 3];
+    // save max score and box to output
+    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 0] = max_score_x0;
+    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 1] = max_score_y0;
+    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 2] = max_score_x1;
+    rpn_rois[(rpn_rois_batch_num + real_proposal_num) * 4 + 3] = max_score_y1;
+
+    rpn_roi_probs[rpn_rois_batch_num + real_proposal_num] = max_score;
+    real_proposal_num++;
 
     float max_score_area = out_area_buf[max_score_id];
-
     printf("nms max_score: %f , index = %d, corrd: (%f, %f, %f, %f) max_score_area=%f\n", max_score, max_score_id, max_score_x0, max_score_y0, max_score_x1, max_score_y1, max_score_area);
 
     for (int inner_id = 0; inner_id < proposals_num; ++inner_id) {
       if (inner_id == max_score_id) {
         continue;
       }
+      
+      // float a[4] = {max_score_x0, max_score_y0, max_score_x1, max_score_y1};
+      // float b[4] = {out_box_buf[inner_id * 4 + 0], out_box_buf[inner_id * 4 + 1], out_box_buf[inner_id * 4 + 2], out_box_buf[inner_id * 4 + 3]};
 
-      // Compute inter area
-      float inter_x0 = std::max(max_score_x0, out_box_buf[inner_id * 4 + 0]);
-      float inter_y0 = std::max(max_score_y0, out_box_buf[inner_id * 4 + 1]);
-      float inter_x1 = std::min(max_score_x1, out_box_buf[inner_id * 4 + 2]);
-      float inter_y1 = std::min(max_score_y1, out_box_buf[inner_id * 4 + 3]);
-
-      float inter_area = std::max(0.0f, inter_x1 - inter_x0 + offset) * std::max(0.0f, inter_y1 - inter_y0 + offset) ;
-      // printf("inter_area:%f , max_score_area : %f, out_area_buf[inner_id]: %f, inter_area: %f\n", inter_area, max_score_area, out_area_buf[inner_id], inter_area);
-      float iou = inter_area / (max_score_area + out_area_buf[inner_id] - inter_area);
-      // printf("iou:%f\n", iou);
-      // if(iou < 0 ){
-      //   printf("inter_area:%f , max_score_area : %f, out_area_buf[inner_id]: %f, inter_area: %f\n", inter_area, max_score_area, out_area_buf[inner_id], inter_area);
-      //   printf("corrd max: (%f, %f, %f, %f) \n", max_score_x0, max_score_y0, max_score_x1, max_score_y1);  
-      //   printf("corrd temp: (%f, %f, %f, %f) \n", out_box_buf[inner_id * 4 + 0], out_box_buf[inner_id * 4 + 1], out_box_buf[inner_id * 4 + 2], out_box_buf[inner_id * 4 + 3]);  
-      //   printf("u:%f\n",  (max_score_area + out_area_buf[inner_id] - inter_area));
-      //   return;
-      // }
-     
+      float *a = out_box_buf + max_score_id * 4;
+      float *b = out_box_buf + inner_id * 4;
+      float iou = calcIoU(a, b, pixel_offset);
       if (iou > nms_thresh) {
-          // if(inner_id == 115) {
-          //    printf("iou[%d] = %f, nms_thresh = %f, scores =%f\n",inner_id, iou, nms_thresh, out_scores_buf[inner_id]);
-          //    printf("max_coor(%f, %f, %f, %f)\n",max_score_x0, max_score_y0, max_score_x1, max_score_y1);
-          //    printf("ioubox coor(%f, %f, %f, %f)\n", out_box_buf[inner_id * 4 + 0],  out_box_buf[inner_id * 4 + 1],  out_box_buf[inner_id * 4 + 2],  out_box_buf[inner_id * 4 + 3]);
-          //    printf("inter (%f, %f, %f, %f)\n",inter_x0, inter_y0, inter_x1, inter_y1);
-          //    printf("inter_area:%f , max_score_area : %f, out_area_buf[inner_id]: %f, inter_area: %f\n", inter_area, max_score_area, out_area_buf[inner_id], inter_area);
+          // if(abs(out_scores_buf[inner_id] - 87.762) < 0.001) {
+          //   printf("iou[%d] = %f, max_score = %f, nms_thresh = %f, scores =%f\n",inner_id, iou, out_scores_buf[inner_id], nms_thresh, out_scores_buf[inner_id]);
+          //   printf("max_coor(%f, %f, %f, %f)\n",max_score_x0, max_score_y0, max_score_x1, max_score_y1);
+          //   printf("ioubox coor(%f, %f, %f, %f)\n", out_box_buf[inner_id * 4 + 0],  out_box_buf[inner_id * 4 + 1],  out_box_buf[inner_id * 4 + 2],  out_box_buf[inner_id * 4 + 3]);
           // }
-          out_scores_buf[inner_id] = PNMS_MIN;
+         out_scores_buf[inner_id] = PNMS_MIN;
       }
     }
   }
   printf("nms end\n");
   *one_image_proposal_num = real_proposal_num;
+  printf("nms end ,outputnum=%d\n", real_proposal_num);
  
   delete[] out_scores_buf;
   delete[] out_box_buf;
   delete[] out_area_buf;
+  delete [] temp_scores;
+
   out_scores_buf = nullptr;
   out_box_buf = nullptr;
   out_area_buf = nullptr;
-  printf("nms end ,outputnum=%d\n", real_proposal_num);
-
-
-
+  temp_scores = nullptr;
 }
 
 void generateProposalsV2CPUImpl(float *scores,
@@ -405,10 +383,8 @@ void generateProposalsV2CPUImpl(float *scores,
                                float* rpn_roi_probs,
                                float* rpn_rois_num,
                                float* rpn_rois_batch_size){
-  cout << "N:" << N << endl;
-  cout << "A:" << A << endl;
-  cout << "H:" << H << endl;
-  cout << "W:" << W << endl;
+  printf("N,A,H,W: (%d, %d, %d, %d), pre_nms_top_n = %d, post_nms_top_n = %d \n",N, A, H, W, pre_nms_top_n, post_nms_top_n);
+  printf("nms_thresh = %f, min_size = %f, pixel_offset = %d\n",nms_thresh, min_size, pixel_offset);
 
   const int AHW = A * H * W;
   int rpn_rois_batch_num = 0;

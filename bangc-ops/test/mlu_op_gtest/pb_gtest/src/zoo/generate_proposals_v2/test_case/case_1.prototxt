@@ -1,3 +1,4 @@
+device: CPU
 op_name: "generate_proposals_v2"
 input {
   id: "input1"
@@ -82,7 +83,6 @@ input {
     distribution: UNIFORM
   }
 }
-
 output {
   id: "output1"
   shape: {
@@ -91,6 +91,11 @@ output {
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
+  thresholds {
+    evaluation_threshold: 0.003
+    evaluation_threshold: 0.003
+    evaluation_threshold: 10.0
+  }
 }
 
 output {
@@ -101,6 +106,11 @@ output {
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
+  thresholds {
+    evaluation_threshold: 10.0
+    evaluation_threshold: 10.0
+    evaluation_threshold: 0.0
+  }
 }
 
 output {
@@ -111,6 +121,11 @@ output {
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
+  thresholds {
+    evaluation_threshold: 10.0
+    evaluation_threshold: 10.0
+    evaluation_threshold: 0.0
+  }
 }
 
 output {
@@ -120,20 +135,23 @@ output {
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
+  thresholds {
+    evaluation_threshold: 10.0
+    evaluation_threshold: 10.0
+    evaluation_threshold: 0.0
+  }
 }
 
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_criterion: DIFF3
 
 generate_proposals_v2_param: {
-  pre_nms_top_n: 600
-  post_nms_top_n: 20
+  pre_nms_top_n: 12
+  post_nms_top_n: 10
   nms_thresh: 0.5
   min_size: 0.1
   eta: 1.0
   pixel_offset: true
 }
 
-test_param: {
-  error_func: DIFF3
-  error_threshold: 0.0
-  baseline_device: CPU
-}

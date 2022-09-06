@@ -239,6 +239,7 @@ __mlu_func__ void calcExp(T * output, T * input, int length){
   __bang_mul_scalar(output, input, (float)LOG_2_E, length);
   __bang_pow2(output, output, length);
 #else
+__bang_printf("LOG_2_E: %.10f \n", (float)LOG_2_E); 
   __bang_active_exphp(output, input, length);
 #endif
 }
@@ -331,7 +332,10 @@ __mlu_func__ void createBox(T *proposal_boxes,
         __bang_mul(d_h, dymax, variances + 3 * input_stride, align_count);
 
         // Min(dymax * var[k + 3], bbox_clip_default)
-        const float bbox_clip_default = std::log(1000.0 / 16.0);
+        // const float bbox_clip_default = std::log(1000.0 / 16.0);
+        const float bbox_clip_default = 4.135166556742356f;
+       
+        __bang_printf("kBBoxClipDefault = %f \n", bbox_clip_default);
         __bang_write_value(tmp1, align_count, bbox_clip_default);
         __bang_minequal(dxmax, d_w, tmp1, align_count);
         __bang_minequal(dymax, d_h, tmp1, align_count);
@@ -729,8 +733,8 @@ __mlu_func__ void getMaxScoreIndex( T *proposal_scores,
 }
 
 template <typename T>
-__mlu_func__ void calcBoxesArea(const T * intput_boxes,
-                                T * output_box_area,
+__mlu_func__ void calcBoxesArea(T * output_box_area,
+                                const T * intput_boxes,
                                 bool pixel_offset,
                                 const int intput_boxes_num,
                                 const int core_offset,
@@ -806,6 +810,7 @@ __mlu_func__ void nonMaximumSuppress(T* output_boxes_ptr,
     __bang_printf("------------nonMaximumSuppress-------------\n");
     // __bang_printf("max_seg_num: %d ,repeat=%d, remain_num = %d, core_num=%d,  core_offset: %d\n",max_seg_num, repeat, remain_num, core_num, core_offset);
     
+    // init nram ptr
     T * output_scores = (T *)nram_buffer;
     T * output_boxes  = (T *)nram_buffer + max_seg_num;
 
@@ -821,10 +826,10 @@ __mlu_func__ void nonMaximumSuppress(T* output_boxes_ptr,
     T * inter_s = inter_y2 + max_seg_num;
     T * tmp1 = inter_s + max_seg_num;
 
-    int getMaxScoreBufSize = PROPOSAL_NRAM_SIZE - 5 * max_seg_num * sizeof(T) - 1 * NFU_ALIGN_SIZE;  // nram size - nram_save - max_box
+    int getMaxScoreBufSize = PROPOSAL_NRAM_SIZE - 5 * max_seg_num * sizeof(T);  // nram size - nram_save
 
-    T *box_area_gdram = workspace;
-    calcBoxesArea(input_boxes_ptr, box_area_gdram, pixel_offset, core_num, core_offset, box_stride); // len_core 要改getComputeParams, 加个参数
+    T *box_area_gdram = workspace; // save boxes area to gdram
+    calcBoxesArea(box_area_gdram, input_boxes_ptr, pixel_offset, core_num, core_offset, box_stride);
     __bang_printf("NMS:  calcBoxesArea end \n");
 
     T* reduce_buffer = box_area_gdram + scores_num;
@@ -928,34 +933,34 @@ __mlu_func__ void nonMaximumSuppress(T* output_boxes_ptr,
             T *x2 = boxes + 2 * max_seg_num;
             T *y2 = boxes + 3 * max_seg_num;
 
-            // inter_x1 = max(a[0], b[0])
+            // inter_x1 = max(a[0], b[0]) __bang_maxeq_scalar
             __bang_write_value(tmp1, actual_num_align, (T)global_max_x1);
             __bang_maxequal(inter_x1, x1, tmp1,  actual_num_align);
 
-            // inter_y1 = max(a[1], b[1])
+            // inter_y1 = max(a[1], b[1]) __bang_maxeq_scalar
             __bang_write_value(tmp1, actual_num_align, (T)global_max_y1);
             __bang_maxequal(inter_y1, y1, tmp1, actual_num_align);
 
-            // inter_x2 = min(a[2], b[2])
+            // inter_x2 = min(a[2], b[2]) __bang_mineq_scalar
             __bang_write_value(tmp1, actual_num_align, (T)global_max_x2);
             __bang_minequal(inter_x2, x2, tmp1,  actual_num_align);
 
-            // inter_y2 = min(a[3], b[3])
+            // inter_y2 = min(a[3], b[3]) __bang_mineq_scalar
             __bang_write_value(tmp1, actual_num_align, (T)global_max_y2);
             __bang_minequal(inter_y2, y2, tmp1, actual_num_align);
 
-  
             if (pixel_offset) {
                  // width = max(inter_x2 - inter_x1 + offset, 0.f),
                  // height = max(inter_y2 - inter_y1 + offset, 0.f);
-                __bang_write_value(tmp1, actual_num_align, (T)1.0);
+                // __bang_write_value(tmp1, actual_num_align, (T)1.0);
                 __bang_sub(inter_x2, inter_x2, inter_x1, actual_num_align);
                 __bang_sub(inter_y2, inter_y2, inter_y1, actual_num_align);
                 // width = inter_x1;
-                __bang_add(inter_x1, inter_x2, tmp1, actual_num_align); 
+                __bang_add_scalar(inter_x1, inter_x2,  (T)1.0, actual_num_align); 
                 // height = inter_21;
-                __bang_add(inter_y1, inter_y2, tmp1, actual_num_align);
+                __bang_add_scalar(inter_y1, inter_y2,  (T)1.0, actual_num_align);
 
+                // >= 322 __bang_maxeq_scalar
                 __bang_write_value(tmp1, actual_num_align, (T)0.0);
                 __bang_maxequal(inter_x1, inter_x1, tmp1, actual_num_align);
                 __bang_maxequal(inter_y1, inter_y1, tmp1, actual_num_align);
@@ -1020,7 +1025,8 @@ __mlu_func__ void ProposalForOneImage(const T *scores,
     __bang_printf("---AHW = %d, pre_nms_top_n = %d, post_nms_top_n= %d!\n", AHW, pre_nms_top_n, post_nms_top_n);
 
     T k_score = 0.0f;
-    bool need_top_k = AHW > pre_nms_top_n;
+    bool need_top_k = (AHW > pre_nms_top_n && pre_nms_top_n > 0);
+
     if (need_top_k) {
         getKthScore(scores, workspace, pre_nms_top_n, AHW, &k_score);
         __bang_printf("getKthScore end, k_scores = %f \n", k_score);
@@ -1051,21 +1057,21 @@ __mlu_func__ void ProposalForOneImage(const T *scores,
     // proposals_num == 0, ouput rpn_rois_num = 1, batchsize = 1, proposal_scores = 0, proposal_boxes=(0,0,0,0)
     if (proposals_num == 0) {
         rpn_rois_num[0] = 1;
-    } else {
-        workspace_buffer = proposal_boxes + 4 * AHW;
-        nonMaximumSuppress(rpn_rois,
-                            rpn_roi_probs,
-                            rpn_rois_num,
-                            proposal_scores,
-                            proposal_boxes,
-                            workspace_buffer,
-                            nms_thresh,
-                            post_nms_top_n,
-                            proposals_num,
-                            pixel_offset,
-                            AHW);
+        one_image_proposals_num[0] += rpn_rois_num[0];
+        return;
     }
-    
+
+    nonMaximumSuppress(rpn_rois,
+                        rpn_roi_probs,
+                        rpn_rois_num,
+                        proposal_scores,
+                        proposal_boxes,
+                        workspace_buffer,
+                        nms_thresh,
+                        post_nms_top_n,
+                        proposals_num,
+                        pixel_offset,
+                        AHW);
     one_image_proposals_num[0] += rpn_rois_num[0];
     __bang_printf("nonMaximumSuppress end, rpn_rois_num = %d \n", rpn_rois_num[0]);
 }

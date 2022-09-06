@@ -49,6 +49,8 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
   // *k_type = CNRT_FUNC_TYPE_UNION1;
   // k_dim->x = handle->core_num_per_cluster;
+  // //   *k_type = CNRT_FUNC_TYPE_BLOCK;
+  // // k_dim->x = 1;
   // return;
 
   if(job < 4){
@@ -152,7 +154,7 @@ mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
   VLOG(5) << "Launch Kernel mluOpUBestKernelGenerateProposalsV2Float <<<k_dim: " << k_type << ", "
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-
+  // return MLUOP_STATUS_SUCCESS;
   KERNEL_CHECK(mluOpUBestKernelGenerateProposalsV2Float(k_dim, k_type, handle->queue, (float *)scores, (float *)bbox_deltas, (float *)im_shape, (float *)anchors, (float *)variances, (float *)workspace, (float *)rpn_rois, (float *)rpn_roi_probs, (int *)rpn_rois_num, (int *)rpn_rois_batch_size, pre_nms_top_n, post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, batch_size, Anchors_num, H, W));
 
   GEN_CASE_END();
