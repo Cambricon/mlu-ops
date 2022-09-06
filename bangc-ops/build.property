@@ -1,0 +1,5 @@
+{
+  "version": "0.1.0-0",
+  "build_requires": {"cntoolkit": ["release","3.0.1-1"]},
+  "package_type": ["rpm","deb"]
+}
