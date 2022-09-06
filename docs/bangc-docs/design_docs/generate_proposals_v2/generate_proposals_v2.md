@@ -239,7 +239,7 @@ Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
 | 输入限制     |  输入参数shape必须满足要求:<br>scores：[N, A, H, W]<br>bbox_deltas:[N, 4*A, H, W]<br>img_size: [N, 2]  <br>anchors[A, H, W, 4] <br>variances[A, H, W, 4] |
-| 输入限制     |  输出参数shape必须满足要求:<br>rpn_rois:[post_nms_top_n, 4]，实际输出的维度信息为[rpn_rois_batch_size, 4] <br>rpn_roi_probs:[post_nms_top_n, 1]<br>rpn_rois_num:[N, 1]，实际输出的维度信息为[rpn_rois_batch_size, 1]  <br>rpn_rois_batch_size:[N], dim=1, shape[0]=1|
+| 输入限制     |  输出参数shape必须满足要求:<br>rpn_rois:[post_nms_top_n, 4]，实际输出的维度信息为[rpn_rois_batch_size, 4] <br>rpn_roi_probs:[post_nms_top_n, 1], 实际输出的维度信息为[rpn_rois_batch_size, 1] <br>rpn_rois_num:[N] <br>rpn_rois_batch_size:[1], dim=1, shape[0]=1|
 | 输入限制     |  输入参数eta表示自适应NMS，当前不支持，和竞品保持一致，参数保留，输入满足 eta >=1.0 |
 | 数据类型限制 | scores、bbox_deltas、anchors、variances只支持 float 输入 <br> pre_nms_top_n、post_nms_top_n只支持int类型输入 <br >nms_thresh、min_size只支持 float 输入|
 | 数据范围限制 | 无 |

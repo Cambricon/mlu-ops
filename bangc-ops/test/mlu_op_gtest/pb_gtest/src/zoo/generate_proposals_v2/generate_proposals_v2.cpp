@@ -41,8 +41,8 @@ void GenerateProposalsV2Executor::paramCheck() {
 void GenerateProposalsV2Executor::workspaceMalloc() {
   size_t workspace_size = 0;
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
-  MLUOP_CHECK(
-      mluOpGetGenerateProposalsV2WorkspaceSize(handle_, tensor_scores, &workspace_size));
+  MLUOP_CHECK(mluOpGetGenerateProposalsV2WorkspaceSize(handle_, tensor_scores,
+                                                       &workspace_size));
   VLOG(4) << "Malloc workspace space.";
   void *temp = mlu_runtime_.allocate(workspace_size);
   workspace_.push_back(temp);
@@ -83,8 +83,7 @@ void GenerateProposalsV2Executor::compute() {
       parser_->getProtoNode()->generate_proposals_v2_param().nms_thresh();
   float min_size =
       parser_->getProtoNode()->generate_proposals_v2_param().min_size();
-  float eta =
-      parser_->getProtoNode()->generate_proposals_v2_param().eta();
+  float eta = parser_->getProtoNode()->generate_proposals_v2_param().eta();
   bool pixel_offset =
       parser_->getProtoNode()->generate_proposals_v2_param().pixel_offset();
 
@@ -117,40 +116,23 @@ void GenerateProposalsV2Executor::compute() {
   auto rois_num_ptr = parser_->getMetaTensor("output3").dev_ptr;
   auto rpn_rois_batch_size_ptr = parser_->getMetaTensor("output4").dev_ptr;
 
-  VLOG(4) << "[mluOpGenerateProposalsV2] call mluOpGetGenerateProposalsV2WorkspaceSize()";
+  VLOG(4) << "[mluOpGenerateProposalsV2] call "
+             "mluOpGetGenerateProposalsV2WorkspaceSize()";
   size_t workspace_size = 0;
-  MLUOP_CHECK(
-      mluOpGetGenerateProposalsV2WorkspaceSize(handle_,tensor_scores, &workspace_size));
+  MLUOP_CHECK(mluOpGetGenerateProposalsV2WorkspaceSize(handle_, tensor_scores,
+                                                       &workspace_size));
   interface_timer_.start();
 
-  VLOG(4) << "[mluOpGenerateProposalsV2] call mluOpGetGenerateProposalsV2WorkspaceSize()";
+  VLOG(4) << "[mluOpGenerateProposalsV2] call "
+             "mluOpGetGenerateProposalsV2WorkspaceSize()";
 
-  MLUOP_CHECK(mluOpGenerateProposalsV2(handle_,
-                                      pre_nms_top_n,
-                                      post_nms_top_n,
-                                      nms_thresh,
-                                      min_size,
-                                      eta,
-                                      pixel_offset,
-                                      tensor_scores,
-                                      scores_ptr,
-                                      tensor_deltas,
-                                      deltas_ptr,
-                                      tensor_img_shape,
-                                      img_shape_ptr,
-                                      tensor_anchors,
-                                      anchors_ptr,
-                                      tensor_variances,
-                                      variances_ptr,
-                                      workspace_[0],
-                                      workspace_size,
-                                      tensor_rois,
-                                      rois_ptr,
-                                      tensor_roi_probs,
-                                      roi_probs_ptr,
-                                      tensor_rois_num,
-                                      rois_num_ptr,
-                                      rpn_rois_batch_size_ptr));
+  MLUOP_CHECK(mluOpGenerateProposalsV2(
+      handle_, pre_nms_top_n, post_nms_top_n, nms_thresh, min_size, eta,
+      pixel_offset, tensor_scores, scores_ptr, tensor_deltas, deltas_ptr,
+      tensor_img_shape, img_shape_ptr, tensor_anchors, anchors_ptr,
+      tensor_variances, variances_ptr, workspace_[0], workspace_size,
+      tensor_rois, rois_ptr, tensor_roi_probs, roi_probs_ptr, tensor_rois_num,
+      rois_num_ptr, rpn_rois_batch_size_ptr));
   interface_timer_.stop();
   VLOG(4) << "[mluOpGenerateProposalsV2] mluOpGenerateProposalsV2 end.";
 }
@@ -170,7 +152,7 @@ void GenerateProposalsV2Executor::cpuCompute() {
       parser_->getProtoNode()->generate_proposals_v2_param().pixel_offset();
 
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
-  
+
   const int N = tensor_scores->dims[0];
   const int A = tensor_scores->dims[1];
   const int H = tensor_scores->dims[2];
@@ -188,25 +170,10 @@ void GenerateProposalsV2Executor::cpuCompute() {
   auto rois_batch_size_ptr = parser_->getMetaTensor("output4").cpu_ptr;
 
   VLOG(4) << "[mluOpGenerateProposalsV2] cpu compute start. ";
-  GenerateProposalsV2::generateProposalsV2CPUImpl(scores_ptr,
-                            deltas_ptr,
-                            img_shape_ptr,
-                            anchors_ptr,
-                            variances_ptr,
-                            pre_nms_top_n,
-                            post_nms_top_n,
-                            nms_thresh,
-                            min_size,
-                            eta,
-                            pixel_offset,
-                            N,
-                            A,
-                            H,
-                            W,
-                            rois_ptr,
-                            roi_probs_ptr,
-                            rois_num_ptr,
-                            rois_batch_size_ptr);
+  GenerateProposalsV2::generateProposalsV2CPUImpl(
+      scores_ptr, deltas_ptr, img_shape_ptr, anchors_ptr, variances_ptr,
+      pre_nms_top_n, post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, N,
+      A, H, W, rois_ptr, roi_probs_ptr, rois_num_ptr, rois_batch_size_ptr);
   VLOG(4) << "[mluOpGenerateProposalsV2] cpu compute end, rois_batch_size: "
           << rois_batch_size_ptr[0];
 }

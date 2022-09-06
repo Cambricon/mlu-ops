@@ -28,25 +28,13 @@
 #include "executor.h"
 
 namespace GenerateProposalsV2 {
-void generateProposalsV2CPUImpl(float *scores,
-                               float *bbox_deltas,
-                               float * im_shape,
-                               float * anchors,
-                               float * variances,
-                               const int pre_nms_top_n,
-                               const int post_nms_top_n,
-                               const float nms_thresh,
-                               const float min_size,
-                               const float eta,
-                               bool pixel_offset,
-                               const int N,
-                               const int A,
-                               const int H,
-                               const int W,
-                               float* rpn_rois,
-                               float* rpn_roi_probs,
-                               float* rpn_rois_num,
-                               float* rpn_rois_batch_size);
-} // namespace GenerateProposalsV2
+void generateProposalsV2CPUImpl(
+    float* scores, float* bbox_deltas, float* im_shape, float* anchors,
+    float* variances, const int pre_nms_top_n, const int post_nms_top_n,
+    const float nms_thresh, const float min_size, const float eta,
+    bool pixel_offset, const int N, const int A, const int H, const int W,
+    float* rpn_rois, float* rpn_roi_probs, float* rpn_rois_num,
+    float* rpn_rois_batch_size);
+}  // namespace GenerateProposalsV2
 
 #endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_IMPL_H_
