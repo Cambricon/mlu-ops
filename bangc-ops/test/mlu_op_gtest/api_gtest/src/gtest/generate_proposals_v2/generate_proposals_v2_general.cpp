@@ -193,7 +193,7 @@ class generate_proposals_v2_general
              pixel_offset_) = generateProposalsV2Param;
 
     PublicParam publicParam = std::get<9>(GetParam());
-    std::tie(pdevice_, expected_status_) = publicParam;
+    std::tie(device_, expected_status_) = publicParam;
   }
 
   bool compute() {
