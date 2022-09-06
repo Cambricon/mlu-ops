@@ -20,15 +20,13 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """Logaddexp2 for bangpy tcp."""
 import bangpy
-from bangpy import tcp
 from bangpy.common.dtypes import DType
-from bangpy.script import build_module, ty
+from bangpy.script import tcp, build_module, ty
 
 DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 
 KERNEL_NAME = "logaddexp2"
-
 
 class Logaddexp2:
     """Operator description:
@@ -50,6 +48,7 @@ class Logaddexp2:
         ex0: ty.Buffer("nram"),
         ex1: ty.Buffer("nram"),
     ) -> None:
+        """compute logic of logaddexp2 is here"""
         # move in0 and in1 to ex0 and ex1, and make sure ex0 >= ex1
         tcp.maximum(ex0, in0, in1)
         tcp.minimum(ex1, in0, in1)
@@ -58,29 +57,25 @@ class Logaddexp2:
         # out = ex1 + log2(1+2**(ex0-ex1))
         tcp.subtract(in0, ex0, ex1)
         tcp.exp2(out, in0)
+        # self.exp2(out, in0)
         tcp.add(out, out, 1)
-        tcp.log(out, out, high_precision=False)
+        tcp.log(out, out)
+        # tcp.log(out, out)
         tcp.multiply(out, out, 1 / self.log2)
         tcp.add(out, out, ex1)
         # if ex0-ex1 > 15, out = ex0
         # ex1: 15
         # in1: mask, if greater than 15, set 1
-        if self.arch >= "mlu3":
-            tcp.less_equal(in1, in0, 15.0)
-            tcp.multiply(out, out, in1)
-            tcp.greater(in1, in0, 15.0)
-        else:
-            # bangpy2.0.3 bug, assign half value without cast lead to wrong result
-            tcp.assign(ex1, tcp.cast(15, self.dtype))
-            tcp.less_equal(in1, in0, ex1)
-            tcp.multiply(out, out, in1)
-            tcp.greater(in1, in0, ex1)
+        tcp.less_equal(in1, in0, 15.0)
+        tcp.multiply(out, out, in1)
+        tcp.greater(in1, in0, 15.0)
         tcp.multiply(ex0, ex0, in1)
         tcp.add(out, out, ex0)
 
     def main(
         self, input0: ty.handle, input1: ty.handle, output: ty.handle, length: ty.int32
     ) -> None:
+        """operator main body"""
         # declare I/O buffer(gdram)
         buffer_in0 = tcp.match_buffer(input0, [length], dtype=self.dtype)
         buffer_in1 = tcp.match_buffer(input1, [length], dtype=self.dtype)
@@ -92,7 +87,8 @@ class Logaddexp2:
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 # calculate split strategy
                 task_id = cluster_id * tgt.core_num + core_id
-                # 3*2+2=8 buffers: 3 pipeline double buffer(input1, input2, output), and 2 extra buffer.
+                # 3*2+2=8 buffers: 3 pipeline double buffer(input1, input2, output)
+                # and 2 extra buffer.
                 # buffer size need to be 128 aligned
                 single_buffer_size = (tgt.nram_size - 128 * 1024) // 8
                 single_buffer_size = single_buffer_size // 128 * 128
@@ -184,7 +180,7 @@ class Logaddexp2:
                     tcp.memcpy(buffer_out[start:stop], buffer_out_n[: stop - start])
 
 
-@tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
+@bangpy.tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_logaddexp2(dtype=None, target=None):
     # build a executable module
     func = build_module.build(
