@@ -188,7 +188,7 @@ class generate_proposals_v2_general
                            mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
 
     GenerateProposalsV2Param generateProposalsV2Param = std::get<8>(GetParam());
-    std::tie(pre_nms_top_n_, post_nms_top_n_, nms_thresh_, min_size, eta_,
+    std::tie(pre_nms_top_n_, post_nms_top_n_, nms_thresh_, min_size_, eta_,
              pixel_offset_) = generateProposalsV2Param;
 
     device_ = std::get<9>(GetParam());
@@ -338,28 +338,5 @@ TEST_P(generate_proposals_v2_general, api_test) {
            << " in generate_proposals_v2";
   }
 }
-
-INSTANTIATE_TEST_CASE_P(
-    zero_element_0, generate_proposals_v2_general,
-    testing::Combine(
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 8, 16, 16}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 32, 16, 16}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         2, std::vector<int>({2, 2}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({8, 16, 16, 4}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({8, 16, 16, 4}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         2, std::vector<int>({5, 4}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         2, std::vector<int>({5, 1}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({2}))),
-        testing::Values(GenerateProposalsV2Param{0, 5, 0.5, 4, 3, 0}),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
 
 }  // namespace mluopapitest
