@@ -36,7 +36,7 @@
 #include "core/type.h"
 #include "mlu_op.h"
 
-#define QUEUE_ARRAY_LENGTH 4
+#define MLUOP_QUEUE_ARRAY_LENGTH 4
 
 struct mluOpTensorStruct {
   mluOpTensorStruct()
