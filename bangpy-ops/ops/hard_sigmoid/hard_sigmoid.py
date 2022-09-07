@@ -39,20 +39,20 @@ class HardSigmoid(object):
         h(x) = 0 if x <= -3,
         h(x) = 1 if x >= +3,
         h(x) = x * 1/6 + 1/2 otherwise.
-        input: tensor
-        output: tensor(same shape as the input)
+        input: tensor.
+        output: tensor(same shape as the input).
 
     Parameters of split strategy
     ----------------------------
-        data_total: total number of data
-        self.task_num: number of task of MLU
-        data_each_task: number of data of per task
-        data_rem: the remainder data after distributing to per task
-        self.nram.size: the size of NRAM (Bytes)
-        self.nram_size_each_buffer: the space of NRAM was divided into three parts
-        data_each_time: number of data of IPU(task) calculation per time
-        loop_num: number of times each task needs to be copied into NRAM for computation
-        data_rem_n: less than one calculation
+        data_total: total number of data.
+        self.task_num: number of task of MLU.
+        data_each_task: number of data of per task.
+        data_rem: the remainder data after distributing to per task.
+        self.nram.size: the size of NRAM (Bytes).
+        self.nram_size_each_buffer: the space of NRAM was divided into three parts.
+        data_each_time: number of data of IPU(task) calculation per time.
+        loop_num: number of times each task needs to be copied into NRAM for computation.
+        data_rem_n: less than one calculation.
     """
 
     def __init__(
@@ -70,7 +70,7 @@ class HardSigmoid(object):
     def hardSigmoid_body(
         self, local_x: ty.Buffer("nram"), local_temp: ty.Buffer("nram"),
     ) -> None:
-        # The body of hard_sigmoid function
+        """The body of hard_sigmoid function."""
         tcp.multiply(local_x, local_x, 1.0 / 6)  # x * 1/6
         tcp.add(local_x, local_x, 1.0 / 2)  # x * 1/6 + 1/2
         tcp.assign(local_temp, tcp.cast(1, self.dtype)) # tcp.assign(local_temp, 1)
