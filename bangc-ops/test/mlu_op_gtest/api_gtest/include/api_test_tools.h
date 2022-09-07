@@ -27,10 +27,10 @@
 #include <tuple>
 #include <string>
 
-#include "core/mlu_op_core.h"
 #include "core/context.h"
 #include "gtest/gtest.h"
 #include "tools.h"
+#include "mlu_op.h"
 
 namespace mluopapitest {
 class MLUOpTensorParam {

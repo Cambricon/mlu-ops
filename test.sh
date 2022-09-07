@@ -13,7 +13,6 @@ usage () {
     echo "      --target=*         Test mlu target:[mlu270, mlu370-s4, mlu220-m2, mlu290]"
     echo
 }
-if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi
 cmdline_args=$(getopt -o h --long target: -n 'test.sh' -- "$@")
 eval set -- "$cmdline_args"
 if [ $# != 0 ]; then

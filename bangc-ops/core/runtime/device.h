@@ -25,11 +25,11 @@
 
 #include <pthread.h>
 #include <string>
-#include "core/mlu_op_core.h"
 #include "cn_api.h"
 #include "core/context.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "mlu_op.h"
 
 typedef void *MLUaddr;
 typedef void *HOSTaddr;

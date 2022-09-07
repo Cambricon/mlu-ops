@@ -23,7 +23,7 @@
 
 操作过程：
 
-文件路径：`mlu-ops/bangc-ops/test/mlu_op_gtest/mlu_op_test_proto/mlu_op_test.proto`
+文件路径：`mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto/mlu_op_test.proto`
 
 1. 增加内容
 
@@ -54,6 +54,7 @@
     }
     
     ```
+     _注意, 这里说的 proto 仅仅是数据格式的定义, 不同的测例是这个定义的实例化; 同时, 如上述代码, `prefer= 1` 后面的数字是域的 id, 不是值，`default = COMPUTATION_HIGH_PRECISION` 才是域的默认值。_
 
 3. 使用 `protoc` 命令编译 `mlu_op_test.proto`文件，目的是检查语法是否正确，并生成 `.cc/.h` 文件
 
@@ -63,9 +64,9 @@
 
 #### 2.2 实现测试代码
 
-1. 新增算子测试代码文件
+1. 新增算子测试代码文件(以新增div算子为例)
 
-- 路径： `mlu-ops/bangc-ops/test/mlu_op_gtest/src/zoo/` ，新增文件夹 `div/`
+- 路径： `mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/src/zoo/` ，新增文件夹 `div/`
 
 - 文件结构：
 
@@ -83,8 +84,8 @@
 
 2. 实现测例代码
 
-- compute()： 调用 `MLU-OPS`算子的API
-- cpuCompute()：实现或调用该算子的 `cpu`实现，用于基本功能的测试和日常调试
+- compute()： 必须重载调用 `MLU-OPS`算子的API
+- cpuCompute()：实现算子的 `cpu`功能，用于基本功能的测试和日常调试
 - 其他函数，按需重载
 
 ### 3. 准备测例（`Pb/Prototxt` 文件）
@@ -93,10 +94,12 @@
 
 一个 `prototxt` 文件应该符合以下格式：
 
+注意：prototxt文件在仓库使用时，必须删除所有注释内容
+
 ```
-op_name: "div" //算子名
+op_name: "div"                          // 算子名
 input {
-  id: "input1"  //第一个输入
+  id: "input1"                          // 第一个输入
   shape: {
     dims: 128
     dims: 7
@@ -105,7 +108,7 @@ input {
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  random_data: {   //随机数
+  random_data: {                        // 随机数
     seed: 23
     upper_bound: 1
     lower_bound: 1
@@ -113,16 +116,16 @@ input {
   }
 }
 input {
-  id: "input2"  //第二个输入
-  shape: {      //指定数据维度信息
+  id: "input2"                          // 第二个输入
+  shape: {                              // 指定数据维度信息
     dims: 128
     dims: 7
     dims: 7
     dims: 512
   }
-  layout: LAYOUT_ARRAY  //输入数据形状
-  dtype: DTYPE_FLOAT   //dtype 输入数据类型
-  random_data: { //随机数
+  layout: LAYOUT_ARRAY                  // 输入数据形状
+  dtype: DTYPE_FLOAT                    // dtype 输入数据类型
+  random_data: {                        // 随机数
     seed: 25
     upper_bound: 10
     lower_bound: 0.1
@@ -130,48 +133,34 @@ input {
   }
 }
 output {
-  id: "output"  //输出维度和输入保持一致
+  id: "output"                          // 输出维度和输入保持一致
   shape: {
     dims: 128
     dims: 7
     dims: 7
     dims: 512
   }
-  layout: LAYOUT_ARRAY  //输出数据形状
-  dtype: DTYPE_FLOAT  //dtype 输出数据类型
+  layout: LAYOUT_ARRAY                  // 输出数据形状
+  dtype: DTYPE_FLOAT                    // dtype 输出数据类型
 }
 test_param: {
   error_func: DIFF1
   error_func: DIFF2
   error_threshold: 0.003
-  error_threshold: 0.003  //测试误差范围
+  error_threshold: 0.003                // 测试误差范围
   baseline_device: CPU
 }
 ```
 
 ### 4. 执行测试
 
-- 执行`prototxt`测例
+- 执行`pb/prototxt`测例
 
   ```
   cd mlu-ops/bangc-ops/build/test
-  ./mluop_gtest --gtest_filter="*div*"  // --gtest_filter指定具体的执行算子
+  ./mluop_gtest --gtest_filter=*div*  // --gtest_filter指定具体的执行算子
   ```
-
-- 执行 `pb` 测例
-
-  ```bash
-  cd bangc-ops/build/test
-  ./mluop_gtest --gtest_filter="*div*" --cases_dir="./pb/"  // --gtest_filter指定具体的执行算子 --cases_dir指定pb测例的路径 
-  ```
-
-  `pb` 存放的文件结构如下（这里存放结构不对会找不到pb测例）：
-
-  ```
-  ./pb
-  └── div
-      └── div_data_included_float32_1652874023871.pb
-  ```
+  
 
 ### 5. `Prototxt/Pb` 互相转化
 
@@ -189,4 +178,26 @@ test_param: {
   ./prototxt2pb case_0.prototxt case_0.pb  // 第一个参数是prototxt路径,第二个参数是pb路径,支持文件夹批量转换
   ```
 
-  
+### 6. 内存泄漏检测
+
+打开环境变量 export MLUOP_BUILD_ASAN_CHECK=ON, 执行测试，./mluop_gtest --gtest_filter=\*div\* 程序没有内存泄漏可正常测试，存在内存泄漏会有提示。  
+
+### 7. 代码覆盖率
+
+代码覆盖率测试方法：
+
+```
+cd bangc-ops
+./build.sh -c
+cd ../tools
+vim coverage.sh
+// 测试的时候注释掉
+  # clean
+    rm -r ${temp_dir_}/output ${temp_dir_}/profdata  ${temp_dir_}/info ${temp_dir_}/result
+
+cd ../bangc-ops/build/test
+// 执行
+bash ../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*算子名称*"
+```
+
+在当前文件下的result文件中可以可视化查看html文件 index.html；测试要求代码覆盖率不低于95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种情况。
