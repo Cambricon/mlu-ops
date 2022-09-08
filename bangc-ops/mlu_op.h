@@ -732,6 +732,39 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t d
                                                        const int dimStride[]);
 
 /*!
+ *  @brief Sets the \b dimNb and \b dimSize factors to the input tensor descriptor.
+ *
+ *  If ::mluOpSetTensorDescriptorDim is called, you do not need to specify the strides of all
+ *  dimensions. The strides are inferred by parameters passed to this function. Also, the data
+ *  will be treated as contiguous in memory with no padding between dimensions. To specify the
+ *  strides of all dimensions, you can call ::mluOpSetTensorDescriptorEx. But the data might not
+ *  be treated as contiguous in memory.
+ *
+ *  @param[in] desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] dimNb
+ *    Input. The number of dimensions in the input tensor of the initialized operation.
+ *  @param[in] dimSize
+ *    Input. An array that contains the size of the tensor for each dimension.
+ *  @par Return
+ *   - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ *  @note
+ *   - dimSize[0] represents the highest dimension, dimSize[DIM_MAX - 1] represents
+ *    the lowest dimension, and DIM_MAX represents the number of dimensions in the input tensor.
+ *
+ *  @par Requirements
+ *   - None.
+ *
+ *  @par Example
+ *   - None.
+ */
+mluOpStatus_t mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc,
+                                        int dimNb,
+                                        const int *dimSize);
+                                        
+/*!
  *  @brief Sets the on-chip data type to the descriptor of a tensor \b desc.
  *  The on-chip data type \b onchip_dtype can be different from the off-chip data type of the
  *  tensor.
