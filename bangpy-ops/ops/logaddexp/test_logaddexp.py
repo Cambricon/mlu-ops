@@ -24,14 +24,11 @@ import random
 import numpy as np
 import pytest
 import bangpy as bp
-from bangpy import tcp
 from bangpy.common import load_op_by_type
-from bangpy.platform.bang_config import TARGET
-from bangpy.tcp.runtime import TaskType
 from logaddexp import DTYPES, TARGET_LIST
 
 
-def run(input_x, input_y, dtype, target):
+def run(input_x, input_y, dtype):
     max_size_buffer = input_x
     min_size_buffer = input_y
     is_sub = True
@@ -64,10 +61,8 @@ def run(input_x, input_y, dtype, target):
             dev
         )
         output_dev = bp.Array(np.zeros(max_size_buffer.size, dtype = dtype.as_numpy_dtype), dev)
-        task_type = TaskType(TARGET(target).cluster_num)
         log_add_exp_func = load_op_by_type("LogAddExp", dtype.name)
-        with tcp.runtime.Run(task_type):
-            log_add_exp_func(x, y, output_dev)
+        log_add_exp_func(x, y, output_dev,max_size_buffer.size)
         return output_dev.numpy().reshape(max_size_buffer.shape)
 
     raise Exception("shape err")
@@ -96,7 +91,6 @@ def create_shape_list(
         (0,),
         (1,),
         (2,),
-
         (const_float32_128_align_element_count - 1,),
         (const_float32_128_align_element_count,),
         (const_float32_128_align_element_count + 1,),
@@ -110,7 +104,12 @@ def create_shape_list(
         (const_current_mlu_single_buffer_float16_max_element_size - 1,),
         (const_current_mlu_single_buffer_float16_max_element_size,),
         (const_current_mlu_single_buffer_float16_max_element_size + 1,),
-        (246783,),
+        (23295,),
+        (23296,),
+        (23297,),
+        (186368,),
+        (186369,),
+        (232960,),
         (246784,),
         (246785,),
         (123391,),
@@ -125,11 +124,12 @@ def create_shape_list(
 
 
 shape_list = create_shape_list(
-    nram_single_buffer_size_by_byte = (512 - 40) * 1024 // 8,
+    nram_single_buffer_size_by_byte = 93184,
     append_test_count = 50,
     max_dim_length = 5,
     each_dim_max_length = 64
 )
+
 
 
 @pytest.mark.parametrize(
@@ -145,16 +145,14 @@ def test_logaddexp(target, shape, dtype):
 
     # origin input
     sub_shape = shape[random.randint(0, len(shape) - 1):len(shape)]
-    data_x = np.random.uniform(low = -1000, high = 1000, size = shape)
-    data_y = np.random.uniform(low = -1000, high = 1000, size = sub_shape)
-
+    data_x = np.random.uniform(low = -800, high = 800, size = shape)
+    data_y = np.random.uniform(low = -800, high = 800, size = sub_shape)
     try:
-        mlu_ret = run(data_x, data_y, dtype, target)
+        mlu_ret = run(data_x, data_y, dtype)
     except Exception as err:
         print(str(err))
         if str(err) == "shape err":
             return
-
         raise Exception(str(err)) from err
 
     cpu_ret = np.logaddexp(data_x, data_y)
