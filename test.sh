@@ -11,11 +11,10 @@ usage () {
     echo "OPTIONS:"
     echo "      -h, --help         Print usage"
     echo "      --sub_module=*     Mlu-ops sub_module:[bangc, bangpy]"
-    echo "      --target=*         Test mlu target:[mlu270, mlu370-s4, mlu220-m2, mlu290]"
     echo
 }
 if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi
-cmdline_args=$(getopt -o h --long sub_module:,target: -n 'test.sh' -- "$@")
+cmdline_args=$(getopt -o h --long sub_module: -n 'test.sh' -- "$@")
 eval set -- "$cmdline_args"
 if [ $# != 0 ]; then
   while true; do
@@ -23,11 +22,6 @@ if [ $# != 0 ]; then
       --sub_module)
           shift
           MLU_SUB_MODULE=$1
-          shift
-          ;;
-      --target)
-          shift
-          MLU_TARGET=$1
           shift
           ;;
       -h | --help)
@@ -47,9 +41,6 @@ if [ $# != 0 ]; then
   done
 fi
 
-echo "MLU_SUB_MODULE: ${MLU_SUB_MODULE}"
-echo "MLU_TARGET: ${MLU_TARGET}"
-
 if [[ ${MLU_SUB_MODULE} == "bangc" ]]; then
   # Test BANGC all operators cases.
   cd bangc-ops/build/test/
@@ -62,5 +53,5 @@ if [[ ${MLU_SUB_MODULE} == "bangpy" ]]; then
   python3 -m pylint ./bangpy-ops  --rcfile=./bangpy-ops/utils/pylintrc
 
   # Test BANGPy all operators cases.
-  ./bangpy-ops/utils/test_operators.sh --only_test --target=${MLU_TARGET}
+  ./bangpy-ops/utils/test_operators.sh --only_test
 fi

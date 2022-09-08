@@ -21,16 +21,29 @@ jobs:
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
           ./tools/pre-commit origin/master
 
-      - name: build
+      - name: build_bangc_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.3
-          bash -c "./build.sh --sub_module=bangc && ./build.sh --sub_module=bangpy"
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./build.sh --sub_module=bangc
 
-      - name: test
+      - name: build_bangpy_ops
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./build.sh --sub_module=bangpy
+
+
+      - name: test_bangc_ops
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.3
-          bash -c "./test.sh --sub_module=bangc && ./test.sh --sub_module=bangpy --target=mlu270"
+          -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangc
+
+      - name: test_bangpy_ops
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangpy
+
 
       - name: clean
         run: |
