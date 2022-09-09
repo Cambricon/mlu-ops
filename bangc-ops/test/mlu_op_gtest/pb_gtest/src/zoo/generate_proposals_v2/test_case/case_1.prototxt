@@ -37,7 +37,7 @@ input {
 input {
   id: "input3"
   shape: {
-    dims: 8
+    dims: 2
     dims: 7
     dims: 1
     dims: 4
@@ -54,7 +54,7 @@ input {
 input {
   id: "input4"
   shape: {
-    dims: 8
+    dims: 2
     dims: 7
     dims: 1
     dims: 4
@@ -86,7 +86,7 @@ input {
 output {
   id: "output1"
   shape: {
-    dims: 20
+    dims: 10
     dims: 4
   }
   layout: LAYOUT_ARRAY
@@ -101,7 +101,7 @@ output {
 output {
   id: "output2"
   shape: {
-    dims: 20
+    dims: 10
     dims: 1
   }
   layout: LAYOUT_ARRAY

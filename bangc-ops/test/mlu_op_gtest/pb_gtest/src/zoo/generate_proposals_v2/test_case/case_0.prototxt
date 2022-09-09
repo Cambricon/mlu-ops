@@ -1,158 +1,590 @@
-device: CPU
+device: GPU
 op_name: "generate_proposals_v2"
 input {
   id: "input1"
-  shape: {
+  shape {
     dims: 1
     dims: 2
-    dims: 8
-    dims: 1
+    dims: 5
+    dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 23
-    upper_bound: 10
-    lower_bound: 1
+  value_f: 0.0
+  value_f: 1.0
+  value_f: 2.0
+  value_f: 3.0
+  value_f: 4.0
+  value_f: 5.0
+  value_f: 6.0
+  value_f: 7.0
+  value_f: 8.0
+  value_f: 9.0
+  value_f: 10.0
+  value_f: 11.0
+  value_f: 12.0
+  value_f: 13.0
+  value_f: 14.0
+  value_f: 15.0
+  value_f: 16.0
+  value_f: 17.0
+  value_f: 18.0
+  value_f: 19.0
+  value_f: 20.0
+  value_f: 21.0
+  value_f: 22.0
+  value_f: 23.0
+  value_f: 24.0
+  value_f: 25.0
+  value_f: 26.0
+  value_f: 27.0
+  value_f: 28.0
+  value_f: 29.0
+  random_data {
     distribution: UNIFORM
+    lower_bound_double: 10.0
+    upper_bound_double: 100.0
   }
 }
 input {
   id: "input2"
-  shape: {
+  shape {
     dims: 1
     dims: 8
-    dims: 8
-    dims: 1
+    dims: 5
+    dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 25
-    upper_bound: 10
-    lower_bound: 1
+  value_f: 0.0
+  value_f: 1.0
+  value_f: 2.0
+  value_f: 3.0
+  value_f: 4.0
+  value_f: 5.0
+  value_f: 6.0
+  value_f: 7.0
+  value_f: 8.0
+  value_f: 9.0
+  value_f: 10.0
+  value_f: 11.0
+  value_f: 12.0
+  value_f: 13.0
+  value_f: 14.0
+  value_f: 15.0
+  value_f: 16.0
+  value_f: 17.0
+  value_f: 18.0
+  value_f: 19.0
+  value_f: 20.0
+  value_f: 21.0
+  value_f: 22.0
+  value_f: 23.0
+  value_f: 24.0
+  value_f: 25.0
+  value_f: 26.0
+  value_f: 27.0
+  value_f: 28.0
+  value_f: 29.0
+  value_f: 30.0
+  value_f: 31.0
+  value_f: 32.0
+  value_f: 33.0
+  value_f: 34.0
+  value_f: 35.0
+  value_f: 36.0
+  value_f: 37.0
+  value_f: 38.0
+  value_f: 39.0
+  value_f: 40.0
+  value_f: 41.0
+  value_f: 42.0
+  value_f: 43.0
+  value_f: 44.0
+  value_f: 45.0
+  value_f: 46.0
+  value_f: 47.0
+  value_f: 48.0
+  value_f: 49.0
+  value_f: 50.0
+  value_f: 51.0
+  value_f: 52.0
+  value_f: 53.0
+  value_f: 54.0
+  value_f: 55.0
+  value_f: 56.0
+  value_f: 57.0
+  value_f: 58.0
+  value_f: 59.0
+  value_f: 60.0
+  value_f: 61.0
+  value_f: 62.0
+  value_f: 63.0
+  value_f: 64.0
+  value_f: 65.0
+  value_f: 66.0
+  value_f: 67.0
+  value_f: 68.0
+  value_f: 69.0
+  value_f: 70.0
+  value_f: 71.0
+  value_f: 72.0
+  value_f: 73.0
+  value_f: 74.0
+  value_f: 75.0
+  value_f: 76.0
+  value_f: 77.0
+  value_f: 78.0
+  value_f: 79.0
+  value_f: 80.0
+  value_f: 81.0
+  value_f: 82.0
+  value_f: 83.0
+  value_f: 84.0
+  value_f: 85.0
+  value_f: 86.0
+  value_f: 87.0
+  value_f: 88.0
+  value_f: 89.0
+  value_f: 90.0
+  value_f: 91.0
+  value_f: 92.0
+  value_f: 93.0
+  value_f: 94.0
+  value_f: 95.0
+  value_f: 96.0
+  value_f: 97.0
+  value_f: 98.0
+  value_f: 99.0
+  value_f: 100.0
+  value_f: 101.0
+  value_f: 102.0
+  value_f: 103.0
+  value_f: 104.0
+  value_f: 105.0
+  value_f: 106.0
+  value_f: 107.0
+  value_f: 108.0
+  value_f: 109.0
+  value_f: 110.0
+  value_f: 111.0
+  value_f: 112.0
+  value_f: 113.0
+  value_f: 114.0
+  value_f: 115.0
+  value_f: 116.0
+  value_f: 117.0
+  value_f: 118.0
+  value_f: 119.0
+  random_data {
     distribution: UNIFORM
+    lower_bound_double: 10.0
+    upper_bound_double: 100.0
   }
 }
 input {
   id: "input3"
-  shape: {
-    dims: 8
-    dims: 8
-    dims: 1
+  shape {
     dims: 4
+    dims: 2
+    dims: 5
+    dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 25
-    upper_bound: 10
-    lower_bound: 1
+  value_f: 70.12966918945312
+  value_f: 55.92848205566406
+  value_f: 73.01446533203125
+  value_f: 27.003528594970703
+  value_f: 38.82783508300781
+  value_f: 73.24666595458984
+  value_f: 77.26078033447266
+  value_f: 31.682353973388672
+  value_f: 64.77796173095703
+  value_f: 50.55561447143555
+  value_f: 29.21823501586914
+  value_f: 41.87294006347656
+  value_f: 45.4251823425293
+  value_f: 44.584407806396484
+  value_f: 39.838645935058594
+  value_f: 48.39381408691406
+  value_f: 37.41545867919922
+  value_f: 34.14255905151367
+  value_f: 73.5113525390625
+  value_f: 23.709394454956055
+  value_f: 78.86431121826172
+  value_f: 51.169952392578125
+  value_f: 53.426124572753906
+  value_f: 97.41202545166016
+  value_f: 33.17146682739258
+  value_f: 98.98106384277344
+  value_f: 36.01799011230469
+  value_f: 12.193092346191406
+  value_f: 26.708887100219727
+  value_f: 46.73466873168945
+  value_f: 44.99064254760742
+  value_f: 70.6400146484375
+  value_f: 68.35897827148438
+  value_f: 48.27215576171875
+  value_f: 88.74610900878906
+  value_f: 77.01551055908203
+  value_f: 96.7458724975586
+  value_f: 50.657161712646484
+  value_f: 11.521093368530273
+  value_f: 92.05982208251953
+  value_f: 59.41569519042969
+  value_f: 88.0479736328125
+  value_f: 82.92510223388672
+  value_f: 92.17501831054688
+  value_f: 48.6588020324707
+  value_f: 34.599056243896484
+  value_f: 14.880136489868164
+  value_f: 27.305049896240234
+  value_f: 90.94903564453125
+  value_f: 48.831878662109375
+  value_f: 22.44739532470703
+  value_f: 98.47763061523438
+  value_f: 92.75662231445312
+  value_f: 80.74895477294922
+  value_f: 73.42491912841797
+  value_f: 47.17438507080078
+  value_f: 91.06963348388672
+  value_f: 93.76809692382812
+  value_f: 14.824145317077637
+  value_f: 42.36012268066406
+  value_f: 98.48765563964844
+  value_f: 62.252357482910156
+  value_f: 81.06095886230469
+  value_f: 84.82465362548828
+  value_f: 82.50562286376953
+  value_f: 71.85297393798828
+  value_f: 24.803661346435547
+  value_f: 51.3051872253418
+  value_f: 44.14091873168945
+  value_f: 32.384124755859375
+  value_f: 30.4451904296875
+  value_f: 14.584685325622559
+  value_f: 82.79293823242188
+  value_f: 17.737268447875977
+  value_f: 19.181894302368164
+  value_f: 25.56306266784668
+  value_f: 92.85755920410156
+  value_f: 96.44842529296875
+  value_f: 38.915122985839844
+  value_f: 34.27973175048828
+  value_f: 43.392513275146484
+  value_f: 10.24378776550293
+  value_f: 28.285400390625
+  value_f: 76.15766143798828
+  value_f: 75.85906219482422
+  value_f: 22.21639060974121
+  value_f: 37.554500579833984
+  value_f: 73.86576843261719
+  value_f: 53.53169250488281
+  value_f: 79.43476867675781
+  value_f: 17.094470977783203
+  value_f: 39.65778732299805
+  value_f: 17.903554916381836
+  value_f: 38.499107360839844
+  value_f: 73.79651641845703
+  value_f: 95.0894775390625
+  value_f: 11.831533432006836
+  value_f: 96.00627136230469
+  value_f: 85.15779876708984
+  value_f: 51.90681076049805
+  value_f: 68.00733947753906
+  value_f: 32.05680465698242
+  value_f: 94.60883331298828
+  value_f: 53.59086990356445
+  value_f: 71.01952362060547
+  value_f: 43.62936782836914
+  value_f: 48.07194900512695
+  value_f: 46.89645004272461
+  value_f: 90.10888671875
+  value_f: 86.09672546386719
+  value_f: 21.207252502441406
+  value_f: 82.12430572509766
+  value_f: 45.24474334716797
+  value_f: 43.117156982421875
+  value_f: 25.180192947387695
+  value_f: 58.345088958740234
+  value_f: 18.480600357055664
+  value_f: 80.83898162841797
+  value_f: 97.71646881103516
+  value_f: 57.618404388427734
+  random_data {
     distribution: UNIFORM
+    lower_bound_double: 10.0
+    upper_bound_double: 100.0
   }
 }
 input {
   id: "input4"
-  shape: {
-    dims: 8
-    dims: 8
-    dims: 1
+  shape {
     dims: 4
+    dims: 2
+    dims: 5
+    dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 25
-    upper_bound: 10
-    lower_bound: 1
+  value_f: 18.1791934967041
+  value_f: 99.3602294921875
+  value_f: 37.351829528808594
+  value_f: 69.71993255615234
+  value_f: 14.6594820022583
+  value_f: 75.87141418457031
+  value_f: 53.62723922729492
+  value_f: 82.26138305664062
+  value_f: 93.39620208740234
+  value_f: 60.147464752197266
+  value_f: 35.437660217285156
+  value_f: 42.36790466308594
+  value_f: 30.449050903320312
+  value_f: 25.30833625793457
+  value_f: 99.45276641845703
+  value_f: 66.51323699951172
+  value_f: 94.58336639404297
+  value_f: 24.835289001464844
+  value_f: 73.87030792236328
+  value_f: 74.02027893066406
+  value_f: 32.680233001708984
+  value_f: 75.8838119506836
+  value_f: 48.05230712890625
+  value_f: 80.41934967041016
+  value_f: 79.17092895507812
+  value_f: 14.348285675048828
+  value_f: 90.1921615600586
+  value_f: 12.070026397705078
+  value_f: 81.08049774169922
+  value_f: 24.908475875854492
+  value_f: 67.36028289794922
+  value_f: 75.29161834716797
+  value_f: 71.39379119873047
+  value_f: 50.12213897705078
+  value_f: 33.214324951171875
+  value_f: 49.0986328125
+  value_f: 40.4558219909668
+  value_f: 67.48323822021484
+  value_f: 77.73612213134766
+  value_f: 45.55178451538086
+  value_f: 14.608838081359863
+  value_f: 27.094263076782227
+  value_f: 72.72789001464844
+  value_f: 64.57454681396484
+  value_f: 93.41610717773438
+  value_f: 76.76631164550781
+  value_f: 54.1607551574707
+  value_f: 86.91624450683594
+  value_f: 16.771596908569336
+  value_f: 19.4633846282959
+  value_f: 84.99358367919922
+  value_f: 87.3423080444336
+  value_f: 53.364295959472656
+  value_f: 11.041546821594238
+  value_f: 50.318565368652344
+  value_f: 14.497466087341309
+  value_f: 54.06132507324219
+  value_f: 17.982376098632812
+  value_f: 29.472795486450195
+  value_f: 74.67225646972656
+  value_f: 81.76776885986328
+  value_f: 45.80321502685547
+  value_f: 86.73106384277344
+  value_f: 68.87037658691406
+  value_f: 80.00873565673828
+  value_f: 49.391456604003906
+  value_f: 87.9380874633789
+  value_f: 47.7910041809082
+  value_f: 49.055198669433594
+  value_f: 85.9345474243164
+  value_f: 87.952392578125
+  value_f: 23.36433982849121
+  value_f: 27.43630027770996
+  value_f: 98.5921630859375
+  value_f: 57.83192825317383
+  value_f: 38.620582580566406
+  value_f: 72.71126556396484
+  value_f: 19.542837142944336
+  value_f: 12.85693073272705
+  value_f: 95.42241668701172
+  value_f: 59.65439224243164
+  value_f: 19.994016647338867
+  value_f: 23.6058349609375
+  value_f: 41.2609748840332
+  value_f: 35.890750885009766
+  value_f: 27.103242874145508
+  value_f: 45.876346588134766
+  value_f: 58.96884536743164
+  value_f: 68.87743377685547
+  value_f: 25.00801658630371
+  value_f: 31.4242000579834
+  value_f: 54.954925537109375
+  value_f: 72.47349548339844
+  value_f: 99.09992980957031
+  value_f: 35.46305847167969
+  value_f: 45.41557312011719
+  value_f: 82.77818298339844
+  value_f: 41.02294158935547
+  value_f: 50.5609245300293
+  value_f: 64.92188262939453
+  value_f: 80.35287475585938
+  value_f: 22.447031021118164
+  value_f: 98.71566772460938
+  value_f: 47.04000473022461
+  value_f: 24.880752563476562
+  value_f: 63.008514404296875
+  value_f: 86.50127410888672
+  value_f: 10.435637474060059
+  value_f: 11.061359405517578
+  value_f: 54.7911262512207
+  value_f: 78.68231964111328
+  value_f: 26.640113830566406
+  value_f: 56.0528564453125
+  value_f: 16.56281280517578
+  value_f: 87.65840148925781
+  value_f: 22.999361038208008
+  value_f: 93.77018737792969
+  value_f: 30.081331253051758
+  value_f: 76.92779541015625
+  value_f: 87.12019348144531
+  random_data {
     distribution: UNIFORM
+    lower_bound_double: 10.0
+    upper_bound_double: 100.0
   }
 }
 input {
   id: "input5"
-  shape: {
+  shape {
     dims: 1
     dims: 2
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 25
-    upper_bound: 10
-    lower_bound: 1
+  value_f: 30.315340042114258
+  value_f: 45.38115692138672
+  random_data {
     distribution: UNIFORM
+    lower_bound_double: 30.0
+    upper_bound_double: 50.0
   }
 }
-
 output {
   id: "output1"
-  shape: {
-    dims: 20
+  shape {
+    dims: 10
     dims: 4
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
+  value_f: 44.38115692138672
+  value_f: 29.315340042114258
+  value_f: 44.38115692138672
+  value_f: 29.315340042114258
+  value_f: 44.38115692138672
+  value_f: 0.0
+  value_f: 44.38115692138672
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 29.315340042114258
+  value_f: 0.0
+  value_f: 29.315340042114258
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
   thresholds {
     evaluation_threshold: 0.003
     evaluation_threshold: 0.003
     evaluation_threshold: 10.0
   }
 }
-
 output {
   id: "output2"
-  shape: {
-    dims: 20
+  shape {
+    dims: 10
     dims: 1
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
+  value_f: 29.0
+  value_f: 27.0
+  value_f: 25.0
+  value_f: 23.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
   thresholds {
     evaluation_threshold: 10.0
     evaluation_threshold: 10.0
     evaluation_threshold: 0.0
   }
 }
-
 output {
   id: "output3"
-  shape: {
+  shape {
     dims: 1
     dims: 1
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
+  value_i: 4
   thresholds {
     evaluation_threshold: 10.0
     evaluation_threshold: 10.0
     evaluation_threshold: 0.0
   }
 }
-
 output {
   id: "output4"
-  shape: {
+  shape {
     dims: 1
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
+  value_i: 4
   thresholds {
     evaluation_threshold: 10.0
     evaluation_threshold: 10.0
     evaluation_threshold: 0.0
   }
 }
-
 evaluation_criterion: DIFF1
 evaluation_criterion: DIFF2
 evaluation_criterion: DIFF3
-
-generate_proposals_v2_param: {
+generate_proposals_v2_param {
   pre_nms_top_n: 15
   post_nms_top_n: 10
-  nms_thresh: 0.5
-  min_size: 0.1
+  nms_thresh: 0.18000000715255737
+  min_size: 0.4000000059604645
   eta: 1.0
   pixel_offset: true
 }
-
