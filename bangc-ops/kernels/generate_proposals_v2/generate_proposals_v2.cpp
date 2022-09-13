@@ -33,11 +33,11 @@
 #include "kernels/kernel.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type, const int AHW) {
+                       cnrtFunctionType_t *k_type, const int HWA) {
   int job = mluop::runtime::getJobLimitCapability(handle);
 
-  int per_core_num = AHW / job;
-  const int min_per_core_num = 256;
+  int per_core_num = HWA / job;
+  const int min_per_core_num = 128;
 
   while (per_core_num < min_per_core_num && job >= 4) {
     per_core_num *= 2;
@@ -105,7 +105,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
   int A = scores_desc->dims[1];
   int H = scores_desc->dims[2];
   int W = scores_desc->dims[3];
-  *size = 6 * A * H * W * 4 + 128 * 4;
+  *size = 7 * A * H * W * 4 + 128 * 6;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -170,7 +170,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   // PARAM_CHECK_EQ(API, im_shape_desc->dims[0], scores_desc->dims[0]);
   // PARAM_CHECK_EQ(API, im_shape_desc->dims[1], 2);
 
-  // // NAHW, AHW4
+  // // NHWA, HWA4
   // PARAM_CHECK_EQ(API, anchors_desc->dim, 4);
   // PARAM_CHECK_EQ(API, anchors_desc->dims[0], scores_desc->dims[1]);
   // PARAM_CHECK_EQ(API, anchors_desc->dims[1], scores_desc->dims[2]);
@@ -229,14 +229,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
 
   // if (eta < 1.0) {
   //   LOG(ERROR) << API << " Not support adaptive NMS. The attribute 'eta' "
-  //              << "should not less than 1. But received eta=[" << eta << "] ";
+  //              << "should not less than 1. But received eta=[" << eta << "]
+  //              ";
   //   return MLUOP_STATUS_BAD_PARAM;
   // }
 
-  int AHW = A * H * W;
+  int HWA = A * H * W;
   cnrtDim3_t k_dim;
   cnrtJobType_t k_type;
-  policyFunc(handle, &k_dim, &k_type, AHW);
+  policyFunc(handle, &k_dim, &k_type, HWA);
 
   VLOG(5) << "Launch Kernel mluOpUBestKernelGenerateProposalsV2Float <<<k_dim: "
           << k_type << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
