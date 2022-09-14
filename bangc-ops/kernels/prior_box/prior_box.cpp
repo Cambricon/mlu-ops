@@ -132,10 +132,9 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
     LOG(ERROR) << api << " Zero element tensor failure.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if((mluOpGetTensorElementNum(output_desc)) == 0 ||
-     (mluOpGetTensorElementNum(var_desc)) == 0 || 
-     (mluOpGetTensorElementNum(max_sizes_desc)) == 0)
-  {
+  if ((mluOpGetTensorElementNum(output_desc)) == 0 ||
+      (mluOpGetTensorElementNum(var_desc)) == 0 ||
+      (mluOpGetTensorElementNum(max_sizes_desc)) == 0) {
     LOG(WARNING) << api << " Zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -177,8 +176,7 @@ mluOpStatus_t mluOpPriorBox(
   if (pb_status != MLUOP_STATUS_SUCCESS) {
     return pb_status;
   }
-  if (height == 0 || width ==0)
-  {
+  if (height == 0 || width == 0) {
     return MLUOP_STATUS_SUCCESS;
   }
   const int min_sizes_num = min_sizes_desc->dims[0];
