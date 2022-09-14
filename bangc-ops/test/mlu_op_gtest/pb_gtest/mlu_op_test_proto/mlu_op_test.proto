@@ -143,6 +143,7 @@ message Node {
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
+  optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
 }
 
 
@@ -245,4 +246,15 @@ message PsRoiPoolBackwardParam{
 // param to call mluOpPolyNms()
 message PolyNmsParam {
   required float iou_threshold = 1 [default = 0.2];
+}
+
+// param to call mluOpYoloBox()
+message YoloBoxParam {
+  optional int32 class_num = 1 [default = 1];
+  optional float conf_thresh = 2 [default = 0.01];
+  optional int32 downsample_ratio = 3 [default = 8];
+  optional bool clip_bbox = 4 [default = true];
+  optional float scale_x_y = 5 [default = 1.0];
+  optional bool iou_aware = 6 [default = true];
+  optional float iou_aware_factor = 7 [default = 0.5];
 }
