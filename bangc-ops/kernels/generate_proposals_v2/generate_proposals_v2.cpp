@@ -43,17 +43,13 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
     per_core_num *= 2;
     job /= 2;
   }
+
   k_dim->y = 1;
   k_dim->z = 1;
-  // *k_type = CNRT_FUNC_TYPE_UNION1;
-  // k_dim->x = handle->core_num_per_cluster;
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
-  k_dim->x = 1;
-
-  //   *k_type = CNRT_FUNC_TYPE_UNION8;
-  // k_dim->x = handle->core_num_per_cluster * 8;
-  return;
-
+  
+  //   k_dim->x = 1;
+  //   *k_type = CNRT_FUNC_TYPE_BLOCK;
+  //   return;
   if (job < 4) {
     k_dim->x = 1;
     *k_type = CNRT_FUNC_TYPE_BLOCK;
@@ -64,40 +60,6 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
     *k_type = (cnrtFunctionType_t)job;
     k_dim->x = job;
   }
-  return;
-  switch (static_cast<KernelClass>(job)) {
-    case CN_KERNEL_CLASS_BLOCK:
-      *k_type = CNRT_FUNC_TYPE_BLOCK;
-      k_dim->x = 1;
-      break;
-    case CN_KERNEL_CLASS_UNION:
-      *k_type = CNRT_FUNC_TYPE_UNION1;
-      k_dim->x = handle->core_num_per_cluster;
-      break;
-    case CN_KERNEL_CLASS_UNION2:
-      *k_type = CNRT_FUNC_TYPE_UNION2;
-      k_dim->x = handle->core_num_per_cluster * 2;
-      break;
-    case CN_KERNEL_CLASS_UNION4:
-      *k_type = CNRT_FUNC_TYPE_UNION4;
-      k_dim->x = handle->core_num_per_cluster * 4;
-      break;
-    case CNRT_FUNC_TYPE_UNION8:
-      *k_type = CNRT_FUNC_TYPE_UNION8;
-      k_dim->x = handle->core_num_per_cluster * 8;
-      break;
-    case CNRT_FUNC_TYPE_UNION16:
-      *k_type = CNRT_FUNC_TYPE_UNION16;
-      k_dim->x = handle->core_num_per_cluster * 16;
-      break;
-    default:
-      *k_type = CNRT_FUNC_TYPE_MUTABLE;
-      k_dim->x = handle->core_num_per_cluster * handle->capability_job_limit;
-      break;
-  }
-
-  k_dim->y = 1;
-  k_dim->z = 1;
   return;
 }
 
@@ -162,59 +124,58 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
 
   // check inputs shape
   PARAM_CHECK_EQ(API, scores_desc->dim, 4);
-
-  // [N,H,W,A4]
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dim, 4);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[0], scores_desc->dims[0]);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[1], scores_desc->dims[1]);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[2], scores_desc->dims[2]);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[3], 4 * scores_desc->dims[3]);
-
-  // [N, 2]
-  PARAM_CHECK_EQ(API, im_shape_desc->dim, 2);
-  PARAM_CHECK_EQ(API, im_shape_desc->dims[0], scores_desc->dims[0]);
-  PARAM_CHECK_EQ(API, im_shape_desc->dims[1], 2);
-
-  // [H, W, A, 4]
-  PARAM_CHECK_EQ(API, anchors_desc->dim, 4);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[0], scores_desc->dims[1]);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[1], scores_desc->dims[2]);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[2], scores_desc->dims[3]);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[3], 4);
-
-  // [H, W, A, 4]
-  PARAM_CHECK_EQ(API, variances_desc->dim, 4);
-  PARAM_CHECK_EQ(API, variances_desc->dims[0], scores_desc->dims[1]);
-  PARAM_CHECK_EQ(API, variances_desc->dims[1], scores_desc->dims[2]);
-  PARAM_CHECK_EQ(API, variances_desc->dims[2], scores_desc->dims[3]);
-  PARAM_CHECK_EQ(API, variances_desc->dims[3], 4);
-
-  // check output shape
-  PARAM_CHECK_EQ(API, rpn_rois_desc->dim, 2);
-  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[0], post_nms_top_n);
-  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[1], 4);
-
-  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dim, 2);
-  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0], post_nms_top_n);
-  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[1], 1);
-
-  // [N]
-  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dim, 1);
-  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], scores_desc->dims[0]);
-
   int N = scores_desc->dims[0];
   int H = scores_desc->dims[1];
   int W = scores_desc->dims[2];
   int A = scores_desc->dims[3];
 
+  // [N,H,W,A4]
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dim, 4);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[0], N);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[1], H);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[2], W);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[3], 4 * A);
+
+  // [N, 2]
+  PARAM_CHECK_EQ(API, im_shape_desc->dim, 2);
+  PARAM_CHECK_EQ(API, im_shape_desc->dims[0], N);
+  PARAM_CHECK_EQ(API, im_shape_desc->dims[1], 2);
+
+  // [H, W, A, 4]
+  PARAM_CHECK_EQ(API, anchors_desc->dim, 4);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[0], H);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[1], W);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[2], A);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[3], 4);
+
+  // [H, W, A, 4]
+  PARAM_CHECK_EQ(API, variances_desc->dim, 4);
+  PARAM_CHECK_EQ(API, variances_desc->dims[0], H);
+  PARAM_CHECK_EQ(API, variances_desc->dims[1], W);
+  PARAM_CHECK_EQ(API, variances_desc->dims[2], A);
+  PARAM_CHECK_EQ(API, variances_desc->dims[3], 4);
+
+  // check output shape
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dim, 2);
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[0], N * post_nms_top_n);
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[1], 4);
+
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dim, 2);
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0], N * post_nms_top_n);
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[1], 1);
+
+  // [N]
+  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dim, 1);
+  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], N);
+
+  if (A == 0 || H == 0 || W == 0) {
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+
   if (N == 0) {
     VLOG(5) << API << " skip zero element tensor.";
     // CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int)));
     return MLUOP_STATUS_SUCCESS;
-  }
-
-  if (A == 0 || H == 0 || W == 0) {
-    return MLUOP_STATUS_BAD_PARAM;
   }
 
   PARAM_CHECK(API, scores != NULL);
