@@ -31,31 +31,13 @@
 namespace mluoptest {
 void PriorBoxExecutor::paramCheck() {
   VLOG(4) << "priorbox param check";
-  if (parser_->getInputNum() != 4) {
-    LOG(ERROR) << "priorbox input number is wrong, it should be 4, "
-               << "but now is " << parser_->getInputNum();
-    throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                std::to_string(__LINE__));
-  }
-  if (parser_->getOutputNum() != 2) {
-    LOG(ERROR) << "priorbox output number is wrong, it should be 2, "
-               << "but now is" << parser_->getOutputNum();
-    throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                std::to_string(__LINE__));
-  }
-  for (int i = 0; i < parser_->getInputNum(); i++) {
-    if ((i == 0 || i == 2) && parser_->inputIsNull(i)) {
-      LOG(ERROR) << "priorbox input [" << i << "] is nullptr.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                  std::to_string(__LINE__));
-    }
+  GTEST_CHECK(parser_->getInputNum() == 4);
+  GTEST_CHECK(parser_->getOutputNum() == 2);
+  for (int i = 0; i < parser_->getInputNum() - 1; i++) {
+    GTEST_CHECK(!parser_->inputIsNull(i))
   }
   for (int i = 0; i < parser_->getOutputNum(); i++) {
-    if (parser_->outputIsNull(i)) {
-      LOG(ERROR) << "priorbox output [" << i << "] is nullptr.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                  std::to_string(__LINE__));
-    }
+    GTEST_CHECK(!parser_->outputIsNull(i))
   }
 }
 
@@ -101,8 +83,8 @@ static void priorBox_Cpu_Kernel(
     float* min_sizes, const int min_sizes_num, float* new_aspect_ratios,
     const int new_aspect_ratios_num, float* variances, const int variances_num,
     float* max_sizes, const int max_sizes_num, const int height,
-    const int width, const int im_height, const int im_width, float step_h,
-    float step_w, float offset, bool clip, bool min_max_aspect_ratios_order,
+    const int width, const int im_height, const int im_width, const float step_h,
+    const float step_w, const float offset, const bool clip, const bool min_max_aspect_ratios_order,
     float* output, const int output_size, float* var, const int var_size,
     int64_t& theory_op_sizes) {
   auto img_width = im_width;
@@ -213,17 +195,17 @@ void PriorBoxExecutor::cpuCompute() {
   float* variances = cpu_fp32_input_[2];
   float* max_sizes = cpu_fp32_input_[3];
 
-  int min_sizes_num = min_sizes_desc_->total_element_num;
-  int aspect_ratios_num = aspect_ratios_desc_->total_element_num;
-  int variances_num = variances_desc_->total_element_num;
-  int max_sizes_num = max_sizes_desc_->total_element_num;
+  const int min_sizes_num = min_sizes_desc_->total_element_num;
+  const int aspect_ratios_num = aspect_ratios_desc_->total_element_num;
+  const int variances_num = variances_desc_->total_element_num;
+  const int max_sizes_num = max_sizes_desc_->total_element_num;
   const int output_num = output_desc_->total_element_num;
   const int var_num = var_desc_->total_element_num;
   const float step_h = step_h_;
   const float step_w = step_w_;
   const float offset = offset_;
-  bool clip = clip_;
-  bool min_max_aspect_ratios_order = min_max_aspect_ratios_order_;
+  const bool clip = clip_;
+  const bool min_max_aspect_ratios_order = min_max_aspect_ratios_order_;
   float* output = cpu_fp32_output_[0];
   float* var = cpu_fp32_output_[1];
   int64_t theory_op_sizes = 0;

@@ -50,13 +50,6 @@ static void policyFuncPriorBox(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
 }
 
-static inline int getMaxSupportNumPriors(mluOpHandle_t handle) {
-  if (handle->arch < 300) {
-    return MLU200SERIERS_MAX_SUPPORT;
-  }
-  return MLU300SERIERS_MAX_SUPPORT;
-}
-
 static int getNumPriors(const mluOpTensorDescriptor_t min_sizes_desc,
                         const mluOpTensorDescriptor_t aspect_ratios_desc,
                         const mluOpTensorDescriptor_t max_sizes_desc) {
@@ -74,8 +67,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
     const void *variances, const mluOpTensorDescriptor_t max_sizes_desc,
     const void *max_sizes, const int height, const int width,
     const int im_height, const int im_width, const float step_h,
-    const float step_w, const float offset, bool clip,
-    bool min_max_aspect_ratios_order, const mluOpTensorDescriptor_t output_desc,
+    const float step_w, const float offset, const bool clip,
+    const bool min_max_aspect_ratios_order, const mluOpTensorDescriptor_t output_desc,
     void *output, const mluOpTensorDescriptor_t var_desc, void *var) {
   // check input
   PARAM_CHECK(api, handle != nullptr);
@@ -83,6 +76,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   PARAM_CHECK(api, aspect_ratios_desc != nullptr);
   PARAM_CHECK(api, variances_desc != nullptr);
   PARAM_CHECK(api, max_sizes_desc != nullptr);
+  PARAM_CHECK(api, output_desc != nullptr);
+  PARAM_CHECK(api, var_desc != nullptr);
   // check dim
   PARAM_CHECK(api, min_sizes_desc->dim == 1);
   PARAM_CHECK(api, aspect_ratios_desc->dim == 1);
@@ -123,8 +118,13 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   const int num_priors =
       getNumPriors(min_sizes_desc, aspect_ratios_desc, max_sizes_desc);
   // check num_priors limit
-  const int max_support_num_priors = getMaxSupportNumPriors(handle);
-  PARAM_CHECK(api, num_priors < max_support_num_priors);
+  const int max_support_num_priors = handle->arch < 300 ? MLU200SERIERS_MAX_SUPPORT : MLU300SERIERS_MAX_SUPPORT;
+  if(num_priors > max_support_num_priors)
+  {
+    LOG(ERROR) << api << " Support max num_priors is " << max_support_num_priors
+    << ",but now is " << num_priors;
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
   // check zero element
   if ((mluOpGetTensorElementNum(min_sizes_desc) == 0) ||
       (mluOpGetTensorElementNum(aspect_ratios_desc) == 0) ||
@@ -164,8 +164,8 @@ mluOpStatus_t mluOpPriorBox(
     const void *variances, const mluOpTensorDescriptor_t max_sizes_desc,
     const void *max_sizes, const int height, const int width,
     const int im_height, const int im_width, const float step_h,
-    const float step_w, const float offset, bool clip,
-    bool min_max_aspect_ratios_order, const mluOpTensorDescriptor_t output_desc,
+    const float step_w, const float offset, const bool clip,
+    const bool min_max_aspect_ratios_order, const mluOpTensorDescriptor_t output_desc,
     void *output, const mluOpTensorDescriptor_t var_desc, void *var) {
   // param check
   mluOpStatus_t pb_status = mluOpPriorBoxParamCheck(

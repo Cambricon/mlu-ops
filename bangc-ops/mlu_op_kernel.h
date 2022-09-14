@@ -133,7 +133,7 @@ void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     const void *max_sizes, const int max_sizes_num, const int height,
     const int width, const int im_height, const int im_width,
     const float step_h, const float step_w, const float offset,
-    const int num_priors, bool clip, bool min_max_aspect_ratios_order,
+    const int num_priors, const bool clip, const bool min_max_aspect_ratios_order,
     void *output, const int output_size, void *var, const int var_size);
 
 /* RoICrop*/
