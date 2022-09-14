@@ -3,7 +3,7 @@ op_name: "generate_proposals_v2"
 input {
   id: "input1"
   shape {
-    dims: 1
+    dims: 0
     dims: 5
     dims: 3
     dims: 2
@@ -49,7 +49,7 @@ input {
 input {
   id: "input2"
   shape {
-    dims: 1
+    dims: 0
     dims: 5
     dims: 3
     dims: 8
@@ -457,7 +457,7 @@ input {
 input {
   id: "input5"
   shape {
-    dims: 1
+    dims: 0
     dims: 2
   }
   layout: LAYOUT_ARRAY

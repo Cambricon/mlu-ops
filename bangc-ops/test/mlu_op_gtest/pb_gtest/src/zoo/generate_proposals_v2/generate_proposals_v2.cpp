@@ -67,11 +67,11 @@ void GenerateProposalsV2Executor::workspaceMalloc() {
 }
 
 void GenerateProposalsV2Executor::workspaceFree() {
-  // if (workspace_[0]) {
-  //   VLOG(4) << "Free device workspace space.";
-  //   GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
-  //   workspace_[0] = nullptr;
-  // }
+  if (workspace_[0]) {
+    VLOG(4) << "Free device workspace space.";
+    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+    workspace_[0] = nullptr;
+  }
 }
 
 void GenerateProposalsV2Executor::compute() {
@@ -154,9 +154,9 @@ void GenerateProposalsV2Executor::cpuCompute() {
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
 
   const int N = tensor_scores->dims[0];
-  const int A = tensor_scores->dims[1];
-  const int H = tensor_scores->dims[2];
-  const int W = tensor_scores->dims[3];
+  const int H = tensor_scores->dims[1];
+  const int W = tensor_scores->dims[2];
+  const int A = tensor_scores->dims[3];
 
   auto scores_ptr = parser_->getMetaTensor("input1").cpu_ptr;
   auto deltas_ptr = parser_->getMetaTensor("input2").cpu_ptr;
@@ -173,19 +173,21 @@ void GenerateProposalsV2Executor::cpuCompute() {
   GenerateProposalsV2::generateProposalsV2CPUImpl(
       scores_ptr, deltas_ptr, img_shape_ptr, anchors_ptr, variances_ptr,
       pre_nms_top_n, post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, N,
-      A, H, W, rois_ptr, roi_probs_ptr, rois_num_ptr, rois_batch_size_ptr);
+      H, W, A, rois_ptr, roi_probs_ptr, rois_num_ptr, rois_batch_size_ptr);
   VLOG(4) << "[mluOpGenerateProposalsV2] cpu compute end, rois_batch_size: "
           << rois_batch_size_ptr[0];
 }
 
 int64_t GenerateProposalsV2Executor::getTheoryOps() {
   VLOG(4) << "getTheoryOps";
-  int64_t theory_ops = 21650;
-  // int dims = parser_->getMetaTensor("input1").tensor->dims[0];
-  // theory_ops = theory_ops * dims * dims;
-  // int64_t sort_ops = dims * dims - dims;
-  // theory_ops += sort_ops;
-  // VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
+  //   int dims = parser_->getMetaTensor("input1").tensor->dims[0];
+  auto tensor_scores = parser_->getMetaTensor("input1").tensor;
+  const int N = tensor_scores->dims[0];
+  const int H = tensor_scores->dims[1];
+  const int W = tensor_scores->dims[2];
+  const int A = tensor_scores->dims[3];
+  int64_t theory_ops = 39 * N * A * H * W;
+  VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
 }
 

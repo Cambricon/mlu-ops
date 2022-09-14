@@ -32,7 +32,7 @@ void generateProposalsV2CPUImpl(
     float* scores, float* bbox_deltas, float* im_shape, float* anchors,
     float* variances, const int pre_nms_top_n, const int post_nms_top_n,
     const float nms_thresh, const float min_size, const float eta,
-    bool pixel_offset, const int N, const int A, const int H, const int W,
+    bool pixel_offset, const int N, const int H, const int W, const int A,
     float* rpn_rois, float* rpn_roi_probs, float* rpn_rois_num,
     float* rpn_rois_batch_size);
 }  // namespace GenerateProposalsV2

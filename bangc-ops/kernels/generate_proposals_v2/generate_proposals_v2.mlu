@@ -101,7 +101,6 @@ __mlu_func__ void getComputeParams(const int input_num, const int limit,
                                    const int data_type_size, int *max_seg_num,
                                    int *repeat, int *remain_num, int *core_num,
                                    int *core_offset) {
-  // 计算每个cluster上的数据量
   int avg_core_num = 0;
   int rem_core_num = 0;
   int len_core_num = 0;
@@ -120,7 +119,6 @@ __mlu_func__ void getComputeParams(const int input_num, const int limit,
         avg_cluster_num * clusterId +
         (clusterId < rem_cluster_num ? clusterId : rem_cluster_num);
 
-    //  计算每个core上的计算量和偏移
     avg_core_num = len_cluster_num / coreDim;
     rem_core_num = len_cluster_num % coreDim;
     len_core_num = avg_core_num + (coreId < rem_core_num);
@@ -146,9 +144,9 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   // | reduce_buffer | box_count |
   // |   taskDim     |  taskDim  |
 
-  // if(HWA <= pre_nms_top_n){
-  //     return;
-  // }
+  if (HWA <= pre_nms_top_n) {
+    return;
+  }
 
   // 根据nram空间大小，计算core上需要循环的次数
   const int memory_block = 2;
@@ -161,15 +159,6 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   int core_num = 0;
   getComputeParams(HWA, limit, memory_block, sizeof(T), &max_seg_num, &repeat,
                    &remain_num, &core_num, &core_offset);
-
-  // __bang_printf(
-  //     "----------clusterDim=%d------taskDim: %d, taskId: %d "
-  //     "---coreDim=%d--------------\n",
-  //     clusterDim, taskDim, taskId, coreDim);
-  // __bang_printf("HWA: %d \n", HWA);
-  // __bang_printf(
-  //     "max_seg_num: %d ,repeat=%d, remain_num = %d,  core_offset: %d\n",
-  //     max_seg_num, repeat, remain_num, core_offset);
 
   // init workspace ptr
   T *reduce_buffer = (T *)workspace;
@@ -213,8 +202,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
       }
     }
   }
-  // __bang_printf("local_max_value %f, global_max_value: %f \n", local_max_value,
-  //               global_max_value);
+
   // look for k_score
   T up = global_max_value;
   T dn = -up;
@@ -233,7 +221,6 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
       }
       int actual_num = (seg_id == repeat) ? remain_num : max_seg_num;
       int actual_num_align = CEIL_ALIGN(actual_num, ALIGN_NUM);
-      // __bang_printf("-topk -actual_num:%d \n", actual_num);
 
       __bang_write_value(scores, actual_num_align, 0);
       __bang_write_value(ge_mask, actual_num_align, 0);
@@ -244,7 +231,6 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
       __bang_ge_scalar(ge_mask, scores, mid, actual_num_align);
       cnt += __bang_count(ge_mask, actual_num_align);
     }
-    // __bang_printf("-local-total cnt:%d \n", cnt);
 
     if (taskDim != 1) {
       box_count[taskId] = cnt;
@@ -256,14 +242,13 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
       }
     }
 
-    // __bang_printf("--total cnt:%d \n", cnt);
     if (cnt == pre_nms_top_n) {
       break;
     } else if ((cnt > pre_nms_top_n) && (mid == up || mid == dn)) {
       break;
     }
 
-    // update boundary and gv
+    // update dn, up, mid
     if (cnt > pre_nms_top_n) {
       dn = (dn == mid) ? up : mid;
     } else if (cnt < pre_nms_top_n) {
@@ -272,10 +257,8 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
     mid = dn + (up - dn) * 0.5;
   }
   k_score[0] = mid;
-  __bang_printf("--topk end, k_score = %f\n", mid);
 }
 
-// output = exp(input)
 template <typename T>
 __mlu_func__ void calcExp(T *output, T *input, int length) {
 #if __BANG_ARCH__ >= 322
@@ -292,16 +275,15 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
                             T *variances, T *nram_temp, const int input_stride,
                             const int count, const T *im_shape,
                             bool pixel_offset) {
-  if (count == 0) {
-    return;
-  }
-
   // nram, 10N, N = input_stride
   // | w(oxmin) | h(oymin) | cx(oxmax) | cy(oymax) | d_w | d_h | d_cx | d_cy |
   // tmp1 |
   // |     N    |     N    |      N    |     N     |  N  |  N  |   N  |   N  |
   // 2N  |
 
+  if (count == 0) {
+    return;
+  }
   int align_count = CEIL_ALIGN(count, ALIGN_NUM);
   T *axmin = anchors;
   T *aymin = anchors + input_stride;
@@ -312,17 +294,6 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
   T *dymin = bbox_deltals + input_stride;
   T *dxmax = bbox_deltals + 2 * input_stride;
   T *dymax = bbox_deltals + 3 * input_stride;
-
-  // for (int i = 0; i < count; i++) {
-  //   __bang_printf(
-  //       "MLU:[%d]: anchor(%f, %f, %f, %f), deltal(%f, %f, %f, %f), var(%f,
-  //       %f, "
-  //       "%f, %f)\n",
-  //       i, axmin[i], aymin[i], axmax[i], aymax[i], dxmin[i], dymin[i],
-  //       dxmax[i],
-  //       dymax[i], variances[i], variances[i + input_stride],
-  //       variances[i + 2 * input_stride], variances[i + 3 * input_stride]);
-  // }
 
   T offset = pixel_offset ? static_cast<T>(1.0) : 0;
 
@@ -349,11 +320,6 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
   __bang_add(cx, cx, axmin, align_count);
   // T cy = aymin + 0.5 * h;
   __bang_add(cy, cy, aymin, align_count);
-
-  // for(int i = 0; i < count; i++) {
-  //   __bang_printf("[%d]:1xmin: (%f, %f, %f, %f) wh(%f, %f), cxy(%f, %f)\n",
-  //   i, axmin[i], aymin[i], axmax[i], aymax[i], w[i], h[i], cx[i], cy[i]);
-  // }
 
   T *d_w = nram_temp + 4 * align_count;
   T *d_h = nram_temp + 5 * align_count;
@@ -399,7 +365,6 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
     __bang_add(d_cx, cx, d_w, align_count);
     __bang_add(d_cy, cy, d_h, align_count);
 
-    // Min(dymax * var[k + 3], bbox_clip_default)
     // const float bbox_clip_default = std::log(1000.0 / 16.0);
     const float bbox_clip_default = 4.135166556742356f;
 #if __BANG_ARCH__ >= 322
@@ -479,23 +444,22 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
                                  const int input_stride, const int boxes_count,
                                  int *after_count, const T min_size,
                                  bool pixel_offset) {
+  // nram N = align_count, 7N,
+  // | w | h | cx | cy | mask_tmp1 | tmp1 |
+  // | N | N | N  | N  | 2N        |  N  |
+
   if (boxes_count == 0) {
     *after_count = 0;
     return;
   }
-  // nram N = align_count, 7N,
-  // | w | h | cx | cy | mask_tmp1 | tmp1 |
-  // | N | N | N  | N  | 2N        |  N  |
   int align_count = CEIL_ALIGN(boxes_count, ALIGN_NUM);
-  // __bang_write_value(nram_temp, 8 * align_count, 0);
+
   T *w = (T *)nram_temp;
   T *h = (T *)nram_temp + align_count;
   T *cx = (T *)nram_temp + 2 * align_count;
   T *cy = (T *)nram_temp + 3 * align_count;
-
   T *mask_tmp1 = (T *)nram_temp + 4 * align_count;
   T *mask_tmp2 = (T *)nram_temp + 5 * align_count;
-
   T *tmp1 = (T *)nram_temp + 6 * align_count;
 
   // w = box[2] - box[0], h = box[3] - box[1];
@@ -565,70 +529,25 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
 }
 
 template <typename T>
-__mlu_func__ void outputTranspose(T * output_ptr, T *box_ptr, const int box_num, const int width, const int box_stride) {
-  #if __BANG_ARCH__ >=300
-  const int memory_block = 8;
-  int limit = (PROPOSAL_NRAM_SIZE) / memory_block;
-
-  int max_seg_num = 0;
-  int repeat = 0;
-  int remain_num = 0;
-  int core_offset = 0;
-  int core_num = 0;
-  getComputeParams(box_num, limit, memory_block, sizeof(T), &max_seg_num, &repeat,
-                   &remain_num, &core_num, &core_offset);
-                   
-  T *load_buffer = (T*)nram_buffer;
-  T *trans = load_buffer + 4 * max_seg_num;
-
-  for (int seg_id = 0; seg_id <= repeat; ++seg_id) {
-    if (seg_id == repeat && remain_num == 0) {
-      break;
-    }
-    int actual_num = (seg_id == repeat) ? remain_num : max_seg_num;
-    int seg_offset = core_offset + max_seg_num * seg_id;
-    // width = 4;
-    
-    __memcpy(load_buffer, box_ptr + seg_offset, actual_num * sizeof(T), GDRAM2NRAM, actual_num * sizeof(T), box_stride * sizeof(T), width);
-    __bang_transpose(trans, load_buffer, actual_num, width);
-    __memcpy(output_ptr + seg_offset * width, trans, width * actual_num * sizeof(T), GDRAM2NRAM);
-
-  }
-#endif
-}
-
-template <typename T>
 __mlu_func__ void loadAndtranspose(T *trans, const T *gdram_ptr,
                                    const int offset, T *nram_temp,
                                    const int height, const int width) {
+// gdram_ptr [height, width] ==> trans[width, align_height]
 #if __BANG_ARCH__ >= 300
-  // nram_temp
-  // |     load_buffer  |
-  // |  width  * height |
-  // |     4N           |
+  int align_height = CEIL_ALIGN(height, ALIGN_NUM);
   T *load_buffer = nram_temp;
   __memcpy(load_buffer, gdram_ptr + offset, width * height * sizeof(T),
            GDRAM2NRAM);
-  __bang_transpose(trans, load_buffer, height, width);
+  __bang_transpose(trans, load_buffer, align_height, width);
 #else
-  // nram_temp
-  // |         load_buffer        |     trans_cache            |
-  // | align_width * align_height | align_width * align_height |
-  // |              16*N          |     16*N                   |
   const int TRANS_ALIGN = 64 / sizeof(T);
   int align_width = CEIL_ALIGN(width, TRANS_ALIGN);
-  int align_height = CEIL_ALIGN(height, TRANS_ALIGN);
+  int align_height = CEIL_ALIGN(height, ALIGN_NUM);
 
   T *load_buffer = nram_temp;
-  T *trans_cache = load_buffer + align_height * align_width;
-
   __memcpy(load_buffer, gdram_ptr + offset, width * sizeof(T), GDRAM2NRAM,
            align_width * sizeof(T), width * sizeof(T), height);
-
-  __bang_transpose(trans_cache, load_buffer, align_height, align_width);
-
-  __memcpy(trans, trans_cache, height * sizeof(T), NRAM2NRAM,
-           height * sizeof(T), align_height * sizeof(T), width);
+  __bang_transpose(trans, load_buffer, align_height, align_width);
 #endif
 }
 
@@ -641,24 +560,21 @@ __mlu_func__ void createAndRemoveBox(T *output_scores, T *output_boxes,
                                      const T k_score, const int HWA,
                                      const T min_size, bool pixel_offset,
                                      bool need_collect, int *proposals_num) {
-  // nram  n = max_seg_num, transpose: 200 32N, 300 4N
-  // | scores | anchors | variances | bbox_deltals | proposals | ge_mask |
-  // nram_temp |  trans_cache |
-  // |  N     |  4N     |    4N     |      4N      |   4N      |    N    | 9N
-  // |              |
-  // |  N     |  4N     |    4N     |      4N       |      trans_buffer      32N
-  // |
+// nram  n = max_seg_num, transpose: 200 32N, 300 4N
+// | scores | anchors | var | deltals | proposals | ge_mask | nram |
+// MLU300
+// |  N     |  4N     | 4N  |   4N    |   4N      |  N      | 9N   |
+// MLU200
+// |  N     |  4N     |  4N |  4N     |   trans_buffer  32N        |
 
-  // workspace
-  // | output_scores | output_boxes | collect_num |
-  // |    HWA        |   4*HWA      | collect_num |
+// workspace
+// | output_scores | output_boxes | collect_num |
+// |    HWA        |   4*HWA      | collect_num |
 
-  // __bang_printf("---createAndRemoveBox start---\n");
-// 根据nram空间大小，计算core上需要循环的次数
 #if __BANG_ARCH__ >= 300
   const int memory_block = 27;
 #else
-  const int memory_block = 41;
+  const int memory_block = 45;
 #endif
   int limit = PROPOSAL_NRAM_SIZE / memory_block;
   int max_seg_num = 0;
@@ -668,9 +584,9 @@ __mlu_func__ void createAndRemoveBox(T *output_scores, T *output_boxes,
   int core_num = 0;
   getComputeParams(HWA, limit, memory_block, sizeof(T), &max_seg_num, &repeat,
                    &remain_num, &core_num, &core_offset);
-  // __bang_printf("HWA=%d,max_seg_num=%d,repeat=%d, remain_num=%d, core_num=%d, core_offset=%d\n", HWA, max_seg_num ,repeat,remain_num ,core_num,core_offset);
+
   // init workspace ptr
-  int *collect_num =(int*)((char*)worksapce);
+  int *collect_num = (int *)((char *)worksapce);
   collect_num[taskId] = 0;
 
   // init nram ptr
@@ -689,20 +605,15 @@ __mlu_func__ void createAndRemoveBox(T *output_scores, T *output_boxes,
       __sync_all_ipu();
     }
     if (seg_id == repeat && remain_num == 0) {
-      __bang_printf("break before __sync_all\n");
       break;
     }
-      // __bang_printf("repeat=%d, segid = %d, 111\n", seg_id, repeat);
 
     int actual_num = (seg_id == repeat) ? remain_num : max_seg_num;
     int actual_num_align = CEIL_ALIGN(actual_num, ALIGN_NUM);
     int scores_offset = core_offset + seg_id * max_seg_num;
-    int anchor_offset = core_offset * 4 + seg_id * max_seg_num * 4;
+    int anchor_offset = (core_offset + seg_id * max_seg_num) * 4;
 
     // load anchors, bbox_deltals, scores, variances
-    // bbox_deltals 取数 1*HWA + offset
-    // anchors [AHW，4] 需要转置
-    // variances [AHW，4] 需要转置
     __bang_write_value(scores, actual_num_align, FLOAT_MIN);
     __memcpy(scores, intput_scores_ptr + scores_offset, sizeof(T) * actual_num,
              GDRAM2NRAM);
@@ -729,40 +640,46 @@ __mlu_func__ void createAndRemoveBox(T *output_scores, T *output_boxes,
         __bang_collect(scores, scores, ge_mask, actual_num_align);
 
         __bang_collect(bbox_deltals, bbox_deltals, ge_mask, actual_num_align);
-        __bang_collect(bbox_deltals + 1 * actual_num,
-                       bbox_deltals + 1 * actual_num, ge_mask,
+        __bang_collect(bbox_deltals + 1 * actual_num_align,
+                       bbox_deltals + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(bbox_deltals + 2 * actual_num,
-                       bbox_deltals + 2 * actual_num, ge_mask,
+        __bang_collect(bbox_deltals + 2 * actual_num_align,
+                       bbox_deltals + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(bbox_deltals + 3 * actual_num,
-                       bbox_deltals + 3 * actual_num, ge_mask,
+        __bang_collect(bbox_deltals + 3 * actual_num_align,
+                       bbox_deltals + 3 * actual_num_align, ge_mask,
                        actual_num_align);
 
         __bang_collect(anchors, anchors, ge_mask, actual_num_align);
-        __bang_collect(anchors + 1 * actual_num, anchors + 1 * actual_num,
-                       ge_mask, actual_num_align);
-        __bang_collect(anchors + 2 * actual_num, anchors + 2 * actual_num,
-                       ge_mask, actual_num_align);
-        __bang_collect(anchors + 3 * actual_num, anchors + 3 * actual_num,
-                       ge_mask, actual_num_align);
+        __bang_collect(anchors + 1 * actual_num_align,
+                       anchors + 1 * actual_num_align, ge_mask,
+                       actual_num_align);
+        __bang_collect(anchors + 2 * actual_num_align,
+                       anchors + 2 * actual_num_align, ge_mask,
+                       actual_num_align);
+        __bang_collect(anchors + 3 * actual_num_align,
+                       anchors + 3 * actual_num_align, ge_mask,
+                       actual_num_align);
 
         __bang_collect(variances, variances, ge_mask, actual_num_align);
-        __bang_collect(variances + 1 * actual_num, variances + 1 * actual_num,
-                       ge_mask, actual_num_align);
-        __bang_collect(variances + 2 * actual_num, variances + 2 * actual_num,
-                       ge_mask, actual_num_align);
-        __bang_collect(variances + 3 * actual_num, variances + 3 * actual_num,
-                       ge_mask, actual_num_align);
+        __bang_collect(variances + 1 * actual_num_align,
+                       variances + 1 * actual_num_align, ge_mask,
+                       actual_num_align);
+        __bang_collect(variances + 2 * actual_num_align,
+                       variances + 2 * actual_num_align, ge_mask,
+                       actual_num_align);
+        __bang_collect(variances + 3 * actual_num_align,
+                       variances + 3 * actual_num_align, ge_mask,
+                       actual_num_align);
       }
     }
 
     // proposals_num = 4 *count
     createBox(proposals, bbox_deltals, anchors, variances, nram_temp,
-              actual_num, count, im_shape, pixel_offset);
+              actual_num_align, count, im_shape, pixel_offset);
 
-    removeSmallBox(scores, proposals, im_shape, nram_temp, actual_num, count,
-                   &after_remove_count, min_size, pixel_offset);
+    removeSmallBox(scores, proposals, im_shape, nram_temp, actual_num_align,
+                   count, &after_remove_count, min_size, pixel_offset);
 
     collect_num[taskId] = after_remove_count;
     __sync_all_ipu();
@@ -779,15 +696,21 @@ __mlu_func__ void createAndRemoveBox(T *output_scores, T *output_boxes,
       continue;
     }
 
-    __memcpy(output_boxes + current_offset, proposals, after_remove_count * sizeof(T), NRAM2GDRAM);
-    __memcpy(output_boxes + current_offset + HWA, proposals + actual_num, after_remove_count * sizeof(T), NRAM2GDRAM);
-    __memcpy(output_boxes + current_offset + 2 *HWA, proposals + 2 *actual_num, after_remove_count * sizeof(T), NRAM2GDRAM);
-    __memcpy(output_boxes + current_offset + 3*HWA, proposals+ 3*actual_num, after_remove_count * sizeof(T), NRAM2GDRAM);
-    __memcpy(output_scores + current_offset, scores, after_remove_count * sizeof(T), NRAM2GDRAM);
+    __memcpy(output_boxes + current_offset, proposals,
+             after_remove_count * sizeof(T), NRAM2GDRAM);
+    __memcpy(output_boxes + current_offset + HWA, proposals + actual_num_align,
+             after_remove_count * sizeof(T), NRAM2GDRAM);
+    __memcpy(output_boxes + current_offset + 2 * HWA,
+             proposals + 2 * actual_num_align, after_remove_count * sizeof(T),
+             NRAM2GDRAM);
+    __memcpy(output_boxes + current_offset + 3 * HWA,
+             proposals + 3 * actual_num_align, after_remove_count * sizeof(T),
+             NRAM2GDRAM);
+    __memcpy(output_scores + current_offset, scores,
+             after_remove_count * sizeof(T), NRAM2GDRAM);
   }
 
   *proposals_num = pre_store_offset;
-  __bang_printf("-taskId=%d--createAndRemoveBox end---\n", taskId);
 }
 
 template <typename T>
@@ -797,9 +720,7 @@ __mlu_func__ void calcBoxesArea(T *output_box_area, const T *intput_boxes,
   // nram
   // | boxes | width | height | area |
   // |  4N   |   N   |   N    |  N   |
-  // 根据nram空间大小，计算core上需要循环的次数
-  // __bang_printf("calcBoxesArea start, intput_boxes_num=%d \n",
-  //               intput_boxes_num);
+
   const int memory_block = 7;
   int limit = PROPOSAL_NRAM_SIZE / memory_block;
 
@@ -808,9 +729,6 @@ __mlu_func__ void calcBoxesArea(T *output_box_area, const T *intput_boxes,
   int repeat = intput_boxes_num / max_seg_num;
   int remain_num = intput_boxes_num % max_seg_num;
 
-  // __bang_printf("calcBoxesArea: repeat = %d, max_seg_num=%d,
-  // remain_num=%d\n",
-  //               repeat, max_seg_num, remain_num);
   T *boxes = (T *)nram_buffer;
   T *width = boxes + 4 * max_seg_num;
   T *height = width + max_seg_num;
@@ -865,12 +783,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   getComputeParams(scores_num, limit, memory_block, sizeof(T), &max_seg_num,
                    &repeat, &remain_num, &core_num, &core_offset);
 
-  // __bang_printf("------------nonMaximumSuppress-------------\n");
-  // __bang_printf(
-  //     "max_seg_num: %d ,repeat=%d, remain_num = %d, core_num=%d, core_offset: "
-  //     "%d\n",
-  //     max_seg_num, repeat, remain_num, core_num, core_offset);
-
   // init nram ptr
   T *output_scores = (T *)nram_buffer;
   T *output_boxes = (T *)nram_buffer + max_seg_num;
@@ -887,7 +799,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   T *inter_s = inter_y2 + max_seg_num;
   T *tmp1 = inter_s + max_seg_num;
 
-  // nram size - nram_save
   int getMaxScoreBufSize = PROPOSAL_NRAM_SIZE - 5 * max_seg_num * sizeof(T);
   T *box_area_gdram = workspace;  // save boxes area to gdram
 
@@ -902,7 +813,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   int nms_num = scores_num > max_output_num ? max_output_num : scores_num;
   int output_scores_num = 0;
   int output_save_count = 0;
-  // __bang_printf("NMS:  nms_num: %d ,proposals_num: %d\n", nms_num, scores_num);
 
   for (int nms_id = 0; nms_id < nms_num; ++nms_id) {
     if (taskDim != 1) {
@@ -911,14 +821,11 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
 
     int max_index = 0;
     T max_score = 0;
-    // getMaxScores()
-    // look for max_score
-    // 1 get_max_box_index();
-    // output: max_box (max_score, max_index)
+
     getMaxScoreIndex(input_scores_ptr, &max_index, &max_score,
                      get_max_score_buffer, reduce_buffer, getMaxScoreBufSize,
                      core_num, core_offset);
-    if(max_index == -1){
+    if (max_index == -1) {
       break;
     }
     input_scores_ptr[max_index] = FLOAT_MIN;
@@ -929,11 +836,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
     T global_max_y2 = input_boxes_ptr[3 * box_stride + max_index];
     T global_max_box_area = box_area_gdram[max_index];
 
-    // __bang_printf(
-    //     "nms max_score: %f , index = %d, coor(%f, %f, %f, %f), area=%f\n",
-    //     max_score, max_index, global_max_x1, global_max_y1, global_max_x2,
-    //     global_max_y2, global_max_box_area);
-    // store
     if (taskId == 0) {
       if (max_score > FLOAT_MIN) {
         output_scores[output_scores_num] = max_score;
@@ -954,7 +856,7 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
           output_save_count++;
           output_scores_num = 0;
         }
-      }  // if (float(max_box[0]) >= (float)FLOAT_MIN)
+      }  // if (max_score > FLOAT_MIN）
     }    // if (taskId == 0)
 
     // if the max score <= 0, end
@@ -983,10 +885,8 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
         break;
       }
     }
-    // continue;
+
     // calculate iou : max_score_box & other boxes
-    // compare iou and nms_thresh
-    // update scores
     for (int seg_id = 0; seg_id <= repeat; ++seg_id) {
       if (seg_id == repeat && remain_num == 0) {
         break;
@@ -1025,9 +925,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
       __bang_minequal(inter_y2, y2, tmp1, actual_num_align);
 
       if (pixel_offset) {
-        // width = max(inter_x2 - inter_x1 + offset, 0.f),
-        // height = max(inter_y2 - inter_y1 + offset, 0.f);
-        // __bang_write_value(tmp1, actual_num_align, (T)1.0);
         __bang_sub(inter_x2, inter_x2, inter_x1, actual_num_align);
         __bang_sub(inter_y2, inter_y2, inter_y1, actual_num_align);
         // width = inter_x1;
@@ -1044,8 +941,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
         __bang_mul(inter_s, inter_x1, inter_y1, actual_num_align);
 
       } else {
-        // width = max(inter_x2 - inter_x1 0.f),
-        // height = max(inter_y2 - inter_y , 0.f);
         __bang_sub(inter_x2, inter_x2, inter_x1, actual_num_align);
         __bang_sub(inter_y2, inter_y2, inter_y1, actual_num_align);
 
@@ -1064,8 +959,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
       // box_area = area_u * nms_thresh
       __bang_mul_scalar(box_area, box_area, nms_thresh, actual_num_align);
 
-      // compare  inter_s 和 area_u * nms_thresh, set ( inter_s >=  area_u *
-      // nms_thresh ) FLOAT_MIN
       __bang_le(inter_x1, inter_s, box_area, actual_num_align);
       __bang_gt(inter_y1, inter_s, box_area, actual_num_align);
 
@@ -1077,10 +970,8 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
                NRAM2GDRAM);
     }  // for seg_id <= repeat
   }    // for nms_id < nms_num
-  __bang_printf("NMS:  after nms, output_count: %d \n", output_num[0]);
 }
 
-// float * __restrict__ bbox_deltas,
 template <typename T>
 __mlu_func__ void ProposalForOneImage(
     const T *scores, const T *bbox_deltas, const T *im_shape, const T *anchors,
@@ -1088,9 +979,7 @@ __mlu_func__ void ProposalForOneImage(
     int *rpn_rois_num, int *one_image_proposals_num, const int pre_nms_top_n,
     const int post_nms_top_n, const float nms_thresh, const float min_size,
     bool pixel_offset, const int HWA) {
-  __bang_printf("---HWA = %d, pre_nms_top_n = %d, post_nms_top_n= %d!\n", HWA,
-                pre_nms_top_n, post_nms_top_n);
-  if(taskDim != 1) {
+  if (taskDim != 1) {
     __sync_all_ipu();
   }
   T k_score = 0.0f;
@@ -1103,7 +992,6 @@ __mlu_func__ void ProposalForOneImage(
   if (taskDim != 1) {
     __sync_all_ipu();
   }
-  __bang_printf("before creatbox\n");
   T *proposal_scores = (T *)workspace;
   T *proposal_boxes = proposal_scores + HWA;
   T *workspace_buffer = proposal_boxes + 4 * HWA;
@@ -1112,49 +1000,22 @@ __mlu_func__ void ProposalForOneImage(
   createAndRemoveBox(proposal_scores, proposal_boxes, scores, bbox_deltas,
                      im_shape, anchors, variances, workspace_buffer, k_score,
                      HWA, min_size, pixel_offset, need_top_k, &proposals_num);
-  __bang_printf("createAndRemoveBox end, proposals_num = %d \n", proposals_num);
 
-  // proposals_num == 0, ouput rpn_rois_num = 1, batchsize = 1, proposal_scores
   if (proposals_num == 0) {
     rpn_rois_num[0] = 1;
     one_image_proposals_num[0] += rpn_rois_num[0];
     return;
   }
 
-  // 这一段放到removebox 后, 直接从nram save 到rois;
-  if (nms_thresh <= 0) {
-    // // transpose proposal_boxes;
-    outputTranspose(rpn_rois, proposal_boxes, proposals_num, 4, HWA);
-    __memcpy(rpn_roi_probs, proposal_scores, proposals_num * sizeof(float), GDRAM2GDRAM);
-    one_image_proposals_num[0] += rpn_rois_num[0];
-    return;
-  }
-  
-  if(taskDim != 1) {
+  if (taskDim != 1) {
     __sync_all_ipu();
   }
-  __bang_printf("taskId = %d, before nms\n", taskId);
+
   nonMaximumSuppress(rpn_rois, rpn_roi_probs, rpn_rois_num, proposal_scores,
                      proposal_boxes, workspace_buffer, nms_thresh,
                      post_nms_top_n, proposals_num, pixel_offset, HWA);
 
   one_image_proposals_num[0] += rpn_rois_num[0];
-  __bang_printf("nonMaximumSuppress end, rpn_rois_num = %d \n",
-            rpn_rois_num[0]);
-
-//   T * nms_Score = (T *)workspace;
-//   T * nms_boxes =  (T *)workspace + HWA;
-
-//  __memcpy(nms_Score, scores, HWA * sizeof(float),GDRAM2GDRAM);
-//  __memcpy(nms_boxes, anchors, 4 * HWA * sizeof(float),GDRAM2GDRAM);
-
-
-//   nonMaximumSuppress(rpn_rois, rpn_roi_probs, rpn_rois_num, nms_Score,
-//   nms_boxes, workspace, nms_thresh,
-//   post_nms_top_n, HWA, pixel_offset, HWA);
-//   one_image_proposals_num[0] += rpn_rois_num[0];
-//   __bang_printf("nonMaximumSuppress end, rpn_rois_num = %d \n",
-//                 rpn_rois_num[0]);
 }
 
 template <typename T>
@@ -1167,13 +1028,11 @@ __mlu_global__ void mluOpGenerateProposalsV2Kernel(
     const int Anchors_num, const int W, const int H) {
   if (coreId == 0x80) return;
 
-  __bang_printf("scale:[%d, %d, %d, %d]\n", batch_size, H, W, Anchors_num);
   const int HWA = Anchors_num * W * H;
- 
+
   int all_proposals_num = 0;
   for (int batch_id = 0; batch_id < batch_size; ++batch_id) {
-  __bang_printf("taskId= %d, batch=%d, batchId = %d\n", taskId, batch_size, batch_id);
-    if(taskDim != 1) {
+    if (taskDim != 1) {
       __sync_all_ipu();
     }
     int one_image_proposals_num = 0;

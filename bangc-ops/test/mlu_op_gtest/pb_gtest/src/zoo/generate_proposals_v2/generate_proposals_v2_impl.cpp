@@ -30,7 +30,7 @@ using namespace std;
 
 namespace GenerateProposalsV2 {
 
-#define PNMS_MIN (-(float)FLT_MAX)
+#define FLOAT_MIN (-(float)FLT_MAX)
 
 template <typename T>
 void quickSort(T *arr, int low, int high) {
@@ -104,7 +104,7 @@ void creatAndFilterProposalsBox(T *anchors_slice, T *bbox_deltas_slice,
   const int HWA = A * H * W;
   int k = max_score_id;
 
-  T axmin = anchors_slice[k * 4];  // [A, H, W, 4]
+  T axmin = anchors_slice[k * 4];
   T aymin = anchors_slice[k * 4 + 1];
   T axmax = anchors_slice[k * 4 + 2];
   T aymax = anchors_slice[k * 4 + 3];
@@ -230,7 +230,7 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
     T max_score = scores_slice[max_score_id];
 
     findMaxScore(temp_scores, HWA, &max_score, &max_score_id);
-    temp_scores[max_score_id] = PNMS_MIN;
+    temp_scores[max_score_id] = FLOAT_MIN;
 
     creatAndFilterProposalsBox<T>(
         anchors_slice, bbox_deltas_slice, im_shape_slice, variances_slice,
@@ -247,10 +247,9 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
     float max_score = 0.0f;
     int max_score_id = 0;
     findMaxScore(out_scores_buf, proposals_num, &max_score, &max_score_id);
-    out_scores_buf[max_score_id] = PNMS_MIN;
+    out_scores_buf[max_score_id] = FLOAT_MIN;
 
-    // max_score < k_score
-    if (max_score <= PNMS_MIN) { /**/
+    if (max_score <= FLOAT_MIN) {
       break;
     }
     // Compute max area
@@ -278,7 +277,7 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
       float *b = out_box_buf + inner_id * 4;
       float iou = calcIoU(a, b, pixel_offset);
       if (iou > nms_thresh) {
-        out_scores_buf[inner_id] = PNMS_MIN;
+        out_scores_buf[inner_id] = FLOAT_MIN;
       }
     }
   }
@@ -299,7 +298,7 @@ void generateProposalsV2CPUImpl(
     float *scores, float *bbox_deltas, float *im_shape, float *anchors,
     float *variances, const int pre_nms_top_n, const int post_nms_top_n,
     const float nms_thresh, const float min_size, const float eta,
-    bool pixel_offset, const int N, const int A, const int H, const int W,
+    bool pixel_offset, const int N, const int H, const int W, const int A,
     float *rpn_rois, float *rpn_roi_probs, float *rpn_rois_num,
     float *rpn_rois_batch_size) {
   const int HWA = A * H * W;

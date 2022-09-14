@@ -46,10 +46,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 
   k_dim->y = 1;
   k_dim->z = 1;
-  
-  //   k_dim->x = 1;
-  //   *k_type = CNRT_FUNC_TYPE_BLOCK;
-  //   return;
+
   if (job < 4) {
     k_dim->x = 1;
     *k_type = CNRT_FUNC_TYPE_BLOCK;
@@ -66,11 +63,29 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc,
     size_t *size) {
+  const std::string API = "[mluOpGenerateProposalsV2]";
+  PARAM_CHECK(API, scores_desc != NULL);
+  PARAM_CHECK(API, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
+
+  PARAM_CHECK_EQ(API, scores_desc->dim, 4);
   int N = scores_desc->dims[0];
-  int A = scores_desc->dims[1];
-  int H = scores_desc->dims[2];
-  int W = scores_desc->dims[3];
-  *size = 7 * A * H * W * 4 + 128 * 6;
+  int H = scores_desc->dims[1];
+  int W = scores_desc->dims[2];
+  int A = scores_desc->dims[3];
+
+  PARAM_CHECK_NE(API, A, 0);
+  PARAM_CHECK_NE(API, H, 0);
+  PARAM_CHECK_NE(API, W, 0);
+  if ((mluOpGetTensorElementNum(scores_desc) *
+           getSizeOfDataType(scores_desc->dtype) >=
+       LARGE_TENSOR_SIZE)) {
+    LOG(ERROR) << API << " Overflow max tensor size."
+               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+  *size = 6 * A * H * W * 4 +
+          handle->cluster_num * handle->core_num_per_cluster * 4 * 3;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -164,17 +179,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0], N * post_nms_top_n);
   PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[1], 1);
 
-  // [N]
   PARAM_CHECK_EQ(API, rpn_rois_num_desc->dim, 1);
   PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], N);
 
-  if (A == 0 || H == 0 || W == 0) {
-    return MLUOP_STATUS_BAD_PARAM;
-  }
+  PARAM_CHECK_NE(API, A, 0);
+  PARAM_CHECK_NE(API, H, 0);
+  PARAM_CHECK_NE(API, W, 0);
 
   if (N == 0) {
     VLOG(5) << API << " skip zero element tensor.";
-    // CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int)));
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -199,6 +212,59 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
+  if (nms_thresh <= 0) {
+    LOG(ERROR) << API
+               << " nms_thresh should be more than 0. But received nms_thresh=["
+               << nms_thresh << "]";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+
+  if ((mluOpGetTensorElementNum(scores_desc) *
+           getSizeOfDataType(scores_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(bbox_deltas_desc) *
+           getSizeOfDataType(bbox_deltas_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(anchors_desc) *
+           getSizeOfDataType(anchors_desc->dtype) >=
+       LARGE_TENSOR_SIZE) ||
+      (mluOpGetTensorElementNum(variances_desc) *
+           getSizeOfDataType(variances_desc->dtype) >=
+       LARGE_TENSOR_SIZE)) {
+    LOG(ERROR) << API << " Overflow max tensor size."
+               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
+  // generate prototxt
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("generate_proposals_v2");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "input1", scores, scores_desc, 10, 0);
+    GEN_CASE_DATA(true, "input2", bbox_deltas, bbox_deltas_desc, 10, 0);
+    GEN_CASE_DATA(true, "input3", anchors, anchors_desc, 10, 0);
+    GEN_CASE_DATA(true, "input4", variances, variances_desc, 10, 0);
+    GEN_CASE_DATA(true, "input5", im_shape, im_shape_desc, 10, 0);
+
+    GEN_CASE_DATA(false, "output1", rpn_rois, rpn_rois_desc, 0, 0);
+    GEN_CASE_DATA(false, "output2", rpn_roi_probs, rpn_roi_probs_desc, 0, 0);
+    GEN_CASE_DATA(false, "output3", rpn_rois_num, rpn_rois_num_desc, 0, 0);
+    GEN_CASE_DATA_UNFOLD(false, "output4", rpn_rois_batch_size, 1, {1},
+                         MLUOP_DTYPE_INT32, MLUOP_LAYOUT_ARRAY, 0, 0);
+
+    GEN_CASE_OP_PARAM_SINGLE(0, "generate_proposals_v2", "pre_nms_top_n",
+                             pre_nms_top_n);
+    GEN_CASE_OP_PARAM_SINGLE(1, "generate_proposals_v2", "post_nms_top_n",
+                             post_nms_top_n);
+    GEN_CASE_OP_PARAM_SINGLE(2, "generate_proposals_v2", "nms_thresh",
+                             nms_thresh);
+    GEN_CASE_OP_PARAM_SINGLE(3, "generate_proposals_v2", "min_size", min_size);
+    GEN_CASE_OP_PARAM_SINGLE(4, "generate_proposals_v2", "eta", eta);
+    GEN_CASE_OP_PARAM_SINGLE(5, "generate_proposals_v2", "pixel_offset",
+                             pixel_offset);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 3e-3, 3e-3, 0);
+  }
+
   int HWA = H * W * A;
   cnrtDim3_t k_dim;
   cnrtJobType_t k_type;
@@ -214,7 +280,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
       (float *)workspace, (float *)rpn_rois, (float *)rpn_roi_probs,
       (int *)rpn_rois_num, (int *)rpn_rois_batch_size, pre_nms_top_n,
       post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, N, A, H, W));
-
+  VLOG(5) << "End mluOpUBestKernelGenerateProposalsV2Float kernel";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
