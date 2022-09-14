@@ -140,8 +140,8 @@
    optional DivParam    div_param                      = 4001;   // param
    optional LogParam    log_param                      = 4002;     // param
    optional SqrtParam   sqrt_param                     = 4003;  // param
-   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
-   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
+   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; // param
+   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  // param
    optional PriorBoxParam prior_box_param              = 4006;   // PriorBoxParam
    optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
  }
@@ -261,4 +261,3 @@
    required float offset = 9 [default = 0.5];
    required bool min_max_aspect_ratios_order = 10 [default = true];
  }
- 
