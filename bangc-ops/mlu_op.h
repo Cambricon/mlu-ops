@@ -1739,8 +1739,6 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  *  - The dimension of \b rpn_roi_probs should be equal to 2.
  *  - The dimension of \b rpn_rois_num should be equal to 1.
  *  - The dimension of \b rpn_rois_batch_size should be equal to 1.
- *  - The shape[0] of output should be equal input shape[0].
- *  - The shape[1] of input should be equal 9.
  *
  *  @par Requirements
  *  - None.
@@ -1750,17 +1748,9 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  * 
  *  @par Note
  *  - This commit does not support nan/inf.
- *  - The coordinates of the input boxes must be sorted clockwise or
- *    counterclockwise. If the coordinates of the boxes are out of order,
- *    the calculation result is not guaranteed and is consistent with the
- *    calculation result of the competitor operator.
- *  - If there are cases with the same score in the input boxes, the output
- *    results may be inconsistent with the results of competing products.
- *  - The number of input boxes on mlu270, mlu290 and mlu370 should be less
- *    than 9770.
  * 
  * @par Reference
- * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
+ * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
  */                         
 mluOpStatus_t MLUOP_WIN_API 
 mluOpGenerateProposalsV2(mluOpHandle_t handle,
@@ -1864,7 +1854,7 @@ mluOpGenerateProposalsV2(mluOpHandle_t handle,
  *    than 9770.
  * 
  * @par Reference
- * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
+ * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
