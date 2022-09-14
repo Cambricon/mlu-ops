@@ -1611,6 +1611,186 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
     size_t *size);
 
 /*!
+ *  @brief Gets extra space size that is needed in poly_nms operation.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the psroipool_forward operation.
+ *  @param[in] scores_desc
+ *    Input. The descriptor of the scores tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t. 
+ *  @param[out] size
+ *    Output. A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t scores_desc,
+                             size_t *size);
+
+/*!
+ *  @brief Generate proposals v2.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the poly_nms operation.
+ *  @param[in] pre_nms_top_n
+ *    Input. The pre_nms_top_n data.
+ *  @param[in] post_nms_top_n
+ *    Input. The post_nms_top_n data
+ *  @param[in] nms_thresh
+ *    Input. The nms_thresh data
+ *  @param[in] min_size
+ *    Input. The min_size data
+ *  @param[in] eta
+ *    Input. The eta data
+ *  @param[in] pixel_offset
+ *    Input. The pixel_offset data
+ *  @param[in] scores_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] scores
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] bbox_deltas_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] bbox_deltas
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] im_shape_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] im_shape
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] anchors_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] anchors
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] variances_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] variances
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] workspace
+ *    Input. Pointer to the MLU memory that stores the extra workspace.
+ *  @param[in] workspace_size
+ *    Input. The size of extra space.
+ *  @param[in] rpn_rois_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] rpn_rois
+ *    Output. Pointer to the MLU memory that stores the output tensor.
+ *  @param[in] rpn_roi_probs_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] rpn_roi_probs
+ *    Output. Pointer to the MLU memory that stores the output tensor.
+ *  @param[in] rpn_rois_num_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] rpn_rois_num
+ *    Output. Pointer to the MLU memory that stores the output tensor.
+ *  @param[in] rpn_rois_batch_size
+ *    Output. Pointer to the MLU memory that stores the output tensor. Indicates
+ *    the number of return values of output.
+ * 
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *    ::MLUOP_STATUS_NOT_SUPPORTED
+ * 
+ *  @par Formula
+ *  - See "generate_proposals_v2 Operation" section in "Cambricon MLUOP User
+ *    Guide" for details.
+ * 
+ *  @par Data Type
+ *  - The supported data types of input and output tensors are as follows:
+ *     - scores: float.
+ *     - bbox_deltas: float.
+ *     - im_shape: float.
+ *     - anchors: float.
+ *     - variances: float.
+ *     - pre_nms_top_n: int32.
+ *     - post_nms_top_n: int32.
+ *     - nms_thresh: float.
+ *     - min_size: float.
+ *     - eta: float.
+ *     - pixel_offset: bool.
+ *     - rpn_rois: float.
+ *     - rpn_roi_probs: int32.
+ *     - rpn_rois_num: int32.
+ *     - rpn_rois_batch_size: int32.
+ * 
+ *  @par Data Layout
+ *  - The supported data layout of \b input, \b output, 
+ *     \b output_size are as follows:
+ * 
+ *   - Input tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output_size tensor: \p MLUOP_LAYOUT_ARRAY.
+ * 
+ *  @par Scale Limitation
+ *  - The dimension of \b scores should be equal to 4.
+ *  - The dimension of \b bbox_deltas should be equal to 4.
+ *  - The dimension of \b im_shape should be equal to 2.
+ *  - The dimension of \b anchors should be equal to 4.
+ *  - The dimension of \b variances should be equal to 4.
+ *  - The dimension of \b rpn_rois should be equal to 2.
+ *  - The dimension of \b rpn_roi_probs should be equal to 2.
+ *  - The dimension of \b rpn_rois_num should be equal to 1.
+ *  - The dimension of \b rpn_rois_batch_size should be equal to 1.
+ *  - The shape[0] of output should be equal input shape[0].
+ *  - The shape[1] of input should be equal 9.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * 
+ *  @par Note
+ *  - This commit does not support nan/inf.
+ *  - The coordinates of the input boxes must be sorted clockwise or
+ *    counterclockwise. If the coordinates of the boxes are out of order,
+ *    the calculation result is not guaranteed and is consistent with the
+ *    calculation result of the competitor operator.
+ *  - If there are cases with the same score in the input boxes, the output
+ *    results may be inconsistent with the results of competing products.
+ *  - The number of input boxes on mlu270, mlu290 and mlu370 should be less
+ *    than 9770.
+ * 
+ * @par Reference
+ * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
+ */                         
+mluOpStatus_t MLUOP_WIN_API 
+mluOpGenerateProposalsV2(mluOpHandle_t handle,
+                        const int pre_nms_top_n,
+                        const int post_nms_top_n,
+                        const float nms_thresh,
+                        const float min_size,
+                        const float eta,
+                        bool pixel_offset,
+                        const mluOpTensorDescriptor_t scores_desc,
+                        const void *scores,
+                        const mluOpTensorDescriptor_t bbox_deltas_desc,
+                        const void *bbox_deltas,
+                        const mluOpTensorDescriptor_t im_shape_desc,
+                        const void *im_shape,
+                        const mluOpTensorDescriptor_t anchors_desc,
+                        const void *anchors,
+                        const mluOpTensorDescriptor_t variances_desc,
+                        const void *variances,
+                        void *workspace,
+                        size_t workspace_size,
+                        const mluOpTensorDescriptor_t rpn_rois_desc,
+                        void *rpn_rois,
+                        const mluOpTensorDescriptor_t rpn_roi_probs_desc,
+                        void *rpn_roi_probs,
+                        const mluOpTensorDescriptor_t rpn_rois_num_desc,
+                        void *rpn_rois_num,
+                        void *rpn_rois_batch_size);
+
+/*!
  *  @brief Polygon Non Maximum Suppression.
  *
  *  @param[in] handle
@@ -1684,7 +1864,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  *    than 9770.
  * 
  * @par Reference
- * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
+ * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,

@@ -91,6 +91,17 @@ void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
 
+/* generate_proposals_v2 */
+void MLUOP_WIN_API mluOpUBestKernelGenerateProposalsV2Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *scores, const float *bbox_deltas, const float *im_shape,
+    const float *anchors, const float *variances, float *workspace,
+    float *rpn_rois, float *rpn_roi_probs, int *rpn_rois_num,
+    int *rpn_rois_batch_size, const int pre_nms_top_n, const int post_nms_top_n,
+    const float nms_thresh, const float min_size, const float eta,
+    bool pixel_offset, const int batch_size, const int Anchors_num, const int H,
+    const int W);
+
 /* poly_nms */
 void MLUOP_WIN_API mluOpBlockKernelPolyNmsCalcAreaFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
