@@ -54,138 +54,67 @@
   mluop::gen_case::PbNode *node = mluop::gen_case::genCaseStart(op_name)
 
 #define GEN_CASE_DATA(is_input, id, data, data_desc, upper_bound, lower_bound) \
-  mluop::gen_case::genCaseData(                                                \
-      node, is_input, id, data, data_desc, upper_bound, lower_bound)
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,            \
+                               upper_bound, lower_bound)
 // when distribution is "GAUSSIAN", upper_bound is mu, lower_bound is sigma.
-#define GEN_CASE_DATA_v2(                                                  \
-    is_input, id, data, data_desc, upper_bound, lower_bound, distribution) \
-  mluop::gen_case::genCaseData(node,                                       \
-                               is_input,                                   \
-                               id,                                         \
-                               data,                                       \
-                               data_desc,                                  \
-                               upper_bound,                                \
-                               lower_bound,                                \
-                               distribution)
-#define GEN_CASE_DATA_UNFOLD(                                               \
-    is_input, id, data, dim, dims, dtype, layout, upper_bound, lower_bound) \
-  mluop::gen_case::genCaseData(node,                                        \
-                               is_input,                                    \
-                               id,                                          \
-                               data,                                        \
-                               dim,                                         \
-                               dims,                                        \
-                               dtype,                                       \
-                               layout,                                      \
-                               upper_bound,                                 \
-                               lower_bound)
+#define GEN_CASE_DATA_v2(is_input, id, data, data_desc, upper_bound, \
+                         lower_bound, distribution)                  \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,  \
+                               upper_bound, lower_bound, distribution)
+#define GEN_CASE_DATA_UNFOLD(is_input, id, data, dim, dims, dtype, layout, \
+                             upper_bound, lower_bound)                     \
+  mluop::gen_case::genCaseData(node, is_input, id, data, dim, dims, dtype, \
+                               layout, upper_bound, lower_bound)
 // the same with GEN_CASE_DATA_v2
-#define GEN_CASE_DATA_UNFOLD_v2(is_input,     \
-                                id,           \
-                                data,         \
-                                dim,          \
-                                dims,         \
-                                dtype,        \
-                                layout,       \
-                                upper_bound,  \
-                                lower_bound,  \
-                                distribution) \
-  mluop::gen_case::genCaseData(node,          \
-                               is_input,      \
-                               id,            \
-                               data,          \
-                               dim,           \
-                               dims,          \
-                               dtype,         \
-                               layout,        \
-                               upper_bound,   \
-                               lower_bound,   \
-                               distribution)
-#define GEN_CASE_DATA_REAL(is_input, id, data, data_desc) \
-  mluop::gen_case::genCaseData(                           \
-      node, is_input, id, data, data_desc, 10, -10, "UNIFORM", true)
+#define GEN_CASE_DATA_UNFOLD_v2(is_input, id, data, dim, dims, dtype, layout, \
+                                upper_bound, lower_bound, distribution)       \
+  mluop::gen_case::genCaseData(node, is_input, id, data, dim, dims, dtype,    \
+                               layout, upper_bound, lower_bound, distribution)
+#define GEN_CASE_DATA_REAL(is_input, id, data, data_desc)                    \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc, 10, -10, \
+                               "UNIFORM", true)
 // special for RNN
-#define GEN_CASE_DATA_RNN(                                                \
-    is_input, id, data, data_desc, upper_bound, lower_bound, have_onchip) \
-  mluop::gen_case::genCaseData(node,                                      \
-                               is_input,                                  \
-                               id,                                        \
-                               data,                                      \
-                               data_desc,                                 \
-                               upper_bound,                               \
-                               lower_bound,                               \
-                               have_onchip)
-#define GEN_CASE_DATA_RNN_v2(is_input,      \
-                             id,            \
-                             data,          \
-                             data_desc,     \
-                             upper_bound,   \
-                             lower_bound,   \
-                             have_onchip,   \
-                             distribution)  \
-  mluop::gen_case::genCaseData(node,        \
-                               is_input,    \
-                               id,          \
-                               data,        \
-                               data_desc,   \
-                               upper_bound, \
-                               lower_bound, \
-                               have_onchip, \
+#define GEN_CASE_DATA_RNN(is_input, id, data, data_desc, upper_bound, \
+                          lower_bound, have_onchip)                   \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,   \
+                               upper_bound, lower_bound, have_onchip)
+#define GEN_CASE_DATA_RNN_v2(is_input, id, data, data_desc, upper_bound, \
+                             lower_bound, have_onchip, distribution)     \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,      \
+                               upper_bound, lower_bound, have_onchip,    \
                                distribution)
 
 #define GEN_CASE_OP_PARAM_SINGLE(pos, param_node_name, param_name, value) \
   mluop::gen_case::genCaseOpParam(                                        \
-      node,                                                               \
-      param_name,                                                         \
-      value,                                                              \
+      node, param_name, value,                                            \
       std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_NAME(pos, param_node_name, param_name, value) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, param_node_name)
 #define GEN_CASE_OP_PARAM_ARRAY(pos, op_name, param_name, value, num) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, num)
-#define GEN_CASE_OP_PARAM_SINGLE_SUB(                   \
-    pos, param_node_name, param_name, value, new_child) \
-  mluop::gen_case::genCaseOpParamSub(                   \
-      node, param_name, value, param_node_name, new_child)
-#define GEN_CASE_OP_PARAM_ARRAY_SUB(                         \
-    pos, param_node_name, param_name, value, num, new_child) \
-  mluop::gen_case::genCaseOpParamSub(                        \
-      node, param_name, value, num, param_node_name, new_child)
+#define GEN_CASE_OP_PARAM_SINGLE_SUB(pos, param_node_name, param_name, value,  \
+                                     new_child)                                \
+  mluop::gen_case::genCaseOpParamSub(node, param_name, value, param_node_name, \
+                                     new_child)
+#define GEN_CASE_OP_PARAM_ARRAY_SUB(pos, param_node_name, param_name, value, \
+                                    num, new_child)                          \
+  mluop::gen_case::genCaseOpParamSub(node, param_name, value, num,           \
+                                     param_node_name, new_child)
 
 #define GEN_CASE_HANDLE(handle) mluop::gen_case::genCaseHandle(node, handle)
 #define GEN_CASE_HANDLE_PARAM() mluop::gen_case::genCaseHandleParam(node)
-#define GEN_CASE_TEST_PARAM(is_diff1,                \
-                            is_diff2,                \
-                            is_diff3,                \
-                            diff1_threshold,         \
-                            diff2_threshold,         \
-                            diff3_threshold,         \
-                            ...)                     \
-  mluop::gen_case::genCaseTestParam(node,            \
-                                    is_diff1,        \
-                                    is_diff2,        \
-                                    is_diff3,        \
-                                    diff1_threshold, \
-                                    diff2_threshold, \
-                                    diff3_threshold, \
-                                    ##__VA_ARGS__);  \
-  node->serialize();                                 \
+#define GEN_CASE_TEST_PARAM(is_diff1, is_diff2, is_diff3, diff1_threshold, \
+                            diff2_threshold, diff3_threshold, ...)         \
+  mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,    \
+                                    diff1_threshold, diff2_threshold,      \
+                                    diff3_threshold, ##__VA_ARGS__);       \
+  node->serialize();                                                       \
   node->reset()
-#define GEN_CASE_TEST_PARAM_NEW(is_diff1,            \
-                                is_diff2,            \
-                                is_diff3,            \
-                                diff1_threshold,     \
-                                diff2_threshold,     \
-                                diff3_threshold,     \
-                                ...)                 \
-  mluop::gen_case::genCaseTestParam(node,            \
-                                    is_diff1,        \
-                                    is_diff2,        \
-                                    is_diff3,        \
-                                    diff1_threshold, \
-                                    diff2_threshold, \
-                                    diff3_threshold, \
-                                    ##__VA_ARGS__)
+#define GEN_CASE_TEST_PARAM_NEW(is_diff1, is_diff2, is_diff3, diff1_threshold, \
+                                diff2_threshold, diff3_threshold, ...)         \
+  mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,        \
+                                    diff1_threshold, diff2_threshold,          \
+                                    diff3_threshold, ##__VA_ARGS__)
 
 #define GEN_CASE_END() mluop::gen_case::genCaseEnd()
 
@@ -209,13 +138,9 @@ struct TensorNode {
   std::vector<double> params;
   std::string distribution;
   bool dump_data;
-  TensorNode(bool is_input,
-             std::string id,
-             const void *device_data,
-             mluOpTensorDescriptor_t desc,
-             std::vector<double> params,
-             std::string distribution,
-             bool dump_data)
+  TensorNode(bool is_input, std::string id, const void *device_data,
+             mluOpTensorDescriptor_t desc, std::vector<double> params,
+             std::string distribution, bool dump_data)
       : is_input(is_input),
         id(id),
         device_ptr(device_data),
@@ -251,19 +176,13 @@ class PbNode {
     handle_param.params.clear();
   }
   void setOpNameAndType(std::string op_name);
-  void appendTensor(bool is_input,
-                    std::string id,
-                    const void *device_data,
-                    mluOpTensorDescriptor_t desc,
-                    std::vector<double> params,
-                    std::string distribution,
-                    bool dump_data);
+  void appendTensor(bool is_input, std::string id, const void *device_data,
+                    mluOpTensorDescriptor_t desc, std::vector<double> params,
+                    std::string distribution, bool dump_data);
   // half need cast
   template <typename paramType>
-  inline void appendOpParam(std::string param_name,
-                            paramType param_value,
-                            std::string param_node_name,
-                            bool is_half) {
+  inline void appendOpParam(std::string param_name, paramType param_value,
+                            std::string param_node_name, bool is_half) {
     if (param_node_name == "") {
       op_param.name = op_name + "_param";
     } else {
@@ -278,10 +197,8 @@ class PbNode {
   }
   // user should control order of children
   template <typename paramType>
-  inline void appendOpParamSub(std::string param_name,
-                               paramType param_value,
-                               std::string param_node_name,
-                               bool new_child) {
+  inline void appendOpParamSub(std::string param_name, paramType param_value,
+                               std::string param_node_name, bool new_child) {
     if (new_child) {
       op_param.childs.push_back(ParamNode());
     }
@@ -290,20 +207,16 @@ class PbNode {
         {param_name, std::to_string(param_value)});
   }
   template <typename paramType>
-  inline void appendOpParam(std::string param_name,
-                            paramType *param_value,
-                            int num,
-                            std::string param_node_name,
+  inline void appendOpParam(std::string param_name, paramType *param_value,
+                            int num, std::string param_node_name,
                             bool is_half) {
     for (int i = 0; i < num; i++) {
       appendOpParam(param_name, param_value[i], param_node_name, is_half);
     }
   }
   template <typename paramType>
-  inline void appendOpParamSub(std::string param_name,
-                               paramType *param_value,
-                               int num,
-                               std::string param_node_name,
+  inline void appendOpParamSub(std::string param_name, paramType *param_value,
+                               int num, std::string param_node_name,
                                bool new_child) {
     if (new_child) {
       op_param.childs.push_back(ParamNode());
@@ -353,8 +266,7 @@ class PbNode {
         return "  value_i: ";
     }
   }
-  inline std::string get_data_string(mluOpDataType_t dtype,
-                                     void *data,
+  inline std::string get_data_string(mluOpDataType_t dtype, void *data,
                                      uint64_t offset) {
     switch (dtype) {
       case MLUOP_DTYPE_HALF:
@@ -389,8 +301,7 @@ class PbNode {
         return std::to_string(((int8_t *)data)[offset]);
     }
   }
-  inline std::string get_data_hex_string(mluOpDataType_t dtype,
-                                         void *data,
+  inline std::string get_data_hex_string(mluOpDataType_t dtype, void *data,
                                          uint64_t offset) {
     std::stringstream s;
     switch (dtype) {
@@ -421,8 +332,8 @@ class PbNode {
     int dim;
     mluOpTensorLayout_t layout;
     mluOpDataType_t dtype;
-    mluOpGetTensorDescriptorEx(
-        tensors[index].desc, &layout, &dtype, &dim, dims, strides);
+    mluOpGetTensorDescriptorEx(tensors[index].desc, &layout, &dtype, &dim, dims,
+                               strides);
     // if tensor not be set, total_element_num will be 0
     uint64_t count = 1;
     for (int i = 0; i < dim; i++) {
@@ -448,15 +359,13 @@ class PbNode {
   inline void *getDeviceData(int index) {
     uint64_t total_num = getTensorSize(index);
     mluOpDataType_t dtype;
-    mluOpGetTensorDescriptor(
-        tensors[index].desc, nullptr, &dtype, nullptr, nullptr);
+    mluOpGetTensorDescriptor(tensors[index].desc, nullptr, &dtype, nullptr,
+                             nullptr);
     uint64_t data_size = total_num * getSizeOfDataType(dtype);
-    void *data         = malloc(data_size);
+    void *data = malloc(data_size);
     if (CNRT_RET_SUCCESS ==
-        cnrtMemcpy(data,
-                   const_cast<void *>(tensors[index].device_ptr),
-                   data_size,
-                   CNRT_MEM_TRANS_DIR_DEV2HOST)) {
+        cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),
+                   data_size, CNRT_MEM_TRANS_DIR_DEV2HOST)) {
     } else {
       LOG(ERROR) << "[gen_case] Dump data failed! cnrtMemcpy data size is "
                  << data_size << " byte.";
@@ -464,8 +373,7 @@ class PbNode {
     }
     return data;
   }
-  void appendCriterion(std::string criterion,
-                       double threshold,
+  void appendCriterion(std::string criterion, double threshold,
                        double threshold_imag);
   std::string getFileName();
   std::string getFolderName();
@@ -564,80 +472,47 @@ inline bool getOpNameMask(const std::string op_name_,
                           const std::string op_name);
 
 PbNode *genCaseStart(std::string op_name);
-void genCaseData(PbNode *node,
-                 bool is_input,
-                 std::string id,
-                 const void *device_data,
-                 mluOpTensorDescriptor_t desc,
-                 double param1,
-                 double param2,
-                 std::string distribution = "UNIFORM",
-                 bool dump_data           = false);
-void genCaseData(PbNode *node,
-                 bool is_input,
-                 std::string id,
-                 const void *device_data,
-                 int dim,
-                 int *dims,
-                 mluOpDataType_t dtype,
-                 mluOpTensorLayout_t layout,
-                 double param1,
-                 double param2,
-                 std::string distribution = "UNIFORM",
-                 bool dump_data           = false);
-void genCaseData(PbNode *node,
-                 bool is_input,
-                 std::string id,
-                 const void *device_data,
-                 int dim,
-                 std::vector<int> dims,
-                 mluOpDataType_t dtype,
-                 mluOpTensorLayout_t layout,
-                 double param1,
-                 double param2,
-                 std::string distribution = "UNIFORM",
-                 bool dump_data           = false);
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, mluOpTensorDescriptor_t desc,
+                 double param1, double param2,
+                 std::string distribution = "UNIFORM", bool dump_data = false);
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, int dim, int *dims,
+                 mluOpDataType_t dtype, mluOpTensorLayout_t layout,
+                 double param1, double param2,
+                 std::string distribution = "UNIFORM", bool dump_data = false);
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, int dim, std::vector<int> dims,
+                 mluOpDataType_t dtype, mluOpTensorLayout_t layout,
+                 double param1, double param2,
+                 std::string distribution = "UNIFORM", bool dump_data = false);
 template <typename paramType>
-void genCaseOpParam(PbNode *node,
-                    std::string param_name,
-                    paramType param_value,
-                    std::string param_node_name = "",
-                    bool is_half                = false) {
+void genCaseOpParam(PbNode *node, std::string param_name, paramType param_value,
+                    std::string param_node_name = "", bool is_half = false) {
   node->appendOpParam(param_name, param_value, param_node_name, is_half);
 }
 template <typename paramType>
-void genCaseOpParam(PbNode *node,
-                    std::string param_name,
-                    paramType *param_value,
-                    int num,
-                    std::string param_node_name = "",
-                    bool is_half                = false) {
+void genCaseOpParam(PbNode *node, std::string param_name,
+                    paramType *param_value, int num,
+                    std::string param_node_name = "", bool is_half = false) {
   node->appendOpParam(param_name, param_value, num, param_node_name, is_half);
 }
 template <typename paramType>
-void genCaseOpParamSub(PbNode *node,
-                       std::string param_name,
-                       paramType param_value,
-                       std::string param_node_name = "",
-                       bool new_child              = false) {
+void genCaseOpParamSub(PbNode *node, std::string param_name,
+                       paramType param_value, std::string param_node_name = "",
+                       bool new_child = false) {
   node->appendOpParamSub(param_name, param_value, param_node_name, new_child);
 }
 template <typename paramType>
-void genCaseOpParamSub(PbNode *node,
-                       std::string param_name,
-                       paramType param_value,
-                       int num,
+void genCaseOpParamSub(PbNode *node, std::string param_name,
+                       paramType param_value, int num,
                        std::string param_node_name = "",
-                       bool new_child              = false) {
-  node->appendOpParamSub(
-      param_name, param_value, num, param_node_name, new_child);
+                       bool new_child = false) {
+  node->appendOpParamSub(param_name, param_value, num, param_node_name,
+                         new_child);
 }
-void genCaseTestParam(PbNode *node,
-                      bool is_diff1,
-                      bool is_diff2,
-                      bool is_diff3,
-                      const float diff1_threshold,
-                      const float diff2_threshold,
+void genCaseTestParam(PbNode *node, bool is_diff1, bool is_diff2, bool is_diff3,
+                      const float diff1_threshold, const float diff2_threshold,
                       const float diff3_threshold,
                       const float diff1_threshold_imag = -1,
                       const float diff2_threshold_imag = -1,

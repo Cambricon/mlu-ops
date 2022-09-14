@@ -81,76 +81,34 @@ namespace cnlog {
 /**
  * @brief: define the interface of the log system.
  */
-#define CLOG(module, severity)  \
-  LogMessage(__FILE__,          \
-             __LINE__,          \
-             LOG_SAVE_AND_SHOW, \
-             LOG_##severity,    \
-             #module,           \
-             true,              \
-             true,              \
-             true,              \
-             true)              \
+#define CLOG(module, severity)                                               \
+  LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
+             true, true, true, true)                                         \
       .stream()
 
-#define DCLOG(module, severity) \
-  LogMessage(__FILE__,          \
-             __LINE__,          \
-             LOG_SAVE_AND_SHOW, \
-             LOG_##severity,    \
-             #module,           \
-             true,              \
-             true,              \
-             true,              \
-             false)             \
+#define DCLOG(module, severity)                                              \
+  LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
+             true, true, true, false)                                        \
       .stream()
 
-#define PLOG(module, severity)  \
-  LogMessage("",                \
-             0,                 \
-             LOG_SAVE_AND_SHOW, \
-             LOG_##severity,    \
-             #module,           \
-             false,             \
-             false,             \
-             true,              \
-             true)              \
+#define PLOG(module, severity)                                                \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             true, true)                                                      \
       .stream()
 
-#define DPLOG(module, severity) \
-  LogMessage("",                \
-             0,                 \
-             LOG_SAVE_AND_SHOW, \
-             LOG_##severity,    \
-             #module,           \
-             false,             \
-             false,             \
-             true,              \
-             false)             \
+#define DPLOG(module, severity)                                               \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             true, false)                                                     \
       .stream()
 
-#define SCOUT(module, severity) \
-  LogMessage("",                \
-             0,                 \
-             LOG_SAVE_AND_SHOW, \
-             LOG_##severity,    \
-             #module,           \
-             false,             \
-             false,             \
-             false,             \
-             true)              \
+#define SCOUT(module, severity)                                               \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             false, true)                                                     \
       .stream()
 
-#define DSCOUT(module, severity) \
-  LogMessage("",                 \
-             0,                  \
-             LOG_SAVE_AND_SHOW,  \
-             LOG_##severity,     \
-             #module,            \
-             false,              \
-             false,              \
-             false,              \
-             false)              \
+#define DSCOUT(module, severity)                                              \
+  LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
+             false, false)                                                    \
       .stream()
 
 /**
@@ -158,15 +116,9 @@ namespace cnlog {
  */
 class LogMessage {
  public:
-  LogMessage(std::string file,
-             int line,
-             int module,
-             int severity,
-             std::string module_name,
-             bool is_print_head,
-             bool is_print_tail,
-             bool is_clear_endl,
-             bool release_can_print);
+  LogMessage(std::string file, int line, int module, int severity,
+             std::string module_name, bool is_print_head, bool is_print_tail,
+             bool is_clear_endl, bool release_can_print);
   ~LogMessage();
 
   /**

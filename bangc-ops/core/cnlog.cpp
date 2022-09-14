@@ -66,19 +66,17 @@ namespace cnlog {
 std::ofstream logFile;                       // which file to save log message.
 std::ostream userStream(std::cout.rdbuf());  // stream to print on screen.
 uint64_t warningCnt = 0;                     // counts of warning
-uint64_t errorCnt   = 0;                     // counts of error
-int64_t fatalCnt    = 0;                     // counts of fatal
-bool is_open_log    = false;                 // whether log system is work.
+uint64_t errorCnt = 0;                       // counts of error
+int64_t fatalCnt = 0;                        // counts of fatal
+bool is_open_log = false;                    // whether log system is work.
 __attribute__((__unused__)) int logLevel = getLevelEnvVar(
     "MLUOP_MIN_LOG_LEVEL", 0);  // only the level GE this will be print.
 __attribute__((__unused__)) bool is_only_show =
     getBoolEnvVar("MLUOP_LOG_ONLY_SHOW", true);  // whether only show on screen.
 __attribute__((__unused__)) bool g_color_print =
     getBoolEnvVar("MLUOP_LOG_COLOR_PRINT", true);  // whether print with color
-__attribute__((__unused__)) const std::map<std::string, bool>
-module_print_map ={
-  {"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)},
-};
+__attribute__((__unused__)) const std::map<std::string, bool> module_print_map =
+    {{"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)}};
 
 bool isPrintToScreen() {
   if (userStream.rdbuf() == std::cout.rdbuf()) {
@@ -98,14 +96,9 @@ bool releasePrint(std::string module_name) {
   return module_print;
 }
 
-LogMessage::LogMessage(std::string file,
-                       int line,
-                       int module,
-                       int severity,
-                       std::string module_name,
-                       bool is_print_head,
-                       bool is_print_tail,
-                       bool is_clear_endl,
+LogMessage::LogMessage(std::string file, int line, int module, int severity,
+                       std::string module_name, bool is_print_head,
+                       bool is_print_tail, bool is_clear_endl,
                        bool release_can_print)
     : logInfoFile_(file),
       logInfoLine_(line),
@@ -178,13 +171,13 @@ LogMessage::~LogMessage() {
   if (!releasePrint(module_name_)) {
     return;
   }
-  log_level      = logLevel;
+  log_level = logLevel;
   is_print_tail_ = false;
 #else
   if (!releasePrint(module_name_)) {
     return;
   }
-  log_level      = logLevel;
+  log_level = logLevel;
   is_print_tail_ = true;
 #endif
   file_str_ << contex_str_.str();
@@ -287,12 +280,12 @@ std::string LogMessage::getTime() {
 #if defined(WINDOWS) || defined(WIN32)
   SYSTEMTIME systime;
   GetLocalTime(&systime);
-  std::string year       = std::to_string(systime.wYear);
-  std::string month      = std::to_string(systime.wMonth);
-  std::string day        = std::to_string(systime.wDay);
-  std::string hour       = std::to_string(systime.wHour);
-  std::string min        = std::to_string(systime.wMinute);
-  std::string second     = std::to_string(systime.wSecond);
+  std::string year = std::to_string(systime.wYear);
+  std::string month = std::to_string(systime.wMonth);
+  std::string day = std::to_string(systime.wDay);
+  std::string hour = std::to_string(systime.wHour);
+  std::string min = std::to_string(systime.wMinute);
+  std::string second = std::to_string(systime.wSecond);
   std::string time_stamp = "[" + year + "-" + month + "-" + day + " " + hour +
                            ":" + min + ":" + second + "] ";
   return time_stamp;
@@ -304,12 +297,12 @@ std::string LogMessage::getTime() {
   if (NULL == gmtime_r(&g_time, &general_time)) {
     return "";
   }
-  std::string year       = std::to_string(general_time.tm_year + BASE_YEAR);
-  std::string month      = std::to_string(general_time.tm_mon + BASE_MONTH);
-  std::string day        = std::to_string(general_time.tm_mday);
-  std::string hour       = std::to_string(general_time.tm_hour);
-  std::string min        = std::to_string(general_time.tm_min);
-  std::string second     = std::to_string(general_time.tm_sec);
+  std::string year = std::to_string(general_time.tm_year + BASE_YEAR);
+  std::string month = std::to_string(general_time.tm_mon + BASE_MONTH);
+  std::string day = std::to_string(general_time.tm_mday);
+  std::string hour = std::to_string(general_time.tm_hour);
+  std::string min = std::to_string(general_time.tm_min);
+  std::string second = std::to_string(general_time.tm_sec);
   std::string time_stamp = "[" + year + "-" + month + "-" + day + " " + hour +
                            ":" + min + ":" + second + "] ";
   return time_stamp;
@@ -482,7 +475,7 @@ int initLogOnlyShow() {
     return 0;
   }
   is_only_show = true;
-  is_open_log  = true;
+  is_open_log = true;
   return 1;
 }
 
@@ -502,7 +495,7 @@ void endLog() {
   }
 #endif
   is_only_show = false;
-  is_open_log  = false;
+  is_open_log = false;
 }
 
 bool getBoolEnvVar(const std::string &str, bool default_para) {

@@ -88,7 +88,7 @@ int genCaseModeGet(bool first) {
     std::lock_guard<std::mutex> guard(stacks_mutex_);
     std::string tid(std::to_string(syscall(SYS_gettid)));
     int mode = dump_internal_ ? gen_case_mode_ : 0;
-    auto it  = mode_stacks_.find(tid);
+    auto it = mode_stacks_.find(tid);
     if (it != mode_stacks_.end()) {
       auto &mode_stack = it->second;
       // the top of mode_stack store the gen_case mode for current thread
@@ -196,76 +196,53 @@ PbNode *genCaseStart(std::string op_name) {
   }
 }
 
-void genCaseData(PbNode *node,
-                 bool is_input,
-                 std::string id,
-                 const void *device_data,
-                 mluOpTensorDescriptor_t desc,
-                 double param1,
-                 double param2,
-                 std::string distribution,
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, mluOpTensorDescriptor_t desc,
+                 double param1, double param2, std::string distribution,
                  bool dump_data) {
   std::vector<double> params{param1, param2};
   if (desc == nullptr) {
     mluOpTensorDescriptor_t desc_;
     mluOpCreateTensorDescriptor(&desc_);
     std::vector<int> dims{1};
-    mluOpSetTensorDescriptor(
-        desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 1, dims.data());
-    node->appendTensor(
-        is_input, id, device_data, desc_, params, distribution, dump_data);
+    mluOpSetTensorDescriptor(desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 1,
+                             dims.data());
+    node->appendTensor(is_input, id, device_data, desc_, params, distribution,
+                       dump_data);
   } else {
-    node->appendTensor(
-        is_input, id, device_data, desc, params, distribution, dump_data);
+    node->appendTensor(is_input, id, device_data, desc, params, distribution,
+                       dump_data);
   }
 }
 
-void genCaseData(PbNode *node,
-                 bool is_input,
-                 std::string id,
-                 const void *device_data,
-                 int dim,
-                 int *dims,
-                 mluOpDataType_t dtype,
-                 mluOpTensorLayout_t layout,
-                 double param1,
-                 double param2,
-                 std::string distribution,
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, int dim, int *dims,
+                 mluOpDataType_t dtype, mluOpTensorLayout_t layout,
+                 double param1, double param2, std::string distribution,
                  bool dump_data) {
   mluOpTensorDescriptor_t desc;
   mluOpCreateTensorDescriptor(&desc);
   mluOpSetTensorDescriptor(desc, layout, dtype, dim, dims);
   std::vector<double> params{param1, param2};
-  node->appendTensor(
-      is_input, id, device_data, desc, params, distribution, dump_data);
+  node->appendTensor(is_input, id, device_data, desc, params, distribution,
+                     dump_data);
 }
 
-void genCaseData(PbNode *node,
-                 bool is_input,
-                 std::string id,
-                 const void *device_data,
-                 int dim,
-                 std::vector<int> dims,
-                 mluOpDataType_t dtype,
-                 mluOpTensorLayout_t layout,
-                 double param1,
-                 double param2,
-                 std::string distribution,
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, int dim, std::vector<int> dims,
+                 mluOpDataType_t dtype, mluOpTensorLayout_t layout,
+                 double param1, double param2, std::string distribution,
                  bool dump_data) {
   mluOpTensorDescriptor_t desc;
   mluOpCreateTensorDescriptor(&desc);
   mluOpSetTensorDescriptor(desc, layout, dtype, dim, dims.data());
   std::vector<double> params{param1, param2};
-  node->appendTensor(
-      is_input, id, device_data, desc, params, distribution, dump_data);
+  node->appendTensor(is_input, id, device_data, desc, params, distribution,
+                     dump_data);
 }
 
-void genCaseTestParam(PbNode *node,
-                      bool is_diff1,
-                      bool is_diff2,
-                      bool is_diff3,
-                      const float diff1_threshold,
-                      const float diff2_threshold,
+void genCaseTestParam(PbNode *node, bool is_diff1, bool is_diff2, bool is_diff3,
+                      const float diff1_threshold, const float diff2_threshold,
                       const float diff3_threshold,
                       const float diff1_threshold_imag,
                       const float diff2_threshold_imag,
@@ -299,10 +276,10 @@ void genCaseEnd() {
   // serialize protxt and restore gen case mode
   if (gen_case_mode_ > 0) {
     std::string tid(std::to_string(syscall(SYS_gettid)));
-    auto it          = mode_stacks_.find(tid);
+    auto it = mode_stacks_.find(tid);
     auto &mode_stack = it->second;
     if (mode_stack.back() > 0) {
-      auto nodes_it      = nodes_.find(tid);
+      auto nodes_it = nodes_.find(tid);
       auto &nodes_vector = nodes_it->second;
       // find the last used slot
       int slot_num = 0;
@@ -320,19 +297,15 @@ void genCaseEnd() {
 
 void PbNode::setOpNameAndType(std::string op_name) { this->op_name = op_name; }
 
-void PbNode::appendTensor(bool is_input,
-                          std::string id,
-                          const void *device_data,
-                          mluOpTensorDescriptor_t desc,
-                          std::vector<double> params,
-                          std::string distribution,
+void PbNode::appendTensor(bool is_input, std::string id,
+                          const void *device_data, mluOpTensorDescriptor_t desc,
+                          std::vector<double> params, std::string distribution,
                           bool dump_data) {
-  this->tensors.push_back(TensorNode(
-      is_input, id, device_data, desc, params, distribution, dump_data));
+  this->tensors.push_back(TensorNode(is_input, id, device_data, desc, params,
+                                     distribution, dump_data));
 }
 
-void PbNode::appendCriterion(std::string criterion,
-                             double threshold,
+void PbNode::appendCriterion(std::string criterion, double threshold,
                              double threshold_imag) {
   this->criterions.push_back(criterion);
   this->thresholds.push_back(threshold);
@@ -363,15 +336,13 @@ void PbNode::getHandleParam() {
 std::string PbNode::getFileName() {
   // Get current time for file name.
   static platform::EnvTime *env_time = platform::EnvTime::Default();
-  uint64_t now_micros                = env_time->NowMicros();
+  uint64_t now_micros = env_time->NowMicros();
   int32_t micros_remainder = static_cast<int32_t>(now_micros % 1000000);
-  time_t current_time      = time(NULL);
+  time_t current_time = time(NULL);
   char char_current_time[64];
-  strftime(char_current_time,
-           sizeof(char_current_time),
-           "%Y%m%d_%H_%M_%S_",
+  strftime(char_current_time, sizeof(char_current_time), "%Y%m%d_%H_%M_%S_",
            localtime(&current_time));
-  std::string string_current_time     = char_current_time;
+  std::string string_current_time = char_current_time;
   std::string string_micros_remainder = std::to_string(micros_remainder);
   while (string_micros_remainder.size() < 6) {
     string_micros_remainder = "0" + string_micros_remainder;
@@ -398,7 +369,7 @@ std::string PbNode::getFolderName() {
     return "NULL";
   }
   std::string folder_name = current_dir;
-  folder_name             = folder_name + "/gen_case/" + op_name;
+  folder_name = folder_name + "/gen_case/" + op_name;
   return folder_name;
 }
 
@@ -437,14 +408,14 @@ void PbNode::printOnScreen() {
 
 void PbNode::dumpToFile() {
   std::string folder_name = getFolderName();
-  int error_number        = mkdir();
+  int error_number = mkdir();
   // use lock to ensure mkdir not conflict
   if (error_number != 0) {
     LOG(ERROR) << "[gen_case]: mkdir folder failed for " << folder_name
                << " ! (" << errno << ": " << strerror(errno) << ")";
     return;
   }
-  std::string file_name      = getFileName();
+  std::string file_name = getFileName();
   std::string case_file_name = folder_name + "/" + file_name + ".prototxt";
   LOG(INFO) << "[gen_case] Generate " + case_file_name;
   std::ofstream case_file;
@@ -489,8 +460,8 @@ void PbNode::dumpToFile() {
                 tensors[i].device_ptr != nullptr) {
               uint64_t total_num = getTensorSize(i);
               mluOpDataType_t dtype;
-              mluOpGetTensorDescriptor(
-                  tensors[i].desc, nullptr, &dtype, nullptr, nullptr);
+              mluOpGetTensorDescriptor(tensors[i].desc, nullptr, &dtype,
+                                       nullptr, nullptr);
               // TO DO : should consider malloc failure
               void *data = getDeviceData(i);
               if (data != nullptr) {
@@ -538,8 +509,8 @@ void PbNode::dumpToFile() {
             } else {
               uint64_t total_num = getTensorSize(i);
               mluOpDataType_t dtype;
-              mluOpGetTensorDescriptor(
-                  tensors[i].desc, nullptr, &dtype, nullptr, nullptr);
+              mluOpGetTensorDescriptor(tensors[i].desc, nullptr, &dtype,
+                                       nullptr, nullptr);
               // TO DO : should consider malloc failure
               void *data = getDeviceData(i);
               if (data != nullptr) {
@@ -650,8 +621,8 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
   mluOpGetTensorDescriptorOnchipDataType(desc, &onchip_dtype);
   int position, offset;
   float scale;
-  mluOpGetTensorDescriptorPositionScaleAndOffset(
-      desc, &position, &scale, &offset);
+  mluOpGetTensorDescriptorPositionScaleAndOffset(desc, &position, &scale,
+                                                 &offset);
   size_t total_element_num = mluOpGetTensorElementNum(desc);
 
   std::stringstream tensor_info;
