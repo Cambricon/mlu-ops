@@ -311,7 +311,9 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
     __bang_add_scalar(w, w, offset, align_count);
     __bang_add_scalar(h, h, offset, align_count);
   }
-
+  // for (int i = 0; i < count; i++) {
+  //   __bang_printf( "MLU:[%d]: anchor(%f, %f, %f, %f), deltal(%f, %f, %f, %f), var(%f, %f, %f, %f)\n",i, axmin[i], aymin[i], axmax[i], aymax[i], dxmin[i], dymin[i],dxmax[i],dymax[i], variances[i], variances[i + input_stride],variances[i + 2 * input_stride], variances[i + 3 * input_stride]);
+  // }
   // 0.5 * w; 0.5 * h
   __bang_mul_scalar(cx, w, T(0.5), align_count);
   __bang_mul_scalar(cy, h, T(0.5), align_count);
@@ -531,23 +533,25 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
 template <typename T>
 __mlu_func__ void loadAndtranspose(T *trans, const T *gdram_ptr,
                                    const int offset, T *nram_temp,
-                                   const int height, const int width) {
+                                   const int height, const int width, const int output_stride) {
 // gdram_ptr [height, width] ==> trans[width, align_height]
 #if __BANG_ARCH__ >= 300
-  int align_height = CEIL_ALIGN(height, ALIGN_NUM);
   T *load_buffer = nram_temp;
   __memcpy(load_buffer, gdram_ptr + offset, width * height * sizeof(T),
            GDRAM2NRAM);
-  __bang_transpose(trans, load_buffer, align_height, width);
+  __bang_transpose(trans, load_buffer, output_stride, width);
 #else
   const int TRANS_ALIGN = 64 / sizeof(T);
   int align_width = CEIL_ALIGN(width, TRANS_ALIGN);
-  int align_height = CEIL_ALIGN(height, ALIGN_NUM);
-
+  int align_height = CEIL_ALIGN(height, TRANS_ALIGN);
+ 
   T *load_buffer = nram_temp;
+  T *trans_cache = load_buffer + align_height * align_width;
   __memcpy(load_buffer, gdram_ptr + offset, width * sizeof(T), GDRAM2NRAM,
            align_width * sizeof(T), width * sizeof(T), height);
-  __bang_transpose(trans, load_buffer, align_height, align_width);
+  __bang_transpose(trans_cache, load_buffer, align_height, align_width);
+  __memcpy(trans, trans_cache, height * sizeof(T), NRAM2NRAM,
+           output_stride * sizeof(T), align_height * sizeof(T), width);
 #endif
 }
 
@@ -619,16 +623,17 @@ __mlu_func__ void createAndRemoveBox(T *output_scores, T *output_boxes,
              GDRAM2NRAM);
 
     T *trans_buffer = variances;
+    // trans anchors: [actual_num,4] --> [4, actual_num_align]
     loadAndtranspose(anchors, anchors_ptr, anchor_offset, trans_buffer,
-                     actual_num, 4);
+                     actual_num, 4, actual_num_align);
 
     trans_buffer = bbox_deltals;
     loadAndtranspose(variances, variances_ptr, anchor_offset, trans_buffer,
-                     actual_num, 4);
+                     actual_num, 4, actual_num_align);
 
     trans_buffer = proposals;
     loadAndtranspose(bbox_deltals, bbox_deltas_ptr, anchor_offset, trans_buffer,
-                     actual_num, 4);
+                     actual_num, 4, actual_num_align);
 
     int count = actual_num;
     int after_remove_count = count;
