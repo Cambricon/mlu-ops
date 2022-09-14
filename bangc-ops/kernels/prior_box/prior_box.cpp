@@ -92,10 +92,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   PARAM_CHECK(api, var_desc->dim == 4);
   // check shape
   PARAM_CHECK(api, variances_desc->dims[0] == 4);
-  PARAM_CHECK_GT(api, height, 0);
-  PARAM_CHECK_GT(api, width, 0);
-  PARAM_CHECK_GT(api, im_height, 0);
-  PARAM_CHECK_GT(api, im_width, 0);
+  PARAM_CHECK_GE(api, height, 0);
+  PARAM_CHECK_GE(api, width, 0);
   // check data type
   PARAM_CHECK(api, min_sizes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(api, aspect_ratios_desc->dtype == MLUOP_DTYPE_FLOAT);
@@ -130,11 +128,16 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   // check zero element
   if ((mluOpGetTensorElementNum(min_sizes_desc) == 0) ||
       (mluOpGetTensorElementNum(aspect_ratios_desc) == 0) ||
-      (mluOpGetTensorElementNum(variances_desc) == 0) ||
-      (mluOpGetTensorElementNum(output_desc)) == 0 ||
-      (mluOpGetTensorElementNum(variances_desc)) == 0) {
+      (mluOpGetTensorElementNum(variances_desc) == 0)) {
     LOG(ERROR) << api << " Zero element tensor failure.";
     return MLUOP_STATUS_BAD_PARAM;
+  }
+  if((mluOpGetTensorElementNum(output_desc)) == 0 ||
+     (mluOpGetTensorElementNum(var_desc)) == 0 || 
+     (mluOpGetTensorElementNum(max_sizes_desc)) == 0)
+  {
+    LOG(WARNING) << api << " Zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
   }
   // check large tensor
   if ((mluOpGetTensorElementNum(min_sizes_desc) >= LARGE_TENSOR_NUM) ||
@@ -173,6 +176,10 @@ mluOpStatus_t mluOpPriorBox(
       min_max_aspect_ratios_order, output_desc, output, var_desc, var);
   if (pb_status != MLUOP_STATUS_SUCCESS) {
     return pb_status;
+  }
+  if (height == 0 || width ==0)
+  {
+    return MLUOP_STATUS_SUCCESS;
   }
   const int min_sizes_num = min_sizes_desc->dims[0];
   const int aspect_ratios_num = aspect_ratios_desc->dims[0];

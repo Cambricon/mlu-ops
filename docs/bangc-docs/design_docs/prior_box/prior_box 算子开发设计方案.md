@@ -53,7 +53,7 @@
 | 是否需要支持原位                                             | 否                                                           |
 | 是否需要支持stride机制                                       | 否                                                           |
 | 是否需要支持广播                                             | 否                                                           |
-|                                                              | height、width 为0时返回 MLUOP_STATUS_SUCCESS<br />im_height、im_width 为0时返回坐标为（0,0,1,1）<br />min_sizes 0元素直接返回 MLUOP_BAD_PARAM<br />max_size 0元素正常计算<br />variance 0元素返回 MLUOP_BAD_PARAM |
+| 是否支持0元素                                                | min_sizes/aspect_ratios/variance 0元素直接返回 MLUOP_BAD_PARAM <br>output/var/max_sizes 0元素返回 MLUOP_STATUS_SUCCESS |
 | 其他特殊需求                                                 |                                                              |
 
 ### 1.2 算子功能和应用场景描述
@@ -241,7 +241,7 @@ box_out, var_out = exe.run(fluid.default_main_program(),
 | 数据类型限制 | 输入输出的Tensor只支持 float32 类型                          |
 | 布局限制     | 输入输出的Tensor只支持 ARRAY 类型                            |
 | 规模限制     | min_sizes、aspect_ratios的维度必须为1维 <br />variance 的 shape[0]  为4且variance的维度必须为1维<br />output 和 var 的维度必须为4维且每个维度都相等<br />output 和 var 的shape[0]等于height，shape[1]等于width<br />min_sizes 至少包含一个元素<br />若max_sizes 非空，max_sizes 的 shape[0] 和 min_sizes 的 shape[0] 需相等<br />output的第三个维度num_priors需满足：num_priors等于min_sizes的shape[0]乘以aspect_ratios的shape[0]再加max_size的shape[0] |
-| 数据范围限制 | height、width、im_height、im_width都大于0<br />min_sizes、aspect_ratios、variance 中的元素必须大于0<br />step_h、step_w 必须大于0<br />max_sizes 中对应位置的元素必须比 min_sizes 中的元素大，即max_sizes[i] > min_sizes[i] |
+| 数据范围限制 | min_sizes、aspect_ratios、variance 中的元素必须大于0<br />step_h、step_w 必须大于0, height，width必须大于等于0<br />max_sizes 中对应位置的元素必须比 min_sizes 中的元素大，即max_sizes[i] > min_sizes[i] |
 | 原位限制     | 不支持原位                                                   |
 | stride限制   | 不支持 stride 机制                                           |
 | 广播限制     | 不支持广播                                                   |
