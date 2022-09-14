@@ -70,20 +70,18 @@ void PriorBoxExecutor::initData() {
   clip_ = parser_->getProtoNode()->prior_box_param().clip();
   min_max_aspect_ratios_order_ =
       parser_->getProtoNode()->prior_box_param().min_max_aspect_ratios_order();
+  min_sizes_desc_ = tensor_desc_[0].tensor;
+  aspect_ratios_desc_ = tensor_desc_[1].tensor;
+  variances_desc_ = tensor_desc_[2].tensor;
+  max_sizes_desc_ = tensor_desc_[3].tensor;
+  output_desc_ = tensor_desc_[4].tensor;
+  var_desc_ = tensor_desc_[5].tensor;
   theory_op_size_ = 0;
 }
 
 void PriorBoxExecutor::compute() {
-  std::cout << "Into Compute" << std::endl;
   paramCheck();
   initData();
-  mluOpTensorDescriptor_t min_sizes_desc = tensor_desc_[0].tensor;
-  mluOpTensorDescriptor_t aspect_ratios_desc = tensor_desc_[1].tensor;
-  mluOpTensorDescriptor_t variances_desc = tensor_desc_[2].tensor;
-  mluOpTensorDescriptor_t max_sizes_desc = tensor_desc_[3].tensor;
-  mluOpTensorDescriptor_t output_desc = tensor_desc_[4].tensor;
-  mluOpTensorDescriptor_t var_desc = tensor_desc_[5].tensor;
-
   auto min_sizes = data_vector_[0].device_ptr;
   auto aspect_ratios = data_vector_[1].device_ptr;
   auto variances = data_vector_[2].device_ptr;
@@ -92,12 +90,11 @@ void PriorBoxExecutor::compute() {
   auto var = data_vector_[5].device_ptr;
   interface_timer_.start();
   MLUOP_CHECK(mluOpPriorBox(
-      handle_, min_sizes_desc, min_sizes, aspect_ratios_desc, aspect_ratios,
-      variances_desc, variances, max_sizes_desc, max_sizes, height_, width_,
+      handle_, min_sizes_desc_, min_sizes, aspect_ratios_desc_, aspect_ratios,
+      variances_desc_, variances, max_sizes_desc_, max_sizes, height_, width_,
       im_height_, im_width_, step_h_, step_w_, offset_, clip_,
-      min_max_aspect_ratios_order_, output_desc, output, var_desc, var));
+      min_max_aspect_ratios_order_, output_desc_, output, var_desc_, var));
   interface_timer_.stop();
-  std::cout << "End Compute" << std::endl;
 }
 
 static void priorBox_Cpu_Kernel(
@@ -211,24 +208,17 @@ void PriorBoxExecutor::cpuCompute() {
   const int image_height = im_height_;
   const int image_width = im_width_;
 
-  mluOpTensorDescriptor_t min_sizes_desc = tensor_desc_[0].tensor;
-  mluOpTensorDescriptor_t aspect_ratios_desc = tensor_desc_[1].tensor;
-  mluOpTensorDescriptor_t variances_desc = tensor_desc_[2].tensor;
-  mluOpTensorDescriptor_t max_sizes_desc = tensor_desc_[3].tensor;
-  mluOpTensorDescriptor_t output_desc = tensor_desc_[4].tensor;
-  mluOpTensorDescriptor_t var_desc = tensor_desc_[5].tensor;
-
   float* min_sizes = cpu_fp32_input_[0];
   float* aspect_ratios = cpu_fp32_input_[1];
   float* variances = cpu_fp32_input_[2];
   float* max_sizes = cpu_fp32_input_[3];
 
-  int min_sizes_num = min_sizes_desc->total_element_num;
-  int aspect_ratios_num = aspect_ratios_desc->total_element_num;
-  int variances_num = variances_desc->total_element_num;
-  int max_sizes_num = max_sizes_desc->total_element_num;
-  const int output_num = output_desc->total_element_num;
-  const int var_num = var_desc->total_element_num;
+  int min_sizes_num = min_sizes_desc_->total_element_num;
+  int aspect_ratios_num = aspect_ratios_desc_->total_element_num;
+  int variances_num = variances_desc_->total_element_num;
+  int max_sizes_num = max_sizes_desc_->total_element_num;
+  const int output_num = output_desc_->total_element_num;
+  const int var_num = var_desc_->total_element_num;
   const float step_h = step_h_;
   const float step_w = step_w_;
   const float offset = offset_;

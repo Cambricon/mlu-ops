@@ -46,6 +46,13 @@ class PriorBoxExecutor : public Executor {
   bool clip_;
   bool min_max_aspect_ratios_order_;
   int64_t theory_op_size_;
+
+  mluOpTensorDescriptor_t min_sizes_desc_;
+  mluOpTensorDescriptor_t aspect_ratios_desc_;
+  mluOpTensorDescriptor_t variances_desc_;
+  mluOpTensorDescriptor_t max_sizes_desc_;
+  mluOpTensorDescriptor_t output_desc_;
+  mluOpTensorDescriptor_t var_desc_;
 };
 }  // namespace mluoptest
 #endif  // TEST_MLU_OP_GTEST_SRC_ZOO_PRIOR_BOX_PRIOR_BOX_H_
