@@ -31,8 +31,6 @@ using namespace std;
 namespace GenerateProposalsV2 {
 
 #define PNMS_MIN (-(float)FLT_MAX)
-static const double kBBoxClipDefault = std::log(1000.0 / 16.0);
-// static const float kBBoxClipDefault = 4.135166556742356f;
 
 template <typename T>
 void quickSort(T *arr, int low, int high) {
@@ -95,39 +93,21 @@ bool isRealBox(const T xmin, const T ymin, const T xmax, const T ymax,
   return is_real_box;
 }
 
-bool testf = true;
 template <typename T>
 void creatAndFilterProposalsBox(T *anchors_slice, T *bbox_deltas_slice,
                                 T *im_shape_slice, T *variances_slice,
                                 T *out_scores, T *out_proposals, T *out_areas,
-                                const int A, const int H, const int W, const float min_size,
-                                const float max_score, const int max_score_id,
-                                bool pixel_offset, int *proposals_num) {
-  // if(testf){
-  //   testf = false;
-  //   int test_indx = 4;
-  //   printf("anchors[%d] (%f, %f, %f, %f)\n",test_indx,
-  //   anchors_slice[4*test_indx], anchors_slice[4*test_indx+1],
-  //   anchors_slice[4*test_indx + 2], anchors_slice[4*test_indx+3] );
-  //   printf("variances_slice[%d] (%f, %f, %f, %f)\n",test_indx,
-  //   variances_slice[4*test_indx], variances_slice[4*test_indx+1],
-  //   variances_slice[4*test_indx + 2], variances_slice[4*test_indx+3] );
-  //   printf("bbox_deltals[%d] (%f, %f, %f, %f)\n",
-  //   test_indx,bbox_deltas_slice[test_indx], bbox_deltas_slice[1 * HWA
-  //   +test_indx], bbox_deltas_slice[2 * HWA +test_indx], bbox_deltas_slice[3 *
-  //   HWA +test_indx] );
-  // }
-  const int HWA = A*H*W;
+                                const int A, const int H, const int W,
+                                const float min_size, const float max_score,
+                                const int max_score_id, bool pixel_offset,
+                                int *proposals_num) {
+  const int HWA = A * H * W;
   int k = max_score_id;
-  // T axmin = anchors_slice[k];  // [A, H, W, 4]
-  // T aymin = anchors_slice[1 * A * W * H + k];
-  // T axmax = anchors_slice[2 * A * W * H + k];
-  // T aymax = anchors_slice[3 * A * W * H + k];
 
-  T axmin = anchors_slice[k*4];  // [A, H, W, 4]
-  T aymin = anchors_slice[k*4+1];
-  T axmax = anchors_slice[k*4+2];
-  T aymax = anchors_slice[k*4+3];
+  T axmin = anchors_slice[k * 4];  // [A, H, W, 4]
+  T aymin = anchors_slice[k * 4 + 1];
+  T axmax = anchors_slice[k * 4 + 2];
+  T aymax = anchors_slice[k * 4 + 3];
 
   T offset = pixel_offset ? static_cast<T>(1.0) : 0;
 
@@ -136,28 +116,22 @@ void creatAndFilterProposalsBox(T *anchors_slice, T *bbox_deltas_slice,
   T cx = axmin + 0.5 * w;
   T cy = aymin + 0.5 * h;
 
-  // int ta = 4 *(k%A);
-  // T dxmin = bbox_deltas_slice[ta + 0 * W * H + k/A];  // [ 1, 4A , H, W]
-  // T dymin = bbox_deltas_slice[ta + 1 * W * H + k/A];
-  // T dxmax = bbox_deltas_slice[ta + 2 * W * H + k/A];
-  // T dymax = bbox_deltas_slice[ta + 3 * W * H + k/A];
+  T dxmin = bbox_deltas_slice[4 * k];
+  T dymin = bbox_deltas_slice[4 * k + 1];
+  T dxmax = bbox_deltas_slice[4 * k + 2];
+  T dymax = bbox_deltas_slice[4 * k + 3];
 
-  T dxmin = bbox_deltas_slice[4*k];  // [ 1, 4 , 1, HWA]
-  T dymin = bbox_deltas_slice[4*k+1];
-  T dxmax = bbox_deltas_slice[4*k+2];
-  T dymax = bbox_deltas_slice[4*k+3];
-
+  // kBBoxClipDefault = std::log(1000.0 / 16.0);
+  static const float kBBoxClipDefault = 4.135166556742356f;
   T bbox_clip_default = static_cast<T>(kBBoxClipDefault);
 
   T d_cx, d_cy, d_w, d_h;
   if (variances_slice) {
-    // printf("------var-----\n");
-    d_cx = cx +
-           dxmin * w * variances_slice[4 * k];  // variances_slice: [A, H, W, 4]
+    d_cx = cx + dxmin * w * variances_slice[4 * k];
     d_cy = cy + dymin * h * variances_slice[4 * k + 1];
-    d_w = exp(std::min(dxmax * variances_slice[4*k+2], bbox_clip_default)) *
+    d_w = exp(std::min(dxmax * variances_slice[4 * k + 2], bbox_clip_default)) *
           w;
-    d_h = exp(std::min(dymax * variances_slice[4*k+3], bbox_clip_default)) *
+    d_h = exp(std::min(dymax * variances_slice[4 * k + 3], bbox_clip_default)) *
           h;
 
   } else {
@@ -165,10 +139,8 @@ void creatAndFilterProposalsBox(T *anchors_slice, T *bbox_deltas_slice,
     d_cy = cy + dymin * h;
     d_w = exp(std::min(dxmax, bbox_clip_default)) * w;
     d_h = exp(std::min(dymax, bbox_clip_default)) * h;
-    // printf("variances\n");
   }
-  // printf("anchor(%f, %f, %f, %f), deltal(%f, %f, %f, %f), var(%f, %f, %f, %f)\n",axmin, aymin, axmax, aymax, dxmin, dymin, dxmax, dymax, variances_slice[k*4], variances_slice[1 +k*4], variances_slice[2 +k*4], variances_slice[3 +k*4]);
-  // printf("d_cx(%f, %f, %f, %f)\n", d_cx, d_cy, d_w, d_h);
+
   T oxmin = d_cx - d_w * 0.5;
   T oymin = d_cy - d_h * 0.5;
   T oxmax = d_cx + d_w * 0.5 - offset;
@@ -178,17 +150,12 @@ void creatAndFilterProposalsBox(T *anchors_slice, T *bbox_deltas_slice,
   T p_ymin = std::max(std::min(oymin, im_shape_slice[0] - offset), (T)0.);
   T p_xmax = std::max(std::min(oxmax, im_shape_slice[1] - offset), (T)0.);
   T p_ymax = std::max(std::min(oymax, im_shape_slice[0] - offset), (T)0.);
-  // printf("CPU dcxy(%f, %f) d_wh(%f, %f) ox(%f, %f, %f, %f), box(%f, %f, %f, %f), score= %f\n", d_cx, d_cy, d_w, d_h, oxmin, oymin, oxmax, oymax, p_xmin, p_ymin, p_xmax, p_ymax, max_score);
 
   T area = 0;
-  // h =im_shape_slice[0], w = im_shape_slice[1]
   bool isValidBox = isRealBox(p_xmin, p_ymin, p_xmax, p_ymax, im_shape_slice[0],
                               im_shape_slice[1], pixel_offset, min_size, &area);
-  // printf("isValidBox:%d \n", isValidBox);
-  // printf("proposals_num:%d \n", proposals_num[0]);
   if (isValidBox) {
     int proposals_count = *proposals_num;
-    // printf("proposals_count:%d ,max_score=%f\n", proposals_count,max_score);
 
     out_proposals[proposals_count * 4] = p_xmin;
     out_proposals[proposals_count * 4 + 1] = p_ymin;
@@ -197,8 +164,6 @@ void creatAndFilterProposalsBox(T *anchors_slice, T *bbox_deltas_slice,
     out_scores[proposals_count] = max_score;
     out_areas[proposals_count] = area;
     *proposals_num = *proposals_num + 1;
-  } else {
-     printf("remove box score:%f \n", max_score);
   }
 }
 
@@ -252,12 +217,9 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
   if (post_nms_num > pre_nms_num) {
     post_nms_num = pre_nms_num;
   }
-  printf("kBBoxClipDefault = %lf \n", kBBoxClipDefault);
 
-  printf("cpu: HWA= %d, pre_nms_top_n = %d , pre_nms_num = %d\n", HWA,
-         pre_nms_top_n, pre_nms_num);
   T k_score = 0.0f;
-  T *out_scores_buf = new T[pre_nms_num];  // 设置四个buf, 从最上层接口传过来
+  T *out_scores_buf = new T[pre_nms_num];
   T *out_box_buf = new T[pre_nms_num * 4];
   T *out_area_buf = new T[pre_nms_num];
   T *temp_scores = new T[HWA];
@@ -276,25 +238,10 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
         max_score_id, pixel_offset, &proposals_num);
   }
 
-  printf("creatAndFilterProposalsBox end: proposals_num: %d \n", proposals_num);
-  // for( int i = 0; i < proposals_num; ++i){
-  //   printf("score[%d]:%f, box(%f, %f, %f, %f)\n", i,  out_scores_buf[i],out_box_buf[i*4 +0],out_box_buf[i*4 + 1],out_box_buf[i*4+2],out_box_buf[i*4+3]);
-  // }
-
-  // for( int i = 0; i < proposals_num; ++i){
-  //   printf("scores[%d]: %f \n", i, out_scores_buf[i]);
-  // }
-
-  // for( int i = 0; i < proposals_num; ++i){
-  //   printf("box_area[%d]: %f \n", i, out_area_buf[i]);
-  // }
-  // nms
-  // one_image_proposal_num;
-
   float offset = pixel_offset ? 1 : 0;
   int real_proposal_num = 0;
   int nms_num = std::min(proposals_num, post_nms_top_n);
-  printf("cpu nms_num: %d ,proposals_num:%d\n", nms_num, proposals_num);
+
   for (int nms_id = 0; nms_id < nms_num; ++nms_id) {
     // Find max score
     float max_score = 0.0f;
@@ -321,11 +268,6 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
     real_proposal_num++;
 
     float max_score_area = out_area_buf[max_score_id];
-    printf(
-        "nms max_score: %f , index = %d, corrd: (%f, %f, %f, %f) "
-        "max_score_area=%f\n",
-        max_score, max_score_id, max_score_x0, max_score_y0, max_score_x1,
-        max_score_y1, max_score_area);
 
     for (int inner_id = 0; inner_id < proposals_num; ++inner_id) {
       if (inner_id == max_score_id) {
@@ -336,20 +278,11 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
       float *b = out_box_buf + inner_id * 4;
       float iou = calcIoU(a, b, pixel_offset);
       if (iou > nms_thresh) {
-        if(out_scores_buf[inner_id] == 27.0) {
-          printf("iou[%d] = %f, max_score = %f, nms_thresh = %f, scores=%f\n",inner_id, iou, out_scores_buf[inner_id], nms_thresh, out_scores_buf[inner_id]);
-          printf("max_coor(%f, %f, %f, %f)\n",max_score_x0, max_score_y0, max_score_x1, max_score_y1);
-          printf("ioubox coor(%f, %f, %f, %f)\n", out_box_buf[inner_id * 4 +
-          0],  out_box_buf[inner_id * 4 + 1],  out_box_buf[inner_id * 4 + 2],
-          out_box_buf[inner_id * 4 + 3]);
-        }
         out_scores_buf[inner_id] = PNMS_MIN;
       }
     }
   }
-  printf("nms end\n");
   *one_image_proposal_num = real_proposal_num;
-  printf("nms end ,outputnum=%d\n", real_proposal_num);
 
   delete[] out_scores_buf;
   delete[] out_box_buf;
@@ -369,12 +302,6 @@ void generateProposalsV2CPUImpl(
     bool pixel_offset, const int N, const int A, const int H, const int W,
     float *rpn_rois, float *rpn_roi_probs, float *rpn_rois_num,
     float *rpn_rois_batch_size) {
-  printf(
-      "N,A,H,W: (%d, %d, %d, %d), pre_nms_top_n = %d, post_nms_top_n = %d \n",
-      N, A, H, W, pre_nms_top_n, post_nms_top_n);
-  printf("nms_thresh = %f, min_size = %f, pixel_offset = %d\n", nms_thresh,
-         min_size, pixel_offset);
-
   const int HWA = A * H * W;
   int rpn_rois_batch_num = 0;
 
@@ -397,25 +324,8 @@ void generateProposalsV2CPUImpl(
 
     rpn_rois_batch_num += one_image_proposal_num;
     rpn_rois_num[i] = one_image_proposal_num;
-    // for(int loop = 0; loop < rpn_rois_batch_num; ++loop) {
-    //     printf("rpn_roi_probs[%d]: %f \n", loop, rpn_roi_probs[loop]);
-    // }
   }
   *rpn_rois_batch_size = rpn_rois_batch_num;
-
-  // printf("rpn_rois_batch_num: %d\n", rpn_rois_batch_num);
-  // for( int i = 0; i < rpn_rois_batch_num; ++i){
-  //   printf("proposal[%d]: corrd: (%f, %f, %f, %f) \n", i, rpn_rois[i*4 + 0],
-  //   rpn_rois[i*4 + 1], rpn_rois[i*4+2], rpn_rois[i*4+3]);
-  // }
-
-  // for( int i = 0; i < rpn_rois_batch_num; ++i){
-  //   printf("rpn_roi_probs[%d]: %f \n", i, rpn_roi_probs[i]);
-  // }
-
-  // for( int i = 0; i < N; ++i){
-  //   printf("rpn_rois_num[%d]: %f \n", i, rpn_rois_num[i]);
-  // }
 }
 
 }  // namespace GenerateProposalsV2

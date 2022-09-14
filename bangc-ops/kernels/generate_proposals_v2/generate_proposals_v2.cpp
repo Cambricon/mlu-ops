@@ -49,6 +49,9 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   // k_dim->x = handle->core_num_per_cluster;
   *k_type = CNRT_FUNC_TYPE_BLOCK;
   k_dim->x = 1;
+
+  //   *k_type = CNRT_FUNC_TYPE_UNION8;
+  // k_dim->x = handle->core_num_per_cluster * 8;
   return;
 
   if (job < 4) {
@@ -122,119 +125,120 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     const mluOpTensorDescriptor_t rpn_roi_probs_desc, void *rpn_roi_probs,
     const mluOpTensorDescriptor_t rpn_rois_num_desc, void *rpn_rois_num,
     void *rpn_rois_batch_size) {
-  // const std::string API = "[mluOpGenerateProposalsV2]";
-  // // check inputs/outputs
-  // PARAM_CHECK(API, scores_desc != NULL);
-  // PARAM_CHECK(API, bbox_deltas_desc != NULL);
-  // PARAM_CHECK(API, im_shape_desc != NULL);
-  // PARAM_CHECK(API, anchors_desc != NULL);
-  // PARAM_CHECK(API, variances_desc != NULL);
-  // PARAM_CHECK(API, rpn_rois_batch_size != NULL);
+  const std::string API = "[mluOpGenerateProposalsV2]";
+  // check inputs/outputs
+  PARAM_CHECK(API, scores_desc != NULL);
+  PARAM_CHECK(API, bbox_deltas_desc != NULL);
+  PARAM_CHECK(API, im_shape_desc != NULL);
+  PARAM_CHECK(API, anchors_desc != NULL);
+  PARAM_CHECK(API, variances_desc != NULL);
+  PARAM_CHECK(API, rpn_rois_batch_size != NULL);
 
-  // PARAM_CHECK(API, rpn_rois_desc != NULL);
-  // PARAM_CHECK(API, rpn_roi_probs_desc != NULL);
-  // PARAM_CHECK(API, rpn_rois_num_desc != NULL);
+  PARAM_CHECK(API, rpn_rois_desc != NULL);
+  PARAM_CHECK(API, rpn_roi_probs_desc != NULL);
+  PARAM_CHECK(API, rpn_rois_num_desc != NULL);
 
-  // // check inputs/outputs data type
-  // PARAM_CHECK(API, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
-  // PARAM_CHECK(API, bbox_deltas_desc->dtype == MLUOP_DTYPE_FLOAT);
-  // PARAM_CHECK(API, im_shape_desc->dtype == MLUOP_DTYPE_FLOAT);
-  // PARAM_CHECK(API, anchors_desc->dtype == MLUOP_DTYPE_FLOAT);
-  // PARAM_CHECK(API, variances_desc->dtype == MLUOP_DTYPE_FLOAT);
+  // check inputs/outputs data type
+  PARAM_CHECK(API, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, bbox_deltas_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, im_shape_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, anchors_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, variances_desc->dtype == MLUOP_DTYPE_FLOAT);
 
-  // PARAM_CHECK(API, rpn_rois_desc->dtype == MLUOP_DTYPE_FLOAT);
-  // PARAM_CHECK(API, rpn_roi_probs_desc->dtype == MLUOP_DTYPE_FLOAT);
-  // PARAM_CHECK(API, rpn_rois_num_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, rpn_rois_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, rpn_roi_probs_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, rpn_rois_num_desc->dtype == MLUOP_DTYPE_INT32);
 
-  // // check inputs layout
-  // PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
-  // PARAM_CHECK(API, bbox_deltas_desc->layout == MLUOP_LAYOUT_ARRAY);
-  // PARAM_CHECK(API, im_shape_desc->layout == MLUOP_LAYOUT_ARRAY);
-  // PARAM_CHECK(API, anchors_desc->layout == MLUOP_LAYOUT_ARRAY);
-  // PARAM_CHECK(API, variances_desc->layout == MLUOP_LAYOUT_ARRAY);
+  // check inputs layout
+  PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, bbox_deltas_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, im_shape_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, anchors_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, variances_desc->layout == MLUOP_LAYOUT_ARRAY);
 
-  // PARAM_CHECK(API, rpn_rois_desc->layout == MLUOP_LAYOUT_ARRAY);
-  // PARAM_CHECK(API, rpn_roi_probs_desc->layout == MLUOP_LAYOUT_ARRAY);
-  // PARAM_CHECK(API, rpn_rois_num_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, rpn_rois_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, rpn_roi_probs_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, rpn_rois_num_desc->layout == MLUOP_LAYOUT_ARRAY);
 
-  // // check inputs shape
-  // PARAM_CHECK_EQ(API, scores_desc->dim, 4);
+  // check inputs shape
+  PARAM_CHECK_EQ(API, scores_desc->dim, 4);
 
-  // PARAM_CHECK_EQ(API, bbox_deltas_desc->dim, 4);
-  // PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[0], scores_desc->dims[0]);
-  // PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[1], 4 * scores_desc->dims[1]);
-  // PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[2], scores_desc->dims[2]);
-  // PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[3], scores_desc->dims[3]);
+  // [N,H,W,A4]
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dim, 4);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[0], scores_desc->dims[0]);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[1], scores_desc->dims[1]);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[2], scores_desc->dims[2]);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[3], 4 * scores_desc->dims[3]);
 
-  // PARAM_CHECK_EQ(API, im_shape_desc->dim, 2);
-  // PARAM_CHECK_EQ(API, im_shape_desc->dims[0], scores_desc->dims[0]);
-  // PARAM_CHECK_EQ(API, im_shape_desc->dims[1], 2);
+  // [N, 2]
+  PARAM_CHECK_EQ(API, im_shape_desc->dim, 2);
+  PARAM_CHECK_EQ(API, im_shape_desc->dims[0], scores_desc->dims[0]);
+  PARAM_CHECK_EQ(API, im_shape_desc->dims[1], 2);
 
-  // // NHWA, HWA4
-  // PARAM_CHECK_EQ(API, anchors_desc->dim, 4);
-  // PARAM_CHECK_EQ(API, anchors_desc->dims[0], scores_desc->dims[1]);
-  // PARAM_CHECK_EQ(API, anchors_desc->dims[1], scores_desc->dims[2]);
-  // PARAM_CHECK_EQ(API, anchors_desc->dims[2], scores_desc->dims[3]);
-  // PARAM_CHECK_EQ(API, anchors_desc->dims[3], 4);
+  // [H, W, A, 4]
+  PARAM_CHECK_EQ(API, anchors_desc->dim, 4);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[0], scores_desc->dims[1]);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[1], scores_desc->dims[2]);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[2], scores_desc->dims[3]);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[3], 4);
 
-  // PARAM_CHECK_EQ(API, variances_desc->dim, 4);
-  // PARAM_CHECK_EQ(API, variances_desc->dims[0], scores_desc->dims[1]);
-  // PARAM_CHECK_EQ(API, variances_desc->dims[1], scores_desc->dims[2]);
-  // PARAM_CHECK_EQ(API, variances_desc->dims[2], scores_desc->dims[3]);
-  // PARAM_CHECK_EQ(API, variances_desc->dims[3], 4);
+  // [H, W, A, 4]
+  PARAM_CHECK_EQ(API, variances_desc->dim, 4);
+  PARAM_CHECK_EQ(API, variances_desc->dims[0], scores_desc->dims[1]);
+  PARAM_CHECK_EQ(API, variances_desc->dims[1], scores_desc->dims[2]);
+  PARAM_CHECK_EQ(API, variances_desc->dims[2], scores_desc->dims[3]);
+  PARAM_CHECK_EQ(API, variances_desc->dims[3], 4);
 
-  // // check output shape
-  // PARAM_CHECK_EQ(API, rpn_rois_desc->dim, 2);
-  // PARAM_CHECK_EQ(API, rpn_rois_desc->dims[0], post_nms_top_n);
-  // PARAM_CHECK_EQ(API, rpn_rois_desc->dims[1], 4);
+  // check output shape
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dim, 2);
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[0], post_nms_top_n);
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[1], 4);
 
-  // PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dim, 2);
-  // PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0], post_nms_top_n);
-  // PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[1], 1);
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dim, 2);
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0], post_nms_top_n);
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[1], 1);
 
-  // // [N,1] 应改成[N]
-  // PARAM_CHECK_EQ(API, rpn_rois_num_desc->dim, 2);
-  // PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], scores_desc->dims[0]);
-  // PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[1], 1);
+  // [N]
+  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dim, 1);
+  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], scores_desc->dims[0]);
 
   int N = scores_desc->dims[0];
-  int A = scores_desc->dims[1];
-  int H = scores_desc->dims[2];
-  int W = scores_desc->dims[3];
+  int H = scores_desc->dims[1];
+  int W = scores_desc->dims[2];
+  int A = scores_desc->dims[3];
 
-  // if (N == 0) {
-  //   VLOG(5) << API << " skip zero element tensor.";
-  //   // CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int)));
-  //   return MLUOP_STATUS_SUCCESS;
-  // }
+  if (N == 0) {
+    VLOG(5) << API << " skip zero element tensor.";
+    // CNRT_CHECK(cnrtMemset(output_size, 0, sizeof(int)));
+    return MLUOP_STATUS_SUCCESS;
+  }
 
-  // if (A == 0 || H == 0 || W == 0) {
-  //   return MLUOP_STATUS_BAD_PARAM;
-  // }
+  if (A == 0 || H == 0 || W == 0) {
+    return MLUOP_STATUS_BAD_PARAM;
+  }
 
-  // PARAM_CHECK(API, scores != NULL);
-  // PARAM_CHECK(API, bbox_deltas != NULL);
-  // PARAM_CHECK(API, im_shape != NULL);
-  // PARAM_CHECK(API, anchors != NULL);
-  // PARAM_CHECK(API, variances != NULL);
+  PARAM_CHECK(API, scores != NULL);
+  PARAM_CHECK(API, bbox_deltas != NULL);
+  PARAM_CHECK(API, im_shape != NULL);
+  PARAM_CHECK(API, anchors != NULL);
+  PARAM_CHECK(API, variances != NULL);
 
-  // PARAM_CHECK(API, rpn_rois != NULL);
-  // PARAM_CHECK(API, rpn_roi_probs != NULL);
-  // PARAM_CHECK(API, rpn_rois_num != NULL);
-  // PARAM_CHECK(API, rpn_rois_batch_size != NULL);
+  PARAM_CHECK(API, rpn_rois != NULL);
+  PARAM_CHECK(API, rpn_roi_probs != NULL);
+  PARAM_CHECK(API, rpn_rois_num != NULL);
+  PARAM_CHECK(API, rpn_rois_batch_size != NULL);
 
-  // if (workspace_size > 0) {
-  //   PARAM_CHECK(API, workspace != NULL);
-  // }
+  if (workspace_size > 0) {
+    PARAM_CHECK(API, workspace != NULL);
+  }
 
-  // if (eta < 1.0) {
-  //   LOG(ERROR) << API << " Not support adaptive NMS. The attribute 'eta' "
-  //              << "should not less than 1. But received eta=[" << eta << "]
-  //              ";
-  //   return MLUOP_STATUS_BAD_PARAM;
-  // }
+  if (eta < 1.0) {
+    LOG(ERROR) << API << " Not support adaptive NMS. The attribute 'eta' "
+               << "should not less than 1. But received eta=[" << eta << "]";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
 
-  int HWA = A * H * W;
+  int HWA = H * W * A;
   cnrtDim3_t k_dim;
   cnrtJobType_t k_type;
   policyFunc(handle, &k_dim, &k_type, HWA);
@@ -242,7 +246,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   VLOG(5) << "Launch Kernel mluOpUBestKernelGenerateProposalsV2Float <<<k_dim: "
           << k_type << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
           << ">>>";
-  // return MLUOP_STATUS_SUCCESS;
+
   KERNEL_CHECK(mluOpUBestKernelGenerateProposalsV2Float(
       k_dim, k_type, handle->queue, (float *)scores, (float *)bbox_deltas,
       (float *)im_shape, (float *)anchors, (float *)variances,
