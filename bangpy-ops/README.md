@@ -34,6 +34,20 @@
   编译成功后在 `bangpy-ops/outs` 目录下生成与算子同名的输出文件夹，其中包含 `libmluops.so`等文件。
 
 
+## 创建测试用例
+测试用例可通过 mlu-ops-generator 测例生成框架进行创建，步骤如下：
+
+- 进行本地环境配置
+  - 根据对第三方计算库的依赖，安装对应的环境。
+- 添加算子的计算逻辑
+  - 添加在 GPU/CPU 上的计算逻辑，文件安放路径请参照 mlu-ops-generator 的使用说明。
+- 撰写 Manual 格式的 Json 文件
+  - json 文件的格式要求需参照 mlu-ops-generator 对应部分的使用说明
+- 生成测例文件
+  - 测例文件的保存格式可以是 pb 和 prototxt。测例创建成功后，将保存的 prototxt 文件移至 'bangpy-ops/ops/' 的不同算子目录下 testcase 文件夹。
+
+`注意` :mlu-ops-generator模块的更多介绍见(https://github.com/Cambricon/mlu-ops-generator)
+
 ## 运行测试用例
 
 首先确定当前的测试平台，如 `mlu270`，`mlu290` 等，之后可以用如下几种命令对算子进行测试：
