@@ -1065,17 +1065,17 @@ __mlu_global__ void mluOpGenerateProposalsV2Kernel(
     }
     int one_image_proposals_num = 0;
 
-    const float *scores_slice = scores + batch_id * HWA;
-    const float *bbox_deltas_slice = bbox_deltas + batch_id * 4 * HWA;
-    const float *im_shape_slice = im_shape + batch_id * 2;
-    const float *anchors_slice = anchors;
-    const float *variances_slice = variances;
+    const T *scores_slice = scores + batch_id * HWA;
+    const T *bbox_deltas_slice = bbox_deltas + batch_id * 4 * HWA;
+    const T *im_shape_slice = im_shape + batch_id * 2;
+    const T *anchors_slice = anchors;
+    const T *variances_slice = variances;
 
-    float *rpn_rois_slice = rpn_rois + 4 * all_proposals_num;
-    float *rpn_roi_probs_slice = rpn_roi_probs + all_proposals_num;
+    T *rpn_rois_slice = rpn_rois + 4 * all_proposals_num;
+    T *rpn_roi_probs_slice = rpn_roi_probs + all_proposals_num;
     int *rpn_rois_num_slice = rpn_rois_num + batch_id;
 
-    ProposalForOneImage<float>(
+    ProposalForOneImage(
         scores_slice, bbox_deltas_slice, im_shape_slice, anchors_slice,
         variances_slice, workspace, rpn_rois_slice, rpn_roi_probs_slice,
         rpn_rois_num_slice, &one_image_proposals_num, pre_nms_top_n,
