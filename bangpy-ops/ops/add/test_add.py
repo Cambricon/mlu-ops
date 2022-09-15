@@ -24,13 +24,13 @@ from test import registerOp, OpTest
 import numpy as np
 import bangpy
 from bangpy.common import load_op_by_type
-from add import KERNEL_NAME, TARGET_LIST
+from add import KERNEL_NAME
 
-@registerOp('add')
+
+@registerOp("add")
 class Addop(OpTest):
     def __init__(self, target, dtype, tensor_list, output_tensor):
         self.dtype = dtype
-        assert target in TARGET_LIST,"Unsupported mlu device!"
         super().__init__(target, dtype, tensor_list, output_tensor)
 
     def compute(self):
@@ -40,13 +40,15 @@ class Addop(OpTest):
         # set I/O data
         data_in0_dev = bangpy.Array(data_in0.astype(self.dtype.as_numpy_dtype), dev)
         data_in1_dev = bangpy.Array(data_in1.astype(self.dtype.as_numpy_dtype), dev)
-        data_out_dev = bangpy.Array(np.zeros(self.output_tensor.shape, \
-            self.dtype.as_numpy_dtype), dev)
+        data_out_dev = bangpy.Array(
+            np.zeros(self.output_tensor.shape, self.dtype.as_numpy_dtype), dev
+        )
 
         f1 = load_op_by_type(KERNEL_NAME, self.dtype.name)
         f1(data_in0_dev, data_in1_dev, data_out_dev, np.prod(data_in0.shape))
         evaluator = f1.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
         run_time = evaluator(
-            data_in0_dev, data_in1_dev, data_out_dev, np.prod(data_in0.shape)).mean
-        print("mlu run time: %ss"%str(run_time))
+            data_in0_dev, data_in1_dev, data_out_dev, np.prod(data_in0.shape)
+        ).mean
+        print("mlu run time: %ss" % str(run_time))
         return data_out_dev

@@ -25,11 +25,10 @@ import bangpy as bp
 
 
 def computeDiff1(cpu_result, mlu_result, rtol, atol):
-    bp.assert_allclose(
-        mlu_result.numpy(), cpu_result, rtol, atol
-    )
+    bp.assert_allclose(mlu_result.numpy(), cpu_result, rtol, atol)
 
-#(TODO)
+
+# (TODO)
 # compute efficiency by formula:
 # theory_ops / latency / peak_compute_force
 # theory_io / latency / io_bandwidth

@@ -25,16 +25,19 @@ import os
 import string
 from .execuator import Process_Mlu
 
+
 def test_op(target, op_name):
-    op_path = os.path.dirname(os.path.realpath('__file__'))
+    op_path = os.path.dirname(os.path.realpath("__file__"))
     try:
-        proto_path = os.listdir(os.path.join(op_path ,op_name, "test_case"))
+        proto_path = os.listdir(os.path.join(op_path, op_name, "test_case"))
     except FileNotFoundError as e:
         raise FileNotFoundError(
-        string.Template("Missing $op_name's test cases").substitute(vars())
+            string.Template("Missing $op_name's test cases").substitute(vars())
         ) from e
     for f in proto_path:
         if f.endswith(".prototxt"):
-            with open(os.path.join(op_path ,op_name, os.path.join("test_case", f)), "r") as p:
+            with open(
+                os.path.join(op_path, op_name, os.path.join("test_case", f)), "r"
+            ) as p:
                 proto_file = p.read()
                 Process_Mlu(proto_file, target, op_name).execuate_kernel()

@@ -39,6 +39,7 @@ def adjust_hue_cpu(image, delta):
     image = matplotlib.colors.hsv_to_rgb(image)
     return image
 
+
 def cal_diff(result, data_out):
     temp_l = 0
     temp_r = 0
@@ -81,10 +82,12 @@ def cal_diff(result, data_out):
     ],
 )
 @pytest.mark.parametrize(
-    "dtype", DTYPES,
+    "dtype",
+    DTYPES,
 )
 @pytest.mark.parametrize(
-    "delta", [-0.45932, 0.7373],
+    "delta",
+    [-0.45932, 0.7373],
 )
 def test_adjust_hue(target, shape, delta, dtype):
     if target not in TARGET_LIST:
@@ -105,9 +108,7 @@ def test_adjust_hue(target, shape, delta, dtype):
     data_in_handle = bp.Array(data_in.astype(dtype.name), dev)
     data_out_handle = bp.Array(data_out.astype(dtype.name), dev)
     f = load_op_by_type(KERNEL_NAME, dtype.name)
-    f(
-        data_in_handle, data_out_handle, n, h, w, c, delta
-    )
+    f(data_in_handle, data_out_handle, n, h, w, c, delta)
     # convert all output to float for diff comparison
     mlu_result = np.zeros((n, h, w, c), dtype="float32")
     for i in range(n):

@@ -34,9 +34,10 @@ class Process_Mlu(object):
     """Proc_Mlu is used for invoking kernel and compare
     difference between mlu result and prototxt result.
     """
+
     def __init__(self, file, target: str, op_name) -> None:
         self.file = file
-        self.data =  Parser(file, op_name)
+        self.data = Parser(file, op_name)
         self.op_name = op_name
         self.target = target
 
@@ -44,20 +45,18 @@ class Process_Mlu(object):
         cambricon_dir = str(Path(__file__).parent.parent.resolve())
         sys.path.append(cambricon_dir)
         for register_op_name in self.op_name:
-            register_op_dir = Path(cambricon_dir + '/ops/' +
-                                   register_op_name)
-            register_op_pys = register_op_dir.rglob('*.py')
+            register_op_dir = Path(cambricon_dir + "/ops/" + register_op_name)
+            register_op_pys = register_op_dir.rglob("*.py")
             for file in register_op_pys:
                 filedir = str(file.resolve())
                 filename = file.name
-                if not filename.startswith('_'):
+                if not filename.startswith("_"):
                     reldir = os.path.relpath(filedir, cambricon_dir)
                     modulename = os.path.splitext(reldir)
-                    importname = modulename.replace('/', '.')
+                    importname = modulename.replace("/", ".")
                     __import__(importname)
 
-
-        inputs ,output = self.data.get_inp_oup()
+        inputs, output = self.data.get_inp_oup()
         op_name = self.data.get_opname()
         if self.data.get_output_dtype() == "DTYPE_FLOAT":
             dtype = bangpy.float32

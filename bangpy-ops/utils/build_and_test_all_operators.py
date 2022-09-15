@@ -19,9 +19,9 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, too-many-locals, missing-function-docstring
-from test import test_op
 import os
 import sys
+from test import test_op
 
 
 build_entrys = []
@@ -55,6 +55,7 @@ def build_all_op():
     print("Build all operators...")
     for obj in build_entrys:
         obj(None, None)
+
 
 def test_all_op(target, opname):
     print("======================")

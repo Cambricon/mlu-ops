@@ -26,54 +26,77 @@ import numpy as np
 
 
 class Parser(object):
-    '''Class for parser prototxt to tensor params, opname and test criterion.'''
+    """Class for parser prototxt to tensor params, opname and test criterion."""
+
     def __init__(self, file, op_name):
         self.file = file
         self.op_name = op_name
-        self.encode = {"DTYPE_FLOAT":np.int32, "DTYPE_HALF":np.int16, "INT32":np.int32}
-        self.decode = {"DTYPE_FLOAT":np.float32, "DTYPE_HALF":np.float16, "INT32":np.int32}
+        self.encode = {
+            "DTYPE_FLOAT": np.int32,
+            "DTYPE_HALF": np.int16,
+            "INT32": np.int32,
+        }
+        self.decode = {
+            "DTYPE_FLOAT": np.float32,
+            "DTYPE_HALF": np.float16,
+            "INT32": np.int32,
+        }
 
     def get_output(self):
-        return self.read_prototxt().get('output')
+        return self.read_prototxt().get("output")
 
-    def read_prototxt(self)->dict:
+    def read_prototxt(self) -> dict:
         return parse(self.file)
 
     def get_dev(self):
-        return self.read_prototxt().get('device')
+        return self.read_prototxt().get("device")
 
     def get_criterion(self):
-        return self.read_prototxt().get('evaluation_criterion')
+        return self.read_prototxt().get("evaluation_criterion")
 
     def get_threshold(self):
-        return self.read_prototxt().get('evaluation_threshold')
+        return self.read_prototxt().get("evaluation_threshold")
 
     def get_opname(self):
-        return self.read_prototxt().get('op_name')
+        return self.read_prototxt().get("op_name")
 
     def get_input_dtype(self):
-        return self.read_prototxt().get('input')[0].get('dtype')
+        return self.read_prototxt().get("input")[0].get("dtype")
 
     def get_output_dtype(self):
-        return self.read_prototxt().get('output').get('dtype')
+        return self.read_prototxt().get("output").get("dtype")
 
     def get_inp_oup(self):
         input_list = []
         for i in self.read_prototxt().get("input"):
-            if i.get('random_data').get('distribution') == 'UNIFORM' and \
-                hasattr(i.get('random_data'), "seed"):
-                np.random.seed(i.get('random_data').get("seed"))
-                input_list.append(np.random.uniform(size=i.get('shape').get('dims')). \
-                    astype(self.decode.get(self.get_input_dtype())))
-            elif i.get('random_data').get('distribution') == 'UNIFORM' and \
-                not hasattr(i.get('random_data').get('distribution'), "seed"):
-                input_list.append(np.frombuffer(np.array(i.get('value_i'), self.encode. \
-                    get(self.get_input_dtype())).reshape([int(i.get('shape').get('dims'))]), \
-                        self.decode.get(self.get_input_dtype())))
-            #(TODO:Add more distribution model)
-        output = np.frombuffer(np.array(self.read_prototxt().get("output"). \
-                get('value_i'), self.encode. \
-                get(self.get_output_dtype())).reshape([int(self.read_prototxt().get("output"). \
-                get('shape').get('dims'))]), \
-                self.decode.get(self.get_output_dtype()))
+            if i.get("random_data").get("distribution") == "UNIFORM" and hasattr(
+                i.get("random_data"), "seed"
+            ):
+                np.random.seed(i.get("random_data").get("seed"))
+                input_list.append(
+                    np.random.uniform(size=i.get("shape").get("dims")).astype(
+                        self.decode.get(self.get_input_dtype())
+                    )
+                )
+            elif i.get("random_data").get("distribution") == "UNIFORM" and not hasattr(
+                i.get("random_data").get("distribution"), "seed"
+            ):
+                input_list.append(
+                    np.frombuffer(
+                        np.array(
+                            i.get("value_i"), self.encode.get(self.get_input_dtype())
+                        ).reshape([int(i.get("shape").get("dims"))]),
+                        self.decode.get(self.get_input_dtype()),
+                    )
+                )
+            # (TODO:Add more distribution model)
+        output = np.frombuffer(
+            np.array(
+                self.read_prototxt().get("output").get("value_i"),
+                self.encode.get(self.get_output_dtype()),
+            ).reshape(
+                [int(self.read_prototxt().get("output").get("shape").get("dims"))]
+            ),
+            self.decode.get(self.get_output_dtype()),
+        )
         return input_list, output

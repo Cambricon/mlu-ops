@@ -33,6 +33,7 @@ class OpTest(ABC):
     If you want to transfer some params from json file to this class, you can
     write params in keyword op_params.
     """
+
     def __init__(self, target, dtype, tensor_list, output_tensor):
         self.inputs_list = tensor_list
         self.output_tensor = output_tensor
@@ -59,8 +60,10 @@ class OpTest(ABC):
     def output_tensors(self):
         return self.tensor_list_.getOutputTensors()
 
+
 class OpTestFactory:
     """Registry for OpTest."""
+
     registry = {}
 
     @classmethod
@@ -70,19 +73,20 @@ class OpTestFactory:
             cls.registry[name] = register_cls
         else:
             raise Exception(
-                '[OpTestFactory]: register the same op, please check op name.')
+                "[OpTestFactory]: register the same op, please check op name."
+            )
 
     @classmethod
     def factory(cls, name: str) -> OpTest:
         """Get OpTest from Factory by name."""
         if name not in cls.registry:
             raise KeyError(
-                '[OpTestFactory]: op are not registered, please use @registerOp.'
+                "[OpTestFactory]: op are not registered, please use @registerOp."
             )
         return cls.registry[name]
 
 
-def registerOp(op_name=' '):
+def registerOp(op_name=" "):
     def register(cls: OpTest):
         if op_name:
             OpTestFactory.register(op_name, cls)

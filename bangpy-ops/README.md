@@ -33,7 +33,6 @@
   
   编译成功后在 `bangpy-ops/outs` 目录下生成与算子同名的输出文件夹，其中包含 `libmluops.so`等文件。
 
-
 ## 创建测试用例
 测试用例可通过 mlu-ops-generator 测例生成框架进行创建，步骤如下：
 
