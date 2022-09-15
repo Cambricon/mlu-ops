@@ -54,5 +54,5 @@ if [[ ${MLU_SUB_MODULE} == "bangpy" ]]; then
 
   # Test BANGPy all operators cases.
   pip3 install prototxt_parser==1.0 -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
-  ./bangpy-ops/utils/test_operators.sh --only_test --filter add
+  ./bangpy-ops/utils/test_operators.sh --only_test
 fi

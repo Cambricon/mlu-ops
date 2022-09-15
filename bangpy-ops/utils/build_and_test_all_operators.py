@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -22,6 +22,7 @@
 import os
 import sys
 from test import test_op
+import pytest
 
 
 build_entrys = []
@@ -60,7 +61,13 @@ def build_all_op():
 def test_all_op(target, opname):
     print("======================")
     print("Test all operators...")
-    test_op(target, opname)
+    if opname in ["add"]:
+        test_op(target, opname)
+    else:
+        if target is not None:
+            pytest.main(["-s", "--target=" + target, *test_files])
+        else:
+            pytest.main(["-s", *test_files])
 
 
 def main():

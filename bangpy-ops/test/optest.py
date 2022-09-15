@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -18,9 +18,8 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=invalid-name, missing-function-docstring, useless-object-inheritance
-# pylint: disable=too-many-instance-attributes, too-many-arguments, too-many-locals
-# pylint: disable=too-many-statements, attribute-defined-outside-init, missing-module-docstring
+# pylint: disable=invalid-name, missing-function-docstring
+"""OpTest is the Basis Function of Kernels"""
 from abc import ABC, abstractmethod
 
 
@@ -34,9 +33,9 @@ class OpTest(ABC):
     write params in keyword op_params.
     """
 
-    def __init__(self, target, dtype, tensor_list, output_tensor):
-        self.inputs_list = tensor_list
-        self.output_tensor = output_tensor
+    def __init__(self, target, dtype, input_tensor_list, output_tensor_list):
+        self.inputs_list = input_tensor_list
+        self.output_tensor = output_tensor_list
         self.dtype = dtype
         self.target = target
         self.test_param_ = None
@@ -53,12 +52,12 @@ class OpTest(ABC):
         self.compute()
 
     @property
-    def input_tensors(self):
-        return self.tensor_list_.getInputTensors()
+    def inputs_tensor_list(self):
+        return self.inputs_list
 
     @property
-    def output_tensors(self):
-        return self.tensor_list_.getOutputTensors()
+    def output_tensor_list(self):
+        return self.output_tensor
 
 
 class OpTestFactory:

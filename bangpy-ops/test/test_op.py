@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -18,15 +18,16 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=invalid-name, missing-function-docstring, useless-object-inheritance
-# pylint: disable=too-many-instance-attributes, too-many-arguments, too-many-locals
-# pylint: disable=too-many-statements, attribute-defined-outside-init, missing-module-docstring
+# pylint: disable=invalid-name
+"""Serach *.prototxt Files According to Operator Name"""
 import os
 import string
-from .execuator import Process_Mlu
+from .execuator import execuate_kernel
 
 
 def test_op(target, op_name):
+    """find *.prototxt files corresponding to the operator
+    and execuate kernel"""
     op_path = os.path.dirname(os.path.realpath("__file__"))
     try:
         proto_path = os.listdir(os.path.join(op_path, op_name, "test_case"))
@@ -40,4 +41,5 @@ def test_op(target, op_name):
                 os.path.join(op_path, op_name, os.path.join("test_case", f)), "r"
             ) as p:
                 proto_file = p.read()
-                Process_Mlu(proto_file, target, op_name).execuate_kernel()
+                # execuate kernel on MLU
+                execuate_kernel(proto_file, target, op_name)

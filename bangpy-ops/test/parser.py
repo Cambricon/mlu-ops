@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -18,14 +18,17 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=invalid-name, missing-function-docstring, useless-object-inheritance
-# pylint: disable=too-many-instance-attributes, missing-module-docstring, too-many-locals
-# pylint: disable=too-many-statements, missing-class-docstring
+# pylint: disable=missing-function-docstring
+"""Parser for prototxt
+
+we use prototxt_parser to parse *.prototxt files to python dict objects.
+"""
+from typing import Dict, List
 from prototxt_parser.prototxt import parse
 import numpy as np
 
 
-class Parser(object):
+class Parser:
     """Class for parser prototxt to tensor params, opname and test criterion."""
 
     def __init__(self, file, op_name):
@@ -90,13 +93,24 @@ class Parser(object):
                     )
                 )
             # (TODO:Add more distribution model)
-        output = np.frombuffer(
-            np.array(
-                self.read_prototxt().get("output").get("value_i"),
-                self.encode.get(self.get_output_dtype()),
-            ).reshape(
-                [int(self.read_prototxt().get("output").get("shape").get("dims"))]
-            ),
-            self.decode.get(self.get_output_dtype()),
-        )
-        return input_list, output
+        output_list = []
+        if isinstance(oups := self.read_prototxt().get("output"), Dict):
+            output = np.frombuffer(
+                np.array(
+                    oups.get("value_i"),
+                    self.encode.get(self.get_output_dtype()),
+                ).reshape([int(oups.get("shape").get("dims"))]),
+                self.decode.get(self.get_output_dtype()),
+            )
+            output_list.append(output)
+        elif isinstance(oups := self.read_prototxt().get("output"), List):
+            for j in oups:
+                output_list.append(
+                    np.array(
+                        j.get("value_i"),
+                        self.encode.get(self.get_output_dtype()),
+                    ).reshape([int(j.get("shape").get("dims"))]),
+                    self.decode.get(self.get_output_dtype()),
+                )
+                output_list.append(j)
+        return input_list, output_list
