@@ -46,15 +46,20 @@ __mlu_func__ void getMaxScoreIndex(const T *proposal_scores, int *max_index,
   // | max_box_tmp  |    scores   |
   // |   ALIGN_NUM  | max_seg_num |
   int max_buffer_num = (scoreIndexBufSize - NFU_ALIGN_SIZE) / sizeof(T);
+  max_buffer_num = max_buffer_num / 3;
   int max_seg_num = FLOOR_ALIGN(max_buffer_num, ALIGN_NUM);
   int repeat = core_num / max_seg_num;
   int remain = core_num % max_seg_num;
 
+  // worksapce
   T *score_reduce = reduce_buffer;
   T *index_reduce = score_reduce + taskDim;
 
+  // nram
   T *max_box_tmp = get_max_score_buffer;
   T *scores = max_box_tmp + ALIGN_NUM;
+  T *mask_buffer = scores + max_seg_num;
+  T *mask_eq = mask_buffer + max_seg_num;
 
   int local_max_index = -1;
   T local_max_score = FLOAT_MIN;
@@ -72,10 +77,19 @@ __mlu_func__ void getMaxScoreIndex(const T *proposal_scores, int *max_index,
              GDRAM2NRAM);
 
     __bang_max(max_box_tmp, scores, actual_num_align);
-
     if (max_box_tmp[0] >= local_max_score) {
+      if (max_box_tmp[0] == FLOAT_MIN) {
+        local_max_score = max_box_tmp[0];
+        local_max_index = ((int *)max_box_tmp)[1] + seg_offset;
+        continue;
+      }
+
+      __bang_write_value(mask_buffer, actual_num_align, (T)max_box_tmp[0]);
+      __bang_eq(mask_eq, scores, mask_buffer, actual_num_align);
+      int tmp_index = __bang_findfirst1(mask_eq, actual_num_align);
+
       local_max_score = max_box_tmp[0];
-      local_max_index = ((int *)max_box_tmp)[1] + seg_offset;
+      local_max_index = tmp_index + seg_offset;
     }
   }  // for repeat
 
@@ -89,6 +103,11 @@ __mlu_func__ void getMaxScoreIndex(const T *proposal_scores, int *max_index,
       if (local_max_score < score_reduce[i]) {
         local_max_score = score_reduce[i];
         local_max_index = index_reduce[i];
+      } else if (local_max_score == score_reduce[i]) {
+        // get max_score with small index
+        if (local_max_index > index_reduce[i]) {
+          local_max_index = index_reduce[i];
+        }
       }
     }
   }
@@ -775,11 +794,12 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   // | box_area_gdram | stop_flag | reduce_buffer |
   // |   scores_num   | stop_flag | 2 * taskDim   |
 
-  // nram 17 * N
+  // nram 17 * N, N = max_seg_num
   // | output_scores | output_boxes | scores | boxes | box_area | inter_x1|
+  // |   N           |     4*N      |   N    |  4N   |    N     |    N    |
+
   // inter_y1| inter_x2 | inter_y2 | inter_s | tmp1 |
-  // |   N           |     4*N      |   N    |  4N   |    N     |    N    |   N
-  // |   N      |   N      |   N     |   N  |
+  // |   N   |   N      |   N      |   N     |  N   |
 
   const int memory_block = 17;
   int limit = PROPOSAL_NRAM_SIZE / memory_block;
