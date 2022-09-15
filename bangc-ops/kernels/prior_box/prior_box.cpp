@@ -31,7 +31,7 @@
 #define MLU300SERIERS_MAX_SUPPORT 2900
 
 // policy function
-static void policyFuncPriorBox(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+static void policyFuncPriorBox(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                cnrtFunctionType_t *k_type, const int count) {
   *k_type = CNRT_FUNC_TYPE_BLOCK;
   uint32_t cluster_max = mluop::runtime::getClusterLimitCapability(handle);
@@ -55,7 +55,7 @@ static int getNumPriors(const mluOpTensorDescriptor_t min_sizes_desc,
 }
 
 mluOpStatus_t mluOpPriorBoxParamCheck(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t min_sizes_desc,
+    const mluOpHandle_t handle, const mluOpTensorDescriptor_t min_sizes_desc,
     const void *min_sizes, const mluOpTensorDescriptor_t aspect_ratios_desc,
     const void *aspect_ratios, const mluOpTensorDescriptor_t variances_desc,
     const void *variances, const mluOpTensorDescriptor_t max_sizes_desc,
