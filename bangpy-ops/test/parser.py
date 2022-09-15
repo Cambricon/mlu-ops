@@ -19,10 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-function-docstring
-"""Parser for prototxt
-
-we use prototxt_parser to parse *.prototxt files to python dict objects.
-"""
+"""Using prototxt_parser to parse *.prototxt Files to Python Dict Objects."""
 from typing import Dict, List
 from prototxt_parser.prototxt import parse
 import numpy as np

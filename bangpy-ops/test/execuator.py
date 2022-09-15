@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=too-many-locals, assignment-from-no-return
-"""Invoking Kernel with parameters from Parser"""
+"""Invoking Kernel with Parameters from Parser"""
 import os
 from pathlib import Path
 import sys
@@ -53,23 +53,14 @@ def execuate_kernel(proto_file, target: str, op_name):
         dtype = bangpy.float32
     elif data.get_output_dtype() == "DTYPE_HALF":
         dtype = bangpy.float16
-<<<<<<< 02b72405fb73862f2a61bb00b72ba0c0e9145adf
     elif data.get_output_dtype() == "DTYPE_INT":
         dtype = bangpy.int32
     else:
-        raise TypeError("Unsupport data type %s" % (data.get_output_dtype()))
+        raise TypeError("Unsupported data type %s" % (data.get_output_dtype()))
     # launch kernel in factory model
     op_test = OpTestFactory.factory(op_name)(target, dtype, inputs, output)
     mlu_result = op_test.compute()
     cpu_result = output[0]
-=======
-    if data.get_output_dtype() == "DTYPE_INT":
-        dtype = bangpy.int32
-    # launch kernel in factory model
-    op_test = OpTestFactory.factory(op_name)(target, dtype, inputs, output)
-    mlu_result = op_test.compute()
-    cpu_result = output
->>>>>>> [feat](test):add test framework with prototxt test cases
     rtol = data.get_threshold()[0]
     atol = data.get_threshold()[1]
     diff = bangpy.assert_allclose(mlu_result.numpy(), cpu_result, rtol, atol)
