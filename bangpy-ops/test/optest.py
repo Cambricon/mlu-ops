@@ -19,7 +19,11 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=invalid-name, missing-function-docstring
+<<<<<<< 02b72405fb73862f2a61bb00b72ba0c0e9145adf
 """OpTest is the Basis Function of Kernels"""
+=======
+"""OpTest is the basis function of kernels"""
+>>>>>>> [feat](test):add test framework with prototxt test cases
 from abc import ABC, abstractmethod
 
 

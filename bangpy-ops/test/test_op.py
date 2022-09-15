@@ -29,6 +29,7 @@ def test_op(target, op_name):
     """find *.prototxt files corresponding to the operator
     and execuate kernel"""
     op_path = os.path.dirname(os.path.realpath("__file__"))
+    # find *.prototxt files corresponding to the operator
     try:
         proto_path = os.listdir(os.path.join(op_path, op_name, "test_case"))
     except FileNotFoundError as e:
