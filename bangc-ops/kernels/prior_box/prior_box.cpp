@@ -68,8 +68,9 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
     const void *max_sizes, const int height, const int width,
     const int im_height, const int im_width, const float step_h,
     const float step_w, const float offset, const bool clip,
-    const bool min_max_aspect_ratios_order, const mluOpTensorDescriptor_t output_desc,
-    void *output, const mluOpTensorDescriptor_t var_desc, void *var) {
+    const bool min_max_aspect_ratios_order,
+    const mluOpTensorDescriptor_t output_desc, void *output,
+    const mluOpTensorDescriptor_t var_desc, void *var) {
   // check input
   PARAM_CHECK(api, handle != nullptr);
   PARAM_CHECK(api, min_sizes_desc != nullptr);
@@ -118,11 +119,12 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   const int num_priors =
       getNumPriors(min_sizes_desc, aspect_ratios_desc, max_sizes_desc);
   // check num_priors limit
-  const int max_support_num_priors = handle->arch < 300 ? MLU200SERIERS_MAX_SUPPORT : MLU300SERIERS_MAX_SUPPORT;
-  if(num_priors > max_support_num_priors)
-  {
+  const int max_support_num_priors = handle->arch < 300
+                                         ? MLU200SERIERS_MAX_SUPPORT
+                                         : MLU300SERIERS_MAX_SUPPORT;
+  if (num_priors > max_support_num_priors) {
     LOG(ERROR) << api << " Support max num_priors is " << max_support_num_priors
-    << ",but now is " << num_priors;
+               << ",but now is " << num_priors;
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check zero element
@@ -165,8 +167,9 @@ mluOpStatus_t mluOpPriorBox(
     const void *max_sizes, const int height, const int width,
     const int im_height, const int im_width, const float step_h,
     const float step_w, const float offset, const bool clip,
-    const bool min_max_aspect_ratios_order, const mluOpTensorDescriptor_t output_desc,
-    void *output, const mluOpTensorDescriptor_t var_desc, void *var) {
+    const bool min_max_aspect_ratios_order,
+    const mluOpTensorDescriptor_t output_desc, void *output,
+    const mluOpTensorDescriptor_t var_desc, void *var) {
   // param check
   mluOpStatus_t pb_status = mluOpPriorBoxParamCheck(
       handle, min_sizes_desc, min_sizes, aspect_ratios_desc, aspect_ratios,

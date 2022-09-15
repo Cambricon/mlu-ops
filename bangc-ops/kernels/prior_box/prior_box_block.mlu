@@ -279,8 +279,9 @@ void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     const void *max_sizes, const int max_sizes_num, const int height,
     const int width, const int im_height, const int im_width,
     const float step_h, const float step_w, const float offset,
-    const int num_priors, const bool clip, const bool min_max_aspect_ratios_order,
-    void *output, const int output_size, void *var, const int var_size) {
+    const int num_priors, const bool clip,
+    const bool min_max_aspect_ratios_order, void *output, const int output_size,
+    void *var, const int var_size) {
   mluKernelPriorBox<<<k_dim_box, k_type, queue>>>(
       (float *)min_sizes, min_sizes_num, (float *)aspect_ratios,
       aspect_ratios_num, (float *)max_sizes, max_sizes_num, height, width,
