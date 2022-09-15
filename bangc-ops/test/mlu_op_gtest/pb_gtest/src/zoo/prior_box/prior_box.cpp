@@ -24,8 +24,6 @@
 #include <string>
 #include <vector>
 
-#include "mlu_op.h"
-
 #include "prior_box.h"
 
 namespace mluoptest {

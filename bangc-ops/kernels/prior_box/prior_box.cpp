@@ -23,11 +23,7 @@
 #include <string>
 
 #include "core/gen_case.h"
-#include "core/logging.h"
 #include "core/runtime/device.h"
-#include "core/tensor.h"
-#include "core/type.h"
-#include "kernels/kernel.h"
 #include "mlu_op_kernel.h"
 
 #define api "mluOpPriorBox"
@@ -177,7 +173,7 @@ mluOpStatus_t mluOpPriorBox(
   PARAM_CHECK(api, variances != nullptr);
   PARAM_CHECK(api, output != nullptr);
   PARAM_CHECK(api, var != nullptr);
-  
+
   const int min_sizes_num = min_sizes_desc->dims[0];
   const int aspect_ratios_num = aspect_ratios_desc->dims[0];
   const int variances_num = variances_desc->dims[0];
