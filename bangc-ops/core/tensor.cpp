@@ -153,44 +153,11 @@ mluOpStatus_t mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size) {
   }
 }
 
-#if MLUOP_TENSOR_QUEUE_ENABLE
-mluOpTensorDescriptorQueueStruct *queue_array = NULL;
-std::hash<std::thread::id> hasher;
-
-MLUOP_ATTRIBUTE_CONSTRUCTOR MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN void mluOpInit() {
-  if (!queue_array) {
-    queue_array =
-        new (std::nothrow) mluOpTensorDescriptorQueueStruct[QUEUE_ARRAY_LENGTH];
-  }
-}
-
-MLUOP_ATTRIBUTE_DESTRUCTOR MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN void mluOpExit() {
-  if (queue_array) {
-    delete[] queue_array;
-    queue_array = NULL;
-  }
-}
-#endif
-
 /* MLUOP interface */
 mluOpStatus_t mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc) {
   PARAM_CHECK("[mluOpCreateTensorDescriptor]", desc != NULL);
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  if (MLUOP_PREDICT_FALSE(queue_array[id].queue.empty())) {
-    queue_array[id].extend(queue_array[id].extend_num);
-    queue_array[id].extend_num *= 2;
-  }
-  *desc = queue_array[id].queue.front();
-  queue_array[id].queue.pop();
-  queue_array[id].unlock();
-#else
   mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
   *desc = ts;
-#endif
-
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -198,30 +165,10 @@ mluOpStatus_t mluOpCreateGroupTensorDescriptors(
     mluOpTensorDescriptor_t *group_desc[], const int desc_num) {
   PARAM_CHECK("[mluOpCreateGroupTensorDescriptors]", group_desc != NULL);
   PARAM_CHECK("[mluOpCreateGroupTensorDescriptors]", desc_num > 0);
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  if (MLUOP_PREDICT_FALSE(queue_array[id].queue.empty() ||
-                          (size_t)desc_num >
-                              (size_t)queue_array[id].queue.size())) {
-    queue_array[id].extend(
-        std::max((size_t)queue_array[id].extend_num, (size_t)desc_num));
-    queue_array[id].extend_num =
-        2 * std::max((size_t)queue_array[id].extend_num, (size_t)desc_num);
-  }
-  for (int i = 0; i < desc_num; ++i) {
-    *(group_desc[i]) = queue_array[id].queue.front();
-    queue_array[id].queue.pop();
-  }
-  queue_array[id].unlock();
-#else
   for (int i = 0; i < desc_num; ++i) {
     mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
     *(group_desc[i]) = ts;
   }
-#endif
-
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -235,13 +182,32 @@ mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
   PARAM_CHECK("[mluOpSetTensorDescriptor]", layout >= 0);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", dtype >= 0);
 
-  desc->dim = dimNb;
   desc->dtype = dtype;
   desc->layout = layout;
 
+  return mluOpSetTensorDescriptorDim(desc, dimNb, dimSize);
+}
+
+mluOpStatus_t mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc,
+                                          int dimNb, const int *dimSize) {
+  PARAM_CHECK("[mluOpSetTensorDescriptor]", desc != NULL);
+  PARAM_CHECK("[mluOpSetTensorDescriptor]", dimNb > 0);
+  PARAM_CHECK("[mluOpSetTensorDescriptor]", dimSize != NULL);
+
+  desc->dim = dimNb;
+  if (MLUOP_PREDICT_FALSE(desc->larger_dims != NULL)) {
+    delete[] desc->larger_dims;
+    desc->larger_dims = NULL;
+  }
+
+  if (MLUOP_PREDICT_FALSE(desc->larger_strides != NULL)) {
+    delete[] desc->larger_strides;
+    desc->larger_strides = NULL;
+  }
+
   if (MLUOP_PREDICT_FALSE(dimNb > MLUOP_DIM_MAX)) {
-    desc->larger_dims = new int[dimNb];
-    desc->larger_strides = new int[dimNb];
+    desc->larger_dims = new (std::nothrow) int[dimNb];
+    desc->larger_strides = new (std::nothrow) int[dimNb];
     desc->dims = desc->larger_dims;
     desc->strides = desc->larger_strides;
   } else {
@@ -251,34 +217,31 @@ mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
   memcpy(desc->dims, dimSize, dimNb * sizeof(int));
 
   // infer strides of dimNb dimensions and compute total_num & total_size
-  int strideBase = 1;
+  uint64_t stride_base = 1;
+  bool is_overflow = false;
+  int tmp_num = 0;
   for (int i = dimNb - 1; i >= 0; --i) {
-    desc->strides[i] = strideBase;
-    strideBase *= desc->dims[i];
+    desc->strides[i] = stride_base;
+    is_overflow |=
+        __builtin_smul_overflow(stride_base, desc->dims[i], &tmp_num);
+    stride_base *= desc->dims[i];
   }
-  desc->total_element_num = strideBase;
-  desc->total_tensor_size = desc->total_element_num * getSizeOfDataType(dtype);
+  desc->total_element_num = stride_base;
+  desc->total_tensor_size =
+      desc->total_element_num * getSizeOfDataType(desc->dtype);
   // judge int overflow situation
-  int total_size = desc->total_tensor_size;
-  if (total_size != 0) {
-    int last_num = total_size / getSizeOfDataType(dtype);
+  if (MLUOP_PREDICT_FALSE(is_overflow)) {
+    std::stringstream tensor_info;
+    tensor_info << "dims:(";
     for (int i = 0; i < dimNb - 1; ++i) {
-      last_num = last_num / dimSize[i];
+      tensor_info << dimSize[i] << ",";
     }
-    if (last_num < dimSize[dimNb - 1]) {
-      std::stringstream tensor_info;
-      tensor_info << "dims:(";
-      for (int i = 0; i < dimNb - 1; ++i) {
-        tensor_info << dimSize[i] << ", ";
-      }
 
-      tensor_info << dimSize[dimNb - 1]
-                  << "), data width:" << getSizeOfDataType(dtype) << ".";
-      LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow tensor size with "
-                      "type 'int'. Currently, mluOp supports tensor size "
-                      "smaller than 2^31, now tensor "
-                   << tensor_info.str();
-    }
+    tensor_info << dimSize[dimNb - 1]
+                << "), data_width:" << getSizeOfDataType(desc->dtype) << ".";
+    LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow max tensor num."
+                 << "Currently, mluOp supports tensor num smaller than 2^31,"
+                 << "now tensor " << tensor_info.str();
   }
   return MLUOP_STATUS_SUCCESS;
 }
@@ -495,15 +458,7 @@ mluOpStatus_t mluOpGetTensorDescriptorPositionScaleAndOffset(
 mluOpStatus_t mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc) {
   PARAM_CHECK("[mluOpDestroyTensorDescriptor]", desc != NULL);
   desc->reset();
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  queue_array[id].queue.emplace(desc);
-  queue_array[id].unlock();
-#else
   delete desc;
-#endif
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -511,21 +466,10 @@ mluOpStatus_t mluOpDestroyGroupTensorDescriptors(
     mluOpTensorDescriptor_t **group_desc, const int desc_num) {
   PARAM_CHECK("[mluOpDestroyGroupTensorDescriptors]", group_desc != NULL);
   PARAM_CHECK("[mluOpDestroyGroupTensorDescriptors]", desc_num > 0);
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  for (int i = 0; i < desc_num; ++i) {
-    (*(group_desc[i]))->reset();
-    queue_array[id].queue.emplace(*(group_desc[i]));
-  }
-  queue_array[id].unlock();
-#else
   for (int i = 0; i < desc_num; ++i) {
     (*(group_desc[i]))->reset();
     delete (*(group_desc[i]));
   }
-#endif
 
   return MLUOP_STATUS_SUCCESS;
 }

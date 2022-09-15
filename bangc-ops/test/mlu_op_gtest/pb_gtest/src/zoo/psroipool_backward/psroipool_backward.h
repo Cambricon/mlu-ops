@@ -20,26 +20,27 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_UNARY_OP_UNARY_OP_HOST_H_
-#define KERNELS_UNARY_OP_UNARY_OP_HOST_H_
-#include <string>
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_BACKWARD_PSROIPOOL_BACKWARD_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_BACKWARD_PSROIPOOL_BACKWARD_H_
+#include "executor.h"
 
-#include "mlu_op.h"
+namespace mluoptest {
+class PsroipoolBackwardExecutor : public Executor {
+ public:
+  PsroipoolBackwardExecutor() {}
+  ~PsroipoolBackwardExecutor() {}
+  void paramCheck() override;
+  void compute() override;
+  void cpuCompute() override;
+  int64_t getTheoryOps() override;
 
-void unaryOpPolicyFunc(const mluOpHandle_t &handle,
-                       const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type);
-
-/* user param check
- * step1:check desc and data ptr is not nullptr_t
- * step2:check shape and data type
- * */
-mluOpStatus_t unaryOpParamCheck(const std::string &op_name,
-                                const mluOpHandle_t &handle,
-                                const mluOpTensorDescriptor_t &x_desc,
-                                const void *x,
-                                const mluOpTensorDescriptor_t &y_desc,
-                                const void *y,
-                                const mluOpDataType_t support_type[],
-                                const int &type_len, bool &zero_element);
-#endif  // KERNELS_UNARY_OP_UNARY_OP_HOST_H_
+ private:
+  void initData();
+  int output_dim_ = 0;
+  int pooled_height_ = 0;
+  int pooled_width_ = 0;
+  float spatial_scale_ = 0;
+  int64_t theory_ops_ = 0;
+};
+}  // namespace mluoptest
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_PSROIPOOL_BACKWARD_PSROIPOOL_BACKWARD_H_

@@ -28,7 +28,7 @@ from add import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 @pytest.mark.parametrize(
-    "shape", [(2048,), (4096,), (6144,),],
+    "shape", [(4096,), (8192,),],
 )
 @pytest.mark.parametrize(
     "dtype", DTYPES,

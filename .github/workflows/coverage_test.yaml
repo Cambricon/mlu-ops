@@ -8,22 +8,22 @@ on:
 
 jobs:
   test:
-    runs-on: [self-hosted, mlu270-x5k]
+    strategy:
+      matrix:
+        runner: [mlu270-x5k, mlu290-m5, mlu370-m8]
+    runs-on: ${{matrix.runner}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: bangc_build
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
-          bash -c "cd bangc-ops && ./build.sh -c"
+          docker run --rm -v $(pwd):/work -w /work/bangc-ops docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./build.sh -c
 
       - name: bangc_test
         run: >
-          idx=$(hostname | cut -d'-' -f3);docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev${idx}:/dev/cambricon_dev0
-          --device /dev/commu${idx}:/dev/commu0 -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
-          bash -c "cd bangc-ops/build/test/ && bash ../../../tools/coverage.sh "./mluop_gtest""
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v $(pwd):/work -w /work/bangc-ops/build/test/ docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ../../../tools/coverage.sh ./mluop_gtest
 
       - name: bangc_clean
-        run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/cambricon/cnnl-ci:v1.2-ubuntu1604
-          bash -c "rm -rf bangc-ops/build"
-
+        run: rm -rf bangc-ops/build

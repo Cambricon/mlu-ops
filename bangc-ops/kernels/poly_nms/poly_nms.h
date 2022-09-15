@@ -26,9 +26,9 @@
 
 #include <algorithm>
 
-#include "core/mlu_op_core.h"
 #include "core/runtime/device.h"
 #include "kernels/poly_nms/enums.h"
+#include "mlu_op.h"
 
 #define MASK_T_BITWIDTH 32  // mask will be stored in an uint32_t value
 
