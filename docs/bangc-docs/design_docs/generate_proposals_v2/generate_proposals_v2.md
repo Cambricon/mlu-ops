@@ -348,8 +348,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
 3. MLU core 内以 batch 作为最外层循环，每次循环计算一个batch， 因第1步中的 MLU core 间拆分， 每个 MLU core上计算 HWA / taskDim 数量的数据。
 
 - **输入数据预处理**
-1. scores shape为[N, H, W， A]， 计算过程中按照[N, H, W， A]方式取数；
-2. bbox_deltas shape为[N, H, W，A*4]， 计算过程中按照[N, 4, 1, H * W * A]方式取数，需要转置；
+1. scores shape为[N, H, W, A]， 计算过程中按照[N, H, W， A]方式取数；
+2. bbox_deltas shape为[N, H, W, A*4]， 计算过程中按照[N, 4, 1, H * W * A]方式取数，需要转置；
 3. anchors shape为 [H, W, A, 4]，计算过程中按照[1，4, 1, H * W * A]方式取数，需要转置；
 4. variances shape为 [H, W, A, 4]， 计算过程中按照[1，4, 1, H * W * A]方式取数，需要转置。
 

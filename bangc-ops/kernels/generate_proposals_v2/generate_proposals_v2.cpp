@@ -280,7 +280,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
       (float *)workspace, (float *)rpn_rois, (float *)rpn_roi_probs,
       (int *)rpn_rois_num, (int *)rpn_rois_batch_size, pre_nms_top_n,
       post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, N, A, H, W));
-  VLOG(5) << "End mluOpUBestKernelGenerateProposalsV2Float kernel";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
