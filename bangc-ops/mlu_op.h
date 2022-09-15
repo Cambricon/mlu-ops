@@ -1793,16 +1793,16 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *  - The shape[0] of \b variances shoule be equal to 4.
  *  - The shape[0] of \b min_sizes shoule be larger than 0.
  *  - The shape[0] of \b aspect_ratios shoule be larger than 0.
- *  - The shape of \b output should be equal with \b var.
- *  - The shape[0] of the \b ouput must be equal with input height.
- *  - The shape[1] of the \b ouput must be equal width input width.
+ *  - The shape of \b output should be same with \b var.
+ *  - The shape[0] of the \b ouput should be equal to input height.
+ *  - The shape[1] of the \b ouput should be equal to input width.
  *  - The shape[2] of the \b ouput and \b var must be less than 2100 
  *     in MLU200 series,be small than 2900 in MLU300 series.
- *  - The shape[2] of \b output and \b var should equal to 
- *     the product of the shape[0] of \b min_sizes and the shape[0]
- *     of \b aspect_ratios add the shape[0] of the \b max_sizes.
- *  - The height should be greater equal 0.
- *  - The width should be greater equal 0.
+ *  - The shape[2] of \b output and \b var should be equal to 
+ *     the result of multiplying the shape[0] of \b min_sizes and the shape[0]
+ *     of \b aspect_ratios and then add the shape[0] of the \b max_sizes.
+ *  - The height should be greater than or equal to 0.
+ *  - The width should be greater than or equal to 0.
  *  - The step_h should be greater than 0.
  *  - The step_w should be greater than 0.
  *  @par Requirements
