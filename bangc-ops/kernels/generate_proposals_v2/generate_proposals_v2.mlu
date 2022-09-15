@@ -228,8 +228,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   T dn = -up;
   T mid = dn + (up - dn) * 0.5;
 
-  int loop_count = pre_nms_top_n;
-  while (loop_count--) {
+  while (true) {
     if (taskDim != 1) {
       __sync_all_ipu();
     }
