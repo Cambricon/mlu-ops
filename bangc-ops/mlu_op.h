@@ -1697,24 +1697,24 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *
  *  @param[in] handle
  *    Input. Handle to a MLUOP context that is used to manage MLU devices
- *    and queues in the poly_nms operation.
+ *    and queues in the prior_box operation.
  *  @param[in] min_sizes_desc
- *    Input. The descriptor of the min_sizes tensor. the min sizes of generated 
+ *    Input. The descriptor of the min_sizes tensor. The min sizes of generated 
  *    prior boxes.
  *  @param[in] min_sizes
  *    Pointer to the MLU memory that stores the min_sizes tensor.
  *  @param[in] aspect_ratios_desc
- *    Input. The descriptor of the aspect_ratios tensor. the aspect ratios of 
+ *    Input. The descriptor of the aspect_ratios tensor. The aspect ratios of 
  *    generated prior boxes.  
  *  @param[in] aspect_ratios
  *    Input. Pointer to the MLU memory that stores the aspect_ratios tensor.
  *  @param[in] variances_desc
- *    Input. The descriptor of the variances tensor. the variances to be 
+ *    Input. The descriptor of the variances tensor. The variances to be 
  *    encoded in prior boxes. 
  *  @param[in] variances
  *    Input. Pointer to the MLU memory that stores the variances tensor.
  *  @param[in] max_sizes_desc
- *    Input. The descriptor of the max_sizes tensor. the max sizes of generated
+ *    Input. The descriptor of the max_sizes tensor. The max sizes of generated
  *    prior boxes.
  *  @param[in] max_sizes
  *    Input. Pointer to the MLU memory that stores the max_sizes tensor.
@@ -1743,7 +1743,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *  @param[out] output
  *    Output. Pointer to the MLU memory that stores the \b output tensor.
  *  @param[in] var_desc
- *    Input. The descriptor of the var tensor, the expanded variances of 
+ *    Input. The descriptor of the var tensor, The expanded variances of 
  *    PriorBox.
  *  @param[out] var
  *    Output. Pointer to the MLU memory that stores the var tensor.
@@ -1799,15 +1799,15 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *  - The shape of \b output should be equal with \b var.
  *  - The shape[0] of the \b ouput must be equal height.
  *  - The shape[1] of the \b ouput must be equal width.
- *  - The shape[2] of the \b ouput and \b var must be small than 2100 
+ *  - The shape[2] of the \b ouput and \b var must be less than 2100 
  *    in MLU200 series,be small than 2900 in MLU300 series.
  *  - The shape[0] of \b aspect_ratios should be equal with 
  *    the product of the shape[0] of \b min_sizes and the shape[0]
  *    of \b aspect_ratios add the shape[0] of the \b max_sizes.
- *  - the height should be larger equal than 0.
- *  - the width should be larger equal than 0.
- *  - The step_h should be larger than 0.
- *  - The step_w should be larger than 0.
+ *  - the height should be greater equal than 0.
+ *  - the width should be greater equal than 0.
+ *  - The step_h should be greater than 0.
+ *  - The step_w should be greater than 0.
  *  @par Requirements
  *  - None.
  *
@@ -1816,9 +1816,9 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  * 
  *  @par Note
  *  - On MLU200 series. The shape[2] of the \b ouput and \b var must be 
- *    small than 2100.
+ *    less than 2100.
  *  - On MLU300 series. The shape[2] of the \b ouput and \b var must be 
- *    small than 2900.
+ *    less than 2900.
  * 
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/

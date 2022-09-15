@@ -53,7 +53,7 @@
 | 是否需要支持原位                                             | 否                                                           |
 | 是否需要支持stride机制                                       | 否                                                           |
 | 是否需要支持广播                                             | 否                                                           |
-| 是否支持0元素                                                | min_sizes/aspect_ratios/variance 0元素直接返回 MLUOP_BAD_PARAM <br>output/var/max_sizes 0元素返回 MLUOP_STATUS_SUCCESS |
+| 是否支持0元素                                                | min_sizes/aspect_ratios/variance 0元素直接返回 MLUOP_BAD_PARAM <br>output/var/  0元素返回 MLUOP_STATUS_SUCCESS<br>max_sizes 0元素正常计算 |
 | 其他特殊需求                                                 |                                                              |
 
 ### 1.2 算子功能和应用场景描述

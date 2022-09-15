@@ -22,14 +22,12 @@
  *************************************************************************/
 #include <string>
 
-#include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
 #include "mlu_op_kernel.h"
 
 #define api "mluOpPriorBox"
@@ -69,8 +67,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
     const int im_height, const int im_width, const float step_h,
     const float step_w, const float offset, const bool clip,
     const bool min_max_aspect_ratios_order,
-    const mluOpTensorDescriptor_t output_desc, void *output,
-    const mluOpTensorDescriptor_t var_desc, void *var) {
+    const mluOpTensorDescriptor_t output_desc, const void *output,
+    const mluOpTensorDescriptor_t var_desc, const void *var) {
   // check input
   PARAM_CHECK(api, handle != nullptr);
   PARAM_CHECK(api, min_sizes_desc != nullptr);
@@ -127,19 +125,7 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
                << ",but now is " << num_priors;
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  // check zero element
-  if ((mluOpGetTensorElementNum(min_sizes_desc) == 0) ||
-      (mluOpGetTensorElementNum(aspect_ratios_desc) == 0) ||
-      (mluOpGetTensorElementNum(variances_desc) == 0)) {
-    LOG(ERROR) << api << " Zero element tensor failure.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
-  if ((mluOpGetTensorElementNum(output_desc)) == 0 ||
-      (mluOpGetTensorElementNum(var_desc)) == 0 ||
-      (mluOpGetTensorElementNum(max_sizes_desc)) == 0) {
-    LOG(WARNING) << api << " Zero element tensor.";
-    return MLUOP_STATUS_SUCCESS;
-  }
+
   // check large tensor
   if ((mluOpGetTensorElementNum(min_sizes_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(aspect_ratios_desc) >= LARGE_TENSOR_NUM) ||
@@ -150,12 +136,6 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
                << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  // check ptr
-  PARAM_CHECK(api, min_sizes != nullptr);
-  PARAM_CHECK(api, aspect_ratios != nullptr);
-  PARAM_CHECK(api, variances != nullptr);
-  PARAM_CHECK(api, output != nullptr);
-  PARAM_CHECK(api, var != nullptr);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -179,9 +159,25 @@ mluOpStatus_t mluOpPriorBox(
   if (pb_status != MLUOP_STATUS_SUCCESS) {
     return pb_status;
   }
-  if (height == 0 || width == 0) {
+  // check zero element
+  if ((mluOpGetTensorElementNum(min_sizes_desc) == 0) ||
+      (mluOpGetTensorElementNum(aspect_ratios_desc) == 0) ||
+      (mluOpGetTensorElementNum(variances_desc) == 0)) {
+    LOG(ERROR) << api << " Zero element tensor failure.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if ((mluOpGetTensorElementNum(output_desc)) == 0 ||
+      (mluOpGetTensorElementNum(var_desc)) == 0) {
+    VLOG(5) << api << " Input skip zero element tensor..";
     return MLUOP_STATUS_SUCCESS;
   }
+  // check ptr
+  PARAM_CHECK(api, min_sizes != nullptr);
+  PARAM_CHECK(api, aspect_ratios != nullptr);
+  PARAM_CHECK(api, variances != nullptr);
+  PARAM_CHECK(api, output != nullptr);
+  PARAM_CHECK(api, var != nullptr);
+  
   const int min_sizes_num = min_sizes_desc->dims[0];
   const int aspect_ratios_num = aspect_ratios_desc->dims[0];
   const int variances_num = variances_desc->dims[0];
@@ -214,7 +210,7 @@ mluOpStatus_t mluOpPriorBox(
     GEN_CASE_DATA(false, "var", var, var_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-
+  GEN_CASE_END();
   cnrtDim3_t k_dim_box;
   cnrtFunctionType_t k_type;
   policyFuncPriorBox(handle, &k_dim_box, &k_type, height);
@@ -227,6 +223,5 @@ mluOpStatus_t mluOpPriorBox(
       height, width, im_height, im_width, step_h, step_w, offset, num_priors,
       clip, min_max_aspect_ratios_order, output, output_size, var, var_size));
   VLOG(5) << "End mluOpBlockKernelPriorBoxFloat kernel";
-  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

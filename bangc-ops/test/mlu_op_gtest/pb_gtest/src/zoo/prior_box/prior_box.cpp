@@ -30,7 +30,7 @@
 
 namespace mluoptest {
 void PriorBoxExecutor::paramCheck() {
-  VLOG(4) << "priorbox param check";
+  VLOG(4) << "Prior_box param check";
   GTEST_CHECK(parser_->getInputNum() == 4);
   GTEST_CHECK(parser_->getOutputNum() == 2);
   for (int i = 0; i < parser_->getInputNum() - 1; i++) {
@@ -62,7 +62,6 @@ void PriorBoxExecutor::initData() {
 }
 
 void PriorBoxExecutor::compute() {
-  paramCheck();
   initData();
   auto min_sizes = data_vector_[0].device_ptr;
   auto aspect_ratios = data_vector_[1].device_ptr;
@@ -79,14 +78,13 @@ void PriorBoxExecutor::compute() {
   interface_timer_.stop();
 }
 
-static void priorBox_Cpu_Kernel(
+void PriorBoxExecutor::priorBox_Cpu_Kernel(
     float* min_sizes, const int min_sizes_num, float* new_aspect_ratios,
     const int new_aspect_ratios_num, float* variances, const int variances_num,
     float* max_sizes, const int max_sizes_num, const int height,
     const int width, const int im_height, const int im_width, const float step_h,
     const float step_w, const float offset, const bool clip, const bool min_max_aspect_ratios_order,
-    float* output, const int output_size, float* var, const int var_size,
-    int64_t& theory_op_sizes) {
+    float* output, const int output_size, float* var, const int var_size) {
   auto img_width = im_width;
   auto img_height = im_height;
 
@@ -112,7 +110,7 @@ static void priorBox_Cpu_Kernel(
           bt[2] = (center_x + box_width) / img_width;
           bt[3] = (center_y + box_height) / img_height;
 
-          theory_op_sizes += 8;
+          theory_op_size_ += 8;
           bt += 4;
           if (max_sizes_num > 0) {
             auto max_size = max_sizes[s];
@@ -123,7 +121,7 @@ static void priorBox_Cpu_Kernel(
             bt[2] = (center_x + box_width) / img_width;
             bt[3] = (center_y + box_height) / img_height;
             bt += 4;
-            theory_op_sizes += 10;
+            theory_op_size_ += 10;
           }
 
           // priors with different aspect ratios
@@ -139,7 +137,7 @@ static void priorBox_Cpu_Kernel(
             bt[2] = (center_x + box_width) / img_width;
             bt[3] = (center_y + box_height) / img_height;
             bt += 4;
-            theory_op_sizes += 12;
+            theory_op_size_ += 12;
           }
         } else {
           // priors with different aspect ratios
@@ -152,7 +150,7 @@ static void priorBox_Cpu_Kernel(
             bt[2] = (center_x + box_width) / img_width;
             bt[3] = (center_y + box_height) / img_height;
             bt += 4;
-            theory_op_sizes += 12;
+            theory_op_size_ += 12;
           }
           if (max_sizes_num > 0) {
             auto max_size = max_sizes[s];
@@ -163,7 +161,7 @@ static void priorBox_Cpu_Kernel(
             bt[2] = (center_x + box_width) / img_width;
             bt[3] = (center_y + box_height) / img_height;
             bt += 4;
-            theory_op_sizes += 10;
+            theory_op_size_ += 10;
           }
         }
       }
@@ -208,14 +206,12 @@ void PriorBoxExecutor::cpuCompute() {
   const bool min_max_aspect_ratios_order = min_max_aspect_ratios_order_;
   float* output = cpu_fp32_output_[0];
   float* var = cpu_fp32_output_[1];
-  int64_t theory_op_sizes = 0;
 
   priorBox_Cpu_Kernel(min_sizes, min_sizes_num, aspect_ratios,
                       aspect_ratios_num, variances, variances_num, max_sizes,
                       max_sizes_num, height, width, image_height, image_width,
                       step_h, step_w, offset, clip, min_max_aspect_ratios_order,
-                      output, output_num, var, var_num, theory_op_sizes);
-  theory_op_size_ = theory_op_sizes;
+                      output, output_num, var, var_num);
 }
 
 int64_t PriorBoxExecutor::getTheoryOps() {
