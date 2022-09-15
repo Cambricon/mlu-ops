@@ -775,11 +775,12 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   // | box_area_gdram | stop_flag | reduce_buffer |
   // |   scores_num   | stop_flag | 2 * taskDim   |
 
-  // nram 17 * N
+  // nram 17 * N, N = max_seg_num
   // | output_scores | output_boxes | scores | boxes | box_area | inter_x1|
+  // |   N           |     4*N      |   N    |  4N   |    N     |    N    |  
+
   // inter_y1| inter_x2 | inter_y2 | inter_s | tmp1 |
-  // |   N           |     4*N      |   N    |  4N   |    N     |    N    |   N
-  // |   N      |   N      |   N     |   N  |
+  // |   N   |   N      |   N      |   N     |  N   |
 
   const int memory_block = 17;
   int limit = PROPOSAL_NRAM_SIZE / memory_block;
