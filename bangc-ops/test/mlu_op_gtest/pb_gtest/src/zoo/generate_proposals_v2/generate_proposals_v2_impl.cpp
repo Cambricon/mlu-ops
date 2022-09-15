@@ -238,6 +238,16 @@ void ProposalForOneImage(T *scores_slice, T *bbox_deltas_slice,
         max_score_id, pixel_offset, &proposals_num);
   }
 
+  if (proposals_num == 0) {
+    *one_image_proposal_num = 1;
+    rpn_rois[rpn_rois_batch_num * 4 + 0] = 0;
+    rpn_rois[rpn_rois_batch_num * 4 + 1] = 0;
+    rpn_rois[rpn_rois_batch_num * 4 + 2] = 0;
+    rpn_rois[rpn_rois_batch_num * 4 + 3] = 0;
+    rpn_roi_probs[rpn_rois_batch_num] = 0;
+    return;
+  }
+
   float offset = pixel_offset ? 1 : 0;
   int real_proposal_num = 0;
   int nms_num = std::min(proposals_num, post_nms_top_n);

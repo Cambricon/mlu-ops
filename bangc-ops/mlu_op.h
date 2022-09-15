@@ -1624,10 +1624,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  */
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
-                             const mluOpTensorDescriptor_t scores_desc,
-                             size_t *size);
+mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc,
+    size_t *size);
 
 /*!
  *  @brief Generate proposals v2.
@@ -1752,33 +1751,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
  */                         
-mluOpStatus_t MLUOP_WIN_API 
-mluOpGenerateProposalsV2(mluOpHandle_t handle,
-                        const int pre_nms_top_n,
-                        const int post_nms_top_n,
-                        const float nms_thresh,
-                        const float min_size,
-                        const float eta,
-                        bool pixel_offset,
-                        const mluOpTensorDescriptor_t scores_desc,
-                        const void *scores,
-                        const mluOpTensorDescriptor_t bbox_deltas_desc,
-                        const void *bbox_deltas,
-                        const mluOpTensorDescriptor_t im_shape_desc,
-                        const void *im_shape,
-                        const mluOpTensorDescriptor_t anchors_desc,
-                        const void *anchors,
-                        const mluOpTensorDescriptor_t variances_desc,
-                        const void *variances,
-                        void *workspace,
-                        size_t workspace_size,
-                        const mluOpTensorDescriptor_t rpn_rois_desc,
-                        void *rpn_rois,
-                        const mluOpTensorDescriptor_t rpn_roi_probs_desc,
-                        void *rpn_roi_probs,
-                        const mluOpTensorDescriptor_t rpn_rois_num_desc,
-                        void *rpn_rois_num,
-                        void *rpn_rois_batch_size);
+mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
+    mluOpHandle_t handle, const int pre_nms_top_n, const int post_nms_top_n,
+    const float nms_thresh, const float min_size, const float eta,
+    bool pixel_offset, const mluOpTensorDescriptor_t scores_desc,
+    const void *scores, const mluOpTensorDescriptor_t bbox_deltas_desc,
+    const void *bbox_deltas, const mluOpTensorDescriptor_t im_shape_desc,
+    const void *im_shape, const mluOpTensorDescriptor_t anchors_desc,
+    const void *anchors, const mluOpTensorDescriptor_t variances_desc,
+    const void *variances, void *workspace, size_t workspace_size,
+    const mluOpTensorDescriptor_t rpn_rois_desc, void *rpn_rois,
+    const mluOpTensorDescriptor_t rpn_roi_probs_desc, void *rpn_roi_probs,
+    const mluOpTensorDescriptor_t rpn_rois_num_desc, void *rpn_rois_num,
+    void *rpn_rois_batch_size);
 
 /*!
  *  @brief Polygon Non Maximum Suppression.

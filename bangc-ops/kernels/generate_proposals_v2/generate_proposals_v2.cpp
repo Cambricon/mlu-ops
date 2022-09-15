@@ -36,9 +36,9 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type, const int HWA) {
   int job = mluop::runtime::getJobLimitCapability(handle);
 
+  // Make sure at least 128 data is processed on each core
   int per_core_num = HWA / job;
   const int min_per_core_num = 128;
-
   while (per_core_num < min_per_core_num && job >= 4) {
     per_core_num *= 2;
     job /= 2;
