@@ -25,6 +25,11 @@ if [ $# != 0 ]; then
           MLU_SUB_MODULE=$1
           shift
           ;;
+      --cases_dir)
+          shift
+          CASES_DIR=$1
+          shift
+          ;;
       -h | --help)
           usage
           exit 0
