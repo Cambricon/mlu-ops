@@ -1611,6 +1611,180 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
     size_t *size);
 
 /*!
+ *  @brief Gets extra space size that is needed in poly_nms operation.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the psroipool_forward operation.
+ *  @param[in] scores_desc
+ *    Input. The descriptor of the scores tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t. 
+ *  @param[out] size
+ *    Output. A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc,
+    size_t *size);
+
+/*!
+ *  @brief This operator is the second version of generate_proposals op to
+ *    generate bounding box proposals for Faster Region-CNN.
+ *    The proposals are generated for a list of images based on image
+ *    score 'Scores', bounding box regression result 'BboxDeltas' as
+ *    well as predefined bounding box shapes 'anchors'. Greedy non-maximum
+ *    suppression is applied to generate the final bounding boxes.
+ *
+ *  @param[in] handle
+ *    Input. Handle to a MLUOP context that is used to manage MLU devices
+ *    and queues in the poly_nms operation.
+ *  @param[in] pre_nms_top_n
+ *    Input. Number of top scoring RPN proposals to keep before applying
+ *    NMS.
+ *  @param[in] post_nms_top_n
+ *    Input. Number of top scoring RPN proposals to keep after applying
+ *    NMS.
+ *  @param[in] nms_thresh
+ *    Input. NMS threshold used on RPN proposals.
+ *  @param[in] min_size
+ *    Input. Proposal height and width both need to be greater than this
+ *    min_size.
+ *  @param[in] eta
+ *    Input. The parameter for adaptive NMS.
+ *  @param[in] pixel_offset
+ *    Input. If true, im_shape pixel offset is 1.
+ *  @param[in] scores_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] scores
+ *    Input. Pointer to the MLU memory that stores the input tensor. The
+ *    scores from conv is in shape (N, H, W, A), N is batch size, A is
+ *    number of anchors, H and W are height and width of the feature map.
+ *  @param[in] bbox_deltas_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] bbox_deltas
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *  @param[in] im_shape_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] im_shape
+ *    Input. Pointer to the MLU memory that stores the input tensor. Image
+ *    shape in shape (N, 2), in format (height, width)
+ *  @param[in] anchors_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] anchors
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Bounding box anchors from anchor_generator_op is in shape (H, W, A, 4).
+ *  @param[in] variances_desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] variances
+ *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Bounding box variances with same shape as `anchors`.
+ *  @param[in] workspace
+ *    Input. Pointer to the MLU memory that stores the extra workspace.
+ *  @param[in] workspace_size
+ *    Input. The size of extra space.
+ *  @param[in] rpn_rois_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] rpn_rois
+ *    Output. Pointer to the MLU memory that stores the output tensor.
+ *    Output proposals with shape (N * post_nms_top_n, 4).
+ *  @param[in] rpn_roi_probs_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] rpn_roi_probs
+ *    Output. Pointer to the MLU memory that stores the output tensor.
+ *            Scores of proposals with shape (N * post_nms_top_n, 1).
+ *  @param[in] rpn_rois_num_desc
+ *    Input. The descriptor of the output tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] rpn_rois_num
+ *    Output. Pointer to the MLU memory that stores the output tensor. The
+ *    number of Rpn RoIs in each image.
+ *  @param[in] rpn_rois_batch_size
+ *    Output. Pointer to the MLU memory that stores the output tensor. Indicates
+ *    the number of return values of output.
+ * 
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *    ::MLUOP_STATUS_NOT_SUPPORTED
+ * 
+ *  @par Formula
+ *  - See "generate_proposals_v2 Operation" section in "Cambricon MLUOP User
+ *    Guide" for details.
+ * 
+ *  @par Data Type
+ *  - The supported data types of input and output tensors are as follows:
+ *     - scores: float.
+ *     - bbox_deltas: float.
+ *     - im_shape: float.
+ *     - anchors: float.
+ *     - variances: float.
+ *     - pre_nms_top_n: int32.
+ *     - post_nms_top_n: int32.
+ *     - nms_thresh: float.
+ *     - min_size: float.
+ *     - eta: float.
+ *     - pixel_offset: bool.
+ *     - rpn_rois: float.
+ *     - rpn_roi_probs: int32.
+ *     - rpn_rois_num: int32.
+ *     - rpn_rois_batch_size: int32.
+ * 
+ *  @par Data Layout
+ *  - The supported data layout of \b input, \b output, 
+ *     \b output_size are as follows:
+ * 
+ *   - Input tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output_size tensor: \p MLUOP_LAYOUT_ARRAY.
+ * 
+ *  @par Scale Limitation
+ *  - The dimension of \b scores should be equal to 4.
+ *  - The dimension of \b bbox_deltas should be equal to 4.
+ *  - The dimension of \b im_shape should be equal to 2.
+ *  - The dimension of \b anchors should be equal to 4.
+ *  - The dimension of \b variances should be equal to 4.
+ *  - The dimension of \b rpn_rois should be equal to 2.
+ *  - The dimension of \b rpn_roi_probs should be equal to 2.
+ *  - The dimension of \b rpn_rois_num should be equal to 1.
+ *  - The dimension of \b rpn_rois_batch_size should be equal to 1.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ * 
+ *  @par Note
+ *  - This commit does not support nan/inf.
+ *  - Not support adaptive NMS. The attribute 'eta' should not less
+ *    than 1.
+ *  - 'nms_thresh' should be more than 0.
+ * 
+ * @par Reference
+ * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
+ */                         
+mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
+    mluOpHandle_t handle, const int pre_nms_top_n, const int post_nms_top_n,
+    const float nms_thresh, const float min_size, const float eta,
+    bool pixel_offset, const mluOpTensorDescriptor_t scores_desc,
+    const void *scores, const mluOpTensorDescriptor_t bbox_deltas_desc,
+    const void *bbox_deltas, const mluOpTensorDescriptor_t im_shape_desc,
+    const void *im_shape, const mluOpTensorDescriptor_t anchors_desc,
+    const void *anchors, const mluOpTensorDescriptor_t variances_desc,
+    const void *variances, void *workspace, size_t workspace_size,
+    const mluOpTensorDescriptor_t rpn_rois_desc, void *rpn_rois,
+    const mluOpTensorDescriptor_t rpn_roi_probs_desc, void *rpn_roi_probs,
+    const mluOpTensorDescriptor_t rpn_rois_num_desc, void *rpn_rois_num,
+    void *rpn_rois_batch_size);
+
+/*!
  *  @brief Polygon Non Maximum Suppression.
  *
  *  @param[in] handle
