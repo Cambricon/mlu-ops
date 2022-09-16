@@ -1,0 +1,6 @@
+_build
+build
+*.bak
+datatype.rst
+api.rst
+doxygen
