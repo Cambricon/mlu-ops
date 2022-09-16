@@ -20,7 +20,6 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """Logaddexp2 for bangpy tcp."""
 import bangpy
-from bangpy.common.dtypes import DType
 from bangpy.script import tcp, build_module, ty
 
 DTYPES = [bangpy.float16, bangpy.float32]
@@ -36,7 +35,10 @@ class Logaddexp2:
 
     def __init__(self, dtype: ty.string, arch: ty.string) -> None:
         self.dtype = dtype
-        self.dtype_size = DType(dtype).bytes
+        if self.dtype == "float32":
+            self.dtype_size = 4
+        else: # dtype == "float16"
+            self.dtype_size = 2
         self.log2 = 0.6931471805599453
         self.arch = arch
 
@@ -57,10 +59,8 @@ class Logaddexp2:
         # out = ex1 + log2(1+2**(ex0-ex1))
         tcp.subtract(in0, ex0, ex1)
         tcp.exp2(out, in0)
-        # self.exp2(out, in0)
         tcp.add(out, out, 1)
         tcp.log(out, out)
-        # tcp.log(out, out)
         tcp.multiply(out, out, 1 / self.log2)
         tcp.add(out, out, ex1)
         # if ex0-ex1 > 15, out = ex0
