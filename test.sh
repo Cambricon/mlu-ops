@@ -11,10 +11,11 @@ usage () {
     echo "OPTIONS:"
     echo "      -h, --help         Print usage"
     echo "      --sub_module=*     Mlu-ops sub_module:[bangc, bangpy]"
+    echo "      --cases_dir=*      [Optional]Test cases for bangc-ops test"
     echo
 }
 if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi
-cmdline_args=$(getopt -o h --long sub_module: -n 'test.sh' -- "$@")
+cmdline_args=$(getopt -o h --long sub_module:,cases_dir: -n 'test.sh' -- "$@")
 eval set -- "$cmdline_args"
 if [ $# != 0 ]; then
   while true; do
@@ -22,6 +23,11 @@ if [ $# != 0 ]; then
       --sub_module)
           shift
           MLU_SUB_MODULE=$1
+          shift
+          ;;
+      --cases_dir)
+          shift
+          CASES_DIR=$1
           shift
           ;;
       -h | --help)
@@ -45,6 +51,11 @@ if [[ ${MLU_SUB_MODULE} == "bangc" ]]; then
   # Test BANGC all operators cases.
   cd bangc-ops/build/test/
   ./mluop_gtest
+  
+  if [[ -n "${CASES_DIR}" && -a "${CASES_DIR}" ]]; then
+    ./mluop_gtest --cases_dir="${CASES_DIR}"
+  fi
+
   cd ../../..
 fi
 
