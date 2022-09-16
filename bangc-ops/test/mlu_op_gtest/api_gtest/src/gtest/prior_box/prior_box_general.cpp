@@ -142,10 +142,10 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
       return true;
     }
     mluOpStatus_t status = mluOpPriorBox(
-        handle_, height_, width_, im_height_, im_width_, min_desc_, min_,
-        aspect_ratios_desc_, aspect_ratios_, variance_desc_, variance_,
-        max_desc_, max_, step_w_, step_h_, offset_, is_clip_,
-        min_max_aspect_order_, output_desc_, output_, var_desc_, var_);
+        handle_, min_desc_, min_, aspect_ratios_desc_, aspect_ratios_,
+        variance_desc_, variance_, max_desc_, max_, height_, width_, im_height_,
+        im_width_, step_h_, step_w_, offset_, is_clip_, min_max_aspect_order_,
+        output_desc_, output_, var_desc_, var_);
     destroy();
     return expected_status_ == status;
   }
