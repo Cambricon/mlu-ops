@@ -41,7 +41,7 @@ class prior_box : public testing::Test {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
-    if (min_desc_) {
+    if (min_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&min_desc_));
       std::vector<int> dim_size = {1};
       MLUOP_CHECK(mluOpSetTensorDescriptor(min_desc_, MLUOP_LAYOUT_ARRAY,
@@ -58,20 +58,20 @@ class prior_box : public testing::Test {
           mluOpSetTensorDescriptor(aspect_ratios_desc_, MLUOP_LAYOUT_ARRAY,
                                    MLUOP_DTYPE_FLOAT, 1, dim_size.data()));
     }
-    if (min) {
+    if (aspect) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&aspect_ratios_, 8));
     }
     if (variance_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&variance_desc_));
       std::vector<int> dim_size = {4};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(min_desc_, MLUOP_LAYOUT_ARRAY,
+      MLUOP_CHECK(mluOpSetTensorDescriptor(variance_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 1,
                                            dim_size.data()));
     }
     if (variance) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&variance_, 8));
     }
-    if (max_desc_) {
+    if (max_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&max_desc_));
       std::vector<int> dim_size = {1};
       MLUOP_CHECK(mluOpSetTensorDescriptor(max_desc_, MLUOP_LAYOUT_ARRAY,
