@@ -32,12 +32,19 @@ jobs:
           ./build.sh --sub_module=bangpy
 
 
-      - name: test_bangc_op
+      - name: test_bangc_ops
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/default_platform
+
+      - name: test_bangc_ops_370
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
           -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/default_platform
+
 
       - name: test_bangpy_ops
         run: >
