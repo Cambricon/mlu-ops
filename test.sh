@@ -11,6 +11,7 @@ usage () {
     echo "OPTIONS:"
     echo "      -h, --help         Print usage"
     echo "      --sub_module=*     Mlu-ops sub_module:[bangc, bangpy]"
+    echo "      --cases_dir=*      [Optional]Test cases for bangc-ops test"
     echo
 }
 if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi
@@ -45,6 +46,11 @@ if [[ ${MLU_SUB_MODULE} == "bangc" ]]; then
   # Test BANGC all operators cases.
   cd bangc-ops/build/test/
   ./mluop_gtest
+  
+  if [[ -n "${CASES_DIR}" && -a "${CASES_DIR}" ]]; then
+    ./mluop_gtest --cases_dir="${CASES_DIR}"
+  fi
+
   cd ../../..
 fi
 
