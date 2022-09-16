@@ -1736,7 +1736,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *    Input. Whether to clip out-of-boundary boxes.
  *  @param[in] min_max_aspect_ratios_order
  *    Input. If the value is set as true, the \b output prior box is in 
- *      the order of [min, max, aspect_ratios];otherwise the order is 
+ *      the order of [min, max, aspect_ratios]; otherwise the order is 
  *      [min, aspect_ratios, max].
  *  @param[in] output_desc
  *    Input. The descriptor of the \b output tensor. The \b output prior boxes of 
@@ -1799,8 +1799,8 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *  - The shape[2] of the \b ouput and \b var must be less than 2100 
  *     in MLU200 series,be small than 2900 in MLU300 series.
  *  - The shape[2] of \b output and \b var should be equal to 
- *     the result of multiplying the shape[0] of \b min_sizes and the shape[0]
- *     of \b aspect_ratios and then add the shape[0] of the \b max_sizes.
+ *     the product of shape[0] of \b min_sizes and \b aspect_ratios 
+ *     plus shape[0] of \b max_sizes.
  *  - The height should be greater than or equal to 0.
  *  - The width should be greater than or equal to 0.
  *  - The step_h should be greater than 0.
@@ -1813,7 +1813,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  * 
  *  @par Note
  *  - The shape[2] of the \b ouput and \b var must be 
- *    less than 2100 in MLU200 series,while less than 2900 in MLU300 series.
+ *    less than 2100 in MLU200 series, while less than 2900 in MLU300 series.
  * 
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/
