@@ -143,6 +143,7 @@ message Node {
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
+  optional MlNmsParam ml_nms_param                    = 4020;  // MlNmsParam
 }
 
 
@@ -244,5 +245,10 @@ message PsRoiPoolBackwardParam{
 
 // param to call mluOpPolyNms()
 message PolyNmsParam {
+  required float iou_threshold = 1 [default = 0.2];
+}
+
+// param to call mluOpMlNms()
+message MlNmsParam {
   required float iou_threshold = 1 [default = 0.2];
 }
