@@ -15,7 +15,7 @@ usage () {
     echo
 }
 if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi
-cmdline_args=$(getopt -o h --long sub_module: -n 'test.sh' -- "$@")
+cmdline_args=$(getopt -o h --long sub_module:,cases_dir: -n 'test.sh' -- "$@")
 eval set -- "$cmdline_args"
 if [ $# != 0 ]; then
   while true; do
