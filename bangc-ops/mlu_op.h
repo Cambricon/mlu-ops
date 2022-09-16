@@ -1635,22 +1635,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
  *    Input. Handle to a MLUOP context that is used to manage MLU devices
  *    and queues in the poly_nms operation.
  *  @param[in] pre_nms_top_n
- *    Input. The pre_nms_top_n data.
+ *    Input. Number of top scoring RPN proposals to keep before applying
+ *    NMS.
  *  @param[in] post_nms_top_n
- *    Input. The post_nms_top_n data
+ *    Input. Number of top scoring RPN proposals to keep after applying
+ *    NMS.
  *  @param[in] nms_thresh
- *    Input. The nms_thresh data
+ *    Input. NMS threshold used on RPN proposals.
  *  @param[in] min_size
- *    Input. The min_size data
+ *    Input. Proposal height and width both need to be greater than this
+ *    min_size.
  *  @param[in] eta
- *    Input. The eta data
+ *    Input. The parameter for adaptive NMS.
  *  @param[in] pixel_offset
- *    Input. The pixel_offset data
+ *    Input. If true, im_shape pixel offset is 1.
  *  @param[in] scores_desc
  *    Input. The descriptor of the input tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[in] scores
- *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Input. Pointer to the MLU memory that stores the input tensor. The
+ *    scores from conv is in shape (N, H, W, A), N is batch size, A is
+ *    number of anchors, H and W are height and width of the feature map.
  *  @param[in] bbox_deltas_desc
  *    Input. The descriptor of the input tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
@@ -1660,17 +1665,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
  *    Input. The descriptor of the input tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[in] im_shape
- *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Input. Pointer to the MLU memory that stores the input tensor. Image
+ *    shape in shape (N, 2), in format (height, width)
  *  @param[in] anchors_desc
  *    Input. The descriptor of the input tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[in] anchors
  *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Bounding box anchors from anchor_generator_op is in shape (H, W, A, 4).
  *  @param[in] variances_desc
  *    Input. The descriptor of the input tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[in] variances
  *    Input. Pointer to the MLU memory that stores the input tensor.
+ *    Bounding box variances with same shape as `anchors`.
  *  @param[in] workspace
  *    Input. Pointer to the MLU memory that stores the extra workspace.
  *  @param[in] workspace_size
@@ -1680,16 +1688,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
  *    see ::mluOpTensorDescriptor_t.
  *  @param[out] rpn_rois
  *    Output. Pointer to the MLU memory that stores the output tensor.
+ *    Output proposals with shape (N * post_nms_top_n, 4).
  *  @param[in] rpn_roi_probs_desc
  *    Input. The descriptor of the output tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[out] rpn_roi_probs
  *    Output. Pointer to the MLU memory that stores the output tensor.
+ *            Scores of proposals with shape (N * post_nms_top_n, 1).
  *  @param[in] rpn_rois_num_desc
  *    Input. The descriptor of the output tensor. For detailed information,
  *    see ::mluOpTensorDescriptor_t.
  *  @param[out] rpn_rois_num
- *    Output. Pointer to the MLU memory that stores the output tensor.
+ *    Output. Pointer to the MLU memory that stores the output tensor. The
+ *    number of Rpn RoIs in each image.
  *  @param[in] rpn_rois_batch_size
  *    Output. Pointer to the MLU memory that stores the output tensor. Indicates
  *    the number of return values of output.
@@ -1747,6 +1758,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
  * 
  *  @par Note
  *  - This commit does not support nan/inf.
+ *  - Not support adaptive NMS. The attribute 'eta' should not less
+ *    than 1.
+ *  - 'nms_thresh' should be more than 0.
  * 
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
