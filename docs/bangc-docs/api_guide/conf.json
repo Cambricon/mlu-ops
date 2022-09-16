@@ -1,0 +1,133 @@
+{
+    "package": [
+        "\\\\usepackage{amsmath}",
+        "\\\\usepackage[table]{xcolor}",
+        "\\\\usepackage{eso-pic}",
+        "\\\\usepackage{wallpaper}",
+        "%\\\\usepackage{titlesec}",
+        "\\\\usepackage{tocbibind}",
+        "% \\\\usepackage{draftwatermark}",
+        "\\\\usepackage{enumitem}",
+        "\\\\usepackage{tcolorbox}",
+        "\\\\usepackage{listings}",
+        "\\\\usepackage{framed}",
+        "\\\\usepackage{color}",
+        "\\\\usepackage{multirow}",
+        "% \\\\usepackage[justification=centering]{caption}"
+    ],
+    "replacepackage": {
+        "comment": "该章节内容是为了替换现有tex里面包的配置，左边为tex文件现有内容，右边是替换内容。",
+        "\\\\usepackage{hyperref}": "\\\\usepackage[bookmarksnumbered=true]{hyperref}",
+        "\\\\sphinxtableofcontents": "\\\\ThisURCornerWallPaper{1}{chapterbkpaper.pdf}\n\\\\sphinxtableofcontents",
+        "\\\\chapter{([\\s\\S].*)}": "\\\\chapter{\\1}\n\\\\ThisURCornerWallPaper{1}{chapterbkpaper.pdf}",
+        "\\\\listoffigures": "\\\\ThisURCornerWallPaper{1}{chapterbkpaper.pdf}\n\\\\listoffigures",
+        "\\\\listoftables": "\\\\newpage\n\\\\ThisURCornerWallPaper{1}{chapterbkpaper.pdf}\n\\\\listoftables",
+        "\\\\footnotesize\\\\raggedright\\\\printindex": "% \\\\footnotesize\\\\raggedright\\\\printindex",
+        "\\\\begin{itemize}": "\\\\begin{itemize}[leftmargin=*]",
+        "\\\\begin{enumerate}": "\\\\begin{enumerate}[leftmargin=*]",
+        "\\\\setmainfont{FreeSerif}\\[[\\s\\S]*?\\]": "",
+        "\\\\setsansfont{FreeSans}\\[[\\s\\S]*?\\]": "",
+        "\\\\setmonofont{FreeMono}\\[[\\s\\S]*?\\]": "",
+        "Extension([\\s\\S]*?)= .otf,":"Extension    = ,",
+        "\\\\begin{sphinxalltt}":"\\\\begin{sphinxVerbatim}[commandchars=\\\\\\\\\\\\{\\}]",
+        "\\\\end{sphinxalltt}":"\\\\end{sphinxVerbatim}",
+        "\\\\begin{sphinxadmonition}{note}{注解:}":"\\\\begin{tcolorbox}[colframe={noteframecolor},colback={notebackcolor},coltitle=white,fonttitle=\\\\bfseries,title=注解：]",
+        "\\\\begin{sphinxadmonition}{note}{备注:}":"\\\\begin{tcolorbox}[colframe={noteframecolor},colback={notebackcolor},coltitle=white,fonttitle=\\\\bfseries,title=注解：]",
+        "\\\\begin{sphinxadmonition}{warning}{警告:}":"\\\\begin{tcolorbox}[colframe={warningframecolor},colback={warningbackcolor},coltitle=white,fonttitle=\\\\bfseries,title=警告：]",
+        "\\\\begin{sphinxadmonition}{tip}{小技巧:}":"\\\\begin{tcolorbox}[colframe={noteframecolor},colback={notebackcolor},coltitle=white,fonttitle=\\\\bfseries,title=小技巧：]",
+        "\\\\begin{sphinxadmonition}{attention}{注意:}":"\\\\begin{tcolorbox}[colframe={warningframecolor},colback={warningbackcolor},coltitle=white,fonttitle=\\\\bfseries,title=注意：]",
+        "\\\\begin{sphinxadmonition}{hint}{提示:}":"\\\\begin{tcolorbox}[colframe={hintframecolor},colback={hintbackcolor},coltitle=white,fonttitle=\\\\bfseries,title=提示：]",
+        "\\\\end{sphinxadmonition}":"\\\\end{tcolorbox}",
+        "\\\\begin{sphinxadmonition}{note}{Note:}":"\\\\begin{tcolorbox}[colframe={noteframecolor},colback={notebackcolor},coltitle=white,fonttitle=\\\\bfseries,title=Note:]",
+        "\\\\begin{sphinxadmonition}{warning}{Warning:}":"\\\\begin{tcolorbox}[colframe={warningframecolor},colback={warningbackcolor},coltitle=white,fonttitle=\\\\bfseries,title=Warning:]",
+        "\\\\begin{sphinxadmonition}{tip}{Tip:}":"\\\\begin{tcolorbox}[colframe={noteframecolor},colback={notebackcolor},coltitle=white,fonttitle=\\\\bfseries,title=Tip:]",
+        "\\\\begin{sphinxadmonition}{attention}{Attention:}":"\\\\begin{tcolorbox}[colframe={warningframecolor},colback={warningbackcolor},coltitle=white,fonttitle=\\\\bfseries,title=Attention:]",
+        "\\\\begin{sphinxadmonition}{hint}{Hint:}":"\\\\begin{tcolorbox}[colframe={hintframecolor},colback={hintbackcolor},coltitle=white,fonttitle=\\\\bfseries,title=Hint:]"
+    },
+    "customoptions": [
+        "% \\\\numberwithin{figure}{chapter}",
+        "% \\\\numberwithin{table}{chapter}",
+        "\\\\titleformat{\\\\chapter}{\\\\raggedleft\\\\huge\\\\bfseries\\\\color{white}}{\\\\thechapter}{0.5em}{}",
+        "\\\\titlespacing{\\\\chapter}{0pt}{50pt}{25pt}",
+        "\\\\definecolor{noteframecolor}{RGB}{91,163,235}",
+        "\\\\definecolor{notebackcolor}{RGB}{222,237,251}",
+        "\\\\definecolor{warningframecolor}{RGB}{235,162,28}",
+        "\\\\definecolor{warningbackcolor}{RGB}{255,247,236}",
+        "\\\\definecolor{hintframecolor}{RGB}{70,193,196}",
+        "\\\\definecolor{hintbackcolor}{RGB}{226,254,249}",
+        "\\\\definecolor{camblue}{RGB}{0,89,196}",
+        "% \\\\SetWatermarkText{Cambricon}",
+        "% \\\\SetWatermarkLightness{0.9}",
+        "% \\\\SetWatermarkScale{1}",
+        "\\\\renewcommand{\\\\labelitemi}{$\\\\vcenter{\\\\hbox{\\\\scriptsize$\\\\bullet$}}$}",
+        "\\\\definecolor{shadecolor}{RGB}{220,220,220}"
+    ],
+    "isfiguretabletoc": {
+        "comment": "插图目录英文：List of  Figures;表格目录英文：List of Tables.",
+        "isfigurestoc": false,
+        "istablestoc": false,
+        "figurestoc": [
+            "\\\\renewcommand\\\\listfigurename{List of Figures}",
+            "\\\\listoffigures"
+        ],
+        "tablestoc": [
+            "\\\\renewcommand\\\\listtablename{List of Tables}",
+            "\\\\listoftables"
+        ]
+    },
+    "tables": {
+        "comment": "isname:true-根据表格的name属性查找表格，false-根据表格的标题查找表格。isnewpage:true-强制在新页生成表格，false-默认。ispartial:true-采用部分匹配查找表格，false-精确匹配查找表格；isLongTable:true-强制设置为长表格，false-不设置长表格。isVertical:true-对第一列进行渲染，false-不对第一列进行渲染。isCusHead：true-对第一行进行渲染，false-不对第一行进行渲染。",
+        "isname": false,
+        "rowtype": "",
+        "headtype": "{camblue!100}",
+        "headfontcolor": "\\textbf{\\textcolor{white}{}}",
+        "styles": [
+            {
+                "align": "centering",
+                "caption": "分区信息xxxxx",
+                "captionalign": "left",
+                "isLongTable": true,
+                "isVertical": false,
+                "isCusHead": true,
+                "isnewpage":true,
+                "ispartial":true
+            }
+
+        ]
+    },
+    "image": {
+        "styles": [
+            {
+                "name": "",
+                "align": "",
+                "caption": ""
+            }
+        ]
+    },
+    "sensitivewords": [
+        "安防",
+        "监听",
+        "stream",
+        "hisi",
+        "展讯",
+        "英伟达",
+        "nvidia",
+        "讯飞",
+        "展锐",
+        "c10",
+        "c20",
+        "IK",
+        "AH",
+        "US",
+        "MLU320"
+    ],
+    "ignorewarnkey": [
+    "sdk_memory.rst && 文档没有加入到任何目录树中",
+    "sdk_memory.rst && document isn't included in any toctree",
+    "Package hyperref Warning",
+    "LaTeX Font Warning",
+    "Package cmap Warning",
+    "Package xeCJK Warning"
+    ]
+
+}
