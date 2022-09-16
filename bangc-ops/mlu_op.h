@@ -1629,7 +1629,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
     size_t *size);
 
 /*!
- *  @brief Generate proposals v2.
+ *  @brief This operator is the second version of generate_proposals op to
+ *    generate bounding box proposals for Faster RCNN.
+ *    The proposals are generated for a list of images based on image
+ *    score 'Scores', bounding box regression result 'BboxDeltas' as
+ *    well as predefined bounding box shapes 'anchors'. Greedy non-maximum
+ *    suppression is applied to generate the final bounding boxes.
  *
  *  @param[in] handle
  *    Input. Handle to a MLUOP context that is used to manage MLU devices
