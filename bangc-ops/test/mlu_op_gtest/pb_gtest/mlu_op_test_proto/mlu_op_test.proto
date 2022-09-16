@@ -142,6 +142,7 @@ message Node {
   optional SqrtParam   sqrt_param                     = 4003;  // param
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
+  optional PriorBoxParam prior_box_param              = 4006;   // PriorBoxParam
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
 }
 
@@ -245,4 +246,18 @@ message PsRoiPoolBackwardParam{
 // param to call mluOpPolyNms()
 message PolyNmsParam {
   required float iou_threshold = 1 [default = 0.2];
+}
+
+// param to call mluOpPriorBox()
+message PriorBoxParam {
+  required int32 height                     = 1 [default = 1];
+  required int32 width                      = 2 [default = 1];
+  required int32 im_height                  = 3 [default = 300];
+  required int32 im_width                   = 4 [default = 300];
+  required bool flip                        = 5 [default = true];
+  required bool clip                        = 6 [default = true];
+  required float step_w                     = 7 [default = 0.0];
+  required float step_h                     = 8 [default = 0.0];
+  required float offset                     = 9 [default = 0.5];
+  required bool min_max_aspect_ratios_order = 10 [default = true];
 }
