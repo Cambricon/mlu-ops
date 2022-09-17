@@ -25,348 +25,313 @@ used to measure the distance between two distributions
 
 import bangpy
 from bangpy import tcp
-from bangpy.tcp.runtime import TaskType
+from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float32]
 TARGET_LIST = ["mlu290"]
+# TARGET_LIST = ["mlu370-s4"]
 KERNEL_NAME = "kldivloss"
-CORES_PER_CLUSTER = 4
 
 
 class KlDivLoss(object):
     """Operator description:
-        The Kullback-Leibler divergence loss is used to measure the distance
-        between two distributions (discrete and continuous)
+    The Kullback-Leibler divergence loss is used to measure the distance
+    between two distributions (discrete and continuous)
 
-        log_target : if target has been logged(0:no / 1:yes)
-            if log_target == 0 : out = target * (log(target) - input)
-            if log_target == 1 : out = exp(target) * (target - input)
+    log_target : if target has been logged(0:no / 1:yes)
+        if log_target == 0 : out = target * (log(target) - input)
+        if log_target == 1 : out = exp(target) * (target - input)
 
-        reduction : perform reduction operation according to the reduction argument
-            The kind of reduction:
-                0 represents "none": out
-                1 represents "sum" : sum(out)
-                2 represents "mean" : sum(out) // dataSize
-                3 represents "batchmean" : sum(out) // batchSize
+    reduction : perform reduction operation according to the reduction argument
+        The kind of reduction:
+            0 represents "none": out
+            1 represents "sum" : sum(out)
+            2 represents "mean" : sum(out) // dataSize
+            3 represents "batchmean" : sum(out) // batchSize
     """
 
-    def __init__(self, dtype, target, task_type):
+    def __init__(
+        self, task_num: ty.int32, nram_size: ty.int32, dtype: ty.string
+    ) -> None:
         """Construct a new KlDivLoss class.
 
         Parameters
         ----------
-        dtype : bangpy.DType
+        task_num : bangpy.common.DType
+            The task number of runtime.
+
+        nram_size : bangpy.common.DType
+            The size of nram.
+
+        dtype : bangpy.common.DType
             The data type of input.
-
-        target : str
-            Target MLU device name.
-
-        task_type : str
-            The task type of runtime.
 
         Attributes
         ----------
-        dtype : bangpy.DType
-            The data type of input.
-
-        target : str
-            Target MLU device name.
-
-        tcp : tcp.TCP
-            TCP container.
-
         task_num : int
             The task number of runtime.
 
-        batchSize : tcp.SizeVar
-            The batch size of input.
-
-        batchLength : tcp.SizeVar
-            The length of each batch.
-
-        totalData : int
-            The data size of input.
-
-        inputShape :
-            The shape of input.
-
-        outShape :
-            The shape of output.
-
-        nram_size : int
+        nram_size : bangpy.common.DType
             The size of nram.
+
+        dtype : bangpy.DType
+            The data type of input.
 
         dtype_sz : int
             The byte of each element.
 
-        compute_row : int
-            How many bytes equals 128 bits.
-
         single_buffer_size : int
             The size of single buffer.
         """
-        # Check parameters.
-        if not ((dtype in DTYPES) and (target in TARGET_LIST)):
-            raise KeyError("please pass correct parameters.")
-
+        self.task_num = task_num
+        self.nram_size = nram_size
         self.dtype = dtype
-        self.target = target
-        self.tcp = tcp.TCP(target)
-        self.task_num = task_type.value * CORES_PER_CLUSTER
 
-        self.batchSize = self.tcp.SizeVar("batchSize")
-        self.batchLength = self.tcp.SizeVar("batchLength")
-        self.totalData = self.batchLength * self.batchSize
-        self.inputShape = (self.batchSize, self.batchLength)
-        self.outShape = (self.totalData,)
-
-        self.nram_size = TARGET(self.target).nram_size
-        self.dtype_sz = dtype.bytes
-        self.compute_row = 128 // self.dtype_sz
-        self.single_buffer_size = self.nram_size // 4 // self.dtype.bytes
-
-        self.tcp.launch_task(self.task_num, 1, 1)
-        self.tcp.launch_cluster(task_type.value)
-
-    def compute_body(self):
-        """Function description:
-            Split data for each buffer, and calculate formula mentioned above
-            If reduction is not equal 0, do the corresponding reduction operation
-        """
-        # calculate split strategy
-        cluster_num = self.task_num // 4
-        cluster_id = self.tcp.clusterId
-        task_id = self.tcp.taskId
-
-        # gets the data length to be calculated for each calculate
-        data_calculated_each_time = self.single_buffer_size // self.dtype_sz
-        # gets the number of cycles required for each task
-        data_calculated_each_task = self.tcp.Scalar(
-            bangpy.int32, name="data_calculated_each_task"
+        self.dtype_sz = 4  # "float32"
+        self.single_buffer_size = (((self.nram_size - 4 * 1024) // 6) // (128 * 64)) * (
+            (128 * 64)  # todo: why 128 * 64 is ok, but 128 causes errors
         )
-        data_calculated_each_task.assign(self.totalData // self.task_num)
-        with self.tcp.if_scope(task_id == self.task_num - 1):
-            data_calculated_each_task.assign(
-                self.totalData // self.task_num + (self.totalData) % self.task_num
-            )
+        # NRAM is divided into 6 main parts
+        # 4 * 1024：reserved for other variables
 
-        # loop time of eacb task
-        loop_num = data_calculated_each_task // data_calculated_each_time
+        # # Check parameters.
+        # if not ((self.dtype in DTYPES) and (self.target in TARGET_LIST)):
+        #     raise KeyError("please pass correct parameters.")
+        # todo: check parameters.
 
-        # declare on-chip buffer
-        inputG = self.tcp.Buffer(
-            shape=self.inputShape, name="inputG", dtype=self.dtype, scope="global"
+    # for reduction
+    def compute_sum(
+        self,
+        sumvar: ty.Buffer("nram"),
+        sum_buf: ty.Buffer("nram"),
+        temp_buffer_pool: ty.Buffer("nram"),
+        temp_buffer: ty.Buffer("nram"),
+        sum_input_pool: ty.Buffer("nram"),
+        sumpool_kernel_size: ty.int32,
+        computed_size: ty.int32,
+    ) -> None:
+
+        tcp.sumpool(
+            temp_buffer_pool,
+            sum_input_pool,
+            (sumpool_kernel_size,),
+            (sumpool_kernel_size,),
         )
+        temp_buffer = temp_buffer_pool.reshape((computed_size,))
+        tcp.sum(sum_buf, temp_buffer)
+        sumvar[0] = sumvar[0] + sum_buf[0]
+
+    # for calculation
+    def numCompute(
+        self,
+        ou: ty.Buffer("nram"),
+        inp: ty.Buffer("nram"),
+        tar: ty.Buffer("nram"),
+        flag: ty.int32,
+    ) -> None:
+        if flag == 0:
+            tcp.log(ou, tar)  # high_precision=False
+            tcp.subtract(ou, ou, inp)
+            tcp.multiply(ou, tar, ou)
+        else:  # flag == 1:
+            tcp.exp(ou, tar, "exp_less_0")  # todo: delete "exp_less_0"?
+            tcp.subtract(tar, tar, inp)
+            tcp.multiply(ou, ou, tar)
+
+    def main(
+        self,
+        inputG: ty.handle,
+        targetG: ty.handle,
+        outG: ty.handle,
+        batchSize: ty.int32,
+        batchLength: ty.int32,
+        reduction: ty.int32,
+        log_target: ty.int32,
+    ) -> None:
+
+        # declare I/O buffer
+        totalData = batchSize * batchLength
+        inputG = tcp.match_buffer(inputG, [batchSize, batchLength], dtype=self.dtype)
+        targetG = tcp.match_buffer(targetG, [batchSize, batchLength], dtype=self.dtype)
+        outG = tcp.match_buffer(outG, [totalData], dtype=self.dtype)
+        data_tempG = tcp.alloc_buffer(
+            [64], dtype=self.dtype, scope="gdram"
+        )  # save the sum of each core, we assume that task_num <= 64
 
         inputG = inputG.flatten()
-
-        targetG = self.tcp.Buffer(
-            shape=self.inputShape, name="targetG", dtype=self.dtype, scope="global"
-        )
         targetG = targetG.flatten()
 
-        outG = self.tcp.Buffer(
-            shape=self.outShape, name="outG", dtype=self.dtype, scope="global"
-        )
+        tgt = tcp.target()
 
-        reduction = self.tcp.SizeVar(name="reduction")
-        log_target = self.tcp.SizeVar(name="log_target")
+        # calculate split strategy
+        data_calculated_each_time = self.single_buffer_size // self.dtype_sz
+        data_calculated_each_task = totalData // self.task_num
 
-        # declare sram buffer which saves temporary variables shared between clusters
-        cluster_nram = self.tcp.Buffer(
-            shape=(cluster_num,), name="cluster_nram", dtype=self.dtype, scope="nram"
-        )
-        tmp_sram = self.tcp.Buffer(
-            shape=(4,), name="tmp_sram", dtype=self.dtype, scope="sram"
-        )
-        sum_each_cluster = self.tcp.Buffer(
-            shape=(1,), name="sum_each_cluster", dtype=self.dtype, scope="sram"
-        )
-
-        # variables related to split
-        start = self.tcp.Scalar(bangpy.int32, name="start")
-        start.assign(task_id * (self.totalData // self.task_num))
-        stop = self.tcp.Scalar(bangpy.int32, name="stop")
+        # loop time of each task
+        loop_num = data_calculated_each_task // data_calculated_each_time
 
         # variables related to sum
         computed_size = 128 // self.dtype_sz
-
         sumpool_size = data_calculated_each_time // computed_size
-        sumpool_kernel_size = (
-            data_calculated_each_time // computed_size // self.compute_row
-        )
+        sumpool_kernel_size = sumpool_size
 
-        sumvar = self.tcp.Scalar(name="sumvar", dtype=self.dtype)
-        sumvar.assign(0)
-
-        with self.tcp.for_range(begin=0, end=loop_num, stage=1) as i:
-            # declare nram buffer
-            buffer_input = self.tcp.Buffer(
-                shape=(data_calculated_each_time,),
-                name="INPUT_N",
-                dtype=self.dtype,
-                scope="nram",
-            )
-            buffer_target = self.tcp.Buffer(
-                shape=(data_calculated_each_time,),
-                name="TARGET_N",
-                dtype=self.dtype,
-                scope="nram",
-            )
-            buffer_out = self.tcp.Buffer(
-                shape=(data_calculated_each_time,),
-                name="OUTPUT_N",
-                dtype=self.dtype,
-                scope="nram",
-            )
-
-            # variables related to reduction
-            sum_input_pool = buffer_out.reshape((computed_size, sumpool_size))
-            temp_buffer = self.tcp.Buffer(
-                shape=(computed_size * self.compute_row,),
-                name="temp_buffer",
-                dtype=self.dtype,
-                scope="nram",
-            )
-            temp_buffer_pool = temp_buffer.reshape((computed_size, self.compute_row))
-
-            sum_buf = self.tcp.Buffer(
-                shape=(1,), name="sum_buf", dtype=self.dtype, scope="nram"
-            )
-
-            def compute_sum(out_buf, outG):
-                self.tcp.sumpool(
-                    temp_buffer_pool,
-                    sum_input_pool,
-                    (sumpool_kernel_size,),
-                    (sumpool_kernel_size,),
-                )
-                with self.tcp.for_range(begin=0, end=self.compute_row) as i:
-                    self.tcp.sum(
-                        out_buf[0],
-                        temp_buffer[i * computed_size : (i + 1) * computed_size],
+        for cluster_id in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
+            for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
+                # parallel region
+                task_id = cluster_id * tgt.core_num + core_id
+                if task_id == (self.task_num - 1):
+                    data_calculated_each_task = totalData // self.task_num + (
+                        totalData % self.task_num
                     )
-                    outG.assign(outG + out_buf[0])
-
-            def numCompute(ou, inp, tar, flag):
-                with self.tcp.if_scope(flag == 0):
-                    self.tcp.log(ou, tar, high_precision=False)
-                    self.tcp.subtract(ou, ou, inp)
-                    self.tcp.multiply(ou, tar, ou)
-                with self.tcp.if_scope(flag == 1):
-                    self.tcp.exp(ou, tar)
-                    self.tcp.subtract(tar, tar, inp)
-                    self.tcp.multiply(ou, ou, tar)
-
-            def compute(ou, inp, tar, flag):
-                numCompute(ou, inp, tar, flag)
-                with self.tcp.if_scope(reduction != 0):
-                    compute_sum(sum_buf, sumvar)
-
-            with self.tcp.block("data_copy"):
-                self.tcp.memcpy(
-                    buffer_input[:data_calculated_each_time],
-                    inputG[
-                        start
-                        + data_calculated_each_time * i : start
-                        + data_calculated_each_time * (i + 1)
-                    ],
+                # variables related to split
+                start = task_id * (totalData // self.task_num)
+                sumvar = tcp.alloc_buffer(
+                    [64], dtype=self.dtype, scope="nram"
+                )  # save the sum of each core in NRAM and tcp.assign needs to be 64-element aligned
+                tcp.assign(sumvar, tcp.cast(0, self.dtype))
+                sum_buf = tcp.alloc_buffer(
+                    [64], dtype=self.dtype, scope="nram"
+                )  # Save temporary result and tcp.assign needs to be 64-element aligned
+                tcp.assign(sum_buf, tcp.cast(0, self.dtype))
+                temp_buffer_pool = tcp.alloc_buffer(
+                    [1, computed_size], dtype=self.dtype, scope="nram",
                 )
-                self.tcp.memcpy(
-                    buffer_target[:data_calculated_each_time],
-                    targetG[
-                        start
-                        + data_calculated_each_time * i : start
-                        + data_calculated_each_time * (i + 1)
-                    ],
+                temp_buffer = tcp.alloc_buffer(
+                    [1, computed_size], dtype=self.dtype, scope="nram",
                 )
 
-            with self.tcp.block("compute"):
-                compute(buffer_out, buffer_input, buffer_target, log_target)
-
-            with self.tcp.block("data_copy"):
-                with self.tcp.if_scope(reduction == 0):
-                    self.tcp.memcpy(
-                        outG[
-                            start
-                            + data_calculated_each_time * i : start
-                            + data_calculated_each_time * (i + 1)
-                        ],
-                        buffer_out[:data_calculated_each_time],
+                for i in range(loop_num, pipeline=True):
+                    buffer_input = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+                    buffer_target = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+                    buffer_out = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype=self.dtype, scope="nram"
                     )
 
-        with self.tcp.if_scope(
-            data_calculated_each_task % data_calculated_each_time != 0
-        ):
-            start.assign(start + data_calculated_each_time * loop_num)
-            stop.assign(start + data_calculated_each_task % data_calculated_each_time)
-            # data copy
-            self.tcp.memcpy(buffer_input[: stop - start], inputG[start:stop])
-            self.tcp.memcpy(buffer_target[: stop - start], targetG[start:stop])
-            # compute
-            numCompute(buffer_out, buffer_input, buffer_target, log_target)
-            with self.tcp.if_scope(self.batchLength >= 2 ** 20):
-                compute_sum(sum_buf, sumvar)
-            with self.tcp.else_scope():
-                with self.tcp.if_scope(reduction != 0):
-                    with self.tcp.if_scope((stop - start) * self.dtype_sz < 128):
-                        with self.tcp.for_range(begin=0, end=stop - start) as k:
-                            sumvar.assign(sumvar + buffer_out[k])
-                    with self.tcp.else_scope():
-                        self.tcp.sum(buffer_out, buffer_out)
-                        with self.tcp.for_range(
-                            begin=0, end=(stop - start) * self.dtype_sz // 128
-                        ) as j:
-                            sumvar.assign(
-                                sumvar + buffer_out[j * (128 // self.dtype_sz)]
+                    with tcp.block("data_copy"):
+                        tcp.memcpy(
+                            buffer_input[:data_calculated_each_time],
+                            inputG[
+                                start
+                                + data_calculated_each_time * i : start
+                                + data_calculated_each_time * (i + 1)
+                            ],
+                        )
+                        tcp.memcpy(
+                            buffer_target[:data_calculated_each_time],
+                            targetG[
+                                start
+                                + data_calculated_each_time * i : start
+                                + data_calculated_each_time * (i + 1)
+                            ],
+                        )
+
+                    with tcp.block("compute"):
+                        self.numCompute(
+                            buffer_out, buffer_input, buffer_target, log_target
+                        )
+                        if reduction != 0:
+                            sum_input_pool = buffer_out.reshape(
+                                (sumpool_size, computed_size)
+                            )
+                            self.compute_sum(
+                                sumvar,
+                                sum_buf,
+                                temp_buffer_pool,
+                                temp_buffer,
+                                sum_input_pool,
+                                sumpool_kernel_size,
+                                computed_size,
                             )
 
-            # data copy
-            with self.tcp.if_scope(reduction == 0):
-                self.tcp.memcpy(outG[start:stop], buffer_out[: stop - start])
+                    with tcp.block("data_copy"):
+                        if reduction == 0:
+                            tcp.memcpy(
+                                outG[
+                                    start
+                                    + data_calculated_each_time * i : start
+                                    + data_calculated_each_time * (i + 1)
+                                ],
+                                buffer_out[:data_calculated_each_time],
+                            )
 
-        with self.tcp.if_scope(reduction != 0):
-            sum_buf[0] = sumvar
-            tmp_sram[task_id % 4] = sum_buf
+                # data_rem_n
+                data_rem_n = data_calculated_each_task % data_calculated_each_time
+                if data_rem_n != 0:
+                    start = start + data_calculated_each_time * loop_num
+                    stop = start + data_rem_n
+                    buffer_input = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+                    buffer_target = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+                    buffer_out = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
 
-            # calculate sum of each cluster
-            sum_out = self.tcp.Scalar(name="sumout", dtype=self.dtype)
-            sum_out.assign(0)
-            with self.tcp.for_range(begin=0, end=4) as i:
-                sum_out.assign(sum_out + tmp_sram[i])
-            sum_each_cluster[0] = sum_out
+                    # data copy
+                    tcp.memcpy(buffer_input[: stop - start], inputG[start:stop])
+                    tcp.memcpy(buffer_target[: stop - start], targetG[start:stop])
 
-            outG[cluster_id] = sum_each_cluster[0]
-            self.tcp.sync_all()
+                    # compute
+                    self.numCompute(buffer_out, buffer_input, buffer_target, log_target)
 
-            with self.tcp.for_range(begin=0, end=cluster_num) as i:
-                cluster_nram[i] = outG[i]
+                    # reduction
+                    if reduction != 0:
+                        if (  # calculate it by sumpool when the size is large
+                            data_rem_n > 128 * 1  # 128 * x | 128
+                        ):  # todo: what is the best value of x?
+                            data_rem_n_temp = (data_rem_n // (128 * 1)) * (128 * 1)
+                            sumpool_kernel_size = data_rem_n_temp // computed_size
+                            tcp.sumpool(
+                                temp_buffer_pool,
+                                buffer_out[
+                                    0 : sumpool_kernel_size * computed_size
+                                ].reshape((sumpool_kernel_size, computed_size)),
+                                (sumpool_kernel_size,),
+                                (sumpool_kernel_size,),
+                            )
+                            temp_buffer = temp_buffer_pool.reshape((computed_size,))
+                            tcp.sum(sum_buf, temp_buffer)
+                            sumvar[0] = sumvar[0] + sum_buf[0]
+                            if (data_rem_n % computed_size) > 0:
+                                for k in range(begin=data_rem_n_temp, end=data_rem_n):
+                                    sumvar[0] = sumvar[0] + buffer_out[k]
+                        else:  # calculate it one by one when the size is small
+                            for k in range(begin=0, end=data_rem_n):
+                                sumvar[0] = sumvar[0] + buffer_out[k]
 
-            total = self.tcp.Scalar(name="total", dtype=self.dtype)
-            total.assign(0)
-            with self.tcp.if_scope(cluster_id == 0):
-                with self.tcp.for_range(begin=0, end=cluster_num) as i:
-                    total.assign(total + cluster_nram[i])
-                # reduction = mean
-                with self.tcp.if_scope(reduction == 2):
-                    total.assign(total / self.totalData)
-                # reduction = batchmen
-                with self.tcp.if_scope(reduction == 3):
-                    total.assign(total / self.batchSize)
-                outG[0] = total
+                    # data copy
+                    if reduction == 0:
+                        tcp.memcpy(outG[start:stop], buffer_out[: stop - start])
 
-        # build a executable module
-        f = self.tcp.BuildBANG(
-            inputs=[inputG, targetG, reduction, log_target],
-            outputs=[outG],
-            kernel_name=KERNEL_NAME,
-        )
-        return f
+                if reduction != 0:
+                    # todo: tcp.sync_all() is not supported
+                    data_tempG[task_id % self.task_num] = sumvar[0]
+                    total = tcp.alloc_buffer([64], dtype=self.dtype, scope="nram")
+                    tcp.assign(total, tcp.cast(0, self.dtype))
+                    if task_id == 0:
+                        for i in range(begin=0, end=self.task_num):
+                            total[0] = total[0] + data_tempG[i]
+                        # reduction = mean
+                        if reduction == 2:
+                            total[0] = total[0] / totalData
+                        # reduction = batchmen
+                        if reduction == 3:
+                            total[0] = total[0] / batchSize
+                        outG[0] = total[0]
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_kldivloss(dtype=None, target=None):
-    task_type = TaskType.UNION1
-    f = KlDivLoss(dtype, target, task_type).compute_body()
+    task_num = TARGET(target).cluster_num * TARGET(target).core_num
+    nram_size = TARGET(target).nram_size
+    f = build_module.build(
+        KlDivLoss(task_num, nram_size, dtype.name), target_tag=target, name=KERNEL_NAME,
+    )
     return f
