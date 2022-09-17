@@ -28,7 +28,7 @@ from kldivloss import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 def cal_diff(result, data_out):
-    """ compute diff """
+    """compute diff"""
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
     diff2 = np.sqrt(
         np.sum(np.power(np.subtract(data_out, result), 2,))
@@ -71,17 +71,16 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     )
     inputdim = len(shape)
 
-    if inputdim > 1:
-        batchnum = shape[0]
-    else:
+    batchnum = shape[0]
+    length = 1
+    if inputdim == 1:
         batchnum = 1
-        shape = (batchnum, shape[0])
-
-    if inputdim > 2:
-        length = 1
+        length = shape[0]
+    else:
         for i in range(1, inputdim):
             length = length * shape[i]
-        shape = (batchnum, length)
+    shape = (batchnum, length)
+    totaldata = batchnum * length
 
     #  By default, input has been logged
     data_input = np.random.uniform(low=0, high=1, size=shape).astype(
@@ -124,12 +123,26 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     )
 
     f = load_op_by_type(KERNEL_NAME, dtype.name)
-    f(data_input_dev, data_target_dev, reduction, log_target, data_out_dev)
+    f(
+        data_input_dev,
+        data_target_dev,
+        data_out_dev,
+        batchnum,
+        length,
+        reduction,
+        log_target,
+    )
 
     evaluator = f.time_evaluator(number=100, repeat=2, min_repeat_ms=0)
     t = (
         evaluator(
-            data_input_dev, data_target_dev, reduction, log_target, data_out_dev
+            data_input_dev,
+            data_target_dev,
+            data_out_dev,
+            batchnum,
+            length,
+            reduction,
+            log_target,
         ).mean
         * 1e3
     )
@@ -149,4 +162,15 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
         cal_diff(data_out_dev[0][0], data_out_batchmean)
 
     print("tutorial : %f ms" % t)
+    # print("------------------------------------------------------------")
+
+    # io_efficiency
+    theory_io_size = (
+        3 * totaldata * dtype.bytes if reduction == 0 else 2 * totaldata * dtype.bytes
+    )
+    io_bandwidth = 2 ** 40  # MLU290: 1024GB/s
+    # IO_BANDWIDTH = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
+    io_efficiency = 1000 * theory_io_size / (t * io_bandwidth)
+    print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
+    print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
     print("------------------------------------------------------------")
