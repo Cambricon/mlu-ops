@@ -29,8 +29,8 @@ from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float32]
-TARGET_LIST = ["mlu290"]
-# TARGET_LIST = ["mlu370-s4"]
+# TARGET_LIST = ["mlu290"]
+TARGET_LIST = ["mlu370-s4"]
 KERNEL_NAME = "kldivloss"
 
 
