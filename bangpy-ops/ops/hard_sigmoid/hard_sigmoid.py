@@ -73,12 +73,14 @@ class HardSigmoid(object):
         """The body of hard_sigmoid function."""
         tcp.multiply(local_x, local_x, 1.0 / 6)  # x * 1/6
         tcp.add(local_x, local_x, 1.0 / 2)  # x * 1/6 + 1/2
-        tcp.assign(local_temp, tcp.cast(1, self.dtype)) # tcp.assign(local_temp, 1)
+        tcp.assign(local_temp, tcp.cast(1, self.dtype))  # tcp.assign(local_temp, 1)
         tcp.minimum(local_x, local_x, local_temp)  # min(x * 1/6 + 1/2, 1)
-        tcp.assign(local_temp, tcp.cast(0, self.dtype)) # tcp.assign(local_temp, 0)
+        tcp.assign(local_temp, tcp.cast(0, self.dtype))  # tcp.assign(local_temp, 0)
         tcp.maximum(local_x, local_x, local_temp)  # max(x * 1/6 + 1/2, 0)
 
-    def main(self, buffer_in: ty.handle, buffer_out: ty.handle, length: ty.int32) -> None:
+    def main(
+        self, buffer_in: ty.handle, buffer_out: ty.handle, length: ty.int32
+    ) -> None:
         # declare I/O buffer
         buffer_in = tcp.match_buffer(buffer_in, [length], dtype=self.dtype)
         buffer_out = tcp.match_buffer(buffer_out, [length], dtype=self.dtype)
