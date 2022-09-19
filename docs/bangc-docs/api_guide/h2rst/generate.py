@@ -554,7 +554,7 @@ def hpp_to_rst(file_paths, output_dir="", get_define=False, api_sort=False, data
     datatype_rst_file_path = os.path.join(output_dir, "datatype.rst")
     define_rst_file_path = os.path.join(output_dir, "define.rst")
     cls_index_file_path = os.path.join(output_dir, "class_index.rst")
-    api_index_file_path = os.path.join(output_dir, "index.rst")
+    api_index_file_path = os.path.join(output_dir, "api.rst")
 
     rst_paths = []
     cls_rst_paths = []
