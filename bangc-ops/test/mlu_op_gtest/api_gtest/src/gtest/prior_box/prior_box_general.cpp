@@ -338,8 +338,6 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 2, 4}))),
         testing::Values(
-            PriorBoxDescParam{3, 3, -1, 9, 3.0, 3.0, 0.5, true, true},
-            PriorBoxDescParam{3, 3, 9, -1, 3.0, 3.0, 0.5, true, true},
             PriorBoxDescParam{-1, 3, 9, 9, 3.0, 3.0, 0.5, true, true},
             PriorBoxDescParam{3, -1, 9, 9, 3.0, 3.0, 0.5, true, true},
             PriorBoxDescParam{3, 3, 9, 9, 0.0, 3.0, 0.5, true, true},
