@@ -145,6 +145,7 @@ message Node {
   optional PriorBoxParam prior_box_param              = 4006;   // PriorBoxParam
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
+  optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
 }
 
 
@@ -271,4 +272,15 @@ message PriorBoxParam {
   required float step_h                     = 8 [default = 0.0];
   required float offset                     = 9 [default = 0.5];
   required bool min_max_aspect_ratios_order = 10 [default = true];
+}
+
+// param to call mluOpYoloBox()
+message YoloBoxParam {
+  optional int32 class_num        = 1 [default = 1];
+  optional float conf_thresh      = 2 [default = 0.01];
+  optional int32 downsample_ratio = 3 [default = 8];
+  optional bool clip_bbox         = 4 [default = true];
+  optional float scale_x_y        = 5 [default = 1.0];
+  optional bool iou_aware         = 6 [default = true];
+  optional float iou_aware_factor = 7 [default = 0.5];
 }

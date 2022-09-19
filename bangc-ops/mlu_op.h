@@ -2466,6 +2466,105 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
     const mluOpTensorDescriptor_t dy_desc, const void *diff_y,
     const mluOpTensorDescriptor_t dx_desc, void *diff_x);
 
+/*!
+ * @brief Computes bounding box information from the backbone output of the
+ * detected network.
+ *
+ * @param[in] handle
+ *   Input. Handle to a MLUOP context that is used to manage MLU devices and
+ *   queues in the yolo_box operation. For detailed information, see
+ *   ::mluOpHandle_t.
+ * @param[in] x_desc
+ *   Input. The descriptor of the tensors. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] img_size_desc
+ *   Input. The descriptor of the tensors. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] img_size
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] anchors_desc
+ *   Input. The descriptor of the tensors. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] anchors
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] class_num
+ *    Input. The number of classes.
+ * @param[in] conf_thresh
+ *    Input. The detection boxes with the confidence score below the threshold should be ignored.
+ * @param[in] downsample_ratio
+ *    Input. The downsample ratio from network input to yolo_box operator input,
+ *    and 32, 16, 8 should be set for the first, second,
+ *    and thrid :attr:`yolo_box` layer.
+ * @param[in] clip_bbox
+ *    Input. Whether clip output bounding box in img_size boundary.
+ * @param[in] scale
+ *    Input. Scale the center point of decoded bounding box.
+ * @param[in] iou_aware
+ *    Input. Whether use iou aware.
+ * @param[in] iou_aware_factor
+ *    Input. iou aware factor.
+ * @param[in] boxes_desc
+ *   Input. The descriptor of the tensors. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[out] boxes
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @param[in] scores_desc
+ *   Input. The descriptor of the tensors. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[out] scores
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ * ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "Yolo Box Operation" section in "Cambricon MLUOP User Guide" for
+ *   details.
+ *
+ * @par Data Type
+ * - Data types of input tensors and output tensor must be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - input x tensor: float.
+ *   - input img_size and anchors tensors: int.
+ *   - output tensors: float.
+ *
+ * @par Scale Limitation
+ * - The first dimension of x tensor, img_size tensor, boxes tensor and scores
+ *   tensor must be the same size.
+ * - The second dimension(the channel dimension) of x tensor , C should be equal to S * (5 + 
+ *   class_num) if \b iou_aware is false, otherwise C should be equal to S * (6 + class_num), 
+ *   the value S is equal to the anchors tensor size divided by 2.
+ * - The first dimension of anchors tensor should be larger than 0.
+ * - The second dimension of img_size tensor must be equal to 2.
+ * - The third dimension of boxes tensor must be equal to 4.
+ * - The third dimension of scores tensor must be equal to \b class_num.
+ * - The third dimension of grid tensor and grad_output tensor must be the same size.
+ * - The fourth dimension of boxes \b boxes tensor and scores tensor
+ *   The \b scores must be equal to third dimension * fourth dimension of x tensor.
+ * - The \b class_num should be larger than 0.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * -
+ * https://github.com/PaddlePaddle/Paddle/blob/release/2.3/python/paddle/vision/ops.py
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
+    mluOpHandle_t &handle, mluOpTensorDescriptor_t x_desc, const void *x,
+    mluOpTensorDescriptor_t img_size_desc, const void *img_size,
+    mluOpTensorDescriptor_t anchors_desc, const void *anchors,
+    const int class_num, const float conf_thresh, const int downsample_ratio,
+    const bool clip_bbox, const float scale, const bool iou_aware,
+    const float iou_aware_factor, mluOpTensorDescriptor_t boxes_desc,
+    void *boxes, mluOpTensorDescriptor_t scores_desc, void *scores);
+
 #if defined(__cplusplus)
 }
 #endif

@@ -1,0 +1,88 @@
+op_name: "yolo_box"
+input {
+  id: "input1"
+  shape {
+    dims: 3
+    dims: 35
+    dims: 16
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 0.0
+    lower_bound: 10.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 3
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    upper_bound: 100.0
+    lower_bound: 1000.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input3"
+  shape {
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    upper_bound: 1.0
+    lower_bound: 10.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output1"
+  shape {
+    dims: 3
+    dims: 5
+    dims: 4
+    dims: 256
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+output {
+  id: "output2"
+  shape {
+    dims: 3
+    dims: 5
+    dims: 2
+    dims: 256
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+yolo_box_param {
+  class_num: 2
+  conf_thresh: 0.1
+  downsample_ratio: 8
+  clip_bbox: true
+  scale_x_y: 1.0
+  iou_aware: false
+  iou_aware_factor: 0.5
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

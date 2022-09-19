@@ -189,6 +189,15 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *y, const void *diff_y, void *x, int num);
 
+/* yolo_box */
+void MLUOP_WIN_API mluOpBlockKernelYoloBoxFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, const void *img_size, const void *anchors,
+    const int class_num, const float conf_thresh, const int downsample_ratio,
+    const bool clip_bbox, const float scale, const bool iou_aware,
+    const float iou_aware_factor, const int n_in, const int anchor_s,
+    const int c_in, const int h_in, const int w_in, void *boxes, void *scores);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus
