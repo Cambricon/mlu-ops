@@ -2544,7 +2544,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
  * - The third dimension of grid tensor and grad_output tensor must be the same size.
  * - The fourth dimension of boxes \b boxes tensor and scores tensor
  *   The \b scores must be equal to third dimension * fourth dimension of x tensor.
- * - The \b class_num should be larger than 0.
+ * - The \b class_num should be larger than 0. On MLU200, the value cannot be 
+ *   greater than 1534. On MLU300, the value cannot be greater than 2558.
+ * - On MLU200, the value range of input x tensor is [-3.4e38, 16] 
+ *   because the activation function exp is called.
  *
  * @par Requirements
  * - None.
@@ -2557,13 +2560,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
  * https://github.com/PaddlePaddle/Paddle/blob/release/2.3/python/paddle/vision/ops.py
  */
 mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
-    mluOpHandle_t &handle, mluOpTensorDescriptor_t x_desc, const void *x,
-    mluOpTensorDescriptor_t img_size_desc, const void *img_size,
-    mluOpTensorDescriptor_t anchors_desc, const void *anchors,
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,
+    const mluOpTensorDescriptor_t img_size_desc, const void *img_size,
+    const mluOpTensorDescriptor_t anchors_desc, const void *anchors,
     const int class_num, const float conf_thresh, const int downsample_ratio,
     const bool clip_bbox, const float scale, const bool iou_aware,
-    const float iou_aware_factor, mluOpTensorDescriptor_t boxes_desc,
-    void *boxes, mluOpTensorDescriptor_t scores_desc, void *scores);
+    const float iou_aware_factor, const mluOpTensorDescriptor_t boxes_desc,
+    void *boxes, const mluOpTensorDescriptor_t scores_desc, void *scores);
 
 #if defined(__cplusplus)
 }

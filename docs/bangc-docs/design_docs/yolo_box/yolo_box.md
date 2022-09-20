@@ -265,11 +265,11 @@ void YoloBoxKernel(const Context& dev_ctx,
 ```c++
 mluOpsStatus_t MLUOP_WIN_API 
 mluOpYoloBox(mluOpHandle_t handle,
-             mluOpTensorDescriptor_t x_desc,
+             const mluOpTensorDescriptor_t x_desc,
              const void *x,
-             mluOpTensorDescriptor_t img_size_desc,
+             const mluOpTensorDescriptor_t img_size_desc,
              const void *img_size,
-             mluOpTensorDescriptor_t anchors_desc,
+             const mluOpTensorDescriptor_t anchors_desc,
              const void *anchors,
              const int class_num,
              const float conf_thresh,
@@ -278,9 +278,9 @@ mluOpYoloBox(mluOpHandle_t handle,
              const float scale,
              const bool iou_aware,
              const float iou_aware_factor,
-             mluOpTensorDescriptor_t boxes_desc,
+             const mluOpTensorDescriptor_t boxes_desc,
              void *boxes,
-             mluOpTensorDescriptor_t scores_desc,
+             const mluOpTensorDescriptor_t scores_desc,
              void* scores);
 ```
 
@@ -479,7 +479,7 @@ yolo_box负责从检测网络的backbone输出部分，计算真实检测框bbox
      2. 根据`score_conf>conf_thresh`生成`score_mask`，`score_mask`中值为1和0，1表示置信度得分大于`conf_thresh`，0表示置信度得分小于`conf_thresh`，`score_mask`结果存放到nram_iou/mask空间，用于第（5）步将置信度得分小于`conf_thresh`的检测框结果set为0；
 
         ```c
-        __bang_gt_scalar(nram_mask, nram_conf, conf_thresh, deal_num);
+        __bang_ge_scalar(nram_mask, nram_conf, conf_thresh, deal_num);
         ```
 
      3. 根据**公式（2）**、**公式（3）**，计算bbox的左上角`(x0,y0)`和右下角`(x1,y1)`坐标；
@@ -653,7 +653,7 @@ yolo_box负责从检测网络的backbone输出部分，计算真实检测框bbox
      2. 根据`score_conf>conf_thresh`生成`score_mask`，`score_mask`中值为1和0，1表示置信度得分大于`conf_thresh`，0表示置信度得分小于`conf_thresh`，`score_mask`结果存放到nram_mask空间，用于第（7）步将`score_conf<conf_thresh`的分类得分结果set为0；
 
         ```c
-        __bang_gt_scalar(nram_mask, nram_conf, conf_thresh, deal_num);
+        __bang_ge_scalar(nram_mask, nram_conf, conf_thresh, deal_num);
         ```
 
      5. 将`score_conf`中`score_conf<conf_thresh`的值置成`conf_thresh`，防止因`score_conf`中含有-inf，导致score的计算结果为nan，参考接口结果为0；

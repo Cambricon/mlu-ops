@@ -234,6 +234,20 @@ static __mlu_func__ void compute(
     __bang_minequal(nram_h_p, nram_h_p, nram_imgh, deal_num);
   }
 
+#if __BANG_ARCH__ >= 322
+  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+  __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
+  __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
+                    (int)0xffffffff, deal_num);
+  __bang_band((char *)nram_x_p, (char *)nram_x_p, (char *)nram_mask_int32,
+              4 * deal_num);
+  __bang_band((char *)nram_y_p, (char *)nram_y_p, (char *)nram_mask_int32,
+              4 * deal_num);
+  __bang_band((char *)nram_w_p, (char *)nram_w_p, (char *)nram_mask_int32,
+              4 * deal_num);
+  __bang_band((char *)nram_h_p, (char *)nram_h_p, (char *)nram_mask_int32,
+              4 * deal_num);
+#else
   for (int k = 0; k < deal_num; k++) {
     if (nram_iou_p[k] == (T)0.0) {
       nram_x_p[k] = (T)0.0;
@@ -242,6 +256,7 @@ static __mlu_func__ void compute(
       nram_h_p[k] = (T)0.0;
     }
   }
+#endif
 }
 
 template <typename T>
@@ -1045,10 +1060,10 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   }
 
 #if __BANG_ARCH__ >= 322
-  __bang_gt_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
+  __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
 #else
   __bang_write_value(nram_iou_p, deal_num, (T)conf_thresh);
-  __bang_gt(nram_iou_p, nram_conf_p, nram_iou_p, deal_num);
+  __bang_ge(nram_iou_p, nram_conf_p, nram_iou_p, deal_num);
 #endif
 
   computeSigmoid(nram_cls_p, nram_cls_p, NULL, 0, class_num * deal_num);
