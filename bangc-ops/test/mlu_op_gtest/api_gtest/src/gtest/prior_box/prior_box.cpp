@@ -84,7 +84,7 @@ class prior_box : public testing::Test {
     }
     if (output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-      std::vector<int> dim_size = {3, 3, 4, 4};
+      std::vector<int> dim_size = {3, 3, 2, 4};
       MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 4,
                                            dim_size.data()));
@@ -94,7 +94,7 @@ class prior_box : public testing::Test {
     }
     if (var_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&var_desc_));
-      std::vector<int> dim_size = {3, 3, 4, 4};
+      std::vector<int> dim_size = {3, 3, 2, 4};
       MLUOP_CHECK(mluOpSetTensorDescriptor(var_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 4,
                                            dim_size.data()));
