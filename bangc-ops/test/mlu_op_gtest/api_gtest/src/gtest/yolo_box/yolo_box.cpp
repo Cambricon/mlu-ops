@@ -41,7 +41,7 @@ class yolo_box : public testing::Test {
     }
     if (x_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&x_desc_));
-      std::vector<int> dim_size = {2, 144, 3, 3};
+      std::vector<int> dim_size = {2, 160, 3, 3};
       MLUOP_CHECK(mluOpSetTensorDescriptor(
           x_desc_, MLUOP_LAYOUT_NCHW, MLUOP_DTYPE_FLOAT, 4, dim_size.data()));
     }
