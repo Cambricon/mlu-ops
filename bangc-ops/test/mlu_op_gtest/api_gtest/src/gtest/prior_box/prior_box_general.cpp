@@ -53,9 +53,9 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&min_desc_));
     MLUOpTensorParam min_params = std::get<0>(GetParam());
-    mluOpTensorLayout_t min_layout = min_params.get_layout();
-    mluOpDataType_t min_dtype = min_params.get_dtype();
-    int min_dim = min_params.get_dim_nb();
+    const mluOpTensorLayout_t min_layout = min_params.get_layout();
+    const mluOpDataType_t min_dtype = min_params.get_dtype();
+    const int min_dim = min_params.get_dim_nb();
     std::vector<int> min_dim_size = min_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(min_desc_, min_layout, min_dtype,
                                          min_dim, min_dim_size.data()));
@@ -66,9 +66,9 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&aspect_ratios_desc_));
     MLUOpTensorParam aspect_params = std::get<1>(GetParam());
-    mluOpTensorLayout_t aspect_layout = aspect_params.get_layout();
-    mluOpDataType_t aspect_dtype = aspect_params.get_dtype();
-    int aspect_dim = aspect_params.get_dim_nb();
+    const mluOpTensorLayout_t aspect_layout = aspect_params.get_layout();
+    const mluOpDataType_t aspect_dtype = aspect_params.get_dtype();
+    const int aspect_dim = aspect_params.get_dim_nb();
     std::vector<int> aspect_dim_size = aspect_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(aspect_ratios_desc_, aspect_layout,
                                          aspect_dtype, aspect_dim,
@@ -80,9 +80,9 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&variance_desc_));
     MLUOpTensorParam variance_params = std::get<2>(GetParam());
-    mluOpTensorLayout_t variance_layout = variance_params.get_layout();
-    mluOpDataType_t variance_dtype = variance_params.get_dtype();
-    int variance_dim = variance_params.get_dim_nb();
+    const mluOpTensorLayout_t variance_layout = variance_params.get_layout();
+    const mluOpDataType_t variance_dtype = variance_params.get_dtype();
+    const int variance_dim = variance_params.get_dim_nb();
     std::vector<int> variance_dim_size = variance_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(variance_desc_, variance_layout,
                                          variance_dtype, variance_dim,
@@ -94,9 +94,9 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&max_desc_));
     MLUOpTensorParam max_params = std::get<3>(GetParam());
-    mluOpTensorLayout_t max_layout = max_params.get_layout();
-    mluOpDataType_t max_dtype = max_params.get_dtype();
-    int max_dim = max_params.get_dim_nb();
+    const mluOpTensorLayout_t max_layout = max_params.get_layout();
+    const mluOpDataType_t max_dtype = max_params.get_dtype();
+    const int max_dim = max_params.get_dim_nb();
     std::vector<int> max_dim_size = max_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(max_desc_, max_layout, max_dtype,
                                          max_dim, max_dim_size.data()));
@@ -107,9 +107,9 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
     MLUOpTensorParam o_params = std::get<4>(GetParam());
-    mluOpTensorLayout_t o_layout = o_params.get_layout();
-    mluOpDataType_t o_dtype = o_params.get_dtype();
-    int o_dim = o_params.get_dim_nb();
+    const mluOpTensorLayout_t o_layout = o_params.get_layout();
+    const mluOpDataType_t o_dtype = o_params.get_dtype();
+    const int o_dim = o_params.get_dim_nb();
     std::vector<int> o_dim_size = o_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, o_layout, o_dtype, o_dim,
                                          o_dim_size.data()));
@@ -120,9 +120,9 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&var_desc_));
     MLUOpTensorParam var_params = std::get<5>(GetParam());
-    mluOpTensorLayout_t var_layout = var_params.get_layout();
-    mluOpDataType_t var_dtype = var_params.get_dtype();
-    int var_dim = var_params.get_dim_nb();
+    const mluOpTensorLayout_t var_layout = var_params.get_layout();
+    const mluOpDataType_t var_dtype = var_params.get_dtype();
+    const int var_dim = var_params.get_dim_nb();
     std::vector<int> var_dim_size = var_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(var_desc_, var_layout, var_dtype,
                                          var_dim, var_dim_size.data()));
