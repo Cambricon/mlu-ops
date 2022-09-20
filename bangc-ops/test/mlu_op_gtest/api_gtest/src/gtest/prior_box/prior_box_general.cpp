@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+
 #include "api_test_tools.h"
 #include "core/context.h"
 #include "core/tensor.h"
@@ -58,7 +59,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     std::vector<int> min_dim_size = min_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(min_desc_, min_layout, min_dtype,
                                          min_dim, min_dim_size.data()));
-    uint64_t min_ele_num = mluOpGetTensorElementNum(min_desc_);
+    const uint64_t min_ele_num = mluOpGetTensorElementNum(min_desc_);
     if (min_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&min_, 8))
     }
@@ -72,7 +73,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     MLUOP_CHECK(mluOpSetTensorDescriptor(aspect_ratios_desc_, aspect_layout,
                                          aspect_dtype, aspect_dim,
                                          aspect_dim_size.data()));
-    uint64_t aspect_ele_num = mluOpGetTensorElementNum(aspect_ratios_desc_);
+    const uint64_t aspect_ele_num = mluOpGetTensorElementNum(aspect_ratios_desc_);
     if (aspect_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&aspect_ratios_, 8));
     }
@@ -86,7 +87,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     MLUOP_CHECK(mluOpSetTensorDescriptor(variance_desc_, variance_layout,
                                          variance_dtype, variance_dim,
                                          variance_dim_size.data()));
-    uint64_t variance_ele_num = mluOpGetTensorElementNum(variance_desc_);
+    const uint64_t variance_ele_num = mluOpGetTensorElementNum(variance_desc_);
     if (variance_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&variance_, 8));
     }
@@ -99,7 +100,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     std::vector<int> max_dim_size = max_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(max_desc_, max_layout, max_dtype,
                                          max_dim, max_dim_size.data()));
-    uint64_t max_ele_num = mluOpGetTensorElementNum(max_desc_);
+    const uint64_t max_ele_num = mluOpGetTensorElementNum(max_desc_);
     if (max_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&max_, 8));
     }
@@ -112,7 +113,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     std::vector<int> o_dim_size = o_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, o_layout, o_dtype, o_dim,
                                          o_dim_size.data()));
-    uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
+    const uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
     if (o_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, 8));
     }
@@ -125,7 +126,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     std::vector<int> var_dim_size = var_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(var_desc_, var_layout, var_dtype,
                                          var_dim, var_dim_size.data()));
-    uint64_t var_ele_num = mluOpGetTensorElementNum(var_desc_);
+    const uint64_t var_ele_num = mluOpGetTensorElementNum(var_desc_);
     if (var_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&var_, 8));
     }
