@@ -82,6 +82,10 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   PARAM_CHECK(api, var_desc->dim == 4);
   // check shape
   PARAM_CHECK(api, variances_desc->dims[0] == 4);
+  PARAM_CHECK(api, output_desc->dims[0] == height);
+  PARAM_CHECK(api, output_desc->dims[1] == width);
+  PARAM_CHECK(api, output_desc->dims[3] == 4);
+  PARAM_CHECK(api, var_desc->dims[3] == 4);
   PARAM_CHECK_GE(api, height, 0);
   PARAM_CHECK_GE(api, width, 0);
   // check data type
@@ -95,8 +99,7 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   PARAM_CHECK_GT(api, step_h, 0);
   PARAM_CHECK_GT(api, step_w, 0);
   // check param depand
-  PARAM_CHECK(api, output_desc->dims[0] == height);
-  PARAM_CHECK(api, output_desc->dims[1] == width);
+
   for (int i = 0; i < output_desc->dim; i++) {
     PARAM_CHECK(api, output_desc->dims[i] == var_desc->dims[i]);
   }
