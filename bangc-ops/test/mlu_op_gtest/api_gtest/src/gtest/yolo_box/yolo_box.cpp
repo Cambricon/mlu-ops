@@ -23,6 +23,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+
 #include "api_test_tools.h"
 #include "core/logging.h"
 #include "core/tensor.h"
@@ -48,14 +49,14 @@ class yolo_box : public testing::Test {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&img_size_desc_));
       std::vector<int> dim_size = {2, 2};
       MLUOP_CHECK(mluOpSetTensorDescriptor(img_size_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_FLOAT, 2,
+                                           MLUOP_DTYPE_INT32, 2,
                                            dim_size.data()));
     }
     if (anchors_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&anchors_desc_));
       std::vector<int> dim_size = {18};
       MLUOP_CHECK(mluOpSetTensorDescriptor(anchors_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_FLOAT, 1,
+                                           MLUOP_DTYPE_INT32, 1,
                                            dim_size.data()));
     }
     if (boxes_desc) {
