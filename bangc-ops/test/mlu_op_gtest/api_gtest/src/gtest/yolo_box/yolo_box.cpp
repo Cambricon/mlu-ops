@@ -54,21 +54,21 @@ class yolo_box : public testing::Test {
     }
     if (anchors_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&anchors_desc_));
-      std::vector<int> dim_size = {18};
+      std::vector<int> dim_size = {20};
       MLUOP_CHECK(mluOpSetTensorDescriptor(anchors_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_INT32, 1,
                                            dim_size.data()));
     }
     if (boxes_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes_desc_));
-      std::vector<int> dim_size = {2, 9, 4, 9};
+      std::vector<int> dim_size = {2, 10, 4, 9};
       MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 4,
                                            dim_size.data()));
     }
     if (scores_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&scores_desc_));
-      std::vector<int> dim_size = {2, 9, 10, 9};
+      std::vector<int> dim_size = {2, 10, 10, 9};
       MLUOP_CHECK(mluOpSetTensorDescriptor(scores_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 4,
                                            dim_size.data()));
