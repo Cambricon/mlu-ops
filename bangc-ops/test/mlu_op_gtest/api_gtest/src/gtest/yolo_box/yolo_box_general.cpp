@@ -300,10 +300,10 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_x_dtype_layout_shape_0, yolo_box_general,
+    bad_x_shape_0, yolo_box_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NCHW, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 135, 3, 3})),
+                                         4, std::vector<int>({2, 135, 3, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({2, 2}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
@@ -317,10 +317,10 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_x_dtype_shape_0, yolo_box_general,
+    bad_x_shape_0, yolo_box_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NCHW, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({2, 144, 3, 3})),
+                                         4, std::vector<int>({2, 144, 3, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({2, 2}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
@@ -334,7 +334,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_x_shape_1, yolo_box_general,
+    bad_x_dtype_layout_shape_0, yolo_box_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({2, 144, 3, 3})),
