@@ -3,10 +3,10 @@ Cambricon BANGC OPS Developer Guide
 ====================================
 
 .. toctree::
-   :maxdepth: 4
-   :caption: Table of Contents
-
-   copyright
-   update
-   datatype
-   api
+    :maxdepth: 5
+    :caption: Table of Contents 
+    
+    copyright
+    update
+    datatype
+    api

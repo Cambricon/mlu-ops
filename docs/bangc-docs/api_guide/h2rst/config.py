@@ -28,13 +28,13 @@ get_define = False
 get_class_variable = True
 
 # 是否对api分组
-api_group = False
+api_group = True
 
 # 忽略掉的分组
 hidden_groups = ["restricted"]
 
 # index.rst的标题
-api_group_index_title = "Built-in Functions"
+api_group_index_title = "API Reference"
 
 # api.rst的标题
 api_title = "API Reference"
