@@ -2531,9 +2531,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
  * @param[in] conf_thresh
  * The detection boxes with the confidence score below the threshold should be ignored.
  * @param[in] downsample_ratio
- * The downsample ratio from network input to yolo_box operator input,
- * and 32, 16, 8 should be set for the first, second,
- * and thrid :attr:`yolo_box` layer.
+ * The downsample ratio from network input to yolo_box operator input, 
+ * so 32, 16, 8 should be set for the first, second, and thrid into yolo_box operator.
  * @param[in] clip_bbox
  * Whether clip output bounding box in img_size boundary.
  * @param[in] scale
@@ -2571,19 +2570,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
  * @par Scale Limitation
  * - The first dimension of x tensor, img_size tensor, boxes tensor and scores
  *   tensor must be the same size.
- * - The second dimension(the channel dimension) of x tensor , C should be equal to S * (5 + 
- *   class_num) if \b iou_aware is false, otherwise C should be equal to S * (6 + class_num), 
+ * - The second dimension(the channel dimension) of x tensor , C should be equal to S * (5 +
+ *   class_num) if \b iou_aware is false, otherwise C should be equal to S * (6 + class_num),
  *   the value S is equal to the anchors tensor size divided by 2.
  * - The first dimension of anchors tensor should be larger than 0.
  * - The second dimension of img_size tensor must be equal to 2.
+ * - The second dimension of boxes tensor must be equal to S.
+ * - The second dimension of scores tensor must be equal to S.
  * - The third dimension of boxes tensor must be equal to 4.
  * - The third dimension of scores tensor must be equal to \b class_num.
- * - The third dimension of grid tensor and grad_output tensor must be the same size.
- * - The fourth dimension of boxes \b boxes tensor and scores tensor
- *   The \b scores must be equal to third dimension * fourth dimension of x tensor.
- * - The \b class_num should be larger than 0. On MLU200, the value cannot be 
+ * - The fourth dimension of boxes tensor and scores tensor must be equal to the
+ *   multiplication result of the third dimension and the fourth dimension of input x tensor.
+ * - The \b class_num should be larger than 0. On MLU200, the value cannot be
  *   greater than 1534. On MLU300, the value cannot be greater than 2558.
- * - On MLU200, the value range of input x tensor is [-3.4e38, 16] 
+ * - On MLU200, the value range of input x tensor is [-3.4e38, 16]
  *   because the activation function exp is called.
  *
  * @par Requirements
@@ -2593,8 +2593,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
  * - None.
  *
  * @par Reference
- * -
- * https://github.com/PaddlePaddle/Paddle/blob/release/2.3/python/paddle/vision/ops.py
+ * - https://github.com/PaddlePaddle/Paddle/blob/release/2.3/python/paddle/vision/ops.py
  */
 mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,

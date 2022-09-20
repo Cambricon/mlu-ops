@@ -187,7 +187,7 @@
 | ---------------- | ------------------------------------------------------------ | ----------------- | ----------------------- | -------- | -------- |
 | handle           | 当前可获得的资源（context）                                  | 输入              | mluOpHandle_t           | /        | 无       |
 | x_desc           | 对输入数据 x 的形状描述，包含了 x 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
-| x                | 输入 tensor x 的地址，包含每个网格中框的坐标、置信度、分类得分等信息 | 输入              | float                   | NCHW     | 无       |
+| x                | 输入 tensor x 的地址，包含每个网格中框的坐标、置信度、分类得分等信息 | 输入              | float                   | ARRAY    | 无       |
 | img_size_desc    | 对输入数据 img_size 的形状描述，包含了 img_size 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
 | img_size         | 输入 tensor img_size 的地址，包含输入图像的宽和高            | 输入              | int                     | ARRAY    | 无       |
 | anchors_desc     | 对输入数据 anchors 的形状描述，包含了 anchors 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
