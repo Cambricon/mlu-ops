@@ -5,6 +5,8 @@ on:
     tags:
       - v*
 
+  pull_request:
+
 jobs:
   test:
     strategy:
@@ -14,6 +16,10 @@ jobs:
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
+
+      - name: update_images
+        run: |
+          docker pull docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.1-devel-x86_64-${{matrix.os}}
       
       - name: build_bangc_ops
         run: >
