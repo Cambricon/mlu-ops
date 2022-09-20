@@ -106,12 +106,12 @@ if [ -f "/etc/os-release" ]; then
             pushd ${PACKAGE_EXTRACT_DIR}
             for filename in ../${REAL_PATH}*.deb; do
               echo "filename: $filename"
-              dpkg -X ${filename} ./ --no-same-owner
+              dpkg -X ${filename} ./
               if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                 pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
                 echo "pure_ver: ${pure_ver}"
                 for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
-                  dpkg -X $lib ./ --no-same-owner
+                  dpkg -X $lib ./
                 done 
               fi
             done
