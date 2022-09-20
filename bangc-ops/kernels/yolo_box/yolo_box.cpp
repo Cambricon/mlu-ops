@@ -145,13 +145,13 @@ mluOpStatus_t YoloBoxParamCheck(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
-    mluOpHandle_t &handle, mluOpTensorDescriptor_t x_desc, const void *x,
-    mluOpTensorDescriptor_t img_size_desc, const void *img_size,
-    mluOpTensorDescriptor_t anchors_desc, const void *anchors,
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,
+    const mluOpTensorDescriptor_t img_size_desc, const void *img_size,
+    const mluOpTensorDescriptor_t anchors_desc, const void *anchors,
     const int class_num, const float conf_thresh, const int downsample_ratio,
     const bool clip_bbox, const float scale, const bool iou_aware,
-    const float iou_aware_factor, mluOpTensorDescriptor_t boxes_desc,
-    void *boxes, mluOpTensorDescriptor_t scores_desc, void *scores) {
+    const float iou_aware_factor, const mluOpTensorDescriptor_t boxes_desc,
+    void *boxes, const mluOpTensorDescriptor_t scores_desc, void *scores) {
   // check params
   mluOpStatus_t param_check =
       YoloBoxParamCheck("[mluOpYoloBox]", handle, x_desc, x, img_size_desc,
