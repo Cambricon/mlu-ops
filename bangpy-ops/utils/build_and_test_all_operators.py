@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -21,6 +21,7 @@
 # pylint: disable=missing-docstring, too-many-locals, missing-function-docstring
 import os
 import sys
+from test import test_op
 import pytest
 
 
@@ -33,13 +34,9 @@ def is_build_func(name, obj):
     return callable(obj) and name.startswith("build")
 
 
-def is_test_func(name, obj):
-    return callable(obj) and name.startswith("test")
-
-
-def collect_build_test_funcs(op, cur_file_name):
+def collect_build_funcs(op):
     dicts = [getattr(op, "__dict__", {})]
-    build_exist = test_exist = 0
+    build_exist = 0
 
     for dic in dicts:
         for name, obj in list(dic.items()):
@@ -51,12 +48,7 @@ def collect_build_test_funcs(op, cur_file_name):
                     )
                 build_entrys.append(obj)
                 build_exist = 1
-            if is_test_func(name, obj):
-                test_entrys.append(obj)
-                if test_files.count(cur_file_name) == 0:
-                    test_files.append(cur_file_name)
-                    test_exist = 2
-    return build_exist | test_exist
+    return build_exist
 
 
 def build_all_op():
@@ -66,15 +58,16 @@ def build_all_op():
         obj(None, None)
 
 
-def test_all_op(target):
+def test_all_op(target, opname):
     print("======================")
     print("Test all operators...")
-    # for obj in test_entrys:
-    #     obj()
-    if target is not None:
-        pytest.main(["-s", "--target=" + target, *test_files])
+    if opname in ["add"]:
+        test_op(target, opname)
     else:
-        pytest.main(["-s", *test_files])
+        if target is not None:
+            pytest.main(["-s", "--target=" + target, *test_files])
+        else:
+            pytest.main(["-s", *test_files])
 
 
 def main():
@@ -118,7 +111,7 @@ def main():
                 if f.endswith(".py"):
                     sys.path.append(os.getcwd())
                     a = __import__(f[:-3])
-                    status |= collect_build_test_funcs(a, os.getcwd() + "/" + f)
+                    status |= collect_build_funcs(a)
                     sys.path.pop()
             os.chdir(cur_work_path)
         operator_statuts[op_name] = status
@@ -133,14 +126,15 @@ def main():
                     % (k)
                 )
     if test_enable:
-        test_all_op(target)
-        for k, v in operator_statuts.items():
-            if not v & 2:
-                print(
-                    "Test Warning: Operator %s was skipped, please check whether\
-                     there is a function start with 'test' prefix in the operator."
-                    % (k)
-                )
+        for op_name in operator_lists:
+            test_all_op(target, op_name)
+            for k, v in operator_statuts.items():
+                if not v & 1:
+                    print(
+                        "Test Warning: Operator %s was skipped, please check whether\
+                            there is a function start with 'test' prefix in the operator."
+                        % (k)
+                    )
 
 
 if __name__ == "__main__":
