@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""Celu operator implementation using BANGPy TCP API."""
 import random
 import torch
 import numpy as np
@@ -125,7 +125,4 @@ def test_celu(target, shape, dtype, alpha):
     torch_value = torch.tensor(data_x)
     m = torch.nn.CELU(alpha)
     t_res = m(torch_value)
-    if dtype.name == "float16":
-        bp.assert_allclose(t_res.numpy(), res, rtol=0.1, atol=0.1)
-    else:
-        bp.assert_allclose(t_res.numpy(), res, rtol=0.1, atol=0.1)
+    bp.assert_allclose(t_res.numpy(), res, rtol=0.1, atol=0.1)
