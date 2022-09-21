@@ -19,7 +19,8 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""Test LogAddExp operator with multi-platform code link."""
+
 import random
 import numpy as np
 import pytest
@@ -150,7 +151,6 @@ def test_logaddexp(target, shape, dtype):
     try:
         mlu_ret = run(data_x, data_y, dtype)
     except Exception as err:
-        print(str(err))
         if str(err) == "shape err":
             return
         raise Exception(str(err)) from err

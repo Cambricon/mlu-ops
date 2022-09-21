@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""A multi-platform code link example test for BANGPy TCP."""
+"""LogAddExp operator implementation using BANGPy TCP API."""
 import bangpy
 from bangpy.script import tcp, ty, build_module
 
@@ -63,7 +63,7 @@ class LogAddExp:
         y: ty.Buffer("nram")
         ) -> None:
         max_threshold = 10
-        min_threshold = -1 * 7.5
+        min_threshold = -7.5
         self.mark_value_compare_with_threshold_value(input_buffer, x, 1, min_threshold)
         self.mark_value_compare_with_threshold_value(input_buffer, y, 0, max_threshold)
 
@@ -137,33 +137,36 @@ class LogAddExp:
                         calc_size = total_count_in_core % process_count
                         if calc_size == 0:
                             calc_size = process_count
-                    tcp.memcpy(
-                        nram_buffer_in0[0:calc_size],
-                        gram_input1[once_loop_start:once_loop_start + calc_size]
+                    with tcp.block("data_copy"):
+                        tcp.memcpy(
+                            nram_buffer_in0[0:calc_size],
+                            gram_input1[once_loop_start:once_loop_start + calc_size]
+                            )
+                        tcp.memcpy(nram_buffer_in1[0:calc_size],
+                            gram_input2[once_loop_start:once_loop_start + calc_size]
+                            )
+                    with tcp.block("compute"):
+                        self.logaddexp_calc(
+                            nram_middle_value,
+                            nram_buffer_in0,
+                            nram_buffer_in1,
+                            nram_x_bool,
+                            nram_y_bool
+                            )
+                        self.replace_the_marked_value(
+                            nram_middle_value,
+                            nram_buffer_in1, nram_y_bool
                         )
-                    tcp.memcpy(nram_buffer_in1[0:calc_size],
-                        gram_input2[once_loop_start:once_loop_start + calc_size]
+                        self.replace_the_marked_value(
+                            nram_middle_value,
+                            nram_buffer_in0,
+                            nram_x_bool
                         )
-                    self.logaddexp_calc(
-                        nram_middle_value,
-                        nram_buffer_in0,
-                        nram_buffer_in1,
-                        nram_x_bool,
-                        nram_y_bool
+                    with tcp.block("data_copy"):
+                        tcp.memcpy(
+                            gram_output[once_loop_start:once_loop_start + calc_size],
+                            nram_middle_value[:calc_size]
                         )
-                    self.replace_the_marked_value(
-                        nram_middle_value,
-                        nram_buffer_in1, nram_y_bool
-                    )
-                    self.replace_the_marked_value(
-                        nram_middle_value,
-                        nram_buffer_in0,
-                        nram_x_bool
-                    )
-                    tcp.memcpy(
-                        gram_output[once_loop_start:once_loop_start + calc_size],
-                        nram_middle_value[:calc_size]
-                    )
 
 
 @bangpy.tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
