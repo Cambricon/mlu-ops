@@ -23,14 +23,10 @@
 """NonZeroCount operator implementation using BANGPy TCP API."""
 import bangpy as bp
 from bangpy import tcp
-from bangpy.tcp.util import round_up, round_down
-from bangpy.platform.bang_config import TARGET
+from bangpy.script import build_module, ty
 
 DTYPES = [bp.float16, bp.float32]
-TARGET_LIST = ["mlu370-s4", "mlu290", "mlu270"]
-
-# Align to 64.
-ALIGN_SIZE = 64
+TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 
 
 class NonZeroCount(object):
@@ -39,200 +35,137 @@ class NonZeroCount(object):
     NonZeroCount is used to count the number of NonZeros on each core.
     """
 
-    def __init__(self, target, dtype=bp.float32, task_num=16, name="NonZeroCount"):
-        """Construct a new NonZero class.
-
-        Parameters
-        ----------
-        target : str
-            Target MLU device name.
-
-        dtype : bangpy.DType
-            The data type of input.
-
-        task_num : int
-            The task number of runtime.
-
-        name : str
-            Kernel entry function name.
-
-        Attributes
-        ----------
-        tcp : tcp.TCP
-            TCP container.
-
-        dtype : bangpy.DType
-            The data type of input.
-
-        target : str
-            Target MLU device name.
-
-        task_num : int
-            The task number of runtime.
-
-        name : str
-            Kernel entry function name.
-
-        dim_0 : tcp.SizeVar
-            The first dimension size of input data.
-
-        dim_1 : tcp.SizeVar
-            The second dimension size of input data.
-
-        dim_2 : tcp.SizeVar
-            The third dimension size of input data.
-
-        dim_3 : tcp.SizeVar
-            The fourth dimension size of input data.
-
-        num_nonzero : tcp.SizeVar
-            The number of nonzero.
-
-        nram_size : int
-            The size of nram buffer needed for one calculation.
-
-        int_type : bangpy.DType
-            The compute int data type.
-
-        float_type : bangpy.DType
-            The compute float data type.
-        """
-        self.tcp = tcp.TCP(target)
+    def __init__(
+        self,
+        dtype: ty.string,
+        align_size: ty.int32,
+    ):
         self.dtype = dtype
-        self.task_num = task_num
-        self.name = name
-        self.dim_0 = self.tcp.SizeVar("dim_0")
-        self.dim_1 = self.tcp.SizeVar("dim_1")
-        self.dim_2 = self.tcp.SizeVar("dim_2")
-        self.dim_3 = self.tcp.SizeVar("dim_3")
-        # 30 * 1024B reserve for stack, need 2 buffers after storage rewrite pass.
-        self.nram_size = round_down(
-            (TARGET(target).nram_size - 30 * 1024) // bp.int32.bytes // 3, 128
-        )
-        self.float_type = bp.float16
+        self.align_size = align_size
+        if self.dtype == "float32":
+            self.mode = "rd"
+        else:
+            self.mode = None
 
-    def core_compute(self, pre_core, core_index, in_buffer, out_buffer):
+    def core_compute(
+        self,
+        pre_core: ty.int32,
+        core_index: ty.int32,
+        out_buffer: ty.Buffer("nram"),  # type: ignore
+    ):
         """NonZero count compute on each core."""
-        repeat = self.tcp.Scalar(dtype=bp.int32, name="repeat")
-        repeat.assign(pre_core / self.nram_size)
-        remain = self.tcp.Scalar(dtype=bp.int32, name="remain")
-        remain.assign(pre_core % self.nram_size)
+        repeat = pre_core / self.nram_size
+        remain = pre_core % self.nram_size
         # The count number buffer for count_nonzero, size at least 128 bytes.
-        count_num = self.tcp.Buffer(
-            shape=(32,), dtype=bp.uint32, name="count", scope="nram"
-        )
+        count_num = tcp.alloc_buffer(shape=(32,), dtype="uint32", scope="nram")
 
-        total_count = self.tcp.Buffer(
-            shape=(1,), dtype=bp.uint32, name="total_count", scope="nram"
-        )
+        total_count = tcp.alloc_buffer(shape=(1,), dtype="uint32", scope="nram")
 
-        cast_nram = self.tcp.Buffer(
+        cast_nram = tcp.alloc_buffer(
             shape=(self.nram_size,),
-            dtype=self.float_type,
-            name="data_nram",
+            dtype="float16",
             scope="nram",
         )
 
-        total_count[0] = 0
-        global_index = self.tcp.Scalar(dtype=bp.int32, name="global_index")
-        zero = self.tcp.Scalar(dtype=self.dtype, name="zero", value=0.0)
+        total_count[0] = tcp.cast(0, "uint32")
+        global_index = 0
+        remain_align = 0
+        zero = tcp.cast(0, self.dtype)
 
-        with self.tcp.for_range(0, repeat, stage=1) as i:
-            with self.tcp.block("compute"):
-                global_index.assign(core_index + i * self.nram_size)
-            data_nram = self.tcp.Buffer(
+        for i in range(repeat, pipeline=True):  # type: ignore
+            with tcp.block("compute"):
+                global_index = core_index + i * self.nram_size
+            data_nram = tcp.alloc_buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
-                name="data_nram",
                 scope="nram",
             )
-            with self.tcp.block("data_copy"):
-                self.tcp.memcpy(
+            with tcp.block("data_copy"):
+                tcp.memcpy(
                     data_nram,
-                    in_buffer.flatten()[global_index : global_index + self.nram_size],
+                    self.in_buffer.flatten()[
+                        global_index : global_index + self.nram_size
+                    ],
                 )
-            with self.tcp.block("compute"):
-                if self.dtype != self.float_type:
-                    self.tcp.type_convert(cast_nram, data_nram)
+            with tcp.block("compute"):
+                if self.dtype != "float16":
+                    tcp.type_convert(cast_nram, data_nram, mode=self.mode)
+                    tcp.count_nonzero(count_num, cast_nram)
                 else:
-                    cast_nram = data_nram
-                self.tcp.count_nonzero(count_num, cast_nram)
+                    tcp.count_nonzero(count_num, data_nram)
                 total_count[0] = total_count[0] + count_num[0]
-
-        with self.tcp.if_scope(remain > 0):
-            global_index.assign(core_index + repeat * self.nram_size)
-            remain_align = self.tcp.Scalar(dtype=bp.int32, name="remain_align")
-            remain_align.assign(
-                round_up(
-                    remain,
-                    ALIGN_SIZE
-                    if self.tcp.mlu_device[:6] == "mlu370"
-                    else ALIGN_SIZE * 2,
-                )
-            )
-            data_nram = self.tcp.Buffer(
+        if remain > 0:
+            global_index = core_index + repeat * self.nram_size
+            remain_align = tcp.round_up(remain, self.align_size)
+            data_nram = tcp.alloc_buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
-                name="data_nram",
                 scope="nram",
             )
-            self.tcp.assign(data_nram[:remain_align], zero)
-            self.tcp.memcpy(
+            tcp.assign(data_nram[:remain_align], zero)
+            tcp.memcpy(
                 data_nram[:remain],
-                in_buffer.flatten()[global_index : global_index + remain],
+                self.in_buffer.flatten()[global_index : global_index + remain],
             )
-            if self.dtype != self.float_type:
-                self.tcp.type_convert(
-                    cast_nram[:remain_align], data_nram[:remain_align]
+            if self.dtype != "float16":
+                tcp.type_convert(
+                    cast_nram[:remain_align], data_nram[:remain_align], mode=self.mode
                 )
+                tcp.count_nonzero(count_num, cast_nram[:remain_align])
             else:
-                cast_nram = data_nram
-            self.tcp.count_nonzero(count_num, cast_nram[:remain_align])
+                tcp.count_nonzero(count_num, data_nram[:remain_align])
             total_count[0] = total_count[0] + count_num[0]
         out_buffer[0] = total_count[0]
 
-    def nonzero_count_compute(self):
+    def main(
+        self,
+        in_buffer: ty.handle,
+        dim_0: ty.int32,
+        dim_1: ty.int32,
+        dim_2: ty.int32,
+        dim_3: ty.int32,
+        core_count: ty.handle,
+    ) -> None:
         """The entry of the NonZero count operator."""
-        self.tcp.launch_task(self.task_num, 1, 1)
-        self.in_buffer = self.tcp.Buffer(
-            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
-            dtype=self.dtype,
-            name="in_buffer",
-            scope="global",
+        tgt = tcp.target()
+        self.dim_0 = dim_0
+        self.dim_1 = dim_1
+        self.dim_2 = dim_2
+        self.dim_3 = dim_3
+        self.in_buffer = tcp.match_buffer(
+            in_buffer,
+            (self.dim_0, self.dim_1, self.dim_2, self.dim_3),
+            self.dtype,
         )
-        self.core_count = self.tcp.Buffer(
-            shape=(self.task_num,), dtype=bp.uint32, name="core_count", scope="global"
+        self.core_count = tcp.match_buffer(
+            core_count,
+            (tgt.core_num,),
+            "uint32",
         )
-
-        elem_size = self.tcp.Scalar(dtype=bp.int32, name="elem_size")
-        elem_size.assign(self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3)
-
-        pre_core = self.tcp.Scalar(dtype=bp.int32, name="pre_core")
-        pre_core.assign(elem_size / self.tcp.taskDim)
-        core_remain = self.tcp.Scalar(dtype=bp.int32, name="core_remain")
-        core_remain.assign(elem_size % self.tcp.taskDim)
-        core_index = self.tcp.Scalar(dtype=bp.int32, name="core_index")
-        core_index.assign(pre_core * self.tcp.taskId)
-        with self.tcp.if_scope(self.tcp.taskId < core_remain):
-            pre_core.assign(pre_core + 1)
-            core_index.assign(core_index + self.tcp.taskId)
-        with self.tcp.else_scope():
-            core_index.assign(core_index + core_remain)
-        self.core_compute(
-            pre_core, core_index, self.in_buffer, self.core_count[self.tcp.taskId]
-        )
-
-        return self.tcp.BuildBANG(
-            inputs=[self.in_buffer, self.dim_0, self.dim_1, self.dim_2, self.dim_3],
-            outputs=[self.core_count],
-            kernel_name=self.name,
-        )
+        self.nram_size = ((tgt.nram_size - 30 * 1024) // 4 // 3) // 128 * 128
+        for i in tcp.thread_binding(0, 1, thread="blockIdx.x"):
+            for j in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
+                task_dim = tgt.core_num
+                task_id = i * tgt.core_num + j
+                elem_size = self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3
+                pre_core = elem_size / task_dim
+                core_remain = elem_size % task_dim
+                core_index = pre_core * task_id
+                if task_id < core_remain:
+                    pre_core = pre_core + 1
+                    core_index = core_index + task_id
+                else:
+                    core_index = core_index + core_remain
+                self.core_compute(pre_core, core_index, self.core_count[task_id])
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, "NonZeroCount")
 def build_nonzero_count(dtype, target):
-    task_num = TARGET(target).cluster_num * TARGET(target).core_num
+    align_size = 64 if target[:6] == "mlu370" else 128
 
-    nonzero_count = NonZeroCount(target, task_num=task_num, dtype=dtype)
-    f_nonzero_count = nonzero_count.nonzero_count_compute()
+    f_nonzero_count = build_module.build(
+        NonZeroCount(dtype.name, align_size),
+        target,
+        "NonZeroCount",
+    )
     return f_nonzero_count

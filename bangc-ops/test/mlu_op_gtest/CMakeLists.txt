@@ -16,9 +16,9 @@ if (STYLE_CHECK)
 endif()
 
 message("[MLUOP GTEST REGISTER OP]: ")
-file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/*case_list.cpp")
+file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*case_list.cpp")
 execute_process(COMMAND rm -f ${CASE_LIST})
-execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
 
 
 ## Try to find libxml2 and protobuf
@@ -74,7 +74,7 @@ else()
 endif()
 
 message("[MLUOP GTEST PROTOC]: ")
-set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/mlu_op_test_proto")
+set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu_op_test_proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
 
 # protoc code
@@ -98,45 +98,55 @@ include_directories("${LIBMLUOP_INCLUDE_DIR}")
 set(GOOGLETEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/googletest"
                        "${CMAKE_CURRENT_SOURCE_DIR}/googletest/include")
 set(GOOGLETEST_SRC     "${CMAKE_CURRENT_SOURCE_DIR}/googletest/src")
-set(MLUOP_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/tests"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/zoo"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/extra_lib/jsoncppDist/json"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+set(MLUOP_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(MLUOP_PB_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/include"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/tests"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/json"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src"
 )
-set(MLUOP_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/src/gtest/extra_lib/jsoncppDist/*.cpp"
+set(MLUOP_PB_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/*.cpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*.cpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
+)
+set(MLUOP_API_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/include"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/extra_lib/jsoncppDist/json"
+)
+set(MLUOP_API_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/*.cpp"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/*.cpp"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
 )
 
 include_directories("${GOOGLETEST_INCLUDE}")
-include_directories("${PROTO_PATH}")
 include_directories("${MLUOP_GTEST_INCLUDE}")
+include_directories("${PROTO_PATH}")
+include_directories("${MLUOP_PB_GTEST_INCLUDE}")
+include_directories("${MLUOP_API_GTEST_INCLUDE}")
 
 file(GLOB SRC_DIR "${GOOGLETEST_SRC}/*.cc")
 #add_library(gtest_shared SHARED ${SRC_DIR})
 add_library(gtest_shared STATIC ${SRC_DIR}) # for runtime convenience
 
-file(GLOB MLUOP_TEST_DIR ${MLUOP_GTEST_SRC})
+file(GLOB MLUOP_PB_TEST_DIR ${MLUOP_PB_GTEST_SRC})
 
 if (MLUOP_BUILD_SPECIFIC_GTEST_OP)
   foreach(op ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
-    file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/zoo/${op}/*.cpp")
-    list(APPEND MLUOP_OP_DIR ${OP_DIR})
+    file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/${op}/*.cpp")
+    list(APPEND MLUOP_PB_GTEST_DIR ${OP_DIR})
   endforeach()
 else()
-  file(GLOB_RECURSE MLUOP_OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/zoo/*/*.cpp")
+  file(GLOB_RECURSE MLUOP_PB_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/*/*.cpp")
 endif()
 
-add_library(mluop_gtest_obj OBJECT ${MLUOP_TEST_DIR} ${MLUOP_OP_DIR} ${PROTO_HDRS})
-add_dependencies(mluop_gtest_obj mluop_build_proto)
-add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_gtest_obj>)
+add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR} ${PROTO_HDRS})
+add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
+add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
 target_link_libraries(mluop_gtest mluops)
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
-
 foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} cnrt cndrv pthread gtest_shared stdc++ m dl)
   target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
@@ -146,6 +156,27 @@ foreach(target_gtest ${targets_mluop_gtest})
     INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
   )
 endforeach()
+
+file(GLOB MLUOP_API_TEST_DIR ${MLUOP_API_GTEST_SRC})
+
+if (MLUOP_BUILD_SPECIFIC_GTEST_OP)
+  foreach(op ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
+    file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/${op}/*.cpp")
+    list(APPEND MLUOP_API_GTEST_DIR ${OP_DIR})
+  endforeach()
+else()
+  file(GLOB_RECURSE MLUOP_API_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/*/*.cpp")
+endif()
+
+add_library(mluop_api_gtest_obj OBJECT ${MLUOP_API_TEST_DIR} ${MLUOP_API_GTEST_DIR})
+add_executable(mluop_api_gtest $<TARGET_OBJECTS:mluop_api_gtest_obj>)
+target_link_libraries(mluop_api_gtest cnrt cndrv pthread gtest_shared mluops stdc++ m dl)
+target_link_libraries(mluop_api_gtest ${LIBXML2_LIBRARIES} ${EXTRA_LIBS})
+set_target_properties(mluop_api_gtest
+  PROPERTIES
+  INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
+)
+set(targets_mluop_gtest mluop_api_gtest)
 
 # pb to prototxt tool
 add_executable(pb2prototxt ${CMAKE_CURRENT_SOURCE_DIR}/tools/pb2prototxt.cpp)
@@ -178,13 +209,13 @@ install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
   DESTINATION test/mluop_gtest/tools
 )
 set(CMAKE_INSTALL_MESSAGE LAZY) # do not show `Up-to-date` info
-install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/src/zoo"
+install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/zoo"
   COMPONENT mluop_gtest
-  DESTINATION test/mluop_gtest/src
+  DESTINATION test/mluop_gtest/pb_gtest/src
   FILES_MATCHING PATTERN "*.prototxt"
 )
-install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/tests"
+install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/tests"
   COMPONENT mluop_gtest
-  DESTINATION test/mluop_gtest/
+  DESTINATION test/mluop_gtest/pb_gtest
   FILES_MATCHING PATTERN "*.prototxt"
 )

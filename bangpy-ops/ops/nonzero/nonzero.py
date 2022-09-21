@@ -20,18 +20,14 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=useless-object-inheritance, too-many-instance-attributes
 # pylint: disable=attribute-defined-outside-init, too-many-statements
-# pylint: disable=too-many-arguments, too-many-locals
+# pylint: disable=too-many-arguments, too-many-locals, missing-function-docstring
 """NonZero operator implementation using BANGPy TCP API."""
 import bangpy as bp
 from bangpy import tcp
-from bangpy.tcp.util import round_up, round_down
-from bangpy.platform.bang_config import TARGET
+from bangpy.script import build_module, ty
 
 DTYPES = [bp.float16, bp.float32]
-TARGET_LIST = ["mlu370-s4", "mlu290", "mlu270"]
-
-# Align to 64.
-ALIGN_SIZE = 64
+TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 
 
 class NonZero(object):
@@ -39,250 +35,184 @@ class NonZero(object):
     ONNX NonZero operator, behaves similar to numpy.nonzero.
     """
 
-    def __init__(self, target, dtype=bp.float32, task_num=16, name="NonZero"):
-        """Construct a new NonZero class.
-
-        Parameters
-        ----------
-        target : str
-            Target MLU device name.
-
-        dtype : bangpy.DType
-            The data type of input.
-
-        task_num : int
-            The task number of runtime.
-
-        name : str
-            Kernel entry function name.
-
-        Attributes
-        ----------
-        tcp : tcp.TCP
-            TCP container.
-
-        dtype : bangpy.DType
-            The data type of input.
-
-        target : str
-            Target MLU device name.
-
-        task_num : int
-            The task number of runtime.
-
-        name : str
-            Kernel entry function name.
-
-        dim_0 : tcp.SizeVar
-            The first dimension size of input data.
-
-        dim_1 : tcp.SizeVar
-            The second dimension size of input data.
-
-        dim_2 : tcp.SizeVar
-            The third dimension size of input data.
-
-        dim_3 : tcp.SizeVar
-            The fourth dimension size of input data.
-
-        num_nonzero : tcp.SizeVar
-            The number of nonzero.
-
-        trans : tcp.SizeVar
-            Output data will be transposed if trans is equal to 1.
-            Otherwise not.
-
-        dim_num : tcp.SizeVar
-            The size of dimension of input data.
-
-        nram_size : int
-            The size of nram buffer needed for one calculation.
-
-        int_type : bangpy.DType
-            The compute int data type.
-
-        float_type : bangpy.DType
-            The compute float data type.
-
-        max_dim_num : int
-            The maximum size of dimension of input data.
-        """
-        self.tcp = tcp.TCP(target)
-        self.dtype = dtype
+    def __init__(
+        self,
+        target: ty.string,
+        dtype: ty.string,
+        dtype_bits: ty.int32,
+        align_size: ty.int32,
+    ):
         self.target = target
-        self.task_num = task_num
-        self.name = name
-        self.dim_0 = self.tcp.SizeVar("dim_0")
-        self.dim_1 = self.tcp.SizeVar("dim_1")
-        self.dim_2 = self.tcp.SizeVar("dim_2")
-        self.dim_3 = self.tcp.SizeVar("dim_3")
-        self.num_nonzero = self.tcp.SizeVar("num_nonzero")
-        self.trans = self.tcp.SizeVar("need_trans")
-        self.dim_num = self.tcp.SizeVar("dim_num")
-        # 30 * 1024B reserve for stack, need 13 buffers after storage rewrite pass.
-        self.nram_size = round_down(
-            (TARGET(target).nram_size - 30 * 1024) // 22 // bp.int32.bytes, 128
-        )
-        self.int_type = bp.int32
-        self.float_type = bp.float32
+        self.dtype = dtype
+        self.dtype_bits = dtype_bits
+        self.align_size = align_size
         self.max_dim_num = 4
+        self.mode = "rd" if self.dtype == "float32" else None
 
-    def indices_set(self, index_nram, global_index, size, seg_size, dim_size):
+    def indices_set(
+        self,
+        index_nram: ty.Buffer("nram"),  # type: ignore
+        global_index: ty.int32,
+        size: ty.int32,
+        seg_size: ty.int32,
+        dim_size: ty.int32,
+    ):
         """Set output indices of each dim."""
-        index_0 = self.tcp.Scalar(dtype=bp.int32, name="index_0")
-        index_1 = self.tcp.Scalar(dtype=bp.int32, name="index_1")
-        remain_front = self.tcp.Scalar(dtype=bp.int32, name="remain_front")
-        remain_back = self.tcp.Scalar(dtype=bp.int32, name="remain_back")
-        offset = self.tcp.Scalar(dtype=bp.int32, name="offset")
-        size_align = self.tcp.Scalar(dtype=bp.int32, name="size_align")
-        value = self.tcp.Scalar(dtype=bp.int32, name="value")
-        size_align.assign(round_up(size, ALIGN_SIZE))
-        index_0.assign(global_index / seg_size)
-        index_1.assign((global_index + size) / seg_size)
-        with self.tcp.if_scope(index_0 == index_1):
-            value.assign(index_0 % dim_size)
-            self.tcp.assign(index_nram[:size_align], value.astype(self.int_type))
-        with self.tcp.else_scope():
-            remain_front.assign(seg_size - global_index % seg_size)
-            remain_back.assign((global_index + size) % seg_size)
-            value.assign(index_0 % dim_size)
-            self.tcp.assign(
-                index_nram[: round_up(remain_front, ALIGN_SIZE)],
-                value.astype(self.int_type),
+        remain_front = 0
+        remain_back = 0
+        offset = 0
+        value = 0
+
+        size_align = tcp.round_up(size, 64)
+        index_0 = global_index / seg_size
+        index_1 = (global_index + size) / seg_size
+        if index_0 == index_1:
+            value = index_0 % dim_size
+            tcp.assign(index_nram[:size_align], tcp.cast(value, "int32"))
+        else:
+            remain_front = seg_size - global_index % seg_size
+            remain_back = (global_index + size) % seg_size
+            value = index_0 % dim_size
+            tcp.assign(
+                index_nram[: tcp.round_up(remain_front, 64)],
+                tcp.cast(value, "int32"),
             )
-            offset.assign(remain_front)
-            with self.tcp.for_range(0, (index_1 - index_0 - 1)) as i:
-                value.assign((index_0 + i + 1) % dim_size)
+            offset = remain_front
+            for i in range(index_1 - index_0 - 1):  # type: ignore
+                value = (index_0 + i + 1) % dim_size
                 # mlu3xx
-                if self.target[:6] == "mlu370":
-                    self.tcp.assign(
-                        index_nram[offset : offset + round_up(seg_size, ALIGN_SIZE)],
-                        value.astype(self.int_type),
+                if self.target == "mlu370":
+                    tcp.assign(
+                        index_nram[offset : offset + tcp.round_up(seg_size, 64)],
+                        tcp.cast(value, "int32"),
                     )
                 # mlu2xx
                 else:
-                    with self.tcp.for_range(0, seg_size) as i:
-                        index_nram[offset + i] = value.astype(self.int_type)
-                offset.assign(offset + seg_size)
-            with self.tcp.if_scope(remain_back != 0):
-                value.assign(index_1 % dim_size)
-                if self.target[:6] == "mlu370":
-                    self.tcp.assign(
-                        index_nram[offset : offset + round_up(remain_back, ALIGN_SIZE)],
-                        value.astype(self.int_type),
+                    for j in range(seg_size):  # type: ignore
+                        index_nram[offset + j] = tcp.cast(value, "int32")
+                offset = offset + seg_size
+            if remain_back != 0:
+                value = index_1 % dim_size
+                if self.target == "mlu370":
+                    tcp.assign(
+                        index_nram[offset : offset + tcp.round_up(remain_back, 64)],
+                        tcp.cast(value, "int32"),
                     )
                 else:
-                    with self.tcp.for_range(0, remain_back) as i:
-                        index_nram[offset + i] = value.astype(self.int_type)
+                    for j in range(remain_back):  # type: ignore
+                        index_nram[offset + j] = tcp.cast(value, "int32")
 
-    def gather_data(self, int64_nram, out_nram, align_size, dim_index):
+    def gather_data(
+        self,
+        int64_nram: ty.Buffer("nram"),  # type: ignore
+        out_nram: ty.Buffer("nram"),  # type: ignore
+        align_size: ty.int32,
+        dim_index: ty.int32,
+    ):
         """Gather each dim output data. Convert int32 to int64 and transpose."""
-        int_nram = int64_nram[: self.dim_num * align_size].reinterpret_cast(bp.int32)
-        with self.tcp.if_scope(self.trans == 1):
-            int_nram0 = int_nram.reshape((align_size, self.dim_num * 2))[
-                :, dim_index * 2
-            ]
-            self.tcp.memcpy(
-                int_nram0[:, 0], out_nram[:align_size].reshape((align_size, 1))
-            )
-        with self.tcp.else_scope():
+        int_nram = int64_nram[: self.dim_num * align_size].reinterpret_cast("int32")
+        if self.trans == 1:
+            int_nram0 = int_nram.reshape((align_size, self.dim_num * 2))
+            int_nram0 = int_nram0[:align_size, dim_index * 2]
+            tcp.memcpy(int_nram0, out_nram[:align_size].reshape((align_size, 1)))
+        else:
             int_nram1 = int_nram.reshape((self.dim_num, align_size * 2))[dim_index]
             int_nram1 = int_nram1.reshape((align_size, 2))
-            self.tcp.memcpy(
-                int_nram1[:, 0], out_nram[:align_size].reshape((align_size, 1))
+            tcp.memcpy(
+                int_nram1[:align_size, 0],
+                out_nram[:align_size].reshape((align_size, 1)),
             )
 
-    def core_compute(self, pre_core, core_index, out_offset, in_buffer, out_buffer):
+    def core_compute(
+        self,
+        pre_core: ty.int32,
+        core_index: ty.int32,
+        out_offset: ty.int32,
+    ):
         """NonZero compute on each core."""
-        repeat = self.tcp.Scalar(dtype=bp.int32, name="repeat")
-        repeat.assign(pre_core / self.nram_size)
-        remain = self.tcp.Scalar(dtype=bp.int32, name="remain")
-        remain.assign(pre_core % self.nram_size)
-        zero = self.tcp.Scalar(dtype=self.dtype, name="zero", value=0)
-        index_0_nram = self.tcp.Buffer(
-            shape=(2 * self.nram_size + ALIGN_SIZE,),
-            dtype=self.int_type,
-            name="index_0_nram",
+        repeat = pre_core / self.nram_size
+        remain = pre_core % self.nram_size
+        zero = tcp.cast(0, self.dtype)
+        index_0_nram = tcp.alloc_buffer(
+            shape=(2 * self.nram_size + 64,),
+            dtype="int32",
             scope="nram",
         )
-        cast_nram = self.tcp.Buffer(
+        cast_nram = tcp.alloc_buffer(
             shape=(self.nram_size,),
-            dtype=self.float_type,
-            name="cast_nram",
+            dtype="float32",
             scope="nram",
         )
-        out_nram = self.tcp.Buffer(
-            shape=(self.nram_size,), dtype=self.int_type, name="out_nram", scope="nram"
+        out_nram = tcp.alloc_buffer(
+            shape=(self.nram_size,), dtype="int32", scope="nram"
         )
-
-        with self.tcp.if_scope(self.dim_num > 1):
-            index_1_nram = self.tcp.Buffer(
-                shape=(self.nram_size + ALIGN_SIZE,),
-                dtype=self.int_type,
-                name="index_1_nram",
-                scope="nram",
-            )
-        with self.tcp.for_range(0, repeat, stage=1) as i:
+        index_1_nram = tcp.alloc_buffer(
+            shape=(self.nram_size + 64,),
+            dtype="int32",
+            scope="nram",
+        )
+        for i in range(repeat, pipeline=True):  # type: ignore
             global_index = core_index + i * self.nram_size
 
             # The count number buffer for count_nonzero, size at least 128 bytes.
-            count_num = self.tcp.Buffer(
-                shape=(32,), dtype=bp.int32, name="count", scope="nram"
-            )
-            data_nram = self.tcp.Buffer(
+            count_num = tcp.alloc_buffer(shape=(32,), dtype="int32", scope="nram")
+            data_nram = tcp.alloc_buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
-                name="data_nram",
                 scope="nram",
             )
 
-            out_nram_int64 = self.tcp.Buffer(
+            out_nram_int64 = tcp.alloc_buffer(
                 shape=(self.nram_size * self.max_dim_num,),
-                dtype=bp.int64,
-                name="out_nram",
+                dtype="int64",
                 scope="nram",
             )
 
-            with self.tcp.block("data_copy"):
-                self.tcp.memcpy(
+            with tcp.block("data_copy"):
+                tcp.memcpy(
                     data_nram,
-                    in_buffer.flatten()[global_index : global_index + self.nram_size],
+                    self.in_buffer.flatten()[
+                        global_index : global_index + self.nram_size
+                    ],
                 )
-            with self.tcp.block("compute"):
-                self.tcp.assign(
-                    out_nram_int64.reinterpret_cast(bp.int32)[
+            with tcp.block("compute"):
+                tcp.assign(
+                    out_nram_int64.reinterpret_cast("int32")[
                         : self.dim_num * self.nram_size * 2
                     ],
-                    zero.astype(bp.int32),
+                    tcp.cast(0, "int32"),
                 )
 
                 # Convert input data type to float32 data type.
-                if self.dtype != self.float_type:
-                    self.tcp.type_convert(cast_nram, data_nram)
+                if self.dtype != "float32":
+                    tcp.type_convert(cast_nram, data_nram, mode=self.mode)
+                    tcp.count_nonzero(count_num.reinterpret_cast("uint32"), cast_nram)
                 else:
-                    cast_nram = data_nram
+                    # cast_nram = data_nram
+                    tcp.count_nonzero(count_num.reinterpret_cast("uint32"), data_nram)
 
-                # cast_nram only computes if there are non-zero elements in it.
-                self.tcp.count_nonzero(count_num.reinterpret_cast(bp.uint32), cast_nram)
-                with self.tcp.if_scope(count_num[0] > 0):
-
+                if count_num[0] > 0:
                     # One dims compute.
-                    with self.tcp.for_range(0, self.nram_size) as k:
+                    for k in range(self.nram_size):  # type: ignore
                         index_0_nram[k] = (global_index + k) % self.dim_3
-                    self.tcp.take(
-                        out_nram.reinterpret_cast(self.float_type),
-                        index_0_nram[: self.nram_size].reinterpret_cast(
-                            self.float_type
-                        ),
-                        cast_nram,
-                    )
-
+                    if self.dtype != "float32":
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32"),
+                            index_0_nram[: self.nram_size].reinterpret_cast("float32"),
+                            cast_nram,
+                        )
+                    else:
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32"),
+                            index_0_nram[: self.nram_size].reinterpret_cast("float32"),
+                            data_nram,
+                        )
                     self.gather_data(
                         out_nram_int64, out_nram, self.nram_size, self.dim_num - 1
                     )
 
                     # Two dims compute.
-                    with self.tcp.if_scope(self.dim_num > 1):
+                    if self.dim_num > 1:
                         self.indices_set(
                             index_1_nram,
                             global_index,
@@ -290,20 +220,28 @@ class NonZero(object):
                             self.dim_3,
                             self.dim_2,
                         )
-
-                        self.tcp.take(
-                            out_nram.reinterpret_cast(self.float_type),
-                            index_1_nram[: self.nram_size].reinterpret_cast(
-                                self.float_type
-                            ),
-                            cast_nram,
-                        )
+                        if self.dtype != "float32":
+                            tcp.take(
+                                out_nram.reinterpret_cast("float32"),
+                                index_1_nram[: self.nram_size].reinterpret_cast(
+                                    "float32"
+                                ),
+                                cast_nram,
+                            )
+                        else:
+                            tcp.take(
+                                out_nram.reinterpret_cast("float32"),
+                                index_1_nram[: self.nram_size].reinterpret_cast(
+                                    "float32"
+                                ),
+                                data_nram,
+                            )
                         self.gather_data(
                             out_nram_int64, out_nram, self.nram_size, self.dim_num - 2
                         )
 
                     # Tree dims compute.
-                    with self.tcp.if_scope(self.dim_num > 2):
+                    if self.dim_num > 2:
                         self.indices_set(
                             index_1_nram,
                             global_index,
@@ -311,19 +249,28 @@ class NonZero(object):
                             self.dim_3 * self.dim_2,
                             self.dim_1,
                         )
-                        self.tcp.take(
-                            out_nram.reinterpret_cast(self.float_type),
-                            index_1_nram[: self.nram_size].reinterpret_cast(
-                                self.float_type
-                            ),
-                            cast_nram,
-                        )
+                        if self.dtype != "float32":
+                            tcp.take(
+                                out_nram.reinterpret_cast("float32"),
+                                index_1_nram[: self.nram_size].reinterpret_cast(
+                                    "float32"
+                                ),
+                                cast_nram,
+                            )
+                        else:
+                            tcp.take(
+                                out_nram.reinterpret_cast("float32"),
+                                index_1_nram[: self.nram_size].reinterpret_cast(
+                                    "float32"
+                                ),
+                                data_nram,
+                            )
                         self.gather_data(
                             out_nram_int64, out_nram, self.nram_size, self.dim_num - 3
                         )
 
                     # Four dims compute.
-                    with self.tcp.if_scope(self.dim_num > 3):
+                    if self.dim_num > 3:
                         self.indices_set(
                             index_1_nram,
                             global_index,
@@ -331,127 +278,148 @@ class NonZero(object):
                             self.dim_3 * self.dim_2 * self.dim_1,
                             self.dim_0,
                         )
-                        self.tcp.take(
-                            out_nram.reinterpret_cast(self.float_type),
-                            index_1_nram[: self.nram_size].reinterpret_cast(
-                                self.float_type
-                            ),
-                            cast_nram,
-                        )
+                        if self.dtype != "float32":
+                            tcp.take(
+                                out_nram.reinterpret_cast("float32"),
+                                index_1_nram[: self.nram_size].reinterpret_cast(
+                                    "float32"
+                                ),
+                                cast_nram,
+                            )
+                        else:
+                            tcp.take(
+                                out_nram.reinterpret_cast("float32"),
+                                index_1_nram[: self.nram_size].reinterpret_cast(
+                                    "float32"
+                                ),
+                                data_nram,
+                            )
                         self.gather_data(
                             out_nram_int64, out_nram, self.nram_size, self.dim_num - 4
                         )
 
-            with self.tcp.block("data_copy"):
-                with self.tcp.if_scope(count_num[0] > 0):
-                    with self.tcp.if_scope(self.trans == 1):
+            with tcp.block("data_copy"):
+                if count_num[0] > 0:
+                    if self.trans == 1:
                         out_nram_int64 = out_nram_int64[
                             : self.dim_num * self.nram_size
                         ].reshape((self.nram_size, self.dim_num))
-                        out_buffer = out_buffer.reshape(
+                        out_buffer = self.out_buffer.reshape(
                             (self.num_nonzero, self.dim_num)
                         )
-                        self.tcp.memcpy(
+                        tcp.memcpy(
                             out_buffer[
                                 out_offset : out_offset + count_num[0],
+                                : self.dim_num,
                             ],
                             out_nram_int64[
                                 : count_num[0],
+                                : self.dim_num,
                             ],
                         )
-                    with self.tcp.else_scope():
+                    else:
                         out_nram_int64 = out_nram_int64[
                             : self.dim_num * self.nram_size
                         ].reshape((self.dim_num, self.nram_size))
-                        out_buffer = out_buffer.reshape(
+                        out_buffer = self.out_buffer.reshape(
                             (self.dim_num, self.num_nonzero)
                         )
-                        self.tcp.memcpy(
-                            out_buffer[:, out_offset : out_offset + count_num[0]],
-                            out_nram_int64[:, : count_num[0]],
+                        tcp.memcpy(
+                            out_buffer[
+                                : self.dim_num, out_offset : out_offset + count_num[0]
+                            ],
+                            out_nram_int64[: self.dim_num, : count_num[0]],
                         )
 
-            with self.tcp.block("compute"):
-                with self.tcp.if_scope(count_num[0] > 0):
-                    out_offset.assign(out_offset + count_num[0])
-        with self.tcp.if_scope(remain > 0):
+            with tcp.block("compute"):
+                if count_num[0] > 0:
+                    out_offset = out_offset + count_num[0]
+        count_num = tcp.alloc_buffer(shape=(32,), dtype="int32", scope="nram")
+        if remain > 0:
             global_index = core_index + repeat * self.nram_size
 
-            remain_align = self.tcp.Scalar(dtype=bp.int32, name="remain_align")
-            remain_align.assign(
-                round_up(
-                    remain,
-                    ALIGN_SIZE
-                    if self.tcp.mlu_device[:6] == "mlu370"
-                    else ALIGN_SIZE * 2,
-                )
-            )
-            data_nram = self.tcp.Buffer(
+            remain_align = tcp.round_up(remain, self.align_size)
+
+            data_nram = tcp.alloc_buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
-                name="data_nram",
                 scope="nram",
             )
 
-            out_nram_int64 = self.tcp.Buffer(
+            out_nram_int64 = tcp.alloc_buffer(
                 shape=(self.nram_size * self.max_dim_num,),
-                dtype=bp.int64,
-                name="out_nram",
+                dtype="int64",
                 scope="nram",
             )
 
-            self.tcp.assign(data_nram[:remain_align], zero)
-            self.tcp.assign(
-                out_nram_int64.reinterpret_cast(bp.int32)[
+            tcp.assign(data_nram[:remain_align], zero)
+            tcp.assign(
+                out_nram_int64.reinterpret_cast("int32")[
                     : self.dim_num * remain_align * 2
                 ],
-                zero.astype(bp.int32),
+                tcp.cast(0, "int32"),
             )
-            self.tcp.memcpy(
+            tcp.memcpy(
                 data_nram[:remain],
-                in_buffer.flatten()[global_index : global_index + remain],
+                self.in_buffer.flatten()[global_index : global_index + remain],
             )
-            if self.dtype != self.float_type:
-                self.tcp.type_convert(
-                    cast_nram[:remain_align], data_nram[:remain_align]
+            if self.dtype != "float32":
+                tcp.type_convert(cast_nram[:remain_align], data_nram[:remain_align])
+                # cast_nram only computes if there are non-zero elements in it.
+                tcp.count_nonzero(
+                    count_num.reinterpret_cast("uint32"), cast_nram[:remain_align]
                 )
             else:
-                cast_nram = data_nram
+                # cast_nram = data_nram
+                # cast_nram only computes if there are non-zero elements in it.
+                tcp.count_nonzero(
+                    count_num.reinterpret_cast("uint32"), data_nram[:remain_align]
+                )
 
-            # cast_nram only computes if there are non-zero elements in it.
-            self.tcp.count_nonzero(
-                count_num.reinterpret_cast(bp.uint32), cast_nram[:remain_align]
-            )
-            with self.tcp.if_scope(count_num[0] > 0):
+            if count_num[0] > 0:
 
                 # One dims compute.
-                with self.tcp.for_range(0, remain) as k:
+                for k in range(remain):  # type: ignore
                     index_0_nram[k] = (global_index + k) % self.dim_3
-                self.tcp.take(
-                    out_nram.reinterpret_cast(self.float_type),
-                    index_0_nram[:remain_align].reinterpret_cast(self.float_type),
-                    cast_nram[:remain_align],
-                )
+                if self.dtype != "float32":
+                    tcp.take(
+                        out_nram.reinterpret_cast("float32")[:remain_align],
+                        index_0_nram[:remain_align].reinterpret_cast("float32"),
+                        cast_nram[:remain_align],
+                    )
+                else:
+                    tcp.take(
+                        out_nram.reinterpret_cast("float32")[:remain_align],
+                        index_0_nram[:remain_align].reinterpret_cast("float32"),
+                        data_nram[:remain_align],
+                    )
                 self.gather_data(
                     out_nram_int64, out_nram, remain_align, self.dim_num - 1
                 )
 
                 # Two dims compute.
-                with self.tcp.if_scope(self.dim_num > 1):
+                if self.dim_num > 1:
                     self.indices_set(
                         index_1_nram, global_index, remain, self.dim_3, self.dim_2
                     )
-                    self.tcp.take(
-                        out_nram.reinterpret_cast(self.float_type),
-                        index_1_nram[:remain_align].reinterpret_cast(self.float_type),
-                        cast_nram,
-                    )
+                    if self.dtype != "float32":
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32")[:remain_align],
+                            index_1_nram[:remain_align].reinterpret_cast("float32"),
+                            cast_nram[:remain_align],
+                        )
+                    else:
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32")[:remain_align],
+                            index_1_nram[:remain_align].reinterpret_cast("float32"),
+                            data_nram[:remain_align],
+                        )
                     self.gather_data(
                         out_nram_int64, out_nram, remain_align, self.dim_num - 2
                     )
 
                 # Tree dims compute.
-                with self.tcp.if_scope(self.dim_num > 2):
+                if self.dim_num > 2:
                     self.indices_set(
                         index_1_nram,
                         global_index,
@@ -459,17 +427,24 @@ class NonZero(object):
                         self.dim_3 * self.dim_2,
                         self.dim_1,
                     )
-                    self.tcp.take(
-                        out_nram.reinterpret_cast(self.float_type),
-                        index_1_nram[:remain_align].reinterpret_cast(self.float_type),
-                        cast_nram,
-                    )
+                    if self.dtype != "float32":
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32")[:remain_align],
+                            index_1_nram[:remain_align].reinterpret_cast("float32"),
+                            cast_nram[:remain_align],
+                        )
+                    else:
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32")[:remain_align],
+                            index_1_nram[:remain_align].reinterpret_cast("float32"),
+                            data_nram[:remain_align],
+                        )
                     self.gather_data(
                         out_nram_int64, out_nram, remain_align, self.dim_num - 3
                     )
 
                 # Four dims compute.
-                with self.tcp.if_scope(self.dim_num > 3):
+                if self.dim_num > 3:
                     self.indices_set(
                         index_1_nram,
                         global_index,
@@ -477,106 +452,134 @@ class NonZero(object):
                         self.dim_3 * self.dim_2 * self.dim_1,
                         self.dim_0,
                     )
-                    self.tcp.take(
-                        out_nram.reinterpret_cast(self.float_type),
-                        index_1_nram[:remain_align].reinterpret_cast(self.float_type),
-                        cast_nram,
-                    )
+                    if self.dtype != "float32":
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32")[:remain_align],
+                            index_1_nram[:remain_align].reinterpret_cast("float32"),
+                            cast_nram[:remain_align],
+                        )
+                    else:
+                        tcp.take(
+                            out_nram.reinterpret_cast("float32")[:remain_align],
+                            index_1_nram[:remain_align].reinterpret_cast("float32"),
+                            data_nram[:remain_align],
+                        )
                     self.gather_data(
                         out_nram_int64, out_nram, remain_align, self.dim_num - 4
                     )
 
-                with self.tcp.if_scope(self.trans == 1):
+                if self.trans == 1:
                     out_nram_int64 = out_nram_int64[
                         : self.dim_num * remain_align
                     ].reshape((remain_align, self.dim_num))
-                    out_buffer = out_buffer.reshape((self.num_nonzero, self.dim_num))
-                    self.tcp.memcpy(
+                    out_buffer = self.out_buffer.reshape(
+                        (self.num_nonzero, self.dim_num)
+                    )
+                    tcp.memcpy(
                         out_buffer[
                             out_offset : out_offset + count_num[0],
+                            : self.dim_num,
                         ],
                         out_nram_int64[
                             : count_num[0],
+                            : self.dim_num,
                         ],
                     )
-                with self.tcp.else_scope():
+                else:
                     out_nram_int64 = out_nram_int64[
                         : self.dim_num * remain_align
                     ].reshape((self.dim_num, remain_align))
-                    out_buffer = out_buffer.reshape((self.dim_num, self.num_nonzero))
-                    self.tcp.memcpy(
-                        out_buffer[:, out_offset : out_offset + count_num[0]],
-                        out_nram_int64[:, : count_num[0]],
+                    out_buffer = self.out_buffer.reshape(
+                        (self.dim_num, self.num_nonzero)
+                    )
+                    tcp.memcpy(
+                        out_buffer[
+                            : self.dim_num, out_offset : out_offset + count_num[0]
+                        ],
+                        out_nram_int64[: self.dim_num, : count_num[0]],
                     )
 
-    def nonzero_compute(self):
+    def main(
+        self,
+        in_buffer: ty.handle,
+        core_count: ty.handle,
+        dim_0: ty.int32,
+        dim_1: ty.int32,
+        dim_2: ty.int32,
+        dim_3: ty.int32,
+        dim_num: ty.int32,
+        num_nonzero: ty.int32,
+        trans: ty.int32,
+        out_buffer: ty.handle,
+    ) -> None:
         """The entry of the NonZero operator."""
-        self.tcp.launch_task(self.task_num, 1, 1)
-        self.in_buffer = self.tcp.Buffer(
-            shape=(self.dim_0, self.dim_1, self.dim_2, self.dim_3),
-            dtype=self.dtype,
-            name="in_buffer",
-            scope="global",
+        tgt = tcp.target()
+        self.dim_0 = dim_0
+        self.dim_1 = dim_1
+        self.dim_2 = dim_2
+        self.dim_3 = dim_3
+        self.dim_num = dim_num
+        self.num_nonzero = num_nonzero
+        self.trans = trans
+        self.in_buffer = tcp.match_buffer(
+            in_buffer,
+            [dim_0, dim_1, dim_2, dim_3],
+            self.dtype,
         )
-
-        self.core_count = self.tcp.Buffer(
-            shape=(self.task_num,), dtype=bp.uint32, name="core_count", scope="global"
-        )
-        self.out_buffer = self.tcp.Buffer(
-            shape=(self.num_nonzero * self.dim_num,),
-            dtype=bp.int64,
-            name="out_buffer",
-            scope="global",
-        )
-        # Multi-core compute split.
-        elem_size = self.tcp.Scalar(dtype=bp.int32, name="elem_size")
-        elem_size.assign(self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3)
-        pre_core = self.tcp.Scalar(dtype=bp.int32, name="pre_core")
-        pre_core.assign(elem_size / self.tcp.taskDim)
-        core_remain = self.tcp.Scalar(dtype=bp.int32, name="core_remain")
-        core_remain.assign(elem_size % self.tcp.taskDim)
-        core_index = self.tcp.Scalar(dtype=bp.int32, name="core_index")
-        out_offset = self.tcp.Scalar(dtype=bp.int32, name="out_offset", value=0)
-
-        with self.tcp.if_scope(self.core_count[self.tcp.taskId] != 0):
-            core_index.assign(pre_core * self.tcp.taskId)
-            with self.tcp.if_scope(self.tcp.taskId < core_remain):
-                pre_core.assign(pre_core + 1)
-                core_index.assign(core_index + self.tcp.taskId)
-            with self.tcp.else_scope():
-                core_index.assign(core_index + core_remain)
-
-            with self.tcp.for_range(0, self.tcp.taskId) as i:
-                out_offset.assign(out_offset + self.core_count[i])
-            self.core_compute(
-                pre_core,
-                core_index,
-                out_offset,
-                self.in_buffer,
-                self.out_buffer,
-            )
-
-        return self.tcp.BuildBANG(
-            inputs=[
-                self.in_buffer,
-                self.core_count,
-                self.dim_0,
-                self.dim_1,
-                self.dim_2,
-                self.dim_3,
-                self.dim_num,
-                self.num_nonzero,
-                self.trans,
+        self.core_count = tcp.match_buffer(
+            core_count,
+            [
+                tgt.core_num,
             ],
-            outputs=[self.out_buffer],
-            kernel_name=self.name,
+            "uint32",
         )
+        self.out_buffer = tcp.match_buffer(
+            out_buffer,
+            [
+                self.num_nonzero * self.dim_num,
+            ],
+            "int64",
+        )
+        self.nram_size = ((tgt.nram_size - 30 * 1024) // 22 // 4) // 128 * 128
+        for i in tcp.thread_binding(0, 1, thread="blockIdx.x"):
+            for j in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
+                # Multi-core compute split.
+                task_dim = tgt.core_num
+                task_id = i * tgt.core_num + j
+                elem_size = self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3
+                pre_core = elem_size / task_dim
+                core_remain = elem_size % task_dim
+                core_index = 0
+                out_offset = 0
+
+                if self.core_count[task_id] != tcp.cast(0, "uint32"):
+                    core_index = pre_core * task_id
+                    if task_id < core_remain:
+                        pre_core = pre_core + 1
+                        core_index = core_index + task_id
+                    else:
+                        core_index = core_index + core_remain
+
+                    for task_ in range(task_id):  # type: ignore
+                        out_offset = out_offset + self.core_count[task_]
+                    self.core_compute(
+                        pre_core,
+                        core_index,
+                        out_offset,
+                    )
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, "NonZero")
 def build_nonzero(dtype, target):
-    task_num = TARGET(target).cluster_num * TARGET(target).core_num
-
-    nonzero = NonZero(target, task_num=task_num, dtype=dtype)
-    f_nonzero = nonzero.nonzero_compute()
+    align_size = 64 if target[:6] == "mlu370" else 128
+    f_nonzero = build_module.build(
+        NonZero(
+            target[:6],
+            dtype.name,
+            dtype.bytes,
+            align_size,
+        ),
+        target,
+        "NonZero",
+    )
     return f_nonzero

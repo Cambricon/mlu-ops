@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -37,20 +48,20 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
                               int32_t offset_aux_b, int32_t num_deal,
                               int32_t num_pong, float coef) {
   int32_t num_per_core = num_total / taskDim;
-  int32_t num_rem      = num_total % taskDim;
-  T *addr_x            = (T *)x + taskId * num_per_core;
-  T *addr_y            = (T *)y + taskId * num_per_core;
+  int32_t num_rem = num_total % taskDim;
+  T *addr_x = (T *)x + taskId * num_per_core;
+  T *addr_y = (T *)y + taskId * num_per_core;
   if (num_rem > 0 && taskId == taskDim - 1) {
     num_per_core = num_per_core + num_rem;
   }
-  int32_t repeat    = num_per_core / num_deal;
-  int32_t rem       = num_per_core % num_deal;
+  int32_t repeat = num_per_core / num_deal;
+  int32_t rem = num_per_core % num_deal;
   int32_t align_rem = CEIL_ALIGN(rem, UNARY_ALIGN_NUM);
 
-  T *nram_x                = (T *)nram_buffer;
-  T *nram_x_half           = (T *)nram_buffer + offset_x_half;
-  T *nram_aux_a            = (T *)nram_buffer + offset_aux_a;
-  T *nram_aux_b            = (T *)nram_buffer + offset_aux_b;
+  T *nram_x = (T *)nram_buffer;
+  T *nram_x_half = (T *)nram_buffer + offset_x_half;
+  T *nram_aux_a = (T *)nram_buffer + offset_aux_a;
+  T *nram_aux_b = (T *)nram_buffer + offset_aux_b;
   int32_t span_handle_size = num_deal * sizeof(T);
 
   // 3 level pipeline.

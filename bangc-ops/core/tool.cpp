@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -9,7 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <core/tool.h>
+#include "core/tool.h"
+
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define INT31_BITWIDTH 31
 #define INT16_BITWIDTH 16
@@ -95,8 +110,6 @@ mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
     bitwidth = 8;
   } else if (datatype == MLUOP_DTYPE_INT16) {
     bitwidth = 16;
-  } else if (datatype == MLUOP_DTYPE_INT31) {
-    bitwidth = 31;
   } else {
     LOG(ERROR) << "[getPosition]:Input data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -144,8 +157,6 @@ mluOpStatus_t getPositionAndScale(float *input, size_t num,
     bitwidth = 8;
   } else if (datatype == MLUOP_DTYPE_INT16) {
     bitwidth = 16;
-  } else if (datatype == MLUOP_DTYPE_INT31) {
-    bitwidth = 31;
   } else {
     LOG(ERROR) << "[getPositionAndScale]:Input data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -304,6 +315,123 @@ int16_t castFloat32ToHalf(float src) {
   exp = (denorm == 1) ? exp : (exp + 15);
   int result = (sign << hs_shift) + (exp << he_shift) + eff;
   return result;
+}
+
+float castHalfToFloat32(int16_t src) {
+  if (sizeof(int16_t) == 2) {
+    int re = src;
+    float f = 0.;
+    int sign = (re >> 15) ? (-1) : 1;
+    int exp = (re >> 10) & 0x1f;
+    int eff = re & 0x3ff;
+    float half_max = 65504.;
+    float half_min = -65504.;  // or to be defined as infinity
+    if (exp == 0x1f && eff) {
+      // when half is nan, float also return nan, reserve sign bit
+      int tmp = (sign > 0) ? 0xffffffff : 0x7fffffff;
+      return *(float *)&tmp;
+    } else if (exp == 0x1f && sign == 1) {
+      // add upper bound of half. 0x7bff： 0 11110 1111111111 =  65504
+      return half_max;
+    } else if (exp == 0x1f && sign == -1) {
+      // add lower bound of half. 0xfbff： 1 11110 1111111111 = -65504
+      return half_min;
+    }
+    if (exp > 0) {
+      exp -= 15;
+      eff = eff | 0x400;
+    } else {
+      exp = -14;
+    }
+    int sft;
+    sft = exp - 10;
+    if (sft < 0) {
+      f = (float)sign * eff / (1 << (-sft));
+    } else {
+      f = ((float)sign) * (1 << sft) * eff;
+    }
+    return f;
+  } else if (sizeof(int16_t) == 4) {
+    // using float
+    return src;
+  }
+}
+
+int mkdirIfNotExist(const char *pathname) {
+  struct stat dir_stat = {};
+  if (stat(pathname, &dir_stat) != 0) {
+    if (mkdir(pathname, 0777) != 0) {
+      return errno;
+    }
+    return 0;
+  } else if (!S_ISDIR(dir_stat.st_mode)) {
+    return ENOTDIR;
+  }
+  return 0;
+}
+
+int mkdirRecursive(const char *pathname) {
+  // let caller ensure pathname is not null
+  const char path_token = '/';
+  size_t pos = 0;
+  const std::string pathname_view(pathname);
+  while (pos < pathname_view.size()) {
+    auto find_path_token = pathname_view.find(path_token, pos);
+    if (find_path_token == std::string::npos) {
+      return mkdirIfNotExist(pathname_view.c_str());
+    }
+    int ret =
+        mkdirIfNotExist(pathname_view.substr(0, find_path_token + 1).c_str());
+    if (ret) return ret;
+    pos = find_path_token + 1;
+  }
+  return 0;
+}
+
+uint64_t getUintEnvVar(const std::string &str, uint64_t default_para) {
+  const char *env_raw_ptr = std::getenv(str.c_str());
+  if (env_raw_ptr == nullptr) {
+    return default_para;
+  }
+
+  uint64_t env_int_var = default_para;
+  bool is_digital = true;
+  for (size_t i = 0; env_raw_ptr[i] != '\0'; i++) {
+    if (i == 0 && (env_raw_ptr[0] == '-' || env_raw_ptr[0] == '+')) continue;
+    if (std::isdigit(env_raw_ptr[i]) == 0) {
+      is_digital = false;
+      break;
+    }
+  }
+  if (!is_digital) {
+    LOG(WARNING) << str << ": " << env_raw_ptr
+                 << " is not digital, uses default value " << default_para
+                 << ".";
+  } else {
+    env_int_var = strtoull(env_raw_ptr, nullptr, 10);
+  }
+
+  return env_int_var;
+}
+
+std::string getStringEnvVar(const std::string &str, std::string default_para) {
+  const char *env_raw_ptr = std::getenv(str.c_str());
+  if (env_raw_ptr == nullptr) {
+    return default_para;
+  }
+  std::string env_var = std::string(env_raw_ptr);
+  return env_var;
+}
+
+bool getBoolEnvVar(const std::string &str, bool default_para) {
+  const char *env_raw_ptr = std::getenv(str.c_str());
+  if (env_raw_ptr == nullptr) {
+    return default_para;
+  }
+  std::string env_var = std::string(env_raw_ptr);
+  std::transform(env_var.begin(), env_var.end(), env_var.begin(), ::toupper);
+  return (env_var == "1" || env_var == "ON" || env_var == "YES" ||
+          env_var == "TRUE");
 }
 #undef INT31_BITWIDTH
 #undef INT16_BITWIDTH

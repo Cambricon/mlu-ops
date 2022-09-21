@@ -1,15 +1,15 @@
-# Cambricon mlu-ops
+# Cambricon MLU-OPS
 
 [![ci](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml/badge.svg)](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml)
 
-mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
+MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
 
 ## 依赖条件
 
 - 操作系统：
-  - 目前只支持 Ubuntu 16.04 x86_64
+  - 目前支持 X86_64 下 Ubuntu16.04 Ubuntu18.04 Centos7.6 
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v2.6.1 版本
+  - 编译和运行时依赖 CNToolkit v3.0.1 版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v4.15.3 或更高版本
 - 外部链接库：
@@ -17,9 +17,9 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 - Python环境：
   - 依赖Python-3.8.0版本
 
-## mlu-ops 依赖环境准备
+## MLU-OPS 依赖环境准备
 
-- 获取 mlu-ops 代码
+- 获取 MLU-OPS 代码
 
   ```sh
   git clone https://github.com/Cambricon/mlu-ops.git
@@ -44,6 +44,7 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 
 - 准备 BANGPy 环境
 
+  获取 BANGPy 最新版发布包：(https://cair.cambricon.com/)
   ```sh
   pip3.8 install bangpy-x.x.x-py3-none-any.whl
   ```
@@ -67,6 +68,9 @@ mlu-ops 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 详情可以参考文档 [BANGC-OPS 算子开发流程.md](docs/bangc-docs/BANGC-OPS算子开发流程.md)、
 [BANGPy-OPS 算子开发流程.md](docs/bangpy-docs/BANGPy-OPS算子开发流程.md) 以及 docs 目录下的其它补充说明，
 同时也需要参考 C 接口说明文档[README.md](bangc-ops/README.md) 和 Python 接口说明文档[README.md](bangpy-ops/README.md)。
+
+## 获取开发手册
+查看最新版 BANGPy 开发手册(https://developer.cambricon.com/index/document/index/classid/3.html)，获取安装说明、教程、示例。
 
 
 ## 目录文件结构
