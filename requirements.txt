@@ -1,2 +1,3 @@
 # Python dependencies required for development
 cpplint
+prototxt_parser

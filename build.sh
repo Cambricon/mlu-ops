@@ -48,6 +48,7 @@ fi
 
 # 2.build BANGPy ops
 if [[ ${MLU_SUB_MODULE} == "bangpy" ]]; then
+  pip3 install prototxt_parser==1.0 -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
   cd bangpy-ops/utils
   ./build_operators.sh
   cd ../..

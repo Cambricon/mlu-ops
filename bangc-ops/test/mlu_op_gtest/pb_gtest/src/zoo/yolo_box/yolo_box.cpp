@@ -67,9 +67,9 @@ void YoloBoxExecutor::compute() {
   interface_timer_.start();
   MLUOP_CHECK(mluOpYoloBox(handle_, x_desc, dev_x, img_size_desc, dev_img_size,
                            anchors_desc, dev_anchors, class_num_, conf_thresh_,
-                           downsample_ratio_, clip_bbox_, scale_x_y_, iou_aware_,
-                           iou_aware_factor_, boxes_desc, dev_boxes, scores_desc,
-                           dev_scores));
+                           downsample_ratio_, clip_bbox_, scale_x_y_,
+                           iou_aware_, iou_aware_factor_, boxes_desc, dev_boxes,
+                           scores_desc, dev_scores));
   interface_timer_.stop();
   VLOG(4) << "[YoloBoxExecutor] call compute() end.";
 }

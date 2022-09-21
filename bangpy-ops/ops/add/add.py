@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -34,6 +34,7 @@ class Add(object):
     """Operator description:
     Add the data in the two buffers.
     """
+
     def __init__(self, buffer_size: ty.int32, dtype: ty.string) -> None:
         self.dtype = dtype
         self.single_buffer_size = buffer_size
@@ -71,7 +72,10 @@ class Add(object):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 for i in range(loop_num):
                     task_id = cluster_id * tgt.core_num + core_id
-                    start = task_id * data_calculated_each_task + i * self.single_buffer_size
+                    start = (
+                        task_id * data_calculated_each_task
+                        + i * self.single_buffer_size
+                    )
                     stop = start + self.single_buffer_size
                     tcp.memcpy(buffer_in0, A[start:stop])
                     tcp.memcpy(buffer_in1, B[start:stop])
@@ -81,7 +85,5 @@ class Add(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_add(dtype=None, target=None):
-    f = build_module.build(
-        Add(64, dtype.name), target_tag=target, name=KERNEL_NAME
-    )
+    f = build_module.build(Add(64, dtype.name), target_tag=target, name=KERNEL_NAME)
     return f

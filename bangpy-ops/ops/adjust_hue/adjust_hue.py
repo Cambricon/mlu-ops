@@ -185,9 +185,9 @@ class AdjustHue(object):
         line_align: ty.int32,
         nram_limit: ty.int32,
     ):
-        rgb = self.rgb_nram[: (nram_limit / r_w) * r_w* self.c]
-        hsv = self.hsv_nram[: (nram_limit / r_w) * r_w* self.c]
-        aux = self.aux_nram[: (nram_limit / r_w) * r_w* self.c]
+        rgb = self.rgb_nram[: (nram_limit / r_w) * r_w * self.c]
+        hsv = self.hsv_nram[: (nram_limit / r_w) * r_w * self.c]
+        aux = self.aux_nram[: (nram_limit / r_w) * r_w * self.c]
         aux_int = self.aux_nram[nram_limit * 2 : nram_limit * 3].reinterpret_cast(
             "int16"
         )
@@ -527,6 +527,7 @@ class AdjustHue(object):
                                 line_align,
                                 nram_limit_size,
                             )
+
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_adjust_hue(dtype=None, target=None):
