@@ -19,7 +19,7 @@ BuildRequires: glibc-devel
 BuildRequires: binutils >= 2.27, redhat-rpm-config >= 9.1.0
 BuildRequires: readline-devel >= 6.2-4
 BuildRequires: rpm-devel
-BuildRequires: python-devel
+#BuildRequires: python-devel
 BuildRequires: texinfo-tex
 BuildRequires: /usr/bin/pod2man
 BuildRequires: texlive-ec texlive-cm-super
@@ -29,9 +29,9 @@ BuildRequires: valgrind >= 3.13.0
 BuildRequires: xz
 BuildRequires: doxygen
 BuildRequires: texlive-latex
-BuildRequires: python >= 2.7.0
-BuildRequires: cncc >= 2.6.0
-BuildRequires: cnas >= 2.6.0
+#BuildRequires: python >= 2.7.0
+#BuildRequires: cncc >= 2.6.0
+#BuildRequires: cnas >= 2.6.0
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Requires: cndrv >= 0.2.0
@@ -54,8 +54,8 @@ bash independent_build.sh -t %{_packagetype}
 install -d $RPM_BUILD_ROOT%{neuware_dir}/lib64
 install -d $RPM_BUILD_ROOT%{neuware_dir}/include
 install -d $RPM_BUILD_ROOT/etc/ld.so.conf.d
-strip %{build_dir}/lib/libmluops.so
-cp %{build_dir}/lib/libmluops.so $RPM_BUILD_ROOT%{neuware_dir}/lib64/
+strip %{build_dir}/lib/libmluops.so*
+cp %{build_dir}/lib/libmluops.so* $RPM_BUILD_ROOT%{neuware_dir}/lib64/
 cp bangc-ops/mlu_op.h bangc-ops/mlu_op_kernel.h $RPM_BUILD_ROOT%{neuware_dir}/include/
 cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 
