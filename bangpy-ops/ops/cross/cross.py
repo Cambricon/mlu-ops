@@ -142,7 +142,7 @@ class Cross(object):
                 # 128*18=2304,482*1024//2304*2304=493056(482*1024=493568),
                 # 493056/18=27392,27392 can be exactly divided by 128,
                 # and of course can be exactly divided by 4(byte) and 2(byte),
-                # means that 13696*float16 and 6848*float32
+                # means that 13696*float16 or 6848*float32
                 single_buffer_size = (
                     (tgt.nram_size - 30 * 1024) // (128 * 18) * (128 * 18) / 18
                 )
