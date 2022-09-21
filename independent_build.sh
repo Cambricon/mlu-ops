@@ -175,6 +175,6 @@ cp -rf ${BUILD_DIR}/lib/libmluop_test_proto.a ${TEST_DIR}/lib
 cp -rf ${BANGCOPS_DIR}/test/* ${TEST_DIR}/test
 
 DEPS_DIR=`echo ${PACKAGE_SERVER} | awk -F '//' '{print $2}'`
-
+rm -rf $DEPS_DIR
 
 rm dependency.txt
