@@ -624,4 +624,27 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
                                     MLUOP_STATUS_BAD_PARAM})));
 
+INSTANTIATE_TEST_CASE_P(
+    bad_min_size_, generate_proposals_v2_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 16, 16, 8}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 16, 16, 32}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({16, 16, 8, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({16, 16, 8, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({5, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({5, 1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({2}))),
+        testing::Values(GenerateProposalsV2Param{10, 5, 0.5, -4, 3, 0}),
+        testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
+                                    MLUOP_STATUS_BAD_PARAM})));
+
 }  // namespace mluopapitest
