@@ -14,11 +14,16 @@ jobs:
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: build_bangc_ops
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.1-devel-x86_64-${{matrix.os}}
           ./build.sh --sub_module=bangc
+
+      - name: mlu_ops_version_check
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.1-devel-x86_64-${{matrix.os}}
+          ./version_check.sh 0.2.0
 
       - name: bangc_ops_release_test_cases
         run: >
@@ -47,7 +52,7 @@ jobs:
           -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.1-devel-x86_64-${{matrix.os}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
 
-      
+
       - name: clean
         run: |
           rm -rf bangc-ops/build
