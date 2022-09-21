@@ -176,6 +176,9 @@ mluOpStatus_t mluOpPriorBox(
   PARAM_CHECK(api, variances != nullptr);
   PARAM_CHECK(api, output != nullptr);
   PARAM_CHECK(api, var != nullptr);
+  if (max_sizes_desc->total_element_num > 0) {
+    PARAM_CHECK(api, max_sizes != nullptr);
+  }
 
   const int min_sizes_num = min_sizes_desc->dims[0];
   const int aspect_ratios_num = aspect_ratios_desc->dims[0];
