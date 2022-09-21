@@ -19,7 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
-"""Celu operator implementation using BANGPy TCP API."""
+"""Test Celu operator with multi-platform code link."""
 import random
 import torch
 import numpy as np
