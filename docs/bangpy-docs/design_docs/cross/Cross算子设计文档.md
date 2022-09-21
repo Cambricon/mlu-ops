@@ -166,7 +166,7 @@ step <= data_each_buffer时，将buffer reshape成(group*3, step)，计算每组
 
 step > data_each_buffer时，一次流水处理不了一整个step，只能每次尽可能地将buffer填满做计算，后续的处理和同步在BANGPy2的框架下实现非常困难，所以这种情况暂时不支持。
 
-在nram大小为512KB的情况下，流水线buffer最大可以取29056B（计算详见3.5），也就是float16容纳14528个数（data_each_buffer=14528)，float32容纳7264个数，而且这只是对shape = (group, 3, step)中step的限制，group的大小不受算子功能限制。
+在nram大小为512KB的情况下，留出30KB，流水线buffer最大可以取27392B（计算详见3.5），也就是float16容纳13696个数（data_each_buffer=13696)，float32容纳6848个数，而且这只是对shape = (group, 3, step)中step的限制，group的大小不受算子功能限制。
 
 流水的计算部分则直接按(c0, c1, c2) = (a0, a1, a2) x (b0, b1, b2)实现即可（注意是叉乘，也就是c0 = a1 \* b2 - a2 \* b1)。
 
@@ -307,7 +307,7 @@ stop：当前task中buffer索引允许的最大值，作为界标，防止该tas
 
 流水线buffer大小：
 
-一个NRAM的大小是512x1024byte，先空出30KB, 而流水线至多需要9（axb=c，a,b,c都是三维）x2=18个buffer，其次乘法和减法要128byte对齐，128x18=2304, (512-30)x1024//2304x2304=493056，493056/18=27392，27392可以被128整除，当然也可以被4(byte)和2(byte)整除，所以流水线一个buffer的大小设置为27392byte,也就是13696个float16或6848个float32。
+一个NRAM的大小是512x1024byte，先空出30KB，而流水线至多需要9（axb=c，a,b,c都是三维）x2=18个buffer，其次乘法和减法要128byte对齐，128x18=2304，(512-30)x1024//2304x2304=493056，493056/18=27392，27392可以被128整除，当然也可以被4(byte)和2(byte)整除，所以流水线一个buffer的大小设置为27392byte，也就是13696个float16或6848个float32。
 
 ### 3.6 测试用例设计
 
