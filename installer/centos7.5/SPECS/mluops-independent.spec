@@ -1,7 +1,7 @@
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
 %define debug_package %{nil}
 %define neuware_dir /usr/local/neuware
-%define build_dir package
+%define build_dir bangc-ops/build
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
