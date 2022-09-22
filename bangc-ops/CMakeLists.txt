@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 
+project(mluops VERSION ${BUILD_VERSION})
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/test")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
@@ -10,6 +11,8 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-s
 ################################################################################
 # Neuware Evironment and BANG Setup
 ################################################################################
+
+#project(mluops VERSION ${BUILD_VERSION})
 
 # set Coverage test setting
 if(${MLUOP_BUILD_COVERAGE_TEST} MATCHES "ON")
