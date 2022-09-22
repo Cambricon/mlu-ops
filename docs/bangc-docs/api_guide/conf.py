@@ -256,7 +256,7 @@ latex_elements = {
 \\fancyhead{}
 \\fancyhead[LE,RO]{\\textsl{\\rightmark}}
 \\fancyhead[LO,RE]{\\textsl{\\leftmark}}
-\\lfoot{Copyright © 2022 SingGo Corporation.}
+\\lfoot{Copyright © 2022 Cambricon Corporation.}
 \\rfoot{\\thepage}
 \\renewcommand{\\headrulewidth}{0.4pt}
 \\renewcommand{\\footrulewidth}{0.4pt}
@@ -267,8 +267,8 @@ latex_elements = {
 \\fancyhf{}
 % left head 还可以内嵌图片，图片可以是 pdf，png，jpeg 等
 % \\lhead{\\includegraphics[height=40pt]{cn_tm.pdf}}
-\\lhead{\\large\\textcolor[rgb]{0.1804,0.4588,0.7137}{SingGo®}}
-\\lfoot{Copyright © 2022 SingGo Corporation.}
+\\lhead{\\large\\textcolor[rgb]{0.1804,0.4588,0.7137}{Cambricon®}}
+\\lfoot{Copyright © 2022 Cambricon Corporation.}
 \\rfoot{\\thepage}
 \\renewcommand{\\headrulewidth}{0.4pt}
 \\renewcommand{\\footrulewidth}{0.4pt}
