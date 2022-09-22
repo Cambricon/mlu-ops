@@ -5,7 +5,7 @@
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
-Version: 0.1.1
+Version: 0.2.0
 Release: 1%{?dist}
 License: Cambricon Release License
 Vendor: Cambricon Inc.
