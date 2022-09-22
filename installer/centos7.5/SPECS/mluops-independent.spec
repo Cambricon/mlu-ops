@@ -74,5 +74,7 @@ rm -rf $RPM_BUILD_DIR
 %postun -p /sbin/ldconfig
 
 %changelog
+* Tue Sep 22 2022 Cambricon Software Team <service@cambricon.com>
+- release mluops v0.2.0
 * Tue Aug 31 2022 Cambricon Software Team <service@cambricon.com>
-- release cncl v0.1.1
+- release mluops v0.1.1
