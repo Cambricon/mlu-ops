@@ -1,7 +1,7 @@
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
 %define debug_package %{nil}
 %define neuware_dir /usr/local/neuware
-%define build_dir bangc-ops/build
+%define build_dir package
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
@@ -51,17 +51,17 @@ The Machine Lerning Unit OPerators.
 bash independent_build.sh -t %{_packagetype}
 
 %install
-install -d $RPM_BUILD_ROOT%{neuware_dir}/lib64
-install -d $RPM_BUILD_ROOT%{neuware_dir}/include
-install -d $RPM_BUILD_ROOT/etc/ld.so.conf.d
+#install -d $RPM_BUILD_ROOT%{neuware_dir}/lib64
+#install -d $RPM_BUILD_ROOT%{neuware_dir}/include
+#install -d $RPM_BUILD_ROOT/etc/ld.so.conf.d
 strip %{build_dir}/lib/libmluops.so*
 cp %{build_dir}/lib/libmluops.so* $RPM_BUILD_ROOT%{neuware_dir}/lib64/
 cp bangc-ops/mlu_op.h bangc-ops/mlu_op_kernel.h $RPM_BUILD_ROOT%{neuware_dir}/include/
 cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 
 %clean
-rm -rf $RPM_BUILD_ROOT
-rm -rf $RPM_BUILD_DIR
+#rm -rf $RPM_BUILD_ROOT
+#rm -rf $RPM_BUILD_DIR
 
 %files
 %defattr (-, root, root)
