@@ -67,7 +67,7 @@ rm -rf $RPM_BUILD_DIR
 %defattr (-, root, root)
 %{neuware_dir}/include/mlu_op.h
 %{neuware_dir}/include/mlu_op_kernel.h
-%{neuware_dir}/lib64/libmluops.so
+%{neuware_dir}/lib64/libmluops.so*
 /etc/ld.so.conf.d/neuware-env.conf
 
 %post -p /sbin/ldconfig
@@ -76,5 +76,6 @@ rm -rf $RPM_BUILD_DIR
 %changelog
 * Tue Sep 22 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.2.0
+
 * Tue Aug 31 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.1.1
