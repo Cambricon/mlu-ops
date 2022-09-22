@@ -54,7 +54,7 @@ mluOpStatus_t YoloBoxParamCheck(
     const mluOpTensorDescriptor_t anchors_desc, const void *anchors,
     const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
     const mluOpTensorDescriptor_t scores_desc, const void *scores,
-    const int class_num, const bool iou_aware) {
+    const int class_num, const bool iou_aware, bool *zero_element) {
   // check descriptor and data
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, x_desc != NULL);
@@ -133,6 +133,7 @@ mluOpStatus_t YoloBoxParamCheck(
 
   // check zero element
   if (mluOpGetTensorElementNum(x_desc) == 0) {
+    *zero_element = true;
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -153,12 +154,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     const float iou_aware_factor, const mluOpTensorDescriptor_t boxes_desc,
     void *boxes, const mluOpTensorDescriptor_t scores_desc, void *scores) {
   // check params
-  mluOpStatus_t param_check =
-      YoloBoxParamCheck("[mluOpYoloBox]", handle, x_desc, x, img_size_desc,
-                        img_size, anchors_desc, anchors, boxes_desc, boxes,
-                        scores_desc, scores, class_num, iou_aware);
+  bool zero_element = false;
+  mluOpStatus_t param_check = YoloBoxParamCheck(
+      "[mluOpYoloBox]", handle, x_desc, x, img_size_desc, img_size,
+      anchors_desc, anchors, boxes_desc, boxes, scores_desc, scores, class_num,
+      iou_aware, &zero_element);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
+  }
+
+  // check zero element
+  if (zero_element == true) {
+    VLOG(5) << "[mluOpYoloBox] Input skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {

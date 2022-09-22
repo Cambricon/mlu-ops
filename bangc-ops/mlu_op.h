@@ -2583,8 +2583,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
  *   multiplication result of the third dimension and the fourth dimension of input x tensor.
  * - The \b class_num should be larger than 0. On MLU200, the value cannot be
  *   greater than 1534. On MLU300, the value cannot be greater than 2558.
- * - On MLU200, the value range of input x tensor is [-3.4e38, 16]
- *   because the activation function exp is called.
  *
  * @par Requirements
  * - None.
