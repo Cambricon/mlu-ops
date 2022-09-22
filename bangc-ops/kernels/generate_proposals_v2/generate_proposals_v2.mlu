@@ -328,7 +328,6 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
 
       T *scores = (T *)nram_buffer;
       T *mask_eq = scores + max_seg_num;
-      // T * mask_ge = mask_eq + max_seg_num;
 
       int cycle = 0;
       int total_cycle = HWA;
