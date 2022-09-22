@@ -76,5 +76,6 @@ rm -rf $RPM_BUILD_DIR
 %changelog
 * Tue Sep 22 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.2.0
+
 * Tue Aug 31 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.1.1
