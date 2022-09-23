@@ -1999,8 +1999,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
  *    less than 2100 in MLU200 series, while less than 2900 in MLU300 series.
  *
  * @par Reference
- * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/
- *   gpu/prior_box_kernel.cu
+ * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/prior_box_kernel.cu
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPriorBox(
@@ -2103,8 +2102,7 @@ mluOpPriorBox(
  *  - On MLU300 series, \b rois does not support NAN/INF.
  *
  * @par Reference
- * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/
- *   lib/model/psroi_pooling
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/psroi_pooling
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPsRoiPoolForward(mluOpHandle_t handle,
@@ -2204,8 +2202,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  *  - On MLU300 series, rois does not support NAN/INF.
  *
  * @par Reference
- * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/
- *   lib/model/psroi_pooling
+ * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/psroi_pooling
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPsRoiPoolBackward(mluOpHandle_t handle,
