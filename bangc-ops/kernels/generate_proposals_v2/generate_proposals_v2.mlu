@@ -153,7 +153,7 @@ __mlu_func__ void getComputeParams(const int input_num, const int limit,
 }
 
 template <typename T>
-__mlu_func__ void getSameScoresCount(T *scores_ptr, const int scores_num,
+__mlu_func__ void getSameScoresCount(const T *scores_ptr, const int scores_num,
                                      const T value, int *ret_ge_count) {
   const int memory_block = 2;
   int limit = PROPOSAL_NRAM_SIZE / memory_block;
@@ -705,7 +705,7 @@ __mlu_func__ void createAndRemoveBox(
                    &remain_num, &core_num, &core_offset);
 
   // init workspace ptr
-  int *collect_num = (int *)((char *)workspace);
+  int *collect_num = (int *)workspace;
   collect_num[taskId] = 0;
 
   // init nram ptr
