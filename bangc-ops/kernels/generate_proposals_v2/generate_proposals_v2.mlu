@@ -312,6 +312,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   k_score[0] = mid;
   *cp_scores_to_workspace = scores_has_same_value;
 
+  __sync_all_ipu();
   if (scores_has_same_value) {
     if (taskId == 0) {
       __memcpy(workspace, intput_scores_ptr, HWA * sizeof(T), GDRAM2GDRAM);
@@ -373,7 +374,6 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
         }
       }
     }
-    __sync_all_ipu();
   }
 }
 
