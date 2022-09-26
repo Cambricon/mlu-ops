@@ -144,31 +144,26 @@ static __mlu_func__ void compute(
   T *nram_iou_p = nram_iou + offset;
 
 #if __BANG_ARCH__ >= 322
-  const int32_t x2d = 0x3fb8aa3b;
-  float log2e = *(float *)&x2d;
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
+  // compute mask
+  computeSigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
   if (iou_aware == true) {
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, (float)-1.0, deal_num);
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, log2e, deal_num);
-  }
+    computeSigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
+    if ((T)iou_aware_factor == (T)0.0) {
+      __bang_write_value(nram_iou_p, deal_num, (T)1.0);
+    } else if ((T)iou_aware_factor == (T)1.0) {
+      __bang_write_value(nram_conf_p, deal_num, (T)1.0);
+    } else {
+      __bang_log(nram_iou_p, nram_iou_p, deal_num);
+      __bang_mul_scalar(nram_iou_p, nram_iou_p, (T)iou_aware_factor, deal_num);
+      __bang_pow2(nram_iou_p, nram_iou_p, deal_num);
 
-  for (int32_t k = 0; k < deal_num; ++k) {
-    // sigmoid(conf)
-    nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
-    nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
-
-    if (iou_aware == true) {
-      // sigmoid(iou)
-      nram_iou_p[k] = powf((T)2.0, nram_iou_p[k]);
-      nram_iou_p[k] = (T)1.0 / ((T)1.0 + nram_iou_p[k]);
-
-      // pow(iou, iou_aware_factor)
-      nram_iou_p[k] = powf(nram_iou_p[k], (T)iou_aware_factor);
-      // pow(iou, 1-iou_aware_factor)
-      nram_conf_p[k] = powf(nram_conf_p[k], (T)1.0 - (T)iou_aware_factor);
-      nram_conf_p[k] = nram_conf_p[k] * nram_iou_p[k];
+      __bang_log(nram_conf_p, nram_conf_p, deal_num);
+      __bang_mul_scalar(nram_conf_p, nram_conf_p, (T)1.0 - (T)iou_aware_factor,
+                        deal_num);
+      __bang_pow2(nram_conf_p, nram_conf_p, deal_num);
     }
+
+    __bang_mul(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
   }
 
   __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
@@ -1129,32 +1124,26 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   T *nram_cls_p = nram_cls + offset;
 
 #if __BANG_ARCH__ >= 322
-  // compute score_mask
-  const int32_t x2d = 0x3fb8aa3b;
-  float log2e = *(float *)&x2d;
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
+  // compute mask
+  computeSigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
   if (iou_aware == true) {
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, (float)-1.0, deal_num);
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, log2e, deal_num);
-  }
+    computeSigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
+    if ((T)iou_aware_factor == (T)0.0) {
+      __bang_write_value(nram_iou_p, deal_num, (T)1.0);
+    } else if ((T)iou_aware_factor == (T)1.0) {
+      __bang_write_value(nram_conf_p, deal_num, (T)1.0);
+    } else {
+      __bang_log(nram_iou_p, nram_iou_p, deal_num);
+      __bang_mul_scalar(nram_iou_p, nram_iou_p, (T)iou_aware_factor, deal_num);
+      __bang_pow2(nram_iou_p, nram_iou_p, deal_num);
 
-  for (int32_t k = 0; k < deal_num; ++k) {
-    // sigmoid(conf)
-    nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
-    nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
-
-    if (iou_aware == true) {
-      // sigmoid(iou)
-      nram_iou_p[k] = powf((T)2.0, nram_iou_p[k]);
-      nram_iou_p[k] = (T)1.0 / ((T)1.0 + nram_iou_p[k]);
-
-      // pow(iou, iou_aware_factor)
-      nram_iou_p[k] = powf(nram_iou_p[k], (T)iou_aware_factor);
-      // pow(iou, 1-iou_aware_factor)
-      nram_conf_p[k] = powf(nram_conf_p[k], (T)1.0 - (T)iou_aware_factor);
-      nram_conf_p[k] = nram_conf_p[k] * nram_iou_p[k];
+      __bang_log(nram_conf_p, nram_conf_p, deal_num);
+      __bang_mul_scalar(nram_conf_p, nram_conf_p, (T)1.0 - (T)iou_aware_factor,
+                        deal_num);
+      __bang_pow2(nram_conf_p, nram_conf_p, deal_num);
     }
+
+    __bang_mul(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
   }
 
   __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);

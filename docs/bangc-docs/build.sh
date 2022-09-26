@@ -7,13 +7,13 @@ RELEASE_NOTE_DIR="release_notes"
 
 echo "Generating BANGC-OPS Docs: API Guide..."
 pushd ${API_GUIDE_DIR}
-./makelatexpdf.sh
+bash ./makelatexpdf.sh
 cp ./_build/latex/Cambricon*.pdf ../
 popd
 
 echo "Generating BANGC-OPS Docs: Release Notes..."
 pushd ${RELEASE_NOTE_DIR}
-./makelatexpdf.sh
+bash ./makelatexpdf.sh
 cp ./_build/latex/Cambricon*.pdf ../
 
 popd
