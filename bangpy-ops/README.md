@@ -36,16 +36,20 @@
 ## 创建测试用例
 测试用例可通过 mlu-ops-generator 测例生成框架进行创建，步骤如下：
 
-- 进行本地环境配置
-  - 根据对第三方计算库的依赖，安装对应的环境。
-- 添加算子的计算逻辑
-  - 添加在 GPU/CPU 上的计算逻辑，文件安放路径请参照 mlu-ops-generator 的使用说明。
-- 撰写 Manual 格式的 Json 文件
-  - json 文件的格式要求需参照 mlu-ops-generator 对应部分的使用说明
+- 在 mlu-ops-generator 框架下进行本地环境配置
+  - 根据对第三方计算库的依赖，安装对应的环境，例如pytorch, tensorflow。
+- 添加算子在 GPU/CPU 上的计算逻辑
+  - 将使用第三方库实现的算子逻辑文件夹添加至 mlu-ops-generator/nonmlu_ops/ 下。
+- 撰写算子 Manual 格式的 Json 文件
+  - 撰写完成的Json 文件添加至 mlu-ops-generator/manual_config/ ，json 文件的具体格式要求需参照 mlu-ops-generator 对应部分的使用说明。
 - 生成测例文件
-  - 测例文件的保存格式可以是 pb 和 prototxt。测例创建成功后，将保存的 prototxt 文件移至 'bangpy-ops/ops/' 的不同算子目录下 testcase 文件夹。
+  - 算子 Manual 格式的 Json 文件撰写完成后，在 mlu-ops-generator 框架下运行以下脚本生成测例文件，
+  ```
+  python3 run_manual.py <opname>
+  ```
+  测例文件的保存格式可以是 pb 和 prototxt。测例创建成功后，将保存的 prototxt 文件移至 'bangpy-ops/ops/' 的不同算子目录下 testcase 文件夹。
 
-`注意` :mlu-ops-generator模块的更多介绍见(https://github.com/Cambricon/mlu-ops-generator)
+`注意` :mlu-ops-generator模块的详细介绍见(https://github.com/Cambricon/mlu-ops-generator)
 
 ## 运行测试用例
 
