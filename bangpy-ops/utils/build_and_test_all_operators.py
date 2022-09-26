@@ -30,17 +30,13 @@ test_entrys = []
 test_files = []
 
 
-def is_build_func(name, obj):
-    return callable(obj) and name.startswith("build")
-
-
-def collect_build_funcs(op):
+def collect_build_test_funcs(op, cur_file_name):
     dicts = [getattr(op, "__dict__", {})]
-    build_exist = 0
+    build_exist = test_exist = 0
 
     for dic in dicts:
         for name, obj in list(dic.items()):
-            if is_build_func(name, obj):
+            if callable(obj) and name.startswith("build"):
                 if dicts[0][name].__qualname__.find("register_mlu_op") != 0:
                     raise TypeError(
                         "Please use 'register_mlu_op' to decorate your build function in '%s.py'."
@@ -48,7 +44,12 @@ def collect_build_funcs(op):
                     )
                 build_entrys.append(obj)
                 build_exist = 1
-    return build_exist
+            if callable(obj) and name.startswith("test"):
+                test_entrys.append(obj)
+                if test_files.count(cur_file_name) == 0:
+                    test_files.append(cur_file_name)
+                    test_exist = 2
+    return build_exist | test_exist
 
 
 def build_all_op():
@@ -111,7 +112,7 @@ def main():
                 if f.endswith(".py"):
                     sys.path.append(os.getcwd())
                     a = __import__(f[:-3])
-                    status |= collect_build_funcs(a)
+                    status |= collect_build_test_funcs(a, os.getcwd() + "/" + f)
                     sys.path.pop()
             os.chdir(cur_work_path)
         operator_statuts[op_name] = status
@@ -129,7 +130,7 @@ def main():
         for op_name in operator_lists:
             test_all_op(target, op_name)
             for k, v in operator_statuts.items():
-                if not v & 1:
+                if not v & 2:
                     print(
                         "Test Warning: Operator %s was skipped, please check whether\
                             there is a function start with 'test' prefix in the operator."
