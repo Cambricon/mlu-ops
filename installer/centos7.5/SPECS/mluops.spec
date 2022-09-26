@@ -5,7 +5,7 @@
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
-Version: 0.1.1
+Version: 0.2.0
 Release: 1%{?dist}
 License: Cambricon Release License
 Vendor: Cambricon Inc.
@@ -19,7 +19,7 @@ BuildRequires: glibc-devel
 BuildRequires: binutils >= 2.27, redhat-rpm-config >= 9.1.0
 BuildRequires: readline-devel >= 6.2-4
 BuildRequires: rpm-devel
-BuildRequires: python-devel
+#BuildRequires: python-devel
 BuildRequires: texinfo-tex
 BuildRequires: /usr/bin/pod2man
 BuildRequires: texlive-ec texlive-cm-super
@@ -29,9 +29,9 @@ BuildRequires: valgrind >= 3.13.0
 BuildRequires: xz
 BuildRequires: doxygen
 BuildRequires: texlive-latex
-BuildRequires: python >= 2.7.0
-BuildRequires: cncc >= 2.6.0
-BuildRequires: cnas >= 2.6.0
+#BuildRequires: python >= 2.7.0
+#BuildRequires: cncc >= 2.6.0
+#BuildRequires: cnas >= 2.6.0
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Requires: cndrv >= 0.2.0
@@ -60,19 +60,22 @@ cp bangc-ops/mlu_op.h bangc-ops/mlu_op_kernel.h $RPM_BUILD_ROOT%{neuware_dir}/in
 cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 
 %clean
-rm -rf $RPM_BUILD_ROOT
-rm -rf $RPM_BUILD_DIR
+#rm -rf $RPM_BUILD_ROOT
+#rm -rf $RPM_BUILD_DIR
 
 %files
 %defattr (-, root, root)
 %{neuware_dir}/include/mlu_op.h
 %{neuware_dir}/include/mlu_op_kernel.h
-%{neuware_dir}/lib64/libmluops.so
+%{neuware_dir}/lib64/libmluops.so*
 /etc/ld.so.conf.d/neuware-env.conf
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 
 %changelog
+* Tue Sep 22 2022 Cambricon Software Team <service@cambricon.com>
+- release mluops v0.2.0
+
 * Tue Aug 31 2022 Cambricon Software Team <service@cambricon.com>
-- release cncl v0.1.1
+- release mluops v0.1.1

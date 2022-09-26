@@ -161,7 +161,7 @@ mkdir -p ${PACKAGE_DIR}
 mkdir -p ${PACKAGE_DIR}/include
 mkdir -p ${PACKAGE_DIR}/lib64
 
-cp -rf ${BUILD_DIR}/lib/libmluops.so ${PACKAGE_DIR}/lib64
+cp -rf ${BUILD_DIR}/lib/libmluops.so* ${PACKAGE_DIR}/lib64
 cp bangc-ops/mlu_op.h bangc-ops/mlu_op_kernel.h ${PACKAGE_DIR}/include
 
 TEST_DIR="test_workspace/mluops"
