@@ -28,7 +28,7 @@ from bangpy import tcp
 from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
-DTYPES = [bangpy.float32]
+DTYPES = [bangpy.float16, bangpy.float32]
 # TARGET_LIST = ["mlu290"]
 TARGET_LIST = ["mlu370-s4"]
 KERNEL_NAME = "kldivloss"
@@ -38,11 +38,9 @@ class KlDivLoss(object):
     """Operator description:
     The Kullback-Leibler divergence loss is used to measure the distance
     between two distributions (discrete and continuous)
-
     log_target : if target has been logged(0:no / 1:yes)
         if log_target == 0 : out = target * (log(target) - input)
         if log_target == 1 : out = exp(target) * (target - input)
-
     reduction : perform reduction operation according to the reduction argument
         The kind of reduction:
             0 represents "none": out
@@ -55,41 +53,35 @@ class KlDivLoss(object):
         self, task_num: ty.int32, nram_size: ty.int32, dtype: ty.string
     ) -> None:
         """Construct a new KlDivLoss class.
-
         Parameters
         ----------
         task_num : bangpy.common.DType
             The task number of runtime.
-
         nram_size : bangpy.common.DType
             The size of nram.
-
         dtype : bangpy.common.DType
             The data type of input.
-
         Attributes
         ----------
         task_num : int
             The task number of runtime.
-
         nram_size : bangpy.common.DType
             The size of nram.
-
         dtype : bangpy.DType
             The data type of input.
-
         dtype_sz : int
             The byte of each element.
-
         single_buffer_size : int
             The size of single buffer.
         """
         self.task_num = task_num
         self.nram_size = nram_size
         self.dtype = dtype
-
-        self.dtype_sz = 4  # "float32"
-        self.single_buffer_size = (((self.nram_size - 4 * 1024) // 6) // (128 * 64)) * (
+        if self.dtype == "float16":
+            self.dtype_sz = 2
+        else:
+            self.dtype_sz = 4  # "float32"
+        self.single_buffer_size = (((self.nram_size - 4 * 1024) // 8) // (128 * 64)) * (
             (128 * 64)  # todo: why 128 * 64 is ok, but 128 causes errors
         )
         # NRAM is divided into 6 main parts
@@ -129,9 +121,23 @@ class KlDivLoss(object):
         inp: ty.Buffer("nram"),
         tar: ty.Buffer("nram"),
         flag: ty.int32,
+        temp1: ty.Buffer("nram"),
     ) -> None:
+        # if flag == 0:
+        #     tcp.log(ou, tar)  # high_precision=False
+        #     tcp.subtract(ou, ou, inp)
+        #     tcp.multiply(ou, tar, ou)
+        # else:  # flag == 1:
+        #     tcp.exp(ou, tar, "exp_less_0")  # todo: delete "exp_less_0"?
+        #     tcp.subtract(tar, tar, inp)
+        #     tcp.multiply(ou, ou, tar)
         if flag == 0:
-            tcp.log(ou, tar)  # high_precision=False
+            if self.dtype == "float16":
+                tcp.type_convert(temp1, tar, 0)
+                tcp.log(temp1, temp1)
+                tcp.type_convert(ou, temp1, 0, "rd")
+            else:
+                tcp.log(ou, tar)  # high_precision=False
             tcp.subtract(ou, ou, inp)
             tcp.multiply(ou, tar, ou)
         else:  # flag == 1:
@@ -211,6 +217,9 @@ class KlDivLoss(object):
                     buffer_out = tcp.alloc_buffer(
                         [data_calculated_each_time], dtype=self.dtype, scope="nram"
                     )
+                    temp1 = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype="float32", scope="nram"
+                    )
 
                     with tcp.block("data_copy"):
                         tcp.memcpy(
@@ -232,7 +241,7 @@ class KlDivLoss(object):
 
                     with tcp.block("compute"):
                         self.numCompute(
-                            buffer_out, buffer_input, buffer_target, log_target
+                            buffer_out, buffer_input, buffer_target, log_target, temp1
                         )
                         if reduction != 0:
                             sum_input_pool = buffer_out.reshape(
@@ -273,13 +282,18 @@ class KlDivLoss(object):
                     buffer_out = tcp.alloc_buffer(
                         [data_calculated_each_time], dtype=self.dtype, scope="nram"
                     )
+                    temp1 = tcp.alloc_buffer(
+                        [data_calculated_each_time], dtype="float32", scope="nram"
+                    )
 
                     # data copy
                     tcp.memcpy(buffer_input[: stop - start], inputG[start:stop])
                     tcp.memcpy(buffer_target[: stop - start], targetG[start:stop])
 
                     # compute
-                    self.numCompute(buffer_out, buffer_input, buffer_target, log_target)
+                    self.numCompute(
+                        buffer_out, buffer_input, buffer_target, log_target, temp1
+                    )
 
                     # reduction
                     if reduction != 0:
