@@ -27,17 +27,35 @@ from bangpy.common import load_op_by_type
 from kldivloss import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
-def cal_diff(result, data_out):
+def cal_diff(result, data_out, reduction):
     """compute diff"""
-    diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
+    if reduction == 0:
+        result[np.isnan(result)] = 0
+        result[np.isinf(result)] = 0
+        data_out[np.isnan(data_out)] = 0
+        data_out[np.isinf(data_out)] = 0
+
+    bp.assert_allclose(np.isnan(result), np.isnan(data_out))
+    bp.assert_allclose(np.isinf(result), np.isinf(data_out))
+
+    diff1 = np.sum(
+        np.abs(np.subtract(result, data_out, dtype=np.float64)), dtype=np.float64
+    ) / np.sum(result, dtype=np.float64)
     diff2 = np.sqrt(
-        np.sum(np.power(np.subtract(data_out, result), 2,))
-        / np.sum(np.power(result, 2))
+        np.sum(
+            np.power(
+                np.subtract(data_out, result, dtype=np.float64), 2, dtype=np.float64
+            ),
+            dtype=np.float64,
+        )
+        / np.sum(np.power(result, 2), dtype=np.float64),
+        dtype=np.float64,
     )
-    assert round(diff1 * 100, 5) < 3e-3 * 100
-    assert round(diff2 * 100, 5) < 3e-3 * 100
+
     print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
+    assert round(diff1 * 100, 5) < 3e-3 * 100
+    assert round(diff2 * 100, 5) < 3e-3 * 100
 
 
 @pytest.mark.parametrize(
@@ -150,19 +168,18 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     data_out_dev = data_out_dev.numpy().reshape(shape)
     if reduction == 0:
         print("data_out_dev : ", data_out_dev)
-        cal_diff(data_out_dev, data_out)
+        cal_diff(data_out_dev, data_out, reduction)
     elif reduction == 1:
         print("data_out_sum_dev : ", data_out_dev[0][0])
-        cal_diff(data_out_dev[0][0], data_out_sum)
+        cal_diff(data_out_dev[0][0], data_out_sum, reduction)
     elif reduction == 2:
         print("data_out_mean_dev : ", data_out_dev[0][0])
-        cal_diff(data_out_dev[0][0], data_out_mean)
+        cal_diff(data_out_dev[0][0], data_out_mean, reduction)
     elif reduction == 3:
         print("data_out_batchmean_dev : ", data_out_dev[0][0])
-        cal_diff(data_out_dev[0][0], data_out_batchmean)
+        cal_diff(data_out_dev[0][0], data_out_batchmean, reduction)
 
     print("tutorial : %f ms" % t)
-    # print("------------------------------------------------------------")
 
     # io_efficiency
     theory_io_size = (
