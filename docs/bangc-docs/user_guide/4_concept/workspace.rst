@@ -1,0 +1,50 @@
+.. _workspace:
+
+工作空间
+=========
+
+Cambricon CNNL 库中部分算子除了输入和输出数据的存放需要内存空间外，还需要额外的内存空间用于算子计算的优化。这部分额外的内存空间被称为工作空间 （workspace）。
+
+需要workspace的算子在调用算子接口前，要申请workspace。Cambricon CNNL 为每个需要使用 workspace 的算子提供了一个获取 workspace 大小的接口，用户通过调用该接口获取算子需要使用的 workspace 大小（单位为字节）。接口名为 ``cnnlGetXXXWorkspaceSize()``，其中 ``XXX`` 为算子名。例如，卷积前向算子（ConvolutionForward）获取 workspace 大小的接口为 ``cnnlGetConvolutionForwardWorkspaceSize()``。用户根据获取的 workspace 大小调用 ``cnrtMalloc()`` 来申请 workspace，并在算子计算时，如 ``cnnlConvolutionForward()`` 将申请的 workspace 地址和 workspace 大小传给算子计算接口的 ``workspace`` 和 ``workspace_size`` 参数。最后，用户需要调用 ``cnrtFree()`` 释放 workspace 空间。
+
+参考《Cambricon CNNL Developer Guide》中各算子的相关章节了解各算子是否需要额外申请 workspace。如果算子接口中包含 ``workspace`` 和 ``workspace_size`` 参数，则说明该算子需要申请 workspace，否则该算子不需要申请 workspace。
+
+如果网络中有多个算子需要 workspace，用户可以通过调用 ``cnnlGetXXXWorkSpaceSize()`` 分别获取各算子所需的 workspace 大小，然后只申请这些算子所需最大workspace大小，而无需为每个算子都申请 workspace。在这种情况下，workspace_size 并不是确切的 workspace 指针指向的内存块的大小，而是指算子需要的工作空间的大小。该方法可以充分复用MLU设备上的内存空间，并且减少多个算子因多次申请和释放 workspace 所带来的时间开销。但是为了确保 workspace 读写安全性，该方法只限于所有算子严格按照顺序执行，并且这些算子的执行在同一个队列内，而不是在多个队列中并行运行。顺序执行可以确保在同一时间仅有一个任务访问这一块 workspace，而多队列并行运行时可能会造成多个并行任务同时访问这一块 workspace，从而造成多个任务互相踩踏内存，并且CNRT会返回 "mlu unfinished error"或算子计算结果出错。
+
+使用方法
+-------------------
+
+执行下面步骤，为一个算子申请 workspace：
+
+1. 调用 ``cnnlCreateTensorDescriptor()`` 和 ``cnnlSetTensorDescriptor()`` 创建 tensor descriptor，并设置算子所需参数。
+
+2. 调用 ``cnnlGetXXXWorkspaceSize()`` 获取到该算子所需要的 workspace 大小，其中 ``XXX`` 需替换为算子名。
+
+#. 根据获取的workspace 大小设置 ``size``，调用 ``cnrtMalloc()`` 申请 workspace 空间。
+
+#. 调用 ``cnnlXXX()`` ，将 tensor descriptor、输入、输出和 workspace 等参数传入该接口来执行算子的计算任务，其中 ``XXX`` 需替换为算子名。
+
+#. 调用 ``cnrtMemcpy()`` 将 MLU 输出结果从设备端拷贝回主机端。
+
+#. 调用 ``cnnlDestroyTensorDescriptor()`` 释放 tensor descriptor。
+
+#. 调用 ``cnrtFree()`` 释放 workspace 空间。
+
+相关CNRT接口详情，请查看《CNRT开发者手册》。
+
+示例
+------------------
+
+以卷积ConvolutionForward算子为例展示 workspace 的使用，示例中忽略卷积张量描述符、数据内存申请和释放以及同步队列中执行任务的过程。
+
+::
+
+	size_t workspace_size;
+	cnnlGetConvolutionForwardWorkspaceSize(handle, x_desc, w_desc, y_desc, conv_desc, algo, &workspace_size); // 获取ConvolutionForward算子所需workspace大小。
+
+	void *workspace = NULL;
+	cnrtMalloc(&workspace, workspace_size); // 为workspace分配内存。
+	cnnlConvolutionForward(handle, conv_desc, algo, x_desc, data_x, w_desc, data_w, desc_bias, data_bias, workspace, workspace_size, y_desc, data_y)); // 完成ConvolutionForward计算任务，其中workspace为workspace地址，workspace_size为workspace大小。
+
+	cnrtFree(workspace); // 释放workspace内存资源。
+
