@@ -9,5 +9,3 @@
   tensor
   handle
   workspace
-  extraInput
-  descriptor

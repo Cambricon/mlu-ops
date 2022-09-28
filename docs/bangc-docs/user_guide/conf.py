@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Cambricon CNNL 用户手册'
+project = u'Cambricon BANGC OPS 用户手册'
 copyright = u'2022, Cambricon'
 author = u''
 

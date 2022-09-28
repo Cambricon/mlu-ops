@@ -6,9 +6,7 @@
 .. toctree::
   :maxdepth: 1
 
-  quant
-  fusedop
+
   apilog
-  precision
   thread_safety
-  reorder
+
