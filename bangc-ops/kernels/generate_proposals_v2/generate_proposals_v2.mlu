@@ -277,14 +277,15 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
     mid = dn + (up - dn) * 0.5;
   }
   k_score[0] = mid;
-  __sync_all_ipu();
+  if (taskDim != 1) {
+    __sync_all_ipu();
+  }
 
   int diff = ge_count - pre_nms_top_n;
   if (diff <= 0) {
     *cp_scores_to_workspace = false;
     return;
   }
-
   *cp_scores_to_workspace = true;
   if (taskId == 0) {
     __memcpy(workspace, intput_scores_ptr, HWA * sizeof(T), GDRAM2GDRAM);
@@ -652,8 +653,8 @@ __mlu_func__ void createAndRemoveBox(
 // |  N     |  4N     |  4N |  4N     |   trans_buffer  32N        |
 
 // workspace
-// | output_scores | output_boxes | collect_num |
-// |    HWA        |   4*HWA      | collect_num |
+// | output_scores | output_boxes | scores_tmp | boxes_tmp | collect_num |
+// |    HWA        |   4*HWA      |    HWA     |   4*HWA   | taskDim     |
 
 #if __BANG_ARCH__ >= 300
   const int memory_block = 27;
@@ -670,7 +671,9 @@ __mlu_func__ void createAndRemoveBox(
                    &remain_num, &core_num, &core_offset);
 
   // init workspace ptr
-  int *collect_num = (int *)workspace;
+  T *output_scores_tmp = workspace;
+  T *output_boxes_tmp = workspace + HWA;
+  int *collect_num = (int *)workspace + 5 * HWA;
   collect_num[taskId] = 0;
 
   // init nram ptr
@@ -682,12 +685,9 @@ __mlu_func__ void createAndRemoveBox(
   T *ge_mask = (T *)proposals + 4 * max_seg_num;
   T *nram_temp = (T *)ge_mask + max_seg_num;
 
-  int pre_store_offset = 0;
+  int core_store_offset = 0;
   // createbox
   for (int seg_id = 0; seg_id <= repeat; ++seg_id) {
-    if (taskDim != 1) {
-      __sync_all_ipu();
-    }
     if (seg_id == repeat && remain_num == 0) {
       break;
     }
@@ -766,39 +766,65 @@ __mlu_func__ void createAndRemoveBox(
     removeSmallBox(scores, proposals, im_shape, nram_temp, actual_num_align,
                    count, &after_remove_count, min_size, pixel_offset);
 
-    collect_num[taskId] = after_remove_count;
-
-    if (taskDim != 1) {
-      __sync_all_ipu();
-    }
-
-    int current_offset = pre_store_offset;
-    for (int i = 0; i < taskDim; ++i) {
-      if (i < taskId) {
-        current_offset += collect_num[i];
-      }
-      pre_store_offset += collect_num[i];
-    }
-
     if (after_remove_count == 0) {
       continue;
     }
 
-    __memcpy(output_boxes + current_offset, proposals,
+    // The output scores  need to be kept in order
+    // step 1. copy the proposals on each core to output_boxes_tmp;
+    // step 2. copy output_boxes_tmp to output_boxes;
+
+    // step 1
+    __memcpy(output_boxes_tmp + core_offset + core_store_offset, proposals,
              after_remove_count * sizeof(T), NRAM2GDRAM);
-    __memcpy(output_boxes + current_offset + HWA, proposals + actual_num_align,
-             after_remove_count * sizeof(T), NRAM2GDRAM);
-    __memcpy(output_boxes + current_offset + 2 * HWA,
+    __memcpy(output_boxes_tmp + core_offset + core_store_offset + HWA,
+             proposals + actual_num_align, after_remove_count * sizeof(T),
+             NRAM2GDRAM);
+    __memcpy(output_boxes_tmp + core_offset + core_store_offset + 2 * HWA,
              proposals + 2 * actual_num_align, after_remove_count * sizeof(T),
              NRAM2GDRAM);
-    __memcpy(output_boxes + current_offset + 3 * HWA,
+    __memcpy(output_boxes_tmp + core_offset + core_store_offset + 3 * HWA,
              proposals + 3 * actual_num_align, after_remove_count * sizeof(T),
              NRAM2GDRAM);
-    __memcpy(output_scores + current_offset, scores,
+    __memcpy(output_scores_tmp + core_offset + core_store_offset, scores,
              after_remove_count * sizeof(T), NRAM2GDRAM);
+
+    core_store_offset += after_remove_count;
   }
 
-  *proposals_num = pre_store_offset;
+  collect_num[taskId] = core_store_offset;
+  if (taskDim != 1) {
+    __sync_all_ipu();
+  }
+
+  int current_offset = 0;
+  int all_proposls_num = 0;
+  for (int i = 0; i < taskDim; ++i) {
+    if (i < taskId) {
+      current_offset += collect_num[i];
+    }
+    all_proposls_num += collect_num[i];
+  }
+
+  *proposals_num = all_proposls_num;
+  if (all_proposls_num == 0 || core_store_offset == 0) {
+    return;
+  }
+
+  // step 2
+  __memcpy(output_boxes + current_offset, output_boxes_tmp + core_offset,
+           core_store_offset * sizeof(T), GDRAM2GDRAM);
+  __memcpy(output_boxes + current_offset + HWA,
+           output_boxes_tmp + core_offset + HWA, core_store_offset * sizeof(T),
+           GDRAM2GDRAM);
+  __memcpy(output_boxes + current_offset + 2 * HWA,
+           output_boxes_tmp + core_offset + 2 * HWA,
+           core_store_offset * sizeof(T), GDRAM2GDRAM);
+  __memcpy(output_boxes + current_offset + 3 * HWA,
+           output_boxes_tmp + core_offset + 3 * HWA,
+           core_store_offset * sizeof(T), GDRAM2GDRAM);
+  __memcpy(output_scores + current_offset, output_scores_tmp + core_offset,
+           core_store_offset * sizeof(T), GDRAM2GDRAM);
 }
 
 template <typename T>
