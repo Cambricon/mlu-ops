@@ -8,7 +8,7 @@ Cambricon BANGC OPS 是一个基于寒武纪MLU并针对人工智能网络的应
 
 **问题2：Cambricon BANGC OPS在寒武纪软件栈中处于什么位置？**
 
-参见 :ref:`CNNL在寒武纪软件栈中如何工作` 一节。
+参见 :ref:`Cambricon BANGC OPS在寒武纪软件栈中如何工作` 一节。
 
 **问题3：Cambricon BANGC OPS运行依赖哪些组件，版本号的对应关系是什么？**
 

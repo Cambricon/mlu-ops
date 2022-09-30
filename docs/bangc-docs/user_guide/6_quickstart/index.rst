@@ -66,7 +66,7 @@ Debian系统
 
   <x.y.z>为Cambricon BANGC OPS版本号，<build>为打包版本，一般为1，<target_directory>为目标目录，会在该目录下安装 ``lib64`` 、 ``include`` 等目录，如果不指定 ``--target`` 参数，默认安装到 ``/usr/local/neuware`` 下。
 
-  注意， ``mluops_<x.y.z>-<build>.ubuntu16.04_arm64.run`` 中的库文件只提供动态链接库，如果是基于Cambricon BANGC OPS静态链接库进行开发，则不需要在边缘端部署CNNL。
+  注意， ``mluops_<x.y.z>-<build>.ubuntu16.04_arm64.run`` 中的库文件只提供动态链接库。
 
 - 从主机端系统拷贝文件到边缘端：
 
@@ -88,7 +88,7 @@ Debian系统
 
     解压到当前目录的 ``usr/local/neuware`` 下。
 
-.. _卸载或升降级CNNL版本:
+.. _卸载或升降级Cambricon BANGC OPS版本:
 
 卸载或升降级Cambricon BANGC OPS版本
 ------------------------------------

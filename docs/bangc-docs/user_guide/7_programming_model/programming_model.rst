@@ -10,7 +10,7 @@
 
 寒武纪Cambricon BANGC OPS异构编程模型是CPU和MLU的协作编程模型。Host端负责调用CNRT接口用来初始化设备、管理设备内存、准备Cambricon BANGC OPS的参数、调用Cambricon BANGC OPS接口以及释放设备资源。MLU端作为协处理器，帮助Host端CPU完成人工智能任务，并达到低能耗、高可用的效果。Cambricon BANGC OPS每个算子由Host端CPU发射，在MLU端异步执行。
 
-.. _CNNL在寒武纪软件栈中如何工作:
+.. _Cambricon BANGC OPS在寒武纪软件栈中如何工作 :
 
 Cambricon BANGC OPS在寒武纪软件栈中如何工作
 --------------------------------------------------
