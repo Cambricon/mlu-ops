@@ -1,10 +1,10 @@
 快速入门
 =================
 
-本章重点介绍了如何部署和使用寒武纪BANGC OPS，以及如何运行寒武纪提供的BANGC OPS样例。
+本章重点介绍了如何部署和使用Cambricon BANGC OPS，以及如何运行寒武纪提供的BANGC OPS样例。
 
-部署寒武纪BANGC OPS
---------------------
+部署Cambricon BANGC OPS
+------------------------
 
 Cambricon BANGC OPS的使用依赖于CNToolkit工具包。用户在使用Cambricon BANGC OPS库之前需要先安装寒武纪CNToolkit工具包。安装详细步骤，请参考《寒武纪CNToolkit安装升级使用手册》。
 
@@ -28,11 +28,11 @@ CentOS系统
 
 - 执行安装命令：
 
-  ::
+::
 
-    sudo yum install mluops-<x.y.z>-1.el7.<arch>.rpm
+   sudo yum install mluops-<x.y.z>-1.el7.<arch>.rpm
 
-  <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构，例如Cambricon BANGC OPS v0.2.0版本在CentOS系统下的包名为 ``mluops-0.2.0-1.el7.x86_64.rpm   ` 。
+   <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构，例如Cambricon BANGC OPS v0.2.0版本在CentOS系统下的包名为 ``mluops-0.2.0-1.el7.x86_64.rpm   ` 。
 
 
 Debian系统
@@ -40,12 +40,12 @@ Debian系统
 
 - 执行安装命令：
 
-  ::
+::
 
-    sudo yum install mluops-<x.y.z>-1.ky10.<arch>.rpm
-
-  <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构，例如Cambricon BANGC OPS v0.2.0版本在Kylin系统下的包名为 ``mluops_0.2.0-1.debian10_amd64.deb`` 。
-
+   sudo yum install mluops-<x.y.z>-1.ky10.<arch>.rpm
+   
+   <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构，例如Cambricon BANGC OPS v0.2.0版本在Kylin系统下的包名为 ``mluops_0.2.0-1.debian10_amd64.deb`` 。
+   
 .. _寒武纪边缘端嵌入式Linux 系统:
 
 寒武纪边缘端嵌入式Linux系统
@@ -91,15 +91,15 @@ Debian系统
 .. _卸载或升降级CNNL版本:
 
 卸载或升降级Cambricon BANGC OPS版本
-----------------------------------
+------------------------------------
 
 卸载Cambricon BANGC OPS
->>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>
 
 卸载Cambricon BANGC OPS，可使用 ``.deb`` 包和 ``.rpm`` 包的操作方式，详细说明，请参看《寒武纪CNToolkit安装升级使用手册》。注意，如果安装了 ``<package_name>-static`` ，卸载时需要同时卸载 ``<package_name>`` 和 ``<package_name>-static`` 。
 
 升级Cambricon BANGC OPS版本
->>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 由于Cambricon BANGC OPS依赖CNToolkit提供的CNDrv、CNRT、CNBin包，在处理CNToolkit的版本更替时，如果遇到依赖冲突报错，可以先卸载Cambricon BANGC OPS，更新完CNToolkit后，再更新Cambricon BANGC OPS（即可以尝试先全部卸载，再重新安装的方式完成CNToolkit和Cambricon BANGC OPS的版本升降级）。
 
@@ -125,12 +125,12 @@ Debian系统
 
 
 降级Cambricon BANGC OPS版本
->>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 Cambricon BANGC OPS的降级推荐直接卸载当前版本，再进行安装。
 
 Cambricon BANGC OPS编程和运行
---------------------------
+-----------------------------
 
 了解如何使用Cambricon BANGC OPS构造一个算子或者搭建一个简单的网络，请参考 :ref:`programming_guide` 。
 
@@ -153,13 +153,13 @@ Cambricon BANGC OPS开发样例
 
     a. 在``samples/bangc-ops/`` 目录下运行下面命令：
 
-      ::
+       ::
 
-        source env.sh
+         source env.sh
+		 
+         ./build.sh
 
-        ./build.sh
-
-      在 ``samples/bangc-ops/build/bin`` 目录下生成可执行文件 ``abs_sample`` 和 ``poly_nms_sample`` 。
+       在 ``samples/bangc-ops/build/bin`` 目录下生成可执行文件 ``abs_sample`` 和 ``poly_nms_sample`` 。
     b. 在 ``samples/bangc-ops/build/bin`` 目录下运行样例：
 
       ::

@@ -38,15 +38,16 @@ Cambricon BANGC OPS库中部分算子除了输入和输出数据的存放需要�
 以不规则四边形非极大值抑制（mluOpPolyNms）算子为例展示 workspace 的使用，示例中忽略张量描述符、数据内存申请和释放以及同步队列中执行任务的过程。
 
 ::
-	size_t workspace_size; 
 
-	mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size); // 获取 mluOpPolyNms 算子所需workspace大小。
-
-	void *workspace = NULL;
-	
-	cnrtMalloc(&workspace, workspace_size); // 为 workspace 分配内存。
-
-	mluOpPolyNms(handle, input_desc, input_ptr, iou_threshold, workspace_ptr, workspace_size, output_desc, output_ptr, output_size_ptr); // 完成 mluOpPolyNms 计算任务，其中workspace为workspace地址，workspace_size为workspace大小。
-
-	cnrtFree(workspace); // 释放workspace内存资源。
+   size_t workspace_size; 
+   
+   mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size); // 获取 mluOpPolyNms 算子所需workspace大小。
+   
+   void *workspace = NULL;
+   
+   cnrtMalloc(&workspace, workspace_size); // 为 workspace 分配内存。
+   
+   mluOpPolyNms(handle, input_desc, input_ptr, iou_threshold, workspace_ptr, workspace_size, output_desc, output_ptr, output_size_ptr); // 完成 mluOpPolyNms 计算任务，其中workspace为workspace地址，workspace_size为workspace大小。
+   
+   cnrtFree(workspace); // 释放workspace内存资源。
 
