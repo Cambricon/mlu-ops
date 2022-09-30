@@ -6,7 +6,7 @@ FAQ
 **问题1：Cambricon BANGC OPS是什么？**
 Cambricon BANGC OPS 是一个基于寒武纪MLU并针对人工智能网络的应用场景提供了高度优化常用算子的高性能计算库。具体可见 :ref:`概述` 。
 
-**问题2：Cambricon BANGC OPS在寒武纪软件栈中处于什么位置？**// TODO(guzh) :软件栈的图需要修改，没有mluops
+**问题2：Cambricon BANGC OPS在寒武纪软件栈中处于什么位置？**
 
 参见 :ref:`CNNL在寒武纪软件栈中如何工作` 一节。
 

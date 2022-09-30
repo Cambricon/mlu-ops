@@ -16,7 +16,6 @@
    7_programming_model/index
    8_functions/index
    9_operators/index
-   10_samples/fusedop_sample
-   11_debugging/index
-   12_env_var/index
-   13_faq/index
+   10_debugging/index
+   11_env_var/index
+   12_faq/index
