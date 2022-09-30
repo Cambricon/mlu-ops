@@ -3,10 +3,10 @@
 Cambricon BANGC OPS环境变量
 ============================
 
- .. _MLUOP_MIN_LOG_LEVEL:
+ .. _MLUOP_MIN_VLOG_LEVEL:
  
-MLUOP_MIN_LOG_LEVEL
-###################
+MLUOP_MIN_VLOG_LEVEL
+######################
 
 **功能描述**
 
@@ -14,13 +14,13 @@ MLUOP_MIN_LOG_LEVEL
 
 **使用方法**
 
-- export MLUOP_MIN_LOG_LEVEL=0：显示FATAL、ERROR、WARNING、INFO级别的日志。
+- export MLUOP_MIN_VLOG_LEVEL=0：显示FATAL、ERROR、WARNING、INFO级别的日志。
 
-- export MLUOP_MIN_LOG_LEVEL=1：显示FATAL、ERROR、WARNING级别的日志。
+- export MLUOP_MIN_VLOG_LEVEL=1：显示FATAL、ERROR、WARNING级别的日志。
 
-- export MLUOP_MIN_LOG_LEVEL=2：显示ERROR和WARNING级别的日志。
+- export MLUOP_MIN_VLOG_LEVEL=2：显示ERROR和WARNING级别的日志。
 
-- export MLUOP_MIN_LOG_LEVEL=3：显示FATAL级别LOG。
+- export MLUOP_MIN_VLOG_LEVEL=3：显示FATAL级别LOG。
 
 默认值为0。
 

@@ -14,7 +14,7 @@ API日志
    
       LOG(INFO/WARNING/ERROR/FATAL) << "Information printed on the screen."
    
-2. 在运行Cambricon BANGC OPS算子前，设置 :ref:`MLUOP_MIN_LOG_LEVEL` 环境变量指定日志的最小打印级别。该环境变量支持设置INFO及以上级别日志、WARNING及以上级别日志、ERROR及以上级别日志以及FATAL级别日志。
+2. 在运行Cambricon BANGC OPS算子前，设置 :ref:`MLUOP_MIN_VLOG_LEVEL` 环境变量指定日志的最小打印级别。该环境变量支持设置INFO及以上级别日志、WARNING及以上级别日志、ERROR及以上级别日志以及FATAL级别日志。
 
    例如在调用Cambricon BANGC OPS函数时，输入下面指令：
 
@@ -27,7 +27,7 @@ API日志
 
    如果在环境变量中设置为WARNING，则只会在屏幕上打印最后三行内容。
 
-下图为 :ref:`MLUOP_MIN_LOG_LEVEL` 设置为WARNING时打印结果示例。
+下图为 :ref:`MLUOP_MIN_VLOG_LEVEL` 设置为WARNING时打印结果示例。
 
 .. figure:: ../images/apilog.png
 

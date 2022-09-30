@@ -25,7 +25,7 @@ Cambricon BANGC OPS提供了一个用于辅助算子调试的工具，开启功�
   -  device上的数据（配合其他变量使用）；
 
 - 算子自身的名字 （``op_name``） ，算子类别 （``op_type``）；
-- 算子运行所需参数。但并非所有算子的运行参数信息都会保存，如 ``mluOpConvolutionForward`` 所需的 ``mluOpConvolutionDescriptor_t`` 描述符中参数不会被保存。
+- 算子运行所需参数。
 
 算子接受到的参数将会以Cambricon BANGC OPS内部定义的 ``protobuf`` 格式保存到当前路径下的 ``gen_case`` 文件夹内。
 

@@ -62,11 +62,11 @@ Debian系统
 
   ::
 
-    bash cnnl_<x.y.z>-<build>.ubuntu16.04_arm64.run --target <target_directory>
+    bash mluops_<x.y.z>-<build>.ubuntu16.04_arm64.run --target <target_directory>
 
   <x.y.z>为Cambricon BANGC OPS版本号，<build>为打包版本，一般为1，<target_directory>为目标目录，会在该目录下安装 ``lib64`` 、 ``include`` 等目录，如果不指定 ``--target`` 参数，默认安装到 ``/usr/local/neuware`` 下。
 
-  注意， ``cnnl_<x.y.z>-<build>.ubuntu16.04_arm64.run`` 中的库文件只提供动态链接库，如果是基于Cambricon BANGC OPS静态链接库进行开发，则不需要在边缘端部署CNNL。
+  注意， ``mluops_<x.y.z>-<build>.ubuntu16.04_arm64.run`` 中的库文件只提供动态链接库，如果是基于Cambricon BANGC OPS静态链接库进行开发，则不需要在边缘端部署CNNL。
 
 - 从主机端系统拷贝文件到边缘端：
 
@@ -76,7 +76,7 @@ Debian系统
 
      ::
 
-       dpkg -X cnnl_<x.y.z>-<build>.ubuntu16.04_arm64.deb <target_directory>
+       dpkg -X mluops_<x.y.z>-<build>.ubuntu16.04_arm64.deb <target_directory>
 
     解压到 ``<target_directory>/usr/local/neuware`` 下。
 
@@ -84,7 +84,7 @@ Debian系统
 
      ::
 
-       ar x cnnl_<x.y.z>-<build>.ubuntu16.04_arm64.deb && tar -xf data.tar.gz
+       ar x mluops_<x.y.z>-<build>.ubuntu16.04_arm64.deb && tar -xf data.tar.gz
 
     解压到当前目录的 ``usr/local/neuware`` 下。
 
@@ -111,7 +111,7 @@ Debian系统
 
     apt install ./cntoolkit_<x.y.z>-1.<distro><id>_<arch>.deb  # 先更新CNToolkit包
     apt update  # 更新CNToolkit本地源
-    apt install cndrv cnrt cnbin ./cnnl_<x.y.z>-1.<distro><id>_<arch>.deb  # 更新源里的cndrv、cnrt、cnbin和本地的cnnl deb包
+    apt install cndrv cnrt cnbin ./mluops_<x.y.z>-1.<distro><id>_<arch>.deb  # 更新源里的cndrv、cnrt、cnbin和本地的mluops deb包
 
 - ``.rpm`` 包升级示例
 
@@ -121,7 +121,7 @@ Debian系统
 
     yum update cntoolkit-<x.y.z>-1.el7update.<arch>.rpm  # 先更新CNToolkit包
     yum clean metadata && yum makecache  # 重建yum包管理数据库信息
-    yum update cndrv cnrt cnbin cnnl-<x.y.z>-1.el7.<arch>.rpm  # 更新cndrv、cnrt、cnbin、cnnl
+    yum update cndrv cnrt cnbin mluops-<x.y.z>-1.el7.<arch>.rpm  # 更新cndrv、cnrt、cnbin、mluops
 
 
 降级Cambricon BANGC OPS版本
@@ -137,7 +137,7 @@ Cambricon BANGC OPS编程和运行
 Cambricon BANGC OPS开发样例
 ----------------------------
 
-寒武纪Cambricon BANGC OPS开发样例为用户提供了卷积算子运算的样例代码，帮助用户快速体验如何使用Cambricon BANGC OPS来开发、编译以及运行一个算子。用户可以直接通过脚本运行样例代码，无需修改任何配置。
+寒武纪Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样例代码，帮助用户快速体验如何使用Cambricon BANGC OPS来开发、编译以及运行一个算子。用户可以直接通过脚本运行样例代码，无需修改任何配置。
 
 开发样例目录结构与使用方法以实际发布的samples/README.md中描述为准，下面描述样例执行步骤：
 
