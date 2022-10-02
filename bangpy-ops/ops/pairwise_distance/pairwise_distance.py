@@ -25,7 +25,8 @@ from bangpy import tcp
 from bangpy.script import ty, build_module
 
 
-DTYPES = [bangpy.float16, bangpy.float32]
+DTYPES = [#bangpy.float16,
+           bangpy.float32]
 TARGET_LIST = ["mlu370-s4"]
 KERNEL_NAME = "pairwise_distance"
 
@@ -47,36 +48,32 @@ class PairwiseDistance(object):
         # The body of add function
         tcp.add(local_a, local_b, local_c)
 
-    def main(self, a: ty.handle, b: ty.handle, c: ty.handle, length: ty.int32) -> None:
-        A = tcp.match_buffer(a, [length], dtype=self.dtype)
-        B = tcp.match_buffer(b, [length], dtype=self.dtype)
-        C = tcp.match_buffer(c, [length], dtype=self.dtype)
-        tgt = tcp.target()
-        # calculate split strategy
-        # gets the data length to be calculated for each task
-        data_calculated_each_task = length // (tgt.cluster_num * tgt.core_num)
-        # gets the number of cycles required for each task
-        loop_num = data_calculated_each_task // self.single_buffer_size
+    def main(self, Gram_tensor1: ty.handle, Gram_tensor2: ty.handle, Gram_paras: ty.handle,
+                    len_tensor1: ty.int32, len_tensor2: ty.int32,
+                    pd_len: ty.int32, pd_height: ty.int32, pd_width: ty.int32,
+                    output_len: ty.int32,
+                    Gram_border_buf_out: ty.handle, 
+                    Gram_border_idx_out: ty.handle, 
+                    Gram_buffer_out: ty.handle
+                    ) -> None:
+        gram_tensor1 = tcp.match_buffer(Gram_tensor1, [len_tensor1], dtype=self.dtype)
+        gram_tensor2 = tcp.match_buffer(Gram_tensor2, [len_tensor2], dtype=self.dtype)
+        gram_paras = tcp.match_buffer(Gram_paras, [2], dtype=self.dtype)
 
-        buffer_in0 = tcp.alloc_buffer(
-            [self.single_buffer_size], dtype=self.dtype, scope="nram"
-        )
-        buffer_in1 = tcp.alloc_buffer(
-            [self.single_buffer_size], dtype=self.dtype, scope="nram"
-        )
-        buffer_out = tcp.alloc_buffer(
-            [self.single_buffer_size], dtype=self.dtype, scope="nram"
-        )
+        gram_border_buf_out = tcp.match_buffer(Gram_border_buf_out, [256], dtype=self.dtype)
+        gram_border_idx_out = tcp.match_buffer(Gram_border_idx_out, [256], dtype='int32')
+        gram_buffer_out = tcp.match_buffer(Gram_buffer_out, [output_len], dtype=self.dtype)        
+
+        tgt = tcp.target()
+        self.bp = tgt
+
+        tcp.print(gram_tensor1)
+        a = 0
         for cluster_id in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
-                for i in range(loop_num):
-                    task_id = cluster_id * tgt.core_num + core_id
-                    start = task_id * data_calculated_each_task + i * self.single_buffer_size
-                    stop = start + self.single_buffer_size
-                    tcp.memcpy(buffer_in0, A[start:stop])
-                    tcp.memcpy(buffer_in1, B[start:stop])
-                    self.add_body(buffer_out, buffer_in0, buffer_in1)
-                    tcp.memcpy(C[start:stop], buffer_out)
+                #self.bp.print("zouni\n")
+                a += 1
+                tcp.print("feifei ", a)
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
