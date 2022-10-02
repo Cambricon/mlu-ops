@@ -64,7 +64,7 @@ def test_hard_sigmoid(target, shape, dtype):
         return
     data_in = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
     # Hardsigmoid function
-    # data_out = torch.nn.functional.hardsigmoid(data_in)
+    # data_out = torch.nn.Hardsigmoid()(data_in)
     data_out = data_in * 1 / 6 + 1 / 2
     data_out = np.minimum(data_out, 1)
     data_out = np.maximum(data_out, 0)
