@@ -77,9 +77,9 @@ mluops 样例
    cd build/bin 
    ./abs_sample [dims_vaule] [shape0] [shape1] [shape2] ... # 运行abs_sample
    # 运行示例
-   ./abs_Sample 4 10 10 10 10
-   ./abs_Sample 3 10 5 6
-   ./abs_Sample 2 8 8
+   ./abs_sample 4 10 10 10 10
+   ./abs_sample 3 10 5 6
+   ./abs_sample 2 8 8
 
    ## 方式2
    source env.sh
