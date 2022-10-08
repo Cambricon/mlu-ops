@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
- 
+
 #include <iostream>
 #include <memory>
 #include <random>
@@ -43,13 +43,13 @@ void random(float *ptr, size_t count) {
 }
 
 void initDevice(int &dev, cnrtQueue_t &queue, mluOpHandle_t &handle) {
-    CNRT_CHECK(cnrtGetDevice(&dev));
-    CNRT_CHECK(cnrtSetDevice(dev));
+  CNRT_CHECK(cnrtGetDevice(&dev));
+  CNRT_CHECK(cnrtSetDevice(dev));
 
-    CNRT_CHECK(cnrtQueueCreate(&queue));
+  CNRT_CHECK(cnrtQueueCreate(&queue));
 
-    mluOpCreate(&handle);
-    mluOpSetQueue(handle, queue);
+  mluOpCreate(&handle);
+  mluOpSetQueue(handle, queue);
 }
 
 // host function: prepare resources and call device kernel
@@ -62,21 +62,21 @@ int main(int argc, char *argv[]) {
   initDevice(dev, queue, handle);
   printf("init device\n");
 
-
   int shape[DIM_SIZE] = {11, 13, 17, 19};  // a shape of tensor
   size_t element_num = 11 * 13 * 17 * 19;
   size_t data_size = element_num * sizeof(float);
 
   printf("prepare mluOpTensorDescriptor_t and malloc memory\n");
   // tensor[0]:input tensor, tensor[1]:output_tensor
-  mluOpTensorDescriptor_t  tensors[TENSOR_NUM];
-  void* host_ptrs[TENSOR_NUM];
-  void* device_ptrs[TENSOR_NUM];
+  mluOpTensorDescriptor_t tensors[TENSOR_NUM];
+  void *host_ptrs[TENSOR_NUM];
+  void *device_ptrs[TENSOR_NUM];
   for (size_t i = 0; i < TENSOR_NUM; ++i) {
     // create input tensor descriptor
     mluOpTensorDescriptor_t desc = nullptr;
     mluOpCreateTensorDescriptor(&desc);
-    mluOpSetTensorDescriptor(desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4, shape);
+    mluOpSetTensorDescriptor(desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+                             shape);
     tensors[i] = desc;
     // malloc host memory
     host_ptrs[i] = (void *)malloc(data_size);
@@ -90,21 +90,23 @@ int main(int argc, char *argv[]) {
   random((float *)host_ptrs[0], element_num);
 
   printf("memcpy input data from host to device\n");
-  CNRT_CHECK(cnrtMemcpy(device_ptrs[0], host_ptrs[0], data_size, CNRT_MEM_TRANS_DIR_HOST2DEV));
+  CNRT_CHECK(cnrtMemcpy(device_ptrs[0], host_ptrs[0], data_size,
+                        CNRT_MEM_TRANS_DIR_HOST2DEV));
 
   printf("call device kernel\n");
   // set function type and task dim
   cnrtDim3_t k_dim = {4, 1, 1};
   cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
   // call device kernel function.
-  MLUUnfinishedExampleKernel<<<k_dim, k_type, queue>>>(device_ptrs[0],
-        device_ptrs[1], element_num);
+  MLUUnfinishedExampleKernel<<<k_dim, k_type, queue>>>(
+      device_ptrs[0], device_ptrs[1], element_num);
 
   // sync: wait device finish compute
   CNRT_CHECK(cnrtQueueSync(queue));  // here should mlu unfinished.
 
   printf("copy result from device to host\n");
-  CNRT_CHECK(cnrtMemcpy(host_ptrs[1], device_ptrs[1], data_size, CNRT_MEM_TRANS_DIR_DEV2HOST));
+  CNRT_CHECK(cnrtMemcpy(host_ptrs[1], device_ptrs[1], data_size,
+                        CNRT_MEM_TRANS_DIR_DEV2HOST));
 
   printf("free resources\n");
   for (size_t i = 0; i < TENSOR_NUM; ++i) {

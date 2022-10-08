@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
- 
+
 #include "fault_kernel.h"
 
 #define MAX_NRAM_SIZE (384 * 1024)  // use 384kB memory in nram
@@ -36,8 +36,7 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
  * For details on how to deal with such MLU unfinished problems, please refer
  * to debugging section in Cambricon-CNNL-User-Guide-CN-vx.x.x.pdf
  */
-__mlu_global__ void MLUUnfinishedExampleKernel(void *input,
-                                               void *output,
+__mlu_global__ void MLUUnfinishedExampleKernel(void *input, void *output,
                                                size_t element_num) {
   if (coreId == 0x80) {
     __sync_cluster();  // this statement will causes synchronization bug
@@ -58,15 +57,17 @@ __mlu_global__ void MLUUnfinishedExampleKernel(void *input,
   size_t remain_size = per_core_num % span_num_deal;
 
   for (int i = 0; i < repeat; ++i) {
-    __memcpy(nram_input, input_start + i * span_load_size, span_load_size, GDRAM2NRAM);
+    __memcpy(nram_input, input_start + i * span_load_size, span_load_size,
+             GDRAM2NRAM);
     __bang_active_abs((float *)nram_output, (float *)nram_input, span_num_deal);
-    __memcpy(output_start + i * span_load_size, nram_output, span_load_size, NRAM2GDRAM);
+    __memcpy(output_start + i * span_load_size, nram_output, span_load_size,
+             NRAM2GDRAM);
   }
   if (remain_size > 0) {
     __memcpy(nram_input, input_start + repeat * span_load_size,
              remain_size * sizeof(float), GDRAM2NRAM);
     __bang_active_abs((float *)nram_output, (float *)nram_input, remain_size);
     __memcpy(output_start + repeat * span_load_size, nram_output,
-        remain_size * sizeof(float), NRAM2GDRAM);
+             remain_size * sizeof(float), NRAM2GDRAM);
   }
 }

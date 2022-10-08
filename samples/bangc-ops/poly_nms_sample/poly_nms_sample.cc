@@ -25,111 +25,132 @@
 
 #include "mlu_op.h"
 
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line) {
+  if (result) {
+    std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
+                        " in " + std::string(func) + "\"";
+    throw std::runtime_error(error);
+  }
+}
+
+#define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
+
 void initDevice(int &dev, cnrtQueue_t &queue, mluOpHandle_t &handle) {
-    CNRT_CHECK(cnrtGetDevice(&dev));
-    CNRT_CHECK(cnrtSetDevice(dev));
+  CNRT_CHECK(cnrtGetDevice(&dev));
+  CNRT_CHECK(cnrtSetDevice(dev));
 
-    CNRT_CHECK(cnrtQueueCreate(&queue));
+  CNRT_CHECK(cnrtQueueCreate(&queue));
 
-    mluOpCreate(&handle);
-    mluOpSetQueue(handle, queue);
+  MLUOP_CHECK(mluOpCreate(&handle));
+  MLUOP_CHECK(mluOpSetQueue(handle, queue));
 }
 
 int main(int argc, char *argv[]) {
-    int dev;
-    mluOpHandle_t handle = nullptr;
-    cnrtQueue_t queue = nullptr;
+  int dev;
+  mluOpHandle_t handle = nullptr;
+  cnrtQueue_t queue = nullptr;
 
-    initDevice(dev, queue, handle);
-    printf("init device\n");
+  initDevice(dev, queue, handle);
+  printf("init device\n");
 
-    // construct input data
+  // construct input data
 
-    constexpr int shape0 = 3;
-    constexpr int shape1 = 9;
-    constexpr int INPUT_SIZE = shape0 * shape1;
-    float a[INPUT_SIZE] = {0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.65, 0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 0.85, 1.0, 1.0, 2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 0.35};
+  constexpr int shape0 = 3;
+  constexpr int shape1 = 9;
+  constexpr int INPUT_SIZE = shape0 * shape1;
+  float a[INPUT_SIZE] = {0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.65,
+                         0.5, 0.5, 1.5, 0.5, 1.5, 1.5, 0.5, 1.5, 0.85,
+                         1.0, 1.0, 2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 0.35};
 
+  // create mluOp tensor descriptor
+  int dim_num = 2;
+  int dim_size[2] = {shape0, shape1};
+  mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
+  mluOpDataType_t type = MLUOP_DTYPE_FLOAT;
 
-    // create mluOp tensor descriptor
-    int dim_num = 2;
-    int dim_size[2] = {shape0, shape1};
-    mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
-    mluOpDataType_t type = MLUOP_DTYPE_FLOAT;
+  mluOpTensorDescriptor_t input_tensor_desc;
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_tensor_desc));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(input_tensor_desc, layout, type, dim_num,
+                                       dim_size));
 
-    mluOpTensorDescriptor_t input_tensor_desc;
-    mluOpCreateTensorDescriptor (&input_tensor_desc);
-    mluOpSetTensorDescriptor(input_tensor_desc, layout, type, dim_num, dim_size);
+  int output_dim_nb = 1;
+  int output_dim_size[1] = {shape0};
+  mluOpTensorLayout_t output_layout = MLUOP_LAYOUT_ARRAY;
+  mluOpDataType_t output_type = MLUOP_DTYPE_INT32;
 
+  mluOpTensorDescriptor_t output_tensor_desc;
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_tensor_desc));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(output_tensor_desc, output_layout,
+                                       output_type, output_dim_nb,
+                                       output_dim_size));
 
-    int output_dim_nb = 1;
-    int output_dim_size[1] = {shape0};
-    mluOpTensorLayout_t output_layout = MLUOP_LAYOUT_ARRAY;
-    mluOpDataType_t output_type = MLUOP_DTYPE_INT32;
+  // get workspace size
+  size_t workspace_size = 0;
+  MLUOP_CHECK(
+      mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size));
 
-    mluOpTensorDescriptor_t output_tensor_desc;
-    mluOpCreateTensorDescriptor (&output_tensor_desc);
-    mluOpSetTensorDescriptor(output_tensor_desc, output_layout, output_type, output_dim_nb, output_dim_size);
+  // create workspace ptr
+  void *workspace_ptr = nullptr;
+  CNRT_CHECK(cnrtMalloc((void **)&workspace_ptr, workspace_size));
 
-    // get workspace size
-    size_t workspace_size = 0;
-    mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size);
+  // create input device ptr
+  void *input_tensor_ptr;
+  CNRT_CHECK(
+      cnrtMalloc((void **)&input_tensor_ptr, INPUT_SIZE * sizeof(float)));
+  // copy host data to device
+  CNRT_CHECK(cnrtMemcpy(input_tensor_ptr, a, INPUT_SIZE * sizeof(float),
+                        cnrtMemcpyHostToDev));
 
-    // create workspace ptr
-    void *workspace_ptr = nullptr;
-    cnrtMalloc((void **)&workspace_ptr, workspace_size);
+  // create output device ptr
+  void *output_tensor_ptr;
+  CNRT_CHECK(cnrtMalloc((void **)&output_tensor_ptr, shape0 * sizeof(float)));
 
-    // create input device ptr
-    void *input_tensor_ptr;
-    cnrtMalloc((void **)&input_tensor_ptr, INPUT_SIZE * sizeof(float));
-    // copy host data to device
-    cnrtMemcpy(input_tensor_ptr, a, INPUT_SIZE * sizeof(float), cnrtMemcpyHostToDev);
+  void *output_size_ptr;
+  CNRT_CHECK(cnrtMalloc((void **)&output_size_ptr, sizeof(float)));
 
-    // create output device ptr
-    void *output_tensor_ptr;
-    cnrtMalloc((void **)&output_tensor_ptr, shape0 * sizeof(float));
+  const float iou_threshold = 0.5;
 
-    void *output_size_ptr;
-    cnrtMalloc((void **)&output_size_ptr, sizeof(float));
+  // call mluOpPolyNms
+  MLUOP_CHECK(mluOpPolyNms(
+      handle, input_tensor_desc, input_tensor_ptr, iou_threshold, workspace_ptr,
+      workspace_size, output_tensor_desc, output_tensor_ptr, output_size_ptr));
 
-    const float iou_threshold = 0.5;
+  // sync queue
+  cnrtQueueSync(queue);
 
-    // call mluOpPolyNms
-    mluOpPolyNms(handle, input_tensor_desc, input_tensor_ptr, iou_threshold, workspace_ptr,  workspace_size, output_tensor_desc, output_tensor_ptr, output_size_ptr);
+  // call end, copy device data to host
+  int32_t *b = new int32_t[shape0];
+  CNRT_CHECK(cnrtMemcpy(b, output_tensor_ptr, shape0 * sizeof(int32_t),
+                        cnrtMemcpyDevToHost));
 
-    // sync queue
-    cnrtQueueSync(queue);
+  int32_t *output_size = new int32_t();
+  CNRT_CHECK(cnrtMemcpy(output_size, output_size_ptr, sizeof(int32_t),
+                        cnrtMemcpyDevToHost));
 
-    // call end, copy device data to host
-    int32_t *b = new int32_t [shape0];
-    cnrtMemcpy(b, output_tensor_ptr, shape0 * sizeof(int32_t),  cnrtMemcpyDevToHost);
-
-    int32_t *output_size =  new int32_t();
-    cnrtMemcpy(output_size, output_size_ptr, sizeof(int32_t),  cnrtMemcpyDevToHost);
-
-    printf("poly_nms intput:\n");
-    for(int i = 0; i < shape0; ++i) {
-        printf("box[%d]:[", i);
-        for(int j = 0; j < shape1; ++j) {
-            printf(" %f,", a[i*shape1 + j]);   
-        }
-        printf("]\n");
+  printf("poly_nms intput:\n");
+  for (int i = 0; i < shape0; ++i) {
+    printf("box[%d]:[", i);
+    for (int j = 0; j < shape1; ++j) {
+      printf(" %f,", a[i * shape1 + j]);
     }
-    printf("poly_nms output size = %d\n", *output_size);
-    for(int i = 0 ; i < *output_size; ++i){
-        printf("poly_nms output[%d]:%d\n", i, b[i]);
-    }
+    printf("]\n");
+  }
+  printf("poly_nms output size = %d\n", *output_size);
+  for (int i = 0; i < *output_size; ++i) {
+    printf("poly_nms output[%d]:%d\n", i, b[i]);
+  }
 
-    // destory resource
-    cnrtFree(input_tensor_ptr);
-    cnrtFree(output_tensor_ptr);
-    cnrtFree(workspace_ptr);
-    cnrtFree(output_size_ptr);
+  // destory resource
+  CNRT_CHECK(cnrtFree(input_tensor_ptr));
+  CNRT_CHECK(cnrtFree(output_tensor_ptr));
+  CNRT_CHECK(cnrtFree(workspace_ptr));
+  CNRT_CHECK(cnrtFree(output_size_ptr));
 
-    mluOpDestroyTensorDescriptor(input_tensor_desc);
-    mluOpDestroyTensorDescriptor(output_tensor_desc);
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_tensor_desc));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_tensor_desc));
 
-    cnrtQueueDestroy(queue);
-    mluOpDestroy(handle);
-    return 0;
+  CNRT_CHECK(cnrtQueueDestroy(queue));
+  MLUOP_CHECK(mluOpDestroy(handle));
+  return 0;
 }

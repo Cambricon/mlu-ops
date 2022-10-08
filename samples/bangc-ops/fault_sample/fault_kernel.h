@@ -28,6 +28,7 @@
 #include <mlu.h>
 #endif  // defined(__BANG__)
 
-__mlu_global__ void MLUUnfinishedExampleKernel(void *input, void* ouptut, size_t element_num);
+__mlu_global__ void MLUUnfinishedExampleKernel(void* input, void* ouptut,
+                                               size_t element_num);
 
 #endif  // SAMPLES_FAULT_DEMO_FAULT_KERNEL_H_
