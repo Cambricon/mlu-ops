@@ -104,7 +104,7 @@ double computeDiff3(float *baseline_result, float *mlu_result, size_t count,
 
 void cpuCompute(const float *input, const int input_length, float *output) {
   for (int i = 0; i < input_length; ++i) {
-    output[i] = (input[i] >= 0) ? input[i] : (-1 * input[i]);
+    output[i] = (input[i] >= 0) ? input[i] : -input[i];
   }
 }
 
@@ -213,7 +213,7 @@ int main(int argc, char *argv[]) {
   CNRT_CHECK(cnrtNotifierCreate(&end));
   CNRT_CHECK(cnrtPlaceNotifier(start, queue));
 
-  // call mluops abs
+  // call mluOpAbs interface
   interface_timer.start();
   MLUOP_CHECK(mluOpAbs(handle, input_tensor_desc, input_tensor_ptr,
                        output_tensor_desc, output_tensor_ptr));

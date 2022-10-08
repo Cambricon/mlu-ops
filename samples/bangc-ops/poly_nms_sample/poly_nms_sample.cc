@@ -55,7 +55,6 @@ int main(int argc, char *argv[]) {
   printf("init device\n");
 
   // construct input data
-
   constexpr int shape0 = 3;
   constexpr int shape1 = 9;
   constexpr int INPUT_SIZE = shape0 * shape1;
@@ -111,7 +110,7 @@ int main(int argc, char *argv[]) {
 
   const float iou_threshold = 0.5;
 
-  // call mluOpPolyNms
+  // call mluOpPolyNms interface
   MLUOP_CHECK(mluOpPolyNms(
       handle, input_tensor_desc, input_tensor_ptr, iou_threshold, workspace_ptr,
       workspace_size, output_tensor_desc, output_tensor_ptr, output_size_ptr));
