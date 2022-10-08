@@ -20,7 +20,9 @@ mluops 样例
   |   |-- run.sh
   |   |-- CMakeLists.txt
   |-- fault_sample
-  |   |-- poly_nms_sample.cc
+  |   |-- fault_demo.mlu
+  |   |-- fault_kernel.h
+  |   |-- fault_kernel.mlu
   |   |-- build.sh
   |   |-- run.sh
   |   |-- CMakeLists.txt
@@ -44,6 +46,14 @@ mluops 样例
 
 **sample/poly_nms_sample**
 - poly_nms_sample.cc: 调用 mluOpPolyNms 的示例文件；
+- build.sh: 自动化编译脚本，其内部对cmake命令进行了封装；
+- CMakeLists.txt: cmake 描述文件， 用于编译样例；
+- run.sh: 自动化编译运行脚本。
+
+**sample/fault_sample**
+- fault_demo.mlu: fault_sample的host代码文件；
+- fault_kernel.h: kernel的文件；
+- fault_kernel.mlu: fault_sample的device端代码文件；
 - build.sh: 自动化编译脚本，其内部对cmake命令进行了封装；
 - CMakeLists.txt: cmake 描述文件， 用于编译样例；
 - run.sh: 自动化编译运行脚本。
