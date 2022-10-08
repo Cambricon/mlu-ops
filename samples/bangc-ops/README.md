@@ -1,8 +1,6 @@
 快速入门
 ===============
 
-
-
 mluops 样例
 ----------------
 
@@ -36,14 +34,14 @@ mluops 样例
 **sample/abs_sample**
 - abs_sample.cc: 调用 mluOpAbs 的示例文件；
 - build.sh: 自动化编译脚本，其内部对cmake命令进行了封装；
-- CMakeLists.txt: cmake 描述文件， 用于编译样例。
-- run.sh: 自动化编译运行脚本
+- CMakeLists.txt: cmake 描述文件， 用于编译样例；
+- run.sh: 自动化编译运行脚本。
 
 **sample/poly_nms_sample**
 - poly_nms_sample.cc: 调用 mluOpPolyNms 的示例文件；
 - build.sh: 自动化编译脚本，其内部对cmake命令进行了封装；
-- CMakeLists.txt: cmake 描述文件， 用于编译样例。
-- run.sh: 自动化编译运行脚本
+- CMakeLists.txt: cmake 描述文件， 用于编译样例；
+- run.sh: 自动化编译运行脚本。
 
 运行样例：
 - 全部样例的编译与运行：
