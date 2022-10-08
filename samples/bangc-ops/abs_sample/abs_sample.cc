@@ -137,8 +137,8 @@ bool parserParam(int argc, char *argv[], ShapeParam &param) {
   param.length = 1;
   param.dims = atoi(argv[0]);
   for (int i = 1; i <= param.dims; ++i) {
-    param.shape[i-1] = atoi(argv[i]);
-    param.length *= param.shape[i-1];
+    param.shape[i - 1] = atoi(argv[i]);
+    param.length *= param.shape[i - 1];
   }
   return true;
 }

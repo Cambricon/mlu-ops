@@ -37,6 +37,7 @@ mluops 样例
 - build.sh：自动化编译脚本，其内部对cmake命令进行了封装；
 - abs_sample: 调用 mluOpAbs 的示例文件；
 - poly_nms_sample: 调用 mluOpPolyNms 的示例文件。
+- fault_sample: 故障处理示例文件
 
 **sample/abs_sample**
 - abs_sample.cc: 调用 mluOpAbs 的示例文件；
@@ -52,7 +53,7 @@ mluops 样例
 
 **sample/fault_sample**
 - fault_demo.mlu: fault_sample的host代码文件；
-- fault_kernel.h: kernel的文件；
+- fault_kernel.h: kernel的头文件；
 - fault_kernel.mlu: fault_sample的device端代码文件；
 - build.sh: 自动化编译脚本，其内部对cmake命令进行了封装；
 - CMakeLists.txt: cmake 描述文件， 用于编译样例；
@@ -105,7 +106,7 @@ mluops 样例
 
 故障处理示例文件目录，其中代码可以引发典型的mlu unfinished错误，用于验证用户手册中调试方法的可行性。
 
-具体可以参考CNNL用户手册中“调试方法”一章的“MLU Unfinished问题定位”一节。
+具体可以参考BANGC OPS用户手册中“调试方法”一章的“MLU Unfinished问题定位”一节。
 
 - fault_demo.cc：运行代码样例，执行后将会引发mlu unfinished错误。
 - fault_kernel.h：可以引发mlu unfinished的kernel代码。
@@ -113,7 +114,7 @@ mluops 样例
 
 运行流程：
 
-1. 参照用户手册中“部署CNNL”一节中内容配置CNtookit，获得neuware文件夹。
+1. 参照用户手册中“部署BANGC OPS”一节中内容配置CNtookit，获得neuware文件夹。
 2. export NEUWARE_HOME=/path/to/your/neuware
 3. 执行source env.sh
 4. 执行./build.sh，默认编译所有样例代码。
