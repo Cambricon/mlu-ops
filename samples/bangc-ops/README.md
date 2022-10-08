@@ -19,6 +19,11 @@ mluops 样例
   |   |-- build.sh
   |   |-- run.sh
   |   |-- CMakeLists.txt
+  |-- fault_sample
+  |   |-- poly_nms_sample.cc
+  |   |-- build.sh
+  |   |-- run.sh
+  |   |-- CMakeLists.txt
 ```
 
 样例所有文件介绍
@@ -85,3 +90,21 @@ mluops 样例
    cd poly_nms_sample
    ./run.sh  # 编译和运行poly_nms_sample
 ```
+
+**sample/fault_sample**:
+
+故障处理示例文件目录，其中代码可以引发典型的mlu unfinished错误，用于验证用户手册中调试方法的可行性。
+
+具体可以参考CNNL用户手册中“调试方法”一章的“MLU Unfinished问题定位”一节。
+
+- fault_demo.cc：运行代码样例，执行后将会引发mlu unfinished错误。
+- fault_kernel.h：可以引发mlu unfinished的kernel代码。
+- fault_kernel.mlu：可以引发mlu unfinished的kernel代码。
+
+运行流程：
+
+1. 参照用户手册中“部署CNNL”一节中内容配置CNtookit，获得neuware文件夹。
+2. export NEUWARE_HOME=/path/to/your/neuware
+3. 执行source env.sh
+4. 执行./build.sh，默认编译所有样例代码。
+5. 可执行文件路径为：sample/build/bin，执行./fault_sample 即可引发mlu unfinished错误，之后可以依照用户手册中“调试方法”一章中“MLU Unfinished问题定位”一节中提供的方法进行定位，以验证用户手册中所提供方法的可行性。

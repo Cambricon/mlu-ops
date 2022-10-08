@@ -52,12 +52,7 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
 )
 
 ## build project
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../bangc-ops")
-
-link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../bangc-ops/build/lib")
-
-file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.mlu")
+file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/*.mlu")
 
 bang_add_executable(${PROJECT_NAME} ${src_files})
 

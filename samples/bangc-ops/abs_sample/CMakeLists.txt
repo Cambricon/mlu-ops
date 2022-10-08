@@ -53,8 +53,6 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
 )
 
 ## build project
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-
 file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
 
 add_executable(${PROJECT_NAME} ${src_files})
