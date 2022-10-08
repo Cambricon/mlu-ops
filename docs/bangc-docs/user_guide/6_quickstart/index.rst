@@ -6,9 +6,9 @@
 部署Cambricon BANGC OPS
 ------------------------
 
-Cambricon BANGC OPS的使用依赖于CNToolkit工具包。用户在使用Cambricon BANGC OPS库之前需要先安装寒武纪CNToolkit工具包。安装详细步骤，请参考《寒武纪CNToolkit安装升级使用手册》。
+Cambricon BANGC OPS库的使用依赖于CNToolkit工具包。用户在使用Cambricon BANGC OPS库之前需要先安装寒武纪CNToolkit工具包。安装详细步骤，请参考《寒武纪CNToolkit安装升级使用手册》。
 
-安装完成CNToolkit工具包后，执行下面命令部署Cambricon BANGC OPS。默认头文件（mlu_op.h）会安装在 ``/usr/local/neuware/include`` 目录下，链接库文件（libmluops.so）会安装在 ``/usr/local/neuware/lib64`` 目录下，示例程序会安装在 ``/usr/local/neuware/samples/bangc-ops`` 目录下。
+安装完成CNToolkit工具包后，执行以下命令部署Cambricon BANGC OPS。默认头文件mlu_op.h会安装在 ``/usr/local/neuware/include`` 目录下，链接库文件libmluops.so会安装在 ``/usr/local/neuware/lib64`` 目录下，示例程序会安装在 ``/usr/local/neuware/samples/bangc-ops`` 目录下。
 
 
 Ubuntu系统
@@ -51,11 +51,11 @@ Debian系统
 寒武纪边缘端嵌入式Linux系统
 >>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-寒武纪边缘端嵌入式Linux系统基于ARM64，不具备包管理工具，因此需要通过解压的方式进行安装Cambricon BANGC OPS，或者先在中心主机端系统下进行部署，然后拷贝到边缘端。
+寒武纪边缘端嵌入式Linux系统基于ARM64，不具备包管理工具，因此需要通过解压的方式安装Cambricon BANGC OPS，或者先在中心主机端系统下进行部署，然后拷贝到边缘端。
 
 同时，边缘端系统不具备直接编译、生成应用的能力，如果要在端侧运行Cambricon BANGC OPS的示例程序或者二次开发，需要在ARM64主机端直接编译或者x86主机端交叉编译，再将生成的应用拷贝到边缘端。
 
-对于ARM64架构的边缘端设备，Cambricon BANGC OPS发行基于Ubuntu 16.04环境生成的DEB包、基于CentOS 7环境生成的RPM包以及自解压安装包，并提供两种部署方式：
+对于ARM64架构的边缘端设备，Cambricon BANGC OPS发行基于Ubuntu 16.04环境生成的deb包、基于CentOS 7环境生成的RPM包以及自解压安装包，并提供两种部署方式：
 
 
 - 边缘端系统下运行安装包，自动解压到目标目录下：
@@ -72,7 +72,7 @@ Debian系统
 
   可以先在主机环境下进行部署，再通过 ``scp`` 或其它拷贝工具拷贝到边缘端。
 
-  + 对于DEB包，可以在主机端直接进行解压操作：
+  + 对于deb包，可以在主机端直接进行解压操作：
 
      ::
 
@@ -80,7 +80,7 @@ Debian系统
 
     解压到 ``<target_directory>/usr/local/neuware`` 下。
 
-  + 通过 ``ar`` 和 ``tar`` 命令解压DEB包：
+  + 通过 ``ar`` 和 ``tar`` 命令解压deb包：
 
      ::
 
@@ -88,7 +88,7 @@ Debian系统
 
     解压到当前目录的 ``usr/local/neuware`` 下。
 
-.. _卸载或升降级Cambricon BANGC OPS版本:
+.. _卸载或升降级BANGC_OPS版本:
 
 卸载或升降级Cambricon BANGC OPS版本
 ------------------------------------
@@ -96,7 +96,7 @@ Debian系统
 卸载Cambricon BANGC OPS
 >>>>>>>>>>>>>>>>>>>>>>>>>
 
-卸载Cambricon BANGC OPS，可使用 ``.deb`` 包和 ``.rpm`` 包的操作方式，详细说明，请参看《寒武纪CNToolkit安装升级使用手册》。注意，如果安装了 ``<package_name>-static`` ，卸载时需要同时卸载 ``<package_name>`` 和 ``<package_name>-static`` 。
+卸载Cambricon BANGC OPS，可使用 ``.deb`` 包和 ``.rpm`` 包的操作方式，详细说明，请参见《寒武纪CNToolkit安装升级使用手册》。注意，如果安装了 ``<package_name>-static`` ，卸载时需要同时卸载 ``<package_name>`` 和 ``<package_name>-static`` 。
 
 升级Cambricon BANGC OPS版本
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -137,9 +137,9 @@ Cambricon BANGC OPS编程和运行
 Cambricon BANGC OPS开发样例
 ----------------------------
 
-寒武纪Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样例代码，帮助用户快速体验如何使用Cambricon BANGC OPS来开发、编译以及运行一个算子。用户可以直接通过脚本运行样例代码，无需修改任何配置。
+Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样例代码，帮助用户快速体验如何使用Cambricon BANGC OPS来开发、编译以及运行一个算子。用户可以直接通过脚本运行样例代码，无需修改任何配置。
 
-开发样例目录结构与使用方法以实际发布的samples/README.md中描述为准，下面描述样例执行步骤：
+开发样例目录结构与使用方法以实际发布的samples/README.md中描述为准，以下描述样例执行步骤：
 
 1. 设置环境变量。
 

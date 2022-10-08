@@ -2,18 +2,19 @@
 
 软件包发布信息
 ===================================
+Cambricon BANGC OPS库为两种主流Linux发行版提供端侧软件包，包括自解压run包和适用于Ubuntu的deb包。
 
 软件包命名格式
 -----------------------------------
 
-- .deb： ``mluops[-<mlu>][-static]_<major>.<minor>.<patch>-<build>.<distro><id>_<arch>.deb``
+- .deb: ``mluops[-<mlu>][-static]_<major>.<minor>.<patch>-<build>.<distro><id>_<arch>.deb``
 
-- .rpm： ``mluops[-<mlu>][-static]_<major>.<minor>.<patch>-<build>.<distro><id>.<arch>.rpm``
+- .rpm: ``mluops[-<mlu>][-static]_<major>.<minor>.<patch>-<build>.<distro><id>.<arch>.rpm``
 
 
 相关字段含义：
 
-- [-<mlu>]：用于aarch64下的端侧软件包，描述支持的特定MLU架构。<mlu>包括mlu220、ce3226。
+- [-<mlu>]：用于AArch64下的端侧软件包，描述支持的特定MLU架构。<mlu>包括MLU220、CE3226。
 
 - [-static]：可选，描述是否是静态库打包。
 
@@ -21,16 +22,14 @@
 
 - <build>：构建版本，一般为1。
 
-- <distro><id>：发行版以及版本号，如debian9、ubuntu18.04，详见下文的表格 `x86_64软件包` 。
+- <distro><id>：发行版以及版本号，如Debian9、Ubuntu18.04，详见下文表格 :ref: `x86_64软件包` 。
 
-- <arch>：CPU架构，CentOS（RPM包管理）下为x86_64或aarch64；Debian、Ubuntu （DEB包管理）下为amd64或arm64。
+- <arch>：CPU架构，CentOS（RPM包管理）下为x86_64或AArch64；Debian、Ubuntu （deb包管理）下为AMD64或ARM64。
 
-- <distro_suffix>：RUN文件。名根据所在发行版，保持和对应DEB或RPM包相同的文件后缀名。
+- <distro_suffix>：run文件。根据所在发行版，保持和对应deb或RPM包相同的文件后缀名。
 
 
-示例：
-
-- x86_64架构的CentOS 7下，Cambricon BANGC OPS的包为 ``mluops-x.y.z-1.el7.x86_64.rpm`` 。
+示例：x86_64架构的CentOS 7下，Cambricon BANGC OPS的包为 ``mluops-x.y.z-1.el7.x86_64.rpm`` 。
 
 
 面向x86_64架构

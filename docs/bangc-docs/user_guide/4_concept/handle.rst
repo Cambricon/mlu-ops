@@ -3,7 +3,7 @@
 句柄
 =================
 
-MLU设备资源不能被直接使用，Cambricon BANGC OPS算子计算时通过句柄（handle）来维护MLU设备信息和队列信息等Cambricon BANGC OPS 库运行环境的上下文。因此，需要在使用 Cambricon BANGC OPS 库时，创建句柄并将句柄绑定到使用的MLU设备和队列上。
+MLU设备资源不能被直接使用，Cambricon BANGC OPS算子计算时通过句柄来维护MLU设备信息和队列信息等Cambricon BANGC OPS 库运行环境的上下文。因此，需要在使用 Cambricon BANGC OPS 库时，创建句柄并将句柄绑定到使用的MLU设备和队列上。
 
 用户需要先调用 ``mluOpCreate()`` 接口在初始化 Cambricon BANGC OPS时创建一个句柄。创建的句柄随后会作为参数传递给算子相关接口完成数据计算。当Cambricon BANGC OPS库使用结束时，用户需要调用 ``mluOpDestroy()`` 接口释放与 Cambricon BANGC OPS 库有关的资源。
 
@@ -17,31 +17,31 @@ MLU设备资源不能被直接使用，Cambricon BANGC OPS算子计算时通过�
 创建句柄和绑定MLU设备的步骤如下：
 
 1. 调用 ``cnrtGetDevice()`` 获取指定MLU设备对应的设备号。
-2. 调用 ``cnrtSetDevice()`` 设置当前线程使用的MLU设备。
-3. 调用 ``mluOpCreate()`` 创建句柄，将创建的句柄与当前线程所使用的设备绑定。
+#. 调用 ``cnrtSetDevice()`` 设置当前线程使用的MLU设备。
+#. 调用 ``mluOpCreate()`` 创建句柄，将创建的句柄与当前线程所使用的设备绑定。
 
-如果需要切换算子运行的MLU设备，可以重复调用以上步骤来重新设置设备并且创建一个新的句柄。相关CNRT接口说明，参考《寒武纪CNRT开发者手册》。
+如果需要切换算子运行的MLU设备，可以重复调用以上步骤来重新设置设备并且创建一个新的句柄。相关CNRT接口说明，请参考《Cambricon CNRT Developer Guide》。
 
 绑定句柄和队列
 ----------------
 
-Cambricon BANGC OPS 中所有算子计算任务都是通过队列来完成。因此，句柄除了在创建时会绑定设备外，还需要绑定一个队列，使Cambricon BANGC OPS 算子的计算任务能够在指定队列上执行。一旦队列与句柄绑定，Cambricon BANGC OPS 算子的计算任务都是基于句柄中绑定的队列来下发。用户可以通过 ``mluOpSetQueue()`` 来绑定队列和句柄，通过 ``mluOpGetQueue()`` 来获取绑定到句柄上的队列。有关队列详情，参考《寒武纪CNRT用户手册》。
+Cambricon BANGC OPS 中所有算子计算任务都是通过队列来完成。因此，句柄除了在创建时会绑定设备外，还需要绑定一个队列，使Cambricon BANGC OPS 算子的计算任务能够在指定队列上执行。一旦队列与句柄绑定，Cambricon BANGC OPS 算子的计算任务都是基于句柄中绑定的队列来下发。用户可以通过 ``mluOpSetQueue()`` 来绑定队列和句柄，通过 ``mluOpGetQueue()`` 来获取绑定到句柄上的队列。有关队列详情，请参考《寒武纪CNRT用户手册》。
 
 执行下面步骤将句柄与队列绑定：
 
 1. 调用 ``cnrtQueueCreate()`` 创建一个队列。
 
-2. 调用 ``mluOpCreate()`` 创建一个句柄。
+#. 调用 ``mluOpCreate()`` 创建一个句柄。
 
-3. 将队列绑定到句柄。调用 ``mluOpSetQueue()`` 将创建好的队列绑定到已有的句柄中。此接口可用来切换句柄中绑定的队列。
+#. 将队列绑定到句柄。调用 ``mluOpSetQueue()`` 将创建好的队列绑定到已有的句柄中。此接口可用来切换句柄中绑定的队列。
 
-4. 使用队列下发任务。 调用 ``mluOpXXX()`` ，将句柄作为参数传入该接口，其中XXX为算子名，如 ``mluOpAbs``。Cambricon BANGC OPS 在任务下发时，会将任务下发至句柄中绑定的队列上。任务下发完成后接口便会异步返回。
+#. 使用队列下发任务。 调用 ``mluOpXXX()`` ，将句柄作为参数传入该接口，其中XXX为算子名，如 ``mluOpAbs``。Cambricon BANGC OPS 在任务下发时，会将任务下发至句柄中绑定的队列上。任务下发完成后接口便会异步返回。
 
-5. 调用 ``mluOpGetQueue()`` 获取句柄中已经绑定好的队列。
+#. 调用 ``mluOpGetQueue()`` 获取句柄中已经绑定好的队列。
 
-6. 调用 ``cnrtQueueSync()`` 同步队列。该接口会阻塞队列直到队列中所有任务均完成。
+#. 调用 ``cnrtQueueSync()`` 同步队列。该接口会阻塞队列直到队列中所有任务均完成。
 
-7. 调用 ``cnrtQueueDestroy()`` 销毁队列所占的资源。
+#. 调用 ``cnrtQueueDestroy()`` 销毁队列所占的资源。
 
 此外，用户需要在 Cambricon BANGC OPS 程序运行最后调用 ``mluOpDestroy()`` 接口释放 Cambricon BANGC OPS 运行上下文资源。
 
