@@ -84,7 +84,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  *size = 7 * A * H * W * 4 +
+  *size = 12 * A * H * W * 4 +
           handle->cluster_num * handle->core_num_per_cluster * 4 * 3;
   return MLUOP_STATUS_SUCCESS;
 }

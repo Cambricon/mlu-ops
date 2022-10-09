@@ -1604,32 +1604,13 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpTensorDescriptor_t y_desc, const void *y,
          const mluOpTensorDescriptor_t z_desc, void *z);
 
-// Group:PolyNms
-/*!
- *  @brief Gets extra space size that is needed in poly_nms operation.
- *
- *  @param[in] handle
- *  Handle to an MLUOP context that is used to manage MLU devices
- *  and queues in the psroipool_forward operation.
- *  @param[in] boxes_desc
- *  The descriptor of the boxes tensor. For detailed information,
- *  see ::mluOpTensorDescriptor_t.
- *  @param[out] size
- *  A host pointer to the returned size of extra space in bytes.
- *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- */
-mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-    size_t *size);
-
 // Group:GenerateProposalsV2
 /*!
  *  @brief Gets extra space size that is needed in poly_nms operation.
  *
  *  @param[in] handle
  *  Handle to an MLUOP context that is used to manage MLU devices
- *  and queues in the psroipool_forward operation.
+ *  and queues in the GenerateProposalsV2 operation.
  *  @param[in] scores_desc
  *  The descriptor of the scores tensor. For detailed information,
  *  see ::mluOpTensorDescriptor_t.
@@ -1743,7 +1724,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
  *     - eta: float.
  *     - pixel_offset: bool.
  *     - rpn_rois: float.
- *     - rpn_roi_probs: int32.
+ *     - rpn_roi_probs: float.
  *     - rpn_rois_num: int32.
  *     - rpn_rois_batch_size: int32.
  *
@@ -1794,6 +1775,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     const mluOpTensorDescriptor_t rpn_roi_probs_desc, void *rpn_roi_probs,
     const mluOpTensorDescriptor_t rpn_rois_num_desc, void *rpn_rois_num,
     void *rpn_rois_batch_size);
+
+// Group:PolyNms
+/*!
+ *  @brief Gets extra space size that is needed in poly_nms operation.
+ *
+ *  @param[in] handle
+ *  Handle to an MLUOP context that is used to manage MLU devices
+ *  and queues in the poly_nms operation.
+ *  @param[in] boxes_desc
+ *  The descriptor of the boxes tensor. For detailed information,
+ *  see ::mluOpTensorDescriptor_t.
+ *  @param[out] size
+ *  A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+    size_t *size);
 
 // Group:PolyNms
 /*!
