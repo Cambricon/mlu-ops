@@ -438,9 +438,8 @@ int rem_num = per_core_num % seg_pad_1;
 // | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
 
 // workspace : createAndRemoveBox 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
-// proposals的个数 proposal_num = pre_nms_top_n- remove_count, remove_count表示removeSmallBox的个数
-// | collect_num | scores       | proposals        |
-// | taskDim     | proposal_num | proposal_num * 4 | 
+// | scores | proposals | scores_tmp | proposals_tmp | collect_num |
+// | AHW    | AHW * 4   | AHW        | AHW * 4       | taskDim     |
 ```
 
 ##### 3.1.2.4 createbox 计算过程
