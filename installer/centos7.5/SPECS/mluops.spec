@@ -69,6 +69,7 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %{neuware_dir}/include/mlu_op.h
 %{neuware_dir}/include/mlu_op_kernel.h
 %{neuware_dir}/lib64/libmluops.so*
+%{neuware_dir}/samples/bangc-ops
 /etc/ld.so.conf.d/neuware-env.conf
 
 %post -p /sbin/ldconfig
