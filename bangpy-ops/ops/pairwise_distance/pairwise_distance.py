@@ -23,7 +23,7 @@
 import bangpy
 from bangpy import tcp
 from bangpy.script import ty, build_module
-
+import bangpy.eager as eg
 
 DTYPES = [#bangpy.float16,
            bangpy.float32]
@@ -31,7 +31,32 @@ TARGET_LIST = ["mlu370-s4"]
 KERNEL_NAME = "pairwise_distance"
 
 
+@eg.module
 class PairwiseDistance(object):
+    def init_data_man(self, bp):
+        self.bp = bp
+        self.m_current_core_start = 0
+        self.m_current_core_end = 0
+        self.m_total_count_in_core = 0
+
+    def calc_core_process_count(self, data_total_len, task_num, task_id):
+        one_core_count = data_total_len // task_num
+        remain = data_total_len % task_num
+
+        # If remains exists, averagely assigning remains to cores.
+        # Small taskId cores will have high priority to be assigned.
+        if task_id < remain:
+            self.m_current_core_start = (one_core_count + 1) * task_id
+            self.m_current_core_start = (one_core_count + 1) * task_id
+            self.m_current_core_end = (one_core_count + 1) * (task_id + 1) - 1
+        else:
+            self.m_current_core_start = (one_core_count + 1) * \
+                remain + one_core_count * (self.bp.taskId - remain)
+            self.m_current_core_end = (one_core_count + 1) * remain + \
+                one_core_count * (self.bp.taskId - remain) + one_core_count - 1
+
+        self.m_total_count_in_core = self.m_current_core_end - self.m_current_core_start + 1
+    
     """Operator description:
     Add the data in the two buffers.
     """
@@ -56,6 +81,9 @@ class PairwiseDistance(object):
                     Gram_border_idx_out: ty.handle, 
                     Gram_buffer_out: ty.handle
                     ) -> None:
+        tgt = tcp.target()
+
+
         gram_tensor1 = tcp.match_buffer(Gram_tensor1, [len_tensor1], dtype=self.dtype)
         gram_tensor2 = tcp.match_buffer(Gram_tensor2, [len_tensor2], dtype=self.dtype)
         gram_paras = tcp.match_buffer(Gram_paras, [2], dtype=self.dtype)
@@ -64,8 +92,6 @@ class PairwiseDistance(object):
         gram_border_idx_out = tcp.match_buffer(Gram_border_idx_out, [256], dtype='int32')
         gram_buffer_out = tcp.match_buffer(Gram_buffer_out, [output_len], dtype=self.dtype)        
 
-        tgt = tcp.target()
-        self.bp = tgt
 
         tcp.print(gram_tensor1)
         a = 0
@@ -73,7 +99,8 @@ class PairwiseDistance(object):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 #self.bp.print("zouni\n")
                 a += 1
-                tcp.print("feifei ", a)
+                tcp.print(cluster_id)
+                tcp.print(core_id)
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
@@ -82,3 +109,4 @@ def build_add(dtype=None, target=None):
         PairwiseDistance(64, dtype.name), target_tag=target, name=KERNEL_NAME
     )
     return f
+ 
