@@ -164,7 +164,7 @@ Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样
 
       ::
 
-        ./abs_sample  # 运行 abs_sample 样例
+        ./abs_sample [dims_vaule] [shape0] [shape1] [shape2] ...  # 运行 abs_sample 样例
 
         ./poly_nms_sample  # 运行 poly_nms_sample 样例
 
@@ -184,9 +184,12 @@ Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样
 
       ::
 
-        ./abs_sample
+        ./abs_sample [dims_vaule] [shape0] [shape1] [shape2] ...  # 运行 abs_sample 样例
 
-   - 编译 poly_nms_sample 样例
+        e.g.
+        ./abs_sample 4 10 10 10 10
+
+  - 编译 poly_nms_sample 样例
 
     a. 在 ``samples/bangc-ops/poly_nms_sample`` 目录下运行下面命令：
 

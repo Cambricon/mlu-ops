@@ -74,7 +74,7 @@ mluOpPolyNms
 
 mluOpGenerateProposalsV2
 ----------------------------
-generate_proposals_v2根据每个检测框为 foreground 对象的概率`scores`，使用非极大值抑制来推选生成用于后续检测网络的ROIs，其中的检测框根据anchors和bbox_deltas计算得到。该算子是generate_proposals 的第二个版本。
+generate_proposals_v2根据每个检测框为 foreground 对象的概率 scores ，使用非极大值抑制来推选生成用于后续检测网络的ROIs，其中的检测框根据anchors和bbox_deltas计算得到。该算子是generate_proposals 的第二个版本。
 
 mluOpPriorBox
 ---------------------------
