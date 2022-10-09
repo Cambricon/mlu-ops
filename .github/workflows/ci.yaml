@@ -49,8 +49,8 @@ jobs:
       - name: test_bangpy_ops
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
-          ./test.sh --sub_module=bangpy
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangpy --cases_dir=/testdata/bangpy
 
 
       - name: clean
