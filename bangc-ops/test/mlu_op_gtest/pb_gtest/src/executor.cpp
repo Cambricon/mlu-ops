@@ -235,10 +235,10 @@ namespace mluoptest {
           memset(temp, 0x0, ts->total_count * cpu_dtype_size);
         } else {
           // if input is reused, need init cpu_output by input data
-          for (int i = 0; i < data_vector_.size(); i++) {
-            if (data_vector_[i].is_output) {
+          for (int j = 0; j < data_vector_.size(); j++) {
+            if (data_vector_[j].is_output) {
               memcpy(temp,
-                     cpu_fp32_stride_input_[i],
+                     cpu_fp32_stride_input_[j],
                      ts->total_count * cpu_dtype_size);
               break;
             }
@@ -1478,7 +1478,7 @@ namespace mluoptest {
 
     std::vector<int> dst_stride(shape.size());
     int stride_base = 1;
-    for (size_t i = shape.size() - 1; i >= 0; --i) {
+    for (ssize_t i = shape.size() - 1; i >= 0; --i) {
       dst_stride[i] = stride_base;
       stride_base *= shape[i];
     }
