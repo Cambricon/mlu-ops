@@ -20,7 +20,7 @@ Cambricon BANGC OPS是AOT模式，指令是提前生成并存放于动态库中�
 
 **问题5：当有新的算子需求而Cambricon BANGC OPS中没有相应算子实现时，应如何处理？**
 
-建议先分析是否可以由多个Cambricon BANGC OPS算子拼接实现，如还不能满足要求，可以考虑使用Cambricon BANGC OPS Extra开发自定义算子，或联系寒武纪AE工程师提出需求。
+建议先分析是否可以由多个Cambricon BANGC OPS算子拼接实现，如还不能满足要求，可以考虑在github仓库提issue，或联系寒武纪AE工程师提出需求。
 
 **问题6：运行过程中出现报错，例如出现mluOpError或mlu unfinished，要怎么处理？**
 

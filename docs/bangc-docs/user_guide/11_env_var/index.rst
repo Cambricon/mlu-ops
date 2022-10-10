@@ -1,9 +1,12 @@
 .. _环境变量:
 
 Cambricon BANGC OPS库环境变量
-===============================
+=============================
 
- .. _MLUOP_MIN_VLOG_LEVEL:
+
+本章介绍 Cambricon BANGC OPS 库环境变量。
+
+.. _MLUOP_MIN_VLOG_LEVEL:
  
 MLUOP_MIN_VLOG_LEVEL
 ######################
@@ -37,7 +40,7 @@ MLUOP_LOG_ONLY_SHOW
 
 - export MLUOP_LOG_ONLY_SHOW=ON：只打印日志信息到屏幕上而不会生成日志文件。
 
-- export MLUOP_LOG_ONLY_SHOW=OFF：打印日志信息到屏幕上并且生成日志文件。日志文件名为 ``MLUOP_auto_log`` ，默认保存在程序运行目录下。不支持更改文件存放路径。
+- export MLUOP_LOG_ONLY_SHOW=OFF：打印日志信息到屏幕上并且生成日志文件。日志文件名为 ``mluop_auto_log`` ，默认保存在程序运行目录下。不支持更改文件存放路径。
 
 默认值为ON。
 

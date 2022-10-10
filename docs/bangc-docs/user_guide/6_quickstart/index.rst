@@ -20,7 +20,7 @@ Ubuntu系统
 
     sudo apt install ./mluops<x.y.z>-1.ubuntu<a.b>_<arch>.deb
 
-  <x.y.z>为Cambricon BANGC OPS版本号，<a.b>为操作系统版本号，<arch>为CPU架构（amd64或arm64）。例如Cambricon BANGC OPS v0.2.0版本在X86_64的Ubuntu18.04系统下的包名为 ``mluops_0.2.0-1.ubuntu18.04_amd64.deb``。
+  <x.y.z>为Cambricon BANGC OPS版本号，<a.b>为操作系统版本号，<arch>为CPU架构（amd64）。例如Cambricon BANGC OPS v0.2.0版本在X86_64的Ubuntu18.04系统下的包名为 ``mluops_0.2.0-1.ubuntu18.04_amd64.deb`` 。
 
 
 CentOS系统
@@ -32,7 +32,7 @@ CentOS系统
 
    sudo yum install mluops-<x.y.z>-1.el7.<arch>.rpm
 
-   <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构，例如Cambricon BANGC OPS v0.2.0版本在CentOS系统下的包名为 ``mluops-0.2.0-1.el7.x86_64.rpm   ` 。
+<x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构（x86_64），例如Cambricon BANGC OPS v0.2.0版本在 CentOS7 系统下的包名为 ``mluops-0.2.0-1.el7.x86_64.rpm``。
 
 
 Debian系统
@@ -42,51 +42,9 @@ Debian系统
 
 ::
 
-   sudo yum install mluops-<x.y.z>-1.ky10.<arch>.rpm
+   sudo yum install mluops-<x.y.z>-1.debian10.<arch>.rpm
    
-   <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构，例如Cambricon BANGC OPS v0.2.0版本在Kylin系统下的包名为 ``mluops_0.2.0-1.debian10_amd64.deb`` 。
-   
-.. _寒武纪边缘端嵌入式Linux 系统:
-
-寒武纪边缘端嵌入式Linux系统
->>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-寒武纪边缘端嵌入式Linux系统基于ARM64，不具备包管理工具，因此需要通过解压的方式安装Cambricon BANGC OPS，或者先在中心主机端系统下进行部署，然后拷贝到边缘端。
-
-同时，边缘端系统不具备直接编译、生成应用的能力，如果要在端侧运行Cambricon BANGC OPS的示例程序或者二次开发，需要在ARM64主机端直接编译或者x86主机端交叉编译，再将生成的应用拷贝到边缘端。
-
-对于ARM64架构的边缘端设备，Cambricon BANGC OPS发行基于Ubuntu 16.04环境生成的deb包、基于CentOS 7环境生成的RPM包以及自解压安装包，并提供两种部署方式：
-
-
-- 边缘端系统下运行安装包，自动解压到目标目录下：
-
-  ::
-
-    bash mluops_<x.y.z>-<build>.ubuntu16.04_arm64.run --target <target_directory>
-
-  <x.y.z>为Cambricon BANGC OPS版本号，<build>为打包版本，一般为1，<target_directory>为目标目录，会在该目录下安装 ``lib64`` 、 ``include`` 等目录，如果不指定 ``--target`` 参数，默认安装到 ``/usr/local/neuware`` 下。
-
-  注意， ``mluops_<x.y.z>-<build>.ubuntu16.04_arm64.run`` 中的库文件只提供动态链接库。
-
-- 从主机端系统拷贝文件到边缘端：
-
-  可以先在主机环境下进行部署，再通过 ``scp`` 或其它拷贝工具拷贝到边缘端。
-
-  + 对于deb包，可以在主机端直接进行解压操作：
-
-     ::
-
-       dpkg -X mluops_<x.y.z>-<build>.ubuntu16.04_arm64.deb <target_directory>
-
-    解压到 ``<target_directory>/usr/local/neuware`` 下。
-
-  + 通过 ``ar`` 和 ``tar`` 命令解压deb包：
-
-     ::
-
-       ar x mluops_<x.y.z>-<build>.ubuntu16.04_arm64.deb && tar -xf data.tar.gz
-
-    解压到当前目录的 ``usr/local/neuware`` 下。
+<x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构（amd64），例如Cambricon BANGC OPS v0.2.0版本在 debian10 系统下的包名为 ``mluops_0.2.0-1.debian10_amd64.deb``。
 
 .. _卸载或升降级BANGC_OPS版本:
 
@@ -96,7 +54,7 @@ Debian系统
 卸载Cambricon BANGC OPS
 >>>>>>>>>>>>>>>>>>>>>>>>>
 
-卸载Cambricon BANGC OPS，可使用 ``.deb`` 包和 ``.rpm`` 包的操作方式，详细说明，请参见《寒武纪CNToolkit安装升级使用手册》。注意，如果安装了 ``<package_name>-static`` ，卸载时需要同时卸载 ``<package_name>`` 和 ``<package_name>-static`` 。
+卸载Cambricon BANGC OPS，可使用 ``.deb`` 包和 ``.rpm`` 包的操作方式，详细说明，请参见《寒武纪CNToolkit安装升级使用手册》。
 
 升级Cambricon BANGC OPS版本
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -111,7 +69,7 @@ Debian系统
 
     apt install ./cntoolkit_<x.y.z>-1.<distro><id>_<arch>.deb  # 先更新CNToolkit包
     apt update  # 更新CNToolkit本地源
-    apt install cndrv cnrt cnbin ./mluops_<x.y.z>-1.<distro><id>_<arch>.deb  # 更新源里的cndrv、cnrt、cnbin和本地的mluops deb包
+    apt install cndrv cnrt cnbin ./mluops_<x.y.z>-1.<distro><id>_<arch>.deb # 更新源里的cndrv、cnrt、cnbin和本地的mluops deb包 
 
 - ``.rpm`` 包升级示例
 
@@ -119,9 +77,9 @@ Debian系统
 
   ::
 
-    yum update cntoolkit-<x.y.z>-1.el7update.<arch>.rpm  # 先更新CNToolkit包
+    yum update cntoolkit-<x.y.z>-1.el<id>.<arch>.rpm  # 先更新CNToolkit包
     yum clean metadata && yum makecache  # 重建yum包管理数据库信息
-    yum update cndrv cnrt cnbin mluops-<x.y.z>-1.el7.<arch>.rpm  # 更新cndrv、cnrt、cnbin、mluops
+    yum update cndrv cnrt cnbin mluops-<x.y.z>-1.el<id>.<arch>.rpm  # 更新cndrv、cnrt、cnbin、mluops
 
 
 降级Cambricon BANGC OPS版本
@@ -145,27 +103,26 @@ Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样
 
    a. 确认CNToolkit和Cambricon BANGC OPS完成安装，安装目录的include子目录下包含 ``mlu_op.h`` 头文件，lib64目录下包含 ``libmluops.so`` 、 ``libcnrt.so`` 、 ``libcndrv.so`` 、 ``libcnbin.so`` 。
    b. 设置 ``NEUWARE_HOME`` 环境变量指向安装目录，如 ``export NEUWARE_HOME=/usr/local/neuware`` 。
-   c. 在 ``samples/bangc-ops/abs_sample`` 和``samples/bangc-ops/poly_nms_sample`` 下执行 ``source env.sh`` ，自动设置 ``PATH`` 、 ``LD_LIBRARY_PATH`` 。
+   c. 在 ``samples/bangc-ops/abs_sample`` 和 ``samples/bangc-ops/poly_nms_sample`` 下执行 ``source env.sh`` ，自动设置 ``PATH`` 、 ``LD_LIBRARY_PATH`` 。
 
 2. 编译并运行开发样例。
 
   - 编译全部样例
 
-    a. 在``samples/bangc-ops/`` 目录下运行下面命令：
+    a. 在 ``samples/bangc-ops/`` 目录下运行下面命令：
 
-       ::
+      ::
 
-         source env.sh
-		 
-         ./build.sh
+        source env.sh
+        ./build.sh
 
-       在 ``samples/bangc-ops/build/bin`` 目录下生成可执行文件 ``abs_sample`` 和 ``poly_nms_sample`` 。
+      在 ``samples/bangc-ops/build/bin`` 目录下生成可执行文件 ``abs_sample`` 和 ``poly_nms_sample`` 。
+      
     b. 在 ``samples/bangc-ops/build/bin`` 目录下运行样例：
 
       ::
 
         ./abs_sample [dims_vaule] [shape0] [shape1] [shape2] ...  # 运行 abs_sample 样例
-
         ./poly_nms_sample  # 运行 poly_nms_sample 样例
 
   - 编译 abs_sample 样例
@@ -175,7 +132,6 @@ Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样
       ::
 
         source env.sh
-
         ./build.sh
 
       在 ``samples/bangc-ops/abs_sample/build/bin`` 目录下生成可执行文件 ``abs_sample`` 。
@@ -185,8 +141,11 @@ Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样
       ::
 
         ./abs_sample [dims_vaule] [shape0] [shape1] [shape2] ...  # 运行 abs_sample 样例
+      
+      e.g.
 
-        e.g.
+      ::
+
         ./abs_sample 4 10 10 10 10
 
   - 编译 poly_nms_sample 样例
@@ -196,7 +155,6 @@ Cambricon BANGC OPS开发样例为用户提供了abs、polyNms算子运算的样
       ::
 
         source env.sh
-
         ./build.sh
 
       在 ``samples/bangc-ops/poly_nms_sample/build/bin`` 目录下生成可执行文件 ``poly_nms_sample`` 。

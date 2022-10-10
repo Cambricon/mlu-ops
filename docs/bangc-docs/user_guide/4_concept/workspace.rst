@@ -40,14 +40,18 @@ Cambricon BANGC OPS库中部分算子除了输入和输出数据的存放需要�
 ::
 
    size_t workspace_size; 
-   
-   mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size); // 获取 mluOpPolyNms 算子所需工作空间大小。
+
+   // 获取mluOpPolyNms算子所需工作空间大小。
+   mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size);
    
    void *workspace = NULL;
+
+   // 为 workspace 分配内存。
+   cnrtMalloc(&workspace, workspace_size);
    
-   cnrtMalloc(&workspace, workspace_size); // 为 workspace 分配内存。
+   // 完成 mluOpPolyNms 计算任务，其中workspace_ptr为工作空间地址，workspace_size为工作空间大小。
+   mluOpPolyNms(handle, input_desc, input_ptr, iou_threshold, workspace_ptr, workspace_size, output_desc, output_ptr, output_size_ptr);
    
-   mluOpPolyNms(handle, input_desc, input_ptr, iou_threshold, workspace_ptr, workspace_size, output_desc, output_ptr, output_size_ptr); // 完成 mluOpPolyNms 计算任务，其中workspace_ptr为工作空间地址，workspace_size为工作空间大小。
-   
-   cnrtFree(workspace); // 释放工作空间内存资源。
+   // 释放工作空间内存资源。
+   cnrtFree(workspace);
 

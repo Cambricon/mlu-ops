@@ -14,8 +14,9 @@ mluOpAbs
 
 公式如下：
 
-.. figure:: ../images/abs.png
-   :scale: 60%
+.. math::
+
+     y_i = |x_i|
 
 其中：
 
@@ -59,8 +60,9 @@ mluOpDiv
 
 公式如下：
 
-.. figure:: ../images/div.png
-   :scale: 60%
+.. math::
+
+   z_i = x_i/y_i
 
 其中：
 
@@ -78,7 +80,7 @@ generate_proposals_v2根据每个检测框为 foreground 对象的概率 scores 
 
 mluOpPriorBox
 ---------------------------
-prior_box为SSD（Single Shot MultiBox Detector）算法生成候选框。具体的在输入input的每个位置产生num_priors个候选框。候选框的坐标为（x1,y1,x2,y2），代表候选框的左上和右下的点的坐标。总共生成 boxes_num = height * width * num_priors 个候选框，其中：
+prior_box为SSD（Single Shot MultiBox Detector）算法生成候选框。具体是在输入input的每个位置产生num_priors个候选框。候选框的坐标为（x1,y1,x2,y2），代表候选框的左上和右下的点的坐标。总共生成 boxes_num = height * width * num_priors 个候选框，其中：
 
 一个点生成的num_priors个候选框的中心都一样，默认为每个网格的中心，offset为候选框的中心位移。
 
@@ -111,8 +113,9 @@ mluOpSqrt
 
 公式如下：
 
-.. figure:: ../images/sqrt.png
-   :scale: 70%
+.. math::
+
+   y_i = \sqrt{x_i}
 
 其中：
 
@@ -133,5 +136,4 @@ mluOpSqrtBackward
 
 mluOpYoloBox
 -------------------
-yolo_box负责从检测网络的backbone输出部分，计算真实检测框bbox信息。该算子三个输入tensor，两个输出tensor，输入x维度[N, C, H, W]，输入img_size维度[N, 2]，输入anchors维度[2*S]，输出boxes维度[N, S, 4, H*W]，输出scores维度[N, S, class_num, H*W]。
-
+yolo_box 负责从检测网络的 backbone 输出部分，计算真实检测框 bbox 信息。该算子三个输入 tensor，两个输出 tensor，输入 x 维度 [N, C, H, W]，输入 img_size 维度 [N, 2]，输入 anchors 维度 [2*S]，其中S表示每个像素点应预测的框的数量，输出 boxes 维度 [N, S, 4, H*W]，输出 scores 维度 [N, S, class_num, H*W]。

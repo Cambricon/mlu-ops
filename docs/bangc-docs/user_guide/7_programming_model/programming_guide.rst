@@ -31,7 +31,7 @@ Cambricon BANGC OPS编程中，每个算子都需要绑定句柄。句柄主要�
 #. 如果接口需要申请额外工作空间，即需要设置 ``workspace`` 和 ``workspace_size``，调用 ``mluOpXXXGetWorkspaceSize()`` 推导该算子需要的最小的临时空间大小。``XXX`` 需要替换为算子名称。
 #. 调用 ``cnrtMalloc()`` 开辟算子需要的输入、输出和临时空间。
 #. 调用 ``cnrtMemcpy()`` 将输入数据拷贝到设备端。拷贝到设备端的数据必须与之前设置的张量描述符信息保持一致。
-#. 调用算子的API接口 ``mluOpXXX()``，传入Cambricon BANGC OPS句柄信息。``XXX`` 需要替换为算子名称。
+#. 调用算子的API接口 ``mluOpXXX()``，传入Cambricon BANGC OPS句柄信息和接口所需所有参数。``XXX`` 需要替换为算子名称。
 #. 调用 ``cnrtQueueSync()`` 同步CPU和MLU端。
 #. 调用 ``cnrtMemcpy()`` 将输出从设备端拷贝回主机端。
 #. 调用 ``cnrtFree()`` 释放设备端的空间。
@@ -48,13 +48,13 @@ Cambricon BANGC OPS编程中，每个算子都需要绑定句柄。句柄主要�
 使用Cambricon BANGC OPS搭建一个多算子的网络，可以考虑如下方法，达到空间复用的效果。操作步骤如下：
 
 1. 执行 单算子编程指南_ 的前六步完成初始化等操作。
-#. 为网络的每一层准备张量描述符 ``mluOpTensorDescriptor_t``，调用 ``mluOpCreateTensorDescriptor()`` 创建张量描述符，并调用 ``mluOpSetTensorDescriptor()`` 设置算子输入和输出描述信息。具体信息包括数据类型、形状信息、维度顺序等。
+#. 为网络每一层准备张量描述符 ``mluOpTensorDescriptor_t``，调用 ``mluOpCreateTensorDescriptor()`` 创建张量描述符，并调用 ``mluOpSetTensorDescriptor()`` 设置算子输入和输出描述信息。具体信息包括数据类型、形状信息、维度顺序等。
 #. 为网络里面含有算子描述符的层创建算子 ``mluOpXXXDescriptor_t``，调用 ``mluOpCreateXXXDescriptor()`` 创建算子描述符，并调用 ``mluOpSetXXXDescriptor()`` 为该算子添加描述。其中 ``XXX`` 需要替换为算子名称。
 #. 为网络里面所有需要的工作空间的层设置 ``workspace`` 和 ``workspace_size``，调用 ``mluOpXXXGetWorkspaceSize()`` 推导该算子需要的最小的临时空间大小，其中 ``XXX`` 需要替换为算子名称。
 #. 调用 ``cnrtMemcpy()`` 将输入层的数据拷贝到设备端。
 #. 按照网络层的顺序调用 ``mluOpXXX()``，每一层绑定上面申请的句柄，保证它们处于同一计算队列中。``XXX`` 需要替换为算子名称。
 #. 调用 ``cnrtQueueSync()`` 同步CPU端和设备端。
-#. 拷回数据、释放句柄和设备端空间。执行 单算子编程指南_ 的14-19步。
+#. 拷回数据、释放句柄和设备端空间。执行 单算子编程指南_ 的13-18步。
 
 有关接口详情，请参见《Cambricon BANGC OPS Developer Guide》。
 
