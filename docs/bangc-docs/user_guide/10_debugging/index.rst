@@ -11,7 +11,7 @@
 算子调试信息的保存
 --------------------------------
 
-Cambricon BANGC OPS提供了一个用于辅助算子调试的工具，开启功能后，该工具会将Cambricon BANGC OPS API接受到的部分输入参数信息保存起来，方便用户更快捷地重现问题。用户也可将信息发送给寒武纪AE工程师来帮助复现问题。然而启用本功能将降低算子性能，因此仅能用于调试。
+Cambricon BANGC OPS提供了一个用于辅助算子调试的工具，开启功能后，该工具会将Cambricon BANGC OPS API接受到的部分输入参数信息保存起来，方便用户更快捷地重现问题。启用本功能将降低算子性能，因此仅能用于调试。
 
 保存的调试信息主要包括：
 
@@ -73,14 +73,12 @@ Cambricon BANGC OPS会自动创建路径并保存文件，并打印log信息提�
     /*...*/
   }
 
-用户可以将上述文件发送给寒武纪AE工程师，方便快速定位问题。
-
 .. _`MLU Unfinished问题定位`:
 
 mlu unfinished问题定位
 --------------------------------
 
-当出现mlu unfinished时, 可以参考本节描述的方法进行定位, 并联系寒武纪AE工程师获取帮助。
+当出现mlu unfinished时, 可以参考本节描述的方法进行定位, 并在github上提issue来获取帮助。
 
 具体过程如下（以CNToolkit-2.3.1为例。随CNToolkit的更新迭代，不同版本的CNToolkit在细节上可能存在差异，但基本流程一致）：
 
@@ -94,12 +92,12 @@ mlu unfinished问题定位
 
    - ``Device name`` 出现异常时硬件的型号信息。
 
-   - ``MLU Kernel name`` 出现异常的 ``kernel name`` 信息。 ``kernel name`` 是在MLU上运行的函数。用户可以联系寒武纪AE工程师，根据 ``kernel name`` 信息推断出现问题的Cambricon BANGC OPS算子。
+   - ``MLU Kernel name`` 出现异常的 ``kernel name`` 信息。 ``kernel name`` 是在MLU上运行的函数。用户可以在github上提issue，并在issue中描述异常 ``kernel name`` 的信息。
 
    - 出现异常时硬件的状态信息， ``exception`` 代表异常的类型。例如 ``barrier sync timeout`` ，说明是硬件同步出现了问题。
 
 #. 用户可单独运行上述过程得到的Cambricon BANGC OPS算子，以确认算子是否存在问题。
 
-#. 如果单算子可以复现问题，设置环境变量 ``MLUOP_GEN_CASE`` ，或者在调用此算子前先调用 ``mluOpSetGenCaseMode`` 函数，然后重新运行该算子（此过程可以保存包含算子调试信息的 ``*.prototxt`` 文件）。最终将出现异常时的 ``core_***.cndump`` 文件、包含 ``*.prototxt`` 文件的 ``gen_case`` 文件夹，以及出现问题时操作系统的dmesg信息提供给寒武纪AE工程师，我们会尽快修复问题。关于如何保存算子的调试信息，详情参看 算子调试信息的保存_。
+#. 如果单算子可以复现问题，设置环境变量 ``MLUOP_GEN_CASE`` ，或者在调用此算子前先调用 ``mluOpSetGenCaseMode`` 函数，然后重新运行该算子（此过程可以保存包含算子调试信息的 ``*.prototxt`` 文件）。最终将出现异常时的 ``core_***.cndump`` 文件、包含 ``*.prototxt`` 文件的 ``gen_case`` 文件夹，以及出现问题时操作系统的dmesg信息提交到github，我们会尽快修复问题。关于如何保存算子的调试信息，详情参看 算子调试信息的保存_。
 
-#. 如果在同参数下验证上述Cambricon BANGC OPS算子没有问题，那导致问题的原因可能是较为底层或其他影响范围更大的特性没有正常工作。如果条件允许（复现问题成本不高），请尽可能缩小复现问题的条件范围，明确问题算子和出现问题的条件，可以帮助Cambricon BANGC OPS更快地定位和解决问题。或者，直接联系寒武纪AE工程师获取帮助。
+#. 如果在同参数下验证上述Cambricon BANGC OPS算子没有问题，那导致问题的原因可能是较为底层或其他影响范围更大的特性没有正常工作。如果条件允许（复现问题成本不高），请尽可能缩小复现问题的条件范围，明确问题算子和出现问题的条件，可以帮助Cambricon BANGC OPS更快地定位和解决问题。
