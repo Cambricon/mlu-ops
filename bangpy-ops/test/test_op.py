@@ -36,9 +36,9 @@ def test_op(target, op_name, cases_dir):
             string.Template("Missing $op_name's test cases").substitute(vars())
         ) from e
     for f in proto_path:
-        if f.endswith(".prototxt"):
+        if f.endswith(".pb"):
             with open(
-                os.path.join(cases_dir, op_name, f), "r"
+                os.path.join(cases_dir, op_name, f), "rb"
             ) as p:
                 proto_file = p.read()
                 # execuate kernel on MLU

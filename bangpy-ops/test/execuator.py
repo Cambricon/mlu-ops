@@ -59,9 +59,4 @@ def execuate_kernel(proto_file, target: str, op_name):
         raise TypeError("Unsupported data type %s" % (data.get_output_dtype()))
     # launch kernel in factory model
     op_test = OpTestFactory.factory(op_name)(target, dtype, inputs, output)
-    mlu_result = op_test.compute()
-    cpu_result = output[0]
-    rtol = data.get_threshold()[0]
-    atol = data.get_threshold()[1]
-    diff = bangpy.assert_allclose(mlu_result.numpy(), cpu_result, rtol, atol)
-    return diff
+    op_test.compute()
