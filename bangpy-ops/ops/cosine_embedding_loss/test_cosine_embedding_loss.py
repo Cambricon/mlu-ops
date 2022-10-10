@@ -31,7 +31,7 @@ np.set_printoptions(threshold=np.inf)
 
 
 @pytest.mark.parametrize(
-    "data_amount", [2 ** 20 * 10, 2 ** 30, 2 ** 30 * 2, 2 ** 30 * 4, 2 ** 30 * 8]
+    "data_amount", [2 ** 20 * 10, 2 ** 28, 2 **29, 2 ** 30]
 )
 @pytest.mark.parametrize(
     "data_width",
@@ -39,20 +39,13 @@ np.set_printoptions(threshold=np.inf)
         2 ** 5,
         2 ** 5 + 1,
         2 ** 5 - 1,
-        2 ** 6,
         2 ** 7,
-        2 ** 8,
         2 ** 9,
-        2 ** 10,
         2 ** 11 + 1,
         2 ** 11 - 1,
-        2 ** 12,
         2 ** 13,
-        2 ** 14,
         2 ** 15,
-        2 ** 16,
         2 ** 17,
-        2 ** 18,
         2 ** 19,
     ],
 )
