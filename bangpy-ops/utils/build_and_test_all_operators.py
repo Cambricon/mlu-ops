@@ -62,14 +62,16 @@ def build_all_op():
 def test_all_op(target, opname, cases_dir):
     print("======================")
     print("Test all operators...")
+    flag = False
     if opname in ["add"]:
         test_op(target, opname, cases_dir)
-        sys.exit()
     else:
+        flag = True
         if target is not None:
             pytest.main(["-s", "--target=" + target, *test_files])
         else:
             pytest.main(["-s", *test_files])
+    return flag
 
 
 def main():
@@ -131,9 +133,9 @@ def main():
                 )
     if test_enable:
         for op_name in operator_lists:
-            test_all_op(target, op_name, cases_dir)
+            flag = test_all_op(target, op_name, cases_dir)
             for k, v in operator_statuts.items():
-                if not v & 2:
+                if not v & 2 and flag is True:
                     print(
                         "Test Warning: Operator %s was skipped, please check whether\
                             there is a function start with 'test' prefix in the operator."
