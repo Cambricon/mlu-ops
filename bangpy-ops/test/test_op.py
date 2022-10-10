@@ -25,21 +25,20 @@ import string
 from .execuator import execuate_kernel
 
 
-def test_op(target, op_name):
+def test_op(target, op_name, cases_dir):
     """Find *.prototxt files corresponding to the operator
     and execuate kernel"""
-    op_path = os.path.dirname(os.path.realpath("__file__"))
     # find *.prototxt files corresponding to the operator
     try:
-        proto_path = os.listdir(os.path.join(op_path, op_name, "test_case"))
+        proto_path = os.listdir(os.path.join(cases_dir, op_name))
     except FileNotFoundError as e:
         raise FileNotFoundError(
             string.Template("Missing $op_name's test cases").substitute(vars())
         ) from e
     for f in proto_path:
-        if f.endswith(".prototxt"):
+        if f.endswith(".pb"):
             with open(
-                os.path.join(op_path, op_name, os.path.join("test_case", f)), "r"
+                os.path.join(cases_dir, op_name, f), "rb"
             ) as p:
                 proto_file = p.read()
                 # execuate kernel on MLU
