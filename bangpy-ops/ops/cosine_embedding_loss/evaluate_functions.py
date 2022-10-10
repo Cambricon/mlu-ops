@@ -28,8 +28,8 @@ import numpy as np
 
 import bangpy
 from cosine_embedding_loss import CosineEmbeddingLoss, DTYPES
-from bangpy.tcp.runtime import TaskType
-
+from bangpy import eager
+from bangpy.script import build_module
 
 def compute_simple_test(x_1, x_2, y, margin):
     """
@@ -65,30 +65,21 @@ def cal_diff(result, data_out):
 ###################################################
 # Testing Parameters
 ###################################################
-# Data amounts 1,2,4,8GB.
-data_amounts = [2 ** 20 * 10, 2 ** 30, 2 ** 30 * 2, 2 ** 30 * 4, 2 ** 30 * 8]
-
-# Data width.
+data_amounts = [2 ** 20 * 10, 2 ** 28, 2 **29, 2 ** 30]
 data_widths = [
     2 ** 5,
     2 ** 5 + 1,
     2 ** 5 - 1,
-    2 ** 6,
     2 ** 7,
-    2 ** 8,
     2 ** 9,
-    2 ** 10,
     2 ** 11 + 1,
     2 ** 11 - 1,
-    2 ** 12,
     2 ** 13,
-    2 ** 14,
     2 ** 15,
-    2 ** 16,
     2 ** 17,
-    2 ** 18,
     2 ** 19,
 ]
+target = "mlu290"
 
 def evaluate(f, dtype, data_amount, data_width):
     """
@@ -120,7 +111,7 @@ def evaluate(f, dtype, data_amount, data_width):
         data_input_y.astype(dtype.as_numpy_dtype),
         margin,
     ).astype(dtype.as_numpy_dtype)
-    f(data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev)
+    f(data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev, data_height, data_width)
 
     dev_out = data_out_dev.numpy()
 
@@ -129,7 +120,7 @@ def evaluate(f, dtype, data_amount, data_width):
     evaluator = f.time_evaluator(dev, 1, 10)
     time = (
         evaluator(
-            data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev
+            data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev, data_height, data_width
         ).mean
         * 1e3
     )  # ms
@@ -141,10 +132,10 @@ def evaluate(f, dtype, data_amount, data_width):
     )  # GB/s
 
     # Output results.
-    print(
-        "data_type: {} data_amount: {:2.4f}GB data_width: \
-        {:7d} time cost: {:3.2f}ms IO speed: {:4.3f}GB/s diff1: \
-        {:1.5f}%, diff2: {:1.5f}%".format(
+    out_str = "data_type: {} data_amount: {:2.4f}GB data_width: "+\
+        "{:7d} time cost: {:3.2f}ms IO speed: {:4.3f}GB/s diff1: "+\
+        "{:1.5f}%, diff2: {:1.5f}%"
+    print(out_str.format(
             dtype.name,
             data_amount / (2 ** 30),
             data_width,
@@ -181,7 +172,9 @@ def func():
         ]
     ]
     for dtype in DTYPES:
-        f = CosineEmbeddingLoss(dtype, 1, "mlu290", TaskType.UNION16).compute_body()
+        f = build_module.build(
+            CosineEmbeddingLoss(dtype.name, True, target), target_tag=target, name="CosineEmbeddingLoss"
+        )
         for data_amount in data_amounts:
             for data_width in data_widths:
                 results.append(evaluate(f, dtype, data_amount, data_width))
@@ -190,6 +183,34 @@ def func():
     with open(filename, "w") as file_obj:
         json.dump(results, file_obj)
 
+def debug(dtype, data_amount, data_width):
+    f = eager.module(CosineEmbeddingLoss)(dtype.name, True, target)
+    data_height = data_amount // dtype.bytes // data_width
+    rng = np.random.default_rng(10)
+    data_input_x1 = rng.random(data_width * data_height).reshape(
+        (data_height, data_width)
+    ).astype(dtype.as_numpy_dtype)
+    data_input_x2 = rng.random(data_width * data_height).reshape(
+        (data_height, data_width)
+    ).astype(dtype.as_numpy_dtype)
+    data_input_y = rng.integers(-1, 1, (data_height,)).astype(dtype.as_numpy_dtype)
+    data_input_y = data_input_y * 2 + 1
+    margin = rng.random()
+    data_out = np.zeros((data_height,)).astype(dtype.as_numpy_dtype)
+    data_out_cpu = np.zeros((data_height,)).astype(dtype.as_numpy_dtype)
+    data_out_cpu = compute_simple_test(
+        data_input_x1,
+        data_input_x2,
+        data_input_y,
+        margin,
+    ).astype(dtype.as_numpy_dtype)
+    f(data_input_x1, data_input_x2, data_input_y, margin, data_out, data_height, data_width)
+    print(data_out[:10])
+    print(data_out_cpu[:10])
+    diff1, diff2 = cal_diff(data_out_cpu, data_out)
+    print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
+    print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
+    print("============")
 
 # Main function.
 if __name__ == "__main__":
