@@ -25,7 +25,7 @@ Cambricon BANGC OPS函数库目前与张量描述符相关的接口有如下几�
 - Set张量描述符相关接口：对集合张量描述符的一系列操作，例如创建、设置和销毁，以及为集合中的一个张量描述符进行一系列的初始化、设置相关参数等操作。Set接口具有特有描述符 ``mluOpTensorSetDescriptor_t`` 。
 
 
-.. tabularcolumns:: |m{0.55\textwidth}|m{0.2\textwidth}|m{0.15\textwidth}|
+.. tabularcolumns:: |m{0.60\textwidth}|m{0.2\textwidth}|m{0.10\textwidth}|
 .. table:: 张量描述符相关接口
    :class: longtable
 
