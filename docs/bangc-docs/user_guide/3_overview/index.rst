@@ -21,8 +21,8 @@ Cambricon BANGC OPS具有以下特点：
   
   -  领域类算子：
   
-     * generate_proposals_v2、PriorBox、YoloBox
-     * polyNms
+     * GenerateProposalsV2、PriorBox、YoloBox
+     * PolyNms
      * PsRoiPoolForward、PsRoiPoolBackward
      * RoiCropForward、RoiCropBackward
 
