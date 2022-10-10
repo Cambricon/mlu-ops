@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -12,7 +23,7 @@
 
 #include <string>
 #include <stdexcept>
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 #include "core/logging.h"
 
 const char *mluOpGetErrorString(mluOpStatus_t status) {
@@ -49,5 +60,15 @@ const char *mluOpGetErrorString(mluOpStatus_t status) {
     case MLUOP_STATUS_NUMERICAL_OVERFLOW: {
       return (char *)"MLUOP_STATUS_NUMERICAL_OVERFLOW";
     }
+  }
+}
+
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line) {
+  if (result) {
+    std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
+                        " in " + std::string(func) + "\"";
+    LOG(ERROR) << error;
+    throw std::runtime_error(error);
   }
 }

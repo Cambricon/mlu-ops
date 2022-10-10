@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -72,27 +83,33 @@ namespace cnlog {
  */
 #define CLOG(module, severity)                                               \
   LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
-             true, true, true, true).stream()
+             true, true, true, true)                                         \
+      .stream()
 
 #define DCLOG(module, severity)                                              \
   LogMessage(__FILE__, __LINE__, LOG_SAVE_AND_SHOW, LOG_##severity, #module, \
-             true, true, true, false).stream()
+             true, true, true, false)                                        \
+      .stream()
 
 #define PLOG(module, severity)                                                \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             true, true).stream()
+             true, true)                                                      \
+      .stream()
 
 #define DPLOG(module, severity)                                               \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             true, false).stream()
+             true, false)                                                     \
+      .stream()
 
 #define SCOUT(module, severity)                                               \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             false, true).stream()
+             false, true)                                                     \
+      .stream()
 
 #define DSCOUT(module, severity)                                              \
   LogMessage("", 0, LOG_SAVE_AND_SHOW, LOG_##severity, #module, false, false, \
-             false, false).stream()
+             false, false)                                                    \
+      .stream()
 
 /**
  * @brief: the log class to realize the log system.

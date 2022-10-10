@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -12,8 +23,11 @@
 #ifndef CORE_CONTEXT_H_
 #define CORE_CONTEXT_H_
 
-#include "core/mlu_op_core.h"
+#include <string>
+
 #include "cn_api.h"
+#include "core/logging.h"
+#include "mlu_op.h"
 
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
 #define CONTEXT_DEVICENAME_LEAST_SIZE 6
@@ -61,11 +75,64 @@ struct mluOpContext {
   int32_t sram_size;
   int32_t capability_cluster_num;
   int32_t capability_job_limit;
+  mluOpQuantizeRoundMode_t round_mode;
+  mluOpAtomicsMode_t atomics_mode;
+
+  int32_t getJobNum(cnrtFunctionType_t function_type) {
+    switch (function_type) {
+      default:
+        return 0;
+      case CNRT_FUNC_TYPE_BLOCK:
+        return job_num[0];
+      case CNRT_FUNC_TYPE_UNION1:
+        return job_num[1];
+      case CNRT_FUNC_TYPE_UNION2:
+        return job_num[2];
+      case CNRT_FUNC_TYPE_UNION4:
+        return job_num[3];
+      case CNRT_FUNC_TYPE_UNION8:
+        return job_num[4];
+      case CNRT_FUNC_TYPE_UNION16:
+        return job_num[5];
+    }
+  }
+  mluOpStatus_t initJobNum(const CNcontext drv_ctx,
+                           const std::string& api_name) {
+    int number = -1;
+    INTERNAL_CHECK(api_name,
+                   CN_SUCCESS == cnGetCtxMaxParallelUnionTasks(
+                                     drv_ctx, CN_KERNEL_CLASS_BLOCK, &number));
+    job_num[0] = number;
+    INTERNAL_CHECK(api_name,
+                   CN_SUCCESS == cnGetCtxMaxParallelUnionTasks(
+                                     drv_ctx, CN_KERNEL_CLASS_UNION, &number));
+    job_num[1] = number;
+    INTERNAL_CHECK(api_name,
+                   CN_SUCCESS == cnGetCtxMaxParallelUnionTasks(
+                                     drv_ctx, CN_KERNEL_CLASS_UNION2, &number));
+    job_num[2] = number;
+    INTERNAL_CHECK(api_name,
+                   CN_SUCCESS == cnGetCtxMaxParallelUnionTasks(
+                                     drv_ctx, CN_KERNEL_CLASS_UNION4, &number));
+    job_num[3] = number;
+    INTERNAL_CHECK(api_name,
+                   CN_SUCCESS == cnGetCtxMaxParallelUnionTasks(
+                                     drv_ctx, CN_KERNEL_CLASS_UNION8, &number));
+    job_num[4] = number;
+    INTERNAL_CHECK(
+        api_name, CN_SUCCESS == cnGetCtxMaxParallelUnionTasks(
+                                    drv_ctx, CN_KERNEL_CLASS_UNION16, &number));
+    job_num[5] = number;
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+ private:
+  int32_t job_num[6] = {0};
 };
 
 typedef enum {
   WARNING = 1,
-  ERROR   = 2,
+  ERROR = 2,
 } DepCheckLevel;  // related to include/cnlog.h
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,

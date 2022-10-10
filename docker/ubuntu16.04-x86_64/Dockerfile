@@ -8,12 +8,12 @@ WORKDIR /tmp
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
-    apt-get install --no-install-recommends -y apt-transport-https apt-utils build-essential \
-    	git cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler vim && \
+    apt-get install --no-install-recommends -y apt-transport-https apt-utils build-essential lcov html2text\
+    	git cmake python3 python pkg-config libprotobuf-dev libxml2-dev protobuf-compiler vim libreadline-dev clang-format&& \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
-ARG CNTOOLKIT_VERSION="2.8.0-1"
+ARG CNTOOLKIT_VERSION="3.0.0-1"
 # NOTE: the url below is only for internal usage, you could replace with your own cntoolkit package.
 ADD http://daily.software.cambricon.com/release/cntoolkit/Linux/x86_64/Ubuntu/16.04/${CNTOOLKIT_VERSION}/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb /tmp/
 
@@ -33,13 +33,28 @@ RUN apt-get update && \
 # Install python3.8.0.
 # NOTE: the url below is only for internal usage, you could replace with your own python-3.8.0 package.
 ADD http://daily.software.cambricon.com/download/python/3.8.0/Python-3.8.0.tgz /tmp/
+ADD http://daily.software.cambricon.com/download/python/3.8.0/_sqlite3.cpython-38-x86_64-linux-gnu.so /tmp/
+ADD http://daily.software.cambricon.com/download/openssl/openssl-1.1.1p.tar.gz /tmp/
+RUN tar -xzvf /tmp/openssl-1.1.1p.tar.gz -C /tmp/ && \
+    cd /tmp/openssl-1.1.1p && \
+    ./config --prefix=/usr/local/openssl && \
+    make -j24 && make install && \
+    ln -s /usr/local/openssl/bin/openssl /usr/bin/openssl && \
+    ln -s /usr/local/openssl/include/openssl /usr/include/openssl && \
+    echo "/usr/local/openssl/lib" >> /etc/ld.so.conf && \
+    ldconfig && \
+    rm /tmp/openssl-1.1.1p* -rf
 RUN tar -xvf /tmp/Python-3.8.0.tgz -C /tmp/ && \
     cd /tmp/Python-3.8.0 && \
-    ./configure && \
+    ./configure --with-openssl=/usr/local/openssl --enable-shared --enable-optimizations && \
     make -j24 && \
     make install && \
+    cp /usr/local/lib/libpython3.8.so.1.0 /usr/lib/ && \
     cd - && \
     rm /tmp/Python-3.8.0* -rf
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates
 
 # Install python requirements.
 RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com --upgrade pip && \
@@ -51,6 +66,7 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     click==8.0.1                       \
     cpplint==1.5.5                     \
     cycler==0.10.0                     \
+    cloudpickle                        \
     decorator==4.4.2                   \
     flake8==3.9.2                      \
     flatbuffers==1.12                  \
@@ -97,11 +113,15 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     wcwidth==0.2.5                     \
     wrapt==1.12.1                      \
     xgboost==0.7.post3                 \
-    -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+    prototxt_parser==1.0               \
+    -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com && \
+    cp /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so /usr/local/lib/python3.8/site-packages/ && \
+    rm /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so
 
 # Install BANGPy.
-ARG BANGPY_VERSION="1.4.0"
+ARG BANGPY_VERSION="2.1.1"
+ARG RELEASE_VERSION="2.1.1-1"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
-ADD http://daily.software.cambricon.com/release/bangpy/${BANGPY_VERSION}-1/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
+ADD http://daily.software.cambricon.com/release/bangpy/${RELEASE_VERSION}/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \
     rm /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl

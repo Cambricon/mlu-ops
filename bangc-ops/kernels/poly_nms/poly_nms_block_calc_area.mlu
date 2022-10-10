@@ -1,0 +1,197 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "kernels/poly_nms/poly_nms_core_set.h"
+#include "kernels/poly_nms/poly_nms.h"
+
+#include "kernels/kernel.h"
+
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define CALC_AREA_NRAM_SIZE MAX_NRAM_SIZE
+#define CALC_AREA_NRAM_FLT_CAP CALC_AREA_NRAM_SIZE / sizeof(float)
+namespace {
+__nram__ static float nram_mlu_calc_area[CALC_AREA_NRAM_FLT_CAP];
+
+__mlu_func__ static void polyArea(float *__restrict__ nram_tile_beg,
+                                  int i_tile_size,
+                                  float *__restrict__ area_buffer) {
+  // Each row of tile is
+  // xA ...
+  // yA ...
+  // xB ...
+  // yB ...
+  // ...
+
+  float *ptrx = nram_tile_beg;
+  float *ptry = nram_tile_beg + i_tile_size;
+  float *ptr0 = nram_tile_beg + 2 * i_tile_size;
+  float *ptr1 = nram_tile_beg + 3 * i_tile_size;
+  float *ptr2 = nram_tile_beg + 4 * i_tile_size;
+  float *ptr3 = nram_tile_beg + 5 * i_tile_size;
+  int stride = 2 * i_tile_size;
+
+#pragma unroll 2
+  for (int i = 1; i < 3; i++) {
+    if (i == 1) {
+      __bang_sub(ptr0, ptr0, ptrx, i_tile_size);
+      __bang_sub(ptr1, ptr1, ptry, i_tile_size);
+    }
+    __bang_sub(ptr2, ptr2, ptrx, i_tile_size);
+    __bang_sub(ptr3, ptr3, ptry, i_tile_size);
+
+    __bang_mul(ptr0, ptr0, ptr3, i_tile_size);
+    __bang_mul(ptr1, ptr1, ptr2, i_tile_size);
+    if (i == 1) {
+      __bang_sub(area_buffer, ptr0, ptr1, i_tile_size);
+    } else {
+      __bang_sub(ptr0, ptr0, ptr1, i_tile_size);
+      __bang_add(area_buffer, ptr0, area_buffer, i_tile_size);
+    }
+    ptr0 = ptr2;
+    ptr1 = ptr3;
+    ptr2 = ptr2 + stride;
+    ptr3 = ptr3 + stride;
+  }
+
+  __bang_mul_scalar(area_buffer, area_buffer, 0.5, i_tile_size);
+#if __BANG_ARCH__ >= 300
+  __bang_abs(area_buffer, area_buffer, i_tile_size);
+#else
+  __bang_active_abs(area_buffer, area_buffer, i_tile_size);
+#endif
+}
+
+#if __BANG_ARCH__ >= 300
+__mlu_func__ static void mluCalcArea300(const float *__restrict__ input_boxes,
+                                        int input_boxes_num, int real_width,
+                                        float *__restrict__ boxes_area) {
+  // nram: | load_buffer(area_buffer) | transpose_buffer |
+  // A core will handle at most core_box_num data
+  const int box_pts_num = 8;
+  int core_box_num = 0;
+  int box_i_beg = 0;
+  getCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+  // split nram to two equal part, half for loading, half for transpose
+  int i_tile_size = CALC_AREA_NRAM_FLT_CAP / box_pts_num / 2;
+  float *load_buffer = nram_mlu_calc_area;
+  float *transpose_buffer = load_buffer + i_tile_size * box_pts_num;
+  // We will divide `core_box_num * 8` data by row,  into K tiles of
+  // `i_tile_size * 8`
+  i_tile_size = MIN(i_tile_size, core_box_num);
+  // reuse load_buffer after transpose
+  float *area_buffer = load_buffer;
+  // todo: use pipeline may get better performance
+  for (int i_beg = box_i_beg; i_beg < input_boxes_num; i_beg += i_tile_size) {
+    int i_end = MIN(input_boxes_num, i_beg + i_tile_size);
+    int this_i_tile_size = i_end - i_beg;
+    const float *tile_dev_beg = input_boxes + i_beg * real_width;
+#ifdef _DEBUG
+    __bang_printf("task_i: %d offset_i_beg: %d tile size:%d \n", taskId,
+                  offset_i_beg, this_i_tile_size);
+#endif
+    // load boxes data into nram and remove padding
+    __memcpy(load_buffer, tile_dev_beg, box_pts_num * sizeof(float), GDRAM2NRAM,
+             box_pts_num * sizeof(float), real_width * sizeof(float),
+             this_i_tile_size - 1);
+    __bang_transpose(transpose_buffer, load_buffer, this_i_tile_size,
+                     box_pts_num);
+    polyArea(transpose_buffer, this_i_tile_size, area_buffer);
+    __memcpy(boxes_area + i_beg, area_buffer, this_i_tile_size * sizeof(float),
+             NRAM2GDRAM);
+  }
+}
+#else
+
+#define FLT_ALIGN_CEIL(v) \
+  ((v + (NFU_ALIGN_FLT_NUM - 1)) / NFU_ALIGN_FLT_NUM * NFU_ALIGN_FLT_NUM)
+
+__mlu_func__ static void mluCalcArea200(const float *__restrict__ input_boxes,
+                                        int input_boxes_num, int real_width,
+                                        float *__restrict__ boxes_area) {
+  // A core will handle at most core_box_num data
+  const int box_pts_num = 8;
+  int core_box_num = 0;
+  int box_i_beg = 0;
+  getCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+
+  constexpr int NFU_ALIGN_FLT_NUM = NFU_ALIGN_SIZE / sizeof(float);
+  constexpr int I_LIMIT = CALC_AREA_NRAM_SIZE / NFU_ALIGN_SIZE /
+                          NFU_ALIGN_FLT_NUM / 2 * NFU_ALIGN_FLT_NUM;
+  constexpr int J_LIMIT = NFU_ALIGN_FLT_NUM / box_pts_num;
+
+  // split nram to two equal part, half for loading, half for transpose
+  float *load_buffer = nram_mlu_calc_area;
+  float *transpose_buffer = load_buffer + I_LIMIT * NFU_ALIGN_FLT_NUM;
+
+  // we will divide boxes into many blocks
+  int i_blk_ele_num = MIN(I_LIMIT * J_LIMIT, core_box_num);
+
+  // reuse load_buffer after transpose
+  float *area_buffer = load_buffer;
+
+  // todo: use pipeline may get better performance
+  for (int i_beg = box_i_beg; i_beg < input_boxes_num; i_beg += i_blk_ele_num) {
+    int i_end = MIN(input_boxes_num, i_beg + i_blk_ele_num);
+    int this_ele_num = i_end - i_beg;
+    const float *tile_dev_beg = input_boxes + i_beg * real_width;
+    int j = 0;
+    for (int this_load_box_num = MIN(I_LIMIT, this_ele_num); j < J_LIMIT; ++j) {
+      if (this_load_box_num <= 0) {
+        break;
+      }
+      __memcpy(load_buffer + j * box_pts_num, tile_dev_beg,
+               box_pts_num * sizeof(float), GDRAM2NRAM, NFU_ALIGN_SIZE,
+               real_width * sizeof(float), this_load_box_num - 1);
+      this_load_box_num = MIN(this_ele_num - (j + 1) * I_LIMIT, I_LIMIT);
+      tile_dev_beg += I_LIMIT * real_width;
+    }
+
+    int transpose_width = FLT_ALIGN_CEIL(MIN(I_LIMIT, this_ele_num));
+    __bang_transpose(transpose_buffer, load_buffer, transpose_width,
+                     NFU_ALIGN_FLT_NUM);
+
+    j = 0;
+    for (int this_load_box_num = MIN(I_LIMIT, this_ele_num); j < J_LIMIT; ++j) {
+      if (this_load_box_num <= 0) {
+        break;
+      }
+      polyArea(transpose_buffer + j * transpose_width * box_pts_num,
+               transpose_width, area_buffer);
+      __memcpy(boxes_area + i_beg + j * I_LIMIT, area_buffer,
+               this_load_box_num * sizeof(float), NRAM2GDRAM);
+      this_load_box_num = MIN(this_ele_num - (j + 1) * I_LIMIT, I_LIMIT);
+    }
+  }
+}
+#endif
+}  // namespace
+
+__mlu_global__ void mluCalcArea(const float *__restrict__ input_boxes,
+                                int input_boxes_num, int real_width,
+                                float *__restrict__ boxes_area) {
+#if __BANG_ARCH__ >= 300
+  return mluCalcArea300(input_boxes, input_boxes_num, real_width, boxes_area);
+#else
+  return mluCalcArea200(input_boxes, input_boxes_num, real_width, boxes_area);
+#endif
+}

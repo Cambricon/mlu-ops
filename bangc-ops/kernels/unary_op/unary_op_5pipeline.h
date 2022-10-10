@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -48,7 +59,7 @@ __mlu_func__ void block5Unary(T *x, T *y, char *nram_buffer, char *sram_buffer,
                               int32_t num_deal, float coef) {
   // split data_num by clusters
   int32_t num_per_cluster = num_total / taskDimY;
-  int32_t remain_cluster  = num_total % taskDimY;
+  int32_t remain_cluster = num_total % taskDimY;
   // ddr ram space
   T *addr_x = (T *)x + taskIdY * num_per_cluster;
   T *addr_y = (T *)y + taskIdY * num_per_cluster;
@@ -57,25 +68,25 @@ __mlu_func__ void block5Unary(T *x, T *y, char *nram_buffer, char *sram_buffer,
   }
 
   // onchip ran space
-  T *sram_x      = (T *)sram_buffer;
-  T *nram_x      = (T *)nram_buffer;
+  T *sram_x = (T *)sram_buffer;
+  T *nram_x = (T *)nram_buffer;
   T *nram_x_half = (T *)nram_buffer + offset_x_half;
-  T *nram_aux_a  = (T *)nram_buffer + offset_aux_a;
-  T *nram_aux_b  = (T *)nram_buffer + offset_aux_b;
+  T *nram_aux_a = (T *)nram_buffer + offset_aux_a;
+  T *nram_aux_b = (T *)nram_buffer + offset_aux_b;
 
   int32_t num_pong = num_deal * CORE_DIM;
-  int32_t repeat   = num_per_cluster / num_pong;
-  int32_t rem      = num_per_cluster % num_pong;
+  int32_t repeat = num_per_cluster / num_pong;
+  int32_t rem = num_per_cluster % num_pong;
 
   // split rem num by cores
-  int32_t rem_per_core    = rem / coreDim;
-  int32_t remain_core     = rem % coreDim;
+  int32_t rem_per_core = rem / coreDim;
+  int32_t remain_core = rem % coreDim;
   int32_t rem_core_offset = taskIdX * rem_per_core;
   if (remain_core > 0 && coreId == coreDim - 1) {
     rem_per_core += remain_core;
   }
   int32_t align_rem_per_core = CEIL_ALIGN(rem_per_core, UNARY_ALIGN_NUM);
-  int32_t span_hanld_size    = num_pong * sizeof(T);
+  int32_t span_hanld_size = num_pong * sizeof(T);
 
   // 5 level pipeline.
   if (repeat > 0) {
