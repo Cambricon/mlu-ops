@@ -3,9 +3,7 @@
 算子支持
 ==========================
 
-Cambricon BANGC OPS共支持13个功能算子。
-
-下面具体介绍各算子及其功能描述。有关算子详情，请参见《Cambricon BANGC OPS Developer Guide》。
+下面具体介绍Cambricon BANGC OPS支持的算子及其功能描述。有关算子详情，请参见《Cambricon BANGC OPS Developer Guide》。
 
 mluOpAbs
 --------
