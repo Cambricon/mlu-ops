@@ -2,9 +2,9 @@ name: ci
 
 on:
   push:
-    branches: [master]
+    branches: [master, r*]
   pull_request:
-    branches: [master]
+    branches: [master, r*]
   schedule:
     - cron: '0 15 * * *'
 
@@ -21,16 +21,47 @@ jobs:
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
           ./tools/pre-commit origin/master
 
-      - name: build
+      - name: build_bangc_ops
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
-          ./build.sh
+          ./build.sh --sub_module=bangc
 
-      - name: test
+      - name: build_bangpy_ops
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./build.sh --sub_module=bangpy
+
+      - name: bangc_ops_release_test_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
-          ./test.sh
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/default_platform
+
+      - name: bangc_ops_release_temp_cases
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/default_platform
+
+      - name: test_bangc_ops_release_test_370_cases
+        if: matrix.runner == 'mlu370-m8'
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/370
+
+      - name: test_bangc_ops_release_temp_370_cases
+        if: matrix.runner == 'mlu370-m8'
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
+
+      - name: test_bangpy_ops
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          ./test.sh --sub_module=bangpy --cases_dir=/testdata/bangpy
 
       - name: clean
         run: |

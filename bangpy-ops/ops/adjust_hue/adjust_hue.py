@@ -185,9 +185,9 @@ class AdjustHue(object):
         line_align: ty.int32,
         nram_limit: ty.int32,
     ):
-        rgb = self.rgb_nram[: (nram_limit / r_w) * r_w* self.c]
-        hsv = self.hsv_nram[: (nram_limit / r_w) * r_w* self.c]
-        aux = self.aux_nram[: (nram_limit / r_w) * r_w* self.c]
+        rgb = self.rgb_nram[: (nram_limit / r_w) * r_w * self.c]
+        hsv = self.hsv_nram[: (nram_limit / r_w) * r_w * self.c]
+        aux = self.aux_nram[: (nram_limit / r_w) * r_w * self.c]
         aux_int = self.aux_nram[nram_limit * 2 : nram_limit * 3].reinterpret_cast(
             "int16"
         )
@@ -344,7 +344,7 @@ class AdjustHue(object):
         self.h = h
         self.w = w
         self.c = c
-        self.delta = tcp.cast(delta, self.dtype) * tcp.cast(6.0, self.dtype)
+        self.delta = tcp.cast(delta * 6.0, self.dtype)
         self.src_gdram = tcp.match_buffer(inputs, [n, h, w, c], self.dtype)
         self.dst_gdram = tcp.match_buffer(outputs, [n, h, w, c], self.dtype)
         for i in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
@@ -436,11 +436,6 @@ class AdjustHue(object):
                 nram_limit_size = nram_use / c / reshape_align * reshape_align
                 nram_limit_size = nram_limit_size - reshape_align
                 row_each_per = tcp.cast(nram_limit_size / w, "int32")
-                r_h = 0
-                r_w = 0
-                r_hw = 0
-                offset_w_start = 0
-                offset_h_start = 0
                 self.hsv_nram = tcp.alloc_buffer(
                     shape=(nram_use,),
                     dtype=self.dtype,
@@ -474,7 +469,7 @@ class AdjustHue(object):
                     )
                     row_each_per = 1
                 else:
-                    r_w_tmp = self.w + 0
+                    r_w_tmp = self.w
                     if h_loop_num <= 4 and row_each_per != 1:
                         if r_w_tmp <= 3900:
                             row_each_per = 3900 / self.w
@@ -532,6 +527,7 @@ class AdjustHue(object):
                                 line_align,
                                 nram_limit_size,
                             )
+
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_adjust_hue(dtype=None, target=None):

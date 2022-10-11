@@ -3,7 +3,7 @@ export BANGC_HOME=${SCRIPT_PATH}/bangc-ops
 export BANGPY_HOME=${SCRIPT_PATH}/bangpy-ops
 export BANGPY_BUILD_PATH=${BANGPY_HOME}/outs
 export CPLUS_INCLUDE_PATH=${BANGPY_HOME}/include/:${CPLUS_INCLUDE_PATH}
-
+export PYTHONPATH=${BANGPY_HOME}:${PYTHONPATH}
 if [[ -z ${NEUWARE_HOME} ]]; then
   export NEUWARE_HOME=/usr/local/neuware
   echo "set env 'NEUWRAE_HOME' to default: ${NEUWARE_HOME}."
