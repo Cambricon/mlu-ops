@@ -954,8 +954,8 @@ namespace mluoptest {
       VLOG(4) << "skip castDataIn: count is zero";
       return;
     }
-    if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_FLOAT) {
-      memcpy(dst_data, src_data, count * sizeof(float));
+    if (src_dtype == dst_dtype) {
+      memcpy(dst_data, src_data, count * getSizeOfDataType(src_dtype));
     } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
                 dst_dtype == MLUOP_DTYPE_INT8) ||
                (src_dtype == MLUOP_DTYPE_FLOAT &&
@@ -999,29 +999,15 @@ namespace mluoptest {
         }
       }
     } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
-                dst_dtype == MLUOP_DTYPE_HALF) ||
-               (src_dtype == MLUOP_DTYPE_FLOAT &&
-                dst_dtype == MLUOP_DTYPE_INT32) ||
-               (src_dtype == MLUOP_DTYPE_FLOAT &&
-                dst_dtype == MLUOP_DTYPE_UINT8) ||
-               (src_dtype == MLUOP_DTYPE_FLOAT &&
-                dst_dtype == MLUOP_DTYPE_BOOL)) {
-      auto in_dtype  = cvtMluOpDtypeToCnrt(src_dtype);
-      auto out_dtype = cvtMluOpDtypeToCnrt(dst_dtype);
-      // no quant
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtCastDataType(
-                      src_data, in_dtype, dst_data, out_dtype, count, nullptr));
+                 (dst_dtype == MLUOP_DTYPE_INT64  || dst_dtype == MLUOP_DTYPE_UINT64 ||
+                  dst_dtype == MLUOP_DTYPE_INT32  || dst_dtype == MLUOP_DTYPE_UINT32 ||
+                  dst_dtype == MLUOP_DTYPE_UINT16 || dst_dtype == MLUOP_DTYPE_HALF   ||
+                  dst_dtype == MLUOP_DTYPE_UINT8  || dst_dtype == MLUOP_DTYPE_BOOL)) ||
+             (src_dtype == MLUOP_DTYPE_COMPLEX_FLOAT && dst_dtype == MLUOP_DTYPE_COMPLEX_HALF)) {
+      arrayCastFloatAndNormal(src_data, src_dtype, dst_data, dst_dtype, count);
       if (dequantify) {
-        // reset cpu data
-        GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
-            cnrtCastDataType(
-                dst_data, out_dtype, src_data, in_dtype, count, nullptr));
+        arrayCastFloatAndNormal(dst_data, dst_dtype, src_data, src_dtype, count);
       }
-    } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
-               dst_dtype == MLUOP_DTYPE_INT64) {
-      arrayCastFloatToInt64((int64_t *)dst_data, src_data, count);
     } else {
       GTEST_CHECK(
           false, "Executor: when cast fp32 to dtype, found unsupported dtype.");
@@ -1136,8 +1122,8 @@ namespace mluoptest {
       } else {
         // if has onchip_dtype
         GTEST_CHECK((ts->dtype != MLUOP_DTYPE_DOUBLE) &&
-                        (ts->dtype != MLUOP_DTYPE_DOUBLE) &&
-                        (ts->dtype != MLUOP_DTYPE_DOUBLE),
+                        (ts->dtype != MLUOP_DTYPE_COMPLEX_HALF) &&
+                        (ts->dtype != MLUOP_DTYPE_COMPLEX_FLOAT),
                     "Executor::castIn():DOUBLE and COMPLEX dtypes are not "
                     "supported"
                     "when quantization is enabled!");

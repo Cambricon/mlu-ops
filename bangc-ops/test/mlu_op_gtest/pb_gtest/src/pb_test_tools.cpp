@@ -128,6 +128,30 @@ namespace mluoptest {
     VLOG(4) << "Save data to file: " << file;
     std::ofstream fout(file, std::ios::out);
     switch (dtype) {
+      case MLUOP_DTYPE_COMPLEX_HALF: {
+        for (int i = 0; i < 2 * count; i += 2) {
+          fout << "real_hex: " << std::setw(10) << std::hex
+               << ((int16_t *)data)[i] << std::setw(20)
+               << "real_dec: " << std::setw(10) << std::dec
+               << cvtHalfToFloat(((int16_t *)data)[i]) << std::endl;
+          fout << "imag_hex: " << std::setw(10) << std::hex
+               << ((int16_t *)data)[i + 1] << std::setw(20)
+               << "imag_dec: " << std::setw(10) << std::dec
+               << cvtHalfToFloat(((int16_t *)data)[i + 1]) << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_COMPLEX_FLOAT: {
+        for (int i = 0; i < 2 * count; i += 2) {
+          fout << "real_hex: " << std::setw(10) << std::hex
+               << ((int32_t *)data)[i] << std::setw(20)
+               << "real_dec: " << std::setw(10) << std::dec << ((float *)data)[i]
+               << std::endl;
+          fout << "imag_hex: " << std::setw(10) << std::hex
+               << ((int32_t *)data)[i + 1] << std::setw(20)
+               << "imag_dec: " << std::setw(10) << std::dec
+               << ((float *)data)[i + 1] << std::endl;
+        }
+      } break;
       case MLUOP_DTYPE_HALF: {
         for (int i = 0; i < count; ++i) {
           fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
@@ -140,6 +164,13 @@ namespace mluoptest {
           fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i]
                << std::setw(20) << "dec: " << std::setw(10) << std::dec
                << ((float *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_DOUBLE: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((int64_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((double *)data)[i] << std::endl;
         }
       } break;
       case MLUOP_DTYPE_INT8: {
@@ -167,11 +198,25 @@ namespace mluoptest {
                << ((int16_t *)data)[i] << std::endl;
         }
       } break;
+      case MLUOP_DTYPE_UINT16: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((uint16_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((uint16_t *)data)[i] << std::endl;
+        }
+      } break;
       case MLUOP_DTYPE_INT32: {
         for (int i = 0; i < count; ++i) {
           fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i]
                << std::setw(20) << "dec: " << std::setw(10) << std::dec
                << ((int32_t *)data)[i] << std::endl;
+        }
+      } break;
+      case MLUOP_DTYPE_UINT32: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((uint32_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((uint32_t *)data)[i] << std::endl;
         }
       } break;
       case MLUOP_DTYPE_INT64: {
@@ -181,97 +226,25 @@ namespace mluoptest {
                << ((int64_t *)data)[i] << std::endl;
         }
       } break;
+      case MLUOP_DTYPE_UINT64: {
+        for (int i = 0; i < count; ++i) {
+          fout << "hex: " << std::setw(10) << std::hex << ((uint64_t *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
+               << ((uint64_t *)data)[i] << std::endl;
+        }
+      } break;
       case MLUOP_DTYPE_BOOL: {
         for (int i = 0; i < count; ++i) {
-          fout << "hex: " << std::setw(10) << std::hex
-               << (int32_t)((bool *)data)[i] << std::setw(20)
-               << "dec: " << std::setw(10) << std::dec
+          fout << "hex: " << std::setw(10) << std::hex << (int32_t)((bool *)data)[i]
+               << std::setw(20) << "dec: " << std::setw(10) << std::dec
                << (int32_t)((bool *)data)[i] << std::endl;
         }
       } break;
+      default: {
+        VLOG(4) << "Unsupported dtype " << getNameOfDataType(dtype);
+      } break;
     }
     fout.close();
-  }
-
-  void generateRandomData(float *data,
-                          size_t count,
-                          const RandomData *random_param,
-                          DataType dtype) {
-    // round to int
-    // if convert_dtype == true, round(float) to int,
-    // else don't round, int is qint
-    bool convert_dtype = random_param->has_convert_dtype()
-                             ? random_param->convert_dtype()
-                             : false;
-    int seed = random_param->seed();
-    // generate random data
-    std::default_random_engine re(seed); // re for random engine
-
-    if (random_param->distribution() == mluoptest::UNIFORM) {
-      float lower = random_param->lower_bound();
-      float upper = random_param->upper_bound();
-
-      if (lower == upper) {
-        for (int i = 0; i < count; ++i) {
-          data[i] = lower;
-        }
-      } else {
-        // uniform_real_distribution is [lower, upper)
-        std::uniform_real_distribution<float> dis(lower, upper);
-        for (int i = 0; i < count; ++i) {
-          data[i] = dis(re);
-        }
-      }
-    } else if (random_param->distribution() == mluoptest::GAUSSIAN) {
-      float mu    = random_param->mu();
-      float sigma = random_param->sigma();
-      // uniform_real_distribution is [lower, upper)
-      std::normal_distribution<float> dis(mu, sigma);
-      for (int i = 0; i < count; ++i) {
-        data[i] = dis(re);
-      }
-    }
-
-    // reset data by dtype
-    switch (dtype) {
-      case DTYPE_HALF:
-      case DTYPE_FLOAT:
-        break;
-      case DTYPE_INT8:
-      case DTYPE_INT16:
-        if (convert_dtype) {
-          // if convert_dtype == true, round(float) to int,
-          // else don't round, int is qint
-          for (int i = 0; i < count; ++i) {
-            int x   = std::floor(data[i]);
-            data[i] = x;
-          }
-        }
-        break;
-      case DTYPE_UINT8:
-      case DTYPE_INT32:
-      case DTYPE_INT64:
-        for (int i = 0; i < count; ++i) {
-          int x   = std::floor(data[i]);
-          data[i] = x;
-        }
-        break;
-      case DTYPE_BOOL: {
-        if (!random_param->has_lower_bound() ||
-            !random_param->has_upper_bound()) {
-          LOG(ERROR) << "Generate bool data should use uniform distribution.";
-        }
-        float mid =
-            (random_param->upper_bound() + random_param->lower_bound()) / 2;
-        for (int i = 0; i < count; ++i) {
-          data[i] = (data[i] < mid) ? 0.0f : 1.0f;
-        }
-      } break;
-      default:
-        LOG(ERROR) << "Generate random data failed. ";
-        throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                    std::to_string(__LINE__));
-    }
   }
 
   cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
@@ -280,6 +253,8 @@ namespace mluoptest {
         return CNRT_FLOAT16;
       case MLUOP_DTYPE_FLOAT:
         return CNRT_FLOAT32;
+      case MLUOP_DTYPE_DOUBLE:
+        return CNRT_FLOAT64;
       case MLUOP_DTYPE_INT8:
         return CNRT_INT8;
       case MLUOP_DTYPE_INT16:
@@ -292,6 +267,10 @@ namespace mluoptest {
         return CNRT_BOOL;
       case MLUOP_DTYPE_UINT8:
         return CNRT_UINT8;
+      case MLUOP_DTYPE_UINT16:
+        return CNRT_UINT16;
+      case MLUOP_DTYPE_UINT32:
+        return CNRT_UINT32;
       default:
         LOG(ERROR) << "NOT support this dtype yet";
         throw std::invalid_argument(std::string(__FILE__) + " +" +
@@ -305,18 +284,30 @@ namespace mluoptest {
         return MLUOP_DTYPE_HALF;
       case DTYPE_FLOAT:
         return MLUOP_DTYPE_FLOAT;
+      case DTYPE_DOUBLE:
+        return MLUOP_DTYPE_DOUBLE;
+      case DTYPE_COMPLEX_HALF:
+        return MLUOP_DTYPE_COMPLEX_HALF;
+      case DTYPE_COMPLEX_FLOAT:
+        return MLUOP_DTYPE_COMPLEX_FLOAT;
       case DTYPE_INT8:
         return MLUOP_DTYPE_INT8;
-      case DTYPE_UINT8:
-        return MLUOP_DTYPE_UINT8;
       case DTYPE_INT16:
         return MLUOP_DTYPE_INT16;
       case DTYPE_INT32:
         return MLUOP_DTYPE_INT32;
-      case DTYPE_BOOL:
-        return MLUOP_DTYPE_BOOL;
       case DTYPE_INT64:
         return MLUOP_DTYPE_INT64;
+      case DTYPE_BOOL:
+        return MLUOP_DTYPE_BOOL;
+      case DTYPE_UINT8:
+        return MLUOP_DTYPE_UINT8;
+      case DTYPE_UINT16:
+        return MLUOP_DTYPE_UINT16;
+      case DTYPE_UINT32:
+        return MLUOP_DTYPE_UINT32;
+      case DTYPE_UINT64:
+        return MLUOP_DTYPE_UINT64;
       default:
         LOG(ERROR) << "Don't support this order.";
         throw std::invalid_argument(std::string(__FILE__) + " +" +
