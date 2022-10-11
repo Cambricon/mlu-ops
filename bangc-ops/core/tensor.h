@@ -36,8 +36,6 @@
 #include "core/type.h"
 #include "mlu_op.h"
 
-#define QUEUE_ARRAY_LENGTH 4
-
 struct mluOpTensorStruct {
   mluOpTensorStruct()
       : dim(0),
@@ -71,8 +69,8 @@ struct mluOpTensorStruct {
 
   /* struct */
   int dim = 0;
-  int total_element_num = 0;
-  int total_tensor_size = 0;
+  uint64_t total_element_num = 0;
+  uint64_t total_tensor_size = 0;
   // if dimNb > MLUOP_DIM_MAX (8), using larger_dims, malloc it and dims point
   // it. else, using normal_dims, dont need malloc and free.
   int normal_dims[MLUOP_DIM_MAX] = {-1};

@@ -358,9 +358,8 @@ class NMS(object):
 
             # by now, we get: max_score|max_index|max_box|max_area
             if output_box_num != 0:
-                if (
-                    nram_save_count == self.gdram_save_count
-                    or max_box[0] <= tcp.cast(score_threshold, self.dtype)
+                if nram_save_count == self.gdram_save_count or max_box[0] <= tcp.cast(
+                    score_threshold, self.dtype
                 ):
                     if task_id == task_num - 1:
                         # score, x1, y1, x2, y2

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 
+project(mluops VERSION ${BUILD_VERSION})
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/test")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
@@ -8,16 +9,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
 ################################################################################
-# Build Evironment
-################################################################################
-option(MLUOP_BUILD_ENABLE_TENSOR_QUEUE "define MLUOP_TENSOR_QUEUE_ENABLE 1/0" ON) 
-message(STATUS "MLUOP_BUILD_ENABLE_TENSOR_QUEUE=${MLUOP_BUILD_ENABLE_TENSOR_QUEUE}")
-
-################################################################################
 # Neuware Evironment and BANG Setup
 ################################################################################
 
-# set Coverage test setting
 if(${MLUOP_BUILD_COVERAGE_TEST} MATCHES "ON")
   message("-- MLU_OP_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST}")
   set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "-u__llvm_profile_runtime ${NEUWARE_HOME}/lib/clang/11.0.0/lib/linux/libclang_rt.profile-x86_64.a")
@@ -74,8 +68,16 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
 
 file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.mlu" "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
+
+
 bang_add_library(mluops SHARED ${src_files})
 target_link_libraries(mluops cnrt cndrv)
+set_target_properties(mluops PROPERTIES 
+  OUTPUT_NAME "mluops"
+  PREFIX      "lib"
+  VERSION     "${BUILD_VERSION}" 
+  SOVERSION   "${MAJOR_VERSION}"
+)
 
 ################################################################################
 # Build MLUOP GTEST

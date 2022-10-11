@@ -17,6 +17,17 @@ usage () {
 cmdline_args=$(getopt -o ch -n 'build.sh' -- "$@")
 eval set -- "$cmdline_args"
 
+script_path=`dirname $0`
+
+pushd $script_path/../
+BUILD_VERSION=$(cat build.property|grep "version"|cut -d ':' -f2|cut -d '-' -f1|cut -d '"' -f2|cut -d '.' -f1-3)
+popd
+echo "build_version: $BUILD_VERSION"
+
+MAJOR_VERSION=$(echo ${BUILD_VERSION}|cut -d '-' -f1|cut -d '.' -f1)
+echo "major_version=${MAJOR_VERSION}"
+
+
 if [ $# != 0 ]; then
   while true; do
     case "$1" in
@@ -75,10 +86,13 @@ pushd ${BUILD_PATH} > /dev/null
   rm -rf *
   if [[ ${MLUOP_BUILD_COVERAGE_TEST} == "ON" ]]; then
     echo "-- Build cambricon coverage test cases."
-    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}"
+    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" \
+                  -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}"
   else
     echo "-- Build cambricon release test cases."
-    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}"
+    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" \
+                  -DBUILD_VERSION="${BUILD_VERSION}" \
+                  -DMAJOR_VERSION="${MAJOR_VERSION}" 
   fi 
 
   if [[ ${MLUOP_BUILD_ASAN_CHECK} == "ON" ]]; then

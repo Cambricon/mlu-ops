@@ -59,28 +59,23 @@ class NonZeroCount(object):
         # The count number buffer for count_nonzero, size at least 128 bytes.
         count_num = tcp.alloc_buffer(shape=(32,), dtype="uint32", scope="nram")
 
-        total_count = tcp.alloc_buffer(shape=(1,), dtype="uint32", scope="nram")
-
         cast_nram = tcp.alloc_buffer(
             shape=(self.nram_size,),
             dtype="float16",
             scope="nram",
         )
 
-        total_count[0] = tcp.cast(0, "uint32")
+        total_count = tcp.uint32(0)
         global_index = 0
-        remain_align = 0
-        zero = tcp.cast(0, self.dtype)
 
         for i in range(repeat, pipeline=True):  # type: ignore
-            with tcp.block("compute"):
-                global_index = core_index + i * self.nram_size
             data_nram = tcp.alloc_buffer(
                 shape=(self.nram_size,),
                 dtype=self.dtype,
                 scope="nram",
             )
             with tcp.block("data_copy"):
+                global_index = core_index + i * self.nram_size
                 tcp.memcpy(
                     data_nram,
                     self.in_buffer.flatten()[
@@ -93,7 +88,7 @@ class NonZeroCount(object):
                     tcp.count_nonzero(count_num, cast_nram)
                 else:
                     tcp.count_nonzero(count_num, data_nram)
-                total_count[0] = total_count[0] + count_num[0]
+                total_count += count_num[0]
         if remain > 0:
             global_index = core_index + repeat * self.nram_size
             remain_align = tcp.round_up(remain, self.align_size)
@@ -102,7 +97,7 @@ class NonZeroCount(object):
                 dtype=self.dtype,
                 scope="nram",
             )
-            tcp.assign(data_nram[:remain_align], zero)
+            tcp.assign(data_nram[:remain_align], 0.0)
             tcp.memcpy(
                 data_nram[:remain],
                 self.in_buffer.flatten()[global_index : global_index + remain],
@@ -114,8 +109,8 @@ class NonZeroCount(object):
                 tcp.count_nonzero(count_num, cast_nram[:remain_align])
             else:
                 tcp.count_nonzero(count_num, data_nram[:remain_align])
-            total_count[0] = total_count[0] + count_num[0]
-        out_buffer[0] = total_count[0]
+            total_count += count_num[0]
+        out_buffer[0] = total_count
 
     def main(
         self,

@@ -29,10 +29,12 @@ from bangpy.common import load_op_by_type
 
 
 @pytest.mark.parametrize(
-    "trans", [0, 1],
+    "trans",
+    [0, 1],
 )
 @pytest.mark.parametrize(
-    "dtype", [bp.float16, bp.float32],
+    "dtype",
+    [bp.float16, bp.float32],
 )
 @pytest.mark.parametrize(
     "shape",
@@ -95,5 +97,8 @@ def test_nonzero(target, trans, dtype, shape):
         mlu_out = mlu_out.reshape((num_nonzero, dim_num))
 
     bp.assert_allclose(
-        mlu_out, cpu_out, rtol=0.0, atol=0.0,
+        mlu_out,
+        cpu_out,
+        rtol=0.0,
+        atol=0.0,
     )
