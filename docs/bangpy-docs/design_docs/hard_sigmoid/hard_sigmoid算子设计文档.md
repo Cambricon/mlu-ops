@@ -105,11 +105,12 @@ def hardsigmoid(input: Tensor,
 ### 2.2 接口设计
 
 ```python
-# MluOpHardSigmoid(input, output, data_total)
+# MluOpHardSigmoid(input, output, data_total, inplace)
 tcp.BuildBANG(
     inputs=[buffer_in],
     outputs=[buffer_out],
     data_total, # data_total: len(data_in.flatten())
+    inplace,
     kernel_name=KERNEL_NAME,
 ) 
 ```
@@ -225,9 +226,10 @@ case_19: input.shape = (67077500,), output.shape = (67077500,), dtype = float
 ```
 注：  
 （1）测试用例覆盖了逻辑分支。  
-（2）随着数据量的增加，对于dtype = half：case_3的IO效率突然降低；对于dtype = float：case_12的IO效率突然降低。  
-（3）case_8与case_9规模相近，但后者的IO效率比前者低了很多。  
-（4）只测试了1~8维的张量（理论上支持任意维度）。
+（2）在MLU290上，随着数据量的增加，对于dtype = half：case_3的IO效率突然降低；对于dtype = float：case_12的IO效率突然降低。  
+（3）在MLU290上，case_8与case_9规模相近，但后者的IO效率比前者低了很多。  
+（4）只测试了1~8维的张量（理论上支持任意维度）。  
+（5）inplace=1时与inplace=0类似，这里没有列出。
 
 ### 3.7 算子防呆检查
 

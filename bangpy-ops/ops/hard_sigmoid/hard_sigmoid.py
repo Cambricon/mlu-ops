@@ -78,7 +78,11 @@ class HardSigmoid(object):
         tcp.maximum(local_x, local_x, local_temp)  # max(x * 1/6 + 1/2, 0)
 
     def main(
-        self, buffer_in: ty.handle, buffer_out: ty.handle, length: ty.int32
+        self,
+        buffer_in: ty.handle,
+        buffer_out: ty.handle,
+        length: ty.int32,
+        inplace: ty.int32,
     ) -> None:
         # declare I/O buffer
         buffer_in = tcp.match_buffer(buffer_in, [length], dtype=self.dtype)
@@ -130,12 +134,21 @@ class HardSigmoid(object):
                         start = task_id * data_each_task + i * data_each_time
                         stop = start + data_each_time
                         if i == loop_num - 1 and data_rem_n > 0:
-                            tcp.memcpy(
-                                buffer_out[start : start + data_rem_n],
-                                buffer_io_n[0:data_rem_n],
-                            )
+                            if inplace == 1:
+                                tcp.memcpy(
+                                    buffer_in[start : start + data_rem_n],
+                                    buffer_io_n[0:data_rem_n],
+                                )
+                            else:
+                                tcp.memcpy(
+                                    buffer_out[start : start + data_rem_n],
+                                    buffer_io_n[0:data_rem_n],
+                                )
                         else:
-                            tcp.memcpy(buffer_out[start:stop], buffer_io_n)
+                            if inplace == 1:
+                                tcp.memcpy(buffer_in[start:stop], buffer_io_n)
+                            else:
+                                tcp.memcpy(buffer_out[start:stop], buffer_io_n)
                 if data_rem > 0:
                     if (
                         task_id == self.task_num - 1
@@ -157,7 +170,10 @@ class HardSigmoid(object):
                             # float32: 128 * 4B
                             # Note: We assume that self.task_num <= 128
                         )
-                        tcp.memcpy(buffer_out[start:stop], buffer_io_n[0:data_rem])
+                        if inplace == 1:
+                            tcp.memcpy(buffer_in[start:stop], buffer_io_n[0:data_rem])
+                        else:
+                            tcp.memcpy(buffer_out[start:stop], buffer_io_n[0:data_rem])
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)

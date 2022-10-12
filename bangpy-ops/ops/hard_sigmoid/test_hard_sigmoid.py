@@ -20,11 +20,11 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """Test hardSigmoid operator with multi-platform code link."""
-from test import registerOp, OpTest
 import numpy as np
+import pytest
 import bangpy
 from bangpy.common import load_op_by_type
-from hard_sigmoid import KERNEL_NAME, TARGET_LIST
+from hard_sigmoid import DTYPES, KERNEL_NAME, TARGET_LIST
 
 
 def cal_diff(result, data_out):
@@ -38,45 +38,67 @@ def cal_diff(result, data_out):
     print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
 
-@registerOp("hard_sigmoid")
-class HardSigmoidOp(OpTest):
-    def __init__(self, target, dtype, tensor_list, output_tensor):
-        self.dtype = dtype
-        super().__init__(target, dtype, tensor_list, output_tensor)
+@pytest.mark.parametrize(
+    "shape",
+    [
+        # These test cases cover the logical branches
+        (2 ** 23 + 1,),
+        (1, 2 ** 24 + 1),
+        (1, 1, 2 ** 25 + 1),
+        (1, 1, 1, 2 ** 26 + 1),
+        (1, 1, 1, 1, 2 ** 27 + 1),
+        (1, 1, 1, 1, 1, 2 ** 28 + 1),
+        (1, 1, 1, 1, 1, 1, 2 ** 29 + 1),
+        (1, 1, 1, 1, 1, 1, 1, 2 ** 30 + 1),
+        # special test cases
+        (66777500,),
+        (67077500,),
+    ],
+)
+@pytest.mark.parametrize(
+    "dtype", DTYPES,
+)
+@pytest.mark.parametrize(
+    "inplace", [0, 1],
+)
+# @pytest.mark.repeat(1000)
+def test_hard_sigmoid(target, shape, dtype, inplace):
+    if target not in TARGET_LIST:
+        return
+    data_in = np.random.uniform(low=-5, high=5, size=shape).astype(dtype.as_numpy_dtype)
+    # Hardsigmoid function
+    # data_out = torch.nn.functional.hardsigmoid(data_in)
+    data_out = data_in * 1 / 6 + 1 / 2
+    data_out = np.minimum(data_out, 1)
+    data_out = np.maximum(data_out, 0)
+    # device
+    dev = bangpy.device(0)
+    # set I/O data
+    data_in_dev = bangpy.Array(data_in.flatten().astype(dtype.as_numpy_dtype), dev)
+    data_out_dev = bangpy.Array(
+        np.zeros(data_out.flatten().shape, dtype.as_numpy_dtype), dev
+    )
+    # calculate and check
+    f = load_op_by_type(KERNEL_NAME, dtype.name)
+    data_total = len(data_in.flatten())
+    f(data_in_dev, data_out_dev, data_total, inplace)
+    data_in_dev2host = data_in_dev.numpy().reshape(shape)
+    data_out_dev2host = data_out_dev.numpy().reshape(shape)
+    # bangpy.assert_allclose(data_out_dev2host, data_out.astype(dtype.as_numpy_dtype))
+    if inplace == 1:
+        cal_diff(data_in_dev2host, data_out.astype(dtype.as_numpy_dtype))
+    else:
+        cal_diff(data_out_dev2host, data_out.astype(dtype.as_numpy_dtype))
 
-    def compute(self):
-        self.shape = self.inputs_tensor_list[0].shape
-        if self.target not in TARGET_LIST:
-            return
-        print("shape :", self.shape)
-        data_in = self.inputs_tensor_list[0]
-        data_out = self.output_tensor_list[0]
-        # device
-        dev = bangpy.device(0)
-        # set I/O data
-        data_in_dev = bangpy.Array(
-            data_in.flatten().astype(self.dtype.as_numpy_dtype), dev
-        )
-        data_out_dev = bangpy.Array(
-            np.zeros(data_out.flatten().shape, self.dtype.as_numpy_dtype), dev
-        )
-        # calculate and check
-        data_total = len(data_in.flatten())
-        f = load_op_by_type(KERNEL_NAME, self.dtype.name)
-        f(data_in_dev, data_out_dev, data_total)
-        data_out_dev2host = data_out_dev.numpy().reshape(self.shape)
-        cal_diff(data_out_dev2host, data_out.astype(self.dtype.as_numpy_dtype))
+    # Hardware time
+    evaluator = f.time_evaluator(number=1, repeat=100, min_repeat_ms=0)
+    latency = evaluator(data_in_dev, data_out_dev, data_total, inplace).median * 1e3
+    print("Hardware time : %f ms" % latency)
 
-        # Hardware time
-        evaluator = f.time_evaluator(number=1, repeat=100, min_repeat_ms=0)
-        latency = evaluator(data_in_dev, data_out_dev, data_total).median * 1e3
-        print("Hardware time : %f us" % (latency * 1000))
-
-        # io_efficiency
-        theory_io_size = data_total * self.dtype.bytes * 2
-        IO_BANDWIDTH = 2 ** 40 if self.target == "mlu290" else 307.2 * 2 ** 30
-        # MLU290: 1024GB/s
-        # MLU370-s4: 307.2GB/s
-        io_efficiency = 1000 * theory_io_size / (latency * IO_BANDWIDTH)
-        print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
-        print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
+    # io_efficiency
+    theory_io_size = data_total * dtype.bytes * 2
+    IO_BANDWIDTH = 2 ** 40  # MLU290: 1024GB/s
+    # IO_BANDWIDTH = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
+    io_efficiency = 1000 * theory_io_size / (latency * IO_BANDWIDTH)
+    print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
+    print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
