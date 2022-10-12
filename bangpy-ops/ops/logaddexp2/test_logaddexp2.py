@@ -19,12 +19,11 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """Logaddexp2 testfile for pytest."""
-
+from test import registerOp, OpTest
 import numpy as np
-import pytest
 import bangpy
 from bangpy.common import load_op_by_type
-from logaddexp2 import DTYPES, KERNEL_NAME, TARGET_LIST
+from logaddexp2 import KERNEL_NAME, TARGET_LIST
 
 def cal_diff(result, data_out):
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
@@ -34,32 +33,67 @@ def cal_diff(result, data_out):
     )
     assert round(diff1 * 100, 5) < 3e-3 * 100
     assert round(diff2 * 100, 5) < 3e-3 * 100
-    print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
-    print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
+    return diff1, diff2
 
-@pytest.mark.parametrize(
-    "shape", [(0), (100), (2**10),(2**18-1), (2**20), (2**26)],
-)
-@pytest.mark.parametrize(
-    "dtype", DTYPES,
-)
-def test_logaddexp2(target, shape, dtype):
-    """Use pytest to test logaddexp2."""
-    if target not in TARGET_LIST:
-        return
-    dev = bangpy.device(0)
+@registerOp("logaddexp2")
+class LogAddExp2Op(OpTest):
+    """Use proto_test to test logaddexp2."""
+    def __init__(self, target, dtype, tensor_list, output_tensor, param):
+        self.dtype = dtype
+        super().__init__(target, dtype, tensor_list, output_tensor, param)
 
-    # set data
-    data_in0 = np.random.randint(low=-200, high=-190, size=shape).astype(dtype.as_numpy_dtype)
-    data_in1 = np.random.randint(low=-200, high=-190, size=shape).astype(dtype.as_numpy_dtype)
-    data_out = np.logaddexp2(data_in0, data_in1)
-    data_in0_dev = bangpy.Array(data_in0, dev)
-    data_in1_dev = bangpy.Array(data_in1, dev)
-    data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
+    def compute(self):
+        self.shape = self.inputs_tensor_list[0].shape
+        if self.shape == (0):
+            return
+        if self.target not in TARGET_LIST:
+            return
+        print("shape :", self.shape)
+        data_in0 = self.inputs_tensor_list[0].astype("int32")
+        data_in1 = self.inputs_tensor_list[1].astype("int32")
+        data_out = self.output_tensor_list[0]
+        # device
+        dev = bangpy.device(0)
+        # set I/O data
+        data_in0_dev = bangpy.Array(data_in0.flatten().astype(self.dtype.as_numpy_dtype), dev)
+        data_in1_dev = bangpy.Array(data_in1.flatten().astype(self.dtype.as_numpy_dtype), dev)
+        data_out_dev = bangpy.Array(
+            np.zeros(data_out.flatten().shape, self.dtype.as_numpy_dtype), dev
+        )
+        # calculate and check
+        data_total = len(data_in0.flatten())
+        f = load_op_by_type(KERNEL_NAME, self.dtype.name)
+        evaluator = f.time_evaluator(number=1, repeat=100, min_repeat_ms=0)
 
-    # calculate
-    func = load_op_by_type(KERNEL_NAME, dtype.name)
-    func(data_in0_dev, data_in1_dev, data_out_dev, shape)
+        # calculate
+        time = (
+            evaluator(
+                data_in0_dev, data_in1_dev, data_out_dev, self.shape[0]
+            ).mean
+            * 1e3
+        )  # ms
 
-    if shape != (0):
-        cal_diff(data_out, data_out_dev.numpy())
+        data_out_dev2host = data_out_dev.numpy().reshape(self.shape)
+        diff1, diff2 = cal_diff(data_out.astype(self.dtype.as_numpy_dtype), data_out_dev2host)
+
+        io_speed = (
+            (data_total * 3 * self.dtype.bytes)
+            / time
+            * 1e3
+            / (2 ** 30)
+        )  # GB/s
+
+        # Output results.
+        out_str = "data_type: {} data_amount: {:2.4f}GB shape: "+\
+            "{:8d} time cost: {:3.2f}us io_efficiency: {:4.3f}%, diff1: "+\
+            "{:1.5f}%, diff2: {:1.5f}%"
+        print(out_str.format(
+                self.dtype.name,
+                (data_total * 3 * self.dtype.bytes) / (2 ** 30),
+                data_total,
+                time * 1e3,
+                io_speed / (1024 if self.target=="mlu290" else 307.2) * 100,
+                round(diff1 * 100, 5),
+                round(diff2 * 100, 5),
+            )
+        )

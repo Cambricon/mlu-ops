@@ -130,7 +130,6 @@ if input0 - input1 > 15, output = input0
 minimum(ex0, in0, in1)
 maximum(in0, in0, in1)
 in1, ex0 = ex0, in1 # equal to self.tcp.memcpy(in1, ex0), but reduce copy time
-
 # ex0 = in0 - in1
 # out = in1 + log2(1+2**(in0-in1))
 subtract(ex0, in0, in1)
