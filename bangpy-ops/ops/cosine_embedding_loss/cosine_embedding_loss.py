@@ -85,7 +85,7 @@ class CosineEmbeddingLoss(object):
         kernels_per_row: ty.int32,
         kernels_per_line_n: ty.int32,
         kernel_size: ty.int32,
-    ) -> None:
+    ) -> ty.float32:
         """compute_sum_batch_1"""
         tcp.multiply(
             self.inter_buffer[: kernel_size * kernels_per_row], in1, in2,
@@ -137,8 +137,9 @@ class CosineEmbeddingLoss(object):
         """
         Transform the original scalar compute into vector compute.
         """
-        tcp.multiply(v_1, v_1, v_2)  # v_1 * v_2
-        tcp.sqrt(v_1, v_1)  # (v_1 * v_2) ** 0.5
+        tcp.sqrt(v_1, v_1)
+        tcp.sqrt(v_2, v_2)
+        tcp.multiply(v_1, v_1, v_2)  # (v_1 * v_2) ** 0.5
 
         if self.arch >= "mlu3":
             tcp.maximum(v_2, v_1, 0.004)
@@ -167,8 +168,6 @@ class CosineEmbeddingLoss(object):
         else:
             tcp.assign(tmp, 0)
             tcp.maximum(v_1, v_2, tmp)
-        # tcp.assign(tmp, 0)
-        # tcp.maximum(v_1, v_2, tmp)
 
         # (1 - v_3) * max(v_1 * v_2, 0)
         tcp.multiply(v_1, v_1, v_3)
