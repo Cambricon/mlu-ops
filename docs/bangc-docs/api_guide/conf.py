@@ -68,7 +68,7 @@ author = u''
 # built documents.
 #
 # The short X.Y version.
-version = u'0.2.0'
+version = u'0.3.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 curfnpre=u'Cambricon-BANGC-OPS-Developer-Guide-EN-v'
