@@ -24,7 +24,7 @@
 #define MLUOP_EXAMPLE_H_
 
 #define MLUOP_MAJOR 0
-#define MLUOP_MINOR 2
+#define MLUOP_MINOR 3
 #define MLUOP_PATCHLEVEL 0
 
 #include <stdint.h>
@@ -1604,32 +1604,13 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpTensorDescriptor_t y_desc, const void *y,
          const mluOpTensorDescriptor_t z_desc, void *z);
 
-// Group:PolyNms
-/*!
- *  @brief Gets extra space size that is needed in poly_nms operation.
- *
- *  @param[in] handle
- *  Handle to an MLUOP context that is used to manage MLU devices
- *  and queues in the psroipool_forward operation.
- *  @param[in] boxes_desc
- *  The descriptor of the boxes tensor. For detailed information,
- *  see ::mluOpTensorDescriptor_t.
- *  @param[out] size
- *  A host pointer to the returned size of extra space in bytes.
- *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- */
-mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
-    size_t *size);
-
 // Group:GenerateProposalsV2
 /*!
  *  @brief Gets extra space size that is needed in poly_nms operation.
  *
  *  @param[in] handle
  *  Handle to an MLUOP context that is used to manage MLU devices
- *  and queues in the psroipool_forward operation.
+ *  and queues in the GenerateProposalsV2 operation.
  *  @param[in] scores_desc
  *  The descriptor of the scores tensor. For detailed information,
  *  see ::mluOpTensorDescriptor_t.
@@ -1743,7 +1724,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
  *     - eta: float.
  *     - pixel_offset: bool.
  *     - rpn_rois: float.
- *     - rpn_roi_probs: int32.
+ *     - rpn_roi_probs: float.
  *     - rpn_rois_num: int32.
  *     - rpn_rois_batch_size: int32.
  *
@@ -1794,6 +1775,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     const mluOpTensorDescriptor_t rpn_roi_probs_desc, void *rpn_roi_probs,
     const mluOpTensorDescriptor_t rpn_rois_num_desc, void *rpn_rois_num,
     void *rpn_rois_batch_size);
+
+// Group:PolyNms
+/*!
+ *  @brief Gets extra space size that is needed in poly_nms operation.
+ *
+ *  @param[in] handle
+ *  Handle to an MLUOP context that is used to manage MLU devices
+ *  and queues in the poly_nms operation.
+ *  @param[in] boxes_desc
+ *  The descriptor of the boxes tensor. For detailed information,
+ *  see ::mluOpTensorDescriptor_t.
+ *  @param[out] size
+ *  A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+    size_t *size);
 
 // Group:PolyNms
 /*!
@@ -2557,6 +2557,96 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     const bool clip_bbox, const float scale, const bool iou_aware,
     const float iou_aware_factor, const mluOpTensorDescriptor_t boxes_desc,
     void *boxes, const mluOpTensorDescriptor_t scores_desc, void *scores);
+
+// Group: ThreeInterpolate
+/*!
+ * @brief Computes weighted linear interpolation on 3 points by using
+ * 3 indices in \b indices to select 3 points in \b features, uses the
+ * 3 points to multiply with corresponding 3 weights in \b weights,
+ * adds the 3 multiplication results to get one interpolation result,
+ * for each batch repeats the above process N times on each channel,
+ * and returns the results in the output tensor \b output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the three_interpolate_forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of the features tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the input features tensor. The features'
+ * shape (B, C, M), B is batch size, C is channel size, M is the number of
+ * elements in one input channel.
+ * @param[in] indices_desc
+ * The descriptor of the indices tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the input indicies tensor. The indices'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] weights_desc
+ * The descriptor of the weights tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] weights
+ * Pointer to the MLU memory that stores the input weights tensor. The weights'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] output_desc
+ * The descriptor of the output tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output features tensor. The
+ * output's shape (B, C, N), B is batch size, C is channel size, N is number
+ * of elements in one output channel.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - Data type of features tensor, weights tensor and output tensor should be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - features tensor: half, float.
+ *   - indices tensor: int.
+ *   - weights tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ *  @par Data Layout
+ *  - The supported data layout of \b features, \b indices, \b weights, \b output are
+ *    as follows:
+ *
+ *   - features tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - indices tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - weights tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ *  @par Scale Limitation
+ *  - The dimension of \b features should be equal to 3.
+ *  - The dimension of \b indices should be equal to 3.
+ *  - The dimension of \b weights should be equal to 3.
+ *  - The dimension of \b output should be equal to 3.
+ *
+ * @par Requirements
+ * - None.
+ *
+ *  @par Note
+ *  - The value of \b indices must be in the range of [0, M-1], otherwise the output result
+ *    is meaningless and the corresponding output will be set to 0.
+ *  - In MLU270 and MLU290, the maximum value in the \b indices should be less than
+ *    2^23, otherwise the output result is not guaranteed to be correct.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t features_desc,
+    const void *features, const mluOpTensorDescriptor_t indices_desc, const void *indices,
+    const mluOpTensorDescriptor_t weights_desc, const void *weights,
+    const mluOpTensorDescriptor_t output_desc, void *output);
 
 #if defined(__cplusplus)
 }

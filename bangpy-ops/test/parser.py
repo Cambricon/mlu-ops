@@ -21,8 +21,10 @@
 # pylint: disable=missing-function-docstring
 """Using prototxt_parser to parse *.prototxt Files to Python Dict Objects."""
 from typing import Dict, List
-from prototxt_parser.prototxt import parse
+from google.protobuf import json_format
 import numpy as np
+from .mlu_op_test_pb2 import Node
+
 
 
 class Parser:
@@ -41,12 +43,15 @@ class Parser:
             "DTYPE_HALF": np.float16,
             "INT32": np.int32,
         }
+        message = Node()
+        message.ParseFromString(file)
+        self.data =  json_format.MessageToDict(message)
 
     def get_output(self):
-        return self.read_prototxt().get("output")
+        return self.read_prototxt().get("output")[0]
 
     def read_prototxt(self) -> dict:
-        return parse(self.file)
+        return self.data
 
     def get_dev(self):
         return self.read_prototxt().get("device")
@@ -58,34 +63,40 @@ class Parser:
         return self.read_prototxt().get("evaluation_threshold")
 
     def get_opname(self):
-        return self.read_prototxt().get("op_name")
+        return self.read_prototxt().get("opName")
 
     def get_input_dtype(self):
-        return self.read_prototxt().get("input")[0].get("dtype")
+        input_ = self.read_prototxt().get("input")
+        if not isinstance(self.read_prototxt().get("input"), list):
+            input_ = [self.read_prototxt().get("input"),]
+        return input_[0].get("dtype")
 
     def get_output_dtype(self):
-        return self.read_prototxt().get("output").get("dtype")
+        return self.read_prototxt().get("output")[0].get("dtype")
 
     def get_inp_oup(self):
         input_list = []
-        for i in self.read_prototxt().get("input"):
-            if i.get("random_data").get("distribution") == "UNIFORM" and hasattr(
-                i.get("random_data"), "seed"
+        input_ = self.read_prototxt().get("input")
+        if not isinstance(self.read_prototxt().get("input"), list):
+            input_ = [self.read_prototxt().get("input"),]
+        for i in input_:
+            if i.get("randomData").get("distribution") == "UNIFORM" and hasattr(
+                i.get("randomData"), "seed"
             ):
-                np.random.seed(i.get("random_data").get("seed"))
+                np.random.seed(i.get("randomData").get("seed"))
                 input_list.append(
                     np.random.uniform(size=i.get("shape").get("dims")).astype(
                         self.decode.get(self.get_input_dtype())
                     )
                 )
-            elif i.get("random_data").get("distribution") == "UNIFORM" and not hasattr(
-                i.get("random_data").get("distribution"), "seed"
+            elif i.get("randomData").get("distribution") == "UNIFORM" and not hasattr(
+                i.get("randomData").get("distribution"), "seed"
             ):
                 input_list.append(
                     np.frombuffer(
                         np.array(
-                            i.get("value_i"), self.encode.get(self.get_input_dtype())
-                        ).reshape([int(i.get("shape").get("dims"))]),
+                            i.get("valueI"), self.encode.get(self.get_input_dtype())
+                        ).reshape(i.get("shape").get("dims")),
                         self.decode.get(self.get_input_dtype()),
                     )
                 )
@@ -94,20 +105,22 @@ class Parser:
         if isinstance(oups := self.read_prototxt().get("output"), Dict):
             output = np.frombuffer(
                 np.array(
-                    oups.get("value_i"),
+                    oups.get("valueI"),
                     self.encode.get(self.get_output_dtype()),
-                ).reshape([int(oups.get("shape").get("dims"))]),
+                ).reshape(oups.get("shape").get("dims")),
                 self.decode.get(self.get_output_dtype()),
             )
             output_list.append(output)
         elif isinstance(oups := self.read_prototxt().get("output"), List):
             for j in oups:
                 output_list.append(
+                    np.frombuffer(
                     np.array(
-                        j.get("value_i"),
+                        j.get("valueI"),
                         self.encode.get(self.get_output_dtype()),
-                    ).reshape([int(j.get("shape").get("dims"))]),
+                    ).reshape(j.get("shape").get("dims")),
                     self.decode.get(self.get_output_dtype()),
                 )
-                output_list.append(j)
+                )
+                # output_list.append(j)
         return input_list, output_list
