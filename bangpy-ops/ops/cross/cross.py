@@ -156,8 +156,6 @@ class Cross(object):
                 step_each_time = data_each_buffer // step
                 # every time data_each_buffer//step steps can be computed.
 
-                data_calculated_each_time = step_each_time * step
-
                 # split and compute
                 buffer_in0 = buffer_in0.reshape(
                     (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
@@ -334,9 +332,9 @@ class Cross(object):
                         else:
                             # every time data_each_buffer//step steps are computed.
                             tcp.memcpy(
-                                buffer_a0[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_a0[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                                 buffer_in0[
                                     (start + i * 3 * step_each_time) : (
                                         start + (i + 1) * 3 * step_each_time
@@ -345,9 +343,9 @@ class Cross(object):
                             )
 
                             tcp.memcpy(
-                                buffer_a1[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_a1[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                                 buffer_in0[
                                     (start + i * 3 * step_each_time)
                                     + 1 : (start + (i + 1) * 3 * step_each_time)
@@ -356,9 +354,9 @@ class Cross(object):
                             )
 
                             tcp.memcpy(
-                                buffer_a2[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_a2[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                                 buffer_in0[
                                     (start + i * 3 * step_each_time)
                                     + 2 : (start + (i + 1) * 3 * step_each_time)
@@ -367,9 +365,9 @@ class Cross(object):
                             )
 
                             tcp.memcpy(
-                                buffer_b0[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_b0[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                                 buffer_in1[
                                     (start + i * 3 * step_each_time) : (
                                         start + (i + 1) * 3 * step_each_time
@@ -378,9 +376,9 @@ class Cross(object):
                             )
 
                             tcp.memcpy(
-                                buffer_b1[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_b1[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                                 buffer_in1[
                                     (start + i * 3 * step_each_time)
                                     + 1 : (start + (i + 1) * 3 * step_each_time)
@@ -389,9 +387,9 @@ class Cross(object):
                             )
 
                             tcp.memcpy(
-                                buffer_b2[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_b2[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                                 buffer_in1[
                                     (start + i * 3 * step_each_time)
                                     + 2 : (start + (i + 1) * 3 * step_each_time)
@@ -473,9 +471,9 @@ class Cross(object):
                                         start + (i + 1) * 3 * step_each_time
                                     ) : 3
                                 ],
-                                buffer_c0[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_c0[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                             )
 
                             tcp.memcpy(
@@ -484,9 +482,9 @@ class Cross(object):
                                     + 1 : (start + (i + 1) * 3 * step_each_time)
                                     + 1 : 3
                                 ],
-                                buffer_c1[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_c1[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                             )
 
                             tcp.memcpy(
@@ -495,13 +493,12 @@ class Cross(object):
                                     + 2 : (start + (i + 1) * 3 * step_each_time)
                                     + 2 : 3
                                 ],
-                                buffer_c2[0:data_calculated_each_time].reshape(
-                                    (data_calculated_each_time / step, step)
-                                ),
+                                buffer_c2[
+                                    0 : (3 * step_each_time + 2) // 3 * step
+                                ].reshape(((3 * step_each_time + 2) // 3, step)),
                             )
 
         buffer_out.reshape((dim0, dim1, dim2, dim3, dim4, dim5, dim6, dim7))
-
 
 @bangpy.tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_cross(dtype=None, target=None):
