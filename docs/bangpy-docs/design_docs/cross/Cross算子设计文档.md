@@ -162,7 +162,7 @@ MluOpCross(inputs=[
 
 设流水线buffer能容纳的最大的数的量为data_each_buffer：
 
-step <= data_each_buffer时，将buffer reshape成(group*3, step)，计算每组task要处理的group数group_each_task，然后将流水线buffer取[0:data_calculated_each_time]，data_calculated_each_time = data_each_buffer // step x step，也就是step最大的倍数，多余部分舍弃，流水线buffer[0:data_calculated_each_time] reshape 成(data_calculated_each_time/step, step)，然后流水线就可以按step为倍数进行strided copy。
+step <= data_each_buffer时，将buffer reshape成(group*3, step)，计算每组task要处理的group数group_each_task，然后将流水线buffer取[0:data_calculated_each_time]，data_calculated_each_time = data_each_buffer // step x step，也就是step最大的倍数，多余部分舍弃，流水线buffer[0:data_calculated_each_time] reshape 成(data_calculated_each_time/step, step)，然后流水线就可以按step为倍数进行strided copy。(注：data_calculated_each_time在实际代码中由于shape检查的原因已经直接替换成表达式了。）
 
 step > data_each_buffer时，一次流水处理不了一整个step，只能每次尽可能地将buffer填满做计算，后续的处理和同步在BANGPy2的框架下实现非常困难，所以这种情况暂时不支持。
 
@@ -295,7 +295,7 @@ last_loop：是否因为数据量按data_each_buffer为倍数处理会有余数�
 
 step_each_time：根据流水线buffer的大小计算能处理的step的最大组数
 
-data_calculated_each_time：每轮流水在a,b,c向量其中一个维度（总共六个）上的操作的数据量
+data_calculated_each_time：每轮流水在a,b,c向量其中一个维度（总共六个）上的操作的数据量（在实际代码中由于shape检查的原因，已经直接替换成表达式）
 
 data_calculated_each_time_last：最后一轮流水处理余数时在a,b,c向量其中一个维度（总共六个）上的操作的数据量
 
