@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-LABEL org.opencontainers.image.authors="cnnl@cambricon.com"
+LABEL org.opencontainers.image.authors="www.cambricon.com"
 
 ENV NEUWARE_HOME="/usr/local/neuware/"
 

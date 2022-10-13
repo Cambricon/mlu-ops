@@ -162,7 +162,7 @@ rpn_rois_num：Tensor(shape=[2], dtype=int32, place=Place(gpu:0), stop_gradient=
 # 0元素行为分析
 # N=0 正常返回
 Tensor(shape=[0, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
-       []) 
+       [])
 ensor(shape=[0, 1], dtype=float32, place=Place(gpu:0), stop_gradient=True,
        [])
 Tensor(shape=[0], dtype=int32, place=Place(gpu:0), stop_gradient=True,
@@ -263,7 +263,7 @@ Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
 - 部分与竞品差距过大的规模在4.算子性能优化记录中进行说明。
 - 附上算子测试报告链接，测试报告必须包括框架给出的网络中规模的性能数据以及对应效率值。
 
-[给定的网络规模](./network_scale.txt) 
+[给定的网络规模](./network_scale.txt)
 
 ## 2 算子接口设计
 ### 2.1 参考接口
@@ -326,7 +326,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(mluOpHandle_t handle,
                                                     const mluOpTensorDescriptor_t rpn_roi_probs_desc,
                                                     void *rpn_roi_probs,
                                                     const mluOpTensorDescriptor_t rpn_rois_num_desc,
-                                                    void *rpn_rois_num,      
+                                                    void *rpn_rois_num,
                                                     void *rpn_rois_batch_size);
 ```
 
@@ -419,7 +419,7 @@ int rem_num = per_core_num % seg_pad_1;
 ```
 
 ##### 3.1.2.2 createAndRemoveBox 实现过程
-1. 从 GDRAM 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core_num, core 上每次循环load seg_pad_1 个数据; 
+1. 从 GDRAM 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core_num, core 上每次循环load seg_pad_1 个数据;
 
 2. 单次循环load完数据后，使用bang_ge 获取 nram 上 scores 大于等于 k_score 的mask;
 
@@ -516,18 +516,18 @@ int rem_num = per_core_num % seg_pad_2;
 3. 根据 global_max_score 的 global_max_score_index，从 workspace 的 proposals 中拿到 global_max_score_box 的坐标，及对应的box_area的值, 并保存 global_max_score 和 global_max_score_box 到 nram 的output rois，roi_probs 空间内;<br>
 
 4. 把 worksapce 上的 scores、proposals、box_area 数据load到 nram，计算 global_max_score_box 与 其余 boxes 的 iou, 整个过程为向量运算;
-    
+
 5. 通过 bang_ge 获取 iou 比 iou_thresh 大的 mask，并将 mask 为 1 的位置的scores置为 -FLT_MAX（如果 nram 空间不足，4、5 两步需要增加循环处理）；<br>
-   
+
 6. 重复循环 2,3,4,5步，循环 min(proposal_num，post_nms_top_n) 次或者单次循环取到的 global_max_score 的值等于 -FLT_MAX 时循环结束;<br>
-   
+
 7. copy nram 上的output_rois、output_roi_probs 数据到 GDARAM的 output 空间。
-   
+
 ##### 3.1.3.3 nms的nram空间和workspace划分
 ```c++
 // nram： 从workspace中loadscores和proposals, seg_pad_2 = max_nram_size / (5 + X)
-// |  output_rois   | output_roi_probs | scores    | proposals     | nram_temp     |  
-// | post_nms_top_n | post_nms_top_n   | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |  
+// |  output_rois   | output_roi_probs | scores    | proposals     | nram_temp     |
+// | post_nms_top_n | post_nms_top_n   | seg_pad_2 | 4 * seg_pad_2 | X * seg_pad_2 |
 
 // workspace：用于规约nms过程中每个core上的最大score值及其index
 // | max_score | scores       | proposals      | box_ares     | max_index |
@@ -581,10 +581,10 @@ __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *varianc
   T up = result[0];
   T mid = dn + (up - dn) * 0.5;
   int count  = 0
-  
+
   while(1){
     __bang_ge_scalar(tmp, scores, mid, scores_num);
-    
+
     // 获取当前大于mid的数量
     count = __bang_count(tmp, scores_num);
 
@@ -810,7 +810,7 @@ __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
 
 ## 5 方案实施
 ### 5.1 开发测试计划
-- 2022.8.16-2022.8.19：算子调研，竞品行为分析，cnnl_extra proposals算子学习，方案设计撰写
+- 2022.8.16-2022.8.19：算子调研，竞品行为分析，方案设计撰写
 - 2022.8.22-2022.8.26：方案设计评审，generator和gtest代码开发
 - 2022.8.29-2022.9.2：算子host/device代码实现、功能调试，大规模测试
 - 2022.9.5-2022.9.9：输出测试报告，PR
