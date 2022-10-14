@@ -66,8 +66,21 @@ namespace mluoptest {
     // 2.get criterion
     if (common_threshold()) {
       criterions_.clear();
+      // check if there exists complex output tensor
+      bool has_complex_output = false;
+      for (auto i = 0; i < proto_node_->output_size(); ++i) {
+        mluOpDataType_t dtype =
+            cvtProtoDtypeToMluOp(proto_node_->mutable_output(i)->dtype());
+        if (dtype == MLUOP_DTYPE_COMPLEX_HALF ||
+            dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+          has_complex_output = true;
+          break;
+        }
+      }
+
       if (proto_node_->has_test_param()) {
         auto test_param = proto_node_->mutable_test_param();
+        auto error_func_size = test_param->error_func_size();
         GTEST_CHECK(test_param->error_func_size() != 0);
         GTEST_CHECK(test_param->error_func_size() ==
                         test_param->error_threshold_size(),
@@ -75,25 +88,66 @@ namespace mluoptest {
                     "number, now they are "
                     "not equal.");
 
-        auto num = test_param->error_func_size();
-        for (int i = 0; i < num; ++i) {
+        if (has_complex_output) {
+          // If error_threshold_imag is set, the number must be the same as
+          // error_func.
+          GTEST_CHECK((test_param->error_threshold_imag_size() == 0) ||
+                          (test_param->error_threshold_imag_size() ==
+                          test_param->error_func_size()),
+                      "Parser: Nb. of error_threshold_imag should be either 0 or "
+                      "equal to the Nb. of error_func.");
+        }
+        for (auto i = 0; i < error_func_size; ++i) {
           auto func = cvtProtoEvaluationCriterion(test_param->error_func(i));
-          criterions_.insert(std::move(
-              Evaluator::Criterion(func, test_param->error_threshold(i))));
+          auto error_thred = test_param->error_threshold(i);
+          auto error_thred_imag = error_thred;
+          if (has_complex_output) {
+            if (test_param->error_threshold_imag_size() > 0) {
+              error_thred_imag = test_param->error_threshold_imag(i);
+            } else {
+              VLOG(4) << "Parser::criterions: set error_threshold_imag to "
+                        "error_threshold.";
+            }
+            criterions_.insert(std::move(
+                Evaluator::Criterion(func, error_thred, error_thred_imag)));
+          } else {
+            criterions_.insert(
+                std::move(Evaluator::Criterion(func, error_thred)));
+          }
         }
       } else {
-        GTEST_CHECK(proto_node_->evaluation_criterion_size() != 0);
-        GTEST_CHECK(proto_node_->evaluation_criterion_size() ==
-                        proto_node_->evaluation_threshold_size(),
-                    "Parser: criterion's number should equal to threshold's "
-                    "number, now they are not equal.");
-
-        auto num = proto_node_->evaluation_criterion_size();
-        for (int i = 0; i < num; ++i) {
+        size_t criterion_size = proto_node_->evaluation_criterion_size();
+        GTEST_CHECK(criterion_size > 0);
+        auto threshold_size = proto_node_->evaluation_threshold_size();
+        auto threshold_imag_size = proto_node_->evaluation_threshold_imag_size();
+        GTEST_CHECK(criterion_size == threshold_size,
+                    "Parser: evaluation_criterion's number should equal to "
+                    "evaluation_threshold's number, now they are not equal.");
+        if (has_complex_output) {
+          // If threshold_imag is set, the number must be the same as criterions.
+          GTEST_CHECK(
+              (threshold_imag_size == 0) ||
+                  (threshold_imag_size == criterion_size),
+              "Parser: Nb. of evaluation_threshold_imag should be either 0 or "
+              "equal to the Nb. of evaluation_criterion.");
+        }
+        for (auto i = 0; i < criterion_size; ++i) {
           auto proto_func = proto_node_->evaluation_criterion(i);
           auto func       = cvtProtoEvaluationCriterion(proto_func);
-          criterions_.insert(std::move(Evaluator::Criterion(
-              func, proto_node_->evaluation_threshold(i))));
+          auto eval_thred = proto_node_->evaluation_threshold(i);
+          auto eval_thred_imag = eval_thred;
+          if (has_complex_output) {
+            if (threshold_imag_size > 0) {
+              eval_thred_imag = proto_node_->evaluation_threshold_imag(i);
+            } else {
+              VLOG(4) << "Parser::criterions: set evaluation_threshold_imag to "
+                        "evaluation_threshold.";
+            }
+            criterions_.insert(std::move(
+                Evaluator::Criterion(func, eval_thred, eval_thred_imag)));
+          } else {
+            criterions_.insert(std::move(Evaluator::Criterion(func, eval_thred)));
+          }
         }
       }
     }
@@ -214,18 +268,14 @@ namespace mluoptest {
 
     auto random_data = pt->mutable_random_data();
     if (random_data->distribution() == mluoptest::UNIFORM) {
-      GTEST_CHECK(random_data->has_seed(),
-                  "Parser: missing seed of UNIFORM random param in *pb");
       GTEST_CHECK(random_data->has_upper_bound(),
                   "Parser: missing upper bound of UNIFORM random param in *pb");
       GTEST_CHECK(random_data->has_lower_bound(),
                   "Parser: missing lower bound of UNIFORM random param in *pb");
     } else if (random_data->distribution() == mluoptest::GAUSSIAN) {
-      GTEST_CHECK(random_data->has_seed(),
-                  "Parser: missing seed of GAUSSIAN random param in *pb");
-      GTEST_CHECK(random_data->has_mu(),
+      GTEST_CHECK(random_data->has_mu() || random_data->has_mu_double(),
                   "Parser: missing mu of UNIFORM random param in *pb");
-      GTEST_CHECK(random_data->has_sigma(),
+      GTEST_CHECK(random_data->has_sigma() || random_data->has_sigma_double(),
                   "Parser: missing sigma of UNIFORM random param in *pb");
     } else {
       GTEST_CHECK(false,
@@ -258,10 +308,26 @@ namespace mluoptest {
   // but this way have precision problem
   // we will abandon value_f
   void Parser::getTensorValueF(const Tensor *pt, void *data, size_t count) {
-    GTEST_CHECK(pt->value_f_size() == count,
-                "Parser: when read value_f, expected element num is not equal "
-                "to real element num.");
     switch (pt->dtype()) {
+      case DTYPE_COMPLEX_HALF:
+      case DTYPE_COMPLEX_FLOAT: {
+        GTEST_CHECK(pt->value_f_size() == 2 * count,
+                    "Parser: when read value_f, expected element num is not "
+                    "equal to real element num.");
+      } break;
+      default:
+        GTEST_CHECK(pt->value_f_size() == count,
+                    "Parser: when read value_f, expected element num is not "
+                    "equal to real element num.");
+    }
+
+    switch (pt->dtype()) {
+      // may have precision issue since value_f is fixed to float in protobuf
+      case DTYPE_DOUBLE:
+        for (int i = 0; i < count; ++i) {
+          ((double *)data)[i] = (double)pt->value_f(i);
+        }
+        break;
       case DTYPE_FLOAT:
         for (int i = 0; i < count; ++i) {
           ((float *)data)[i] = pt->value_f(i);
@@ -270,6 +336,18 @@ namespace mluoptest {
       case DTYPE_HALF:
         for (int i = 0; i < count; ++i) {
           ((int16_t *)data)[i] = cvtFloatToHalf(pt->value_f(i));
+        }
+        break;
+      case DTYPE_COMPLEX_HALF:
+        for (int i = 0; i < 2 * count; i += 2) {
+          ((int16_t *)data)[i] = cvtFloatToHalf(pt->value_f(i));
+          ((int16_t *)data)[i + 1] = cvtFloatToHalf(pt->value_f(i + 1));
+        }
+        break;
+      case DTYPE_COMPLEX_FLOAT:
+        for (int i = 0; i < 2 * count; i += 2) {
+          ((float *)data)[i] = pt->value_f(i);
+          ((float *)data)[i + 1] = pt->value_f(i + 1);
         }
         break;
       default:
@@ -307,6 +385,11 @@ namespace mluoptest {
       case DTYPE_INT16:
         for (int i = 0; i < count; ++i) {
           ((int16_t *)data)[i] = pt->value_i(i);
+        }
+        break;
+      case DTYPE_UINT16:
+        for (int i = 0; i < count; ++i) {
+          ((uint16_t *)data)[i] = pt->value_i(i);
         }
         break;
       case DTYPE_INT32:
@@ -369,11 +452,43 @@ namespace mluoptest {
           ((int64_t *)data)[i] = pt->value_l(i);
         }
         break;
+      case DTYPE_INT8:
+      case DTYPE_BOOL:  // parser value_l == BOOL
+        for (int i = 0; i < count; ++i) {
+          ((int8_t *)data)[i] = pt->value_l(i);
+        }
+        break;
+      case DTYPE_INT16:
+        for (int i = 0; i < count; ++i) {
+          ((int16_t *)data)[i] = pt->value_l(i);
+        }
+        break;
+      case DTYPE_INT32:
+        for (int i = 0; i < count; ++i) {
+          ((int32_t *)data)[i] = pt->value_l(i);
+        }
+        break;
+      case DTYPE_DOUBLE:
+        for (int i = 0; i < count; ++i) {
+          int64_t value_l = pt->value_l(i);
+          ((double *)data)[i] = *((double *)(&value_l));
+        }
+        break;
       default:
         GTEST_CHECK(false,
                     "Parser: found unsuppored dtype in value_l, value_l only "
                     "support int64.");
     }
+  }
+
+  inline double str2fp64(const std::string *in_str) {
+    uint64_t res = 0x0;
+    for (int i = 0; i < in_str->size(); ++i) {
+      char byte = in_str->c_str()[i];  // 0~f
+      res = res << 4;
+      res |= 0xf & (byte >= 'a') ? byte - 'a' + 10 : byte - '0';  // 0~15
+    }
+    return *(double *)(&res);
   }
 
   inline float str2fp32(const std::string *in_str) {
@@ -399,9 +514,21 @@ namespace mluoptest {
   // get value by value_h (hex)
   // we hope all float value come from value_h to keep precision
   void Parser::getTensorValueH(Tensor *pt, void *data, size_t count) {
-    GTEST_CHECK(pt->value_h_size() == count,
-                "Parser: when read value_h, expected element num is not equal "
-                "to real element num.");
+    switch (pt->dtype()) {
+      case DTYPE_COMPLEX_HALF:
+      case DTYPE_COMPLEX_FLOAT: {
+        // each complex number is composed of real and imaginary parts
+        GTEST_CHECK(pt->value_h_size() == 2 * count,
+                    "Parser: when read value_h, expected element num is not "
+                    "equal to real element num.");
+      } break;
+      default: {
+        GTEST_CHECK(pt->value_h_size() == count,
+                    "Parser: when read value_h, expected element num is not "
+                    "equal to real element num.");
+      }
+    }
+
     switch (pt->dtype()) {
       case DTYPE_HALF:
         for (int i = 0; i < count; ++i) {
@@ -410,6 +537,21 @@ namespace mluoptest {
         break;
       case DTYPE_FLOAT:
         for (int i = 0; i < count; ++i) {
+          ((float *)data)[i] = str2fp32(pt->mutable_value_h(i));
+        }
+        break;
+      case DTYPE_DOUBLE:
+        for (int i = 0; i < count; ++i) {
+          ((double *)data)[i] = str2fp64(pt->mutable_value_h(i));
+        }
+        break;
+      case DTYPE_COMPLEX_HALF:
+        for (int i = 0; i < 2 * count; ++i) {
+          ((uint16_t *)data)[i] = str2fp16(pt->mutable_value_h(i));
+        }
+        break;
+      case DTYPE_COMPLEX_FLOAT:
+        for (int i = 0; i < 2 * count; ++i) {
           ((float *)data)[i] = str2fp32(pt->mutable_value_h(i));
         }
         break;
@@ -422,7 +564,17 @@ namespace mluoptest {
 
   // get value by random data param
   void Parser::getTensorValueRandom(Tensor *pt, float *data, size_t count) {
-    generateRandomData(data, count, pt->mutable_random_data(), pt->dtype());
+    if (pt->dtype() == DTYPE_DOUBLE) {
+      generateRandomData((double *)data, count, pt->mutable_random_data(),
+                        pt->dtype());
+    } else if (pt->dtype() == DTYPE_COMPLEX_HALF ||
+              pt->dtype() == DTYPE_COMPLEX_FLOAT) {
+      generateRandomData((float *)data, 2 * count, pt->mutable_random_data(),
+                        pt->dtype());
+    } else {
+      generateRandomData((float *)data, count, pt->mutable_random_data(),
+                        pt->dtype());
+    }
   }
 
   // get value by random data param
@@ -533,6 +685,18 @@ namespace mluoptest {
       Parser::criterions(int index, std::vector<int> criterions_use) {
     std::set<Evaluator::Criterion> res;
 
+    // check if there exists complex output tensor
+    bool has_complex_output = false;
+    for (auto i = 0; i < proto_node_->output_size(); ++i) {
+      mluOpDataType_t dtype =
+          cvtProtoDtypeToMluOp(proto_node_->mutable_output(i)->dtype());
+      if (dtype == MLUOP_DTYPE_COMPLEX_HALF ||
+          dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+        has_complex_output = true;
+        break;
+      }
+    }
+
     if (proto_node_->has_test_param()) {
       auto test_param = proto_node_->mutable_test_param();
       GTEST_CHECK(test_param->error_func_size() != 0);
@@ -541,42 +705,84 @@ namespace mluoptest {
                   "Parser: error func's number should equal to threshold's "
                   "number, now they are not equal.");
 
+      if (has_complex_output) {
+        // If error_threshold_imag is set, the number must be the same as
+        // error_func.
+        GTEST_CHECK((test_param->error_threshold_imag_size() == 0) ||
+                        (test_param->error_threshold_imag_size() ==
+                        test_param->error_func_size()),
+                    "Parser: Nb. of error_threshold_imag should be either 0 or "
+                    "equal to the Nb. of error_func.");
+      }
       auto num = test_param->error_func_size();
       for (int i = 0; i < num; ++i) {
         auto func = cvtProtoEvaluationCriterion(test_param->error_func(i));
-        res.insert(Evaluator::Criterion(func, test_param->error_threshold(i)));
+        auto error_thred = test_param->error_threshold(i);
+        auto error_thred_imag = error_thred;
+        if (has_complex_output) {
+          if (test_param->error_threshold_imag_size() > 0) {
+            error_thred_imag = test_param->error_threshold_imag(i);
+          } else {
+            VLOG(4) << "Parser::criterions: set error_threshold_imag to "
+                      "error_threshold.";
+          }
+          res.insert(std::move(
+              Evaluator::Criterion(func, error_thred, error_thred_imag)));
+        } else {
+          res.insert(std::move(Evaluator::Criterion(func, error_thred)));
+        }
       }
     } else {
-      GTEST_CHECK(proto_node_->evaluation_criterion_size() != 0);
-
+      auto criterion_size = proto_node_->evaluation_criterion_size();
+      GTEST_CHECK(criterion_size > 0);
       GTEST_CHECK(criterions_use.size() == 4,
                   "criterions_use_'s size should be 4, now it's not");
-      auto num   = proto_node_->evaluation_criterion_size();
-      Tensor *pt = proto_node_->mutable_output(0); // pt for proto_tensor
-      for (int i = 0; i < num; ++i) {
+      size_t threshold_size = 0;
+      size_t threshold_imag_size = 0;
+      Tensor *pt = nullptr;
+      if (-1 == index) {
+        // use common evaluation threshold
+        threshold_size = proto_node_->evaluation_threshold_size();
+        threshold_imag_size = proto_node_->evaluation_threshold_imag_size();
+      } else {
+        // use evaluation thresholds specified in each tensor
+        pt = proto_node_->mutable_output(index);  // pt for proto_tensor
+        threshold_size = pt->thresholds().evaluation_threshold_size();
+        threshold_imag_size = pt->thresholds().evaluation_threshold_imag_size();
+      }
+      GTEST_CHECK(criterion_size == threshold_size,
+                  "Parser: evaluation_criterion's number should equal to "
+                  "evaluation_threshold's number, now they are not equal.");
+      if (has_complex_output) {
+        // If threshold_imag is set, the number must be the same as criterions.
+        GTEST_CHECK(
+            (threshold_imag_size == 0) || (threshold_imag_size == criterion_size),
+            "Parser: Nb. of evaluation_threshold_imag should be either 0 or "
+            "equal to the Nb. of evaluation_criterion.");
+      }
+      for (int i = 0; i < criterion_size; ++i) {
         if (0 == criterions_use[i]) {
           continue;
         }
         auto proto_func = proto_node_->evaluation_criterion(i);
         auto func       = cvtProtoEvaluationCriterion(proto_func);
-        if (-1 == index) {
-          GTEST_CHECK(proto_node_->evaluation_criterion_size() ==
-                          proto_node_->evaluation_threshold_size(),
-                      "Parser: criterion's number should equal to threshold's "
-                      "number, now they are not "
-                      "equal.");
+        auto eval_thred = (index == -1)
+                              ? proto_node_->evaluation_threshold(i)
+                              : pt->thresholds().evaluation_threshold(i);
+        auto eval_thred_imag = eval_thred;
+        if (has_complex_output) {
+          if (threshold_imag_size > 0) {
+            eval_thred_imag = (index == -1)
+                                  ? proto_node_->evaluation_threshold_imag(i)
+                                  : pt->thresholds().evaluation_threshold_imag(i);
+          } else {
+            VLOG(4) << "Parser::criterions: set evaluation_threshold_imag to "
+                      "evaluation_threshold.";
+          }
           res.insert(
-              Evaluator::Criterion(func, proto_node_->evaluation_threshold(i)));
+              std::move(Evaluator::Criterion(func, eval_thred, eval_thred_imag)));
         } else {
-          Tensor *pt = proto_node_->mutable_output(index); // pt for
-                                                           // proto_tensor
-          GTEST_CHECK(proto_node_->evaluation_criterion_size() ==
-                          pt->thresholds().evaluation_threshold_size(),
-                      "Parser: criterion's number should equal to threshold's "
-                      "number, now they are "
-                      "not equal.");
-          res.insert(Evaluator::Criterion(
-              func, pt->thresholds().evaluation_threshold(i)));
+          res.insert(std::move(Evaluator::Criterion(func, eval_thred)));
         }
       }
     }
@@ -666,6 +872,30 @@ namespace mluoptest {
       GTEST_CHECK(pt->has_shape(), "Parser: missing tensor shape in prototxt.");
       return shapeStrideCount(pt->mutable_shape());
     }
+
+    if (pt->dtype() == DTYPE_COMPLEX_HALF || pt->dtype() == DTYPE_COMPLEX_FLOAT) {
+      int num = 0;
+      if (value_type == VALUE_F) {
+        num = pt->value_f_size();
+        GTEST_CHECK(num % 2 == 0,
+                    "Parser: number of value_f should be multiples of 2 for "
+                    "complex dtype.");
+        return num / 2;
+      } else if (value_type == VALUE_H) {
+        num = pt->value_h_size();
+        GTEST_CHECK(num % 2 == 0,
+                    "Parser: number of value_h should be multiples of 2 for "
+                    "complex dtype.");
+        return num / 2;
+      } else if (value_type == VALUE_I) {
+        num = pt->value_i_size();
+        GTEST_CHECK(num % 2 == 0,
+                    "Parser: number of value_i should be multiples of 2 for "
+                    "complex dtype.");
+        return num / 2;
+      }
+    }
+
     switch (value_type) {
       case VALUE_H:
         return pt->value_h_size();
@@ -731,6 +961,8 @@ namespace mluoptest {
   case TENSOR_DTYPE:                                                           \
     return WIDTH;
     switch (pt->dtype()) {
+      GET_WIDTH_TENSOR_TYPE(DTYPE_COMPLEX_FLOAT, 8);
+      GET_WIDTH_TENSOR_TYPE(DTYPE_COMPLEX_HALF, 4);
       GET_WIDTH_TENSOR_TYPE(DTYPE_DOUBLE, 8);
       GET_WIDTH_TENSOR_TYPE(DTYPE_INT64, 8);
       GET_WIDTH_TENSOR_TYPE(DTYPE_UINT64, 8);
