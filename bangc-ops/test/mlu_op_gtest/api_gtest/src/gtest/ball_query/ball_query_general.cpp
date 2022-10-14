@@ -145,9 +145,9 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
 
  private:
   mluOpHandle_t handle_ = NULL;
-  int min_radius_ = 0;
-  int max_radius_ = 0.2;
-  float nsample_ = 32;
+  float min_radius_ = 0;
+  float max_radius_ = 0.2;
+  int nsample_ = 32;
   mluOpTensorDescriptor_t new_xyz_desc_ = NULL;
   void* new_xyz_ = NULL;
   mluOpTensorDescriptor_t xyz_desc_ = NULL;
