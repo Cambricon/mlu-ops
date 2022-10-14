@@ -4,7 +4,7 @@ input {
   id: "input1"          
   shape: {              
     dims: 16
-    dims: 10176
+    dims: 128
     dims: 3
   }
   layout: LAYOUT_ARRAY  
@@ -20,7 +20,7 @@ input {
   id: "input2"
   shape: {
     dims: 16
-    dims: 10176
+    dims: 512
     dims: 3
   }
   layout: LAYOUT_ARRAY
@@ -37,8 +37,8 @@ output {
   id: "output"
   shape: {
     dims: 16
-    dims: 10176
-    dims: 10176
+    dims: 128
+    dims: 128
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
@@ -47,8 +47,8 @@ output {
 
 ball_query_param: {
   min_radius: 0.0
-  max_radius: 0.4
-  nsample: 10176
+  max_radius: 0.8
+  nsample: 128
 }
 
 test_param: {
