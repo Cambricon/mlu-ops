@@ -322,6 +322,20 @@ void MLUOP_WIN_API mluOpUnionKernelAssignVoxelsCoors(
     void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,
     const int32_t num_points, const int32_t num_features);
 
+/* ThreeInterpolateBackward*/
+void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *indices, const void *weights,
+    const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features);
+void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *indices, const void *weights,
+    const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus

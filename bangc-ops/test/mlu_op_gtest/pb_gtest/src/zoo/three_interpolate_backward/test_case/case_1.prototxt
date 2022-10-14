@@ -1,0 +1,66 @@
+op_name: "three_interpolate_backward"
+input {
+  id: "grad_output"
+  shape: {
+    dims: 16
+    dims: 128
+    dims: 64
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+  random_data: {
+    seed: 23
+    upper_bound: 1e2
+    lower_bound: 1e-1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "idx"
+  shape: {
+    dims: 16
+    dims: 64
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    upper_bound: 15
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "weight"
+  shape: {
+    dims: 16
+    dims: 64
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+  random_data: {
+    seed: 23
+    upper_bound: 1e2
+    lower_bound: 1e-1
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "grad_features"
+  shape: {
+    dims: 16
+    dims: 128
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
