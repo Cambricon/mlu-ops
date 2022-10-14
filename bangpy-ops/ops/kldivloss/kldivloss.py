@@ -86,7 +86,6 @@ class KlDivLoss(object):
         )
         # NRAM is divided into 6 main parts
         # 4 * 1024：reserved for other variables
-
         # # Check parameters.
         # if not ((self.dtype in DTYPES) and (self.target in TARGET_LIST)):
         #     raise KeyError("please pass correct parameters.")
