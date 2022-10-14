@@ -2652,6 +2652,85 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
     const mluOpTensorDescriptor_t weights_desc, const void *weights,
     const mluOpTensorDescriptor_t output_desc, void *output);
 
+// Group:Ballquery
+/*!
+ * @brief Takes the point's index in the \b new_xyz set as the center of the sphere,
+ * uses \b min_radius and \b max_radius as the radius, and returns the \b idx of
+ * the first \n nsample points in the \b xyz set in the spherical domain.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the sqrt backward operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] new_xyz_desc
+ * The descriptor of the new_xyz tensors, which indicates the center of the ball.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] new_xyz
+ * Pointer to the MLU memory that stores the new_xyz tensor.
+ * @param[in] xyz_desc
+ * The descriptor of the xyz tensors, which means cloud points. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] xyz
+ * Pointer to the MLU memory that stores the xyz tensor.
+ * @param[in] min_radius
+ * A float value which is the minimum radius.
+ * @param[in] max_radius
+ * A float value which is the maximum radius.
+ * @param[in] nsample
+ * An integer value which is the selected points index.
+ * @param[in] idx_desc
+ * The descriptor of the idx tensors, which contains output indexes. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] idx
+ * Pointer to the MLU memory that stores the xyz tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The data types of new_xyz and xyz must be the same. The supported data types of new_xyz
+ *   tensor \b new_xyz, xyz tensor \b xyz and idx tensor \b idx are as fllows:
+ *   - new_xyz tensor: float or half.
+ *   - xyz tensor: float or half.
+ *   - idx tensor: int.
+ *
+ * @par Scale Limitation
+ * - The new_xyz tensor, xyz tensor and idx tensor must be 3D.
+ * - The first dimension of the new_xyz tensor, xyz tensor and the idx tensor must be the same.
+ * - The second dimension of the new_xyz tensor and the idx tensor must be the same.
+ * - The third dimension of the new_xyz tensor and the xyz tensor must be the same and equal to 3.
+ * - The third dimension of idx tensor must be equal to nsample.
+ * - The \b min_radius should be larger than 0.
+ * - The \b max_radius should be larger than 0.
+ * - The \b nsample should be larger than 0.
+ * 
+ * @note
+ * - Take the point in new_xyz as the center of the sphere, there may be no points in xyz within the
+ *   sphere with min_radius and max_radius as diameters. At this time, the value of the corresponding
+ *   position in idx is the value when it is passed into the kernel. Generally, before passing idx
+ *   into the kernel, initialize all the values in idx to 0 or other const values.
+ * 
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/
+ *   csrc/common/cuda/ball_query_cuda_kernel.cuh
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(mluOpHandle_t handle,
+                                           const mluOpTensorDescriptor_t new_xyz_desc,
+                                           const void *new_xyz,
+                                           const mluOpTensorDescriptor_t xyz_desc,
+                                           const void *xyz,
+                                           const float min_radius,
+                                           const float max_radius,
+                                           const int nsample,
+                                           const mluOpTensorDescriptor_t idx_desc,
+                                           void *idx);
+
 #if defined(__cplusplus)
 }
 #endif
