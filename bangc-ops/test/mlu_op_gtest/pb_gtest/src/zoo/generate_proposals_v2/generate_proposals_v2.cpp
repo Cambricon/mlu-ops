@@ -9,13 +9,13 @@
 * permit persons to whom the Software is furnished to do so, subject to
 * the following conditions:
 *
-* The above copyright notice and this permission notice shall self.tcp included
+* The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
 *
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -42,7 +42,7 @@ void GenerateProposalsV2Executor::workspaceMalloc() {
   size_t workspace_size = 0;
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
   mluOpGetGenerateProposalsV2WorkspaceSize(handle_, tensor_scores, &workspace_size);
-  
+
   VLOG(4) << "Malloc workspace space.";
   void *temp = mlu_runtime_.allocate(workspace_size);
   workspace_.push_back(temp);
