@@ -2731,6 +2731,132 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(mluOpHandle_t handle,
                                            const mluOpTensorDescriptor_t idx_desc,
                                            void *idx);
 
+// Group:Copy
+/*!
+ * @brief Returns a copy of input tensor \b input in the output tensor \b output
+ * on MLU device.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the copy operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - Data types of input tensor \b input and output tensor \b output must be the
+ *   same. The supported data types are as follows:
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, double, complex_half, complex_float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, double, complex_half, complex_float.
+ *
+ * @note
+ * - You can specify the stride of all dimensions for input_desc and output_desc
+ *   with ::mluOpSetTensorDescriptorEx.
+ * 
+ * @par Requirements
+ * - Data type of input tensor and output tensor must be the same.
+ * - Data layout of input tensor and output tensor must be the same.
+ * - The shape of input tensor and output tensor must be the same.
+ *
+ * @par Scale Limitation
+ * - When the input or output tensor is non-contiguous, for example with non-contiguous
+ *   strides set in the tensor descriptor, the total number of bytes spanned by 
+ *   either of the input or output tensor should be less than or equal to 
+ *   \f$2^{23}-1\f$ (the maximum value for int32).
+ *
+ * @par Example
+ * - The example of the copy operation is as follows:
+     @verbatim
+      input array by 2 * 2
+      --> then: [[1, 8], [6, 4]]
+
+      output array by 2 * 2
+      --> output: [[1, 8], [6, 4]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://www.tensorflow.org/api_docs/python/tf/raw_ops/Snapshot
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t input_desc,
+                                      const void *input,
+                                      const mluOpTensorDescriptor_t output_desc,
+                                      void *output);
+
+// Group:Expand
+/*!
+ * @brief Copies and expands the input tensor \b input to the shape of output
+ * tensor \b output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input
+ *   and output tensor \b output. 
+ *   Data type of both tensors should be the same.
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, complex_half, complex_float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, complex_half, complex_float.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must meet the following requirements:
+ *   - Every dimension of the input tensor should be divisible by the same
+ *     dimension of the output tensor.
+ *
+ * @note
+ * - The input tensor \b input and output tensor \b output are multi-dimensional
+ *   array, supporting up to \p MLUOP_DIM_MAX dimensions.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the expand operation is as follows:
+     @verbatim
+     input one array by 2 * 2 --> input: [[1, 2], [3, 4]]
+     output array by 3 * 2 * 2 --> output: [[[1, 2], [3, 4]],
+                                            [[1, 2], [3, 4]],
+                                            [[1, 2], [3, 4]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/tensors.html#torch.Tensor.expand
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpExpand(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
+    const void *input, const mluOpTensorDescriptor_t output_desc, void *output);
+
 #if defined(__cplusplus)
 }
 #endif
