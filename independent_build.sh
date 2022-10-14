@@ -11,6 +11,7 @@ python2 json_parser.py
 output='dependency.txt'
 RELEASE_TYPE="release"
 MODULE_VERSION=""
+PACKAGE_ARCH="$(uname -m)"
 # get the package type
 while getopts "t:" opt
 do
@@ -45,7 +46,7 @@ echo "PACKAGE_MODULE_VERS: $PACKAGE_MODULE_VERS"
 
 PACKAGE_SERVER="http://daily.software.cambricon.com"
 PACKAGE_OS="Linux"
-PACKAGE_ARCH="x86_64"
+
 
 arr_modules=(`echo $PACKAGE_MODULES`)
 arr_branch=(`echo $PACKAGE_BRANCH`)

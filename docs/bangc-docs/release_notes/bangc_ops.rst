@@ -55,7 +55,7 @@ v0.3.0
 
   * ``three_interpolate_forward``
 
-  * ``ball_qeury_forward_forward``
+  * ``ball_qeury``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -76,11 +76,11 @@ v0.2.0
 
 - 新增以下算子：
 
-  * ``yolo_box``: 从检测网络的backbone输出部分，计算真实检测框bounding box信息。
+  * ``yolo_box``
 
-  * ``generate_proposals_v2``: 根据每个检测框为foreground对象的概率，推选生成用于后续检测网络的ROIs。
+  * ``generate_proposals_v2``
 
-  * ``prior_box``: 根据输入的 feature_map，在每个像素点上生成 num_priors 个候选框。
+  * ``prior_box``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~
