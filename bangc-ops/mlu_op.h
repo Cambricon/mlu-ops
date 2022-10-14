@@ -2622,10 +2622,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
  *   - output tensor: \p MLUOP_LAYOUT_ARRAY.
  *
  *  @par Scale Limitation
- *  - The dimension of \b features should be equal to 3.
- *  - The dimension of \b indices should be equal to 3.
- *  - The dimension of \b weights should be equal to 3.
- *  - The dimension of \b output should be equal to 3.
+ *  - The dimension of \b features, \b indices, \b weights and \b output
+ *    should be equal to 3.
+ *  - The shape[0] of \b features, \b indices, \b weights and \b output
+ *    should be the same.
+ *  - The shape[1] of \b features and \b output should be the same.
+ *  - The shape[1] of \b indices, \b weights and the shape[2] of \b output
+ *    should be the same.
+ *  - The shape[2] of \b indices and \b weights should be equal to 3.
  *
  * @par Requirements
  * - None.
@@ -2633,7 +2637,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
  *  @par Note
  *  - The value of \b indices must be in the range of [0, M-1], otherwise the output result
  *    is meaningless and the corresponding output will be set to 0.
- *  - In MLU270 and MLU290, the maximum value in the \b indices should be less than
+ *  - In MLU200 series, the maximum value in the \b indices should be less than
  *    2^23, otherwise the output result is not guaranteed to be correct.
  *
  * @par Example
