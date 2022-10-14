@@ -85,7 +85,14 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
 
     # Convert the size of the input data to the new style (batchnum, length)
     print(
-        "shape is :", shape, "reduction is :", reduction, "log_target is :", log_target
+        "shape is :",
+        shape,
+        "reduction is :",
+        reduction,
+        "log_target is :",
+        log_target,
+        "dtype is :",
+        dtype,
     )
     inputdim = len(shape)
 
@@ -139,6 +146,7 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     data_out_dev = bp.Array(
         np.zeros(data_out.flatten().shape, dtype.as_numpy_dtype), dev
     )
+    reduction_result_dev = bp.Array(np.zeros((1,), np.float32), dev)
 
     f = load_op_by_type(KERNEL_NAME, dtype.name)
     f(
@@ -149,6 +157,7 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
         length,
         reduction,
         log_target,
+        reduction_result_dev,
     )
 
     evaluator = f.time_evaluator(number=100, repeat=2, min_repeat_ms=0)
@@ -161,23 +170,25 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
             length,
             reduction,
             log_target,
+            reduction_result_dev,
         ).mean
         * 1e3
     )
 
     data_out_dev = data_out_dev.numpy().reshape(shape)
+    reduction_result_dev = reduction_result_dev.numpy()
     if reduction == 0:
         print("data_out_dev : ", data_out_dev)
         cal_diff(data_out_dev, data_out, reduction)
     elif reduction == 1:
-        print("data_out_sum_dev : ", data_out_dev[0][0])
-        cal_diff(data_out_dev[0][0], data_out_sum, reduction)
+        print("data_out_sum_dev : ", reduction_result_dev[0])
+        cal_diff(reduction_result_dev[0], data_out_sum, reduction)
     elif reduction == 2:
-        print("data_out_mean_dev : ", data_out_dev[0][0])
-        cal_diff(data_out_dev[0][0], data_out_mean, reduction)
+        print("data_out_mean_dev : ", reduction_result_dev[0])
+        cal_diff(reduction_result_dev[0], data_out_mean, reduction)
     elif reduction == 3:
-        print("data_out_batchmean_dev : ", data_out_dev[0][0])
-        cal_diff(data_out_dev[0][0], data_out_batchmean, reduction)
+        print("data_out_batchmean_dev : ", reduction_result_dev[0])
+        cal_diff(reduction_result_dev[0], data_out_batchmean, reduction)
 
     print("tutorial : %f ms" % t)
 
