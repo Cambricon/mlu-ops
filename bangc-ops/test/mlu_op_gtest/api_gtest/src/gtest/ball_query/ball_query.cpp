@@ -34,8 +34,8 @@
 namespace mluopapitest {
 class ball_query : public testing::Test {
  public:
-  void setParam(bool handle, bool new_xyz_desc, bool new_xyz_desc,
-                bool xyz_desc, bool xyz, bool idx_desc, bool idx) {
+  void setParam(bool handle, bool new_xyz_desc, bool new_xyz, bool xyz_desc,
+                bool xyz, bool idx_desc, bool idx) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }

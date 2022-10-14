@@ -293,7 +293,7 @@ INSTANTIATE_TEST_CASE_P(
                                     MLUOP_STATUS_BAD_PARAM})));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_xyz, ball_query_general,
+    bad_idx, ball_query_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({2, 16, 3}))),
