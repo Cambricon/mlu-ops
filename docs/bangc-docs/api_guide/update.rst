@@ -6,7 +6,7 @@ This section lists contents that were made for each product release.
 
 * V0.3.0
 
-  **Date:** October 14, 2022
+  **Date:** October 20, 2022
 
   **Changes:**
 
@@ -14,7 +14,7 @@ This section lists contents that were made for each product release.
   - Added the following new operations:
 
     - three_interpolate_forward
-    - ball_qeury_forward_forward
+    - ball_qeury
 
 * V0.2.0
 
