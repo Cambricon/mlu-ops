@@ -35,7 +35,7 @@
 
 ### 1.1 算子需求分析
 
-该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU_OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU_OPS 全部支持。
+该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU-OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU-OPS 全部支持。
 
 | 算子功能简介                | 根据感兴趣区域提取固定大小的输出特征|
 | -------------------------- | ---------------------------------------- |
@@ -118,7 +118,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |MLU_OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
+| handle      |MLU-OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
 | input_desc |对输入数据 input 的形状描述，包含了 input 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| / | 无 |
 | input      |输入 tensor input 的地址| 输入              | float | NHWC     | 无       |
 | grid_desc |对输入数据 gird 的形状描述，包含了 grid 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| / | 无    |
@@ -130,7 +130,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |MLU_OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
+| handle      |MLU-OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
 | grad_output_desc |对输入数据 grad_output 的形状描述，包含了 grad_output 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t | /        | 无       |
 | grad_output      |输入 tensor grad_output 的地址|输入 |  float    | NHWC     | 无       |
 | grid_desc |对输入数据 gird 的形状描述结构体，包含了 grid 的数据类型、数据维度和布局等信息| 输入   |mluOpTensorDescriptor_t | /        | 无       |
@@ -156,13 +156,13 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
 - 算子精度验收标准：diff1、diff2；
 - 算子精度阈值描述：diff1 <= 3e-3 && diff2 <=3e-3；
 
 #### 1.5.2 性能验收标准
 
-见 [MLU_OPS 性能验收标准](../MLU_OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 2 算子接口设计
 
@@ -333,8 +333,8 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 - 2022.4.19 ~ 4.21 调研源码+开始设计方案
 - 2022.4.22 设计方案评审：算子功能+接口设计
-- 2022.4.24 算子在 MLU_OPS 下的 GTest 代码开发
-- 2022.4.25 ~ 4.29  算子在 MLU_OPS 下的 host、kernel 代码开发
+- 2022.4.24 算子在 MLU-OPS 下的 GTest 代码开发
+- 2022.4.25 ~ 4.29  算子在 MLU-OPS 下的 host、kernel 代码开发
 - 2022.5.5 算子在黄区下的 Generator 开发
 - 2022.5.10 ~ 5.18 大规模测试
 - 2022.5.23 提交交 MR + 代码 review
@@ -344,8 +344,8 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 - 5.30 ~ 6.1 算子需求分析和方案设计
 - 6.2 算子方案评审
-- 6.6 算子在 MLU_OPS 下的 GTest 开发
-- 6.7 ~ 6.10 算子在 MLU_OPS 下的 host、kernel 代码开发
+- 6.6 算子在 MLU-OPS 下的 GTest 开发
+- 6.7 ~ 6.10 算子在 MLU-OPS 下的 host、kernel 代码开发
 - 6.11 算子在黄区下的 Generator开发
 - 6.13 ~ 5.16 大规模测试
 - 6.17 提交交 MR + 代码 review

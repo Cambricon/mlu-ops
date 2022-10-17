@@ -110,13 +110,13 @@ example:
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../MLU-OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
 
 例如：本算子属于纯 IO 类算子，验收标准为 diff3=0。
 
 #### 1.5.2 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../MLU-OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 2 算子接口设计
 
