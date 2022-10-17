@@ -67,8 +67,8 @@ MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开
 
 ## 新算子开发流程
 
-详情可以参考文档 [BANGC-OPS 算子开发流程.md](docs/bangc-docs/BANGC-OPS算子开发流程.md)、
-[BANGPy-OPS 算子开发流程.md](docs/bangpy-docs/BANGPy-OPS算子开发流程.md) 以及 docs 目录下的其它补充说明，
+详情可以参考文档 [BANGC-OPS 算子开发流程.md](docs/bangc-docs/BANGC-OPS-Operator-Development-Process.md)、
+[BANGPy-OPS 算子开发流程.md](docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md) 以及 docs 目录下的其它补充说明，
 同时也需要参考 C 接口说明文档[README.md](bangc-ops/README.md) 和 Python 接口说明文档[README.md](bangpy-ops/README.md)。
 
 ## 获取开发手册

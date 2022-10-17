@@ -254,7 +254,7 @@ box_out, var_out = exe.run(fluid.default_main_program(),
 
   该算子属于算术类算子
   
-  按照[精度验收标准](../../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+  按照[精度验收标准](../../MLU_OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
   
   第一个输出output：
   

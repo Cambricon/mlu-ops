@@ -245,7 +245,7 @@ tensor([[[0, 0, 0],
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../MLU_OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
 - 算子精度验收标准：diff1、diff2；
 - 算子精度阈值描述：diff1 = 0 && diff2 = 0；
 
