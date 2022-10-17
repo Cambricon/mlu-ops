@@ -254,7 +254,7 @@ box_out, var_out = exe.run(fluid.default_main_program(),
 
   该算子属于算术类算子
   
-  按照[精度验收标准](../../MLU_OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
+  按照[精度验收标准](../../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
   
   第一个输出output：
   
@@ -269,7 +269,7 @@ box_out, var_out = exe.run(fluid.default_main_program(),
 
 #### 1.5.2 性能验收标准 
 
-- 见 [MLU_OPS 性能验收标准](../../MLU_OPS性能验收标准.md)。
+- 见 [MLU-OPS 性能验收标准](../../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 Paddle cuda性能测试： 在`Tesla V100-SXM2-16GB`平台上测试`Paddle`框架的`prior_box`算子性能； 算子输入输出规模分别为:
 
