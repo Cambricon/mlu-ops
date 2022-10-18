@@ -88,13 +88,14 @@ tensor([[[[[[[[-26, -22],
 
 ### 1.3 算子输入输出参数要求
 
-| 参数       | 语义                | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制       |
-| ---------- | ------------------- | ----------------- | ----------- | -------- | -------------- |
-| buffer_in0 | 参与计算的张量0     | 输入              | half, float | ARRAY    | 八维           |
-| buffer_in1 | 参与计算的张量1     | 输入              | half, float | ARRAY    | 八维           |
-| shape      | 张量的维度          | 输入              | int         | ARRAY    | 一维，八个元素 |
-| dim        | cross计算所在的维度 | 输入              | int         | /        | 无             |
-| buffer_out | 计算的结果          | 输出              | half, float | ARRAY    | 八维           |
+| 参数              | 语义                     | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制       |
+| ----------------- | ------------------------ | ----------------- | ----------- | -------- | -------------- |
+| buffer_in0        | 参与计算的张量0          | 输入              | half, float | ARRAY    | 八维           |
+| buffer_in1        | 参与计算的张量1          | 输入              | half, float | ARRAY    | 八维           |
+| shape             | 张量的维度               | 输入              | int         | ARRAY    | 一维，八个元素 |
+| shape[0]~shape[7] | 张量的维度各维的具体数值 | 输入              | int         | /        | 无             |
+| dim               | cross计算所在的维度      | 输入              | int         | /        | 无             |
+| buffer_out        | 计算的结果               | 输出              | half, float | ARRAY    | 八维           |
 
 ### 1.4 算子限制
 
@@ -144,7 +145,11 @@ MluOpCross(inputs=[
                 buffer_in0,
                 buffer_in1,
                 shape,
-                self.dim
+    			shape[0],
+    			shape[1],
+    			…
+    			shape[7],	//由于BANGPy2编程框架和数据结构的原因，shape[0]~shape[7]必须作为输入给出
+                dim
             ],   
             outputs=[buffer_out],)
 ```
@@ -164,7 +169,7 @@ MluOpCross(inputs=[
 
 step <= data_each_buffer时，将buffer reshape成(group*3, step)，计算每组task要处理的group数group_each_task，然后将流水线buffer取[0:data_calculated_each_time]，data_calculated_each_time = data_each_buffer // step x step，也就是step最大的倍数，多余部分舍弃，流水线buffer[0:data_calculated_each_time] reshape 成(data_calculated_each_time/step, step)，然后流水线就可以按step为倍数进行strided copy。(注：data_calculated_each_time在实际代码中由于shape检查的原因已经直接替换成表达式了。）
 
-step > data_each_buffer时，一次流水处理不了一整个step，只能每次尽可能地将buffer填满做计算，后续的处理和同步在BANGPy2的框架下实现非常困难，所以这种情况暂时不支持。
+step > data_each_buffer时，将step分多次做计算，每次计算data_each_buffer的量，与上面的情况相统一就是每次处理的数据切片大小为[step_each_time:step_io_each_time]，其中step_io_each_time除最后一次循环外均是data_each_buffer，而step_each_time是max(data_each_buffer//step, 1)，括号内前者就是小于等于的情况，做了这个处理以后情况就和小于等于相统一。最后一次循环会浪费一些流水线空间，但是相比每次拷满导致要进行复杂的标量计算来求memcpy的不规则的start和stop的位置，这样做不但代码更简洁，能和上面统一，而且最终效率也几乎相同。
 
 在nram大小为512KB的情况下，留出30KB，流水线buffer最大可以取27392B（计算详见3.5），也就是float16容纳13696个数（data_each_buffer=13696)，float32容纳6848个数，而且这只是对shape = (group, 3, step)中step的限制，group的大小不受算子功能限制。nram大小为768KB则流水线buffer最大取41984byte，可以容纳20992个float16或10496个float32。
 
@@ -196,15 +201,14 @@ for i in(0,dim):
 	group = group * shape(i)
 
 for i in(dim, 8):
-	dim = dim * shape(i)
-	
-if (step > data_each_buffer):
-	exit
+	dim = dim * shape(i)	
 
-if (step <= data_each_buffer):
-
+step_loop_time = (step + data_each_buffer - 1) // data_each_buffer	//step<data_each_buffer时等于1
+step_each_time = max(data_each_buffer//step,1)
+for i in (step_loop_time):
 	//计算流水线每次可以处理的step数
-	step_each_time = data_each_buffer//step
+	step_start = step_loop * data_each_buffer
+	step_io_each_time = min(data_each_buffer,step)
 	
 	//计算每组task要处理的group数量
 	group_each_task = group // task_num
@@ -228,11 +232,12 @@ if (step <= data_each_buffer):
 		data_calculated_each_time_last = ((stop - start - (loop_num-1)*3*step_each_time)//3) * step
 		if ((stop - start - (loop_num-1)*3*step_each_time)%3 != 0):
 			data_calculated_each_time_last=data_calculated_each_time_last+step
+			step_io_each_time = step - step_start
 	
 	进入流水:
-	load: 以step为单位进行strided copy (GDRAM→NRAM)
+	load: 以切片[step_each_time:step_io_each_time]为单位进行strided copy (GDRAM→NRAM)
 	compute: axb=c
-	store: 以step为单位进行strided copy (NRAM→GDRAM)
+	store: 以切片[step_each_time:step_io_each_time]为单位进行strided copy (NRAM→GDRAM)
 	
 ```
 
@@ -249,6 +254,8 @@ if (step <= data_each_buffer):
 数据拆分：
 
 流水中设置9个buffer，分别代表axb=c中a,b,c的三维，接下来的阐述就可以以其中一组流水线buffer为视角。
+
+step也进行了数据拆分，如果step过大则会以data_each_buffer为单位进行拆分
 
 根据流水线buffer的大小计算能处理的step的最大组数step_each_time，然后放弃多余的部分将buffer reshape成(group*3,step)，每次流水按step_each_time进行strided copy。
 
@@ -294,6 +301,8 @@ data_each_buffer：流水线中每个buffer的大小
 last_loop：是否因为数据量按data_each_buffer为倍数处理会有余数而需要特殊处理最后一轮循环（等于1需要）
 
 step_each_time：根据流水线buffer的大小计算能处理的step的最大组数
+
+step_io_each_time：根据step和data_each_buffer的大小关系，计算一组数据的最大数据量
 
 data_calculated_each_time：每轮流水在a,b,c向量其中一个维度（总共六个）上的操作的数据量（在实际代码中由于shape检查的原因，已经直接替换成表达式）
 
@@ -351,11 +360,9 @@ stop：当前task中buffer索引允许的最大值，作为界标，防止该tas
 
 ### 4.2 已经过优化的规模说明
 
-| 提交日期   | 修复规模                            | 修复问题            |
-| ---------- | ----------------------------------- | ------------------- |
-| 2022.05.01 | ((2, 1024, 4, 4, 3, 2, 3, 1024), 4) | 性能提升            |
-| 2022.09.21 | 将算子更新到BANGPy2                 | 算子代码改为BANGPy2 |
-|            |                                     |                     |
+| 提交日期 | 修复规模 | 修复问题 |
+| -------- | -------- | -------- |
+|          |          |          |
 
 ## 5 方案实施
 
