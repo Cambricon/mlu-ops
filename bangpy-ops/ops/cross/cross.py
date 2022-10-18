@@ -24,6 +24,7 @@ import bangpy
 from bangpy.common.dtypes import DType
 from bangpy.script import tcp, build_module, ty
 
+# pylint:skip-file
 DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu220-m2", "mlu270", "mlu290", "mlu370-s4"]
 KERNEL_NAME = "cross"
@@ -126,6 +127,8 @@ class Cross(object):
 
                 for i in range(mydim, maxdim):
                     step = step * shape[i]
+                if step < 0:
+                    step = step
                 # step=4x5=20, if current element's index is 'i',
                 # then next element is in 'i+step'
 
@@ -152,353 +155,555 @@ class Cross(object):
                 data_each_buffer = single_buffer_size // self.dtype_size
                 last_loop = 0
 
-                # ATTENTION: step must <= data_each_buffer to run this operator now;
+                step_loop_num = 1
                 step_each_time = data_each_buffer // step
-                # every time data_each_buffer//step steps can be computed.
+                if data_each_buffer < step:
+                    step_loop_num = (step + data_each_buffer - 1) // data_each_buffer
+                    step_each_time = 1
+                # every time data_each_buffer//step steps can be computed;
+                # if step is larger than data_each_buffer, step can also be divided,
+                # and after buffer is reshaped, use slice in both dimensions
+                # to deal with the large step in loop.
 
                 # split and compute
-                buffer_in0 = buffer_in0.reshape(
+                buffer_in0 = buffer_in0.flatten()[
+                    : dim0
+                    * dim1
+                    * dim2
+                    * dim3
+                    * dim4
+                    * dim5
+                    * dim6
+                    * dim7
+                    / step
+                    * step
+                ].reshape(
                     (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
                 )
-                buffer_in1 = buffer_in1.reshape(
+                buffer_in1 = buffer_in1.flatten()[
+                    : dim0
+                    * dim1
+                    * dim2
+                    * dim3
+                    * dim4
+                    * dim5
+                    * dim6
+                    * dim7
+                    / step
+                    * step
+                ].reshape(
                     (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
                 )
-                buffer_out = buffer_out.reshape(
+                buffer_out = buffer_out.flatten()[
+                    : dim0
+                    * dim1
+                    * dim2
+                    * dim3
+                    * dim4
+                    * dim5
+                    * dim6
+                    * dim7
+                    / step
+                    * step
+                ].reshape(
                     (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
                 )
 
-                # compute every task's group number,
-                # remainder distributed from task_id=0
-                # e.g. group=7, task=3, then group_each_task[3] is (3,2,2)
-                group_each_task = group // task_num
-                rest = group % task_num
-                start = 0
-                stop = 0
-                if task_id < rest:
-                    group_each_task = group_each_task + 1
-                    start = group_each_task * task_id * 3
-                    # stop: the max value which the index of buffer can reach in current task
-                    # index can not in next task's compute range
-                    # in other words, stop is next task's start
-                    stop = group_each_task * (task_id + 1) * 3
-                else:
-                    # start.assign(((group_each_task+1)*task_id-(task_id-rest))*3),simplify
-                    start = 3 * (group_each_task * task_id + rest)
-                    stop = 3 * (group_each_task * (task_id + 1) + rest)
+                for step_loop in range(step_loop_num):
+                    step_start = step_loop * data_each_buffer
+                    step_io_each_time = data_each_buffer
+                    if step_loop == (step_loop_num - 1):
+                        step_io_each_time = step - step_start
+                    # if step is too large, it will be divided
 
-                stop = stop - 2
+                    # compute every task's group number,
+                    # remainder distributed from task_id=0
+                    # e.g. group=7, task=3, then group_each_task[3] is (3,2,2)
+                    group_each_task = group // task_num
+                    rest = group % task_num
 
-                # if there exists remainder (can't be exactly divided),
-                # that means an extra compute time is needed;
-                # in this case we need 'stop' computed before
-                loop_num = group_each_task // step_each_time
-                if group_each_task % step_each_time != 0:
-                    loop_num = loop_num + 1
-                    last_loop = 1
-                    # means there exists remainder
+                    start = 0
+                    stop = 0
+                    if task_id < rest:
+                        group_each_task = group_each_task + 1
+                        start = group_each_task * task_id * 3
+                        # stop: the max value which the index of buffer can reach in current task
+                        # index can not in next task's compute range
+                        # in other words, stop is next task's start
+                        stop = group_each_task * (task_id + 1) * 3
+                    else:
+                        # start.assign(((group_each_task+1)*task_id-(task_id-rest))*3),simplify
+                        start = 3 * (group_each_task * task_id + rest)
+                        stop = 3 * (group_each_task * (task_id + 1) + rest)
 
-                for i in range(loop_num, pipeline=True):
-                    buffer_a0 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_a1 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_a2 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_b0 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_b1 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_b2 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_c0 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_c1 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_c2 = tcp.alloc_buffer(
-                        [data_each_buffer], dtype=self.dtype, scope="nram"
-                    )
-                    # (a0,a1,a2)x(b0,b1,b2)=(c0,c1,c2)
-                    with tcp.block("data_copy"):
-                        if i == loop_num - 1 and last_loop == 1:
-                            # to calculate remainder
-                            tcp.memcpy(
-                                buffer_a0[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                    # (stop-start+step-1)//step,
-                                    # that's shape[0] of slice(start:stop:step)
-                                ),
-                                buffer_in0[(start + i * 3 * step_each_time) : stop : 3],
-                            )
+                    stop = stop - 2
 
-                            tcp.memcpy(
-                                buffer_a1[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                                buffer_in0[
-                                    (start + i * 3 * step_each_time) + 1 : stop + 1 : 3
-                                ],
-                            )
+                    # if there exists remainder (can't be exactly divided),
+                    # that means an extra compute time is needed;
+                    # in this case we need 'stop' computed before
+                    loop_num = group_each_task // step_each_time
+                    if group_each_task % step_each_time != 0:
+                        loop_num = loop_num + 1
+                        last_loop = 1
+                        # means there exists remainder
 
-                            tcp.memcpy(
-                                buffer_a2[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                                buffer_in0[
-                                    (start + i * 3 * step_each_time) + 2 : stop + 2 : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_b0[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                                buffer_in1[(start + i * 3 * step_each_time) : stop : 3],
-                            )
-
-                            tcp.memcpy(
-                                buffer_b1[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                                buffer_in1[
-                                    (start + i * 3 * step_each_time) + 1 : stop + 1 : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_b2[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                                buffer_in1[
-                                    (start + i * 3 * step_each_time) + 2 : stop + 2 : 3
-                                ],
-                            )
-
-                        else:
-                            # every time data_each_buffer//step steps are computed.
-                            tcp.memcpy(
-                                buffer_a0[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                                buffer_in0[
-                                    (start + i * 3 * step_each_time) : (
-                                        start + (i + 1) * 3 * step_each_time
-                                    ) : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_a1[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                                buffer_in0[
-                                    (start + i * 3 * step_each_time)
-                                    + 1 : (start + (i + 1) * 3 * step_each_time)
-                                    + 1 : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_a2[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                                buffer_in0[
-                                    (start + i * 3 * step_each_time)
-                                    + 2 : (start + (i + 1) * 3 * step_each_time)
-                                    + 2 : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_b0[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                                buffer_in1[
-                                    (start + i * 3 * step_each_time) : (
-                                        start + (i + 1) * 3 * step_each_time
-                                    ) : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_b1[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                                buffer_in1[
-                                    (start + i * 3 * step_each_time)
-                                    + 1 : (start + (i + 1) * 3 * step_each_time)
-                                    + 1 : 3
-                                ],
-                            )
-
-                            tcp.memcpy(
-                                buffer_b2[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                                buffer_in1[
-                                    (start + i * 3 * step_each_time)
-                                    + 2 : (start + (i + 1) * 3 * step_each_time)
-                                    + 2 : 3
-                                ],
-                            )
-
-                    with tcp.block("compute"):
-                        self.cross_body(
-                            buffer_a0,
-                            buffer_a1,
-                            buffer_a2,
-                            buffer_b0,
-                            buffer_b1,
-                            buffer_b2,
-                            buffer_c0,
-                            buffer_c1,
-                            buffer_c2,
+                    for i in range(loop_num, pipeline=True):
+                        buffer_a0 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
                         )
+                        buffer_a1 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_a2 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_b0 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_b1 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_b2 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_c0 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_c1 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        buffer_c2 = tcp.alloc_buffer(
+                            [data_each_buffer], dtype=self.dtype, scope="nram"
+                        )
+                        # (a0,a1,a2)x(b0,b1,b2)=(c0,c1,c2)
+                        with tcp.block("data_copy"):
+                            if i == loop_num - 1 and last_loop == 1:
+                                # to calculate remainder
+                                tcp.memcpy(
+                                    buffer_a0[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                        # (stop-start+step-1)//step,
+                                        # that's shape[0] of slice(start:stop:step)
+                                    ),
+                                    buffer_in0[
+                                        (start + i * 3 * step_each_time) : stop : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    # slice happens in both dimensions
+                                )
 
-                    with tcp.block("data_copy"):
-                        # store is the reverse of load
-                        if i == loop_num - 1 and last_loop == 1:
+                                tcp.memcpy(
+                                    buffer_a1[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in0[
+                                        (start + i * 3 * step_each_time)
+                                        + 1 : stop
+                                        + 1 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
 
-                            tcp.memcpy(
-                                buffer_out[(start + i * 3 * step_each_time) : stop : 3],
-                                buffer_c0[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
+                                tcp.memcpy(
+                                    buffer_a2[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in0[
+                                        (start + i * 3 * step_each_time)
+                                        + 2 : stop
+                                        + 2 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_b0[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in1[
+                                        (start + i * 3 * step_each_time) : stop : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_b1[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in1[
+                                        (start + i * 3 * step_each_time)
+                                        + 1 : stop
+                                        + 1 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_b2[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in1[
+                                        (start + i * 3 * step_each_time)
+                                        + 2 : stop
+                                        + 2 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                            else:
+                                # every time max(data_each_buffer//step,1) step(s) are computed.
+                                tcp.memcpy(
+                                    buffer_a0[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in0[
+                                        (start + i * 3 * step_each_time) : (
+                                            start + (i + 1) * 3 * step_each_time
+                                        ) : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_a1[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in0[
+                                        (start + i * 3 * step_each_time)
+                                        + 1 : (start + (i + 1) * 3 * step_each_time)
+                                        + 1 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_a2[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in0[
+                                        (start + i * 3 * step_each_time)
+                                        + 2 : (start + (i + 1) * 3 * step_each_time)
+                                        + 2 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_b0[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in1[
+                                        (start + i * 3 * step_each_time) : (
+                                            start + (i + 1) * 3 * step_each_time
+                                        ) : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_b1[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in1[
+                                        (start + i * 3 * step_each_time)
+                                        + 1 : (start + (i + 1) * 3 * step_each_time)
+                                        + 1 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                                tcp.memcpy(
+                                    buffer_b2[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                    buffer_in1[
+                                        (start + i * 3 * step_each_time)
+                                        + 2 : (start + (i + 1) * 3 * step_each_time)
+                                        + 2 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                )
+
+                        with tcp.block("compute"):
+                            self.cross_body(
+                                buffer_a0,
+                                buffer_a1,
+                                buffer_a2,
+                                buffer_b0,
+                                buffer_b1,
+                                buffer_b2,
+                                buffer_c0,
+                                buffer_c1,
+                                buffer_c2,
                             )
 
-                            tcp.memcpy(
-                                buffer_out[
-                                    (start + i * 3 * step_each_time) + 1 : stop + 1 : 3
-                                ],
-                                buffer_c1[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                            )
+                        with tcp.block("data_copy"):
+                            # store is the reverse of load
+                            if i == loop_num - 1 and last_loop == 1:
 
-                            tcp.memcpy(
-                                buffer_out[
-                                    (start + i * 3 * step_each_time) + 2 : stop + 2 : 3
-                                ],
-                                buffer_c2[
-                                    0 : (stop - (start + i * 3 * step_each_time) + 2)
-                                    // 3
-                                    * step
-                                ].reshape(
-                                    (
-                                        (stop - (start + i * 3 * step_each_time) + 2)
-                                        // 3,
-                                        step,
-                                    )
-                                ),
-                            )
+                                tcp.memcpy(
+                                    buffer_out[
+                                        (start + i * 3 * step_each_time) : stop : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    buffer_c0[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                )
 
-                        else:
+                                tcp.memcpy(
+                                    buffer_out[
+                                        (start + i * 3 * step_each_time)
+                                        + 1 : stop
+                                        + 1 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    buffer_c1[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                )
 
-                            tcp.memcpy(
-                                buffer_out[
-                                    (start + i * 3 * step_each_time) : (
-                                        start + (i + 1) * 3 * step_each_time
-                                    ) : 3
-                                ],
-                                buffer_c0[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                            )
+                                tcp.memcpy(
+                                    buffer_out[
+                                        (start + i * 3 * step_each_time)
+                                        + 2 : stop
+                                        + 2 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    buffer_c2[
+                                        0 : (
+                                            stop - (start + i * 3 * step_each_time) + 2
+                                        )
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (
+                                                stop
+                                                - (start + i * 3 * step_each_time)
+                                                + 2
+                                            )
+                                            // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                )
 
-                            tcp.memcpy(
-                                buffer_out[
-                                    (start + i * 3 * step_each_time)
-                                    + 1 : (start + (i + 1) * 3 * step_each_time)
-                                    + 1 : 3
-                                ],
-                                buffer_c1[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                            )
+                            else:
 
-                            tcp.memcpy(
-                                buffer_out[
-                                    (start + i * 3 * step_each_time)
-                                    + 2 : (start + (i + 1) * 3 * step_each_time)
-                                    + 2 : 3
-                                ],
-                                buffer_c2[
-                                    0 : (3 * step_each_time + 2) // 3 * step
-                                ].reshape(((3 * step_each_time + 2) // 3, step)),
-                            )
+                                tcp.memcpy(
+                                    buffer_out[
+                                        (start + i * 3 * step_each_time) : (
+                                            start + (i + 1) * 3 * step_each_time
+                                        ) : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    buffer_c0[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                )
+
+                                tcp.memcpy(
+                                    buffer_out[
+                                        (start + i * 3 * step_each_time)
+                                        + 1 : (start + (i + 1) * 3 * step_each_time)
+                                        + 1 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    buffer_c1[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                )
+
+                                tcp.memcpy(
+                                    buffer_out[
+                                        (start + i * 3 * step_each_time)
+                                        + 2 : (start + (i + 1) * 3 * step_each_time)
+                                        + 2 : 3,
+                                        step_start : step_start + step_io_each_time,
+                                    ],
+                                    buffer_c2[
+                                        0 : (3 * step_each_time + 2)
+                                        // 3
+                                        * step_io_each_time
+                                    ].reshape(
+                                        (
+                                            (3 * step_each_time) // 3,
+                                            step_io_each_time,
+                                        )
+                                    ),
+                                )
 
         buffer_out.reshape((dim0, dim1, dim2, dim3, dim4, dim5, dim6, dim7))
+
 
 @bangpy.tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_cross(dtype=None, target=None):

@@ -33,6 +33,7 @@ from cross import DTYPES, KERNEL_NAME, TARGET_LIST
     [
         # It's not suggested to test all cases in one time
         # you may consider to divide them into two groups
+        # step <= pipeline buffer
         ((1, 1, 1, 1, 2, 3, 4, 5), 5),
         ((2, 1, 2, 1, 2, 2, 2, 3), 7),
         ((2, 1, 2, 1, 2, 2, 3, 3), 6),
@@ -45,10 +46,12 @@ from cross import DTYPES, KERNEL_NAME, TARGET_LIST
         ((1, 1024, 2, 4, 3, 2, 3, 1024), 4),
         ((2, 1024, 4, 4, 3, 2, 3, 1024), 4),
         ((1, 1024, 2, 4, 3, 2, 3, 1024), 6),
+        # step > pipeline buffer
+        ((1, 1, 1, 1, 2, 3, 4, 8192), 5),
+        ((2, 1024, 2, 4, 3, 2, 8192, 2), 4),
         # below are illegal input
         # ((1, 2, 2, 2, 3, 128, 1, 1), 1),  # shape[dim]!=3, should fail
         # ((1, 2, 2, 2, 3, 128, 1, 1), -9),  # dim not in [-8,7], should fail
-        # ((2,1024,2,4,3,2,8192,2),4),  # step > pipeline buffer, should fail
     ],
 )
 @pytest.mark.parametrize(
@@ -61,7 +64,7 @@ def test_cross(target, shape, dim, dtype):
 
     if target == "mlu370-s4":
         nram_size = 768 * 1024
-        IO_BANDWIDTH = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
+        IO_BANDWIDTH = 307.2 * 2**30  # MLU370-s4: 307.2GB/s
     else:
         nram_size = 512 * 1024
         IO_BANDWIDTH = 2**40  # MLU290: 1024GB/s
@@ -90,9 +93,6 @@ def test_cross(target, shape, dim, dtype):
         buffer_size = buffer_size / 4
     elif dtype == bangpy.float16:
         buffer_size = buffer_size / 2
-
-    if step > buffer_size:
-        raise KeyError("step is too large!")
 
     # computation below is functionally similar to torch.cross(data_in0,data_in1,dim),
     # except data type is numpy array instead of tensor.
