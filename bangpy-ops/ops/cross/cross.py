@@ -160,7 +160,7 @@ class Cross(object):
                 if data_each_buffer < step:
                     step_loop_num = (step + data_each_buffer - 1) // data_each_buffer
                     step_each_time = 1
-                # every time data_each_buffer//step steps can be computed;
+                # every time max(data_each_buffer//step, 1) steps can be computed;
                 # if step is larger than data_each_buffer, step can also be divided,
                 # and after buffer is reshaped, use slice in both dimensions
                 # to deal with the large step in loop.
