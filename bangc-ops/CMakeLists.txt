@@ -67,11 +67,13 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
 )
 
 file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.mlu" "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
+file(GLOB_RECURSE obj_files ${obj_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.o")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
 
 bang_add_library(mluops SHARED ${src_files})
 target_link_libraries(mluops cnrt cndrv)
+target_link_libraries(mluops ${obj_files})
 set_target_properties(mluops PROPERTIES 
   OUTPUT_NAME "mluops"
   PREFIX      "lib"

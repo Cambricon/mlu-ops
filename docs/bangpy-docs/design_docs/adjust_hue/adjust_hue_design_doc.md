@@ -77,13 +77,13 @@
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../../../MLU-OPS精度验收标准.md#精度验收标准)的要求明确本算子的精度标准。
+按照[精度验收标准](../../../MLU-OPS-Accuracy-Acceptance-Standard.md#精度验收标准)的要求明确本算子的精度标准。
 
 本算子属于复合类算子，验收标准为 diff1 <= 3e-3 && diff2 <= 3e-3 。
 
 #### 1.5.2 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../../../MLU-OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../../../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 2 算子接口设计
 

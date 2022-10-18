@@ -253,7 +253,7 @@ Tensor(shape=[2, 4], dtype=float32, place=Place(gpu:0), stop_gradient=True,
 ### 1.5 验收标准
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../../../MLU-OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../../../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
 `generate_proposals_v2` 是复合类算子。<br>
 `rpn_rois`参数精度设为 diff1 <= 3e-3 && diff2 <=3e-3。<br>
 `rpn_roi_probs`、`rpn_rois_num`、`rpn_rois_batch_size`的精度设置为 diff3=0。

@@ -139,3 +139,15 @@ yolo_box 负责从检测网络的 backbone 输出部分，计算真实检测框 
 mluOpThreeInterpolateForward
 -------------------
 three_interpolate_forward 对三个输入特征做加权线性插值获得目标特征。其中三个输入特征在 features tensor 中的下标由 indices tensor 决定，将选择出来的三个输入特征乘上对应的 weights tensor 中的权重，并将对应的乘法结果进行累加得到目标特征，对于每个 batch，在每个 channel 上重复上述过程 N 次就得到加权插值后的输出结果。该算子有三个输入 tensor，一个输出 tensor,输入 features 维度 [B, C, M]，输入 indices 维度 [B, N, 3]，输入 weights 维度 [B, N, 3]，输出 output 维度 [B, C, N]。
+
+mluOpBallQuery
+-------------------
+ballquery 负责返回球域内点的 indexes。该算子有五个输入和一个输出，其中输入有 new_xyz 和 xyz 两个 tensor 以及 min_radius、max_radius、nsample 三个标量，有 idx 一个输出 tensor。其以 new_xyz 中的点为球心，以 min_radius 和 max_radius 分别为内径和外径， 返回球域内前 nsample 个 xyz 点的index。其中，输入 new_xyz 维度 [B, M, 3]，输入 xyz 维度 [B, N, 3], 输入 min_radius、max_radius、nsample 为标量，输出 idx 维度 [B, M, nsample]。
+
+mluOpCopy
+-------------------
+该算子主要在语音网络中使用，对数据块进行 device 到 device 的拷贝。
+
+mluOpExpand
+-------------------
+该算子应用于各种需要广播的场景，实现张量的维度扩展。算子需要输出维度与输入维度符合广播扩展标准，根据输入输出的维度，将输入数据复制并扩展成输出维度。

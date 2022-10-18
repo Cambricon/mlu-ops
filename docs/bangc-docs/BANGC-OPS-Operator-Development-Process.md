@@ -1,14 +1,14 @@
 # BANGC-OPS 算子开发流程
 
-[概述](./BANGC-OPS算子开发流程.md#概述)
+[概述](./BANGC-OPS-Operator-Development-Process.md#概述)
 
-[需要添加的文件](./BANGC-OPS算子开发流程.md#需要添加的文件)
+[需要添加的文件](./BANGC-OPS-Operator-Development-Process.md#需要添加的文件)
 
-[算子设计文档](./BANGC-OPS算子开发流程.md#算子设计文档)
+[算子设计文档](./BANGC-OPS-Operator-Development-Process.md#算子设计文档)
 
-[算子测试报告](./BANGC-OPS算子开发流程.md#算子测试报告)
+[算子测试报告](./BANGC-OPS-Operator-Development-Process.md#算子测试报告)
 
-[代码提交流程](./BANGC-OPS算子开发流程.md#代码提交流程)
+[代码提交流程](./BANGC-OPS-Operator-Development-Process.md#代码提交流程)
 
 ## 概述
 
@@ -43,7 +43,7 @@ $ cd add
 $ vim add.md
 ```
 
-在 add 目录下添加的 add.md 文件，为算子的设计文档，设计文档模板可参考[BANGC-OPS 算子设计文档模板](./BANGC-OPS算子设计文档模板.md)。
+在 add 目录下添加的 add.md 文件，为算子的设计文档，设计文档模板可参考[BANGC-OPS 算子设计文档模板](./BANGC-OPS-Operator-Design-Doc-Template.md)。
 
 如果一个算子存在正向和反向，那么正反向算子当做两个不同的算子来处理。如卷积算子存在卷积前向与卷积反向，目录结构应为
 
@@ -121,22 +121,22 @@ GTest 测试例的添加原则为能够测试到该算子的各种应用场景�
 
 ## 算子测试报告
 
-详见：[MLU-OPS测试报告模板](../MLU-OPS测试报告模板.md)
+详见：[MLU-OPS测试报告模板](../MLU-OPS-Test-Report-Template.md)
 
 ### 1. 测试覆盖率
 
 MLU-OPS coverage test 是面向 bangc 语言的代码覆盖率测试工具。
-关于 MLU-OPS coverage test 的使用方法见[MLU-OPS 测试报告模板.md](../MLU-OPS测试报告模板.md)。
+关于 MLU-OPS coverage test 的使用方法见[MLU-OPS 测试报告模板.md](../MLU-OPS-Test-Report-Template.md)。
 
 ### 2. 算子验收标准
 
 #### 2.1 精度验收标准
 
-kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为 baseline 进行精度对比验证，具体精度标准见 [MLU-OPS 精度验收标准](../MLU-OPS精度验收标准.md)。
+kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为 baseline 进行精度对比验证，具体精度标准见 [MLU-OPS 精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)。
 
 #### 2.1 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../MLU-OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 代码提交流程
 

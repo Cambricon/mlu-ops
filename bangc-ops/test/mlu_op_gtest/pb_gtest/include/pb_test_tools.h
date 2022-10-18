@@ -52,10 +52,6 @@ namespace mluoptest {
                          void *data,
                          mluOpDataType_t dtype,
                          size_t count);
-  void generateRandomData(float *data,
-                          size_t count,
-                          const RandomData *random_data,
-                          DataType dtype);
 
   // include stride
   // if no stride this count == shape count
@@ -157,6 +153,136 @@ namespace mluoptest {
     }
   }
 
+  template <typename T>
+  void generateRandomData(T *data, size_t count, const RandomData *random_param,
+                          DataType dtype) {
+    // round to int
+    // if convert_dtype == true, round(float) to int,
+    // else don't round, int is qint
+    bool convert_dtype =
+        random_param->has_convert_dtype() ? random_param->convert_dtype() : false;
+    int seed = 23;
+    if (random_param->has_seed()) {
+      seed = random_param->seed();
+    }
+    // generate random data
+    std::default_random_engine re(seed);  // re for random engine
+    bool is_lower_equal_upper = false;
+
+    if (random_param->distribution() == mluoptest::UNIFORM) {
+      T lower = 1.;
+      T upper = -1.;
+      if (random_param->has_lower_bound_double()) {
+        lower = (T)random_param->lower_bound_double();
+        upper = (T)random_param->upper_bound_double();
+      } else {
+        lower = (T)random_param->lower_bound();
+        upper = (T)random_param->upper_bound();
+      }
+      if (lower == upper) {
+        is_lower_equal_upper = true;
+        for (int i = 0; i < count; ++i) {
+          data[i] = lower;
+        }
+      } else {
+        // uniform_real_distribution is [lower, upper)
+        std::uniform_real_distribution<T> dis(lower, upper);
+        for (int i = 0; i < count; ++i) {
+          data[i] = dis(re);
+        }
+      }
+    } else if (random_param->distribution() == mluoptest::GAUSSIAN) {
+      T mu = 0;
+      T sigma = 1;
+      if (random_param->has_mu_double()) {
+        mu = (T)random_param->mu_double();
+        sigma = (T)random_param->sigma_double();
+      } else {
+        mu = (T)random_param->mu();
+        sigma = (T)random_param->sigma();
+      }
+      // uniform_real_distribution is [lower, upper)
+      std::normal_distribution<T> dis(mu, sigma);
+      for (int i = 0; i < count; ++i) {
+        data[i] = dis(re);
+      }
+    }
+
+    // reset data by dtype
+    switch (dtype) {
+      case DTYPE_HALF:
+      case DTYPE_FLOAT:
+      case DTYPE_DOUBLE:
+      case DTYPE_COMPLEX_HALF:
+      case DTYPE_COMPLEX_FLOAT:
+        break;
+      case DTYPE_INT8:
+      case DTYPE_INT16: {
+        if (convert_dtype) {
+          // if convert_dtype == true, round(float) to int,
+          // else don't round, int is qint
+          for (int i = 0; i < count; ++i) {
+            int x = std::floor(data[i]);
+            data[i] = x;
+          }
+        }
+      }; break;
+      case DTYPE_UINT8:
+      case DTYPE_UINT16:
+      case DTYPE_UINT32: {
+        for (int i = 0; i < count; ++i) {
+          uint32_t x = std::floor(data[i]);
+          data[i] = x;
+        }
+      }; break;
+      case DTYPE_INT32: {
+        for (int i = 0; i < count; ++i) {
+          int x = std::floor(data[i]);
+          data[i] = x;
+        }
+      }; break;
+      case DTYPE_INT64: {
+        for (int i = 0; i < count; ++i) {
+          int64_t x = std::floor(data[i]);
+          data[i] = x;
+        }
+      }; break;
+      case DTYPE_UINT64: {
+        for (int i = 0; i < count; ++i) {
+          uint64_t x = std::floor(std::abs(data[i]));
+          data[i] = x;
+        }
+      }; break;
+      case DTYPE_BOOL: {
+        if (!random_param->has_lower_bound() ||
+            !random_param->has_upper_bound()) {
+          LOG(ERROR) << "Generate bool data should use uniform distribution.";
+        }
+        if (is_lower_equal_upper) {
+          for (int i = 0; i < count; ++i) {
+            data[i] = (data[i] > 0) ? 1.0f : 0.0f;
+          }
+          break;
+        }
+        T mid = 0;
+        if (random_param->has_upper_bound_double()) {
+          mid = (T)(random_param->upper_bound_double() +
+                    random_param->lower_bound_double()) /
+                2;
+        } else {
+          mid =
+              (T)(random_param->upper_bound() + random_param->lower_bound()) / 2;
+        }
+        for (int i = 0; i < count; ++i) {
+          data[i] = (data[i] < mid) ? 0.0f : 1.0f;
+        }
+      }; break;
+      default:
+        LOG(ERROR) << "Generate random data failed. ";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
+    }
+  }
 } // namespace mluoptest
 
 #endif // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_

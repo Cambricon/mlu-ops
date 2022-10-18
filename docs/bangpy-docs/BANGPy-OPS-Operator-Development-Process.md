@@ -1,14 +1,14 @@
 # BANGPy-OPS 算子开发流程
 
-[概述](./BANGPy-OPS算子开发流程.md#概述)
+[概述](./BANGPy-OPS-Operator-Development-Process.md#概述)
 
-[需要添加的文件](./BANGPy-OPS算子开发流程.md#需要添加的文件)
+[需要添加的文件](./BANGPy-OPS-Operator-Development-Process.md#需要添加的文件)
 
-[算子设计文档](./BANGPy-OPS算子开发流程.md#算子设计文档)
+[算子设计文档](./BANGPy-OPS-Operator-Development-Process.md#算子设计文档)
 
-[算子测试报告](./BANGPy-OPS算子开发流程.md#算子测试报告)
+[算子测试报告](./BANGPy-OPS-Operator-Development-Process.md#算子测试报告)
 
-[代码提交流程](./BANGPy-OPS算子开发流程.md#代码提交流程)
+[代码提交流程](./BANGPy-OPS-Operator-Development-Process.md#代码提交流程)
 
 ## 概述
 
@@ -43,7 +43,7 @@ $ cd add
 $ vim add.md
 ```
 
-在 add 目录下添加的 add.md 文件，为算子的设计文档，设计文档模板可参考[BANGPy-OPS 算子设计文档模板](./BANGPy-OPS算子设计文档模板.md)。
+在 add 目录下添加的 add.md 文件，为算子的设计文档，设计文档模板可参考[BANGPy-OPS 算子设计文档模板](./BANGPy-OPS-Operator-Design-Doc-Template.md)。
 
 如果一个算子存在正向和反向，那么正反向算子当做两个不同的算子来处理。如卷积算子存在卷积前向与卷积反向，目录结构应为
 
@@ -119,19 +119,19 @@ def test_add(target, shape, dtype):
 ##### 1. 精度验收标准
 
 ops 下的 BANGPy 算子实现需要自己使用numpy接口来实现CPU baseline 进行精度对比验证，具体精度标准建
-[MLU-OPS 精度验收标准](../MLU-OPS精度验收标准.md)。
+[MLU-OPS 精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)。
 
 
 ##### 2. 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../MLU-OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 
 ## 算子设计文档
 
 算子负责人接到算子开发任务后，必须先进行算子的需求分析，完成算子设计文档。
 
-算子设计文档模板链接：[BANGPy-OPS 算子设计文档模板](./BANGPy-OPS算子设计文档模板.md)
+算子设计文档模板链接：[BANGPy-OPS 算子设计文档模板](./BANGPy-OPS-Operator-Design-Doc-Template.md)
 
 算子设计文档需包含以下 5 个部分：
 
@@ -185,7 +185,7 @@ ops 下的 BANGPy 算子实现需要自己使用numpy接口来实现CPU baseline
 - 性能测试
 - 稳定性测试
 
-具体见：[MLU-OPS 测试报告模板](../MLU-OPS测试报告模板.md)。
+具体见：[MLU-OPS 测试报告模板](../MLU-OPS-Test-Report-Template.md)。
 
 ## 代码提交流程
 
