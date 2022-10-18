@@ -195,8 +195,9 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
                         output_desc->dtype == MLUOP_DTYPE_FLOAT));
   // check shape
   if (features_desc->dims[0] != indices_desc->dims[0]) {
-    LOG(ERROR) << op_name << " Check failed: features_desc->dims[0] should be "
-                             "equal to indices_desc->dims[0].";
+    LOG(ERROR) << op_name
+               << "Check failed: features_desc->dims[0] should be "
+                  "equal to indices_desc->dims[0].";
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int i = 0; i < indices_desc->dim; ++i) {
@@ -219,8 +220,9 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
     }
   }
   if (output_desc->dims[2] != indices_desc->dims[1]) {
-    LOG(ERROR) << op_name << " Check failed: output_desc->dims[2] should be "
-                             "equal to indices_desc->dims[1].";
+    LOG(ERROR) << op_name
+               << " Check failed: output_desc->dims[2] should be "
+                  "equal to indices_desc->dims[1].";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check large tensor

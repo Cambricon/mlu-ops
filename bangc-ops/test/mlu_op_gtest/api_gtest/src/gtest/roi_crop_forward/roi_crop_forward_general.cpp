@@ -89,7 +89,7 @@ class roi_crop_forward_general
     uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
     if (o_bytes > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
-    }    
+    }
   }
 
   bool compute() {
@@ -230,4 +230,4 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({2, 3, 3, 7}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
-}  // mluopapitest
+}  // namespace mluopapitest

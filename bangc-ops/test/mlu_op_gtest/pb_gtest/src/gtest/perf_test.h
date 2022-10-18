@@ -30,12 +30,11 @@ xmlXPathObjectPtr getNodeSet(xmlDocPtr doc, const xmlChar *xpath);
 
 std::string getTestCaseName(std::string str);
 
-bool getXmlData(std::string case_name, double *xml_time, double *workspace_size);
+bool getXmlData(std::string case_name, double *xml_time,
+                double *workspace_size);
 
-bool updateBaselineStrategy(double hw_time_mean,
-                            double scale_bound,
+bool updateBaselineStrategy(double hw_time_mean, double scale_bound,
                             double threshold_absolute,
-                            double threshold_relative,
-                            double *hw_time_base);
+                            double threshold_relative, double *hw_time_base);
 
 #endif  // TEST_MLU_OP_GTEST_SRC_GTEST_PERF_TEST_H_

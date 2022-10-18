@@ -26,9 +26,10 @@
 #include <math.h>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
-using namespace std;
+using namespace std;  //NOLINT
 
 namespace PNMS {
 
