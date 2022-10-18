@@ -145,10 +145,10 @@ MluOpCross(inputs=[
                 buffer_in0,
                 buffer_in1,
                 shape,
-    			shape[0],
-    			shape[1],
-    			…
-    			shape[7],	//由于BANGPy2编程框架和数据结构的原因，shape[0]~shape[7]必须作为输入给出
+    		shape[0],
+    		shape[1],
+    		…
+    		shape[7],	//由于BANGPy2编程框架和数据结构的原因，shape[0]~shape[7]必须作为输入给出
                 dim
             ],   
             outputs=[buffer_out],)
