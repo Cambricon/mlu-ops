@@ -79,11 +79,11 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
   /*
    * NRAM partition
    *  |-----------------------------------------------------------------------------------|
-   *  |           nram_features                  | nram_features_transpose |
+   *  |           nram_features                  |        nram_features_transpose         |
    *  |-----------------------------------------------------------------------------------|
-   *  |           nram_features_selected         | nram_output         |
+   *  |           nram_features_selected         |              nram_output               |
    *  |-----------------------------------------------------------------------------------|
-   *  |      nram_weights         |   nram_weights_transpose  | nram_indices |
+   *  |      nram_weights         |   nram_weights_transpose  |     nram_indices          |
    *  |-----------------------------------------------------------------------------------|
    *  | nram_indices_transpose(addition/float/float_addition) |
    *  |-----------------------------------------------------------------------------------|
