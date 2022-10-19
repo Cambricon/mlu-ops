@@ -125,6 +125,11 @@ else
   echo "-- [pre-commit] check printf PASSED."
 fi
 
+echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
+for i in $filenames; do
+  tools/check_log_error.py $i
+done
+
 if [[ "$(which pylint)" == "" ]]; then
   echo "Please pip install pylint!(pylint==2.9)"
   exit -1
