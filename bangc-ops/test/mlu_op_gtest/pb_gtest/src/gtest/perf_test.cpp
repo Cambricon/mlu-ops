@@ -54,7 +54,8 @@ xmlXPathObjectPtr getNodeSet(xmlDocPtr doc, const xmlChar *xpath) {
 }
 
 // get hardware_time_base in xml file
-bool getXmlData(std::string case_name, double *xml_time, double *workspace_size) {
+bool getXmlData(std::string case_name, double *xml_time,
+                double *workspace_size) {
   std::string xml_file;
   if (getenv("MLUOP_BASELINE_XML_FILE") != NULL) {
     xml_file = getenv("MLUOP_BASELINE_XML_FILE");
@@ -75,7 +76,8 @@ bool getXmlData(std::string case_name, double *xml_time, double *workspace_size)
   xmlChar *xpath = BAD_CAST(xpath_string.c_str());
   xmlXPathObjectPtr search_result = getNodeSet(doc, xpath);
   if (search_result == NULL) {
-    LOG(INFO) << "search " << case_name << " data in mlu_op_base_data.xml failed.";
+    LOG(INFO) << "search " << case_name
+              << " data in mlu_op_base_data.xml failed.";
     xmlFreeDoc(doc);
     return false;
   }
@@ -90,7 +92,8 @@ bool getXmlData(std::string case_name, double *xml_time, double *workspace_size)
     xmlNodePtr property_next = NULL;
     property_next = property->next;
     // get hw_time_base
-    if (xmlHasProp(property, BAD_CAST("name")) && xmlHasProp(property, BAD_CAST("value"))) {
+    if (xmlHasProp(property, BAD_CAST("name")) &&
+        xmlHasProp(property, BAD_CAST("value"))) {
       name = xmlGetProp(property, BAD_CAST "name");
       if (!xmlStrcmp(name, BAD_CAST(search_data.c_str()))) {
         xmlChar *value = xmlGetProp(property, BAD_CAST "value");
@@ -99,8 +102,8 @@ bool getXmlData(std::string case_name, double *xml_time, double *workspace_size)
       }
       xmlFree(name);
     } else {
-      LOG(ERROR)
-          << "getXmlData:search the name or value of property failed when getting hw_time_base.";
+      LOG(ERROR) << "getXmlData:search the name or value of property failed "
+                    "when getting hw_time_base.";
       xmlXPathFreeObject(search_result);
       xmlFreeDoc(doc);
       return false;
@@ -116,8 +119,8 @@ bool getXmlData(std::string case_name, double *xml_time, double *workspace_size)
       }
       xmlFree(name);
     } else {
-      LOG(ERROR)
-          << "getXmlData:search the name or value of property failed when getting workspace size.";
+      LOG(ERROR) << "getXmlData:search the name or value of property failed "
+                    "when getting workspace size.";
       xmlXPathFreeObject(search_result);
       xmlFreeDoc(doc);
       return false;
@@ -144,17 +147,17 @@ std::string getTestCaseName(std::string str) {
 }
 
 // update baseline hardware_time_base
-bool updateBaselineStrategy(double hw_time_mean,
-                            double scale_bound,
+bool updateBaselineStrategy(double hw_time_mean, double scale_bound,
                             double threshold_absolute,
-                            double threshold_relative,
-                            double *hw_time_base) {
+                            double threshold_relative, double *hw_time_base) {
   if (*hw_time_base <= 0) {
-    LOG(ERROR) << "updateBaselineStrategy:baseline time is error, it must be greater than zero";
+    LOG(ERROR) << "updateBaselineStrategy:baseline time is error, it must be "
+                  "greater than zero";
     return false;
   }
   if (scale_bound <= 0 || threshold_absolute <= 0 || threshold_relative <= 0) {
-    LOG(ERROR) << "updateBaselineStrategy:threshold is wrong, it must be greater than zero";
+    LOG(ERROR) << "updateBaselineStrategy:threshold is wrong, it must be "
+                  "greater than zero";
     return false;
   }
   double time_base = *hw_time_base;

@@ -645,16 +645,16 @@ __mlu_func__ void createAndRemoveBox(
     const T *variances_ptr, T *workspace, const T k_score, const int HWA,
     const int pre_nms_top_n, const T min_size, bool pixel_offset,
     bool need_collect, int *proposals_num) {
-// nram  n = max_seg_num, transpose: 200 32N, 300 4N
-// | scores | anchors | var | deltals | proposals | ge_mask | nram |
-// MLU300
-// |  N     |  4N     | 4N  |   4N    |   4N      |  N      | 9N   |
-// MLU200
-// |  N     |  4N     |  4N |  4N     |   trans_buffer  32N        |
+  // nram  n = max_seg_num, transpose: 200 32N, 300 4N
+  // | scores | anchors | var | deltals | proposals | ge_mask | nram |
+  // MLU300
+  // |  N     |  4N     | 4N  |   4N    |   4N      |  N      | 9N   |
+  // MLU200
+  // |  N     |  4N     |  4N |  4N     |   trans_buffer  32N        |
 
-// workspace
-// | output_scores | output_boxes | scores_tmp | boxes_tmp | collect_num |
-// |    HWA        |   4*HWA      |    HWA     |   4*HWA   | taskDim     |
+  // workspace
+  // | output_scores | output_boxes | scores_tmp | boxes_tmp | collect_num |
+  // |    HWA        |   4*HWA      |    HWA     |   4*HWA   | taskDim     |
 
 #if __BANG_ARCH__ >= 300
   const int memory_block = 27;

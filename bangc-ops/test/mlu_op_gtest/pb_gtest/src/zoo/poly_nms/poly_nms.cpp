@@ -22,9 +22,12 @@
  *************************************************************************/
 
 #include "poly_nms.h"
+
+#include <vector>
+
 #include "pnms_impl.h"
 
-using namespace PNMS;
+using namespace PNMS;  // NOLINT
 
 namespace mluoptest {
 void PolyNmsExecutor::paramCheck() {

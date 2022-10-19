@@ -1,8 +1,31 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
 #include <mlu_op.h>
 #include <string.h>
 
 #include <iostream>
-using namespace std;
+using namespace std;  //NOLINT
 
 /*
 Add version check by mluOpGetLibVersion.
@@ -16,7 +39,7 @@ int main(int argc, char *argv[]) {
     int version_in_str_size = strlen(argv[1]);
     if (version_in_str_size < 3) {
       char err_info[100];
-      sprintf(err_info, "Expect version string length >= 3, but now is: %d",
+      sprintf(err_info, "Expect version string length >= 3, but now is: %d",  // NOLINT
               version_in_str_size);
       cerr << err_info << endl;
       return 1;
@@ -40,7 +63,7 @@ int main(int argc, char *argv[]) {
     mluOpGetLibVersion(&major, &minor, &patch);
     if (major != major_in || minor != minor_in || patch != patch_in) {
       char err_info[100];
-      sprintf(err_info, "Expect version:  %d.%d.%d, but get %d.%d.%d", major_in,
+      sprintf(err_info, "Expect version:  %d.%d.%d, but get %d.%d.%d", major_in,  // NOLINT
               minor_in, patch_in, major, minor, patch);
       cerr << err_info << endl;
       return 1;

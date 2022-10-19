@@ -73,7 +73,8 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     MLUOP_CHECK(mluOpSetTensorDescriptor(aspect_ratios_desc_, aspect_layout,
                                          aspect_dtype, aspect_dim,
                                          aspect_dim_size.data()));
-    const uint64_t aspect_ele_num = mluOpGetTensorElementNum(aspect_ratios_desc_);
+    const uint64_t aspect_ele_num =
+        mluOpGetTensorElementNum(aspect_ratios_desc_);
     if (aspect_ele_num > 0) {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&aspect_ratios_, 8));
     }
@@ -533,4 +534,4 @@ INSTANTIATE_TEST_CASE_P(
                                           true}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
-}  // mluopapitest
+}  // namespace mluopapitest

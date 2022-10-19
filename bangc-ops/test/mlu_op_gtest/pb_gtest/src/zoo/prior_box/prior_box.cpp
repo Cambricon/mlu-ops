@@ -80,9 +80,10 @@ void PriorBoxExecutor::priorBox_Cpu_Kernel(
     float* min_sizes, const int min_sizes_num, float* new_aspect_ratios,
     const int new_aspect_ratios_num, float* variances, const int variances_num,
     float* max_sizes, const int max_sizes_num, const int height,
-    const int width, const int im_height, const int im_width, const float step_h,
-    const float step_w, const float offset, const bool clip, const bool min_max_aspect_ratios_order,
-    float* output, const int output_size, float* var, const int var_size) {
+    const int width, const int im_height, const int im_width,
+    const float step_h, const float step_w, const float offset, const bool clip,
+    const bool min_max_aspect_ratios_order, float* output,
+    const int output_size, float* var, const int var_size) {
   auto img_width = im_width;
   auto img_height = im_height;
 
