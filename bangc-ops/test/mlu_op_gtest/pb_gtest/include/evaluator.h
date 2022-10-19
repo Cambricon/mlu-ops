@@ -59,9 +59,8 @@ class Evaluator {
         : formula(f), threshold(t), enable(e) {}
     Formula formula;
     double threshold = 0;
-    bool enable =
-        true;  // if false, only compute it, but won't mark case failed.
-
+    // if false, only compute it, but won't mark case failed.
+    bool enable = true;
     bool operator<(const struct Criterion &c) const {
       if (formula == c.formula) {
         return false;  // for deduplication
@@ -108,9 +107,8 @@ class Evaluator {
                         size_t count);
   double computeDiff4(float *baseline_result, float *mlu_result, size_t count);
   inline std::string showFormula(Formula f);
-
-  std::vector<Criterion>
-      criterion_vec_;  // vector of (diff1+thresdhold) /(diff2 + threshold)
+  // vector of (diff1+thresdhold) /(diff2 + threshold)
+  std::vector<Criterion> criterion_vec_;
   std::vector<ErrorWrap> error_vec_;  // vetor output's error
 
   double workspace_size_ = -1;  // for -1

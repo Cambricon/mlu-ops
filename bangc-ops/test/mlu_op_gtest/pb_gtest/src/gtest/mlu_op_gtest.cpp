@@ -31,9 +31,8 @@ std::string TestSuite::op_name_ = "";  // NOLINT
 std::vector<std::string> TestSuite::case_path_vec_ = {};
 std::shared_ptr<mluoptest::ExecuteConfig> TestSuite::ecfg_ =
     std::make_shared<mluoptest::ExecuteConfig>();
-std::shared_ptr<mluoptest::ExecuteContext> TestSuite::ectx_ =
-    nullptr;  // depends on thread num.
-
+// depends on thread num.
+std::shared_ptr<mluoptest::ExecuteContext> TestSuite::ectx_ = nullptr;
 // setup for 1 op
 void TestSuite::SetUpTestCase() {
   // get op name and case list.
@@ -224,8 +223,8 @@ void TestSuite::ThreadX() {
   auto set_device = [](std::shared_ptr<Context> ctx) {
     std::lock_guard<std::mutex> lk(ctx->mtx);
     auto it = ctx->been_initialized.find(std::this_thread::get_id());
-    if (it == ctx->been_initialized
-                  .end()) {  // if current thread has not been set device.
+    // if current thread has not been set device.
+    if (it == ctx->been_initialized.end()) {
       ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
       ctx->been_initialized.insert(std::this_thread::get_id());
     }

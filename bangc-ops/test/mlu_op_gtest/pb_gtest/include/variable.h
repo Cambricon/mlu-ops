@@ -42,8 +42,8 @@ class GlobalVar {
   std::string get_vmpeak_ = "";
   TestSummary summary_;
 
-  int dev_id_ =
-      0;  // the picked device id, make sure gtest run on the picked device.
+  // the picked device id, make sure gtest run on the picked device.
+  int dev_id_ = 0;
   int rand_n_ = -1;  // pick n * random case, -1 for uninitialized
   int repeat_ = 1;   // perf-repeat repeat * kernel enqueue cnrtQueue_t, and get
                      // ave hw_time
