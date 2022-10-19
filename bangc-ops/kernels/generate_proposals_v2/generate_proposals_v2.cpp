@@ -64,7 +64,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc,
     size_t *size) {
   const std::string API = "[mluOpGenerateProposalsV2]";
+  PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, scores_desc != NULL);
+  PARAM_CHECK(API, size != NULL);
+
   PARAM_CHECK(API, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
 
@@ -104,6 +107,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     void *rpn_rois_batch_size) {
   const std::string API = "[mluOpGenerateProposalsV2]";
   // check inputs/outputs
+  PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, scores_desc != NULL);
   PARAM_CHECK(API, bbox_deltas_desc != NULL);
   PARAM_CHECK(API, im_shape_desc != NULL);
