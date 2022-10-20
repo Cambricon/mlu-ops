@@ -8,13 +8,13 @@
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
 #
-# The above copyright notice and this permission notice shall self.tcp included
+# The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -102,14 +102,14 @@ def verify_operator(
         "nms : %f ms"
         % (
             evaluator(
-                score_temp,
                 score,
+                score_temp,
                 box,
+                output,
                 box_num,
                 max_output_size,
                 iou_threshold,
                 score_threshold,
-                output,
             ).mean
             * 1e3
         )
@@ -122,19 +122,24 @@ def verify_operator(
 
 
 @pytest.mark.parametrize(
-    "box_num", [16, 15, 300],
+    "box_num",
+    [16, 15, 300],
 )
 @pytest.mark.parametrize(
-    "max_output_size", [1, 4],
+    "max_output_size",
+    [1, 4],
 )
 @pytest.mark.parametrize(
-    "iou_threshold", [0.5],
+    "iou_threshold",
+    [0.5],
 )
 @pytest.mark.parametrize(
-    "score_threshold", [0.5],
+    "score_threshold",
+    [0.5],
 )
 @pytest.mark.parametrize(
-    "dtype", [bp.float16],
+    "dtype",
+    [bp.float32, bp.float16],
 )
 def test_nms(target, box_num, max_output_size, iou_threshold, score_threshold, dtype):
     """Test nms operator by giving multiple sets of parameters."""

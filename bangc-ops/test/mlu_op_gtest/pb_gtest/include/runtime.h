@@ -65,12 +65,14 @@ class CPURuntime : public Runtime {
   // this function will throw exception
   // don't call this function in ctor
   template <typename T>
-  T allocate(mluOpStatus_t (*ctor)(T *), mluOpStatus_t (*dtor)(T), std::string name = "") {
-    T obj                = NULL;
+  T allocate(mluOpStatus_t (*ctor)(T *), mluOpStatus_t (*dtor)(T),
+             std::string name = "") {
+    T obj = NULL;
     mluOpStatus_t status = (*ctor)(&obj);
     if (status != MLUOP_STATUS_SUCCESS) {
       LOG(ERROR) << "CPURuntime: Failed to allocate " << name;
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
       return NULL;
     }
     memory_blocks_.push_back(std::make_shared<MemBlock<T>>(obj, dtor, name));
@@ -96,12 +98,15 @@ class CPURuntime : public Runtime {
     if (NULL == (void *)object) {
       return CNRT_RET_SUCCESS;
     }
-    auto it =
-        std::find_if(memory_blocks_.begin(), memory_blocks_.end(),
-                     [=](std::shared_ptr<MemBlockBase> b) { return b->id == (void *)object; });
+    auto it = std::find_if(memory_blocks_.begin(), memory_blocks_.end(),
+                           [=](std::shared_ptr<MemBlockBase> b) {
+                             return b->id == (void *)object;
+                           });
     if (it == memory_blocks_.end()) {
-      LOG(ERROR) << "CPURuntime: Failed to deallocate " << (void *)object << ", double free.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      LOG(ERROR) << "CPURuntime: Failed to deallocate " << (void *)object
+                 << ", double free.";
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
       return CNRT_RET_ERR_INVALID;
     }
     it->reset();
@@ -121,21 +126,26 @@ class CPURuntime : public Runtime {
 
   template <typename T>
   struct MemBlock : MemBlockBase {
-    MemBlock(T o, mluOpStatus_t (*f)(T), std::string n) : obj(o), c_dtor(f), name(n) {
+    MemBlock(T o, mluOpStatus_t (*f)(T), std::string n)
+        : obj(o), c_dtor(f), name(n) {
       id = (void *)o;
 #ifdef GTEST_DEBUG_LOG
-      VLOG(4) << "CPURuntime: [allocate] malloc for [" << name << "] " << (void *)obj;
+      VLOG(4) << "CPURuntime: [allocate] malloc for [" << name << "] "
+              << (void *)obj;
 #endif
     }
-    MemBlock(T o, void (*f)(void *), std::string n) : obj(o), v_dtor(f), name(n) {
+    MemBlock(T o, void (*f)(void *), std::string n)
+        : obj(o), v_dtor(f), name(n) {
       id = (void *)o;
 #ifdef GTEST_DEBUG_LOG
-      VLOG(4) << "CPURuntime: [allocate] malloc for [" << name << "] " << (void *)obj;
+      VLOG(4) << "CPURuntime: [allocate] malloc for [" << name << "] "
+              << (void *)obj;
 #endif
     }
     ~MemBlock() {
 #ifdef GTEST_DEBUG_LOG
-      VLOG(4) << "CPURuntime: [deallocate] free for [" << name << "] " << (void *)obj;
+      VLOG(4) << "CPURuntime: [deallocate] free for [" << name << "] "
+              << (void *)obj;
 #endif
       if (c_dtor != NULL) {
         (*c_dtor)(obj);
@@ -151,8 +161,9 @@ class CPURuntime : public Runtime {
     // when deallocate, dtor type is unknown(only known obj type)
     // i don't want a map(or something) to find out dtor type by obj type
     //
-    // * no matter what type ptr is, delete void*/ free(void*) can release space correctly
-    void (*v_dtor)(void *)     = NULL;
+    // * no matter what type ptr is, delete void*/ free(void*) can release space
+    // correctly
+    void (*v_dtor)(void *) = NULL;
     mluOpStatus_t (*c_dtor)(T) = NULL;
     // here can't set object as shared_ptr directly.
     // cuz we need put all object (different type) in a vector
@@ -182,12 +193,13 @@ class MLURuntime : public Runtime {
 
  private:
   struct MemBlock {
-    MemBlock(size_t s, char *p, std::string n) : raw_bytes(s), header(p), name(n) {}
-    size_t raw_bytes = 0;      // include mask
-    char *header     = NULL;   // mlu addr
-    bool is_const    = false;  // if is const, this buffer shouldn't be modified.
-    void *mask       = NULL;   // if is const, use host_ptr to check.
-    std::string name;          // memory block id
+    MemBlock(size_t s, char *p, std::string n)
+        : raw_bytes(s), header(p), name(n) {}
+    size_t raw_bytes = 0;   // include mask
+    char *header = NULL;    // mlu addr
+    bool is_const = false;  // if is const, this buffer shouldn't be modified.
+    void *mask = NULL;      // if is const, use host_ptr to check.
+    std::string name;       // memory block id
   };
 
   // each memory has head mask and foot mask

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <string>
-#include "core/mlu_op_core.h"
+
 #include "kernels/kernel.h"
 #include "core/logging.h"
 #include "core/tensor.h"
@@ -29,6 +29,7 @@
 #include "core/context.h"
 #include "core/runtime/device.h"
 #include "unary_op_host.h"
+#include "mlu_op.h"
 
 void unaryOpPolicyFunc(const mluOpHandle_t &handle,
                        const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,

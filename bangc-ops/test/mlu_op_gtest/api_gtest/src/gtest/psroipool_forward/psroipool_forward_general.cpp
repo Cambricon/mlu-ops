@@ -324,4 +324,4 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({2, 3, 3, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
-}  // mluopapitest
+}  // namespace mluopapitest

@@ -40,7 +40,7 @@ namespace mluoptest {
 
 class ThreadPool {
  public:
-  ThreadPool()              = default;
+  ThreadPool() = default;
   ThreadPool(ThreadPool &&) = default;
   explicit ThreadPool(size_t thread_num);
   ~ThreadPool();

@@ -189,4 +189,4 @@ TEST_F(roi_crop_forward, BAD_PARAM_output_null) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in roi_crop_forward";
   }
 }
-}  // mluopapitest
+}  // namespace mluopapitest

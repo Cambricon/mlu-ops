@@ -1,0 +1,73 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "fault_kernel.h"
+
+#define MAX_NRAM_SIZE (384 * 1024)  // use 384kB memory in nram
+#define STREAM_ALIGN_NUM 64
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+/* The purpose of this kernel is to explain how to debug when MLU unfinished
+ * problem occurs in device.
+ * The statement "__sync_cluster" on line 26 will causes a synchronization
+ * bug becasue it will only be executed by MPU, but it attempts to synchronize
+ * both IPUs and MPU in the cluster.
+ * After removing this statement, the kernel function can execute normally.
+ * For details on how to deal with such MLU unfinished problems, please refer
+ * to debugging section in Cambricon-BANGC-OPS-User-Guide-CN-vx.x.x.pdf
+ */
+__mlu_global__ void MLUUnfinishedExampleKernel(void *input, void *output,
+                                               size_t element_num) {
+  if (coreId == 0x80) {
+    __sync_cluster();  // this statement will causes synchronization bug
+  }
+  size_t per_core_num = element_num / taskDim;
+  size_t left_num = element_num % taskDim;
+  char *input_start = (char *)input + taskId * per_core_num * sizeof(float);
+  char *output_start = (char *)output + taskId * per_core_num * sizeof(float);
+  if (taskId == taskDim - 1) {
+    per_core_num += left_num;
+  }
+  size_t span_num_deal = MAX_NRAM_SIZE / 2 / sizeof(float);
+  span_num_deal = (span_num_deal / STREAM_ALIGN_NUM) * STREAM_ALIGN_NUM;
+  size_t span_load_size = span_num_deal * sizeof(float);
+  char *nram_input = nram_buffer;
+  char *nram_output = nram_buffer + span_load_size;
+  int repeat = per_core_num / span_num_deal;
+  size_t remain_size = per_core_num % span_num_deal;
+
+  for (int i = 0; i < repeat; ++i) {
+    __memcpy(nram_input, input_start + i * span_load_size, span_load_size,
+             GDRAM2NRAM);
+    __bang_active_abs((float *)nram_output, (float *)nram_input, span_num_deal);
+    __memcpy(output_start + i * span_load_size, nram_output, span_load_size,
+             NRAM2GDRAM);
+  }
+  if (remain_size > 0) {
+    __memcpy(nram_input, input_start + repeat * span_load_size,
+             remain_size * sizeof(float), GDRAM2NRAM);
+    __bang_active_abs((float *)nram_output, (float *)nram_input, remain_size);
+    __memcpy(output_start + repeat * span_load_size, nram_output,
+             remain_size * sizeof(float), NRAM2GDRAM);
+  }
+}

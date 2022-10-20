@@ -142,7 +142,11 @@ message Node {
   optional SqrtParam   sqrt_param                     = 4003;  // param
   optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
   optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
+  optional PriorBoxParam prior_box_param              = 4006;   // PriorBoxParam
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
+  optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
+  optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
+  optional BallQueryParam  ball_query_param             = 4008;  // param  
 }
 
 
@@ -225,6 +229,16 @@ message DivParam {
   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
 }
 
+ // param to call mluOpGenerateProposalsV2()
+ message GenerateProposalsV2Param {
+  optional int32 pre_nms_top_n = 1 [default = 6000];
+  optional int32 post_nms_top_n = 2 [default = 2000];
+  optional float nms_thresh = 3 [default = 0.5];
+  optional float min_size = 4 [default = 0.1];
+  optional float eta = 5 [default = 1.0];
+  optional bool pixel_offset = 6 [default = true];
+}
+
 // param to call mluOpPsRoiPoolForward()
 message PsRoiPoolForwardParam{
   optional float spatial_scale = 1 [default = 0.0625];
@@ -245,4 +259,36 @@ message PsRoiPoolBackwardParam{
 // param to call mluOpPolyNms()
 message PolyNmsParam {
   required float iou_threshold = 1 [default = 0.2];
+}
+
+// param to call mluOpPriorBox()
+message PriorBoxParam {
+  required int32 height                     = 1 [default = 1];
+  required int32 width                      = 2 [default = 1];
+  required int32 im_height                  = 3 [default = 300];
+  required int32 im_width                   = 4 [default = 300];
+  required bool flip                        = 5 [default = true];
+  required bool clip                        = 6 [default = true];
+  required float step_w                     = 7 [default = 0.0];
+  required float step_h                     = 8 [default = 0.0];
+  required float offset                     = 9 [default = 0.5];
+  required bool min_max_aspect_ratios_order = 10 [default = true];
+}
+
+// param to call mluOpYoloBox()
+message YoloBoxParam {
+  optional int32 class_num        = 1 [default = 1];
+  optional float conf_thresh      = 2 [default = 0.01];
+  optional int32 downsample_ratio = 3 [default = 8];
+  optional bool clip_bbox         = 4 [default = true];
+  optional float scale_x_y        = 5 [default = 1.0];
+  optional bool iou_aware         = 6 [default = true];
+  optional float iou_aware_factor = 7 [default = 0.5];
+}
+
+// param to call mluOpBallQuery()
+message BallQueryParam  {
+  optional float min_radius = 1 [default = 0.0];
+  optional float max_radius = 2 [default = 1.0];
+  optional int32   nsample  = 3 [default = 1];
 }

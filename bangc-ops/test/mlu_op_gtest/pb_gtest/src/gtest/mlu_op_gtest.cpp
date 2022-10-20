@@ -31,8 +31,8 @@ std::string TestSuite::op_name_ = "";  // NOLINT
 std::vector<std::string> TestSuite::case_path_vec_ = {};
 std::shared_ptr<mluoptest::ExecuteConfig> TestSuite::ecfg_ =
     std::make_shared<mluoptest::ExecuteConfig>();
-std::shared_ptr<mluoptest::ExecuteContext> TestSuite::ectx_ = nullptr;  // depends on thread num.
-
+// depends on thread num.
+std::shared_ptr<mluoptest::ExecuteContext> TestSuite::ectx_ = nullptr;
 // setup for 1 op
 void TestSuite::SetUpTestCase() {
   // get op name and case list.
@@ -102,10 +102,11 @@ void TestSuite::Thread1() {
     mluoptest::EvaluateResult res;
     res.op_name = case_path;
     res.case_path = case_path;
-    res.what.emplace_back("Unknown error: maybe exception raised, other info is lost.");
+    res.what.emplace_back(
+        "Unknown error: maybe exception raised, other info is lost.");
     res_.emplace_back(res);
-    ADD_FAILURE() << "MLUOP GTEST: catched " << e.what() << " in single thread mode. (of "
-                  << case_path << ")";
+    ADD_FAILURE() << "MLUOP GTEST: catched " << e.what()
+                  << " in single thread mode. (of " << case_path << ")";
   }
 }
 
@@ -115,7 +116,9 @@ void TestSuite::Thread1() {
 // when it's ready, set been_chosen as true, then teardown, then reset().
 struct ExecutorWrap {
   ExecutorWrap() = default;
-  explicit ExecutorWrap(std::shared_ptr<mluoptest::Executor> e) : exe(e) { in_used = true; }
+  explicit ExecutorWrap(std::shared_ptr<mluoptest::Executor> e) : exe(e) {
+    in_used = true;
+  }
 
   std::shared_ptr<mluoptest::Executor> exe = nullptr;
   // flag for teardown polling and pick up.
@@ -220,7 +223,8 @@ void TestSuite::ThreadX() {
   auto set_device = [](std::shared_ptr<Context> ctx) {
     std::lock_guard<std::mutex> lk(ctx->mtx);
     auto it = ctx->been_initialized.find(std::this_thread::get_id());
-    if (it == ctx->been_initialized.end()) {  // if current thread has not been set device.
+    // if current thread has not been set device.
+    if (it == ctx->been_initialized.end()) {
       ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
       ctx->been_initialized.insert(std::this_thread::get_id());
     }
@@ -228,8 +232,9 @@ void TestSuite::ThreadX() {
 
   // find executor that is done
   auto has_done = [](std::shared_ptr<Context> ctx) -> bool {
-    auto it = find_if(ctx->exe_vec.begin(), ctx->exe_vec.end(),
-                      [](std::shared_ptr<ExecutorWrap> ew) { return ew->ready(); });
+    auto it =
+        find_if(ctx->exe_vec.begin(), ctx->exe_vec.end(),
+                [](std::shared_ptr<ExecutorWrap> ew) { return ew->ready(); });
     if (it != ctx->exe_vec.end()) {
       return true;
     } else {
@@ -241,8 +246,9 @@ void TestSuite::ThreadX() {
   // buffer is thread num * 1.5 wont exceed int64_t
   auto any_done = [](std::shared_ptr<Context> ctx) -> int64_t {
     std::lock_guard<std::mutex> lk(ctx->mtx);
-    auto it = find_if(ctx->exe_vec.begin(), ctx->exe_vec.end(),
-                      [](std::shared_ptr<ExecutorWrap> ew) { return ew->ready(); });
+    auto it =
+        find_if(ctx->exe_vec.begin(), ctx->exe_vec.end(),
+                [](std::shared_ptr<ExecutorWrap> ew) { return ew->ready(); });
     if (it != ctx->exe_vec.end()) {
       (*it)->been_chosen = true;
       // mark this exe been chosen, and other thread shouldn't choose it.
@@ -262,12 +268,15 @@ void TestSuite::ThreadX() {
       ctx->ecw_vec[id]->reset();  // reset running env
 
       res = *(exe->result());
-      res.what.emplace_back("Unknown error: maybe exception raised, other info is lost.");
-      ADD_FAILURE() << "MLUOP GTEST: catched " << e.what() << " in teardown. (of " << res.case_path
+      res.what.emplace_back(
+          "Unknown error: maybe exception raised, other info is lost.");
+      ADD_FAILURE() << "MLUOP GTEST: catched " << e.what()
+                    << " in teardown. (of " << res.case_path
                     << ") tid: " << std::this_thread::get_id();
     }
-    printf("[ TEARDOWN ]: %s\n", res.case_path.c_str());  // printf is thread-safe
-    exe.reset();                                          // free this exe.
+    printf("[ TEARDOWN ]: %s\n",
+           res.case_path.c_str());  // printf is thread-safe
+    exe.reset();                    // free this exe.
     {
       std::lock_guard<std::mutex> lk(ctx->mtx);
       ctx->exe_vec[id]->reset();  // reset this position as idle.
@@ -277,8 +286,8 @@ void TestSuite::ThreadX() {
     ctx->cond.notify_all();
   };
 
-  auto setup = [](std::string op_name, std::string case_path, std::shared_ptr<Context> ctx,
-                  size_t pos) {
+  auto setup = [](std::string op_name, std::string case_path,
+                  std::shared_ptr<Context> ctx, size_t pos) {
     printf("[ SETUP    ]: %s\n", case_path.c_str());  // printf is thread-safe
     // get corresponding executor context which saved handle queue ...
     auto ecw = ctx->ecw_vec[pos];
@@ -302,13 +311,14 @@ void TestSuite::ThreadX() {
       mluoptest::EvaluateResult res;
       res.op_name = op_name;
       res.case_path = case_path;
-      res.what.emplace_back("Unknown error: maybe exception raised, other info is lost.");
+      res.what.emplace_back(
+          "Unknown error: maybe exception raised, other info is lost.");
       {
         std::lock_guard<std::mutex> lk(ctx->mtx);
         ctx->results.emplace_back(res);
       }
-      ADD_FAILURE() << "MLUOP GTEST: catched " << e.what() << " in setup. (of " << res.case_path
-                    << ") tid: " << std::this_thread::get_id();
+      ADD_FAILURE() << "MLUOP GTEST: catched " << e.what() << " in setup. (of "
+                    << res.case_path << ") tid: " << std::this_thread::get_id();
     }
   };
 
@@ -323,12 +333,14 @@ void TestSuite::ThreadX() {
       thread_pool->enqueue(teardown, teardown_pos, context);
     } else {
       // find a idle position.
-      auto it = find_if(context->exe_vec.begin(), context->exe_vec.end(),
-                        [](std::shared_ptr<ExecutorWrap> e) { return e->is_free(); });
+      auto it =
+          find_if(context->exe_vec.begin(), context->exe_vec.end(),
+                  [](std::shared_ptr<ExecutorWrap> e) { return e->is_free(); });
       if (it != context->exe_vec.end() && i < case_path_vec_.size()) {
         (*it)->used();  // occupy this position
         auto setup_pos = std::distance(context->exe_vec.begin(), it);
-        thread_pool->enqueue(setup, op_name_, case_path_vec_[i], context, setup_pos);
+        thread_pool->enqueue(setup, op_name_, case_path_vec_[i], context,
+                             setup_pos);
         i++;
       } else {
         // task is full, just wait.
@@ -341,8 +353,9 @@ void TestSuite::ThreadX() {
     // all case been launched and buffer is empty, done.
     if (i == case_path_vec_.size()) {
       // find a exe which is not free
-      auto it = find_if(context->exe_vec.begin(), context->exe_vec.end(),
-                        [](std::shared_ptr<ExecutorWrap> e) { return !e->is_free(); });
+      auto it = find_if(
+          context->exe_vec.begin(), context->exe_vec.end(),
+          [](std::shared_ptr<ExecutorWrap> e) { return !e->is_free(); });
       if (it == context->exe_vec.end()) {
         // if all exe in task buffer is free, done.
         break;
@@ -401,32 +414,50 @@ std::string showFormula(mluoptest::Evaluator::Formula f) {
     case mluoptest::Evaluator::Formula::DIFF4:
       return "DIFF4";
     default:
-      GTEST_CHECK(false, "MLUOP GTEST: got an unsupported formula when print it.");
+      GTEST_CHECK(false,
+                  "MLUOP GTEST: got an unsupported formula when print it.");
   }
 }
 
 void TestSuite::print(mluoptest::EvaluateResult eva, bool average) {
   std::cout << "\n";
   if (true == average) {
-    std::cout << "[Average MLU Hardware Time     ]: " << eva.mlu.hardware_time << " (us)\n";
-    std::cout << "[Average MLU Interface Time    ]: " << eva.mlu.interface_time << " (us)\n";
-    std::cout << "[Average MLU IO Efficiency     ]: " << eva.mlu.io_efficiency << "\n";
-    std::cout << "[Average MLU Compute Efficiency]: " << eva.mlu.compute_efficiency << "\n";
-    std::cout << "[Average MLU Workspace Size    ]: " << eva.mlu.workspace_size << " (Bytes)\n";
-    std::cout << "[MLU TheoryOps         ]: " << eva.mlu.theory_ops << " (Ops)\n";
-    std::cout << "[MLU TheoryIOs         ]: " << eva.mlu.theory_io << " (Bytes)\n";
-    std::cout << "[MLU ComputeForce      ]: " << eva.mlu.compute_force << " (op/s)\n";
-    std::cout << "[MLU IoBandWidth       ]: " << eva.mlu.io_bandwidth << " (GB/s)\n";
+    std::cout << "[Average MLU Hardware Time     ]: " << eva.mlu.hardware_time
+              << " (us)\n";
+    std::cout << "[Average MLU Interface Time    ]: " << eva.mlu.interface_time
+              << " (us)\n";
+    std::cout << "[Average MLU IO Efficiency     ]: " << eva.mlu.io_efficiency
+              << "\n";
+    std::cout << "[Average MLU Compute Efficiency]: "
+              << eva.mlu.compute_efficiency << "\n";
+    std::cout << "[Average MLU Workspace Size    ]: " << eva.mlu.workspace_size
+              << " (Bytes)\n";
+    std::cout << "[MLU TheoryOps         ]: " << eva.mlu.theory_ops
+              << " (Ops)\n";
+    std::cout << "[MLU TheoryIOs         ]: " << eva.mlu.theory_io
+              << " (Bytes)\n";
+    std::cout << "[MLU ComputeForce      ]: " << eva.mlu.compute_force
+              << " (op/s)\n";
+    std::cout << "[MLU IoBandWidth       ]: " << eva.mlu.io_bandwidth
+              << " (GB/s)\n";
   } else {
-    std::cout << "[MLU Hardware Time     ]: " << eva.mlu.hardware_time << " (us)\n";
-    std::cout << "[MLU Interface Time    ]: " << eva.mlu.interface_time << " (us)\n";
+    std::cout << "[MLU Hardware Time     ]: " << eva.mlu.hardware_time
+              << " (us)\n";
+    std::cout << "[MLU Interface Time    ]: " << eva.mlu.interface_time
+              << " (us)\n";
     std::cout << "[MLU IO Efficiency     ]: " << eva.mlu.io_efficiency << "\n";
-    std::cout << "[MLU Compute Efficiency]: " << eva.mlu.compute_efficiency << "\n";
-    std::cout << "[MLU Workspace Size    ]: " << eva.mlu.workspace_size << " (Bytes)\n";
-    std::cout << "[MLU TheoryOps         ]: " << eva.mlu.theory_ops << " (Ops)\n";
-    std::cout << "[MLU TheoryIOs         ]: " << eva.mlu.theory_io << " (Bytes)\n";
-    std::cout << "[MLU ComputeForce      ]: " << eva.mlu.compute_force << " (op/s)\n";
-    std::cout << "[MLU IoBandWidth       ]: " << eva.mlu.io_bandwidth << " (GB/s)\n";
+    std::cout << "[MLU Compute Efficiency]: " << eva.mlu.compute_efficiency
+              << "\n";
+    std::cout << "[MLU Workspace Size    ]: " << eva.mlu.workspace_size
+              << " (Bytes)\n";
+    std::cout << "[MLU TheoryOps         ]: " << eva.mlu.theory_ops
+              << " (Ops)\n";
+    std::cout << "[MLU TheoryIOs         ]: " << eva.mlu.theory_io
+              << " (Bytes)\n";
+    std::cout << "[MLU ComputeForce      ]: " << eva.mlu.compute_force
+              << " (op/s)\n";
+    std::cout << "[MLU IoBandWidth       ]: " << eva.mlu.io_bandwidth
+              << " (GB/s)\n";
   }
 
   auto print_error = [](std::vector<mluoptest::Evaluator::ErrorWrap> errors) {

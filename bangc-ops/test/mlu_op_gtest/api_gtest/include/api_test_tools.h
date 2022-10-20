@@ -27,10 +27,10 @@
 #include <tuple>
 #include <string>
 
-#include "core/mlu_op_core.h"
 #include "core/context.h"
 #include "gtest/gtest.h"
 #include "tools.h"
+#include "mlu_op.h"
 
 namespace mluopapitest {
 class MLUOpTensorParam {
@@ -62,6 +62,6 @@ class MLUOpTensorParam {
   std::vector<int> dim_stride_;
   mluOpDataType_t onchip_dtype_;
 };
-}  // mluopapitest
+}  // namespace mluopapitest
 
-#endif // TEST_MLU_OP_GTEST_API_GTEST_INCLUDE_TEST_TOOLS_H_
+#endif  // TEST_MLU_OP_GTEST_API_GTEST_INCLUDE_TEST_TOOLS_H_

@@ -33,6 +33,23 @@
   
   编译成功后在 `bangpy-ops/outs` 目录下生成与算子同名的输出文件夹，其中包含 `libmluops.so`等文件。
 
+## 创建测试用例
+测试用例可通过 mlu-ops-generator 测例生成框架进行创建，步骤如下：
+
+- 在 mlu-ops-generator 框架下进行本地环境配置
+  - 根据对第三方计算库的依赖，安装对应的环境，例如pytorch, tensorflow。
+- 添加算子在 GPU/CPU 上的计算逻辑
+  - 将使用第三方库实现的算子逻辑文件夹添加至 mlu-ops-generator/nonmlu_ops/ 下。
+- 撰写算子 Manual 格式的 Json 文件
+  - 撰写完成的Json 文件添加至 mlu-ops-generator/manual_config/ ，json 文件的具体格式要求需参照 mlu-ops-generator 对应部分的使用说明。
+- 生成测例文件
+  - 算子 Manual 格式的 Json 文件撰写完成后，在 mlu-ops-generator 框架下运行以下脚本生成测例文件，
+  ```
+  python3 run_manual.py <opname>
+  ```
+  测例文件的保存格式可以是 pb 和 prototxt。测例创建成功后，将保存的 prototxt 文件移至 'bangpy-ops/ops/' 的不同算子目录下 testcase 文件夹。
+
+`注意` :mlu-ops-generator模块的详细介绍见(https://github.com/Cambricon/mlu-ops-generator)
 
 ## 运行测试用例
 
@@ -92,7 +109,7 @@
 
 ## 新算子开发流程
 
-详情可以参考文档 [BANGPy-OPS 算子开发流程.md](../docs/bangpy-docs/BANGPy-OPS算子开发流程.md)。
+详情可以参考文档 [BANGPy-OPS 算子开发流程.md](../docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md)。
 
 1. 在 `mlu-ops/bangpy-ops/ops/` 路径下，创建算子文件夹，添加算子实现文件，可以参考现有的 add 算子中的[add.py](./ops/add/add.py)进行添加。
 2. 在算子文件夹下创建以 `test_` 为前缀的算子测试文件，添加测试代码，可以参考[test_add.py](./ops/add/test_add.py)进行添加。

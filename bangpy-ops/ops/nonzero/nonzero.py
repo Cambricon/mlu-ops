@@ -8,13 +8,13 @@
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
 #
-# The above copyright notice and this permission notice shall self.tcp included
+# The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -58,24 +58,19 @@ class NonZero(object):
         dim_size: ty.int32,
     ):
         """Set output indices of each dim."""
-        remain_front = 0
-        remain_back = 0
-        offset = 0
-        value = 0
-
         size_align = tcp.round_up(size, 64)
         index_0 = global_index / seg_size
         index_1 = (global_index + size) / seg_size
         if index_0 == index_1:
             value = index_0 % dim_size
-            tcp.assign(index_nram[:size_align], tcp.cast(value, "int32"))
+            tcp.assign(index_nram[:size_align], value)
         else:
             remain_front = seg_size - global_index % seg_size
             remain_back = (global_index + size) % seg_size
             value = index_0 % dim_size
             tcp.assign(
                 index_nram[: tcp.round_up(remain_front, 64)],
-                tcp.cast(value, "int32"),
+                value,
             )
             offset = remain_front
             for i in range(index_1 - index_0 - 1):  # type: ignore
@@ -84,23 +79,23 @@ class NonZero(object):
                 if self.target == "mlu370":
                     tcp.assign(
                         index_nram[offset : offset + tcp.round_up(seg_size, 64)],
-                        tcp.cast(value, "int32"),
+                        value,
                     )
                 # mlu2xx
                 else:
                     for j in range(seg_size):  # type: ignore
-                        index_nram[offset + j] = tcp.cast(value, "int32")
+                        index_nram[offset + j] = value
                 offset = offset + seg_size
             if remain_back != 0:
                 value = index_1 % dim_size
                 if self.target == "mlu370":
                     tcp.assign(
                         index_nram[offset : offset + tcp.round_up(remain_back, 64)],
-                        tcp.cast(value, "int32"),
+                        value,
                     )
                 else:
                     for j in range(remain_back):  # type: ignore
-                        index_nram[offset + j] = tcp.cast(value, "int32")
+                        index_nram[offset + j] = value
 
     def gather_data(
         self,
@@ -180,7 +175,7 @@ class NonZero(object):
                     out_nram_int64.reinterpret_cast("int32")[
                         : self.dim_num * self.nram_size * 2
                     ],
-                    tcp.cast(0, "int32"),
+                    0,
                 )
 
                 # Convert input data type to float32 data type.
@@ -333,7 +328,7 @@ class NonZero(object):
 
             with tcp.block("compute"):
                 if count_num[0] > 0:
-                    out_offset = out_offset + count_num[0]
+                    out_offset += count_num[0]
         count_num = tcp.alloc_buffer(shape=(32,), dtype="int32", scope="nram")
         if remain > 0:
             global_index = core_index + repeat * self.nram_size
@@ -357,7 +352,7 @@ class NonZero(object):
                 out_nram_int64.reinterpret_cast("int32")[
                     : self.dim_num * remain_align * 2
                 ],
-                tcp.cast(0, "int32"),
+                0,
             )
             tcp.memcpy(
                 data_nram[:remain],
@@ -549,7 +544,6 @@ class NonZero(object):
                 elem_size = self.dim_0 * self.dim_1 * self.dim_2 * self.dim_3
                 pre_core = elem_size / task_dim
                 core_remain = elem_size % task_dim
-                core_index = 0
                 out_offset = 0
 
                 if self.core_count[task_id] != tcp.cast(0, "uint32"):

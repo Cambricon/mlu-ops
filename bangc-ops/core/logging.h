@@ -29,7 +29,7 @@
 #include <sstream>
 #include "core/macros.h"
 #include "core/cnlog.h"
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
@@ -163,17 +163,17 @@
 #define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                 \
   if (!(num < max_num)) {                                                \
     LOG(ERROR) << "[" << api << "]: overflow max supported tensor num. " \
-               << reason << api << "supports tensor num smaller than ";  \
-    << max_num << ", "                                                   \
-    << "now tensor's total num is " << num;                              \
+               << reason << api << "supports tensor num smaller than "   \
+               << max_num << ", "                                        \
+               << "now tensor's total num is " << num;                   \
     return MLUOP_STATUS_SUCCESS;                                         \
   }
 #define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)               \
   if (!(size < max_size)) {                                               \
     LOG(ERROR) << "[" << api << "]: overflow max supported tensor size. " \
-               << reason << api << "supports tensor size smaller than ";  \
-    << max_size << "B, "                                                  \
-    << "now tensor's total size is " << size << "B.";                     \
+               << reason << api << "supports tensor size smaller than "   \
+               << max_size << "B, "                                       \
+               << "now tensor's total size is " << size << "B.";          \
     return MLUOP_STATUS_SUCCESS;                                          \
   }
 
