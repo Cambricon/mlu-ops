@@ -88,11 +88,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   PARAM_CHECK("[mluOpBallQuery]", xyz_desc != NULL);
   PARAM_CHECK("[mluOpBallQuery]", idx_desc != NULL);
 
-  // check ptr
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz != NULL);
-  PARAM_CHECK("[mluOpBallQuery]", xyz != NULL);
-  PARAM_CHECK("[mluOpBallQuery]", idx != NULL);
-
   // check dims
   PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dim == 3);
   PARAM_CHECK("[mluOpBallQuery]", xyz_desc->dim == 3);
@@ -136,6 +131,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   }
 
   // check 0 element
+  // for new_xyz, zero elements are not supported
   if (mluOpGetTensorElementNum(new_xyz_desc) == 0) {
     VLOG(5) << "[mluOpBallQuery] new_xyz tensor is a zero element tensor. The "
                "shape of new_xyz tensor is ["
@@ -143,17 +139,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
             << new_xyz_desc->dims[2] << "].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (xyz_desc->dims[0] > 0) {
-    if (xyz_desc->dims[1] == 0) {
-      return MLUOP_STATUS_SUCCESS;
-    }
-  } else {
-    VLOG(5) << "[mluOpBallQuery] xyz tensor is a zero element tensor. The "
-               "shape of xyz tensor is ["
-            << xyz_desc->dims[0] << ", " << xyz_desc->dims[1] << ", "
-            << xyz_desc->dims[2] << "].";
-    return MLUOP_STATUS_BAD_PARAM;
+  // the shape of xyz is [b, n, 3]. currently only n equal to 0 is supported
+  if (xyz_desc->dims[1] == 0) {
+    return MLUOP_STATUS_SUCCESS;
   }
+  // the shape of idx is [b, m, nsample]. currently only nsample equal to 0 is
+  // supported
+  if (idx_desc->dims[2] == 0) {
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  // check ptr
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", xyz != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", idx != NULL);
+
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("ball_query");
     GEN_CASE_HANDLE(handle);

@@ -2667,11 +2667,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] new_xyz
  * Pointer to the MLU memory that stores the new_xyz tensor.
+ * The shape of new_xyz is [B, M, 3]. B: the batch size; M: the number of elements in a batch;
+ * 3: the dimension of the 3D coordinate.
  * @param[in] xyz_desc
  * The descriptor of the xyz tensors, which means cloud points. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] xyz
  * Pointer to the MLU memory that stores the xyz tensor.
+ * The shape of xyz is [B, N, 3]. B: the batch size; N: the number of elements in a batch;
+ * 3: the dimension of the 3D coordinate.
  * @param[in] min_radius
  * A float value which is the minimum radius.
  * @param[in] max_radius
@@ -2683,6 +2687,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
  * see ::mluOpTensorDescriptor_t.
  * @param[in] idx
  * Pointer to the MLU memory that stores the xyz tensor.
+ * The shape of idx is [B, M, nsample]. B: the batch size; M: the number of elements in a batch;
+ * nsample: the number of points selected in the sphere.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -2694,15 +2700,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
  *   - xyz tensor: float or half.
  *   - idx tensor: int.
  *
+ *  @par Data Layout
+ *  - The supported data layouts of \b new_xyz, \b xyz, \b idx are
+ *    as follows:
+ *
+ *   - new_xyz tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - xyz tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - idx tensor: \p MLUOP_LAYOUT_ARRAY.
+ * 
  * @par Scale Limitation
  * - The new_xyz tensor, xyz tensor and idx tensor must be 3D.
  * - The first dimension of the new_xyz tensor, xyz tensor and the idx tensor must be the same.
  * - The second dimension of the new_xyz tensor and the idx tensor must be the same.
  * - The third dimension of the new_xyz tensor and the xyz tensor must be the same and equal to 3.
  * - The third dimension of idx tensor must be equal to nsample.
- * - The \b min_radius should be larger than 0.
- * - The \b max_radius should be larger than 0.
- * - The \b nsample should be larger than 0.
+ * - The \b min_radius should be greater or equal to 0.
+ * - The \b max_radius should be greater or equal to 0.
+ * - The \b nsample should be greater or equal to 0.
  * 
  * @note
  * - Take the point in new_xyz as the center of the sphere, there may be no points in xyz within the
