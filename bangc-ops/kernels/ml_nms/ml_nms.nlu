@@ -1,0 +1,198 @@
+/*************************************************************************
+* Copyright (C) [2022] by Cambricon, Inc.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be included
+* in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+************************************************************************/
+#include "bang.h"
+#include "mlu_op_kernel.h"
+#include "kernels/unary_op/unary_op_ml_nms.h"
+
+
+__mlu_func__ void getComputeLen(int seg, int elem_byte, int* compute_len) {
+#if (__BANG_ARCH__ < 200)
+  *compute_len = (seg * elem_byte % 64) == 0 ?
+    seg : (seg * elem_byte / 64 + 1) * 64 / elem_byte;
+#elif (__BANG_ARCH__ > 200 && __BANG_ARCH__ < 300)
+  *compute_len = (seg * elem_byte % 128) == 0 ?
+    seg : (seg * elem_byte / 128 + 1) * 128 / elem_byte;
+#elif (__BANG_ARCH__ > 300)
+  *compute_len = seg;
+#endif
+}
+__mlu_func__ void getOffsetNumMlNmsFast(int input_boxes_num, int* offset) {
+  if (taskDim > 1) {
+    *offset = (input_boxes_num % taskDim) > taskId ?
+      (input_boxes_num / taskDim + 1) * taskId :
+      (input_boxes_num / taskDim) * taskId + (input_boxes_num % taskDim);
+  } else {
+    *offset = input_boxes_num;
+  }
+}
+
+__mlu_func__ void getSegNumMlNmsFast(int input_boxes_num, int* seg) {
+  if (taskDim > 1) {
+    *seg = (input_boxes_num / taskDim) +
+           uint32_t((input_boxes_num % taskDim) > taskId);
+  } else {
+    *seg = input_boxes_num;
+  }
+}
+
+template <typename T>
+__mlu_func__ void computeMlNmsFast(T* worke_space,
+  T nms_thres, int input_boxes_num, int offset,
+  int seg, uint8_t* output_boxes_index) {
+  __nram__ T scores_max_boxes_area;
+  __nram__ T w_s, h_s;
+  __nram__ T* scores_max_boxes;
+  __nram__ T* x1;
+  __nram__ T* y1;
+  __nram__ T* x2;
+  __nram__ T* y2;
+  __nram__ T* w;
+  __nram__ T* h;
+  __nram__ T* area_ptr;
+  __nram__ T* inter_area_ptr;
+  __nram__ T* scores_max_boxes_area_ptr;
+  __nram__ T* nms_thres_ptr;
+  __nram__ T* scores_max_boxes_ptr;
+  __nram__ T* tem;
+  __nram__ uint8_t* result;
+  int compute_len;
+  int i, j;
+  int data_len = seg * 4 + 4;
+
+  getComputeLen(seg, sizeof(T), &compute_len);
+  scores_max_boxes = worke_space + (seg * 4);
+  x1 = worke_space + data_len;
+  y1 = worke_space + (data_len + compute_len);
+  x2 = worke_space + (data_len + (compute_len * 2));
+  y2 = worke_space + (data_len + (compute_len * 3));
+
+  data_len = data_len + (compute_len * 4);
+
+  for (i = 0, j = 0; i < seg * 4; i+=4, j++) {
+    x1[j] = worke_space[i];
+    y1[j] = worke_space[i + 1];
+    x2[j] = worke_space[i + 2];
+    y2[j] = worke_space[i + 3];
+  }
+  w = worke_space + data_len;
+  h = worke_space + (data_len + compute_len);
+  area_ptr = worke_space + (data_len + (compute_len * 2));
+  inter_area_ptr = worke_space + (data_len + (compute_len * 3));
+  scores_max_boxes_area_ptr = worke_space + (data_len + (compute_len * 4));
+  nms_thres_ptr = worke_space + (data_len + (compute_len * 5));
+  scores_max_boxes_ptr = worke_space + (data_len + (compute_len * 6));
+  tem = worke_space + (data_len + (compute_len * 7));
+  result = (uint8_t*)worke_space + (data_len + (compute_len * 8));
+
+  // -----------------iou detect--------------------
+  // fing all boxes area
+  __bang_sub(h, y1, y2, compute_len);
+  __bang_sub(w, x2, x1, compute_len);
+  __bang_mul(area_ptr, h, w, compute_len);
+
+  // max x1
+  __bang_write_value(scores_max_boxes_ptr, compute_len, scores_max_boxes[0]);
+  __bang_cycle_sub(x1, x1, scores_max_boxes_ptr, compute_len, compute_len);
+  __bang_active_relu(x1, x1, compute_len);
+  __bang_cycle_add(x1, x1, scores_max_boxes_ptr, compute_len, compute_len);
+
+  // min y1
+  __bang_write_value(scores_max_boxes_ptr, compute_len, scores_max_boxes[1]);
+  __bang_write_zero(tem, compute_len);
+  __bang_cycle_add(tem, tem, scores_max_boxes_ptr, compute_len, compute_len);
+  __bang_sub(tem, y1, scores_max_boxes_ptr, compute_len);
+  __bang_active_relu(tem, tem, compute_len);
+  __bang_sub(y1, y1, tem, compute_len);
+
+  // min x2
+  __bang_write_value(scores_max_boxes_ptr, compute_len, scores_max_boxes[2]);
+  __bang_write_zero(tem, compute_len);
+  __bang_cycle_add(tem, tem, scores_max_boxes_ptr, compute_len, compute_len);
+  __bang_sub(tem, x2, scores_max_boxes_ptr, compute_len);
+  __bang_active_relu(tem, tem, compute_len);
+  __bang_sub(x2, x2, tem, compute_len);
+
+  // max y2
+  __bang_write_value(scores_max_boxes_ptr, compute_len, scores_max_boxes[3]);
+  __bang_cycle_sub(y2, y2, scores_max_boxes_ptr, compute_len, compute_len);
+  __bang_active_relu(y2, y2, compute_len);
+  __bang_cycle_add(y2, y2, scores_max_boxes_ptr, compute_len, compute_len);
+
+  // --------- intesection-------
+  // fing W
+  __bang_sub(w, x2, x1, compute_len);
+  __bang_active_relu(w, w, compute_len);
+
+  // find H
+  __bang_sub(h, y1, y2, compute_len);
+  __bang_active_relu(h, h, compute_len);
+
+  // fing intersection
+  __bang_mul(inter_area_ptr, h, w, compute_len);
+
+  // fing scores max boxes area
+  w_s = scores_max_boxes[2] - scores_max_boxes[0];
+  h_s = scores_max_boxes[1] - scores_max_boxes[3];
+  scores_max_boxes_area = w_s * h_s;
+
+  __bang_write_value(scores_max_boxes_area_ptr, compute_len,
+    scores_max_boxes_area);
+  __bang_cycle_add(tem, area_ptr, scores_max_boxes_area_ptr,
+    compute_len, compute_len);
+  __bang_sub(tem, tem, inter_area_ptr, compute_len);
+  __bang_write_value(nms_thres_ptr, compute_len, nms_thres);
+  __bang_cycle_mul(tem, tem, nms_thres_ptr, compute_len, compute_len);
+
+  __bang_le(tem, inter_area_ptr, tem, compute_len);
+
+  for (int i = 0; i < seg; i++) {
+    if (tem[i]) {
+      result[i] = 1;
+    } else {
+      result[i] = 0;
+    }
+  }
+  __memcpy(output_boxes_index + offset, result, seg * sizeof(uint8_t),
+    NRAM2GDRAM);
+}
+
+UNION_OP_KERNEL_IMPLE(MlNms, float, Fast);
+UNION_OP_KERNEL_IMPLE(MlNms, half, Fast);
+
+void MLUOP_WIN_API mluOpKernelMlNmsFloatFast(
+  cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+  mluOpDataType_t data_type, void* boxes_data_ptr, float nms_thres,
+  int input_boxes_num, uint8_t* output_boxes_index) {
+  MLUOpKernelMlNmsfloatFast<<<k_dim, k_type, queue>>>(
+    data_type, boxes_data_ptr, nms_thres,
+    input_boxes_num, output_boxes_index);
+}
+
+void MLUOP_WIN_API mluOpKernelMlNmsHalfFast(
+  cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+  mluOpDataType_t data_type, void* boxes_data_ptr, float nms_thres,
+  int input_boxes_num, uint8_t* output_boxes_index) {
+  MLUOpKernelMlNmshalfFast<<<k_dim, k_type, queue>>>(
+    data_type, boxes_data_ptr, nms_thres,
+    input_boxes_num, output_boxes_index);
+}
