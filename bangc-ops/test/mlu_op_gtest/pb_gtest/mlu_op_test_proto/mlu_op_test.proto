@@ -147,6 +147,7 @@ message Node {
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional BallQueryParam  ball_query_param             = 4008;  // param  
+  optional MlNmsParam ml_nms_param                    = 4020;  // MlNmsParam
 }
 
 
@@ -291,4 +292,9 @@ message BallQueryParam  {
   optional float min_radius = 1 [default = 0.0];
   optional float max_radius = 2 [default = 1.0];
   optional int32   nsample  = 3 [default = 1];
+}
+
+// param to call mluOpMlNms()
+message MlNmsParam {
+  required float iou_threshold = 1 [default = 0.2];
 }
