@@ -1434,6 +1434,27 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
                                    void *data,
                                    mluOpTensorDescriptor_t *tensorDesc,
                                    void **dataAddrInDevice);
+  
+   /*
+ *
+ * @param handle : Set the handle to the MLU
+ *
+ * @param mluOpTensorDescriptor_t : Properties of the input data
+ *
+ * @param boxesDataPtr : The coordinates of the input box
+ *
+ * @param scoresMaxBoxesDataPtr : Coordin of the box with maximum accuracy
+ *
+ * @param inputBoxesNum : input box number
+ *
+ * @param iouThreshold : Threshold of intersection and union ratio
+ *
+ * @param outputBoxesIndex : Index of the output box
+ *
+ */
+
+mluOpStatus_t MLUOP_WIN_API mluOpMlNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_data_ptr_desc, void* boxes_data_ptr,
+		float iou_threshold, void* output_boxes_index);
 
 // Group:Abs
 /*!
