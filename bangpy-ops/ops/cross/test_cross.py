@@ -18,173 +18,137 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=missing-docstring, invalid-name, too-many-locals
+# pylint: disable=missing-docstring, invalid-name, too-many-locals, too-many-function-args
 
 """test file for ops: cross"""
+from test import registerOp, OpTest
 import numpy as np
-import pytest
 import bangpy
 from bangpy.common import load_op_by_type
-from cross import DTYPES, KERNEL_NAME, TARGET_LIST
+from cross import KERNEL_NAME, TARGET_LIST
 
+EPSILON=1e-9
+# np.set_printoptions(threshold=np.inf)
 
-@pytest.mark.parametrize(
-    "shape,dim",
-    [
-        # It's not suggested to test all cases in one time
-        # you may consider to divide them into two groups
-        # step <= pipeline buffer
-        ((1, 1, 1, 1, 2, 3, 4, 5), 5),
-        ((2, 1, 2, 1, 2, 2, 2, 3), 7),
-        ((2, 1, 2, 1, 2, 2, 3, 3), 6),
-        ((3, 2, 2, 1, 1, 1, 1, 1), 0),
-        ((2, 2, 2, 3, 3, 4, 4, 4), 4),
-        ((1, 2, 2, 2, 3, 128, 1, 1), 4),
-        ((1, 2, 2, 2, 3, 128, 1, 1), -4),
-        ((1024, 2, 2, 3, 3, 4, 4, 4), 4),
-        ((1, 1, 2, 4, 3, 2, 3, 1024), 4),
-        ((1, 1024, 2, 4, 3, 2, 3, 1024), 4),
-        ((2, 1024, 4, 4, 3, 2, 3, 1024), 4),
-        ((1, 1024, 2, 4, 3, 2, 3, 1024), 6),
-        # step > pipeline buffer
-        ((1, 1, 1, 1, 2, 3, 4, 8192), 5),
-        ((2, 1024, 2, 4, 3, 2, 8192, 2), 4),
-        # below are illegal input
-        # ((1, 2, 2, 2, 3, 128, 1, 1), 1),  # shape[dim]!=3, should fail
-        # ((1, 2, 2, 2, 3, 128, 1, 1), -9),  # dim not in [-8,7], should fail
-    ],
-)
-@pytest.mark.parametrize(
-    "dtype",
-    DTYPES,
-)
-def test_cross(target, shape, dim, dtype):
-    if target not in TARGET_LIST:
-        return
-
-    if target == "mlu370-s4":
-        nram_size = 768 * 1024
-        IO_BANDWIDTH = 307.2 * 2**30  # MLU370-s4: 307.2GB/s
-    else:
-        nram_size = 512 * 1024
-        IO_BANDWIDTH = 2**40  # MLU290: 1024GB/s
-
-    data_in0 = np.random.uniform(low=-1, high=1, size=shape)
-    data_in1 = np.random.uniform(low=-1, high=1, size=shape)
-
-    if not -8 <= dim <= 7:
-        raise KeyError("dim shall be in [-8,7], but not")
-
-    if dim < 0:
-        dim = dim + 8
-
-    if shape[dim] != 3:
-        raise KeyError("shape[dim] is not 3!")
-
-    # To check if step is larger than pipeline buffer
-    step = 1
-    for i in range(dim + 1, 8):
-        step = step * shape[i]
-
-    nram_size = 512 * 1024
-    buffer_size = (nram_size - 30 * 1024) // (128 * 18) * (128 * 18) / 18
-    # how to compute pipeline buffer's size, refer to cross.py (line 121)
-    if dtype == bangpy.float32:
-        buffer_size = buffer_size / 4
-    elif dtype == bangpy.float16:
-        buffer_size = buffer_size / 2
-
-    # computation below is functionally similar to torch.cross(data_in0,data_in1,dim),
-    # except data type is numpy array instead of tensor.
-    axes = list(np.arange(dim))
-    axes += list(np.arange(dim + 1, len(shape)))
-    axes.append(dim)
-    axes2 = list(np.arange(dim))
-    axes2.append(len(shape) - 1)
-    axes2 += list(np.arange(dim, len(shape) - 1))
-
-    data0 = data_in0.transpose(axes).astype(dtype.as_numpy_dtype)
-    data1 = data_in1.transpose(axes).astype(dtype.as_numpy_dtype)
-    dataout = np.cross(data0, data1)
-    data_out = dataout.transpose(axes2).astype(dtype.as_numpy_dtype)
-
-    dev = bangpy.device(0)
-
-    # set I/O datas
-
-    data_in0_dev = bangpy.Array(data_in0.astype(dtype.as_numpy_dtype), dev)
-    data_in1_dev = bangpy.Array(data_in1.astype(dtype.as_numpy_dtype), dev)
-    data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
-    dimshape = bangpy.Array(np.array(shape).astype(bangpy.int32.as_numpy_dtype), dev)
-
-    f1 = load_op_by_type(KERNEL_NAME, dtype.name)
-    f1(
-        data_in0_dev,
-        data_in1_dev,
-        dimshape,
-        shape[0],
-        shape[1],
-        shape[2],
-        shape[3],
-        shape[4],
-        shape[5],
-        shape[6],
-        shape[7],
-        dim,
-        data_out_dev,
+def cal_diff(result, data_out):
+    """
+    Compute diff1 & 2 between cpu result and mlu result.
+    """
+    result_ = result
+    data_out_ = data_out
+    result_[np.isnan(result) & np.isnan(data_out)] = 0
+    result_[np.isinf(result) & np.isinf(data_out)] = 0
+    data_out_[np.isnan(result) & np.isnan(data_out)] = 0
+    data_out_[np.isinf(result) & np.isinf(data_out)] = 0
+    diff1 = np.sum(np.abs(np.subtract(result_, data_out_))) / (np.sum(result_) +EPSILON)
+    diff2 = np.sqrt(
+        np.sum(np.power(np.subtract(data_out_, result_), 2,))
+        / np.sum(np.power(result_, 2) + EPSILON)
     )
+    return diff1, diff2
 
-    # Hardware time
-    evaluator = f1.time_evaluator(number=1, repeat=1, min_repeat_ms=0)
-    latency = (
-        evaluator(
+@registerOp("cross")
+class CrossOp(OpTest):
+    """Use proto_test to test cosine_embedding_loss."""
+    def __init__(self, target, dtype, tensor_list, output_tensor, param):
+        self.dtype = dtype
+        super().__init__(target, dtype, tensor_list, output_tensor, param)
+        self.param = param
+
+    def evaluate(self, f, dtype, target):
+        """
+        Evaluate IO efficiency and accuracy of cosineEmbeddingLoss of given parameters
+        """
+        if target not in TARGET_LIST:
+            return
+
+        if target == "mlu370-s4":
+            IO_BANDWIDTH = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
+        else:
+            IO_BANDWIDTH = 2**40  # MLU290: 1024GB/s
+
+        data_in0 = self.inputs_tensor_list[0]
+        data_in1 = self.inputs_tensor_list[1]
+        dim = self.param.get("crossParam").get("dim")
+
+        data_out = self.output_tensor_list[0]
+
+        dev = bangpy.device(0)
+        shape = data_out.shape
+        # set I/O datas
+
+        data_in0_dev = bangpy.Array(data_in0.flatten().astype(dtype.as_numpy_dtype), dev)
+        data_in1_dev = bangpy.Array(data_in1.flatten().astype(dtype.as_numpy_dtype), dev)
+        data_out_dev = bangpy.Array(np.zeros(data_out.flatten().shape, dtype.as_numpy_dtype), dev)
+        dimshape = bangpy.Array(np.array(shape).astype(bangpy.int32.as_numpy_dtype), dev)
+
+        f(
             data_in0_dev,
             data_in1_dev,
             dimshape,
-            shape[0],
-            shape[1],
-            shape[2],
-            shape[3],
-            shape[4],
-            shape[5],
-            shape[6],
-            shape[7],
+            len(shape),
+            data_in0.size,
             dim,
             data_out_dev,
-        ).median
-        * 1e3
-    )
-    print("Shape:", shape)
-    print("dim:", dim)
-    print("dtype:", dtype)
-    print("Hardware time : %f ms" % latency)
+        )
 
-    # io_efficiency
-    length = 1
-    for i in shape:
-        length = length * i
-    theory_io_size = length * dtype.bytes * 3
-    io_efficiency = 1000 * theory_io_size / (latency * IO_BANDWIDTH)
-    print("theory_io_size : %f GB" % (theory_io_size / (2**30)))
-    print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%\n")
+        # Hardware time
+        evaluator = f.time_evaluator(number=1, repeat=1, min_repeat_ms=0)
+        latency = (
+            evaluator(
+                data_in0_dev,
+                data_in1_dev,
+                dimshape,
+                len(shape),
+                data_in0.size,
+                dim,
+                data_out_dev,
+            ).median
+            * 1e3
+        )
+        print("Shape:", shape)
+        print("dim:", dim)
+        print("dtype:", dtype)
+        print("Hardware time : %f ms" % latency)
 
-    # diff3 test
-    # calculate diff3 will cost lots of time, to test efficiency quickly,
-    # strongly advise you to skip this part
-    data_out = data_out.flatten()
-    data_out_dev = data_out_dev.numpy().flatten()
-    diff = np.abs(data_out - data_out_dev)
-    data_out = np.abs(data_out)
-    maxdiff3 = 0
-    if dtype == bangpy.float16:
-        th = 1e-4
-    elif dtype == bangpy.float32:
-        th = 1e-6
-    for i, data in enumerate(data_out):
-        if data > th:
-            diff3 = diff[i] / data
-        else:
-            diff3 = diff[i]
-        if diff3 > maxdiff3:
-            maxdiff3 = diff3
-    assert maxdiff3 == 0
+        # io_efficiency
+        length = 1
+        for i in shape:
+            length = length * i
+        theory_io_size = length * dtype.bytes * 3
+        io_efficiency = 1000 * theory_io_size / (latency * IO_BANDWIDTH)
+        print("theory_io_size : %f GB" % (theory_io_size / (2**30)))
+        print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%\n")
+
+        diff1, diff2 = cal_diff(data_out.flatten(), data_out_dev.numpy().flatten())
+        assert round(diff1 * 100, 5) < 3e-3 * 100
+        assert round(diff2 * 100, 5) < 3e-3 * 100
+        print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
+        print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
+        # diff3 test
+        # calculate diff3 will cost lots of time, to test efficiency quickly,
+        # strongly advise you to skip this part
+        # data_out = data_out.flatten()
+        # data_out_dev = data_out_dev.numpy().flatten()
+        # diff = np.abs(data_out - data_out_dev)
+        # data_out = np.abs(data_out)
+        # maxdiff3 = 0
+        # if dtype == bangpy.float16:
+        #     th = 1e-4
+        # elif dtype == bangpy.float32:
+        #     th = 1e-6
+        # for i, data in enumerate(data_out):
+        #     if data > th:
+        #         diff3 = diff[i] / data
+        #     else:
+        #         diff3 = diff[i]
+        #     if diff3 > maxdiff3:
+        #         maxdiff3 = diff3
+        # assert maxdiff3 == 0
+
+    def compute(self):
+        if self.target not in TARGET_LIST:
+            return
+        f = load_op_by_type(KERNEL_NAME, self.dtype.name)
+
+        self.evaluate(f, self.dtype, self.target)

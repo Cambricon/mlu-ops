@@ -74,14 +74,8 @@ class Cross(object):
         input0: ty.handle,
         input1: ty.handle,
         dimshape: ty.handle,
-        dim0: ty.int32,
-        dim1: ty.int32,
-        dim2: ty.int32,
-        dim3: ty.int32,
-        dim4: ty.int32,
-        dim5: ty.int32,
-        dim6: ty.int32,
-        dim7: ty.int32,
+        dims: ty.int32,
+        buffer_size: ty.int32,
         dim: ty.int32,
         output: ty.handle,
     ) -> None:
@@ -89,24 +83,27 @@ class Cross(object):
         # shape=(dim0, dim1, …)
         # if 'shape' is not set as parameter，then 'shape[i]' below would be not supported
 
-        shape = tcp.match_buffer(dimshape, [8], dtype="int32")
+        shape = tcp.match_buffer(dimshape, [dims,], dtype="int32")
         buffer_in0 = tcp.match_buffer(
-            input0, [dim0, dim1, dim2, dim3, dim4, dim5, dim6, dim7], dtype=self.dtype
+            input0, [buffer_size,], dtype=self.dtype
         )
         buffer_in1 = tcp.match_buffer(
-            input1, [dim0, dim1, dim2, dim3, dim4, dim5, dim6, dim7], dtype=self.dtype
+            input1, [buffer_size,], dtype=self.dtype
         )
         buffer_out = tcp.match_buffer(
-            output, [dim0, dim1, dim2, dim3, dim4, dim5, dim6, dim7], dtype=self.dtype
+            output, [buffer_size,], dtype=self.dtype
         )
 
         tgt = tcp.target()
         task_num = tgt.cluster_num * tgt.core_num
 
-        mydim = dim + 1
+        mydim = dim+1
+        if dim < 0:
+            mydim = dim + dims
+            mydim = mydim + 1
         # Bangpy2 can automatically deal with negative index
 
-        maxdim = 8
+        maxdim = dims
         # pipeline buffer's shape must be statically defined,
         # so the dimension of shape must be static
 
@@ -167,46 +164,25 @@ class Cross(object):
 
                 # split and compute
                 buffer_in0 = buffer_in0.flatten()[
-                    : dim0
-                    * dim1
-                    * dim2
-                    * dim3
-                    * dim4
-                    * dim5
-                    * dim6
-                    * dim7
+                    : buffer_size
                     / step
                     * step
                 ].reshape(
-                    (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
+                    (buffer_size / step, step)
                 )
                 buffer_in1 = buffer_in1.flatten()[
-                    : dim0
-                    * dim1
-                    * dim2
-                    * dim3
-                    * dim4
-                    * dim5
-                    * dim6
-                    * dim7
+                    : buffer_size
                     / step
                     * step
                 ].reshape(
-                    (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
+                    (buffer_size / step, step)
                 )
                 buffer_out = buffer_out.flatten()[
-                    : dim0
-                    * dim1
-                    * dim2
-                    * dim3
-                    * dim4
-                    * dim5
-                    * dim6
-                    * dim7
+                    : buffer_size
                     / step
                     * step
                 ].reshape(
-                    (dim0 * dim1 * dim2 * dim3 * dim4 * dim5 * dim6 * dim7 / step, step)
+                    (buffer_size / step, step)
                 )
 
                 for step_loop in range(step_loop_num):
@@ -702,7 +678,6 @@ class Cross(object):
                                     ),
                                 )
 
-        buffer_out.reshape((dim0, dim1, dim2, dim3, dim4, dim5, dim6, dim7))
 
 
 @bangpy.tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
