@@ -14,7 +14,7 @@ else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
     | grep -v ${exclude_list} \
-    | grep -E ${check_list}) 
+    | grep -E ${check_list})
 fi
 
 ret=0
@@ -51,7 +51,7 @@ for i in ${filenames} ; do
   check_dir=$(echo $i | grep -E "^core\/|^kernels\/")
   #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
   if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
-    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \ 
+    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \
       /\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
     for line in ${printf_log};
     do
@@ -83,15 +83,15 @@ fi
 #   include_mlu=$(echo $i | grep "\.mlu")
 #   if [[ -n "${include_mlu}" ]]; then
 #     # step1
-#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>". 
-#     # launch_kenel_indexs is an array, duo to there are many places to launch 
+#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>".
+#     # launch_kenel_indexs is an array, duo to there are many places to launch
 #     # kernel.
 #     launch_kernel_indexs=$(sed -n '/<<<.*queue>>>/=' $i)
 #     if [[ launch_kernel_indexs ]]; then
 #       for launch_kernel_index in ${launch_kernel_indexs}; do
 #         forward_line_num=1
 #         # step2
-#         # forward_line_num represents how many lines before "launch_kenel_index", 
+#         # forward_line_num represents how many lines before "launch_kenel_index",
 #         # attempting to find the starting line of launch kernel
 #         while [[ ${forward_line_num} -le ${launch_kernel_index} ]]; do
 #           start_index_launch_kernel=`expr ${launch_kernel_index} - ${forward_line_num}`
