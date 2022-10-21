@@ -122,7 +122,8 @@ FilePath FilePath::GetCurrentDir() {
 FilePath FilePath::RemoveExtension(const char *extension) const {
   const std::string dot_extension = std::string(".") + extension;
   if (String::EndsWithCaseInsensitive(pathname_, dot_extension)) {
-    return FilePath(pathname_.substr(0, pathname_.length() - dot_extension.length()));
+    return FilePath(
+        pathname_.substr(0, pathname_.length() - dot_extension.length()));
   }
   return *this;
 }
@@ -177,23 +178,23 @@ FilePath FilePath::RemoveFileName() const {
 // than zero (e.g., 12), returns "dir/test_12.xml".
 // On Windows platform, uses \ as the separator rather than /.
 FilePath FilePath::MakeFileName(const FilePath &directory,
-                                const FilePath &base_name,
-                                int number,
+                                const FilePath &base_name, int number,
                                 const char *extension) {
   std::string file;
   if (number == 0) {
     file = base_name.string() + "." + extension;
   } else {
-    file = base_name.string() + "_" + StreamableToString(number) + "." + extension;
+    file =
+        base_name.string() + "_" + StreamableToString(number) + "." + extension;
   }
   return ConcatPaths(directory, FilePath(file));
 }
 
 // Given directory = "dir", relative_path = "test.xml", returns "dir/test.xml".
 // On Windows, uses \ as the separator rather than /.
-FilePath FilePath::ConcatPaths(const FilePath &directory, const FilePath &relative_path) {
-  if (directory.IsEmpty())
-    return relative_path;
+FilePath FilePath::ConcatPaths(const FilePath &directory,
+                               const FilePath &relative_path) {
+  if (directory.IsEmpty()) return relative_path;
   const FilePath dir(directory.RemoveTrailingPathSeparator());
   return FilePath(dir.string() + kPathSeparator + relative_path.string());
 }
@@ -219,7 +220,8 @@ bool FilePath::DirectoryExists() const {
 #if GTEST_OS_WINDOWS
   // Don't strip off trailing separator if path is a root directory on
   // Windows (like "C:\\").
-  const FilePath &path(IsRootDirectory() ? *this : RemoveTrailingPathSeparator());
+  const FilePath &path(IsRootDirectory() ? *this
+                                         : RemoveTrailingPathSeparator());
 #else
   const FilePath &path(*this);
 #endif
@@ -228,12 +230,14 @@ bool FilePath::DirectoryExists() const {
   LPCWSTR unicode = String::AnsiToUtf16(path.c_str());
   const DWORD attributes = GetFileAttributes(unicode);
   delete[] unicode;
-  if ((attributes != kInvalidFileAttributes) && (attributes & FILE_ATTRIBUTE_DIRECTORY)) {
+  if ((attributes != kInvalidFileAttributes) &&
+      (attributes & FILE_ATTRIBUTE_DIRECTORY)) {
     result = true;
   }
 #else
   posix::StatStruct file_stat;
-  result = posix::Stat(path.c_str(), &file_stat) == 0 && posix::IsDir(file_stat);
+  result =
+      posix::Stat(path.c_str(), &file_stat) == 0 && posix::IsDir(file_stat);
 #endif  // GTEST_OS_WINDOWS_MOBILE
 
   return result;
@@ -257,7 +261,8 @@ bool FilePath::IsAbsolutePath() const {
   const char *const name = pathname_.c_str();
 #if GTEST_OS_WINDOWS
   return pathname_.length() >= 3 &&
-         ((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= 'A' && name[0] <= 'Z')) &&
+         ((name[0] >= 'a' && name[0] <= 'z') ||
+          (name[0] >= 'A' && name[0] <= 'Z')) &&
          name[1] == ':' && IsPathSeparator(name[2]);
 #else
   return IsPathSeparator(name[0]);
@@ -287,7 +292,8 @@ FilePath FilePath::GenerateUniqueFileName(const FilePath &directory,
 // it is intended to represent a directory. Returns false otherwise.
 // This does NOT check that a directory (or file) actually exists.
 bool FilePath::IsDirectory() const {
-  return !pathname_.empty() && IsPathSeparator(pathname_.c_str()[pathname_.length() - 1]);
+  return !pathname_.empty() &&
+         IsPathSeparator(pathname_.c_str()[pathname_.length() - 1]);
 }
 
 // Create directories so that path exists. Returns true if successful or if
@@ -332,7 +338,8 @@ bool FilePath::CreateFolder() const {
 // name, otherwise return the name string unmodified.
 // On Windows platform, uses \ as the separator, other platforms use /.
 FilePath FilePath::RemoveTrailingPathSeparator() const {
-  return IsDirectory() ? FilePath(pathname_.substr(0, pathname_.length() - 1)) : *this;
+  return IsDirectory() ? FilePath(pathname_.substr(0, pathname_.length() - 1))
+                       : *this;
 }
 
 // Removes any redundant separators that might be in the pathname.
@@ -359,8 +366,7 @@ void FilePath::Normalize() {
         *dest_ptr = kPathSeparator;
       }
 #endif
-      while (IsPathSeparator(*src))
-        src++;
+      while (IsPathSeparator(*src)) src++;
     }
     dest_ptr++;
   }

@@ -50,8 +50,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, void *output);
 
-mluOpStatus_t MLUOP_WIN_API mluOpContiguous(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
-    const void *input, void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpContiguous(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
+                const void *input, void *output);
 
 #endif  // KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_HOST_H_

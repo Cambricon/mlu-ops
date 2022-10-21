@@ -23,10 +23,12 @@
 
 #include "generate_proposals_v2_impl.h"
 
-#include <iostream>
 #include <float.h>
 
-using namespace std;
+#include <algorithm>
+#include <iostream>
+
+using namespace std;  // NOLINT
 
 namespace GenerateProposalsV2 {
 

@@ -1,12 +1,10 @@
 #! /bin/bash
 
-bangc_core="bangc-ops/core|"
-bangc_kernel="bangc-ops/kernels|"
-bangc_test_zoo="bangc-ops/test/mlu_op_gtest/src/zoo"
-check_list=${bangc_core}${bangc_kernel}${bangc_test_zoo}
+bangc_ops="bangc-ops"
+check_list=${bangc_ops}
 
-bangc_core_op_h="bangc-ops/core/mlu_op_core.h"
-exclude_list=${bangc_core_op_h}
+bangc_mlu_op_h="bangc-ops/mlu_op.h"
+exclude_list=${bangc_mlu_op_h}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
@@ -126,6 +124,11 @@ Please add KERNEL_CHECK when launching kernel."
 else
   echo "-- [pre-commit] check printf PASSED."
 fi
+
+echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
+for i in $filenames; do
+  tools/check_log_error.py $i
+done
 
 if [[ "$(which pylint)" == "" ]]; then
   echo "Please pip install pylint!(pylint==2.9)"

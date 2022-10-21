@@ -257,9 +257,11 @@ class GTEST_API_ KilledBySignal {
 //
 #ifdef NDEBUG
 
-#define EXPECT_DEBUG_DEATH(statement, regex) GTEST_EXECUTE_STATEMENT_(statement, regex)
+#define EXPECT_DEBUG_DEATH(statement, regex) \
+  GTEST_EXECUTE_STATEMENT_(statement, regex)
 
-#define ASSERT_DEBUG_DEATH(statement, regex) GTEST_EXECUTE_STATEMENT_(statement, regex)
+#define ASSERT_DEBUG_DEATH(statement, regex) \
+  GTEST_EXECUTE_STATEMENT_(statement, regex)
 
 #else
 
@@ -314,8 +316,9 @@ class GTEST_API_ KilledBySignal {
     ::testing::internal::RE::PartialMatch(".*", (regex));                      \
     GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement);                 \
     terminator;                                                                \
-  } else                                                                       \
-  ::testing::Message()
+  } else {                                                                     \
+    ::testing::Message();                                                      \
+  }
 
 // EXPECT_DEATH_IF_SUPPORTED(statement, regex) and
 // ASSERT_DEATH_IF_SUPPORTED(statement, regex) expand to real death tests if
@@ -323,10 +326,13 @@ class GTEST_API_ KilledBySignal {
 // useful when you are combining death test assertions with normal test
 // assertions in one test.
 #if GTEST_HAS_DEATH_TEST
-#define EXPECT_DEATH_IF_SUPPORTED(statement, regex) EXPECT_DEATH(statement, regex)
-#define ASSERT_DEATH_IF_SUPPORTED(statement, regex) ASSERT_DEATH(statement, regex)
+#define EXPECT_DEATH_IF_SUPPORTED(statement, regex) \
+  EXPECT_DEATH(statement, regex)
+#define ASSERT_DEATH_IF_SUPPORTED(statement, regex) \
+  ASSERT_DEATH(statement, regex)
 #else
-#define EXPECT_DEATH_IF_SUPPORTED(statement, regex) GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, )
+#define EXPECT_DEATH_IF_SUPPORTED(statement, regex) \
+  GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, )
 #define ASSERT_DEATH_IF_SUPPORTED(statement, regex) \
   GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, return )
 #endif

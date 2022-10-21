@@ -120,11 +120,13 @@ bool readIn(const std::string &filename, google::protobuf::Message *proto) {
 }
 
 // write to pb.
-bool writeTo(const google::protobuf::Message *proto, const std::string &filename) {
+bool writeTo(const google::protobuf::Message *proto,
+             const std::string &filename) {
   std::ifstream fin(filename, std::ios::in);
   if (fin.is_open()) {
     fin.close();
-    std::cout << filename << " already exists, create file failed." << std::endl;
+    std::cout << filename << " already exists, create file failed."
+              << std::endl;
     return false;
   }
 
@@ -222,9 +224,11 @@ int main(int argc, char **argv) {
       std::string name = splitFileName(proto_files[i]);
       std::string prefix = splitPrefix(src_path, proto_files[i]);
       makeDir(dst_path + prefix + "/");
-      dumpProto(src_path + prefix + "/" + name + ext, dst_path + prefix + "/" + name + ".pb");
+      dumpProto(src_path + prefix + "/" + name + ext,
+                dst_path + prefix + "/" + name + ".pb");
     }
   } else {
-    std::cout << "Can't read in from " << src_path << " and write to " << dst_path << std::endl;
+    std::cout << "Can't read in from " << src_path << " and write to "
+              << dst_path << std::endl;
   }
 }

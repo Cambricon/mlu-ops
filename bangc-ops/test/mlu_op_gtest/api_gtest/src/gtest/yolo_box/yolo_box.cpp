@@ -283,4 +283,4 @@ TEST_F(yolo_box, BAD_PARAM_scores_null) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in yolo_box";
   }
 }
-}  // mluopapitest
+}  // namespace mluopapitest

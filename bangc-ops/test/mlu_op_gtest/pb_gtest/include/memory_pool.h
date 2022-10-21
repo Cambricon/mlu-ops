@@ -40,16 +40,19 @@ namespace mluoptest {
 class MemoryPool {
  public:
   struct Chunk {
-    Chunk(size_t as, size_t rs, void *p) : allocated_size(as), requested_size(rs), ptr(p) {}
+    Chunk(size_t as, size_t rs, void *p)
+        : allocated_size(as), requested_size(rs), ptr(p) {}
     uint64_t allocated_size = 0;
     uint64_t requested_size = 0;
-    void *ptr               = nullptr;
+    void *ptr = nullptr;
   };
 
   MemoryPool() { ctx_ = std::make_shared<Context>(); }
   virtual ~MemoryPool() { destroy(); }
 
-  virtual void *allocate(size_t num_bytes, const std::string &name = "") { return nullptr; }
+  virtual void *allocate(size_t num_bytes, const std::string &name = "") {
+    return nullptr;
+  }
   virtual void deallocate(void *ptr) {}
   virtual void destroy() {}
   virtual void clear() {}  // free obj of 1 thread.

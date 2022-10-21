@@ -29,27 +29,29 @@
 namespace mluoptest {
 
 struct TestSummary {
-  size_t case_count  = 0;
+  size_t case_count = 0;
   size_t suite_count = 0;
   std::list<std::string> failed_list;
 };
 
 class GlobalVar {
  public:
-  std::string cases_dir_  = "";
+  std::string cases_dir_ = "";
   std::string cases_list_ = "";
-  std::string case_path_  = "";
+  std::string case_path_ = "";
   std::string get_vmpeak_ = "";
   TestSummary summary_;
 
-  int dev_id_     = 0;      // the picked device id, make sure gtest run on the picked device.
-  int rand_n_     = -1;     // pick n * random case, -1 for uninitialized
-  int repeat_     = 1;      // perf-repeat repeat * kernel enqueue cnrtQueue_t, and get ave hw_time
-  int thread_num_ = 1;      // thread num
-  bool shuffle_   = false;  // shuffle cases.
+  // the picked device id, make sure gtest run on the picked device.
+  int dev_id_ = 0;
+  int rand_n_ = -1;  // pick n * random case, -1 for uninitialized
+  int repeat_ = 1;   // perf-repeat repeat * kernel enqueue cnrtQueue_t, and get
+                     // ave hw_time
+  int thread_num_ = 1;    // thread num
+  bool shuffle_ = false;  // shuffle cases.
 
   std::string getParam(const std::string &str, std::string key) {
-    key       = key + "=";
+    key = key + "=";
     auto npos = str.find(key);
     if (npos == std::string::npos) {
       return "";
@@ -60,7 +62,8 @@ class GlobalVar {
 
   void init(int argc, char **argv) {
     auto to_int = [](std::string s, std::string opt) -> int {
-      if (std::count_if(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c); }) ==
+      if (std::count_if(s.begin(), s.end(),
+                        [](unsigned char c) { return std::isdigit(c); }) ==
               s.size() &&
           !s.empty()) {
         return std::atoi(s.c_str());
@@ -70,20 +73,26 @@ class GlobalVar {
     };
     for (int i = 0; i < argc; i++) {
       std::string arg = argv[i];
-      cases_dir_      = cases_dir_.empty() ? getParam(arg, "--cases_dir") : cases_dir_;
-      cases_list_     = cases_list_.empty() ? getParam(arg, "--cases_list") : cases_list_;
-      case_path_      = case_path_.empty() ? getParam(arg, "--case_path") : case_path_;
-      get_vmpeak_     = get_vmpeak_.empty() ? getParam(arg, "--get_vmpeak") : get_vmpeak_;
-      rand_n_         = (rand_n_ == -1) ? to_int(getParam(arg, "--rand_n"), "--rand_n") : rand_n_;
-      repeat_         = getParam(arg, "--perf_repeat").empty()
+      cases_dir_ =
+          cases_dir_.empty() ? getParam(arg, "--cases_dir") : cases_dir_;
+      cases_list_ =
+          cases_list_.empty() ? getParam(arg, "--cases_list") : cases_list_;
+      case_path_ =
+          case_path_.empty() ? getParam(arg, "--case_path") : case_path_;
+      get_vmpeak_ =
+          get_vmpeak_.empty() ? getParam(arg, "--get_vmpeak") : get_vmpeak_;
+      rand_n_ = (rand_n_ == -1) ? to_int(getParam(arg, "--rand_n"), "--rand_n")
+                                : rand_n_;
+      repeat_ = getParam(arg, "--perf_repeat").empty()
                     ? repeat_
                     : to_int(getParam(arg, "--perf_repeat"), "--perf_repeat");
       thread_num_ = getParam(arg, "--thread").empty()
                         ? thread_num_
                         : to_int(getParam(arg, "--thread"), "--thread");
 
-      shuffle_ =
-          (shuffle_ == false) ? (arg.find("--gtest_shuffle") != std::string::npos) : shuffle_;
+      shuffle_ = (shuffle_ == false)
+                     ? (arg.find("--gtest_shuffle") != std::string::npos)
+                     : shuffle_;
     }
     // print();
   }

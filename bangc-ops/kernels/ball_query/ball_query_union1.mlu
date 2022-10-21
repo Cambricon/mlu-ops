@@ -52,7 +52,7 @@ __mlu_func__ void convertFloat2Int(int32_t *dst, float *dst_addtion,
   __bang_add_scalar((float *)src, (float *)src, (float)(offset),
                     CEIL_ALIGN(elem_count, 64));
   __float2int32((int32_t *)dst, (float *)dst_addtion, (float *)src,
-                    (float *)src_addtion, CEIL_ALIGN(elem_count, 64));
+                (float *)src_addtion, CEIL_ALIGN(elem_count, 64));
 #endif
 }
 

@@ -70,18 +70,18 @@ static size_t shapeStrideCount(const mluOpTensorDescriptor_t desc) {
 }
 
 /* The API for mluOpCopy. This operator copy a tensor to another tensor.
-*  The operator supports data types of INT8, INT16, INT32, HALF and FLOAT32.
-*  And the kernel can be launched on UNION1 job types with multi jobs.
-*  parameters:
-*    handle - the context of the current kernel
-*    input_desc - the tensor descriptor of the input tensor
-*    input - pointer to the input tensor on DDR
-*    output_desc - the tensor descriptor of the output tensor
-*    output - pointer to the output tensor on DDR
-*  returns:
-*    MLUOP_STATUS_SUCCESS - The kernel is performed successfully
-*    MLUOP_STATUS_EXECUTION_FAILED - The job configuration is invalid
-*/
+ *  The operator supports data types of INT8, INT16, INT32, HALF and FLOAT32.
+ *  And the kernel can be launched on UNION1 job types with multi jobs.
+ *  parameters:
+ *    handle - the context of the current kernel
+ *    input_desc - the tensor descriptor of the input tensor
+ *    input - pointer to the input tensor on DDR
+ *    output_desc - the tensor descriptor of the output tensor
+ *    output - pointer to the output tensor on DDR
+ *  returns:
+ *    MLUOP_STATUS_SUCCESS - The kernel is performed successfully
+ *    MLUOP_STATUS_EXECUTION_FAILED - The job configuration is invalid
+ */
 mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
                                       const mluOpTensorDescriptor_t input_desc,
                                       const void *input,
@@ -188,15 +188,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
     }
     VLOG(5) << "use_SMC: " << use_SMC;
     KERNEL_CHECK((mluOpUnion1KernelCopyWithStride(
-        k_dim, k_type, handle->queue, input, input_shape, output,
-        output_shape, num_input, kDTypeSize, use_SMC)));
+        k_dim, k_type, handle->queue, input, input_shape, output, output_shape,
+        num_input, kDTypeSize, use_SMC)));
   } else {
     VLOG(5) << "Launch Kernel mluOpUnion1KernelCopy <<<Union1"
             << ", Dim3{" << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
             << "} >>>";
-    KERNEL_CHECK(
-        (mluOpUnion1KernelCopy(k_dim, k_type, handle->queue, input,
-                               output, num_input, kDTypeSize)));
+    KERNEL_CHECK((mluOpUnion1KernelCopy(k_dim, k_type, handle->queue, input,
+                                        output, num_input, kDTypeSize)));
   }
 
   GEN_CASE_END();
