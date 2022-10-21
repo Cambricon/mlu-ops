@@ -179,16 +179,16 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     reduction_result_dev = reduction_result_dev.numpy()
     if reduction == 0:
         print("data_out_dev : ", data_out_dev)
-        cal_diff(data_out_dev, data_out, reduction)
+        cal_diff(data_out, data_out_dev, reduction)
     elif reduction == 1:
         print("data_out_sum_dev : ", reduction_result_dev[0])
-        cal_diff(reduction_result_dev[0], data_out_sum, reduction)
+        cal_diff(data_out_sum, reduction_result_dev[0], reduction)
     elif reduction == 2:
         print("data_out_mean_dev : ", reduction_result_dev[0])
-        cal_diff(reduction_result_dev[0], data_out_mean, reduction)
+        cal_diff(data_out_mean, reduction_result_dev[0], reduction)
     elif reduction == 3:
         print("data_out_batchmean_dev : ", reduction_result_dev[0])
-        cal_diff(reduction_result_dev[0], data_out_batchmean, reduction)
+        cal_diff(data_out_batchmean, reduction_result_dev[0], reduction)
 
     print("tutorial : %f ms" % t)
 
@@ -196,8 +196,8 @@ def test_kldivloss(target, shape, dtype, reduction, log_target):
     theory_io_size = (
         3 * totaldata * dtype.bytes if reduction == 0 else 2 * totaldata * dtype.bytes
     )
-    # io_bandwidth = 2 ** 40  # MLU290: 1024GB/s
-    io_bandwidth = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
+    io_bandwidth = 2 ** 40  # MLU290: 1024GB/s
+    # io_bandwidth = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
     io_efficiency = 1000 * theory_io_size / (t * io_bandwidth)
     print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
     print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
