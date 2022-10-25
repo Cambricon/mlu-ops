@@ -44,8 +44,10 @@ template <typename T, void (*OpFunc)(T*, T, int, int, int, uint8_t*)>
 __mlu_device__ void unionImple(T* boxes_data_ptr, T nms_thres, int offset,
   int seg, int input_boxes_num, uint8_t* output_boxes_index) {
   __nram__ char worke_space[MAX_NRAM_SIZE / 16];
-  __memcpy((T*)worke_space, boxes_data_ptr + (offset * 4), seg * 4 * sizeof(T), GDRAM2NRAM);
-  __memcpy((T*)worke_space + (seg * 4), boxes_data_ptr, 4 * sizeof(T), GDRAM2NRAM); 
+  __memcpy((T*)worke_space, boxes_data_ptr + (offset * 4),
+           seg * 4 * sizeof(T), GDRAM2NRAM);
+  __memcpy((T*)worke_space + (seg * 4), boxes_data_ptr,
+           4 * sizeof(T), GDRAM2NRAM);
   OpFunc((T*)worke_space, nms_thres, input_boxes_num, offset,
     seg, output_boxes_index);
 }
