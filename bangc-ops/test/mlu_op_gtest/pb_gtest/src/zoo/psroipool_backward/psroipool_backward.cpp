@@ -22,6 +22,8 @@
  *************************************************************************/
 #include "psroipool_backward.h"
 
+#include <algorithm>
+
 namespace mluoptest {
 void PsroipoolBackwardExecutor::paramCheck() {
   VLOG(4) << "[PsroipoolBackwardExecutor] param check.";

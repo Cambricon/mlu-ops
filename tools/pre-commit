@@ -1,12 +1,10 @@
 #! /bin/bash
 
-bangc_core="bangc-ops/core|"
-bangc_kernel="bangc-ops/kernels|"
-bangc_test_zoo="bangc-ops/test/mlu_op_gtest/src/zoo"
-check_list=${bangc_core}${bangc_kernel}${bangc_test_zoo}
+bangc_ops="bangc-ops"
+check_list=${bangc_ops}
 
-bangc_core_op_h="bangc-ops/core/mlu_op_core.h"
-exclude_list=${bangc_core_op_h}
+bangc_mlu_op_h="bangc-ops/mlu_op.h"
+exclude_list=${bangc_mlu_op_h}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
@@ -16,7 +14,7 @@ else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
     | grep -v ${exclude_list} \
-    | grep -E ${check_list}) 
+    | grep -E ${check_list})
 fi
 
 ret=0
@@ -53,7 +51,7 @@ for i in ${filenames} ; do
   check_dir=$(echo $i | grep -E "^core\/|^kernels\/")
   #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
   if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
-    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \ 
+    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \
       /\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
     for line in ${printf_log};
     do
@@ -85,15 +83,15 @@ fi
 #   include_mlu=$(echo $i | grep "\.mlu")
 #   if [[ -n "${include_mlu}" ]]; then
 #     # step1
-#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>". 
-#     # launch_kenel_indexs is an array, duo to there are many places to launch 
+#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>".
+#     # launch_kenel_indexs is an array, duo to there are many places to launch
 #     # kernel.
 #     launch_kernel_indexs=$(sed -n '/<<<.*queue>>>/=' $i)
 #     if [[ launch_kernel_indexs ]]; then
 #       for launch_kernel_index in ${launch_kernel_indexs}; do
 #         forward_line_num=1
 #         # step2
-#         # forward_line_num represents how many lines before "launch_kenel_index", 
+#         # forward_line_num represents how many lines before "launch_kenel_index",
 #         # attempting to find the starting line of launch kernel
 #         while [[ ${forward_line_num} -le ${launch_kernel_index} ]]; do
 #           start_index_launch_kernel=`expr ${launch_kernel_index} - ${forward_line_num}`
@@ -126,6 +124,11 @@ Please add KERNEL_CHECK when launching kernel."
 else
   echo "-- [pre-commit] check printf PASSED."
 fi
+
+echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
+for i in $filenames; do
+  tools/check_log_error.py $i
+done
 
 if [[ "$(which pylint)" == "" ]]; then
   echo "Please pip install pylint!(pylint==2.9)"

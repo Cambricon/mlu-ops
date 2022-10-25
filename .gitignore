@@ -204,4 +204,7 @@ cython_debug/
 # Local History for Visual Studio Code
 .history/
 
-
+# Build Temp Dir
+dep_libs_extract/
+package/
+test_workspace/

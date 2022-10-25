@@ -3,19 +3,21 @@
 [![ci](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml/badge.svg)](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml)
 
 MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
+MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开发自定义算子，实现对应模型的计算。
 
 ## 依赖条件
 
 - 操作系统：
-  - 目前支持 X86_64 下 Ubuntu16.04 Ubuntu18.04 Centos7.6 
+  - 支持 x86_64 下 Ubuntu16.04、Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5 ;
+  - 支持 AArch64 下 KylinV10。
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.0.1 版本
+  - 编译和运行时依赖 CNToolkit v3.1.2 或更高版本。
 - 寒武纪 MLU 驱动：
-  - 运行时依赖驱动 v4.15.3 或更高版本
+  - 运行时依赖驱动 v5.0.0 或更高版本。
 - 外部链接库：
-  - libxml2-dev libprotobuf-dev protobuf-compiler llvm-6.0-dev
+  - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev
 - Python环境：
-  - 依赖Python-3.8.0版本
+  - 依赖Python-3.8.0版本。
 
 ## MLU-OPS 依赖环境准备
 
@@ -58,15 +60,15 @@ MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）
 
 ## 编译和运行测试用例
 
-当前C接口（`BANGC`）和 Python接口（`BANGPy`）开发编译和测试分开，后续会将两种接口开发编译、测试统一到一起。
+当前 C 接口（`BANGC`）和 Python 接口（`BANGPy`）开发编译和测试分开，后续会将两种接口开发编译、测试统一到一起。
 
 - C 接口请参考文档 [README.md](bangc-ops/README.md)。
 - Python 接口请参考文档 [README.md](bangpy-ops/README.md)。
 
 ## 新算子开发流程
 
-详情可以参考文档 [BANGC-OPS 算子开发流程.md](docs/bangc-docs/BANGC-OPS算子开发流程.md)、
-[BANGPy-OPS 算子开发流程.md](docs/bangpy-docs/BANGPy-OPS算子开发流程.md) 以及 docs 目录下的其它补充说明，
+详情可以参考文档 [BANGC-OPS 算子开发流程.md](docs/bangc-docs/BANGC-OPS-Operator-Development-Process.md)、
+[BANGPy-OPS 算子开发流程.md](docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md) 以及 docs 目录下的其它补充说明，
 同时也需要参考 C 接口说明文档[README.md](bangc-ops/README.md) 和 Python 接口说明文档[README.md](bangpy-ops/README.md)。
 
 ## 获取开发手册

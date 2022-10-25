@@ -144,8 +144,9 @@ void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     const void *max_sizes, const int max_sizes_num, const int height,
     const int width, const int im_height, const int im_width,
     const float step_h, const float step_w, const float offset,
-    const int num_priors, const bool clip, const bool min_max_aspect_ratios_order,
-    void *output, const int output_size, void *var, const int var_size);
+    const int num_priors, const bool clip,
+    const bool min_max_aspect_ratios_order, void *output, const int output_size,
+    void *var, const int var_size);
 
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
@@ -197,6 +198,33 @@ void MLUOP_WIN_API mluOpBlockKernelYoloBoxFloat(
     const bool clip_bbox, const float scale, const bool iou_aware,
     const float iou_aware_factor, const int n_in, const int anchor_s,
     const int c_in, const int h_in, const int w_in, void *boxes, void *scores);
+
+/* ThreeInterpolateForward*/
+void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *features, const void *indices, const void *weights, const int b,
+    const int c, const int m, const int n, const int c_limit_size,
+    const int m_limit_size, const int n_limit_size, void *output);
+void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *features, const void *indices, const void *weights, const int b,
+    const int c, const int m, const int n, const int c_limit_size,
+    const int m_limit_size, const int n_limit_size, void *output);
+
+/* Expand */
+void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, void *output, const int input_1, const int input_2,
+    const int input_3, const int input_4, const int input_5, const int input_6,
+    const int input_7, const int input_8, const int output_1,
+    const int output_2, const int output_3, const int output_4,
+    const int output_5, const int output_6, const int output_7,
+    const int output_8, const int dtype_size);
+
+void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, void *output, const int high_num, const int expand_num,
+    const int low_num, const int dtype_size);
 
 #if defined(__cplusplus)
 }

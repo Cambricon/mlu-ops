@@ -12,7 +12,7 @@
 
 如：算子采用静态阈值标准：diffs=[diff1, diff2], diff1<=3e-3 && diff2 <= 3e-3
 
-详细见 [MLU-OPS 精度验收标准](./MLU-OPS精度验收标准.md)
+详细见 [MLU-OPS 精度验收标准](./MLU-OPS-Accuracy-Acceptance-Standard.md)
 
 ### 1.2 算子方案CHECKLIST
 
@@ -39,11 +39,11 @@
 - [ ] nan / inf测试  
 - [ ] 内存泄漏检查, 详见[GTest-User-Guide-zh](./GTest-User-Guide-zh.md)
 - [ ] 代码覆盖率检查，详见[GTest-User-Guide-zh](./GTest-User-Guide-zh.md)
-- [ ] IO计算效率检查，详见[MLU-OPS性能验收标准](./MLU-OPS性能验收标准.md) 
+- [ ] IO计算效率检查，详见[MLU-OPS性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md) 
 
 **_关于功能测试，是希望算子开发者能够针对每一个逻辑，每一个分支，每一个判断，进行对应的测例设计，尽量覆盖到所有代码逻辑。_**
 
-### 1.3 参数检查
+### 1.4 参数检查
 
 提交新算子时，给出测试点，并说明测试结果。
 
@@ -54,7 +54,7 @@
 
 # 2. 性能测试
 
-详见：[MLU-OPS性能验收标准](./MLU-OPS性能验收标准.md)
+详见：[MLU-OPS性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md)
 
 平台：MLU270
 

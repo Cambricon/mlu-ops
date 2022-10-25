@@ -4,6 +4,7 @@ set -e
 SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
+MLUOPS_TARGET_CPU_ARCH=`uname -m`
 
 usage () {
     echo "USAGE: ./build.sh <options>"
@@ -87,17 +88,21 @@ pushd ${BUILD_PATH} > /dev/null
   if [[ ${MLUOP_BUILD_COVERAGE_TEST} == "ON" ]]; then
     echo "-- Build cambricon coverage test cases."
     ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" \
-                  -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}"
+                  -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}" \
+                  -DMLUOPS_TARGET_CPU_ARCH="${MLUOPS_TARGET_CPU_ARCH}"
   else
     echo "-- Build cambricon release test cases."
     ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" \
                   -DBUILD_VERSION="${BUILD_VERSION}" \
-                  -DMAJOR_VERSION="${MAJOR_VERSION}" 
-  fi 
+                  -DMAJOR_VERSION="${MAJOR_VERSION}" \
+                  -DMLUOPS_TARGET_CPU_ARCH="${MLUOPS_TARGET_CPU_ARCH}"
+  fi
 
   if [[ ${MLUOP_BUILD_ASAN_CHECK} == "ON" ]]; then
     echo "-- Build cambricon ASAN leak check."
-    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}"
+    ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" \
+                  -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
+                  -DMLUOPS_TARGET_CPU_ARCH="${MLUOPS_TARGET_CPU_ARCH}"
   fi
 popd > /dev/null
 ${CMAKE} --build build --  -j

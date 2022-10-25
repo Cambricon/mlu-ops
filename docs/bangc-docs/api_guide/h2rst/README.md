@@ -8,12 +8,12 @@ C++ H files to RST files auto-build tools
 #### Usage
 > python main.py <file1\> <file2\>
 
-例子：python main.py ~/Documents/cnnl.h ~/Documents/docs_h/doc/pipeline.hpp
+例子：python main.py ~/Documents/mluops.h ~/Documents/docs_h/doc/pipeline.hpp
 
 指定输出文件目录：
 > python main.py -o <directory\> <file1\> <file2\>
 
-例子：python main.py -o ~/Documents ~/Documents/cnnl.h ~/Documents/docs_h/doc/pipeline.hpp
+例子：python main.py -o ~/Documents ~/Documents/mluops.h ~/Documents/docs_h/doc/pipeline.hpp
 
 ##### 可修改 config.py 配置文件配置参数
 
@@ -48,14 +48,14 @@ api.rst的标题: api_title
 api接口按字母排序：
 > python main.py --api-s <file1\> <file2\>
 
-例子：python main.py --api-s ~/Documents/cnnl.h ~/Documents/docs_h/doc/pipeline.hpp
+例子：python main.py --api-s ~/Documents/mluops.h ~/Documents/docs_h/doc/pipeline.hpp
 
 数据类型按字母排序：
 > python main.py --dt-s <file1\> <file2\>
 
-例子：python main.py --dt-s ~/Documents/cnnl.h ~/Documents/docs_h/doc/pipeline.hpp
+例子：python main.py --dt-s ~/Documents/mluops.h ~/Documents/docs_h/doc/pipeline.hpp
 
 提取宏信息写入define.rst：
 > python main.py -d <file1\> <file2\>
 
-例子：python main.py -d ~/Documents/cnnl.h ~/Documents/docs_h/doc/pipeline.hpp
+例子：python main.py -d ~/Documents/mluops.h ~/Documents/docs_h/doc/pipeline.hpp

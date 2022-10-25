@@ -31,16 +31,16 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-#define GTEST_CHECK(condition, ...)                                            \
-  if (unlikely(!(condition))) {                                                \
-    ADD_FAILURE() << "Check failed: " #condition ". " #__VA_ARGS__;            \
-    throw std::invalid_argument(std::string(__FILE__) + " +" +                 \
-                                std::to_string(__LINE__));                     \
+#define GTEST_CHECK(condition, ...)                                 \
+  if (unlikely(!(condition))) {                                     \
+    ADD_FAILURE() << "Check failed: " #condition ". " #__VA_ARGS__; \
+    throw std::invalid_argument(std::string(__FILE__) + " +" +      \
+                                std::to_string(__LINE__));          \
   }
 
-#define GTEST_WARNING(condition, ...)                                          \
-  if (unlikely(!(condition))) {                                                \
-    LOG(WARNING) << "Check failed: " #condition ". " #__VA_ARGS__;             \
+#define GTEST_WARNING(condition, ...)                              \
+  if (unlikely(!(condition))) {                                    \
+    LOG(WARNING) << "Check failed: " #condition ". " #__VA_ARGS__; \
   }
 
-#endif // TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
