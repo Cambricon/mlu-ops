@@ -2751,8 +2751,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
  * - None.
  *
  * @par Reference
- * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/
- *   csrc/common/cuda/ball_query_cuda_kernel.cuh
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/ball_query.py
  */
 mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(mluOpHandle_t handle,
                                            const mluOpTensorDescriptor_t new_xyz_desc,
