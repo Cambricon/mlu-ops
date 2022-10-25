@@ -1455,7 +1455,7 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
 mluOpStatus_t MLUOP_WIN_API mluOpMlNms(mluOpHandle_t handle,
                                        const mluOpTensorDescriptor_t boxes_data_ptr_desc,
                                        void* boxes_data_ptr,
-		                                   float iou_threshold,
+		                        float iou_threshold,
                                        void* output_boxes_index);
 
 // Group:Abs
