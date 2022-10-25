@@ -39,7 +39,6 @@
     unionImple<DType, compute##Op##Prefer>( \
     (DType*)boxes_data_ptr, (DType)nms_thres, \
     offset, seg, input_boxes_num, output_boxes_index);}
-
 template <typename T, void (*OpFunc)(T*, T, int, int, int, uint8_t*)>
 __mlu_device__ void unionImple(T* boxes_data_ptr, T nms_thres, int offset,
   int seg, int input_boxes_num, uint8_t* output_boxes_index) {
