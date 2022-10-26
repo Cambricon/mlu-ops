@@ -30,7 +30,6 @@
 #include "core/type.h"
 #include "mlu_op_kernel.h"
 #include "cnrt.h"
-#include "cndev.h"
 
 typedef uint16_t half;
 
