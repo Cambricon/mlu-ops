@@ -215,7 +215,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 
 #### 3.1.1 roi_crop_forward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个  分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 MLU core 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
 - step2: 根据双线性插值原理，1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE / 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
 - step3: 每个 MLU core 循环获取 gw、gh、gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
