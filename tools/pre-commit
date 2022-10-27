@@ -141,10 +141,10 @@ fi
 
 echo "-- [pre-commit] Using pylint to check bangpy/ops \
 by .git/hooks/pre-commit..."
-#python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
-#     | grep -v "Your code" \
-#     | grep -v "Module bangpy" \
-#     | grep -E ".py"
+python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
+     | grep -v "Your code" \
+     | grep -v "Module bangpy" \
+     | grep -E ".py"
 
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
   ret=1
