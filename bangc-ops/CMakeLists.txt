@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
 ################################################################################
-# Build Evironment
+# Build Environment
 ################################################################################
 set(MLUOP_BUILD_SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
 message("-- MLUOP_BUILD_SPECIFIC_OP=${MLUOP_BUILD_SPECIFIC_OP}")
@@ -19,7 +19,7 @@ set(MLUOP_MLU_ARCH_LIST ${MLUOP_MLU_ARCH_LIST})
 message("-- MLUOP_MLU_ARCH_LIST=${MLUOP_MLU_ARCH_LIST}")
 
 ################################################################################
-# Neuware Evironment and BANG Setup
+# Environment and BANG Setup
 ################################################################################
 
 if(${MLUOP_BUILD_COVERAGE_TEST} MATCHES "ON")

@@ -23,7 +23,7 @@ from test import registerOp, OpTest
 import numpy as np
 import bangpy
 from bangpy.common import load_op_by_type
-from logaddexp2 import KERNEL_NAME, TARGET_LIST
+from logaddexp2 import KERNEL_NAME
 
 def cal_diff(result, data_out):
     diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(result)
@@ -45,8 +45,6 @@ class LogAddExp2Op(OpTest):
     def compute(self):
         self.shape = self.inputs_tensor_list[0].shape
         if self.shape == (0):
-            return
-        if self.target not in TARGET_LIST:
             return
         print("shape :", self.shape)
         data_in0 = self.inputs_tensor_list[0].astype("int32")

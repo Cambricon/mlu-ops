@@ -434,18 +434,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSizeOfDataType(mluOpDataType_t data_type,
  * */
 void mluOpGetLibVersion(int *major, int *minor, int *patch);
 
-/******************************************************************************
- * MLUOP Data Structure: Descriptor
- * The struct represent neural, weight and the neural-network layer
- ******************************************************************************/
-/*! The descriptor of a tensor that holds the information including tensor
- *  layout, data type, the number of dimensions, shape and strides.
- *
- *  You need to call the ::mluOpCreateTensorDescriptor function to create a descriptor,
- *  and call the ::mluOpSetTensorDescriptor function or the ::mluOpSetTensorDescriptorEx
- *  function to set the tensor information to the descriptor. Also, you need to destroy
- *  the MLUOP context at the end with the ::mluOpDestroyTensorDescriptor function.
- */
 // Group:QuantizeRoundMode
 /*!
  *  @brief Updates the specific rounding mode of MLUOP context information that holds by the \b handle. This function
@@ -499,6 +487,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeRoundMode(mluOpHandle_t handle,
                                                       mluOpQuantizeRoundMode_t *round_mode);
 
+/******************************************************************************
+ * MLUOP Data Structure: Descriptor
+ * The struct represent node, weight and the AI network layer
+ ******************************************************************************/
+/*! The descriptor of a tensor that holds the information including tensor
+ *  layout, data type, the number of dimensions, shape and strides.
+ *
+ *  You need to call the ::mluOpCreateTensorDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetTensorDescriptor function or the ::mluOpSetTensorDescriptorEx
+ *  function to set the tensor information to the descriptor. Also, you need to destroy
+ *  the MLUOP context at the end with the ::mluOpDestroyTensorDescriptor function.
+ */
 typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 
 // Group:Tensor
