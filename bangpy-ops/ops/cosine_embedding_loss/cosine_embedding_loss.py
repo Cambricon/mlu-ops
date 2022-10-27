@@ -18,14 +18,14 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# pylint: disable=missing-docstring, invalid-name, too-many-locals
 """cosine embedding loss for bangpy tcp script"""
-# pylint: skip-file
 import bangpy
 from bangpy.common.dtypes import DType
 from bangpy.script import tcp, build_module, ty
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu290", "mlu370-s4", "mlu370-m8"]
+TARGET_LIST = ["mlu290", "mlu270", "mlu370-s4", "mlu370-m8"]
 KERNEL_NAME = "cosine_embedding_loss"
 CORES_PER_CLUSTER = 4
 
@@ -61,7 +61,7 @@ class CosineEmbeddingLoss(object):
         inter_n: ty.Buffer,
         inter_n_fp: ty.Buffer,
         temp_n: ty.Buffer,
-        out: ty.float32,
+        out_n: ty.float32,
         kernel_size: ty.int32,
         kernels_per_line: ty.int32,
     ) -> ty.float32:
@@ -77,7 +77,8 @@ class CosineEmbeddingLoss(object):
             (kernels_per_line,),
         )
         tcp.sum(temp_n[0][0], inter_n_fp[0])
-        return tcp.cast(temp_n[0][0], "float32") + tcp.cast(out, "float32")
+        var = tcp.cast(temp_n[0][0], "float32") + tcp.cast(out_n, "float32")
+        return var
 
     def compute_sum_batch_1(
         self,
@@ -173,7 +174,6 @@ class CosineEmbeddingLoss(object):
         # (v_3 + 1) * (1 - v_0)
         tcp.multiply(v_0, v_0, v_1)
         # 1 - v_3
-        tcp.equal(v_3, v_3, -1.0)
         # max(v_1 * v_2, 0)
 
         if self.arch >= "mlu3":
@@ -181,7 +181,7 @@ class CosineEmbeddingLoss(object):
         else:
             tcp.assign(tmp, 0)
             tcp.maximum(v_1, v_2, tmp)
-
+        tcp.equal(v_2, v_3, -1.0)
         # (1 - v_3) * max(v_1 * v_2, 0)
         tcp.multiply(v_1, v_1, v_3)
         tcp.add(v_0, v_1, v_0)
@@ -555,12 +555,11 @@ class CosineEmbeddingLoss(object):
                                         lower1_sum = 0.0
                                         lower2_sum = upper_sum - margin
                                         if input_y[k] == 1.0:
-                                            upper_fp[k] = tcp.cast(1 - upper_sum, self.dtype)
+                                            upper[k] = 1 - upper_sum
                                         elif input_y[k] == -1.0:
-                                            upper_fp[k] = tcp.cast(tcp.max(lower1_sum, lower2_sum), self.dtype)
+                                            upper[k] = tcp.max(lower1_sum, lower2_sum)
                                         else:
-                                            upper_fp[k] = tcp.cast(0.0, self.dtype)
-
+                                            upper[k] = 0.0
                                 # Nram can store more than align_size rows of data.
                                 else:
                                     # arch below mlu3xx need 64 byte align

@@ -18,13 +18,13 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# pylint: disable=missing-docstring, invalid-name, too-many-locals
 """Test cosineEmbeddingLoss operator with multi-platform code link"""
 from test import registerOp, OpTest
 import numpy as np
-from cosine_embedding_loss import KERNEL_NAME, TARGET_LIST
+from cosine_embedding_loss import KERNEL_NAME
 import bangpy
 from bangpy.common import load_op_by_type
-# pylint: skip-file
 EPSILON=1e-9
 np.set_printoptions(threshold=np.inf)
 
@@ -38,7 +38,7 @@ def cal_diff(result, data_out):
     result_[np.isinf(result) & np.isinf(data_out)] = 0
     data_out_[np.isnan(result) & np.isnan(data_out)] = 0
     data_out_[np.isinf(result) & np.isinf(data_out)] = 0
-    
+
     diff1 = np.sum(np.abs(np.subtract(result_, data_out_))) / (np.sum(result_) +EPSILON)
     diff2 = np.sqrt(
         np.sum(np.power(np.subtract(data_out_, result_), 2,))
@@ -79,7 +79,15 @@ class CosineEmbeddingLossOp(OpTest):
         data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
 
         data_out = self.output_tensor_list[0]
-        f(data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev, data_height, data_width)
+        f(
+            data_input_x1_dev,
+            data_input_x2_dev,
+            data_input_y_dev,
+            margin,
+            data_out_dev,
+            data_height,
+            data_width
+        )
 
         dev_out = data_out_dev.numpy()
 
@@ -87,7 +95,13 @@ class CosineEmbeddingLossOp(OpTest):
         evaluator = f.time_evaluator(dev, 1, 10)
         time = (
             evaluator(
-                data_input_x1_dev, data_input_x2_dev, data_input_y_dev, margin, data_out_dev, data_height, data_width
+                data_input_x1_dev,
+                data_input_x2_dev,
+                data_input_y_dev,
+                margin,
+                data_out_dev,
+                data_height,
+                data_width
             ).mean
             * 1e3
         )  # ms
@@ -117,8 +131,6 @@ class CosineEmbeddingLossOp(OpTest):
         assert round(diff2 * 100, 5) < 3e-3 * 100
 
     def compute(self):
-        if self.target not in TARGET_LIST:
-            return
         f = load_op_by_type(KERNEL_NAME, self.dtype.name)
 
         self.evaluate(f, self.dtype, self.target)
