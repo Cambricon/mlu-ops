@@ -24,7 +24,7 @@
 #define MLUOP_EXAMPLE_H_
 
 #define MLUOP_MAJOR 0
-#define MLUOP_MINOR 2
+#define MLUOP_MINOR 3
 #define MLUOP_PATCHLEVEL 0
 
 #include <stdint.h>
@@ -434,18 +434,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSizeOfDataType(mluOpDataType_t data_type,
  * */
 void mluOpGetLibVersion(int *major, int *minor, int *patch);
 
-/******************************************************************************
- * MLUOP Data Structure: Descriptor
- * The struct represent neural, weight and the neural-network layer
- ******************************************************************************/
-/*! The descriptor of a tensor that holds the information including tensor
- *  layout, data type, the number of dimensions, shape and strides.
- *
- *  You need to call the ::mluOpCreateTensorDescriptor function to create a descriptor,
- *  and call the ::mluOpSetTensorDescriptor function or the ::mluOpSetTensorDescriptorEx
- *  function to set the tensor information to the descriptor. Also, you need to destroy
- *  the MLUOP context at the end with the ::mluOpDestroyTensorDescriptor function.
- */
 // Group:QuantizeRoundMode
 /*!
  *  @brief Updates the specific rounding mode of MLUOP context information that holds by the \b handle. This function
@@ -499,6 +487,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeRoundMode(mluOpHandle_t handle,
                                                       mluOpQuantizeRoundMode_t *round_mode);
 
+/******************************************************************************
+ * MLUOP Data Structure: Descriptor
+ * The struct represent node, weight and the AI network layer
+ ******************************************************************************/
+/*! The descriptor of a tensor that holds the information including tensor
+ *  layout, data type, the number of dimensions, shape and strides.
+ *
+ *  You need to call the ::mluOpCreateTensorDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetTensorDescriptor function or the ::mluOpSetTensorDescriptorEx
+ *  function to set the tensor information to the descriptor. Also, you need to destroy
+ *  the MLUOP context at the end with the ::mluOpDestroyTensorDescriptor function.
+ */
 typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 
 // Group:Tensor
@@ -2557,6 +2557,318 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     const bool clip_bbox, const float scale, const bool iou_aware,
     const float iou_aware_factor, const mluOpTensorDescriptor_t boxes_desc,
     void *boxes, const mluOpTensorDescriptor_t scores_desc, void *scores);
+
+// Group: ThreeInterpolate
+/*!
+ * @brief Computes weighted linear interpolation on 3 points by using
+ * 3 indices in \b indices to select 3 points in \b features, uses the
+ * 3 points to multiply with corresponding 3 weights in \b weights,
+ * adds the 3 multiplication results to get one interpolation result,
+ * for each batch repeats the above process N times on each channel,
+ * and returns the results in the output tensor \b output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the three_interpolate_forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of the features tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the input features tensor. The features'
+ * shape (B, C, M), B is batch size, C is channel size, M is the number of
+ * elements in one input channel.
+ * @param[in] indices_desc
+ * The descriptor of the indices tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the input indicies tensor. The indices'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] weights_desc
+ * The descriptor of the weights tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] weights
+ * Pointer to the MLU memory that stores the input weights tensor. The weights'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] output_desc
+ * The descriptor of the output tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output features tensor. The
+ * output's shape (B, C, N), B is batch size, C is channel size, N is number
+ * of elements in one output channel.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - Data type of features tensor, weights tensor and output tensor should be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - features tensor: half, float.
+ *   - indices tensor: int.
+ *   - weights tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ *  @par Data Layout
+ *  - The supported data layout of \b features, \b indices, \b weights, \b output are
+ *    as follows:
+ *
+ *   - features tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - indices tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - weights tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ *  @par Scale Limitation
+ *  - The dimension of \b features, \b indices, \b weights and \b output
+ *    should be equal to 3.
+ *  - The shape[0] of \b features, \b indices, \b weights and \b output
+ *    should be the same.
+ *  - The shape[1] of \b features and \b output should be the same.
+ *  - The shape[1] of \b indices, \b weights and the shape[2] of \b output
+ *    should be the same.
+ *  - The shape[2] of \b indices and \b weights should be equal to 3.
+ *
+ * @par Requirements
+ * - None.
+ *
+ *  @par Note
+ *  - The value of \b indices must be in the range of [0, M-1], otherwise the output result
+ *    is meaningless and the corresponding output will be set to 0.
+ *  - In MLU200 series, the maximum value in the \b indices should be less than
+ *    2^23, otherwise the output result is not guaranteed to be correct.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t features_desc,
+    const void *features, const mluOpTensorDescriptor_t indices_desc, const void *indices,
+    const mluOpTensorDescriptor_t weights_desc, const void *weights,
+    const mluOpTensorDescriptor_t output_desc, void *output);
+
+// Group:Ballquery
+/*!
+ * @brief Takes the point's index in the \b new_xyz set as the center of the sphere,
+ * uses \b min_radius and \b max_radius as the radius, and returns the \b idx of
+ * the first \n nsample points in the \b xyz set in the spherical domain.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the sqrt backward operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] new_xyz_desc
+ * The descriptor of the new_xyz tensors, which indicates the center of the ball.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] new_xyz
+ * Pointer to the MLU memory that stores the new_xyz tensor.
+ * The shape of new_xyz is [B, M, 3]. B: the batch size; M: the number of elements in a batch;
+ * 3: the dimension of the 3D coordinate.
+ * @param[in] xyz_desc
+ * The descriptor of the xyz tensors, which means cloud points. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] xyz
+ * Pointer to the MLU memory that stores the xyz tensor.
+ * The shape of xyz is [B, N, 3]. B: the batch size; N: the number of elements in a batch;
+ * 3: the dimension of the 3D coordinate.
+ * @param[in] min_radius
+ * A float value which is the minimum radius.
+ * @param[in] max_radius
+ * A float value which is the maximum radius.
+ * @param[in] nsample
+ * An integer value which is the selected points index.
+ * @param[in] idx_desc
+ * The descriptor of the idx tensors, which contains output indexes. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] idx
+ * Pointer to the MLU memory that stores the xyz tensor.
+ * The shape of idx is [B, M, nsample]. B: the batch size; M: the number of elements in a batch;
+ * nsample: the number of points selected in the sphere.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The data types of new_xyz and xyz must be the same. The supported data types of new_xyz
+ *   tensor \b new_xyz, xyz tensor \b xyz and idx tensor \b idx are as fllows:
+ *   - new_xyz tensor: float or half.
+ *   - xyz tensor: float or half.
+ *   - idx tensor: int.
+ *
+ *  @par Data Layout
+ *  - The supported data layouts of \b new_xyz, \b xyz, \b idx are
+ *    as follows:
+ *
+ *   - new_xyz tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - xyz tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - idx tensor: \p MLUOP_LAYOUT_ARRAY.
+ * 
+ * @par Scale Limitation
+ * - The new_xyz tensor, xyz tensor and idx tensor must be 3D.
+ * - The first dimension of the new_xyz tensor, xyz tensor and the idx tensor must be the same.
+ * - The second dimension of the new_xyz tensor and the idx tensor must be the same.
+ * - The third dimension of the new_xyz tensor and the xyz tensor must be the same and equal to 3.
+ * - The third dimension of idx tensor must be equal to nsample.
+ * - The \b min_radius should be greater or equal to 0.
+ * - The \b max_radius should be greater or equal to 0.
+ * - The \b nsample should be greater or equal to 0.
+ * 
+ * @note
+ * - Take the point in new_xyz as the center of the sphere, there may be no points in xyz within the
+ *   sphere with min_radius and max_radius as diameters. At this time, the value of the corresponding
+ *   position in idx is the value when it is passed into the kernel. Generally, before passing idx
+ *   into the kernel, initialize all the values in idx to 0 or other const values.
+ * 
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/ball_query.py
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(mluOpHandle_t handle,
+                                           const mluOpTensorDescriptor_t new_xyz_desc,
+                                           const void *new_xyz,
+                                           const mluOpTensorDescriptor_t xyz_desc,
+                                           const void *xyz,
+                                           const float min_radius,
+                                           const float max_radius,
+                                           const int nsample,
+                                           const mluOpTensorDescriptor_t idx_desc,
+                                           void *idx);
+
+// Group:Copy
+/*!
+ * @brief Returns a copy of input tensor \b input in the output tensor \b output
+ * on MLU device.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the copy operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - Data types of input tensor \b input and output tensor \b output must be the
+ *   same. The supported data types are as follows:
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, double, complex_half, complex_float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, double, complex_half, complex_float.
+ *
+ * @note
+ * - You can specify the stride of all dimensions for input_desc and output_desc
+ *   with ::mluOpSetTensorDescriptorEx.
+ * 
+ * @par Requirements
+ * - Data type of input tensor and output tensor must be the same.
+ * - Data layout of input tensor and output tensor must be the same.
+ * - The shape of input tensor and output tensor must be the same.
+ *
+ * @par Scale Limitation
+ * - When the input or output tensor is non-contiguous, for example with non-contiguous
+ *   strides set in the tensor descriptor, the total number of bytes spanned by 
+ *   either of the input or output tensor should be less than or equal to 
+ *   \f$2^{23}-1\f$ (the maximum value for int32).
+ *
+ * @par Example
+ * - The example of the copy operation is as follows:
+     @verbatim
+      input array by 2 * 2
+      --> then: [[1, 8], [6, 4]]
+
+      output array by 2 * 2
+      --> output: [[1, 8], [6, 4]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://www.tensorflow.org/api_docs/python/tf/raw_ops/Snapshot
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t input_desc,
+                                      const void *input,
+                                      const mluOpTensorDescriptor_t output_desc,
+                                      void *output);
+
+// Group:Expand
+/*!
+ * @brief Copies and expands the input tensor \b input to the shape of output
+ * tensor \b output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input
+ *   and output tensor \b output. 
+ *   Data type of both tensors should be the same.
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, complex_half, complex_float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float, complex_half, complex_float.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must meet the following requirements:
+ *   - Every dimension of the input tensor should be divisible by the same
+ *     dimension of the output tensor.
+ *
+ * @note
+ * - The input tensor \b input and output tensor \b output are multi-dimensional
+ *   array, supporting up to \p MLUOP_DIM_MAX dimensions.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the expand operation is as follows:
+     @verbatim
+     input one array by 2 * 2 --> input: [[1, 2], [3, 4]]
+     output array by 3 * 2 * 2 --> output: [[[1, 2], [3, 4]],
+                                            [[1, 2], [3, 4]],
+                                            [[1, 2], [3, 4]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/tensors.html#torch.Tensor.expand
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpExpand(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
+    const void *input, const mluOpTensorDescriptor_t output_desc, void *output);
 
 #if defined(__cplusplus)
 }

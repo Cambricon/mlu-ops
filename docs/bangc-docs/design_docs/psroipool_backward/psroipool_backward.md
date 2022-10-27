@@ -249,13 +249,13 @@ tensor([[[[nan, 0., 0.],
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
 - 算子精度验收标准：diff1、diff2；
 - 算子精度阈值描述：diff1 <= 3e-3 && diff2 <= 3e-3；
 
 #### 1.5.2 性能验收标准
 
-见 [MLU_OPS 性能验收标准](../MLU_OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 2 算子接口设计
 

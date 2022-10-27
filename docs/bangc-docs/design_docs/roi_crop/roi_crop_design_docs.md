@@ -35,7 +35,7 @@
 
 ### 1.1 算子需求分析
 
-该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU_OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU_OPS 全部支持。
+该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU-OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU-OPS 全部支持。
 
 | 算子功能简介                | 根据感兴趣区域提取固定大小的输出特征|
 | -------------------------- | ---------------------------------------- |
@@ -118,7 +118,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |MLU_OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
+| handle      |MLU-OPS 上下文的指针| 输入              |mluOpHandle_t| /        | 无       |
 | input_desc |对输入数据 input 的形状描述，包含了 input 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| / | 无 |
 | input      |输入 tensor input 的地址| 输入              | float | NHWC     | 无       |
 | grid_desc |对输入数据 gird 的形状描述，包含了 grid 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t| / | 无    |
@@ -130,7 +130,7 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 | 参数        | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
 | ----------- | ---- | ----------------- | ----------- | -------- | -------- |
-| handle      |MLU_OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
+| handle      |MLU-OPS 上下文的指针  | 输入  |mluOpHandle_t             | /        | 无       |
 | grad_output_desc |对输入数据 grad_output 的形状描述，包含了 grad_output 的数据类型、数据维度和布局等信息| 输入 |mluOpTensorDescriptor_t | /        | 无       |
 | grad_output      |输入 tensor grad_output 的地址|输入 |  float    | NHWC     | 无       |
 | grid_desc |对输入数据 gird 的形状描述结构体，包含了 grid 的数据类型、数据维度和布局等信息| 输入   |mluOpTensorDescriptor_t | /        | 无       |
@@ -156,13 +156,13 @@ Ay = (y + 1) * (height - 1) / 2;  Ay_weight = 1 - (Ay - floor(Ay));
 
 #### 1.5.1 精度验收标准
 
-按照[精度验收标准](../MLU_OPS精度验收标准.md)的要求明确本算子的精度标准。
+按照[精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
 - 算子精度验收标准：diff1、diff2；
 - 算子精度阈值描述：diff1 <= 3e-3 && diff2 <=3e-3；
 
 #### 1.5.2 性能验收标准
 
-见 [MLU_OPS 性能验收标准](../MLU_OPS性能验收标准.md)。
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 2 算子接口设计
 
@@ -215,16 +215,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 
 #### 3.1.1 roi_crop_forward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 MLU core 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
 - step2: 根据双线性插值原理，1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE / 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
-- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
+- step3: 每个 MLU core 循环获取 gw、gh、gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 #### 3.1.2 roi_crop_backward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim；
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 MLU core 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim；
 - step2: 根据双线性插值梯度计算公式知，1 个 bin 需要 grad_output 下的 1 个 channels 得到 grad_output 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 grad_output 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 grad_input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
-- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 grad_output 和 grad_input 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
+- step3: 每个 MLU core 循环获取 gw、gh、gn 等信息，进而得到 grad_output 和 grad_input 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 ### 3.2 伪代码实现（可选）
@@ -241,10 +241,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 ### 3.3 拆分(任务拆分，多核拆分)
 
 基本任务类型是 U1。根据算子的实现方案可知，roi_crop_forward 和roi_crop_backward 算子都是依据 grid 中 bin 的数据进行拆分的，因此：
-将 grid 中的 n * out_h * out_w 作为总元素数分到每个 IPU 上公式如下：<br>
+将 grid 中的 n * out_h * out_w 作为总元素数分到每个 MLU core 上公式如下：<br>
 bin_n = n * out_h * out_w;<br>
 task_bins = (taskId < ( bin_n % taskDim)) ? bin_n / taskDim + 1 : bin_n / taskDim;<br>
-每个 IPU 要对不同的数据区域做处理，所以需要根据 taskId 加偏移，获取每个 IPU 要处理的 bin 的索引;<br>
+每个 MLU core 要对不同的数据区域做处理，所以需要根据 taskId 加偏移，获取每个 MLU core 要处理的 bin 的索引;<br>
 rem_bins = bin_n % taskDim;<br>
 bins_first_per = (bin_n / taskDim) * taskId + (taskId > rem_bins ? rem_bins : taskId);<br>
 bins_loop_per = bins_first_per + task_bins;<br>
@@ -333,8 +333,8 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 - 2022.4.19 ~ 4.21 调研源码+开始设计方案
 - 2022.4.22 设计方案评审：算子功能+接口设计
-- 2022.4.24 算子在 MLU_OPS 下的 GTest 代码开发
-- 2022.4.25 ~ 4.29  算子在 MLU_OPS 下的 host、kernel 代码开发
+- 2022.4.24 算子在 MLU-OPS 下的 GTest 代码开发
+- 2022.4.25 ~ 4.29  算子在 MLU-OPS 下的 host、kernel 代码开发
 - 2022.5.5 算子在黄区下的 Generator 开发
 - 2022.5.10 ~ 5.18 大规模测试
 - 2022.5.23 提交交 MR + 代码 review
@@ -344,8 +344,8 @@ bins_loop_per = bins_first_per + task_bins;<br>
 
 - 5.30 ~ 6.1 算子需求分析和方案设计
 - 6.2 算子方案评审
-- 6.6 算子在 MLU_OPS 下的 GTest 开发
-- 6.7 ~ 6.10 算子在 MLU_OPS 下的 host、kernel 代码开发
+- 6.6 算子在 MLU-OPS 下的 GTest 开发
+- 6.7 ~ 6.10 算子在 MLU-OPS 下的 host、kernel 代码开发
 - 6.11 算子在黄区下的 Generator开发
 - 6.13 ~ 5.16 大规模测试
 - 6.17 提交交 MR + 代码 review

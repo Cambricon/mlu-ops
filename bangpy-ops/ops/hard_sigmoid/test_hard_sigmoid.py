@@ -25,7 +25,7 @@ from test import registerOp, OpTest
 import numpy as np
 import bangpy
 from bangpy.common import load_op_by_type
-from hard_sigmoid import KERNEL_NAME, TARGET_LIST
+from hard_sigmoid import KERNEL_NAME
 
 
 def cal_diff(result, data_out):
@@ -47,8 +47,6 @@ class HardSigmoidOp(OpTest):
 
     def compute(self):
         self.shape = self.inputs_tensor_list[0].shape
-        if self.target not in TARGET_LIST:
-            return
         print("shape :", self.shape)
         data_in = self.inputs_tensor_list[0]
         data_out = self.output_tensor_list[0]

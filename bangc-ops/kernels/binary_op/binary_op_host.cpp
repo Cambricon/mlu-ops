@@ -31,7 +31,6 @@
 #include "binary_op_host.h"
 #include "mlu_op.h"
 
-
 void binaryOpPolicyFunc(const mluOpHandle_t &handle,
                         const mluOpTensorDescriptor_t &desc,
                         const int &align_param, cnrtDim3_t *k_dim,

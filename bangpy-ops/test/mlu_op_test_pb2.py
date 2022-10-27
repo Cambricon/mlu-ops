@@ -19,7 +19,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='mlu_op_test.proto',
   package='mluoptest',
-  serialized_pb=_b('\n\x11mlu_op_test.proto\x12\tmluoptest\")\n\x05Shape\x12\x0c\n\x04\x64ims\x18\x01 \x03(\x05\x12\x12\n\ndim_stride\x18\x02 \x03(\x05\"M\n\nThresholds\x12\x1c\n\x14\x65valuation_threshold\x18\x01 \x03(\x01\x12!\n\x19\x65valuation_threshold_imag\x18\x02 \x03(\x01\"\xe1\x03\n\x06Tensor\x12\n\n\x02id\x18\x01 \x02(\t\x12\x1f\n\x05shape\x18\x02 \x02(\x0b\x32\x10.mluoptest.Shape\x12\x35\n\x06layout\x18\x03 \x02(\x0e\x32\x17.mluoptest.TensorLayout:\x0cLAYOUT_ARRAY\x12/\n\x05\x64type\x18\x04 \x02(\x0e\x32\x13.mluoptest.DataType:\x0b\x44TYPE_FLOAT\x12&\n\tmlu_dtype\x18\x0c \x01(\x0e\x32\x13.mluoptest.DataType\x12)\n\x0conchip_dtype\x18\r \x01(\x0e\x32\x13.mluoptest.DataType\x12\x10\n\x08position\x18\x05 \x01(\x05\x12\r\n\x05scale\x18\x06 \x01(\x02\x12\x0e\n\x06offset\x18\x0e \x01(\x05\x12\x0f\n\x07value_f\x18\x07 \x03(\x02\x12\x0f\n\x07value_i\x18\x08 \x03(\x05\x12\x0f\n\x07value_l\x18\x11 \x03(\x03\x12\x0f\n\x07value_h\x18\t \x03(\t\x12\x0c\n\x04path\x18\x0b \x01(\t\x12*\n\x0brandom_data\x18\n \x01(\x0b\x32\x15.mluoptest.RandomData\x12)\n\nthresholds\x18\x0f \x01(\x0b\x32\x15.mluoptest.Thresholds\x12\x15\n\rthreshold_use\x18\x10 \x01(\x05\"\xe8\x08\n\x04Node\x12\x13\n\x05valid\x18\x01 \x01(\t:\x04True\x12\x17\n\x07pattern\x18\x02 \x01(\t:\x06random\x12&\n\x06\x64\x65vice\x18\x03 \x01(\x0e\x32\x11.mluoptest.Device:\x03\x43PU\x12\x18\n\x07op_name\x18\x05 \x02(\t:\x07unknown\x12 \n\x05input\x18\x06 \x03(\x0b\x32\x11.mluoptest.Tensor\x12!\n\x06output\x18\x07 \x03(\x0b\x32\x11.mluoptest.Tensor\x12(\n\ntest_param\x18\n \x01(\x0b\x32\x14.mluoptest.TestParam\x12\x0f\n\x07latency\x18\x0b \x01(\x01\x12\x15\n\rio_efficiency\x18\x0c \x01(\x01\x12\x12\n\nefficiency\x18\r \x01(\x01\x12<\n\x14\x65valuation_criterion\x18\x0e \x03(\x0e\x32\x1e.mluoptest.EvaluationCriterion\x12\x1c\n\x14\x65valuation_threshold\x18\x0f \x03(\x01\x12!\n\x19\x65valuation_threshold_imag\x18\x17 \x03(\x01\x12\x16\n\x0etheory_io_size\x18\x10 \x01(\x01\x12\x1a\n\x12theory_compute_ops\x18\x11 \x01(\x01\x12\x16\n\x0eworkspace_size\x18\x12 \x01(\x01\x12\x16\n\x0ethreshold_rate\x18\x15 \x03(\x01\x12\x36\n\x16supported_mlu_platform\x18\x16 \x03(\x0e\x32\x16.mluoptest.MLUPlatform\x12\'\n\tdiv_param\x18\xa1\x1f \x01(\x0b\x32\x13.mluoptest.DivParam\x12\'\n\tlog_param\x18\xa2\x1f \x01(\x0b\x32\x13.mluoptest.LogParam\x12)\n\nsqrt_param\x18\xa3\x1f \x01(\x0b\x32\x14.mluoptest.SqrtParam\x12\x42\n\x17psroipool_forward_param\x18\xa4\x1f \x01(\x0b\x32 .mluoptest.PsRoiPoolForwardParam\x12\x44\n\x18psroipool_backward_param\x18\xa5\x1f \x01(\x0b\x32!.mluoptest.PsRoiPoolBackwardParam\x12\x32\n\x0fprior_box_param\x18\xa6\x1f \x01(\x0b\x32\x18.mluoptest.PriorBoxParam\x12\x30\n\x0epoly_nms_param\x18\xaa\x1f \x01(\x0b\x32\x17.mluoptest.PolyNmsParam\x12\x30\n\x0eyolo_box_param\x18\xab\x1f \x01(\x0b\x32\x17.mluoptest.YoloBoxParam\x12I\n\x1bgenerate_proposals_v2_param\x18\xaa. \x01(\x0b\x32#.mluoptest.GenerateProposalsV2Param\x12\x38\n\x12hard_sigmoid_param\x18\xf0. \x01(\x0b\x32\x1b.mluoptest.HardSigmoidParam*\x06\x08\xb8\x17\x10\xa1\x1f\"\xb6\x02\n\nRandomData\x12\x0c\n\x04seed\x18\x01 \x01(\x05\x12\x17\n\x0blower_bound\x18\x02 \x01(\x02:\x02-1\x12\x16\n\x0bupper_bound\x18\x03 \x01(\x02:\x01\x31\x12\x1e\n\x12lower_bound_double\x18\x08 \x01(\x02:\x02-1\x12\x1d\n\x12upper_bound_double\x18\t \x01(\x02:\x01\x31\x12\r\n\x02mu\x18\x06 \x01(\x02:\x01\x30\x12\x10\n\x05sigma\x18\x07 \x01(\x02:\x01\x31\x12\x14\n\tmu_double\x18\n \x01(\x01:\x01\x30\x12\x17\n\x0csigma_double\x18\x0b \x01(\x01:\x01\x31\x12<\n\x0c\x64istribution\x18\x04 \x01(\x0e\x32\x1d.mluoptest.RandomDistribution:\x07UNIFORM\x12\x1c\n\rconvert_dtype\x18\x05 \x01(\x08:\x05\x66\x61lse\"\xc7\x01\n\tTestParam\x12\x32\n\nerror_func\x18\x01 \x03(\x0e\x32\x1e.mluoptest.EvaluationCriterion\x12\x17\n\x0f\x65rror_threshold\x18\x02 \x03(\x01\x12\x1c\n\x14\x65rror_threshold_imag\x18\x03 \x03(\x01\x12\x0f\n\x07latency\x18\x05 \x01(\x01\x12\x12\n\nefficiency\x18\x06 \x01(\x01\x12*\n\x0f\x62\x61seline_device\x18\x07 \x01(\x0e\x32\x11.mluoptest.Device\"O\n\x0bHandleParam\x12@\n\nround_mode\x18\x01 \x01(\x0e\x32\x1c.mluoptest.QuantizeRoundMode:\x0eROUND_OFF_ZERO\"\x90\x01\n\x08LogParam\x12\x36\n\x08log_base\x18\x01 \x02(\x0e\x32\x17.mluoptest.mluOpLogBase:\x0bMLUOP_LOG_E\x12L\n\x06prefer\x18\x02 \x01(\x0e\x32 .mluoptest.ComputationPreference:\x1a\x43OMPUTATION_HIGH_PRECISION\"Y\n\tSqrtParam\x12L\n\x06prefer\x18\x01 \x01(\x0e\x32 .mluoptest.ComputationPreference:\x1a\x43OMPUTATION_HIGH_PRECISION\"X\n\x08\x44ivParam\x12L\n\x06prefer\x18\x01 \x01(\x0e\x32 .mluoptest.ComputationPreference:\x1a\x43OMPUTATION_HIGH_PRECISION\"\xb1\x01\n\x18GenerateProposalsV2Param\x12\x1b\n\rpre_nms_top_n\x18\x01 \x01(\x05:\x04\x36\x30\x30\x30\x12\x1c\n\x0epost_nms_top_n\x18\x02 \x01(\x05:\x04\x32\x30\x30\x30\x12\x17\n\nnms_thresh\x18\x03 \x01(\x02:\x03\x30.5\x12\x15\n\x08min_size\x18\x04 \x01(\x02:\x03\x30.1\x12\x0e\n\x03\x65ta\x18\x05 \x01(\x02:\x01\x31\x12\x1a\n\x0cpixel_offset\x18\x06 \x01(\x08:\x04true\"\x97\x01\n\x15PsRoiPoolForwardParam\x12\x1d\n\rspatial_scale\x18\x01 \x01(\x02:\x06\x30.0625\x12\x15\n\ngroup_size\x18\x02 \x01(\x05:\x01\x37\x12\x15\n\noutput_dim\x18\x03 \x01(\x05:\x01\x38\x12\x18\n\rpooled_height\x18\x04 \x01(\x05:\x01\x37\x12\x17\n\x0cpooled_width\x18\x05 \x01(\x05:\x01\x37\"\x81\x01\n\x16PsRoiPoolBackwardParam\x12\x15\n\noutput_dim\x18\x01 \x01(\x05:\x01\x38\x12\x18\n\rpooled_height\x18\x02 \x01(\x05:\x01\x37\x12\x17\n\x0cpooled_width\x18\x03 \x01(\x05:\x01\x37\x12\x1d\n\rspatial_scale\x18\x04 \x01(\x02:\x06\x30.0625\"*\n\x0cPolyNmsParam\x12\x1a\n\riou_threshold\x18\x01 \x02(\x02:\x03\x30.2\"\xc3\x01\n\x0cYoloBoxParam\x12\x14\n\tclass_num\x18\x01 \x01(\x05:\x01\x31\x12\x19\n\x0b\x63onf_thresh\x18\x02 \x01(\x02:\x04\x30.01\x12\x1b\n\x10\x64ownsample_ratio\x18\x03 \x01(\x05:\x01\x38\x12\x17\n\tclip_bbox\x18\x04 \x01(\x08:\x04true\x12\x14\n\tscale_x_y\x18\x05 \x01(\x02:\x01\x31\x12\x17\n\tiou_aware\x18\x06 \x01(\x08:\x04true\x12\x1d\n\x10iou_aware_factor\x18\x07 \x01(\x02:\x03\x30.5\"\xf1\x01\n\rPriorBoxParam\x12\x11\n\x06height\x18\x01 \x02(\x05:\x01\x31\x12\x10\n\x05width\x18\x02 \x02(\x05:\x01\x31\x12\x16\n\tim_height\x18\x03 \x02(\x05:\x03\x33\x30\x30\x12\x15\n\x08im_width\x18\x04 \x02(\x05:\x03\x33\x30\x30\x12\x12\n\x04\x66lip\x18\x05 \x02(\x08:\x04true\x12\x12\n\x04\x63lip\x18\x06 \x02(\x08:\x04true\x12\x11\n\x06step_w\x18\x07 \x02(\x02:\x01\x30\x12\x11\n\x06step_h\x18\x08 \x02(\x02:\x01\x30\x12\x13\n\x06offset\x18\t \x02(\x02:\x03\x30.5\x12)\n\x1bmin_max_aspect_ratios_order\x18\n \x02(\x08:\x04true\"\x12\n\x10HardSigmoidParam*\xb6\x01\n\x0cTensorLayout\x12\x0f\n\x0bLAYOUT_NCHW\x10\x00\x12\x0f\n\x0bLAYOUT_NHWC\x10\x01\x12\x0f\n\x0bLAYOUT_HWCN\x10\x02\x12\x10\n\x0cLAYOUT_NDHWC\x10\x03\x12\x10\n\x0cLAYOUT_ARRAY\x10\x04\x12\x10\n\x0cLAYOUT_NCDHW\x10\x05\x12\x0e\n\nLAYOUT_TNC\x10\x06\x12\x0e\n\nLAYOUT_NTC\x10\x07\x12\r\n\tLAYOUT_NC\x10\x08\x12\x0e\n\nLAYOUT_NLC\x10\t*\x9b\x02\n\x08\x44\x61taType\x12\x11\n\rDTYPE_INVALID\x10\x00\x12\x0e\n\nDTYPE_HALF\x10\x01\x12\x0f\n\x0b\x44TYPE_FLOAT\x10\x02\x12\x10\n\x0c\x44TYPE_DOUBLE\x10\x03\x12\x0e\n\nDTYPE_INT8\x10\x04\x12\x0f\n\x0b\x44TYPE_INT16\x10\x05\x12\x0f\n\x0b\x44TYPE_INT32\x10\x06\x12\x0f\n\x0b\x44TYPE_INT64\x10\x07\x12\x0f\n\x0b\x44TYPE_UINT8\x10\x08\x12\x10\n\x0c\x44TYPE_UINT16\x10\t\x12\x10\n\x0c\x44TYPE_UINT32\x10\n\x12\x10\n\x0c\x44TYPE_UINT64\x10\x0b\x12\x0e\n\nDTYPE_BOOL\x10\x0c\x12\x16\n\x12\x44TYPE_COMPLEX_HALF\x10\r\x12\x17\n\x13\x44TYPE_COMPLEX_FLOAT\x10\x0e*\x1a\n\x06\x44\x65vice\x12\x07\n\x03\x43PU\x10\x01\x12\x07\n\x03GPU\x10\x02*N\n\x13\x45valuationCriterion\x12\t\n\x05\x44IFF1\x10\x01\x12\t\n\x05\x44IFF2\x10\x02\x12\t\n\x05\x44IFF3\x10\x03\x12\x0b\n\x07\x44IFF3_2\x10\x04\x12\t\n\x05\x44IFF4\x10\x05*%\n\x0bMLUPlatform\x12\n\n\x06MLU200\x10\x01\x12\n\n\x06MLU370\x10\x02*I\n\x12RandomDistribution\x12\x0b\n\x07UNIFORM\x10\x01\x12\x0c\n\x08GAUSSIAN\x10\x02\x12\n\n\x06SAMPLE\x10\x03\x12\x0c\n\x08\x42INOMIAL\x10\x04*M\n\x15\x43omputationPreference\x12\x14\n\x10\x43OMPUTATION_FAST\x10\x00\x12\x1e\n\x1a\x43OMPUTATION_HIGH_PRECISION\x10\x01*M\n\x11QuantizeRoundMode\x12\x11\n\rROUND_TO_EVEN\x10\x00\x12\x11\n\rROUND_HALF_UP\x10\x01\x12\x12\n\x0eROUND_OFF_ZERO\x10\x02*B\n\x0cmluOpLogBase\x12\x0f\n\x0bMLUOP_LOG_E\x10\x00\x12\x0f\n\x0bMLUOP_LOG_2\x10\x01\x12\x10\n\x0cMLUOP_LOG_10\x10\x02')
+  serialized_pb=_b('\n\x11mlu_op_test.proto\x12\tmluoptest\")\n\x05Shape\x12\x0c\n\x04\x64ims\x18\x01 \x03(\x05\x12\x12\n\ndim_stride\x18\x02 \x03(\x05\"M\n\nThresholds\x12\x1c\n\x14\x65valuation_threshold\x18\x01 \x03(\x01\x12!\n\x19\x65valuation_threshold_imag\x18\x02 \x03(\x01\"\xe1\x03\n\x06Tensor\x12\n\n\x02id\x18\x01 \x02(\t\x12\x1f\n\x05shape\x18\x02 \x02(\x0b\x32\x10.mluoptest.Shape\x12\x35\n\x06layout\x18\x03 \x02(\x0e\x32\x17.mluoptest.TensorLayout:\x0cLAYOUT_ARRAY\x12/\n\x05\x64type\x18\x04 \x02(\x0e\x32\x13.mluoptest.DataType:\x0b\x44TYPE_FLOAT\x12&\n\tmlu_dtype\x18\x0c \x01(\x0e\x32\x13.mluoptest.DataType\x12)\n\x0conchip_dtype\x18\r \x01(\x0e\x32\x13.mluoptest.DataType\x12\x10\n\x08position\x18\x05 \x01(\x05\x12\r\n\x05scale\x18\x06 \x01(\x02\x12\x0e\n\x06offset\x18\x0e \x01(\x05\x12\x0f\n\x07value_f\x18\x07 \x03(\x02\x12\x0f\n\x07value_i\x18\x08 \x03(\x05\x12\x0f\n\x07value_l\x18\x11 \x03(\x03\x12\x0f\n\x07value_h\x18\t \x03(\t\x12\x0c\n\x04path\x18\x0b \x01(\t\x12*\n\x0brandom_data\x18\n \x01(\x0b\x32\x15.mluoptest.RandomData\x12)\n\nthresholds\x18\x0f \x01(\x0b\x32\x15.mluoptest.Thresholds\x12\x15\n\rthreshold_use\x18\x10 \x01(\x05\"\xcc\n\n\x04Node\x12\x13\n\x05valid\x18\x01 \x01(\t:\x04True\x12\x17\n\x07pattern\x18\x02 \x01(\t:\x06random\x12&\n\x06\x64\x65vice\x18\x03 \x01(\x0e\x32\x11.mluoptest.Device:\x03\x43PU\x12\x18\n\x07op_name\x18\x05 \x02(\t:\x07unknown\x12 \n\x05input\x18\x06 \x03(\x0b\x32\x11.mluoptest.Tensor\x12!\n\x06output\x18\x07 \x03(\x0b\x32\x11.mluoptest.Tensor\x12(\n\ntest_param\x18\n \x01(\x0b\x32\x14.mluoptest.TestParam\x12\x0f\n\x07latency\x18\x0b \x01(\x01\x12\x15\n\rio_efficiency\x18\x0c \x01(\x01\x12\x12\n\nefficiency\x18\r \x01(\x01\x12<\n\x14\x65valuation_criterion\x18\x0e \x03(\x0e\x32\x1e.mluoptest.EvaluationCriterion\x12\x1c\n\x14\x65valuation_threshold\x18\x0f \x03(\x01\x12!\n\x19\x65valuation_threshold_imag\x18\x17 \x03(\x01\x12\x16\n\x0etheory_io_size\x18\x10 \x01(\x01\x12\x1a\n\x12theory_compute_ops\x18\x11 \x01(\x01\x12\x16\n\x0eworkspace_size\x18\x12 \x01(\x01\x12\x16\n\x0ethreshold_rate\x18\x15 \x03(\x01\x12\x36\n\x16supported_mlu_platform\x18\x16 \x03(\x0e\x32\x16.mluoptest.MLUPlatform\x12\'\n\tdiv_param\x18\xa1\x1f \x01(\x0b\x32\x13.mluoptest.DivParam\x12\'\n\tlog_param\x18\xa2\x1f \x01(\x0b\x32\x13.mluoptest.LogParam\x12)\n\nsqrt_param\x18\xa3\x1f \x01(\x0b\x32\x14.mluoptest.SqrtParam\x12\x42\n\x17psroipool_forward_param\x18\xa4\x1f \x01(\x0b\x32 .mluoptest.PsRoiPoolForwardParam\x12\x44\n\x18psroipool_backward_param\x18\xa5\x1f \x01(\x0b\x32!.mluoptest.PsRoiPoolBackwardParam\x12\x32\n\x0fprior_box_param\x18\xa6\x1f \x01(\x0b\x32\x18.mluoptest.PriorBoxParam\x12\x30\n\x0epoly_nms_param\x18\xaa\x1f \x01(\x0b\x32\x17.mluoptest.PolyNmsParam\x12\x30\n\x0eyolo_box_param\x18\xab\x1f \x01(\x0b\x32\x17.mluoptest.YoloBoxParam\x12I\n\x1bgenerate_proposals_v2_param\x18\xaa. \x01(\x0b\x32#.mluoptest.GenerateProposalsV2Param\x12\x38\n\x12hard_sigmoid_param\x18\xf0. \x01(\x0b\x32\x1b.mluoptest.HardSigmoidParam\x12I\n\x1b\x63osine_embedding_loss_param\x18\xd8\x36 \x01(\x0b\x32#.mluoptest.CosineEmbeddingLossParam\x12\x35\n\x10logaddexp2_param\x18\xc0> \x01(\x0b\x32\x1a.mluoptest.LogAddExp2Param\x12+\n\x0b\x63ross_param\x18\xa8\x46 \x01(\x0b\x32\x15.mluoptest.CrossParam\x12\x33\n\x0fkldivloss_param\x18\xa9\x46 \x01(\x0b\x32\x19.mluoptest.KlDivLossParam*\x06\x08\xb8\x17\x10\xa1\x1f\"\xb6\x02\n\nRandomData\x12\x0c\n\x04seed\x18\x01 \x01(\x05\x12\x17\n\x0blower_bound\x18\x02 \x01(\x02:\x02-1\x12\x16\n\x0bupper_bound\x18\x03 \x01(\x02:\x01\x31\x12\x1e\n\x12lower_bound_double\x18\x08 \x01(\x02:\x02-1\x12\x1d\n\x12upper_bound_double\x18\t \x01(\x02:\x01\x31\x12\r\n\x02mu\x18\x06 \x01(\x02:\x01\x30\x12\x10\n\x05sigma\x18\x07 \x01(\x02:\x01\x31\x12\x14\n\tmu_double\x18\n \x01(\x01:\x01\x30\x12\x17\n\x0csigma_double\x18\x0b \x01(\x01:\x01\x31\x12<\n\x0c\x64istribution\x18\x04 \x01(\x0e\x32\x1d.mluoptest.RandomDistribution:\x07UNIFORM\x12\x1c\n\rconvert_dtype\x18\x05 \x01(\x08:\x05\x66\x61lse\"\xc7\x01\n\tTestParam\x12\x32\n\nerror_func\x18\x01 \x03(\x0e\x32\x1e.mluoptest.EvaluationCriterion\x12\x17\n\x0f\x65rror_threshold\x18\x02 \x03(\x01\x12\x1c\n\x14\x65rror_threshold_imag\x18\x03 \x03(\x01\x12\x0f\n\x07latency\x18\x05 \x01(\x01\x12\x12\n\nefficiency\x18\x06 \x01(\x01\x12*\n\x0f\x62\x61seline_device\x18\x07 \x01(\x0e\x32\x11.mluoptest.Device\"O\n\x0bHandleParam\x12@\n\nround_mode\x18\x01 \x01(\x0e\x32\x1c.mluoptest.QuantizeRoundMode:\x0eROUND_OFF_ZERO\"\x90\x01\n\x08LogParam\x12\x36\n\x08log_base\x18\x01 \x02(\x0e\x32\x17.mluoptest.mluOpLogBase:\x0bMLUOP_LOG_E\x12L\n\x06prefer\x18\x02 \x01(\x0e\x32 .mluoptest.ComputationPreference:\x1a\x43OMPUTATION_HIGH_PRECISION\"Y\n\tSqrtParam\x12L\n\x06prefer\x18\x01 \x01(\x0e\x32 .mluoptest.ComputationPreference:\x1a\x43OMPUTATION_HIGH_PRECISION\"X\n\x08\x44ivParam\x12L\n\x06prefer\x18\x01 \x01(\x0e\x32 .mluoptest.ComputationPreference:\x1a\x43OMPUTATION_HIGH_PRECISION\"\xb1\x01\n\x18GenerateProposalsV2Param\x12\x1b\n\rpre_nms_top_n\x18\x01 \x01(\x05:\x04\x36\x30\x30\x30\x12\x1c\n\x0epost_nms_top_n\x18\x02 \x01(\x05:\x04\x32\x30\x30\x30\x12\x17\n\nnms_thresh\x18\x03 \x01(\x02:\x03\x30.5\x12\x15\n\x08min_size\x18\x04 \x01(\x02:\x03\x30.1\x12\x0e\n\x03\x65ta\x18\x05 \x01(\x02:\x01\x31\x12\x1a\n\x0cpixel_offset\x18\x06 \x01(\x08:\x04true\"\x97\x01\n\x15PsRoiPoolForwardParam\x12\x1d\n\rspatial_scale\x18\x01 \x01(\x02:\x06\x30.0625\x12\x15\n\ngroup_size\x18\x02 \x01(\x05:\x01\x37\x12\x15\n\noutput_dim\x18\x03 \x01(\x05:\x01\x38\x12\x18\n\rpooled_height\x18\x04 \x01(\x05:\x01\x37\x12\x17\n\x0cpooled_width\x18\x05 \x01(\x05:\x01\x37\"\x81\x01\n\x16PsRoiPoolBackwardParam\x12\x15\n\noutput_dim\x18\x01 \x01(\x05:\x01\x38\x12\x18\n\rpooled_height\x18\x02 \x01(\x05:\x01\x37\x12\x17\n\x0cpooled_width\x18\x03 \x01(\x05:\x01\x37\x12\x1d\n\rspatial_scale\x18\x04 \x01(\x02:\x06\x30.0625\"*\n\x0cPolyNmsParam\x12\x1a\n\riou_threshold\x18\x01 \x02(\x02:\x03\x30.2\"\xc3\x01\n\x0cYoloBoxParam\x12\x14\n\tclass_num\x18\x01 \x01(\x05:\x01\x31\x12\x19\n\x0b\x63onf_thresh\x18\x02 \x01(\x02:\x04\x30.01\x12\x1b\n\x10\x64ownsample_ratio\x18\x03 \x01(\x05:\x01\x38\x12\x17\n\tclip_bbox\x18\x04 \x01(\x08:\x04true\x12\x14\n\tscale_x_y\x18\x05 \x01(\x02:\x01\x31\x12\x17\n\tiou_aware\x18\x06 \x01(\x08:\x04true\x12\x1d\n\x10iou_aware_factor\x18\x07 \x01(\x02:\x03\x30.5\"\xf1\x01\n\rPriorBoxParam\x12\x11\n\x06height\x18\x01 \x02(\x05:\x01\x31\x12\x10\n\x05width\x18\x02 \x02(\x05:\x01\x31\x12\x16\n\tim_height\x18\x03 \x02(\x05:\x03\x33\x30\x30\x12\x15\n\x08im_width\x18\x04 \x02(\x05:\x03\x33\x30\x30\x12\x12\n\x04\x66lip\x18\x05 \x02(\x08:\x04true\x12\x12\n\x04\x63lip\x18\x06 \x02(\x08:\x04true\x12\x11\n\x06step_w\x18\x07 \x02(\x02:\x01\x30\x12\x11\n\x06step_h\x18\x08 \x02(\x02:\x01\x30\x12\x13\n\x06offset\x18\t \x02(\x02:\x03\x30.5\x12)\n\x1bmin_max_aspect_ratios_order\x18\n \x02(\x08:\x04true\"&\n\x10HardSigmoidParam\x12\x12\n\x07inplace\x18\x01 \x02(\x05:\x01\x31\"/\n\x18\x43osineEmbeddingLossParam\x12\x13\n\x06margin\x18\x01 \x02(\x02:\x03\x30.5\"\x11\n\x0fLogAddExp2Param\"\x1c\n\nCrossParam\x12\x0e\n\x03\x64im\x18\x01 \x02(\x05:\x01\x31\"=\n\x0eKlDivLossParam\x12\x14\n\treduction\x18\x01 \x02(\x05:\x01\x31\x12\x15\n\nlog_target\x18\x02 \x02(\x05:\x01\x31*\xb6\x01\n\x0cTensorLayout\x12\x0f\n\x0bLAYOUT_NCHW\x10\x00\x12\x0f\n\x0bLAYOUT_NHWC\x10\x01\x12\x0f\n\x0bLAYOUT_HWCN\x10\x02\x12\x10\n\x0cLAYOUT_NDHWC\x10\x03\x12\x10\n\x0cLAYOUT_ARRAY\x10\x04\x12\x10\n\x0cLAYOUT_NCDHW\x10\x05\x12\x0e\n\nLAYOUT_TNC\x10\x06\x12\x0e\n\nLAYOUT_NTC\x10\x07\x12\r\n\tLAYOUT_NC\x10\x08\x12\x0e\n\nLAYOUT_NLC\x10\t*\x9b\x02\n\x08\x44\x61taType\x12\x11\n\rDTYPE_INVALID\x10\x00\x12\x0e\n\nDTYPE_HALF\x10\x01\x12\x0f\n\x0b\x44TYPE_FLOAT\x10\x02\x12\x10\n\x0c\x44TYPE_DOUBLE\x10\x03\x12\x0e\n\nDTYPE_INT8\x10\x04\x12\x0f\n\x0b\x44TYPE_INT16\x10\x05\x12\x0f\n\x0b\x44TYPE_INT32\x10\x06\x12\x0f\n\x0b\x44TYPE_INT64\x10\x07\x12\x0f\n\x0b\x44TYPE_UINT8\x10\x08\x12\x10\n\x0c\x44TYPE_UINT16\x10\t\x12\x10\n\x0c\x44TYPE_UINT32\x10\n\x12\x10\n\x0c\x44TYPE_UINT64\x10\x0b\x12\x0e\n\nDTYPE_BOOL\x10\x0c\x12\x16\n\x12\x44TYPE_COMPLEX_HALF\x10\r\x12\x17\n\x13\x44TYPE_COMPLEX_FLOAT\x10\x0e*\x1a\n\x06\x44\x65vice\x12\x07\n\x03\x43PU\x10\x01\x12\x07\n\x03GPU\x10\x02*N\n\x13\x45valuationCriterion\x12\t\n\x05\x44IFF1\x10\x01\x12\t\n\x05\x44IFF2\x10\x02\x12\t\n\x05\x44IFF3\x10\x03\x12\x0b\n\x07\x44IFF3_2\x10\x04\x12\t\n\x05\x44IFF4\x10\x05*%\n\x0bMLUPlatform\x12\n\n\x06MLU200\x10\x01\x12\n\n\x06MLU370\x10\x02*I\n\x12RandomDistribution\x12\x0b\n\x07UNIFORM\x10\x01\x12\x0c\n\x08GAUSSIAN\x10\x02\x12\n\n\x06SAMPLE\x10\x03\x12\x0c\n\x08\x42INOMIAL\x10\x04*M\n\x15\x43omputationPreference\x12\x14\n\x10\x43OMPUTATION_FAST\x10\x00\x12\x1e\n\x1a\x43OMPUTATION_HIGH_PRECISION\x10\x01*M\n\x11QuantizeRoundMode\x12\x11\n\rROUND_TO_EVEN\x10\x00\x12\x11\n\rROUND_HALF_UP\x10\x01\x12\x12\n\x0eROUND_OFF_ZERO\x10\x02*B\n\x0cmluOpLogBase\x12\x0f\n\x0bMLUOP_LOG_E\x10\x00\x12\x0f\n\x0bMLUOP_LOG_2\x10\x01\x12\x10\n\x0cMLUOP_LOG_10\x10\x02')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -72,8 +72,8 @@ _TENSORLAYOUT = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=3666,
-  serialized_end=3848,
+  serialized_start=4075,
+  serialized_end=4257,
 )
 _sym_db.RegisterEnumDescriptor(_TENSORLAYOUT)
 
@@ -147,8 +147,8 @@ _DATATYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=3851,
-  serialized_end=4134,
+  serialized_start=4260,
+  serialized_end=4543,
 )
 _sym_db.RegisterEnumDescriptor(_DATATYPE)
 
@@ -170,8 +170,8 @@ _DEVICE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4136,
-  serialized_end=4162,
+  serialized_start=4545,
+  serialized_end=4571,
 )
 _sym_db.RegisterEnumDescriptor(_DEVICE)
 
@@ -205,8 +205,8 @@ _EVALUATIONCRITERION = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4164,
-  serialized_end=4242,
+  serialized_start=4573,
+  serialized_end=4651,
 )
 _sym_db.RegisterEnumDescriptor(_EVALUATIONCRITERION)
 
@@ -228,8 +228,8 @@ _MLUPLATFORM = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4244,
-  serialized_end=4281,
+  serialized_start=4653,
+  serialized_end=4690,
 )
 _sym_db.RegisterEnumDescriptor(_MLUPLATFORM)
 
@@ -259,8 +259,8 @@ _RANDOMDISTRIBUTION = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4283,
-  serialized_end=4356,
+  serialized_start=4692,
+  serialized_end=4765,
 )
 _sym_db.RegisterEnumDescriptor(_RANDOMDISTRIBUTION)
 
@@ -282,8 +282,8 @@ _COMPUTATIONPREFERENCE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4358,
-  serialized_end=4435,
+  serialized_start=4767,
+  serialized_end=4844,
 )
 _sym_db.RegisterEnumDescriptor(_COMPUTATIONPREFERENCE)
 
@@ -309,8 +309,8 @@ _QUANTIZEROUNDMODE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4437,
-  serialized_end=4514,
+  serialized_start=4846,
+  serialized_end=4923,
 )
 _sym_db.RegisterEnumDescriptor(_QUANTIZEROUNDMODE)
 
@@ -336,8 +336,8 @@ _MLUOPLOGBASE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=4516,
-  serialized_end=4582,
+  serialized_start=4925,
+  serialized_end=4991,
 )
 _sym_db.RegisterEnumDescriptor(_MLUOPLOGBASE)
 
@@ -810,6 +810,34 @@ _NODE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='cosine_embedding_loss_param', full_name='mluoptest.Node.cosine_embedding_loss_param', index=28,
+      number=7000, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='logaddexp2_param', full_name='mluoptest.Node.logaddexp2_param', index=29,
+      number=8000, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='cross_param', full_name='mluoptest.Node.cross_param', index=30,
+      number=9000, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='kldivloss_param', full_name='mluoptest.Node.kldivloss_param', index=31,
+      number=9001, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -822,7 +850,7 @@ _NODE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=639,
-  serialized_end=1767,
+  serialized_end=1995,
 )
 
 
@@ -921,8 +949,8 @@ _RANDOMDATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1770,
-  serialized_end=2080,
+  serialized_start=1998,
+  serialized_end=2308,
 )
 
 
@@ -986,8 +1014,8 @@ _TESTPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2083,
-  serialized_end=2282,
+  serialized_start=2311,
+  serialized_end=2510,
 )
 
 
@@ -1016,8 +1044,8 @@ _HANDLEPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2284,
-  serialized_end=2363,
+  serialized_start=2512,
+  serialized_end=2591,
 )
 
 
@@ -1053,8 +1081,8 @@ _LOGPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2366,
-  serialized_end=2510,
+  serialized_start=2594,
+  serialized_end=2738,
 )
 
 
@@ -1083,8 +1111,8 @@ _SQRTPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2512,
-  serialized_end=2601,
+  serialized_start=2740,
+  serialized_end=2829,
 )
 
 
@@ -1113,8 +1141,8 @@ _DIVPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2603,
-  serialized_end=2691,
+  serialized_start=2831,
+  serialized_end=2919,
 )
 
 
@@ -1178,8 +1206,8 @@ _GENERATEPROPOSALSV2PARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2694,
-  serialized_end=2871,
+  serialized_start=2922,
+  serialized_end=3099,
 )
 
 
@@ -1236,8 +1264,8 @@ _PSROIPOOLFORWARDPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2874,
-  serialized_end=3025,
+  serialized_start=3102,
+  serialized_end=3253,
 )
 
 
@@ -1287,8 +1315,8 @@ _PSROIPOOLBACKWARDPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3028,
-  serialized_end=3157,
+  serialized_start=3256,
+  serialized_end=3385,
 )
 
 
@@ -1317,8 +1345,8 @@ _POLYNMSPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3159,
-  serialized_end=3201,
+  serialized_start=3387,
+  serialized_end=3429,
 )
 
 
@@ -1389,8 +1417,8 @@ _YOLOBOXPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3204,
-  serialized_end=3399,
+  serialized_start=3432,
+  serialized_end=3627,
 )
 
 
@@ -1482,14 +1510,74 @@ _PRIORBOXPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3402,
-  serialized_end=3643,
+  serialized_start=3630,
+  serialized_end=3871,
 )
 
 
 _HARDSIGMOIDPARAM = _descriptor.Descriptor(
   name='HardSigmoidParam',
   full_name='mluoptest.HardSigmoidParam',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='inplace', full_name='mluoptest.HardSigmoidParam.inplace', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=True, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=3873,
+  serialized_end=3911,
+)
+
+
+_COSINEEMBEDDINGLOSSPARAM = _descriptor.Descriptor(
+  name='CosineEmbeddingLossParam',
+  full_name='mluoptest.CosineEmbeddingLossParam',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='margin', full_name='mluoptest.CosineEmbeddingLossParam.margin', index=0,
+      number=1, type=2, cpp_type=6, label=2,
+      has_default_value=True, default_value=0.5,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=3913,
+  serialized_end=3960,
+)
+
+
+_LOGADDEXP2PARAM = _descriptor.Descriptor(
+  name='LogAddExp2Param',
+  full_name='mluoptest.LogAddExp2Param',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
@@ -1505,8 +1593,75 @@ _HARDSIGMOIDPARAM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3645,
-  serialized_end=3663,
+  serialized_start=3962,
+  serialized_end=3979,
+)
+
+
+_CROSSPARAM = _descriptor.Descriptor(
+  name='CrossParam',
+  full_name='mluoptest.CrossParam',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='dim', full_name='mluoptest.CrossParam.dim', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=True, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=3981,
+  serialized_end=4009,
+)
+
+
+_KLDIVLOSSPARAM = _descriptor.Descriptor(
+  name='KlDivLossParam',
+  full_name='mluoptest.KlDivLossParam',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='reduction', full_name='mluoptest.KlDivLossParam.reduction', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=True, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='log_target', full_name='mluoptest.KlDivLossParam.log_target', index=1,
+      number=2, type=5, cpp_type=1, label=2,
+      has_default_value=True, default_value=1,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=4011,
+  serialized_end=4072,
 )
 
 _TENSOR.fields_by_name['shape'].message_type = _SHAPE
@@ -1532,6 +1687,10 @@ _NODE.fields_by_name['poly_nms_param'].message_type = _POLYNMSPARAM
 _NODE.fields_by_name['yolo_box_param'].message_type = _YOLOBOXPARAM
 _NODE.fields_by_name['generate_proposals_v2_param'].message_type = _GENERATEPROPOSALSV2PARAM
 _NODE.fields_by_name['hard_sigmoid_param'].message_type = _HARDSIGMOIDPARAM
+_NODE.fields_by_name['cosine_embedding_loss_param'].message_type = _COSINEEMBEDDINGLOSSPARAM
+_NODE.fields_by_name['logaddexp2_param'].message_type = _LOGADDEXP2PARAM
+_NODE.fields_by_name['cross_param'].message_type = _CROSSPARAM
+_NODE.fields_by_name['kldivloss_param'].message_type = _KLDIVLOSSPARAM
 _RANDOMDATA.fields_by_name['distribution'].enum_type = _RANDOMDISTRIBUTION
 _TESTPARAM.fields_by_name['error_func'].enum_type = _EVALUATIONCRITERION
 _TESTPARAM.fields_by_name['baseline_device'].enum_type = _DEVICE
@@ -1557,6 +1716,10 @@ DESCRIPTOR.message_types_by_name['PolyNmsParam'] = _POLYNMSPARAM
 DESCRIPTOR.message_types_by_name['YoloBoxParam'] = _YOLOBOXPARAM
 DESCRIPTOR.message_types_by_name['PriorBoxParam'] = _PRIORBOXPARAM
 DESCRIPTOR.message_types_by_name['HardSigmoidParam'] = _HARDSIGMOIDPARAM
+DESCRIPTOR.message_types_by_name['CosineEmbeddingLossParam'] = _COSINEEMBEDDINGLOSSPARAM
+DESCRIPTOR.message_types_by_name['LogAddExp2Param'] = _LOGADDEXP2PARAM
+DESCRIPTOR.message_types_by_name['CrossParam'] = _CROSSPARAM
+DESCRIPTOR.message_types_by_name['KlDivLossParam'] = _KLDIVLOSSPARAM
 DESCRIPTOR.enum_types_by_name['TensorLayout'] = _TENSORLAYOUT
 DESCRIPTOR.enum_types_by_name['DataType'] = _DATATYPE
 DESCRIPTOR.enum_types_by_name['Device'] = _DEVICE
@@ -1685,6 +1848,34 @@ HardSigmoidParam = _reflection.GeneratedProtocolMessageType('HardSigmoidParam', 
   # @@protoc_insertion_point(class_scope:mluoptest.HardSigmoidParam)
   ))
 _sym_db.RegisterMessage(HardSigmoidParam)
+
+CosineEmbeddingLossParam = _reflection.GeneratedProtocolMessageType('CosineEmbeddingLossParam', (_message.Message,), dict(
+  DESCRIPTOR = _COSINEEMBEDDINGLOSSPARAM,
+  __module__ = 'mlu_op_test_pb2'
+  # @@protoc_insertion_point(class_scope:mluoptest.CosineEmbeddingLossParam)
+  ))
+_sym_db.RegisterMessage(CosineEmbeddingLossParam)
+
+LogAddExp2Param = _reflection.GeneratedProtocolMessageType('LogAddExp2Param', (_message.Message,), dict(
+  DESCRIPTOR = _LOGADDEXP2PARAM,
+  __module__ = 'mlu_op_test_pb2'
+  # @@protoc_insertion_point(class_scope:mluoptest.LogAddExp2Param)
+  ))
+_sym_db.RegisterMessage(LogAddExp2Param)
+
+CrossParam = _reflection.GeneratedProtocolMessageType('CrossParam', (_message.Message,), dict(
+  DESCRIPTOR = _CROSSPARAM,
+  __module__ = 'mlu_op_test_pb2'
+  # @@protoc_insertion_point(class_scope:mluoptest.CrossParam)
+  ))
+_sym_db.RegisterMessage(CrossParam)
+
+KlDivLossParam = _reflection.GeneratedProtocolMessageType('KlDivLossParam', (_message.Message,), dict(
+  DESCRIPTOR = _KLDIVLOSSPARAM,
+  __module__ = 'mlu_op_test_pb2'
+  # @@protoc_insertion_point(class_scope:mluoptest.KlDivLossParam)
+  ))
+_sym_db.RegisterMessage(KlDivLossParam)
 
 
 # @@protoc_insertion_point(module_scope)

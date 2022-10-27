@@ -1,0 +1,60 @@
+op_name: "ball_query"
+ 
+input {
+  id: "input1"          
+  shape: {              
+    dims: 2
+    dims: 16
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY  
+  dtype: DTYPE_HALF   
+  random_data: {            
+    seed: 30
+    upper_bound: 1.0  
+    lower_bound: 0.0      
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 2
+    dims: 32
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+  random_data: {            
+    seed: 30
+    upper_bound: 1.0        
+    lower_bound: 0.0       
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "output"
+  shape: {
+    dims: 2
+    dims: 16
+    dims: 8
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+ 
+
+ball_query_param: {
+  min_radius: 0.0
+  max_radius: 0.4
+  nsample: 8
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0
+  error_threshold: 0
+  baseline_device: CPU
+}

@@ -8,13 +8,13 @@
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
 #
-# The above copyright notice and this permission notice shall self.tcp included
+# The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -92,35 +92,55 @@ class Parser:
             elif i.get("randomData").get("distribution") == "UNIFORM" and not hasattr(
                 i.get("randomData").get("distribution"), "seed"
             ):
-                input_list.append(
-                    np.frombuffer(
-                        np.array(
-                            i.get("valueI"), self.encode.get(self.get_input_dtype())
-                        ).reshape(i.get("shape").get("dims")),
-                        self.decode.get(self.get_input_dtype()),
+                if i.get("dtype") in ("DTYPE_FLOAT", "DTYPE_HALF"):
+                    input_list.append(
+                        np.frombuffer(
+                            np.array(
+                                i.get("valueI"), self.encode.get(i.get("dtype"))
+                            ).reshape(i.get("shape").get("dims")),
+                            self.decode.get(self.get_input_dtype()),
+                        ).reshape(i.get("shape").get("dims"))
                     )
-                )
+                else:
+                    input_list.append(
+                        np.array(
+                            i.get("valueI"), self.encode.get(i.get("dtype"))
+                        ).reshape(i.get("shape").get("dims"))
+                    )
             # (TODO:Add more distribution model)
         output_list = []
         if isinstance(oups := self.read_prototxt().get("output"), Dict):
-            output = np.frombuffer(
-                np.array(
+            if self.get_output_dtype() in ("DTYPE_FLOAT", "DTYPE_HALF"):
+                output = np.frombuffer(
+                    np.array(
+                        oups.get("valueI"),
+                        self.encode.get(self.get_output_dtype()),
+                    ).reshape(oups.get("shape").get("dims")),
+                    self.decode.get(self.get_output_dtype()),
+                ).reshape(oups.get("shape").get("dims"))
+            else:
+                output = np.array(
                     oups.get("valueI"),
                     self.encode.get(self.get_output_dtype()),
-                ).reshape(oups.get("shape").get("dims")),
-                self.decode.get(self.get_output_dtype()),
-            )
+                ).reshape(oups.get("shape").get("dims"))
             output_list.append(output)
         elif isinstance(oups := self.read_prototxt().get("output"), List):
             for j in oups:
-                output_list.append(
-                    np.frombuffer(
-                    np.array(
-                        j.get("valueI"),
-                        self.encode.get(self.get_output_dtype()),
-                    ).reshape(j.get("shape").get("dims")),
-                    self.decode.get(self.get_output_dtype()),
-                )
-                )
-                # output_list.append(j)
+                if self.get_output_dtype() in ("DTYPE_FLOAT", "DTYPE_HALF"):
+                    output_list.append(
+                        np.frombuffer(
+                        np.array(
+                            j.get("valueI"),
+                            self.encode.get(self.get_output_dtype()),
+                        ).reshape(j.get("shape").get("dims")),
+                        self.decode.get(self.get_output_dtype()),
+                    ).reshape(j.get("shape").get("dims"))
+                    )
+                else:
+                    output_list.append(
+                        np.array(
+                            j.get("valueI"),
+                            self.encode.get(self.get_output_dtype()),
+                        ).reshape(j.get("shape").get("dims"))
+                    )
         return input_list, output_list

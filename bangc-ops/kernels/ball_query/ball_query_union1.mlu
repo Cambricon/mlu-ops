@@ -1,0 +1,308 @@
+/*************************************************************************
+ * Copyright (C) 2021 Cambricon.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include <type_traits>
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+#define COORD_NUM 3
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_func__ void genIndexFunc(T *index, int32_t max_index, int32_t base_num) {
+  for (int32_t i = 0; i < base_num; i++) {
+    index[i] = (T)i;
+  }
+  int32_t offset = 1;
+  for (; offset < max_index / base_num; offset *= 2) {
+    __bang_add_scalar(index + offset * base_num, index, (T)(offset * base_num),
+                      offset * base_num);
+  }
+  offset = offset / 2;
+  int32_t remain_num = max_index - offset * base_num;
+  if (remain_num != 0)
+    __memcpy(index + offset * base_num, index, remain_num * sizeof(T),
+             NRAM2NRAM);
+
+  int32_t offset_num = offset * base_num;
+  __bang_add_scalar(index + offset_num, index + offset_num, (T)offset_num,
+                    remain_num);
+}
+
+template <typename T>
+__mlu_func__ void convertFloat2Int(int32_t *dst, float *dst_addtion,
+                                   void *src_origin, float *src_addtion,
+                                   int32_t elem_count, int32_t offset,
+                                   int32_t start_index) {
+  if (elem_count == 0) return;
+#if __BANG_ARCH__ >= 322
+  int32_t *src = (int32_t *)src_origin + start_index;
+  __bang_add_scalar((int32_t *)dst, (int32_t *)src, offset, elem_count);
+#else
+  float *src = (float *)src_origin + start_index;
+  __bang_add_scalar((float *)src, (float *)src, (float)(offset),
+                    CEIL_ALIGN(elem_count, 64));
+  __float2int32((int32_t *)dst, (float *)dst_addtion, (float *)src,
+                (float *)src_addtion, CEIL_ALIGN(elem_count, 64));
+#endif
+}
+
+__mlu_func__ void checkPointsValid(float *distance2, float *tmp_addr,
+                                   float *output_addr, float *zeros_addr,
+                                   int32_t num_deal_xyz, float min_radius2,
+                                   float max_radius2) {
+#if __BANG_ARCH__ >= 322
+  // distance2 >= min_radius2
+  __bang_ge_scalar(tmp_addr, distance2, min_radius2, num_deal_xyz);
+  // distance2 < max_radius2
+  __bang_lt_scalar(output_addr, distance2, max_radius2, num_deal_xyz);
+  // min_radius2 <= distance2 < max_radius2
+  __bang_and(tmp_addr, tmp_addr, output_addr, num_deal_xyz);
+  // distance2 == 0
+  __bang_eq_scalar(output_addr, distance2, 0, num_deal_xyz);
+  // distance2 == 0 | min_radius2 <= distance2 < max_radius2
+  __bang_or(output_addr, output_addr, tmp_addr, num_deal_xyz);
+#else
+  // distance2 >= min_radius2
+  __bang_ge_scalar(tmp_addr, distance2, min_radius2, num_deal_xyz);
+  // distance2 < max_radius2
+  __bang_ge_scalar(output_addr, distance2, max_radius2, num_deal_xyz);
+  __bang_not(output_addr, output_addr, num_deal_xyz);
+  // min_radius2 <= distance2 < max_radius2
+  __bang_and(tmp_addr, tmp_addr, output_addr, num_deal_xyz);
+  // distance2 == 0
+  // __bang_write_zero(tmp2, num_deal_xyz);// 提前
+  __bang_eq(output_addr, distance2, zeros_addr, num_deal_xyz);
+  // distance2 == 0 | min_radius2 <= distance2 < max_radius2
+  __bang_or(output_addr, output_addr, tmp_addr, num_deal_xyz);
+#endif
+}
+
+template <typename T>
+__mlu_func__ void ballQueryWorkflow(
+    T *vec_new_x1, T *vec_new_y1, T *vec_new_z1, int32_t *vec_idx_num,
+    T *vec_x1, T *vec_y1, T *vec_z1, int32_t *vec_index, T *vec_sub_x1,
+    T *vec_sub_y1, T *vec_sub_z1, void *tmp1, void *out1, void *out2,
+    void *out3, void *tmp2, float *src_addtion, T *new_xyz, T *xyz,
+    int32_t *idx, const int32_t num_stride, const int32_t b, const int32_t n,
+    const int32_t m, const int32_t nsample, const float min_radius2,
+    const float max_radius2, const int32_t nfu_align_size) {
+  const int32_t task_stride = b * m / taskDim;
+  const int32_t rem_task = b * m % taskDim;
+  const int32_t task_start = taskId * task_stride;
+  const int32_t num_per_task = task_stride + (taskId == taskDim - 1) * rem_task;
+
+  int32_t num_loop_new_xyz = num_per_task / num_stride;
+  const int32_t rem_num_new_xyz = num_per_task % num_stride;
+  num_loop_new_xyz =
+      rem_num_new_xyz > 0 ? num_loop_new_xyz + 1 : num_loop_new_xyz;
+
+  int32_t num_loop_xyz = n / num_stride;
+  const int32_t rem_num_xyz = n % num_stride;
+  num_loop_xyz = rem_num_xyz > 0 ? num_loop_xyz + 1 : num_loop_xyz;
+  int32_t start_index = NFU_ALIGN_SIZE / sizeof(float);
+  int32_t index_start = 0, cur_batch_id = 0;
+  int32_t same_batch_s = 0, same_batch_e = 0;
+#if __BANG_ARCH__ < 322
+  __bang_write_zero((float *)tmp2, num_stride);
+#endif
+  for (int32_t i = 0; i < num_loop_new_xyz; ++i) {
+    int32_t index_new_xyz = task_start + i * num_stride;
+    int32_t num_deal_new_xyz = i * num_stride + num_stride > num_per_task
+                                   ? rem_num_new_xyz
+                                   : num_stride;
+    int32_t b1 = index_new_xyz;
+    int32_t base1 = b1 * COORD_NUM;
+
+    T *new_xyz_nram = vec_new_x1;
+    __memcpy(new_xyz_nram, &new_xyz[base1], num_deal_new_xyz * 3 * sizeof(T),
+             GDRAM2NRAM);
+    __bang_write_zero(vec_idx_num, num_stride);
+
+    for (int32_t new_index = index_new_xyz;
+         new_index < (index_new_xyz + num_deal_new_xyz);) {
+      if (i == 0 && new_index == index_new_xyz) {
+        index_start = index_new_xyz;
+      }
+      cur_batch_id = index_start / m;
+      same_batch_s = index_start - index_new_xyz;
+      int32_t tmp_num = 0;
+      for (int k = index_start; k < (index_new_xyz + num_deal_new_xyz); ++k) {
+        if (k / m == cur_batch_id) {
+          tmp_num += 1;
+        } else {
+          break;
+        }
+      }
+      same_batch_e = same_batch_s + tmp_num;  // [same_batch_s, same_batch_e)
+      index_start = same_batch_e + index_new_xyz;
+      new_index += tmp_num;
+
+      for (int32_t j = 0; j < num_loop_xyz; ++j) {
+        // #if 0
+        int32_t index_xyz_same_batch = j * num_stride;
+        int32_t index_xyz = cur_batch_id * n + index_xyz_same_batch;
+        int32_t num_deal_xyz =
+            index_xyz_same_batch + num_stride > n ? rem_num_xyz : num_stride;
+        __bang_write_value(vec_x1, CEIL_ALIGN(num_deal_xyz, nfu_align_size),
+                           (T)(INFINITY));
+        __memcpy(vec_sub_x1, &xyz[index_xyz * COORD_NUM],
+                 num_deal_xyz * 3 * sizeof(T), GDRAM2NRAM);
+        __memcpy(vec_x1, (T *)vec_sub_x1, sizeof(T), NRAM2NRAM, sizeof(T),
+                 (COORD_NUM) * sizeof(T), num_deal_xyz - 1);
+        __memcpy(vec_y1, (T *)vec_sub_x1 + 1, sizeof(T), NRAM2NRAM, sizeof(T),
+                 (COORD_NUM) * sizeof(T), num_deal_xyz - 1);
+        __memcpy(vec_z1, (T *)vec_sub_x1 + 2, sizeof(T), NRAM2NRAM, sizeof(T),
+                 (COORD_NUM) * sizeof(T), num_deal_xyz - 1);
+        if (num_deal_xyz == rem_num_xyz) {
+          num_deal_xyz = CEIL_ALIGN(num_deal_xyz, nfu_align_size);
+        }
+        for (int32_t k = same_batch_s; k < same_batch_e; ++k) {
+          // (x1 - x2)
+          __bang_sub_scalar(vec_sub_x1, vec_x1, new_xyz_nram[3 * k],
+                            num_deal_xyz);
+          // (y1 - y2)
+          __bang_sub_scalar(vec_sub_y1, vec_y1, new_xyz_nram[3 * k + 1],
+                            num_deal_xyz);
+          // (z1 - z2)
+          __bang_sub_scalar(vec_sub_z1, vec_z1, new_xyz_nram[3 * k + 2],
+                            num_deal_xyz);
+          // (x1 - x2)^2
+          __bang_square(vec_sub_x1, vec_sub_x1, num_deal_xyz);
+          // (y1 - y2)^2
+          __bang_square(vec_sub_y1, vec_sub_y1, num_deal_xyz);
+          // (z1 - z2)^2
+          __bang_square(vec_sub_z1, vec_sub_z1, num_deal_xyz);
+          // (x1 - x2)^2 + (y1 - y2)^2
+          __bang_add(vec_sub_x1, vec_sub_x1, vec_sub_y1, num_deal_xyz);
+          // (x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2
+          __bang_add(vec_sub_x1, vec_sub_x1, vec_sub_z1, num_deal_xyz);
+
+          if (!std::is_same<T, float>::value) {
+            __bang_half2float((float *)out1, (half *)vec_sub_x1, num_deal_xyz);
+            checkPointsValid((float *)out1, (float *)vec_sub_x1,
+                             (float *)vec_sub_z1, (float *)tmp2, num_deal_xyz,
+                             min_radius2, max_radius2);
+          } else {
+            checkPointsValid((float *)vec_sub_x1, (float *)out1,
+                             (float *)vec_sub_z1, (float *)tmp2, num_deal_xyz,
+                             min_radius2, max_radius2);
+          }
+
+          __bang_select((float *)out3, (float *)vec_index, (float *)vec_sub_z1,
+                        num_deal_xyz);
+          int32_t selected_num = ((uint32_t *)out3)[0];
+
+          if (selected_num > 0) {
+            convertFloat2Int<T>((int32_t *)vec_sub_z1, (float *)out1, out3,
+                                (float *)src_addtion, selected_num,
+                                index_xyz_same_batch, start_index);
+            int32_t *in_ball_idx = (int32_t *)vec_sub_z1;
+            int32_t gdram_offset = index_new_xyz * nsample + k * nsample;
+            if (vec_idx_num[k] == 0) {
+              __gdramset(idx + gdram_offset, nsample, in_ball_idx[0]);
+            }
+            gdram_offset += vec_idx_num[k];
+            selected_num = (nsample - vec_idx_num[k]) > selected_num
+                               ? selected_num
+                               : (nsample - vec_idx_num[k]);
+            if (selected_num == 0) {
+              continue;
+            }
+            __memcpy(idx + gdram_offset, in_ball_idx,
+                     selected_num * sizeof(int32_t), NRAM2GDRAM);
+            vec_idx_num[k] += selected_num;
+          }
+        }
+      }
+    }
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUUnion1KernelBallQuery(
+    const int b, const int n, const int m, const float min_radius,
+    const float max_radius, const int nsample, const T *new_xyz, const T *xyz,
+    int32_t *idx) {
+  if (coreId == 0x80) {
+    return;
+  }
+  /*
+   * NRAM partition
+   *  |------------------------------------------------------------------|
+   *  |   vec_new_x1   |  vec_new_y1   |   vec_new_z1  |   vec_idx_num   |
+   *  |------------------------------------------------------------------|
+   *  |     vec_x1     |    vec_y1     |     vec_z1    |    vec_index    |
+   *  |------------------------------------------------------------------|
+   *  |   vec_sub_x1   |  vec_sub_y1   |   vec_sub_z1  |       tmp1      |
+   *  |------------------------------------------------------------------|
+   *  |       out1     |      out2     |     out3      |       tmp2      |
+   *  |------------------------------------------------------------------|
+   *  |   128Bytes|                                                      |
+   *  |------------------------------------------------------------------|
+   *
+   */
+  const int32_t nfu_align_size = NFU_ALIGN_SIZE / sizeof(T);
+  int32_t max_nram_size = MAX_NRAM_SIZE - 128;
+  int32_t num_stride1 = FLOOR_ALIGN(
+      max_nram_size / 4 / (3 * sizeof(T) + sizeof(int32_t)), nfu_align_size);
+  const int32_t num_stride = FLOOR_ALIGN(num_stride1, 64);
+
+  char *vec_new_x1 = nram_buffer;
+  char *vec_new_y1 = vec_new_x1 + num_stride * sizeof(T);
+  char *vec_new_z1 = vec_new_y1 + num_stride * sizeof(T);
+  char *vec_idx_num = vec_new_z1 + num_stride * sizeof(T);
+
+  char *vec_x1 = vec_idx_num + num_stride * sizeof(int32_t);
+  char *vec_y1 = vec_x1 + num_stride * sizeof(T);
+  char *vec_z1 = vec_y1 + num_stride * sizeof(T);
+  char *vec_index = vec_z1 + num_stride * sizeof(T);
+
+  char *vec_sub_x1 = vec_index + num_stride * sizeof(int32_t);
+  char *vec_sub_y1 = vec_sub_x1 + num_stride * sizeof(T);
+  char *vec_sub_z1 = vec_sub_y1 + num_stride * sizeof(T);
+  char *tmp1 = vec_sub_z1 + num_stride * sizeof(T);
+
+  char *out1 = tmp1 + num_stride * sizeof(int32_t);
+  char *out2 = out1 + num_stride * sizeof(T);
+  char *out3 = out2 + num_stride * sizeof(T);
+  char *tmp2 = out3 + num_stride * sizeof(T);
+
+  char *src_addtion = tmp2 + num_stride * sizeof(int32_t);
+
+  const float min_radius2 = min_radius * min_radius;
+  const float max_radius2 = max_radius * max_radius;
+
+#if __BANG_ARCH__ >= 322
+  genIndexFunc<int32_t>((int32_t *)vec_index, num_stride, nfu_align_size);
+#else
+  genIndexFunc<float>((float *)vec_index, num_stride, nfu_align_size);
+#endif
+
+  ballQueryWorkflow(
+      (T *)vec_new_x1, (T *)vec_new_y1, (T *)vec_new_z1, (int32_t *)vec_idx_num,
+      (T *)vec_x1, (T *)vec_y1, (T *)vec_z1, (int32_t *)vec_index,
+      (T *)vec_sub_x1, (T *)vec_sub_y1, (T *)vec_sub_z1, (void *)tmp1,
+      (void *)out1, (void *)out2, (void *)out3, (void *)tmp2,
+      (float *)src_addtion, (T *)new_xyz, (T *)xyz, (int32_t *)idx, num_stride,
+      b, n, m, nsample, min_radius2, max_radius2, nfu_align_size);
+}
+
+template void MLUUnion1KernelBallQuery<half>(const int, const int, const int,
+                                             const float, const float,
+                                             const int, const half *,
+                                             const half *, int *);
+
+template void MLUUnion1KernelBallQuery<float>(const int, const int, const int,
+                                              const float, const float,
+                                              const int, const float *,
+                                              const float *, int *);

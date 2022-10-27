@@ -28,9 +28,7 @@
 
 extern mluoptest::GlobalVar global_var;
 
-Collector::Collector(const std::string &name) {
-  op_name_ = name;
-}
+Collector::Collector(const std::string &name) { op_name_ = name; }
 
 size_t Collector::num() {
   if (global_var.thread_num_ > 1) {
@@ -104,7 +102,8 @@ std::vector<std::string> Collector::read_case(std::string cases_list) {
   while (getline(fin, case_path)) {
     if (case_path.find(op_dir) != std::string::npos) {
       if (case_path.back() == '\r' || case_path.back() == '\n') {
-        res.push_back(case_path.substr(0, case_path.length() - 1));  // remove "\r"
+        res.push_back(
+            case_path.substr(0, case_path.length() - 1));  // remove "\r"
       } else {
         res.push_back(case_path.substr(0, case_path.length()));
       }
@@ -173,9 +172,11 @@ std::vector<std::string> Collector::list_by_case_dir(std::string case_dir) {
 
   for (auto name : all_files) {
     if (name.find("invalid") == std::string::npos) {  // no "invalid" in name
-      if (name.substr(name.size() - suffix_pb.size(), suffix_pb.size()) == suffix_pb) {
+      if (name.substr(name.size() - suffix_pb.size(), suffix_pb.size()) ==
+          suffix_pb) {
         res.push_back(name);
-      } else if (name.substr(name.size() - suffix_txt.size(), suffix_txt.size()) == suffix_txt) {
+      } else if (name.substr(name.size() - suffix_txt.size(),
+                             suffix_txt.size()) == suffix_txt) {
         res.push_back(name);
       }
     }
@@ -202,7 +203,8 @@ std::vector<std::string> Collector::list() {
     case_names = list_by_case_dir("../../test/mlu_op_gtest/pb_gtest/src/zoo/");
   }
 
-  auto fisher_shuffle = [](std::vector<std::string> res, int n) -> std::vector<std::string> {
+  auto fisher_shuffle = [](std::vector<std::string> res,
+                           int n) -> std::vector<std::string> {
     std::vector<std::string> res_n;
     n = std::min(n, int(res.size()));
     std::srand(std::time(nullptr));

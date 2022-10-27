@@ -27,7 +27,7 @@ from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu290", "mlu370-s4"]
+TARGET_LIST = ["mlu290", "mlu370-s4", "mlu270"]
 KERNEL_NAME = "hard_sigmoid"
 
 
