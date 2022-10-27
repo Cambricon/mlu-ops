@@ -31,7 +31,7 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
  * problem occurs in device.
  * The statement "__sync_cluster" on line 26 will causes a synchronization
  * bug becasue it will only be executed by MPU, but it attempts to synchronize
- * both IPUs and MPU in the cluster.
+ * both MLU cores and MPU in the cluster.
  * After removing this statement, the kernel function can execute normally.
  * For details on how to deal with such MLU unfinished problems, please refer
  * to debugging section in Cambricon-BANGC-OPS-User-Guide-CN-vx.x.x.pdf

@@ -436,7 +436,7 @@ void mluOpGetLibVersion(int *major, int *minor, int *patch);
 
 /******************************************************************************
  * MLUOP Data Structure: Descriptor
- * The struct represent neural, weight and the neural-network layer
+ * The struct represent node, weight and the AI network layer
  ******************************************************************************/
 /*! The descriptor of a tensor that holds the information including tensor
  *  layout, data type, the number of dimensions, shape and strides.

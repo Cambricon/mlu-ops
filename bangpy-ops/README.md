@@ -1,6 +1,6 @@
 # Cambricon BANGPy operators
 
-提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）开发高性能算子、Python 接口封装的示例代码。
+提供基于寒武纪人工智能单元（MLU）开发高性能算子、Python 接口封装的示例代码。
 
 ## 编译 BANGPy operators
 - 环境依赖准备

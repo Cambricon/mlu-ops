@@ -215,16 +215,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 
 #### 3.1.1 roi_crop_forward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个  分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim (bin_n = n * out_h * out_w)；
 - step2: 根据双线性插值原理，1个 bin 需要 input 下的 4 个 channels 得到 output 下的 1 个 channels，所以拆分 NRAM 为 8 等份，每份P AD_DOWN(MAX_NRAM_SIZE / 8 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float)) 个数据，用于存储 input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)，NRAM 支持原位计算，output 可以复用 NRAM 的空间；
-- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
+- step3: 每个 MLU core 循环获取 gw、gh、gn 等信息，进而得到 input 和 output 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 #### 3.1.2 roi_crop_backward
 
-- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 IPU 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim；
+- step1: 根据 grid 中 bin 的个数进行任务规模划分，每个 MLU core 分到 task_bins 份，task_bins = taskId < rem_bins ? bin_n / taskDim + 1 : bin_n / taskDim；
 - step2: 根据双线性插值梯度计算公式知，1 个 bin 需要 grad_output 下的 1 个 channels 得到 grad_output 下的 4 个 channels，所以拆分 NRAM 为 10 等份，每份 PAD_DOWN(MAX_NRAM_SIZE/ 10 / sizeof(float)，NFU_ALIGN_SIZE / sizeof(float))个数据，用于存储 grad_output 的 2 个 channels 数据量(ping 占 1 个，pong 占 1 个)，用于存储 grad_input 的 8 个 channels 数据量(ping 占 4 个，pong 占 4 个)；
-- step3: 每个 IPU 循环获取 gw、gh、gn 等信息，进而得到 grad_output 和 grad_input 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
+- step3: 每个 MLU core 循环获取 gw、gh、gn 等信息，进而得到 grad_output 和 grad_input 的偏移地址，拷贝 GDRAM 中数据到 NRAM；
 - step4: NRAM 下使用三级流水，进行计算。
 
 ### 3.2 伪代码实现（可选）
@@ -241,10 +241,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(const mluOpHandle_t handle,
 ### 3.3 拆分(任务拆分，多核拆分)
 
 基本任务类型是 U1。根据算子的实现方案可知，roi_crop_forward 和roi_crop_backward 算子都是依据 grid 中 bin 的数据进行拆分的，因此：
-将 grid 中的 n * out_h * out_w 作为总元素数分到每个 IPU 上公式如下：<br>
+将 grid 中的 n * out_h * out_w 作为总元素数分到每个 MLU core 上公式如下：<br>
 bin_n = n * out_h * out_w;<br>
 task_bins = (taskId < ( bin_n % taskDim)) ? bin_n / taskDim + 1 : bin_n / taskDim;<br>
-每个 IPU 要对不同的数据区域做处理，所以需要根据 taskId 加偏移，获取每个 IPU 要处理的 bin 的索引;<br>
+每个 MLU core 要对不同的数据区域做处理，所以需要根据 taskId 加偏移，获取每个 MLU core 要处理的 bin 的索引;<br>
 rem_bins = bin_n % taskDim;<br>
 bins_first_per = (bin_n / taskDim) * taskId + (taskId > rem_bins ? rem_bins : taskId);<br>
 bins_loop_per = bins_first_per + task_bins;<br>
