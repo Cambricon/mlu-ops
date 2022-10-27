@@ -25,10 +25,10 @@ from test import registerOp, OpTest
 import numpy as np
 import bangpy
 from bangpy.common import load_op_by_type
-from cross import KERNEL_NAME, TARGET_LIST
+from cross import KERNEL_NAME
 
 EPSILON=1e-9
-# np.set_printoptions(threshold=np.inf)
+np.set_printoptions(threshold=np.inf)
 
 def cal_diff(result, data_out):
     """
@@ -59,13 +59,10 @@ class CrossOp(OpTest):
         """
         Evaluate IO efficiency and accuracy of cosineEmbeddingLoss of given parameters
         """
-        if target not in TARGET_LIST:
-            return
-
-        if target == "mlu370-s4":
-            IO_BANDWIDTH = 307.2 * 2 ** 30  # MLU370-s4: 307.2GB/s
+        if target == "mlu290":
+            IO_BANDWIDTH = 2**40  # MLU370-s4: 307.2GB/s
         else:
-            IO_BANDWIDTH = 2**40  # MLU290: 1024GB/s
+            IO_BANDWIDTH = 307.2 * 2 ** 30  # MLU290: 1024GB/s
 
         data_in0 = self.inputs_tensor_list[0]
         data_in1 = self.inputs_tensor_list[1]
@@ -147,8 +144,6 @@ class CrossOp(OpTest):
         # assert maxdiff3 == 0
 
     def compute(self):
-        if self.target not in TARGET_LIST:
-            return
         f = load_op_by_type(KERNEL_NAME, self.dtype.name)
 
         self.evaluate(f, self.dtype, self.target)

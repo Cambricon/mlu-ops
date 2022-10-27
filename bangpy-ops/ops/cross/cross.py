@@ -24,7 +24,6 @@ import bangpy
 from bangpy.common.dtypes import DType
 from bangpy.script import tcp, build_module, ty
 
-# pylint:skip-file
 DTYPES = [bangpy.float16, bangpy.float32]
 TARGET_LIST = ["mlu220-m2", "mlu270", "mlu290", "mlu370-s4"]
 KERNEL_NAME = "cross"
@@ -125,7 +124,7 @@ class Cross(object):
                 for i in range(mydim, maxdim):
                     step = step * shape[i]
                 if step < 0:
-                    step = step
+                    step = step + 0
                 # step=4x5=20, if current element's index is 'i',
                 # then next element is in 'i+step'
 
