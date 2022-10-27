@@ -1,0 +1,41 @@
+op_name: "copy"
+input {
+  id: "input"
+  shape: {
+    dims: 3
+    dims: 1
+    dims: 5
+    dims: 1
+    dims: 6
+    dim_stride: 30
+    dim_stride: 10086
+    dim_stride: 6
+    dim_stride: 95533
+    dim_stride: 1
+  }
+  layout: LAYOUT_NDHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 3
+    dims: 1
+    dims: 5
+    dims: 1
+    dims: 6
+  }
+  layout: LAYOUT_NDHWC
+  dtype: DTYPE_FLOAT
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.000
+  baseline_device: CPU
+}

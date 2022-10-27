@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -19,12 +30,11 @@
 #include <thread>  // NOLINT
 #include <atomic>
 #include <cstring>
-#include "core/mlu_op_core.h"
+
 #include "core/macros.h"
 #include "core/logging.h"
 #include "core/type.h"
-
-#define QUEUE_ARRAY_LENGTH 4
+#include "mlu_op.h"
 
 struct mluOpTensorStruct {
   mluOpTensorStruct()
@@ -58,17 +68,17 @@ struct mluOpTensorStruct {
   }
 
   /* struct */
-  int dim               = 0;
-  int total_element_num = 0;
-  int total_tensor_size = 0;
+  int dim = 0;
+  uint64_t total_element_num = 0;
+  uint64_t total_tensor_size = 0;
   // if dimNb > MLUOP_DIM_MAX (8), using larger_dims, malloc it and dims point
   // it. else, using normal_dims, dont need malloc and free.
   int normal_dims[MLUOP_DIM_MAX] = {-1};
-  int *larger_dims               = NULL;
+  int *larger_dims = NULL;
   int *dims = normal_dims;  // point the normal dims as default
 
   int normal_strides[MLUOP_DIM_MAX] = {-1};
-  int *larger_strides               = NULL;
+  int *larger_strides = NULL;
   int *strides = normal_strides;  // point the normal strides as default
 
   mluOpDataType_t dtype;
@@ -84,14 +94,14 @@ struct mluOpTensorStruct {
   inline void init() {  // reset random value after malloc.
     // init these pointer.
     // if not, when call reset() will free invalid pointer.
-    larger_dims    = NULL;
+    larger_dims = NULL;
     larger_strides = NULL;
 
-    dim               = 0;
+    dim = 0;
     total_element_num = 0;
     total_tensor_size = 0;
-    dims              = normal_dims;
-    strides           = normal_strides;
+    dims = normal_dims;
+    strides = normal_strides;
   }
   inline void reset() {  // reset variable as default.
     if (MLUOP_PREDICT_FALSE(larger_dims != NULL)) {
@@ -102,40 +112,191 @@ struct mluOpTensorStruct {
       delete[] larger_strides;
       larger_strides = NULL;
     }
-    dims         = normal_dims;
-    strides      = normal_strides;
-    dtype        = MLUOP_DTYPE_FLOAT;
+    dims = normal_dims;
+    strides = normal_strides;
+    dtype = MLUOP_DTYPE_FLOAT;
     onchip_dtype = MLUOP_DTYPE_INVALID;
-    layout       = MLUOP_LAYOUT_ARRAY;
+    layout = MLUOP_LAYOUT_ARRAY;
 
     position = 0;
-    scale    = 1.0f;
-    offset   = 0;
+    scale = 1.0f;
+    offset = 0;
 
-    dim               = 0;
+    dim = 0;
     total_element_num = 0;
     total_tensor_size = 0;
   }
 };
+
+// dim_set(rnn)     [layer_num, direction, cap_of_cell]
+// dim_offset_base  [direction * cap_of_cell, cap_of_cell, 1]
+// tensor_set       [l1.forward.filter1, ..., l1.forward.filter9,
+//                   l1.backward.filter1, ..., l1.backward.filter9,
+//                   l2.forward.filter1, ..., l2.forward.filter9
+//                   ...                                       ]
+struct mluOpTensorSetStruct {
+  mluOpTensorSetStruct() : tensor_num(0), dim_num(0) {
+    /* explicit set initial values for document use.
+     */
+  }
+  ~mluOpTensorSetStruct() {
+    /* please do NOT implement any codes here.
+     * a state-less struct should not hold any resources.
+     */
+  }
+  /* methods */
+  inline size_t getSize() {
+    CHECK(!this->tensor_set.empty());
+    size_t tensor_set_size = 0;
+    for (int i = 0; i < tensor_set.size(); i++) {
+      size_t size = 0;
+      tensor_set[i]->tensorSize(size);
+      tensor_set_size += size;
+    }
+    return tensor_set_size;
+  }
+  // tensor set (eg: rnn)
+  inline int getIndex(const int tensorIndex[]) const {
+    int index = 0;
+    for (int i = 0; i < this->dim_set.size(); i++) {
+      index += tensorIndex[i] * this->dim_offset_base[i];
+    }
+    return index;
+  }
+
+  inline size_t getOffset(const int tensorIndex[]) {
+    int64_t offset = 0;
+    int index = this->getIndex(tensorIndex);
+    for (int i = 0; i < index; i++) {
+      size_t ts_size = 0;
+      this->tensor_set[i]->tensorSize(ts_size);
+      offset += ts_size;
+    }
+    data_offset[index] = offset;
+    return offset;
+  }
+
+  inline mluOpTensorDescriptor_t getTensor(const int tensorIndex[]) const {
+    auto index = this->getIndex(tensorIndex);
+    auto ts = this->tensor_set[index].get();
+    return ts;
+  }
+
+  inline mluOpDataType_t getDatatype() const {
+    CHECK(!this->tensor_set.empty());
+    return this->tensor_set[0]->dtype;
+  }
+
+  inline mluOpTensorLayout_t getLayout() const {
+    CHECK(!this->tensor_set.empty());
+    return this->tensor_set[0]->layout;
+  }
+
+  inline void checkDataOffset() const {
+    auto data_offset_array = data_offset.size();
+    for (int i = 0; i < data_offset_array; i++) {
+      if (i != 0 && data_offset[i] == 0) {
+        LOG(ERROR) << "tensorSet's data not set, index:" << i << " of "
+                   << tensor_num;
+      }
+    }
+  }
+
+  inline void dataOffsetInit(int set_size) {
+    this->data_offset.resize(set_size);
+  }
+
+  inline std::vector<size_t> getDataOffsets() {
+    if (data_offset.size() == 0) {
+      return data_offset;
+    }
+    int offset = 0;
+    data_offset[0] = offset;
+    for (int i = 0; i < tensor_num - 1; i++) {
+      size_t ts_size = 0;
+      this->tensor_set[i]->tensorSize(ts_size);
+      offset += ts_size;
+      data_offset[i + 1] = offset;
+    }
+    return data_offset;
+  }
+  /* struct */
+  int tensor_num = 0;
+  int dim_num = 0;                   // dimension number
+  std::vector<int> dim_set;          // the number for each dimension
+  std::vector<int> dim_offset_base;  // offset for each dimension
+  std::vector<std::shared_ptr<mluOpTensorStruct>>
+      tensor_set;  // vector of tensorDesc
+
+  std::vector<std::vector<int>> user_indices;  // releated tensor's index
+  std::vector<size_t> data_offset;             // data's offset
+};
+
+#ifndef MLUOP_TENSOR_QUEUE_ENABLE
+#define MLUOP_TENSOR_QUEUE_ENABLE 1
+#endif
+
+#if MLUOP_TENSOR_QUEUE_ENABLE
+struct mluOpTensorDescriptorQueueStruct {
+  mluOpTensorDescriptorQueueStruct() {
+    extend(extend_num);
+    extend_num *= 2;
+  }
+  explicit mluOpTensorDescriptorQueueStruct(size_t n) {
+    extend_num = n;
+    extend(extend_num);
+    extend_num *= 2;
+  }
+  ~mluOpTensorDescriptorQueueStruct() {
+    for (auto it : this->headers) {
+      delete[] it;
+    }
+  }
+  std::queue<mluOpTensorDescriptor_t> queue;
+  std::list<mluOpTensorStruct *> headers;
+  std::atomic_flag flag = ATOMIC_FLAG_INIT;
+  inline void lock() {
+    while (flag.test_and_set(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+  }
+  inline void unlock() { flag.clear(std::memory_order_release); }
+  inline void extend(size_t n) {
+    mluOpTensorStruct *header = new (std::nothrow) mluOpTensorStruct[n];
+    headers.emplace_back(header);
+    for (size_t i = 0; i < n; ++i) {
+      mluOpTensorStruct *desc = header + i;
+      desc->init();  // reset random value.
+      queue.emplace(desc);
+    }
+  }
+  size_t extend_num = 100;
+};
+#endif
 
 inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
   switch (dt) {
     case MLUOP_DTYPE_HALF:
       return 2;
     case MLUOP_DTYPE_FLOAT:
+    case MLUOP_DTYPE_COMPLEX_HALF:
       return 4;
+    case MLUOP_DTYPE_DOUBLE:
+    case MLUOP_DTYPE_COMPLEX_FLOAT:
+      return 8;
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_UINT8:
     case MLUOP_DTYPE_BOOL:
       return 1;
     case MLUOP_DTYPE_INT16:
+    case MLUOP_DTYPE_UINT16:
       return 2;
     // case MLUOP_DTYPE_INT23:   return 3;
-    case MLUOP_DTYPE_INT31:
-      return 4;
     case MLUOP_DTYPE_INT32:
+    case MLUOP_DTYPE_UINT32:
       return 4;
     case MLUOP_DTYPE_INT64:
+    case MLUOP_DTYPE_UINT64:
       return 8;
     default:
       return -1;

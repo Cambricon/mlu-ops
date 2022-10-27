@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -109,11 +120,13 @@ bool readIn(const std::string &filename, google::protobuf::Message *proto) {
 }
 
 // write to pb.
-bool writeTo(const google::protobuf::Message *proto, const std::string &filename) {
+bool writeTo(const google::protobuf::Message *proto,
+             const std::string &filename) {
   std::ifstream fin(filename, std::ios::in);
   if (fin.is_open()) {
     fin.close();
-    std::cout << filename << " already exists, create file failed." << std::endl;
+    std::cout << filename << " already exists, create file failed."
+              << std::endl;
     return false;
   }
 
@@ -211,9 +224,11 @@ int main(int argc, char **argv) {
       std::string name = splitFileName(proto_files[i]);
       std::string prefix = splitPrefix(src_path, proto_files[i]);
       makeDir(dst_path + prefix + "/");
-      dumpProto(src_path + prefix + "/" + name + ext, dst_path + prefix + "/" + name + ".pb");
+      dumpProto(src_path + prefix + "/" + name + ext,
+                dst_path + prefix + "/" + name + ".pb");
     }
   } else {
-    std::cout << "Can't read in from " << src_path << " and write to " << dst_path << std::endl;
+    std::cout << "Can't read in from " << src_path << " and write to "
+              << dst_path << std::endl;
   }
 }

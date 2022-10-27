@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -24,6 +35,9 @@
 #if defined(__GNUC__)
 
 // Compiler supports GCC-style attributes
+#define MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN __attribute__((visibility("hidden")))
+#define MLUOP_ATTRIBUTE_CONSTRUCTOR __attribute__((constructor))
+#define MLUOP_ATTRIBUTE_DESTRUCTOR __attribute__((destructor))
 #define MLUOP_ATTRIBUTE_NORETURN __attribute__((noreturn))
 #define MLUOP_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
 #define MLUOP_ATTRIBUTE_NOINLINE __attribute__((noinline))
@@ -40,6 +54,8 @@
 // Non-GCC equivalents
 #define MLUOP_ATTRIBUTE_NORETURN __declspec(noreturn)
 #define MLUOP_ATTRIBUTE_ALWAYS_INLINE __forceinline
+#define MLUOP_ATTRIBUTE_CONSTRUCTOR
+#define MLUOP_ATTRIBUTE_DESTRUCTOR
 #define MLUOP_ATTRIBUTE_NOINLINE
 #define MLUOP_ATTRIBUTE_UNUSED
 #define MLUOP_ATTRIBUTE_COLD

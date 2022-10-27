@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -18,7 +29,10 @@
 #include <sstream>
 #include "core/macros.h"
 #include "core/cnlog.h"
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
+
+#define LARGE_TENSOR_NUM ((uint64_t)2147483648)
+#define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
 #define LOG(severity) cnlog::CLOG(MLUOP, severity)
 
@@ -62,32 +76,44 @@
     LOG(ERROR) << " Check failed: " #val1 " > " #val2 ". " #__VA_ARGS__; \
   }
 
+// kernel check for crop
+#define SYMBOL_CHECK(symbol...)                                     \
+  if (MLUOP_PREDICT_FALSE(!&symbol)) {                              \
+    LOG(FATAL) << "calling underfined symbol which not be linked: " \
+               << #symbol;                                          \
+  }                                                                 \
+  symbol
+
 // return if found cnrt error.
-#define KERNEL_CHECK(kernel) \
-  { kernel; }
-
-// Because the function of cnrtGetLastErr is incomplete and not binding to
-// thread or queue, errors occur earlly will be caught at mluOp function call.
-// It's not a good method to deal with <<<>>> launch kernel error. Waiting
-// follow-up cntoolkit to use.
-
-// #define KERNEL_CHECK(kernel)                                    \
-//   {                                                             \
-//     kernel;                                                     \
-//     cnrtRet_t ret = cnrtGetLastErr();                           \
-//     if (CNRT_RET_SUCCESS != ret) {                              \
-//       const char *err_str = cnrtGetErrorStr(ret);               \
-//       LOG(ERROR) << "Check failed: Found " << std::string(err_str) \
-//                  << " when invoke kernel.";                      \
-//       return MLUOP_STATUS_EXECUTION_FAILED;                      \
-//     }                                                           \
-//   }
+#define KERNEL_CHECK(kernel...)                                    \
+  {                                                                \
+    cnrtGetLastError();                                            \
+    kernel;                                                        \
+    cnrtRet_t ret = cnrtPeekAtLastError();                         \
+    if (MLUOP_PREDICT_FALSE(CNRT_RET_SUCCESS != ret)) {            \
+      LOG(ERROR) << "Check failed: Found " << cnrtGetErrorStr(ret) \
+                 << " after invoke kernel " #kernel;               \
+      return MLUOP_STATUS_EXECUTION_FAILED;                        \
+    }                                                              \
+  }
 
 // CHECK with return value.
 #define INTERNAL_CHECK(api, condition, ...)                           \
   if (!(condition)) {                                                 \
     LOG(ERROR) << api << " An internal error occured. " #__VA_ARGS__; \
     return MLUOP_STATUS_INTERNAL_ERROR;                               \
+  }
+
+// CHECK if return value equals MLUOP_STATUS_SUCCESS
+#define CHECK_RETURN(api, status, ...)                                     \
+  {                                                                        \
+    mluOpStatus_t __status__ = (status);                                   \
+    if ((__status__) != MLUOP_STATUS_SUCCESS) {                            \
+      LOG(ERROR) << api << "BAD return status: " << #status << " returns " \
+                 << (__status__) << " (FILE: " << __FILE__                 \
+                 << ", LINE: " << __LINE__ "). " __VA_ARGS__;              \
+      return (__status__);                                                 \
+    }                                                                      \
   }
 
 #define PARAM_CHECK(api, condition, ...)                                 \
@@ -134,16 +160,48 @@
     return MLUOP_STATUS_BAD_PARAM;                                       \
   }
 
+#define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                 \
+  if (!(num < max_num)) {                                                \
+    LOG(ERROR) << "[" << api << "]: overflow max supported tensor num. " \
+               << reason << api << "supports tensor num smaller than "   \
+               << max_num << ", "                                        \
+               << "now tensor's total num is " << num;                   \
+    return MLUOP_STATUS_SUCCESS;                                         \
+  }
+#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)               \
+  if (!(size < max_size)) {                                               \
+    LOG(ERROR) << "[" << api << "]: overflow max supported tensor size. " \
+               << reason << api << "supports tensor size smaller than "   \
+               << max_size << "B, "                                       \
+               << "now tensor's total size is " << size << "B.";          \
+    return MLUOP_STATUS_SUCCESS;                                          \
+  }
+
 void mluOpCheck(mluOpStatus_t result, char const *const func,
                 const char *const file, int const line);
+
 #define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
+
+#define KERNEL_CALL_CHECK(parent_kernel, sub_kernel, status, statement)       \
+  do {                                                                        \
+    if (status != MLUOP_STATUS_SUCCESS) {                                     \
+      std::string error = "[" + std::string(parent_kernel) + "]" + " Error" + \
+                          std::string(mluOpGetErrorString(status)) +          \
+                          " occured when this kernel "                        \
+                          "call the kernel " +                                \
+                          std::string(sub_kernel) + ". " +                    \
+                          std::string(statement);                             \
+      LOG(ERROR) << error;                                                    \
+      return status;                                                          \
+    }                                                                         \
+  } while (0)
 
 namespace mluop {
 
-const int INFO    = 0;  // base_logging::INFO;
+const int INFO = 0;     // base_logging::INFO;
 const int WARNING = 1;  // base_logging::WARNING;
-const int ERROR   = 2;  // base_logging::ERROR;
-const int FATAL   = 3;  // base_logging::FATAL;
+const int ERROR = 2;    // base_logging::ERROR;
+const int FATAL = 3;    // base_logging::FATAL;
 
 namespace internal {
 
@@ -212,7 +270,8 @@ void MakeCheckOpValueString(std::ostream *os, const char &v);
 template <>
 void MakeCheckOpValueString(std::ostream *os, const signed char &v);  // NOLINT
 template <>
-void MakeCheckOpValueString(std::ostream *os, const unsigned char &v);  // NOLINT
+void MakeCheckOpValueString(std::ostream *os,
+                            const unsigned char &v);  // NOLINT
 
 #if LANG_CXX11
 // We need an explicit specialization for std::nullptr_t.
@@ -354,7 +413,8 @@ inline unsigned long GetReferenceableValue(unsigned long t) {  // NOLINT
 inline long long GetReferenceableValue(long long t) {  // NOLINT
   return t;
 }
-inline unsigned long long GetReferenceableValue(unsigned long long t) {  // NOLINT
+inline unsigned long long                      // NOLINT
+GetReferenceableValue(unsigned long long t) {  // NOLINT
   return t;
 }
 

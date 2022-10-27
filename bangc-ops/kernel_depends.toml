@@ -1,0 +1,25 @@
+[mlu-ops]
+
+[bangc-ops.kernels]
+
+# # bangc-ops API dependencies: only bangc-ops/kernels/<> compile depedencies
+# ##  format:
+# ##  <kernel_name> = ["op_1", "op_2"]
+
+abs = ["unary_op"]
+copy = ["tensor_stride_process"]
+div = ["binary_op"]
+expand = ["copy"]
+log = ["unary_op"]
+psroipool = ["fill_zero"]
+roi_crop = ["fill_zero"]
+sqrt = ["binary_op", "unary_op"]
+tensor_stride_process = ["copy"]
+yolo_box = ["fill_zero"]
+
+
+[bangc-ops.gtest]
+
+# # mlu_op_gtest API dependencies under mlu_op_gtest/pb_gtest/src/zoo/<op>
+# ## If mlu_op_gtest use dlopen to call mluops, dependencies below may not be necessary
+

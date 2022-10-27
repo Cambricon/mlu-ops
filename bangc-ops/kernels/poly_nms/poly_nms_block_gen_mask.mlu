@@ -1,0 +1,145 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "kernels/poly_nms/intersect_area.h"
+#include "kernels/poly_nms/poly_nms_core_set.h"
+#include "kernels/poly_nms/poly_nms.h"
+
+#include "kernels/kernel.h"
+
+#define CALC_GENMASK_NRAM_SIZE MAX_NRAM_SIZE
+#define CALC_GENMASK_NRAM_FLT_CAP CALC_GENMASK_NRAM_SIZE / sizeof(float)
+
+namespace {
+
+__nram__ float nram_gen_mask[CALC_GENMASK_NRAM_FLT_CAP];
+
+__mlu_func__ static float polyIou(const QuadClipBox *__restrict__ clipbox,
+                                  const float *__restrict__ box_j, float area_i,
+                                  float area_j) {
+  float intersect = intersectArea(box_j, clipbox);
+  return intersect / (area_i + area_j - intersect);
+}
+
+__mlu_func__ static void maySuppress(uint32_t *mask, int j) {
+  int pos_j = j / MASK_T_BITWIDTH;
+  int offset = j % MASK_T_BITWIDTH;
+  constexpr uint32_t DEFAULT_MASK = 0x80000000;  // 0b 1000 0000 0000 0000
+  mask[pos_j] &= ~(DEFAULT_MASK >> offset);
+}
+
+__mlu_func__ static void mluGenNmsMaskImpl(
+    const float *__restrict__ input_boxes, int input_boxes_num, int real_width,
+    float threshold, const float *__restrict__ boxes_area, uint32_t *mask,
+    int *sort_info) {
+  // TODO(ZW): support larger size.
+  int mask_col_num = (input_boxes_num + MASK_T_BITWIDTH - 1) / MASK_T_BITWIDTH;
+
+  // nram: | box_buffer    | area_buffer | mask_buffer  | mask_buffer_swap |
+  // size: | ipt_box_num*9 | ipt_box_num | mask_col_num |  mask_col_num    |
+
+  // load boxes data into nram and remove padding
+  float *box_buffer = nram_gen_mask;
+  __memcpy_async(box_buffer, input_boxes, 9 * sizeof(float), GDRAM2NRAM,
+                 9 * sizeof(float), real_width * sizeof(float),
+                 input_boxes_num - 1);
+
+  int box_buffer_num = input_boxes_num * 9;
+  int mask_buffer_num = mask_col_num;
+  int area_buffer_num = input_boxes_num;
+#if __BANG_ARCH__ < 300
+  const int align_num = NFU_ALIGN_SIZE / sizeof(uint32_t);
+  box_buffer_num = CEIL_ALIGN(input_boxes_num * 9, align_num);
+  mask_buffer_num = CEIL_ALIGN(mask_col_num, align_num);
+  area_buffer_num = CEIL_ALIGN(area_buffer_num, align_num);
+#endif
+  // load box area into nram
+  float *area_buffer = box_buffer + box_buffer_num;
+  __memcpy_async(area_buffer, boxes_area, input_boxes_num * sizeof(float),
+                 GDRAM2NRAM);
+
+  // create mask_buffer for a single row
+  constexpr uint32_t allones = 0xFFFFFFFF;
+  constexpr int default_mask_v = allones;
+  uint32_t *mask_buffer = (uint32_t *)area_buffer + area_buffer_num;
+  uint32_t *mask_buffer_swap = mask_buffer + mask_buffer_num;
+  __bang_write_value(mask_buffer, mask_buffer_num * 2, default_mask_v);
+
+  // get the rows this core should handle
+  int core_box_num = 0;
+  int box_i_beg = 0;
+  getCoreWorkingSet(input_boxes_num, &core_box_num, &box_i_beg);
+  int box_i_end = box_i_beg + core_box_num;
+  box_i_end = box_i_end < input_boxes_num ? box_i_end : input_boxes_num;
+
+  __sync_io();
+
+  for (int i = box_i_beg; i < box_i_end; i += 1) {
+    int i_pos = 0;
+    float *box_i = &box_buffer[i * 9];
+    QuadClipBox clip_box;
+    clip_box.addLines(reinterpret_cast<const Point2D *>(box_i));
+
+    float score_i = box_i[8];
+    for (int j = 0; j < input_boxes_num; ++j) {
+      if (i == j) {
+        continue;
+      }
+
+      float *box_j = &box_buffer[j * 9];
+      float score_j = box_j[8];
+      if (score_i < score_j) {
+        i_pos += 1;
+      } else {
+        if (score_i == score_j) {
+          i_pos += (j < i);
+        } else {
+          float iou = polyIou(&clip_box, box_j, area_buffer[i], area_buffer[j]);
+          if (iou > threshold) {
+            maySuppress(mask_buffer, j);
+          }
+        }
+      }
+    }
+    __memcpy(mask + i * mask_col_num, mask_buffer,
+             mask_col_num * sizeof(uint32_t), NRAM2GDRAM);
+    sort_info[i_pos] = i;
+    __sync_compute();
+    uint32_t *tmp = mask_buffer;
+    mask_buffer = mask_buffer_swap;
+    mask_buffer_swap = tmp;
+    __bang_write_value(mask_buffer_swap, mask_buffer_num,
+                       default_mask_v);  // reset to all 1
+  }
+}
+
+}  // namespace
+
+__mlu_global__ void mluGenNmsMask(const float *__restrict__ input_boxes,
+                                  int input_boxes_num, int real_width,
+                                  float threshold,
+                                  const float *__restrict__ boxes_area,
+                                  uint32_t *mask, int *sort_info) {
+  return mluGenNmsMaskImpl(input_boxes, input_boxes_num, real_width, threshold,
+                           boxes_area, mask, sort_info);
+}

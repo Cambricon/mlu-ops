@@ -29,8 +29,7 @@ from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float16, bangpy.float32]
-# TARGET_LIST = ["mlu290"]
-TARGET_LIST = ["mlu370-s4"]
+TARGET_LIST = ["mlu290", "mlu270", "mlu370-s4"]
 KERNEL_NAME = "kldivloss"
 
 
@@ -113,6 +112,8 @@ class KlDivLoss(object):
         temp_buffer = temp_buffer_pool.reshape((computed_size,))
         if self.reduction == 2:
             tcp.divide(temp_buffer, temp_buffer, self.totalData)
+        if self.reduction == 3:
+            tcp.divide(temp_buffer, temp_buffer, self.batchSize)
         tcp.sum(sum_buf, temp_buffer)
         sumvar[0] = sumvar[0] + sum_buf[0]
 
@@ -162,6 +163,7 @@ class KlDivLoss(object):
         totalData = batchSize * batchLength
         self.reduction = reduction
         self.totalData = totalData
+        self.batchSize = batchSize
         inputG = tcp.match_buffer(inputG, [batchSize, batchLength], dtype=self.dtype)
         targetG = tcp.match_buffer(targetG, [batchSize, batchLength], dtype=self.dtype)
         outG = tcp.match_buffer(outG, [totalData], dtype=self.dtype)
@@ -317,6 +319,8 @@ class KlDivLoss(object):
                             temp_buffer = temp_buffer_pool.reshape((computed_size,))
                             if reduction == 2:
                                 tcp.divide(temp_buffer, temp_buffer, totalData)
+                            if reduction == 3:
+                                tcp.divide(temp_buffer, temp_buffer, batchSize)
                             tcp.sum(sum_buf, temp_buffer)
                             sumvar[0] = sumvar[0] + sum_buf[0]
                             if (data_rem_n % computed_size) > 0:
@@ -325,7 +329,11 @@ class KlDivLoss(object):
                         else:  # calculate it one by one when the size is small
                             if reduction == 2:
                                 tcp.divide(
-                                    buffer_out[:data_rem_n], buffer_out[:data_rem_n], totalData
+                                    buffer_out, buffer_out, totalData
+                                )
+                            if reduction == 3:
+                                tcp.divide(
+                                    buffer_out, buffer_out, batchSize
                                 )
                             for k in range(begin=0, end=data_rem_n):
                                 sumvar[0] = sumvar[0] + buffer_out[k]
@@ -347,7 +355,7 @@ class KlDivLoss(object):
                             total[0] = total[0]
                         # reduction = batchmen
                         if reduction == 3:
-                            total[0] = total[0] / batchSize
+                            total[0] = total[0]
                         outG[0] = total[0]
 
 

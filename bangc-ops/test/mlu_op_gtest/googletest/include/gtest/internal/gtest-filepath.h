@@ -39,6 +39,8 @@
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_FILEPATH_H_
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_FILEPATH_H_
 
+#include <string>
+
 #include "gtest/internal/gtest-string.h"
 
 namespace testing {
@@ -60,7 +62,9 @@ class GTEST_API_ FilePath {
   FilePath() : pathname_("") {}
   FilePath(const FilePath &rhs) : pathname_(rhs.pathname_) {}
 
-  explicit FilePath(const std::string &pathname) : pathname_(pathname) { Normalize(); }
+  explicit FilePath(const std::string &pathname) : pathname_(pathname) {
+    Normalize();
+  }
 
   FilePath &operator=(const FilePath &rhs) {
     Set(rhs);
@@ -80,14 +84,14 @@ class GTEST_API_ FilePath {
   // than zero (e.g., 12), returns "dir/test_12.xml".
   // On Windows platform, uses \ as the separator rather than /.
   static FilePath MakeFileName(const FilePath &directory,
-                               const FilePath &base_name,
-                               int number,
+                               const FilePath &base_name, int number,
                                const char *extension);
 
   // Given directory = "dir", relative_path = "test.xml",
   // returns "dir/test.xml".
   // On Windows, uses \ as the separator rather than /.
-  static FilePath ConcatPaths(const FilePath &directory, const FilePath &relative_path);
+  static FilePath ConcatPaths(const FilePath &directory,
+                              const FilePath &relative_path);
 
   // Returns a pathname for a file that does not currently exist. The pathname
   // will be directory/base_name.extension or

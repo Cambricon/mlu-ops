@@ -1,5 +1,5 @@
-bangc-ops/test/mlu_op_gtest/src/gtest/case_list.cpp
-bangc-ops/test/mlu_op_gtest/src/gtest/op_register.h
+bangc-ops/test/mlu_op_gtest/pb_gtest/src/gtest/case_list.cpp
+bangc-ops/test/mlu_op_gtest/pb_gtest/src/gtest/op_register.h
 
 # Swap
 [._]*.s[a-v][a-z]
@@ -87,7 +87,7 @@ MANIFEST
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
-*.spec
+#*.spec
 
 # Installer logs
 pip-log.txt
@@ -204,4 +204,7 @@ cython_debug/
 # Local History for Visual Studio Code
 .history/
 
-
+# Build Temp Dir
+dep_libs_extract/
+package/
+test_workspace/

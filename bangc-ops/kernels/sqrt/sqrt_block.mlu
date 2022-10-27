@@ -1,0 +1,279 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/binary_op/binary_op_3pipeline.h"
+#include "kernels/unary_op/unary_op_3pipeline.h"
+#include "kernels/unary_op/unary_op_5pipeline.h"
+#include "mlu_op_kernel.h"
+
+#define SQRT_HIGH_BOUND 1e4
+#define SQRT_SCALE 1e-6
+#define SQRT_RECOVER 1e3
+
+#define SQRT_NRAM_USED MAX_NRAM_SIZE
+#define SQRT_SRAM_USED (CORE_DIM * SQRT_NRAM_USED)
+#define SQRTBACK_NRAM_USED SQRT_NRAM_USED
+
+__nram__ float nram_tmp[NFU_ALIGN_SIZE];
+__nram__ char nram_buffer[SQRT_NRAM_USED];
+__mlu_shared__ char sram_buffer[SQRT_SRAM_USED];
+
+template <typename T>
+__mlu_func__ void get3OffsetSqrtHighAcc(int32_t &offset_x_half,
+                                        int32_t &offset_aux_a,
+                                        int32_t &offset_aux_b,
+                                        int32_t &num_deal, int32_t &num_pong) {
+  // need 4 pingpong sapce.
+  num_deal = FLOOR_ALIGN(SQRT_NRAM_USED / sizeof(T) / 4, UNARY_ALIGN_NUM);
+  num_pong = 2 * num_deal;
+  offset_x_half = num_deal;
+  offset_aux_a = 2 * num_pong;
+  offset_aux_b = offset_aux_a;
+}
+
+template <typename T>
+__mlu_func__ void get3OffsetSqrtFast(int32_t &offset_x_half,
+                                     int32_t &offset_aux_a,
+                                     int32_t &offset_aux_b, int32_t &num_deal,
+                                     int32_t &num_pong) {
+  if (sizeof(T) == sizeof(float)) {
+    // need 2 auxiliary space and 2 pingpong sapce,
+    // use 2 auxiliary space to expand input range for float data type.
+    num_deal = FLOOR_ALIGN(SQRT_NRAM_USED / sizeof(T) / 4, UNARY_ALIGN_NUM);
+    num_pong = num_deal;
+    offset_x_half = 0;
+    offset_aux_a = 2 * num_pong;
+    offset_aux_b = offset_aux_a + num_deal;
+  } else {
+    // need 2 pingpong sapce,
+    num_deal = FLOOR_ALIGN(SQRT_NRAM_USED / sizeof(T) / 2, UNARY_ALIGN_NUM);
+    num_pong = num_deal;
+    offset_x_half = 0;
+    offset_aux_a = 2 * num_pong;
+    offset_aux_b = offset_aux_a;
+  }
+}
+
+template <typename T>
+__mlu_func__ void computeSqrtFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
+                                  T *nram_aux_b, int deal_num, int actual_num,
+                                  float coef) {
+  if (sizeof(T) == sizeof(float)) {
+    __bang_write_value((float *)nram_tmp, UNARY_ALIGN_NUM,
+                       (float)SQRT_HIGH_BOUND);
+    // scale x
+    __bang_cycle_lt((float *)nram_aux_a, (float *)nram_x_half,
+                    (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
+    __bang_mul_scalar(nram_aux_a, nram_aux_a, (float)(1 - SQRT_SCALE),
+                      deal_num);
+    __bang_add_scalar(nram_aux_a, nram_aux_a, (float)SQRT_SCALE, deal_num);
+    // recover x
+    __bang_cycle_lt((float *)nram_aux_b, (float *)nram_x_half,
+                    (float *)nram_tmp, deal_num, UNARY_ALIGN_NUM);
+    __bang_mul_scalar(nram_aux_b, nram_aux_b, (float)(1 - SQRT_RECOVER),
+                      deal_num);
+    __bang_add_scalar(nram_aux_b, nram_aux_b, (float)SQRT_RECOVER, deal_num);
+    // sqrt x
+    __bang_mul(nram_x, nram_x_half, nram_aux_a, deal_num);
+    __bang_active_sqrthp(nram_x, nram_x, deal_num);
+    __bang_mul(nram_x, nram_x, nram_aux_b, deal_num);
+  } else {
+    __bang_active_sqrthp(nram_x, nram_x_half, deal_num);
+  }
+}
+
+template <typename T>
+__mlu_func__ void get5OffsetSqrtHighAcc(int32_t &offset_x_half,
+                                        int32_t &offset_aux_a,
+                                        int32_t &offset_aux_b,
+                                        int32_t &num_deal) {
+  // need 2 nram space.
+  int32_t num_nram_div = 2;
+  num_deal =
+      FLOOR_ALIGN(SQRT_SRAM_USED / 2 / CORE_DIM / sizeof(T) / num_nram_div,
+                  UNARY_ALIGN_NUM);
+  offset_x_half = num_deal;
+  offset_aux_a = offset_x_half;
+  offset_aux_b = offset_x_half;
+}
+
+template <typename T>
+__mlu_func__ void get5OffsetSqrtFast(int32_t &offset_x_half,
+                                     int32_t &offset_aux_a,
+                                     int32_t &offset_aux_b, int32_t &num_deal) {
+  int32_t num_nram_div = 1;
+  if (sizeof(T) == sizeof(float)) {
+    // need 2 auxiliary space to expand input range for float data type in
+    // MLU200 series.
+    num_nram_div = num_nram_div + 2;
+    num_deal =
+        FLOOR_ALIGN(SQRT_SRAM_USED / 2 / CORE_DIM / sizeof(T) / num_nram_div,
+                    UNARY_ALIGN_NUM);
+    offset_x_half = 0;
+    offset_aux_a = num_deal;
+    offset_aux_b = offset_aux_a + num_deal;
+  } else {
+    // need 1 nram space.
+    num_deal =
+        FLOOR_ALIGN(SQRT_SRAM_USED / 2 / CORE_DIM / sizeof(T) / num_nram_div,
+                    UNARY_ALIGN_NUM);
+    offset_x_half = 0;
+    offset_aux_a = offset_x_half;
+    offset_aux_b = offset_aux_a;
+  }
+}
+
+template <typename T>
+__mlu_func__ void computeSqrtHighAcc(T *nram_x, T *nram_x_half, T *nram_aux_a,
+                                     T *nram_aux_b, int deal_num,
+                                     int actual_num, float coef) {
+  __bang_half2float((float *)nram_x, (half *)nram_x_half, deal_num);
+  __bang_active_sqrthp((float *)nram_x, (float *)nram_x, deal_num);
+  __bang_float2half_rd((half *)nram_x, (float *)nram_x, deal_num);
+}
+
+/*Fast mode only will be used when data type is float*/
+template <typename T>
+__mlu_func__ void get3OffsetSqrtBackwardFast(int32_t &nram_limit,
+                                             int32_t &pong_x, int32_t &pong_y,
+                                             T *&nram_x, T *&nram_y,
+                                             T *&nram_aux1, T *&nram_aux2,
+                                             T *&nram_aux3, char *nram_buffer) {
+  // x - x_pong - y - y_pong
+  nram_limit = (SQRTBACK_NRAM_USED / sizeof(T)) / 4;
+  nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
+  pong_x = nram_limit;
+  pong_y = nram_limit;
+  nram_x = (T *)nram_buffer;  // nram_x_pong = nram_x + nram_limit
+  nram_y = nram_x + nram_limit * 2;
+}
+
+/*HighAcc mode only will be used when data type is half*/
+template <typename T>
+__mlu_func__ void get3OffsetSqrtBackwardHighAcc(int32_t &nram_limit,
+                                                int32_t &pong_x,
+                                                int32_t &pong_y, T *&nram_x,
+                                                T *&nram_y, T *&nram_aux1,
+                                                T *&nram_aux2, T *&nram_aux3,
+                                                char *nram_buffer) {
+  // x - x_pong - y - y_pong
+  // x half->float bit_up
+  nram_limit = (SQRTBACK_NRAM_USED / sizeof(T)) / 6;
+  nram_limit = FLOOR_ALIGN(nram_limit, BINARY_ALIGN_NUM);
+  pong_x = 2 * nram_limit;
+  pong_y = nram_limit;
+  nram_x = (T *)nram_buffer + nram_limit;
+  nram_y = nram_x + nram_limit * 3;
+}
+
+template <typename T>
+__mlu_func__ void computeSqrtBackwardFast(T *nram_y, T *nram_dy, T *nram_aux1,
+                                          T *nram_aux2, T *nram_aux3,
+                                          const int32_t actual_num,
+                                          const int32_t deal_num) {
+  __bang_mul_scalar(nram_dy, nram_dy, (T)0.5, deal_num);
+  __bang_active_reciphp((float *)nram_y, (float *)nram_y, deal_num);
+  __bang_mul(nram_y, nram_dy, nram_y, deal_num);
+}
+
+template <typename T>
+__mlu_func__ void computeSqrtBackwardHighAcc(T *nram_y, T *nram_dy,
+                                             T *nram_aux1, T *nram_aux2,
+                                             T *nram_aux3,
+                                             const int32_t actual_num,
+                                             const int32_t deal_num) {
+  float *nram_fp_y = (float *)(nram_y - deal_num);
+  // bit-up
+  __bang_half2float(nram_fp_y, nram_y, deal_num);
+  __bang_active_reciphp(nram_fp_y, nram_fp_y, deal_num);
+  __bang_float2half_rd((half *)nram_fp_y, (float *)nram_fp_y, deal_num);
+  __bang_mul_scalar(nram_dy, nram_dy, (T)0.5, deal_num);
+  __bang_mul(nram_y, (half *)nram_fp_y, nram_dy, deal_num);
+}
+
+// function implementation
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Sqrt, float, Fast);
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Sqrt, half, Fast);
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Sqrt, half, HighAcc);
+
+UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, float, Fast);
+UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, half, Fast);
+UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, half, HighAcc);
+
+BINARY_OP_3PIPELINE_IMPLE(SqrtBackward, float, Fast);
+BINARY_OP_3PIPELINE_IMPLE(SqrtBackward, half, HighAcc);
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel3StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfHighAcc(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel3StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtFloatFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel3StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel5StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfHighAcc(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel5StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtFloatFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, void *y, int num) {
+  MLUBlockKernel5StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
+      (void *)x, (void *)y, num, 0.0);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *y, const void *diff_y, void *x, int num) {
+  MLUBlockKernel3StagePipelineSqrtBackwardhalfHighAcc<<<k_dim, k_type, queue>>>(
+      (void *)y, (void *)diff_y, (void *)x, num);
+}
+
+void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *y, const void *diff_y, void *x, int num) {
+  MLUBlockKernel3StagePipelineSqrtBackwardfloatFast<<<k_dim, k_type, queue>>>(
+      (void *)y, (void *)diff_y, (void *)x, num);
+}

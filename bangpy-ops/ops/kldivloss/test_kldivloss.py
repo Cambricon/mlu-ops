@@ -18,13 +18,13 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=too-many-locals, line-too-long, too-many-function-args
+# pylint: disable=too-many-locals, line-too-long, too-many-function-args, unused-argument
 """KlDivloss test demo."""
 from test import registerOp, OpTest
 import numpy as np
 import bangpy as bp
 from bangpy.common import load_op_by_type
-from kldivloss import KERNEL_NAME, TARGET_LIST
+from kldivloss import KERNEL_NAME
 
 
 def cal_diff(result, data_out, reduction):
@@ -35,6 +35,10 @@ def cal_diff(result, data_out, reduction):
         data_out[np.isnan(data_out)] = 0
         data_out[np.isinf(data_out)] = 1
     else:
+        if np.isinf(result):
+            print("DIFF1:", str(round(0 * 100, 5)) + "%")
+            print("DIFF2:", str(round(0 * 100, 5)) + "%")
+            return
         if (np.isnan(result) and np.isnan(data_out)) or (np.isinf(result) and np.isinf(data_out)):
             print("DIFF1:", str(round(0 * 100, 5)) + "%")
             print("DIFF2:", str(round(0 * 100, 5)) + "%")
@@ -74,8 +78,6 @@ class KlDivLossOp(OpTest):
 
     def evaluate(self, f, dtype, target):
         """Test kldivloss operator by giving multiple sets of parameters."""
-        if target not in TARGET_LIST:
-            return
         reduction = self.param.get("kldivlossParam").get("reduction")
         log_target =  self.param.get("kldivlossParam").get("logTarget")
         shape =   self.inputs_tensor_list[0].shape
@@ -88,14 +90,14 @@ class KlDivLossOp(OpTest):
         data_out = self.output_tensor_list[0]
 
         # Reduction operation
-        if reduction == 0:
-            print("data_out : ", data_out)
+        # if reduction == 0:
+        #     print("data_out : ", data_out)
         if reduction == 1:
-            print("data_out_sum : ", data_out)
+            print("data_out_sum : ", data_out[0])
         if reduction == 2:
-            print("data_out_mean : ", data_out)
+            print("data_out_mean : ", data_out[0])
         if reduction == 3:
-            print("data_out_batchmean : ", data_out)
+            print("data_out_batchmean : ", data_out[0])
 
         dev = bp.device(0)
         # Set I/O data
@@ -132,17 +134,17 @@ class KlDivLossOp(OpTest):
 
         data_out_dev = data_out_dev.numpy().reshape(shape[0], data_in0.size // shape[0])
         if reduction == 0:
-            print("data_out_dev : ", data_out_dev)
+            # print("data_out_dev : ", data_out_dev)
             data_out = data_out.reshape(shape[0], data_in0.size // shape[0])
             cal_diff(data_out, data_out_dev, reduction)
         elif reduction == 1:
-            print("data_out_sum_dev : ", data_out_dev[0])
+            print("data_out_sum_dev : ", data_out_dev[0][0])
             cal_diff(data_out[0], data_out_dev[0][0], reduction)
         elif reduction == 2:
-            print("data_out_mean_dev : ", data_out_dev[0])
+            print("data_out_mean_dev : ", data_out_dev[0][0])
             cal_diff(data_out[0], data_out_dev[0][0], reduction)
         elif reduction == 3:
-            print("data_out_batchmean_dev : ", data_out_dev[0])
+            print("data_out_batchmean_dev : ", data_out_dev[0][0])
             cal_diff(data_out[0], data_out_dev[0][0], reduction)
 
         print("tutorial : %f ms" % t)
@@ -159,8 +161,6 @@ class KlDivLossOp(OpTest):
         print("------------------------------------------------------------")
 
     def compute(self):
-        if self.target not in TARGET_LIST:
-            return
         f = load_op_by_type(KERNEL_NAME, self.dtype.name)
 
         self.evaluate(f, self.dtype, self.target)

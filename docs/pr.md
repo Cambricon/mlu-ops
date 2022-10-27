@@ -28,7 +28,7 @@
 
 - 当第一次提交 `PR` 时
 
-  `Fork` Mlu-ops 原代码库，点击 GitHub 界面右上角的 `Fork` 按钮即可
+  `Fork` MLU-OPS 原代码库，点击 GitHub 界面右上角的 `Fork` 按钮即可
 
    ![fork](./pr_fork.png)
 
@@ -101,9 +101,9 @@
 
 3. 粒度要细，一个 `PR` 只做一件事情，避免超大的 `PR`
 
-   - Bad：给 Mlu-ops 添加一个 Add 算子
-   - Acceptable：给 Add 算子添加一个类型转换接口
-   - Good：给类型转换接口添加一个是否支持 Half 类型的参数
+   - Bad：给 MLU-OPS 添加一个 Add 算子，同时修改了 Div 算子的接口  
+   - Acceptable：给 MLU-OPS 添加一个 Add 算子并添加 Add 算子的设计文档
+   - Good：提交两个`PR`，分别为：提交 Add 算子的设计文档，提交 Add 算子的代码
 
 4. `commit` 需要提供清晰且有意义的 `commit` 信息
 
@@ -116,6 +116,11 @@
      ```
 
    - prefix：新增功能 [Feature] ，修 bug [Fix]，文档相关 [Docs] ，开发中 [WIP] （暂时不会被 review）
+     ```
+     [Feature](bangc-ops): Revise code type
+     [Fix](bangc-ops): Fix div bug
+     [Docs](bangc-ops): Add div doc
+     ```
 
    - 描述里介绍拉取请求的主要修改内容、结果，以及对其他部分的影响
 

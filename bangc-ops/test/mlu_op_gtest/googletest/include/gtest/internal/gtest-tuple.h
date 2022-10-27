@@ -39,6 +39,7 @@
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_TUPLE_H_
 
 #include <utility>  // For ::std::pair.
+#include <tuple>
 
 // The compiler used in Symbian has a bug that prevents us from declaring the
 // tuple template as a friend (it complains that tuple is redefined).  This
@@ -60,45 +61,58 @@
 // those compilers.
 #if defined(_MSC_VER) && _MSC_VER >= 1600 /* 1600 is Visual Studio 2010 */
 #error \
-    "gtest's tuple doesn't compile on Visual Studio 2010 or later. \
-GTEST_USE_OWN_TR1_TUPLE must be set to 0 on those compilers."
+    "gtest's tuple doesn't compile on Visual Studio 2010 or later. /* NOLINT */ \
+GTEST_USE_OWN_TR1_TUPLE must be set to 0 on those compilers."  /* NOLINT */
 #endif
 
 // GTEST_n_TUPLE_(T) is the type of an n-tuple.
 #define GTEST_0_TUPLE_(T) tuple<>
-#define GTEST_1_TUPLE_(T) tuple<T##0, void, void, void, void, void, void, void, void, void>
-#define GTEST_2_TUPLE_(T) tuple<T##0, T##1, void, void, void, void, void, void, void, void>
-#define GTEST_3_TUPLE_(T) tuple<T##0, T##1, T##2, void, void, void, void, void, void, void>
-#define GTEST_4_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, void, void, void, void, void, void>
-#define GTEST_5_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, T##4, void, void, void, void, void>
-#define GTEST_6_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, T##4, T##5, void, void, void, void>
-#define GTEST_7_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, void, void, void>
-#define GTEST_8_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, T##7, void, void>
-#define GTEST_9_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, T##7, T##8, void>
-#define GTEST_10_TUPLE_(T) tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, T##7, T##8, T##9>
+#define GTEST_1_TUPLE_(T) \
+  tuple<T##0, void, void, void, void, void, void, void, void, void>
+#define GTEST_2_TUPLE_(T) \
+  tuple<T##0, T##1, void, void, void, void, void, void, void, void>
+#define GTEST_3_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, void, void, void, void, void, void, void>
+#define GTEST_4_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, void, void, void, void, void, void>
+#define GTEST_5_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, T##4, void, void, void, void, void>
+#define GTEST_6_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, T##4, T##5, void, void, void, void>
+#define GTEST_7_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, void, void, void>
+#define GTEST_8_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, T##7, void, void>
+#define GTEST_9_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, T##7, T##8, void>
+#define GTEST_10_TUPLE_(T) \
+  tuple<T##0, T##1, T##2, T##3, T##4, T##5, T##6, T##7, T##8, T##9>
 
 // GTEST_n_TYPENAMES_(T) declares a list of n typenames.
 #define GTEST_0_TYPENAMES_(T)
 #define GTEST_1_TYPENAMES_(T) typename T##0
 #define GTEST_2_TYPENAMES_(T) typename T##0, typename T##1
 #define GTEST_3_TYPENAMES_(T) typename T##0, typename T##1, typename T##2
-#define GTEST_4_TYPENAMES_(T) typename T##0, typename T##1, typename T##2, typename T##3
+#define GTEST_4_TYPENAMES_(T) \
+  typename T##0, typename T##1, typename T##2, typename T##3
 #define GTEST_5_TYPENAMES_(T) \
   typename T##0, typename T##1, typename T##2, typename T##3, typename T##4
-#define GTEST_6_TYPENAMES_(T) \
-  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, typename T##5
-#define GTEST_7_TYPENAMES_(T)                                                               \
-  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, typename T##5, \
-      typename T##6
-#define GTEST_8_TYPENAMES_(T)                                                               \
-  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, typename T##5, \
-      typename T##6, typename T##7
-#define GTEST_9_TYPENAMES_(T)                                                               \
-  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, typename T##5, \
-      typename T##6, typename T##7, typename T##8
-#define GTEST_10_TYPENAMES_(T)                                                              \
-  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, typename T##5, \
-      typename T##6, typename T##7, typename T##8, typename T##9
+#define GTEST_6_TYPENAMES_(T)                                                \
+  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, \
+      typename T##5
+#define GTEST_7_TYPENAMES_(T)                                                \
+  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, \
+      typename T##5, typename T##6
+#define GTEST_8_TYPENAMES_(T)                                                \
+  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, \
+      typename T##5, typename T##6, typename T##7
+#define GTEST_9_TYPENAMES_(T)                                                \
+  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, \
+      typename T##5, typename T##6, typename T##7, typename T##8
+#define GTEST_10_TYPENAMES_(T)                                               \
+  typename T##0, typename T##1, typename T##2, typename T##3, typename T##4, \
+      typename T##5, typename T##6, typename T##7, typename T##8,            \
+      typename T##9
 
 // In theory, defining stuff in the ::std namespace is undefined
 // behavior.  We can do this as we are playing the role of a standard
@@ -106,15 +120,9 @@ GTEST_USE_OWN_TR1_TUPLE must be set to 0 on those compilers."
 namespace std {
 namespace tr1 {
 
-template <typename T0 = void,
-          typename T1 = void,
-          typename T2 = void,
-          typename T3 = void,
-          typename T4 = void,
-          typename T5 = void,
-          typename T6 = void,
-          typename T7 = void,
-          typename T8 = void,
+template <typename T0 = void, typename T1 = void, typename T2 = void,
+          typename T3 = void, typename T4 = void, typename T5 = void,
+          typename T6 = void, typename T7 = void, typename T8 = void,
           typename T9 = void>
 class tuple;
 
@@ -259,7 +267,8 @@ class GTEST_2_TUPLE_(T) {
 
   tuple() : f0_(), f1_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1) : f0_(f0), f1_(f1) {}
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1)
+      : f0_(f0), f1_(f1) {}
 
   tuple(const tuple &t) : f0_(t.f0_), f1_(t.f1_) {}
 
@@ -302,7 +311,8 @@ class GTEST_3_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1, GTEST_BY_REF_(T2) f2)
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2)
       : f0_(f0), f1_(f1), f2_(f2) {}
 
   tuple(const tuple &t) : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_) {}
@@ -340,16 +350,15 @@ class GTEST_4_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_(), f3_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3)
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3)
       : f0_(f0), f1_(f1), f2_(f2), f3_(f3) {}
 
   tuple(const tuple &t) : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_) {}
 
   template <GTEST_4_TYPENAMES_(U)>
-  tuple(const GTEST_4_TUPLE_(U) & t) : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_) {}
+  tuple(const GTEST_4_TUPLE_(U) & t)
+      : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_) {}
 
   tuple &operator=(const tuple &t) { return CopyFrom(t); }
 
@@ -383,17 +392,17 @@ class GTEST_5_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_(), f3_(), f4_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3,
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3,
                  GTEST_BY_REF_(T4) f4)
       : f0_(f0), f1_(f1), f2_(f2), f3_(f3), f4_(f4) {}
 
-  tuple(const tuple &t) : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_) {}
+  tuple(const tuple &t)
+      : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_) {}
 
   template <GTEST_5_TYPENAMES_(U)>
-  tuple(const GTEST_5_TUPLE_(U) & t) : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_) {}
+  tuple(const GTEST_5_TUPLE_(U) & t)
+      : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_) {}
 
   tuple &operator=(const tuple &t) { return CopyFrom(t); }
 
@@ -429,19 +438,27 @@ class GTEST_6_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_(), f3_(), f4_(), f5_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3,
-                 GTEST_BY_REF_(T4) f4,
-                 GTEST_BY_REF_(T5) f5)
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3,
+                 GTEST_BY_REF_(T4) f4, GTEST_BY_REF_(T5) f5)
       : f0_(f0), f1_(f1), f2_(f2), f3_(f3), f4_(f4), f5_(f5) {}
 
-  tuple(const tuple &t) : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_), f5_(t.f5_) {}
+  tuple(const tuple &t)
+      : f0_(t.f0_),
+        f1_(t.f1_),
+        f2_(t.f2_),
+        f3_(t.f3_),
+        f4_(t.f4_),
+        f5_(t.f5_) {}
 
   template <GTEST_6_TYPENAMES_(U)>
   tuple(const GTEST_6_TUPLE_(U) & t)
-      : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_), f5_(t.f5_) {}
+      : f0_(t.f0_),
+        f1_(t.f1_),
+        f2_(t.f2_),
+        f3_(t.f3_),
+        f4_(t.f4_),
+        f5_(t.f5_) {}
 
   tuple &operator=(const tuple &t) { return CopyFrom(t); }
 
@@ -479,21 +496,30 @@ class GTEST_7_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_(), f3_(), f4_(), f5_(), f6_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3,
-                 GTEST_BY_REF_(T4) f4,
-                 GTEST_BY_REF_(T5) f5,
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3,
+                 GTEST_BY_REF_(T4) f4, GTEST_BY_REF_(T5) f5,
                  GTEST_BY_REF_(T6) f6)
       : f0_(f0), f1_(f1), f2_(f2), f3_(f3), f4_(f4), f5_(f5), f6_(f6) {}
 
   tuple(const tuple &t)
-      : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_), f5_(t.f5_), f6_(t.f6_) {}
+      : f0_(t.f0_),
+        f1_(t.f1_),
+        f2_(t.f2_),
+        f3_(t.f3_),
+        f4_(t.f4_),
+        f5_(t.f5_),
+        f6_(t.f6_) {}
 
   template <GTEST_7_TYPENAMES_(U)>
   tuple(const GTEST_7_TUPLE_(U) & t)
-      : f0_(t.f0_), f1_(t.f1_), f2_(t.f2_), f3_(t.f3_), f4_(t.f4_), f5_(t.f5_), f6_(t.f6_) {}
+      : f0_(t.f0_),
+        f1_(t.f1_),
+        f2_(t.f2_),
+        f3_(t.f3_),
+        f4_(t.f4_),
+        f5_(t.f5_),
+        f6_(t.f6_) {}
 
   tuple &operator=(const tuple &t) { return CopyFrom(t); }
 
@@ -533,15 +559,18 @@ class GTEST_8_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_(), f3_(), f4_(), f5_(), f6_(), f7_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3,
-                 GTEST_BY_REF_(T4) f4,
-                 GTEST_BY_REF_(T5) f5,
-                 GTEST_BY_REF_(T6) f6,
-                 GTEST_BY_REF_(T7) f7)
-      : f0_(f0), f1_(f1), f2_(f2), f3_(f3), f4_(f4), f5_(f5), f6_(f6), f7_(f7) {}
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3,
+                 GTEST_BY_REF_(T4) f4, GTEST_BY_REF_(T5) f5,
+                 GTEST_BY_REF_(T6) f6, GTEST_BY_REF_(T7) f7)
+      : f0_(f0),
+        f1_(f1),
+        f2_(f2),
+        f3_(f3),
+        f4_(f4),
+        f5_(f5),
+        f6_(f6),
+        f7_(f7) {}
 
   tuple(const tuple &t)
       : f0_(t.f0_),
@@ -604,16 +633,20 @@ class GTEST_9_TUPLE_(T) {
 
   tuple() : f0_(), f1_(), f2_(), f3_(), f4_(), f5_(), f6_(), f7_(), f8_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3,
-                 GTEST_BY_REF_(T4) f4,
-                 GTEST_BY_REF_(T5) f5,
-                 GTEST_BY_REF_(T6) f6,
-                 GTEST_BY_REF_(T7) f7,
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3,
+                 GTEST_BY_REF_(T4) f4, GTEST_BY_REF_(T5) f5,
+                 GTEST_BY_REF_(T6) f6, GTEST_BY_REF_(T7) f7,
                  GTEST_BY_REF_(T8) f8)
-      : f0_(f0), f1_(f1), f2_(f2), f3_(f3), f4_(f4), f5_(f5), f6_(f6), f7_(f7), f8_(f8) {}
+      : f0_(f0),
+        f1_(f1),
+        f2_(f2),
+        f3_(f3),
+        f4_(f4),
+        f5_(f5),
+        f6_(f6),
+        f7_(f7),
+        f8_(f8) {}
 
   tuple(const tuple &t)
       : f0_(t.f0_),
@@ -678,19 +711,24 @@ class tuple {
   template <int k>
   friend class gtest_internal::Get;
 
-  tuple() : f0_(), f1_(), f2_(), f3_(), f4_(), f5_(), f6_(), f7_(), f8_(), f9_() {}
+  tuple()
+      : f0_(), f1_(), f2_(), f3_(), f4_(), f5_(), f6_(), f7_(), f8_(), f9_() {}
 
-  explicit tuple(GTEST_BY_REF_(T0) f0,
-                 GTEST_BY_REF_(T1) f1,
-                 GTEST_BY_REF_(T2) f2,
-                 GTEST_BY_REF_(T3) f3,
-                 GTEST_BY_REF_(T4) f4,
-                 GTEST_BY_REF_(T5) f5,
-                 GTEST_BY_REF_(T6) f6,
-                 GTEST_BY_REF_(T7) f7,
-                 GTEST_BY_REF_(T8) f8,
-                 GTEST_BY_REF_(T9) f9)
-      : f0_(f0), f1_(f1), f2_(f2), f3_(f3), f4_(f4), f5_(f5), f6_(f6), f7_(f7), f8_(f8), f9_(f9) {}
+  explicit tuple(GTEST_BY_REF_(T0) f0, GTEST_BY_REF_(T1) f1,
+                 GTEST_BY_REF_(T2) f2, GTEST_BY_REF_(T3) f3,
+                 GTEST_BY_REF_(T4) f4, GTEST_BY_REF_(T5) f5,
+                 GTEST_BY_REF_(T6) f6, GTEST_BY_REF_(T7) f7,
+                 GTEST_BY_REF_(T8) f8, GTEST_BY_REF_(T9) f9)
+      : f0_(f0),
+        f1_(f1),
+        f2_(f2),
+        f3_(f3),
+        f4_(f4),
+        f5_(f5),
+        f6_(f6),
+        f7_(f7),
+        f8_(f8),
+        f9_(f9) {}
 
   tuple(const tuple &t)
       : f0_(t.f0_),
@@ -705,7 +743,7 @@ class tuple {
         f9_(t.f9_) {}
 
   template <GTEST_10_TYPENAMES_(U)>
-  tuple(const GTEST_10_TUPLE_(U) & t)
+  tuple(const GTEST_10_TUPLE_(U) & t)  // NOLINT
       : f0_(t.f0_),
         f1_(t.f1_),
         f2_(t.f2_),
@@ -759,9 +797,7 @@ class tuple {
 // std::tr1::reference_wrapper<T> to make_tuple().  And we don't
 // implement tie().
 
-inline tuple<> make_tuple() {
-  return tuple<>();
-}
+inline tuple<> make_tuple() { return tuple<>(); }
 
 template <GTEST_1_TYPENAMES_(T)>
 inline GTEST_1_TUPLE_(T) make_tuple(const T0 &f0) {
@@ -779,69 +815,49 @@ inline GTEST_3_TUPLE_(T) make_tuple(const T0 &f0, const T1 &f1, const T2 &f2) {
 }
 
 template <GTEST_4_TYPENAMES_(T)>
-inline GTEST_4_TUPLE_(T) make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3) {
+inline GTEST_4_TUPLE_(T)
+    make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3) {
   return GTEST_4_TUPLE_(T)(f0, f1, f2, f3);
 }
 
 template <GTEST_5_TYPENAMES_(T)>
-inline GTEST_5_TUPLE_(T)
-    make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3, const T4 &f4) {
+inline GTEST_5_TUPLE_(T) make_tuple(const T0 &f0, const T1 &f1, const T2 &f2,
+                                    const T3 &f3, const T4 &f4) {
   return GTEST_5_TUPLE_(T)(f0, f1, f2, f3, f4);
 }
 
 template <GTEST_6_TYPENAMES_(T)>
-inline GTEST_6_TUPLE_(T)
-    make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3, const T4 &f4, const T5 &f5) {
+inline GTEST_6_TUPLE_(T) make_tuple(const T0 &f0, const T1 &f1, const T2 &f2,
+                                    const T3 &f3, const T4 &f4, const T5 &f5) {
   return GTEST_6_TUPLE_(T)(f0, f1, f2, f3, f4, f5);
 }
 
 template <GTEST_7_TYPENAMES_(T)>
-inline GTEST_7_TUPLE_(T) make_tuple(const T0 &f0,
-                                    const T1 &f1,
-                                    const T2 &f2,
-                                    const T3 &f3,
-                                    const T4 &f4,
-                                    const T5 &f5,
-                                    const T6 &f6) {
+inline GTEST_7_TUPLE_(T)
+    make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3,
+               const T4 &f4, const T5 &f5, const T6 &f6) {
   return GTEST_7_TUPLE_(T)(f0, f1, f2, f3, f4, f5, f6);
 }
 
 template <GTEST_8_TYPENAMES_(T)>
-inline GTEST_8_TUPLE_(T) make_tuple(const T0 &f0,
-                                    const T1 &f1,
-                                    const T2 &f2,
-                                    const T3 &f3,
-                                    const T4 &f4,
-                                    const T5 &f5,
-                                    const T6 &f6,
-                                    const T7 &f7) {
+inline GTEST_8_TUPLE_(T)
+    make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3,
+               const T4 &f4, const T5 &f5, const T6 &f6, const T7 &f7) {
   return GTEST_8_TUPLE_(T)(f0, f1, f2, f3, f4, f5, f6, f7);
 }
 
 template <GTEST_9_TYPENAMES_(T)>
-inline GTEST_9_TUPLE_(T) make_tuple(const T0 &f0,
-                                    const T1 &f1,
-                                    const T2 &f2,
-                                    const T3 &f3,
-                                    const T4 &f4,
-                                    const T5 &f5,
-                                    const T6 &f6,
-                                    const T7 &f7,
-                                    const T8 &f8) {
+inline GTEST_9_TUPLE_(T) make_tuple(const T0 &f0, const T1 &f1, const T2 &f2,
+                                    const T3 &f3, const T4 &f4, const T5 &f5,
+                                    const T6 &f6, const T7 &f7, const T8 &f8) {
   return GTEST_9_TUPLE_(T)(f0, f1, f2, f3, f4, f5, f6, f7, f8);
 }
 
 template <GTEST_10_TYPENAMES_(T)>
-inline GTEST_10_TUPLE_(T) make_tuple(const T0 &f0,
-                                     const T1 &f1,
-                                     const T2 &f2,
-                                     const T3 &f3,
-                                     const T4 &f4,
-                                     const T5 &f5,
-                                     const T6 &f6,
-                                     const T7 &f7,
-                                     const T8 &f8,
-                                     const T9 &f9) {
+inline GTEST_10_TUPLE_(T)
+    make_tuple(const T0 &f0, const T1 &f1, const T2 &f2, const T3 &f3,
+               const T4 &f4, const T5 &f5, const T6 &f6, const T7 &f7,
+               const T8 &f8, const T9 &f9) {
   return GTEST_10_TUPLE_(T)(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9);
 }
 
@@ -907,8 +923,8 @@ struct tuple_size<GTEST_10_TUPLE_(T)> {
 
 template <int k, class Tuple>
 struct tuple_element {
-  typedef
-      typename gtest_internal::TupleElement < k<(tuple_size<Tuple>::value), k, Tuple>::type type;
+  typedef typename gtest_internal::TupleElement <
+      k<(tuple_size<Tuple>::value), k, Tuple>::type type;
 };
 
 #define GTEST_TUPLE_ELEMENT_(k, Tuple) typename tuple_element<k, Tuple>::type
@@ -926,7 +942,8 @@ class Get<0> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(0, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(0, Tuple))
+      ConstField(const Tuple &t) {
     return t.f0_;
   }
 };
@@ -940,7 +957,8 @@ class Get<1> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(1, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(1, Tuple))
+      ConstField(const Tuple &t) {
     return t.f1_;
   }
 };
@@ -954,7 +972,8 @@ class Get<2> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(2, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(2, Tuple))
+      ConstField(const Tuple &t) {
     return t.f2_;
   }
 };
@@ -968,7 +987,8 @@ class Get<3> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(3, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(3, Tuple))
+      ConstField(const Tuple &t) {
     return t.f3_;
   }
 };
@@ -982,7 +1002,8 @@ class Get<4> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(4, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(4, Tuple))
+      ConstField(const Tuple &t) {
     return t.f4_;
   }
 };
@@ -996,7 +1017,8 @@ class Get<5> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(5, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(5, Tuple))
+      ConstField(const Tuple &t) {
     return t.f5_;
   }
 };
@@ -1010,7 +1032,8 @@ class Get<6> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(6, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(6, Tuple))
+      ConstField(const Tuple &t) {
     return t.f6_;
   }
 };
@@ -1024,7 +1047,8 @@ class Get<7> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(7, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(7, Tuple))
+      ConstField(const Tuple &t) {
     return t.f7_;
   }
 };
@@ -1038,7 +1062,8 @@ class Get<8> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(8, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(8, Tuple))
+      ConstField(const Tuple &t) {
     return t.f8_;
   }
 };
@@ -1052,7 +1077,8 @@ class Get<9> {
   }  // NOLINT
 
   template <class Tuple>
-  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(9, Tuple)) ConstField(const Tuple &t) {
+  static GTEST_BY_REF_(GTEST_TUPLE_ELEMENT_(9, Tuple))
+      ConstField(const Tuple &t) {
     return t.f9_;
   }
 };
@@ -1104,13 +1130,16 @@ struct SameSizeTuplePrefixComparator<k, k> {
 }  // namespace gtest_internal
 
 template <GTEST_10_TYPENAMES_(T), GTEST_10_TYPENAMES_(U)>
-inline bool operator==(const GTEST_10_TUPLE_(T) & t, const GTEST_10_TUPLE_(U) & u) {
+inline bool operator==(const GTEST_10_TUPLE_(T) & t,
+                       const GTEST_10_TUPLE_(U) & u) {
   return gtest_internal::SameSizeTuplePrefixComparator<
-      tuple_size<GTEST_10_TUPLE_(T)>::value, tuple_size<GTEST_10_TUPLE_(U)>::value>::Eq(t, u);
+      tuple_size<GTEST_10_TUPLE_(T)>::value,
+      tuple_size<GTEST_10_TUPLE_(U)>::value>::Eq(t, u);
 }
 
 template <GTEST_10_TYPENAMES_(T), GTEST_10_TYPENAMES_(U)>
-inline bool operator!=(const GTEST_10_TUPLE_(T) & t, const GTEST_10_TUPLE_(U) & u) {
+inline bool operator!=(const GTEST_10_TUPLE_(T) & t,
+                       const GTEST_10_TUPLE_(U) & u) {
   return !(t == u);
 }
 
