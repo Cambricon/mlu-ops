@@ -5,9 +5,6 @@ import sys
 import re
 
 lines = ''
-# LOG(ERROR) << "[cnnlWeightNormBackward] Only support axis == 0 or axis assign to"
-#     #            << " last dimension currently. But now axis is " << axis << ".";
-#     # return MLUOP_STATUS_SUCCESS;
 sucess_regx = 'LOG\(ERROR\)[^}]+return MLUOP_STATUS_SUCCESS;'
 
 #void func_name(.....) {
@@ -144,10 +141,6 @@ def check():
     #先处理返回类型为void的函数
     del_void_func()
 
-    #匹配到LOG(ERROR) << "[cnnlWeightNormBackward] Only support axis == 0 or axis assign to"
-    #            << " last dimension currently. But now axis is " << axis << ".";
-    # return MLUOP_STATUS_SUCCESS;  肯定错误
-    # res = re.search(sucess_regx, lines)
     res = re.findall(sucess_regx,lines)
     if len(res)!=0:
         print("-- the return value is wrong")
