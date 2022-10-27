@@ -13,14 +13,17 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-s
 ################################################################################
 set(MLUOP_BUILD_SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
 message("-- MLUOP_BUILD_SPECIFIC_OP=${MLUOP_BUILD_SPECIFIC_OP}")
-set(MLUOP_BUILD_SPECIFIC_GTEST_OP ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
-message("-- MLUOP_BUILD_SPECIFIC_GTEST_OP=${MLUOP_BUILD_SPECIFIC_GTEST_OP}")
 set(MLUOP_MLU_ARCH_LIST ${MLUOP_MLU_ARCH_LIST})
 message("-- MLUOP_MLU_ARCH_LIST=${MLUOP_MLU_ARCH_LIST}")
 
 ################################################################################
 # Environment and BANG Setup
 ################################################################################
+if (NOT CMAKE_BUILD_TYPE)
+  set(_CMAKE_BUILD_TYPE_LOWER "release")
+else()
+  string(TOLOWER ${CMAKE_BUILD_TYPE} _CMAKE_BUILD_TYPE_LOWER)
+endif()
 
 if(${MLUOP_BUILD_COVERAGE_TEST} MATCHES "ON")
   message("-- MLU_OP_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST}")
@@ -69,7 +72,15 @@ endif()
 
 # setup cncc flags
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fPIC -Wall -Werror -std=c++11 -pthread")
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3")
+if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
+  message(STATUS "build debug version")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g3 -O0")
+  add_compile_options(-g)
+elseif(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "release")
+  message(STATUS "build release version")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3 -DNDEBUG")
+endif()
+
 if (NOT MLUOP_MLU_ARCH_LIST)
   message(STATUS "build all arch")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_270"
