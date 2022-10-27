@@ -18,5 +18,5 @@ Depends:
  ${misc:Depends},
  cnrt (>= 4.4.0),
  cndrv (>= 0.2.0),
-Description: The Machine Learning Unit OPerators.
+Description: The MLU OPerators.
 
