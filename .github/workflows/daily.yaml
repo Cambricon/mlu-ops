@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: bangc_lint_check
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
           ./tools/pre-commit origin/master
 
       - name: build_bangc_ops
@@ -23,7 +23,7 @@ jobs:
 
       - name: build_bangpy_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
           ./build.sh --sub_module=bangpy
 
       - name: bangc_ops_release_test_cases
@@ -55,7 +55,7 @@ jobs:
       - name: test_bangpy_ops
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/open_cnnl_ubuntu16.04:v1.4
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
           ./test.sh --sub_module=bangpy --cases_dir=/testdata/bangpy
 
       - name: clean
