@@ -409,10 +409,10 @@ float offset_f = (float)(offset);
 if (!std::is_same<T, float>::value) {
 __bang_int162float((float *)src_bak, (int16_t *)src, PAD_UP(elem_count,64), 0);
 __bang_add_scalar((float *)src_bak, (float *)src_bak, offset_f, PAD_UP(elem_count,64));
-__cnnl_float2int((int32_t *)dst, (float *)dst_addtion, (float *)src_bak, (float *)src_addtion, PAD_UP(elem_count,64));
+convertFloat2Int((int32_t *)dst, (float *)dst_addtion, (float *)src_bak, (float *)src_addtion, PAD_UP(elem_count,64));
 } else {
 __bang_add_scalar((T *)src, (T *)src, offset_f, PAD_UP(elem_count, 64));// 有致命错误隐患，当ele_count==num_stride,src会缺失128Bytes
-__cnnl_float2int((int32_t *)dst, (float *)dst_addtion, (float *)src, (float *)src_addtion, PAD_UP(elem_count,64));  // 
+convertFloat2Int((int32_t *)dst, (float *)dst_addtion, (float *)src, (float *)src_addtion, PAD_UP(elem_count,64));  // 
 }
 }
 ```
@@ -441,11 +441,16 @@ vec_idx_num[k] += selected_num;
 任务类型U1：对 new_xyz 的坐标点数 b * m进行均匀拆分, 平均分为taskDim份进行计算。
 ```C++
 // 多核拆分
-  // 启动U1任务，并且计划占用所有可用的cluster
+  // 启动U1任务
+  size_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
+  size_t core_in_cluster = handle->core_num_per_cluster;
+  size_t needed_cluster_num =
+      (total_data_num + core_in_cluster - 1) / core_in_cluster;
   cnrtDim3_t k_dims;
-  k_dims.x = cnnl::runtime::getCoreNumOfEachUnionCapability(handle);
-  k_dims.y = cnnl::runtime::getClusterLimitCapability(handle);
-  k_dims.z = 1;
+  k_dim->x = core_in_cluster;
+  k_dim->y =
+      needed_cluster_num > cluster_num ? cluster_num : needed_cluster_num;
+  k_dim->z = 1;
   cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
 ```
 ![image](ballquery_split.jpg)
