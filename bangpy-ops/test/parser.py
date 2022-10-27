@@ -92,35 +92,55 @@ class Parser:
             elif i.get("randomData").get("distribution") == "UNIFORM" and not hasattr(
                 i.get("randomData").get("distribution"), "seed"
             ):
-                input_list.append(
-                    np.frombuffer(
-                        np.array(
-                            i.get("valueI"), self.encode.get(self.get_input_dtype())
-                        ).reshape(i.get("shape").get("dims")),
-                        self.decode.get(self.get_input_dtype()),
+                if i.get("dtype") in ("DTYPE_FLOAT", "DTYPE_HALF"):
+                    input_list.append(
+                        np.frombuffer(
+                            np.array(
+                                i.get("valueI"), self.encode.get(i.get("dtype"))
+                            ).reshape(i.get("shape").get("dims")),
+                            self.decode.get(self.get_input_dtype()),
+                        ).reshape(i.get("shape").get("dims"))
                     )
-                )
+                else:
+                    input_list.append(
+                        np.array(
+                            i.get("valueI"), self.encode.get(i.get("dtype"))
+                        ).reshape(i.get("shape").get("dims"))
+                    )
             # (TODO:Add more distribution model)
         output_list = []
         if isinstance(oups := self.read_prototxt().get("output"), Dict):
-            output = np.frombuffer(
-                np.array(
+            if self.get_output_dtype() in ("DTYPE_FLOAT", "DTYPE_HALF"):
+                output = np.frombuffer(
+                    np.array(
+                        oups.get("valueI"),
+                        self.encode.get(self.get_output_dtype()),
+                    ).reshape(oups.get("shape").get("dims")),
+                    self.decode.get(self.get_output_dtype()),
+                ).reshape(oups.get("shape").get("dims"))
+            else:
+                output = np.array(
                     oups.get("valueI"),
                     self.encode.get(self.get_output_dtype()),
-                ).reshape(oups.get("shape").get("dims")),
-                self.decode.get(self.get_output_dtype()),
-            )
+                ).reshape(oups.get("shape").get("dims"))
             output_list.append(output)
         elif isinstance(oups := self.read_prototxt().get("output"), List):
             for j in oups:
-                output_list.append(
-                    np.frombuffer(
-                    np.array(
-                        j.get("valueI"),
-                        self.encode.get(self.get_output_dtype()),
-                    ).reshape(j.get("shape").get("dims")),
-                    self.decode.get(self.get_output_dtype()),
-                )
-                )
-                # output_list.append(j)
+                if self.get_output_dtype() in ("DTYPE_FLOAT", "DTYPE_HALF"):
+                    output_list.append(
+                        np.frombuffer(
+                        np.array(
+                            j.get("valueI"),
+                            self.encode.get(self.get_output_dtype()),
+                        ).reshape(j.get("shape").get("dims")),
+                        self.decode.get(self.get_output_dtype()),
+                    ).reshape(j.get("shape").get("dims"))
+                    )
+                else:
+                    output_list.append(
+                        np.array(
+                            j.get("valueI"),
+                            self.encode.get(self.get_output_dtype()),
+                        ).reshape(j.get("shape").get("dims"))
+                    )
         return input_list, output_list
