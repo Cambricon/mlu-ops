@@ -25,9 +25,10 @@
 import bangpy
 from bangpy import tcp
 from bangpy.script import build_module, ty
+from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
+TARGET_LIST = ["mlu290", "mlu370-s4"]
 KERNEL_NAME = "hardshrink"
 
 
@@ -50,7 +51,7 @@ class HardShrink(object):
     ) -> None:
         """Include the main compute"""
         tcp.abs(tensor_abs_nram, tensor_input_nram)
-        tcp.greater(tensor_greater_nram, tensor_abs_nram, tensor_lambda_nram)
+        tcp.greater_equal(tensor_greater_nram, tensor_abs_nram, tensor_lambda_nram)
         tcp.multiply(tensor_output_nram, tensor_input_nram, tensor_greater_nram)
 
     def hardshrink_compute(self):
@@ -66,23 +67,6 @@ class HardShrink(object):
         cmpt_times = task_content // self.nram_use_size
         remain_num = task_content % self.nram_use_size
 
-        tensor_input_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-        tensor_output_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-        tensor_abs_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-        tensor_lambda_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-
-        tcp.assign(tensor_lambda_nram, tcp.cast(self.lambda_para, self.dtype))
-        tensor_greater_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
 
         for cluster_id in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, self.core_num, thread="threadIdx.x"):
@@ -91,14 +75,31 @@ class HardShrink(object):
                 task_end = task_start + task_content
 
                 for c_t in range(cmpt_times, pipeline=True):
-                    cmpt_start = task_start + c_t * self.nram_use_size
-                    cmpt_end = cmpt_start + self.nram_use_size
+                    tensor_input_nram = tcp.alloc_buffer(
+                        [self.nram_use_size], dtype=self.dtype, scope="nram"
+                    )
+                    tensor_output_nram = tcp.alloc_buffer(
+                        [self.nram_use_size], dtype=self.dtype, scope="nram"
+                    )
+                    tensor_abs_nram = tcp.alloc_buffer(
+                        [self.nram_use_size], dtype=self.dtype, scope="nram"
+                    )
+                    tensor_lambda_nram = tcp.alloc_buffer(
+                        [self.nram_use_size], dtype=self.dtype, scope="nram"
+                    )
+
+                    tensor_greater_nram = tcp.alloc_buffer(
+                        [self.nram_use_size], dtype=self.dtype, scope="nram"
+                    )
                     with tcp.block("data_copy"):
+                        cmpt_start = task_start + c_t * self.nram_use_size
+                        cmpt_end = cmpt_start + self.nram_use_size
                         tcp.memcpy(
                             tensor_input_nram,
                             tensor_input_flatten[cmpt_start:cmpt_end],
                         )
                     with tcp.block("compute"):
+                        tcp.assign(tensor_lambda_nram, tcp.cast(self.lambda_para, self.dtype))
                         self.compute(
                             tensor_input_nram,
                             tensor_abs_nram,
@@ -107,11 +108,30 @@ class HardShrink(object):
                             tensor_output_nram,
                         )
                     with tcp.block("data_copy"):
+                        cmpt_start = task_start + c_t * self.nram_use_size
+                        cmpt_end = cmpt_start + self.nram_use_size
                         tcp.memcpy(
                             tensor_output_flatten[cmpt_start:cmpt_end],
                             tensor_output_nram,
                         )
 
+                tensor_input_nram = tcp.alloc_buffer(
+                    [self.nram_use_size], dtype=self.dtype, scope="nram"
+                )
+                tensor_output_nram = tcp.alloc_buffer(
+                    [self.nram_use_size], dtype=self.dtype, scope="nram"
+                )
+                tensor_abs_nram = tcp.alloc_buffer(
+                    [self.nram_use_size], dtype=self.dtype, scope="nram"
+                )
+                tensor_lambda_nram = tcp.alloc_buffer(
+                    [self.nram_use_size], dtype=self.dtype, scope="nram"
+                )
+
+                tcp.assign(tensor_lambda_nram, tcp.cast(self.lambda_para, self.dtype))
+                tensor_greater_nram = tcp.alloc_buffer(
+                    [self.nram_use_size], dtype=self.dtype, scope="nram"
+                )
                 if remain_num != 0:
                     start_pos = task_end - remain_num
                     end_pos = task_end
@@ -206,7 +226,8 @@ class HardShrink(object):
         self.nram_size = tgt.nram_size
         self.core_num = tgt.core_num
         self.base_align = 64
-        self.nram_use_size = tcp.round_up(self.nram_size // 32, self.base_align)
+        dtype_bytes = 2 if self.dtype == "float16" else 4
+        self.nram_use_size = tcp.round_up(self.nram_size // (8 * dtype_bytes), self.base_align)
 
         self.tensor_input = tcp.match_buffer(
             data_in_dev, self.tensor_shape, dtype=self.dtype
@@ -220,9 +241,8 @@ class HardShrink(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_hardshrink(dtype=None, target=None):
-    cluster_num = 1
 
     f_hardshrink = build_module.build(
-        HardShrink(cluster_num, dtype.name), target_tag=target, name=KERNEL_NAME
+        HardShrink(TARGET(target).cluster_num, dtype.name), target_tag=target, name=KERNEL_NAME
     )
     return f_hardshrink
