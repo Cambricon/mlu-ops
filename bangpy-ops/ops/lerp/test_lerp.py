@@ -21,65 +21,72 @@
 """Test Lerp operator with multi-platform code link."""
 # pylint: skip-file
 
+from test import registerOp, OpTest
 import numpy as np
-import pytest
-from lerp import TARGET_LIST, DTYPES
-import bangpy as bp
+import bangpy
 from bangpy.common import load_op_by_type
+from lerp import KERNEL_NAME
 
-
-@pytest.mark.parametrize(
-    "dtype", DTYPES,
-)
-@pytest.mark.parametrize(
-    "shape", [(4, 16, 1024, 1024), (4, 16, 1, 64), (3, 5, 197, 255),],
-)
-def test_lerp(target, shape, dtype):
-    if target not in TARGET_LIST:
-        return
-    data_in_start = np.random.uniform(low=-1, high=1, size=shape)
-    data_in_end = np.random.uniform(low=-1, high=1, size=shape)
-    data_weight = np.random.uniform(low=-1, high=1, size=shape)
-
-    data_temp = np.subtract(data_in_end, data_in_start)
-    data_temp = np.multiply(data_temp, data_weight)
-    data_out = np.add(data_in_start, data_temp)
-
-    dev = bp.device(0)
-    data_in_start_dev = bp.Array(data_in_start.astype(dtype.as_numpy_dtype), dev)
-    data_in_end_dev = bp.Array(data_in_end.astype(dtype.as_numpy_dtype), dev)
-    data_weight_dev = bp.Array(data_weight.astype(dtype.as_numpy_dtype), dev)
-    data_out_dev = bp.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
-
-    f_lerp = load_op_by_type("lerp", dtype.name)
-
-    f_lerp(
-        data_in_start_dev,
-        data_in_end_dev,
-        data_weight_dev,
-        shape[0],
-        shape[1],
-        shape[2],
-        shape[3],
-        data_out_dev,
+def cal_diff(result, data_out):
+    diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(np.abs(data_out))
+    diff2 = np.sqrt(
+        np.sum(np.power(np.subtract(data_out, result), 2)) / np.sum(np.power(data_out, 2))
     )
+    assert round(diff1 * 100, 5) < 3e-3 * 100
+    assert round(diff2 * 100, 5) < 3e-3 * 100
+    print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
+    print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
-    evaluator = f_lerp.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
-    run_time = evaluator(
-        data_in_start_dev,
-        data_in_end_dev,
-        data_weight_dev,
-        shape[0],
-        shape[1],
-        shape[2],
-        shape[3],
-        data_out_dev,
-    ).mean
-    print("mlu run time: " + str(run_time) + "s")
+@registerOp("lerp")
+class LerpOp(OpTest):
+    def __init__(self, target, dtype, tensor_list, output_tensor, params):
+        self.dtype = dtype
+        super().__init__(target, dtype, tensor_list, output_tensor, params)
 
-    bp.assert_allclose(
-        data_out_dev.numpy(),
-        data_out.astype(dtype.as_numpy_dtype),
-        rtol=3e-3,
-        atol=3e-3,
-    )
+    def compute(self):
+        data_in_start = self.inputs_tensor_list[0]
+        data_in_end = self.inputs_tensor_list[1]
+        data_weight = self.inputs_tensor_list[2]
+        data_out = self.output_tensor_list[0]
+        # set I/O data
+        dev = bangpy.device(0)
+        data_in_start_dev = bangpy.Array(data_in_start.astype(self.dtype.as_numpy_dtype), dev)
+        data_in_end_dev = bangpy.Array(data_in_end.astype(self.dtype.as_numpy_dtype), dev)
+        data_weight_dev = bangpy.Array(data_weight.astype(self.dtype.as_numpy_dtype), dev)
+        data_out_dev = bangpy.Array(np.zeros(data_out.shape, self.dtype.as_numpy_dtype), dev)
+
+        f_lerp = load_op_by_type(KERNEL_NAME, self.dtype.name)
+
+        f_lerp(
+            data_in_start_dev,
+            data_in_end_dev,
+            data_weight_dev,
+            data_in_start.shape[0],
+            data_in_start.shape[1],
+            data_in_start.shape[2],
+            data_in_start.shape[3],
+            data_out_dev,
+        )
+
+        theory_io_size = data_in_start.shape[0] * data_in_start.shape[1] * data_in_start.shape[2] * data_in_start.shape[3] * self.dtype.bytes * 4
+        IO_BANDWIDTH = 2 ** 40 if self.target == "mlu290" else 307.2 * 2 ** 30
+        evaluator = f_lerp.time_evaluator(number=2, repeat=1, min_repeat_ms=0)
+        latency = evaluator(
+            data_in_start_dev,
+            data_in_end_dev,
+            data_weight_dev,
+            data_in_start.shape[0],
+            data_in_start.shape[1],
+            data_in_start.shape[2],
+            data_in_start.shape[3],
+            data_out_dev,
+        ).mean
+        print("Hardware time : %f us" % (latency * 1000 ** 2))
+        
+        # io_efficiency
+        io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
+        print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
+        print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
+
+        
+        cal_diff(data_out_dev.numpy(),data_out.astype(self.dtype.as_numpy_dtype))

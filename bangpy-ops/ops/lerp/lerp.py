@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -24,15 +24,16 @@
 """Lerp operator implementation using BANGPy TCP API."""
 import bangpy
 from bangpy import tcp
+from bangpy.platform.bang_config import TARGET
 from bangpy.script import build_module, ty
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
+TARGET_LIST = ["mlu290", "mlu370-s4"]
 KERNEL_NAME = "lerp"
 
 
 class Lerp(object):
-    """ Operator description:
+    """Operator description:
     A linear interpolation of two tensors, behaves similar to torch.lerp.
     """
 
@@ -45,14 +46,13 @@ class Lerp(object):
         tensor_input_start_nram: ty.Buffer("nram"),
         tensor_input_end_nram: ty.Buffer("nram"),
         tensor_weight_nram: ty.Buffer("nram"),
-        tensor_output_nram: ty.Buffer("nram"),
     ) -> None:
         """Include the main compute"""
         tcp.subtract(
             tensor_input_end_nram, tensor_input_end_nram, tensor_input_start_nram
         )
         tcp.multiply(tensor_input_end_nram, tensor_input_end_nram, tensor_weight_nram)
-        tcp.add(tensor_output_nram, tensor_input_start_nram, tensor_input_end_nram)
+        tcp.add(tensor_weight_nram, tensor_input_start_nram, tensor_input_end_nram)
 
     def lerp_compute(self):
         """The main compute pipeline"""
@@ -61,39 +61,42 @@ class Lerp(object):
         task_content = self.element_num // self.task_num
         task_remain = self.element_num % self.task_num
 
-        tensor_input_start_flatten = self.tensor_input_start.reshape(
-            (self.element_num,)
-        )
-        tensor_input_end_flatten = self.tensor_input_end.reshape((self.element_num,))
-        tensor_output_flatten = self.tensor_output.reshape((self.element_num,))
-        tensor_weight_flatten = self.tensor_weight.reshape((self.element_num,))
-
-        cmpt_times = task_content // self.nram_use_size
-        remain_num = task_content % self.nram_use_size
-
-        tensor_input_start_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-        tensor_input_end_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-        tensor_output_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-        tensor_weight_nram = tcp.alloc_buffer(
-            [self.nram_use_size], dtype=self.dtype, scope="nram"
-        )
-
         for cluster_id in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, self.core_num, thread="threadIdx.x"):
                 task_id = cluster_id * self.core_num + core_id
                 task_start = task_id * task_content
                 task_end = task_start + task_content
 
+                cmpt_times = task_content * 2 // self.nram_use_size
+                remain_num = task_content * 2 % self.nram_use_size
+                calculated_each_time = self.nram_use_size // 2
+                tensor_input_start_flatten = (
+                    self.tensor_input_start.flatten()
+                )
+                tensor_input_end_flatten = (
+                    self.tensor_input_end.flatten()
+                )
+                tensor_output_flatten = (
+                    self.tensor_output.flatten()
+                )
+                tensor_weight_flatten = (
+                    self.tensor_weight.flatten()
+                )
+
                 for c_t in range(cmpt_times, pipeline=True):
-                    cmpt_start = task_start + c_t * self.nram_use_size
-                    cmpt_end = cmpt_start + self.nram_use_size
+                    tensor_input_start_nram = tcp.alloc_buffer(
+                        [calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+                    tensor_input_end_nram = tcp.alloc_buffer(
+                        [calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+                    tensor_weight_nram = tcp.alloc_buffer(
+                        [calculated_each_time], dtype=self.dtype, scope="nram"
+                    )
+
                     with tcp.block("data_copy"):
+                        cmpt_start = task_start + c_t * calculated_each_time
+                        cmpt_end = cmpt_start + calculated_each_time
                         tcp.memcpy(
                             tensor_input_start_nram,
                             tensor_input_start_flatten[cmpt_start:cmpt_end],
@@ -111,13 +114,26 @@ class Lerp(object):
                             tensor_input_start_nram,
                             tensor_input_end_nram,
                             tensor_weight_nram,
-                            tensor_output_nram,
                         )
                     with tcp.block("data_copy"):
+                        cmpt_start = task_start + c_t * calculated_each_time
+                        cmpt_end = cmpt_start + calculated_each_time
                         tcp.memcpy(
                             tensor_output_flatten[cmpt_start:cmpt_end],
-                            tensor_output_nram,
+                            tensor_weight_nram,
                         )
+                cmpt_times = task_content // calculated_each_time
+                remain_num = task_content % calculated_each_time
+
+                tensor_input_start_nram = tcp.alloc_buffer(
+                    [calculated_each_time], dtype=self.dtype, scope="nram"
+                )
+                tensor_input_end_nram = tcp.alloc_buffer(
+                    [calculated_each_time], dtype=self.dtype, scope="nram"
+                )
+                tensor_weight_nram = tcp.alloc_buffer(
+                    [calculated_each_time], dtype=self.dtype, scope="nram"
+                )
 
                 if remain_num != 0:
                     start_pos = task_end - remain_num
@@ -140,12 +156,11 @@ class Lerp(object):
                             tensor_input_start_nram,
                             tensor_input_end_nram,
                             tensor_weight_nram,
-                            tensor_output_nram,
                         )
                     with tcp.block("data_copy"):
                         tcp.memcpy(
                             tensor_output_flatten[start_pos:end_pos],
-                            tensor_output_nram[:remain_num],
+                            tensor_weight_nram[:remain_num],
                         )
                 if task_remain != 0:
                     remain_by_thistask = task_remain // self.task_num
@@ -154,9 +169,6 @@ class Lerp(object):
                         [self.base_align], dtype=self.dtype, scope="nram"
                     )
                     tensor_input_small_end_nram = tcp.alloc_buffer(
-                        [self.base_align], dtype=self.dtype, scope="nram"
-                    )
-                    tensor_output_small_nram = tcp.alloc_buffer(
                         [self.base_align], dtype=self.dtype, scope="nram"
                     )
                     tensor_weight_small_nram = tcp.alloc_buffer(
@@ -192,14 +204,13 @@ class Lerp(object):
                                 tensor_input_small_start_nram,
                                 tensor_input_small_end_nram,
                                 tensor_weight_small_nram,
-                                tensor_output_small_nram,
                             )
                         with tcp.block("data_copy"):
                             tcp.memcpy(
                                 tensor_output_flatten[
                                     remain_task_start:remain_task_end
                                 ],
-                                tensor_output_small_nram[:remain_by_thistask],
+                                tensor_weight_small_nram[:remain_by_thistask],
                             )
 
     def main(
@@ -227,7 +238,7 @@ class Lerp(object):
         self.nram_size = tgt.nram_size
         self.core_num = tgt.core_num
         self.base_align = 64
-        self.nram_use_size = tcp.round_up(self.nram_size // 32, self.base_align)
+        self.nram_use_size = tcp.round_up(tgt.nram_size // 26, self.base_align)
 
         self.tensor_input_start = tcp.match_buffer(
             data_in_start_dev, self.tensor_shape, dtype=self.dtype
@@ -247,9 +258,10 @@ class Lerp(object):
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_lerp(dtype=None, target=None):
-    cluster_num = 1
 
     f_lerp = build_module.build(
-        Lerp(cluster_num, dtype.name), target_tag=target, name=KERNEL_NAME
+        Lerp(TARGET(target).cluster_num, dtype.name),
+        target_tag=target,
+        name=KERNEL_NAME,
     )
     return f_lerp
