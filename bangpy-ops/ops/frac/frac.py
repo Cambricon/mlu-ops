@@ -27,7 +27,7 @@ from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
+TARGET_LIST = ["mlu370-s4", "mlu290"]
 KERNEL_NAME = "frac"
 
 
@@ -43,9 +43,8 @@ class Frac(object):
         self.cluster_num = cluster_num
         self.dtype_sz = dtype_sz
 
-    def compute_body(
+    def compute_body_half(
         self,
-        buffer_out_n: ty.Buffer("nram"),
         buffer_in_n: ty.Buffer("nram"),
         buffer_abs: ty.Buffer("nram"),
         buffer_floor: ty.Buffer("nram"),
@@ -55,12 +54,35 @@ class Frac(object):
     ) -> None:
         """The body of frac function"""
 
-        tcp.abs(buffer_abs, buffer_in_n)
-        tcp.type_convert(buffer_floor, buffer_abs, 0, "tz")
-        tcp.type_convert(buffer_floor_after, buffer_floor, 0, "tz")
-        tcp.sign(buffer_sgn, buffer_in_n)
-        tcp.multiply(buffer_tem, buffer_floor_after, buffer_sgn)
-        tcp.subtract(buffer_out_n, buffer_in_n, buffer_tem)
+        tcp.type_convert(buffer_tem,buffer_in_n, 0, "tz") #h2f
+        tcp.abs(buffer_abs, buffer_tem)#f
+        tcp.type_convert(buffer_floor, buffer_abs, 0, "tz")#  f2i
+        tcp.type_convert(buffer_floor_after, buffer_floor, 0, "tz")#i2f
+        tcp.sign(buffer_sgn, buffer_tem) #f
+        tcp.multiply(buffer_abs, buffer_floor_after, buffer_sgn)# f
+        
+        tcp.subtract(buffer_tem, buffer_tem, buffer_abs) #f
+        tcp.type_convert(buffer_in_n,buffer_tem, 0, "rd")#f2h
+
+    def compute_body_float(
+        self,
+        buffer_in_n: ty.Buffer("nram"),
+        buffer_abs: ty.Buffer("nram"),
+        buffer_floor: ty.Buffer("nram"),
+        buffer_floor_after: ty.Buffer("nram"),
+        buffer_sgn: ty.Buffer("nram"),
+        buffer_tem: ty.Buffer("nram"),
+    ) -> None:
+        """The body of frac function"""
+
+        tcp.memcpy(buffer_tem, buffer_in_n)
+        tcp.abs(buffer_abs, buffer_tem)#f
+        tcp.type_convert(buffer_floor, buffer_abs, 0, "tz")#  f2i
+        tcp.type_convert(buffer_floor_after, buffer_floor, 0, "tz")#i2f
+        tcp.sign(buffer_sgn, buffer_tem) #f
+        tcp.multiply(buffer_abs, buffer_floor_after, buffer_sgn)# f
+        
+        tcp.subtract(buffer_in_n, buffer_tem, buffer_abs) #f
 
     def main(
         self,
@@ -88,18 +110,17 @@ class Frac(object):
         self.length = self.dim0 * self.dim1 * self.dim2 * self.dim3
 
         self.task_num = self.cluster_num * tgt.core_num
-        self.single_buffer_size = (tgt.nram_size) // 16
+        self.single_buffer_size = (tgt.nram_size) // 8
         task_id = 0
         data_calculated_each_task = self.length // self.task_num
         data_remain = self.length % self.task_num
-        loop_num = data_calculated_each_task * self.dtype_sz // self.single_buffer_size
-        data_calculated_each_time = self.single_buffer_size // self.dtype_sz
+        loop_num = data_calculated_each_task * self.dtype_sz * (10//5) // self.single_buffer_size 
+        data_calculated_each_time = self.single_buffer_size // (self.dtype_sz * 10//5)
         each_task_remain = data_calculated_each_task % data_calculated_each_time
 
         buffer_in = buffer_in.reshape((self.length,))
         buffer_out = buffer_out.reshape((self.length,))
 
-        
 
         for cluster_id in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
@@ -111,23 +132,21 @@ class Frac(object):
                     buffer_out_n = tcp.alloc_buffer(
                         [data_calculated_each_time,], dtype=self.dtype, scope="nram"
                     )
-                    size = data_calculated_each_time
                     buffer_abs = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                        shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                     )
                     buffer_floor = tcp.alloc_buffer(
                         shape=[data_calculated_each_time,], dtype="int16", scope="nram",
                     )
                     buffer_floor_after = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                        shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                     )
                     buffer_sgn = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                        shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                     )
                     buffer_tem = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                        shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                     )
-                    
                     with tcp.block("data_copy"):
                         start = (
                             task_id * data_calculated_each_task
@@ -136,111 +155,122 @@ class Frac(object):
                         stop = start + data_calculated_each_time
                         tcp.memcpy(buffer_in_n, buffer_in[start:stop])
                     with tcp.block("compute"):
-                        self.compute_body(
-                            buffer_out_n,
-                            buffer_in_n,
-                            buffer_abs,
-                            buffer_floor,
-                            buffer_floor_after,
-                            buffer_sgn,
-                            buffer_tem,
-                        )
+                        if self.dtype == "float32":
+                            self.compute_body_float(
+                                buffer_in_n,
+                                buffer_abs,
+                                buffer_floor,
+                                buffer_floor_after,
+                                buffer_sgn,
+                                buffer_tem,
+                            )
+                        elif self.dtype == "float16":
+                            self.compute_body_half(
+                                buffer_in_n,
+                                buffer_abs,
+                                buffer_floor,
+                                buffer_floor_after,
+                                buffer_sgn,
+                                buffer_tem,
+                            )
+                            
                     with tcp.block("data_copy"):
                         start = (
                             task_id * data_calculated_each_task
                             + i * data_calculated_each_time
                         )
                         stop = start + data_calculated_each_time
-                        tcp.memcpy(buffer_out[start:stop], buffer_out_n)
+                        tcp.memcpy(buffer_out[start:stop], buffer_in_n)
 
-                if each_task_remain != 0:
-                    buffer_in_n = tcp.alloc_buffer(
-                        [data_calculated_each_time,], dtype=self.dtype, scope="nram"
-                    )
-                    buffer_out_n = tcp.alloc_buffer(
-                        [data_calculated_each_time,], dtype=self.dtype, scope="nram"
-                    )
-                    size = data_calculated_each_time
-                    buffer_abs = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
-                    )
-                    buffer_floor = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype="int16", scope="nram",
-                    )
-                    buffer_floor_after = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
-                    )
-                    buffer_sgn = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
-                    )
-                    buffer_tem = tcp.alloc_buffer(
-                        shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
-                    )
-                    start = (
-                        task_id * data_calculated_each_task
-                        + loop_num * data_calculated_each_time
-                    )
-                    stop = start + each_task_remain
-                    tcp.assign(buffer_in_n, 0)
-                    tcp.assign(buffer_out_n, 0)
-                    with tcp.block("data_copy"):
-                        tcp.memcpy(
-                            buffer_in_n[0:each_task_remain], buffer_in[start:stop]
-                        )
-                    with tcp.block("compute"):
-                        self.compute_body(
-                            buffer_out_n,
-                            buffer_in_n,
-                            buffer_abs,
-                            buffer_floor,
-                            buffer_floor_after,
-                            buffer_sgn,
-                            buffer_tem,
-                        )
-                    with tcp.block("data_copy"):
-                        tcp.memcpy(
-                            buffer_out[start:stop], buffer_out_n[0:each_task_remain]
-                        )
-
-        if data_remain != 0:
-            if task_id == self.task_num - 1:
                 buffer_in_n = tcp.alloc_buffer(
                     [data_calculated_each_time,], dtype=self.dtype, scope="nram"
                 )
                 buffer_out_n = tcp.alloc_buffer(
                     [data_calculated_each_time,], dtype=self.dtype, scope="nram"
                 )
-                size = data_calculated_each_time
                 buffer_abs = tcp.alloc_buffer(
-                    shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                    shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                 )
                 buffer_floor = tcp.alloc_buffer(
                     shape=[data_calculated_each_time,], dtype="int16", scope="nram",
                 )
                 buffer_floor_after = tcp.alloc_buffer(
-                    shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                    shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                 )
                 buffer_sgn = tcp.alloc_buffer(
-                    shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                    shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                 )
                 buffer_tem = tcp.alloc_buffer(
-                    shape=[data_calculated_each_time,], dtype=self.dtype, scope="nram",
+                    shape=[data_calculated_each_time,], dtype="float32", scope="nram",
                 )
-                start = task_id * data_calculated_each_task + data_calculated_each_task
-                stop = start + data_remain
                 tcp.assign(buffer_in_n, 0)
                 tcp.assign(buffer_out_n, 0)
-                tcp.memcpy(buffer_in_n[0:data_remain], buffer_in[start:stop])
-                self.compute_body(
-                    buffer_out_n,
-                    buffer_in_n,
-                    buffer_abs,
-                    buffer_floor,
-                    buffer_floor_after,
-                    buffer_sgn,
-                    buffer_tem,
-                )
-                tcp.memcpy(buffer_out[start:stop], buffer_out_n[0:data_remain])
+                if each_task_remain != 0:
+                    with tcp.block("data_copy"):
+                        start = (
+                            task_id * data_calculated_each_task
+                            + loop_num * data_calculated_each_time
+                        )
+                        stop = start + each_task_remain
+                        tcp.memcpy(
+                            buffer_in_n[0:each_task_remain], buffer_in[start:stop]
+                        )
+                    with tcp.block("compute"):
+                        if self.dtype == "float32":
+                            self.compute_body_float(
+                                buffer_in_n,
+                                buffer_abs,
+                                buffer_floor,
+                                buffer_floor_after,
+                                buffer_sgn,
+                                buffer_tem,
+                            )
+                        elif self.dtype == "float16":
+                            self.compute_body_half(
+                                buffer_in_n,
+                                buffer_abs,
+                                buffer_floor,
+                                buffer_floor_after,
+                                buffer_sgn,
+                                buffer_tem,
+                            )
+                    with tcp.block("data_copy"):
+                        start = (
+                            task_id * data_calculated_each_task
+                            + loop_num * data_calculated_each_time
+                        )
+                        stop = start + each_task_remain
+                        tcp.memcpy(
+                            buffer_out[start:stop], buffer_in_n[0:each_task_remain]
+                        )
+
+                if data_remain != 0:
+                    if task_id == self.task_num - 1:
+                        start = task_id * data_calculated_each_task + data_calculated_each_task
+                        stop = start + data_remain
+                    tcp.assign(buffer_in_n, 0)
+                    tcp.assign(buffer_out_n, 0)
+                    tcp.memcpy(buffer_in_n[0:data_remain], buffer_in[start:stop])
+                    with tcp.block("compute"):
+                        if self.dtype == "float32":
+                            self.compute_body_float(
+                                buffer_in_n,
+                                buffer_abs,
+                                buffer_floor,
+                                buffer_floor_after,
+                                buffer_sgn,
+                                buffer_tem,
+                            )
+                        elif self.dtype == "float16":
+                            self.compute_body_half(
+                                buffer_in_n,
+                                buffer_abs,
+                                buffer_floor,
+                                buffer_floor_after,
+                                buffer_sgn,
+                                buffer_tem,
+                            )
+                    tcp.memcpy(buffer_out[start:stop], buffer_in_n[0:data_remain])
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
