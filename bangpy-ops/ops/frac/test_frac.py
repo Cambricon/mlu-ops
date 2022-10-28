@@ -21,64 +21,59 @@
 # pylint: disable=missing-docstring, invalid-name, too-many-locals
 """Test frac operator with multi-platform code link."""
 # pylint: skip-file
-import os
-import time
+from test import registerOp, OpTest
 import numpy as np
-import pytest
-
 import bangpy
-from bangpy.common import utils, load_op_by_type
-from frac import DTYPES, KERNEL_NAME, TARGET_LIST
+from bangpy.common import load_op_by_type
+from frac import KERNEL_NAME
 
 
-@pytest.mark.parametrize(
-    "shape", [(4, 4, 16, 1024),],
-)
-@pytest.mark.parametrize(
-    "dtype", DTYPES,
-)
-def test_frac(target, shape, dtype):
-    if target not in TARGET_LIST:
-        return
+def cal_diff(result, data_out):
+    diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum((np.abs(data_out)))
+    diff2 = np.sqrt(
+        np.sum(np.power(np.subtract(data_out, result), 2)) / np.sum(np.power(data_out, 2))
+    )
+    assert round(diff1 * 100, 5) < 3e-3 * 100
+    assert round(diff2 * 100, 5) < 3e-3 * 100
+    print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
+    print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
 
-    dim0 = shape[0]
-    dim1 = shape[1]
-    dim2 = shape[2]
-    dim3 = shape[3]
-    data_in = np.random.uniform(low=-10, high=10, size=shape)
-    data_absolute = np.absolute(data_in)
-    data_floor = np.floor(data_absolute)
-    data_sign = np.sign(data_in)
-    data_tem = np.multiply(data_floor, data_sign)
-    data_out = np.subtract(data_in, data_tem)
 
-    dev = bangpy.device(0)
+@registerOp("frac")
+class Fracop(OpTest):
+    def __init__(self, target, dtype, tensor_list, output_tensor):
+        self.dtype = dtype
+        self.target = target
+        super().__init__(target, dtype, tensor_list, output_tensor)
+    def compute(self):
+        np.random.seed(0)
+        dim0 = data_in.shape[0]
+        dim1 = data_in.shape[1]
+        dim2 = data_in.shape[2]
+        dim3 = data_in.shape[3]
+        
+        data_in = self.inputs_tensor_list[0]
+        data_out = self.output_tensor_list[0]
 
-    data_in_dev = bangpy.Array(data_in.astype(dtype.as_numpy_dtype), dev)
-    data_out_dev = bangpy.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
-    f1 = load_op_by_type(KERNEL_NAME, dtype.name)
-    f1(data_in_dev, data_out_dev, dim0, dim1, dim2, dim3)
+        dev = bangpy.device(0)
 
-    theory_io_size = shape[0] * shape[1] * shape[2] * shape[3] * dtype.bytes * 2
-    IO_BANDWIDTH = 2 ** 40 if target == "mlu290" else 307.2 * 2 ** 30
-    evaluator = f1.time_evaluator(number=2, repeat=1, min_repeat_ms=0)
-    latency = evaluator(
-        data_in_dev, data_out_dev, dim0, dim1, dim2, dim3
-    ).median
-    print("Hardware time : %f us" % (latency * 1000 ** 2))
+        data_in_dev = bangpy.Array(data_in.astype(self.dtype.as_numpy_dtype), dev)
+        data_out_dev = bangpy.Array(np.zeros(data_out.shape, self.dtype.as_numpy_dtype), dev)
+        f1 = load_op_by_type(KERNEL_NAME, self.dtype.name)
+        f1(data_in_dev, data_out_dev, dim0, dim1, dim2, dim3)
 
-    # io_efficiency
-    io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
-    print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
-    print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
+        theory_io_size = dim0 * dim1 * dim2 * dim3 * self.dtype.bytes * 2
+        IO_BANDWIDTH = 2 ** 40 if self.target == "mlu290" else 307.2 * 2 ** 30
+        evaluator = f1.time_evaluator(number=2, repeat=1, min_repeat_ms=0)
+        latency = evaluator(
+            data_in_dev, data_out_dev, dim0, dim1, dim2, dim3
+        ).mean
+        io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
+        print("Hardware time : %f us" % (latency * 1000 ** 2))
+        
+        # io_efficiency
+        io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
+        print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
+        print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
 
-    def cal_diff(result, data_out):
-        diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(np.abs(data_out))
-        diff2 = np.sqrt(
-        np.sum(np.power(np.subtract(result, data_out), 2)) / np.sum(np.power(data_out, 2))
-        )
-        print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
-        print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
-        assert round(diff1 * 100, 5) < 3e-3 * 100
-        assert round(diff2 * 100, 5) < 3e-3 * 100
-    cal_diff(data_out_dev.numpy(),data_out.astype(dtype.as_numpy_dtype))
+        cal_diff(data_out_dev.numpy(),data_out.astype(self.dtype.as_numpy_dtype))
