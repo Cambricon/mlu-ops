@@ -21,50 +21,51 @@
 """Test HardShrink operator with multi-platform code link."""
 # pylint: skip-file
 
+from test import registerOp, OpTest
 import numpy as np
-import pytest
-from hardshrink import TARGET_LIST, DTYPES
-import bangpy as bp
+import bangpy
 from bangpy.common import load_op_by_type
+from hardshrink import KERNEL_NAME
 
-
-@pytest.mark.parametrize(
-    "dtype", DTYPES,
-)
-@pytest.mark.parametrize(
-    "shape", [(4, 16, 1024, 1024), (4, 16, 1, 64), (3, 5, 197, 255),],
-)
-@pytest.mark.parametrize("lambda_para", [0.5,])
-def test_hardshrink(target, shape, dtype, lambda_para):
-    if target not in TARGET_LIST:
-        return
-    data_in = np.random.uniform(low=-1, high=1, size=shape)
-    data_out = data_in.astype(dtype.as_numpy_dtype)
-    dev = bp.device(0)
-
-    data_in_dev = bp.Array(data_in.astype(dtype.as_numpy_dtype), dev)
-    data_out_dev = bp.Array(np.zeros(data_out.shape, dtype.as_numpy_dtype), dev)
-
-    f_hardshrink = load_op_by_type("hardshrink", dtype.name)
-
-    f_hardshrink(
-        data_in_dev, lambda_para, shape[0], shape[1], shape[2], shape[3], data_out_dev,
+def cal_diff(result, data_out):
+    diff1 = np.sum(np.abs(np.subtract(result, data_out))) / np.sum(np.abs(data_out))
+    diff2 = np.sqrt(
+        np.sum(np.power(np.subtract(result, data_out), 2)) / np.sum(np.power(data_out, 2))
     )
+    print("DIFF1:", str(round(diff1 * 100, 5)) + "%")
+    print("DIFF2:", str(round(diff2 * 100, 5)) + "%")
+    assert round(diff1 * 100, 5) < 3e-3 * 100
+    assert round(diff2 * 100, 5) < 3e-3 * 100
 
-    eps = 1e-8
-    cpu_out = np.where(
-        (data_in.astype(dtype.as_numpy_dtype) + lambda_para > -eps)
-        & (data_in - lambda_para < eps),
-        0,
-        data_in,
-    )
+@registerOp("hardshrink")
+class Hardshrinkop(OpTest):
+    def __init__(self, target, dtype, tensor_list, output_tensor, params):
+        self.dtype = dtype
+        super().__init__(target, dtype, tensor_list, output_tensor, params)
+        
+    def compute(self):
+        dev = bangpy.device(0)
+        data_in = self.inputs_tensor_list[0]
+        data_out = self.output_tensor_list[0]
+        data_in_dev = bangpy.Array(data_in, dev)
+        data_out_dev = bangpy.Array(data_out, dev)
+        lambda_para = self.test_param_.get("op_param").get("lambda")
+        f_hardshrink = load_op_by_type("hardshrink", self.dtype.name)
 
-    evaluator = f_hardshrink.time_evaluator(number=10, repeat=1, min_repeat_ms=0)
-    run_time = evaluator(
-        data_in_dev, lambda_para, shape[0], shape[1], shape[2], shape[3], data_out_dev
-    ).mean
-    print("mlu run time: " + str(run_time) + "s")
+        f_hardshrink(
+            data_in_dev, lambda_para, data_in.shape[0], data_in.shape[1], data_in.shape[2], data_in.shape[3], data_out_dev,
+        )
+        theory_io_size = data_in.shape[0] * data_in.shape[1] * data_in.shape[2] * data_in.shape[3] * self.dtype.bytes * 2
+        IO_BANDWIDTH = 2 ** 40 if self.target == "mlu290" else 307.2 * 2 ** 30
 
-    bp.assert_allclose(
-        data_out_dev.numpy(), cpu_out.astype(dtype.as_numpy_dtype), rtol=1e-6, atol=1e-6
-    )
+        evaluator = f_hardshrink.time_evaluator(number=2, repeat=1, min_repeat_ms=0)
+        latency = evaluator(
+            data_in_dev, lambda_para, data_in.shape[0], data_in.shape[1], data_in.shape[2], data_in.shape[3], data_out_dev
+        ).mean
+        print("Hardware time : %f us" % (latency * 1000 ** 2))
+        # io_efficiency
+        io_efficiency = theory_io_size / (latency * IO_BANDWIDTH)
+        print("theory_io_size : %f GB" % (theory_io_size / (2 ** 30)))
+        print("io_efficiency:", str(round(io_efficiency * 100, 2)) + "%")
+        cal_diff(data_out_dev.numpy(),data_out.astype(self.dtype.as_numpy_dtype))
+
