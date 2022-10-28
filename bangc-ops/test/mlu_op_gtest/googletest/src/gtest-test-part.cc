@@ -50,8 +50,9 @@ std::ostream &operator<<(std::ostream &os, const TestPartResult &result) {
   return os << result.file_name() << ":" << result.line_number() << ": "
             << (result.type() == TestPartResult::kSuccess
                     ? "Success"
-                    : result.type() == TestPartResult::kFatalFailure ? "Fatal failure"
-                                                                     : "Non-fatal failure")
+                    : result.type() == TestPartResult::kFatalFailure
+                          ? "Fatal failure"
+                          : "Non-fatal failure")
             << ":\n"
             << result.message() << std::endl;
 }
@@ -80,17 +81,19 @@ namespace internal {
 
 HasNewFatalFailureHelper::HasNewFatalFailureHelper()
     : has_new_fatal_failure_(false),
-      original_reporter_(GetUnitTestImpl()->GetTestPartResultReporterForCurrentThread()) {
+      original_reporter_(
+          GetUnitTestImpl()->GetTestPartResultReporterForCurrentThread()) {
   GetUnitTestImpl()->SetTestPartResultReporterForCurrentThread(this);
 }
 
 HasNewFatalFailureHelper::~HasNewFatalFailureHelper() {
-  GetUnitTestImpl()->SetTestPartResultReporterForCurrentThread(original_reporter_);
+  GetUnitTestImpl()->SetTestPartResultReporterForCurrentThread(
+      original_reporter_);
 }
 
-void HasNewFatalFailureHelper::ReportTestPartResult(const TestPartResult &result) {
-  if (result.fatally_failed())
-    has_new_fatal_failure_ = true;
+void HasNewFatalFailureHelper::ReportTestPartResult(
+    const TestPartResult &result) {
+  if (result.fatally_failed()) has_new_fatal_failure_ = true;
   original_reporter_->ReportTestPartResult(result);
 }
 

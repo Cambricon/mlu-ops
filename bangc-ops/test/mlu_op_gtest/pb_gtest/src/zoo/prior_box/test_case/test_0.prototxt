@@ -1,0 +1,103 @@
+op_name: "prior_box"
+input {
+  id: "input1"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+  value_f: 7.865464
+  value_f: 147.885208
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+  value_f: 1.000000
+  value_f: 8.517177
+  value_f: 0.117410
+}
+input {
+  id: "input3"
+  shape: {
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+  value_f: 0.431075
+  value_f: 0.590221
+  value_f: 0.258366
+  value_f: 0.276392
+}
+input {
+  id: "input4"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+  value_f: 222.035751
+  value_f: 235.476242
+}
+output {
+  id: "output"
+  shape: {
+    dims: 1
+    dims: 1
+    dims: 8
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+}
+output {
+  id: "var"
+  shape: {
+    dims: 1
+    dims: 1
+    dims: 8
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+}
+prior_box_param {
+  height: 1
+  width: 1
+  im_height: 300
+  im_width: 300
+  step_h: 300.000000
+  step_w: 300.000000
+  offset: 0.500000
+  flip: 1
+  clip: 1
+  min_max_aspect_ratios_order: 1
+}
+test_param {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

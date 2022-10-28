@@ -37,15 +37,14 @@ CPURuntime::CPURuntime() {}
 CPURuntime::~CPURuntime() {}
 
 // all member variable are shared_ptr.
-cnrtRet_t CPURuntime::destroy() {
-  return CNRT_RET_SUCCESS;
-}
+cnrtRet_t CPURuntime::destroy() { return CNRT_RET_SUCCESS; }
 
 void *CPURuntime::allocate(void *ptr, std::string name) {
   if (ptr == NULL) {
     return NULL;  // can't free NULL, don't push NULL into vector.
   } else {
-    memory_blocks_.push_back(std::make_shared<MemBlock<void *>>(ptr, free, name));
+    memory_blocks_.push_back(
+        std::make_shared<MemBlock<void *>>(ptr, free, name));
     return ptr;
   }
 }
@@ -63,14 +62,17 @@ void *CPURuntime::allocate(size_t num_bytes, std::string name) {
 
   if (ptr != NULL) {
 #ifdef __AVX__
-    memory_blocks_.push_back(std::make_shared<MemBlock<void *>>(ptr, _mm_free, name));
+    memory_blocks_.push_back(
+        std::make_shared<MemBlock<void *>>(ptr, _mm_free, name));
 #else
-    memory_blocks_.push_back(std::make_shared<MemBlock<void *>>(ptr, free, name));
+    memory_blocks_.push_back(
+        std::make_shared<MemBlock<void *>>(ptr, free, name));
 #endif
     return ptr;
   } else {
     LOG(ERROR) << "CPURuntime: Failed to allocate " << num_bytes << " bytes.";
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return NULL;
   }
 }
@@ -79,12 +81,16 @@ void *CPURuntime::allocate(size_t num_bytes, std::string name) {
 MLURuntime::MLURuntime() {
   check_enable_ = getEnv("MLUOP_GTEST_OVERWRITTEN_CHECK", true);
   if (true == check_enable_) {
-    header_mask_ = std::shared_ptr<char>(new char[mask_bytes_], [](char *p) { delete[] p; });
-    footer_mask_ = std::shared_ptr<char>(new char[mask_bytes_], [](char *p) { delete[] p; });
+    header_mask_ = std::shared_ptr<char>(new char[mask_bytes_],
+                                         [](char *p) { delete[] p; });
+    footer_mask_ = std::shared_ptr<char>(new char[mask_bytes_],
+                                         [](char *p) { delete[] p; });
     rand_set_mask();
 
-    header_check_ = std::shared_ptr<char>(new char[mask_bytes_], [](char *p) { delete[] p; });
-    footer_check_ = std::shared_ptr<char>(new char[mask_bytes_], [](char *p) { delete[] p; });
+    header_check_ = std::shared_ptr<char>(new char[mask_bytes_],
+                                          [](char *p) { delete[] p; });
+    footer_check_ = std::shared_ptr<char>(new char[mask_bytes_],
+                                          [](char *p) { delete[] p; });
   }
 }
 
@@ -99,14 +105,14 @@ cnrtRet_t MLURuntime::destroy() {
     if (true == check_enable_) {
       reset_check();
       char *footer = header + memory_blocks_[i].raw_bytes - mask_bytes_;
-      ret =
-          cnrtMemcpy((void *)header_check_.get(), header, mask_bytes_, CNRT_MEM_TRANS_DIR_DEV2HOST);
+      ret = cnrtMemcpy((void *)header_check_.get(), header, mask_bytes_,
+                       CNRT_MEM_TRANS_DIR_DEV2HOST);
       if (ret != CNRT_RET_SUCCESS) {
         LOG(ERROR) << "MLURuntime: cnrtFree failed. Addr = " << header;
         ok = false;
       }
-      ret =
-          cnrtMemcpy((void *)footer_check_.get(), footer, mask_bytes_, CNRT_MEM_TRANS_DIR_DEV2HOST);
+      ret = cnrtMemcpy((void *)footer_check_.get(), footer, mask_bytes_,
+                       CNRT_MEM_TRANS_DIR_DEV2HOST);
       if (ret != CNRT_RET_SUCCESS) {
         LOG(ERROR) << "MLURuntime: cnrtFree failed. Addr = " << header;
         ok = false;
@@ -114,13 +120,17 @@ cnrtRet_t MLURuntime::destroy() {
 
       void *mlu_addr = (void *)(header + mask_bytes_);
       std::string name = memory_blocks_[i].name;
-      if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(), mask_bytes_)) {
-        LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << name << ") has been overwritten.";
+      if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(),
+                      mask_bytes_)) {
+        LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << name
+                   << ") has been overwritten.";
         ok = false;
       }
 
-      if (!check_byte((void *)footer_check_.get(), (void *)footer_mask_.get(), mask_bytes_)) {
-        LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << name << ") has been overwritten.";
+      if (!check_byte((void *)footer_check_.get(), (void *)footer_mask_.get(),
+                      mask_bytes_)) {
+        LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << name
+                   << ") has been overwritten.";
         ok = false;
       }
     }  // endif (true == check_enable_)
@@ -141,7 +151,8 @@ cnrtRet_t MLURuntime::destroy() {
 
 void *MLURuntime::allocate(size_t num_bytes, std::string name) {
 #ifdef GTEST_DEBUG_LOG
-  VLOG(4) << "MLURuntime: [allocate] malloc for [" << name << "] " << num_bytes << " bytes.";
+  VLOG(4) << "MLURuntime: [allocate] malloc for [" << name << "] " << num_bytes
+          << " bytes.";
 #endif
   if (num_bytes == 0) {
     return NULL;
@@ -152,7 +163,8 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name) {
     cnrtRet_t ret = cnrtMalloc((void **)&raw_addr, num_bytes);
     if (ret != CNRT_RET_SUCCESS) {
       LOG(ERROR) << "MLURuntime: Failed to allocate " << num_bytes << " bytes.";
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
       return NULL;
     }
     memory_blocks_.push_back(MemBlock(num_bytes, raw_addr, name));
@@ -171,26 +183,32 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name) {
   char *mlu_addr = header + mask_bytes_;
 
 #ifdef GTEST_DEBUG_LOG
-  VLOG(4) << "MLURuntime: [allocate] malloc [" << (void *)mlu_addr << ", " << (void *)footer << ")";
+  VLOG(4) << "MLURuntime: [allocate] malloc [" << (void *)mlu_addr << ", "
+          << (void *)footer << ")";
 #endif
 
-  ret = cnrtMemcpy(header, (void *)header_mask_.get(), mask_bytes_, CNRT_MEM_TRANS_DIR_HOST2DEV);
+  ret = cnrtMemcpy(header, (void *)header_mask_.get(), mask_bytes_,
+                   CNRT_MEM_TRANS_DIR_HOST2DEV);
   if (ret != CNRT_RET_SUCCESS) {
     LOG(ERROR) << "MLURuntime: Failed to allocate " << num_bytes << " bytes.";
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return NULL;
   }
 
-  ret = cnrtMemcpy(footer, (void *)footer_mask_.get(), mask_bytes_, CNRT_MEM_TRANS_DIR_HOST2DEV);
+  ret = cnrtMemcpy(footer, (void *)footer_mask_.get(), mask_bytes_,
+                   CNRT_MEM_TRANS_DIR_HOST2DEV);
   if (ret != CNRT_RET_SUCCESS) {
     LOG(ERROR) << "MLURuntime: Failed to allocate " << num_bytes << " bytes.";
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return NULL;
   }
 
   if (ret != CNRT_RET_SUCCESS) {
     LOG(ERROR) << "MLURuntime: Failed to allocate " << num_bytes << " bytes.";
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return NULL;
   }
 
@@ -212,14 +230,16 @@ cnrtRet_t MLURuntime::deallocate(void *mlu_addr) {
                            [=](MemBlock b) { return b.header == mlu_addr; });
     if (it == memory_blocks_.end()) {
       LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
       return CNRT_RET_ERR_INVALID;
     }
     memory_blocks_.erase(it);
     cnrtRet_t ret = cnrtFree(mlu_addr);
     if (ret != CNRT_RET_SUCCESS) {
       LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
-      throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
       return ret;
     }
     return ret;
@@ -232,39 +252,46 @@ cnrtRet_t MLURuntime::deallocate(void *mlu_addr) {
                          [=](MemBlock b) { return b.header == header; });
   if (it == memory_blocks_.end()) {
     LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return CNRT_RET_ERR_INVALID;
   }
 
   size_t raw_bytes = it->raw_bytes;
   char *footer = (char *)header + raw_bytes - mask_bytes_;
 #ifdef GTEST_DEBUG_LOG
-  VLOG(4) << "MLURuntime: [deallocate] get ptr " << (void *)(mlu_addr) << " for [" << it->name
-          << "]";
-  VLOG(4) << "MLURuntime: [deallocate] free [" << (void *)(mlu_addr) << ", " << (void *)(footer)
-          << ")";
+  VLOG(4) << "MLURuntime: [deallocate] get ptr " << (void *)(mlu_addr)
+          << " for [" << it->name << "]";
+  VLOG(4) << "MLURuntime: [deallocate] free [" << (void *)(mlu_addr) << ", "
+          << (void *)(footer) << ")";
 #endif
 
   reset_check();
-  ret = cnrtMemcpy((void *)header_check_.get(), header, mask_bytes_, CNRT_MEM_TRANS_DIR_DEV2HOST);
+  ret = cnrtMemcpy((void *)header_check_.get(), header, mask_bytes_,
+                   CNRT_MEM_TRANS_DIR_DEV2HOST);
   if (ret != CNRT_RET_SUCCESS) {
     LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return ret;
   }
 
-  ret = cnrtMemcpy((void *)footer_check_.get(), footer, mask_bytes_, CNRT_MEM_TRANS_DIR_DEV2HOST);
+  ret = cnrtMemcpy((void *)footer_check_.get(), footer, mask_bytes_,
+                   CNRT_MEM_TRANS_DIR_DEV2HOST);
   if (ret != CNRT_RET_SUCCESS) {
     LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return ret;
   }
 
 #ifdef GTEST_DEBUG_LOG
   VLOG(4) << "MLURuntime: [deallocate] check " << (void *)header << " begin.";
 #endif
-  if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(), mask_bytes_)) {
-    LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << it->name << ") has been overwritten.";
+  if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(),
+                  mask_bytes_)) {
+    LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << it->name
+               << ") has been overwritten.";
     return CNRT_RET_ERR_INVALID;
   }
 
@@ -275,8 +302,10 @@ cnrtRet_t MLURuntime::deallocate(void *mlu_addr) {
 #ifdef GTEST_DEBUG_LOG
   VLOG(4) << "MLURuntime: [deallocate] check " << (void *)footer << " begin.";
 #endif
-  if (!check_byte((void *)footer_check_.get(), (void *)footer_mask_.get(), mask_bytes_)) {
-    LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << it->name << ") has been overwritten.";
+  if (!check_byte((void *)footer_check_.get(), (void *)footer_mask_.get(),
+                  mask_bytes_)) {
+    LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << it->name
+               << ") has been overwritten.";
     return CNRT_RET_ERR_INVALID;
   }
 #ifdef GTEST_DEBUG_LOG
@@ -287,7 +316,8 @@ cnrtRet_t MLURuntime::deallocate(void *mlu_addr) {
   ret = cnrtFree(header);
   if (ret != CNRT_RET_SUCCESS) {
     LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
     return ret;
   }
 
@@ -323,12 +353,14 @@ void MLURuntime::rand_set_mask() {
       LOG(WARNING) << "env MLUOP_GTEST_SET_GDRAM only supports NAN or INF"
                    << ", now it is set " << user_mask_value;
     }
-    std::fill(mask_start, mask_start + (mask_bytes_ / sizeof(float)), mask_value);
+    std::fill(mask_start, mask_start + (mask_bytes_ / sizeof(float)),
+              mask_value);
   };
   set_mask((float *)footer_mask_.get());
   set_mask((float *)header_mask_.get());
 #ifdef GTEST_DEBUG_LOG
-  VLOG(4) << "MLURuntime: set " << mask_value << " before and after input/output gdram.";
+  VLOG(4) << "MLURuntime: set " << mask_value
+          << " before and after input/output gdram.";
 #endif
 }
 

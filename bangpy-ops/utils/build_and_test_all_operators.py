@@ -1,4 +1,4 @@
-# Copyright (C) [2021] by Cambricon, Inc.
+# Copyright (C) [2022] by Cambricon, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
@@ -21,21 +21,14 @@
 # pylint: disable=missing-docstring, too-many-locals, missing-function-docstring
 import os
 import sys
+from test import test_op
 import pytest
 
 
 build_entrys = []
 test_entrys = []
 test_files = []
-
-
-def is_build_func(name, obj):
-    return callable(obj) and name.startswith("build")
-
-
-def is_test_func(name, obj):
-    return callable(obj) and name.startswith("test")
-
+pb_test_op = ["add", "logaddexp2", "kldivloss", "cross", "hard_sigmoid", "cosine_embedding_loss"]
 
 def collect_build_test_funcs(op, cur_file_name):
     dicts = [getattr(op, "__dict__", {})]
@@ -43,7 +36,7 @@ def collect_build_test_funcs(op, cur_file_name):
 
     for dic in dicts:
         for name, obj in list(dic.items()):
-            if is_build_func(name, obj):
+            if callable(obj) and name.startswith("build"):
                 if dicts[0][name].__qualname__.find("register_mlu_op") != 0:
                     raise TypeError(
                         "Please use 'register_mlu_op' to decorate your build function in '%s.py'."
@@ -51,7 +44,7 @@ def collect_build_test_funcs(op, cur_file_name):
                     )
                 build_entrys.append(obj)
                 build_exist = 1
-            if is_test_func(name, obj):
+            if callable(obj) and name.startswith("test"):
                 test_entrys.append(obj)
                 if test_files.count(cur_file_name) == 0:
                     test_files.append(cur_file_name)
@@ -66,15 +59,19 @@ def build_all_op():
         obj(None, None)
 
 
-def test_all_op(target):
+def test_all_op(target, opname, cases_dir):
     print("======================")
     print("Test all operators...")
-    # for obj in test_entrys:
-    #     obj()
-    if target is not None:
-        pytest.main(["-s", "--target=" + target, *test_files])
+    flag = False
+    if opname in ["add"]:
+        test_op(target, opname, cases_dir)
     else:
-        pytest.main(["-s", *test_files])
+        flag = True
+        if target is not None:
+            pytest.main(["-s", "-x", "--target=" + target, *test_files])
+        else:
+            pytest.main(["-s", "-x", *test_files])
+    return flag
 
 
 def main():
@@ -83,6 +80,7 @@ def main():
     build_enable = True
     test_enable = True
     target = None
+    cases_dir = None
     oper_idx = 1
     if len(sys.argv) == 1:
         raise ValueError("Please input operators list.")
@@ -95,9 +93,10 @@ def main():
         for arg in sys.argv[2:]:
             if arg.find("--target=") != -1:
                 target = arg[arg.find("--target=") + len("--target=") :]
+            if arg.find("--cases_dir=") != -1:
+                cases_dir = arg[arg.find("--cases_dir=") + len("--cases_dir=") :]
     if len(sys.argv) == 2 and oper_idx != 1:
         raise ValueError("Please input operators list.")
-
     operator_lists = sys.argv[oper_idx].split(",")
     operator_lists = [i for i in operator_lists if i != ""]
     cur_work_path = ops_path
@@ -128,19 +127,25 @@ def main():
         for k, v in operator_statuts.items():
             if not v & 1:
                 print(
-                    "Build Warning: Operator %s was skipped, please check whether\
-                     there is a function start with 'build' prefix in the operator."
-                    % (k)
+                    "Build Warning: Operator %s was skipped, please check whether"% (k)+
+                    " there is a function start with 'build' prefix in the operator."
                 )
     if test_enable:
-        test_all_op(target)
+        print("======================")
+        print("Test all operators with pb case...")
+        for op_name in operator_lists:
+            if op_name in pb_test_op:
+                test_op(target, op_name, cases_dir)
+        flag = False
+        if len(test_files) != 0:
+            flag = test_all_op(target, "", cases_dir)
         for k, v in operator_statuts.items():
-            if not v & 2:
-                print(
-                    "Test Warning: Operator %s was skipped, please check whether\
-                     there is a function start with 'test' prefix in the operator."
-                    % (k)
-                )
+            if k not in pb_test_op:
+                if not v & 2 and flag is True:
+                    print(
+                        "Test Warning: Operator %s was skipped, please check whether"% (k) +
+                        " there is a function start with 'test' prefix in the operator."
+                    )
 
 
 if __name__ == "__main__":

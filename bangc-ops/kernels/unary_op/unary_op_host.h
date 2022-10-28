@@ -23,7 +23,8 @@
 #ifndef KERNELS_UNARY_OP_UNARY_OP_HOST_H_
 #define KERNELS_UNARY_OP_UNARY_OP_HOST_H_
 #include <string>
-#include "core/mlu_op_core.h"
+
+#include "mlu_op.h"
 
 void unaryOpPolicyFunc(const mluOpHandle_t &handle,
                        const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,

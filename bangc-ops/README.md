@@ -1,6 +1,6 @@
 # Cambricon BANGC operators
 
-提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）开发高性能算子、C 接口封装的示例代码。
+提供基于寒武纪人工智能单元（MLU）开发高性能算子、C 接口封装的示例代码。
 
 ## 编译 BANGC operators
 - 环境依赖准备
@@ -32,7 +32,7 @@ cd bangc-ops/build/test/
 
 ## 新算子开发流程
 
-详情可以参考文档 [BANGC-OPS 算子开发流程.md](../docs/bangc-docs/BANGC-OPS算子开发流程.md)以及 docs 目录下的其它补充说明。
+详情可以参考文档 [BANGC-OPS 算子开发流程.md](../docs/bangc-docs/BANGC-OPS-Operator-Development-Process.md)以及 docs 目录下的其它补充说明。
 
 1. 在`mlu-ops/bangc-ops/kernels/`路径下，创建算子文件夹，添加算子实现，可以参考现有的 abs 算子进行添加。
 2. 在`mlu-ops/bangc-ops/test/mlu_op_gtest/src/zoo`创建算子文件夹，添加测试代码。

@@ -34,13 +34,14 @@ usage () {
     echo "      --target=*                     Test mlu target:[mlu270, mlu370-s4, mlu220-m2, mlu290]"
     echo "      --opsfile=*                    Operators list file"
     echo "      --only_test                    Test without build"
+    echo "      --cases_dir=*                  Test with prototxt cases"
 
     echo
 }
 
 TEST_ARGS="$*"
 BUILD_ENABLE="True"
-cmdline_args=$(getopt -o h,r,t --long filter:,release,test,target:,only_test,opsfile: -n 'test_operators.sh' -- "$@")
+cmdline_args=$(getopt -o h,r,t --long filter:,release,test,target:,cases_dir:,only_test,opsfile: -n 'test_operators.sh' -- "$@")
 eval set -- "$cmdline_args"
 if [ $? != 0 ]; then echo "Unknown options, use -h or --help" >&2 ; exit -1; fi
 if [ $# != 0 ]; then
@@ -69,6 +70,11 @@ if [ $# != 0 ]; then
           ;;
       --only_test)
           BUILD_ENABLE="False"
+          shift
+          ;;
+      --cases_dir)
+          shift
+          BANGPY_TEST_CASES=$1
           shift
           ;;
       -r | --release)
@@ -146,9 +152,9 @@ export LD_LIBRARY_PATH=${BUILD_OUT_DIR}:${LD_LIBRARY_PATH}
 
 # Test
 if [ -z ${MLU_TARGET} ]; then
-    python3 ${BANGPY_UTILS_PATH}"build_and_test_all_operators.py" -t ${BANGPY_BUILD_OP_DIR_STRIG}
+    python3 ${BANGPY_UTILS_PATH}"build_and_test_all_operators.py" -t ${BANGPY_BUILD_OP_DIR_STRIG} "--cases_dir"=${BANGPY_TEST_CASES}
 else
-    python3 ${BANGPY_UTILS_PATH}"build_and_test_all_operators.py" -t ${BANGPY_BUILD_OP_DIR_STRIG} "--target="${MLU_TARGET}
+    python3 ${BANGPY_UTILS_PATH}"build_and_test_all_operators.py" -t ${BANGPY_BUILD_OP_DIR_STRIG} "--target="${MLU_TARGET} "--cases_dir"=${BANGPY_TEST_CASES}
 fi
 if [ -n "${BANGPY_BUILD_OP_DIR_LIST}" ]; then
     for i in $(find ${OPS_DIR} -maxdepth 1 -name "\.pytest_cache")

@@ -8,13 +8,13 @@
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
 #
-# The above copyright notice and this permission notice shall self.tcp included
+# The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -24,14 +24,12 @@
 """Non-maximum suppression operator implementation using BANGPy TCP API."""
 import bangpy as bp
 from bangpy import tcp
-from bangpy.tcp.runtime import TaskType
-from bangpy.tcp.util import round_up, round_down
+from bangpy.script import build_module, ty
 
 
 TARGET_LIST = ["mlu370-s4", "mlu220-m2", "mlu270", "mlu290"]
 KERNEL_NAME = "nms"
-DTYPES = [bp.float16]
-NMS_SIZE = 64
+DTYPES = [bp.float32, bp.float16]
 
 
 class NMS(object):
@@ -47,426 +45,439 @@ class NMS(object):
         The name of operator.
     """
 
-    def __init__(
-        self, dtype=bp.float16, target="mlu270", task_type=TaskType.UNION1, name="nms"
-    ):
+    def __init__(self, dtype: ty.string) -> None:
         self.dtype = dtype
-        self.task_type = task_type
-        self.name = name
-        self.tcp = tcp.TCP(target)
-        self.num_boxes = self.tcp.SizeVar("num_boxes")
-        self.max_output_size = self.tcp.SizeVar("max_output_size")
-        self.iou_threshold = self.tcp.Var("iou_threshold", dtype=bp.float32)
-        self.score_threshold = self.tcp.Var("score_threshold", dtype=bp.float32)
         # To avoid copying multiple times, copy data 256 by 256
         self.gdram_save_count = 256
         self.buffer_segment = 11
+        self.NMS_SIZE = 64
 
-    def nms_compute_body(self, task_num):
-        """The main compute body of the nms operator."""
-        # SRAM buffer declaration
-        self.tcp.memcpy(self.input_score, self.gdram_score)
-        self.sram_buffer = self.tcp.Buffer(
-            shape=[(self.tcp.get_ram_size("sram") - 52 * 1024) // self.dtype.bytes],
-            dtype=self.dtype,
-            name="sram_buffer",
-            scope="sram",
+    def score_sort_each_loop(
+        self,
+        offset: ty.int32,
+        loop_extent: ty.int32,
+        alignment: ty.int32,
+        score_nram_buffer: ty.Buffer("nram"),  # type: ignore
+        comp_ret_buffer: ty.Buffer("nram"),  # type: ignore
+        max_box: ty.Buffer("nram"),  # type: ignore
+        int_ret_buffer: ty.Buffer("nram"),  # type: ignore
+    ):
+        tcp.assign(score_nram_buffer[:alignment], 0)
+        tcp.memcpy(
+            score_nram_buffer[:loop_extent],
+            self.input_score[offset : offset + loop_extent],
         )
-        self.sram_pos = self.tcp.Buffer(
-            shape=[64], dtype=bp.int32, name="sram_pos", scope="sram"
-        )
-        self.max_score = self.tcp.Buffer(
-            shape=[64], dtype=self.dtype, name="max_score", scope="nram"
-        )
-
-        # Calculate the maximum buffer size according to the buffer involved in nms's computation
-        nram_size_limit = (
-            self.tcp.get_ram_size("nram")
-            - 64 * 2 * self.dtype.bytes
-            - 52 * 1024
-            - self.max_output_size * 5 * self.dtype.bytes
-        ) / (self.buffer_segment * self.dtype.bytes)
-
-        self.max_seg_size = self.tcp.Scalar(
-            dtype=bp.int32,
-            name="max_seg_size",
-            value=round_down(nram_size_limit, NMS_SIZE),
-        )
-
-        # NRAM buffer declaration
-        buffer = self.tcp.Buffer(
-            shape=[(self.tcp.get_ram_size("nram") - 52 * 1024) // self.dtype.bytes],
-            dtype=self.dtype,
-            name="buffer",
-            scope="nram",
-        )
-        self.score = buffer[: self.max_seg_size]
-        self.x1 = buffer[self.max_seg_size : 2 * self.max_seg_size]
-        self.y1 = buffer[2 * self.max_seg_size : 3 * self.max_seg_size]
-        self.x2 = buffer[3 * self.max_seg_size : 4 * self.max_seg_size]
-        self.y2 = buffer[4 * self.max_seg_size : 5 * self.max_seg_size]
-        self.inter_x1 = buffer[5 * self.max_seg_size : 6 * self.max_seg_size]
-        self.inter_y1 = buffer[6 * self.max_seg_size : 7 * self.max_seg_size]
-        self.inter_x2 = buffer[7 * self.max_seg_size : 8 * self.max_seg_size]
-        self.inter_y2 = buffer[8 * self.max_seg_size : 9 * self.max_seg_size]
-        self.max_box = buffer[9 * self.max_seg_size : 10 * self.max_seg_size]
-        self.nram_save = buffer[10 * self.max_seg_size : 11 * self.max_seg_size]
-        self.max_pos = self.tcp.Buffer(
-            shape=[64], dtype=bp.int32, name="max_pos", scope="nram"
-        )
-
-        # Scalar declaration
-        self.output_box_num = self.tcp.Scalar(
-            dtype=bp.int32, name="output_box_num", value=0
-        )
-        self.nram_save_count = self.tcp.Scalar(
-            dtype=bp.int32, name="nram_save_count", value=0
-        )
-        self.save_time = self.tcp.Scalar(dtype=bp.int32, name="save_time", value=0)
-        self.zero_scalar = self.tcp.Scalar(
-            dtype=self.dtype, name="zero_scalar", value=0
-        )
-
-        core_num = self.tcp.Scalar(
-            dtype=bp.int32, name="core_num", value=self.num_boxes / task_num
-        )
-        len_remain = self.tcp.Scalar(
-            dtype=bp.int32, name="len_remain", value=self.num_boxes % task_num
-        )
-        input_offset = self.tcp.Scalar(
-            dtype=bp.int32, name="input_offset", value=self.tcp.taskId * core_num
-        )
-
-        with self.tcp.if_scope(len_remain > 0):
-            core_num += 1
-            with self.tcp.if_scope(self.tcp.taskId < len_remain):
-                input_offset += self.tcp.taskId
-            with self.tcp.else_scope():
-                input_offset += len_remain - 1
-
-        repeat = self.tcp.Scalar(
-            dtype=bp.int32, name="repeat", value=core_num / self.max_seg_size
-        )
-        remain = self.tcp.Scalar(
-            dtype=bp.int32, name="remain", value=core_num % self.max_seg_size
-        )
-        remain_pad = self.tcp.Scalar(
-            dtype=bp.int32, name="remain_pad", value=round_up(remain, NMS_SIZE)
-        )
-
-        with self.tcp.for_range(0, self.max_output_size) as _:
-            self.max_box[0] = self.zero_scalar
-            # Look for the max score and its corresponding index.
-            max_index = self.score_sort(input_offset, repeat, remain, remain_pad)
-
-            # the max box's x1, y1, x2, y2 on every core
-            self.tcp.memcpy(self.max_box[1], self.input_box[0, max_index])
-            self.tcp.memcpy(self.max_box[2], self.input_box[1, max_index])
-            self.tcp.memcpy(self.max_box[3], self.input_box[2, max_index])
-            self.tcp.memcpy(self.max_box[4], self.input_box[3, max_index])
-
-            if task_num == 1:
-                max_area = (self.max_box[3] - self.max_box[1]) * (
-                    self.max_box[4] - self.max_box[2]
-                )
-                self.input_score[max_index] = 0
-                global_max_index = max_index
-                self.max_score[0] = self.max_box[0]
-            else:
-                # The argmax of each core
-                self.max_pos[0] = max_index
-                # copy every core's box info to sram, form: score--x1---y1---x2---y2---
-                with self.tcp.for_range(0, 5) as i:
-                    idx = i * task_num + self.tcp.taskId
-                    self.tcp.memcpy(self.sram_buffer[idx], self.max_box[i])
-                # copy every core's max_index to sram, use 2 half to memcpy max_index
-                self.tcp.memcpy(self.sram_pos[self.tcp.taskId], self.max_pos[0])
-
-                # copy score from sram to nram and find the max
-                self.tcp.assign(self.inter_x1[:64], 0)
-                self.tcp.memcpy(self.inter_x1[:task_num], self.sram_buffer[:task_num])
-                self.tcp.amax(self.max_score, self.inter_x1[:64])
-
-                max_core = self.tcp.uint_reinterpret(self.max_score[1])
-
-                # copy the max box to max_box
-                self.max_box[0] = self.max_score[0]
-                self.tcp.memcpy(
-                    self.max_box[1], self.sram_buffer[1 * task_num + max_core]
-                )
-                self.tcp.memcpy(
-                    self.max_box[2], self.sram_buffer[2 * task_num + max_core]
-                )
-                self.tcp.memcpy(
-                    self.max_box[3], self.sram_buffer[3 * task_num + max_core]
-                )
-                self.tcp.memcpy(
-                    self.max_box[4], self.sram_buffer[4 * task_num + max_core]
-                )
-                max_area = (self.max_box[3] - self.max_box[1]) * (
-                    self.max_box[4] - self.max_box[2]
-                )
-
-                self.tcp.memcpy(self.max_pos[:task_num], self.sram_pos[:task_num])
-                global_max_index = self.max_pos[max_core]
-
-                self.input_score[global_max_index] = self.zero_scalar
-
-            # by now, we get: max_score|max_index|max_box|max_area
-            with self.tcp.if_scope(self.output_box_num != 0):
-                with self.tcp.if_scope(
-                    tcp.any(
-                        self.nram_save_count == self.gdram_save_count,
-                        self.max_score[0] <= self.score_threshold,
-                    )
-                ):
-                    with self.tcp.if_scope(self.tcp.taskId == task_num - 1):
-                        # score, x1, y1, x2, y2
-                        self.tcp.memcpy(
-                            self.output[
-                                self.save_time
-                                * self.nram_save_count : self.save_time
-                                * self.nram_save_count
-                                + self.gdram_save_count
-                            ],
-                            self.nram_save[: self.gdram_save_count * 5].reshape(
-                                [self.gdram_save_count, 5],
-                            )
-                        )
-                        self.save_time += 1
-                    self.nram_save_count.assign(0)
-
-            with self.tcp.if_scope(self.max_score[0] >= self.score_threshold):
-                # score, x1, y1, x2, y2
-                with self.tcp.if_scope(self.tcp.taskId == task_num - 1):
-                    idx = self.nram_save_count * 5
-                    self.tcp.memcpy(self.nram_save[idx : idx + 5], self.max_box[:5])
-
-                self.nram_save_count += 1
-                self.output_box_num += 1
-
-                with self.tcp.if_scope(self.output_box_num == self.max_output_size):
-                    with self.tcp.if_scope(self.tcp.taskId == task_num - 1):
-                        self.tcp.memcpy(
-                            self.output[
-                                self.save_time
-                                * self.gdram_save_count : self.save_time
-                                * self.gdram_save_count
-                                + self.nram_save_count
-                            ],
-                            self.nram_save[: self.nram_save_count * 5].reshape(
-                                [self.nram_save_count, 5]
-                            ),
-                        )
-
-                self.score_rewrite(max_area, input_offset, repeat, remain, remain_pad)
-
-        # Pad the output whose number is equal to the self.max_output_size
-        with self.tcp.if_scope(self.output_box_num < self.max_output_size):
-            with self.tcp.if_scope(self.tcp.taskId == task_num - 1):
-                self.tcp.assign(self.x1, 0)
-                self.tcp.memcpy(
-                    self.output[self.output_box_num : self.max_output_size],
-                    self.x1[: (self.max_output_size - self.output_box_num) * 5].reshape(
-                        [self.max_output_size - self.output_box_num, 5]
-                    ),
-                )
-
-    def nms_compute(self):
-        """The entry of the nms operator."""
-        self.gdram_score = self.tcp.Buffer(
-            shape=[self.num_boxes], dtype=self.dtype, name="gdram_score", scope="global"
-        )
-        self.input_score = self.tcp.Buffer(
-            shape=[self.num_boxes], dtype=self.dtype, name="input_score", scope="global"
-        )
-        self.input_box = self.tcp.Buffer(
-            shape=[4, self.num_boxes],
-            dtype=self.dtype,
-            name="input_box",
-            scope="global",
-        )
-        self.output = self.tcp.Buffer(
-            shape=[self.max_output_size, 5],
-            dtype=self.dtype,
-            name="output",
-            scope="global",
-        )
-
-        # pylint: disable=unexpected-keyword-arg
-        # disable cause: the for_range parameters of TCP and IRBuilder differ.
-        self.tcp.launch_cluster(self.task_type.value)
-        task_num = self.task_type.value * 4 if self.task_type.value != 0 else 1
-        self.tcp.launch_task(task_num, 1, 1)
-        self.nms_compute_body(task_num)
-
-        return self.tcp.BuildBANG(
-            inputs=[
-                self.gdram_score,
-                self.input_score,
-                self.input_box,
-                self.num_boxes,
-                self.max_output_size,
-                self.iou_threshold,
-                self.score_threshold,
-            ],
-            outputs=[self.output],
-            kernel_name=self.name,
-        )
-
-    def score_sort(self, input_offset, nms_loop, remain, remain_pad):
-        """Sort the boxes' score."""
-        with self.tcp.if_scope(nms_loop > 0):
-            with self.tcp.for_range(0, nms_loop) as i:
-                offset = i * self.max_seg_size
-                max_index = self.score_sort_each_loop(
-                    input_offset, offset, self.max_seg_size, self.max_seg_size
-                )
-
-        offset = nms_loop * self.max_seg_size
-        with self.tcp.if_scope(remain > 0):
-            max_index = self.score_sort_each_loop(
-                input_offset, offset, remain, remain_pad
-            )
-        return max_index
-
-    def score_sort_each_loop(self, input_offset, offset, loop_extent, alignmemt):
-        """Sort the boxes' score in each loop."""
-        self.tcp.assign(self.score[:alignmemt], 0)
-        idx = input_offset + offset
-        self.tcp.memcpy(
-            self.score[:loop_extent], self.input_score[idx : idx + loop_extent]
-        )
-        self.tcp.amax(self.inter_x1, self.score[:alignmemt])
-
-        with self.tcp.if_scope(self.inter_x1[0] > self.max_box[0]):
-            self.max_box[0] = self.inter_x1[0]
+        tcp.amax(comp_ret_buffer, score_nram_buffer[:alignment])
+        if comp_ret_buffer[0] > max_box[0]:
+            max_box[0] = comp_ret_buffer[0]
             # offset start from head of input data
-            max_index = idx + self.tcp.uint_reinterpret(self.inter_x1[1])
-        return max_index
+            int_ret_buffer[0] = offset + tcp.uint_reinterpret(comp_ret_buffer[1])
 
-    def score_rewrite(self, max_area, input_offset, nms_loop, remain, remain_pad):
-        """Rewrite the score of boxes."""
-        with self.tcp.if_scope(nms_loop > 0):
-            with self.tcp.for_range(0, nms_loop) as i:
-                offset = i * self.max_seg_size
-                self.score_rewrite_each_loop(
-                    max_area, input_offset, offset, self.max_seg_size, self.max_seg_size
+    def score_sort(
+        self,
+        input_offset: ty.int32,
+        repeat_loop: ty.int32,
+        remain: ty.int32,
+        remain_pad: ty.int32,
+        score_nram_buffer: ty.Buffer("nram"),  # type: ignore
+        comp_ret_buffer: ty.Buffer("nram"),  # type: ignore
+        max_box: ty.Buffer("nram"),  # type: ignore
+        max_seg_size: ty.int32,
+        int_ret_buffer: ty.Buffer("nram"),  # type: ignore
+    ):
+        if repeat_loop > 0:
+            for i in range(repeat_loop):
+                offset = i * max_seg_size + input_offset
+                self.score_sort_each_loop(
+                    offset,
+                    max_seg_size,
+                    max_seg_size,
+                    score_nram_buffer,
+                    comp_ret_buffer,
+                    max_box,
+                    int_ret_buffer,
                 )
 
-        offset = nms_loop * self.max_seg_size
-        with self.tcp.if_scope(remain > 0):
-            self.score_rewrite_each_loop(
-                max_area, input_offset, offset, remain, remain_pad
+        offset = repeat_loop * max_seg_size + input_offset
+        if remain > 0:
+            self.score_sort_each_loop(
+                offset,
+                remain,
+                remain_pad,
+                score_nram_buffer,
+                comp_ret_buffer,
+                max_box,
+                int_ret_buffer,
             )
 
     def score_rewrite_each_loop(
-        self, max_area, input_offset, offset, loop_extent, alignmemt
+        self,
+        max_area: ty.Buffer("nram"),  # type: ignore
+        offset: ty.int32,
+        loop_extent: ty.int32,
+        alignment: ty.int32,
+        iou_threshold: ty.float32,
+        score: ty.Buffer("nram"),  # type: ignore
+        max_box: ty.Buffer("nram"),  # type: ignore
     ):
-        """Rewrite the score of each loop."""
-        self.tcp.assign(self.score[:alignmemt], 0)
-        idx = input_offset + offset
-        self.tcp.memcpy(
-            self.score[:loop_extent], self.input_score[idx : idx + loop_extent]
+        tcp.assign(score[:alignment], 0)
+        tcp.memcpy(score[:loop_extent], self.input_score[offset : offset + loop_extent])
+        tcp.memcpy(
+            self.x1[:loop_extent], self.input_box[0, offset : offset + loop_extent]
         )
-        self.tcp.memcpy(
-            self.x1[:loop_extent], self.input_box[0, idx : idx + loop_extent]
+        tcp.memcpy(
+            self.y1[:loop_extent], self.input_box[1, offset : offset + loop_extent]
         )
-        self.tcp.memcpy(
-            self.y1[:loop_extent], self.input_box[1, idx : idx + loop_extent]
+        tcp.memcpy(
+            self.x2[:loop_extent], self.input_box[2, offset : offset + loop_extent]
         )
-        self.tcp.memcpy(
-            self.x2[:loop_extent], self.input_box[2, idx : idx + loop_extent]
-        )
-        self.tcp.memcpy(
-            self.y2[:loop_extent], self.input_box[3, idx : idx + loop_extent]
+        tcp.memcpy(
+            self.y2[:loop_extent], self.input_box[3, offset : offset + loop_extent]
         )
 
-        # 1、 compute IOU
-        # get the area_I
-        self.tcp.assign(self.inter_y1[:alignmemt], self.max_box[1])
-        self.tcp.maximum(
-            self.inter_x1[:alignmemt], self.x1[:alignmemt], self.inter_y1[:alignmemt]
+        tcp.assign(self.inter_y1[:alignment], max_box[1])
+        tcp.maximum(
+            self.inter_x1[:alignment], self.x1[:alignment], self.inter_y1[:alignment]
         )
-        self.tcp.assign(self.inter_y2[:alignmemt], self.max_box[3])
-        self.tcp.minimum(
-            self.inter_x2[:alignmemt], self.x2[:alignmemt], self.inter_y2[:alignmemt]
+        tcp.assign(self.inter_y2[:alignment], max_box[3])
+        tcp.minimum(
+            self.inter_x2[:alignment], self.x2[:alignment], self.inter_y2[:alignment]
         )
-        self.tcp.subtract(
-            self.inter_x1[:alignmemt],
-            self.inter_x2[:alignmemt],
-            self.inter_x1[:alignmemt],
+        tcp.subtract(
+            self.inter_x1[:alignment],
+            self.inter_x2[:alignment],
+            self.inter_x1[:alignment],
         )
-        self.tcp.relu(self.inter_x1[:alignmemt], self.inter_x1[:alignmemt])
-        self.tcp.assign(self.inter_x2[:alignmemt], self.max_box[2])
-        self.tcp.maximum(
-            self.inter_y1[:alignmemt], self.y1[:alignmemt], self.inter_x2[:alignmemt]
+        tcp.relu(self.inter_x1[:alignment], self.inter_x1[:alignment])
+        tcp.assign(self.inter_x2[:alignment], max_box[2])
+        tcp.maximum(
+            self.inter_y1[:alignment], self.y1[:alignment], self.inter_x2[:alignment]
         )
-        self.tcp.assign(self.inter_x2[:alignmemt], self.max_box[4])
-        self.tcp.minimum(
-            self.inter_y2[:alignmemt], self.y2[:alignmemt], self.inter_x2[:alignmemt]
+        tcp.assign(self.inter_x2[:alignment], max_box[4])
+        tcp.minimum(
+            self.inter_y2[:alignment], self.y2[:alignment], self.inter_x2[:alignment]
         )
-        self.tcp.subtract(
-            self.inter_y1[:alignmemt],
-            self.inter_y2[:alignmemt],
-            self.inter_y1[:alignmemt],
+        tcp.subtract(
+            self.inter_y1[:alignment],
+            self.inter_y2[:alignment],
+            self.inter_y1[:alignment],
         )
-        self.tcp.relu(self.inter_y1[:alignmemt], self.inter_y1[:alignmemt])
+        tcp.relu(self.inter_y1[:alignment], self.inter_y1[:alignment])
 
-        self.tcp.multiply(
-            self.inter_x1[:alignmemt],
-            self.inter_x1[:alignmemt],
-            self.inter_y1[:alignmemt],
+        tcp.multiply(
+            self.inter_x1[:alignment],
+            self.inter_x1[:alignment],
+            self.inter_y1[:alignment],
         )
-        # get the area of input_box: area = (self.x2 - self.x1) * (y2 - self.y1)
-        self.tcp.subtract(
-            self.inter_y1[:alignmemt], self.x2[:alignmemt], self.x1[:alignmemt]
+        # get the area of input_box: area = (x2 - x1) * (y2 - y1)
+        tcp.subtract(
+            self.inter_y1[:alignment], self.x2[:alignment], self.x1[:alignment]
         )
-        self.tcp.subtract(
-            self.inter_y2[:alignmemt], self.y2[:alignmemt], self.y1[:alignmemt]
+        tcp.subtract(
+            self.inter_y2[:alignment], self.y2[:alignment], self.y1[:alignment]
         )
-        self.tcp.multiply(
-            self.inter_x2[:alignmemt],
-            self.inter_y1[:alignmemt],
-            self.inter_y2[:alignmemt],
+        tcp.multiply(
+            self.inter_x2[:alignment],
+            self.inter_y1[:alignment],
+            self.inter_y2[:alignment],
         )
 
         # get the area_U: area + max_area - area_I
-        self.tcp.assign(self.inter_y1[:alignmemt], max_area)
-        self.tcp.add(
-            self.inter_x2[:alignmemt],
-            self.inter_x2[:alignmemt],
-            self.inter_y1[:alignmemt],
+        tcp.assign(self.inter_y1[:alignment], max_area)
+        tcp.add(
+            self.inter_x2[:alignment],
+            self.inter_x2[:alignment],
+            self.inter_y1[:alignment],
         )
-        self.tcp.subtract(
-            self.inter_x2[:alignmemt],
-            self.inter_x2[:alignmemt],
-            self.inter_x1[:alignmemt],
+        tcp.subtract(
+            self.inter_x2[:alignment],
+            self.inter_x2[:alignment],
+            self.inter_x1[:alignment],
         )
 
-        # 2、 select the box
+        # 2. select the box
         # if IOU greater than thres, set the score to zero, abort it: area_U * thresh > area_I?
-        self.tcp.multiply(
-            self.inter_x2[:alignmemt], self.inter_x2[:alignmemt], self.iou_threshold
+        tcp.multiply(
+            self.inter_x2[:alignment], self.inter_x2[:alignment], iou_threshold
         )
-        self.tcp.greater(
-            self.inter_x1[:alignmemt],
-            self.inter_x2[:alignmemt],
-            self.inter_x1[:alignmemt],
+        tcp.greater(
+            self.inter_x1[:alignment],
+            self.inter_x2[:alignment],
+            self.inter_x1[:alignment],
         )
-        self.tcp.multiply(
-            self.score[:alignmemt], self.score[:alignmemt], self.inter_x1[:alignmemt]
-        )
+        tcp.multiply(score[:alignment], score[:alignment], self.inter_x1[:alignment])
 
         # update the score
-        idx = input_offset + offset
-        self.tcp.memcpy(
-            self.input_score[idx : idx + loop_extent], self.score[:loop_extent]
+        tcp.memcpy(self.input_score[offset : offset + loop_extent], score[:loop_extent])
+
+    def score_rewrite(
+        self,
+        max_area: ty.Buffer("nram"),  # type: ignore
+        input_offset: ty.int32,
+        nms_loop: ty.int32,
+        remain: ty.int32,
+        remain_pad: ty.int32,
+        iou_threshold: ty.float32,
+        score: ty.Buffer("nram"),  # type: ignore
+        max_box: ty.Buffer("nram"),  # type: ignore
+        max_seg_size: ty.int32,
+    ):
+        if nms_loop > 0:
+            for i in range(nms_loop):
+                offset = i * max_seg_size + input_offset
+                self.score_rewrite_each_loop(
+                    max_area,
+                    offset,
+                    max_seg_size,
+                    max_seg_size,
+                    iou_threshold,
+                    score,
+                    max_box,
+                )
+
+        offset = nms_loop * max_seg_size + input_offset
+        if remain > 0:
+            self.score_rewrite_each_loop(
+                max_area,
+                offset,
+                remain,
+                remain_pad,
+                iou_threshold,
+                score,
+                max_box,
+            )
+
+    def nms_compute_body(
+        self,
+        total_box_num: ty.int32,
+        max_output_size: ty.int32,
+        iou_threshold: ty.float32,
+        score_threshold: ty.float32,
+        nram_size_limit: ty.int32,
+        task_id: ty.int32,
+        task_num: ty.int32,
+    ):
+        # SRAM buffer declaration
+        sram_pos = tcp.alloc_buffer(shape=[64], dtype="int32", scope="sram")
+
+        max_seg_size = tcp.round_down(nram_size_limit, self.NMS_SIZE)
+
+        score = self.nram_buffer[:max_seg_size]
+        self.x1 = self.nram_buffer[max_seg_size : 2 * max_seg_size]
+        self.y1 = self.nram_buffer[2 * max_seg_size : 3 * max_seg_size]
+        self.x2 = self.nram_buffer[3 * max_seg_size : 4 * max_seg_size]
+        self.y2 = self.nram_buffer[4 * max_seg_size : 5 * max_seg_size]
+        self.inter_x1 = self.nram_buffer[5 * max_seg_size : 6 * max_seg_size]
+        self.inter_y1 = self.nram_buffer[6 * max_seg_size : 7 * max_seg_size]
+        self.inter_x2 = self.nram_buffer[7 * max_seg_size : 8 * max_seg_size]
+        self.inter_y2 = self.nram_buffer[8 * max_seg_size : 9 * max_seg_size]
+        max_box = self.nram_buffer[9 * max_seg_size : 10 * max_seg_size]
+        nram_save = self.nram_buffer[10 * max_seg_size : 11 * max_seg_size]
+
+        max_pos = tcp.alloc_buffer(shape=[64], dtype="int32", scope="nram")
+        int_ret_buffer = tcp.alloc_buffer(shape=[1], dtype="int32", scope="nram")
+        com_res_buffer = tcp.alloc_buffer(shape=[2], dtype=self.dtype, scope="nram")
+
+        # Scalar declaration
+        output_box_num = 0
+        nram_save_count = 0
+
+        save_time = 0
+        batch_size = total_box_num / task_num
+        len_remain = total_box_num % task_num
+        input_offset = task_id * batch_size
+
+        if len_remain > 0:
+            batch_size += 1
+            input_offset = (
+                input_offset + task_id
+                if task_id < len_remain
+                else input_offset + len_remain - 1
+            )
+        repeat = batch_size / max_seg_size
+        remain = batch_size % max_seg_size
+        remain_pad = tcp.round_up(remain, self.NMS_SIZE)
+
+        # Worst case that all boxes are irrelevant but hold high score.
+        for _ in range(max_output_size):
+            max_box[0] = tcp.cast(0, self.dtype)
+            # Look for the max score and its corresponding index.
+            self.score_sort(
+                input_offset,
+                repeat,
+                remain,
+                remain_pad,
+                score,
+                self.inter_x1,
+                max_box,
+                max_seg_size,
+                int_ret_buffer,
+            )
+            max_index = int_ret_buffer[0]
+            # the max box's x1, y1, x2, y2 on every core
+            tcp.memcpy(max_box[1], self.input_box[0, max_index])
+            tcp.memcpy(max_box[2], self.input_box[1, max_index])
+            tcp.memcpy(max_box[3], self.input_box[2, max_index])
+            tcp.memcpy(max_box[4], self.input_box[3, max_index])
+
+            # The argmax of each core
+            max_pos[0] = max_index
+            # copy every core's box info to sram, form: score--x1---y1---x2---y2---
+            for i in range(5):
+                idx = i * task_num + task_id
+                tcp.memcpy(self.sram_buffer[idx], max_box[i])
+            # copy every core's max_index to sram, use 2 half to memcpy max_index
+            tcp.memcpy(sram_pos[task_id], max_pos[0])
+
+            # copy score from sram to nram and find the max
+            tcp.assign(self.inter_x1[:64], 0)
+            tcp.memcpy(self.inter_x1[:task_num], self.sram_buffer[:task_num])
+            tcp.amax(com_res_buffer, self.inter_x1[:64])
+            task_id_of_max_score = tcp.uint_reinterpret(com_res_buffer[1])
+
+            # copy the max_box info from sram to nram
+            max_box[0] = com_res_buffer[0]
+            tcp.memcpy(
+                max_box[1], self.sram_buffer[1 * task_num + task_id_of_max_score]
+            )
+            tcp.memcpy(
+                max_box[2], self.sram_buffer[2 * task_num + task_id_of_max_score]
+            )
+            tcp.memcpy(
+                max_box[3], self.sram_buffer[3 * task_num + task_id_of_max_score]
+            )
+            tcp.memcpy(
+                max_box[4], self.sram_buffer[4 * task_num + task_id_of_max_score]
+            )
+            max_area = (max_box[3] - max_box[1]) * (max_box[4] - max_box[2])
+
+            tcp.memcpy(max_pos[:task_num], sram_pos[:task_num])
+            global_max_index = max_pos[task_id_of_max_score]
+
+            self.input_score[global_max_index] = tcp.cast(0, self.dtype)
+
+            # by now, we get: max_score|max_index|max_box|max_area
+            if output_box_num != 0:
+                if nram_save_count == self.gdram_save_count or max_box[0] <= tcp.cast(
+                    score_threshold, self.dtype
+                ):
+                    if task_id == task_num - 1:
+                        # score, x1, y1, x2, y2
+                        tcp.memcpy(
+                            self.output[
+                                save_time
+                                * nram_save_count : save_time
+                                * nram_save_count
+                                + self.gdram_save_count
+                            ].reshape((self.gdram_save_count * 5,)),
+                            nram_save[: self.gdram_save_count * 5],
+                        )
+                        save_time += 1
+                    # TODO((BANGPy-Team)): break not support.
+                    # if max_box[0] <= score_threshold:
+                    #     break;
+                    nram_save_count = 0
+
+            if max_box[0] >= tcp.cast(score_threshold, self.dtype):
+                # score, x1, y1, x2, y2
+                if task_id == task_num - 1:
+                    idx = nram_save_count * 5
+                    tcp.memcpy(nram_save[idx : idx + 5], max_box[:5])
+
+                nram_save_count += 1
+                output_box_num += 1
+
+                if output_box_num == max_output_size:
+                    if task_id == task_num - 1:
+                        tcp.memcpy(
+                            self.output[
+                                save_time
+                                * self.gdram_save_count : save_time
+                                * self.gdram_save_count
+                                + nram_save_count
+                            ].reshape((nram_save_count * 5,)),
+                            nram_save[: nram_save_count * 5],
+                        )
+
+                self.score_rewrite(
+                    max_area,
+                    input_offset,
+                    repeat,
+                    remain,
+                    remain_pad,
+                    iou_threshold,
+                    score,
+                    max_box,
+                    max_seg_size,
+                )
+
+            # Read after write, sync cluster here.
+            tcp.sync_cluster()
+
+        # Pad the output whose number is equal to the self.max_output_size
+        if output_box_num < max_output_size:
+            if task_id == task_num - 1:
+                tcp.assign(self.x1, 0)
+                tcp.memcpy(
+                    self.output[output_box_num:max_output_size].reshape(
+                        ((max_output_size - output_box_num) * 5),
+                    ),
+                    self.x1[: 5 * (max_output_size - output_box_num)],
+                )
+
+    def main(
+        self,
+        input_score: ty.handle,
+        gdram_score: ty.handle,
+        input_box: ty.handle,
+        output: ty.handle,
+        total_box_num: ty.int32,
+        max_output_size: ty.int32,
+        iou_threshold: ty.float32,
+        score_threshold: ty.float32,
+    ) -> None:
+        self.gdram_score = tcp.match_buffer(
+            gdram_score, [total_box_num], dtype=self.dtype
         )
+        self.input_score = tcp.match_buffer(
+            input_score, [total_box_num], dtype=self.dtype
+        )
+        self.input_box = tcp.match_buffer(
+            input_box, [4, total_box_num], dtype=self.dtype
+        )
+        self.output = tcp.match_buffer(output, [max_output_size, 5], dtype=self.dtype)
+
+        # pylint: disable=unexpected-keyword-arg
+        # disable cause: the for_range parameters of TCP and IRBuilder differ.
+        tgt = tcp.target()
+        for _ in tcp.thread_binding(0, 1, thread="blockIdx.x"):
+            for i in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
+                self.sram_buffer = tcp.alloc_buffer(
+                    shape=[(tgt.sram_size - 52 * 1024) // 4],
+                    dtype=self.dtype,
+                    scope="sram",
+                )
+                nram_size_limit = (
+                    tgt.nram_size - 64 * 2 * 4 - 52 * 1024 - max_output_size * 5 * 4
+                ) / (self.buffer_segment * 4)
+                self.nram_buffer = tcp.alloc_buffer(
+                    shape=[(tgt.nram_size - 52 * 1024) // 4],
+                    dtype=self.dtype,
+                    scope="nram",
+                )
+                tcp.memcpy(self.input_score, self.gdram_score)
+                self.nms_compute_body(
+                    total_box_num,
+                    max_output_size,
+                    iou_threshold,
+                    score_threshold,
+                    nram_size_limit,
+                    i,
+                    tgt.core_num,
+                )
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_nms(dtype=None, target=None):
-    task_type = TaskType.UNION1
-    op_mod = NMS(dtype=dtype, target=target, task_type=task_type).nms_compute()
+    op_mod = build_module.build(NMS(dtype.name), target, KERNEL_NAME)
     return op_mod
