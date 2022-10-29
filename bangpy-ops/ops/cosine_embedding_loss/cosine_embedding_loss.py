@@ -46,12 +46,11 @@ class CosineEmbeddingLoss(object):
     output: (N), if reduction, then scalar
     """
 
-    def __init__(self, dtype: ty.string, pipeline: ty.boolean, arch: ty.string) -> None:
+    def __init__(self, dtype: ty.string, pipeline: ty.boolean) -> None:
         # Initialize attributes.
         self.dtype = dtype
         self.dtype_size = DType(dtype).bytes
         self.pipeline = pipeline
-        self.arch = arch
 
     # Sum function.
     def compute_sum_batch_0(
@@ -147,12 +146,8 @@ class CosineEmbeddingLoss(object):
         """
         Transform the original scalar compute into vector compute.
         """
-        if self.arch >= "mlu3":
-            tcp.maximum(v_1, v_1, 0.004)
-            tcp.maximum(v_2, v_2, 0.004)
-        else:
-            tcp.assign(tmp, 0.004)
-            tcp.maximum(v_2, v_2, tmp)
+        tcp.maximum(v_1, v_1, 0.004)
+        tcp.maximum(v_2, v_2, 0.004)
         tcp.reciprocal(v_1, v_1)
         tcp.multiply(v_1, v_0, v_1)
         tcp.reciprocal(v_2, v_2)
@@ -176,11 +171,7 @@ class CosineEmbeddingLoss(object):
         # 1 - v_3
         # max(v_1 * v_2, 0)
 
-        if self.arch >= "mlu3":
-            tcp.maximum(v_1, v_2, 0)
-        else:
-            tcp.assign(tmp, 0)
-            tcp.maximum(v_1, v_2, tmp)
+        tcp.maximum(v_1, v_2, 0)
         tcp.equal(v_2, v_3, -1.0)
         # (1 - v_3) * max(v_1 * v_2, 0)
         tcp.multiply(v_1, v_1, v_3)
@@ -705,7 +696,7 @@ class CosineEmbeddingLoss(object):
 def build_cosine_embedding_loss(dtype=None, target=None):
     pipeline = True
     op_mod = build_module.build(
-        CosineEmbeddingLoss(dtype.name, pipeline, target),
+        CosineEmbeddingLoss(dtype.name, pipeline),
         target_tag=target,
         name=KERNEL_NAME,
     )
