@@ -36,7 +36,7 @@ usage () {
     echo
 }
 
-cmdline_args=$(getopt -o h,r,t --long filter:,release,test,target:,opsfile: -n 'build_operators.sh' -- "$@")
+cmdline_args=$(getopt -o h,r,t --long filter:,release,test,target:,cases_dir:,opsfile: -n 'build_operators.sh' -- "$@")
 eval set -- "$cmdline_args"
 if [ $? != 0 ]; then echo "Unknown options, use -h or --help" >&2 ; exit -1; fi
 if [ $# != 0 ]; then
@@ -60,6 +60,11 @@ if [ $# != 0 ]; then
               exit -1
           fi
           echo "-- Build libmluops.so with operators in file \"${BANGPY_OP_FILE}\"."
+          shift
+          ;;
+      --cases_dir)
+          shift
+          BANGPY_TEST_CASES=$1
           shift
           ;;
       -r | --release)

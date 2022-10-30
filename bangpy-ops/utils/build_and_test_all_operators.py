@@ -28,7 +28,18 @@ import pytest
 build_entrys = []
 test_entrys = []
 test_files = []
-pb_test_op = ["add", "logaddexp2", "kldivloss", "cross", "hard_sigmoid", "cosine_embedding_loss"]
+pb_test_op = [
+    "add",
+    "logaddexp2",
+    "kldivloss",
+    "cross",
+    "hard_sigmoid",
+    "cosine_embedding_loss",
+    "lerp",
+    "frac",
+    "hardshrink",
+]
+
 
 def collect_build_test_funcs(op, cur_file_name):
     dicts = [getattr(op, "__dict__", {})]
@@ -127,8 +138,8 @@ def main():
         for k, v in operator_statuts.items():
             if not v & 1:
                 print(
-                    "Build Warning: Operator %s was skipped, please check whether"% (k)+
-                    " there is a function start with 'build' prefix in the operator."
+                    "Build Warning: Operator %s was skipped, please check whether" % (k)
+                    + " there is a function start with 'build' prefix in the operator."
                 )
     if test_enable:
         print("======================")
@@ -143,8 +154,9 @@ def main():
             if k not in pb_test_op:
                 if not v & 2 and flag is True:
                     print(
-                        "Test Warning: Operator %s was skipped, please check whether"% (k) +
-                        " there is a function start with 'test' prefix in the operator."
+                        "Test Warning: Operator %s was skipped, please check whether"
+                        % (k)
+                        + " there is a function start with 'test' prefix in the operator."
                     )
 
 
