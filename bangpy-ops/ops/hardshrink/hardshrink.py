@@ -227,7 +227,7 @@ class HardShrink(object):
         self.core_num = tgt.core_num
         self.base_align = 64
         dtype_bytes = 2 if self.dtype == "float16" else 4
-        self.nram_use_size = tcp.round_up(self.nram_size // (8 * dtype_bytes), self.base_align)
+        self.nram_use_size = tcp.round_up(self.nram_size // (16 * dtype_bytes), self.base_align)
 
         self.tensor_input = tcp.match_buffer(
             data_in_dev, self.tensor_shape, dtype=self.dtype
