@@ -238,7 +238,7 @@ class Lerp(object):
         self.nram_size = tgt.nram_size
         self.core_num = tgt.core_num
         self.base_align = 64
-        self.nram_use_size = tcp.round_up(tgt.nram_size // 26, self.base_align)
+        self.nram_use_size = tcp.round_up(tgt.nram_size // 16, self.base_align)
 
         self.tensor_input_start = tcp.match_buffer(
             data_in_start_dev, self.tensor_shape, dtype=self.dtype
