@@ -28,7 +28,7 @@ from bangpy.script import build_module, ty
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu290", "mlu370-s4"]
+TARGET_LIST = ["mlu290", "mlu270", "mlu370-s4", "mlu370-m8"]
 KERNEL_NAME = "hardshrink"
 
 
