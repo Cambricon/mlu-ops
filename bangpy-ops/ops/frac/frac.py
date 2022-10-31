@@ -245,9 +245,8 @@ class Frac(object):
                         )
 
                 if data_remain != 0:
-                    if task_id == self.task_num - 1:
-                        start = task_id * data_calculated_each_task + data_calculated_each_task
-                        stop = start + data_remain
+                    start = task_id * data_calculated_each_task + data_calculated_each_task
+                    stop = start + data_remain
                     tcp.assign(buffer_in_n, 0)
                     tcp.assign(buffer_out_n, 0)
                     tcp.memcpy(buffer_in_n[0:data_remain], buffer_in[start:stop])
