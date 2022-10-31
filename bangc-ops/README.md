@@ -69,7 +69,7 @@
   | `NEUWARE_HOME`              | 用户声明，或`source ../env.sh`设置 | neuware路径，包含cnrt,cndrv                            | `NEUWARE_HOME`              |                                      |
   | `MLUOP_BUILD_COVERAGE_TEST` | OFF                                | 代码覆盖率测试                                         | `MLUOP_BUILD_COVERAGE_TEST` | -c<br />--coverage                   |
   | `MLUOP_BUILD_ASAN_CHECK`    | OFF                                | 开启ASAN内存检查工具                                   | `MLUOP_BUILD_ASAN_CHECK`    | --asan                               |
-  | `MLUOP_MLU_ARCH_LIST`       | `mtp_270/mtp_290/mtp_370`          | 目标mlu架构列表，分号分割的字符串，如"mtp_270;mtp_370" | `MLUOP_MLU_ARCH_LIST`       | --mlu270<br />--mlu290<br />--mlu370 |
+  | `MLUOP_MLU_ARCH_LIST`       | `mtp_270/mtp_290/mtp_372`          | 目标mlu架构列表，分号分割的字符串，如"mtp_270;mtp_372" | `MLUOP_MLU_ARCH_LIST`       | --mlu270<br />--mlu290<br />--mlu370 |
   | `MLUOP_BUILD_SPECIFIC_OP`   | 空                                 | 编译指定的算子                                         | `MLUOP_BUILD_SPECIFIC_OP`   | --filter                             |
 
   
