@@ -1148,7 +1148,8 @@ mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t des
  *  @par Example
  *  - None.
  */
- mluOpStatus_t MLUOP_WIN_API mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
+mluOpStatus_t MLUOP_WIN_API mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
+
 // Group:Tensor
 /*!
  *  @brief Destroys a group of tensor descriptors that was created by
@@ -2009,7 +2010,7 @@ mluOpPriorBox(
   const void *variances, const mluOpTensorDescriptor_t max_sizes_desc,
   const void *max_sizes, const int height, const int width,
   const int im_height, const int im_width, const float step_h,
-  const float step_w,const float offset, const bool clip,
+  const float step_w, const float offset, const bool clip,
   const bool min_max_aspect_ratios_order,
   const mluOpTensorDescriptor_t output_desc, void *output,
   const mluOpTensorDescriptor_t var_desc, void *var);

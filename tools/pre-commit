@@ -4,16 +4,13 @@ bangc_ops="bangc-ops"
 check_list=${bangc_ops}
 
 bangc_mlu_op_h="bangc-ops/mlu_op.h"
-exclude_list=${bangc_mlu_op_h}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
-    | grep -v ${exclude_list} \
     | grep -E ${check_list})
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -v ${exclude_list} \
     | grep -E ${check_list})
 fi
 
@@ -26,10 +23,17 @@ fi
 
 echo "-- [pre-commit] Using cpplint to check patch by .git/hooks/pre-commit..."
 for i in ${filenames} ; do
-  cpplint $i 2>&1 \
-    | grep -v Ignoring \
-    | grep -v "Total errors" \
-    | grep -v "Done processing"
+  if [[ $i == *$bangc_mlu_op_h ]]; then
+    cpplint --linelength=200 $i 2>&1 \
+      | grep -v Ignoring \
+      | grep -v "Total errors" \
+      | grep -v "Done processing"
+  else
+    cpplint --linelength=80 $i 2>&1 \
+      | grep -v Ignoring \
+      | grep -v "Total errors" \
+      | grep -v "Done processing"
+  fi
 
   if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     ret=1
