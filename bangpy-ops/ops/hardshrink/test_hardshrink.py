@@ -49,7 +49,7 @@ class Hardshrinkop(OpTest):
         data_out = self.output_tensor_list[0]
         data_in_dev = bangpy.Array(data_in, dev)
         data_out_dev = bangpy.Array(data_out, dev)
-        lambda_para = self.test_param_.get("op_param").get("lambda")
+        lambda_para = 0.5
         f_hardshrink = load_op_by_type("hardshrink", self.dtype.name)
 
         f_hardshrink(
