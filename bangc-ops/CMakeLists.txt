@@ -4,7 +4,7 @@ project(mluops VERSION ${BUILD_VERSION})
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/test")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -fPIC -std=c++11 -pthread -pipe")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wdeprecated-declarations -fPIC -std=c++11 -pthread -pipe")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
@@ -71,7 +71,7 @@ elseif (NOT BANG_CNCC_EXECUTABLE)
 endif()
 
 # setup cncc flags
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fPIC -Wall -Werror -std=c++11 -pthread")
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++11 -fPIC -pthread")
 if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
   message(STATUS "build debug version")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g3 -O0")
@@ -135,10 +135,10 @@ file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/
 bang_add_library(mluops SHARED ${core_src_files} ${src_files})
 target_link_libraries(mluops cnrt cndrv)
 target_link_libraries(mluops ${obj_files})
-set_target_properties(mluops PROPERTIES 
+set_target_properties(mluops PROPERTIES
   OUTPUT_NAME "mluops"
   PREFIX      "lib"
-  VERSION     "${BUILD_VERSION}" 
+  VERSION     "${BUILD_VERSION}"
   SOVERSION   "${MAJOR_VERSION}"
 )
 
