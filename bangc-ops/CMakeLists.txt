@@ -5,7 +5,6 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/test")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wdeprecated-declarations -fPIC -std=c++11 -pthread -pipe")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
 ################################################################################
@@ -75,10 +74,10 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall 
 if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
   message(STATUS "build debug version")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g3 -O0")
-  add_compile_options(-g)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
 elseif(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "release")
   message(STATUS "build release version")
-  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3 -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 
 if (NOT MLUOP_MLU_ARCH_LIST)

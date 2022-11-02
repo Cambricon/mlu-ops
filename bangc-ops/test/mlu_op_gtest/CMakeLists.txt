@@ -61,14 +61,13 @@ include_directories(${LIBXML2_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIR})
 
 
-if(${TARGET_CPU_ARCH} MATCHES "aarch64-linux-gnu")
+if(${MLUOPS_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
   # set(DEFAULT_PROTOBUF_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/lib/")
   # set(DEFAULT_LIBXML2_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/include/libxml2")
   # set(DEFAULT_LIBXML2_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/lib/")
 else()
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS} -mavx2")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -mavx2")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif()
 
 message("[MLUOP GTEST PROTOC]: ")
