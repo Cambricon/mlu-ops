@@ -28,7 +28,7 @@ from bangpy.platform.bang_config import TARGET
 from bangpy.script import build_module, ty
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu290", "mlu370-s4"]
+TARGET_LIST = ["mlu220-m2", "mlu270", "mlu290", "mlu370-s4"]
 KERNEL_NAME = "lerp"
 
 
