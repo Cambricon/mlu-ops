@@ -34,28 +34,28 @@ KERNEL_NAME = "pairwise_distance"
 @eg.module
 class PairwiseDistance(object):
     def calc_core_process_count(self, data_total_len: ty.int32, task_num: ty.int32, task_id: ty.int32):
-        one_core_count = 0
-        remain = 0
-        
         one_core_count = data_total_len // task_num
         remain = data_total_len % task_num
-
-        tcp.print("task id : ", task_id)
+        m_current_core_start = 0
+        m_current_core_end = 0
+        m_total_count_in_core = 0
+        # tcp.print("task id : ", task_id)
         if task_id < remain:
-            self.m_current_core_start = (one_core_count + 1) * task_id
-            self.m_current_core_end = (one_core_count + 1) * (task_id + 1) - 1
-            self.m_total_count_in_core = self.m_current_core_end - self.m_current_core_start + 1
-            tcp.print("ooooooooo: ", self.m_total_count_in_core)            
+            m_current_core_start = (one_core_count + 1) * task_id
+            m_current_core_end = (one_core_count + 1) * (task_id + 1) - 1
+            m_total_count_in_core = m_current_core_end - m_current_core_start + 1
         else:
-            self.m_current_core_start = (one_core_count + 1) * \
+            m_current_core_start = (one_core_count + 1) * \
                 remain + one_core_count * (task_id - remain)
-            self.m_current_core_end = (one_core_count + 1) * remain + \
+            m_current_core_end = (one_core_count + 1) * remain + \
                 one_core_count * (task_id - remain) + one_core_count - 1
-            self.m_total_count_in_core = self.m_current_core_end - self.m_current_core_start + 1
-            tcp.print("*********: ", self.m_total_count_in_core)
+            m_total_count_in_core = m_current_core_end - m_current_core_start + 1
 
-        tcp.print("final ", self.m_total_count_in_core)
-        tcp.print("-------------------\n")
+        self.m_total_count_in_core = m_total_count_in_core
+        self.m_current_core_start = m_current_core_start
+        self.m_current_core_end = m_current_core_end
+
+
 
 
 
@@ -121,7 +121,7 @@ class PairwiseDistance(object):
                 task_id = tgt.core_num * cluster_id + core_id
                 #tcp.print(task_num, task_id)
                 self.calc_core_process_count(len_tensor1, task_num, task_id)
-                #self.sub_tensor()
+                tcp.print(self.m_total_count_in_core)
                 
 
 
