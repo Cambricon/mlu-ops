@@ -191,9 +191,10 @@ typedef enum {
   // RUNTIME_MLU100 = 100,
   RUNTIME_MLU220 = 220,
   RUNTIME_MLU270 = 270,
-  RUNTIME_MLU370 = 372,
   RUNTIME_MLU290 = 290,
   RUNTIME_CE3226 = 322,
+  RUNTIME_MLU370 = 372,
+  RUNTIME_MLU590 = 592,
 } RuntimeDevType_t;
 
 struct RuntimeDeviceName {
