@@ -27,7 +27,7 @@ from bangpy.script import ty, build_module
 from bangpy.platform.bang_config import TARGET
 
 DTYPES = [bangpy.float16, bangpy.float32]
-TARGET_LIST = ["mlu370-s4", "mlu290"]
+TARGET_LIST = ["mlu220-m2", "mlu270", "mlu290", "mlu370-s4"]
 KERNEL_NAME = "frac"
 
 
