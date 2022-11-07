@@ -32,12 +32,6 @@ import logging
 def create_random_shape(length, size):
     return np.random.randint(low=1, high=size, size=length)
 
-def __log(data):
-    fp = open("a.txt", "a")
-    print(data)
-    fp.write(data + '\n')
-    fp.close()
-
 ranshp = create_random_shape(2, 512)
 ranshp1 = create_random_shape(5, 3)
 ranshp2 = create_random_shape(10, 2)
@@ -153,7 +147,7 @@ def test_pairwise_distance(target, shape, dtype, p, eps, keepdim):
 
             eager_mode = True
             if not eager_mode:
-                func = load_op_by_type(KERNEL_NAME, dtype.name)
+                func = load_op_by_type(KERNEL_NAME, dtype.name, dtype.bytes)
                 func(_mlu_input1, _mlu_input2,
                      _mlu_paras,
                      get_total_size(_shape1), get_total_size(_shape2),
@@ -163,7 +157,7 @@ def test_pairwise_distance(target, shape, dtype, p, eps, keepdim):
                      , _mlu_output
                      )
             else:
-                func = PairwiseDistance(64, dtype.name)
+                func = PairwiseDistance(dtype.name, dtype.bytes)
                 func(a.flatten(), b.flatten(),
                      paras,
                      get_total_size(_shape1), get_total_size(_shape2),

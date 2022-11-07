@@ -33,45 +33,65 @@ KERNEL_NAME = "pairwise_distance"
 
 @eg.module
 class PairwiseDistance(object):
-    def init_data_man(self, bp):
-        self.bp = bp
-        self.m_current_core_start = 0
-        self.m_current_core_end = 0
-        self.m_total_count_in_core = 0
-
-    def calc_core_process_count(self, data_total_len, task_num, task_id):
+    def calc_core_process_count(self, data_total_len: ty.int32, task_num: ty.int32, task_id: ty.int32):
+        one_core_count = 0
+        remain = 0
+        
         one_core_count = data_total_len // task_num
         remain = data_total_len % task_num
 
-        # If remains exists, averagely assigning remains to cores.
-        # Small taskId cores will have high priority to be assigned.
+        tcp.print("task id : ", task_id)
         if task_id < remain:
             self.m_current_core_start = (one_core_count + 1) * task_id
-            self.m_current_core_start = (one_core_count + 1) * task_id
             self.m_current_core_end = (one_core_count + 1) * (task_id + 1) - 1
+            self.m_total_count_in_core = self.m_current_core_end - self.m_current_core_start + 1
+            tcp.print("ooooooooo: ", self.m_total_count_in_core)            
         else:
             self.m_current_core_start = (one_core_count + 1) * \
-                remain + one_core_count * (self.bp.taskId - remain)
+                remain + one_core_count * (task_id - remain)
             self.m_current_core_end = (one_core_count + 1) * remain + \
-                one_core_count * (self.bp.taskId - remain) + one_core_count - 1
+                one_core_count * (task_id - remain) + one_core_count - 1
+            self.m_total_count_in_core = self.m_current_core_end - self.m_current_core_start + 1
+            tcp.print("*********: ", self.m_total_count_in_core)
 
-        self.m_total_count_in_core = self.m_current_core_end - self.m_current_core_start + 1
+        tcp.print("final ", self.m_total_count_in_core)
+        tcp.print("-------------------\n")
+
+
+
+    def sub_tensor(self):
+        nram_available_size = tcp.round_down((self.bp.nram_size - 30 * 1024) // 2, 128)
+        nram_process_count = nram_available_size // self.dtype_size
+
+        nram_buffer_in = tcp.alloc_buffer(
+            shape=(2, nram_process_count),
+            dtype=self.dtype,
+            scope="nram")
+
+        nram_buffer_in0 = nram_buffer_in[0][:]
+        nram_buffer_in1 = nram_buffer_in[1][:]
+
+        total_count_in_core = self.m_total_count_in_core
+        calc_loop_count = (total_count_in_core + nram_process_count - 1) // nram_process_count
+
+        for i in range(calc_loop_count):
+            if i < calc_loop_count - 1:
+                calc_size = nram_process_count
+            else:
+                calc_size = total_count_in_core % nram_process_count
+                if calc_size == 0:
+                    calc_size = nram_process_count
+
+            once_loop_start = self.m_current_core_start + nram_process_count * i
+            tcp.print("loop start ", once_loop_start)
+
     
     """Operator description:
     Add the data in the two buffers.
     """
-    def __init__(self, buffer_size: ty.int32, dtype: ty.string) -> None:
+    def __init__(self, dtype: ty.string, dtype_size: ty.int32) -> None:
         self.dtype = dtype
-        self.single_buffer_size = buffer_size
-
-    def add_body(
-        self,
-        local_a: ty.Buffer("nram"),  # type: ignore
-        local_b: ty.Buffer("nram"),  # type: ignore
-        local_c: ty.Buffer("nram"),  # type: ignore
-    ) -> None:
-        # The body of add function
-        tcp.add(local_a, local_b, local_c)
+        self.dtype_size = dtype_size
 
     def main(self, Gram_tensor1: ty.handle, Gram_tensor2: ty.handle, Gram_paras: ty.handle,
                     len_tensor1: ty.int32, len_tensor2: ty.int32,
@@ -82,6 +102,8 @@ class PairwiseDistance(object):
                     Gram_buffer_out: ty.handle
                     ) -> None:
         tgt = tcp.target()
+        self.bp = tgt
+
 
 
         gram_tensor1 = tcp.match_buffer(Gram_tensor1, [len_tensor1], dtype=self.dtype)
@@ -92,21 +114,21 @@ class PairwiseDistance(object):
         gram_border_idx_out = tcp.match_buffer(Gram_border_idx_out, [256], dtype='int32')
         gram_buffer_out = tcp.match_buffer(Gram_buffer_out, [output_len], dtype=self.dtype)        
 
-
-        tcp.print(gram_tensor1)
         a = 0
         for cluster_id in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
-                #self.bp.print("zouni\n")
-                a += 1
-                tcp.print(cluster_id)
-                tcp.print(core_id)
+                task_num = tgt.cluster_num * tgt.core_num
+                task_id = tgt.core_num * cluster_id + core_id
+                #tcp.print(task_num, task_id)
+                self.calc_core_process_count(len_tensor1, task_num, task_id)
+                #self.sub_tensor()
+                
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
 def build_add(dtype=None, target=None):
     f = build_module.build(
-        PairwiseDistance(64, dtype.name), target_tag=target, name=KERNEL_NAME
+        PairwiseDistance(dtype.name, dtype.bytes), target_tag=target, name=KERNEL_NAME
     )
     return f
  
