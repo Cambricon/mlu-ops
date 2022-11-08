@@ -55,11 +55,7 @@ class PairwiseDistance(object):
         self.m_current_core_start = m_current_core_start
         self.m_current_core_end = m_current_core_end
 
-
-
-
-
-    def sub_tensor(self):
+    def sub_tensor(self, t1: ty.handle, t2: ty.handle, len_t2: ty.int32):
         nram_available_size = tcp.round_down((self.bp.nram_size - 30 * 1024) // 2, 128)
         nram_process_count = nram_available_size // self.dtype_size
 
@@ -83,7 +79,52 @@ class PairwiseDistance(object):
                     calc_size = nram_process_count
 
             once_loop_start = self.m_current_core_start + nram_process_count * i
-            tcp.print("loop start ", once_loop_start)
+            tcp.print("loop start ", self.m_current_core_start)
+
+            # tensor1 copy
+            tcp.memcpy(nram_buffer_in0[0:calc_size], t1[once_loop_start:once_loop_start + calc_size])
+
+            # tensor2 copy
+            head_offset = once_loop_start % len_t2
+            
+            head_len = 0
+            if head_offset == 0:
+                head_len = 0
+            else:
+                head_len = len_t2 - head_offset
+
+            if head_len >= calc_size:
+                tcp.memcpy(nram_buffer_in1[0:calc_size], t2[head_offset:head_offset + calc_size])
+            else:
+                if head_len > 0:
+                    tcp.memcpy(nram_buffer_in1[0:head_len], t2[head_offset:len_t2])
+
+                total_offset = head_len
+                body_cp_count = (calc_size - head_len) // len_t2
+
+                for _ in body_cp_count:
+                    tcp.memcpy(nram_buffer_in1[total_offset:total_offset + len_t2], t2[0:len_t2])
+                    total_offset = total_offset + len_t2
+
+                offset_end = (once_loop_start + calc_size) % len_t2
+
+                if offset_end > 0:
+                    tcp.memcpy(nram_buffer_in1[total_offset:total_offset + offset_end], t2[0:offset_end])
+
+
+            tcp.subtract(nram_buffer_in0, nram_buffer_in0, nram_buffer_in1)
+            tcp.abs(nram_buffer_in0, nram_buffer_in0)
+
+            # subtract eps
+            eps = -self.gram_paras[1]
+            tcp.add(nram_buffer_in0, nram_buffer_in0, eps)
+
+            tcp.log(nram_buffer_in0, nram_buffer_in0)
+            p = self.gram_paras[0]
+            tcp.multiply(nram_buffer_in0, nram_buffer_in0, p)
+            tcp.exp(nram_buffer_in0, nram_buffer_in0)
+
+            tcp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
 
     
     """Operator description:
@@ -108,7 +149,7 @@ class PairwiseDistance(object):
 
         gram_tensor1 = tcp.match_buffer(Gram_tensor1, [len_tensor1], dtype=self.dtype)
         gram_tensor2 = tcp.match_buffer(Gram_tensor2, [len_tensor2], dtype=self.dtype)
-        gram_paras = tcp.match_buffer(Gram_paras, [2], dtype=self.dtype)
+        self.gram_paras = tcp.match_buffer(Gram_paras, [2], dtype=self.dtype)
 
         gram_border_buf_out = tcp.match_buffer(Gram_border_buf_out, [256], dtype=self.dtype)
         gram_border_idx_out = tcp.match_buffer(Gram_border_idx_out, [256], dtype='int32')
@@ -121,6 +162,7 @@ class PairwiseDistance(object):
                 task_id = tgt.core_num * cluster_id + core_id
                 #tcp.print(task_num, task_id)
                 self.calc_core_process_count(len_tensor1, task_num, task_id)
+                self.sub_tensor(gram_tensor1, gram_tensor2, len_tensor2)
                 tcp.print(self.m_total_count_in_core)
                 
 
