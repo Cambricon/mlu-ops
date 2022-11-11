@@ -29,12 +29,23 @@
   ./build.sh --filter="abs;expand" # '--filter'参数后接要编译的算子，构建系统会根据'kernel_depends.toml'文件描述的依赖自动编译依赖的算子
   ```
 
-  算子名指的是`bangc-ops/kernels`目录下面的文件夹名。
+  当算子存在正反向时
+
+  ```sh
+  cd mlu-ops/bangc-ops
+  ./build.sh --filter="opname_forward"/"opname_backward"
+  ```
+  
+  算子名指的是`bangc-ops/kernels`目录下面的文件夹名, 对于存在正反向的算子，算子名字指的是`test/mlu_op_gtest/pb_gtest/src/zoo`目录下的算子名字。
 
   注意，该功能对算子开发者有一定要求：
 
-  - `kernels/`、`test/mlu_op_gtest/pb_gtest/src/zoo`、`test/mlu_op_gtest/api_gtest/src/gtest/`三个目录下的算子文件夹命名要完全一致
   - 相关算子依赖需要更新[kernel_depends.toml](./kernel_depends.toml)文件，请严格按照字母顺序添加
+  - 存在正反向的算子，需要在文件中，添加映射关系，以roi_crop算子为例:
+    ```sh
+    roi_crop_backward = ["roi_crop"]
+    roi_crop_forward = ["roi_crop"]
+    ```
 
 - 多MLU平台架构编译
 
