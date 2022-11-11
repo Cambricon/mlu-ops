@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
-MLUOPS_TARGET_CPU_ARCH=`uname -m`
+MLUOP_TARGET_CPU_ARCH=`uname -m`
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
 
@@ -167,7 +167,7 @@ prog_log_info "BUILD_MODE = ${BUILD_MODE}"
 prog_log_info "MLUOP_BUILD_COVERAGE_TEST = ${MLUOP_BUILD_COVERAGE_TEST}"
 prog_log_info "MLUOP_BUILD_ASAN_CHECK = ${MLUOP_BUILD_ASAN_CHECK}"
 prog_log_info "MLUOP_MLU_ARCH_LIST = ${MLUOP_MLU_ARCH_LIST}"
-prog_log_info "MLUOPS_TARGET_CPU_ARCH = ${MLUOPS_TARGET_CPU_ARCH}"
+prog_log_info "MLUOP_TARGET_CPU_ARCH = ${MLUOP_TARGET_CPU_ARCH}"
 #check compiler version and consider activate devtoolset for CentOS 7
 if [ "$OS_RELEASE_ID" = "centos" -a "$OS_RELEASE_VERSION_ID" = "7" ]; then
   if [ ! -f "/opt/rh/devtoolset-7/enable" ]; then
@@ -203,8 +203,8 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMAJOR_VERSION="${MAJOR_VERSION}" \
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
-                -DMLUOPS_TARGET_CPU_ARCH="${MLUOPS_TARGET_CPU_ARCH}" \
-                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" 
+                -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
+                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}"
 
 popd > /dev/null
 ${CMAKE} --build build --  -j
