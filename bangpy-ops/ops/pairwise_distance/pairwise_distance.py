@@ -55,8 +55,13 @@ class PairwiseDistance(object):
         self.m_current_core_start = m_current_core_start
         self.m_current_core_end = m_current_core_end
 
+    def calc_avaible_nram_count(self):
+        return tcp.round_down((self.bp.nram_size - 30 * 1024) // 2, 128)
+
     def sub_tensor(self, t1: ty.handle, t2: ty.handle, len_t2: ty.int32):
-        nram_available_size = tcp.round_down((self.bp.nram_size - 30 * 1024) // 2, 128)
+#        nram_available_size = tcp.round_down((self.bp.nram_size - 30 * 1024) // 2, 128)
+        nram_available_size = self.calc_avaible_nram_count()
+
         nram_process_count = nram_available_size // self.dtype_size
 
         nram_buffer_in = tcp.alloc_buffer(
@@ -64,13 +69,14 @@ class PairwiseDistance(object):
             dtype=self.dtype,
             scope="nram")
 
-        nram_buffer_in0 = nram_buffer_in[0][:]
-        nram_buffer_in1 = nram_buffer_in[1][:]
+        nram_buffer_in0 = nram_buffer_in[0]
+        nram_buffer_in1 = nram_buffer_in[1]
 
         total_count_in_core = self.m_total_count_in_core
         calc_loop_count = (total_count_in_core + nram_process_count - 1) // nram_process_count
 
         for i in range(calc_loop_count):
+            calc_size = 0
             if i < calc_loop_count - 1:
                 calc_size = nram_process_count
             else:
@@ -86,7 +92,7 @@ class PairwiseDistance(object):
 
             # tensor2 copy
             head_offset = once_loop_start % len_t2
-            
+
             head_len = 0
             if head_offset == 0:
                 head_len = 0
@@ -97,12 +103,12 @@ class PairwiseDistance(object):
                 tcp.memcpy(nram_buffer_in1[0:calc_size], t2[head_offset:head_offset + calc_size])
             else:
                 if head_len > 0:
-                    tcp.memcpy(nram_buffer_in1[0:head_len], t2[head_offset:len_t2])
+                    tcp.memcpy(nram_buffer_in1[0:len_t2 - head_offset], t2[head_offset:len_t2])
 
                 total_offset = head_len
                 body_cp_count = (calc_size - head_len) // len_t2
 
-                for _ in body_cp_count:
+                for i in range(body_cp_count):
                     tcp.memcpy(nram_buffer_in1[total_offset:total_offset + len_t2], t2[0:len_t2])
                     total_offset = total_offset + len_t2
 
@@ -126,7 +132,32 @@ class PairwiseDistance(object):
 
             tcp.memcpy(t1[once_loop_start:once_loop_start + calc_size], nram_buffer_in0[:calc_size])
 
-    
+    def copy_from_2d_tensor(self, dst: ty.handle, offset_dst: ty.int32, src: ty.handle, \
+        offset_src: ty.int32, dim_len: ty.int32, width: ty.int32, cp_len: ty.int32):
+        big_row = offset_src // (width * dim_len)
+        m = offset_src % dim_len + big_row * dim_len
+
+        big_n = offset_src % dim_len
+        n = big_n % width
+
+        if offset_dst != offset_dst + cp_len // 2:
+            tcp.memcpy(dst[offset_dst:offset_dst + cp_len // 2, 0:1], \
+                src[m:m + cp_len  // 2, n:n + 1])
+
+        if offset_dst + cp_len // 2 != offset_dst + cp_len:
+            tcp.memcpy(dst[offset_dst + cp_len // 2:offset_dst + cp_len, 0:1], \
+                src[m + cp_len // 2:m + cp_len, n:n + 1])
+
+    def calc_norm(self, buffer: ty.handle, start: ty.int32, end: ty.int32):
+        result = 0.0
+        size = end - start
+        for i in range(size):
+            result += buffer[start + i]
+        return result
+
+    def scalar_pow(self, value, p):
+        return ScalarAPI.scalar_pow(value, p)
+
     """Operator description:
     Add the data in the two buffers.
     """
@@ -134,28 +165,58 @@ class PairwiseDistance(object):
         self.dtype = dtype
         self.dtype_size = dtype_size
 
+    def calc_pairwise_distance1(self, gram_tensor: ty.handle, border_outputs: ty.handle, idx_outputs: ty.handle, outputs: ty.handle):
+        current_core_start = self.m_current_core_start
+        total_count_in_core = self.m_total_count_in_core
+        calc_loop_count = (total_count_in_core + self.nram_process_count - 1) // self.nram_process_count
+        norm_value = 0.0
+
+        once_loop_start = 0
+        oper_type = 0
+        pw = 1 / self.gram_paras[0]
+        dim_len = self.pd_len
+        norm_offset = current_core_start % dim_len
+
+        if norm_offset == 0:
+            oper_type = 2
+        else:
+            oper_type = 0
+
+        #flat_nram = self.nram_calc_buffer[:self.nram_process_count].reshape([self.nram_process_count, ])
+
+        
+
+    def calc_pairwise_distance2(self, gram_tensor: ty.handle, border_outputs: ty.handle, idx_outputs: ty.handle, outputs: ty.handle):
+        tcp.print("2 zouni")
+
+        current_core_start = self.m_current_core_start
+        total_count_in_core = self.m_total_count_in_core
+        dim_len = self.pd_len
+        norm_value = 0.0
+        pw = 1 / self.gram_paras[0]
+
+        return 11
+
     def main(self, Gram_tensor1: ty.handle, Gram_tensor2: ty.handle, Gram_paras: ty.handle,
                     len_tensor1: ty.int32, len_tensor2: ty.int32,
                     pd_len: ty.int32, pd_height: ty.int32, pd_width: ty.int32,
                     output_len: ty.int32,
-                    Gram_border_buf_out: ty.handle, 
-                    Gram_border_idx_out: ty.handle, 
+                    Gram_border_buf_out: ty.handle,
+                    Gram_border_idx_out: ty.handle,
                     Gram_buffer_out: ty.handle
                     ) -> None:
         tgt = tcp.target()
         self.bp = tgt
 
-
-
         gram_tensor1 = tcp.match_buffer(Gram_tensor1, [len_tensor1], dtype=self.dtype)
         gram_tensor2 = tcp.match_buffer(Gram_tensor2, [len_tensor2], dtype=self.dtype)
         self.gram_paras = tcp.match_buffer(Gram_paras, [2], dtype=self.dtype)
 
-        gram_border_buf_out = tcp.match_buffer(Gram_border_buf_out, [256], dtype=self.dtype)
-        gram_border_idx_out = tcp.match_buffer(Gram_border_idx_out, [256], dtype='int32')
-        gram_buffer_out = tcp.match_buffer(Gram_buffer_out, [output_len], dtype=self.dtype)        
+        border_array_size = 128
+        gram_border_buf_out = tcp.match_buffer(Gram_border_buf_out, [border_array_size * 2], dtype=self.dtype)
+        gram_border_idx_out = tcp.match_buffer(Gram_border_idx_out, [border_array_size * 2], dtype='int32')
+        gram_buffer_out = tcp.match_buffer(Gram_buffer_out, [output_len], dtype=self.dtype)
 
-        a = 0
         for cluster_id in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 task_num = tgt.cluster_num * tgt.core_num
@@ -163,8 +224,51 @@ class PairwiseDistance(object):
                 #tcp.print(task_num, task_id)
                 self.calc_core_process_count(len_tensor1, task_num, task_id)
                 self.sub_tensor(gram_tensor1, gram_tensor2, len_tensor2)
-                tcp.print(self.m_total_count_in_core)
-                
+                tcp.sync_cluster()
+
+
+                #if task_id == 0:
+                #    tcp.print(len_tensor1, pd_height, pd_width)
+                gram_reshape_tensor = gram_tensor1[:pd_height * pd_width].reshape([pd_height, pd_width])
+                    #gram_reshape_tensor = gram_tensor1[:len_tensor1].reshape([pd_height, pd_width])
+                tcp.sync_cluster()
+
+                nram_available_size = self.calc_avaible_nram_count()
+                self.nram_process_count = nram_available_size // self.dtype_size
+
+                self.nram_calc_buffer = tcp.alloc_buffer(
+                    shape=(self.nram_process_count, 1),
+                    dtype=self.dtype,
+                    scope="nram")
+
+                self.pd_len = pd_len
+
+                if self.pd_len > self.nram_process_count:
+                    self.calc_pairwise_distance1(gram_reshape_tensor, gram_border_buf_out, \
+                        gram_border_idx_out, gram_buffer_out)
+                else:
+                    if len_tensor1 // task_num + 1 < self.pd_len:
+                        self.calc_pairwise_distance1(gram_reshape_tensor, \
+                            gram_border_buf_out, gram_border_idx_out, gram_buffer_out)
+                    else:
+                        self.calc_pairwise_distance2(gram_reshape_tensor, gram_border_buf_out, \
+                            gram_border_idx_out, gram_buffer_out)
+
+                tcp.sync_cluster()
+
+                if task_id == 0:
+                    for i in range(border_array_size):
+                        index1 = gram_border_idx_out[2 * i]
+                        index2 = gram_border_idx_out[2 * i + 1]
+                        norm_value1 = gram_border_buf_out[2 * i]
+                        norm_value2 = gram_border_buf_out[2 * i + 1]
+
+                        if index1 >= 0:
+                            gram_buffer_out[index1] = gram_buffer_out[index1] + norm_value1
+
+                        if index2 >= 0:
+                            gram_buffer_out[index2] = gram_buffer_out[index2] + norm_value2
+
 
 
 @tcp.register_mlu_op(DTYPES, TARGET_LIST, KERNEL_NAME)
@@ -173,4 +277,4 @@ def build_add(dtype=None, target=None):
         PairwiseDistance(dtype.name, dtype.bytes), target_tag=target, name=KERNEL_NAME
     )
     return f
- 
+
