@@ -85,7 +85,6 @@ class PairwiseDistance(object):
                     calc_size = nram_process_count
 
             once_loop_start = self.m_current_core_start + nram_process_count * i
-            tcp.print("loop start ", self.m_current_core_start)
 
             # tensor1 copy
             tcp.memcpy(nram_buffer_in0[0:calc_size], t1[once_loop_start:once_loop_start + calc_size])
@@ -155,9 +154,6 @@ class PairwiseDistance(object):
             result += buffer[start + i]
         return result
 
-    #def scalar_pow(self, value: ty.float32, p: ty.float32):
-    #    return ScalarAPI.scalar_pow(value, p)
-
     """Operator description:
     Add the data in the two buffers.
     """
@@ -218,39 +214,40 @@ class PairwiseDistance(object):
                         border_outputs[self.taskId * 2 + 1] = norm_value
                         idx_outputs[self.taskId * 2 + 1] = index
             else:
-                    self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
-                        dim_len, self.pd_width, expect_cp_len)
-                    cp_data_len = cp_data_len + expect_cp_len
-                    seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
-                    norm_value = norm_value + seg_norm_value
+                self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, once_loop_start, \
+                    dim_len, self.pd_width, expect_cp_len)
+                cp_data_len = cp_data_len + expect_cp_len
+                seg_norm_value = self.calc_norm(flat_nram, 0, expect_cp_len)
 
-                    once_norm_ok = 1
-                    index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
-                    if cp_data_len < dim_len:
-                        border_outputs[self.taskId * 2] \
-                            = norm_value
-                        idx_outputs[self.taskId * 2] = index
-                    else:
-                        outputs[index] = tcp.scalar_pow(norm_value, pw)  # norm complete
+                norm_value = norm_value + seg_norm_value
 
-                    norm_value = 0.0
-                    cp_data_len = calc_size - expect_cp_len
-                    if cp_data_len > 0:
-                        self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
-                            once_loop_start + expect_cp_len, dim_len, \
-                            self.pd_width, cp_data_len)
-                        calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
-                        norm_value = calc_result
-                        if i == calc_loop_count - 1:
-                            border_outputs[self.taskId * 2 + 1] = norm_value
-                            idx_outputs[self.taskId * 2 + 1] = index + 1
+                once_norm_ok = 1
+                index = self.get_norm_index(once_loop_start + expect_cp_len, dim_len)
+
+                if cp_data_len < dim_len:
+                    border_outputs[self.taskId * 2] \
+                        = norm_value
+                    idx_outputs[self.taskId * 2] = index
+                else:
+                    outputs[index] = tcp.scalar_pow(norm_value, pw)  # norm complete
+
+                norm_value = 0.0
+                cp_data_len = calc_size - expect_cp_len
+                if cp_data_len > 0:
+                    self.copy_from_2d_tensor(self.nram_calc_buffer, 0, gram_tensor, \
+                        once_loop_start + expect_cp_len, dim_len, \
+                        self.pd_width, cp_data_len)
+                    calc_result = self.calc_norm(flat_nram, 0, cp_data_len)
+
+                    norm_value = calc_result
+                    if i == calc_loop_count - 1:
+                        border_outputs[self.taskId * 2 + 1] = norm_value
+                        idx_outputs[self.taskId * 2 + 1] = index + 1
 
          
 
 
     def calc_pairwise_distance2(self, gram_tensor: ty.handle, border_outputs: ty.handle, idx_outputs: ty.handle, outputs: ty.handle):
-        tcp.print("2 zouni")
-
         current_core_start = self.m_current_core_start
         total_count_in_core = self.m_total_count_in_core
         dim_len = self.pd_len
@@ -289,7 +286,6 @@ class PairwiseDistance(object):
                 self.sub_tensor(gram_tensor1, gram_tensor2, len_tensor2)
                 tcp.sync_cluster()
 
-
                 self.pd_width = pd_width
                 #    tcp.print(len_tensor1, pd_height, pd_width)
                 gram_reshape_tensor = gram_tensor1[:pd_height * pd_width].reshape([pd_height, pd_width])
@@ -318,6 +314,9 @@ class PairwiseDistance(object):
                             gram_border_idx_out, gram_buffer_out)
 
                 tcp.sync_cluster()
+
+                #tcp.print(gram_border_buf_out)
+                #tcp.print(gram_border_idx_out)
 
                 if task_id == 0:
                     for i in range(border_array_size):

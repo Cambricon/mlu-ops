@@ -156,6 +156,8 @@ def test_pairwise_distance(target, shape, dtype, p, eps, keepdim):
                      , _mlu_border_idx_output
                      , _mlu_output
                      )
+                result = _mlu_output.numpy()
+                result_border_idx = _mlu_border_idx_output.numpy()
             else:
                 func = PairwiseDistance(dtype.name, dtype.bytes)
                 func(a.flatten(), b.flatten(),
@@ -167,8 +169,8 @@ def test_pairwise_distance(target, shape, dtype, p, eps, keepdim):
                      , output_buffer
                      )
 
-            result = _mlu_output.numpy()
-            result_border_idx = _mlu_border_idx_output.numpy()
+                result = output_buffer
+                result_border_idx = output_buffer3
 
             s = set()
             for i in result_border_idx:
@@ -212,5 +214,9 @@ def test_pairwise_distance(target, shape, dtype, p, eps, keepdim):
 
     cpu_ret = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
         (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()
+
+    print(cpu_ret)
+
+    print(mlu_ret)
 
     #bp.assert_allclose(cpu_ret, mlu_ret, rtol = 0.01, atol = 0.01)
