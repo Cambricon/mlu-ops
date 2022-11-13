@@ -39,9 +39,18 @@ ranshp2 = create_random_shape(10, 2)
 @pytest.mark.parametrize(
     "shape",
     [
-
-    [(1, 3), (1, 3)],
-
+    #[(1, 2, 10241 * 100 ), (1, 2, 10241 * 100)],
+    #[(2, 1, 1, 1, 3, 2, 2, 3, 1, 2, 5, 4 ), (5, 4,)],
+    #[(30000, 1), (30000, 1)],
+    #[(1, 3), (1, 3)],
+    #[(4,5,2), (234)],
+    [(1, 44), (1, 44)],
+    #[(32, 482 * 1024), (32, 482 * 1024)],
+    #[ranshp, ranshp],
+    #[ranshp1, ranshp1],
+    #[ranshp2, ranshp2],
+    #    [[112, 2], [2]],
+    #    [[112, 12], [1]]
     ],
 )
 
@@ -51,14 +60,15 @@ ranshp2 = create_random_shape(10, 2)
 
 @pytest.mark.parametrize(
     "p", [1,],
+    #"p", [-1.2]
 )
 
 @pytest.mark.parametrize(
-    "eps", [0.000001, ],
+    "eps", [0.0001],
 )
 
 @pytest.mark.parametrize(
-    "keepdim", [False, ],
+    "keepdim", [True],
 )
 
 
@@ -215,8 +225,4 @@ def test_pairwise_distance(target, shape, dtype, p, eps, keepdim):
     cpu_ret = torch.nn.PairwiseDistance(p=p, eps=eps, keepdim=keepdim)\
         (torch.Tensor(m_ori_input1), torch.Tensor(m_ori_input2)).numpy()
 
-    print(cpu_ret)
-
-    print(mlu_ret)
-
-    #bp.assert_allclose(cpu_ret, mlu_ret, rtol = 0.01, atol = 0.01)
+    bp.assert_allclose(cpu_ret, mlu_ret, rtol = 0.01, atol = 0.01)
