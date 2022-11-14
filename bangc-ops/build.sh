@@ -37,6 +37,7 @@ long_args=(
   mlu270 # mlu arch
   mlu290 # mlu arch
   mlu370 # mlu arch
+  mlu590
 )
 
 add_mlu_arch_support () {
@@ -51,6 +52,9 @@ add_mlu_arch_support () {
       ;;
     --mlu370)
       bang_arch="mtp_372;"
+      ;;
+    --mlu590)
+      bang_arch="mtp_592;"
       ;;
     *)
       ;;
@@ -85,6 +89,11 @@ usage () {
     echo "                                                          __MLU_WRAM_SIZE__ = 1024KB"
     echo "                                                          __MLU_SRAM_SIZE__ = 4096KB"
     echo "                                                          cncc --bang-mlu-arch=mtp_372, cnas --mlu-arch mtp_372"
+    echo "      --mlu590           Build for target product MLU590: __BANG_ARCH__ = 592"
+    echo "                                                          __MLU_NRAM_SIZE__ = 512KB"
+    echo "                                                          __MLU_WRAM_SIZE__ = 512KB"
+    echo "                                                          __MLU_SRAM_SIZE__ = 2048KB"
+    echo "                                                          cncc --bang-mlu-arch=mtp_592, cnas --mlu-arch mtp_592"
     echo "      --filter=*         Build specified OP only (string with ';' separated)"
     echo
 }
