@@ -28,9 +28,9 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/kernel.h"
 #include "mlu_op.h"
 #include "mlu_op_kernel.h"
-#include "kernels/kernel.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type, const int HWA) {
@@ -50,7 +50,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   if (job < 4) {
     k_dim->x = 1;
     *k_type = CNRT_FUNC_TYPE_BLOCK;
-  } else{
+  } else {
     *k_type = CNRT_FUNC_TYPE_UNION1;
     k_dim->x = handle->core_num_per_cluster;
   }
@@ -84,8 +84,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  *size = 12 * A * H * W * 4 +
-          handle->cluster_num * handle->core_num_per_cluster * 4 * 3;
+  *size = 12 * A * H * W * 4 + handle->core_num_per_cluster * 4 * 3;
   return MLUOP_STATUS_SUCCESS;
 }
 
