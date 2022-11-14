@@ -23,3 +23,8 @@ yolo_box = ["fill_zero"]
 # # mlu_op_gtest API dependencies under mlu_op_gtest/pb_gtest/src/zoo/<op>
 # ## If mlu_op_gtest use dlopen to call mluops, dependencies below may not be necessary
 
+psroipool_backward = ["psroipool"]
+psroipool_forward = ["psroipool"]
+roi_crop_backward = ["roi_crop"]
+roi_crop_forward = ["roi_crop"]
+sqrt_backward = ["sqrt"]
