@@ -75,7 +75,6 @@ __mlu_func__ void getMaxScoreIndex(const T *proposal_scores, int *max_index,
     __bang_write_value(scores, actual_num_align, FLOAT_MIN);
     __memcpy(scores, proposal_scores + seg_offset, actual_num * sizeof(T),
              GDRAM2NRAM);
-
     __bang_max(max_box_tmp, scores, actual_num_align);
     if (max_box_tmp[0] >= local_max_score) {
       if (max_box_tmp[0] == FLOAT_MIN) {
@@ -885,10 +884,9 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   // | output_scores | output_boxes | scores | boxes | box_area | inter_x1|
   // |   N           |     4*N      |   N    |  4N   |    N     |    N    |
 
-  // inter_y1| inter_x2 | inter_y2 | inter_s | tmp1 |
-  // |   N   |   N      |   N      |   N     |  N   |
-
-  const int memory_block = 17;
+  // inter_y1| inter_x2 | inter_y2 | 
+  // |   N   |   N      |   N      | 
+  const int memory_block = 15;
   int limit = PROPOSAL_NRAM_SIZE / memory_block;
   int max_seg_num = 0;
   int repeat = 0;
@@ -897,7 +895,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   int core_num = 0;
   getComputeParams(scores_num, limit, memory_block, sizeof(T), &max_seg_num,
                    &repeat, &remain_num, &core_num, &core_offset);
-
   // init nram ptr
   T *output_scores = (T *)nram_buffer;
   T *output_boxes = (T *)nram_buffer + max_seg_num;
@@ -911,8 +908,6 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
   T *inter_y1 = inter_x1 + max_seg_num;
   T *inter_x2 = inter_y1 + max_seg_num;
   T *inter_y2 = inter_x2 + max_seg_num;
-  T *inter_s = inter_y2 + max_seg_num;
-  T *tmp1 = inter_s + max_seg_num;
 
   int getMaxScoreBufSize = PROPOSAL_NRAM_SIZE - 5 * max_seg_num * sizeof(T);
   T *box_area_gdram = workspace;  // save boxes area to gdram
@@ -1027,64 +1022,54 @@ __mlu_func__ void nonMaximumSuppress(T *output_boxes_ptr, T *output_scores_ptr,
       T *x2 = boxes + 2 * max_seg_num;
       T *y2 = boxes + 3 * max_seg_num;
 
-      // inter_x1 = max(a[0], b[0]) __bang_maxeq_scalar
-      __bang_write_value(tmp1, actual_num_align, (T)global_max_x1);
-      __bang_maxequal(inter_x1, x1, tmp1, actual_num_align);
-
-      // inter_y1 = max(a[1], b[1]) __bang_maxeq_scalar
-      __bang_write_value(tmp1, actual_num_align, (T)global_max_y1);
-      __bang_maxequal(inter_y1, y1, tmp1, actual_num_align);
-
-      // inter_x2 = min(a[2], b[2]) __bang_mineq_scalar
-      __bang_write_value(tmp1, actual_num_align, (T)global_max_x2);
-      __bang_minequal(inter_x2, x2, tmp1, actual_num_align);
-
-      // inter_y2 = min(a[3], b[3]) __bang_mineq_scalar
-      __bang_write_value(tmp1, actual_num_align, (T)global_max_y2);
-      __bang_minequal(inter_y2, y2, tmp1, actual_num_align);
-
+      __bang_write_value(inter_y1, actual_num_align, (T)global_max_x1);
+      __bang_maxequal(inter_x1, x1, inter_y1, actual_num_align);
+      // max_x2
+      __bang_write_value(inter_y2, actual_num_align, (T)global_max_x2);
+      __bang_minequal(inter_x2, x2, inter_y2, actual_num_align);
+      __bang_sub(inter_x1, inter_x2, inter_x1, actual_num_align);         
       if (pixel_offset) {
-        __bang_sub(inter_x2, inter_x2, inter_x1, actual_num_align);
-        __bang_sub(inter_y2, inter_y2, inter_y1, actual_num_align);
-        // width = inter_x1;
-        __bang_add_scalar(inter_x1, inter_x2, (T)1.0, actual_num_align);
-        // height = inter_21;
-        __bang_add_scalar(inter_y1, inter_y2, (T)1.0, actual_num_align);
-
-        // >= 322 __bang_maxeq_scalar
-        __bang_write_value(tmp1, actual_num_align, (T)0.0);
-        __bang_maxequal(inter_x1, inter_x1, tmp1, actual_num_align);
-        __bang_maxequal(inter_y1, inter_y1, tmp1, actual_num_align);
-
-        // inter_s = width * height;
-        __bang_mul(inter_s, inter_x1, inter_y1, actual_num_align);
-
-      } else {
-        __bang_sub(inter_x2, inter_x2, inter_x1, actual_num_align);
-        __bang_sub(inter_y2, inter_y2, inter_y1, actual_num_align);
-
-        __bang_write_value(tmp1, actual_num_align, (T)0.0);
-        __bang_maxequal(inter_x1, inter_x2, tmp1, actual_num_align);
-        __bang_maxequal(inter_y1, inter_y2, tmp1, actual_num_align);
-
-        // inter_s = width * height;
-        __bang_mul(inter_s, inter_x1, inter_y1, actual_num_align);
+        __bang_add_scalar(inter_x1, inter_x1, (T)1.0, actual_num_align);
       }
 
-      // area_u
-      __bang_add_scalar(box_area, box_area, global_max_box_area,
-                        actual_num_align);
-      __bang_sub(box_area, box_area, inter_s, actual_num_align);
-      // box_area = area_u * nms_thresh
-      __bang_mul_scalar(box_area, box_area, nms_thresh, actual_num_align);
+      // max_y1
+      __bang_write_value(inter_x2, actual_num_align, (T)global_max_y1);
+      __bang_maxequal(inter_y1, y1, inter_x2, actual_num_align);
+      // max_y2
+      __bang_write_value(inter_x2, actual_num_align, (T)global_max_y2);
+      __bang_minequal(inter_y2, y2, inter_x2, actual_num_align);
+      __bang_sub(inter_y1, inter_y2, inter_y1, actual_num_align);
+      if (pixel_offset) {
+        __bang_add_scalar(inter_y1, inter_y1, (T)1.0, actual_num_align);
+      }
 
-      __bang_le(inter_x1, inter_s, box_area, actual_num_align);
-      __bang_gt(inter_y1, inter_s, box_area, actual_num_align);
+      __bang_write_value(inter_y2, actual_num_align, (T)0.0);
+      __bang_maxequal(inter_x1, inter_x1, inter_y2, actual_num_align);
+      __bang_maxequal(inter_y1, inter_y1, inter_y2, actual_num_align);
+      // get the area_i
+      __bang_mul(inter_x1, inter_x1, inter_y1, actual_num_align);
 
-      __bang_mul(inter_x1, scores, inter_x1, actual_num_align);
-      __bang_mul_scalar(inter_y1, inter_y1, FLOAT_MIN, actual_num_align);
+      // get the area of input_box (y2-y1) * (x2-x1)
+      __bang_sub(inter_y1, x2, x1, actual_num_align);
+      __bang_sub(inter_y2, y2, y1, actual_num_align);
+      if (pixel_offset) {
+        __bang_add_scalar(inter_y1, inter_y1, (T)1.0, actual_num_align);
+        __bang_add_scalar(inter_y2, inter_y2, (T)1.0, actual_num_align);
+      }
+      __bang_mul(inter_x2, inter_y1, inter_y2, actual_num_align);
 
-      __bang_add(scores, inter_x1, inter_y1, actual_num_align);
+      // get the area_u  max_area + area - area_i
+      __bang_add_scalar(inter_x2, inter_x2, global_max_box_area,actual_num_align);
+      __bang_sub(inter_x2,inter_x2,inter_x1,actual_num_align);
+ 
+      //2. select the box
+      __bang_mul_scalar(inter_x2, inter_x2, nms_thresh, actual_num_align);      
+      __bang_le(inter_y1, inter_x1, inter_x2, actual_num_align);
+      __bang_gt(inter_y2, inter_x1, inter_x2, actual_num_align);
+      __bang_mul(inter_y1, scores, inter_y1, actual_num_align);
+      __bang_mul_scalar(inter_y2, inter_y2, FLOAT_MIN, actual_num_align);
+      
+      __bang_add(scores, inter_y1, inter_y2, actual_num_align);
       __memcpy(input_scores_ptr + seg_offset, scores, actual_num * sizeof(T),
                NRAM2GDRAM);
     }  // for seg_id <= repeat
@@ -1135,11 +1120,9 @@ __mlu_func__ void ProposalForOneImage(
   if (taskDim != 1) {
     __sync_all_ipu();
   }
-
   nonMaximumSuppress(rpn_rois, rpn_roi_probs, rpn_rois_num, proposal_scores,
                      proposal_boxes, workspace_buffer, nms_thresh,
                      post_nms_top_n, proposals_num, pixel_offset, HWA);
-
   one_image_proposals_num[0] += rpn_rois_num[0];
 }
 

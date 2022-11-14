@@ -50,12 +50,9 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   if (job < 4) {
     k_dim->x = 1;
     *k_type = CNRT_FUNC_TYPE_BLOCK;
-  } else if (job == 4) {
+  } else{
     *k_type = CNRT_FUNC_TYPE_UNION1;
     k_dim->x = handle->core_num_per_cluster;
-  } else {
-    *k_type = (cnrtFunctionType_t)job;
-    k_dim->x = job;
   }
   return;
 }
