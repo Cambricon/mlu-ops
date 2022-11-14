@@ -36,6 +36,28 @@
   - `kernels/`、`test/mlu_op_gtest/pb_gtest/src/zoo`、`test/mlu_op_gtest/api_gtest/src/gtest/`三个目录下的算子文件夹命名要完全一致
   - 相关算子依赖需要更新[kernel_depends.toml](./kernel_depends.toml)文件，请严格按照字母顺序添加
 
+  当算子存在正反向，且在kernel下的同一个文件夹下实现时
+
+  - 文件结构
+  
+    `kernels/op_name`、`test/mlu_op_gtest/pb_gtest/src/zoo/op_name_forward(op_name_backward)`、`test/mlu_op_gtest/api_gtest/src/gtest/op_name_forward(op_name_backward)`
+
+  - 添加依赖
+  
+    在[kernel_depends.toml](./kernel_depends.toml)文件中的[bangc-ops.gtest]下添加依赖说明
+
+    ```sh
+    op_name_backward = ["op_name"]
+    op_name_forward = ["op_name"]
+    ```
+
+  - 编译方式
+
+    ```sh
+    cd mlu-ops/bangc-ops
+    ./build.sh --filter="op_name_forward(或op_name_backward)" 
+    ```
+
 - 多MLU平台架构编译
 
   - 当不指定架构时，默认编译支持`MLU270/MLU290/MLU370`板卡的 `libmluops.so`，运行时动态选择`MLU270/MLU290/MLU370`
