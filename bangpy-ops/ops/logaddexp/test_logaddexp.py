@@ -70,10 +70,8 @@ def run(input_x, input_y, dtype):
 
 
 def random_int_list(max_dim_length, each_dim_max_length):
-    random_list = []
-    for _ in range(max_dim_length):
-        random_list.append(random.randint(2, each_dim_max_length))
-    return tuple(random_list)
+    return (random.randint(2, each_dim_max_length)
+        for _ in range(max_dim_length))
 
 
 def create_shape_list(
