@@ -51,20 +51,17 @@ def create_shape_list(
         (0,),
         (1,),
         (2,),
-
         (const_float32_128_align_element_count - 1,),
         (const_float32_128_align_element_count,),
         (const_float32_128_align_element_count + 1,),
         (const_float16_128_align_element_count - 1,),
         (const_float16_128_align_element_count,),
         (const_float16_128_align_element_count + 1,),
-
         (const_current_mlu_single_buffer_float32_max_element_size - 1,),
         (const_current_mlu_single_buffer_float32_max_element_size,),
         (const_current_mlu_single_buffer_float32_max_element_size + 1,),
         (const_current_mlu_single_buffer_float16_max_element_size,),
         (const_current_mlu_single_buffer_float16_max_element_size + 1,),
-
         (246783,),
         (246784,),
         (246785,),
@@ -73,11 +70,12 @@ def create_shape_list(
         (123393,),
         (2, 2, 3, 3, 4, 3, 2, 4, 2, 3, 4, 4, 2, 3, 5,),
     ]
-    for _ in range(append_test_count):
-        test_shape_list.append(random_int_list(random.randint(
-            2, max_dim_length), random.randint(2, each_dim_max_length)))
+    test_shape_list +=[
+        tuple(random_int_list(random.randint(2, max_dim_length),
+            random.randint(2, each_dim_max_length)))
+        for _ in range(append_test_count)
+        ]
     return test_shape_list
-
 
 shape_list = create_shape_list(
     nram_single_buffer_size_by_byte=(768 - 40) * 1024 // 4,
