@@ -31,13 +31,11 @@ KERNEL_NAME = "Celu"
 class Celu:
     def __init__(
                 self,
-                cluster_num: ty.int32,
                 dtype_bits: ty.int32,
                 dtype: ty.string
                 ) -> None:
         self.dtype = dtype
         self.dtype_sz = dtype_bits
-        self.cluster_num = cluster_num
 
     def main(
             self,
@@ -49,8 +47,8 @@ class Celu:
         gram_input0 = tcp.match_buffer(input0, [length], dtype=self.dtype)
         gram_output = tcp.match_buffer(output, [length], dtype=self.dtype)
         target = tcp.target()
-        one_core_count = length // (self.cluster_num * target.core_num)
-        remain = length % (self.cluster_num * target.core_num)
+        one_core_count = length // (target.cluster_num * target.core_num)
+        remain = length % (target.cluster_num * target.core_num)
         nram_avable_size = (((target.nram_size - 40 * 1024) // 4) // 128) * 128
         process_count = nram_avable_size // self.dtype_sz
         nram_buffer_in0 = tcp.alloc_buffer(
@@ -71,7 +69,7 @@ class Celu:
         once_loop_start = 0
         calc_size = 0
 
-        for cluster_id in tcp.thread_binding(0, self.cluster_num, thread="blockIdx.x"):
+        for cluster_id in tcp.thread_binding(0, target.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, target.core_num, thread="threadIdx.x"):
                 current_task_id = cluster_id * target.core_num + core_id
                 if current_task_id < remain:
@@ -113,7 +111,6 @@ class Celu:
 def build_celu(dtype=None, target=None):
     f = build_module.build(
         Celu(
-            1,
             4 if dtype.name == "float32" else 2,
             dtype.name
             ),
