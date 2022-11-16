@@ -32,7 +32,6 @@ class LogAddExp:
     def __init__(self, dtype_bits: ty.int32, dtype: ty.string) -> None:
         self.dtype = dtype
         self.dtype_sz = dtype_bits
-       
 
     def replace_the_marked_value(
         self,
