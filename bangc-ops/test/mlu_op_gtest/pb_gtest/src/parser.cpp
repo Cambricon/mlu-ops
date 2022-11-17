@@ -228,6 +228,8 @@ void Parser::checkTensorValid(MetaTensor *mt, Tensor *pt) {
     case VALUE_I:
     case VALUE_L:
     case VALUE_H:
+    case VALUE_UI:
+    case VALUE_UL:
       shape_count = std::accumulate(mt->shape.begin(), mt->shape.end(),
                                     shape_count, std::multiplies<int>());
       GTEST_WARNING(mt->shape_count == shape_count,
@@ -266,10 +268,12 @@ void Parser::checkRandomParam(Tensor *pt) {
 
   auto random_data = pt->mutable_random_data();
   if (random_data->distribution() == mluoptest::UNIFORM) {
-    GTEST_CHECK(random_data->has_upper_bound(),
-                "Parser: missing upper bound of UNIFORM random param in *pb");
-    GTEST_CHECK(random_data->has_lower_bound(),
-                "Parser: missing lower bound of UNIFORM random param in *pb");
+    GTEST_CHECK(
+        random_data->has_upper_bound() || random_data->has_upper_bound_double(),
+        "Parser: missing upper bound of UNIFORM random param in *pb");
+    GTEST_CHECK(
+        random_data->has_lower_bound() || random_data->has_lower_bound_double(),
+        "Parser: missing lower bound of UNIFORM random param in *pb");
   } else if (random_data->distribution() == mluoptest::GAUSSIAN) {
     GTEST_CHECK(random_data->has_mu() || random_data->has_mu_double(),
                 "Parser: missing mu of UNIFORM random param in *pb");
@@ -474,6 +478,71 @@ void Parser::getTensorValueL(const Tensor *pt, void *data, size_t count) {
   }
 }
 
+// get value from value_ui
+// no quant uintx, saved in value_ui
+void Parser::getTensorValueUI(const Tensor *pt, void *data, size_t count) {
+  GTEST_CHECK(pt->value_ui_size() == count,
+              "Parser: when read value_ui, expected element num is not equal "
+              "to real element num.");
+  switch (pt->dtype()) {
+    case DTYPE_UINT8:
+      for (int i = 0; i < count; ++i) {
+        ((uint8_t *)data)[i] = pt->value_ui(i);
+      }
+      break;
+    case DTYPE_UINT16:
+      for (int i = 0; i < count; ++i) {
+        ((uint16_t *)data)[i] = pt->value_ui(i);
+      }
+      break;
+    case DTYPE_UINT32:
+      for (int i = 0; i < count; ++i) {
+        ((uint32_t *)data)[i] = pt->value_ui(i);
+      }
+      break;
+    default:
+      GTEST_CHECK(
+          false,
+          "Parser: found unsuppored dtype in value_ui, value_ui only support "
+          "uint8/uint16/uint32.");
+  }
+}
+
+// get value from value_ul
+// no quant uintx, saved in value_ul
+void Parser::getTensorValueUL(const Tensor *pt, void *data, size_t count) {
+  GTEST_CHECK(pt->value_ul_size() == count,
+              "Parser: when read value_ul, expected element num is not equal "
+              "to real element num.");
+  switch (pt->dtype()) {
+    case DTYPE_UINT64:
+      for (int i = 0; i < count; ++i) {
+        ((uint64_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    case DTYPE_UINT8:
+      for (int i = 0; i < count; ++i) {
+        ((uint8_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    case DTYPE_UINT16:
+      for (int i = 0; i < count; ++i) {
+        ((uint16_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    case DTYPE_UINT32:
+      for (int i = 0; i < count; ++i) {
+        ((uint32_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    default:
+      GTEST_CHECK(
+          false,
+          "Parser: found unsuppored dtype in value_ul, value_ul only support "
+          "uint8/uint16/uint32/uint64.");
+  }
+}
+
 inline double str2fp64(const std::string *in_str) {
   uint64_t res = 0x0;
   for (int i = 0; i < in_str->size(); ++i) {
@@ -601,6 +670,12 @@ void Parser::getTensorValue(Tensor *pt, void *data, ValueType value_type,
       break;
     case VALUE_L:
       getTensorValueL(pt, data, count);
+      break;
+    case VALUE_UI:
+      getTensorValueUI(pt, data, count);
+      break;
+    case VALUE_UL:
+      getTensorValueUL(pt, data, count);
       break;
     case VALUE_RANDOM:
       getTensorValueRandom(pt, (float *)data, count);  // cpu mode dtype fp32
@@ -838,6 +913,10 @@ ValueType Parser::getValueType(const Tensor *t) {
     return VALUE_I;
   } else if (t->value_l_size() != 0) {
     return VALUE_L;
+  } else if (t->value_ui_size() != 0) {
+    return VALUE_UI;
+  } else if (t->value_ul_size() != 0) {
+    return VALUE_UL;
   } else if (t->has_path()) {
     return VALUE_PATH;
   } else if (t->has_random_data()) {
@@ -892,6 +971,10 @@ inline size_t Parser::getTensorStrideCount(Tensor *pt, ValueType value_type) {
       return pt->value_i_size();
     case VALUE_L:
       return pt->value_l_size();
+    case VALUE_UI:
+      return pt->value_ui_size();
+    case VALUE_UL:
+      return pt->value_ul_size();
     case VALUE_F:
       return pt->value_f_size();
     case VALUE_RANDOM:
