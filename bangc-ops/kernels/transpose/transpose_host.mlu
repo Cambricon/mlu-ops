@@ -1,0 +1,3366 @@
+/*************************************************************************
+ * Copyright (C) [2019-2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#ifndef KERNELS_TRANSPOSE_TRANSPOSE_HOST_MLU_
+#define KERNELS_TRANSPOSE_TRANSPOSE_HOST_MLU_
+
+#include "kernels/transpose/transpose_host.h"
+
+#include <climits>
+#include <functional>
+#include <numeric>
+
+#include "mlu_op.h"
+#include "kernels/kernel.h"
+
+Transpose::Transpose(mluOpHandle_t handle, const int *input,
+                     const std::vector<int> &permute,
+                     const mluOpDataType_t dtype) {
+  uint64_t ele_num_ = 1;
+  handle_ = handle;
+  cluster_num = mluop::runtime::getClusterLimitCapability(handle);
+  core_num_per_cluster =
+      mluop::runtime::getCoreNumOfEachUnionCapability(handle);
+  split_dim_nd_for_small = 0;
+  trans_raw_info.permute_raw = permute;
+  trans_raw_info.input_raw.clear();
+  trans_raw_info.dtype = dtype;
+
+  for (int i = 0; i < trans_raw_info.permute_raw.size(); i++) {
+    trans_raw_info.input_raw.push_back(input[i]);
+    ele_num_ *= input[i];
+  }
+  if (getSizeOfDataType(dtype) == getSizeOfDataType(MLUOP_DTYPE_INT64)) {
+    trans_raw_info.permute_raw.push_back(trans_raw_info.input_raw.size());
+    trans_raw_info.input_raw.push_back(2);
+    ele_num_ *= 2;
+    trans_raw_info.dtype = MLUOP_DTYPE_INT32;
+  }
+  if (MLUOP_DTYPE_COMPLEX_HALF == dtype) {
+    trans_raw_info.dtype = MLUOP_DTYPE_FLOAT;
+  }
+  trans_raw_info.size_origin = mluOpDataTypeBytes(trans_raw_info.dtype);
+  ele_num = ele_num_;
+  // IPU CORE process the min aligned number of transpose at once time.
+  uint64_t min_trans_num = TRANS_MIN_BYTE / pow(trans_raw_info.size_origin, 2);
+  nram_limit = NRAM_BYTE_2D_CPU / NFU_ALIGN_SIZE * NFU_ALIGN_SIZE /
+               trans_raw_info.size_origin / min_trans_num * min_trans_num;
+
+  split_info.split_h = false;
+  split_info.split_w = false;
+  split_info.is_split_lowest_dim = false;
+  split_info.is_mul_overflow = false;
+}
+
+void Transpose::dimensionFolder() {
+  const auto &x_in = trans_raw_info.input_raw;
+  const auto &p_in = trans_raw_info.permute_raw;
+
+  const auto dim = trans_raw_info.input_raw.size();
+  auto &out_x = trans_fold_info.input_fold;
+  auto &out_p = trans_fold_info.permute_fold;
+  out_x.clear();
+  out_p.clear();
+  if (dim == 1) {
+    out_x.push_back(x_in[0]);
+    out_p.push_back(p_in[0]);
+    return;
+  }
+
+  int head, tail;
+  int folded_dims_sum = 1;  // record folded dims sum
+  bool in_positive_sequence_search = false;
+  std::vector<int> permute(p_in);
+  std::vector<int> folded_dim(permute.size(), 0);
+  std::vector<int> dim_less;
+  std::vector<int> new_x;
+  for (int d = 0; d < dim - 1; d++) {
+    if (permute[d] + 1 == permute[d + 1]) {
+      if (in_positive_sequence_search == false) {
+        /* start search */
+        in_positive_sequence_search = true;
+        head = d;
+        folded_dims_sum *= x_in[permute[d]];
+        folded_dims_sum *= x_in[permute[d + 1]];
+      } else {
+        /* during search */
+        folded_dims_sum *= x_in[permute[d + 1]];
+      }
+
+      /* last two permute equals */
+      if (d == dim - 2) {
+        new_x.push_back(folded_dims_sum);
+        folded_dims_sum = 1;
+        tail = dim - 1;
+        for (int dd = permute[tail] + 1; dd < dim; dd++) {
+          folded_dim[dd] += tail - head;
+        }
+        dim_less.push_back(tail - head);
+      }
+    } else {
+      /* two permute is not equal */
+      if (in_positive_sequence_search == false) {
+        /* not in search */
+        new_x.push_back(x_in[permute[d]]);
+        if (d == dim - 2) {
+          new_x.push_back(x_in[permute[dim - 1]]);
+        }
+      } else {
+        /* during search, but two permutes is not equal, need to stop searching
+         */
+        in_positive_sequence_search = false;
+        tail = d;
+        for (int dd = permute[tail] + 1; dd < dim; dd++) {
+          folded_dim[dd] += tail - head;
+        }
+        dim_less.push_back(tail - head);
+        new_x.push_back(folded_dims_sum);
+        folded_dims_sum = 1;
+        // search to dim - 2, the last two permutes is not equal, just push the
+        // last one in vector
+        if (d == dim - 2) {
+          new_x.push_back(x_in[permute[dim - 1]]);
+        }
+      }
+    }
+  }
+
+  for (int p = 0; p < dim; p++) {
+    permute[p] -= folded_dim[permute[p]];
+  }
+  int dim_fold = 0;
+  int idx = 0;
+  for (int p = 0; p < dim - 1;) {
+    if (permute[p] + 1 == permute[p + 1]) {
+      out_p.push_back(permute[p++]);
+      dim_fold++;
+      p += dim_less[idx++];
+    } else {
+      out_p.push_back(permute[p++]);
+      dim_fold++;
+    }
+    if (p == dim - 1) {
+      out_p.push_back(permute[p]);
+      dim_fold++;
+      break;
+    }
+  }
+
+  for (int i = 0; i < new_x.size(); i++) {
+    for (int j = 0; j < dim_fold; j++) {
+      if (i == out_p[j]) {
+        out_x.push_back(new_x[j]);
+        break;
+      }
+    }
+  }
+  return;
+}
+
+void Transpose::getTransposeStrategy() {
+  const size_t dims = trans_fold_info.input_fold.size();
+  const auto &p = trans_fold_info.permute_fold;
+  auto &strategy = policy_info.strategy;
+  switch (dims) {
+    case 1:
+      strategy = TRANSPOSE_1D;
+      break;
+    case 2:
+      strategy = TRANSPOSE_2D;
+      break;
+    case 3:
+      if (p[0] == 0 && p[1] == 2 && p[2] == 1) {
+        strategy = TRANSPOSE_3D_021;
+      } else if (p[0] == 2 && p[1] == 1 && p[2] == 0) {
+        strategy = TRANSPOSE_3D_210;
+      } else if (p[0] == 1 && p[1] == 0 && p[2] == 2) {
+        strategy = TRANSPOSE_3D_102;
+      }
+      break;
+    case 4:
+      if (p[0] == 0 && p[1] == 2 && p[2] == 1 && p[3] == 3) {
+        strategy = TRANSPOSE_4D_0213;
+      } else if (p[0] == 0 && p[1] == 3 && p[2] == 2 && p[3] == 1) {
+        strategy = TRANSPOSE_4D_0321;
+      } else if (p[0] == 1 && p[1] == 0 && p[2] == 3 && p[3] == 2) {
+        strategy = TRANSPOSE_4D_1032;
+      } else if (p[0] == 1 && p[1] == 3 && p[2] == 0 && p[3] == 2) {
+        strategy = TRANSPOSE_4D_1302;
+      } else if (p[0] == 1 && p[1] == 3 && p[2] == 2 && p[3] == 0) {
+        strategy = TRANSPOSE_4D_1320;
+      } else if (p[0] == 2 && p[1] == 0 && p[2] == 3 && p[3] == 1) {
+        strategy = TRANSPOSE_4D_2031;
+      } else if (p[0] == 2 && p[1] == 1 && p[2] == 0 && p[3] == 3) {
+        strategy = TRANSPOSE_4D_2103;
+      } else if (p[0] == 2 && p[1] == 1 && p[2] == 3 && p[3] == 0) {
+        strategy = TRANSPOSE_4D_2130;
+      } else if (p[0] == 3 && p[1] == 0 && p[2] == 2 && p[3] == 1) {
+        strategy = TRANSPOSE_4D_3021;
+      } else if (p[0] == 3 && p[1] == 1 && p[2] == 0 && p[3] == 2) {
+        strategy = TRANSPOSE_4D_3102;
+      } else if (p[0] == 3 && p[1] == 2 && p[2] == 1 && p[3] == 0) {
+        strategy = TRANSPOSE_4D_3210;
+      }
+      break;
+    default:
+      strategy = TRANSPOSE_COMMON;
+      break;
+  }
+}
+
+void Transpose::dimensionReduction() {
+  auto x = trans_raw_info.input_raw;
+  auto permute = trans_raw_info.permute_raw;
+  auto it = find(x.begin(), x.end(), 1);
+  if (it == x.end()) {
+    return;
+  }
+  auto permute_less = permute;
+  auto dim = trans_raw_info.input_raw.size();
+  for (size_t i = 0; i < dim; i++) {
+    if (x[i] == 1) {
+      x[i] = -1;
+      for (int j = 0; j < dim; j++) {
+        if (permute[j] == i) {
+          permute_less[j] = -1;
+        } else if (permute[j] > i) {
+          permute_less[j] -= 1;
+        }
+      }
+    }
+  }
+  int input_dim = 0;
+  int permute_dim = 0;
+  for (int i = 0; i < dim; i++) {
+    if (x[i] != -1) {
+      trans_raw_info.input_raw[input_dim++] = x[i];
+    }
+    if (permute_less[i] != -1) {
+      trans_raw_info.permute_raw[permute_dim++] = permute_less[i];
+    }
+  }
+  if (input_dim == 0) {
+    input_dim = 1;
+    permute_dim = 1;
+    trans_raw_info.input_raw[input_dim - 1] = 1;
+    trans_raw_info.permute_raw[permute_dim - 1] = 0;
+  }
+  trans_raw_info.input_raw.resize(input_dim);
+  trans_raw_info.permute_raw.resize(permute_dim);
+}
+
+bool Transpose::isMulOverflow() const {
+  int mult = 1;
+  uint32_t max = TRANS_MAX / trans_raw_info.size_origin;
+  const auto &input_fold = trans_fold_info.input_fold;
+  const int dim_fold = input_fold.size();
+  for (int i = 0; i < dim_fold; i++) {
+    uint64_t temp = (uint64_t)input_fold[i];
+    if (temp > max) {
+      return true;
+    } else {
+      if (input_fold[i] > (max / mult)) {
+        return true;
+      } else {
+        mult *= input_fold[i];
+      }
+    }
+  }
+  return false;
+}
+
+bool Transpose::isSplitLowestDim() const {
+  const auto &x_fold = trans_fold_info.input_fold;
+  if (split_info.is_mul_overflow) {
+    return false;
+  }
+
+  if (policy_info.strategy == TRANSPOSE_3D_021) {
+    if (x_fold[TR_H] * trans_raw_info.size_origin < TRANS_MEMCPY_ALIGN &&
+        x_fold[TR_W] > TRANS_THRESHOLD_RATIO * x_fold[TR_H]) {
+      int core_num = cluster_num * core_num_per_cluster;
+      int n_split_num = (core_num > x_fold[TR_N]) ? x_fold[TR_N] : core_num;
+      int remain_num = core_num / n_split_num;
+      if (x_fold[TR_H] < sqrt(x_fold[TR_W]) &&
+          (x_fold[TR_H] * x_fold.size()) > (sqrt(x_fold[TR_W]) / remain_num)) {
+        return false;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+void Transpose::policyFunc2D(mluOpHandle_t handle_, const int &h, const int &w,
+                             const int &size_dt, const int &number,
+                             mluOpTranspose2DStrategy_t &st2D,
+                             const int &trans_aligned, bool &split_h) {
+  auto getSplitInfoFor2D = [&](const int &h, const int &w, const int &number,
+                               const int &size_dt, const int &trans_aligned,
+                               bool &split_h) {
+    int h_process, w_process;
+    int h_ceil = PAD_UP(h, trans_aligned);
+    int w_ceil = PAD_UP(w, trans_aligned);
+    h_process = h_ceil / number;
+    w_process = w_ceil / number;
+    int h_process_align_rem = h_process % (TRANS_MEMCPY_ALIGN / size_dt);
+    int w_process_align_rem = w_process % (TRANS_MEMCPY_ALIGN / size_dt);
+    if (h >= w) {
+      if (h_process_align_rem && !w_process_align_rem &&
+          (w_process * size_dt >= TRANS_MEMCPY_ALIGN) &&
+          (h / w >= TRANS_SPLIT_RATIO)) {
+        split_h = false;
+      } else {
+        split_h = true;
+      }
+    } else {
+      if (!h_process_align_rem && w_process_align_rem &&
+          (h_process * size_dt >= TRANS_MEMCPY_ALIGN)) {
+        split_h = true;
+      } else if (!h_process_align_rem && !w_process_align_rem &&
+                 (h_process * size_dt >= TRANS_MEMCPY_ALIGN) &&
+                 (w_process * size_dt >= TRANS_MEMCPY_ALIGN)) {
+        split_h = true;
+      } else {
+        split_h = false;
+      }
+    }
+  };
+
+  getSplitInfoFor2D(h, w, number, size_dt, trans_aligned, split_h);
+  int h_process, w_process;
+  int h_ceil = PAD_UP(h, trans_aligned);
+  int w_ceil = PAD_UP(w, trans_aligned);
+  h_process = h_ceil / number;
+  w_process = w_ceil / number;
+  int max_h_process = h_process;
+  int max_w_process = w_process;
+  bool is_enormous = false;
+  if (split_h) {
+    h_process = CEIL(h_process, trans_aligned);
+    int used_cores;
+    if (h_process == 0) {
+      used_cores = 1;
+    } else {
+      used_cores = h % h_process == 0 ? h / h_process : h / h_process + 1;
+    }
+    used_cores = (used_cores < number) ? used_cores : number;
+    int last_core_h_prcocess = h - h_process * (used_cores - 1);
+    max_h_process = std::max(h_process, last_core_h_prcocess);
+    max_w_process = w;
+  } else {
+    w_process = CEIL(w_process, trans_aligned);
+    int used_cores;
+    if (w_process == 0) {
+      used_cores = 1;
+    } else {
+      used_cores = w % w_process == 0 ? w / w_process : w / w_process + 1;
+    }
+    used_cores = (used_cores < number) ? used_cores : number;
+    int last_core_w_process = w - w_process * (used_cores - 1);
+    max_w_process = std::max(w_process, last_core_w_process);
+    max_h_process = h;
+  }
+  int process_num = CEIL(max_h_process, trans_aligned) *
+                    CEIL(max_w_process, trans_aligned) * size_dt;
+  int loop = (process_num % NRAM_BYTE_2D_CPU)
+                 ? (process_num / NRAM_BYTE_2D_CPU + 1)
+                 : process_num / NRAM_BYTE_2D_CPU;
+  if (loop >= 2) {
+    int trans_per_loop = max_h_process >= max_w_process
+                             ? FLOOR(max_h_process / loop, trans_aligned)
+                             : FLOOR(max_w_process / loop, trans_aligned);
+    is_enormous = trans_per_loop ? false : true;
+    st2D = (is_enormous == false) ? TR_2D_ALLSPLIT : TR_2D_ENORMOUS;
+  } else {
+    st2D = TR_2D_SMALL;
+  }
+}
+
+void Transpose::policyFunc() {
+  const auto &x_fold = trans_fold_info.input_fold;
+  auto &strategy = policy_info.strategy;
+  auto &st2D = policy_info.st2D;
+  auto &st3D = policy_info.st3D;
+  auto &is_split_lowest_dim = split_info.is_split_lowest_dim;
+
+  auto getMaxDimIndex = [&](const std::vector<int> &x, const int &dims) {
+    uint64_t max_dim = x[0];
+    uint64_t max_dim_index = 0;
+    for (int i = 1; i < dims; i++) {
+      if (x[i] > max_dim) {
+        max_dim = x[i];
+        max_dim_index = i;
+      }
+    }
+    return max_dim_index;
+  };
+
+  const auto dim_fold = x_fold.size();
+  const auto &size_dt = trans_raw_info.size_origin;
+  const auto &is_mul_overflow = split_info.is_mul_overflow;
+  const int max_job = cluster_num;
+  if (handle_->arch == 520) {
+    policy_info.kType = CNRT_FUNC_TYPE_BLOCK;
+    policy_info.kDim.x = core_num_per_cluster;
+    policy_info.kDim.y = cluster_num;
+    policy_info.kDim.z = 1;
+  } else {
+    policy_info.kType = CNRT_FUNC_TYPE_UNION1;
+    policy_info.kDim.x = core_num_per_cluster;
+    policy_info.kDim.y = 1;
+    policy_info.kDim.z = 1;
+  }
+  const int number = cluster_num * core_num_per_cluster;
+  if (strategy == TRANSPOSE_1D) {
+    policy_info.kDim.y = max_job;
+    return;
+  }
+
+  int jobs = 1;
+  switch (strategy) {
+    case TRANSPOSE_2D: {
+      int h = x_fold[TR_N];
+      int w = x_fold[TR_H];
+      jobs = max_job;
+      policyFunc2D(handle_, h, w, size_dt, number, st2D, trans_aligned,
+                   split_info.split_h);
+      break;
+    }
+    case TRANSPOSE_3D_021: {
+      int a = x_fold[0];
+      int b = x_fold[1];
+      int c = x_fold[2];
+      int b_ceil = CEIL(b, trans_aligned);
+      int c_ceil = CEIL(c, trans_aligned);
+      jobs = a % core_num_per_cluster ? a / core_num_per_cluster + 1
+                                      : a / core_num_per_cluster;
+      jobs = std::min(jobs, max_job);
+      // 1. if b is small, c is bigger than b, st3D = TR_3D_021_LOOP
+      // 2. if the case is not satisfied with above situation, there are two
+      // situation: 2.1 if the size of case is small, which can be processed at
+      // once for Ipu core, st3D = TR_3D_021_TILING; 2.2 if the case is not
+      // satisfied with 2.1, st3D = TR_3D_021_LOOP.
+      if (b * size_dt < TRANS_MEMCPY_ALIGN &&
+          c * size_dt > TRANS_MEMCPY_ALIGN && c > b * TRANS_THRESHOLD_RATIO) {
+        st3D = TR_3D_021_LOOP;
+        VLOG(6) << "TR_3D_021_LOOP";
+        jobs = max_job;
+      } else {
+        // TR_3D_021_TILING kernel limit: b_ceil * c_ceil * size_dt <=
+        // NRAM_BYTE_2D_CPU
+        if (b_ceil <= NRAM_BYTE_2D_CPU / c_ceil / size_dt &&
+            a <= NRAM_BYTE_2D_CPU / b_ceil / c_ceil / size_dt *
+                     policy_info.kDim.x * jobs &&
+            a <= core_num_per_cluster * jobs) {
+          st3D = TR_3D_021_TILING;
+          VLOG(6) << "TR_3D_021_TILING";
+          // When st3D is TR_3D_021_TILING, calling original kernel, is not
+          // split lowest dimension, so if is_split_lowest_dim is true,
+          // is_split_lowest_dim will be set false.
+          if (is_split_lowest_dim) {
+            is_split_lowest_dim = false;
+          }
+          jobs = a % core_num_per_cluster ? a / core_num_per_cluster + 1
+                                          : a / core_num_per_cluster;
+        } else {
+          st3D = TR_3D_021_LOOP;
+          VLOG(6) << "TR_3D_021_LOOP";
+          jobs = max_job;
+          if (is_mul_overflow) {
+            policyFunc2D(handle_, b, c, size_dt, number, st2D, trans_aligned,
+                         split_info.split_h);
+          }
+        }
+      }
+      break;
+    }
+    case TRANSPOSE_3D_102: {
+      int a = x_fold[0];
+      int b = x_fold[1];
+      if (a * b <= max_job) {
+        jobs = TRANS_PAD_UP(a * b, core_num_per_cluster);
+      } else {
+        jobs = max_job;
+      }
+      break;
+    }
+    case TRANSPOSE_3D_210:
+    case TRANSPOSE_4D_0321: {
+      size_t a_ceil = CEIL(x_fold[dim_fold - 3], trans_aligned);
+      size_t b = x_fold[dim_fold - 2];
+      size_t c_ceil = CEIL(x_fold[dim_fold - 1], trans_aligned);
+      if (is_mul_overflow ||
+          (a_ceil * c_ceil * size_dt < 2 * NRAM_BYTE_2D_CPU)) {
+        VLOG(6) << "TR_3D_210..";
+        jobs = TRANS_PAD_UP(b, core_num_per_cluster);
+        st3D = TR_3D_210;
+      } else {
+        VLOG(6) << "TR_3D_210_OPTIMIZE..";
+        jobs = max_job;
+        st3D = TR_3D_210_OPTIMIZE;
+      }
+      break;
+    }
+    default: {
+      jobs = max_job;
+      split_dim_nd_for_small = getMaxDimIndex(x_fold, dim_fold);
+      break;
+    }
+  }
+  policy_info.kDim.y = std::min(jobs, max_job);
+}
+
+void Transpose::splitLowestDim() {
+  auto closetDivisors = [&](const int n, int &a, int &b) {
+    for (int i = sqrt(n); i >= 0; i--) {
+      if (n % i == 0) {
+        a = i;
+        b = n / i;
+        break;
+      }
+    }
+    return;
+  };
+
+  const auto &input_raw = trans_raw_info.input_raw;
+  const auto &permute_raw = trans_raw_info.permute_raw;
+  auto &input_fold = trans_fold_info.input_fold;
+  auto &permute_fold = trans_fold_info.permute_fold;
+  auto dim_fold = input_fold.size();
+
+  if (input_fold[TR_H] * trans_raw_info.size_origin < TRANS_MEMCPY_ALIGN &&
+      input_fold[TR_W] * trans_raw_info.size_origin > TRANS_MEMCPY_ALIGN &&
+      input_fold[TR_W] > TRANS_THRESHOLD_RATIO * input_fold[TR_H]) {
+    // When the original permute is [0, 2, 3, 1], the input_fold is restored to
+    // input_raw.
+    if ((permute_raw.size() == 4) &&
+        ((permute_raw[TR_N] == 0) && (permute_raw[TR_H] == 2) &&
+         (permute_raw[TR_W] == 3) && (permute_raw[TR_C] == 1)) &&
+        (input_raw[TR_C] / input_raw[TR_W] < TRANS_THRESHOLD_RATIO) &&
+        (input_raw[TR_W] / input_raw[TR_C] < TRANS_THRESHOLD_RATIO)) {
+      input_fold.clear();
+      for (int i = 0; i < input_raw.size(); i++) {
+        input_fold.push_back(input_raw[i]);
+      }
+      permute_fold.resize(4);
+      return;
+    }
+
+    int a = 0;
+    int b = 0;
+    // last dimension split
+    closetDivisors(input_fold[dim_fold - 1], a, b);
+    input_fold.resize(4);
+    input_fold[TR_C] = b;
+    input_fold[TR_W] = a;
+    input_fold[TR_H] = input_fold[dim_fold - 2];
+    input_fold[TR_N] = dim_fold < 3 ? 1 : input_fold[dim_fold - 3];
+    permute_fold.resize(4);
+    return;
+  }
+
+  return;
+}
+
+void Transpose::getCoreSplitInfo() {
+  const auto number = cluster_num * core_num_per_cluster;
+  const auto &input = trans_fold_info.input_fold;
+  auto &num_split = split_info.num_split;
+  const auto &align = this->align_for3d4d;
+  auto &split_h = split_info.split_h;
+  auto &split_w = split_info.split_w;
+
+  num_split.clear();
+  for (int i = 0; i < input.size(); i++) {
+    num_split.push_back(1);
+  }
+  if (policy_info.strategy == TRANSPOSE_2D) {
+    /* first, get core split information
+       For small cases. */
+    if (input[TR_N] <= trans_aligned || input[TR_H] <= trans_aligned) {
+      int limit = FLOOR(NRAM_BYTE_2D_CPU, trans_aligned);
+      int loop_n = CEIL(input[TR_N], trans_aligned) / limit;
+      loop_n += (CEIL(input[TR_N], trans_aligned) % limit != 0);
+      int loop_h = CEIL(input[TR_H], trans_aligned) / limit;
+      loop_h += (CEIL(input[TR_H], trans_aligned) % limit != 0);
+      num_split[TR_N] =
+          (input[TR_N] <= trans_aligned) ? 1 : std::min(loop_n, number);
+      num_split[TR_H] =
+          (input[TR_H] <= trans_aligned) ? 1 : std::min(loop_h, number);
+      VLOG(6) << "getCoreSplitInfo::num_split[TR_N] = " << num_split[TR_N];
+      VLOG(6) << "getCoreSplitInfo::num_split[TR_H] = " << num_split[TR_H];
+      return;
+    }
+    /* For large cases.
+       1. if H > W;
+       The tensor shape is [H,W], but dimension index ranges form TR_N to TR_H,
+       which means the index of dimension H is TR_N and the index of dimension W
+       is TR_H. */
+    if (input[TR_N] >= input[TR_H]) {
+      num_split[TR_N] =
+          (input[TR_N] >= number * input[TR_H])
+              ? number
+              : std::max(core_num_per_cluster, number / core_num_per_cluster);
+      num_split[TR_H] = number / num_split[TR_N];
+    } else {
+      /* 2. if W > H; */
+      num_split[TR_H] =
+          (input[TR_H] >= number * input[TR_N])
+              ? number
+              : std::max(core_num_per_cluster, number / core_num_per_cluster);
+      num_split[TR_N] = number / num_split[TR_H];
+    }
+    VLOG(6) << "getCoreSplitInfo::num_split[TR_N] = " << num_split[TR_N];
+    VLOG(6) << "getCoreSplitInfo::num_split[TR_H] = " << num_split[TR_H];
+    return;
+  }
+  // calculate the number of ipuCore used, no matter if the total number of
+  // ipuCore is two to the power of n or not.
+
+  // first, deal with N
+  if (align[TR_N]) {
+    if (input[TR_N] % trans_aligned == 0) {
+      // N only split into 2 parts or 1 part.
+      num_split[TR_N] = (input[TR_N] / trans_aligned) > 1 ? 2 : 1;
+    } else {
+      int memcpy_align_num = TRANS_MEMCPY_ALIGN / trans_raw_info.size_origin;
+      num_split[TR_N] = input[TR_N] / memcpy_align_num;
+      if (num_split[TR_N] == 0 || num_split[TR_N] == 1) {
+        num_split[TR_N] = 1;
+      } else {
+        num_split[TR_N] = input[TR_N] / memcpy_align_num;
+        if (num_split[TR_N] % 2) {
+          num_split[TR_N] += 1;
+        }
+      }
+    }
+    num_split[TR_N] = (num_split[TR_N] > number) ? number : num_split[TR_N];
+  } else {
+    if (input[TR_N] < number) {
+      num_split[TR_N] = input[TR_N];
+    } else {
+      num_split[TR_N] = number;
+    }
+
+    // split core_num_per_cluster parts for input[TR_N] = 17 or 20 for better
+    // performance due to test.
+    if (input[TR_N] == 17 || input[TR_N] == 20) {
+      num_split[TR_N] = core_num_per_cluster;
+    }
+    // when strategy is TRANSPOSE_3D_102/TRANSPOSE_4D_0213, input = [n, h, w],
+    // if h is greater than n and w, n-dimension will not be split
+    if ((policy_info.strategy == TRANSPOSE_3D_102 ||
+         policy_info.strategy == TRANSPOSE_4D_0213) &&
+        ((handle_->arch >= 372 &&
+          (input[TR_H] / input[TR_N] >= TRANS_HN_THRESHOLD_RATIO - 1)) ||
+         (handle_->arch < 372 &&
+          (input[TR_H] / input[TR_N] >= TRANS_HN_THRESHOLD_RATIO))) &&
+        (input[TR_H] / input[TR_W] >= TRANS_HW_THRESHOLD_RATIO)) {
+      num_split[TR_N] = 1;
+    }
+  }
+  // then, deal with H or W
+  // "remain" indicates the remain of ipuCore is no used.
+  int remain = number / num_split[TR_N];
+  if (input[TR_H] >= input[TR_W] ||
+      (input[TR_H] > number &&
+       (input[TR_W] / remain) * trans_raw_info.size_origin <
+           TRANS_MEMCPY_ALIGN)) {
+    split_h = true;
+    split_w = false;
+    if (input[TR_H] < remain) {
+      num_split[TR_H] = input[TR_H];
+    } else {
+      num_split[TR_H] = remain;
+    }
+  } else {
+    split_h = false;
+    split_w = true;
+    if (input[TR_W] < remain) {
+      num_split[TR_W] = input[TR_W];
+    } else {
+      num_split[TR_W] = remain;
+    }
+  }
+  VLOG(6) << "getCoreSplitInfo::num_split[TR_N] = " << num_split[TR_N];
+  VLOG(6) << "getCoreSplitInfo::num_split[TR_H] = " << num_split[TR_H];
+  VLOG(6) << "getCoreSplitInfo::num_split[TR_W] = " << num_split[TR_W];
+  // if (input.size() == 4) {
+  //  VLOG(6) << "getCoreSplitInfo::num_split[TR_C] = " << num_split[TR_C];
+  // }
+  return;
+}
+
+void Transpose::getNumProcessedLimit(const std::vector<int> &num_processed,
+                                     const std::vector<bool> &align_for3d4d,
+                                     std::vector<int> &num_processed_limit) {
+  auto getCoreMinRepeatNum = [&](const std::vector<int> &input,
+                                 const std::vector<bool> &align) {
+    uint32_t trans_num = 1;
+    bool trans_num_overflow = false;
+    int repeat_num = 1;
+    int index_overflow = 0;
+    for (int i = 0; i < input.size(); i++) {
+      VLOG(6) << "getNumProcessedLimit::input[" << i << "] = " << input[i];
+      trans_num *= (align[i]) ? CEIL(input[i], trans_aligned) : input[i];
+      if (i != (input.size() - 1)) {
+        if ((uint32_t)CEIL(input[i + 1], trans_aligned) >
+            (uint32_t)(TRANS_MAX / trans_num)) {
+          trans_num_overflow = true;
+          repeat_num = trans_num % nram_limit ? (trans_num / nram_limit + 1)
+                                              : (trans_num / nram_limit);
+          index_overflow = i + 1;
+          break;
+        }
+      }
+    }
+    if (trans_num_overflow) {
+      for (int index = index_overflow; index < input.size(); index++) {
+        repeat_num *=
+            (align[index]) ? CEIL(input[index], trans_aligned) : input[index];
+      }
+    } else {
+      repeat_num = trans_num % nram_limit ? (trans_num / nram_limit + 1)
+                                          : (trans_num / nram_limit);
+    }
+    VLOG(6) << "getCoreMinRepeatNum::input.size() = " << input.size();
+    VLOG(6) << "getCoreMinRepeatNum::trans_num  = " << trans_num;
+    VLOG(6) << "getCoreMinRepeatNum::nram_limit = " << nram_limit;
+    VLOG(6) << "getCoreMinRepeatNum::min_repeat_num = " << repeat_num;
+    VLOG(6) << "getCoreMinRepeatNum::trans_aligned = " << trans_aligned;
+    return repeat_num;
+  };
+
+  auto getOnceNum = [&](const int total_num, const int repeat_num,
+                        const bool align) {
+    int once_num = 1;
+    if (align) {
+      once_num = FLOOR(total_num / repeat_num, trans_aligned);
+      if (!once_num) {
+        once_num = total_num / repeat_num;
+      }
+    } else {
+      once_num = total_num / repeat_num;
+    }
+    if (once_num == 0) {
+      once_num = 1;
+    }
+
+    return once_num;
+  };
+
+  auto getRepeatNum = [&](const int total_num, const int once_num,
+                          const bool align) {
+    int trans_once_num = once_num;
+    int repeat_num = 1;
+    if (align) {
+      trans_once_num = CEIL(once_num, trans_aligned);
+    }
+    repeat_num = (total_num % trans_once_num) ? (total_num / trans_once_num + 1)
+                                              : (total_num / trans_once_num);
+    return repeat_num;
+  };
+
+  auto optimumSolutionFor210 = [&](const std::vector<int> &num_processed,
+                                   std::vector<int> &num_processed_limit) {
+    const auto dim = num_processed.size();
+    int min_num_processed_limit = INT_MAX;
+    int min_index = 0;
+    int max_num_processed_limit = INT_MIN;
+    int max_index = 0;
+
+    for (int i = 0; i < dim; i++) {
+      if (max_num_processed_limit < num_processed_limit[i]) {
+        max_num_processed_limit = num_processed_limit[i];
+        max_index = i;
+      }
+      if (num_processed_limit[i] == num_processed[i]) {
+        continue;
+      }
+      if (min_num_processed_limit > num_processed_limit[i]) {
+        min_num_processed_limit = num_processed_limit[i];
+        min_index = i;
+      }
+    }
+    min_num_processed_limit = num_processed_limit[min_index];
+    max_num_processed_limit = num_processed_limit[max_index];
+    if (min_index != max_index) {
+      if (min_num_processed_limit * trans_raw_info.size_origin <
+              NFU_ALIGN_SIZE &&
+          max_num_processed_limit * trans_raw_info.size_origin >
+              NFU_ALIGN_SIZE) {
+        int multiplier = 2;
+        while (min_num_processed_limit * trans_raw_info.size_origin <
+               NFU_ALIGN_SIZE) {
+          if ((max_num_processed_limit / multiplier) % trans_aligned) {
+            break;
+          }
+          if ((min_num_processed_limit * multiplier) >
+              num_processed[min_index]) {
+            break;
+          }
+          max_num_processed_limit /= multiplier;
+          min_num_processed_limit *= multiplier;
+        }
+      }
+      num_processed_limit[min_index] = min_num_processed_limit;
+      num_processed_limit[max_index] = max_num_processed_limit;
+    }
+  };
+
+  num_processed_limit.resize(num_processed.size(), 1);
+  int max_repeat_num = 1;
+  int min_repeat_num = getCoreMinRepeatNum(num_processed, align_for3d4d);
+  int dim = num_processed.size();
+  for (int i = 0; i < dim; i++) {
+    num_processed_limit[i] = num_processed[i];
+  }
+
+  std::vector<int> idx(dim);
+  for (int i = 0; i < dim; i++) {
+    idx[i] = i;
+  }
+  // when idx = {TR_N, TR_H, TR_W}, means first split dimN, then split dimH,
+  // last split dimW.
+  if (num_processed[TR_H] >= num_processed[TR_W]) {
+    // when strategy is TRANSPOSE_3D_102, input = [n, h, w], if h is far greater
+    // than n and w, h-dimension will be prioritized to split when strategy is
+    // TRANSPOSE_4D_0213, input = [batch, n, h, w], is identical to loop batch
+    // times for input = [n, h, w], if h is greater than n and w, h-dimension
+    // will be prioritized to split
+    if ((policy_info.strategy == TRANSPOSE_3D_102 ||
+         policy_info.strategy == TRANSPOSE_4D_0213) &&
+        num_processed[TR_H] > num_processed[TR_N] &&
+        num_processed[TR_H] > num_processed[TR_W]) {
+      idx = {TR_H, TR_N, TR_W};
+    }
+    if (dim == 4) {
+      if (num_processed[TR_W] < num_processed[TR_C]) {
+        idx = {TR_N, TR_H, TR_C, TR_W};
+      }
+    }
+  } else {
+    idx = {TR_N, TR_W, TR_H};
+    if (dim == 4) {
+      if (num_processed[TR_H] >= num_processed[TR_C]) {
+        idx = {TR_N, TR_W, TR_H, TR_C};
+      } else {
+        idx = {TR_N, TR_W, TR_C, TR_H};
+      }
+    }
+  }
+
+  int repeat_num = 1;
+  for (int i = 0; i < dim; i++) {
+    if (repeat_num >= min_repeat_num) {
+      break;
+    }
+    min_repeat_num = (min_repeat_num % repeat_num)
+                         ? (min_repeat_num / repeat_num + 1)
+                         : (min_repeat_num / repeat_num);
+    max_repeat_num =
+        (align_for3d4d[idx[i]])
+            ? getRepeatNum(num_processed[idx[i]], trans_aligned, true)
+            : min_repeat_num;
+    repeat_num =
+        (min_repeat_num < max_repeat_num) ? min_repeat_num : max_repeat_num;
+    num_processed_limit[idx[i]] =
+        getOnceNum(num_processed[idx[i]], repeat_num, align_for3d4d[idx[i]]);
+
+    bool flag = idx[i] == TR_N && align_for3d4d[idx[i]] &&
+                (num_processed_limit[idx[i]] * trans_raw_info.size_origin <
+                 TRANS_MEMCPY_ALIGN);
+    if (flag) {
+      if (num_processed[TR_H] < num_processed[TR_W]) {
+        if ((CEIL(num_processed[TR_W] / min_repeat_num, trans_aligned) *
+             trans_raw_info.size_origin) >= TRANS_MEMCPY_ALIGN) {
+          num_processed_limit[idx[i]] = num_processed[TR_N];
+        } else {
+          int tmp_repeat_num = min_repeat_num;
+          while (num_processed[TR_W] / tmp_repeat_num *
+                         trans_raw_info.size_origin <
+                     TRANS_MEMCPY_ALIGN &&
+                 tmp_repeat_num > 1) {
+            tmp_repeat_num /= 2;
+          }
+          num_processed_limit[TR_N] =
+              FLOOR(num_processed[TR_N] / (min_repeat_num / tmp_repeat_num),
+                    trans_aligned);
+          if (num_processed_limit[TR_N] == 0) {
+            num_processed_limit[TR_N] = trans_aligned;
+          }
+        }
+      } else {
+        if (num_processed[TR_N] * trans_raw_info.size_origin >
+            TRANS_MEMCPY_ALIGN) {
+          num_processed_limit[TR_N] =
+              TRANS_MEMCPY_ALIGN / trans_raw_info.size_origin;
+        } else {
+          num_processed_limit[TR_N] = num_processed[TR_N];
+        }
+      }
+    }
+    if (idx[i] == TR_W && (i != dim - 1)) {
+      if (num_processed[idx[i]] >= trans_aligned &&
+          num_processed[idx[i]] < 2 * trans_aligned) {
+        num_processed_limit[idx[i]] = trans_aligned;
+      }
+    }
+    repeat_num =
+        getRepeatNum(num_processed[idx[i]], num_processed_limit[idx[i]],
+                     align_for3d4d[idx[i]]);
+  }
+  VLOG(6) << "getNumProcessedLimit:: num_processed_limit[TR_N] = "
+          << num_processed_limit[TR_N];
+  VLOG(6) << "getNumProcessedLimit:: num_processed_limit[TR_H] = "
+          << num_processed_limit[TR_H];
+  VLOG(6) << "getNumProcessedLimit:: num_processed_limit[TR_W] = "
+          << num_processed_limit[TR_W];
+
+  // When x = (N,H,W), permute = (2,1,0), strategy = TRANSPOSE_3D_210,
+  // N, H, W must be aligned, the load layout of kernel is (N, H, W), the store
+  // layout of kernel is (W, H, N), it is better performance for  (W / N) *
+  // size_origin >= 128
+  if (policy_info.strategy == TRANSPOSE_3D_210) {
+    optimumSolutionFor210(num_processed, num_processed_limit);
+  }
+}
+
+void Transpose::inferNextParam() {
+  // index save the permute of transpose each time
+  std::vector<int> index;
+  std::vector<int> x_tmp = trans_fold_info.input_fold;
+  int dim = trans_fold_info.input_fold.size();
+  for (int i = 0; i < dim; i++) {
+    index.push_back(i);
+  }
+  auto updateInputInfo = [](const std::vector<int> &input,
+                            const std::vector<int> &index,
+                            std::vector<int> &output) {
+    for (int i = 0; i < index.size(); i++) {
+      output[i] = input[index[i]];
+    }
+  };
+
+  auto updateIndexInfo = [](std::vector<int> &index, int start,
+                            const int &end) {
+    std::vector<int> index_tmp = index;
+    for (int j = start; j < index.size(); j++) {
+      if (end + j - start < index.size()) {
+        index[j] = index_tmp[end + j - start];
+      } else {
+        index[j] = index_tmp[start++];
+      }
+    }
+  };
+
+  int n = 1;
+  int h = 1;
+  int w = 1;
+  infer_info.infer_nd_for_021trans = std::queue<std::vector<int>>();
+  for (int i = 0; i < dim; i++) {
+    // find the position of permute[i] in index
+    std::vector<int>::iterator iter =
+        std::find(index.begin(), index.end(), trans_fold_info.permute_fold[i]);
+    int pos = std::distance(index.begin(), iter);
+    if (pos == i) {
+      continue;
+    }
+    std::vector<int> tmp;
+    if (i != 0) {
+      n = accumulate(x_tmp.begin(), x_tmp.begin() + i, 1,
+                     std::multiplies<int>());
+    }
+    h = accumulate(x_tmp.begin() + i, x_tmp.begin() + pos, 1,
+                   std::multiplies<int>());
+    w = accumulate(x_tmp.begin() + pos, x_tmp.end(), 1, std::multiplies<int>());
+    tmp = {n, h, w};
+    infer_info.infer_nd_for_021trans.push(tmp);
+    // update index, the value of index is 0...i-1 no changing, i...pos-1 and
+    // pos....len-1 exchange position;
+    updateIndexInfo(index, i, pos);
+    // when index_order == permute end
+    if (index == trans_fold_info.permute_fold) {
+      break;
+    }
+    // update x_tmp
+    updateInputInfo(trans_fold_info.input_fold, index, x_tmp);
+  }
+}
+
+void Transpose::inferTransPath() {
+  auto dim = trans_fold_info.input_fold.size();
+  auto &permute_fold = trans_fold_info.permute_fold;
+  std::vector<int> permute_tmp;
+  for (int i = 0; i < dim; i++) {
+    permute_tmp.push_back(i);
+  }
+  auto &paths = infer_info.infer_nd_path;
+  paths.push_back(permute_tmp);
+  bool permute_13024 = false;
+  permute_13024 = (permute_fold.size() == 5) && (permute_fold[0] == 1) &&
+                  (permute_fold[1] == 3) && (permute_fold[2] == 0) &&
+                  (permute_fold[3] == 2) && (permute_fold[4] == 4);
+  if (permute_13024) {
+    paths.push_back({1, 2, 3, 0, 4});
+    paths.push_back({1, 3, 0, 2, 4});
+    return;
+  }
+
+  std::vector<std::vector<int>> paths_tmp;
+  for (int pi = 0; pi < dim; pi++) {
+    // find position of permute[pi] in current permute
+    std::vector<int>::iterator iter =
+        std::find(paths.back().begin(), paths.back().end(), permute_fold[pi]);
+    int pos = std::distance(paths.back().begin(), iter);
+    if (paths.back()[pi] == permute_fold[pi]) {
+      continue;
+    }
+    // find next permute for transpose
+    // [0,pi-1] is same with before permute
+    // [pi, pos-1] exchange with [pos], [pos, pos+1] ...[pos, dim)
+    std::vector<int> path;
+    std::vector<std::vector<int>> paths_tmp;
+    for (int path_num = 0; path_num < dim - pos; path_num++) {
+      std::vector<int> path_tmp;
+      // [0, pi)
+      for (int p_index = 0; p_index < pi; p_index++) {
+        path_tmp.push_back(paths.back()[p_index]);
+      }
+      // [pos, pos + path_num]
+      for (int ii = pos; ii <= pos + path_num; ii++) {
+        path_tmp.push_back(paths.back()[ii]);
+      }
+      // [pi, pos - 1]
+      for (int ii = pi; ii < pos; ii++) {
+        path_tmp.push_back(paths.back()[ii]);
+      }
+      // [pos + path_num + 1, dim)
+      for (int ii = pos + path_num + 1; ii < dim; ii++) {
+        path_tmp.push_back(paths.back()[ii]);
+      }
+      paths_tmp.push_back(path_tmp);
+    }
+    int max_count = 0;
+    std::vector<int> path_tmp;
+    for (int i = 0; i < paths_tmp.size(); i++) {
+      int same_count = 0;
+      for (int j = 0; j < paths_tmp[i].size(); j++) {
+        if (paths_tmp[i][j] == permute_fold[j]) {
+          same_count += 1;
+        }
+      }
+      if (same_count > max_count) {
+        path_tmp = paths_tmp[i];
+        max_count = same_count;
+      }
+    }
+    paths.push_back(path_tmp);
+    if (path_tmp == permute_fold) {
+      break;
+    }
+  }
+  return;
+}
+
+void Transpose::spliter() {
+  auto getNumProcessed = [&]() {
+    auto &num_processed = split_info.num_processed;
+    auto &num_processed_ceil = split_info.num_processed_ceil;
+    const auto &input = trans_fold_info.input_fold;
+    const auto &num_split = split_info.num_split;
+
+    num_processed.resize(input.size(), 1);
+    num_processed_ceil.resize(input.size(), 1);
+    for (int i = 0; i < input.size(); i++) {
+      num_processed[i] = input[i] / num_split[i];
+      num_processed_ceil[i] =
+          (input[i] % num_split[i]) ? (num_processed[i] + 1) : num_processed[i];
+      VLOG(6) << "spliter::num_processed[" << i << "] = " << num_processed[i];
+      VLOG(6) << "spliter::num_processed_ceil[" << i
+              << "] = " << num_processed_ceil[i];
+    }
+    return;
+  };
+  const auto &num_processed = split_info.num_processed;
+
+  const auto &num_processed_ceil = split_info.num_processed_ceil;
+  getCoreSplitInfo();
+  getNumProcessed();
+  if (policy_info.strategy == TRANSPOSE_2D) {
+    return;
+  }
+  auto &num_processed_limit = split_info.num_processed_limit;
+  auto &num_processed_ceil_limit = split_info.num_processed_ceil_limit;
+  getNumProcessedLimit(num_processed, this->align_for3d4d, num_processed_limit);
+  getNumProcessedLimit(num_processed_ceil, this->align_for3d4d,
+                       num_processed_ceil_limit);
+  VLOG(6) << "spliter::num_processed_limit[TR_N]" << num_processed_limit[TR_N];
+  VLOG(6) << "spliter::num_processed_limit[TR_H]" << num_processed_limit[TR_H];
+  VLOG(6) << "spliter::num_processed_limit[TR_W]" << num_processed_limit[TR_W];
+  // if (num_processed_limit.size() == 4) {
+  //   VLOG(6) << "spliter::num_processed_limit[TR_C]" <<
+  //   num_processed_limit[TR_C];
+  // }
+  VLOG(6) << "spliter::num_processed_ceil_limit[TR_N]"
+          << num_processed_ceil_limit[TR_N];
+  VLOG(6) << "spliter::num_processed_ceil_limit[TR_H]"
+          << num_processed_ceil_limit[TR_H];
+  VLOG(6) << "spliter::num_processed_ceil_limit[TR_W]"
+          << num_processed_ceil_limit[TR_W];
+  // if (num_processed_ceil_limit.size() == 4) {
+  //   VLOG(6) << "spliter::num_processed_ceil_limit[TR_C]" <<
+  //   num_processed_ceil_limit[TR_C];
+  // }
+  return;
+}
+
+void Transpose::preProcess() {
+  auto getTransposeAlignedSize = [&](const mluOpDataType_t &dt) {
+    switch (dt) {
+      case MLUOP_DTYPE_INT32:
+      case MLUOP_DTYPE_FLOAT:
+      case MLUOP_DTYPE_UINT32:
+        return BANG_TRANSPOSE_ALIGN_FP32;
+      case MLUOP_DTYPE_UINT64:
+      case MLUOP_DTYPE_INT64:
+        return BANG_TRANSPOSE_ALIGN_FP64;
+      case MLUOP_DTYPE_HALF:
+      case MLUOP_DTYPE_INT16:
+      case MLUOP_DTYPE_UINT16:
+      case MLUOP_DTYPE_INT8:
+      case MLUOP_DTYPE_UINT8:
+      case MLUOP_DTYPE_BOOL:
+        return BANG_TRANSPOSE_ALIGN_INT8;
+      default:
+        return BANG_TRANSPOSE_ALIGN_INT8;
+    }
+  };
+
+  this->trans_aligned = getTransposeAlignedSize(trans_raw_info.dtype);
+  dimensionReduction();
+  dimensionFolder();
+  getTransposeStrategy();
+  return;
+}
+
+bool Transpose::planner() {
+  mluOpTransposeStrategy_t &strategy = policy_info.strategy;
+  bool &is_split_lowest_dim = split_info.is_split_lowest_dim;
+
+  if (strategy == TRANSPOSE_3D_021 || strategy == TRANSPOSE_3D_210 ||
+      strategy == TRANSPOSE_4D_0321) {
+    split_info.is_mul_overflow = isMulOverflow();
+    is_split_lowest_dim = isSplitLowestDim();
+  }
+  this->policyFunc();
+  if (strategy == TRANSPOSE_2D) {
+    this->spliter();
+    return true;
+  }
+  if (strategy == TRANSPOSE_3D_021) {
+    if (is_split_lowest_dim) {
+      splitLowestDim();
+    }
+  }
+
+  if (strategy == TRANSPOSE_3D_021 || strategy == TRANSPOSE_3D_210 ||
+      strategy == TRANSPOSE_3D_102 || strategy == TRANSPOSE_4D_0321 ||
+      strategy == TRANSPOSE_4D_0213) {
+    const int dim = trans_fold_info.input_fold.size();
+    if (dim == 3) {
+      if (strategy == TRANSPOSE_3D_021) {
+        align_for3d4d = {false, true, true};
+      } else if (strategy == TRANSPOSE_3D_210) {
+        align_for3d4d = {true, true, true};
+      } else {
+        align_for3d4d = {false, false, false};
+      }
+    }
+    if (dim == 4) {
+      if (strategy == TRANSPOSE_3D_021) {
+        align_for3d4d = {false, false, true, true};
+      } else if (strategy == TRANSPOSE_4D_0321) {
+        // TRANSPOSE_4D_0321 implements by TRANSPOSE_3D_210,
+        // the highest dimension N will not be considered.
+        align_for3d4d = {true, true, true, false};
+      } else {
+        align_for3d4d = {false, false, false, false};
+      }
+    }
+
+    const std::vector<int> input_fold_raw = trans_fold_info.input_fold;
+    if (strategy == TRANSPOSE_4D_0321 || strategy == TRANSPOSE_4D_0213) {
+      // input_fold = (N,H,W,C), permute_fold = (0,3,2,1),which is equal to loop
+      // N times for input_fold = (H,W,C), permute_fold = (0,2,1). Therefore,
+      // TRANSPOSE_4D_0321 can be implemented by TRANSPOSE_3D_021, this part
+      // firstly modify the information of input_fold is (H,W,C), which is to
+      // compute the information of split-the value of split_info.
+      trans_fold_info.input_fold.assign(input_fold_raw.begin() + 1,
+                                        input_fold_raw.end());
+    }
+
+    this->spliter();
+    if (strategy == TRANSPOSE_3D_210 || strategy == TRANSPOSE_4D_0321) {
+      auto policyUpdatFor210 = [&]() {
+        std::vector<int> num_processed = split_info.num_processed;
+        std::vector<int> num_processed_limit = split_info.num_processed_limit;
+        auto num_processed_ceil = split_info.num_processed_ceil;
+        auto num_processed_ceil_limit = split_info.num_processed_ceil_limit;
+        int mult_num_processed_limit = 1;
+        for (int i = 0; i < split_info.num_processed_limit.size(); ++i) {
+          int max_num_processed_limit =
+              (split_info.num_processed_limit[i] <
+               split_info.num_processed_ceil_limit[i])
+                  ? split_info.num_processed_ceil_limit[i]
+                  : split_info.num_processed_limit[i];
+          mult_num_processed_limit *=
+              CEIL(max_num_processed_limit, trans_aligned);
+        }
+        if (mult_num_processed_limit > nram_limit) {
+          const int max_job = cluster_num;
+          const auto dim_fold = trans_fold_info.input_fold.size();
+          int b = trans_fold_info.input_fold[dim_fold - 2];
+          int jobs = TRANS_PAD_UP(b, core_num_per_cluster);
+          policy_info.st3D = TR_3D_210;
+          policy_info.kDim.y = std::min(jobs, max_job);
+          return;
+        }
+        if (CEIL(trans_fold_info.input_fold[TR_N], trans_aligned) *
+                CEIL(trans_fold_info.input_fold[TR_W], trans_aligned) <=
+            nram_limit) {
+          const int max_job = cluster_num;
+          const auto dim_fold = trans_fold_info.input_fold.size();
+          size_t a_align = trans_fold_info.input_fold[dim_fold - 3];
+          size_t b = trans_fold_info.input_fold[dim_fold - 2];
+          size_t c_align = trans_fold_info.input_fold[dim_fold - 1];
+          size_t jobs_raw = TRANS_PAD_UP(b, core_num_per_cluster);
+          jobs_raw = std::min(uint32_t(jobs_raw), uint32_t(max_job));
+          size_t loop_raw = TRANS_PAD_UP(b, jobs_raw * core_num_per_cluster);
+          size_t loop_optimize = 1;
+          size_t total_number_optimize = 1;
+          for (int i = 0; i < num_processed_limit.size(); ++i) {
+            size_t num_process_align =
+                CEIL(num_processed_ceil[i], trans_aligned);
+            size_t num_process_limit_align =
+                CEIL(num_processed_ceil_limit[i], trans_aligned);
+            loop_optimize *=
+                TRANS_PAD_UP(num_process_align, num_process_limit_align);
+            total_number_optimize *= num_processed_ceil[i];
+          }
+          // single ipu core explains for total_processed_number,
+          // once_processed_number, loop times total_processed_number: a_align *
+          // loop_raw * c_align, total_number_optimize once_processed_number:
+          // a_align * c_align, total_number_optimize / loop_optimize loop
+          // times: loop_raw, loop_optimize represent two algorithm is raw and
+          // optimize replace raw with optimize algorithm need satisfy: 1.if
+          // total processed number of raw is bigger or equal than optimize 1.1
+          // once processed number of raw is smaller than than optimize 1.2 once
+          // processed number of raw is smaller or equal than 8096 1.3 once
+          // processed number of optimize is bigger or equal than 2048
+          if (a_align * loop_raw * c_align >= total_number_optimize) {
+            if (a_align * c_align <= total_number_optimize / loop_optimize) {
+              if (a_align * c_align <= TRANS_ONCE_NUM * 4 &&
+                  total_number_optimize / loop_optimize >= TRANS_ONCE_NUM) {
+                policy_info.st3D = TR_3D_210_OPTIMIZE;
+                policy_info.kDim.y = max_job;
+                return;
+              }
+            }
+          }
+          // 2.if total processed number of raw is bigger or equal than optimize
+          // 2.1 total processed number of raw id divided by optimize is bigger
+          // than 10 2.2 loop times of raw is not equal to optimize
+          if (a_align * loop_raw * c_align >= total_number_optimize) {
+            if (a_align * loop_raw * c_align >
+                    TRANS_TOTAL_NUM_RATIO * total_number_optimize &&
+                loop_raw != loop_optimize) {
+              policy_info.st3D = TR_3D_210_OPTIMIZE;
+              policy_info.kDim.y = max_job;
+              return;
+            }
+          }
+          // 3.if total processed number of raw is smaller than optimize
+          // 3.1 loop times of raw is bigger than optimize
+          if (a_align * loop_raw * c_align < total_number_optimize) {
+            if (loop_raw > loop_optimize) {
+              policy_info.st3D = TR_3D_210_OPTIMIZE;
+              policy_info.kDim.y = max_job;
+              return;
+            }
+          }
+          // 4.if total processed number of raw is equal to optimize
+          // 4.1.1 once processed number of raw is smaller than than optimize
+          // 4.1.2 loop times of raw is divided by optimize is smaller than 5
+          // 4.1.3 loop times of optimize is smaller than 9
+          // 4.2.1 loop times of optimize is equal to 1
+          // 4.3.1 n != 96 && h = 3136
+          if (a_align * loop_raw * c_align == total_number_optimize) {
+            if (a_align * c_align < total_number_optimize / loop_optimize) {
+              if (loop_raw / loop_optimize < TRANS_LOOP_RATIO &&
+                  loop_optimize < TRANS_LOOP_LIMIT) {
+                policy_info.st3D = TR_3D_210_OPTIMIZE;
+                policy_info.kDim.y = max_job;
+                return;
+              }
+              if (loop_optimize == 1) {
+                policy_info.st3D = TR_3D_210_OPTIMIZE;
+                policy_info.kDim.y = max_job;
+                return;
+              }
+              if (b == TRANS_H_LIMIT &&
+                  trans_fold_info.input_fold[dim_fold - 3] != TRANS_N) {
+                policy_info.st3D = TR_3D_210_OPTIMIZE;
+                policy_info.kDim.y = max_job;
+                return;
+              }
+            }
+          }
+        }
+      };
+      // TODO(*): modify this code to make sure num_processed_limit <
+      // nram_limit. do in spliter();
+      policyUpdatFor210();
+    }
+    if (strategy == TRANSPOSE_4D_0321 || strategy == TRANSPOSE_4D_0213) {
+      trans_fold_info.input_fold = input_fold_raw;
+    }
+
+    return true;
+  } else if (strategy == TRANSPOSE_COMMON || strategy == TRANSPOSE_4D_1320) {
+    inferNextParam();
+    inferTransPath();
+    return true;
+  } else {
+    return true;
+  }
+}
+
+mluOpStatus_t Transpose::launchKernel(const std::string op_name,
+                                      const mluOpTransposeDescriptor_t &desc,
+                                      const mluOpTensorDescriptor_t x_desc,
+                                      const void *x,
+                                      const mluOpTensorDescriptor_t y_desc,
+                                      void *y, void *workspace) {
+  const auto &data_type = trans_raw_info.dtype;
+  const auto &size_origin = trans_raw_info.size_origin;
+  const auto &x_fold = trans_fold_info.input_fold;
+  const auto &p_fold = trans_fold_info.permute_fold;
+  int dim_fold = trans_fold_info.input_fold.size();
+  const auto &kType = policy_info.kType;
+  const auto &kDim = policy_info.kDim;
+  const auto &strategy = policy_info.strategy;
+
+  const auto &sum = this->ele_num;
+  // in case of invalid read of std::vector<int> of x_fold
+  int x_kernel[TRANSPOSE_MAX_DIM] = {0};
+  int p_kernel[TRANSPOSE_MAX_DIM] = {0};
+  for (int i = 0; i < dim_fold; i++) {
+    x_kernel[i] = x_fold[i];
+    p_kernel[i] = p_fold[i];
+  }
+  int len = infer_info.infer_nd_for_021trans.size();
+  if (strategy == TRANSPOSE_1D) {
+    // TRANSPOSE_1D can be implemented by mluOpCopy. Some cases have performance
+    // degradation when using mluOpCopy, therefore we temporarily use the
+    // original method to implement TRANSPOSE_1D. TRANSPOSE_1D is implemented by
+    // mluOpCopy following commented code.
+
+    VLOG(6) << "MLUTransposeKernel1D";
+    if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+        data_type == MLUOP_DTYPE_BOOL) {
+      KERNEL_CHECK((MLUTransposeKernel1D<int8_t, 1>
+                    <<<kDim, kType, handle_->queue>>>((void *)x, y, sum)));
+    } else if (data_type == MLUOP_DTYPE_INT16 ||
+               data_type == MLUOP_DTYPE_UINT16 ||
+               data_type == MLUOP_DTYPE_HALF) {
+      KERNEL_CHECK((MLUTransposeKernel1D<int16_t, 1>
+                    <<<kDim, kType, handle_->queue>>>((void *)x, y, sum)));
+    } else if (data_type == MLUOP_DTYPE_INT32 ||
+               data_type == MLUOP_DTYPE_UINT32 ||
+               data_type == MLUOP_DTYPE_FLOAT) {
+      KERNEL_CHECK((MLUTransposeKernel1D<int32_t, 1>
+                    <<<kDim, kType, handle_->queue>>>((void *)x, y, sum)));
+    }
+  } else {
+    if (strategy == TRANSPOSE_2D) {
+      const mluOpTranspose2DStrategy_t &st2D = policy_info.st2D;
+      const auto &split_h = split_info.split_h;
+      if (st2D == TR_2D_SMALL) {
+        VLOG(6) << "MLUTransposeKernel2DSmall";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel2DSmall<int8_t, 1>
+               <<<kDim, kType, handle_->queue>>>((void *)x, y, x_kernel[TR_N],
+                                                 x_kernel[TR_H], split_h)));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel2DSmall<int16_t, 1>
+               <<<kDim, kType, handle_->queue>>>((void *)x, y, x_kernel[TR_N],
+                                                 x_kernel[TR_H], split_h)));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel2DSmall<int32_t, 1>
+               <<<kDim, kType, handle_->queue>>>((void *)x, y, x_kernel[TR_N],
+                                                 x_kernel[TR_H], split_h)));
+        }
+      } else if (st2D == TR_2D_ALLSPLIT) {
+        VLOG(6) << "MLUTransposeKernel2D";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel2D<int8_t, 1><<<kDim, kType, handle_->queue>>>(
+                  (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], split_h)));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK((
+              MLUTransposeKernel2D<int16_t, 1><<<kDim, kType, handle_->queue>>>(
+                  (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], split_h)));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK((
+              MLUTransposeKernel2D<int32_t, 1><<<kDim, kType, handle_->queue>>>(
+                  (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], split_h)));
+        }
+      } else {
+        VLOG(6) << "MLUTransposeKernel2DEnormous";
+        auto &num_split = split_info.num_split;
+        auto &num_processed = split_info.num_processed;
+        auto &num_processed_ceil = split_info.num_processed_ceil;
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK((
+              MLUTransposeKernel2DEnormous<int8_t, 1>
+              <<<kDim, kType, handle_->queue>>>(
+                  (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], num_split[TR_N],
+                  num_split[TR_H], num_processed[TR_N], num_processed[TR_H],
+                  num_processed_ceil[TR_N], num_processed_ceil[TR_H])));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK((
+              MLUTransposeKernel2DEnormous<int16_t, 1>
+              <<<kDim, kType, handle_->queue>>>(
+                  (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], num_split[TR_N],
+                  num_split[TR_H], num_processed[TR_N], num_processed[TR_H],
+                  num_processed_ceil[TR_N], num_processed_ceil[TR_H])));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK((
+              MLUTransposeKernel2DEnormous<int32_t, 1>
+              <<<kDim, kType, handle_->queue>>>(
+                  (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], num_split[TR_N],
+                  num_split[TR_H], num_processed[TR_N], num_processed[TR_H],
+                  num_processed_ceil[TR_N], num_processed_ceil[TR_H])));
+        }
+      }
+    } else if (strategy == TRANSPOSE_3D_021 || strategy == TRANSPOSE_3D_102 ||
+               strategy == TRANSPOSE_3D_210) {
+      const mluOpTranspose3DStrategy_t &st3D = policy_info.st3D;
+      const auto &is_mul_overflow = split_info.is_mul_overflow;
+      const auto &is_split_lowest_dim = split_info.is_split_lowest_dim;
+      const auto &split_h = split_info.split_h;
+
+      auto &num_split = split_info.num_split;
+      auto &num_processed = split_info.num_processed;
+      auto &num_processed_limit = split_info.num_processed_limit;
+      auto &num_processed_ceil = split_info.num_processed_ceil;
+      auto &num_processed_ceil_limit = split_info.num_processed_ceil_limit;
+      // 4 means 4-dims of [N,H,W,C]
+      num_split.resize(4);
+      num_processed.resize(4);
+      num_processed_limit.resize(4);
+      num_processed_ceil.resize(4);
+      num_processed_ceil_limit.resize(4);
+      if (strategy == TRANSPOSE_3D_102) {
+        int min_n_num =
+            std::min(num_processed_limit[TR_N], num_processed_ceil_limit[TR_N]);
+        int h_ratio = num_processed_limit[TR_H] / num_processed_limit[TR_N];
+        int h_ceil_ratio =
+            num_processed_ceil_limit[TR_H] / num_processed_ceil_limit[TR_N];
+        int min_h_ratio = std::min(h_ratio, h_ceil_ratio);
+        if ((num_processed_limit[TR_N] == x_kernel[TR_N] ||
+             (min_n_num > TRANS_N_LIMIT && min_h_ratio > TRANS_HN_RATIO)) &&
+            num_processed_limit[TR_W] == x_kernel[TR_W]) {
+          VLOG(6) << "MLUTransposeKernel3D102Tower";
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK(
+                (MLUTransposeKernel3D102Tower<int8_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                     x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                     num_split[TR_W], split_h, num_processed[TR_N],
+                     num_processed[TR_H], num_processed[TR_W],
+                     num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                     num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                     num_processed_limit[TR_H], num_processed_limit[TR_W],
+                     num_processed_ceil_limit[TR_N],
+                     num_processed_ceil_limit[TR_H],
+                     num_processed_ceil_limit[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK(
+                (MLUTransposeKernel3D102Tower<int16_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                     x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                     num_split[TR_W], split_h, num_processed[TR_N],
+                     num_processed[TR_H], num_processed[TR_W],
+                     num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                     num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                     num_processed_limit[TR_H], num_processed_limit[TR_W],
+                     num_processed_ceil_limit[TR_N],
+                     num_processed_ceil_limit[TR_H],
+                     num_processed_ceil_limit[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK(
+                (MLUTransposeKernel3D102Tower<int32_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                     x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                     num_split[TR_W], split_h, num_processed[TR_N],
+                     num_processed[TR_H], num_processed[TR_W],
+                     num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                     num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                     num_processed_limit[TR_H], num_processed_limit[TR_W],
+                     num_processed_ceil_limit[TR_N],
+                     num_processed_ceil_limit[TR_H],
+                     num_processed_ceil_limit[TR_W])));
+          }
+        } else {
+          VLOG(6) << "MLUTransposeKernel3D102";
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK((MLUTransposeKernel3D102<int8_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK((MLUTransposeKernel3D102<int16_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK((MLUTransposeKernel3D102<int32_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W])));
+          }
+        }
+      } else if (strategy == TRANSPOSE_3D_021) {
+        if ((st3D == TR_3D_021_LOOP) && (!is_split_lowest_dim) &&
+            (!is_mul_overflow) &&
+            (num_processed_limit[TR_H] == x_kernel[TR_H]) &&
+            (num_processed_limit[TR_W] == x_kernel[TR_W])) {
+          VLOG(6) << "MLUTransposeKernel3D021_Small";
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK((MLUTransposeKernel3D021Small<int8_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W], num_split[TR_N], split_h,
+                              num_processed[TR_N], num_processed_ceil[TR_N],
+                              num_processed_limit[TR_N],
+                              num_processed_ceil_limit[TR_N])));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK((MLUTransposeKernel3D021Small<int16_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W], num_split[TR_N], split_h,
+                              num_processed[TR_N], num_processed_ceil[TR_N],
+                              num_processed_limit[TR_N],
+                              num_processed_ceil_limit[TR_N])));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK((MLUTransposeKernel3D021Small<int32_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W], num_split[TR_N], split_h,
+                              num_processed[TR_N], num_processed_ceil[TR_N],
+                              num_processed_limit[TR_N],
+                              num_processed_ceil_limit[TR_N])));
+          }
+        } else {
+          if (st3D == TR_3D_021_TILING) {
+            VLOG(6) << "MLUTransposeKernel3D021Tiling";
+            if (data_type == MLUOP_DTYPE_INT8 ||
+                data_type == MLUOP_DTYPE_UINT8 ||
+                data_type == MLUOP_DTYPE_BOOL) {
+              KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int8_t, 1>
+                            <<<kDim, kType, handle_->queue>>>(
+                                (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                                x_kernel[TR_W])));
+            } else if (data_type == MLUOP_DTYPE_INT16 ||
+                       data_type == MLUOP_DTYPE_UINT16 ||
+                       data_type == MLUOP_DTYPE_HALF) {
+              KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int16_t, 1>
+                            <<<kDim, kType, handle_->queue>>>(
+                                (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                                x_kernel[TR_W])));
+            } else if (data_type == MLUOP_DTYPE_INT32 ||
+                       data_type == MLUOP_DTYPE_UINT32 ||
+                       data_type == MLUOP_DTYPE_FLOAT) {
+              KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int32_t, 1>
+                            <<<kDim, kType, handle_->queue>>>(
+                                (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                                x_kernel[TR_W])));
+            }
+          } else if (is_mul_overflow) {
+            VLOG(6) << "MLUTransposeKernel3D021Loop";
+            if (data_type == MLUOP_DTYPE_INT8 ||
+                data_type == MLUOP_DTYPE_UINT8 ||
+                data_type == MLUOP_DTYPE_BOOL) {
+              KERNEL_CHECK((MLUTransposeKernel3D021Loop<int8_t, 1>
+                            <<<kDim, kType, handle_->queue>>>(
+                                (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                                x_kernel[TR_W], split_h)));
+            } else if (data_type == MLUOP_DTYPE_INT16 ||
+                       data_type == MLUOP_DTYPE_UINT16 ||
+                       data_type == MLUOP_DTYPE_HALF) {
+              KERNEL_CHECK((MLUTransposeKernel3D021Loop<int16_t, 1>
+                            <<<kDim, kType, handle_->queue>>>(
+                                (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                                x_kernel[TR_W], split_h)));
+            } else if (data_type == MLUOP_DTYPE_INT32 ||
+                       data_type == MLUOP_DTYPE_UINT32 ||
+                       data_type == MLUOP_DTYPE_FLOAT) {
+              KERNEL_CHECK((MLUTransposeKernel3D021Loop<int32_t, 1>
+                            <<<kDim, kType, handle_->queue>>>(
+                                (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                                x_kernel[TR_W], split_h)));
+            }
+          } else if (is_split_lowest_dim) {
+            VLOG(6) << "MLUTransposeKernel4D0231";
+            if (data_type == MLUOP_DTYPE_INT8 ||
+                data_type == MLUOP_DTYPE_UINT8 ||
+                data_type == MLUOP_DTYPE_BOOL) {
+              KERNEL_CHECK(
+                  (MLUTransposeKernel4D0231<int8_t, 1>
+                   <<<kDim, kType, handle_->queue>>>(
+                       (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                       x_kernel[TR_W], x_kernel[TR_C], num_split[TR_N],
+                       num_split[TR_H], num_split[TR_W], num_split[TR_C],
+                       split_h, num_processed[TR_N], num_processed[TR_H],
+                       num_processed[TR_W], num_processed[TR_C],
+                       num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                       num_processed_ceil[TR_W], num_processed_ceil[TR_C],
+                       num_processed_limit[TR_N], num_processed_limit[TR_H],
+                       num_processed_limit[TR_W], num_processed_limit[TR_C],
+                       num_processed_ceil_limit[TR_N],
+                       num_processed_ceil_limit[TR_H],
+                       num_processed_ceil_limit[TR_W],
+                       num_processed_ceil_limit[TR_C])));
+            } else if (data_type == MLUOP_DTYPE_INT16 ||
+                       data_type == MLUOP_DTYPE_UINT16 ||
+                       data_type == MLUOP_DTYPE_HALF) {
+              KERNEL_CHECK(
+                  (MLUTransposeKernel4D0231<int16_t, 1>
+                   <<<kDim, kType, handle_->queue>>>(
+                       (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                       x_kernel[TR_W], x_kernel[TR_C], num_split[TR_N],
+                       num_split[TR_H], num_split[TR_W], num_split[TR_C],
+                       split_h, num_processed[TR_N], num_processed[TR_H],
+                       num_processed[TR_W], num_processed[TR_C],
+                       num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                       num_processed_ceil[TR_W], num_processed_ceil[TR_C],
+                       num_processed_limit[TR_N], num_processed_limit[TR_H],
+                       num_processed_limit[TR_W], num_processed_limit[TR_C],
+                       num_processed_ceil_limit[TR_N],
+                       num_processed_ceil_limit[TR_H],
+                       num_processed_ceil_limit[TR_W],
+                       num_processed_ceil_limit[TR_C])));
+            } else if (data_type == MLUOP_DTYPE_INT32 ||
+                       data_type == MLUOP_DTYPE_UINT32 ||
+                       data_type == MLUOP_DTYPE_FLOAT) {
+              KERNEL_CHECK(
+                  (MLUTransposeKernel4D0231<int32_t, 1>
+                   <<<kDim, kType, handle_->queue>>>(
+                       (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                       x_kernel[TR_W], x_kernel[TR_C], num_split[TR_N],
+                       num_split[TR_H], num_split[TR_W], num_split[TR_C],
+                       split_h, num_processed[TR_N], num_processed[TR_H],
+                       num_processed[TR_W], num_processed[TR_C],
+                       num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                       num_processed_ceil[TR_W], num_processed_ceil[TR_C],
+                       num_processed_limit[TR_N], num_processed_limit[TR_H],
+                       num_processed_limit[TR_W], num_processed_limit[TR_C],
+                       num_processed_ceil_limit[TR_N],
+                       num_processed_ceil_limit[TR_H],
+                       num_processed_ceil_limit[TR_W],
+                       num_processed_ceil_limit[TR_C])));
+            }
+          } else {
+            VLOG(6) << "MLUTransposeKernel3D021";
+            if (data_type == MLUOP_DTYPE_INT8 ||
+                data_type == MLUOP_DTYPE_UINT8 ||
+                data_type == MLUOP_DTYPE_BOOL) {
+              KERNEL_CHECK(
+                  (MLUTransposeKernel3D021<int8_t, 1>
+                   <<<kDim, kType, handle_->queue>>>(
+                       (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                       x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                       num_split[TR_W], split_h, num_processed[TR_N],
+                       num_processed[TR_H], num_processed[TR_W],
+                       num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                       num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                       num_processed_limit[TR_H], num_processed_limit[TR_W],
+                       num_processed_ceil_limit[TR_N],
+                       num_processed_ceil_limit[TR_H],
+                       num_processed_ceil_limit[TR_W])));
+            } else if (data_type == MLUOP_DTYPE_INT16 ||
+                       data_type == MLUOP_DTYPE_UINT16 ||
+                       data_type == MLUOP_DTYPE_HALF) {
+              KERNEL_CHECK(
+                  (MLUTransposeKernel3D021<int16_t, 1>
+                   <<<kDim, kType, handle_->queue>>>(
+                       (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                       x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                       num_split[TR_W], split_h, num_processed[TR_N],
+                       num_processed[TR_H], num_processed[TR_W],
+                       num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                       num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                       num_processed_limit[TR_H], num_processed_limit[TR_W],
+                       num_processed_ceil_limit[TR_N],
+                       num_processed_ceil_limit[TR_H],
+                       num_processed_ceil_limit[TR_W])));
+            } else if (data_type == MLUOP_DTYPE_INT32 ||
+                       data_type == MLUOP_DTYPE_UINT32 ||
+                       data_type == MLUOP_DTYPE_FLOAT) {
+              KERNEL_CHECK(
+                  (MLUTransposeKernel3D021<int32_t, 1>
+                   <<<kDim, kType, handle_->queue>>>(
+                       (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                       x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                       num_split[TR_W], split_h, num_processed[TR_N],
+                       num_processed[TR_H], num_processed[TR_W],
+                       num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                       num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                       num_processed_limit[TR_H], num_processed_limit[TR_W],
+                       num_processed_ceil_limit[TR_N],
+                       num_processed_ceil_limit[TR_H],
+                       num_processed_ceil_limit[TR_W])));
+            }
+          }
+        }
+      } else {
+        if (st3D == TR_3D_210) {
+          VLOG(6) << "MLUTransposeKernel3D210Small";
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK((MLUTransposeKernel3D210Small<int8_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK((MLUTransposeKernel3D210Small<int16_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK((MLUTransposeKernel3D210Small<int32_t, 1>
+                          <<<kDim, kType, handle_->queue>>>(
+                              (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                              x_kernel[TR_W])));
+          }
+        } else {
+          VLOG(6) << "MLUTransposeKernel3D210";
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK(
+                (MLUTransposeKernel3D210<int8_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                     x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                     num_split[TR_W], split_h, num_processed[TR_N],
+                     num_processed[TR_H], num_processed[TR_W],
+                     num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                     num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                     num_processed_limit[TR_H], num_processed_limit[TR_W],
+                     num_processed_ceil_limit[TR_N],
+                     num_processed_ceil_limit[TR_H],
+                     num_processed_ceil_limit[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK(
+                (MLUTransposeKernel3D210<int16_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                     x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                     num_split[TR_W], split_h, num_processed[TR_N],
+                     num_processed[TR_H], num_processed[TR_W],
+                     num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                     num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                     num_processed_limit[TR_H], num_processed_limit[TR_W],
+                     num_processed_ceil_limit[TR_N],
+                     num_processed_ceil_limit[TR_H],
+                     num_processed_ceil_limit[TR_W])));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK(
+                (MLUTransposeKernel3D210<int32_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                     x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                     num_split[TR_W], split_h, num_processed[TR_N],
+                     num_processed[TR_H], num_processed[TR_W],
+                     num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                     num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                     num_processed_limit[TR_H], num_processed_limit[TR_W],
+                     num_processed_ceil_limit[TR_N],
+                     num_processed_ceil_limit[TR_H],
+                     num_processed_ceil_limit[TR_W])));
+          }
+        }
+      }
+      // 1. NHWC -> NWHC
+    } else if (strategy == TRANSPOSE_4D_0213) {
+      const auto &split_h = split_info.split_h;
+      const auto &num_split = split_info.num_split;
+      const auto &num_processed = split_info.num_processed;
+      const auto &num_processed_limit = split_info.num_processed_limit;
+      const auto &num_processed_ceil = split_info.num_processed_ceil;
+      const auto &num_processed_ceil_limit =
+          split_info.num_processed_ceil_limit;
+      const auto task_dim = kDim.x * kDim.y * kDim.z;
+      if ((x_kernel[TR_H] * x_kernel[TR_W] * x_kernel[TR_C] * size_origin <
+           NRAM_BYTE_2D_CPU) &&
+          (x_kernel[TR_N] >= task_dim)) {
+        VLOG(6) << "MLUTransposeKernel4D0213Small";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK((MLUTransposeKernel4D0213Small<int8_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK((MLUTransposeKernel4D0213Small<int16_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK((MLUTransposeKernel4D0213Small<int32_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        }
+      } else if (num_processed_limit[TR_N] != 1 &&
+                 num_processed_limit[TR_W] == x_kernel[TR_C]) {
+        VLOG(6) << "MLUTransposeKernel4D0213Tower";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel4D0213Tower<int8_t, 1>
+               <<<kDim, kType, handle_->queue>>>(
+                   (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], x_kernel[TR_W],
+                   x_kernel[TR_C], num_split[TR_N], num_split[TR_H],
+                   num_split[TR_W], split_h, num_processed[TR_N],
+                   num_processed[TR_H], num_processed[TR_W],
+                   num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                   num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                   num_processed_limit[TR_H], num_processed_limit[TR_W],
+                   num_processed_ceil_limit[TR_N],
+                   num_processed_ceil_limit[TR_H],
+                   num_processed_ceil_limit[TR_W])));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel4D0213Tower<int16_t, 1>
+               <<<kDim, kType, handle_->queue>>>(
+                   (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], x_kernel[TR_W],
+                   x_kernel[TR_C], num_split[TR_N], num_split[TR_H],
+                   num_split[TR_W], split_h, num_processed[TR_N],
+                   num_processed[TR_H], num_processed[TR_W],
+                   num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                   num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                   num_processed_limit[TR_H], num_processed_limit[TR_W],
+                   num_processed_ceil_limit[TR_N],
+                   num_processed_ceil_limit[TR_H],
+                   num_processed_ceil_limit[TR_W])));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel4D0213Tower<int32_t, 1>
+               <<<kDim, kType, handle_->queue>>>(
+                   (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], x_kernel[TR_W],
+                   x_kernel[TR_C], num_split[TR_N], num_split[TR_H],
+                   num_split[TR_W], split_h, num_processed[TR_N],
+                   num_processed[TR_H], num_processed[TR_W],
+                   num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                   num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                   num_processed_limit[TR_H], num_processed_limit[TR_W],
+                   num_processed_ceil_limit[TR_N],
+                   num_processed_ceil_limit[TR_H],
+                   num_processed_ceil_limit[TR_W])));
+        }
+      } else {
+        VLOG(6) << "MLUTransposeKernel4D0213";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK((MLUTransposeKernel4D0213<int8_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK((MLUTransposeKernel4D0213<int16_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK((MLUTransposeKernel4D0213<int32_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        }
+      }
+      // 2. NHWC -> NCWH
+    } else if (strategy == TRANSPOSE_4D_0321) {
+      const mluOpTranspose3DStrategy_t &st3D = policy_info.st3D;
+      const auto &split_h = split_info.split_h;
+      const auto &num_split = split_info.num_split;
+      const auto &num_processed = split_info.num_processed;
+      const auto &num_processed_limit = split_info.num_processed_limit;
+      const auto &num_processed_ceil = split_info.num_processed_ceil;
+      const auto &num_processed_ceil_limit =
+          split_info.num_processed_ceil_limit;
+      if (st3D == TR_3D_210) {
+        VLOG(6) << "MLUTransposeKernel4D0321Small";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK((MLUTransposeKernel4D0321Small<int8_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK((MLUTransposeKernel4D0321Small<int16_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK((MLUTransposeKernel4D0321Small<int32_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                            x_kernel[TR_W], x_kernel[TR_C])));
+        }
+      } else {
+        VLOG(6) << "MLUTransposeKernel4D0321";
+        if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+            data_type == MLUOP_DTYPE_BOOL) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel4D0321<int8_t, 1>
+               <<<kDim, kType, handle_->queue>>>(
+                   (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], x_kernel[TR_W],
+                   x_kernel[TR_C], num_split[TR_N], num_split[TR_H],
+                   num_split[TR_W], split_h, num_processed[TR_N],
+                   num_processed[TR_H], num_processed[TR_W],
+                   num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                   num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                   num_processed_limit[TR_H], num_processed_limit[TR_W],
+                   num_processed_ceil_limit[TR_N],
+                   num_processed_ceil_limit[TR_H],
+                   num_processed_ceil_limit[TR_W])));
+        } else if (data_type == MLUOP_DTYPE_INT16 ||
+                   data_type == MLUOP_DTYPE_UINT16 ||
+                   data_type == MLUOP_DTYPE_HALF) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel4D0321<int16_t, 1>
+               <<<kDim, kType, handle_->queue>>>(
+                   (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], x_kernel[TR_W],
+                   x_kernel[TR_C], num_split[TR_N], num_split[TR_H],
+                   num_split[TR_W], split_h, num_processed[TR_N],
+                   num_processed[TR_H], num_processed[TR_W],
+                   num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                   num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                   num_processed_limit[TR_H], num_processed_limit[TR_W],
+                   num_processed_ceil_limit[TR_N],
+                   num_processed_ceil_limit[TR_H],
+                   num_processed_ceil_limit[TR_W])));
+        } else if (data_type == MLUOP_DTYPE_INT32 ||
+                   data_type == MLUOP_DTYPE_UINT32 ||
+                   data_type == MLUOP_DTYPE_FLOAT) {
+          KERNEL_CHECK(
+              (MLUTransposeKernel4D0321<int32_t, 1>
+               <<<kDim, kType, handle_->queue>>>(
+                   (void *)x, y, x_kernel[TR_N], x_kernel[TR_H], x_kernel[TR_W],
+                   x_kernel[TR_C], num_split[TR_N], num_split[TR_H],
+                   num_split[TR_W], split_h, num_processed[TR_N],
+                   num_processed[TR_H], num_processed[TR_W],
+                   num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                   num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                   num_processed_limit[TR_H], num_processed_limit[TR_W],
+                   num_processed_ceil_limit[TR_N],
+                   num_processed_ceil_limit[TR_H],
+                   num_processed_ceil_limit[TR_W])));
+        }
+      }
+      // 3. NHWC -> HNCW
+    } else if (strategy == TRANSPOSE_4D_1032) {
+      VLOG(6) << "MLUTransposeKernel4D1032";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D1032<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D1032<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D1032<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 4. NHWC -> HCNW
+    } else if (strategy == TRANSPOSE_4D_1302) {
+      VLOG(6) << "MLUTransposeKernel4D1302";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D1302<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D1302<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D1302<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 5. NHWC -> WNCH
+    } else if (strategy == TRANSPOSE_4D_2031) {
+      VLOG(6) << "MLUTransposeKernel4D2031";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D2031<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D2031<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D2031<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 6. NHWC -> WHNC
+    } else if (strategy == TRANSPOSE_4D_2103) {
+      VLOG(6) << "MLUTransposeKernel4D2103";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D2103<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D2103<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D2103<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 7. NHWC -> WHCN
+    } else if (strategy == TRANSPOSE_4D_2130) {
+      VLOG(6) << "MLUTransposeKernel4D2130";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D2130<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D2130<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D2130<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 8. NHWC -> CNWH
+    } else if (strategy == TRANSPOSE_4D_3021) {
+      VLOG(6) << "MLUTransposeKernel4D3021";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D3021<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D3021<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D3021<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 9. NHWC -> CHNW
+    } else if (strategy == TRANSPOSE_4D_3102) {
+      VLOG(6) << "MLUTransposeKernel4D3102";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D3102<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D3102<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D3102<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+      // 10. NHWC -> CWHN
+    } else if (strategy == TRANSPOSE_4D_3210) {
+      VLOG(6) << "MLUTransposeKernel4D3210";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D3210<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D3210<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D3210<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+    } else if ((strategy == TRANSPOSE_4D_1320) &&
+               (op_name == "[mluOpTranspose]")) {
+      VLOG(6) << "MLUTransposeKernel4D1320";
+      if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+          data_type == MLUOP_DTYPE_BOOL) {
+        KERNEL_CHECK((MLUTransposeKernel4D1320<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT16 ||
+                 data_type == MLUOP_DTYPE_UINT16 ||
+                 data_type == MLUOP_DTYPE_HALF) {
+        KERNEL_CHECK((MLUTransposeKernel4D1320<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      } else if (data_type == MLUOP_DTYPE_INT32 ||
+                 data_type == MLUOP_DTYPE_UINT32 ||
+                 data_type == MLUOP_DTYPE_FLOAT) {
+        KERNEL_CHECK((MLUTransposeKernel4D1320<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C])));
+      }
+    } else {
+      VLOG(6) << "High dimension kernel";
+      if (op_name == "[mluOpTranspose]") {
+        auto findYIndexByXIndex = [&]() {
+          for (auto i = 0; i < dim_fold; i++) {
+            if (split_dim_nd_for_small == p_fold[i]) {
+              return i;
+            }
+          }
+          return split_dim_nd_for_small;
+        };
+
+        auto simulatingKernelSplit = [&](const int &task_dim,
+                                         const int &split_dim_value,
+                                         int &max_split_value) {
+          int loop_task = task_dim;
+          if (split_dim_value < task_dim) {
+            loop_task = split_dim_value;
+          }
+          int dim = split_dim_value;
+          std::vector<int> split_vec;
+          for (int i = 0; i < loop_task; i++) {
+            int d = dim / (loop_task - i);
+            split_vec.push_back(d);
+            dim -= d;
+          }
+          auto max_iterator =
+              std::max_element(split_vec.begin(), split_vec.end());
+          max_split_value = *max_iterator;
+        };
+
+        int split_dim_y = findYIndexByXIndex();
+        int split_dim_value = x_kernel[split_dim_nd_for_small];
+        int task_dim = kDim.x * kDim.y * kDim.z;
+        int max_split_value;
+        simulatingKernelSplit(task_dim, split_dim_value, max_split_value);
+        int bytes = 1;
+        std::vector<int> x_after_split(x_fold);
+        x_after_split[split_dim_nd_for_small] = max_split_value;
+        for (int i = 0; i < dim_fold; i++) {
+          bytes *= x_after_split[i];
+        }
+
+        if (bytes * size_origin > NRAM_BYTE_LIMIT) {
+          int index_y = -1;
+          for (int i = 0; i < dim_fold; i++) {
+            if (p_kernel[i] == split_dim_nd_for_small) {
+              index_y = i;
+              break;
+            }
+          }
+          if (index_y == -1) {
+            LOG(ERROR) << "mluOpTranspose:: error happens when finding splite "
+                          "params of big common "
+                          "kernel.\n";
+            return MLUOP_STATUS_INTERNAL_ERROR;
+          }
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK(
+                (MLUTransposeKernelCommonBig<int8_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[0], x_kernel[1], x_kernel[2],
+                     x_kernel[3], x_kernel[4], x_kernel[5], x_kernel[6],
+                     x_kernel[7], p_kernel[0], p_kernel[1], p_kernel[2],
+                     p_kernel[3], p_kernel[4], p_kernel[5], p_kernel[6],
+                     p_kernel[7], sum, dim_fold, split_dim_nd_for_small,
+                     index_y)));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK(
+                (MLUTransposeKernelCommonBig<int16_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[0], x_kernel[1], x_kernel[2],
+                     x_kernel[3], x_kernel[4], x_kernel[5], x_kernel[6],
+                     x_kernel[7], p_kernel[0], p_kernel[1], p_kernel[2],
+                     p_kernel[3], p_kernel[4], p_kernel[5], p_kernel[6],
+                     p_kernel[7], sum, dim_fold, split_dim_nd_for_small,
+                     index_y)));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK(
+                (MLUTransposeKernelCommonBig<int32_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[0], x_kernel[1], x_kernel[2],
+                     x_kernel[3], x_kernel[4], x_kernel[5], x_kernel[6],
+                     x_kernel[7], p_kernel[0], p_kernel[1], p_kernel[2],
+                     p_kernel[3], p_kernel[4], p_kernel[5], p_kernel[6],
+                     p_kernel[7], sum, dim_fold, split_dim_nd_for_small,
+                     index_y)));
+          }
+        } else {
+          if (data_type == MLUOP_DTYPE_INT8 || data_type == MLUOP_DTYPE_UINT8 ||
+              data_type == MLUOP_DTYPE_BOOL) {
+            KERNEL_CHECK(
+                (MLUTransposeKernelCommonSmall<int16_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[0], x_kernel[1], x_kernel[2],
+                     x_kernel[3], x_kernel[4], x_kernel[5], x_kernel[6],
+                     x_kernel[7], p_kernel[0], p_kernel[1], p_kernel[2],
+                     p_kernel[3], p_kernel[4], p_kernel[5], p_kernel[6],
+                     p_kernel[7], sum, dim_fold, split_dim_nd_for_small,
+                     split_dim_y)));
+          } else if (data_type == MLUOP_DTYPE_INT16 ||
+                     data_type == MLUOP_DTYPE_UINT16 ||
+                     data_type == MLUOP_DTYPE_HALF) {
+            KERNEL_CHECK(
+                (MLUTransposeKernelCommonSmall<int16_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[0], x_kernel[1], x_kernel[2],
+                     x_kernel[3], x_kernel[4], x_kernel[5], x_kernel[6],
+                     x_kernel[7], p_kernel[0], p_kernel[1], p_kernel[2],
+                     p_kernel[3], p_kernel[4], p_kernel[5], p_kernel[6],
+                     p_kernel[7], sum, dim_fold, split_dim_nd_for_small,
+                     split_dim_y)));
+          } else if (data_type == MLUOP_DTYPE_INT32 ||
+                     data_type == MLUOP_DTYPE_UINT32 ||
+                     data_type == MLUOP_DTYPE_FLOAT) {
+            KERNEL_CHECK(
+                (MLUTransposeKernelCommonSmall<int16_t, 1>
+                 <<<kDim, kType, handle_->queue>>>(
+                     (void *)x, y, x_kernel[0], x_kernel[1], x_kernel[2],
+                     x_kernel[3], x_kernel[4], x_kernel[5], x_kernel[6],
+                     x_kernel[7], p_kernel[0], p_kernel[1], p_kernel[2],
+                     p_kernel[3], p_kernel[4], p_kernel[5], p_kernel[6],
+                     p_kernel[7], sum, dim_fold, split_dim_nd_for_small,
+                     split_dim_y)));
+          }
+        }
+      } else if (op_name == "[mluOpTranspose_v2]") {
+        auto input_fold = trans_fold_info.input_fold;
+        auto &nhw = infer_info.infer_nd_for_021trans;
+        auto &paths = infer_info.infer_nd_path;
+        bool strategy_0213 = true;
+        bool strategy_102 = true;
+
+        for (int i = 0; i < paths.size() - 1; i++) {
+          trans_raw_info.input_raw.clear();
+          trans_raw_info.permute_raw.clear();
+          split_info.num_split.clear();
+          split_info.num_processed.clear();
+          split_info.num_processed_limit.clear();
+          split_info.num_processed_ceil.clear();
+          split_info.num_processed_ceil_limit.clear();
+          split_info.is_mul_overflow = false;
+          split_info.is_split_lowest_dim = false;
+          split_info.split_h = false;
+          std::vector<int> path_a = paths[i];
+          std::vector<int> path_b = paths[i + 1];
+          for (int j = 0; j < path_a.size(); j++) {
+            std::vector<int>::iterator iter =
+                std::find(path_a.begin(), path_a.end(), path_b[j]);
+            int pos = std::distance(path_a.begin(), iter);
+            trans_raw_info.permute_raw.push_back(pos);
+            trans_raw_info.input_raw.push_back(input_fold[path_a[j]]);
+          }
+          preProcess();
+          planner();
+
+          auto permute_fold = trans_fold_info.permute_fold;
+          auto input = trans_fold_info.input_fold;
+          bool permute_0213 = (permute_fold.size() == 4) &&
+                              permute_fold[0] == 0 && permute_fold[1] == 2 &&
+                              permute_fold[2] == 1 && permute_fold[3] == 3;
+          bool permute_102 = (permute_fold.size() == 3) &&
+                             permute_fold[0] == 1 && permute_fold[1] == 0 &&
+                             permute_fold[2] == 2;
+          bool input_102 =
+              (input_fold[0] / input_fold[1]) < TRANS_THRESHOLD_RATIO;
+
+          bool input_0213 = (input.size() == 4) &&
+                            (input[1] * input[2] * input[3] * size_origin <=
+                                 NRAM_BYTE_2D_CPU ||
+                             input[3] == split_info.num_processed_limit[TR_W]);
+          if (permute_0213) {
+            strategy_0213 = input_0213;
+          }
+          if (permute_102) {
+            strategy_102 = input_102;
+          }
+          if (!strategy_102 || !strategy_0213) {
+            break;
+          }
+        }
+
+        if (strategy_0213 && strategy_102 &&
+            ((paths.size() - 1) < nhw.size())) {
+          auto &paths = infer_info.infer_nd_path;
+          int path_len = paths.size();
+          void *input = (void *)x;
+          void *output = (path_len % 2) ? workspace : y;
+          void *tmp = (path_len % 2) ? y : workspace;
+          // for (int i = 0; i < 1; ++i) {
+          for (int i = 0; i < paths.size() - 1; i++) {
+            trans_raw_info.input_raw.clear();
+            trans_raw_info.permute_raw.clear();
+            split_info.num_split.clear();
+            split_info.num_processed.clear();
+            split_info.num_processed_limit.clear();
+            split_info.num_processed_ceil.clear();
+            split_info.num_processed_ceil_limit.clear();
+            split_info.is_mul_overflow = false;
+            split_info.is_split_lowest_dim = false;
+            split_info.split_h = false;
+            std::vector<int> path_a = paths[i];
+            std::vector<int> path_b = paths[i + 1];
+            for (int j = 0; j < path_a.size(); j++) {
+              std::vector<int>::iterator iter =
+                  std::find(path_a.begin(), path_a.end(), path_b[j]);
+              int pos = std::distance(path_a.begin(), iter);
+              trans_raw_info.permute_raw.push_back(pos);
+              trans_raw_info.input_raw.push_back(input_fold[path_a[j]]);
+            }
+
+            this->preProcess();
+            this->planner();
+
+            cnrtDim3_t kDim = policy_info.kDim;
+            cnrtFunctionType_t kType = policy_info.kType;
+            const auto x_fold = trans_fold_info.input_fold;
+            dim_fold = trans_fold_info.input_fold.size();
+            const mluOpTranspose3DStrategy_t &st3D = policy_info.st3D;
+            const auto &is_mul_overflow = split_info.is_mul_overflow;
+            const auto &is_split_lowest_dim = split_info.is_split_lowest_dim;
+            const auto &split_h = split_info.split_h;
+            auto &num_split = split_info.num_split;
+            auto &num_processed = split_info.num_processed;
+            auto &num_processed_limit = split_info.num_processed_limit;
+            auto &num_processed_ceil = split_info.num_processed_ceil;
+            auto &num_processed_ceil_limit =
+                split_info.num_processed_ceil_limit;
+            for (int index = 0; index < dim_fold; index++) {
+              x_kernel[index] = x_fold[index];
+            }
+
+            if (strategy == TRANSPOSE_2D) {
+              const mluOpTranspose2DStrategy_t &st2D = policy_info.st2D;
+              const auto &split_h = split_info.split_h;
+              if (st2D == TR_2D_SMALL) {
+                VLOG(6) << "MLUTransposeKernel2DSmall";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((MLUTransposeKernel2DSmall<int8_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], split_h)));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((MLUTransposeKernel2DSmall<int16_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], split_h)));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((MLUTransposeKernel2DSmall<int32_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], split_h)));
+                }
+              } else if (st2D == TR_2D_ALLSPLIT) {
+                VLOG(6) << "MLUTransposeKernel2D";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((MLUTransposeKernel2D<int8_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)x, y, x_kernel[TR_N],
+                                    x_kernel[TR_H], split_h)));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((MLUTransposeKernel2D<int16_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)x, y, x_kernel[TR_N],
+                                    x_kernel[TR_H], split_h)));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((MLUTransposeKernel2D<int32_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)x, y, x_kernel[TR_N],
+                                    x_kernel[TR_H], split_h)));
+                }
+              } else {
+                VLOG(6) << "MLUTransposeKernel2DEnormous";
+                auto &num_split = split_info.num_split;
+                auto &num_processed = split_info.num_processed;
+                auto &num_processed_ceil = split_info.num_processed_ceil;
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel2DEnormous<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          num_split[TR_N], num_split[TR_H], num_processed[TR_N],
+                          num_processed[TR_H], num_processed_ceil[TR_N],
+                          num_processed_ceil[TR_H])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel2DEnormous<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          num_split[TR_N], num_split[TR_H], num_processed[TR_N],
+                          num_processed[TR_H], num_processed_ceil[TR_N],
+                          num_processed_ceil[TR_H])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel2DEnormous<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          num_split[TR_N], num_split[TR_H], num_processed[TR_N],
+                          num_processed[TR_H], num_processed_ceil[TR_N],
+                          num_processed_ceil[TR_H])));
+                }
+              }
+            } else if (strategy == TRANSPOSE_3D_021) {
+              if ((st3D == TR_3D_021_LOOP) && (!is_split_lowest_dim) &&
+                  (!is_mul_overflow) &&
+                  (num_processed_limit[TR_H] == x_kernel[TR_H]) &&
+                  (num_processed_limit[TR_W] == x_kernel[TR_W])) {
+                VLOG(6) << "MLUTransposeKernel3D021_Small";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel3D021Small<int8_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], num_split[TR_N],
+                           split_h, num_processed[TR_N],
+                           num_processed_ceil[TR_N], num_processed_limit[TR_N],
+                           num_processed_ceil_limit[TR_N])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel3D021Small<int16_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], num_split[TR_N],
+                           split_h, num_processed[TR_N],
+                           num_processed_ceil[TR_N], num_processed_limit[TR_N],
+                           num_processed_ceil_limit[TR_N])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel3D021Small<int32_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], num_split[TR_N],
+                           split_h, num_processed[TR_N],
+                           num_processed_ceil[TR_N], num_processed_limit[TR_N],
+                           num_processed_ceil_limit[TR_N])));
+                }
+              } else {
+                if (st3D == TR_3D_021_TILING) {
+                  VLOG(6) << "MLUTransposeKernel3D021Tiling";
+                  if (data_type == MLUOP_DTYPE_INT8 ||
+                      data_type == MLUOP_DTYPE_UINT8 ||
+                      data_type == MLUOP_DTYPE_BOOL) {
+                    KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int8_t, 1>
+                                  <<<kDim, kType, handle_->queue>>>(
+                                      (void *)input, output, x_kernel[TR_N],
+                                      x_kernel[TR_H], x_kernel[TR_W])));
+                  } else if (data_type == MLUOP_DTYPE_INT16 ||
+                             data_type == MLUOP_DTYPE_UINT16 ||
+                             data_type == MLUOP_DTYPE_HALF) {
+                    KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int16_t, 1>
+                                  <<<kDim, kType, handle_->queue>>>(
+                                      (void *)input, output, x_kernel[TR_N],
+                                      x_kernel[TR_H], x_kernel[TR_W])));
+                  } else if (data_type == MLUOP_DTYPE_INT32 ||
+                             data_type == MLUOP_DTYPE_UINT32 ||
+                             data_type == MLUOP_DTYPE_FLOAT) {
+                    KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int32_t, 1>
+                                  <<<kDim, kType, handle_->queue>>>(
+                                      (void *)input, output, x_kernel[TR_N],
+                                      x_kernel[TR_H], x_kernel[TR_W])));
+                  }
+                } else if (is_mul_overflow) {
+                  VLOG(6) << "MLUTransposeKernel3D021Loop";
+                  if (data_type == MLUOP_DTYPE_INT8 ||
+                      data_type == MLUOP_DTYPE_UINT8 ||
+                      data_type == MLUOP_DTYPE_BOOL) {
+                    KERNEL_CHECK(
+                        (MLUTransposeKernel3D021Loop<int8_t, 1>
+                         <<<kDim, kType, handle_->queue>>>(
+                             (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                             x_kernel[TR_W], split_h)));
+                  } else if (data_type == MLUOP_DTYPE_INT16 ||
+                             data_type == MLUOP_DTYPE_UINT16 ||
+                             data_type == MLUOP_DTYPE_HALF) {
+                    KERNEL_CHECK(
+                        (MLUTransposeKernel3D021Loop<int16_t, 1>
+                         <<<kDim, kType, handle_->queue>>>(
+                             (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                             x_kernel[TR_W], split_h)));
+                  } else if (data_type == MLUOP_DTYPE_INT32 ||
+                             data_type == MLUOP_DTYPE_UINT32 ||
+                             data_type == MLUOP_DTYPE_FLOAT) {
+                    KERNEL_CHECK(
+                        (MLUTransposeKernel3D021Loop<int32_t, 1>
+                         <<<kDim, kType, handle_->queue>>>(
+                             (void *)x, y, x_kernel[TR_N], x_kernel[TR_H],
+                             x_kernel[TR_W], split_h)));
+                  }
+                } else if (is_split_lowest_dim) {
+                  VLOG(6) << "MLUTransposeKernel4D0231";
+                  if (data_type == MLUOP_DTYPE_INT8 ||
+                      data_type == MLUOP_DTYPE_UINT8 ||
+                      data_type == MLUOP_DTYPE_BOOL) {
+                    KERNEL_CHECK((
+                        MLUTransposeKernel4D0231<int8_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)input, output, x_kernel[TR_N],
+                            x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C],
+                            num_split[TR_N], num_split[TR_H], num_split[TR_W],
+                            num_split[TR_C], split_h, num_processed[TR_N],
+                            num_processed[TR_H], num_processed[TR_W],
+                            num_processed[TR_C], num_processed_ceil[TR_N],
+                            num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                            num_processed_ceil[TR_C], num_processed_limit[TR_N],
+                            num_processed_limit[TR_H],
+                            num_processed_limit[TR_W],
+                            num_processed_limit[TR_C],
+                            num_processed_ceil_limit[TR_N],
+                            num_processed_ceil_limit[TR_H],
+                            num_processed_ceil_limit[TR_W],
+                            num_processed_ceil_limit[TR_C])));
+                  } else if (data_type == MLUOP_DTYPE_INT16 ||
+                             data_type == MLUOP_DTYPE_UINT16 ||
+                             data_type == MLUOP_DTYPE_HALF) {
+                    KERNEL_CHECK((
+                        MLUTransposeKernel4D0231<int16_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)input, output, x_kernel[TR_N],
+                            x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C],
+                            num_split[TR_N], num_split[TR_H], num_split[TR_W],
+                            num_split[TR_C], split_h, num_processed[TR_N],
+                            num_processed[TR_H], num_processed[TR_W],
+                            num_processed[TR_C], num_processed_ceil[TR_N],
+                            num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                            num_processed_ceil[TR_C], num_processed_limit[TR_N],
+                            num_processed_limit[TR_H],
+                            num_processed_limit[TR_W],
+                            num_processed_limit[TR_C],
+                            num_processed_ceil_limit[TR_N],
+                            num_processed_ceil_limit[TR_H],
+                            num_processed_ceil_limit[TR_W],
+                            num_processed_ceil_limit[TR_C])));
+                  } else if (data_type == MLUOP_DTYPE_INT32 ||
+                             data_type == MLUOP_DTYPE_UINT32 ||
+                             data_type == MLUOP_DTYPE_FLOAT) {
+                    KERNEL_CHECK((
+                        MLUTransposeKernel4D0231<int32_t, 1>
+                        <<<kDim, kType, handle_->queue>>>(
+                            (void *)input, output, x_kernel[TR_N],
+                            x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C],
+                            num_split[TR_N], num_split[TR_H], num_split[TR_W],
+                            num_split[TR_C], split_h, num_processed[TR_N],
+                            num_processed[TR_H], num_processed[TR_W],
+                            num_processed[TR_C], num_processed_ceil[TR_N],
+                            num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                            num_processed_ceil[TR_C], num_processed_limit[TR_N],
+                            num_processed_limit[TR_H],
+                            num_processed_limit[TR_W],
+                            num_processed_limit[TR_C],
+                            num_processed_ceil_limit[TR_N],
+                            num_processed_ceil_limit[TR_H],
+                            num_processed_ceil_limit[TR_W],
+                            num_processed_ceil_limit[TR_C])));
+                  }
+                } else {
+                  VLOG(6) << "MLUTransposeKernel3D021";
+                  if (data_type == MLUOP_DTYPE_INT8 ||
+                      data_type == MLUOP_DTYPE_UINT8 ||
+                      data_type == MLUOP_DTYPE_BOOL) {
+                    KERNEL_CHECK(
+                        (MLUTransposeKernel3D021<int8_t, 1>
+                         <<<kDim, kType, handle_->queue>>>(
+                             (void *)input, output, x_kernel[TR_N],
+                             x_kernel[TR_H], x_kernel[TR_W], num_split[TR_N],
+                             num_split[TR_H], num_split[TR_W], split_h,
+                             num_processed[TR_N], num_processed[TR_H],
+                             num_processed[TR_W], num_processed_ceil[TR_N],
+                             num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                             num_processed_limit[TR_N],
+                             num_processed_limit[TR_H],
+                             num_processed_limit[TR_W],
+                             num_processed_ceil_limit[TR_N],
+                             num_processed_ceil_limit[TR_H],
+                             num_processed_ceil_limit[TR_W])));
+                  } else if (data_type == MLUOP_DTYPE_INT16 ||
+                             data_type == MLUOP_DTYPE_UINT16 ||
+                             data_type == MLUOP_DTYPE_HALF) {
+                    KERNEL_CHECK(
+                        (MLUTransposeKernel3D021<int16_t, 1>
+                         <<<kDim, kType, handle_->queue>>>(
+                             (void *)input, output, x_kernel[TR_N],
+                             x_kernel[TR_H], x_kernel[TR_W], num_split[TR_N],
+                             num_split[TR_H], num_split[TR_W], split_h,
+                             num_processed[TR_N], num_processed[TR_H],
+                             num_processed[TR_W], num_processed_ceil[TR_N],
+                             num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                             num_processed_limit[TR_N],
+                             num_processed_limit[TR_H],
+                             num_processed_limit[TR_W],
+                             num_processed_ceil_limit[TR_N],
+                             num_processed_ceil_limit[TR_H],
+                             num_processed_ceil_limit[TR_W])));
+                  } else if (data_type == MLUOP_DTYPE_INT32 ||
+                             data_type == MLUOP_DTYPE_UINT32 ||
+                             data_type == MLUOP_DTYPE_FLOAT) {
+                    KERNEL_CHECK(
+                        (MLUTransposeKernel3D021<int32_t, 1>
+                         <<<kDim, kType, handle_->queue>>>(
+                             (void *)input, output, x_kernel[TR_N],
+                             x_kernel[TR_H], x_kernel[TR_W], num_split[TR_N],
+                             num_split[TR_H], num_split[TR_W], split_h,
+                             num_processed[TR_N], num_processed[TR_H],
+                             num_processed[TR_W], num_processed_ceil[TR_N],
+                             num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                             num_processed_limit[TR_N],
+                             num_processed_limit[TR_H],
+                             num_processed_limit[TR_W],
+                             num_processed_ceil_limit[TR_N],
+                             num_processed_ceil_limit[TR_H],
+                             num_processed_ceil_limit[TR_W])));
+                  }
+                }
+              }
+            } else if (strategy == TRANSPOSE_3D_102) {
+              if (num_processed_limit[TR_N] == x_kernel[TR_N] &&
+                  num_processed_limit[TR_W] == x_kernel[TR_W] &&
+                  num_processed_ceil_limit[TR_N] == x_kernel[TR_N] &&
+                  num_processed_ceil_limit[TR_W] == x_kernel[TR_W]) {
+                VLOG(6) << "launch TRANSPOSE_3D_102_TOWER";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel3D102Tower<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                          num_split[TR_W], split_h, num_processed[TR_N],
+                          num_processed[TR_H], num_processed[TR_W],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                          num_processed_limit[TR_H], num_processed_limit[TR_W],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel3D102Tower<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                          num_split[TR_W], split_h, num_processed[TR_N],
+                          num_processed[TR_H], num_processed[TR_W],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                          num_processed_limit[TR_H], num_processed_limit[TR_W],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel3D102Tower<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                          num_split[TR_W], split_h, num_processed[TR_N],
+                          num_processed[TR_H], num_processed[TR_W],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                          num_processed_limit[TR_H], num_processed_limit[TR_W],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W])));
+                }
+              } else {
+                VLOG(6) << "launch TRANSPOSE_3D_102";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((MLUTransposeKernel3D102<int8_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((MLUTransposeKernel3D102<int16_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((MLUTransposeKernel3D102<int32_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W])));
+                }
+              }
+            } else if (strategy == TRANSPOSE_4D_0213) {
+              const auto task_dim = kDim.x * kDim.y * kDim.z;
+              if ((x_kernel[TR_H] * x_kernel[TR_W] * x_kernel[TR_C] *
+                       size_origin <
+                   NRAM_BYTE_2D_CPU) &&
+                  (x_kernel[TR_N] >= task_dim)) {
+                VLOG(6) << "launch MLUTransposeKernel4D0213Small";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213Small<int8_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213Small<int16_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213Small<int32_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C])));
+                }
+              } else if (num_processed_limit[TR_N] != 1 &&
+                         num_processed_limit[TR_W] == x_kernel[TR_C]) {
+                VLOG(6) << "launch MLUTransposeKernel4D0213Tower";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213Tower<int8_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C],
+                           num_split[TR_N], num_split[TR_H], num_split[TR_W],
+                           split_h, num_processed[TR_N], num_processed[TR_H],
+                           num_processed[TR_W], num_processed_ceil[TR_N],
+                           num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                           num_processed_limit[TR_N], num_processed_limit[TR_H],
+                           num_processed_limit[TR_W],
+                           num_processed_ceil_limit[TR_N],
+                           num_processed_ceil_limit[TR_H],
+                           num_processed_ceil_limit[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213Tower<int16_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C],
+                           num_split[TR_N], num_split[TR_H], num_split[TR_W],
+                           split_h, num_processed[TR_N], num_processed[TR_H],
+                           num_processed[TR_W], num_processed_ceil[TR_N],
+                           num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                           num_processed_limit[TR_N], num_processed_limit[TR_H],
+                           num_processed_limit[TR_W],
+                           num_processed_ceil_limit[TR_N],
+                           num_processed_ceil_limit[TR_H],
+                           num_processed_ceil_limit[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213Tower<int32_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C],
+                           num_split[TR_N], num_split[TR_H], num_split[TR_W],
+                           split_h, num_processed[TR_N], num_processed[TR_H],
+                           num_processed[TR_W], num_processed_ceil[TR_N],
+                           num_processed_ceil[TR_H], num_processed_ceil[TR_W],
+                           num_processed_limit[TR_N], num_processed_limit[TR_H],
+                           num_processed_limit[TR_W],
+                           num_processed_ceil_limit[TR_N],
+                           num_processed_ceil_limit[TR_H],
+                           num_processed_ceil_limit[TR_W])));
+                }
+              } else {
+                VLOG(6) << "launch MLUTransposeKernel4D0213";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213<int8_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213<int16_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK(
+                      (MLUTransposeKernel4D0213<int32_t, 1>
+                       <<<kDim, kType, handle_->queue>>>(
+                           (void *)input, output, x_kernel[TR_N],
+                           x_kernel[TR_H], x_kernel[TR_W], x_kernel[TR_C])));
+                }
+              }
+            }
+            input = output;
+            output = tmp;
+            tmp = input;
+          }
+        } else {
+          // assign permute to {0, 2, 1}
+          trans_fold_info.permute_fold = {0, 2, 1};
+          policy_info.strategy = TRANSPOSE_3D_021;
+
+          void *input = (void *)x;
+          void *output = (len % 2) ? y : workspace;
+          void *tmp = (len % 2) ? workspace : y;
+          for (int i = 0; i < len; i++) {
+            trans_fold_info.input_fold = nhw.front();
+            split_info.num_split.clear();
+            split_info.num_processed.clear();
+            split_info.num_processed_limit.clear();
+            split_info.num_processed_ceil.clear();
+            split_info.num_processed_ceil_limit.clear();
+            split_info.is_mul_overflow = false;
+            split_info.is_split_lowest_dim = false;
+            split_info.split_h = false;
+
+            this->planner();
+            for (int j = 0; j < trans_fold_info.input_fold.size(); j++) {
+              x_kernel[j] = trans_fold_info.input_fold[j];
+            }
+            cnrtDim3_t kDim = policy_info.kDim;
+            cnrtFunctionType_t kType = policy_info.kType;
+            auto st3D = policy_info.st3D;
+            auto data_type = trans_raw_info.dtype;
+            auto num_split = split_info.num_split;
+            auto split_h = split_info.split_h;
+            auto is_split_lowest_dim = split_info.is_split_lowest_dim;
+            auto is_mul_overflow = split_info.is_mul_overflow;
+            auto num_processed = split_info.num_processed;
+            auto num_processed_ceil = split_info.num_processed_ceil;
+            auto num_processed_limit = split_info.num_processed_limit;
+            auto num_processed_ceil_limit = split_info.num_processed_ceil_limit;
+            if ((st3D == TR_3D_021_LOOP) && (!is_split_lowest_dim) &&
+                (!is_mul_overflow) &&
+                (num_processed_limit[TR_H] == x_kernel[TR_H]) &&
+                (num_processed_limit[TR_W] == x_kernel[TR_W])) {
+              VLOG(6) << "MLUTransposeKernel3D021Small";
+              if (data_type == MLUOP_DTYPE_INT8 ||
+                  data_type == MLUOP_DTYPE_UINT8 ||
+                  data_type == MLUOP_DTYPE_BOOL) {
+                KERNEL_CHECK(
+                    (MLUTransposeKernel3D021Small<int8_t, 1>
+                     <<<kDim, kType, handle_->queue>>>(
+                         (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                         x_kernel[TR_W], num_split[TR_N], split_h,
+                         num_processed[TR_N], num_processed_ceil[TR_N],
+                         num_processed_limit[TR_N],
+                         num_processed_ceil_limit[TR_N])));
+              } else if (data_type == MLUOP_DTYPE_INT16 ||
+                         data_type == MLUOP_DTYPE_UINT16 ||
+                         data_type == MLUOP_DTYPE_HALF) {
+                KERNEL_CHECK(
+                    (MLUTransposeKernel3D021Small<int16_t, 1>
+                     <<<kDim, kType, handle_->queue>>>(
+                         (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                         x_kernel[TR_W], num_split[TR_N], split_h,
+                         num_processed[TR_N], num_processed_ceil[TR_N],
+                         num_processed_limit[TR_N],
+                         num_processed_ceil_limit[TR_N])));
+              } else if (data_type == MLUOP_DTYPE_INT32 ||
+                         data_type == MLUOP_DTYPE_UINT32 ||
+                         data_type == MLUOP_DTYPE_FLOAT) {
+                KERNEL_CHECK(
+                    (MLUTransposeKernel3D021Small<int32_t, 1>
+                     <<<kDim, kType, handle_->queue>>>(
+                         (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                         x_kernel[TR_W], num_split[TR_N], split_h,
+                         num_processed[TR_N], num_processed_ceil[TR_N],
+                         num_processed_limit[TR_N],
+                         num_processed_ceil_limit[TR_N])));
+              }
+            } else {
+              if (st3D == TR_3D_021_TILING) {
+                VLOG(6) << "MLUTransposeKernel3D021Tiling";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int8_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int16_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((MLUTransposeKernel3D021Tiling<int32_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)input, output, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W])));
+                }
+              } else if (is_mul_overflow) {
+                VLOG(6) << "MLUTransposeKernel3D021Loop";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((MLUTransposeKernel3D021Loop<int8_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)x, y, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W], split_h)));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((MLUTransposeKernel3D021Loop<int16_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)x, y, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W], split_h)));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((MLUTransposeKernel3D021Loop<int32_t, 1>
+                                <<<kDim, kType, handle_->queue>>>(
+                                    (void *)x, y, x_kernel[TR_N],
+                                    x_kernel[TR_H], x_kernel[TR_W], split_h)));
+                }
+              } else if (is_split_lowest_dim) {
+                VLOG(6) << "MLUTransposeKernel4D0231";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel4D0231<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C], num_split[TR_N],
+                          num_split[TR_H], num_split[TR_W], num_split[TR_C],
+                          split_h, num_processed[TR_N], num_processed[TR_H],
+                          num_processed[TR_W], num_processed[TR_C],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_ceil[TR_C],
+                          num_processed_limit[TR_N], num_processed_limit[TR_H],
+                          num_processed_limit[TR_W], num_processed_limit[TR_C],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W],
+                          num_processed_ceil_limit[TR_C])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel4D0231<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C], num_split[TR_N],
+                          num_split[TR_H], num_split[TR_W], num_split[TR_C],
+                          split_h, num_processed[TR_N], num_processed[TR_H],
+                          num_processed[TR_W], num_processed[TR_C],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_ceil[TR_C],
+                          num_processed_limit[TR_N], num_processed_limit[TR_H],
+                          num_processed_limit[TR_W], num_processed_limit[TR_C],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W],
+                          num_processed_ceil_limit[TR_C])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel4D0231<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], x_kernel[TR_C], num_split[TR_N],
+                          num_split[TR_H], num_split[TR_W], num_split[TR_C],
+                          split_h, num_processed[TR_N], num_processed[TR_H],
+                          num_processed[TR_W], num_processed[TR_C],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_ceil[TR_C],
+                          num_processed_limit[TR_N], num_processed_limit[TR_H],
+                          num_processed_limit[TR_W], num_processed_limit[TR_C],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W],
+                          num_processed_ceil_limit[TR_C])));
+                }
+              } else {
+                VLOG(6) << "MLUTransposeKernel3D021";
+                if (data_type == MLUOP_DTYPE_INT8 ||
+                    data_type == MLUOP_DTYPE_UINT8 ||
+                    data_type == MLUOP_DTYPE_BOOL) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel3D021<int8_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                          num_split[TR_W], split_h, num_processed[TR_N],
+                          num_processed[TR_H], num_processed[TR_W],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                          num_processed_limit[TR_H], num_processed_limit[TR_W],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT16 ||
+                           data_type == MLUOP_DTYPE_UINT16 ||
+                           data_type == MLUOP_DTYPE_HALF) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel3D021<int16_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                          num_split[TR_W], split_h, num_processed[TR_N],
+                          num_processed[TR_H], num_processed[TR_W],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                          num_processed_limit[TR_H], num_processed_limit[TR_W],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W])));
+                } else if (data_type == MLUOP_DTYPE_INT32 ||
+                           data_type == MLUOP_DTYPE_UINT32 ||
+                           data_type == MLUOP_DTYPE_FLOAT) {
+                  KERNEL_CHECK((
+                      MLUTransposeKernel3D021<int32_t, 1>
+                      <<<kDim, kType, handle_->queue>>>(
+                          (void *)input, output, x_kernel[TR_N], x_kernel[TR_H],
+                          x_kernel[TR_W], num_split[TR_N], num_split[TR_H],
+                          num_split[TR_W], split_h, num_processed[TR_N],
+                          num_processed[TR_H], num_processed[TR_W],
+                          num_processed_ceil[TR_N], num_processed_ceil[TR_H],
+                          num_processed_ceil[TR_W], num_processed_limit[TR_N],
+                          num_processed_limit[TR_H], num_processed_limit[TR_W],
+                          num_processed_ceil_limit[TR_N],
+                          num_processed_ceil_limit[TR_H],
+                          num_processed_ceil_limit[TR_W])));
+                }
+              }
+            }
+            input = output;
+            output = tmp;
+            tmp = input;
+            nhw.pop();
+          }
+        }
+      }
+    }
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+// -1 means zeor
+// 0 means pass
+// 1 means bad
+int paramCheck(const std::string op_name, const mluOpHandle_t &handle,
+               const mluOpTransposeDescriptor_t &desc,
+               const mluOpTensorDescriptor_t &x_desc, const void *x,
+               const mluOpTensorDescriptor_t &y_desc, const void *y,
+               const void *workspace, const size_t workspace_size) {
+  PARAM_CHECK(op_name, handle != NULL);
+  PARAM_CHECK(op_name, x_desc != NULL);
+  PARAM_CHECK(op_name, y_desc != NULL);
+  if (workspace_size > 0) {
+    PARAM_CHECK(op_name, workspace != NULL);
+  }
+  // zero elements, return success
+  if (mluOpGetTensorElementNum(x_desc) == 0 ||
+      mluOpGetTensorElementNum(y_desc) == 0) {
+    VLOG(5) << op_name << " skip zero element tensor.";
+    return -1;
+  }
+
+  PARAM_CHECK(op_name, desc != NULL);
+  PARAM_CHECK(op_name, x != NULL);
+  PARAM_CHECK(op_name, y != NULL);
+
+  const auto &permute = desc->permute;
+  const auto &x_dims = x_desc->dims;
+  // check dims info
+  if (x_desc->dim > TRANSPOSE_MAX_DIM) {
+    LOG(ERROR) << op_name << " The dim size of x should be less than or "
+               << "equal to " << TRANSPOSE_MAX_DIM << ". But now is "
+               << x_desc->dim << ".";
+    return 1;
+  }
+  if (y_desc->dim > TRANSPOSE_MAX_DIM) {
+    LOG(ERROR) << op_name << " The dim size of y should be less than or "
+               << "equal to " << TRANSPOSE_MAX_DIM << ". But now is "
+               << y_desc->dim << ".";
+    return 1;
+  }
+  if (x_desc->dim != desc->dim || y_desc->dim != desc->dim) {
+    LOG(ERROR) << op_name
+               << " The dim size of permute should be equal to dim size of x "
+                  "and dim size of y. "
+               << "But now dim size of x is " << x_desc->dim
+               << ", dim size of y is " << y_desc->dim
+               << ", and the dim size of permute is " << desc->dim << ".";
+    return 1;
+  }
+  // check permute
+  for (auto i = 0; i < desc->dim; i++) {
+    if (permute.end() == std::find(permute.begin(), permute.end(), i)) {
+      LOG(ERROR) << op_name << " Permute check faild. "
+                 << "The number of 0 1, ... ," << desc->dim - 1
+                 << " should be found in permute. "
+                 << "But now the number " << i << " is not found in permute.";
+      return 1;
+    }
+  }
+  // check y
+  for (int i = 0; i < desc->dim; i++) {
+    if (y_desc->dims[i] != x_dims[permute[i]]) {
+      LOG(ERROR) << op_name << " Parameter check failed. "
+                 << "y[" << i << "] should be " << x_dims[permute[i]]
+                 << ", but now is " << y_desc->dims[i];
+      return 1;
+    }
+  }
+  // check datatype
+  const auto input_data_type = x_desc->dtype;
+  const auto output_data_type = y_desc->dtype;
+  switch (input_data_type) {
+    case MLUOP_DTYPE_INT32:
+    case MLUOP_DTYPE_UINT32:
+    case MLUOP_DTYPE_FLOAT:
+    case MLUOP_DTYPE_HALF:
+    case MLUOP_DTYPE_INT16:
+    case MLUOP_DTYPE_UINT16:
+    case MLUOP_DTYPE_INT8:
+    case MLUOP_DTYPE_UINT8:
+    case MLUOP_DTYPE_BOOL:
+    case MLUOP_DTYPE_INT64:
+    case MLUOP_DTYPE_UINT64:
+    case MLUOP_DTYPE_COMPLEX_HALF:
+    case MLUOP_DTYPE_COMPLEX_FLOAT:
+      break;
+    default:
+      LOG(ERROR) << op_name
+                 << " DataType error, it should be MLUOP_DTYPE_INT64, "
+                    "MLUOP_DTYPE_UINT64, "
+                    "MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_INT32, MLUOP_DTYPE_UINT32, "
+                    "MLUOP_DTYPE_HALF, MLUOP_DTYPE_INT16, MLUOP_DTYPE_UINT16 "
+                    "MLUOP_DTYPE_INT8, MLUOP_DTYPE_UINT8, MLUOP_DTYPE_BOOL, "
+                    "MLUOP_DTYPE_COMPLEX_HALF, MLUOP_DTYPE_COMPLEX_FLOAT.";
+      return 1;
+  }
+
+  if (input_data_type != output_data_type) {
+    LOG(ERROR)
+        << op_name
+        << " DataType error, the type of input and output should be same.";
+    return 1;
+  }
+
+  return 0;
+}
+#endif

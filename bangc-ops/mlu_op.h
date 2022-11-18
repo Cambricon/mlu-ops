@@ -3223,7 +3223,7 @@ typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
  * about descriptor, see "Cambricon MLUOP user Guide".
  *
  * @param[out] desc
- *   Input. A host pointer to the transpose descriptor that holds information about
+ *   A host pointer to the transpose descriptor that holds information about
  *   the transpose operation.
  * @par Return
  *   ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
@@ -3252,13 +3252,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateTransposeDescriptor(mluOpTransposeDescrip
  * The information includes the permute dimensions \b dims and permute rules \b permute.
  *
  * @param[in] desc
- *   Input. The descriptor of the transpose operation. For detailed information,
+ *   The descriptor of the transpose operation. For detailed information,
  *   see ::mluOpTransposeDescriptor_t.
  * @param[in] dims
- *   Input. The number of dimensions in the permute tensor of the transpose operation.
+ *   The number of dimensions in the permute tensor of the transpose operation.
  *   Currently, the value of this parameter should be less than or equal to 8.
  * @param[in] permute
- *   Input. The order of transpose. Currently, for each dimension, the value of permute
+ *   The order of transpose. Currently, for each dimension, the value of permute
  *   should be in the range of [0,...,dims -1], and should not be the same in each dimension.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -3285,7 +3285,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTransposeDescriptor(mluOpTransposeDescriptor
  * about the transpose operation.
  *
  * @param[in] desc
- *   Input. The transpose descriptor to be destroyed. For detailed information,
+ *   The transpose descriptor to be destroyed. For detailed information,
  *   see ::mluOpTransposeDescriptor_t.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -3311,17 +3311,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyTransposeDescriptor(mluOpTransposeDescri
  * For more information about the workspace, see "Cambricon MLUOP User Guide".
  *
  * @param[in]  handle
- *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and
  *   queues in the transpose operation. For detailed information,
  *   see ::mluOpHandle_t.
  * @param[in]  x_desc
- *   Input. The descriptor of the input tensor. For detailed information,
+ *   The descriptor of the input tensor. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
  * @param[out] desc
- *   Input. The descriptor of the transpose operation. For detailed information,
+ *   The descriptor of the transpose operation. For detailed information,
  *   see ::mluOpTransposeDescriptor_t.
  * @param[out] size
- *   Output. A host pointer to the returned size of the extra workspace in bytes that is used in
+ *   A host pointer to the returned size of the extra workspace in bytes that is used in
  *   the transpose operation.
  *
  * @par Return
@@ -3357,21 +3357,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  *   to use ::mluOpTranspose_v2 instead.
  *
  * @param[in] handle
- *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
+ *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
  *   in the transpose operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc
- *   Input. The descriptor of the transpose operation. For detailed information,
+ *   The descriptor of the transpose operation. For detailed information,
  *          see ::mluOpTransposeDescriptor_t.
  * @param[in] x_desc
- *   Input. The descriptor of the input tensor. For detailed information,
+ *   The descriptor of the input tensor. For detailed information,
  *          see ::mluOpTensorDescriptor_t.
  * @param[in] x
- *   Input. Pointer to the MLU memory that stores the input tensor.
+ *   Pointer to the MLU memory that stores the input tensor.
  * @param[in] y_desc
- *   Input. The descriptor of the output tensor. For detailed information,
+ *   The descriptor of the output tensor. For detailed information,
  *          see ::mluOpTensorDescriptor_t.
  * @param[out] y
- *   Output. Pointer to the MLU memory that stores the output tensor.
+ *   Pointer to the MLU memory that stores the output tensor.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, :MLUOP_STATUS_BAD_PARAM
  *
@@ -3436,28 +3436,28 @@ mluOpStatus_t MLUOP_WIN_API mluOpTranspose(mluOpHandle_t handle,
  * ::mluOpGetTransposeWorkspaceSize function.
  *
  * @param[in] handle
- *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and
  *   queues in the transpose operation. For detailed information,
  *   see ::mluOpHandle_t.
  * @param[in] desc
- *   Input. The descriptor of the transpose operation. For detailed information,
+ *   The descriptor of the transpose operation. For detailed information,
  *   see ::mluOpTransposeDescriptor_t.
  * @param[in] x_desc
- *   Input. The descriptor of the input tensor. For detailed information,
+ *   The descriptor of the input tensor. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
  * @param[in] x
- *   Input. Pointer to the MLU memory that stores the input tensor.
+ *   Pointer to the MLU memory that stores the input tensor.
  * @param[out] y_desc
- *   Output. The descriptor of the output tensor. For detailed information,
+ *   The descriptor of the output tensor. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
  * @param[out] y
- *   Output. Pointer to the MLU memory that stores the output tensor.
+ *   Pointer to the MLU memory that stores the output tensor.
  * @param[in] workspace
- *   Input. Pointer to the MLU memory that is used as an extra workspace for the
+ *   Pointer to the MLU memory that is used as an extra workspace for the
  *   transpose operation. For more information about workspace,
  *   see "Cambricon MLUOP User Guide".
  * @param[in] workspace_size
- *   Input. The size of the extra workspace in bytes that needs to be used in
+ *   The size of the extra workspace in bytes that needs to be used in
  *   the transpose operation. You can get the size of the workspace with
  *   the ::mluOpGetTransposeWorkspaceSize function.
 
