@@ -3203,6 +3203,327 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
                      const mluOpTensorDescriptor_t dx_desc,
                      void *dx);
 
+// Group:Transpose
+/*! The descriptor of the transpose operation that holds transpose information
+ *  including \b dimensions and \b permute.
+ *
+ *  You need to call the ::mluOpCreateTransposeDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetTransposeDescriptor function to set the information of
+ *  transpose operation to the descriptor. Also, you need to destroy the Cambricon MLUOP context
+ *  at the end with the ::mluOpDestroyTransposeDescriptor function.
+ */
+typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
+
+// Group:Transpose
+/*!
+ * @brief Creates a descriptor pointed by \b desc for a transpose operation,
+ *        and allocated memory for holding the information about the transpose operation.
+ *
+ * The information is defined in ::mluOpTransposeDescriptor_t. For more information
+ * about descriptor, see "Cambricon MLUOP user Guide".
+ *
+ * @param[out] desc
+ *   Input. A host pointer to the transpose descriptor that holds information about
+ *   the transpose operation.
+ * @par Return
+ *   ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpSetTransposeDescriptor
+ *   function to initialize and set information to the transpose descriptor.
+ * - You need to call the ::mluOpDestroyTransposeDescriptor function to destroy the descriptor.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpCreateTransposeDescriptor(mluOpTransposeDescriptor_t *desc);
+
+// Group:Transpose
+/*!
+ * @brief Initializes the transpose descriptor \b desc that is previously created
+ * with the ::mluOpCreateTransposeDescriptor function, and set the information
+ * about the transpose operation to the transpose descriptor \b desc.
+ * The information includes the permute dimensions \b dims and permute rules \b permute.
+ *
+ * @param[in] desc
+ *   Input. The descriptor of the transpose operation. For detailed information,
+ *   see ::mluOpTransposeDescriptor_t.
+ * @param[in] dims
+ *   Input. The number of dimensions in the permute tensor of the transpose operation.
+ *   Currently, the value of this parameter should be less than or equal to 8.
+ * @param[in] permute
+ *   Input. The order of transpose. Currently, for each dimension, the value of permute
+ *   should be in the range of [0,...,dims -1], and should not be the same in each dimension.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpSetTransposeDescriptor(mluOpTransposeDescriptor_t desc,
+                                                        const int dims,
+                                                        const int permute[]);
+
+// Group:Transpose
+/*!
+ * @brief Destroys a transpose descriptor \b desc that is previously created with the
+ *        ::mluOpCreateTensorDescriptor function.
+ *
+ * The transpose descriptor is defined in ::mluOpTransposeDescriptor_t and holds the information
+ * about the transpose operation.
+ *
+ * @param[in] desc
+ *   Input. The transpose descriptor to be destroyed. For detailed information,
+ *   see ::mluOpTransposeDescriptor_t.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpDestroyTransposeDescriptor(mluOpTransposeDescriptor_t desc);
+
+// Group:Transpose
+/*!
+ * @brief Returns in \b size the size of the MLU memory that is used as an extra workspace
+ * to optimize the transpose operation.
+ *
+ * The size of extra workspace is based on the given information of the transpose operation,
+ * including the input tensor descriptor \b x_desc and transpose descriptor \b desc.
+ * For more information about the workspace, see "Cambricon MLUOP User Guide".
+ *
+ * @param[in]  handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the transpose operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in]  x_desc
+ *   Input. The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] desc
+ *   Input. The descriptor of the transpose operation. For detailed information,
+ *   see ::mluOpTransposeDescriptor_t.
+ * @param[out] size
+ *   Output. A host pointer to the returned size of the extra workspace in bytes that is used in
+ *   the transpose operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - This function must be called after the ::mluOpCreateTensorDescriptor and
+ *   ::mluOpSetTensorDescriptor functions to create and set the tensor descriptors \b x_desc.
+ * - The allocated extra workspace should be passed to the ::mluOpTranspose_v2 function
+ *   to perform the transpose operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
+                                                           const mluOpTensorDescriptor_t x_desc,
+                                                           const mluOpTransposeDescriptor_t desc,
+                                                           size_t *size);
+// Group:Transpose
+/*!
+ * @brief Reorders the dimension according to the value of \b permute. To have better performance
+ *        for over 4D transpose with large-scale cases, call the
+ *        ::mluOpTranspose_v2 function.
+ *
+ * @par Deprecated
+ * - ::mluOpTranspose is deprecated and will be removed in the further release. It is recommended
+ *   to use ::mluOpTranspose_v2 instead.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
+ *   in the transpose operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] desc
+ *   Input. The descriptor of the transpose operation. For detailed information,
+ *          see ::mluOpTransposeDescriptor_t.
+ * @param[in] x_desc
+ *   Input. The descriptor of the input tensor. For detailed information,
+ *          see ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] y_desc
+ *   Input. The descriptor of the output tensor. For detailed information,
+ *          see ::mluOpTensorDescriptor_t.
+ * @param[out] y
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, :MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b x and
+ *   output tensor \b y.
+ *   <b>Note that the data type of input tensor and output tensor should be same.</b>
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int31, int32, uint64, int64, bool, half,
+ *     float, complex_half, complex_float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int31, int32, uint64, int64, bool, half,
+ *     float, complex_half, complex_float.
+ *
+ * @par Data Layout
+ * - The dimension of input tensor should be less than or equal to 8-dimension.
+ *
+ * @par Scale Limitation
+ * - The \b x, \b y and \b permute have the same shape.
+ * - The dimension size of \b x, \b y and \b permute should be less than or equal to
+ *   MLUOP_DIM_MAX.
+ * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
+ * - The \b y i-th dimension will correspond to the \b x permute[i]-th dimension.
+ * - The process of computing, the copy times of memcpy should be less than 65536.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement transpose, you need to prepare all the parameters
+ *   passed to this function. See each parameter description for details.
+ *
+ * @note
+ * - None.
+ *
+ * @par Example
+ * - The example of the transpose operation is as follows:
+     @verbatim
+      input array by 3 * 2 -->
+          input: [[1, 4],
+                  [2, 5],
+                  [3, 6]]
+      param:
+        dims: 2, permute: (1, 0),
+
+      output array by 2 * 3 --> output: [[1, 2, 3],
+                                         [4, 5, 6]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://www.tensorflow.org/api_docs/python/tf/transpose
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpTranspose(mluOpHandle_t handle,
+                                           const mluOpTransposeDescriptor_t desc,
+                                           const mluOpTensorDescriptor_t x_desc,
+                                           const void *x,
+                                           const mluOpTensorDescriptor_t y_desc,
+                                           void *y);
+// Group:Transpose
+/*!
+ * @brief Reorders the dimension according to the value of \b permute. Compared with
+ *        ::mluOpTranspose, ::mluOpTranspose_v2 provides better performance for above 4D
+ *        transpose with extra input space.
+ *
+ * This function needs extra MLU memory as the workspace to work.
+ * You can get the size of the workspace \b workspace_size with the
+ * ::mluOpGetTransposeWorkspaceSize function.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the transpose operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] desc
+ *   Input. The descriptor of the transpose operation. For detailed information,
+ *   see ::mluOpTransposeDescriptor_t.
+ * @param[in] x_desc
+ *   Input. The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[out] y_desc
+ *   Output. The descriptor of the output tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] y
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @param[in] workspace
+ *   Input. Pointer to the MLU memory that is used as an extra workspace for the
+ *   transpose operation. For more information about workspace,
+ *   see "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ *   Input. The size of the extra workspace in bytes that needs to be used in
+ *   the transpose operation. You can get the size of the workspace with
+ *   the ::mluOpGetTransposeWorkspaceSize function.
+
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Scale Limitation
+ * - The \b x, \b y and \b permute have the same shape.
+ * - The dimension size of \b x, \b y and \b permute should be less than or equal to MLUOP_DIM_MAX.
+ * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
+ * - The \b y i-th dimension will correspond to \b x permute[i]-th dimension.
+ * - The process of computing, the copy times of memcpy should be less than 65536.
+ *
+ * @par Formula
+ * - See "Transpose Operator" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b x and
+ *   output tensor \b y.
+ *   <b>Note that the data type of input tensor and output tensor should be same.</b>
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int31, int32, uint64, int64, bool, half,
+ *     float, complex_half, complex_float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int31, int32, uint64, int64, bool, half,
+ *     float, complex_half, complex_float.
+ *
+ * @par Data Layout
+ * - The dimension of input tensor should be less than or equal to 8-dimension.
+
+ * @par API Dependency
+ * - Before calling this function to implement transpose, you need to prepare
+ *   all the parameters passed to this function. See each parameter description
+ *   for details.
+ *
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the transpose operation is as follows:
+ *   @verbatim
+ *    input array by 3 * 2 -->
+ *         input: [[1, 4],
+ *                 [2, 5],
+ *                 [3, 6]]
+ *     param:
+ *       dims: 2, permute: (1, 0),
+ *
+ *     output array by 2 * 3 --> output: [[1, 2, 3],
+ *                                        [4, 5, 6]]
+ *    @endverbatim
+ *
+ * @par Reference
+ * - https://www.tensorflow.org/api_docs/python/tf/transpose
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpTranspose_v2(mluOpHandle_t handle,
+                                              const mluOpTransposeDescriptor_t desc,
+                                              const mluOpTensorDescriptor_t x_desc,
+                                              const void *x,
+                                              const mluOpTensorDescriptor_t y_desc,
+                                              void *y,
+                                              void *workspace,
+                                              size_t workspace_size);
+
 #if defined(__cplusplus)
 }
 #endif
