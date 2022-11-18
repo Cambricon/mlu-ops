@@ -118,8 +118,7 @@
                                 diff2_threshold, diff3_threshold, ...)         \
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,        \
                                     diff1_threshold, diff2_threshold,          \
-                                    diff3_threshold, ##__VA_ARGS__);
-  node->serialize(true);
+                                    diff3_threshold, ##__VA_ARGS__)
 
 #define GEN_CASE_END() mluop::gen_case::genCaseEnd()
 
