@@ -61,8 +61,8 @@ class LogAddExp:
         x: ty.Buffer("nram"),
         y: ty.Buffer("nram")
         ) -> None:
-        max_threshold = 10
-        min_threshold = -7.5
+        max_threshold = 10  # Natural base exponential power limit
+        min_threshold = -7.5  # Natural base exponential power lower limit
         self.mark_value_compare_with_threshold_value(input_buffer, x, 1, min_threshold)
         self.mark_value_compare_with_threshold_value(input_buffer, y, 0, max_threshold)
 
