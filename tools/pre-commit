@@ -7,12 +7,6 @@ bangpy_check_list=${bangpy_ops}
 
 bangc_mlu_op_h="bangc-ops/mlu_op.h"
 
-echo "-- [pre-commit] prepare..."
-if [[ ! ${MLUOP_GIT_COMMIT_MSG_ENABLED} ]]; then
-  ehco "-- Please source env.sh before git commit."
-  exit -1
-fi
-
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
     | grep -E ${bangc_check_list})
