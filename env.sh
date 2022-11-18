@@ -1,6 +1,5 @@
 SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BANGC_HOME=${SCRIPT_PATH}/bangc-ops
-export MLUOP_GIT_COMMIT_MSG_ENABLED=1
 export BANGPY_HOME=${SCRIPT_PATH}/bangpy-ops
 export BANGPY_BUILD_PATH=${BANGPY_HOME}/outs
 export CPLUS_INCLUDE_PATH=${BANGPY_HOME}/include/:${CPLUS_INCLUDE_PATH}
