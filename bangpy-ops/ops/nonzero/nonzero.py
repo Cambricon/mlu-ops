@@ -109,13 +109,13 @@ class NonZero(object):
         if self.trans == 1:
             int_nram0 = int_nram.reshape((align_size, self.dim_num * 2))
             int_nram0 = int_nram0[:align_size, dim_index * 2]
-            tcp.memcpy(int_nram0, out_nram[:align_size].reshape((align_size, 1)))
+            tcp.memcpy(int_nram0, out_nram[:align_size])
         else:
             int_nram1 = int_nram.reshape((self.dim_num, align_size * 2))[dim_index]
             int_nram1 = int_nram1.reshape((align_size, 2))
             tcp.memcpy(
                 int_nram1[:align_size, 0],
-                out_nram[:align_size].reshape((align_size, 1)),
+                out_nram[:align_size],
             )
 
     def core_compute(
