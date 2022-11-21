@@ -76,6 +76,8 @@ mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
 
 mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
                                  int position);
+mluOpStatus_t castDtypeToBitwidth(mluOpDataType_t quantize_dtype,
+                                  int *bitwidth);
 
 int16_t castFloat32ToHalf(float src);
 float castHalfToFloat32(int16_t src);
@@ -135,10 +137,10 @@ bool getBoolEnvVar(const std::string &str, bool default_para = false);
  *         otherwise the error code is returned.
  */
 template <typename FixedType>
-mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
-                                 const size_t num, const int position = 0,
-                                 const float scale = 1.0,
-                                 const int offset = 0) {
+mluOpStatus_t castFloat32ToFixed(
+    const float *src, FixedType *dst, const size_t num, const int position = 0,
+    const float scale = 1.0, const int offset = 0,
+    mluOpQuantizeRoundMode_t round_mode = MLUOP_ROUND_HALF_OFF_ZERO) {
   PARAM_CHECK("[castFloat32ToFixed]", src != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", dst != NULL);
   PARAM_CHECK("[castFloat32ToFixed]", num > 0);
@@ -153,7 +155,13 @@ mluOpStatus_t castFloat32ToFixed(const float *src, FixedType *dst,
     } else if (res < min) {
       res = min;
     }
-    dst[i] = static_cast<FixedType>(round(res));
+    if (round_mode == MLUOP_ROUND_HALF_OFF_ZERO) {
+      dst[i] = static_cast<FixedType>(round(res));
+    } else if (round_mode == MLUOP_ROUND_HALF_TO_EVEN) {
+      dst[i] = static_cast<FixedType>(rint(res));
+    } else if (round_mode == MLUOP_ROUND_HALF_UP) {
+      dst[i] = static_cast<FixedType>(floor(res + 0.5));
+    }
   }
   return MLUOP_STATUS_SUCCESS;
 }

@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
 ################################################################################
-# Neuware Evironment and BANG Setup
+# Environment and BANG Setup
 ################################################################################
 
 # check `NEUWARE_HOME` env
@@ -50,6 +50,7 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
                                          "--bang-mlu-arch=mtp_270"
                                          "--bang-mlu-arch=mtp_290"
                                          "--bang-mlu-arch=mtp_372"
+                                         "--bang-mlu-arch=mtp_592"
 )
 
 # build project

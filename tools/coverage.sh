@@ -116,9 +116,6 @@ function process () {
 
     # show the coverage test report
     html2text ${temp_dir_}/result/index.html
-
-    # clean
-    rm -r ${temp_dir_}/output ${temp_dir_}/profdata  ${temp_dir_}/info ${temp_dir_}/result
 }
 
 function main () {

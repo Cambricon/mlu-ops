@@ -1,13 +1,9 @@
 #!/usr/bin/python3
 
-#检查LOG(ERROR)后是否有返回非success状态，仅作提示，不强制限制
 import sys
 import re
 
 lines = ''
-# LOG(ERROR) << "[cnnlWeightNormBackward] Only support axis == 0 or axis assign to"
-#     #            << " last dimension currently. But now axis is " << axis << ".";
-#     # return MLUOP_STATUS_SUCCESS;
 sucess_regx = 'LOG\(ERROR\)[^}]+return MLUOP_STATUS_SUCCESS;'
 
 #void func_name(.....) {
@@ -42,7 +38,6 @@ def getFile(filename):
         lines = f.read()
 
 
-#找到返回类型为void的函数，不用判断
 def del_void_func():
     global lines
     st = []
@@ -67,7 +62,6 @@ def del_void_func():
             lines = lines[0:res.span()[0]] + lines[end + 1:]
 
 
-#index处开始括号匹配
 def find_brace(msg, index):
     start = index
     end = -1
@@ -102,7 +96,6 @@ def process(msg):
             break
 
 
-#处理if、else、switch中的LOG(ERROR)
 def helper(func, reg):
     start = -1
     end = -1
@@ -114,7 +107,6 @@ def helper(func, reg):
             temp = func[res.span()[0]:end + 1]
             res2 = re.search("LOG\(ERROR\)[^;]+;", temp)
             if res2 != None:
-                #LOG(ERROR)后面没有非success状态,函数可能被外部调用，可能返回false等值
                 if temp[res2.span()[1]:].find(
                         "return") == -1 and temp[res2.span()[1]:].find(
                             "MLUOP_STATUS_NOT_INITIALIZED"
@@ -141,13 +133,8 @@ def helper(func, reg):
 
 
 def check():
-    #先处理返回类型为void的函数
     del_void_func()
 
-    #匹配到LOG(ERROR) << "[cnnlWeightNormBackward] Only support axis == 0 or axis assign to"
-    #            << " last dimension currently. But now axis is " << axis << ".";
-    # return MLUOP_STATUS_SUCCESS;  肯定错误
-    # res = re.search(sucess_regx, lines)
     res = re.findall(sucess_regx,lines)
     if len(res)!=0:
         print("-- the return value is wrong")

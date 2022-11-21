@@ -57,6 +57,7 @@ typedef enum {
   MLUOP_MLU270 = 270,
   MLUOP_MLU290 = 290,
   MLUOP_MLU370 = 372,
+  MLUOP_MLU590 = 592,
 } mluOpDevType_t;
 
 struct deviceName {

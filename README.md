@@ -2,18 +2,18 @@
 
 [![ci](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml/badge.svg)](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml)
 
-MLU-OPS 提供基于寒武纪机器学习单元（Machine Learning Unit，MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
+MLU-OPS 提供基于寒武纪人工智能单元（MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
 MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开发自定义算子，实现对应模型的计算。
 
 ## 依赖条件
 
 - 操作系统：
-  - 支持 x86_64 下 Ubuntu16.04、Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5 ;
+  - 支持 x86_64 下 Ubuntu16.04、Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5;
   - 支持 AArch64 下 KylinV10。
 - 寒武纪 MLU SDK：
   - 编译和运行时依赖 CNToolkit v3.1.2 或更高版本。
 - 寒武纪 MLU 驱动：
-  - 运行时依赖驱动 v5.0.0 或更高版本。
+  - 运行时依赖驱动 v4.20.11 或更高版本。
 - 外部链接库：
   - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev
 - Python环境：

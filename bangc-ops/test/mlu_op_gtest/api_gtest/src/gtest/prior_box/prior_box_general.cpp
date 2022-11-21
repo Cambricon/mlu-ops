@@ -33,7 +33,6 @@
 #include "mlu_op.h"
 
 namespace mluopapitest {
-
 typedef std::tuple<int, int, int, int, float, float, float, bool, bool>
     PriorBoxDescParam;
 typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
