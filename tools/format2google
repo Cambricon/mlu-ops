@@ -29,8 +29,7 @@ else
 fi
 
 file_list=$(find ${input} -name "*.cc" -or -name "*.cpp" \
-  -or -name "*.mlu" -or -name "*.cu" -or -name "*.h" \
-  -or -name "*.hpp")
+  -or -name "*.mlu" -or -name "*.h" -or -name "*.hpp")
 mluop_name="bangc-ops/mlu_op.h"
 for file in ${file_list}; do
   echo "clang-formating ${file} ..."
