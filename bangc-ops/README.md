@@ -12,7 +12,7 @@
   source env.sh
   ```
 
-- 编译 bangc-ops
+- 编译所有算子
   ```sh
   cd mlu-ops/bangc-ops
   ./build.sh
@@ -20,6 +20,81 @@
 
   编译成功后在 `bangc-ops/build/lib` 目录下生成算子库文件 `libmluops.so`，在 `bangc-ops/build/test` 目录下生成测试用的可执行文件 `mluop_gtest` 。
 
+- 编译指定算子
+
+  支持编译指定的一个或多个算子
+
+  ```sh
+  cd mlu-ops/bangc-ops
+  ./build.sh --filter="abs;expand" # '--filter'参数后接要编译的算子，构建系统会根据'kernel_depends.toml'文件描述的依赖自动编译依赖的算子
+  ```
+
+  算子名指的是`bangc-ops/kernels`目录下面的文件夹名。
+
+  注意，该功能对算子开发者有一定要求：
+
+  - `kernels/`、`test/mlu_op_gtest/pb_gtest/src/zoo`、`test/mlu_op_gtest/api_gtest/src/gtest/`三个目录下的算子文件夹命名要完全一致
+  - 相关算子依赖需要更新[kernel_depends.toml](./kernel_depends.toml)文件，请严格按照字母顺序添加
+
+  当算子存在正反向，且在kernel下的同一个文件夹下实现时
+
+  - 文件结构
+  
+    `kernels/op_name`、`test/mlu_op_gtest/pb_gtest/src/zoo/op_name_forward(op_name_backward)`、`test/mlu_op_gtest/api_gtest/src/gtest/op_name_forward(op_name_backward)`
+
+  - 添加依赖
+  
+    在[kernel_depends.toml](./kernel_depends.toml)文件中的[bangc-ops.gtest]下添加依赖说明
+
+    ```sh
+    op_name_backward = ["op_name"]
+    op_name_forward = ["op_name"]
+    ```
+
+  - 编译方式
+
+    ```sh
+    cd mlu-ops/bangc-ops
+    ./build.sh --filter="op_name_forward(或op_name_backward)" 
+    ```
+
+- 多MLU平台架构编译
+
+  - 当不指定架构时，默认编译支持`MLU270/MLU290/MLU370`板卡的 `libmluops.so`，运行时动态选择`MLU270/MLU290/MLU370`
+
+  - 编译指定MLU板卡
+
+      ```sh
+      ./build.sh            # 编译多架构的版本，libmluops.so 体积较大，cncc使用多arch的cnfatbin封装
+      ./build.sh  --mlu270  # 编译 MLU270 板卡专用版本，cncc使用选项--bang-mlu-arch=mtp_270
+      ./build.sh  --mlu290  # 编译 MLU290 板卡专用版本，cncc使用选项--bang-mlu-arch=mtp_290
+      ./build.sh  --mlu370  # 编译 MLU370 板卡专用版本，cncc使用选项--bang-mlu-arch=mtp_372
+      ./build.sh  --mlu270 --filter="abs;expand"  # mlu270 下编译 abs 算子和 expand 算子
+      ./build.sh  --mlu270 --mlu370 --filter="abs;expand"  # mlu270 和 mlu370 下编译 abs 算子和 expand 算子
+      ```
+
+- kernel_depends.toml
+
+  TOML格式的配置文件（一种类似于INI文件的格式，但是具有JSON同等的表达能力，支持注释，对人类可读性更友好），记录`kernels/`目录下的算子编译依赖关系，需要算子开发者进行维护{op1}的依赖{dep\_op1},{dep\_op2}（维护直接的第一级依赖即可），确保`--filter={op1}`时，能正确编译。格式如下：
+
+  ```sh
+  <op_name> = ["dep_op1", "dep_op2", ...]
+  ```
+
+- 命令行参数
+
+  可通过`./build.sh -h`或`./build.sh --help`，查看命令行参数
+
+  | 变量名                      | 默认值                             | 说明                                                   | 关联cmake选项               | 关联命令行参数                       |
+  | --------------------------- | ---------------------------------- | ------------------------------------------------------ | --------------------------- | ------------------------------------ |
+  | `BUILD_MODE`                | release                            | release/debug，编译模式                                | `CMAKE_BUILD_TYPE`          | -d<br />--debug                      |
+  | `NEUWARE_HOME`              | 用户声明，或`source ../env.sh`设置 | neuware路径，包含cnrt,cndrv                            | `NEUWARE_HOME`              |                                      |
+  | `MLUOP_BUILD_COVERAGE_TEST` | OFF                                | 代码覆盖率测试                                         | `MLUOP_BUILD_COVERAGE_TEST` | -c<br />--coverage                   |
+  | `MLUOP_BUILD_ASAN_CHECK`    | OFF                                | 开启ASAN内存检查工具                                   | `MLUOP_BUILD_ASAN_CHECK`    | --asan                               |
+  | `MLUOP_MLU_ARCH_LIST`       | `mtp_270/mtp_290/mtp_372`          | 目标mlu架构列表，分号分割的字符串，如"mtp_270;mtp_372" | `MLUOP_MLU_ARCH_LIST`       | --mlu270<br />--mlu290<br />--mlu370 |
+  | `MLUOP_BUILD_SPECIFIC_OP`   | 空                                 | 编译指定的算子                                         | `MLUOP_BUILD_SPECIFIC_OP`   | --filter                             |
+
+  
 
 ## 运行测试用例
 

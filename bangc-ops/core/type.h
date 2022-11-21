@@ -29,6 +29,31 @@
 #include "core/logging.h"
 #include "mlu_op.h"
 
+// This function is used to get high 32bit and low 32bit of param value.
+// The hardware hasn't support 8 bytes operation, so if the sizeof(dtype) is 8
+// bytes, sometimes we need to separate 8bytes to two 4bytes. Example:for
+// mluOpPad, users will pass the host pointer of padding_value to mluOpPad.
+// uint32_t high_value = 0, low_value = 0;
+// if (getSizeOfDataType(dtype) == sizeof(int64_t)) {
+//   getLowAndHighValueFrom64Bits(*(int64_t*)padding_value_ptr, &high_value,
+//   &low_value);
+// }
+template <typename T>
+static mluOpStatus_t getLowAndHighValueFrom64Bits(T value, uint32_t* high,
+                                                  uint32_t* low) {
+  if (sizeof(T) != sizeof(int64_t)) {
+    VLOG(5)
+        << "getLowAndHighValueFrom64Bits() only supports 64 bits data type.";
+    return MLUOP_STATUS_INTERNAL_ERROR;
+  }
+  uint64_t temp = *(uint64_t*)&value;
+  // get the high 32bit value
+  *high = temp >> 32;
+  // get the low 32bit value
+  *low = temp;
+  return MLUOP_STATUS_SUCCESS;
+}
+
 size_t getSizeOfDataType(const mluOpDataType_t dtype);
 
 std::string getNameOfDataType(const mluOpDataType_t dtype);

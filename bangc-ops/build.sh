@@ -4,11 +4,15 @@ set -e
 SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
-MLUOPS_TARGET_CPU_ARCH=`uname -m`
+MLUOP_TARGET_CPU_ARCH=`uname -m`
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
 
+#### variable names with default value, and could be overrided from user env ####
 export MLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}"
+export BUILD_MODE=${BUILD_MODE:-release} # release/debug
+export MLUOP_BUILD_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST:-OFF} # ON/OFF coverage mode
+export MLUOP_BUILD_ASAN_CHECK=${MLUOP_BUILD_ASAN_CHECK:-OFF} # ON/OFF Address Sanitizer (ASan)
 
 # import common method like `download_pkg`, `get_json_val`, `common_extract`, etc
 . ./scripts/utils.bash
@@ -21,17 +25,19 @@ export MLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}"
 short_args=(
   c   # coverage
   h   # help
+  d   # debug
 )
 # setup long options, follow alphabetical order
 long_args=(
   asan
   coverage
+  debug
   filter:
-  gtest-filter:
   help
   mlu270 # mlu arch
   mlu290 # mlu arch
   mlu370 # mlu arch
+  mlu590
 )
 
 add_mlu_arch_support () {
@@ -46,6 +52,9 @@ add_mlu_arch_support () {
       ;;
     --mlu370)
       bang_arch="mtp_372;"
+      ;;
+    --mlu590)
+      bang_arch="mtp_592;"
       ;;
     *)
       ;;
@@ -62,8 +71,9 @@ usage () {
     echo
     echo "OPTIONS:"
     echo "      -h, --help         Print usage."
-    echo "      -c, --coverage     Build mluops with coverage test."
+    echo "      -c, --coverage     Build bangc-ops with coverage test."
     echo "      --asan             Build with asan check enabled"
+    echo "      -d, --debug        Build bangc-ops with debug mode"
     echo "      --mlu270           Build for target product MLU270: __BANG_ARCH__ = 270"
     echo "                                                          __MLU_NRAM_SIZE__ = 512KB"
     echo "                                                          __MLU_WRAM_SIZE__ = 1024KB"
@@ -79,8 +89,12 @@ usage () {
     echo "                                                          __MLU_WRAM_SIZE__ = 1024KB"
     echo "                                                          __MLU_SRAM_SIZE__ = 4096KB"
     echo "                                                          cncc --bang-mlu-arch=mtp_372, cnas --mlu-arch mtp_372"
+    echo "      --mlu590           Build for target product MLU590: __BANG_ARCH__ = 592"
+    echo "                                                          __MLU_NRAM_SIZE__ = 512KB"
+    echo "                                                          __MLU_WRAM_SIZE__ = 512KB"
+    echo "                                                          __MLU_SRAM_SIZE__ = 2048KB"
+    echo "                                                          cncc --bang-mlu-arch=mtp_592, cnas --mlu-arch mtp_592"
     echo "      --filter=*         Build specified OP only (string with ';' separated)"
-    echo "      --gtest-filter=*   Build specified test/mlu_op_gtest/pb_gtest OP (src/zoo/<op>) too, for special purpose"
     echo
 }
 
@@ -106,16 +120,15 @@ if [ $# != 0 ]; then
           usage
           exit 0
           ;;
+      -d | --debug)
+          shift
+          export BUILD_MODE="debug"
+          prog_log_note "Using debug build mode"
+          ;;
       --filter)
         shift
         export MLUOP_BUILD_SPECIFIC_OP=$1
         prog_log_note "Build libmluop.so with OP: ${MLUOP_BUILD_SPECIFIC_OP} only."
-        shift
-        ;;
-      --gtest-filter)
-        shift
-        export MLUOP_BUILD_SPECIFIC_GTEST_OP=$1
-        prog_log_note "Build test/mlu_op_gtest/pb_gtest with additional OP: ${MLUOP_BUILD_SPECIFIC_GTEST_OP}."
         shift
         ;;
       --)
@@ -150,9 +163,11 @@ popd
 MAJOR_VERSION=$(echo ${BUILD_VERSION}|cut -d '-' -f1|cut -d '.' -f1)
 prog_log_info "build_version = $BUILD_VERSION"
 prog_log_info "major_version = ${MAJOR_VERSION}"
+prog_log_info "BUILD_MODE = ${BUILD_MODE}"
+prog_log_info "MLUOP_BUILD_COVERAGE_TEST = ${MLUOP_BUILD_COVERAGE_TEST}"
+prog_log_info "MLUOP_BUILD_ASAN_CHECK = ${MLUOP_BUILD_ASAN_CHECK}"
 prog_log_info "MLUOP_MLU_ARCH_LIST = ${MLUOP_MLU_ARCH_LIST}"
-prog_log_info "MLUOPS_TARGET_CPU_ARCH = ${MLUOPS_TARGET_CPU_ARCH}"
-
+prog_log_info "MLUOP_TARGET_CPU_ARCH = ${MLUOP_TARGET_CPU_ARCH}"
 #check compiler version and consider activate devtoolset for CentOS 7
 if [ "$OS_RELEASE_ID" = "centos" -a "$OS_RELEASE_VERSION_ID" = "7" ]; then
   if [ ! -f "/opt/rh/devtoolset-7/enable" ]; then
@@ -179,22 +194,17 @@ else
   exit -1
 fi
 
-# check op filter constraint
-if [ -z "${MLUOP_BUILD_SPECIFIC_OP}" ] && [ -n "${MLUOP_BUILD_SPECIFIC_GTEST_OP}" ]; then
-  prog_log_fatal "If you are using \`--gtest-filter\`, you must also use \`--filter\` to specify kernel (kernels/<kernel>) directory to build"
-fi
-
 pushd ${BUILD_PATH} > /dev/null
   rm -rf *
-  ${CMAKE}  ../ -DNEUWARE_HOME="${NEUWARE_HOME}" \
+  ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
+                -DNEUWARE_HOME="${NEUWARE_HOME}" \
                 -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}" \
                 -DBUILD_VERSION="${BUILD_VERSION}" \
                 -DMAJOR_VERSION="${MAJOR_VERSION}" \
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
-                -DMLUOPS_TARGET_CPU_ARCH="${MLUOPS_TARGET_CPU_ARCH}" \
-                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
-                -DMLUOP_BUILD_SPECIFIC_GTEST_OP="${MLUOP_BUILD_SPECIFIC_GTEST_OP}" 
+                -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
+                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}"
 
 popd > /dev/null
 ${CMAKE} --build build --  -j
