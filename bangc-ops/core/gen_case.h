@@ -95,7 +95,8 @@
 #define GEN_CASE_OP_PARAM_SINGLE_NAME(pos, param_node_name, param_name, value) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, param_node_name)
 #define GEN_CASE_OP_PARAM_ARRAY(pos, op_name, param_name, value, num) \
-  mluop::gen_case::genCaseOpParam(node, param_name, value, num)
+  mluop::gen_case::genCaseOpParam(node, param_name, value, num, \
+                    std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_SUB(pos, param_node_name, param_name, value,  \
                                      new_child)                                \
   mluop::gen_case::genCaseOpParamSub(node, param_name, value, param_node_name, \
@@ -112,13 +113,13 @@
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,    \
                                     diff1_threshold, diff2_threshold,      \
                                     diff3_threshold, ##__VA_ARGS__);       \
-  node->serialize(true);                                                   \
-  node->reset()
+  node->serialize(true); node->reset()
 #define GEN_CASE_TEST_PARAM_NEW(is_diff1, is_diff2, is_diff3, diff1_threshold, \
                                 diff2_threshold, diff3_threshold, ...)         \
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,        \
                                     diff1_threshold, diff2_threshold,          \
-                                    diff3_threshold, ##__VA_ARGS__)
+                                    diff3_threshold, ##__VA_ARGS__);           \
+  node->serialize(true);
 
 #define GEN_CASE_END() mluop::gen_case::genCaseEnd()
 
