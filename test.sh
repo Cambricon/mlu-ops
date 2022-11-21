@@ -67,5 +67,7 @@ if [[ ${MLU_SUB_MODULE} == "bangpy" ]]; then
   pip3 install prototxt_parser==1.0 -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
   if [[ -n "${CASES_DIR}" && -a "${CASES_DIR}" ]]; then
     ./bangpy-ops/utils/test_operators.sh --only_test --cases_dir="${CASES_DIR}"
+  else
+    ./bangpy-ops/utils/test_operators.sh --only_test
   fi
 fi

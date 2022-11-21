@@ -33,12 +33,12 @@ class OpTest(ABC):
     write params in keyword op_params.
     """
 
-    def __init__(self, target, dtype, input_tensor_list, output_tensor_list):
+    def __init__(self, target, dtype, input_tensor_list, output_tensor_list, param):
         self.inputs_list = input_tensor_list
         self.output_tensor = output_tensor_list
         self.dtype = dtype
         self.target = target
-        self.test_param_ = None
+        self.test_param_ = param
 
     def paramCheck(self):
         pass

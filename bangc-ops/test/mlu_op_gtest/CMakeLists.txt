@@ -6,11 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # check
 message("[MLUOP GTEST STYLE]: ")
-set(MLUOP_BUILD_SPECIFIC_GTEST_OP ${MLUOP_BUILD_SPECIFIC_OP} ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
-if (MLUOP_BUILD_SPECIFIC_GTEST_OP)
-  list(REMOVE_DUPLICATES MLUOP_BUILD_SPECIFIC_GTEST_OP)
-endif ()
-execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/gtest_style.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP} RESULT_VARIABLE STYLE_CHECK)
+set(MLUOP_BUILD_SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
+
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/gtest_style.py ${MLUOP_BUILD_SPECIFIC_OP} RESULT_VARIABLE STYLE_CHECK)
 if (STYLE_CHECK)
   message(FATAL_ERROR "-- Pleace check gtest code manually.")
 endif()
@@ -18,7 +16,7 @@ endif()
 message("[MLUOP GTEST REGISTER OP]: ")
 file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*case_list.cpp")
 execute_process(COMMAND rm -f ${CASE_LIST})
-execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
+execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_OP})
 
 
 ## Try to find libxml2 and protobuf
@@ -63,14 +61,13 @@ include_directories(${LIBXML2_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIR})
 
 
-if(${TARGET_CPU_ARCH} MATCHES "aarch64-linux-gnu")
+if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
   # set(DEFAULT_PROTOBUF_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/lib/")
   # set(DEFAULT_LIBXML2_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/include/libxml2")
   # set(DEFAULT_LIBXML2_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/lib/")
 else()
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS} -mavx2")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -mavx2")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif()
 
 message("[MLUOP GTEST PROTOC]: ")
@@ -131,8 +128,8 @@ add_library(gtest_shared STATIC ${SRC_DIR}) # for runtime convenience
 
 file(GLOB MLUOP_PB_TEST_DIR ${MLUOP_PB_GTEST_SRC})
 
-if (MLUOP_BUILD_SPECIFIC_GTEST_OP)
-  foreach(op ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
+if (MLUOP_BUILD_SPECIFIC_OP)
+  foreach(op ${MLUOP_BUILD_SPECIFIC_OP})
     file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/${op}/*.cpp")
     list(APPEND MLUOP_PB_GTEST_DIR ${OP_DIR})
   endforeach()
@@ -159,8 +156,8 @@ endforeach()
 
 file(GLOB MLUOP_API_TEST_DIR ${MLUOP_API_GTEST_SRC})
 
-if (MLUOP_BUILD_SPECIFIC_GTEST_OP)
-  foreach(op ${MLUOP_BUILD_SPECIFIC_GTEST_OP})
+if (MLUOP_BUILD_SPECIFIC_OP)
+  foreach(op ${MLUOP_BUILD_SPECIFIC_OP})
     file(GLOB_RECURSE OP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/${op}/*.cpp")
     list(APPEND MLUOP_API_GTEST_DIR ${OP_DIR})
   endforeach()
