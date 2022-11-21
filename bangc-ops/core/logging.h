@@ -29,7 +29,7 @@
 #include <sstream>
 #include "core/macros.h"
 #include "core/cnlog.h"
-#include "core/mlu_op_core.h"
+#include "mlu_op.h"
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
@@ -122,6 +122,13 @@
     return MLUOP_STATUS_BAD_PARAM;                                       \
   }
 
+// this prints out values instead of names of variables inside _VA_ARGS__
+#define PARAM_CHECK_V2(api, condition, ...)                             \
+  if (!(condition)) {                                                   \
+    LOG(ERROR) << api << " Check failed: " #condition ". " __VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                      \
+  }
+
 // CHECK_EQ/NE/... with return value.
 #define PARAM_CHECK_EQ(api, val1, val2, ...)                              \
   if (!(val1 == val2)) {                                                  \
@@ -163,17 +170,17 @@
 #define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                 \
   if (!(num < max_num)) {                                                \
     LOG(ERROR) << "[" << api << "]: overflow max supported tensor num. " \
-               << reason << api << "supports tensor num smaller than ";  \
-    << max_num << ", "                                                   \
-    << "now tensor's total num is " << num;                              \
+               << reason << api << "supports tensor num smaller than "   \
+               << max_num << ", "                                        \
+               << "now tensor's total num is " << num;                   \
     return MLUOP_STATUS_SUCCESS;                                         \
   }
 #define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)               \
   if (!(size < max_size)) {                                               \
     LOG(ERROR) << "[" << api << "]: overflow max supported tensor size. " \
-               << reason << api << "supports tensor size smaller than ";  \
-    << max_size << "B, "                                                  \
-    << "now tensor's total size is " << size << "B.";                     \
+               << reason << api << "supports tensor size smaller than "   \
+               << max_size << "B, "                                       \
+               << "now tensor's total size is " << size << "B.";          \
     return MLUOP_STATUS_SUCCESS;                                          \
   }
 

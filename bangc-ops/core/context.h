@@ -27,8 +27,7 @@
 
 #include "cn_api.h"
 #include "core/logging.h"
-#include "core/mlu_op_core.h"
-#include "mlu_op_core.h"
+#include "mlu_op.h"
 
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
 #define CONTEXT_DEVICENAME_LEAST_SIZE 6
@@ -58,6 +57,7 @@ typedef enum {
   MLUOP_MLU270 = 270,
   MLUOP_MLU290 = 290,
   MLUOP_MLU370 = 372,
+  MLUOP_MLU590 = 592,
 } mluOpDevType_t;
 
 struct deviceName {

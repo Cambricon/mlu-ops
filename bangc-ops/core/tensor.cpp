@@ -171,7 +171,6 @@ MLUOP_ATTRIBUTE_DESTRUCTOR MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN void mluOpExit() {
   }
 }
 #endif
-
 /* MLUOP interface */
 mluOpStatus_t mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc) {
   PARAM_CHECK("[mluOpCreateTensorDescriptor]", desc != NULL);
@@ -190,7 +189,6 @@ mluOpStatus_t mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc) {
   mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
   *desc = ts;
 #endif
-
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -235,13 +233,32 @@ mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
   PARAM_CHECK("[mluOpSetTensorDescriptor]", layout >= 0);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", dtype >= 0);
 
-  desc->dim = dimNb;
   desc->dtype = dtype;
   desc->layout = layout;
 
+  return mluOpSetTensorDescriptorDim(desc, dimNb, dimSize);
+}
+
+mluOpStatus_t mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc,
+                                          int dimNb, const int *dimSize) {
+  PARAM_CHECK("[mluOpSetTensorDescriptor]", desc != NULL);
+  PARAM_CHECK("[mluOpSetTensorDescriptor]", dimNb > 0);
+  PARAM_CHECK("[mluOpSetTensorDescriptor]", dimSize != NULL);
+
+  desc->dim = dimNb;
+  if (MLUOP_PREDICT_FALSE(desc->larger_dims != NULL)) {
+    delete[] desc->larger_dims;
+    desc->larger_dims = NULL;
+  }
+
+  if (MLUOP_PREDICT_FALSE(desc->larger_strides != NULL)) {
+    delete[] desc->larger_strides;
+    desc->larger_strides = NULL;
+  }
+
   if (MLUOP_PREDICT_FALSE(dimNb > MLUOP_DIM_MAX)) {
-    desc->larger_dims = new int[dimNb];
-    desc->larger_strides = new int[dimNb];
+    desc->larger_dims = new (std::nothrow) int[dimNb];
+    desc->larger_strides = new (std::nothrow) int[dimNb];
     desc->dims = desc->larger_dims;
     desc->strides = desc->larger_strides;
   } else {
@@ -251,34 +268,31 @@ mluOpStatus_t mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
   memcpy(desc->dims, dimSize, dimNb * sizeof(int));
 
   // infer strides of dimNb dimensions and compute total_num & total_size
-  int strideBase = 1;
+  uint64_t stride_base = 1;
+  bool is_overflow = false;
+  int tmp_num = 0;
   for (int i = dimNb - 1; i >= 0; --i) {
-    desc->strides[i] = strideBase;
-    strideBase *= desc->dims[i];
+    desc->strides[i] = stride_base;
+    is_overflow |=
+        __builtin_smul_overflow(stride_base, desc->dims[i], &tmp_num);
+    stride_base *= desc->dims[i];
   }
-  desc->total_element_num = strideBase;
-  desc->total_tensor_size = desc->total_element_num * getSizeOfDataType(dtype);
+  desc->total_element_num = stride_base;
+  desc->total_tensor_size =
+      desc->total_element_num * getSizeOfDataType(desc->dtype);
   // judge int overflow situation
-  int total_size = desc->total_tensor_size;
-  if (total_size != 0) {
-    int last_num = total_size / getSizeOfDataType(dtype);
+  if (MLUOP_PREDICT_FALSE(is_overflow)) {
+    std::stringstream tensor_info;
+    tensor_info << "dims:(";
     for (int i = 0; i < dimNb - 1; ++i) {
-      last_num = last_num / dimSize[i];
+      tensor_info << dimSize[i] << ",";
     }
-    if (last_num < dimSize[dimNb - 1]) {
-      std::stringstream tensor_info;
-      tensor_info << "dims:(";
-      for (int i = 0; i < dimNb - 1; ++i) {
-        tensor_info << dimSize[i] << ", ";
-      }
 
-      tensor_info << dimSize[dimNb - 1]
-                  << "), data width:" << getSizeOfDataType(dtype) << ".";
-      LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow tensor size with "
-                      "type 'int'. Currently, mluOp supports tensor size "
-                      "smaller than 2^31, now tensor "
-                   << tensor_info.str();
-    }
+    tensor_info << dimSize[dimNb - 1]
+                << "), data_width:" << getSizeOfDataType(desc->dtype) << ".";
+    LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow max tensor num."
+                 << "Currently, mluOp supports tensor num smaller than 2^31,"
+                 << "now tensor " << tensor_info.str();
   }
   return MLUOP_STATUS_SUCCESS;
 }

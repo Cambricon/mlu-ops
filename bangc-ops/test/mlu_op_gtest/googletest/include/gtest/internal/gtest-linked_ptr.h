@@ -71,6 +71,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <algorithm>
+
 #include "gtest/internal/gtest-port.h"
 
 namespace testing {
@@ -103,7 +105,8 @@ class linked_ptr_internal {
   // framework.
 
   // Join an existing circle.
-  void join(linked_ptr_internal const *ptr) GTEST_LOCK_EXCLUDED_(g_linked_ptr_mutex) {
+  void join(linked_ptr_internal const *ptr)
+      GTEST_LOCK_EXCLUDED_(g_linked_ptr_mutex) {
     MutexLock lock(&g_linked_ptr_mutex);
 
     linked_ptr_internal const *p = ptr;
@@ -114,7 +117,7 @@ class linked_ptr_internal {
       p = p->next_;
     }
     p->next_ = this;
-    next_    = ptr;
+    next_ = ptr;
   }
 
   // Leave whatever circle we're part of.  Returns true if we were the
@@ -122,8 +125,7 @@ class linked_ptr_internal {
   bool depart() GTEST_LOCK_EXCLUDED_(g_linked_ptr_mutex) {
     MutexLock lock(&g_linked_ptr_mutex);
 
-    if (next_ == this)
-      return true;
+    if (next_ == this) return true;
     linked_ptr_internal const *p = next_;
     while (p->next_ != this) {
       assert(p->next_ != next_ &&
@@ -203,8 +205,7 @@ class linked_ptr {
   linked_ptr_internal link_;
 
   void depart() {
-    if (link_.depart())
-      delete value_;
+    if (link_.depart()) delete value_;
   }
 
   void capture(T *ptr) {

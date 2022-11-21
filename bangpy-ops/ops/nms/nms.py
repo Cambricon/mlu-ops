@@ -8,13 +8,13 @@
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
 #
-# The above copyright notice and this permission notice shall self.tcp included
+# The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -358,9 +358,8 @@ class NMS(object):
 
             # by now, we get: max_score|max_index|max_box|max_area
             if output_box_num != 0:
-                if (
-                    nram_save_count == self.gdram_save_count
-                    or max_box[0] <= tcp.cast(score_threshold, self.dtype)
+                if nram_save_count == self.gdram_save_count or max_box[0] <= tcp.cast(
+                    score_threshold, self.dtype
                 ):
                     if task_id == task_num - 1:
                         # score, x1, y1, x2, y2

@@ -55,11 +55,12 @@ class Evaluator {
   enum Formula { DIFF1, DIFF2, DIFF3, DIFF3_2, DIFF4 };
 
   struct Criterion {
-    Criterion(Formula f, double t, bool e = true) : formula(f), threshold(t), enable(e) {}
+    Criterion(Formula f, double t, bool e = true)
+        : formula(f), threshold(t), enable(e) {}
     Formula formula;
     double threshold = 0;
-    bool enable      = true;  // if false, only compute it, but won't mark case failed.
-
+    // if false, only compute it, but won't mark case failed.
+    bool enable = true;
     bool operator<(const struct Criterion &c) const {
       if (formula == c.formula) {
         return false;  // for deduplication
@@ -71,20 +72,17 @@ class Evaluator {
 
   // pack 1 tensor's name/ criterion(func/threshold)/ diff together.
   struct ErrorWrap {
-    ErrorWrap(std::string n, Criterion c, double e) : name(n), criterion(c), error(e) {}
+    ErrorWrap(std::string n, Criterion c, double e)
+        : name(n), criterion(c), error(e) {}
     std::string name = "";  // tensor's name
     Criterion criterion;    // criterion
     double error = 0;       // the error of this criterion
   };
 
   // compute error between A and B, by given criterion
-  double computeError(float *a,
-                      float *b,
-                      size_t count,
-                      const Criterion &criterion,
-                      const std::string &name,
-                      const mluOpDataType_t dtype,
-                      bool skip_nan_n_inf = false);
+  double computeError(float *a, float *b, size_t count,
+                      const Criterion &criterion, const std::string &name,
+                      const mluOpDataType_t dtype, bool skip_nan_n_inf = false);
 
   // compute efficiency by formula:
   // theory_ops / latency / peak_compute_force
@@ -103,16 +101,15 @@ class Evaluator {
  private:
   double computeDiff1(float *cpu_result, float *mlu_result, size_t count);
   double computeDiff2(float *cpu_result, float *mlu_result, size_t count);
-  double computeDiff3(float *baseline_result,
-                      float *mlu_result,
-                      size_t count,
+  double computeDiff3(float *baseline_result, float *mlu_result, size_t count,
                       mluOpDataType_t dtype);
-  double computeDiff3_2(float *baseline_result, float *mlu_result, size_t count);
+  double computeDiff3_2(float *baseline_result, float *mlu_result,
+                        size_t count);
   double computeDiff4(float *baseline_result, float *mlu_result, size_t count);
   inline std::string showFormula(Formula f);
-
-  std::vector<Criterion> criterion_vec_;  // vector of (diff1+thresdhold) /(diff2 + threshold)
-  std::vector<ErrorWrap> error_vec_;      // vetor output's error
+  // vector of (diff1+thresdhold) /(diff2 + threshold)
+  std::vector<Criterion> criterion_vec_;
+  std::vector<ErrorWrap> error_vec_;  // vetor output's error
 
   double workspace_size_ = -1;  // for -1
 };
@@ -135,15 +132,15 @@ struct PerfInfo {  // perf info for certain device (mlu)
   double workspace_size = -1;
 
   // theory ops/io/peak force/bandwidth for efficiency
-  double theory_ops    = -1;  // op
-  double theory_io     = -1;  // bytes
+  double theory_ops = -1;     // op
+  double theory_io = -1;      // bytes
   double compute_force = -1;  // op/s
-  double io_bandwidth  = -1;  // GB/s
+  double io_bandwidth = -1;   // GB/s
 };
 
 struct EvaluateResult {
   // id
-  std::string op_name   = "";
+  std::string op_name = "";
   std::string case_path = "";
   // perf info
   PerfInfo mlu;

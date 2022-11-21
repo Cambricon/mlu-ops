@@ -1,0 +1,1673 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "mlu_op_kernel.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+template <typename T>
+static __mlu_func__ void memCopy(T *dst, const T *src, const int size,
+                                 mluMemcpyDirection_t dir, const int dst_stride,
+                                 const int src_stride, const int segnum) {
+  if (segnum > 0) {
+    __memcpy_async(dst, src,
+                   size,  // size
+                   dir,
+                   dst_stride,  // dst stride
+                   src_stride,  // src stride
+                   segnum);     // seg number
+  } else {
+    __memcpy_async(dst, src, size, dir);
+  }
+}
+
+template <typename T>
+static __mlu_func__ void load(const T *addr_x, T *nram_x, T *nram_y, T *nram_w,
+                              T *nram_h, T *nram_conf, T *nram_iou,
+                              const bool iou_aware, const int batch_num,
+                              const int class_num, const int anchor_s,
+                              const int anchor_num, const int s_num_offset,
+                              const int c_in, const int hw_total_num,
+                              const int hw_seg_num, const int align_hw_seg_num,
+                              const int data_ram_num, const int i) {
+  int offset = (i % 2) * data_ram_num;
+  int bbox_data_offset = (5 + class_num) * hw_total_num;
+  T *nram_x_p = nram_x + offset;
+  T *nram_y_p = nram_y + offset;
+  T *nram_w_p = nram_w + offset;
+  T *nram_h_p = nram_h + offset;
+  T *nram_conf_p = nram_conf + offset;
+  T *nram_iou_p = nram_iou + offset;
+
+  if (iou_aware == true) {
+    for (int n_iter = 0; n_iter < batch_num; n_iter++) {
+      // load iou
+      T *addr_x_n = (T *)addr_x + n_iter * c_in * hw_total_num;
+      int nram_offset = n_iter * anchor_num * align_hw_seg_num;
+      T *nram_iou_tmp = nram_iou_p + nram_offset;
+      memCopy(nram_iou_tmp, addr_x_n + s_num_offset * hw_total_num,
+              hw_seg_num * sizeof(T),  // size
+              GDRAM2NRAM,
+              align_hw_seg_num * sizeof(T),  // dst stride
+              hw_total_num * sizeof(T),      // src stride
+              anchor_num - 1);               // seg number
+
+      // load x/y/w/h/conf
+      addr_x_n =
+          addr_x_n + anchor_s * hw_total_num + s_num_offset * bbox_data_offset;
+      T *nram_x_tmp = nram_x_p + nram_offset;
+      T *nram_y_tmp = nram_y_p + nram_offset;
+      T *nram_w_tmp = nram_w_p + nram_offset;
+      T *nram_h_tmp = nram_h_p + nram_offset;
+      T *nram_conf_tmp = nram_conf_p + nram_offset;
+      memCopy(nram_x_tmp, addr_x_n, hw_seg_num * sizeof(T), GDRAM2NRAM,
+              align_hw_seg_num * sizeof(T), bbox_data_offset * sizeof(T),
+              anchor_num - 1);
+      memCopy(nram_y_tmp, addr_x_n + hw_total_num, hw_seg_num * sizeof(T),
+              GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+              bbox_data_offset * sizeof(T), anchor_num - 1);
+      memCopy(nram_w_tmp, addr_x_n + 2 * hw_total_num, hw_seg_num * sizeof(T),
+              GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+              bbox_data_offset * sizeof(T), anchor_num - 1);
+      memCopy(nram_h_tmp, addr_x_n + 3 * hw_total_num, hw_seg_num * sizeof(T),
+              GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+              bbox_data_offset * sizeof(T), anchor_num - 1);
+      memCopy(nram_conf_tmp, addr_x_n + 4 * hw_total_num,
+              hw_seg_num * sizeof(T), GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+              bbox_data_offset * sizeof(T), anchor_num - 1);
+    }
+  } else {
+    // load x/y/w/h/conf
+    int ns_num = batch_num * anchor_num;
+    T *addr_x_n = (T *)addr_x + s_num_offset * bbox_data_offset;
+    memCopy(nram_x_p, addr_x_n,
+            hw_seg_num * sizeof(T),  // size
+            GDRAM2NRAM,
+            align_hw_seg_num * sizeof(T),  // dst stride
+            bbox_data_offset * sizeof(T),  // src stride
+            ns_num - 1);                   // seg number
+    memCopy(nram_y_p, addr_x_n + hw_total_num, hw_seg_num * sizeof(T),
+            GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+            bbox_data_offset * sizeof(T), ns_num - 1);
+    memCopy(nram_w_p, addr_x_n + 2 * hw_total_num, hw_seg_num * sizeof(T),
+            GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+            bbox_data_offset * sizeof(T), ns_num - 1);
+    memCopy(nram_h_p, addr_x_n + 3 * hw_total_num, hw_seg_num * sizeof(T),
+            GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+            bbox_data_offset * sizeof(T), ns_num - 1);
+    memCopy(nram_conf_p, addr_x_n + 4 * hw_total_num, hw_seg_num * sizeof(T),
+            GDRAM2NRAM, align_hw_seg_num * sizeof(T),
+            bbox_data_offset * sizeof(T), ns_num - 1);
+  }
+}
+
+template <typename T>
+static __mlu_func__ void compute(
+    T *nram_x, T *nram_y, T *nram_w, T *nram_h, T *nram_conf, T *nram_iou,
+    T *nram_cx, T *nram_cy, T *anchors_w, T *anchors_h, T *nram_imgw,
+    T *nram_imgh, const int w_in, const int h_in, const float conf_thresh,
+    const int downsample_ratio, const bool clip_bbox, const float scale,
+    const bool iou_aware, const float iou_aware_factor, const int deal_num,
+    const int data_ram_num, const int i) {
+  int offset = (i % 2) * data_ram_num;
+  T gridw = (T)w_in;
+  T gridh = (T)h_in;
+  T inputw = gridw * (T)downsample_ratio;
+  T inputh = gridh * (T)downsample_ratio;
+  T bias = (T)0.5 * ((T)1.0 - (T)scale);
+  T *nram_x_p = nram_x + offset;
+  T *nram_y_p = nram_y + offset;
+  T *nram_w_p = nram_w + offset;
+  T *nram_h_p = nram_h + offset;
+  T *nram_conf_p = nram_conf + offset;
+  T *nram_iou_p = nram_iou + offset;
+
+#if __BANG_ARCH__ >= 322
+  // compute mask
+  computeSigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
+  if (iou_aware == true) {
+    computeSigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
+    if ((T)iou_aware_factor == (T)0.0) {
+      __bang_write_value(nram_iou_p, deal_num, (T)1.0);
+    } else if ((T)iou_aware_factor == (T)1.0) {
+      __bang_write_value(nram_conf_p, deal_num, (T)1.0);
+    } else {
+      __bang_log(nram_iou_p, nram_iou_p, deal_num);
+      __bang_mul_scalar(nram_iou_p, nram_iou_p, (T)iou_aware_factor, deal_num);
+      __bang_pow2(nram_iou_p, nram_iou_p, deal_num);
+
+      __bang_log(nram_conf_p, nram_conf_p, deal_num);
+      __bang_mul_scalar(nram_conf_p, nram_conf_p, (T)1.0 - (T)iou_aware_factor,
+                        deal_num);
+      __bang_pow2(nram_conf_p, nram_conf_p, deal_num);
+    }
+
+    __bang_mul(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
+  }
+
+  __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
+
+  // bx0
+  computeSigmoid(nram_x_p, nram_x_p, NULL, 0, deal_num);
+  __bang_mul_scalar(nram_x_p, nram_x_p, (T)scale, deal_num);
+  __bang_add_scalar(nram_x_p, nram_x_p, bias, deal_num);
+  __bang_add(nram_x_p, nram_x_p, nram_cx, deal_num);
+  __bang_mul(nram_x_p, nram_x_p, nram_imgw, deal_num);
+  __bang_mul_scalar(nram_x_p, nram_x_p, (T)1.0 / gridw, deal_num);
+
+  // by0
+  computeSigmoid(nram_y_p, nram_y_p, NULL, 0, deal_num);
+  __bang_mul_scalar(nram_y_p, nram_y_p, (T)scale, deal_num);
+  __bang_add_scalar(nram_y_p, nram_y_p, bias, deal_num);
+  __bang_add(nram_y_p, nram_y_p, nram_cy, deal_num);
+  __bang_mul(nram_y_p, nram_y_p, nram_imgh, deal_num);
+  __bang_mul_scalar(nram_y_p, nram_y_p, (T)1.0 / gridh, deal_num);
+
+  // bw
+  computeExp(nram_w_p, nram_w_p, NULL, 0, deal_num);
+  __bang_mul(nram_w_p, nram_w_p, anchors_w, deal_num);
+  __bang_mul(nram_w_p, nram_w_p, nram_imgw, deal_num);
+  __bang_mul_scalar(nram_w_p, nram_w_p, (T)1.0 / inputw, deal_num);
+
+  // bh
+  computeExp(nram_h_p, nram_h_p, NULL, 0, deal_num);
+  __bang_mul(nram_h_p, nram_h_p, anchors_h, deal_num);
+  __bang_mul(nram_h_p, nram_h_p, nram_imgh, deal_num);
+  __bang_mul_scalar(nram_h_p, nram_h_p, (T)1.0 / inputh, deal_num);
+
+  // bx0 = bx - bw/2;
+  // by0 = by - bh/2;
+  // bx1 = bx + bw/2;
+  // by1 = by + bh/2;
+  __bang_mul_scalar(nram_conf_p, nram_w_p, (T)0.5, deal_num);
+  __bang_add(nram_w_p, nram_x_p, nram_conf_p, deal_num);
+  __bang_sub(nram_x_p, nram_x_p, nram_conf_p, deal_num);
+
+  __bang_mul_scalar(nram_conf_p, nram_h_p, (T)0.5, deal_num);
+  __bang_add(nram_h_p, nram_y_p, nram_conf_p, deal_num);
+  __bang_sub(nram_y_p, nram_y_p, nram_conf_p, deal_num);
+
+  if (clip_bbox == true) {
+    // bx0 = bx0 > 0 ? bx0 : 0;
+    // by0 = by0 > 0 ? by0 : 0;
+    __bang_write_zero(nram_conf_p, deal_num);
+    __bang_maxequal(nram_x_p, nram_conf_p, nram_x_p, deal_num);
+    __bang_maxequal(nram_y_p, nram_conf_p, nram_y_p, deal_num);
+
+    // bx1 = bx1 < imgw ? bx1 : imgw;
+    // by1 = by1 < imgh ? by1 : imgh;
+    __bang_sub_scalar(nram_conf_p, nram_imgw, (T)1.0, deal_num);
+    __bang_minequal(nram_w_p, nram_conf_p, nram_w_p, deal_num);
+    __bang_sub_scalar(nram_conf_p, nram_imgh, (T)1.0, deal_num);
+    __bang_minequal(nram_h_p, nram_conf_p, nram_h_p, deal_num);
+  }
+
+  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+  __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
+  __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
+                    (int)0xffffffff, deal_num);
+  __bang_band((char *)nram_x_p, (char *)nram_x_p, (char *)nram_mask_int32,
+              4 * deal_num);
+  __bang_band((char *)nram_y_p, (char *)nram_y_p, (char *)nram_mask_int32,
+              4 * deal_num);
+  __bang_band((char *)nram_w_p, (char *)nram_w_p, (char *)nram_mask_int32,
+              4 * deal_num);
+  __bang_band((char *)nram_h_p, (char *)nram_h_p, (char *)nram_mask_int32,
+              4 * deal_num);
+#else
+  const int32_t x2d = 0x3fb8aa3b;
+  float log2e = *(float *)&x2d;
+  __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
+  __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
+  if (iou_aware == true) {
+    __bang_mul_scalar(nram_iou_p, nram_iou_p, (float)-1.0, deal_num);
+    __bang_mul_scalar(nram_iou_p, nram_iou_p, log2e, deal_num);
+  }
+  __bang_mul_scalar(nram_x_p, nram_x_p, (float)-1.0, deal_num);
+  __bang_mul_scalar(nram_x_p, nram_x_p, log2e, deal_num);
+  __bang_mul_scalar(nram_y_p, nram_y_p, (float)-1.0, deal_num);
+  __bang_mul_scalar(nram_y_p, nram_y_p, log2e, deal_num);
+  __bang_mul_scalar(nram_w_p, nram_w_p, log2e, deal_num);
+  __bang_mul_scalar(nram_h_p, nram_h_p, log2e, deal_num);
+
+  for (int32_t k = 0; k < deal_num; ++k) {
+    // sigmoid(conf)
+    nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
+    nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
+
+    if (iou_aware == true) {
+      // sigmoid(iou)
+      nram_iou_p[k] = powf((T)2.0, nram_iou_p[k]);
+      nram_iou_p[k] = (T)1.0 / ((T)1.0 + nram_iou_p[k]);
+
+      // pow(iou, iou_aware_factor)
+      nram_iou_p[k] = powf(nram_iou_p[k], (T)iou_aware_factor);
+      // pow(iou, 1-iou_aware_factor)
+      nram_conf_p[k] = powf(nram_conf_p[k], (T)1.0 - (T)iou_aware_factor);
+      nram_conf_p[k] = nram_conf_p[k] * nram_iou_p[k];
+    }
+
+    if (nram_conf_p[k] < (T)conf_thresh) {
+      nram_x_p[k] = (T)0.0;
+      nram_y_p[k] = (T)0.0;
+      nram_w_p[k] = (T)0.0;
+      nram_h_p[k] = (T)0.0;
+    } else {
+      // sigmoid(x)
+      nram_x_p[k] = powf((T)2.0, nram_x_p[k]);
+      nram_x_p[k] = (T)1.0 / ((T)1.0 + nram_x_p[k]);
+
+      // sigmoid(y)
+      nram_y_p[k] = powf((T)2.0, nram_y_p[k]);
+      nram_y_p[k] = (T)1.0 / ((T)1.0 + nram_y_p[k]);
+
+      // exp(w) and exp(h)
+      nram_w_p[k] = powf((T)2.0, nram_w_p[k]);
+      nram_h_p[k] = powf((T)2.0, nram_h_p[k]);
+    }
+  }
+
+  __bang_write_value(nram_iou_p, deal_num, (T)conf_thresh);
+  __bang_ge(nram_iou_p, nram_conf_p, nram_iou_p, deal_num);
+
+  // bx0
+  __bang_mul_scalar(nram_x_p, nram_x_p, (T)scale, deal_num);
+  __bang_add_scalar(nram_x_p, nram_x_p, bias, deal_num);
+  __bang_add(nram_x_p, nram_x_p, nram_cx, deal_num);
+  __bang_mul(nram_x_p, nram_x_p, nram_imgw, deal_num);
+  __bang_mul_scalar(nram_x_p, nram_x_p, (T)1.0 / gridw, deal_num);
+
+  // by0
+  __bang_mul_scalar(nram_y_p, nram_y_p, (T)scale, deal_num);
+  __bang_add_scalar(nram_y_p, nram_y_p, bias, deal_num);
+  __bang_add(nram_y_p, nram_y_p, nram_cy, deal_num);
+  __bang_mul(nram_y_p, nram_y_p, nram_imgh, deal_num);
+  __bang_mul_scalar(nram_y_p, nram_y_p, (T)1.0 / gridh, deal_num);
+
+  // bw
+  __bang_mul(nram_w_p, nram_w_p, anchors_w, deal_num);
+  __bang_mul(nram_w_p, nram_w_p, nram_imgw, deal_num);
+  __bang_mul_scalar(nram_w_p, nram_w_p, (T)1.0 / inputw, deal_num);
+
+  // bh
+  __bang_mul(nram_h_p, nram_h_p, anchors_h, deal_num);
+  __bang_mul(nram_h_p, nram_h_p, nram_imgh, deal_num);
+  __bang_mul_scalar(nram_h_p, nram_h_p, (T)1.0 / inputh, deal_num);
+
+  // bx0 = bx - bw/2;
+  // by0 = by - bh/2;
+  // bx1 = bx + bw/2;
+  // by1 = by + bh/2;
+  __bang_mul_scalar(nram_conf_p, nram_w_p, (T)0.5, deal_num);
+  __bang_add(nram_w_p, nram_x_p, nram_conf_p, deal_num);
+  __bang_sub(nram_x_p, nram_x_p, nram_conf_p, deal_num);
+
+  __bang_mul_scalar(nram_conf_p, nram_h_p, (T)0.5, deal_num);
+  __bang_add(nram_h_p, nram_y_p, nram_conf_p, deal_num);
+  __bang_sub(nram_y_p, nram_y_p, nram_conf_p, deal_num);
+
+  for (int k = 0; k < deal_num; k++) {
+    if (clip_bbox == true) {
+      nram_x_p[k] = nram_x_p[k] > (T)0.0 ? nram_x_p[k] : (T)0.0;
+      nram_y_p[k] = nram_y_p[k] > (T)0.0 ? nram_y_p[k] : (T)0.0;
+      nram_w_p[k] = nram_w_p[k] < (nram_imgw[k] - (T)1.0)
+                        ? nram_w_p[k]
+                        : (nram_imgw[k] - (T)1.0);
+      nram_h_p[k] = nram_h_p[k] < (nram_imgh[k] - (T)1.0)
+                        ? nram_h_p[k]
+                        : (nram_imgh[k] - (T)1.0);
+    }
+
+    if (nram_iou_p[k] == (T)0.0) {
+      nram_x_p[k] = (T)0.0;
+      nram_y_p[k] = (T)0.0;
+      nram_w_p[k] = (T)0.0;
+      nram_h_p[k] = (T)0.0;
+    }
+  }
+#endif
+}
+
+template <typename T>
+static __mlu_func__ void store(T *addr_boxes, T *nram_x0, T *nram_y0,
+                               T *nram_x1, T *nram_y1, const int batch_num,
+                               const int anchor_s, const int hw_total_num,
+                               const int hw_seg_num, const int align_hw_seg_num,
+                               const int data_ram_num, const int i) {
+  int offset = (i % 2) * data_ram_num;
+  int bbox_data_offset = 4 * hw_total_num;
+  T *nram_x0_p = nram_x0 + offset;
+  T *nram_y0_p = nram_y0 + offset;
+  T *nram_x1_p = nram_x1 + offset;
+  T *nram_y1_p = nram_y1 + offset;
+  int ns_num = batch_num * anchor_s;
+  memCopy(addr_boxes, nram_x0_p,
+          hw_seg_num * sizeof(T),  // size
+          NRAM2GDRAM,
+          bbox_data_offset * sizeof(T),  // dst stride
+          align_hw_seg_num * sizeof(T),  // src stride
+          ns_num - 1);                   // seg number
+  memCopy(addr_boxes + hw_total_num, nram_y0_p, hw_seg_num * sizeof(T),
+          NRAM2GDRAM, bbox_data_offset * sizeof(T),
+          align_hw_seg_num * sizeof(T), ns_num - 1);
+  memCopy(addr_boxes + 2 * hw_total_num, nram_x1_p, hw_seg_num * sizeof(T),
+          NRAM2GDRAM, bbox_data_offset * sizeof(T),
+          align_hw_seg_num * sizeof(T), ns_num - 1);
+  memCopy(addr_boxes + 3 * hw_total_num, nram_y1_p, hw_seg_num * sizeof(T),
+          NRAM2GDRAM, bbox_data_offset * sizeof(T),
+          align_hw_seg_num * sizeof(T), ns_num - 1);
+}
+
+template <typename T>
+static __mlu_func__ void initCxyParam(T *nram_cx, T *nram_cy,
+                                      const int batch_num, const int anchor_s,
+                                      const int w_in, const int hw_seg_num,
+                                      const int align_hw_seg_num,
+                                      const int hw_data_offset) {
+  // init cx/cy
+  for (int i = 0; i < hw_seg_num; i++) {
+    nram_cx[i] = (T)((hw_data_offset + i) % w_in);
+    nram_cy[i] = (T)((hw_data_offset + i) / w_in);
+  }
+
+  if (batch_num * anchor_s > 1) {
+    __bang_cycle_add(nram_cx + align_hw_seg_num, nram_cx + align_hw_seg_num,
+                     nram_cx, (batch_num * anchor_s - 1) * align_hw_seg_num,
+                     align_hw_seg_num);
+    __bang_cycle_add(nram_cy + align_hw_seg_num, nram_cy + align_hw_seg_num,
+                     nram_cy, (batch_num * anchor_s - 1) * align_hw_seg_num,
+                     align_hw_seg_num);
+  }
+}
+
+template <typename T>
+static __mlu_func__ void initAnchorParam(const int *anchors, T *nram_anchor_w,
+                                         T *nram_anchor_h, const int batch_num,
+                                         const int anchor_s,
+                                         const int anchor_num,
+                                         const int anchor_offset,
+                                         const int align_hw_seg_num) {
+  // init anchor_w/anchor_h
+  for (int i = 0; i < anchor_num; i++) {
+    int idx = ((anchor_offset + i) % anchor_s) * 2;
+    __bang_write_value(nram_anchor_w + i * align_hw_seg_num, align_hw_seg_num,
+                       (T)anchors[idx]);
+    __bang_write_value(nram_anchor_h + i * align_hw_seg_num, align_hw_seg_num,
+                       (T)anchors[idx + 1]);
+  }
+
+  if (batch_num > 1) {
+    int num = anchor_num * align_hw_seg_num;
+    __bang_cycle_add(nram_anchor_w + num, nram_anchor_w + num, nram_anchor_w,
+                     (batch_num - 1) * num, num);
+    __bang_cycle_add(nram_anchor_h + num, nram_anchor_h + num, nram_anchor_h,
+                     (batch_num - 1) * num, num);
+  }
+}
+
+template <typename T>
+static __mlu_func__ void initImgParam(const int *img_size, T *nram_img_w,
+                                      T *nram_img_h, const int batch_num,
+                                      const int anchor_s,
+                                      const int align_hw_seg_num) {
+  // init img_w/img_h
+  for (int i = 0; i < batch_num; i++) {
+    __bang_write_value(nram_img_h + i * anchor_s * align_hw_seg_num,
+                       anchor_s * align_hw_seg_num, (T)img_size[2 * i]);
+    __bang_write_value(nram_img_w + i * anchor_s * align_hw_seg_num,
+                       anchor_s * align_hw_seg_num, (T)img_size[2 * i + 1]);
+  }
+}
+
+template <typename T>
+static __mlu_func__ void YoloBoxComputeBbox(
+    const T *x, const int *img_size, const int *anchors, const int class_num,
+    const float conf_thresh, const int downsample_ratio, const bool clip_bbox,
+    const float scale, const bool iou_aware, const float iou_aware_factor,
+    const int n_in, const int anchor_s, const int c_in, const int h_in,
+    const int w_in, T *boxes) {
+  int hw_total_num = h_in * w_in;
+  int hw_per_task = hw_total_num / taskDim;
+  int rem_num = hw_total_num % taskDim;
+  int hw_seg_num = hw_per_task + (taskId < rem_num);
+  int hw_data_offset =
+      taskId * hw_per_task + ((taskId < rem_num) ? taskId : rem_num);
+  if (hw_seg_num == 0) {
+    return;
+  }
+  int align_num = NFU_ALIGN_SIZE / sizeof(T);
+  int align_hw_seg_num = CEIL_ALIGN(hw_seg_num, align_num);
+  int total_hw_seg_num = n_in * anchor_s * align_hw_seg_num;
+
+  // nram space
+  // ping/pong: |nram_x|nram_y|nram_w|nram_h|nram_conf|nram_iou|, 12*deal_num
+  // |nram_cx|nram_cy|nram_anchor_w|nram_anchor_w|nram_img_w|nram_img_h|
+  int max_nram_num = MAX_NRAM_SIZE / sizeof(T);
+  int deal_num = 0;
+  int nram_pingpong_num = 0;
+  deal_num = FLOOR_ALIGN(max_nram_num / 12, align_num);
+  if (deal_num < total_hw_seg_num) {
+    // |ping|pong|
+    deal_num = FLOOR_ALIGN(max_nram_num / (12 + 6), align_num);
+    nram_pingpong_num = 6 * deal_num;
+  }
+
+  // ping/pong
+  T *nram_x = (T *)nram_buffer;
+  T *nram_y = nram_x + deal_num;
+  T *nram_w = nram_y + deal_num;
+  T *nram_h = nram_w + deal_num;
+  T *nram_conf = nram_h + deal_num;
+  T *nram_iou = nram_conf + deal_num;
+
+  T *nram_cx = (T *)nram_buffer + 6 * deal_num + nram_pingpong_num;
+  T *nram_cy = nram_cx + deal_num;
+  T *nram_anchor_w = nram_cy + deal_num;
+  T *nram_anchor_h = nram_anchor_w + deal_num;
+  T *nram_img_w = nram_anchor_h + deal_num;
+  T *nram_img_h = nram_img_w + deal_num;
+
+  // 1. deal_num>(N*S*num_hw)
+  if (deal_num >= total_hw_seg_num) {
+    // load data
+    T *addr_x = (T *)x + hw_data_offset;
+    load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, iou_aware,
+         n_in, class_num, anchor_s, anchor_s, 0, c_in, hw_total_num, hw_seg_num,
+         align_hw_seg_num, 0, 0);
+
+    __bang_write_zero(nram_cx, deal_num);
+    __bang_write_zero(nram_cy, deal_num);
+    initCxyParam(nram_cx, nram_cy, n_in, anchor_s, w_in, hw_seg_num,
+                 align_hw_seg_num, hw_data_offset);
+    __bang_write_zero(nram_anchor_w, deal_num);
+    __bang_write_zero(nram_anchor_h, deal_num);
+    initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, n_in, anchor_s,
+                    anchor_s, 0, align_hw_seg_num);
+    __bang_write_zero(nram_img_w, deal_num);
+    __bang_write_zero(nram_img_h, deal_num);
+    initImgParam(img_size, nram_img_w, nram_img_h, n_in, anchor_s,
+                 align_hw_seg_num);
+    __asm__ volatile("sync;");
+
+    // compute bbox
+    compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+            nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h, w_in,
+            h_in, conf_thresh, downsample_ratio, clip_bbox, scale, iou_aware,
+            iou_aware_factor, deal_num, 0, 0);
+    __asm__ volatile("sync;");
+
+    // store bbox
+    T *addr_boxes = (T *)boxes + hw_data_offset;
+    store(addr_boxes, nram_x, nram_y, nram_w, nram_h, n_in, anchor_s,
+          hw_total_num, hw_seg_num, align_hw_seg_num, 0, 0);
+  } else if (deal_num >= (anchor_s * align_hw_seg_num)) {
+    int deal_n_num = deal_num / (anchor_s * align_hw_seg_num);
+    int repeat_n = n_in / deal_n_num;
+    int rem_n_num = n_in % deal_n_num;
+    int input_stride = c_in * hw_total_num;
+    int output_stride = anchor_s * 4 * hw_total_num;
+    T *base_addr_x = (T *)x + hw_data_offset;
+    T *base_addr_boxes = (T *)boxes + hw_data_offset;
+
+    __bang_write_zero(nram_cx, deal_num);
+    __bang_write_zero(nram_cy, deal_num);
+    initCxyParam(nram_cx, nram_cy, deal_n_num, anchor_s, w_in, hw_seg_num,
+                 align_hw_seg_num, hw_data_offset);
+    __bang_write_zero(nram_anchor_w, deal_num);
+    __bang_write_zero(nram_anchor_h, deal_num);
+    initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, deal_n_num, anchor_s,
+                    anchor_s, 0, align_hw_seg_num);
+
+    if (repeat_n > 0) {
+      // L
+      T *addr_x = base_addr_x;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, deal_n_num, class_num, anchor_s, anchor_s, 0, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_n > 1) {
+      // L
+      T *addr_x = base_addr_x + deal_n_num * input_stride;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, deal_n_num, class_num, anchor_s, anchor_s, 0, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num, 1);
+
+      // C
+      int *addr_img_size = (int *)img_size;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, deal_n_num, anchor_s,
+                   align_hw_seg_num);
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    for (int n_iter = 0; n_iter < repeat_n - 2; n_iter++) {
+      // S
+      T *addr_boxes = base_addr_boxes + n_iter * deal_n_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, deal_n_num, anchor_s,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            n_iter);
+
+      // L
+      T *addr_x = base_addr_x + (n_iter + 2) * deal_n_num * input_stride;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, deal_n_num, class_num, anchor_s, anchor_s, 0, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+           n_iter + 2);
+
+      // C
+      int *addr_img_size = (int *)img_size + (n_iter + 1) * deal_n_num * 2;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, deal_n_num, anchor_s,
+                   align_hw_seg_num);
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+              n_iter + 1);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_n >= 2) {
+      // S
+      T *addr_boxes =
+          base_addr_boxes + (repeat_n - 2) * deal_n_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, deal_n_num, anchor_s,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            repeat_n - 2);
+    }
+    if (rem_n_num > 0) {
+      // L
+      T *addr_x = base_addr_x + repeat_n * deal_n_num * input_stride;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, rem_n_num, class_num, anchor_s, anchor_s, 0, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+           repeat_n);
+    }
+    if (repeat_n > 0) {
+      // C
+      int *addr_img_size = (int *)img_size + (repeat_n - 1) * deal_n_num * 2;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, deal_n_num, anchor_s,
+                   align_hw_seg_num);
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+              repeat_n - 1);
+    }
+    __asm__ volatile("sync;");
+
+    if (repeat_n > 0) {
+      // S
+      T *addr_boxes =
+          base_addr_boxes + (repeat_n - 1) * deal_n_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, deal_n_num, anchor_s,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            repeat_n - 1);
+    }
+    if (rem_n_num > 0) {
+      // C
+      int *addr_img_size = (int *)img_size + repeat_n * deal_n_num * 2;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, rem_n_num, anchor_s,
+                   align_hw_seg_num);
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+              repeat_n);
+      __asm__ volatile("sync;");
+
+      // S
+      T *addr_boxes = base_addr_boxes + repeat_n * deal_n_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, rem_n_num, anchor_s,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            repeat_n);
+      __asm__ volatile("sync;");
+    }
+  } else if (deal_num >= align_hw_seg_num) {
+    int deal_s_num = deal_num / align_hw_seg_num;
+    int repeat_ns = (n_in * anchor_s) / deal_s_num;
+    int rem_ns_num = (n_in * anchor_s) % deal_s_num;
+    int input_stride = c_in * hw_total_num;
+    int output_stride = 4 * hw_total_num;
+    T *base_addr_x = (T *)x + hw_data_offset;
+    T *base_addr_boxes = (T *)boxes + hw_data_offset;
+
+    __bang_write_zero(nram_cx, deal_num);
+    __bang_write_zero(nram_cy, deal_num);
+    initCxyParam(nram_cx, nram_cy, 1, deal_s_num, w_in, hw_seg_num,
+                 align_hw_seg_num, hw_data_offset);
+
+    if (repeat_ns > 0) {
+      // L
+      T *addr_x = base_addr_x;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, 1, class_num, anchor_s, deal_s_num, 0, c_in, hw_total_num,
+           hw_seg_num, align_hw_seg_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_ns > 1) {
+      // L
+      T *addr_x = base_addr_x;
+      int s_num_offset = deal_s_num % anchor_s;
+      int anchor_num = anchor_s - s_num_offset;
+      bool next_batch = deal_s_num > anchor_num;
+      anchor_num = next_batch ? anchor_num : deal_s_num;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, 1, class_num, anchor_s, anchor_num, s_num_offset, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num, 1);
+
+      if (next_batch == true) {
+        T *addr_x = base_addr_x + input_stride;
+        int nram_offset = anchor_num * align_hw_seg_num;
+        T *nram_x_tmp = nram_x + nram_offset;
+        T *nram_y_tmp = nram_y + nram_offset;
+        T *nram_w_tmp = nram_w + nram_offset;
+        T *nram_h_tmp = nram_h + nram_offset;
+        T *nram_conf_tmp = nram_conf + nram_offset;
+        T *nram_iou_tmp = nram_iou + nram_offset;
+        anchor_num = deal_s_num - anchor_num;
+        load(addr_x, nram_x_tmp, nram_y_tmp, nram_w_tmp, nram_h_tmp,
+             nram_conf_tmp, nram_iou_tmp, iou_aware, 1, class_num, anchor_s,
+             anchor_num, 0, c_in, hw_total_num, hw_seg_num, align_hw_seg_num,
+             nram_pingpong_num, 1);
+      }
+
+      // C
+      __bang_write_zero(nram_anchor_w, deal_num);
+      __bang_write_zero(nram_anchor_h, deal_num);
+      initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
+                      deal_s_num, 0, align_hw_seg_num);
+
+      int *addr_img_size = (int *)img_size;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, deal_s_num,
+                   align_hw_seg_num);
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    for (int ns_iter = 0; ns_iter < repeat_ns - 2; ns_iter++) {
+      // S
+      T *addr_boxes = base_addr_boxes + ns_iter * deal_s_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, deal_s_num,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            ns_iter);
+
+      // L
+      int ns_num_offset = (ns_iter + 2) * deal_s_num;
+      int batch_num = ns_num_offset / anchor_s;
+      T *addr_x = base_addr_x + batch_num * input_stride;
+      int s_num_offset = ns_num_offset % anchor_s;
+      int anchor_num = anchor_s - s_num_offset;
+      bool next_batch = deal_s_num > anchor_num;
+      anchor_num = next_batch ? anchor_num : deal_s_num;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, 1, class_num, anchor_s, anchor_num, s_num_offset, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+           ns_iter + 2);
+
+      if (next_batch == true) {
+        T *addr_x = base_addr_x + (batch_num + 1) * input_stride;
+        int nram_offset = anchor_num * align_hw_seg_num;
+        T *nram_x_tmp = nram_x + nram_offset;
+        T *nram_y_tmp = nram_y + nram_offset;
+        T *nram_w_tmp = nram_w + nram_offset;
+        T *nram_h_tmp = nram_h + nram_offset;
+        T *nram_conf_tmp = nram_conf + nram_offset;
+        T *nram_iou_tmp = nram_iou + nram_offset;
+        anchor_num = deal_s_num - anchor_num;
+        load(addr_x, nram_x_tmp, nram_y_tmp, nram_w_tmp, nram_h_tmp,
+             nram_conf_tmp, nram_iou_tmp, iou_aware, 1, class_num, anchor_s,
+             anchor_num, 0, c_in, hw_total_num, hw_seg_num, align_hw_seg_num,
+             nram_pingpong_num, ns_iter + 2);
+      }
+
+      // C
+      __bang_write_zero(nram_anchor_w, deal_num);
+      __bang_write_zero(nram_anchor_h, deal_num);
+      int anchor_offset = (ns_iter + 1) * deal_s_num;
+      initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
+                      deal_s_num, anchor_offset, align_hw_seg_num);
+
+      // init img w/h
+      batch_num = anchor_offset / anchor_s;
+      int *addr_img_size = (int *)img_size + batch_num * 2;
+      s_num_offset = anchor_offset % anchor_s;  // (1*deal_s_num) % anchor_s
+      anchor_num = anchor_s - s_num_offset;
+      next_batch = deal_s_num > anchor_num;
+      anchor_num = next_batch ? anchor_num : deal_s_num;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, anchor_num,
+                   align_hw_seg_num);
+
+      if (next_batch == true) {
+        int *addr_img_size = (int *)img_size + (batch_num + 1) * 2;
+        int nram_offset = anchor_num * align_hw_seg_num;
+        T *nram_img_w_tmp = nram_img_w + nram_offset;
+        T *nram_img_h_tmp = nram_img_h + nram_offset;
+        anchor_num = deal_s_num - anchor_num;
+        initImgParam(addr_img_size, nram_img_w_tmp, nram_img_h_tmp, 1,
+                     anchor_num, align_hw_seg_num);
+      }
+
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+              ns_iter + 1);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_ns >= 2) {
+      // S
+      T *addr_boxes =
+          base_addr_boxes + (repeat_ns - 2) * deal_s_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, deal_s_num,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            repeat_ns - 2);
+    }
+    if (rem_ns_num > 0) {
+      // L
+      int ns_num_offset = repeat_ns * deal_s_num;
+      int batch_num = ns_num_offset / anchor_s;
+      int s_num_offset = ns_num_offset % anchor_s;
+      T *addr_x = base_addr_x + batch_num * input_stride;
+      load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+           iou_aware, 1, class_num, anchor_s, rem_ns_num, s_num_offset, c_in,
+           hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+           repeat_ns);
+    }
+    if (repeat_ns > 0) {
+      // C
+      __bang_write_zero(nram_anchor_w, deal_num);
+      __bang_write_zero(nram_anchor_h, deal_num);
+      int anchor_offset = (repeat_ns - 1) * deal_s_num;
+      initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
+                      deal_s_num, anchor_offset, align_hw_seg_num);
+
+      // init img w/h
+      int batch_num = anchor_offset / anchor_s;
+      int *addr_img_size = (int *)img_size + batch_num * 2;
+      int s_num_offset = anchor_offset % anchor_s;  // (1*deal_s_num) % anchor_s
+      int anchor_num = anchor_s - s_num_offset;
+      bool next_batch = deal_s_num > anchor_num;
+      anchor_num = next_batch ? anchor_num : deal_s_num;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, anchor_num,
+                   align_hw_seg_num);
+
+      if (next_batch == true) {
+        int *addr_img_size = (int *)img_size + (batch_num + 1) * 2;
+        int nram_offset = anchor_num * align_hw_seg_num;
+        T *nram_img_w_tmp = nram_img_w + nram_offset;
+        T *nram_img_h_tmp = nram_img_h + nram_offset;
+        anchor_num = deal_s_num - anchor_num;
+        initImgParam(addr_img_size, nram_img_w_tmp, nram_img_h_tmp, 1,
+                     anchor_num, align_hw_seg_num);
+      }
+
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+              repeat_ns - 1);
+    }
+    __asm__ volatile("sync;");
+
+    if (repeat_ns > 0) {
+      // S
+      T *addr_boxes =
+          base_addr_boxes + (repeat_ns - 1) * deal_s_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, deal_s_num,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            repeat_ns - 1);
+    }
+    if (rem_ns_num > 0) {
+      // C
+      __bang_write_zero(nram_anchor_w, deal_num);
+      __bang_write_zero(nram_anchor_h, deal_num);
+      int anchor_offset = repeat_ns * deal_s_num;
+      initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
+                      rem_ns_num, anchor_offset, align_hw_seg_num);
+
+      // init img w/h
+      int batch_num = anchor_offset / anchor_s;
+      int *addr_img_size = (int *)img_size + batch_num * 2;
+      __bang_write_zero(nram_img_w, deal_num);
+      __bang_write_zero(nram_img_h, deal_num);
+      initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, rem_ns_num,
+                   align_hw_seg_num);
+
+      compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+              nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+              w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+              iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+              repeat_ns);
+
+      __asm__ volatile("sync;");
+
+      // S
+      T *addr_boxes = base_addr_boxes + repeat_ns * deal_s_num * output_stride;
+      store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, rem_ns_num,
+            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
+            repeat_ns);
+      __asm__ volatile("sync;");
+    }
+  } else {
+    int repeat_hw = hw_seg_num / deal_num;
+    int rem_hw_num = hw_seg_num % deal_num;
+    int input_stride = c_in * hw_total_num;
+    int output_stride = anchor_s * 4 * hw_total_num;
+    T *base_addr_x = (T *)x + hw_data_offset;
+    T *base_addr_boxes = (T *)boxes + hw_data_offset;
+
+    for (int n_iter = 0; n_iter < n_in; n_iter++) {
+      for (int s_iter = 0; s_iter < anchor_s; s_iter++) {
+        T *addr_x_n = base_addr_x + n_iter * input_stride;
+        T *addr_boxes_n = base_addr_boxes + n_iter * output_stride +
+                          s_iter * 4 * hw_total_num;
+
+        __bang_write_zero(nram_anchor_w, deal_num);
+        __bang_write_zero(nram_anchor_h, deal_num);
+        initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s, 1,
+                        s_iter, deal_num);
+
+        __bang_write_zero(nram_img_w, deal_num);
+        __bang_write_zero(nram_img_h, deal_num);
+        int *addr_img_size = (int *)img_size + n_iter * 2;
+        initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, 1, deal_num);
+
+        if (repeat_hw > 0) {
+          // L
+          T *addr_x = addr_x_n;
+          load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+               iou_aware, 1, class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+               deal_num, deal_num, nram_pingpong_num, 0);
+          __asm__ volatile("sync;");
+        }
+
+        if (repeat_hw > 1) {
+          // L
+          T *addr_x = addr_x_n + deal_num;
+          load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+               iou_aware, 1, class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+               deal_num, deal_num, nram_pingpong_num, 1);
+
+          // C
+          __bang_write_zero(nram_cx, deal_num);
+          __bang_write_zero(nram_cy, deal_num);
+          int hw_offset = hw_data_offset;
+          initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
+                       hw_offset);
+
+          compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+                  nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+                  w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+                  iou_aware, iou_aware_factor, deal_num, nram_pingpong_num, 0);
+          __asm__ volatile("sync;");
+        }
+
+        for (int hw_iter = 0; hw_iter < repeat_hw - 2; hw_iter++) {
+          // S
+          T *addr_boxes = addr_boxes_n + hw_iter * deal_num;
+          store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, 1, hw_total_num,
+                deal_num, deal_num, nram_pingpong_num, hw_iter);
+
+          // L
+          T *addr_x = addr_x_n + (hw_iter + 2) * deal_num;
+          load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+               iou_aware, 1, class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+               deal_num, deal_num, nram_pingpong_num, hw_iter + 2);
+
+          // C
+          __bang_write_zero(nram_cx, deal_num);
+          __bang_write_zero(nram_cy, deal_num);
+          int hw_offset = hw_data_offset + (hw_iter + 1) * deal_num;
+          initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
+                       hw_offset);
+
+          compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+                  nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+                  w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+                  iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+                  hw_iter + 1);
+          __asm__ volatile("sync;");
+        }
+
+        if (repeat_hw >= 2) {
+          // S
+          T *addr_boxes = addr_boxes_n + (repeat_hw - 2) * deal_num;
+          store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, 1, hw_total_num,
+                deal_num, deal_num, nram_pingpong_num, repeat_hw - 2);
+        }
+        if (rem_hw_num > 0) {
+          // L
+          T *addr_x = addr_x_n + repeat_hw * deal_num;
+          load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
+               iou_aware, 1, class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+               rem_hw_num, deal_num, nram_pingpong_num, repeat_hw);
+        }
+        if (repeat_hw > 0) {
+          // C
+          __bang_write_zero(nram_cx, deal_num);
+          __bang_write_zero(nram_cy, deal_num);
+          int hw_offset = hw_data_offset + (repeat_hw - 1) * deal_num;
+          initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
+                       hw_offset);
+
+          compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+                  nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+                  w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+                  iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+                  repeat_hw - 1);
+        }
+        __asm__ volatile("sync;");
+
+        if (repeat_hw > 0) {
+          // S
+          T *addr_boxes = addr_boxes_n + (repeat_hw - 1) * deal_num;
+          store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, 1, hw_total_num,
+                deal_num, deal_num, nram_pingpong_num, repeat_hw - 1);
+        }
+        if (rem_hw_num > 0) {
+          // C
+          __bang_write_zero(nram_cx, deal_num);
+          __bang_write_zero(nram_cy, deal_num);
+          int hw_offset = hw_data_offset + repeat_hw * deal_num;
+          initCxyParam(nram_cx, nram_cy, 1, 1, w_in, rem_hw_num, deal_num,
+                       hw_offset);
+
+          compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
+                  nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
+                  w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
+                  iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
+                  repeat_hw);
+          __asm__ volatile("sync;");
+
+          // S
+          T *addr_boxes = addr_boxes_n + repeat_hw * deal_num;
+          store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, 1, hw_total_num,
+                rem_hw_num, deal_num, nram_pingpong_num, repeat_hw);
+        }
+        __asm__ volatile("sync;");
+      }
+    }
+  }
+}
+
+template <typename T>
+static __mlu_func__ void loadScore(const T *addr_x, T *nram_iou, T *nram_conf,
+                                   T *nram_cls, const bool iou_aware,
+                                   const int batch_num, const int class_num,
+                                   const int anchor_s, const int anchor_num,
+                                   const int s_num_offset, const int c_in,
+                                   const int hw_total_num, const int hw_seg_num,
+                                   const int align_hw_seg_num,
+                                   const int deal_num, const int data_ram_num,
+                                   const int i) {
+  int offset = (i % 2) * data_ram_num;
+  int data_offset = (5 + class_num) * hw_total_num;
+  T *nram_iou_p = nram_iou + offset;
+  T *nram_conf_p = nram_conf + offset;
+  T *nram_cls_p = nram_cls + offset;  // class_num * deal_num
+
+  if (iou_aware == true) {
+    for (int n_iter = 0; n_iter < batch_num; n_iter++) {
+      // load iou
+      T *addr_x_n = (T *)addr_x + n_iter * c_in * hw_total_num;
+      T *nram_iou_tmp = nram_iou_p + n_iter * anchor_num * align_hw_seg_num;
+      memCopy(nram_iou_tmp, addr_x_n + s_num_offset * hw_total_num,
+              hw_seg_num * sizeof(T),  // size
+              GDRAM2NRAM,
+              align_hw_seg_num * sizeof(T),  // dst stride
+              hw_total_num * sizeof(T),      // src stride
+              anchor_num - 1);               // seg number
+
+      // load conf/cls[n]
+      addr_x_n =
+          addr_x_n + (anchor_s + 4) * hw_total_num + s_num_offset * data_offset;
+      T *nram_conf_tmp = nram_conf_p + n_iter * anchor_num * align_hw_seg_num;
+      memCopy(nram_conf_tmp, addr_x_n,
+              hw_seg_num * sizeof(T),  // size
+              GDRAM2NRAM,
+              align_hw_seg_num * sizeof(T),  // dst stride
+              data_offset * sizeof(T),       // src stride
+              anchor_num - 1);               // seg number
+
+      addr_x_n = addr_x_n + hw_total_num;
+      T *nram_cls_tmp = nram_cls_p + n_iter * anchor_num * align_hw_seg_num;
+      for (int cls_iter = 0; cls_iter < class_num; cls_iter++) {
+        memCopy(nram_cls_tmp + cls_iter * deal_num,
+                addr_x_n + cls_iter * hw_total_num,
+                hw_seg_num * sizeof(T),  // size
+                GDRAM2NRAM,
+                align_hw_seg_num * sizeof(T),  // dst stride
+                data_offset * sizeof(T),       // src stride
+                anchor_num - 1);               // seg number
+      }
+    }
+  } else {
+    // load conf/cls[N]
+    int ns_num = batch_num * anchor_num;
+    T *addr_x_n = (T *)addr_x + 4 * hw_total_num + s_num_offset * data_offset;
+    memCopy(nram_conf_p, addr_x_n,
+            hw_seg_num * sizeof(T),  // size
+            GDRAM2NRAM,
+            align_hw_seg_num * sizeof(T),  // dst stride
+            data_offset * sizeof(T),       // src stride
+            ns_num - 1);                   // seg number
+
+    // load cls
+    addr_x_n = addr_x_n + hw_total_num;
+    for (int cls_iter = 0; cls_iter < class_num; cls_iter++) {
+      memCopy(nram_cls_p + cls_iter * deal_num,
+              addr_x_n + cls_iter * hw_total_num,
+              hw_seg_num * sizeof(T),  // size
+              GDRAM2NRAM,
+              align_hw_seg_num * sizeof(T),  // dst stride
+              data_offset * sizeof(T),       // src stride
+              ns_num - 1);                   // seg number
+    }
+  }
+}
+
+template <typename T>
+static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
+                                      const float conf_thresh,
+                                      const bool iou_aware,
+                                      const float iou_aware_factor,
+                                      const int class_num, const int deal_num,
+                                      const int data_ram_num, const int i) {
+  int offset = (i % 2) * data_ram_num;
+  T *nram_iou_p = nram_iou + offset;
+  T *nram_conf_p = nram_conf + offset;
+  T *nram_cls_p = nram_cls + offset;
+
+#if __BANG_ARCH__ >= 322
+  // compute mask
+  computeSigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
+  if (iou_aware == true) {
+    computeSigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
+    if ((T)iou_aware_factor == (T)0.0) {
+      __bang_write_value(nram_iou_p, deal_num, (T)1.0);
+    } else if ((T)iou_aware_factor == (T)1.0) {
+      __bang_write_value(nram_conf_p, deal_num, (T)1.0);
+    } else {
+      __bang_log(nram_iou_p, nram_iou_p, deal_num);
+      __bang_mul_scalar(nram_iou_p, nram_iou_p, (T)iou_aware_factor, deal_num);
+      __bang_pow2(nram_iou_p, nram_iou_p, deal_num);
+
+      __bang_log(nram_conf_p, nram_conf_p, deal_num);
+      __bang_mul_scalar(nram_conf_p, nram_conf_p, (T)1.0 - (T)iou_aware_factor,
+                        deal_num);
+      __bang_pow2(nram_conf_p, nram_conf_p, deal_num);
+    }
+
+    __bang_mul(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
+  }
+
+  __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
+
+  computeSigmoid(nram_cls_p, nram_cls_p, NULL, 0, class_num * deal_num);
+  __bang_cycle_mul(nram_cls_p, nram_cls_p, nram_conf_p, class_num * deal_num,
+                   deal_num);
+
+  // mask, set 0
+  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+  __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
+  __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
+                    (int)0xffffffff, deal_num);
+  __bang_cycle_band((char *)nram_cls_p, (char *)nram_cls_p,
+                    (char *)nram_mask_int32, 4 * class_num * deal_num,
+                    4 * deal_num);
+#else
+  const int32_t x2d = 0x3fb8aa3b;
+  float log2e = *(float *)&x2d;
+  __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
+  __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
+  if (iou_aware == true) {
+    __bang_mul_scalar(nram_iou_p, nram_iou_p, (float)-1.0, deal_num);
+    __bang_mul_scalar(nram_iou_p, nram_iou_p, log2e, deal_num);
+  }
+  __bang_mul_scalar(nram_cls_p, nram_cls_p, (float)-1.0, class_num * deal_num);
+  __bang_mul_scalar(nram_cls_p, nram_cls_p, log2e, class_num * deal_num);
+
+  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+
+  for (int32_t k = 0; k < deal_num; ++k) {
+    // sigmoid(conf)
+    nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
+    nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
+
+    if (iou_aware == true) {
+      // sigmoid(iou)
+      nram_iou_p[k] = powf((T)2.0, nram_iou_p[k]);
+      nram_iou_p[k] = (T)1.0 / ((T)1.0 + nram_iou_p[k]);
+
+      // pow(iou, iou_aware_factor)
+      nram_iou_p[k] = powf(nram_iou_p[k], (T)iou_aware_factor);
+      // pow(iou, 1-iou_aware_factor)
+      nram_conf_p[k] = powf(nram_conf_p[k], (T)1.0 - (T)iou_aware_factor);
+      nram_conf_p[k] = nram_conf_p[k] * nram_iou_p[k];
+    }
+
+    if (nram_conf_p[k] < (T)conf_thresh) {
+      nram_mask_int32[k] = 0;
+    } else {
+      nram_mask_int32[k] = 0xffffffff;
+    }
+
+    for (int32_t ci = 0; ci < class_num; ++ci) {
+      // sigmoid(cls)
+      nram_cls_p[ci * deal_num + k] =
+          powf((T)2.0, nram_cls_p[ci * deal_num + k]);
+      nram_cls_p[ci * deal_num + k] =
+          (T)1.0 / ((T)1.0 + nram_cls_p[ci * deal_num + k]);
+    }
+  }
+
+  __bang_cycle_mul(nram_cls_p, nram_cls_p, nram_conf_p, class_num * deal_num,
+                   deal_num);
+  // mask, set 0
+  __bang_cycle_band((char *)nram_cls_p, (char *)nram_cls_p,
+                    (char *)nram_mask_int32, 4 * class_num * deal_num,
+                    4 * deal_num);
+
+#endif
+}
+
+template <typename T>
+static __mlu_func__ void storeScore(T *addr_scores, T *nram_cls,
+                                    const int batch_num, const int anchor_s,
+                                    const int class_num, const int hw_total_num,
+                                    const int hw_seg_num,
+                                    const int align_hw_seg_num,
+                                    const int deal_num, const int data_ram_num,
+                                    const int i) {
+  int offset = (i % 2) * data_ram_num;
+  int data_offset = class_num * hw_total_num;
+  T *nram_cls_p = nram_cls + offset;
+  int ns_num = batch_num * anchor_s;
+
+  for (int cls_iter = 0; cls_iter < class_num; cls_iter++) {
+    T *addr_scores_tmp = addr_scores + cls_iter * hw_total_num;
+    T *nram_cls_tmp = nram_cls_p + cls_iter * deal_num;
+    memCopy(addr_scores_tmp, nram_cls_tmp,
+            hw_seg_num * sizeof(T),  // size
+            NRAM2GDRAM,
+            data_offset * sizeof(T),       // dst stride
+            align_hw_seg_num * sizeof(T),  // src stride
+            ns_num - 1);                   // seg number
+  }
+}
+
+template <typename T>
+__mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
+                                      const float conf_thresh,
+                                      const bool iou_aware,
+                                      const float iou_aware_factor,
+                                      const int n_in, const int anchor_s,
+                                      const int c_in, const int h_in,
+                                      const int w_in, T *scores) {
+  int hw_total_num = h_in * w_in;
+  int hw_per_task = hw_total_num / taskDim;
+  int rem_num = hw_total_num % taskDim;
+  int hw_seg_num = hw_per_task + (taskId < rem_num);
+  int hw_data_offset =
+      taskId * hw_per_task + ((taskId < rem_num) ? taskId : rem_num);
+  if (hw_seg_num == 0) {
+    return;
+  }
+  int align_num = NFU_ALIGN_SIZE / sizeof(T);
+  int align_hw_seg_num = CEIL_ALIGN(hw_seg_num, align_num);
+  int total_hw_seg_num = n_in * anchor_s * align_hw_seg_num;
+
+  // nram space
+  // ping/pong: |nram_iou|nram_conf|class_num*nram_cls|,
+  // 2*(2+class_num)*deal_num
+  int max_nram_num = MAX_NRAM_SIZE / sizeof(T);
+  int deal_num = 0;
+  int nram_pingpong_num = 0;
+  deal_num = FLOOR_ALIGN(max_nram_num / (2 + class_num), align_num);
+  if (deal_num < total_hw_seg_num) {
+    // |ping|pong|
+    deal_num = FLOOR_ALIGN(max_nram_num / 2 / (2 + class_num), align_num);
+    nram_pingpong_num = (2 + class_num) * deal_num;
+  }
+
+  // ping/pong
+  T *nram_iou = (T *)nram_buffer;
+  T *nram_conf = nram_iou + deal_num;
+  T *nram_cls = nram_conf + deal_num;  // class_num * deal_num
+
+  // 1. deal_num>(N*S*num_hw)
+  if (deal_num >= total_hw_seg_num) {
+    // load
+    T *addr_x = (T *)x + hw_data_offset;
+    loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, n_in, class_num,
+              anchor_s, anchor_s, 0, c_in, hw_total_num, hw_seg_num,
+              align_hw_seg_num, deal_num, 0, 0);
+    __asm__ volatile("sync;");
+
+    // compute
+    computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                 iou_aware_factor, class_num, deal_num, 0, 0);
+    __asm__ volatile("sync;");
+
+    // store
+    T *addr_scores = (T *)scores + hw_data_offset;
+    storeScore(addr_scores, nram_cls, n_in, anchor_s, class_num, hw_total_num,
+               hw_seg_num, align_hw_seg_num, deal_num, 0, 0);
+
+  } else if (deal_num >= (anchor_s * align_hw_seg_num)) {
+    int deal_n_num = deal_num / (anchor_s * align_hw_seg_num);
+    int repeat_n = n_in / deal_n_num;
+    int rem_n_num = n_in % deal_n_num;
+    int input_stride = c_in * hw_total_num;
+    int output_stride = anchor_s * class_num * hw_total_num;
+    T *base_addr_x = (T *)x + hw_data_offset;
+    T *base_addr_scores = (T *)scores + hw_data_offset;
+
+    if (repeat_n > 0) {
+      // L
+      T *addr_x = base_addr_x;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, deal_n_num,
+                class_num, anchor_s, anchor_s, 0, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_n > 1) {
+      // L
+      T *addr_x = base_addr_x + deal_n_num * input_stride;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, deal_n_num,
+                class_num, anchor_s, anchor_s, 0, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num, 1);
+
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    for (int n_iter = 0; n_iter < repeat_n - 2; n_iter++) {
+      // S
+      T *addr_scores = base_addr_scores + n_iter * deal_n_num * output_stride;
+      storeScore(addr_scores, nram_cls, deal_n_num, anchor_s, class_num,
+                 hw_total_num, hw_seg_num, align_hw_seg_num, deal_num,
+                 nram_pingpong_num, n_iter);
+
+      // L
+      T *addr_x = base_addr_x + (n_iter + 2) * deal_n_num * input_stride;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, deal_n_num,
+                class_num, anchor_s, anchor_s, 0, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                n_iter + 2);
+
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                   n_iter + 1);
+
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_n >= 2) {
+      // S
+      T *addr_scores =
+          base_addr_scores + (repeat_n - 2) * deal_n_num * output_stride;
+      storeScore(addr_scores, nram_cls, deal_n_num, anchor_s, class_num,
+                 hw_total_num, hw_seg_num, align_hw_seg_num, deal_num,
+                 nram_pingpong_num, repeat_n - 2);
+    }
+    if (rem_n_num > 0) {
+      // L
+      T *addr_x = base_addr_x + repeat_n * deal_n_num * input_stride;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, rem_n_num,
+                class_num, anchor_s, anchor_s, 0, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                repeat_n);
+    }
+    if (repeat_n > 0) {
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                   repeat_n - 1);
+    }
+    __asm__ volatile("sync;");
+
+    if (repeat_n > 0) {
+      // S
+      T *addr_scores =
+          base_addr_scores + (repeat_n - 1) * deal_n_num * output_stride;
+      storeScore(addr_scores, nram_cls, deal_n_num, anchor_s, class_num,
+                 hw_total_num, hw_seg_num, align_hw_seg_num, deal_num,
+                 nram_pingpong_num, repeat_n - 1);
+    }
+    if (rem_n_num > 0) {
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                   repeat_n);
+      __asm__ volatile("sync;");
+
+      // S
+      T *addr_scores = base_addr_scores + repeat_n * deal_n_num * output_stride;
+      storeScore(addr_scores, nram_cls, rem_n_num, anchor_s, class_num,
+                 hw_total_num, hw_seg_num, align_hw_seg_num, deal_num,
+                 nram_pingpong_num, repeat_n);
+      __asm__ volatile("sync;");
+    }
+  } else if (deal_num >= align_hw_seg_num) {
+    int deal_s_num = deal_num / align_hw_seg_num;
+    int repeat_ns = (n_in * anchor_s) / deal_s_num;
+    int rem_ns_num = (n_in * anchor_s) % deal_s_num;
+    int input_stride = c_in * hw_total_num;
+    int output_stride = class_num * hw_total_num;
+    T *base_addr_x = (T *)x + hw_data_offset;
+    T *base_addr_scores = (T *)scores + hw_data_offset;
+
+    if (repeat_ns > 0) {
+      // L
+      T *addr_x = base_addr_x;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1, class_num,
+                anchor_s, deal_s_num, 0, c_in, hw_total_num, hw_seg_num,
+                align_hw_seg_num, deal_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_ns > 1) {
+      // L
+      T *addr_x = base_addr_x;
+      int s_num_offset = deal_s_num % anchor_s;
+      int anchor_num = anchor_s - s_num_offset;
+      bool next_batch = deal_s_num > anchor_num;
+      anchor_num = next_batch ? anchor_num : deal_s_num;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1, class_num,
+                anchor_s, anchor_num, s_num_offset, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num, 1);
+
+      if (next_batch == true) {
+        T *addr_x = base_addr_x + input_stride;
+        int nram_offset = anchor_num * align_hw_seg_num;
+        T *nram_iou_tmp = nram_iou + nram_offset;
+        T *nram_conf_tmp = nram_conf + nram_offset;
+        T *nram_cls_tmp = nram_cls + nram_offset;
+        anchor_num = deal_s_num - anchor_num;
+        loadScore(addr_x, nram_iou_tmp, nram_conf_tmp, nram_cls_tmp, iou_aware,
+                  1, class_num, anchor_s, anchor_num, 0, c_in, hw_total_num,
+                  hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num, 1);
+      }
+
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num, 0);
+      __asm__ volatile("sync;");
+    }
+
+    for (int ns_iter = 0; ns_iter < repeat_ns - 2; ns_iter++) {
+      // S
+      T *addr_scores = base_addr_scores + ns_iter * deal_s_num * output_stride;
+      storeScore(addr_scores, nram_cls, 1, deal_s_num, class_num, hw_total_num,
+                 hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                 ns_iter);
+
+      // L
+      int ns_num_offset = (ns_iter + 2) * deal_s_num;
+      int batch_num = ns_num_offset / anchor_s;
+      T *addr_x = base_addr_x + batch_num * input_stride;
+      int s_num_offset = ns_num_offset % anchor_s;
+      int anchor_num = anchor_s - s_num_offset;
+      bool next_batch = deal_s_num > anchor_num;
+      anchor_num = next_batch ? anchor_num : deal_s_num;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1, class_num,
+                anchor_s, anchor_num, s_num_offset, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                ns_iter + 2);
+
+      if (next_batch == true) {
+        T *addr_x = base_addr_x + (batch_num + 1) * input_stride;
+        int nram_offset = anchor_num * align_hw_seg_num;
+        T *nram_iou_tmp = nram_iou + nram_offset;
+        T *nram_conf_tmp = nram_conf + nram_offset;
+        T *nram_cls_tmp = nram_cls + nram_offset;
+        anchor_num = deal_s_num - anchor_num;
+        loadScore(addr_x, nram_iou_tmp, nram_conf_tmp, nram_cls_tmp, iou_aware,
+                  1, class_num, anchor_s, anchor_num, 0, c_in, hw_total_num,
+                  hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                  ns_iter + 2);
+      }
+
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                   ns_iter + 1);
+      __asm__ volatile("sync;");
+    }
+
+    if (repeat_ns >= 2) {
+      // S
+      T *addr_scores =
+          base_addr_scores + (repeat_ns - 2) * deal_s_num * output_stride;
+      storeScore(addr_scores, nram_cls, 1, deal_s_num, class_num, hw_total_num,
+                 hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                 repeat_ns - 2);
+    }
+    if (rem_ns_num > 0) {
+      // L
+      int ns_num_offset = repeat_ns * deal_s_num;
+      int batch_num = ns_num_offset / anchor_s;
+      int s_num_offset = ns_num_offset % anchor_s;
+      T *addr_x = base_addr_x + batch_num * input_stride;
+      loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1, class_num,
+                anchor_s, rem_ns_num, s_num_offset, c_in, hw_total_num,
+                hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                repeat_ns);
+    }
+    if (repeat_ns > 0) {
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                   repeat_ns - 1);
+    }
+    __asm__ volatile("sync;");
+
+    if (repeat_ns > 0) {
+      // S
+      T *addr_scores =
+          base_addr_scores + (repeat_ns - 1) * deal_s_num * output_stride;
+      storeScore(addr_scores, nram_cls, 1, deal_s_num, class_num, hw_total_num,
+                 hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                 repeat_ns - 1);
+    }
+    if (rem_ns_num > 0) {
+      // C
+      computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                   iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                   repeat_ns);
+      __asm__ volatile("sync;");
+
+      // S
+      T *addr_scores =
+          base_addr_scores + repeat_ns * deal_s_num * output_stride;
+      storeScore(addr_scores, nram_cls, 1, rem_ns_num, class_num, hw_total_num,
+                 hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
+                 repeat_ns);
+      __asm__ volatile("sync;");
+    }
+  } else {
+    int repeat_hw = hw_seg_num / deal_num;
+    int rem_hw_num = hw_seg_num % deal_num;
+    int input_stride = c_in * hw_total_num;
+    int output_stride = anchor_s * class_num * hw_total_num;
+    T *base_addr_x = (T *)x + hw_data_offset;
+    T *base_addr_scores = (T *)scores + hw_data_offset;
+
+    for (int n_iter = 0; n_iter < n_in; n_iter++) {
+      for (int s_iter = 0; s_iter < anchor_s; s_iter++) {
+        T *addr_x_n = base_addr_x + n_iter * input_stride;
+        T *addr_scores_n = base_addr_scores + n_iter * output_stride +
+                           s_iter * class_num * hw_total_num;
+
+        if (repeat_hw > 0) {
+          // L
+          T *addr_x = addr_x_n;
+          loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1,
+                    class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+                    deal_num, deal_num, deal_num, nram_pingpong_num, 0);
+          __asm__ volatile("sync;");
+        }
+
+        if (repeat_hw > 1) {
+          // L
+          T *addr_x = addr_x_n + deal_num;
+          loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1,
+                    class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+                    deal_num, deal_num, deal_num, nram_pingpong_num, 1);
+
+          // C
+          computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                       iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                       0);
+          __asm__ volatile("sync;");
+        }
+
+        for (int hw_iter = 0; hw_iter < repeat_hw - 2; hw_iter++) {
+          // S
+          T *addr_scores = addr_scores_n + hw_iter * deal_num;
+          storeScore(addr_scores, nram_cls, 1, 1, class_num, hw_total_num,
+                     deal_num, deal_num, deal_num, nram_pingpong_num, hw_iter);
+
+          // L
+          T *addr_x = addr_x_n + (hw_iter + 2) * deal_num;
+          loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1,
+                    class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+                    deal_num, deal_num, deal_num, nram_pingpong_num,
+                    hw_iter + 2);
+
+          // C
+          computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                       iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                       hw_iter + 1);
+          __asm__ volatile("sync;");
+        }
+
+        if (repeat_hw >= 2) {
+          // S
+          T *addr_scores = addr_scores_n + (repeat_hw - 2) * deal_num;
+          storeScore(addr_scores, nram_cls, 1, 1, class_num, hw_total_num,
+                     deal_num, deal_num, deal_num, nram_pingpong_num,
+                     repeat_hw - 2);
+        }
+        if (rem_hw_num > 0) {
+          // L
+          T *addr_x = addr_x_n + repeat_hw * deal_num;
+          loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1,
+                    class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
+                    rem_hw_num, deal_num, deal_num, nram_pingpong_num,
+                    repeat_hw);
+        }
+        if (repeat_hw > 0) {
+          // C
+          computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                       iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                       repeat_hw - 1);
+        }
+        __asm__ volatile("sync;");
+
+        if (repeat_hw > 0) {
+          // S
+          T *addr_scores = addr_scores_n + (repeat_hw - 1) * deal_num;
+          storeScore(addr_scores, nram_cls, 1, 1, class_num, hw_total_num,
+                     deal_num, deal_num, deal_num, nram_pingpong_num,
+                     repeat_hw - 1);
+        }
+        if (rem_hw_num > 0) {
+          // C
+          computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
+                       iou_aware_factor, class_num, deal_num, nram_pingpong_num,
+                       repeat_hw);
+          __asm__ volatile("sync;");
+
+          // S
+          T *addr_scores = addr_scores_n + repeat_hw * deal_num;
+          storeScore(addr_scores, nram_cls, 1, 1, class_num, hw_total_num,
+                     rem_hw_num, deal_num, deal_num, nram_pingpong_num,
+                     repeat_hw);
+        }
+        __asm__ volatile("sync;");
+      }
+    }
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelYoloBox(
+    const T *x, const int *img_size, const int *anchors, const int class_num,
+    const float conf_thresh, const int downsample_ratio, const bool clip_bbox,
+    const float scale, const bool iou_aware, const float iou_aware_factor,
+    const int n_in, const int anchor_s, const int c_in, const int h_in,
+    const int w_in, T *boxes, T *scores) {
+  if (coreId == 0x80) {
+    return;
+  }
+
+  YoloBoxComputeBbox(x, img_size, anchors, class_num, conf_thresh,
+                     downsample_ratio, clip_bbox, scale, iou_aware,
+                     iou_aware_factor, n_in, anchor_s, c_in, h_in, w_in, boxes);
+  YoloBoxComputeScore(x, class_num, conf_thresh, iou_aware, iou_aware_factor,
+                      n_in, anchor_s, c_in, h_in, w_in, scores);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelYoloBoxFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *x, const void *img_size, const void *anchors,
+    const int class_num, const float conf_thresh, const int downsample_ratio,
+    const bool clip_bbox, const float scale, const bool iou_aware,
+    const float iou_aware_factor, const int n_in, const int anchor_s,
+    const int c_in, const int h_in, const int w_in, void *boxes, void *scores) {
+  MLUKernelYoloBox<<<k_dim, k_type, queue>>>(
+      (float *)x, (int *)img_size, (int *)anchors, class_num, conf_thresh,
+      downsample_ratio, clip_bbox, scale, iou_aware, iou_aware_factor, n_in,
+      anchor_s, c_in, h_in, w_in, (float *)boxes, (float *)scores);
+}

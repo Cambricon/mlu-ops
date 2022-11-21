@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-LABEL org.opencontainers.image.authors="cnnl@cambricon.com"
+LABEL org.opencontainers.image.authors="www.cambricon.com"
 
 ENV NEUWARE_HOME="/usr/local/neuware/"
 
@@ -52,6 +52,9 @@ RUN tar -xvf /tmp/Python-3.8.0.tgz -C /tmp/ && \
     cp /usr/local/lib/libpython3.8.so.1.0 /usr/lib/ && \
     cd - && \
     rm /tmp/Python-3.8.0* -rf
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates
 
 # Install python requirements.
 RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com --upgrade pip && \
@@ -110,13 +113,14 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     wcwidth==0.2.5                     \
     wrapt==1.12.1                      \
     xgboost==0.7.post3                 \
+    prototxt_parser==1.0               \
     -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com && \
     cp /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so /usr/local/lib/python3.8/site-packages/ && \
     rm /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so
 
 # Install BANGPy.
-ARG BANGPY_VERSION="2.1.0"
-ARG RELEASE_VERSION="2.1.0-1"
+ARG BANGPY_VERSION="2.1.2"
+ARG RELEASE_VERSION="2.1.2-1"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
 ADD http://daily.software.cambricon.com/release/bangpy/${RELEASE_VERSION}/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \

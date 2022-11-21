@@ -61,10 +61,8 @@ using ::std::ostream;
 GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_
 GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
 GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_
-void PrintByteSegmentInObjectTo(const unsigned char *obj_bytes,
-                                size_t start,
-                                size_t count,
-                                ostream *os) {
+void PrintByteSegmentInObjectTo(const unsigned char *obj_bytes, size_t start,
+                                size_t count, ostream *os) {
   char text[5] = "";
   for (size_t i = 0; i != count; i++) {
     const size_t j = start + i;
@@ -82,7 +80,8 @@ void PrintByteSegmentInObjectTo(const unsigned char *obj_bytes,
 }
 
 // Prints the bytes in the given value to the given ostream.
-void PrintBytesInObjectToImpl(const unsigned char *obj_bytes, size_t count, ostream *os) {
+void PrintBytesInObjectToImpl(const unsigned char *obj_bytes, size_t count,
+                              ostream *os) {
   // Tells the user how big the object is.
   *os << count << "-byte object <";
 
@@ -113,7 +112,8 @@ namespace internal2 {
 // uses the << operator and thus is easier done outside of the
 // ::testing::internal namespace, which contains a << operator that
 // sometimes conflicts with the one in STL.
-void PrintBytesInObjectTo(const unsigned char *obj_bytes, size_t count, ostream *os) {
+void PrintBytesInObjectTo(const unsigned char *obj_bytes, size_t count,
+                          ostream *os) {
   PrintBytesInObjectToImpl(obj_bytes, count, os);
 }
 
@@ -131,9 +131,7 @@ enum CharFormat { kAsIs, kHexEscape, kSpecialEscape };
 // Returns true if c is a printable ASCII character.  We test the
 // value of c directly instead of calling isprint(), which is buggy on
 // Windows Mobile.
-inline bool IsPrintableAscii(wchar_t c) {
-  return 0x20 <= c && c <= 0x7E;
-}
+inline bool IsPrintableAscii(wchar_t c) { return 0x20 <= c && c <= 0x7E; }
 
 // Prints a wide or narrow char c as a character literal without the
 // quotes, escaping it when necessary; returns how c was formatted.
@@ -205,7 +203,8 @@ static CharFormat PrintAsStringLiteralTo(wchar_t c, ostream *os) {
 // Prints a char c as if it's part of a string literal, escaping it when
 // necessary; returns how c was formatted.
 static CharFormat PrintAsStringLiteralTo(char c, ostream *os) {
-  return PrintAsStringLiteralTo(static_cast<wchar_t>(static_cast<unsigned char>(c)), os);
+  return PrintAsStringLiteralTo(
+      static_cast<wchar_t>(static_cast<unsigned char>(c)), os);
 }
 
 // Prints a wide or narrow character c and its code.  '\0' is printed
@@ -222,8 +221,7 @@ void PrintCharAndCodeTo(Char c, ostream *os) {
   // To aid user debugging, we also print c's code in decimal, unless
   // it's 0 (in which case c was printed as '\\0', making the code
   // obvious).
-  if (c == 0)
-    return;
+  if (c == 0) return;
   *os << " (" << static_cast<int>(c);
 
   // For more convenience, we print c's code again in hexadecimal,
@@ -246,9 +244,7 @@ void PrintTo(signed char c, ::std::ostream *os) {
 
 // Prints a wchar_t as a symbol if it is printable or as its internal
 // code otherwise and also as its code.  L'\0' is printed as "L'\\0'".
-void PrintTo(wchar_t wc, ostream *os) {
-  PrintCharAndCodeTo<wchar_t>(wc, os);
-}
+void PrintTo(wchar_t wc, ostream *os) { PrintCharAndCodeTo<wchar_t>(wc, os); }
 
 // Prints the given array of characters to the ostream.  CharType must be either
 // char or wchar_t.
@@ -366,9 +362,7 @@ bool ContainsUnprintableControlCodes(const char *str, size_t length) {
   return false;
 }
 
-bool IsUTF8TrailByte(unsigned char t) {
-  return 0x80 <= t && t <= 0xbf;
-}
+bool IsUTF8TrailByte(unsigned char t) { return 0x80 <= t && t <= 0xbf; }
 
 bool IsValidUTF8(const char *str, size_t length) {
   const unsigned char *s = reinterpret_cast<const unsigned char *>(str);
@@ -383,15 +377,18 @@ bool IsValidUTF8(const char *str, size_t length) {
       return false;  // trail byte or non-shortest form
     } else if (lead <= 0xdf && (i + 1) <= length && IsUTF8TrailByte(s[i])) {
       ++i;  // 2-byte character
-    } else if (0xe0 <= lead && lead <= 0xef && (i + 2) <= length && IsUTF8TrailByte(s[i]) &&
-               IsUTF8TrailByte(s[i + 1]) &&
+    } else if (0xe0 <= lead && lead <= 0xef && (i + 2) <= length &&
+               IsUTF8TrailByte(s[i]) && IsUTF8TrailByte(s[i + 1]) &&
                // check for non-shortest form and surrogate
-               (lead != 0xe0 || s[i] >= 0xa0) && (lead != 0xed || s[i] < 0xa0)) {
+               (lead != 0xe0 || s[i] >= 0xa0) &&
+               (lead != 0xed || s[i] < 0xa0)) {
       i += 2;  // 3-byte character
-    } else if (0xf0 <= lead && lead <= 0xf4 && (i + 3) <= length && IsUTF8TrailByte(s[i]) &&
-               IsUTF8TrailByte(s[i + 1]) && IsUTF8TrailByte(s[i + 2]) &&
+    } else if (0xf0 <= lead && lead <= 0xf4 && (i + 3) <= length &&
+               IsUTF8TrailByte(s[i]) && IsUTF8TrailByte(s[i + 1]) &&
+               IsUTF8TrailByte(s[i + 2]) &&
                // check for non-shortest form
-               (lead != 0xf0 || s[i] >= 0x90) && (lead != 0xf4 || s[i] < 0x90)) {
+               (lead != 0xf0 || s[i] >= 0x90) &&
+               (lead != 0xf4 || s[i] < 0x90)) {
       i += 3;  // 4-byte character
     } else {
       return false;
@@ -401,7 +398,8 @@ bool IsValidUTF8(const char *str, size_t length) {
 }
 
 void ConditionalPrintAsText(const char *str, size_t length, ostream *os) {
-  if (!ContainsUnprintableControlCodes(str, length) && IsValidUTF8(str, length)) {
+  if (!ContainsUnprintableControlCodes(str, length) &&
+      IsValidUTF8(str, length)) {
     *os << "\n    As Text: \"" << str << "\"";
   }
 }
