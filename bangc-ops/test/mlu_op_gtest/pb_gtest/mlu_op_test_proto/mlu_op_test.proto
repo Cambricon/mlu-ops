@@ -147,6 +147,8 @@ message Node {
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional BallQueryParam  ball_query_param             = 4008;  // param  
+  optional PsamaskForwardParam psamask_forward_param = 4055;  // PsamaskForwardParam
+  optional PsamaskBackwardParam psamask_backward_param = 4056;  // PsamaskBackwardParam
 }
 
 
@@ -291,4 +293,18 @@ message BallQueryParam  {
   optional float min_radius = 1 [default = 0.0];
   optional float max_radius = 2 [default = 1.0];
   optional int32   nsample  = 3 [default = 1];
+}
+
+// param to call mluOpPsamaskForward()
+message PsamaskForwardParam {
+  required int32 h_mask = 1;
+  required int32 w_mask = 2;
+  required int32 psa_type = 3;
+}
+
+// param to call mluOpPsamaskBackward()
+message PsamaskBackwardParam {
+  required int32 h_mask = 1;
+  required int32 w_mask = 2;
+  required int32 psa_type = 3;
 }

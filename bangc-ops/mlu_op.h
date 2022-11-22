@@ -2966,6 +2966,176 @@ mluOpExpand(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t output_desc,
             void *output);
 
+// Group:Psamask
+/*!
+ * @brief Moves the \b x tensor to \b y tensor according to \b h_mask,
+ *        \b w_mask and \b psa_type.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the ::mluOpPsamaskForward. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] psa_type
+ *   Input. Type of the psamask computation, including COLLECT and DISTRIBUTE.
+ * @param[in] x_desc
+ *   Input. The descriptor of data of input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ *   Input. Pointer to the MLU memory that stores the data of input tensor.
+ * @param[in] h_mask
+ *   Input. An integer value which is the h_mask factor of the psamask.
+ * @param[in] w_mask
+ *   Input. An integer value which is the w_mask factor of the psamask.
+ * @param[in] y_desc
+ *   Input. The descriptor of data of output tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] y
+ *   Output. Pointer to the MLU memory that stores the data of output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
+ *
+ * @par Formula
+ * - See "Psamask Operator" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - This function supports the following data type for
+ *   data of input tensor \b x and data of output tensor \b y:
+ *   - x: float.
+ *   - y: float.
+ *
+ * @par Data Layout
+ * - This function supports the following data layout for
+ *   data of input tensor \b x and data of output tensor \b y:
+ *   - x: NHWC.
+ *   - y: NHWC.
+ *
+ * @par Scale Limitation
+ * - The shape of \b x must be [N, H, W, C].
+ * - The shape of \b y must be [N, H, W, C].
+ * - All dimensions size of \b x and \b y must be the same, except the C dimension.
+ * - If the shape of \b x is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
+ * w_mask .
+ * - If the shape of \b y is set to [N, H, W, C], the size of C dimension should be H * W.
+ * - On MLU200 series:
+ *   - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
+ * satisfied: ci + co <= 6144.
+ *   - When psa_type is DISTRIBUTE, the size of \b x channels ci and \b y channels co should be
+ * satisfied: ci + 2 * co <= 6144.
+ * - On MLU300 series:
+ *   - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
+ * satisfied: ci + co <= 10240.
+ *   - When psa_type is DISTRIBUTE, the size of \b x channels ci and \b y channels co should be
+ * satisfied: ci + 2 * co <= 10240.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPsamaskForward(mluOpHandle_t handle,
+                    const int psa_type,
+                    const mluOpTensorDescriptor_t x_desc,
+                    const void *x,
+                    const int h_mask,
+                    const int w_mask,
+                    const mluOpTensorDescriptor_t y_desc,
+                    void *y);
+
+// Group:Psamask
+/*!
+ * @brief Computes the gradients of input tensor \b dx with the gradients of output tensor \b dy
+ *        according to \b h_mask , \b w_mask and \b psa_type.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the ::mluOpPsamaskBackward. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] psa_type
+ *   Input. Type of the psamask computation, including COLLECT and DISTRIBUTE.
+ * @param[in] dy_desc
+ *   Input. The descriptor of gradient of output tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] dy
+ *   Input. Pointer to the MLU memory that stores the gradient of output tensor.
+ * @param[in] h_mask
+ *   Input. An integer value which is the h_mask factor of the psamask.
+ * @param[in] w_mask
+ *   Input. An integer value which is the w_mask factor of the psamask.
+ * @param[in] dx_desc
+ *   Input. The descriptor of gradient of input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] dx
+ *   Output. Pointer to the MLU memory that stores the gradient of input tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
+ *
+ * @par Formula
+ * - See "Psamask Operator" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - This function supports the following data type for
+ *   gradient of output tensor \b dy and gradient of input tensor \b dx:
+ *   - dy: float.
+ *   - dx: float.
+ *
+ * @par Data Layout
+ * - This function supports the following data layout for
+ *   gradient of output tensor \b dy and gradient of input tensor \b dx:
+ *   - dy: NHWC.
+ *   - dx: NHWC.
+ *
+ * @par Scale Limitation
+ * - The shape of \b dy must be [N, H, W, C].
+ * - The shape of \b dx must be [N, H, W, C].
+ * - All dimensions size of \b dy and \b dx must be the same, except the C dimension.
+ * - If the shape of \b dx is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
+ * w_mask .
+ * - If the shape of \b dy is set to [N, H, W, C], the size of C dimension should be H * W.
+ * - On MLU200 series:
+ *   - When psa_type is COLLECT, the size of \b dx channels ci and \b dy channels co should be
+ * satisfied: ci + co <= 6144.
+ *   - When psa_type is DISTRIBUTE, the size of \b dx channels ci and \b dy channels co should be
+ * satisfied: ci + 2 * co <= 6144.
+ * - On MLU300 series:
+ *   - When psa_type is COLLECT, the size of \b dx channels ci and \b dy channels co should be
+ * satisfied: ci + co <= 10240.
+ *   - When psa_type is DISTRIBUTE, the size of \b dx channels ci and \b dy channels co should be
+ * satisfied: ci + 2 * co <= 10240.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPsamaskBackward(mluOpHandle_t handle,
+                     const int psa_type,
+                     const mluOpTensorDescriptor_t dy_desc,
+                     const void *dy,
+                     const int h_mask,
+                     const int w_mask,
+                     const mluOpTensorDescriptor_t dx_desc,
+                     void *dx);
+
 #if defined(__cplusplus)
 }
 #endif
