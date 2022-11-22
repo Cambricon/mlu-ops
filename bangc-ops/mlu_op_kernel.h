@@ -227,6 +227,44 @@ void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
     const int low_num, const int dtype_size);
 
 /* Psamask */
+typedef enum {
+  COLLECT = 0,
+  DISTRIBUTE = 1,
+} psamaskType_t;
+
+typedef enum {
+  PARTITION_N = 0,
+  PARTITION_H = 1,
+} dimPartitionType_t;
+
+struct PartitionSeg {
+  int h_per_cluster;
+  int n_per_cluster;
+  int h_per_core;
+  int n_per_core;
+  dimPartitionType_t cluster_partition;
+  dimPartitionType_t core_partition;
+};
+struct Shape {
+  int n;
+  int h;
+  int w;
+  int c;
+};
+struct LimitParam {
+  int n;
+  int h;
+  int w;
+};
+struct PositionInCore {
+  int n_start;
+  int n_end;
+  int h_start;
+  int h_end;
+  int w_start;
+  int w_end;
+};
+
 void MLUOP_WIN_API mluOpUnion1KernelPsamaskForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, const psamaskType_t psa_type,
