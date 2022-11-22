@@ -155,3 +155,92 @@ mluOpExpand
 mluOpFill
 -------------------
 创建一个所有元素都设置为 value 的张量，不支持广播。给定一个张量 tensor，以及值为 value 的 Scale 标量，该操作会返回一个所有元素设置为 value 的 tensor 对象，其与输入 tensor 具有相同的类型和形状。
+
+mluOpPsamaskBackward
+--------------------
+
+根据mask大小、计算方式以及输出的梯度，计算输入的梯度。
+对于COLLECT计算方式，计算公式如下：
+
+.. math::
+
+   \begin{array}
+
+   {lcl}
+   half_mask_h = (h_mask - 1) / 2
+   half_mask_w = (w_mask - 1) / 2
+   dx[n][h][w][hidx * w\_mask + widx] = dy[n][h][w][(hidx + h - half_mask_h)*
+   w_feature + widx + w - half_mask_w]
+   hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)]
+   widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)]
+   \end{array}
+
+
+其中：
+
+- ``n``、``h`` 和 ``w`` 分别表示当前的NHW维度。
+- ``dx`` 是输入的梯度。
+- ``dy`` 是输出的梯度。
+
+对于DISTRIBUTE计算方式，计算公式如下：
+
+.. math::
+
+   \begin{array}{lcl}
+
+   half_mask_h = (h_mask - 1) / 2
+   half_mask_w = (w_mask - 1) / 2
+   dx[n][h][w][hidx * w\_mask + widx] = dy[n][hidx + h - half\_mask\_h][widx + w - half\_mask\_w][c]
+   hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)]
+   widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)]
+   \end{array}
+
+其中：
+
+- ``n``、 ``h``、``w`` 和 ``c`` 分别表示当前的NHWC维度。
+- ``dx`` 是输入的梯度。
+- ``dy`` 是输出的梯度。
+
+mluOpPsamaskForward
+-------------------
+
+根据mask大小以及计算方式，为输入打上mask。
+对于COLLECT计算方式，计算公式如下：
+
+.. math::
+
+   \begin{array}
+
+   {lcl}
+   half_mask_h = (h_mask - 1) / 2
+   half_mask_w = (w_mask - 1) / 2
+   y[n][h][w][(hidx + h - half\_mask\_h) * w\_feature + widx + w - half\_mask\_w] = x[n][h][w][hidx * w\_mask + widx]
+   hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)]
+   widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)] \\\
+   \end{array}
+
+
+其中：
+
+- ``n``、``h`` 和 ``w`` 分别表示当前的NHW维度。
+- ``x`` 是输入的数据。
+- ``y`` 是输出的数据。
+
+对于DISTRIBUTE计算方式，计算公式如下：
+
+.. math::
+
+   \begin{array}{lcl}
+
+   half_mask_h = (h_mask - 1) / 2
+   half_mask_w = (w_mask - 1) / 2
+   y[n][hidx + h - half\_mask\_h][widx + w - half\_mask\_w][c] = x[n][h][w][hidx * w\_mask + widx]
+   hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)]
+   widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)]
+   \end{array}
+
+其中：
+
+- ``n``、``h``、``w`` 和 ``c`` 分别表示当前的NHWC维度。
+- ``x`` 是输入的数据。
+- ``y`` 是输出的数据。

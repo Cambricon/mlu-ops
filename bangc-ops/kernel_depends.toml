@@ -29,3 +29,6 @@ psroipool_forward = ["psroipool"]
 roi_crop_backward = ["roi_crop"]
 roi_crop_forward = ["roi_crop"]
 sqrt_backward = ["sqrt"]
+psamask_forward = ["psamask"]
+psamask_backward = ["psamask"]
+
