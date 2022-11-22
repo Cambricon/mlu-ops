@@ -1,0 +1,60 @@
+op_name: "roi_align_rotated_forward"
+input {
+  id: "input1"
+  shape: {
+    dims: 9
+    dims: 27
+    dims: 24
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 1
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_h: "00000000"
+  value_h: "41100000"
+  value_h: "41300000"
+  value_h: "40c00000"
+  value_h: "40c00000"
+  value_h: "3def9798"
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 5
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+roi_align_rotated_forward_param: {
+  pooled_height: 2
+  pooled_width: 5
+  sample_ratio: 0
+  spatial_scale: 0.41744283
+  aligned: true
+  clockwise: true
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

@@ -1,0 +1,150 @@
+op_name: "roi_align_rotated_backward"
+input {
+  id: "input1"
+  shape: {
+    dims: 16
+    dims: 5
+    dims: 5
+    dims: 9
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 16
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_h: "40a00000"
+  value_h: "41880000"
+  value_h: "42aa0000"
+  value_h: "41000000"
+  value_h: "41b80000"
+  value_h: "3eec03bf"
+  value_h: "40c00000"
+  value_h: "42700000"
+  value_h: "43040000"
+  value_h: "40e00000"
+  value_h: "42480000"
+  value_h: "3ef909b2"
+  value_h: "00000000"
+  value_h: "42140000"
+  value_h: "42b40000"
+  value_h: "41f80000"
+  value_h: "42600000"
+  value_h: "3fb91794"
+  value_h: "40c00000"
+  value_h: "42000000"
+  value_h: "42840000"
+  value_h: "42300000"
+  value_h: "422c0000"
+  value_h: "3f64f4ed"
+  value_h: "40400000"
+  value_h: "41d80000"
+  value_h: "42ee0000"
+  value_h: "41800000"
+  value_h: "428a0000"
+  value_h: "3fbc5eeb"
+  value_h: "40e00000"
+  value_h: "41000000"
+  value_h: "42880000"
+  value_h: "40a00000"
+  value_h: "42c60000"
+  value_h: "3ed95372"
+  value_h: "40e00000"
+  value_h: "420c0000"
+  value_h: "422c0000"
+  value_h: "42280000"
+  value_h: "42980000"
+  value_h: "3f1f7f57"
+  value_h: "40e00000"
+  value_h: "42400000"
+  value_h: "42c40000"
+  value_h: "41a00000"
+  value_h: "42ae0000"
+  value_h: "3e70e3b1"
+  value_h: "40800000"
+  value_h: "40400000"
+  value_h: "43020000"
+  value_h: "3f800000"
+  value_h: "40000000"
+  value_h: "3ecb24f7"
+  value_h: "40e00000"
+  value_h: "42240000"
+  value_h: "43040000"
+  value_h: "41c80000"
+  value_h: "40a00000"
+  value_h: "3fbc8c5f"
+  value_h: "40000000"
+  value_h: "422c0000"
+  value_h: "42440000"
+  value_h: "41400000"
+  value_h: "42aa0000"
+  value_h: "3f777a4f"
+  value_h: "40e00000"
+  value_h: "42080000"
+  value_h: "42a00000"
+  value_h: "41600000"
+  value_h: "42600000"
+  value_h: "3fb7f11a"
+  value_h: "3f800000"
+  value_h: "41d00000"
+  value_h: "42880000"
+  value_h: "42380000"
+  value_h: "41500000"
+  value_h: "3e68ccd1"
+  value_h: "3f800000"
+  value_h: "41500000"
+  value_h: "42880000"
+  value_h: "41300000"
+  value_h: "42e40000"
+  value_h: "3d8d9517"
+  value_h: "40000000"
+  value_h: "42400000"
+  value_h: "42240000"
+  value_h: "40a00000"
+  value_h: "40a00000"
+  value_h: "3eab7a70"
+  value_h: "40400000"
+  value_h: "42040000"
+  value_h: "42ae0000"
+  value_h: "420c0000"
+  value_h: "42a20000"
+  value_h: "3f33e30a"
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 9
+    dims: 158
+    dims: 65
+    dims: 9
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+roi_align_rotated_backward_param: {
+  pooled_height: 5
+  pooled_width: 5
+  sample_ratio: 3
+  spatial_scale: 1
+  aligned: false
+  clockwise: true
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

@@ -146,7 +146,9 @@ message Node {
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
-  optional BallQueryParam  ball_query_param             = 4008;  // param  
+  optional BallQueryParam  ball_query_param             = 4008;  // param
+  optional RoiAlignRotatedForwardParam roi_align_rotated_forward_param  = 4012;  //param
+  optional RoiAlignRotatedBackwardParam roi_align_rotated_backward_param = 4013;  // param  
 }
 
 
@@ -292,3 +294,25 @@ message BallQueryParam  {
   optional float max_radius = 2 [default = 1.0];
   optional int32   nsample  = 3 [default = 1];
 }
+
+// param to call mluOpRoiAlignRotatedForward()
+message RoiAlignRotatedForwardParam {
+  required int32 pooled_height  = 1;
+  required int32 pooled_width   = 2;
+  optional int32 sample_ratio   = 3 [default = 0];
+  required float spatial_scale  = 4;
+  optional bool aligned         = 5 [default = true];
+  optional bool clockwise       = 6 [default = false];
+}
+
+// param to call mluOpRoiAlignRotatedBackward()
+message RoiAlignRotatedBackwardParam {
+  required int32 pooled_height  = 1;
+  required int32 pooled_width   = 2;
+  optional int32 sample_ratio   = 3 [default = 0];
+  required float spatial_scale  = 4;
+  optional bool aligned         = 5 [default = true];
+  optional bool clockwise       = 6 [default = false];
+}
+
+

@@ -1,0 +1,175 @@
+op_name: "roi_align_rotated_forward"
+input {
+  id: "input1"
+  shape: {
+    dims: 9
+    dims: 17
+    dims: 3
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_HALF
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 20
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+   value_h: "3c00"
+  value_h: "3c00"
+  value_h: "4700"
+  value_h: "3c00"
+  value_h: "4700"
+  value_h: "34b1"
+  value_h: "3c00"
+  value_h: "4000"
+  value_h: "4980"
+  value_h: "0000"
+  value_h: "4400"
+  value_h: "3e39"
+  value_h: "3c00"
+  value_h: "4000"
+  value_h: "4a00"
+  value_h: "0000"
+  value_h: "4800"
+  value_h: "320c"
+  value_h: "4400"
+  value_h: "0000"
+  value_h: "4900"
+  value_h: "0000"
+  value_h: "4500"
+  value_h: "3e3e"
+  value_h: "4400"
+  value_h: "4000"
+  value_h: "4800"
+  value_h: "0000"
+  value_h: "0000"
+  value_h: "38c9"
+  value_h: "4000"
+  value_h: "4000"
+  value_h: "4a00"
+  value_h: "3c00"
+  value_h: "4200"
+  value_h: "365b"
+  value_h: "4600"
+  value_h: "3c00"
+  value_h: "4980"
+  value_h: "3c00"
+  value_h: "4800"
+  value_h: "3483"
+  value_h: "0000"
+  value_h: "3c00"
+  value_h: "4800"
+  value_h: "0000"
+  value_h: "4a80"
+  value_h: "3bac"
+  value_h: "4500"
+  value_h: "0000"
+  value_h: "4a80"
+  value_h: "0000"
+  value_h: "3c00"
+  value_h: "311b"
+  value_h: "4000"
+  value_h: "4000"
+  value_h: "4a80"
+  value_h: "3c00"
+  value_h: "4400"
+  value_h: "3d04"
+  value_h: "4000"
+  value_h: "3c00"
+  value_h: "4700"
+  value_h: "3c00"
+  value_h: "4a80"
+  value_h: "21b5"
+  value_h: "0000"
+  value_h: "0000"
+  value_h: "4800"
+  value_h: "0000"
+  value_h: "3c00"
+  value_h: "359f"
+  value_h: "4600"
+  value_h: "3c00"
+  value_h: "4500"
+  value_h: "0000"
+  value_h: "4600"
+   value_h: "2f63"
+  value_h: "4400"
+  value_h: "4000"
+  value_h: "4800"
+  value_h: "3c00"
+  value_h: "4000"
+  value_h: "2522"
+  value_h: "4500"
+  value_h: "3c00"
+  value_h: "4400"
+  value_h: "0000"
+  value_h: "4500"
+  value_h: "3d64"
+  value_h: "4000"
+  value_h: "0000"
+  value_h: "4400"
+  value_h: "0000"
+  value_h: "4700"
+  value_h: "3cf6"
+  value_h: "4600"
+  value_h: "0000"
+  value_h: "4900"
+  value_h: "0000"
+  value_h: "4a00"
+  value_h: "36fb"
+  value_h: "4700"
+  value_h: "3c00"
+  value_h: "4900"
+  value_h: "0000"
+  value_h: "4a00"
+  value_h: "3d74"
+  value_h: "3c00"
+  value_h: "4000"
+  value_h: "4880"
+  value_h: "0000"
+  value_h: "4800"
+  value_h: "3de8"
+  value_h: "4700"
+  value_h: "0000"
+  value_h: "4500"
+  value_h: "0000"
+  value_h: "4500"
+  value_h: "39d0"
+  
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 20
+    dims: 4
+    dims: 4
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_HALF
+}
+roi_align_rotated_forward_param: {
+  pooled_height: 4
+  pooled_width: 4
+  sample_ratio: 0
+  spatial_scale: 0.41744283
+  aligned: true
+  clockwise: true
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
