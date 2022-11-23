@@ -31,6 +31,16 @@
 
 #define HALFMAX 65504
 
+template <typename T>
+__mlu_func__ inline T __min(T a, T b) {
+  return a < b ? a : b;
+}
+
+template <typename T>
+__mlu_func__ inline T __max(T a, T b) {
+  return a > b ? a : b;
+}
+
 /******************************************************************************************
  * MLUOPS FUNC: computeRecip
  * param 'nram_dst' is the nram destination address, which supports half or
