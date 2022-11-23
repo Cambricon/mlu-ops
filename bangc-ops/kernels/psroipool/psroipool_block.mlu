@@ -117,10 +117,10 @@ __mlu_func__ void psRoiAvgPool(
         wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
         hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
         wend = ceil(static_cast<T>(pw + 1) * bin_size_w + roi_start_w);
-        hstart = __min(__max((T)hstart, (T)0), (T)height);
-        hend = __min(__max((T)hend, (T)0), (T)height);
-        wstart = __min(__max((T)wstart, (T)0), (T)width);
-        wend = __min(__max((T)wend, (T)0), (T)width);
+        hstart = __min(__max(hstart, 0), height);
+        hend = __min(__max(hend, 0), height);
+        wstart = __min(__max(wstart, 0), width);
+        wend = __min(__max(wend, 0), width);
         is_empty = (hend <= hstart) || (wend <= wstart);
         // vector version
         if (!is_empty) {
@@ -266,10 +266,10 @@ __mlu_func__ void psRoiAvgPoolBackwardCompute(
   int wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
   int hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
   int wend = ceil(static_cast<T>(pw + 1) * bin_size_w + roi_start_w);
-  hstart = __min(__max((T)hstart, (T)0), (T)height);
-  hend = __min(__max((T)hend, (T)0), (T)height);
-  wstart = __min(__max((T)wstart, (T)0), (T)width);
-  wend = __min(__max((T)wend, (T)0), (T)width);
+  hstart = __min(__max(hstart, 0), height);
+  hend = __min(__max(hend, 0), height);
+  wstart = __min(__max(wstart, 0), width);
+  wend = __min(__max(wend, 0), width);
   bool is_empty = (hend <= hstart) || (wend <= wstart);
   int bin_area = (hend - hstart) * (wend - wstart);
   T bin_area_recip = 1.0 / bin_area;
