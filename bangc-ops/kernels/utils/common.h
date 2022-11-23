@@ -32,12 +32,12 @@
 #define HALFMAX 65504
 
 template <typename T>
-__mlu_func__ inline T __min(T a, T b) {
+__mlu_func__ inline T __mluop_min(T a, T b) {
   return a < b ? a : b;
 }
 
 template <typename T>
-__mlu_func__ inline T __max(T a, T b) {
+__mlu_func__ inline T __mluop_max(T a, T b) {
   return a > b ? a : b;
 }
 
