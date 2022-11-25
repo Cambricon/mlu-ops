@@ -94,7 +94,7 @@
       std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_NAME(pos, param_node_name, param_name, value) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, param_node_name)
-#define GEN_CASE_OP_PARAM_ARRAY(pos, op_name, param_name, value, num) \
+#define GEN_CASE_OP_PARAM_ARRAY(pos, param_node_name, param_name, value, num) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, num, \
                     std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_SUB(pos, param_node_name, param_name, value,  \

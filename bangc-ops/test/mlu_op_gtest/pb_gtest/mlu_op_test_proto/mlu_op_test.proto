@@ -384,6 +384,7 @@ message FillParam  {
   optional int32 version = 2      [default = 1];
   optional PointerMode mode = 3   [default = POINTER_MODE_HOST];
   optional string   value_hex = 4 [default = "0X00000000"];
+}
 
 // param to call mluOpTranspose()
 message TransposeParam {
