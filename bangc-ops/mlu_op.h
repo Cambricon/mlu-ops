@@ -197,6 +197,19 @@ typedef enum {
   MLUOP_LOG_10 = 2, /*!< The base 10 is used.*/
 } mluOpLogBase_t;
 
+/*!
+ * @brief Describes the pointer modes that are used in the implementation
+ * of the fill function.
+ */
+typedef enum {
+  MLUOP_POINTER_MODE_HOST = 0,
+  /*!< A host pointer, which means that the values passed by reference are on
+     the host. */
+  MLUOP_POINTER_MODE_DEVICE = 1,
+  /*!< A device pointer, which means that the values passed by reference are on
+     the device. */
+} mluOpPointerMode_t;
+
 /******************************************************************************
  * MLUOP Runtime Management
  ******************************************************************************/
@@ -2965,6 +2978,66 @@ mluOpExpand(mluOpHandle_t handle,
             const void *input,
             const mluOpTensorDescriptor_t output_desc,
             void *output);
+
+// Group:Fill
+/*!
+ * @brief Fills the output tensor \b output with \b value.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * in the fill operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] pointer_mode
+ * An enum value which indicates that the scalar value \b value is passed
+ * by reference on the host or device. The information is defined in
+ * ::mluOpPointerMode_t.
+ * @param[in] value
+ * A pointer to scaling factor of tensor input.
+ * If the \b pointer_mode is \b MLUOP_POINTER_MODE_DEVICE, the \b value should
+ * be a device pointer.
+ * If the \b pointer_mode is \b MLUOP_POINTER_MODE_HOST, the \b value should
+ * be a host pointer.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for \b value and output
+ *   tensor \b output.
+ *   - value: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool,
+ *     half, float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
+ *     bool, half, float.
+ *
+ * @note
+ * - Data types of \b value and output tensor \b output should be the same.
+ * - The number of elements of \b value can only be one.
+ * - You can specify the stride of all dimensions for \b output_desc with
+ *   ::mluOpSetTensorDescriptorEx.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the fill operation is as follows:
+     @verbatim
+      param:value: 5
+
+      output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
+                                             [[5,5],[5,5],[5,5]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpFill(
+    mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
+    const void *value, const mluOpTensorDescriptor_t output_desc, void *output);
 
 #if defined(__cplusplus)
 }

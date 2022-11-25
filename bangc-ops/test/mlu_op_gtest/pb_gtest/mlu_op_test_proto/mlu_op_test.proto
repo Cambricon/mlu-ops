@@ -74,6 +74,11 @@ enum MLUPlatform {
   MLU370 = 2;
 }
 
+enum PointerMode {
+  POINTER_MODE_HOST   = 0;
+  POINTER_MODE_DEVICE = 1;
+}
+
 message Shape {
   repeated int32 dims       = 1;
   repeated int32 dim_stride = 2;
@@ -102,6 +107,8 @@ message Tensor {
   repeated float value_f          = 7;
   repeated int32 value_i          = 8;
   repeated int64 value_l          = 17;
+  repeated uint32 value_ui        = 18;
+  repeated uint64 value_ul        = 19;
   repeated string value_h         = 9;
   // else data source
   optional string path            = 11;
@@ -147,7 +154,8 @@ message Node {
   optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
-  optional BallQueryParam  ball_query_param             = 4008;  // param  
+  optional BallQueryParam  ball_query_param             = 4008;  // param
+  optional FillParam       fill_param                   = 4007;  // param
 }
 
 
@@ -168,8 +176,8 @@ message RandomData {
   // only for uniform
   optional float lower_bound               = 2 [default = -1.0];
   optional float upper_bound               = 3 [default = 1.0];
-  optional float lower_bound_double        = 8 [default = -1.0];
-  optional float upper_bound_double        = 9 [default = 1.0];
+  optional double lower_bound_double       = 8 [default = -1.0];
+  optional double upper_bound_double       = 9 [default = 1.0];
 
   // only for gaussian
   optional float mu                        = 6 [default = 0.0];
@@ -292,4 +300,12 @@ message BallQueryParam  {
   optional float min_radius = 1 [default = 0.0];
   optional float max_radius = 2 [default = 1.0];
   optional int32   nsample  = 3 [default = 1];
+}
+
+// param to call mluOpFill()
+message FillParam  {
+  optional float value = 1        [default = 0.0];
+  optional int32 version = 2      [default = 1];
+  optional PointerMode mode = 3   [default = POINTER_MODE_HOST];
+  optional string   value_hex = 4 [default = "0X00000000"];
 }

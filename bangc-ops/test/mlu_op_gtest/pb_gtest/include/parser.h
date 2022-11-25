@@ -45,6 +45,8 @@ enum ValueType {
   VALUE_I,
   VALUE_L,
   VALUE_H,
+  VALUE_UI,
+  VALUE_UL,
   VALUE_RANDOM,
   VALUE_PATH,
   VALUE_INVALID,
@@ -236,6 +238,8 @@ class Parser {
   void getTensorValueF(const Tensor *pt, void *data, size_t count);
   void getTensorValueI(const Tensor *pt, void *data, size_t count);
   void getTensorValueL(const Tensor *pt, void *data, size_t count);
+  void getTensorValueUI(const Tensor *pt, void *data, size_t count);
+  void getTensorValueUL(const Tensor *pt, void *data, size_t count);
   void getTensorValueRandom(Tensor *pt, float *data, size_t count);
   void getTensorValueByFile(Tensor *pt, float *data, size_t count);
 
