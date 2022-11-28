@@ -31,11 +31,7 @@ fill_param: {
   value: 2147483649
 }
 test_param: {
-  error_func: DIFF1
-  error_func: DIFF2
   error_func: DIFF3
-  error_threshold: 0
-  error_threshold: 0
   error_threshold: 0
   baseline_device: CPU
 }

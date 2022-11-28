@@ -125,7 +125,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
       GEN_CASE_OP_PARAM_SINGLE(0, "fill", "value_hex", value_str);
       GEN_CASE_OP_PARAM_SINGLE(1, "fill", "version", 3);
       GEN_CASE_OP_PARAM_SINGLE(2, "fill", "mode", std::to_string(pointer_mode));
-      GEN_CASE_TEST_PARAM_NEW(true, true, true, 0, 0, 0);
+      GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
       free(value_host);
     } else {
       char value_str[21];
@@ -133,7 +133,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
       GEN_CASE_OP_PARAM_SINGLE(0, "fill", "value_hex", value_str);
       GEN_CASE_OP_PARAM_SINGLE(1, "fill", "version", 3);
       GEN_CASE_OP_PARAM_SINGLE(2, "fill", "mode", std::to_string(pointer_mode));
-      GEN_CASE_TEST_PARAM_NEW(true, true, true, 0, 0, 0);
+      GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
     }
   }
   // generate mluOpFill prototxt end!
