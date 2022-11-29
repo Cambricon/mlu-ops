@@ -3217,10 +3217,10 @@ typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
 // Group:Transpose
 /*!
  * @brief Creates a descriptor pointed by \b desc for a transpose operation,
- *        and allocated memory for holding the information about the transpose operation.
+ *        and allocates memory for holding the information about the transpose operation.
  *
  * The information is defined in ::mluOpTransposeDescriptor_t. For more information
- * about descriptor, see "Cambricon MLUOP user Guide".
+ * about descriptor, see "Cambricon BANGC OPS User Guide".
  *
  * @param[out] desc
  *   A host pointer to the transpose descriptor that holds information about
@@ -3247,7 +3247,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateTransposeDescriptor(mluOpTransposeDescrip
 // Group:Transpose
 /*!
  * @brief Initializes the transpose descriptor \b desc that is previously created
- * with the ::mluOpCreateTransposeDescriptor function, and set the information
+ * with the ::mluOpCreateTransposeDescriptor function, and sets the information
  * about the transpose operation to the transpose descriptor \b desc.
  * The information includes the permute dimensions \b dims and permute rules \b permute.
  *
@@ -3308,7 +3308,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyTransposeDescriptor(mluOpTransposeDescri
  *
  * The size of extra workspace is based on the given information of the transpose operation,
  * including the input tensor descriptor \b x_desc and transpose descriptor \b desc.
- * For more information about the workspace, see "Cambricon MLUOP User Guide".
+ * For more information about the workspace, see "Cambricon BANGC OPS User Guide".
  *
  * @param[in]  handle
  *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and
@@ -3375,7 +3375,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  *   Pointer to the MLU memory that is used as an extra workspace for the
  *   transpose operation. For more information about workspace,
- *   see "Cambricon MLUOP User Guide".
+ *   see "Cambricon BANGC OPS User Guide".
  * @param[in] workspace_size
  *   The size of the extra workspace in bytes that needs to be used in
  *   the transpose operation. You can get the size of the workspace with
@@ -3389,22 +3389,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  * - The dimension size of \b x, \b y and \b permute should be less than or equal to MLUOP_DIM_MAX.
  * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
  * - The \b y i-th dimension will correspond to \b x permute[i]-th dimension.
- * - The process of computing, the copy times of memcpy should be less than 65536.
  *
  * @par Formula
- * - See "Transpose Operator" section in "Cambricon MLUOP User Guide" for details.
+ * - See "Transpose Operator" section in "Cambricon BANGC OPS User Guide" for details.
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b x and
  *   output tensor \b y.
- *   <b>Note that the data type of input tensor and output tensor should be same.</b>
+ *   The data types of input tensor and output tensor should be the same.
  *   - input tensor: uint8, int8, uint16, int16, uint32, int31, int32, uint64, int64, bool, half,
  *     float, complex_half, complex_float.
  *   - output tensor: uint8, int8, uint16, int16, uint32, int31, int32, uint64, int64, bool, half,
  *     float, complex_half, complex_float.
  *
  * @par Data Layout
- * - The dimension of input tensor should be less than or equal to 8-dimension.
+ * - The dimension of input tensor should be less than or equal to 8.
 
  * @par API Dependency
  * - Before calling this function to implement transpose, you need to prepare
