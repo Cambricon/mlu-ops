@@ -134,7 +134,7 @@ file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
 bang_add_library(mluops SHARED ${core_src_files} ${src_files})
-target_link_libraries(mluops cnrt cndrv)
+target_link_libraries(mluops cnrt cndrv dl)
 target_link_libraries(mluops ${obj_files})
 set_target_properties(mluops PROPERTIES
   OUTPUT_NAME "mluops"
