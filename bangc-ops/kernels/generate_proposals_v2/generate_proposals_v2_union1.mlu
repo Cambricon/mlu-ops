@@ -23,6 +23,7 @@
 
 #include <float.h>
 
+#include "kernels/utils/common.h"
 #include "kernels/kernel.h"
 #include "mlu_op.h"
 #include "mlu_op_kernel.h"
@@ -336,6 +337,8 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   T global_max_value = FLOAT_MIN;
   T local_max_value = FLOAT_MIN;
 
+  const int align_write_num = CEIL_ALIGN(max_seg_num, ALIGN_NUM);
+  __bang_write_value(scores, align_write_num, FLOAT_MIN);
   for (int seg_id = 0; seg_id <= repeat; ++seg_id) {
     if (seg_id == repeat && remain_num == 0) {
       break;

@@ -96,6 +96,46 @@ bool isFile(std::string dir) {
   return false;
 }
 
+int str2int(const std::string src_str) {
+  int value_int = 0;
+  const char *value_char = src_str.c_str();
+  sscanf(value_char, "%x", &value_int);
+  return value_int;
+}
+
+int64_t str2long(const std::string src_str) {
+  int64_t value_int = 0;
+  const char *value_char = src_str.c_str();
+  sscanf(value_char, "%lx", &value_int);
+  return value_int;
+}
+
+void tensorHex2Int(mluoptest::Tensor *ts) {
+  if (ts->value_h_size()) {
+    if (ts->dtype() == mluoptest::DTYPE_DOUBLE) {
+      for (auto value = 0; value < ts->value_h_size(); value++) {
+        ts->add_value_l(str2long(ts->value_h(value)));
+      }
+    } else {
+      for (auto value = 0; value < ts->value_h_size(); value++) {
+        ts->add_value_i(str2int(ts->value_h(value)));
+      }
+    }
+    ts->clear_value_h();
+  }
+}
+
+void nodeHex2Int(mluoptest::Node *node) {
+  for (size_t i = 0; i < node->input_size(); ++i) {
+    mluoptest::Tensor *input_tensor = node->mutable_input(i);
+    tensorHex2Int(input_tensor);
+  }
+  for (size_t i = 0; i < node->output_size(); ++i) {
+    mluoptest::Tensor *output_tensor = node->mutable_output(i);
+    tensorHex2Int(output_tensor);
+  }
+}
+
 // read in prototxt
 bool readIn(const std::string &filename, google::protobuf::Message *proto) {
   size_t dot = filename.rfind(".");

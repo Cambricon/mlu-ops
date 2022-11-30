@@ -20,27 +20,34 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
+#include "mlu_op.h"
+#include "core/context.h"
+#include "core/logging.h"
+#include "core/runtime/device.h"
+#include "core/tensor.h"
+#include "core/type.h"
+#include "core/tool.h"
+#include "fill_ram.h"
 
-#include <vector>
+static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                       cnrtFunctionType_t *k_type) {
+#if TARGET_MLU_ARCH == 520
+  *k_type = CNRT_FUNC_TYPE_BLOCK;
+#else
+  *k_type = CNRT_FUNC_TYPE_UNION1;
+#endif
+  k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
+  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
+  k_dim->z = 1;
+}
 
-#include "executor.h"
-
-namespace mluoptest {
-
-class GenerateProposalsV2Executor : public Executor {
- public:
-  GenerateProposalsV2Executor() {}
-  ~GenerateProposalsV2Executor() { workspaceFree(); }
-  void paramCheck() override;
-  void compute() override;
-  void cpuCompute() override;
-  void workspaceMalloc() override;
-  void workspaceFree() override;
-  int64_t getTheoryOps() override;
-};
-
-}  // namespace mluoptest
-
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_ //NOLINT
+mluOpStatus_t mluOpFillRam(mluOpHandle_t handle, nram_value value) {
+  if (value == NO_FILL) {
+    return MLUOP_STATUS_SUCCESS;
+  }
+  cnrtDim3_t k_dim;
+  cnrtFunctionType_t k_type;
+  policyFunc(handle, &k_dim, &k_type);
+  KERNEL_CHECK((mluBlockFillRam(k_dim, k_type, handle->queue, value)));
+  return MLUOP_STATUS_SUCCESS;
+}
