@@ -72,6 +72,7 @@ enum EvaluationCriterion {
 enum MLUPlatform {
   MLU200 = 1;
   MLU370 = 2;
+  MLU590 = 4;
 }
 
 enum PointerMode {
@@ -142,6 +143,8 @@ message Node {
   optional double workspace_size                      = 18;
   repeated double threshold_rate                      = 21;   // determine the magnification of dynamic threshold
   repeated MLUPlatform supported_mlu_platform         = 22;
+
+  optional HandleParam handle_param                   = 23451;
 
   extensions 3000 to 4000;
 
