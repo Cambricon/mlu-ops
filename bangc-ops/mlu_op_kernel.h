@@ -226,6 +226,70 @@ void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
     const void *input, void *output, const int high_num, const int expand_num,
     const int low_num, const int dtype_size);
 
+/* Psamask */
+typedef enum {
+  COLLECT = 0,
+  DISTRIBUTE = 1,
+} psamaskType_t;
+
+typedef enum {
+  PARTITION_N = 0,
+  PARTITION_H = 1,
+} dimPartitionType_t;
+
+struct PartitionSeg {
+  int h_per_cluster;
+  int n_per_cluster;
+  int h_per_core;
+  int n_per_core;
+  dimPartitionType_t cluster_partition;
+  dimPartitionType_t core_partition;
+};
+
+struct Shape {
+  int n;
+  int h;
+  int w;
+  int c;
+};
+
+struct LimitParam {
+  int n;
+  int h;
+  int w;
+};
+
+struct PositionInCore {
+  int n_start;
+  int n_end;
+  int h_start;
+  int h_end;
+  int w_start;
+  int w_end;
+};
+
+void MLUOP_WIN_API mluOpUnion1KernelPsamaskForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *x, float *y, const psamaskType_t psa_type,
+    const dimPartitionType_t core_partition,
+    const dimPartitionType_t cluster_partition, const int batch,
+    const int h_feature, const int w_feature, const int h_mask,
+    const int w_mask, const int x_c, const int y_c, const int half_h_mask,
+    const int half_w_mask, const int n_per_core, const int h_per_core,
+    const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
+    const int limit_h_seg, const int limit_w_seg);
+
+void MLUOP_WIN_API mluOpUnion1KernelPsamaskBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *y, float *x, const psamaskType_t psa_type,
+    const dimPartitionType_t core_partition,
+    const dimPartitionType_t cluster_partition, const int batch,
+    const int h_feature, const int w_feature, const int h_mask,
+    const int w_mask, const int x_c, const int y_c, const int half_h_mask,
+    const int half_w_mask, const int n_per_core, const int h_per_core,
+    const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
+    const int limit_h_seg, const int limit_w_seg);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus
