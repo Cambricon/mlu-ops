@@ -95,6 +95,63 @@ bool isFile(std::string dir) {
   return false;
 }
 
+std::string int2str(const int src_int, const mluoptest::DataType dtype) {
+  // 9: size that float represented as hex, and add one '\0'
+  char value_char[9];
+  if (dtype == mluoptest::DTYPE_HALF) {
+    snprintf(value_char, sizeof(value_char), "%hx", src_int);
+  } else {
+    snprintf(value_char, sizeof(value_char), "%x", src_int);
+  }
+  return value_char;
+}
+
+std::string long2str(const int64_t src_int) {
+  char value_char[17];
+  snprintf(value_char, sizeof(value_char), "%lx", src_int);
+  return value_char;
+}
+
+bool isIntDtype(const mluoptest::Tensor *ts) {
+  return ts->dtype() == mluoptest::DTYPE_INT8 ||
+         ts->dtype() == mluoptest::DTYPE_INT16 ||
+         ts->dtype() == mluoptest::DTYPE_INT32 ||
+         ts->dtype() == mluoptest::DTYPE_INT64;
+}
+
+bool isBoolDtype(const mluoptest::Tensor *ts) {
+  return ts->dtype() == mluoptest::DTYPE_BOOL;
+}
+
+void tensorInt2Hex(mluoptest::Tensor *ts) {
+  // if dtype is int and save as value_i, no need change to value_h.
+  if (isIntDtype(ts) || isBoolDtype(ts)) {
+    return;
+  }
+  if (ts->value_i_size()) {
+    for (auto value = 0; value < ts->value_i_size(); value++) {
+      ts->add_value_h(int2str(ts->value_i(value), ts->dtype()));
+    }
+    ts->clear_value_i();
+  } else if (ts->value_l_size()) {
+    for (auto value = 0; value < ts->value_l_size(); value++) {
+      ts->add_value_h(long2str(ts->value_l(value)));
+    }
+    ts->clear_value_l();
+  }
+}
+
+void nodeInt2Hex(mluoptest::Node *node) {
+  for (size_t i = 0; i < node->input_size(); ++i) {
+    mluoptest::Tensor *input_tensor = node->mutable_input(i);
+    tensorInt2Hex(input_tensor);
+  }
+  for (size_t i = 0; i < node->output_size(); ++i) {
+    mluoptest::Tensor *output_tensor = node->mutable_output(i);
+    tensorInt2Hex(output_tensor);
+  }
+}
+
 // read in pb.
 bool readIn(const std::string &filename, google::protobuf::Message *proto) {
   std::string ext_pattern = ".pb";

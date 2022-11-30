@@ -26,7 +26,8 @@
 #include <vector>
 #include "case_collector.h"
 
-extern mluoptest::GlobalVar global_var;
+extern mluoptest::GlobalVar mluoptest::global_var;
+using mluoptest::global_var;
 
 Collector::Collector(const std::string &name) { op_name_ = name; }
 
