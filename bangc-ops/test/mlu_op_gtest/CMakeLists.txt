@@ -177,7 +177,7 @@ set_target_properties(mluop_api_gtest
   PROPERTIES
   INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
 )
-set(targets_mluop_gtest mluop_api_gtest)
+set(targets_mluop_api_gtest mluop_api_gtest)
 
 # pb to prototxt tool
 add_executable(pb2prototxt ${CMAKE_CURRENT_SOURCE_DIR}/tools/pb2prototxt.cpp)
@@ -188,8 +188,17 @@ set_target_properties(pb2prototxt prototxt2pb
   PROPERTIES
   INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
 )
-
+if (NOT CMAKE_INSTALL_MESSAGE)
+  set(CMAKE_INSTALL_MESSAGE NEVER) # LAZY: do not show `Up-to-date` info
+endif()
 install(TARGETS ${targets_mluop_gtest}
+  COMPONENT mluop_gtest
+  RUNTIME DESTINATION build/test
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(TARGETS ${targets_mluop_api_gtest}
   COMPONENT mluop_gtest
   RUNTIME DESTINATION build/test
   ARCHIVE DESTINATION lib${LIB_SUFFIX}
@@ -203,13 +212,17 @@ install(TARGETS pb2prototxt prototxt2pb mluop_test_proto gtest_shared
   LIBRARY DESTINATION lib${LIB_SUFFIX}
 )
 
-install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
-  "${CMAKE_CURRENT_LIST_DIR}/tools/search_case_v2.py"
-  "${CMAKE_CURRENT_LIST_DIR}/tools/watch_mem.bash"
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/gtest_config/test_list"
   COMPONENT mluop_gtest
-  DESTINATION test/mluop_gtest/tools
+  DESTINATION test/mlu_op_gtest/pb_gtest/gtest_config
 )
-set(CMAKE_INSTALL_MESSAGE LAZY) # do not show `Up-to-date` info
+# install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
+#   "${CMAKE_CURRENT_LIST_DIR}/tools/search_case_v2.py"
+#   "${CMAKE_CURRENT_LIST_DIR}/tools/watch_mem.bash"
+#   COMPONENT mluop_gtest
+#   DESTINATION test/mluop_gtest/tools
+# )
+
 install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/zoo"
   COMPONENT mluop_gtest
   DESTINATION test/mluop_gtest/pb_gtest/src

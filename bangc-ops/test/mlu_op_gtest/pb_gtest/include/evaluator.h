@@ -206,7 +206,8 @@ class Evaluator {
     Criterion() {}
     Criterion(Formula f, double t, bool e = true)
         : formula(f), threshold(t), enable(e) {}
-    Criterion(Formula f, double t, double ti, bool e = true) {}
+    Criterion(Formula f, double t, double ti, bool e = true)
+        : formula(f), threshold(t), threshold_imag(ti), enable(e) {}
     Criterion &operator=(const Criterion &c) {
       this->formula = c.formula;
       this->threshold = c.threshold;
@@ -286,8 +287,8 @@ class Evaluator {
     }
     for (size_t i = 0; i < count_total_; ++i) {
       if (isNanOrInf(a[i]) || isNanOrInf(b[i])) {
-        skip_compute_diff_ = false;
-        bool has_nan_inf = false;
+        skip_compute_diff_ = true;
+        bool has_nan_inf = true;
         if (!((std::isnan(a[i]) && std::isnan(b[i])) || (a[i] == b[i]))) {
           LOG(ERROR) << "Found NaN or Inf, but mlu is not equal to baseline,"
                      << " return DBL_MAX instead."
