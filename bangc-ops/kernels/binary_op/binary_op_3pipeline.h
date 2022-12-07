@@ -24,6 +24,7 @@
 #define KERNELS_BINARY_OP_BINARY_OP_3PIPELINE_H_
 
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 #define BINARY_ALIGN_NUM 64
 
 #define BINARY_OP_3PIPELINE_DECLARE(Op, Dtype, Prefer)                 \
