@@ -288,7 +288,7 @@ class Evaluator {
     for (size_t i = 0; i < count_total_; ++i) {
       if (isNanOrInf(a[i]) || isNanOrInf(b[i])) {
         skip_compute_diff_ = true;
-        bool has_nan_inf = true;
+        has_nan_inf = true;
         if (!((std::isnan(a[i]) && std::isnan(b[i])) || (a[i] == b[i]))) {
           LOG(ERROR) << "Found NaN or Inf, but mlu is not equal to baseline,"
                      << " return DBL_MAX instead."
@@ -298,6 +298,7 @@ class Evaluator {
         }
       }
     }
+
     if (has_nan_inf) {
       nan_inf_pass_ = true;
     }

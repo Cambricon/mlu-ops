@@ -26,8 +26,6 @@
 #include <mlu.h>
 #endif
 
-#define WRAM_LT_STRIDE (__MLU_WRAM_SIZE__ * 1024 / 64)
-#define LT_NUM 64
 #define FILL_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 4096)
 #define FILL_SRAM_SIZE (MAX_SRAM_SIZE + REM_FOR_STACK - 4096)
 #define ONCE_WRAM (256 * 1024)

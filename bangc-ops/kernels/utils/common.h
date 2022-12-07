@@ -338,4 +338,20 @@ __mlu_func__ void __float2int32(int32_t *dst, float *dst_addition, float *src,
 #endif
 }
 
+__mlu_func__ void pvLock() {
+#if __BANG_ARCH__ == 270
+  if (coreId != 0x80) {
+    __bang_lock(0, 0);
+  }
+#endif
+}
+
+__mlu_func__ void pvUnlock() {
+#if __BANG_ARCH__ == 270
+  if (coreId != 0x80) {
+    __bang_unlock(0, 0);
+  }
+#endif
+}
+
 #endif  // KERNELS_UTILS__COMMON_H_
