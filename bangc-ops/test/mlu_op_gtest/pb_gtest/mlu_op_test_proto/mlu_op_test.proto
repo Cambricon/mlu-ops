@@ -218,7 +218,7 @@ message Node {
   optional FillParam       fill_param                   = 4007;  // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
   optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
-
+  optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
 }
 
 
@@ -398,4 +398,12 @@ message PsamaskBackwardParam {
   required int32 h_mask = 1;
   required int32 w_mask = 2;
   required int32 psa_type = 3;
+}
+
+// param to call mluOpVoxelization()
+message VoxelizationParam {
+  optional int32 max_points   = 1 [default = 35];
+  optional int32 max_voxels   = 2 [default = 20000];
+  optional int32 ndim         = 3 [default = 3];
+  optional bool deterministic = 4 [default = true];
 }
