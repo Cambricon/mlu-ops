@@ -97,20 +97,12 @@ __mlu_func__ void computeDynamicVoxelize(
              (int32_t *)auxiliary_b, deal_num);
   __bang_not((int32_t *)auxiliary_c, (int32_t *)auxiliary_a, deal_num);
 
-  __bang_mul((int32_t *)points_x, (int32_t *)points_x, (int32_t *)auxiliary_a,
-             deal_num);
   __bang_mul_scalar((int32_t *)auxiliary_b, (int32_t *)auxiliary_c,
                     (int32_t)(-1), deal_num);
-  __bang_add((int32_t *)points_x, (int32_t *)points_x, (int32_t *)auxiliary_b,
-             deal_num);
-  __bang_mul((int32_t *)points_y, (int32_t *)points_y, (int32_t *)auxiliary_a,
-             deal_num);
-  __bang_add((int32_t *)points_y, (int32_t *)points_y, (int32_t *)auxiliary_b,
-             deal_num);
-  __bang_mul((int32_t *)points_z, (int32_t *)points_z, (int32_t *)auxiliary_a,
-             deal_num);
-  __bang_add((int32_t *)points_z, (int32_t *)points_z, (int32_t *)auxiliary_b,
-             deal_num);
+  __bang_cycle_mul((int32_t *)points_x, (int32_t *)points_x, (int32_t *)auxiliary_a,
+                   deal_num * 3, 3);
+  __bang_cycle_mul((int32_t *)points_x, (int32_t *)points_x, (int32_t *)auxiliary_b,
+                   deal_num * 3, 3);
 }
 
 __mlu_func__ void computePoint2Voxel(char *coors_x, char *coors_y,
