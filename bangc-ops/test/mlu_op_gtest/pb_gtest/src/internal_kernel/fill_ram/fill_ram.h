@@ -20,27 +20,24 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
 
-#include <vector>
+#include "mlu_op.h"
+#include "core/tensor.h"
+#include "kernels/kernel.h"
 
-#include "executor.h"
-
-namespace mluoptest {
-
-class GenerateProposalsV2Executor : public Executor {
- public:
-  GenerateProposalsV2Executor() {}
-  ~GenerateProposalsV2Executor() { workspaceFree(); }
-  void paramCheck() override;
-  void compute() override;
-  void cpuCompute() override;
-  void workspaceMalloc() override;
-  void workspaceFree() override;
-  int64_t getTheoryOps() override;
+enum nram_value {
+  NAN_HALF = 0,
+  NAN_FLOAT = 1,
+  INF_HALF = 2,
+  INF_FLOAT = 3,
+  NO_FILL = 4
 };
 
-}  // namespace mluoptest
+void mluBlockFillRam(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                     cnrtQueue_t queue, nram_value value);
 
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_ //NOLINT
+mluOpStatus_t mluOpFillRam(mluOpHandle_t handle, nram_value value);
+
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_

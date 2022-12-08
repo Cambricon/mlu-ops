@@ -20,27 +20,18 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
+#ifndef CORE_MLU_ENV_H_
+#define CORE_MLU_ENV_H_
 
-#include <vector>
+#include <sys/syscall.h>
+#include "core/tool.h"
 
-#include "executor.h"
+// macro function for user
+#define IS_TF32_OVERRIDE (mluop::mlu_env::getCambriconTF32Override() > 0)
 
-namespace mluoptest {
-
-class GenerateProposalsV2Executor : public Executor {
- public:
-  GenerateProposalsV2Executor() {}
-  ~GenerateProposalsV2Executor() { workspaceFree(); }
-  void paramCheck() override;
-  void compute() override;
-  void cpuCompute() override;
-  void workspaceMalloc() override;
-  void workspaceFree() override;
-  int64_t getTheoryOps() override;
-};
-
-}  // namespace mluoptest
-
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_ //NOLINT
+namespace mluop {
+namespace mlu_env {
+int getCambriconTF32Override();
+}  // namespace mlu_env
+}  // namespace mluop
+#endif  // CORE_MLU_ENV_H_

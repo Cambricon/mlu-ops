@@ -20,27 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_
 
-#include <vector>
+#ifndef MLU_OP_TEST_CASE_H_
+#define MLU_OP_TEST_CASE_H_
+#include <string>
+#include <map>
 
-#include "executor.h"
+std::map<std::string, std::string> mlu_op_test_case = {
+    {"default", "MLUOPS-CORE-0000"}};
 
-namespace mluoptest {
-
-class GenerateProposalsV2Executor : public Executor {
- public:
-  GenerateProposalsV2Executor() {}
-  ~GenerateProposalsV2Executor() { workspaceFree(); }
-  void paramCheck() override;
-  void compute() override;
-  void cpuCompute() override;
-  void workspaceMalloc() override;
-  void workspaceFree() override;
-  int64_t getTheoryOps() override;
-};
-
-}  // namespace mluoptest
-
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_ //NOLINT
+#endif  // MLU_OP_TEST_CASE_H_

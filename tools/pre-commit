@@ -6,13 +6,18 @@ bangc_check_list=${bangc_ops}
 bangpy_check_list=${bangpy_ops}
 
 bangc_mlu_op_h="bangc-ops/mlu_op.h"
+bangc_gtest_json_file="jsoncppDist/"
+
+bangc_exclude_list=${bangc_gtest_json_file}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
+    | grep -v ${bangc_exclude_list} \
     | grep -E ${bangc_check_list})
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
+    | grep -v ${bangc_exclude_list} \
     | grep -E ${bangc_check_list})
 fi
 
