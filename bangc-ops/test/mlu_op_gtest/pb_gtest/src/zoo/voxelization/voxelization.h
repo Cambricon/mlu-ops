@@ -39,9 +39,9 @@ class VoxelizationExecutor : public Executor {
   void workspaceFree() override;
   int64_t getTheoryIoSize() override;
   int64_t getTheoryOps() override;
-  size_t workspace_size = 0;
 
  private:
+  size_t workspace_size = 0;
   void deterministic_hard_voxelize(
       const float *points, const float *voxel_size, const float *coors_range,
       const int32_t num_points, const int32_t num_features,
