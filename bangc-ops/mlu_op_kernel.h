@@ -148,6 +148,14 @@ void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     const bool min_max_aspect_ratios_order, void *output, const int output_size,
     void *var, const int var_size);
 
+/* VoxelPooling */
+void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int num_points, const int num_channels,
+    const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
+    const void *geom_xyz, const void *input_features, void *output_features,
+    void *pos_memo);
+
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

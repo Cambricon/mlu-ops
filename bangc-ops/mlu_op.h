@@ -2657,6 +2657,104 @@ mluOpYoloBox(mluOpHandle_t handle,
              const mluOpTensorDescriptor_t scores_desc,
              void *scores);
 
+// Group:VoxelPooling
+/*!
+ * @brief Computes bounding box information from the backbone output of the
+ * detected network.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the voxel_pooling_forward operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] batch_size
+ * The number of the batch size.
+ * @param[in] num_points
+ * The number of voxels.
+ * @param[in] num_channels
+ * The number of channels for voxel features.
+ * @param[in] num_voxel_x
+ * The number of voxels for dimX.
+ * @param[in] num_voxel_y
+ * The number of voxels for dimY.
+ * @param[in] num_voxel_z
+ * The number of voxels for dimZ.
+ * @param[in] geom_xyz_desc
+ * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] geom_xyz
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] input_features_desc
+ * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input_features
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] output_features_desc
+ * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output_features
+ * Pointer to the MLU memory that stores the output tensor.
+ * @param[in] pos_memo_desc
+ * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] pos_memo
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *
+ *   - geom_xyz tensor: int.
+ *   - input_features tensor: float.
+ *   - output_features tensor: float.
+ *   - pos_memo tensor: int.
+ *
+ * @par Data Layout
+ *  - The supported data layouts of \b geom_xyz, \b input_features, \b output_features and \b pos_memo are
+ *    as follows:
+ *
+ *   - Input tensor:
+ *     - geom_xyz tensor: \p MLUOP_LAYOUT_ARRAY.
+ *     - input_features tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - Output tensor:
+ *     - output_features tensor: \p MLUOP_LAYOUT_ARRAY.
+ *     - pos_memo tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ *  @par Scale Limitation
+ *  - The geom_xyz tensor, input_features tensor and pos_memo tensor must be 3D.
+ *  - The output_features tensor must be 4D.
+ *  - The shape of \b geom_xyz should be [batch_size, num_points, 3].
+ *  - The shape of \b input_features should be [batch_size, num_points, num_channels].
+ *  - The shape of \b output_features should be [batch_size, num_voxel_y, num_voxel_x, num_channels].
+ *  - The shape of \b pos_memo should be [batch_size, num_points, 3].
+ *  - The \b batch_size, \b num_points, \b num_channels, \b num_voxel_x and \b num_voxel_y should be larger than zero.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ *
+ *  @par Note
+ *  - The operator does not support MLU200 series.
+ *  - You need to set the initial value for the output \b pos_memo before calling the operator, and initialize it to a negative number.
+ *
+ * @par Reference
+ * - https://github.com/Megvii-BaseDetection/BEVDepth/blob/main/bevdepth/ops/voxel_pooling/src/voxel_pooling_forward_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(mluOpHandle_t handle,
+                                                     const int batch_size,
+                                                     const int num_points,
+                                                     const int num_channels,
+                                                     const int num_voxel_x,
+                                                     const int num_voxel_y,
+                                                     const int num_voxel_z,
+                                                     const mluOpTensorDescriptor_t geom_xyz_desc,
+                                                     const void *geom_xyz,
+                                                     const mluOpTensorDescriptor_t input_features_desc,
+                                                     const void *input_features,
+                                                     const mluOpTensorDescriptor_t output_features_desc,
+                                                     void *output_features,
+                                                     const mluOpTensorDescriptor_t pos_memo_desc,
+                                                     void *pos_memo);
+
 // Group: ThreeInterpolate
 /*!
  * @brief Computes weighted linear interpolation on 3 points by using
@@ -3001,7 +3099,7 @@ mluOpExpand(mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
- * 
+ *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -3045,12 +3143,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(
  * \b w_mask and \b psa_type.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and 
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
  * queues in the ::mluOpPsamaskForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] psa_type
  * Type of the psamask computation, including COLLECT and DISTRIBUTE.
  * @param[in] x_desc
- * The descriptor of data of input tensor. For detailed information, 
+ * The descriptor of data of input tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the data of input tensor.

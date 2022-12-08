@@ -131,8 +131,8 @@ message Tensor {
   optional DataType onchip_dtype  = 13;
 
   optional int32 position         = 5;
-  optional float scale            = 6;     
-  optional int32 offset           = 14;    
+  optional float scale            = 6;
+  optional int32 offset           = 14;
 
   // data
   repeated float value_f          = 7;
@@ -214,6 +214,7 @@ message Node {
   optional PolyNmsParam poly_nms_param                          = 4010;   // PolyNmsParam
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
+  optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 4007;  // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
@@ -269,7 +270,7 @@ message TestParam {
   repeated EvaluationCriterion error_func = 1;
   repeated double error_threshold         = 2;
   repeated double error_threshold_imag    = 3;
-  
+
   optional double latency                 = 5;    //   latency
   optional double efficiency              = 6;    //   efficiency
   optional Device baseline_device         = 7;
@@ -314,8 +315,8 @@ message DivParam {
   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
 }
 
- // param to call mluOpGenerateProposalsV2()
- message GenerateProposalsV2Param {
+// param to call mluOpGenerateProposalsV2()
+message GenerateProposalsV2Param {
   optional int32 pre_nms_top_n = 1 [default = 6000];
   optional int32 post_nms_top_n = 2 [default = 2000];
   optional float nms_thresh = 3 [default = 0.5];
@@ -358,6 +359,16 @@ message PriorBoxParam {
   required float step_h                     = 8 [default = 0.0];
   required float offset                     = 9 [default = 0.5];
   required bool min_max_aspect_ratios_order = 10 [default = true];
+}
+
+// param to call mluOpVoxelPoolingForward()
+message VoxelPoolingForwardParam {
+  optional int32 batch_size   = 1;
+  optional int32 num_points   = 2;
+  optional int32 num_channels = 3;
+  optional int32 num_voxel_x  = 4;
+  optional int32 num_voxel_y  = 5;
+  optional int32 num_voxel_z  = 6;
 }
 
 // param to call mluOpYoloBox()
