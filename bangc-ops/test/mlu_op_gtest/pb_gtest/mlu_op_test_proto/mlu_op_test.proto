@@ -131,8 +131,8 @@ message Tensor {
   optional DataType onchip_dtype  = 13;
 
   optional int32 position         = 5;
-  optional float scale            = 6;     
-  optional int32 offset           = 14;    
+  optional float scale            = 6;
+  optional int32 offset           = 14;
 
   // data
   repeated float value_f          = 7;
@@ -269,7 +269,7 @@ message TestParam {
   repeated EvaluationCriterion error_func = 1;
   repeated double error_threshold         = 2;
   repeated double error_threshold_imag    = 3;
-  
+
   optional double latency                 = 5;    //   latency
   optional double efficiency              = 6;    //   efficiency
   optional Device baseline_device         = 7;
@@ -302,7 +302,7 @@ enum mluOpLogBase {
 // param to call mluOpLog()
 message LogParam {
   required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
-  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];     
+  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];
 }
 
 // param to call mluOpSqrt()
