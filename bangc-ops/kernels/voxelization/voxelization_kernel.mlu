@@ -99,10 +99,10 @@ __mlu_func__ void computeDynamicVoxelize(
 
   __bang_mul_scalar((int32_t *)auxiliary_b, (int32_t *)auxiliary_c,
                     (int32_t)(-1), deal_num);
-  __bang_cycle_mul((int32_t *)points_x, (int32_t *)points_x, (int32_t *)auxiliary_a,
-                   deal_num * 3, deal_num);
-  __bang_cycle_add((int32_t *)points_x, (int32_t *)points_x, (int32_t *)auxiliary_b,
-                   deal_num * 3, deal_num);
+  __bang_cycle_mul((int32_t *)points_x, (int32_t *)points_x,
+                   (int32_t *)auxiliary_a, deal_num * 3, deal_num);
+  __bang_cycle_add((int32_t *)points_x, (int32_t *)points_x,
+                   (int32_t *)auxiliary_b, deal_num * 3, deal_num);
 }
 
 __mlu_func__ void computePoint2Voxel(char *coors_x, char *coors_y,
@@ -142,9 +142,8 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
   }
 
   int32_t points_rem = num_points % taskDim;
-  int32_t points_per_core = taskId < points_rem
-                                ? num_points / taskDim + 1
-                                : num_points / taskDim;
+  int32_t points_per_core =
+      taskId < points_rem ? num_points / taskDim + 1 : num_points / taskDim;
   int32_t points_start = taskId < points_rem
                              ? taskId * points_per_core
                              : taskId * points_per_core + points_rem;

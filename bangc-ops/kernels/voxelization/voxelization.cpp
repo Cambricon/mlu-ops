@@ -144,10 +144,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(
   PARAM_CHECK("[mluOpGetVoxelizationWorkspaceSize]", size != NULL);
 
   // check params
-  mluOpStatus_t paramcheck_status =
-      voxelizationParamCheck(handle, points_desc, voxel_size_desc, coors_range_desc,
-                             max_points, max_voxels, NDim, deterministic, voxels_desc,
-                             coors_desc, num_points_per_voxel_desc, voxel_num_desc);
+  mluOpStatus_t paramcheck_status = voxelizationParamCheck(
+      handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
+      max_voxels, NDim, deterministic, voxels_desc, coors_desc,
+      num_points_per_voxel_desc, voxel_num_desc);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
@@ -221,10 +221,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   PARAM_CHECK("[mluOpVoxelization]", voxel_num_desc != NULL);
 
   // check params
-  mluOpStatus_t paramcheck_status =
-      voxelizationParamCheck(handle, points_desc, voxel_size_desc, coors_range_desc,
-                             max_points, max_voxels, NDim, deterministic, voxels_desc,
-                             coors_desc, num_points_per_voxel_desc, voxel_num_desc);
+  mluOpStatus_t paramcheck_status = voxelizationParamCheck(
+      handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
+      max_voxels, NDim, deterministic, voxels_desc, coors_desc,
+      num_points_per_voxel_desc, voxel_num_desc);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
