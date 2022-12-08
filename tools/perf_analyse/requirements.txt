@@ -1,0 +1,11 @@
+pandas
+openpyxl
+xlsxwriter
+sqlalchemy
+protobuf==3.17.0
+tqdm
+matplotlib
+pymysql==0.9.3
+xlwt
+xlrd
+xlutils
