@@ -149,13 +149,13 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
     return;
   }
 
-  int32_t points_per_core = num_points / taskDim;
   int32_t points_rem = num_points % taskDim;
+  int32_t points_per_core = taskId < points_rem
+                                ? num_points / taskDim + 1
+                                : num_points / taskDim;
   int32_t points_start = taskId < points_rem
-                             ? taskId * (points_per_core + 1)
+                             ? taskId * points_per_core
                              : taskId * points_per_core + points_rem;
-  int32_t points_end = taskId < points_rem ? points_start + points_per_core + 1
-                                           : points_start + points_per_core;
 
   float *voxel_size = (float *)nram_buffer;
   float *coors_range = (float *)(nram_buffer + 3 * sizeof(float));
@@ -179,9 +179,8 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
   int32_t split_num = 9;
   int32_t deal_num =
       FLOOR_ALIGN(MAX_NRAM_SIZE / split_num / sizeof(float), NFU_ALIGN_SIZE);
-  int32_t deal_total_num = points_end - points_start;
-  int32_t repeat = deal_total_num / deal_num;
-  int32_t rem = deal_total_num % deal_num;
+  int32_t repeat = points_per_core / deal_num;
+  int32_t rem = points_per_core % deal_num;
   int32_t ping_pong_gap = 3 * deal_num * sizeof(float);
 
   char *points_x = nram_buffer;
