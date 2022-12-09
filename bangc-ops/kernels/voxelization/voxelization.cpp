@@ -60,12 +60,13 @@ mluOpStatus_t voxelizationParamCheck(
     const mluOpTensorDescriptor_t voxels_desc,
     const mluOpTensorDescriptor_t coors_desc,
     const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-    const mluOpTensorDescriptor_t voxel_num_desc) {
+    const mluOpTensorDescriptor_t voxel_num_desc, bool is_zero_element) {
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << "[mluOpVoxelization] The operator does not match the current "
-                  "architecture.";
-    return MLUOP_STATUS_ARCH_MISMATCH;
+    LOG(ERROR) << "[mluOpVoxelization] The operator only support platform which
+                  handle->arch >=
+        372. ";
+        return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
   if (deterministic == true) {
@@ -97,8 +98,6 @@ mluOpStatus_t voxelizationParamCheck(
     PARAM_CHECK_EQ("[mluOpVoxelization]", voxel_num_desc->dims[0], 1);
 
     // check params
-    PARAM_CHECK("[mluOpVoxelization]", max_points >= 0);
-    PARAM_CHECK("[mluOpVoxelization]", max_voxels >= 0);
     PARAM_CHECK_EQ("[mluOpVoxelization]", NDim, 3);
 
     // check tensor datatype
@@ -113,6 +112,41 @@ mluOpStatus_t voxelizationParamCheck(
                 num_points_per_voxel_desc->dtype == MLUOP_DTYPE_INT32);
     PARAM_CHECK("[mluOpVoxelization]",
                 voxel_num_desc->dtype == MLUOP_DTYPE_INT32);
+
+    size_t points_element_num = mluOpGetTensorElementNum(points_desc);
+    size_t voxel_size_element_num = mluOpGetTensorElementNum(voxel_size_desc);
+    size_t coors_range_element_num = mluOpGetTensorElementNum(coors_range_desc);
+    size_t voxels_element_num = mluOpGetTensorElementNum(voxels_desc);
+    size_t coors_element_num = mluOpGetTensorElementNum(coors_desc);
+    size_t num_points_per_voxel_element_num =
+        mluOpGetTensorElementNum(num_points_per_voxel_desc);
+    size_t voxel_num_element_num = mluOpGetTensorElementNum(voxel_num_desc);
+
+    // check large tensor
+    if (points_element_num >= LARGE_TENSOR_NUM ||
+        voxel_size_element_num >= LARGE_TENSOR_NUM ||
+        coors_range_element_num >= LARGE_TENSOR_NUM ||
+        voxels_element_num >= LARGE_TENSOR_NUM ||
+        coors_element_num >= LARGE_TENSOR_NUM ||
+        num_points_per_voxel_element_num >= LARGE_TENSOR_NUM ||
+        voxel_num_element_num >= LARGE_TENSOR_NUM) {
+      LOG(ERROR) << "[mluOpVoxelization] Overflow max tensor num."
+                 << "Currently, MLU-OPS supports tensor num smaller than 2^31.";
+      return MLUOP_STATUS_NOT_SUPPORTED;
+    }
+
+    // check element num zero
+    is_zero_element = false;
+    if (points_element_num == 0 || voxel_size_element_num == 0 ||
+        coors_range_element_num == 0) {
+      LOG(ERROR)
+          << "[mluOpVoxelization] Check failed: Input zero element tensor.";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+
+    if (max_points == 0 || max_voxels == 0) {
+      is_zero_element = true;
+    }
   } else {
     VLOG(5) << "[mluOpVoxelization] Currently, Non-deterministic mode not "
                "supported.";
@@ -144,45 +178,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(
   PARAM_CHECK("[mluOpGetVoxelizationWorkspaceSize]", size != NULL);
 
   // check params
+  bool is_zero_element = false;
   mluOpStatus_t paramcheck_status = voxelizationParamCheck(
       handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
       max_voxels, NDim, deterministic, voxels_desc, coors_desc,
-      num_points_per_voxel_desc, voxel_num_desc);
+      num_points_per_voxel_desc, voxel_num_desc, is_zero_element);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
 
-  size_t points_element_num = mluOpGetTensorElementNum(points_desc);
-  size_t voxel_size_element_num = mluOpGetTensorElementNum(voxel_size_desc);
-  size_t coors_range_element_num = mluOpGetTensorElementNum(coors_range_desc);
-  size_t voxels_element_num = mluOpGetTensorElementNum(voxels_desc);
-  size_t coors_element_num = mluOpGetTensorElementNum(coors_desc);
-  size_t num_points_per_voxel_element_num =
-      mluOpGetTensorElementNum(num_points_per_voxel_desc);
-  size_t voxel_num_element_num = mluOpGetTensorElementNum(voxel_num_desc);
-
-  // check large tensor
-  if (points_element_num >= LARGE_TENSOR_NUM ||
-      voxel_size_element_num >= LARGE_TENSOR_NUM ||
-      coors_range_element_num >= LARGE_TENSOR_NUM ||
-      voxels_element_num >= LARGE_TENSOR_NUM ||
-      coors_element_num >= LARGE_TENSOR_NUM ||
-      num_points_per_voxel_element_num >= LARGE_TENSOR_NUM ||
-      voxel_num_element_num >= LARGE_TENSOR_NUM) {
-    LOG(ERROR) << "[mluOpVoxelization] Overflow max tensor num."
-               << "Currently, MLU-OPS supports tensor num smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
-
-  // check element num zero
-  if (points_element_num == 0 || voxel_size_element_num == 0 ||
-      coors_range_element_num == 0) {
-    LOG(ERROR)
-        << "[mluOpVoxelization] Check failed: Input zero element tensor.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
-
-  if (max_points == 0 || max_voxels == 0) {
+  if (is_zero_element == true) {
     VLOG(5) << "[mluOpVoxelization] Skip output zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -221,10 +226,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   PARAM_CHECK("[mluOpVoxelization]", voxel_num_desc != NULL);
 
   // check params
+  bool is_zero_element = false;
   mluOpStatus_t paramcheck_status = voxelizationParamCheck(
       handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
       max_voxels, NDim, deterministic, voxels_desc, coors_desc,
-      num_points_per_voxel_desc, voxel_num_desc);
+      num_points_per_voxel_desc, voxel_num_desc, is_zero_element);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
@@ -234,37 +240,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
     PARAM_CHECK("[mluOpVoxelization]", workspace != NULL);
   }
 
-  size_t points_element_num = mluOpGetTensorElementNum(points_desc);
-  size_t voxel_size_element_num = mluOpGetTensorElementNum(voxel_size_desc);
-  size_t coors_range_element_num = mluOpGetTensorElementNum(coors_range_desc);
-  size_t voxels_element_num = mluOpGetTensorElementNum(voxels_desc);
-  size_t coors_element_num = mluOpGetTensorElementNum(coors_desc);
-  size_t num_points_per_voxel_element_num =
-      mluOpGetTensorElementNum(num_points_per_voxel_desc);
-  size_t voxel_num_element_num = mluOpGetTensorElementNum(voxel_num_desc);
-
-  // check large tensor
-  if (points_element_num >= LARGE_TENSOR_NUM ||
-      voxel_size_element_num >= LARGE_TENSOR_NUM ||
-      coors_range_element_num >= LARGE_TENSOR_NUM ||
-      voxels_element_num >= LARGE_TENSOR_NUM ||
-      coors_element_num >= LARGE_TENSOR_NUM ||
-      num_points_per_voxel_element_num >= LARGE_TENSOR_NUM ||
-      voxel_num_element_num >= LARGE_TENSOR_NUM) {
-    LOG(ERROR) << "[mluOpVoxelization] Overflow max tensor num."
-               << "Currently, MLU-OPS supports tensor num smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
-
-  // check element num zero
-  if (points_element_num == 0 || voxel_size_element_num == 0 ||
-      coors_range_element_num == 0) {
-    LOG(ERROR)
-        << "[mluOpVoxelization] Check failed: Input zero element tensor.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
-
-  if (max_points == 0 || max_voxels == 0) {
+  if (is_zero_element == true) {
     VLOG(5) << "[mluOpVoxelization] Skip output zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
