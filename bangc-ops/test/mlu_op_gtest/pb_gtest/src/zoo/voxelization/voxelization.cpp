@@ -56,12 +56,12 @@ void VoxelizationExecutor::workspaceMalloc() {
   MLUOP_CHECK(mluOpGetVoxelizationWorkspaceSize(
       handle_, tensor_points, tensor_voxel_size, tensor_coors_range, max_points,
       max_voxels, NDim, deterministic, tensor_voxels, tensor_coors,
-      tensor_num_points_per_voxel, tensor_voxel_num, &workspace_size));
-  if (workspace_size) {
-    workspace_ptr = mlu_runtime_.allocate(workspace_size);
+      tensor_num_points_per_voxel, tensor_voxel_num, &workspace_size_));
+  if (workspace_size_) {
+    workspace_ptr = mlu_runtime_.allocate(workspace_size_);
   }
   workspace_.push_back(workspace_ptr);
-  eva_->setMluWorkspaceSize(workspace_size);
+  eva_->setMluWorkspaceSize(workspace_size_);
   VLOG(4) << "[VoxelizationExecutor] call workspaceMalloc() End.";
 }
 
@@ -96,7 +96,7 @@ void VoxelizationExecutor::compute() {
   MLUOP_CHECK(mluOpVoxelization(
       handle_, tensor_points, dev_points, tensor_voxel_size, dev_voxel_size,
       tensor_coors_range, dev_coors_range, max_points, max_voxels, NDim,
-      deterministic, workspace_[0], workspace_size, tensor_voxels, dev_voxels,
+      deterministic, workspace_[0], workspace_size_, tensor_voxels, dev_voxels,
       tensor_coors, dev_coors, tensor_num_points_per_voxel,
       dev_num_points_per_voxel, tensor_voxel_num, dev_voxel_num));
   interface_timer_.stop();
