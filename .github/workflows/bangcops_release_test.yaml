@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         runner: [mlu270-x5k, mlu290-m5, mlu370-m8]
-        os: [ubuntu16.04, ubuntu18.04, ubuntu20.04, debian9, debian10, centos7, centos8]
+        os: [ubuntu18.04, ubuntu20.04, debian9, debian10, centos7, centos8]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
