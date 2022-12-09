@@ -298,6 +298,29 @@ void MLUOP_WIN_API mluOpUnion1KernelPsamaskBackwardFloat(
     const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
     const int limit_h_seg, const int limit_w_seg);
 
+/* voxelization */
+void MLUOP_WIN_API mluOpUnionKernelDynamicVoxelize(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *points, const void *voxel_size, const void *coors_range,
+    void *coors, const int32_t num_points, const int32_t num_features);
+
+void MLUOP_WIN_API mluOpUnionKernelPoint2Voxel(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *coors,
+    void *point_to_pointidx, void *point_to_voxelidx, const int32_t num_points,
+    const int32_t max_points);
+
+void MLUOP_WIN_API mluOpUnionKernelCalcPointsPerVoxel(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *point_to_pointidx, void *point_to_voxelidx, void *coor_to_voxelidx,
+    void *num_points_per_voxel, void *voxel_num, const int32_t max_voxels,
+    const int32_t num_points);
+
+void MLUOP_WIN_API mluOpUnionKernelAssignVoxelsCoors(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *points, void *temp_coors, void *point_to_voxelidx,
+    void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,
+    const int32_t num_points, const int32_t num_features);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus

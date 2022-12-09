@@ -16,6 +16,7 @@ psroipool = ["fill_zero"]
 roi_crop = ["fill_zero"]
 sqrt = ["binary_op", "unary_op"]
 tensor_stride_process = ["copy"]
+voxelization = ["fill_zero"]
 yolo_box = ["fill_zero"]
 
 

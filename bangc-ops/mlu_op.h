@@ -2550,6 +2550,163 @@ mluOpSqrtBackward(mluOpHandle_t handle,
                   const mluOpTensorDescriptor_t dx_desc,
                   void *diff_x);
 
+// Group:Voxelization
+/*!
+ * @brief Gets extra space size that is needed in voxelization operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the voxelization operation.
+ * @param[in] points_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] voxel_size_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] coors_range_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] max_points
+ * An integer value which is the maximum number of points contained
+ * in a voxel.
+ * @param[in] max_voxels
+ * An integer value which is the maximum number of voxels this
+ * function create.
+ * @param[in] NDim
+ * An integer value which is the second dimension of coors.
+ * @param[in] deterministic
+ * A bool value whether to invoke the non-deterministic
+ * version of hard-voxelization implementations. Currently,
+ * non-deterministic mode is not supported.
+ * @param[in] voxels_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] coors_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] num_points_per_voxel_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] voxel_num_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ *  @param[out] size
+ *  A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *    ::MLUOP_STATUS_NOT_SUPPORTED.
+ */
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t points_desc,
+    const mluOpTensorDescriptor_t voxel_size_desc,
+    const mluOpTensorDescriptor_t coors_range_desc, const int32_t max_points,
+    const int32_t max_voxels, const int32_t NDim, const bool deterministic,
+    const mluOpTensorDescriptor_t voxels_desc,
+    const mluOpTensorDescriptor_t coors_desc,
+    const mluOpTensorDescriptor_t num_points_per_voxel_desc,
+    const mluOpTensorDescriptor_t voxel_num_desc, size_t *size);
+
+// Group:Voxelization
+/*!
+ * @brief Generates voxelization of input tensor \b points. Output tensor
+ * \b voxels contains points in voxels; \b coors is the voxel coordinates;
+ * \b num_points_per_voxel is the number of points per voxel; \b voxel_num
+ * is the number of voxels.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the voxelization operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] points_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] points
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] voxel_size_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] voxel_size
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] coors_range_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] coors_range
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] max_points
+ * An integer value which is the maximum number of points contained
+ * in a voxel.
+ * @param[in] max_voxels
+ * An integer value which is the maximum number of voxels this
+ * function create.
+ * @param[in] NDim
+ * An integer value which is the second dimension of coors.
+ * @param[in] deterministic
+ * A bool value whether to invoke the non-deterministic
+ * version of hard-voxelization implementations. Currently,
+ * non-deterministic mode is not supported.
+ * @param[in] workspace
+ * Pointer to the MLU memory that stores the extra workspace.
+ * @param[in] workspace_size
+ * The size of extra space.
+ * @param[in] voxels_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] voxels
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] coors_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] coors
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] num_points_per_voxel_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] num_points_per_voxel
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] voxel_num_desc
+ * The descriptor of the tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] voxel_num
+ * Pointer to the MLU memory that stores the input tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED.
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - points, voxel_size, coors_range, voxels: float.
+ *   - coors, num_points_per_voxel, voxel_num: int.
+ *
+ * @par Scale Limitation
+ * - max_points and max_voxels must be greater than or equal to 0.
+ * - NDim must be equal to 3, which means 3D.
+ * - The value of the deterministic mode must be True. Currently,
+ *   the non-deterministic mode is not supported.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/voxelize.py
+ */
+
+mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t points_desc,
+    const void *points, const mluOpTensorDescriptor_t voxel_size_desc,
+    const void *voxel_size, const mluOpTensorDescriptor_t coors_range_desc,
+    const void *coors_range, const int32_t max_points, const int32_t max_voxels,
+    const int32_t NDim, const bool deterministic, void *workspace,
+    size_t workspace_size, const mluOpTensorDescriptor_t voxels_desc,
+    void *voxels, const mluOpTensorDescriptor_t coors_desc, void *coors,
+    const mluOpTensorDescriptor_t num_points_per_voxel_desc,
+    void *num_points_per_voxel, const mluOpTensorDescriptor_t voxel_num_desc,
+    void *voxel_num);
+
 // Group:YoloBox
 /*!
  * @brief Computes bounding box information from the backbone output of the
