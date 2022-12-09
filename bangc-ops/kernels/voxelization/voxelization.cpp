@@ -306,15 +306,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   cnrtFunctionType_t k_type;
   policyFuncDefault(handle, num_points, &k_dim, &k_type);
 
-  int32_t voxels_size = max_voxels * max_points * num_features * sizeof(float);
+  const int32_t voxels_size =
+      max_voxels * max_points * num_features * sizeof(float);
   KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
                                              voxels_size, voxels)));
 
-  int32_t coors_size = max_voxels * 3 * sizeof(int32_t);
+  const int32_t coors_size = max_voxels * 3 * sizeof(int32_t);
   KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
                                              coors_size, coors)));
 
-  int32_t num_points_per_voxel_size = max_voxels * sizeof(int32_t);
+  const int32_t num_points_per_voxel_size = max_voxels * sizeof(int32_t);
   KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
                                              num_points_per_voxel_size,
                                              num_points_per_voxel)));

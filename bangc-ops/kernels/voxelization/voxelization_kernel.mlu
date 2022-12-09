@@ -149,12 +149,12 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
     return;
   }
 
-  int32_t points_rem = num_points % taskDim;
-  int32_t points_per_core =
+  const int32_t points_rem = num_points % taskDim;
+  const int32_t points_per_core =
       taskId < points_rem ? num_points / taskDim + 1 : num_points / taskDim;
-  int32_t points_start = taskId < points_rem
-                             ? taskId * points_per_core
-                             : taskId * points_per_core + points_rem;
+  const int32_t points_start = taskId < points_rem
+                                   ? taskId * points_per_core
+                                   : taskId * points_per_core + points_rem;
 
   float *voxel_size = (float *)nram_buffer;
   float *coors_range = (float *)(nram_buffer + 3 * sizeof(float));
@@ -175,12 +175,12 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
   const int32_t grid_y = round((coors_y_max - coors_y_min) / voxel_y);
   const int32_t grid_z = round((coors_z_max - coors_z_min) / voxel_z);
 
-  int32_t split_num = 9;
-  int32_t deal_num =
+  const int32_t split_num = 9;
+  const int32_t deal_num =
       FLOOR_ALIGN(MAX_NRAM_SIZE / split_num / sizeof(float), NFU_ALIGN_SIZE);
-  int32_t repeat = points_per_core / deal_num;
-  int32_t rem = points_per_core % deal_num;
-  int32_t ping_pong_gap = 3 * deal_num * sizeof(float);
+  const int32_t repeat = points_per_core / deal_num;
+  const int32_t rem = points_per_core % deal_num;
+  const int32_t ping_pong_gap = 3 * deal_num * sizeof(float);
 
   char *points_x = nram_buffer;
   char *points_y = points_x + deal_num * sizeof(float);
@@ -344,18 +344,10 @@ __mlu_global__ void mluPoint2Voxel(int32_t *coors, int32_t *point_to_pointidx,
     return;
   }
 
-  int32_t points_per_core = num_points / taskDim;
-  int32_t points_rem = num_points % taskDim;
-  int32_t points_start = taskId < points_rem
-                             ? taskId * (points_per_core + 1)
-                             : taskId * points_per_core + points_rem;
-  int32_t points_end = taskId < points_rem ? points_start + points_per_core + 1
-                                           : points_start + points_per_core;
-
-  int32_t split_num = 6;
-  int32_t deal_num =
+  const int32_t split_num = 6;
+  const int32_t deal_num =
       FLOOR_ALIGN(MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
-  int32_t ping_pong_gap = 3 * deal_num * sizeof(int32_t);
+  const int32_t ping_pong_gap = 3 * deal_num * sizeof(int32_t);
 
   char *coors_x = nram_buffer;
   char *coors_y = coors_x + deal_num * sizeof(int32_t);
@@ -365,7 +357,8 @@ __mlu_global__ void mluPoint2Voxel(int32_t *coors, int32_t *point_to_pointidx,
   int32_t *coors_y_start = coors + num_points;
   int32_t *coors_x_start = coors + num_points * 2;
 
-  for (int32_t point_idx = points_start; point_idx < points_end; ++point_idx) {
+  for (int32_t point_idx = taskId; point_idx < num_points;
+       point_idx += taskDim) {
     if (coors_x_start[point_idx] == -1) {
       point_to_pointidx[point_idx] = -1;
       point_to_voxelidx[point_idx] = -1;
