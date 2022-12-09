@@ -63,8 +63,8 @@ mluOpStatus_t voxelizationParamCheck(
     const mluOpTensorDescriptor_t voxel_num_desc, bool is_zero_element) {
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << "[mluOpVoxelization] The operator only support platform which
-                  handle->arch >= 372.";
+    LOG(ERROR) << "[mluOpVoxelization] The operator only support architecture "
+                  "which is greater than or equal to 372.";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
