@@ -64,9 +64,8 @@ mluOpStatus_t voxelizationParamCheck(
   // check arch
   if (handle->arch < MLUOP_MLU370) {
     LOG(ERROR) << "[mluOpVoxelization] The operator only support platform which
-                  handle->arch >=
-        372. ";
-        return MLUOP_STATUS_ARCH_MISMATCH;
+                  handle->arch >= 372.";
+    return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
   if (deterministic == true) {
