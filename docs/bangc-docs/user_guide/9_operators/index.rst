@@ -131,6 +131,9 @@ mluOpSqrtBackward
 
    diff_x = 0.5 * \frac{diff_y}{y}
 
+mluOpVoxelPoolingForward
+-------------------
+voxel_pooling_forward 算子用于 BEVDepth 网络，将给定若干个相同的 x,y 坐标上的所有通道上的特征值分别相加，再投射到对应坐标上的 bev 2D 区域内的对应通道，该算子有两个输入 tensor，两个输出 tensor，输入 geom_xyz 维度 [B, N, 3]，输入 input_features 维度 [B, N, C]，输出 output_features 维度 [B, H, W, C]，输出 pos_memo 维度 [B, N, 3]。
 
 mluOpYoloBox
 -------------------
