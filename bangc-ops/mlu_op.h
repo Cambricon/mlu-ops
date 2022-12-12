@@ -24,7 +24,7 @@
 #define MLUOP_EXAMPLE_H_
 
 #define MLUOP_MAJOR 0
-#define MLUOP_MINOR 3
+#define MLUOP_MINOR 4
 #define MLUOP_PATCHLEVEL 0
 
 #include <stdint.h>
