@@ -31,6 +31,16 @@
 
 #define HALFMAX 65504
 
+template <typename T>
+__mlu_func__ inline T __mluop_min(T a, T b) {
+  return a < b ? a : b;
+}
+
+template <typename T>
+__mlu_func__ inline T __mluop_max(T a, T b) {
+  return a > b ? a : b;
+}
+
 /******************************************************************************************
  * MLUOPS FUNC: computeRecip
  * param 'nram_dst' is the nram destination address, which supports half or
@@ -325,6 +335,22 @@ __mlu_func__ void __float2int32(int32_t *dst, float *dst_addition, float *src,
   __bang_mul_scalar((float *)dst, (float *)dst, -2.0, src_count);
   __bang_bor((char *)dst, (char *)dst, (char *)dst_addition,
              src_count * floatDchar);
+#endif
+}
+
+__mlu_func__ void pvLock() {
+#if __BANG_ARCH__ == 270
+  if (coreId != 0x80) {
+    __bang_lock(0, 0);
+  }
+#endif
+}
+
+__mlu_func__ void pvUnlock() {
+#if __BANG_ARCH__ == 270
+  if (coreId != 0x80) {
+    __bang_unlock(0, 0);
+  }
 #endif
 }
 

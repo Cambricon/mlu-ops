@@ -1,0 +1,228 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "mlu_op_kernel.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+__mlu_global__ void MLUKernelVoxelPoolingForward(
+    const int batch_size, const int num_points, const int num_channels,
+    const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
+    const int *geom_xyz, const float *input_features, float *output_features,
+    int *pos_memo) {
+  // params (int)geom_xyz: (batch_size, num_points, 3)
+  // params (float)input_features: (batch_size, num_points, channels)
+  // params (float)output_features: (batch_size, num_voxel_y, num_voxel_x,
+  // channels) params (int)geom_xyz: (batch_size, num_points, 3)
+#if __BANG_ARCH__ >= 322
+  if (__is_mpu()) {
+    return;
+  }
+  /*
+   * NRAM partition
+   *  |---------------------------------------------------------------|
+   *  |                          nram_geom_xyz                        |
+   *  |                          nram_pos_memo                        |
+   *  |    nram_buffer_temp   | pt_in_voxel_mask  |                   |
+   *  |                       | nram_input_features                   |
+   *  |---------------------------------------------------------------|
+   *  |    nram_geom_xyz_x    |  nram_geom_xyz_y  |  nram_geom_xyz_z  |
+   *  |  nram_pos_memo_batch  |  nram_pos_memo_y  |  nram_pos_memo_x  |
+   *  |---------------------------------------------------------------|
+   */
+  const int nram_limit_pt_num = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(int) / 6,
+                                            NFU_ALIGN_SIZE / sizeof(int));
+
+  int *nram_geom_xyz = (int *)nram_buffer;
+  int *nram_geom_xyz_x = (int *)nram_buffer + nram_limit_pt_num * 3;
+  int *nram_geom_xyz_y = (int *)nram_buffer + nram_limit_pt_num * 4;
+  int *nram_geom_xyz_z = (int *)nram_buffer + nram_limit_pt_num * 5;
+  int *nram_buffer_temp = (int *)nram_buffer;
+  int *pt_in_voxel_mask = (int *)nram_buffer + nram_limit_pt_num * 1;
+  float *nram_input_features = (float *)pt_in_voxel_mask;
+  int *nram_pos_memo = nram_geom_xyz;
+  int *nram_pos_memo_batch = nram_geom_xyz_x;
+  int *nram_pos_memo_y = nram_geom_xyz_y;
+  int *nram_pos_memo_x = nram_geom_xyz_z;
+  const int num_points_total = batch_size * num_points;
+  const int pt_num_per_core_least = num_points_total / taskDim;
+  const int pt_num_rem = num_points_total % taskDim;
+  const int pt_num_per_core_actual =
+      pt_num_per_core_least + (int)(taskId < pt_num_rem);
+  const int pt_idx_cur_task = pt_num_per_core_least * taskId +
+                              (taskId < pt_num_rem ? taskId : pt_num_rem);
+  const int *geom_xyz_task_offset = geom_xyz + pt_idx_cur_task * 3;
+  const int per_core_repeat = pt_num_per_core_actual / nram_limit_pt_num;
+  const int rem_pt_num_per_core = pt_num_per_core_actual % nram_limit_pt_num;
+  const int nram_limit_channels = nram_limit_pt_num * 5;
+  const int channels_loop_times = num_channels / nram_limit_channels;
+  const int rem_channels = num_channels % nram_limit_channels;
+  for (int per_core_loop_idx = 0; per_core_loop_idx <= per_core_repeat;
+       ++per_core_loop_idx) {
+    int actual_pt_num = (per_core_loop_idx == per_core_repeat)
+                            ? rem_pt_num_per_core
+                            : nram_limit_pt_num;
+    if (actual_pt_num == 0) {
+      break;
+    }
+    int pt_idx_cur_loop =
+        pt_idx_cur_task + per_core_loop_idx * nram_limit_pt_num;
+    // load pos_memo to gdram
+    __memcpy(nram_geom_xyz,
+             geom_xyz_task_offset + per_core_loop_idx * nram_limit_pt_num * 3,
+             actual_pt_num * 3 * sizeof(int), GDRAM2NRAM);
+    // nram_geom_xyz_transpose (3, nram_limit_pt_num)
+    __bang_transpose(nram_geom_xyz_x, nram_geom_xyz, nram_limit_pt_num, 3);
+    // x >= 0 , x < num_voxel_x
+    __bang_ge_scalar(pt_in_voxel_mask, nram_geom_xyz_x, 0, actual_pt_num);
+    __bang_lt_scalar(nram_buffer_temp, nram_geom_xyz_x, num_voxel_x,
+                     actual_pt_num);
+    __bang_and(pt_in_voxel_mask, pt_in_voxel_mask, nram_buffer_temp,
+               actual_pt_num);
+    // y >= 0 , y < num_voxel_y
+    __bang_ge_scalar(nram_buffer_temp, nram_geom_xyz_y, 0, actual_pt_num);
+    __bang_and(pt_in_voxel_mask, pt_in_voxel_mask, nram_buffer_temp,
+               actual_pt_num);
+    __bang_lt_scalar(nram_buffer_temp, nram_geom_xyz_y, num_voxel_y,
+                     actual_pt_num);
+    __bang_and(pt_in_voxel_mask, pt_in_voxel_mask, nram_buffer_temp,
+               actual_pt_num);
+    // z >= 0 , z < num_voxel_z
+    __bang_ge_scalar(nram_buffer_temp, nram_geom_xyz_z, 0, actual_pt_num);
+    __bang_and(pt_in_voxel_mask, pt_in_voxel_mask, nram_buffer_temp,
+               actual_pt_num);
+    __bang_lt_scalar(nram_buffer_temp, nram_geom_xyz_z, num_voxel_z,
+                     actual_pt_num);
+    __bang_and(pt_in_voxel_mask, pt_in_voxel_mask, nram_buffer_temp,
+               actual_pt_num);
+    // get pos_memo x
+    __bang_mul(nram_pos_memo_x, nram_geom_xyz_x, pt_in_voxel_mask,
+               actual_pt_num);
+    // get pos_memo y
+    __bang_mul(nram_pos_memo_y, nram_geom_xyz_y, pt_in_voxel_mask,
+               actual_pt_num);
+    // get pos_memo batch_idx
+    int cur_loop_batch_idx_pt_num = 0;
+    int *nram_pos_memo_batch_offset = nram_pos_memo_batch;
+    int cur_loop_batch_pt_idx_begin = pt_idx_cur_loop;
+    int cur_loop_batch_pt_idx_end = pt_idx_cur_loop + actual_pt_num - 1;
+    int batch_idx_begin = cur_loop_batch_pt_idx_begin / num_points;
+    int batch_idx_end = cur_loop_batch_pt_idx_end / num_points;
+    for (int batch_idx = batch_idx_begin; batch_idx <= batch_idx_end;
+         ++batch_idx) {
+      if (batch_idx == batch_idx_end) {
+        cur_loop_batch_idx_pt_num =
+            cur_loop_batch_pt_idx_end - cur_loop_batch_pt_idx_begin + 1;
+        __bang_write_value(nram_pos_memo_batch_offset,
+                           cur_loop_batch_idx_pt_num, batch_idx);
+      } else {
+        cur_loop_batch_idx_pt_num =
+            (batch_idx + 1) * num_points - cur_loop_batch_pt_idx_begin;
+        __bang_write_value(nram_pos_memo_batch_offset,
+                           cur_loop_batch_idx_pt_num, batch_idx);
+        nram_pos_memo_batch_offset += cur_loop_batch_idx_pt_num;
+        cur_loop_batch_pt_idx_begin += cur_loop_batch_idx_pt_num;
+      }
+    }
+    __bang_mul(nram_pos_memo_batch, nram_pos_memo_batch, pt_in_voxel_mask,
+               actual_pt_num);
+    // process pos_memo initial value
+    __bang_not(nram_buffer_temp, pt_in_voxel_mask, actual_pt_num);
+    // read from gdram with pos_memo initial value
+    int initial_value = pos_memo[0];
+    __bang_mul_scalar(nram_buffer_temp, nram_buffer_temp, initial_value,
+                      actual_pt_num);
+    __bang_add(nram_pos_memo_batch, nram_pos_memo_batch, nram_buffer_temp,
+               actual_pt_num);
+    __bang_add(nram_pos_memo_y, nram_pos_memo_y, nram_buffer_temp,
+               actual_pt_num);
+    __bang_add(nram_pos_memo_x, nram_pos_memo_x, nram_buffer_temp,
+               actual_pt_num);
+
+    // nram_pos_memo transpose nram_pos_memo (3, nram_limit_pt_num) to
+    // (nram_limit_pt_num, 3)
+    __bang_transpose(nram_pos_memo, nram_pos_memo_batch, 3, nram_limit_pt_num);
+    // store pos_memo to gdram
+    __memcpy(pos_memo + pt_idx_cur_loop * 3, nram_pos_memo,
+             actual_pt_num * 3 * sizeof(int), NRAM2GDRAM);
+
+    // process output_features
+    // output_features_pt_offset_addr = (batch_idx * num_voxel_y * num_voxel_x +
+    // y * num_voxel_x + x) * num_channels
+    __bang_mul_scalar(nram_buffer_temp, nram_pos_memo_batch,
+                      num_voxel_y * num_voxel_x, actual_pt_num);
+    __bang_mul_scalar(pt_in_voxel_mask, nram_pos_memo_y, num_voxel_x,
+                      actual_pt_num);
+    __bang_add(nram_buffer_temp, nram_buffer_temp, pt_in_voxel_mask,
+               actual_pt_num);
+    __bang_add(nram_buffer_temp, nram_buffer_temp, nram_pos_memo_x,
+               actual_pt_num);
+    __bang_mul_scalar(nram_buffer_temp, nram_buffer_temp, num_channels,
+                      actual_pt_num);
+    int *output_features_pt_offset_addr = nram_buffer_temp;
+
+    for (int pt_idx = 0; pt_idx < actual_pt_num; ++pt_idx) {
+      int output_features_pt_offset = output_features_pt_offset_addr[pt_idx];
+      if (output_features_pt_offset < 0) {
+        continue;
+      }
+      float *output_features_pt_addr =
+          output_features + output_features_pt_offset;
+      // input_features_pt_offset = (batch_idx * num_points + pt_idx) *
+      // num_channels;
+      int input_features_pt_offset = (pt_idx_cur_loop + pt_idx) * num_channels;
+      const float *input_features_pt_addr =
+          input_features + input_features_pt_offset;
+      for (int channels_loop_idx = 0; channels_loop_idx <= channels_loop_times;
+           ++channels_loop_idx) {
+        int actual_channels_num = (channels_loop_idx == channels_loop_times)
+                                      ? rem_channels
+                                      : nram_limit_channels;
+        if (actual_channels_num == 0) {
+          break;
+        }
+        int channels_offset = channels_loop_idx * nram_limit_channels;
+        // load input_features
+        __memcpy(nram_input_features, input_features_pt_addr + channels_offset,
+                 actual_channels_num * sizeof(float), GDRAM2NRAM);
+        __bang_atomic_reduce_add(output_features_pt_addr + channels_offset,
+                                 nram_input_features, actual_channels_num);
+      }
+    }
+  }
+#endif
+}
+void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int num_points, const int num_channels,
+    const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
+    const void *geom_xyz, const void *input_features, void *output_features,
+    void *pos_memo) {
+  if (num_voxel_z <= 0) {
+    return;
+  }
+  MLUKernelVoxelPoolingForward<<<k_dim, k_type, queue>>>(
+      batch_size, num_points, num_channels, num_voxel_x, num_voxel_y,
+      num_voxel_z, (int *)geom_xyz, (float *)input_features,
+      (float *)output_features, (int *)pos_memo);
+}

@@ -26,6 +26,7 @@
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
+#include <atomic>
 #include <string>
 #include <vector>
 #include <set>
@@ -33,9 +34,14 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include "mlu_op_test.pb.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
-#include "mlu_op_test.pb.h"
+#include "core/logging.h"
+#include "core/tensor.h"
+#include "core/type.h"
+#include "evaluator.h"
+#include "tools.h"
 
 namespace mluoptest {
 
@@ -45,10 +51,12 @@ enum ValueType {
   VALUE_I,
   VALUE_L,
   VALUE_H,
+  VALUE_UI,
+  VALUE_UL,
   VALUE_RANDOM,
   VALUE_PATH,
-  VALUE_INVALID,
-};
+  VALUE_INVALID
+};  // NOLINT
 
 // only the tensor info saved in *pb.
 struct MetaTensor {
@@ -83,6 +91,7 @@ struct MetaTensor {
   inline bool empty() { return shape_count == 0 || total_count == 0; }
   inline bool null() { return is_null; }
 
+  // TODO(wangjianxin): remove these pointer
   // it's a not good idea to put *ptr and layout.. together.
   mluOpTensorDescriptor_t tensor = nullptr;
   // bool is_output       = false;
@@ -115,7 +124,10 @@ class Parser {
  public:
   Parser() {}
   virtual ~Parser();
+  // parse prototxt
   void parse(const std::string &file);
+
+  bool negative_scale_ = getEnv("MLUOP_GTEST_NEGATIVE_SCALE", false);
 
   inline const std::vector<MetaTensor> &inputs() { return inputs_; }
   inline const std::vector<MetaTensor> &outputs() { return outputs_; }
@@ -135,12 +147,16 @@ class Parser {
   std::vector<int> threshold_use();
   bool common_threshold();
   bool check_threshold();
-  inline std::set<Evaluator::Criterion> criterions() { return criterions_; }
-  std::set<Evaluator::Criterion> criterions(int index,
-                                            std::vector<int> criterions_use);
-  std::vector<std::string> getBlOfZeroInput() { return bl_zeroinput_; }
-  std::vector<std::string> getBlOfMluOnlyFast() { return bl_mlu_only_fast_; }
+  inline std::set<Evaluator::Criterion> criterions() const {
+    return criterions_;
+  }
+  std::set<Evaluator::Criterion> criterions(
+      int index, const std::set<Evaluator::Formula> &criterions_use);
+  std::vector<std::string> getListRelyRealData() {
+    return list_rely_real_data_;
+  }
 
+  // TODO(wangjianxin): remove the following api
   MetaTensor &getMetaTensor(const std::string &name);
   MetaTensor &getMetaTensor(int index);
   inline int getInputNum() { return inputs_.size(); }
@@ -217,16 +233,25 @@ class Parser {
     return inputs_.at(index).value_type;
   }
   inline Node *getProtoNode() { return proto_node_; }
+  inline int getOpTf32Param() { return is_support_TF32_; }
+  inline size_t getParsedFileSize() const { return parsed_file_size; }
+  inline double getParsedCostSeconds() const { return parsed_cost_seconds; }
 
  private:
   Node *proto_node_ = nullptr;
+  std::atomic<size_t> parsed_file_size{
+      0};  ///< record parsed file size for pb and splitted data(VALUE_PATH)
+  // XXX At present, file parsing is in single thread, so calculation without
+  // mutex/atomic primitive is safe
+  double parsed_cost_seconds =
+      0.;  ///< record total file reading and deserialization time
+  int is_support_TF32_;
   std::vector<MetaTensor> inputs_;
   std::vector<MetaTensor> outputs_;
   std::set<Evaluator::Criterion> criterions_;
   std::string op_name_;
   std::string pb_path_;
-  std::vector<std::string> bl_zeroinput_;
-  std::vector<std::string> bl_mlu_only_fast_;
+  std::vector<std::string> list_rely_real_data_;
   Device device_ = CPU;
 
   ValueType getValueType(const Tensor *t);
@@ -236,8 +261,10 @@ class Parser {
   void getTensorValueF(const Tensor *pt, void *data, size_t count);
   void getTensorValueI(const Tensor *pt, void *data, size_t count);
   void getTensorValueL(const Tensor *pt, void *data, size_t count);
-  void getTensorValueRandom(Tensor *pt, float *data, size_t count);
-  void getTensorValueByFile(Tensor *pt, float *data, size_t count);
+  void getTensorValueUI(const Tensor *pt, void *data, size_t count);
+  void getTensorValueUL(const Tensor *pt, void *data, size_t count);
+  void getTensorValueRandom(Tensor *pt, void *data, size_t count);
+  void getTensorValueByFile(Tensor *pt, void *data, size_t count);
 
   void checkTensorValid(MetaTensor *mt, Tensor *t);
   void checkRandomParam(Tensor *t);
@@ -248,10 +275,13 @@ class Parser {
   size_t getTensorShapeCount(Tensor *pt);
 
   Evaluator::Formula cvtProtoEvaluationCriterion(EvaluationCriterion c);
+  Evaluator::Formula cvtProtoEvaluationCriterion(int c);
   bool readMessageFromFile(const std::string &filename, Node *proto);
   size_t getTensorSize(Tensor *pt);
   void setCurPbPath(const std::string &file);
+  void isSupportTF32(Node *protoNode);
 };
 
 }  // namespace mluoptest
+
 #endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_

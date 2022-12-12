@@ -23,15 +23,15 @@
 #ifndef TEST_MLU_OP_GTEST_SRC_GTEST_PERF_TEST_H_
 #define TEST_MLU_OP_GTEST_SRC_GTEST_PERF_TEST_H_
 
-#include <libxml/xpath.h>
 #include <string>
-
-xmlXPathObjectPtr getNodeSet(xmlDocPtr doc, const xmlChar *xpath);
 
 std::string getTestCaseName(std::string str);
 
-bool getXmlData(std::string case_name, double *xml_time,
+bool getTxtData(std::string case_name, double *txt_time,
                 double *workspace_size);
+
+bool getThreshold(std::string op_name, double *scale_bound,
+                  double *threshold_absolute, double *threshold_relative);
 
 bool updateBaselineStrategy(double hw_time_mean, double scale_bound,
                             double threshold_absolute,
