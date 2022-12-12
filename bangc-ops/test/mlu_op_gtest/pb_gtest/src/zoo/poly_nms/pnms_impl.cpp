@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-using namespace std;  //NOLINT
+using namespace std;  // NOLINT
 
 namespace PNMS {
 

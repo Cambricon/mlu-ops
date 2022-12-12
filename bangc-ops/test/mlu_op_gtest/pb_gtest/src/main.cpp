@@ -22,20 +22,47 @@
  *************************************************************************/
 
 /************************************************************************
- *
- *  @file main.c
- *
- **************************************************************************/
+ *
+ *  @file main.c
+ *
+ **************************************************************************/
 
 #include <stdlib.h>
 #include "gtest/gtest.h"
 #include "variable.h"
 #include "test_env.h"
+#include "mlu_op_test_result_printer.h"
+#include "cnrt_test.h"
+#include "mlu_op_test.h"
+#include "mlu_op_gtest_event_listener.h"
+#include "modules_test.h"
+#include "src/gtest-internal-inl.h"
 
-mluoptest::GlobalVar global_var;
+using namespace mluoptest;  // NOLINT
 int main(int argc, char **argv) {
   global_var.init(argc, argv);
   testing::AddGlobalTestEnvironment(new TestEnvironment);
   testing::InitGoogleTest(&argc, argv);
+  testing::TestEventListeners &listeners =
+      testing::UnitTest::GetInstance()->listeners();
+  delete listeners.Release(listeners.default_xml_generator());
+  const std::string &output_format =
+      testing::internal::UnitTestOptions::GetOutputFormat();
+  if (output_format == "xml") {
+    listeners.Append(new xmlPrinter(
+        testing::internal::UnitTestOptions::GetAbsolutePathToOutputFile()
+            .c_str()));
+  } else if (output_format == "json") {
+    listeners.Append(new JsonPrinter(
+        testing::internal::UnitTestOptions::GetAbsolutePathToOutputFile()
+            .c_str()));
+  } else if (output_format != "") {
+    GTEST_LOG_(WARNING) << "WARNING: unrecognized output format \""
+                        << output_format << "\" ignored.";
+  }
+  if (global_var.enable_gtest_internal_perf) {
+    testing::UnitTest::GetInstance()->listeners().Append(
+        new MLUOPGtestInternalPerfEventListener);
+  }
   return RUN_ALL_TESTS();
 }

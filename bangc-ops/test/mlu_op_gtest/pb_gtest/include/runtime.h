@@ -33,6 +33,8 @@
 #include "core/logging.h"
 #include "memory_pool.h"
 #include "mlu_op.h"
+#include "variable.h"
+#include "tools.h"
 #include "pb_test_tools.h"
 
 namespace mluoptest {
@@ -191,15 +193,21 @@ class MLURuntime : public Runtime {
   // return status
   cnrtRet_t destroy();
 
+  inline size_t getAllocatedSize() const { return allocated_size; }
+
+  inline size_t getMemBlockSize() const { return memory_blocks_.size(); }
+
  private:
+  std::atomic<size_t> allocated_size{0};
   struct MemBlock {
-    MemBlock(size_t s, char *p, std::string n)
-        : raw_bytes(s), header(p), name(n) {}
+    MemBlock(size_t s, char *p, std::string n, int offset)
+        : raw_bytes(s), header(p), name(n), unalign_address_offset(offset) {}
     size_t raw_bytes = 0;   // include mask
     char *header = NULL;    // mlu addr
     bool is_const = false;  // if is const, this buffer shouldn't be modified.
     void *mask = NULL;      // if is const, use host_ptr to check.
     std::string name;       // memory block id
+    size_t unalign_address_offset = 0;
   };
 
   // each memory has head mask and foot mask
@@ -221,7 +229,9 @@ class MLURuntime : public Runtime {
   bool check_byte(void *new_mask, void *org_mask, size_t num);
   void reset_check();
   void rand_set_mask();
+  bool checkAndFree(struct MemBlock &mem_block);
   bool check_enable_ = true;
+  bool unalign_address_ = false;
 };
 
 }  // namespace mluoptest

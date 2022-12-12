@@ -1,17 +1,24 @@
 #! /bin/bash
 
 bangc_ops="bangc-ops"
-check_list=${bangc_ops}
+bangpy_ops="bangpy-ops"
+bangc_check_list=${bangc_ops}
+bangpy_check_list=${bangpy_ops}
 
 bangc_mlu_op_h="bangc-ops/mlu_op.h"
+bangc_gtest_json_file="jsoncppDist/"
+
+bangc_exclude_list=${bangc_gtest_json_file}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
-    | grep -E ${check_list})
+    | grep -v ${bangc_exclude_list} \
+    | grep -E ${bangc_check_list})
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -E ${check_list})
+    | grep -v ${bangc_exclude_list} \
+    | grep -E ${bangc_check_list})
 fi
 
 ret=0
@@ -131,30 +138,41 @@ fi
 
 echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
 for i in $filenames; do
-  tools/check_log_error.py $i
+  python tools/check_log_error.py $i
 done
 
-if [[ "$(which pylint)" == "" ]]; then
-  echo "Please pip install pylint!(pylint==2.9)"
-  exit -1
-fi
-
-echo "-- [pre-commit] Using pylint to check bangpy/ops \
-by .git/hooks/pre-commit..."
-python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
-     | grep -v "Your code" \
-     | grep -v "Module bangpy" \
-     | grep -E ".py"
-
-if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-  ret=1
-fi
-
-if [[ ${ret} != 0 ]]; then
-  echo "-- [pre-commit] pylint FAILED: Please fix pylint errors."
-  exit ${ret}
+if [[ $# -eq 1 ]]; then
+  bangpy_filenames=$(git diff --name-only ${1} \
+    | grep -E ${bangpy_check_list})
 else
-  echo "-- [pre-commit] pylint PASSED."
+  bangpy_filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
+    --diff-filter=R --diff-filter=T --cached --name-only \
+    | grep -E ${bangpy_check_list})
+fi
+
+if [[ ${bangpy_filenames} != "" ]]; then
+  if [[ "$(which pylint)" == "" ]]; then
+    echo "Please pip install pylint!(pylint==2.9)"
+    exit -1
+  fi
+
+  echo "-- [pre-commit] Using pylint to check bangpy/ops \
+  by .git/hooks/pre-commit..."
+  python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
+       | grep -v "Your code" \
+       | grep -v "Module bangpy" \
+       | grep -E ".py"
+
+  if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+    ret=1
+  fi
+
+  if [[ ${ret} != 0 ]]; then
+    echo "-- [pre-commit] pylint FAILED: Please fix pylint errors."
+    exit ${ret}
+  else
+    echo "-- [pre-commit] pylint PASSED."
+  fi
 fi
 
 exit 0

@@ -20,19 +20,28 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include <malloc.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <iterator>
 #include <functional>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include "mlu_op_gtest.h"
 #include "op_register.h"
+#include "internal_perf.h"
+#include "gtest/mlu_op_test_case.h"
 
-extern mluoptest::GlobalVar global_var;
+extern mluoptest::GlobalVar mluoptest::global_var;
+using mluoptest::global_var;
 std::string TestSuite::op_name_ = "";  // NOLINT
 std::vector<std::string> TestSuite::case_path_vec_ = {};
 std::shared_ptr<mluoptest::ExecuteConfig> TestSuite::ecfg_ =
     std::make_shared<mluoptest::ExecuteConfig>();
-// depends on thread num.
-std::shared_ptr<mluoptest::ExecuteContext> TestSuite::ectx_ = nullptr;
+std::shared_ptr<mluoptest::ExecuteContext> TestSuite::ectx_ =
+    nullptr;  // depends on thread num.
+
 // setup for 1 op
 void TestSuite::SetUpTestCase() {
   // get op name and case list.
@@ -47,6 +56,14 @@ void TestSuite::SetUpTestCase() {
 
   // exe config
   ecfg_->perf_repeat = global_var.repeat_;
+  ecfg_->zero_input = global_var.zero_input_;
+  ecfg_->mlu_only = global_var.mlu_only_;
+  ecfg_->test_llc = global_var.test_llc_;
+  if (ecfg_->mlu_only) {
+    LOG(WARNING) << "MLUOPSGTEST: MLU-ONLY mode, skip computing cpu result (or "
+                    "reading from *pb) and "
+                    "computing diff.";
+  }
 
   // exe context
   // if thread is 1, prepare 1 execute_context(handle queue...).
@@ -82,11 +99,11 @@ void TestSuite::Thread1() {
   auto case_path = case_path_vec_[case_idx];
   try {
     auto exe = getOpExecutor(op_name_);
+    // TODO(wangjianxin): modify ctor, set op_name in ctor.
     exe->result()->op_name = op_name_;
     exe->init(ectx_);
     exe->setup(case_path_vec_[case_idx], ecfg_);
     exe->launch();
-    exe->sync();
     auto res = exe->teardown();
     res_.emplace_back(res);
     if (global_var.get_vmpeak_ != "") {
@@ -105,7 +122,7 @@ void TestSuite::Thread1() {
     res.what.emplace_back(
         "Unknown error: maybe exception raised, other info is lost.");
     res_.emplace_back(res);
-    ADD_FAILURE() << "MLUOP GTEST: catched " << e.what()
+    ADD_FAILURE() << "MLUOPSGTEST: catched " << e.what()
                   << " in single thread mode. (of " << case_path << ")";
   }
 }
@@ -214,6 +231,13 @@ struct Context {
 };
 
 void TestSuite::ThreadX() {
+  // Set device in current thread, it is necessary when we mluOpSetQueue(handle,
+  // nullptr) Because we place notifier in other thread but query the notifier
+  // in current thread, We should ensure different thread access the same device
+  // when we use default queue. Sadly, CNRT have other multithread restriction,
+  // we may need to write new thread model.
+  ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
+
   size_t thread_num = global_var.thread_num_;
   size_t max_exe_vec_num = thread_num * 1.5;
   auto thread_pool = std::make_shared<mluoptest::ThreadPool>(thread_num);
@@ -223,8 +247,8 @@ void TestSuite::ThreadX() {
   auto set_device = [](std::shared_ptr<Context> ctx) {
     std::lock_guard<std::mutex> lk(ctx->mtx);
     auto it = ctx->been_initialized.find(std::this_thread::get_id());
-    // if current thread has not been set device.
-    if (it == ctx->been_initialized.end()) {
+    if (it == ctx->been_initialized
+                  .end()) {  // if current thread has not been set device.
       ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
       ctx->been_initialized.insert(std::this_thread::get_id());
     }
@@ -262,7 +286,10 @@ void TestSuite::ThreadX() {
     mluoptest::EvaluateResult res;
     auto exe = ctx->exe_vec[id]->exe;
     try {
-      exe->sync();
+      if (!global_var.use_default_queue_) {
+        // when we use default cnrt queue, sync has been called in setup phase
+        exe->sync();
+      }
       res = exe->teardown();
     } catch (std::exception &e) {
       ctx->ecw_vec[id]->reset();  // reset running env
@@ -270,7 +297,7 @@ void TestSuite::ThreadX() {
       res = *(exe->result());
       res.what.emplace_back(
           "Unknown error: maybe exception raised, other info is lost.");
-      ADD_FAILURE() << "MLUOP GTEST: catched " << e.what()
+      ADD_FAILURE() << "MLUOPSGTEST: catched " << e.what()
                     << " in teardown. (of " << res.case_path
                     << ") tid: " << std::this_thread::get_id();
     }
@@ -296,10 +323,16 @@ void TestSuite::ThreadX() {
     // run
     try {
       auto exe = getOpExecutor(op_name);
+      // TODO(wangjianxin): modify ctor, set op_name in ctor.
       exe->result()->op_name = op_name;
       exe->init(ecw->ectx);
       exe->setup(case_path, ecfg_);
       exe->launch();
+      if (global_var.use_default_queue_) {
+        // when we use default cnrt queue, launch and sync should be in the same
+        // thread
+        exe->sync();
+      }
       {
         std::lock_guard<std::mutex> lk(ctx->mtx);
         ctx->exe_vec[pos]->set(exe);  // push exe into task queue.
@@ -317,7 +350,7 @@ void TestSuite::ThreadX() {
         std::lock_guard<std::mutex> lk(ctx->mtx);
         ctx->results.emplace_back(res);
       }
-      ADD_FAILURE() << "MLUOP GTEST: catched " << e.what() << " in setup. (of "
+      ADD_FAILURE() << "MLUOPSGTEST: catched " << e.what() << " in setup. (of "
                     << res.case_path << ") tid: " << std::this_thread::get_id();
     }
   };
@@ -382,23 +415,7 @@ void TestSuite::Run() {
   } else {
     ThreadX();
   }
-}
-
-// * print result
-// * is pass?
-// * calc average
-void TestSuite::report(mluoptest::EvaluateResult eva) {
-  if (global_var.repeat_ > 1) {
-    print(eva, true);  // print average log.
-  } else {
-    print(eva, false);  // normal log.
-  }
-  if (!eva.is_passed) {
-    global_var.summary_.failed_list.emplace_back(eva.case_path);
-  }
-  recordXml(eva);
-  bool passed = eva.is_passed;
-  EXPECT_TRUE(passed);
+  malloc_trim(0);
 }
 
 std::string showFormula(mluoptest::Evaluator::Formula f) {
@@ -415,112 +432,135 @@ std::string showFormula(mluoptest::Evaluator::Formula f) {
       return "DIFF4";
     default:
       GTEST_CHECK(false,
-                  "MLUOP GTEST: got an unsupported formula when print it.");
+                  "MLUOPSGTEST: got an unsupported formula when print it.");
   }
 }
 
-void TestSuite::print(mluoptest::EvaluateResult eva, bool average) {
-  std::cout << "\n";
-  if (true == average) {
-    std::cout << "[Average MLU Hardware Time     ]: " << eva.mlu.hardware_time
-              << " (us)\n";
-    std::cout << "[Average MLU Interface Time    ]: " << eva.mlu.interface_time
-              << " (us)\n";
-    std::cout << "[Average MLU IO Efficiency     ]: " << eva.mlu.io_efficiency
-              << "\n";
-    std::cout << "[Average MLU Compute Efficiency]: "
-              << eva.mlu.compute_efficiency << "\n";
-    std::cout << "[Average MLU Workspace Size    ]: " << eva.mlu.workspace_size
-              << " (Bytes)\n";
-    std::cout << "[MLU TheoryOps         ]: " << eva.mlu.theory_ops
-              << " (Ops)\n";
-    std::cout << "[MLU TheoryIOs         ]: " << eva.mlu.theory_io
-              << " (Bytes)\n";
-    std::cout << "[MLU ComputeForce      ]: " << eva.mlu.compute_force
-              << " (op/s)\n";
-    std::cout << "[MLU IoBandWidth       ]: " << eva.mlu.io_bandwidth
-              << " (GB/s)\n";
-  } else {
-    std::cout << "[MLU Hardware Time     ]: " << eva.mlu.hardware_time
-              << " (us)\n";
-    std::cout << "[MLU Interface Time    ]: " << eva.mlu.interface_time
-              << " (us)\n";
-    std::cout << "[MLU IO Efficiency     ]: " << eva.mlu.io_efficiency << "\n";
-    std::cout << "[MLU Compute Efficiency]: " << eva.mlu.compute_efficiency
-              << "\n";
-    std::cout << "[MLU Workspace Size    ]: " << eva.mlu.workspace_size
-              << " (Bytes)\n";
-    std::cout << "[MLU TheoryOps         ]: " << eva.mlu.theory_ops
-              << " (Ops)\n";
-    std::cout << "[MLU TheoryIOs         ]: " << eva.mlu.theory_io
-              << " (Bytes)\n";
-    std::cout << "[MLU ComputeForce      ]: " << eva.mlu.compute_force
-              << " (op/s)\n";
-    std::cout << "[MLU IoBandWidth       ]: " << eva.mlu.io_bandwidth
-              << " (GB/s)\n";
+std::ostringstream print_error(
+    const std::vector<mluoptest::Evaluator::ErrorWrap> &errors) {
+  std::ostringstream oss;
+  if (errors.empty()) {
+    return oss;
   }
-
-  auto print_error = [](std::vector<mluoptest::Evaluator::ErrorWrap> errors) {
-    std::cout << "[Diffs]:\n";
-    std::string name = "";
-    for (auto error : errors) {
-      if (error.name != name) {
-        name = error.name;
-        std::cout << "[" << name << "]\n";
-      }
-      auto func = showFormula(error.criterion.formula);
-      std::ostringstream oss;  //  keep precision
+  oss << "[Diffs]:\n";
+  std::string name = "";
+  for (const auto &error : errors) {
+    if (error.name != name) {
+      name = error.name;
+      oss << "[" << name << "]\n";
+    }
+    auto func = showFormula(error.criterion.formula);
+    oss << func << ": ";
+    if (error.criterion.formula == mluoptest::Evaluator::Formula::DIFF4 &&
+        error.error < 0) {
+      oss << "Ignored[sample# < 100]";
+    } else {
       oss.setf(std::ios::scientific);
       oss << error.error;
-      std::cout << func << ": " << oss.str() << "\n";
     }
-  };
+    if (error.dtype == MLUOP_DTYPE_COMPLEX_HALF ||
+        error.dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+      std::ostringstream oss_imag;
+      if (error.criterion.formula == mluoptest::Evaluator::Formula::DIFF4 &&
+          error.error_imag < 0) {
+        oss_imag << "Ignored[sample# < 100]";
+      } else {
+        oss_imag.setf(std::ios::scientific);
+        oss_imag << error.error_imag;
+      }
+      oss << " " << oss_imag.str() << "\n";
+    } else {
+      oss << "\n";
+    }
+  }
+  return oss;
+}
 
-  if (eva.is_passed) {  // if passed, just print errors.
-    print_error(eva.errors);
-    std::cout << "[^      OK ] " << eva.case_path << "\n";
+static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
+                                    Test *self) {
+  std::ostringstream out;
+  if (global_var.repeat_ > 1) {
+    out << "[Average MLU Hardware Time     ]: " << eva.mlu.hardware_time
+        << " (us)\n"
+        << "[Average MLU Interface Time    ]: " << eva.mlu.interface_time
+        << " (us)\n"
+        << "[Average MLU IO Efficiency     ]: " << eva.mlu.io_efficiency << "\n"
+        << "[Average MLU Compute Efficiency]: " << eva.mlu.compute_efficiency
+        << "\n"
+        << "[Average MLU Workspace Size    ]: " << eva.mlu.workspace_size
+        << " (Bytes)\n";
+  } else {
+    out << "[MLU Hardware Time      ]: " << eva.mlu.hardware_time << " (us)\n"
+        << "[MLU Interface Time     ]: " << eva.mlu.interface_time << " (us)\n"
+        << "[MLU IO Efficiency      ]: " << eva.mlu.io_efficiency << "\n"
+        << "[MLU Compute Efficiency ]: " << eva.mlu.compute_efficiency << "\n"
+        << "[MLU Workspace Size     ]: " << eva.mlu.workspace_size
+        << " (Bytes)\n";
+  }
+  out << "[MLU TheoryOps          ]: " << eva.mlu.theory_ops << " (Ops)\n"
+      << "[MLU TheoryIOs          ]: " << eva.mlu.theory_io << " (Bytes)\n"
+      << "[MLU ComputeForce       ]: " << eva.mlu.compute_force << " (op/s)\n"
+      << "[MLU IoBandWidth        ]: " << eva.mlu.io_bandwidth << " (GB/s)\n";
+  if (-1 != eva.mlu.hardware_time_layer) {
+    out << "[MLU Hardware Time by layer]: " << eva.mlu.hardware_time_layer
+        << " (us)\n";
+  }
+  out << "[GPU Hardware Time      ]: " << eva.gpu.hardware_time << " (us)\n"
+      << "[GPU IO Efficiency      ]: " << eva.gpu.io_efficiency << "\n"
+      << "[GPU Compute Efficiency ]: " << eva.gpu.compute_efficiency << "\n"
+      << "[GPU Workspace Size     ]: " << eva.gpu.workspace_size
+      << " (Bytes)\n";
+  if (eva.gpu.has_runtime_env) {
+    out << "[GPU dl_framework      ]: " << eva.gpu.dl_framework << "\n";
+  }
+
+  if (global_var.enable_gtest_internal_perf) {
+    out << "[GTEST Internal Time(ms)]: "
+        << mluoptest::timeseries_to_array_str(eva.gtest.time_costs_ms) << "\n";
+    out << "[GTEST Case FileSize    ]: " << eva.gtest.parsed_file_size
+        << " (Bytes)\n";
+  }
+
+  out << print_error(eva.errors).str();
+
+  if (eva.is_passed &&
+      (!self->HasFailure())) {  // if passed, just print errors.
+    out << "[^      OK ] " << eva.case_path;
   } else {  // if failed.
-    if (!eva.errors.empty()) {
-      print_error(eva.errors);
-    }
     for (auto line : eva.what) {
-      std::cout << line << "\n";
+      out << line << "\n";
     }
-    std::cout << "[^  FAILED ] " << eva.case_path << "\n";
+    out << "[^  FAILED ] " << eva.case_path;
+  }
+
+  return out;
+}
+
+// * print result
+// * is pass?
+// * calc average
+void TestSuite::report(mluoptest::EvaluateResult eva) {
+  bool is_passed = eva.is_passed && (!this->HasFailure());
+  auto log = print_log(eva, this);
+  try {
+    recordXml(eva);
+    if (is_passed) {
+      std::cout << log.str() << "\n";
+    } else {
+      global_var.summary_.failed_list.emplace_back(eva.case_path);
+      throw std::runtime_error("Errors found during calculations");
+    }
+  } catch (std::exception &e) {
+    ADD_FAILURE() << "MLUOPSGTEST: " << e.what() << "\n" << log.str();
   }
 }
 
-void TestSuite::recordXml(mluoptest::EvaluateResult er) {
-  this->RecordProperty("op_name", op_name_);
-  if (global_var.repeat_ != 0) {
-    this->RecordProperty("repeat_count", global_var.repeat_);
-  }
+void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
+  // add keywords for write-back
+  std::string mlu_op_jira_id;
+  std::string test_case_key;
 
-  // save date(Year_month_day_hour_minute_second).
-  std::ostringstream date_oss;
-  char ymd_time[24];
-  time_t timep;
-  time(&timep);
-  strftime(ymd_time, sizeof(ymd_time), "%Y_%m_%d_%H_%M_%S", localtime(&timep));
-  date_oss << ymd_time;
-  this->RecordProperty("date", date_oss.str());
-
-  // save case_path
-  this->RecordProperty("case_path", er.case_path);
-
-  // save mlu platform.
-  std::ostringstream mlu_platform_oss;
-  char dev_name[64];
-  cnDeviceGetName(dev_name, 64, 0);
-  mlu_platform_oss << dev_name;
-  this->RecordProperty("mlu_platform", mlu_platform_oss.str());
-
-  // hardware_time is latency in generator.
-  std::ostringstream mhwb_oss;
-  mhwb_oss << std::setprecision(10) << er.mlu.hardware_time_base;
-  this->RecordProperty("hardware_time_base", mhwb_oss.str());
-
-  // save case_name and hardware_time_base
+  // save case_name
   std::string::size_type start = er.case_path.find_last_of("/");
   std::string case_name;
   if (start != std::string::npos) {
@@ -529,6 +569,26 @@ void TestSuite::recordXml(mluoptest::EvaluateResult er) {
   } else {
     case_name = er.case_path;
   }
+
+  if (mlu_op_test_case.find(op_name_) != mlu_op_test_case.end()) {
+    mlu_op_jira_id = mlu_op_test_case[op_name_];
+  } else {
+    mlu_op_jira_id = mlu_op_test_case["default"];
+  }
+  test_case_key = "['" + mlu_op_jira_id + "']";
+  this->RecordProperty("caseId", case_name);
+  this->RecordProperty("test_case_issue_key", test_case_key);
+
+  this->RecordProperty("op_name", op_name_);
+
+  // save case_path
+  this->RecordProperty("case_path", er.case_path);
+
+  // hardware_time is latency in generator.
+  std::ostringstream mhwb_oss;
+  mhwb_oss << std::setprecision(10) << er.mlu.hardware_time_base;
+  this->RecordProperty("hardware_time_base", mhwb_oss.str());
+
   this->RecordProperty(case_name, mhwb_oss.str());
 
   std::ostringstream mws_oss;
@@ -538,6 +598,12 @@ void TestSuite::recordXml(mluoptest::EvaluateResult er) {
   std::ostringstream mhw_oss;
   mhw_oss << std::setprecision(10) << er.mlu.hardware_time;
   this->RecordProperty("hardware_time_mlu", mhw_oss.str());
+
+  if (0 != er.mlu.hardware_time_layer) {
+    std::ostringstream mhwl_oss;
+    mhwl_oss << std::setprecision(10) << er.mlu.hardware_time_layer;
+    this->RecordProperty("hardware_time_mlu_by_layer", mhwl_oss.str());
+  }
 
   std::ostringstream interface_oss;
   interface_oss << std::setprecision(10) << er.mlu.interface_time;
@@ -550,6 +616,28 @@ void TestSuite::recordXml(mluoptest::EvaluateResult er) {
   std::ostringstream mce_oss;
   mce_oss << std::setprecision(10) << er.mlu.compute_efficiency;
   this->RecordProperty("compute_efficiency_mlu", mce_oss.str());
+
+  std::ostringstream gws_oss;
+  gws_oss << std::setprecision(10) << er.gpu.workspace_size;
+  this->RecordProperty("workspace_size_gpu", gws_oss.str());
+
+  std::ostringstream ghw_oss;
+  ghw_oss << std::setprecision(10) << er.gpu.hardware_time;
+  this->RecordProperty("hardware_time_gpu", ghw_oss.str());
+
+  std::ostringstream gie_oss;
+  gie_oss << std::setprecision(10) << er.gpu.io_efficiency;
+  this->RecordProperty("io_efficiency_gpu", gie_oss.str());
+
+  std::ostringstream gce_oss;
+  gce_oss << std::setprecision(10) << er.gpu.compute_efficiency;
+  this->RecordProperty("compute_efficiency_gpu", gce_oss.str());
+
+  if (er.gpu.has_runtime_env) {
+    std::ostringstream gdl_oss;
+    gdl_oss << er.gpu.dl_framework;
+    this->RecordProperty("dl_framework_gpu", gdl_oss.str());
+  }
 
   std::ostringstream theory_ops_oss;
   theory_ops_oss << std::setprecision(10) << er.mlu.theory_ops;
