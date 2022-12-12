@@ -23,44 +23,104 @@
 #ifndef KERNELS_KERNEL_H_
 #define KERNELS_KERNEL_H_
 
-/******************************************************************************
- * Macros for host and device side
- ******************************************************************************/
-#define NFU_ALIGN_SIZE 128          // Byte
-#define REM_FOR_STACK (128 * 1024)  // 128KB reserved for cncc
-#define CEIL_ALIGN(x, align) (((x) + (align)-1) / (align) * (align))
-#define FLOOR_ALIGN(x, align) ((x) / (align) * (align))
-
 #if defined(__BANG__)
 #include <mlu.h>
 #endif  // defined(__BANG__)
 
+
 /******************************************************************************
- * Macros for device side
- ******************************************************************************/
-#define CORE_DIM 4
-#if defined(__BANG__)
-#define MAX_NRAM_SIZE \
-  (__MLU_NRAM_SIZE__ * 1024 - 128 * 1024)  // 128KB reserved for cncc
-#define MAX_SRAM_SIZE \
-  (__MLU_SRAM_SIZE__ * 1024 - 128 * 1024)  // 128KB reserved for cncc
+ * Macros for mluop kernels
+ ******************************************************************************/
+// in future, can be "__BANG_ARCH__ == 592 || __BANG_ARCH__ == xxx || ...)"
+#define ARCH_SUPPORT_LARGE_TENSOR (__BANG_ARCH__ == 592)
+// in future, can be "(__BANG_ARCH__ != 520 && __BANG_ARCH__ != xxx && ...)"
+#define ARCH_NO_SRAM (__BANG_ARCH__ != 520)
+
+
 #define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024)
+#define WRAM_LT_STRIDE (__MLU_WRAM_SIZE__ * 1024 / 64)
 
-__mlu_func__ void pvLock() {
-#if __BANG_ARCH__ == 270
-  if (coreId != 0x80) {
-    __bang_lock(0, 0);
-  }
-#endif
-}
 
-__mlu_func__ void pvUnlock() {
-#if __BANG_ARCH__ == 270
-  if (coreId != 0x80) {
-    __bang_unlock(0, 0);
-  }
+#if (__BANG_ARCH__ == 290) && defined(CONV_WARM_UP)
+#undef MAX_WRAM_SIZE
+#define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024 - 8 * 1024)
 #endif
-}
-#endif  // defined(__BANG__)
+
+
+// only support when __BANG_ARCH__ > 300
+#if(__BANG_ARCH__ > 300)
+#define WRAM_LT_MAP16_STRIDE (__MLU_WRAM_SIZE__ * 1024 / 16)
+#endif
+
+
+#define DDR_ALIGN_MAP3 (1024 * 16)  // 16KB
+#define NFU_ALIGN_SIZE 128          // Byte
+#define WRAM_ALIGN_SIZE 64
+#define LT_NUM 64
+#define COMPUTE_COUNT_ALIGN 64   // elem_count must be divisible by 64
+
+
+#if __BANG_ARCH__ == 322 || __BANG_ARCH__ == 520
+#define CORE_DIM 1
+#else
+#define CORE_DIM 4
+#endif
+#define CLUSTER_DIM_OF_BLOCK 0
+#define CLUSTER_DIM_OF_UNION1 1
+#define CLUSTER_DIM_OF_UNION2 2
+#define CLUSTER_DIM_OF_UNION4 4
+#define CLUSTER_DIM_OF_UNION8 8
+#define CLUSTER_DIM_OF_UNION16 16
+
+
+#define REM_FOR_STACK (128 * 1024)           // 128KB reserved for cncc
+#define THRESHOLD_SIZE_OF_UNION (64 * 1024)  // Split NRAM to 6 * 64KB
+
+
+#ifdef __BANG_ARCH__
+#define MAX_NRAM_SIZE (__MLU_NRAM_SIZE__ * 1024 - REM_FOR_STACK)
+#if __MLU_SRAM_SIZE__ == 0
+#define MAX_SRAM_SIZE 0
+#else
+#define MAX_SRAM_SIZE (__MLU_SRAM_SIZE__ * 1024 - REM_FOR_STACK)
+#endif
+#else  // __BANG_ARCH__
+#define MAX_NRAM_SIZE (384 * 1024)           // 384KB, initialization value
+#define MAX_SRAM_SIZE (1920 * 1024)          // 1920KB,initialization value
+#endif  // __BANG_ARCH__
+
+
+#ifndef PAD_UP
+#define PAD_UP(x, y) (((x) / (y) + (int)((x) % (y) > 0)) * (y))
+#endif
+
+
+#ifndef PAD_DOWN
+#define PAD_DOWN(x, y) (((x) / (y)) * (y))
+#endif
+
+
+#ifndef DIV_UP
+#define DIV_UP(x, y) ((x) % (y) > 0 ? ((x) / (y) + 1) : ((x) / (y)))
+#endif
+
+
+#ifndef DIV_DN
+#define DIV_DN(x, y) ((x) / (y))
+#endif
+
+
+#define CEIL_ALIGN(x, align) (((x) + (align) - 1) / (align) * (align))
+#define FLOOR_ALIGN(x, align) ((x) / (align) * (align))
+
+
+// maximum integer that can be represented by float
+#if __BANG_ARCH__ >= 322
+#define MAX_INT2FLOAT_EXACT (powf(2, 24))
+#define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 24))
+#else
+#define MAX_INT2FLOAT_EXACT (powf(2, 23) - 1)
+#define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 23))
+#endif
 
 #endif  // KERNELS_KERNEL_H_

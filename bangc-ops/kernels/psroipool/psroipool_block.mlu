@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 #include "mlu.h"
 #include "mlu_op_kernel.h"
 
@@ -96,8 +97,8 @@ __mlu_func__ void psRoiAvgPool(
     if (bidx < 0 || bidx > (batch_size - 1)) {
       return;
     }
-    T roi_height = std::max(roi_end_h - roi_start_h, (T)0.1);
-    T roi_width = std::max(roi_end_w - roi_start_w, (T)0.1);
+    T roi_height = __mluop_max(roi_end_h - roi_start_h, (T)0.1);
+    T roi_width = __mluop_max(roi_end_w - roi_start_w, (T)0.1);
     T bin_size_h = (T)roi_height / (T)(pooled_height);
     T bin_size_w = (T)roi_width / (T)(pooled_width);
     T *ptr_nram_des = nram_des;
@@ -116,10 +117,10 @@ __mlu_func__ void psRoiAvgPool(
         wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
         hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
         wend = ceil(static_cast<T>(pw + 1) * bin_size_w + roi_start_w);
-        hstart = std::min(std::max(hstart, 0), height);
-        hend = std::min(std::max(hend, 0), height);
-        wstart = std::min(std::max(wstart, 0), width);
-        wend = std::min(std::max(wend, 0), width);
+        hstart = __mluop_min(__mluop_max(hstart, 0), height);
+        hend = __mluop_min(__mluop_max(hend, 0), height);
+        wstart = __mluop_min(__mluop_max(wstart, 0), width);
+        wend = __mluop_min(__mluop_max(wend, 0), width);
         is_empty = (hend <= hstart) || (wend <= wstart);
         // vector version
         if (!is_empty) {
@@ -257,18 +258,18 @@ __mlu_func__ void psRoiAvgPoolBackwardCompute(
   if (batch_id < 0 || batch_id > (batch_size - 1)) {
     return;
   }
-  T roi_height = std::max(roi_end_h - roi_start_h, (T)0.1);
-  T roi_width = std::max(roi_end_w - roi_start_w, (T)0.1);
+  T roi_height = __mluop_max(roi_end_h - roi_start_h, (T)0.1);
+  T roi_width = __mluop_max(roi_end_w - roi_start_w, (T)0.1);
   T bin_size_h = (T)roi_height / (T)(pooled_height);
   T bin_size_w = (T)roi_width / (T)(pooled_width);
   int hstart = floor(static_cast<T>(ph) * bin_size_h + roi_start_h);
   int wstart = floor(static_cast<T>(pw) * bin_size_w + roi_start_w);
   int hend = ceil(static_cast<T>(ph + 1) * bin_size_h + roi_start_h);
   int wend = ceil(static_cast<T>(pw + 1) * bin_size_w + roi_start_w);
-  hstart = std::min(std::max(hstart, 0), height);
-  hend = std::min(std::max(hend, 0), height);
-  wstart = std::min(std::max(wstart, 0), width);
-  wend = std::min(std::max(wend, 0), width);
+  hstart = __mluop_min(__mluop_max(hstart, 0), height);
+  hend = __mluop_min(__mluop_max(hend, 0), height);
+  wstart = __mluop_min(__mluop_max(wstart, 0), width);
+  wend = __mluop_min(__mluop_max(wend, 0), width);
   bool is_empty = (hend <= hstart) || (wend <= wstart);
   int bin_area = (hend - hstart) * (wend - wstart);
   T bin_area_recip = 1.0 / bin_area;

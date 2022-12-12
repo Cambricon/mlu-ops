@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_TOOLS_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_TOOLS_H_
 
 #include <algorithm>
 #include <sstream>
@@ -31,21 +31,22 @@
 #include <random>
 #include <thread>  //NOLINT
 #include <vector>
+#include <limits>
 #include <unordered_map>
 #include "core/tensor.h"
 #include "evaluator.h"
 #include "gtest/gtest.h"
 #include "mlu_op_test.pb.h"
 #include "mlu_op.h"
-#include "tools.h"
+#include "pb_test_tools.h"
 
 namespace mluoptest {
 
 // for debug
 void saveDataToFile(const std::string &file, float *data, size_t count);
-void saveDataToFile(const std::string &file, float *data, mluOpDataType_t dtype,
+void saveDataToFile(const std::string &file, void *data, mluOpDataType_t dtype,
                     size_t count);
-void readDataFromFile(const std::string &file, float *data, size_t count);
+void readDataFromFile(const std::string &file, void *data, size_t count);
 void saveHexDataToFile(const std::string &file, void *data,
                        mluOpDataType_t dtype, size_t count);
 
@@ -59,20 +60,20 @@ cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype);
 mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype);
 mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order);
 int16_t cvtFloatToHalf(float x);
-int64_t cvtFloatToInt64(float x);
 float cvtHalfToFloat(int16_t);
 
-void arrayCastFloatToHalf(int16_t *dst, float *src, int num);
-void arrayCastFloatToInt64(int64_t *dst, float *src, int num);
-void arrayCastHalfToFloat(float *dst, int16_t *src, int num);
+cnrtRet_t warpRtConvertFloatToHalf(uint16_t *f16, float d);
+cnrtRet_t warpRtConvertHalfToFloat(float *d, uint16_t f16);
+
+void arrayCastFloatToHalf(int16_t *dst, float *src, size_t num);
+void arrayCastHalfToFloat(float *dst, int16_t *src, size_t num);
 void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype,
                              void *dst_data, mluOpDataType_t dst_dtype,
-                             int num);
-void arrayCastHalfToInt8or16HalfUp(void *dst, int16_t *src, int pos, int num,
+                             size_t num);
+void arrayCastHalfToInt8or16HalfUp(void *dst, int16_t *src, int pos, size_t num,
                                    int int8or16);
-uint64_t GenNumberOfFixedWidth(uint64_t a, int witdh);
-
 bool getEnv(const std::string &env, bool default_ret);
+int getEnvInt(const std::string &env, int default_ret);
 size_t proc_usage_peak();
 std::unordered_map<std::string, std::vector<std::string>> readFileByLine(
     const std::string &file);
@@ -84,6 +85,7 @@ int float_mult(int in_a, int in_b, int float_16or32, int round_mode,
 int float_add(int in_a, int in_b, int float_16or32, int round_mode,
               int add_or_sub, int ieee754);
 
+bool hasRandomBound(const RandomData *random_param);
 // force fix to float
 template <typename FixedType>
 void forceFixToFloat(FixedType *src, float *dst, const size_t num) {
@@ -165,13 +167,14 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
     }
     if (lower == upper) {
       is_lower_equal_upper = true;
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         data[i] = lower;
       }
     } else {
       // uniform_real_distribution is [lower, upper)
+      upper = std::nexttoward(upper, -std::numeric_limits<T>::infinity());
       std::uniform_real_distribution<T> dis(lower, upper);
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         data[i] = dis(re);
       }
     }
@@ -187,7 +190,7 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
     }
     // uniform_real_distribution is [lower, upper)
     std::normal_distribution<T> dis(mu, sigma);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       data[i] = dis(re);
     }
   }
@@ -205,7 +208,7 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
       if (convert_dtype) {
         // if convert_dtype == true, round(float) to int,
         // else don't round, int is qint
-        for (int i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; ++i) {
           int x = std::floor(data[i]);
           data[i] = x;
         }
@@ -214,36 +217,37 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
     case DTYPE_UINT8:
     case DTYPE_UINT16:
     case DTYPE_UINT32: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         uint32_t x = std::floor(data[i]);
         data[i] = x;
       }
     }; break;
     case DTYPE_INT32: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         int x = std::floor(data[i]);
         data[i] = x;
       }
     }; break;
     case DTYPE_INT64: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         int64_t x = std::floor(data[i]);
         data[i] = x;
       }
     }; break;
     case DTYPE_UINT64: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         uint64_t x = std::floor(std::abs(data[i]));
         data[i] = x;
       }
     }; break;
     case DTYPE_BOOL: {
-      if (!random_param->has_lower_bound() ||
-          !random_param->has_upper_bound()) {
+      if (!hasRandomBound(random_param)) {
         LOG(ERROR) << "Generate bool data should use uniform distribution.";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
       }
       if (is_lower_equal_upper) {
-        for (int i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; ++i) {
           data[i] = (data[i] > 0) ? 1.0f : 0.0f;
         }
         break;
@@ -257,7 +261,7 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
         mid =
             (T)(random_param->upper_bound() + random_param->lower_bound()) / 2;
       }
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         data[i] = (data[i] < mid) ? 0.0f : 1.0f;
       }
     }; break;
@@ -267,6 +271,11 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
                                   std::to_string(__LINE__));
   }
 }
+
+template <typename T>
+inline void hash_combine(size_t &seed, T value) {
+  seed ^= std::hash<T>()(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_TOOLS_H_

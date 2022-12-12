@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 cmake_policy(SET CMP0048 NEW) # Use project(... VERSION ...)
 project(mlu_op_test)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # check
@@ -122,6 +122,9 @@ include_directories("${PROTO_PATH}")
 include_directories("${MLUOP_PB_GTEST_INCLUDE}")
 include_directories("${MLUOP_API_GTEST_INCLUDE}")
 
+file(GLOB_RECURSE gtest_mlu_files FOLLOW_SYMLINKS "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/internal_kernel/*")
+bang_add_library(mluop_gtest_kernels STATIC "${gtest_mlu_files}")
+
 file(GLOB SRC_DIR "${GOOGLETEST_SRC}/*.cc")
 #add_library(gtest_shared SHARED ${SRC_DIR})
 add_library(gtest_shared STATIC ${SRC_DIR}) # for runtime convenience
@@ -145,7 +148,8 @@ set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
 foreach(target_gtest ${targets_mluop_gtest})
-  target_link_libraries(${target_gtest} cnrt cndrv pthread gtest_shared stdc++ m dl)
+  target_link_libraries(${target_gtest} mluop_gtest_kernels)
+  target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
   target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
   target_link_libraries(${target_gtest} mluop_test_proto)
   set_target_properties(${target_gtest}
@@ -167,13 +171,13 @@ endif()
 
 add_library(mluop_api_gtest_obj OBJECT ${MLUOP_API_TEST_DIR} ${MLUOP_API_GTEST_DIR})
 add_executable(mluop_api_gtest $<TARGET_OBJECTS:mluop_api_gtest_obj>)
-target_link_libraries(mluop_api_gtest cnrt cndrv pthread gtest_shared mluops stdc++ m dl)
+target_link_libraries(mluop_api_gtest cnrt cndev cndrv cndev pthread gtest_shared mluops stdc++ m dl)
 target_link_libraries(mluop_api_gtest ${LIBXML2_LIBRARIES} ${EXTRA_LIBS})
 set_target_properties(mluop_api_gtest
   PROPERTIES
   INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
 )
-set(targets_mluop_gtest mluop_api_gtest)
+set(targets_mluop_api_gtest mluop_api_gtest)
 
 # pb to prototxt tool
 add_executable(pb2prototxt ${CMAKE_CURRENT_SOURCE_DIR}/tools/pb2prototxt.cpp)
@@ -184,8 +188,17 @@ set_target_properties(pb2prototxt prototxt2pb
   PROPERTIES
   INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
 )
-
+if (NOT CMAKE_INSTALL_MESSAGE)
+  set(CMAKE_INSTALL_MESSAGE NEVER) # LAZY: do not show `Up-to-date` info
+endif()
 install(TARGETS ${targets_mluop_gtest}
+  COMPONENT mluop_gtest
+  RUNTIME DESTINATION build/test
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(TARGETS ${targets_mluop_api_gtest}
   COMPONENT mluop_gtest
   RUNTIME DESTINATION build/test
   ARCHIVE DESTINATION lib${LIB_SUFFIX}
@@ -199,13 +212,17 @@ install(TARGETS pb2prototxt prototxt2pb mluop_test_proto gtest_shared
   LIBRARY DESTINATION lib${LIB_SUFFIX}
 )
 
-install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
-  "${CMAKE_CURRENT_LIST_DIR}/tools/search_case_v2.py"
-  "${CMAKE_CURRENT_LIST_DIR}/tools/watch_mem.bash"
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/gtest_config/test_list"
   COMPONENT mluop_gtest
-  DESTINATION test/mluop_gtest/tools
+  DESTINATION test/mlu_op_gtest/pb_gtest/gtest_config
 )
-set(CMAKE_INSTALL_MESSAGE LAZY) # do not show `Up-to-date` info
+# install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
+#   "${CMAKE_CURRENT_LIST_DIR}/tools/search_case_v2.py"
+#   "${CMAKE_CURRENT_LIST_DIR}/tools/watch_mem.bash"
+#   COMPONENT mluop_gtest
+#   DESTINATION test/mluop_gtest/tools
+# )
+
 install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/zoo"
   COMPONENT mluop_gtest
   DESTINATION test/mluop_gtest/pb_gtest/src

@@ -43,4 +43,4 @@ class GenerateProposalsV2Executor : public Executor {
 
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_  //NOLINT
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_GENERATE_PROPOSALS_v2_GENERATE_PROPOSALS_v2_H_ //NOLINT
