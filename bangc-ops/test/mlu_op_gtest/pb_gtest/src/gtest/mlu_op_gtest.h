@@ -74,7 +74,7 @@ class TestSuite : public TestWithParam<std::tuple<std::string, size_t>> {
 
   void print(mluoptest::EvaluateResult eva, bool average = false);
   void report(mluoptest::EvaluateResult eva);
-  void recordXml(mluoptest::EvaluateResult eva);
+  void recordXml(mluoptest::EvaluateResult &eva);
 };
 
 #endif  // TEST_MLU_OP_GTEST_SRC_GTEST_MLU_OP_GTEST_H_

@@ -24,6 +24,8 @@
 #define KERNELS_UNARY_OP_UNARY_OP_3PIPELINE_H_
 
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
 #define UNARY_ALIGN_NUM 64
 
 #define UNARY_OP_KERNEL_3PIPELINE_DECLARE(Op, DType, Prefer)           \

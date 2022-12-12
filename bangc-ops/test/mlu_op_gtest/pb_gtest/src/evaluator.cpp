@@ -26,282 +26,166 @@
 #endif
 #include <algorithm>
 #include <utility>
+#include <set>
 #include <vector>
 #include <string>
 #include "evaluator.h"
 
 namespace mluoptest {
-const double EPSILON = 1e-9;
-const double EPSILON_FLOAT = 1e-6;
-const double EPSILON_HALF = 1e-3;
 
-// found inf or nan, return true.
-#ifdef __AVX__
-bool hasNanOrInf(float *data, size_t count) {
-  const __m256 exp_bit = _mm256_set1_ps(std::numeric_limits<float>::infinity());
-
-  size_t stride = 256 / (sizeof(float) * 8);  // 1 __m256 saved 8 *
-                                              // (sizeof(float) * 8 bit)
-  size_t repeat = count / stride * stride;
-
-  __m256 m_data;
-  for (size_t i = 0; i < repeat; i += stride) {
-    m_data = _mm256_load_ps(data + i);
-    m_data = _mm256_and_ps(exp_bit, m_data);
-    m_data = _mm256_cmp_ps(m_data, exp_bit, _CMP_EQ_OQ);
-    if (_mm256_movemask_ps(m_data) != 0) {
-      return true;
-    }
-  }
-
-  for (size_t i = repeat; i < count - repeat; ++i) {
-    if (std::isnan(data[i]) || std::isinf(data[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-#else
-bool hasNanOrInf(float *data, size_t count) {
-  for (int i = 0; i < count; ++i) {
-    if (std::isinf(data[i]) || std::isnan(data[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-#endif
-
-void resetNanOrInfAsZero(float *a, float *b, size_t count) {
-  bool has_nan = false;
-  bool has_inf = false;
-  for (size_t i = 0; i < count; ++i) {
-    if (unlikely(std::isnan(a[i]) && std::isnan(b[i]))) {
-      a[i] = 0.0f;
-      b[i] = 0.0f;
-      has_nan = true;
-    } else if (unlikely(std::isinf(a[i]) && std::isinf(b[i]) && a[i] == b[i])) {
-      // if a is inf, b is -inf, don't deal here.
-      // when check hasNanOrInf will set diff as DBL_MAX (instead infinity).
-      a[i] = 0.0f;
-      b[i] = 0.0f;
-      has_inf = true;
-    }
-  }
-  if (has_nan) {
-    VLOG(4) << "Found result of baseline and mlu are both NaN, set them as "
-               "0, and go on.";
-  }
-  if (has_inf) {
-    VLOG(4) << "Found result of baseline and mlu are both Inf, set them as "
-               "0, and go on.";
-  }
-}
-
-void skipNanOrInfAsZero(float *a, float *b, size_t count) {
-  bool has_nan = false;
-  bool has_inf = false;
-  for (size_t i = 0; i < count; ++i) {
-    int tmp = *(int *)&a[i];
-    if (unlikely(std::isnan(a[i]))) {
-      a[i] = 0.0f;
-      b[i] = 0.0f;
-      has_nan = true;
-    } else if (unlikely(std::isinf(a[i]))) {
-      a[i] = 0.0f;
-      b[i] = 0.0f;
-      has_inf = true;
-    }
-  }
-  if (has_nan) {
-    VLOG(4) << "Found result of baseline is NaN,"
-            << " set baseline and mlu as 0, and go on.";
-  }
-  if (has_inf) {
-    VLOG(4) << "Found result of baseline is Inf,"
-            << " set baseline and mlu as 0, and go on.";
-  }
-}
-
-double Evaluator::computeDiff1(float *cpu_result, float *mlu_result,
-                               size_t count) {
-  if (hasNanOrInf(cpu_result, count) || hasNanOrInf(mlu_result, count)) {
-    LOG(ERROR) << "Found NaN or Inf when compute diff, return DBL_MAX "
-                  "instead.";
-    return DBL_MAX;
-  }
-
-  double numerator_sum = 0.0;
-  double denominator_sum = 0.0;
-  for (int i = 0; i < count; i++) {
-    numerator_sum += fabs(cpu_result[i] - mlu_result[i]);
-    denominator_sum += fabs(cpu_result[i]);
-  }
-
-  return numerator_sum / (denominator_sum + EPSILON);
-}
-
-double Evaluator::computeDiff2(float *cpu_result, float *mlu_result,
-                               size_t count) {
-  if (hasNanOrInf(cpu_result, count) || hasNanOrInf(mlu_result, count)) {
-    LOG(ERROR) << "Found NaN or Inf when compute diff, return DBL_MAX "
-                  "instead.";
-    return DBL_MAX;
-  }
-
-  double numerator_sum = 0.0;
-  double denominator_sum = 0.0;
-  for (int i = 0; i < count; i++) {
-    float delta = fabs(cpu_result[i] - mlu_result[i]);
-    numerator_sum += pow(delta, 2);
-    denominator_sum += pow(fabs(cpu_result[i]), 2);
-  }
-
-  return sqrt(numerator_sum / (denominator_sum + EPSILON));
-}
-
-double Evaluator::computeDiff3_2(float *baseline_result, float *mlu_result,
-                                 size_t count) {
-  if (hasNanOrInf(baseline_result, count) || hasNanOrInf(mlu_result, count)) {
-    LOG(ERROR) << "Found NaN or Inf when compute diff, return DBL_MAX "
-                  "instead.";
-    return DBL_MAX;
-  }
-  double max_value = 0.0;
-  for (int i = 0; i < count; ++i) {
-    double ratio = fabs(mlu_result[i] - baseline_result[i]);
-    max_value = (ratio > max_value) ? ratio : max_value;
-  }
-  return max_value;
-}
-
-// aka maxape
-double Evaluator::computeDiff3(float *baseline_result, float *mlu_result,
-                               size_t count, mluOpDataType_t dtype) {
-  if (hasNanOrInf(baseline_result, count) || hasNanOrInf(mlu_result, count)) {
-    LOG(ERROR) << "Found NaN or Inf when compute diff, return DBL_MAX "
-                  "instead.";
-    return DBL_MAX;
-  }
-  double max_value = 0.0;
-  for (int i = 0; i < count; ++i) {
-    float numerator = fabs(mlu_result[i] - baseline_result[i]);
-    double ratio = 0;
-    if (((MLUOP_DTYPE_HALF == dtype) &&
-         (fabs(baseline_result[i]) < EPSILON_HALF)) ||
-        ((MLUOP_DTYPE_FLOAT == dtype) &&
-         (fabs(baseline_result[i]) < EPSILON_FLOAT))) {
-      ratio = numerator;
-    } else {
-      ratio = numerator / (fabs(baseline_result[i]) + EPSILON);
-    }
-    max_value = (ratio > max_value) ? ratio : max_value;
-  }
-  return max_value;
-}
-
-double Evaluator::computeDiff4(float *baseline_result, float *mlu_result,
-                               size_t count) {
-  if (hasNanOrInf(baseline_result, count) || hasNanOrInf(mlu_result, count)) {
-    LOG(ERROR) << "Found NaN or Inf when compute diff, return DBL_MAX "
-                  "instead.";
-    return DBL_MAX;
-  }
-
-  double max_value = 0.0;
-  int max_count = 0;
-  int num_count = 0;
-  for (int i = 0; i < count; ++i) {
-    max_count += mlu_result[i] < baseline_result[i];
-    num_count += mlu_result[i] != baseline_result[i];
-  }
-
-  max_value = (num_count < 100) ? 0 : max_count / (num_count + EPSILON);
-  return max_value;
-}
-
-double Evaluator::computeError(float *baseline_result, float *mlu_result,
-                               size_t count, const Criterion &criterion,
-                               const std::string &name,
-                               const mluOpDataType_t dtype,
-                               bool skip_nan_n_inf) {
-  double error = -1;
-  auto func = criterion.formula;
-
-  if (skip_nan_n_inf) {
-    // if one of mlu and baseline is nan/inf, set them zero
-    skipNanOrInfAsZero(baseline_result, mlu_result, count);
+void Evaluator::init(void *baseline_result, void *mlu_result,
+                     const size_t count, const std::set<Criterion> criterions,
+                     const std::string &name, const mluOpDataType_t dtype,
+                     const bool skip_nan_n_inf) {
+  base_array_ = baseline_result;
+  mlu_array_ = mlu_result;
+  count_ = count;
+  count_total_ = is_complex_ ? count_ * 2 : count_;
+  criterions_ = criterions;
+  name_ = name;
+  dtype_ = dtype;
+  skip_nan_n_inf_ = skip_nan_n_inf;
+  if (dtype_ == MLUOP_DTYPE_COMPLEX_HALF ||
+      dtype_ == MLUOP_DTYPE_COMPLEX_FLOAT) {
+    is_complex_ = true;
   } else {
-    // if both mlu and baseline is nan/inf, set them zero
-    resetNanOrInfAsZero(baseline_result, mlu_result, count);
+    is_complex_ = false;
   }
+  stride_ = is_complex_ ? 2 : 1;
+  thresholdLevel1();
+}
 
-  switch (func) {
-    case DIFF1: {
-      error = computeDiff1(baseline_result, mlu_result, count);
-      break;
-    }
-    case DIFF2: {
-      error = computeDiff2(baseline_result, mlu_result, count);
-      break;
-    }
-    case DIFF3: {
-      error = computeDiff3(baseline_result, mlu_result, count, dtype);
-      break;
-    }
-    case DIFF3_2: {
-      error = computeDiff3_2(baseline_result, mlu_result, count);
-      break;
-    }
-    case DIFF4: {
-      error = computeDiff4(baseline_result, mlu_result, count);
-      break;
-    }
-    default:
-      GTEST_CHECK(false,
-                  "Evaluator: found unsupported criterion when compute "
-                  "result error.");
+void Evaluator::computeErrorForOneCriterion() {
+  if (skip_compute_diff_) {
+    return;
   }
+  func_ = cur_criterion_.formula;
 
-  error_vec_.push_back(ErrorWrap(name, criterion, error));
-  return error;
+  switch (dtype_) {
+    case MLUOP_DTYPE_DOUBLE: {
+      compute_diff<double>();
+    } break;
+    default: {
+      compute_diff<float>();
+    }
+  }
+  error_vec_.push_back(
+      ErrorWrap(name_, cur_criterion_, error_, error_imag_, dtype_));
+}
+
+void Evaluator::setErrorWrap() {
+  for (auto &it : criterions_) {
+    if (nan_inf_pass_) {
+      if (it.formula == DIFF4) {
+        error_vec_.push_back(ErrorWrap(name_, it, -1, -1, dtype_));
+      } else {  // !DIFF4
+        error_vec_.push_back(ErrorWrap(name_, it, 0, 0, dtype_));
+      }
+    } else {  // !nan_inf_pass
+      auto error_max = std::numeric_limits<double>::max();
+      error_vec_.push_back(ErrorWrap(name_, it, error_max, error_max, dtype_));
+    }
+  }
+}
+
+void Evaluator::thresholdLevel1() {
+  threshold_l1_ = true;
+  // if one op only need compute diff4 in the future, fix here.
+  for (auto &it : criterions_) {
+    if (it.formula == DIFF4) {
+      continue;
+    } else {
+      if (!(it.threshold == 0 && it.threshold_imag == 0)) {
+        threshold_l1_ = false;
+        return;
+      }
+    }
+  }
+}
+
+void Evaluator::computeError(void *baseline_result, void *mlu_result,
+                             const size_t count,
+                             const std::set<Criterion> criterions,
+                             const std::string &name,
+                             const mluOpDataType_t dtype,
+                             const bool skip_nan_n_inf) {
+  if (0 == criterions.size()) {
+    criterion_matching_ = false;
+    LOG(ERROR) << "Error func in mluop_gtest and pb/pt may mismatch,"
+               << " now no error func is used, plese check.";
+    return;
+  }
+  init(baseline_result, mlu_result, count, criterions, name, dtype,
+       skip_nan_n_inf);
+  switch (dtype_) {
+    case MLUOP_DTYPE_DOUBLE: {
+      check_nan_inf<double>();
+    } break;
+    default: {
+      check_nan_inf<float>();
+    }
+  }
+  for (auto &it : criterions_) {
+    cur_criterion_ = it;
+    computeErrorForOneCriterion();
+  }
 }
 
 bool Evaluator::isPassed() {
+  if (!criterion_matching_) {
+    return false;
+  }
   if (error_vec_.empty()) {
     LOG(WARNING) << "The result error is empty, it means output shape is 0 "
-                    "in pb, and skip compute "
-                    "result error.";
+                    "in pb, "
+                    "and skip compute result error.";
   }
-
-  for (int i = 0; i < error_vec_.size(); ++i) {
+  for (size_t i = 0; i < error_vec_.size(); ++i) {
     if (error_vec_[i].criterion.enable == false) {
       continue;
     }
     auto func = error_vec_[i].criterion.formula;
     auto threshold = error_vec_[i].criterion.threshold;
     auto error = error_vec_[i].error;
-    if (std::isnan(error) || std::isinf(error)) {
-      return false;
-    } else if (Formula::DIFF4 == func) {
-      if (error > threshold || ((error < 1 - threshold) && (error != 0)) ||
-          error < 0) {
-        return false;
-      }
-    } else if (error > threshold || error < 0) {
-      return false;
-    } else {
-      // pass, and next
-    }
+    auto threshold_imag = error_vec_[i].criterion.threshold_imag;
+    auto error_imag = error_vec_[i].error_imag;
+    auto dtype = error_vec_[i].dtype;
+
+// for diff4, error < 0 means it is not used because number of data points are
+// less than 100. also, for diff4, thred < 0 means gpu_diff4 is 0.0 or 1.0, in
+// this case, mlu should always pass
+#define CHECK_ERROR(err, thred)             \
+  if (std::isnan(err) || std::isinf(err)) { \
+    return false;                           \
+  } else if (Formula::DIFF4 == func) {      \
+    if (err >= 0 && thred >= 0) {           \
+      if (err == 0.0 || (err == 1.0)) {     \
+        return false;                       \
+      }                                     \
+    }                                       \
+  } else if (err > thred || err < 0) {      \
+    return false;                           \
   }
 
+    switch (dtype) {
+      case MLUOP_DTYPE_COMPLEX_HALF:
+      case MLUOP_DTYPE_COMPLEX_FLOAT: {
+        CHECK_ERROR(error, threshold);
+        CHECK_ERROR(error_imag, threshold_imag);
+      } break;
+      default: {
+        CHECK_ERROR(error, threshold);
+      }
+    }
+#undef CHECK_ERROR
+  }
   return true;
 }
 
 // only when failed, call this func. to get error reason
 std::vector<std::string> Evaluator::what() {
   std::vector<std::string> res;
-  for (int i = 0; i < error_vec_.size(); ++i) {
+  for (size_t i = 0; i < error_vec_.size(); ++i) {
     if (error_vec_[i].criterion.enable == false) {
       continue;
     }
@@ -309,37 +193,51 @@ std::vector<std::string> Evaluator::what() {
     auto threshold = error_vec_[i].criterion.threshold;
     auto error = error_vec_[i].error;
     auto name = error_vec_[i].name;
-    if (std::isnan(error) || std::isinf(error)) {
-      std::ostringstream oss;
-      oss.setf(std::ios::scientific);
-      oss << error;
-      res.emplace_back("The error " + oss.str() + " of [" + name +
-                       "] is NOT digit.");
-    } else if (Formula::DIFF4 == func) {
-      if (error > threshold || ((error < 1 - threshold) && (error != 0)) ||
-          error < 0) {
-        std::ostringstream oss;
-        oss.setf(std::ios::scientific);
-        oss << error;
-        res.emplace_back("The error " + oss.str() + " of [" + name +
-                         "] is over " + showFormula(func) + " threshold " +
-                         " [" + std::to_string(1 - threshold) + " , " +
-                         std::to_string(threshold) + "]");
-      }
-    } else if (error > threshold || error < 0) {
-      std::ostringstream oss_error, oss_threshold;
-      oss_error.setf(std::ios::scientific);
-      oss_threshold.setf(std::ios::scientific);
-      oss_error << error;
-      oss_threshold << threshold;
-      res.emplace_back("The error " + oss_error.str() + " of [" + name +
-                       "] is over " + showFormula(func) + " threshold " +
-                       oss_threshold.str());
-    } else {
-      // pass
-    }
+    auto threshold_imag = error_vec_[i].criterion.threshold_imag;
+    auto error_imag = error_vec_[i].error_imag;
+    auto dtype = error_vec_[i].dtype;
+
+#define GET_ERROR_INFO(err, thred, err_name)                                   \
+  if (std::isnan(err) || std::isinf(err)) {                                    \
+    std::ostringstream oss;                                                    \
+    oss.setf(std::ios::scientific);                                            \
+    oss << err;                                                                \
+    res.emplace_back("The " + err_name + " " + oss.str() + " of [" + name +    \
+                     "] is NOT digit.");                                       \
+  } else if (Formula::DIFF4 == func) {                                         \
+    if (err >= 0 && thred >= 0) {                                              \
+      if (err == 0.0 || (err == 1.0)) {                                        \
+        std::ostringstream oss;                                                \
+        oss.setf(std::ios::scientific);                                        \
+        oss << err;                                                            \
+        res.emplace_back("The " + err_name + " " + oss.str() + " of [" +       \
+                         name + "] is over " + showFormula(func) +             \
+                         " threshold (0, 1) ");                                \
+      }                                                                        \
+    }                                                                          \
+  } else if (err > thred || err < 0) {                                         \
+    std::ostringstream oss_err, oss_thred;                                     \
+    oss_err.setf(std::ios::scientific);                                        \
+    oss_thred.setf(std::ios::scientific);                                      \
+    oss_err << err;                                                            \
+    oss_thred << thred;                                                        \
+    res.emplace_back("The " + err_name + " " + oss_err.str() + " of [" +       \
+                     name + "] is over " + showFormula(func) + " threshold " + \
+                     oss_thred.str());                                         \
   }
 
+    switch (dtype) {
+      case MLUOP_DTYPE_COMPLEX_HALF:
+      case MLUOP_DTYPE_COMPLEX_FLOAT: {
+        GET_ERROR_INFO(error, threshold, std::string("error_real"));
+        GET_ERROR_INFO(error_imag, threshold_imag, std::string("error_imag"));
+      } break;
+      default: {
+        GET_ERROR_INFO(error, threshold, std::string("error"));
+      }
+    }
+#undef CHECK_ERROR
+  }
   return res;
 }
 

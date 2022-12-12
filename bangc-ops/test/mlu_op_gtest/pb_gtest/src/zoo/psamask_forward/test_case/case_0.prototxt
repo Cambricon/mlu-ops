@@ -1,0 +1,43 @@
+op_name: "psamask_forward"
+input {
+    id: "input"
+    shape: {
+        dims: 123
+        dims: 3
+        dims: 12
+        dims: 638
+    }
+    layout: LAYOUT_NHWC
+    dtype: DTYPE_FLOAT
+    random_data: {
+        seed: 23
+        upper_bound: 1
+        lower_bound: -1
+        distribution: UNIFORM
+    }
+}
+
+output {
+    id: "output"
+    shape: {
+        dims: 123
+        dims: 3
+        dims: 12
+        dims: 36
+    }
+    layout: LAYOUT_NHWC
+    dtype: DTYPE_FLOAT
+}
+
+psamask_forward_param: {
+    h_mask: 29
+    w_mask: 22
+    psa_type: 0
+}
+
+test_param: {
+    error_func: DIFF3
+    error_threshold: 0.0
+    baseline_device: CPU
+}
+

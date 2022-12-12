@@ -1,0 +1,99 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "internal_kernel/fill_ram/fill_ram.h"
+
+#if defined(__BANG__)
+#include <mlu.h>
+#endif
+
+#define FILL_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 4096)
+#define FILL_SRAM_SIZE (MAX_SRAM_SIZE + REM_FOR_STACK - 4096)
+#define ONCE_WRAM (256 * 1024)
+#define ONCE_WRAM_STRIDE (ONCE_WRAM / LT_NUM)
+__nram__ char nram_buffer[FILL_NRAM_SIZE];
+__wram__ char wram_buffer[MAX_WRAM_SIZE];
+
+template <typename T>
+__mlu_func__ void fillRamBase(const int &fill_value, char *sram_buffer) {
+  T *tmp = (T *)&fill_value;
+  __bang_write_value(nram_buffer, FILL_NRAM_SIZE / sizeof(T), (T)*tmp);
+#if __BANG_ARCH__ == 520  // use nram to fill wram
+  uint32_t wram_repeat = DIV_UP(MAX_WRAM_SIZE, ONCE_WRAM);
+  uint32_t last_size = MAX_WRAM_SIZE - (wram_repeat - 1) * ONCE_WRAM;
+  for (int i = 0; i < wram_repeat; ++i) {
+    uint32_t size = i == wram_repeat - 1 ? last_size : ONCE_WRAM;
+    char *wram = wram_buffer + i * ONCE_WRAM_STRIDE;
+    __memcpy(wram, nram_buffer, size, NRAM2WRAM);
+  }
+#else  // use sram to fill wram
+  __sramset(sram_buffer, FILL_SRAM_SIZE / sizeof(T), (T)*tmp);
+  __sync_cluster();
+#if __BANG_ARCH__ == 290
+  // 290: MAX_WRAM_SIZE = physical wram size - 8KB
+  __memcpy(wram_buffer, sram_buffer, MAX_WRAM_SIZE, SRAM2WRAM, MAX_WRAM_SIZE,
+           MAX_WRAM_SIZE, 0);
+#else   // fill all wram
+  __memcpy(wram_buffer, sram_buffer, WRAM_LT_STRIDE, SRAM2WRAM, WRAM_LT_STRIDE,
+           WRAM_LT_STRIDE, LT_NUM - 1);
+#endif  // 290
+#endif  // 520
+}
+
+__mlu_global__ void MLUBlockKernelFillRam(nram_value value) {
+#if __BANG_ARCH__ != 520
+  __mlu_shared__ char sram_buffer[FILL_SRAM_SIZE];
+#else
+  char *sram_buffer = NULL;
+#endif
+
+  const int nan_half_value = 0xffff;
+  const int inf_half_value = 0xfc00;
+  const int nan_float_value = 0x7fc00000;
+  const int inf_float_value = 0x7f800000;
+
+  switch (value) {
+    case NAN_HALF: {
+      fillRamBase<half>(nan_half_value, sram_buffer);
+      break;
+    }
+    case INF_HALF: {
+      fillRamBase<half>(inf_half_value, sram_buffer);
+      break;
+    }
+    case NAN_FLOAT: {
+      fillRamBase<float>(nan_float_value, sram_buffer);
+      break;
+    }
+    case INF_FLOAT: {
+      fillRamBase<float>(inf_float_value, sram_buffer);
+      break;
+    }
+    default:
+      __bang_printf("cannot find a type to write nram \n");
+  }
+}
+
+void mluBlockFillRam(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                     cnrtQueue_t queue, nram_value value) {
+  MLUBlockKernelFillRam<<<k_dim, k_type, queue>>>(value);
+}
