@@ -99,8 +99,8 @@ void MLUOP_WIN_API mluOpUBestKernelGenerateProposalsV2Float(
     float *rpn_rois, float *rpn_roi_probs, int *rpn_rois_num,
     int *rpn_rois_batch_size, const int pre_nms_top_n, const int post_nms_top_n,
     const float nms_thresh, const float min_size, const float eta,
-    bool pixel_offset, const int batch_size, const int Anchors_num, const int H,
-    const int W);
+    const bool pixel_offset, const int batch_size, const int Anchors_num,
+    const int H, const int W);
 
 /* poly_nms */
 void MLUOP_WIN_API mluOpBlockKernelPolyNmsCalcAreaFloat(
@@ -147,6 +147,14 @@ void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     const int num_priors, const bool clip,
     const bool min_max_aspect_ratios_order, void *output, const int output_size,
     void *var, const int var_size);
+
+/* VoxelPooling */
+void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int num_points, const int num_channels,
+    const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
+    const void *geom_xyz, const void *input_features, void *output_features,
+    void *pos_memo);
 
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
@@ -225,6 +233,93 @@ void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, void *output, const int high_num, const int expand_num,
     const int low_num, const int dtype_size);
+
+/* Psamask */
+typedef enum {
+  COLLECT = 0,
+  DISTRIBUTE = 1,
+} psamaskType_t;
+
+typedef enum {
+  PARTITION_N = 0,
+  PARTITION_H = 1,
+} dimPartitionType_t;
+
+struct PartitionSeg {
+  int h_per_cluster;
+  int n_per_cluster;
+  int h_per_core;
+  int n_per_core;
+  dimPartitionType_t cluster_partition;
+  dimPartitionType_t core_partition;
+};
+
+struct Shape {
+  int n;
+  int h;
+  int w;
+  int c;
+};
+
+struct LimitParam {
+  int n;
+  int h;
+  int w;
+};
+
+struct PositionInCore {
+  int n_start;
+  int n_end;
+  int h_start;
+  int h_end;
+  int w_start;
+  int w_end;
+};
+
+void MLUOP_WIN_API mluOpUnion1KernelPsamaskForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *x, float *y, const psamaskType_t psa_type,
+    const dimPartitionType_t core_partition,
+    const dimPartitionType_t cluster_partition, const int batch,
+    const int h_feature, const int w_feature, const int h_mask,
+    const int w_mask, const int x_c, const int y_c, const int half_h_mask,
+    const int half_w_mask, const int n_per_core, const int h_per_core,
+    const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
+    const int limit_h_seg, const int limit_w_seg);
+
+void MLUOP_WIN_API mluOpUnion1KernelPsamaskBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *y, float *x, const psamaskType_t psa_type,
+    const dimPartitionType_t core_partition,
+    const dimPartitionType_t cluster_partition, const int batch,
+    const int h_feature, const int w_feature, const int h_mask,
+    const int w_mask, const int x_c, const int y_c, const int half_h_mask,
+    const int half_w_mask, const int n_per_core, const int h_per_core,
+    const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
+    const int limit_h_seg, const int limit_w_seg);
+
+/* voxelization */
+void MLUOP_WIN_API mluOpUnionKernelDynamicVoxelize(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *points, const void *voxel_size, const void *coors_range,
+    void *coors, const int32_t num_points, const int32_t num_features);
+
+void MLUOP_WIN_API mluOpUnionKernelPoint2Voxel(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *coors,
+    void *point_to_pointidx, void *point_to_voxelidx, const int32_t num_points,
+    const int32_t max_points);
+
+void MLUOP_WIN_API mluOpUnionKernelCalcPointsPerVoxel(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *point_to_pointidx, void *point_to_voxelidx, void *coor_to_voxelidx,
+    void *num_points_per_voxel, void *voxel_num, const int32_t max_voxels,
+    const int32_t num_points);
+
+void MLUOP_WIN_API mluOpUnionKernelAssignVoxelsCoors(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *points, void *temp_coors, void *point_to_voxelidx,
+    void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,
+    const int32_t num_points, const int32_t num_features);
 
 #if defined(__cplusplus)
 }

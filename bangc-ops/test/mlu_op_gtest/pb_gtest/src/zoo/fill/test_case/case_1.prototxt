@@ -1,0 +1,40 @@
+op_name: "fill"
+input {
+  id: "input1"
+  shape: {
+    dims: 512
+    dims: 370
+    dim_stride: 2
+    dim_stride: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "output"
+  shape: {
+    dims: 512
+    dims: 370
+    dim_stride: 2
+    dim_stride: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+}
+
+fill_param: {
+  value_hex: "0x123"
+  mode: POINTER_MODE_DEVICE
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0
+  baseline_device: CPU
+}

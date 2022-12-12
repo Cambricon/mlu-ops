@@ -20,17 +20,59 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include <chrono>       // NOLINT
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <set>
-#include <algorithm>
 #include <unordered_map>
 #include <utility>
 #include <functional>
+
+#include <sys/types.h>  // NOLINT
+#include <sys/stat.h>   // NOLINT
+#include <unistd.h>     // NOLINT
+#include <fcntl.h>      // NOLINT
+
 #include "pb_test_tools.h"
 #include "parser.h"
+#include "zero_element.h"
+
+static void zeroElementCreate(mluoptest::Node *node) {
+  std::string tem_name = node->op_name();
+  const char *env = std::getenv("MLUOP_GTEST_BUILD_ZERO_ELEMENT");
+  if (env == NULL) {
+    return;
+  }
+  std::string env_str = env;
+  int env_num = std::stoi(env_str);
+  if (env_num == 0) {
+    return;
+  }
+  std::vector<std::string>::iterator iter =
+      std::find(white_list.begin(), white_list.end(), tem_name);
+  if (iter == white_list.end()) {
+    VLOG(4) << "op_name = " << tem_name.c_str();
+    for (size_t i = 0; i < node->input_size(); i++) {
+      auto *in_shape = node->mutable_input(i)->mutable_shape();
+      for (size_t j = 0; j < in_shape->dims_size(); j++) {
+        in_shape->set_dims(j, 0);
+      }
+    }
+    for (size_t i = 0; i < node->output_size(); i++) {
+      auto *out_shape = node->mutable_output(i)->mutable_shape();
+      for (size_t j = 0; j < out_shape->dims_size(); j++) {
+        out_shape->set_dims(j, 0);
+      }
+    }
+  }
+}
 
 namespace mluoptest {
+
+// env for test negative_scale
+__attribute__((__unused__)) bool negative_scale_ =
+    getEnv("MLUOP_GTEST_NEGATIVE_SCALE", false);
 
 Parser::~Parser() {
   if (proto_node_ != nullptr) {
@@ -41,12 +83,14 @@ Parser::~Parser() {
 
 void Parser::parse(const std::string &file) {
   proto_node_ = new Node;
-  setCurPbPath(file);
+  setCurPbPath(file);  // set root path of pb/prototxt
   GTEST_CHECK(readMessageFromFile(file, proto_node_),
               "Parser: parse *pb/*prototxt failed.");
+  isSupportTF32(proto_node_);
+
   GTEST_CHECK(proto_node_->has_op_name(),
               "Parser: missing op name in prototxt.");
-
+  zeroElementCreate(proto_node_);
   // 1.get device
   if (proto_node_->has_device()) {
     device_ = proto_node_->device();
@@ -54,8 +98,8 @@ void Parser::parse(const std::string &file) {
     if (proto_node_->mutable_test_param()->has_baseline_device()) {
       device_ = proto_node_->mutable_test_param()->baseline_device();
     } else {
-      LOG(WARNING) << "Parser: missing device in test param, using CPU as "
-                      "default.";
+      LOG(WARNING)
+          << "Parser: missing device in test param, using CPU as default.";
       device_ = Device::CPU;  // default cpu
     }
   } else {
@@ -81,13 +125,12 @@ void Parser::parse(const std::string &file) {
     if (proto_node_->has_test_param()) {
       auto test_param = proto_node_->mutable_test_param();
       auto error_func_size = test_param->error_func_size();
-      GTEST_CHECK(test_param->error_func_size() != 0);
+      GTEST_CHECK(error_func_size > 0);
       GTEST_CHECK(
           test_param->error_func_size() == test_param->error_threshold_size(),
-          "Parser: error func's number should equal to threshold's "
-          "number, now they are "
-          "not equal.");
-
+          "Parser: error_func's number should equal to error_threshold's "
+          "number, "
+          "now they are not equal.");
       if (has_complex_output) {
         // If error_threshold_imag is set, the number must be the same as
         // error_func.
@@ -165,10 +208,10 @@ void Parser::parse(const std::string &file) {
     // 1.shape set to tensor desc
     GTEST_CHECK(pt->has_shape(), "Parser: missing tensor shape in prototxt.");
     mt->shape.resize(pt->mutable_shape()->dims_size());
+    // pt->mutable_shape->set_dims(0,0);
     for (size_t i = 0; i < mt->shape.size(); ++i) {
       mt->shape[i] = pt->mutable_shape()->dims(i);
     }
-
     mt->stride.resize(pt->mutable_shape()->dim_stride_size());
     for (size_t i = 0; i < mt->stride.size(); ++i) {
       mt->stride[i] = pt->mutable_shape()->dim_stride(i);
@@ -184,8 +227,8 @@ void Parser::parse(const std::string &file) {
     // 3.size to malloc memory. (shape may not equal to size)
     // stride_count include stride, if no stride stride_count == shape_count
     mt->total_count = getTensorStrideCount(pt, mt->value_type);
-    // shape_count come from value_f/value_i/value_h and shape.
-    // not include stride
+    // shape_count come from value_f/value_i/value_h/value_ui/value_ul and
+    // shape. not include stride
     mt->shape_count = getTensorShapeCount(pt);
     mt->sizeof_dtype = getSizeOfDataType(mt->dtype);
     mt->size_in_bytes = mt->total_count * mt->sizeof_dtype;
@@ -204,23 +247,58 @@ void Parser::parse(const std::string &file) {
     checkTensorValid(mt, pt);
   };
 
+  bool is_float = false;
+  bool is_group = false;
+  bool is_round_half_up = false;
+  if (proto_node_->has_handle_param()) {
+    if (proto_node_->handle_param().has_round_mode()) {
+      if (proto_node_->handle_param().round_mode() ==
+          mluoptest::ROUND_HALF_UP) {
+        is_round_half_up = true;
+      }
+    }
+  }
+
   inputs_.resize(proto_node_->input_size());
   for (size_t i = 0; i < proto_node_->input_size(); ++i) {
     parse_tensor(&inputs_[i], proto_node_->mutable_input(i));
+    if (negative_scale_) {
+      if ((inputs_[i].dtype == MLUOP_DTYPE_HALF &&
+           (inputs_[i].oc_dt == MLUOP_DTYPE_HALF ||
+            inputs_[i].oc_dt == MLUOP_DTYPE_INVALID)) ||
+          (inputs_[i].dtype == MLUOP_DTYPE_FLOAT &&
+           (inputs_[i].oc_dt == MLUOP_DTYPE_FLOAT ||
+            inputs_[i].oc_dt == MLUOP_DTYPE_INVALID))) {
+        is_float = true;
+      }
+    }
+  }
+  if (!is_group && !is_float && !is_round_half_up && negative_scale_) {
+    for (size_t i = 0; i < proto_node_->input_size(); ++i) {
+      // only test symmetric quantify
+      if (inputs_[i].offset == 0) {
+        if (inputs_[i].dtype != MLUOP_DTYPE_INT16 &&
+            inputs_[i].dtype != MLUOP_DTYPE_INT8) {
+          inputs_[i].scale = -inputs_[i].scale;
+        }
+      }
+    }
   }
 
   outputs_.resize(proto_node_->output_size());
   for (size_t i = 0; i < proto_node_->output_size(); ++i) {
     parse_tensor(&outputs_[i], proto_node_->mutable_output(i));
   }
+
+  // get gtest ini like black list of zero_input mode
+  getTestInfo();
 }
 
 // check if tensor value is equal to shape.
-// when found value_i value_f value_h, just check value_size and shape_size
-// when found random_param, check random param
-// here allow shape_size != data size saved in pb
-// cuz shape_size is for create tensor and data_size is for malloc space
-// so just print warning.
+// when found value_i value_f value_h value_ui value_ul, just check value_size
+// and shape_size when found random_param, check random param here allow
+// shape_size != data size saved in pb cuz shape_size is for create tensor and
+// data_size is for malloc space so just print warning.
 void Parser::checkTensorValid(MetaTensor *mt, Tensor *pt) {
   int shape_count = 1;
   switch (mt->value_type) {
@@ -228,6 +306,8 @@ void Parser::checkTensorValid(MetaTensor *mt, Tensor *pt) {
     case VALUE_I:
     case VALUE_L:
     case VALUE_H:
+    case VALUE_UI:
+    case VALUE_UL:
       shape_count = std::accumulate(mt->shape.begin(), mt->shape.end(),
                                     shape_count, std::multiplies<int>());
       GTEST_WARNING(mt->shape_count == shape_count,
@@ -240,21 +320,20 @@ void Parser::checkTensorValid(MetaTensor *mt, Tensor *pt) {
       }
       break;
     case VALUE_PATH: {
-      // if found path(only) in pb, but can't access this
-      // path, throw.
+      // if found path(only) in pb, but can't access this path, throw.
       auto cur_pb_path = pb_path_ + pt->path();
       GTEST_CHECK((access(cur_pb_path.c_str(), 4) != -1),
                   "Parser: open path saved in *prototxt failed.");
       break;
     }
     case VALUE_INVALID:
-      // check output, if may shape empty, value is empty, and not random
-      // param, so don't need check.
+      // check output, if may shape empty, value is empty, and not random param,
+      // so don't need check.
       break;
     default: {
       GTEST_CHECK(false,
                   "Parser: got unsupported value type, parse tensor failed.");
-    }
+    } break;
   }
 }
 
@@ -266,25 +345,26 @@ void Parser::checkRandomParam(Tensor *pt) {
 
   auto random_data = pt->mutable_random_data();
   if (random_data->distribution() == mluoptest::UNIFORM) {
-    GTEST_CHECK(random_data->has_upper_bound(),
-                "Parser: missing upper bound of UNIFORM random param in *pb");
-    GTEST_CHECK(random_data->has_lower_bound(),
-                "Parser: missing lower bound of UNIFORM random param in *pb");
+    GTEST_CHECK(
+        random_data->has_upper_bound() || random_data->has_upper_bound_double(),
+        "Parser: missing upper bound of UNIFORM random param in *pb");
+    GTEST_CHECK(
+        random_data->has_lower_bound() || random_data->has_lower_bound_double(),
+        "Parser: missing lower bound of UNIFORM random param in *pb");
   } else if (random_data->distribution() == mluoptest::GAUSSIAN) {
     GTEST_CHECK(random_data->has_mu() || random_data->has_mu_double(),
                 "Parser: missing mu of UNIFORM random param in *pb");
     GTEST_CHECK(random_data->has_sigma() || random_data->has_sigma_double(),
                 "Parser: missing sigma of UNIFORM random param in *pb");
   } else {
-    GTEST_CHECK(false,
-                "Parser: got unsupported distribution when check tensor "
-                "valid.");
+    GTEST_CHECK(
+        false, "Parser: got unsupported distribution when check tensor valid.");
   }
 }
 
 // return value's dtype is according to value type.
 // if value type is value_*, return dtype is dtype in proto.
-// if value type is random, return dtype is fp32
+// if value type is random, return dtype is fp64 for double and fp32 otherwise.
 void Parser::getInputTensorValue(size_t index, void *data, size_t count) {
   getTensorValue(proto_node_->mutable_input(index), data,
                  inputs_[index].value_type, count);
@@ -292,15 +372,14 @@ void Parser::getInputTensorValue(size_t index, void *data, size_t count) {
 
 // return value's dtype is according to value type.
 // if value type is value_*, return dtype is dtype in proto.
-// if value type is random, return dtype is fp32
+// if value type is random, return dtype is fp64 for double and fp32 otherwise.
 void Parser::getOutputTensorValue(size_t index, void *data, size_t count) {
   getTensorValue(proto_node_->mutable_output(index), data,
                  outputs_[index].value_type, count);
 }
 
-// get value from field value_f
-// but this way have precision problem
-// we will abandon value_f
+// Get value from field value_f
+// TODO(taokai): abandon value_f, use value_h for float numbers instead.
 void Parser::getTensorValueF(const Tensor *pt, void *data, size_t count) {
   switch (pt->dtype()) {
     case DTYPE_COMPLEX_HALF:
@@ -355,13 +434,13 @@ void Parser::getTensorValueF(const Tensor *pt, void *data, size_t count) {
 // no quant intx, saved in value_i
 void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
   if (pt->dtype() == DTYPE_COMPLEX_HALF || pt->dtype() == DTYPE_COMPLEX_FLOAT) {
-    GTEST_CHECK(pt->value_i_size() == count * 2,
-                "Parser: when read value_i, expected element num is not "
-                "equal to real element num.");
+    GTEST_CHECK(pt->value_i_size() == 2 * count,
+                "Parser: when read value_i, expected element num is not equal "
+                "to real element num.");
   } else {
     GTEST_CHECK(pt->value_i_size() == count,
-                "Parser: when read value_i, expected element num is not "
-                "equal to real element num.");
+                "Parser: when read value_i, expected element num is not equal "
+                "to real element num.");
   }
 
   switch (pt->dtype()) {
@@ -426,10 +505,10 @@ void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
       }
       break;
     default:
-      GTEST_CHECK(false,
-                  "Parser: found unsuppored dtype in value_i, value_i only "
-                  "support "
-                  "int8/uint8/int16/int32/int64/bool.");
+      GTEST_CHECK(
+          false,
+          "Parser: found unsuppored dtype in value_i, value_i only support "
+          "int8/uint8/int16/uint16/int32/int64/bool.");
   }
 }
 
@@ -437,8 +516,8 @@ void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
 // no quant intx, saved in value_l
 void Parser::getTensorValueL(const Tensor *pt, void *data, size_t count) {
   GTEST_CHECK(pt->value_l_size() == count,
-              "Parser: when read value_l, expected element num is not equal "
-              "to real element num.");
+              "Parser: when read value_l, expected element num is not equal to "
+              "real element num.");
   switch (pt->dtype()) {
     case DTYPE_INT64:
       for (int i = 0; i < count; ++i) {
@@ -468,9 +547,75 @@ void Parser::getTensorValueL(const Tensor *pt, void *data, size_t count) {
       }
       break;
     default:
-      GTEST_CHECK(false,
-                  "Parser: found unsuppored dtype in value_l, value_l only "
-                  "support int64.");
+      GTEST_CHECK(
+          false,
+          "Parser: found unsuppored dtype in value_l, value_l only support "
+          "bool/int8/int16/int32/int64.");
+  }
+}
+
+// get value from value_ui
+// no quant uintx, saved in value_ui
+void Parser::getTensorValueUI(const Tensor *pt, void *data, size_t count) {
+  GTEST_CHECK(pt->value_ui_size() == count,
+              "Parser: when read value_ui, expected element num is not equal "
+              "to real element num.");
+  switch (pt->dtype()) {
+    case DTYPE_UINT8:
+      for (int i = 0; i < count; ++i) {
+        ((uint8_t *)data)[i] = pt->value_ui(i);
+      }
+      break;
+    case DTYPE_UINT16:
+      for (int i = 0; i < count; ++i) {
+        ((uint16_t *)data)[i] = pt->value_ui(i);
+      }
+      break;
+    case DTYPE_UINT32:
+      for (int i = 0; i < count; ++i) {
+        ((uint32_t *)data)[i] = pt->value_ui(i);
+      }
+      break;
+    default:
+      GTEST_CHECK(
+          false,
+          "Parser: found unsuppored dtype in value_ui, value_ui only support "
+          "uint8/uint16/uint32.");
+  }
+}
+
+// get value from value_ul
+// no quant uintx, saved in value_ul
+void Parser::getTensorValueUL(const Tensor *pt, void *data, size_t count) {
+  GTEST_CHECK(pt->value_ul_size() == count,
+              "Parser: when read value_ul, expected element num is not equal "
+              "to real element num.");
+  switch (pt->dtype()) {
+    case DTYPE_UINT64:
+      for (int i = 0; i < count; ++i) {
+        ((uint64_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    case DTYPE_UINT8:
+      for (int i = 0; i < count; ++i) {
+        ((uint8_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    case DTYPE_UINT16:
+      for (int i = 0; i < count; ++i) {
+        ((uint16_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    case DTYPE_UINT32:
+      for (int i = 0; i < count; ++i) {
+        ((uint32_t *)data)[i] = pt->value_ul(i);
+      }
+      break;
+    default:
+      GTEST_CHECK(
+          false,
+          "Parser: found unsuppored dtype in value_ul, value_ul only support "
+          "uint8/uint16/uint32/uint64.");
   }
 }
 
@@ -483,9 +628,8 @@ inline double str2fp64(const std::string *in_str) {
   }
   return *(double *)(&res);
 }
-
 inline float str2fp32(const std::string *in_str) {
-  uint32_t res = 0x0000;
+  uint32_t res = 0x0;
   for (int i = 0; i < in_str->size(); ++i) {
     char byte = in_str->c_str()[i];  // 0~f
     res = res << 4;
@@ -493,9 +637,8 @@ inline float str2fp32(const std::string *in_str) {
   }
   return *(float *)(&res);
 }
-
 inline uint16_t str2fp16(const std::string *in_str) {
-  uint16_t res = 0x00;
+  uint16_t res = 0x0;
   for (int i = 0; i < in_str->size(); ++i) {
     char byte = in_str->c_str()[i];
     res = res << 4;
@@ -556,7 +699,7 @@ void Parser::getTensorValueH(Tensor *pt, void *data, size_t count) {
 }
 
 // get value by random data param
-void Parser::getTensorValueRandom(Tensor *pt, float *data, size_t count) {
+void Parser::getTensorValueRandom(Tensor *pt, void *data, size_t count) {
   if (pt->dtype() == DTYPE_DOUBLE) {
     generateRandomData((double *)data, count, pt->mutable_random_data(),
                        pt->dtype());
@@ -571,17 +714,22 @@ void Parser::getTensorValueRandom(Tensor *pt, float *data, size_t count) {
 }
 
 // get value by random data param
-void Parser::getTensorValueByFile(Tensor *pt, float *data, size_t count) {
-  // readDataFromFile(pt->path(), data, count);
+void Parser::getTensorValueByFile(Tensor *pt, void *data, size_t count) {
   auto cur_pb_path = pb_path_ + pt->path();
-  std::ifstream fin(cur_pb_path, std::ios::in | std::ios::binary);
   size_t tensor_length = count * getTensorSize(pt);
+  auto start = std::chrono::steady_clock::now();
+  std::ifstream fin(cur_pb_path, std::ios::in | std::ios::binary);
   fin.read((char *)data, tensor_length);
-  if (!fin) {
-    LOG(ERROR) << "read data in file failed.";
-    throw std::invalid_argument(std::string(__FILE__) + "+" +
-                                std::to_string(__LINE__));
-  }
+  auto stop = std::chrono::steady_clock::now();
+  std::chrono::duration<double> cost_s = stop - start;
+
+  ASSERT_TRUE(fin) << "read data in file failed.";
+  VLOG(2) << __func__ << " " << cur_pb_path << ", time cost: " << cost_s.count()
+          << " s"
+          << ", speed: " << tensor_length / 1024. / 1024. / cost_s.count()
+          << " MB/s";
+  parsed_file_size += tensor_length;
+  parsed_cost_seconds += cost_s.count();
 }
 
 // set value in proto to meta_tensor.ptr
@@ -602,16 +750,22 @@ void Parser::getTensorValue(Tensor *pt, void *data, ValueType value_type,
     case VALUE_L:
       getTensorValueL(pt, data, count);
       break;
+    case VALUE_UI:
+      getTensorValueUI(pt, data, count);
+      break;
+    case VALUE_UL:
+      getTensorValueUL(pt, data, count);
+      break;
     case VALUE_RANDOM:
-      getTensorValueRandom(pt, (float *)data, count);  // cpu mode dtype fp32
+      getTensorValueRandom(pt, data, count);  // cpu mode dtype fp32 or fp64
       break;
     case VALUE_PATH:
-      getTensorValueByFile(pt, (float *)data, count);  // cpu mode dtype fp32
+      getTensorValueByFile(pt, data, count);  // cpu mode dtype fp32
       break;
     case VALUE_INVALID:
-      GTEST_WARNING(false,
-                    "Parser: trying to get value of tensor, but missing data "
-                    "source.");
+      GTEST_WARNING(
+          false,
+          "Parser: trying to get value of tensor, but missing data source.");
       break;
     default:
       GTEST_CHECK(false,
@@ -672,7 +826,7 @@ bool Parser::common_threshold() {
 }
 
 std::set<Evaluator::Criterion> Parser::criterions(
-    int index, std::vector<int> criterions_use) {
+    int index, const std::set<Evaluator::Formula> &criterions_use) {
   std::set<Evaluator::Criterion> res;
 
   // check if there exists complex output tensor
@@ -692,9 +846,8 @@ std::set<Evaluator::Criterion> Parser::criterions(
     GTEST_CHECK(test_param->error_func_size() != 0);
     GTEST_CHECK(
         test_param->error_func_size() == test_param->error_threshold_size(),
-        "Parser: error func's number should equal to threshold's "
-        "number, now they are not equal.");
-
+        "Parser: error_func's number should equal to error_threshold's number, "
+        "now they are not equal.");
     if (has_complex_output) {
       // If error_threshold_imag is set, the number must be the same as
       // error_func.
@@ -704,8 +857,8 @@ std::set<Evaluator::Criterion> Parser::criterions(
                   "Parser: Nb. of error_threshold_imag should be either 0 or "
                   "equal to the Nb. of error_func.");
     }
-    auto num = test_param->error_func_size();
-    for (int i = 0; i < num; ++i) {
+    auto error_func_size = test_param->error_func_size();
+    for (auto i = 0; i < error_func_size; ++i) {
       auto func = cvtProtoEvaluationCriterion(test_param->error_func(i));
       auto error_thred = test_param->error_threshold(i);
       auto error_thred_imag = error_thred;
@@ -723,10 +876,8 @@ std::set<Evaluator::Criterion> Parser::criterions(
       }
     }
   } else {
-    auto criterion_size = proto_node_->evaluation_criterion_size();
+    size_t criterion_size = proto_node_->evaluation_criterion_size();
     GTEST_CHECK(criterion_size > 0);
-    GTEST_CHECK(criterions_use.size() == 4,
-                "criterions_use_'s size should be 4, now it's not");
     size_t threshold_size = 0;
     size_t threshold_imag_size = 0;
     Tensor *pt = nullptr;
@@ -750,12 +901,13 @@ std::set<Evaluator::Criterion> Parser::criterions(
           "Parser: Nb. of evaluation_threshold_imag should be either 0 or "
           "equal to the Nb. of evaluation_criterion.");
     }
-    for (int i = 0; i < criterion_size; ++i) {
-      if (0 == criterions_use[i]) {
-        continue;
-      }
+    for (size_t i = 0; i < criterion_size; ++i) {
       auto proto_func = proto_node_->evaluation_criterion(i);
       auto func = cvtProtoEvaluationCriterion(proto_func);
+      if (criterions_use.find(func) == criterions_use.end()) {
+        VLOG(4) << "Parser::criterions: skip " << Evaluator::Formula2str(func);
+        continue;
+      }
       auto eval_thred = (index == -1)
                             ? proto_node_->evaluation_threshold(i)
                             : pt->thresholds().evaluation_threshold(i);
@@ -779,42 +931,82 @@ std::set<Evaluator::Criterion> Parser::criterions(
   return res;
 }
 
+static inline bool strEndsWith(const std::string &self,
+                               const std::string &pattern) {
+  if (self.size() < pattern.size()) return false;
+  return (self.compare(self.size() - pattern.size(), pattern.size(), pattern) ==
+          0);
+}
+
 bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
-  std::ifstream fin(filename, std::ios::in);
-  if (!fin.is_open()) {
-    LOG(ERROR) << "File not found: " << filename;
-    fin.close();
+  struct stat file_stat;
+  int fd = open(filename.c_str(), O_RDONLY);
+  if (fd == -1) {
+    LOG(ERROR) << "File open failed: " << filename << ". Reason: " << errno
+               << "-" << strerror(errno);
     return false;
   }
-  VLOG(4) << "Open " << filename;
+  int ret_stat = fstat(fd, &file_stat);
+  if (ret_stat == -1) {
+    LOG(ERROR) << "File stat failed: " << filename << ". Reason: " << errno
+               << "-" << strerror(errno);
+    return false;
+  }
+
+  VLOG(4) << "Open " << filename << " (File size: " << file_stat.st_size
+          << " Bytes)";
 
   bool status = false;
-  google::protobuf::io::IstreamInputStream input(&fin);
-  if (filename.find(".prototxt") != std::string::npos) {
-    status = google::protobuf::TextFormat::Parse(&input, proto);
-  } else if (filename.find(".pb") != std::string::npos) {
+  auto start = std::chrono::steady_clock::now();
+
+  // ref ProtoBuf docs, `FileInputStream` is preferred over using an ifstream
+  // with `IstreamInputStream`
+  google::protobuf::io::FileInputStream input(fd);
+  if (strEndsWith(filename, ".pb")) {
     google::protobuf::io::CodedInputStream coded_input(&input);
     coded_input.SetTotalBytesLimit(INT_MAX, INT_MAX - 1);
     status = proto->ParseFromCodedStream(&coded_input);
+  } else if (strEndsWith(filename, ".prototxt")) {
+    status = google::protobuf::TextFormat::Parse(&input, proto);
+  } else {
+    LOG(ERROR) << "Unsupported file extension";
+    return false;
   }
-  fin.close();
+
+  close(fd);
+
+  auto stop = std::chrono::steady_clock::now();
+  std::chrono::duration<double> cost_s = stop - start;
+  VLOG(2) << __func__ << " " << filename << ", time cost: " << cost_s.count()
+          << " s"
+          << ", speed: " << file_stat.st_size / 1024. / 1024. / cost_s.count()
+          << " MB/s";
+  parsed_file_size += file_stat.st_size;
+  parsed_cost_seconds += cost_s.count();
 
   return status;
 }
 
 void Parser::getTestInfo() {
   std::unordered_map<std::string, std::vector<std::string>> test_info;
-  test_info = readFileByLine("../../test/mluop_gtest/gtest_config/test_list");
-  bl_zeroinput_ = test_info["black_list_zero_input"];
-  bl_mlu_only_fast_ = test_info["black_list_mlu_only_fast"];
+  test_info =
+      readFileByLine("../../test/mlu_op_gtest/pb_gtest/gtest_config/test_list");
+  list_rely_real_data_ = test_info["rely_real_data"];
+}
+
+Evaluator::Formula Parser::cvtProtoEvaluationCriterion(int f) {
+  return Parser::cvtProtoEvaluationCriterion(
+      static_cast<EvaluationCriterion>(f));
 }
 
 Evaluator::Formula Parser::cvtProtoEvaluationCriterion(EvaluationCriterion f) {
   switch (f) {
+    case MAPE:
     case DIFF1:
       return Evaluator::Formula::DIFF1;
     case DIFF2:
       return Evaluator::Formula::DIFF2;
+    case MAXAPE:
     case DIFF3:
       return Evaluator::Formula::DIFF3;
     case DIFF3_2:
@@ -838,6 +1030,10 @@ ValueType Parser::getValueType(const Tensor *t) {
     return VALUE_I;
   } else if (t->value_l_size() != 0) {
     return VALUE_L;
+  } else if (t->value_ui_size() != 0) {
+    return VALUE_UI;
+  } else if (t->value_ul_size() != 0) {
+    return VALUE_UL;
   } else if (t->has_path()) {
     return VALUE_PATH;
   } else if (t->has_random_data()) {
@@ -892,6 +1088,10 @@ inline size_t Parser::getTensorStrideCount(Tensor *pt, ValueType value_type) {
       return pt->value_i_size();
     case VALUE_L:
       return pt->value_l_size();
+    case VALUE_UI:
+      return pt->value_ui_size();
+    case VALUE_UL:
+      return pt->value_ul_size();
     case VALUE_F:
       return pt->value_f_size();
     case VALUE_RANDOM:
@@ -939,6 +1139,52 @@ void Parser::setCurPbPath(const std::string &filename) {
   } else {
     auto pos_pb = filename.find_last_of("/");
     pb_path_ = filename.substr(0, pos_pb + 1);
+  }
+}
+
+void Parser::isSupportTF32(Node *protoNode) {
+  // get proto_node_'s description
+  const google::protobuf::Descriptor *desc = protoNode->GetDescriptor();
+  // get proto_node_'s reflection
+  const auto reflection = protoNode->GetReflection();
+  std::vector<const google::protobuf::FieldDescriptor *> fields;
+  reflection->ListFields(*protoNode, &fields);
+  // google::protobuf::FieldDescriptor* OpParamTemp;
+  std::string op_param;
+  for (auto &f : fields) {
+    std::string::size_type pos_param = f->name().find("param");
+    std::string::size_type pos_test = f->name().find("test");
+    std::string::size_type pos_handle = f->name().find("handle");
+
+    if (pos_param != f->name().npos && pos_test == f->name().npos &&
+        pos_handle == f->name().npos) {
+      op_param = f->name();
+    }
+  }
+
+  const google::protobuf::FieldDescriptor *op_param_des =
+      desc->FindFieldByName(op_param.c_str());
+  if (nullptr == op_param_des) {
+    is_support_TF32_ = 0;
+    return;
+  }
+
+  const google::protobuf::Message &message_param = reflection->GetMessage(
+      dynamic_cast<google::protobuf::Message &>(*protoNode), op_param_des);
+  // get allow_tf32 etc in  message of message
+  const google::protobuf::Descriptor *message_param_new =
+      message_param.GetDescriptor();
+  const google::protobuf::FieldDescriptor *tf32_field_desc =
+      message_param_new->FindFieldByName("allow_tf32");
+  is_support_TF32_ = 1;
+  if (tf32_field_desc == nullptr) {
+    is_support_TF32_ = 0;
+  } else {
+    const auto tf32_ref = message_param.GetReflection();
+    int allow_tf32_val = tf32_ref->GetInt32(message_param, tf32_field_desc);
+    if (allow_tf32_val == 0) {
+      is_support_TF32_ = 0;
+    }
   }
 }
 
