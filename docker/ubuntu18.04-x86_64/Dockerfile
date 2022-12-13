@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 LABEL org.opencontainers.image.authors="www.cambricon.com"
 
@@ -13,14 +13,14 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
-ARG CNTOOLKIT_VERSION="3.0.0-1"
+ARG CNTOOLKIT_VERSION="3.2.0-1"
 # NOTE: the url below is only for internal usage, you could replace with your own cntoolkit package.
-ADD http://daily.software.cambricon.com/release/cntoolkit/Linux/x86_64/Ubuntu/16.04/${CNTOOLKIT_VERSION}/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb /tmp/
+ADD http://daily.software.cambricon.com/release/cntoolkit/Linux/x86_64/Ubuntu/18.04/${CNTOOLKIT_VERSION}/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu18.04_amd64.deb /tmp/
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get install -y /tmp/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu16.04_amd64.deb && \
+    apt-get install -y /tmp/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu18.04_amd64.deb && \
     apt-get update && \
-    apt-get install --no-install-recommends -y cncc cnas cnbin cnrt cndrv cnrtc && \
+    apt-get install --no-install-recommends -y cncc cnas cnbin cnrt cndrv cndev cnrtc cngdb cnperf && \
     echo "/usr/local/neuware/lib64" > /etc/ld.so.conf.d/neuware.conf && ldconfig && \
     rm -rf /tmp/*.deb && apt-get autoclean && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -119,9 +119,9 @@ RUN pip3.8 install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirr
     rm /tmp/_sqlite3.cpython-38-x86_64-linux-gnu.so
 
 # Install BANGPy.
-ARG BANGPY_VERSION="2.1.2"
-ARG RELEASE_VERSION="2.1.2-1"
+ARG BANGPY_VERSION="2.2.0"
+ARG RELEASE_VERSION="2.2.0-1"
 # NOTE: the url below is only for internal usage,you could replace with your own BANGPy package.
-ADD http://daily.software.cambricon.com/release/bangpy/${RELEASE_VERSION}/wheel/bangpy-${BANGPY_VERSION}-py3-none-any.whl /tmp/
+ADD http://daily.software.cambricon.com/daily/bangpy/wheel/2.2.0/20221212-185904-6cd05e4/bangpy-2.2.0-py3-none-any.whl /tmp/
 RUN pip3.8 install /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl && \
     rm /tmp/bangpy-${BANGPY_VERSION}-py3-none-any.whl

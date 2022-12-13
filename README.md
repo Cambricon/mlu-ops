@@ -8,7 +8,7 @@ MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开
 ## 依赖条件
 
 - 操作系统：
-  - 支持 x86_64 下 Ubuntu16.04、Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5;
+  - 支持 x86_64 下 Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5;
   - 支持 AArch64 下 KylinV10。
 - 寒武纪 MLU SDK：
   - 编译和运行时依赖 CNToolkit v3.1.2 或更高版本。
