@@ -167,21 +167,20 @@
     return MLUOP_STATUS_BAD_PARAM;                                       \
   }
 
-#define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                 \
-  if (!(num < max_num)) {                                                \
-    LOG(ERROR) << "[" << api << "]: overflow max supported tensor num. " \
-               << reason << api << "supports tensor num smaller than "   \
-               << max_num << ", "                                        \
-               << "now tensor's total num is " << num;                   \
-    return MLUOP_STATUS_SUCCESS;                                         \
+#define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                    \
+  if (!(num < max_num)) {                                                   \
+    LOG(ERROR) << "[" << api << "]: overflow max supported tensor num. "    \
+               << max_num - 1 << ", "                                       \
+               << "now tensor's total num is " << num << ". " << reason;    \
+    return MLUOP_STATUS_NOT_SUPPORTED;                                      \
   }
-#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)               \
-  if (!(size < max_size)) {                                               \
-    LOG(ERROR) << "[" << api << "]: overflow max supported tensor size. " \
-               << reason << api << "supports tensor size smaller than "   \
-               << max_size << "B, "                                       \
-               << "now tensor's total size is " << size << "B.";          \
-    return MLUOP_STATUS_SUCCESS;                                          \
+
+#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)                 \
+  if (!(size < max_size)) {                                                 \
+    LOG(ERROR) << "[" << api << "]: overflow max supported tensor size. "   \
+               << max_size - 1 << "B, "                                     \
+               << "now tensor's total size is " << size << "B. " << reason; \
+    return MLUOP_STATUS_NOT_SUPPORTED;                                      \
   }
 
 void mluOpCheck(mluOpStatus_t result, char const *const func,
