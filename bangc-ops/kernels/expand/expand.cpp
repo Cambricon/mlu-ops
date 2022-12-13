@@ -73,10 +73,10 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("[mluOpExpand]", input != NULL);
   PARAM_CHECK("[mluOpExpand]", output != NULL);
 
-  int dims_input[MLUOP_DIM_MAX];
-  int dims_output[MLUOP_DIM_MAX];
-  int32_t redims_input[MLUOP_DIM_MAX + 1];
-  int32_t redims_output[MLUOP_DIM_MAX + 1];
+  uint64_t dims_input[MLUOP_DIM_MAX];
+  uint64_t dims_output[MLUOP_DIM_MAX];
+  uint64_t redims_input[MLUOP_DIM_MAX + 1];
+  uint64_t redims_output[MLUOP_DIM_MAX + 1];
   int32_t count_flag = 0;
   int32_t count_index[MLUOP_DIM_MAX + 1];
 
@@ -179,10 +179,10 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   }
 
   if (count_flag == 1) {
-    size_t high_num = 1;
-    size_t expand_num =
+    uint64_t high_num = 1;
+    uint64_t expand_num =
         redims_output[count_index[0]] / redims_input[count_index[0]];
-    size_t low_num = 1;
+    uint64_t low_num = 1;
     for (int i = 0; i < count_index[0]; i++) {
       high_num *= redims_output[i];
     }
@@ -196,8 +196,9 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
             << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
             << k_dim.z << ">>>";
     KERNEL_CHECK((mluOpUnion1KernelExpandOneDim(
-        k_dim, k_type, handle->queue, (void *)input, output, high_num,
-        expand_num, low_num, mluOpDataTypeBytes(data_type))));
+        k_dim, k_type, handle->queue, (void *)input, output, (uint32_t)high_num,
+        (uint32_t)expand_num, (uint32_t)low_num,
+        mluOpDataTypeBytes(data_type))));
   } else {
     INTERNAL_CHECK("mluOpExpand",
                    MLUOP_STATUS_SUCCESS == policyFunc(handle, &k_dim, &k_type));
@@ -205,11 +206,15 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
             << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
             << k_dim.z << ">>>";
     KERNEL_CHECK((mluOpUnion1KernelExpandTensor(
-        k_dim, k_type, handle->queue, (void *)input, output, dims_input[0],
-        dims_input[1], dims_input[2], dims_input[3], dims_input[4],
-        dims_input[5], dims_input[6], dims_input[7], dims_output[0],
-        dims_output[1], dims_output[2], dims_output[3], dims_output[4],
-        dims_output[5], dims_output[6], dims_output[7],
+        k_dim, k_type, handle->queue, (void *)input, output,
+        (uint32_t)dims_input[0], (uint32_t)dims_input[1],
+        (uint32_t)dims_input[2], (uint32_t)dims_input[3],
+        (uint32_t)dims_input[4], (uint32_t)dims_input[5],
+        (uint32_t)dims_input[6], (uint32_t)dims_input[7],
+        (uint32_t)dims_output[0], (uint32_t)dims_output[1],
+        (uint32_t)dims_output[2], (uint32_t)dims_output[3],
+        (uint32_t)dims_output[4], (uint32_t)dims_output[5],
+        (uint32_t)dims_output[6], (uint32_t)dims_output[7],
         mluOpDataTypeBytes(input_desc->dtype))));
   }
 
