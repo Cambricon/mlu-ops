@@ -30,7 +30,6 @@
 #include "core/type.h"
 #include "mlu_op_kernel.h"
 #include "mlu_op.h"
-#include "ml_nms.h"
 #include "cnrt.h"
 #include "cndev.h"
 
