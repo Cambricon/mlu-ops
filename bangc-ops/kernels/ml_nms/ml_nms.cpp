@@ -32,7 +32,6 @@
 #include "mlu_op_kernel.h"
 #include "cnrt.h"
 #include "cndev.h"
-#include "ml_nms.h"
 
 static inline bool isSupportType(const mluOpDataType_t check_type,
                                  const mluOpDataType_t support_type[],
