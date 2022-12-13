@@ -10,9 +10,6 @@ This section lists contents that were made for each product release.
 
   **Changes:**
 
-  - Supported boards and operators can be optional while building mlu-ops.
-  - Supported MLU590.
-  - Supported MLU operators performance comparison.
   - Added the following new operations:
 
     - voxel_pooling_forward
@@ -26,7 +23,6 @@ This section lists contents that were made for each product release.
 
   **Changes:**
 
-  - Supported AArch64 KylinV10 OS.
   - Added the following new operations:
 
     - three_interpolate_forward

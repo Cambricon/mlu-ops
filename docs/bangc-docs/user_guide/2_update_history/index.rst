@@ -6,9 +6,6 @@
 
   **更新内容**：
 
-  -  编译支持板卡、算子可选。
-  -  支持MLU590。
-  -  支持MLU算子性能比对功能。
   -  新增支持 :ref:`voxel_pooling_forward` 、 :ref:`voxelization` 、:ref:`psa_mask` 和 :ref:`fill` 新算子。
 
 * **V0.3.0**
