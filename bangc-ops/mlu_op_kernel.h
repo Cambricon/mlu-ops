@@ -222,17 +222,18 @@ void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
 /* Expand */
 void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, void *output, const int input_1, const int input_2,
-    const int input_3, const int input_4, const int input_5, const int input_6,
-    const int input_7, const int input_8, const int output_1,
-    const int output_2, const int output_3, const int output_4,
-    const int output_5, const int output_6, const int output_7,
-    const int output_8, const int dtype_size);
+    const void *input, void *output, const uint32_t input_1,
+    const uint32_t input_2, const uint32_t input_3, const uint32_t input_4,
+    const uint32_t input_5, const uint32_t input_6, const uint32_t input_7,
+    const uint32_t input_8, const uint32_t output_1, const uint32_t output_2,
+    const uint32_t output_3, const uint32_t output_4, const uint32_t output_5,
+    const uint32_t output_6, const uint32_t output_7, const uint32_t output_8,
+    const int dtype_size);
 
 void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, void *output, const int high_num, const int expand_num,
-    const int low_num, const int dtype_size);
+    const void *input, void *output, const uint32_t high_num,
+    const uint32_t expand_num, const uint32_t low_num, const int dtype_size);
 
 /* Psamask */
 typedef enum {
