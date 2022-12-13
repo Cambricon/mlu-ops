@@ -22,7 +22,6 @@
 ************************************************************************/
 #include <stdio.h>
 #include <string>
-#include "mlu_op.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -30,6 +29,8 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "mlu_op_kernel.h"
+#include "mlu_op.h"
+#include "ml_nms.h"
 #include "cnrt.h"
 #include "cndev.h"
 
