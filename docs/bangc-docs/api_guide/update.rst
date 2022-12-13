@@ -4,13 +4,25 @@ Update History
 This section lists contents that were made for each product release.
 
 
+* V0.4.0
+
+  **Date:** December 12, 2022
+
+  **Changes:**
+
+  - Added the following new operations:
+
+    - voxel_pooling_forward
+    - voxelization
+    - psa_mask
+    - fill
+
 * V0.3.0
 
   **Date:** October 20, 2022
 
   **Changes:**
 
-  - Supported AArch64 KylinV10 OS.
   - Added the following new operations:
 
     - three_interpolate_forward

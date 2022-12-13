@@ -21,116 +21,61 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <string>
-#include <cstring>
-#include <unordered_set>
 #include "perf_test.h"
 #include "core/logging.h"
+#include "json.h"
 
 // baseline default threshold
 #define DEFAULT_SCALE_BOUND (100)
 #define DEFAULT_THRESHOLD_ABSOLUTE (5)
 #define DEFAULT_THRESHOLD_RELATIVE (0.04f)
 
-xmlXPathObjectPtr getNodeSet(xmlDocPtr doc, const xmlChar *xpath) {
-  xmlXPathContextPtr context = NULL;
-  xmlXPathObjectPtr result = NULL;
-  context = xmlXPathNewContext(doc);
-  if (context == NULL) {
-    LOG(ERROR) << "getNodeSet:Get context of xml file failed.";
-    return NULL;
-  }
-  result = xmlXPathEvalExpression(xpath, context);
-  xmlXPathFreeContext(context);
-  if (result == NULL) {
-    LOG(INFO) << "getNodeSet:Get XPath expression of xml file failed.";
-    return NULL;
-  }
-  if (xmlXPathNodeSetIsEmpty(result->nodesetval)) {
-    xmlXPathFreeObject(result);
-    LOG(INFO) << "getNodeSet:XPath node set is empty.";
-    return NULL;
-  }
-  return result;
-}
-
-// get hardware_time_base in xml file
-bool getXmlData(std::string case_name, double *xml_time,
+// get hardware_time and workspace_size from txt file for better perfermance
+bool getTxtData(std::string case_name, double *txt_time,
                 double *workspace_size) {
-  std::string xml_file;
+  bool is_get = false;
+
+  if (std::getenv("MLUOP_GTEST_GENERATE_BASELINE_ONLY") != NULL &&
+      std::string(std::getenv("MLUOP_GTEST_GENERATE_BASELINE_ONLY"))
+              .compare("ON") == 0) {
+    return is_get;
+  }
+
+  std::string txt_file;
   if (getenv("MLUOP_BASELINE_XML_FILE") != NULL) {
-    xml_file = getenv("MLUOP_BASELINE_XML_FILE");
+    txt_file = std::string(getenv("MLUOP_BASELINE_XML_FILE")) + ".txt";
   } else {
-    LOG(ERROR) << "getXmlData:The env of MLUOP_BASELINE_XML_FILE is NULL.";
-    return false;
+    LOG(ERROR) << "getTxtData:The env of MLUOP_BASELINE_XML_FILE is NULL.";
+    return is_get;
   }
 
-  *xml_time = 0;
-  xmlDocPtr doc = NULL;
-  xmlKeepBlanksDefault(0);
-  doc = xmlReadFile(xml_file.c_str(), "UTF-8", XML_PARSE_RECOVER);
-  if (doc == NULL) {
-    LOG(INFO) << "open " << xml_file << " failed.";
-    return false;
+  std::ifstream file(txt_file.c_str(), std::fstream::in);
+  if (!file.is_open()) {
+    LOG(ERROR) << "getTxtData: failed to open file " << txt_file << "\n";
+    return is_get;
   }
-  std::string xpath_string = "///testcase//*[@name='" + case_name + "']";
-  xmlChar *xpath = BAD_CAST(xpath_string.c_str());
-  xmlXPathObjectPtr search_result = getNodeSet(doc, xpath);
-  if (search_result == NULL) {
-    LOG(INFO) << "search " << case_name
-              << " data in mlu_op_base_data.xml failed.";
-    xmlFreeDoc(doc);
-    return false;
-  }
-  std::string search_data = case_name;
-  if (search_result) {
-    xmlNodeSetPtr nodeset = NULL;
-    xmlNodePtr property = NULL;
-    xmlChar *name = NULL;
-    nodeset = search_result->nodesetval;
-    property = nodeset->nodeTab[0];
+  std::string hw_input, ws_input, result;
+  std::string::size_type start, end;
+  while (getline(file, hw_input)) {
+    if (hw_input.find(case_name.c_str()) != std::string::npos) {
+      // get hard_time_base
+      start = hw_input.find_last_of("value=");
+      end = hw_input.find_last_of("/");
+      result = hw_input.substr(start + 1, end - start - 1);
+      *txt_time = atof(result.c_str());
 
-    xmlNodePtr property_next = NULL;
-    property_next = property->next;
-    // get hw_time_base
-    if (xmlHasProp(property, BAD_CAST("name")) &&
-        xmlHasProp(property, BAD_CAST("value"))) {
-      name = xmlGetProp(property, BAD_CAST "name");
-      if (!xmlStrcmp(name, BAD_CAST(search_data.c_str()))) {
-        xmlChar *value = xmlGetProp(property, BAD_CAST "value");
-        *xml_time = atof((const char *)value);
-        xmlFree(value);
-      }
-      xmlFree(name);
-    } else {
-      LOG(ERROR) << "getXmlData:search the name or value of property failed "
-                    "when getting hw_time_base.";
-      xmlXPathFreeObject(search_result);
-      xmlFreeDoc(doc);
-      return false;
+      // get workspace_size_base
+      getline(file, ws_input);
+      start = ws_input.find_last_of("value=");
+      end = ws_input.find_last_of("/");
+      result = ws_input.substr(start + 1, end - start - 1);
+      *workspace_size = atof(result.c_str());
+      is_get = true;
+      break;
     }
-    // get workspace_size_mlu
-    if (xmlHasProp(property_next, BAD_CAST("name")) &&
-        xmlHasProp(property_next, BAD_CAST("value"))) {
-      name = xmlGetProp(property_next, BAD_CAST "name");
-      if (!xmlStrcmp(name, BAD_CAST("workspace_size_mlu"))) {
-        xmlChar *value = xmlGetProp(property_next, BAD_CAST "value");
-        *workspace_size = atof((const char *)value);
-        xmlFree(value);
-      }
-      xmlFree(name);
-    } else {
-      LOG(ERROR) << "getXmlData:search the name or value of property failed "
-                    "when getting workspace size.";
-      xmlXPathFreeObject(search_result);
-      xmlFreeDoc(doc);
-      return false;
-    }
-
-    xmlXPathFreeObject(search_result);
-    xmlFreeDoc(doc);
-    return true;
   }
-  return false;
+
+  return is_get;
 }
 
 // get pb or prototxt file name
@@ -144,6 +89,75 @@ std::string getTestCaseName(std::string str) {
     result = str;
   }
   return result;
+}
+
+// get threshold from json config file
+bool getThreshold(std::string op_name, double *scale_bound,
+                  double *threshold_absolute, double *threshold_relative) {
+  // init for default config
+  bool in_white_list = false;
+  *scale_bound = DEFAULT_SCALE_BOUND;
+  *threshold_absolute = DEFAULT_THRESHOLD_ABSOLUTE;
+  *threshold_relative = DEFAULT_THRESHOLD_RELATIVE;
+
+  std::string file_path;
+  if (getenv("MLUOP_GTEST_THRESHOLD_FILE") != NULL) {
+    file_path = getenv("MLUOP_GTEST_THRESHOLD_FILE");
+  } else {
+    LOG(INFO) << "getThreshold:The env of MLUOP_GTEST_THERSHOLD_FILE is NULL";
+    LOG(INFO) << "getThreshold:Use default threshold set";
+    return in_white_list;
+  }
+
+  Json::Value root;
+  Json::CharReaderBuilder build;
+  std::string errs;
+  std::fstream f;
+  f.open(file_path, std::ios::in);
+  if (!f.is_open()) {
+    LOG(INFO) << "getThreshold:Open json file error!";
+    LOG(INFO) << "getThreshold:Use default threshold set";
+    return in_white_list;
+  }
+
+  bool parse_ok = Json::parseFromStream(build, f, &root, &errs);
+  if (!parse_ok) {
+    LOG(INFO) << "getThreshold:Parse json file error!";
+    LOG(INFO) << "getThreshold:Use default threshold set";
+    f.close();
+    return in_white_list;
+  }
+
+  // get default threshold from json file
+  in_white_list = root[0]["in_white_list"].asBool();
+  double scale_bound_temp =
+      root[0]["threshold_attrs"]["scale_bound"].asDouble();
+  double threshold_absolute_temp =
+      root[0]["threshold_attrs"]["threshold_absolute"].asDouble();
+  double threshold_relative_temp =
+      root[0]["threshold_attrs"]["threshold_relative"].asDouble();
+  int i = 0;
+  while (i < root.size()) {
+    std::string name = root[i]["op_name"].asString();
+    if (strcmp(op_name.c_str(), name.c_str()) == 0) {
+      in_white_list = root[i]["in_white_list"].asBool();
+      scale_bound_temp = root[i]["threshold_attrs"]["scale_bound"].asDouble();
+      threshold_absolute_temp =
+          root[i]["threshold_attrs"]["threshold_absolute"].asDouble();
+      threshold_relative_temp =
+          root[i]["threshold_attrs"]["threshold_relative"].asDouble();
+      break;
+    }
+    ++i;
+  }
+
+  *scale_bound = scale_bound_temp;
+  *threshold_absolute = threshold_absolute_temp;
+  *threshold_relative = threshold_relative_temp;
+
+  f.close();
+
+  return in_white_list;
 }
 
 // update baseline hardware_time_base

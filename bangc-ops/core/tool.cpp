@@ -29,6 +29,26 @@
 #define INT31_BITWIDTH 31
 #define INT16_BITWIDTH 16
 
+mluOpStatus_t castDtypeToBitwidth(mluOpDataType_t quantize_dtype,
+                                  int *bitwidth) {
+  if (bitwidth == NULL) {
+    LOG(ERROR) << "[castDtypeToBitwidth]:The pointer of bitwidth is NULL.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+
+  if (quantize_dtype == MLUOP_DTYPE_INT8) {
+    *bitwidth = 8;
+  } else if (quantize_dtype == MLUOP_DTYPE_INT16) {
+    *bitwidth = 16;
+  } else {
+    LOG(ERROR) << "[castDtypeToBitwidth]:quantize_dtype is not supported, it "
+                  "supports int8, int16.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
 mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
   if (src == NULL) {
     LOG(ERROR) << "[castFloat32ToInt31]:The pointer of src is NULL.";
@@ -433,5 +453,3 @@ bool getBoolEnvVar(const std::string &str, bool default_para) {
   return (env_var == "1" || env_var == "ON" || env_var == "YES" ||
           env_var == "TRUE");
 }
-#undef INT31_BITWIDTH
-#undef INT16_BITWIDTH

@@ -26,6 +26,9 @@
 #include <string>
 #include <cctype>
 
+#include "internal_perf.h"
+#include "pb_test_tools.h"
+
 namespace mluoptest {
 
 struct TestSummary {
@@ -41,6 +44,7 @@ class GlobalVar {
   std::string case_path_ = "";
   std::string get_vmpeak_ = "";
   TestSummary summary_;
+  TestInternalInfo internal_info_;
 
   // the picked device id, make sure gtest run on the picked device.
   int dev_id_ = 0;
@@ -49,65 +53,22 @@ class GlobalVar {
                      // ave hw_time
   int thread_num_ = 1;    // thread num
   bool shuffle_ = false;  // shuffle cases.
+  bool mlu_only_ = false;
+  bool zero_input_ = false;
+  bool use_default_queue_ = false;
+  bool test_llc_ = false;
+  bool unaligned_mlu_address_random_ = false;
+  int unaligned_mlu_address_set_ = 0;
+  bool enable_gtest_internal_perf = false;
 
-  std::string getParam(const std::string &str, std::string key) {
-    key = key + "=";
-    auto npos = str.find(key);
-    if (npos == std::string::npos) {
-      return "";
-    } else {
-      return str.substr(npos + key.length());
-    }
-  }
+  std::string getParam(const std::string &str, std::string key);
 
-  void init(int argc, char **argv) {
-    auto to_int = [](std::string s, std::string opt) -> int {
-      if (std::count_if(s.begin(), s.end(),
-                        [](unsigned char c) { return std::isdigit(c); }) ==
-              s.size() &&
-          !s.empty()) {
-        return std::atoi(s.c_str());
-      } else {
-        return -1;
-      }
-    };
-    for (int i = 0; i < argc; i++) {
-      std::string arg = argv[i];
-      cases_dir_ =
-          cases_dir_.empty() ? getParam(arg, "--cases_dir") : cases_dir_;
-      cases_list_ =
-          cases_list_.empty() ? getParam(arg, "--cases_list") : cases_list_;
-      case_path_ =
-          case_path_.empty() ? getParam(arg, "--case_path") : case_path_;
-      get_vmpeak_ =
-          get_vmpeak_.empty() ? getParam(arg, "--get_vmpeak") : get_vmpeak_;
-      rand_n_ = (rand_n_ == -1) ? to_int(getParam(arg, "--rand_n"), "--rand_n")
-                                : rand_n_;
-      repeat_ = getParam(arg, "--perf_repeat").empty()
-                    ? repeat_
-                    : to_int(getParam(arg, "--perf_repeat"), "--perf_repeat");
-      thread_num_ = getParam(arg, "--thread").empty()
-                        ? thread_num_
-                        : to_int(getParam(arg, "--thread"), "--thread");
+  void init(int argc, char **argv);
 
-      shuffle_ = (shuffle_ == false)
-                     ? (arg.find("--gtest_shuffle") != std::string::npos)
-                     : shuffle_;
-    }
-    // print();
-  }
-
-  void print() {
-    std::cout << "cases_dir is " << cases_dir_ << std::endl;
-    std::cout << "cases_list is " << cases_list_ << std::endl;
-    std::cout << "cases_path is " << case_path_ << std::endl;
-    std::cout << "get_vmpeak is " << get_vmpeak_ << std::endl;
-    std::cout << "rand_n is " << rand_n_ << std::endl;
-    std::cout << "repeat is " << repeat_ << std::endl;
-    std::cout << "thread is " << thread_num_ << std::endl;
-    std::cout << "shuffle is " << shuffle_ << std::endl;
-  }
+  void print();
 };
+
+extern GlobalVar global_var;
 
 }  // namespace mluoptest
 

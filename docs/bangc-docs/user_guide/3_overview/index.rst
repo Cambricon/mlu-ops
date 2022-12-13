@@ -3,7 +3,7 @@
 概述
 ====
 
-Cambricon BANGC OPS是一个基于寒武纪MLU，并针对深度人工智能网络场景提供高速优化、常用算子的计算库。
+Cambricon BANGC OPS是一个基于寒武纪MLU，并针对人工智能网络场景提供高速优化、常用算子的计算库。
 同时也为用户提供简洁、高效、通用、灵活并且可扩展的编程接口。
 
 Cambricon BANGC OPS具有以下特点：

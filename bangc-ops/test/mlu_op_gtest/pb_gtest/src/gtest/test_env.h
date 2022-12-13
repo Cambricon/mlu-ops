@@ -33,15 +33,48 @@
 #include <vector>
 #include <tuple>
 #include <random>
+#include <libxml/xpath.h>  // NOLINT
+#include "cn_api.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
 #include "core/logging.h"
 #include "variable.h"
 
+struct TestEnvInfo {
+  std::string commit_id;
+  std::string mluop_version;
+  std::string date;
+  std::string ip;
+  std::string mluop_branch;
+  std::string mlu_platform;
+  std::string job_limit;
+  std::string cluster_limit;
+};
+
 class TestEnvironment : public testing::Environment {
  public:
   virtual void SetUp();
   virtual void TearDown();
+  static TestEnvInfo test_env_;
+
+ private:
+  void convertBaselineXml2Txt();
+  // set environment of test, such as date, mluop_version.
+  static void setTestEnv();
+  // record environment info to xml.
+  static void recordEnvXml();
+
+  static void setDate();
+  static void setMluopVersion();
+  static void setMluPlatform();
+  static void setClusterLimit();
+  static void setJobLimit();
+  // CommitId, MluopBranch will be null when not a mluops envrionment.
+  static void setCommitId();
+  static void setMluopBranch();
+  // Ip will be null when "ifconfig" is not installed,
+  //  such as testing in docker.
+  static void setIp();
 };
 
 #endif  // TEST_MLU_OP_GTEST_SRC_GTEST_TEST_ENV_H_

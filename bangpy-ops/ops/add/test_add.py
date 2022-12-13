@@ -29,19 +29,19 @@ from add import KERNEL_NAME
 
 @registerOp("add")
 class Addop(OpTest):
-    def __init__(self, target, dtype, tensor_list, output_tensor):
+    def __init__(self, target, dtype, tensor_list, output_tensor, param):
         self.dtype = dtype
-        super().__init__(target, dtype, tensor_list, output_tensor)
+        super().__init__(target, dtype, tensor_list, output_tensor, param)
 
     def compute(self):
-        data_in0 = self.inputs_tensor_list[0]
-        data_in1 = self.inputs_tensor_list[1]
+        data_in0 = self.inputs_tensor_list[0].flatten()
+        data_in1 = self.inputs_tensor_list[1].flatten()
         dev = bangpy.device(0)
         # set I/O data
         data_in0_dev = bangpy.Array(data_in0.astype(self.dtype.as_numpy_dtype), dev)
         data_in1_dev = bangpy.Array(data_in1.astype(self.dtype.as_numpy_dtype), dev)
         data_out_dev = bangpy.Array(
-            np.zeros(self.output_tensor_list[0].shape, self.dtype.as_numpy_dtype), dev
+            np.zeros(self.output_tensor_list[0].flatten().shape, self.dtype.as_numpy_dtype), dev
         )
 
         f1 = load_op_by_type(KERNEL_NAME, self.dtype.name)

@@ -50,12 +50,9 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   if (job < 4) {
     k_dim->x = 1;
     *k_type = CNRT_FUNC_TYPE_BLOCK;
-  } else if (job == 4) {
+  } else {
     *k_type = CNRT_FUNC_TYPE_UNION1;
     k_dim->x = handle->core_num_per_cluster;
-  } else {
-    *k_type = (cnrtFunctionType_t)job;
-    k_dim->x = job;
   }
   return;
 }
@@ -87,8 +84,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  *size = 12 * A * H * W * 4 +
-          handle->cluster_num * handle->core_num_per_cluster * 4 * 3;
+  *size = 12 * A * H * W * 4 + handle->core_num_per_cluster * 4 * 3;
   return MLUOP_STATUS_SUCCESS;
 }
 
