@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include "cnrt.h"
+#include "mlu_op.h"
 
 #ifndef MLUOP_WIN_API
 #ifdef _WIN32
@@ -37,6 +38,17 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif  // __cplusplus
+
+/* ml_nms */
+void MLUOP_WIN_API mluOpKernelMlNmsFloatFast(cnrtDim3_t k_dim,
+    cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t data_type,
+    void* boxes_data_ptr, float nms_thres, int input_boxes_num,
+    uint8_t* output_boxes_index);
+
+void MLUOP_WIN_API mluOpKernelMlNmsHalfFast(cnrtDim3_t k_dim,
+    cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t data_type,
+    void* boxes_data_ptr, float nms_thres, int input_boxes_num,
+    uint8_t* output_boxes_index);
 
 /* Abs */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsHalfFast(
