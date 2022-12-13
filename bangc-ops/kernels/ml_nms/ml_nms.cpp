@@ -45,9 +45,9 @@ static inline bool isSupportType(const mluOpDataType_t check_type,
 }
 
 mluOpStatus_t MlNmsParamCheck(
-    const std::string &op_name, const mluOpHandle_t &handle,
-    const mluOpTensorDescriptor_t &x_desc, const void *x,
-    const mluOpDataType_t support_type[], const int &len) {
+  const std::string &op_name, const mluOpHandle_t &handle,
+  const mluOpTensorDescriptor_t &x_desc, const void *x,
+  const mluOpDataType_t support_type[], const int &len) {
   PARAM_CHECK(op_name, x_desc != NULL);
   PARAM_CHECK(op_name, handle != NULL);
 
