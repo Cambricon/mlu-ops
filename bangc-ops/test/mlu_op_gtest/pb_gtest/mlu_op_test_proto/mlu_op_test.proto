@@ -220,6 +220,7 @@ message Node {
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
   optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
   optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
+  optional MlNmsParam ml_nms_param                    = 4020;  // MlNmsParam
 }
 
 
@@ -417,4 +418,9 @@ message VoxelizationParam {
   optional int32 max_voxels   = 2 [default = 20000];
   optional int32 ndim         = 3 [default = 3];
   optional bool deterministic = 4 [default = true];
+}
+
+// param to call mluOpMlNms()
+message MlNmsParam {
+  required float iou_threshold = 1 [default = 0.2];
 }
