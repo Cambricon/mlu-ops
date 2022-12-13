@@ -21,6 +21,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ************************************************************************/
 #include <stdio.h>
+#include <string>
 #include "mlu_op.h"
 #include "core/context.h"
 #include "core/gen_case.h"
