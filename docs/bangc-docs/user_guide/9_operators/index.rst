@@ -173,7 +173,7 @@ mluOpVoxelization
 -------------------
 该算子用于将输入点集转化为指定边界范围内的体素，输出所有体素内各点特征值、所有体素位置、各体素内点的数量以及体素数量。
 
-.. _psa_mask:
+.. _psa_mask_backward:
 
 mluOpPsamaskBackward
 ----------------------
@@ -216,6 +216,8 @@ mluOpPsamaskBackward
 - ``n``、 ``h``、``w`` 和 ``c`` 分别表示当前的NHWC维度。
 - ``dx`` 是输入的梯度。
 - ``dy`` 是输出的梯度。
+
+.. _psa_mask_forward:
 
 mluOpPsamaskForward
 -------------------

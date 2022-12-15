@@ -10,7 +10,8 @@
   
      + :ref:`voxel_pooling_forward` 
      + :ref:`voxelization`
-     + :ref:`psa_mask`
+     + :ref:`psa_mask_forward`
+     + :ref:`psa_mask_backward`
      + :ref:`fill`
 
 * **V0.3.0**
