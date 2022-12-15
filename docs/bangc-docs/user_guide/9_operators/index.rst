@@ -184,12 +184,10 @@ mluOpPsamaskBackward
 .. math::
 
    \begin{array}{lcl}
-
-   
-   half_mask_h = (h_mask - 1) / 2 \\
-   half_mask_w = (w_mask - 1) / 2 \\
-   dx[n][h][w][hidx * w\_mask + widx] = dy[n][h][w][(hidx + h - half_mask_h)* \\
-   w_feature + widx + w - half_mask_w] \\
+   half\_mask\_h = (h\_mask - 1) / 2 \\
+   half\_mask\_w = (w\_mask - 1) / 2 \\
+   dx[n][h][w][hidx * w\_mask + widx] = dy[n][h][w][(hidx + h - half\_mask\_h)* \\
+   w\_feature + widx + w - half\_mask\_w] \\
    hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)] \\
    widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)] \\\
    \end{array}
@@ -206,9 +204,8 @@ mluOpPsamaskBackward
 .. math::
 
    \begin{array}{lcl}
-
-   half_mask_h = (h_mask - 1) / 2 \\
-   half_mask_w = (w_mask - 1) / 2 \\
+   half\_mask\_h = (h\_mask - 1) / 2 \\
+   half\_mask\_w = (w\_mask - 1) / 2 \\
    dx[n][h][w][hidx * w\_mask + widx] = dy[n][hidx + h - half\_mask\_h][widx + w - half\_mask\_w][c] \\
    hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)] \\
    widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)] \\\
@@ -229,10 +226,8 @@ mluOpPsamaskForward
 .. math::
 
    \begin{array}{lcl}
-
-   
-   half_mask_h = (h_mask - 1) / 2 \\
-   half_mask_w = (w_mask - 1) / 2 \\
+   half\_mask\_h = (h\_mask - 1) / 2 \\
+   half\_mask\_w = (w\_mask - 1) / 2 \\
    y[n][h][w][(hidx + h - half\_mask\_h) * w\_feature + widx + w - half\_mask\_w] = x[n][h][w][hidx * w\_mask + widx] \\
    hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)] \\
    widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)] \\\
@@ -250,9 +245,8 @@ mluOpPsamaskForward
 .. math::
 
    \begin{array}{lcl}
-
-   half_mask_h = (h_mask - 1) / 2 \\
-   half_mask_w = (w_mask - 1) / 2 \\
+   half\_mask\_h = (h\_mask - 1) / 2 \\
+   half\_mask\_w = (w\_mask - 1) / 2 \\
    y[n][hidx + h - half\_mask\_h][widx + w - half\_mask\_w][c] = x[n][h][w][hidx * w\_mask + widx] \\
    hidx \in [max(0, half\_mask\_h - h),min(h\_mask, h\_feature + half\_mask\_h)] \\
    widx \in [max(0, half\_mask\_w - w),min(w\_mask, w\_feature + half\_mask\_w)] \\\
