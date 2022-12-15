@@ -17,14 +17,17 @@ Cambricon BANGC OPS具有以下特点：
 
   -  常见的网络算子：
 
-     * abs、log、div、sqrt、sqrtBackward
+     * abs、copy、expand、fill、log、div、sqrt、sqrtBackward
   
   -  领域类算子：
   
+     * BallQuery
      * GenerateProposalsV2、PriorBox、YoloBox
      * PolyNms
      * PsRoiPoolForward、PsRoiPoolBackward
      * RoiCropForward、RoiCropBackward
+     * PsaMaskForward、PsaMaskBackward
+     * VoxelPoolingForward、Voxelization
 
 	 
 

@@ -61,13 +61,15 @@ v0.4.0
 -  支持MLU算子性能比对功能。
 -  新增支持以下算子：
 
-  * ``voxel_pooling_forward``
+   * ``voxel_pooling_forward``
 
-  * ``voxelization``
+   * ``voxelization``
 
-  * ``psa_mask``
+   * ``psa_mask_forward``
 
-  * ``fill``
+   * ``psa_mask_backward``
+
+   * ``fill``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~
