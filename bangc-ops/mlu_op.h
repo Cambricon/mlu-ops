@@ -1800,7 +1800,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  *
  * @par Reference
  * -
- * https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
+ * https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_kernel.cu
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGenerateProposalsV2(mluOpHandle_t handle,
@@ -3287,7 +3287,7 @@ mluOpExpand(mluOpHandle_t handle,
      @endverbatim
  *
  * @par Reference
- * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
+ * - https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
  *
  */
 mluOpStatus_t MLUOP_WIN_API mluOpFill(
@@ -3363,7 +3363,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(
  * - None.
  *
  * @par Reference
- * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
  *
  */
 mluOpStatus_t MLUOP_WIN_API
@@ -3445,7 +3445,7 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
  *
  */
 mluOpStatus_t MLUOP_WIN_API

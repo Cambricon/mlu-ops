@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         runner: [mlu270-x5k, mlu290-m5, mlu370-m8]
-        os: [ubuntu16.04, ubuntu18.04, ubuntu20.04, debian9, debian10, centos7, centos8]
+        os: [ubuntu18.04, ubuntu20.04, debian9, debian10, centos7, centos8]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
@@ -27,7 +27,7 @@ jobs:
       - name: mlu_ops_version_check
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
-          bash version_check.sh 0.4.0
+          bash version_check.sh 0.4.1
 
       - name: bangc_ops_release_test_cases
         run: >
