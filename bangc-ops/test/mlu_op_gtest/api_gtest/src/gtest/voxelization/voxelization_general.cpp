@@ -183,6 +183,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     }
     if (handle_->arch < MLUOP_MLU370) {
       VLOG(4) << "mluOpVoxelization do not support platform < MLU370";
+      destroy();
       return true;
     }
     mluOpStatus_t status = mluOpGetVoxelizationWorkspaceSize(
