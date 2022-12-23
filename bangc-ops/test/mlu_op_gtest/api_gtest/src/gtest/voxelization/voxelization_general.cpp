@@ -47,6 +47,9 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       VLOG(4) << "Device does not match, skip testing.";
       return;
     }
+    if (handle_->arch < MLUOP_MLU370) {
+        return;
+    }
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&points_desc_));
     MLUOpTensorParam points_params = std::get<0>(GetParam());
     mluOpTensorLayout_t points_layout = points_params.get_layout();
@@ -176,6 +179,10 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     if (!(device_ == MLUOP_UNKNOWN_DEVICE || device_ == handle_->arch)) {
       VLOG(4) << "Device does not match, skip testing.";
       destroy();
+      return true;
+    }
+    if (handle_->arch < MLUOP_MLU370) {
+      VLOG(4) << "mluOpVoxelization do not support platform < MLU370";
       return true;
     }
     mluOpStatus_t status = mluOpGetVoxelizationWorkspaceSize(

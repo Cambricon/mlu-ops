@@ -42,6 +42,9 @@ class voxelization : public testing::Test {
                 bool voxel_num) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
+      if (handle_->arch < MLUOP_MLU370) {
+        return;
+      }
     }
     if (points_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&points_desc_));
@@ -148,6 +151,12 @@ class voxelization : public testing::Test {
   }
 
   mluOpStatus_t compute() {
+    if (NULL != handle_) {
+      if (handle_->arch < MLUOP_MLU370) {
+        destroy();
+        return MLUOP_STATUS_BAD_PARAM;
+      }
+    }
     mluOpStatus_t status = mluOpVoxelization(
         handle_, points_desc_, points_, voxel_size_desc_, voxel_size_,
         coors_range_desc_, coors_range_, max_points_, max_voxels_, NDim_,
