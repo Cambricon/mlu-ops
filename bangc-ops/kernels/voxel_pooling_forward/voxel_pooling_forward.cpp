@@ -82,6 +82,12 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
   PARAM_CHECK(op_name, pos_memo_desc->dims[0] == batch_size);
   PARAM_CHECK(op_name, pos_memo_desc->dims[1] == num_points);
   PARAM_CHECK(op_name, pos_memo_desc->dims[2] == 3);
+  // check dim prams
+  PARAM_CHECK(op_name, batch_size > 0);
+  PARAM_CHECK(op_name, num_points > 0);
+  PARAM_CHECK(op_name, num_channels > 0);
+  PARAM_CHECK(op_name, num_voxel_x > 0);
+  PARAM_CHECK(op_name, num_voxel_y > 0);
   // check large tensor
   if ((mluOpGetTensorElementNum(geom_xyz_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(input_features_desc) >= LARGE_TENSOR_NUM) ||
@@ -99,18 +105,11 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
     LOG(ERROR) << op_name << " Check zero element tensor failure.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  // check other prams
-  PARAM_CHECK(op_name, batch_size > 0);
-  PARAM_CHECK(op_name, num_points > 0);
-  PARAM_CHECK(op_name, num_channels > 0);
-  PARAM_CHECK(op_name, num_voxel_x > 0);
-  PARAM_CHECK(op_name, num_voxel_y > 0);
   // check ptr
   PARAM_CHECK(op_name, geom_xyz != NULL);
   PARAM_CHECK(op_name, input_features != NULL);
   PARAM_CHECK(op_name, output_features != NULL);
   PARAM_CHECK(op_name, pos_memo != NULL);
-
   // check arch
   if (handle->arch < MLUOP_MLU370) {
     LOG(ERROR) << op_name
