@@ -8,13 +8,13 @@
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
 #
-# The above copyright notice and this permission notice shall self.tcp included
+# The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -109,13 +109,13 @@ class NonZero(object):
         if self.trans == 1:
             int_nram0 = int_nram.reshape((align_size, self.dim_num * 2))
             int_nram0 = int_nram0[:align_size, dim_index * 2]
-            tcp.memcpy(int_nram0, out_nram[:align_size].reshape((align_size, 1)))
+            tcp.memcpy(int_nram0, out_nram[:align_size])
         else:
             int_nram1 = int_nram.reshape((self.dim_num, align_size * 2))[dim_index]
             int_nram1 = int_nram1.reshape((align_size, 2))
             tcp.memcpy(
                 int_nram1[:align_size, 0],
-                out_nram[:align_size].reshape((align_size, 1)),
+                out_nram[:align_size],
             )
 
     def core_compute(

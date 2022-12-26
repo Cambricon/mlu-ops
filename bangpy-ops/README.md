@@ -1,6 +1,6 @@
 # Cambricon BANGPy operators
 
-提供基于寒武纪机器学习单元（Machine Learning Unit，MLU）开发高性能算子、Python 接口封装的示例代码。
+提供基于寒武纪人工智能单元（MLU）开发高性能算子、Python 接口封装的示例代码。
 
 ## 编译 BANGPy operators
 - 环境依赖准备
@@ -109,7 +109,7 @@
 
 ## 新算子开发流程
 
-详情可以参考文档 [BANGPy-OPS 算子开发流程.md](../docs/bangpy-docs/BANGPy-OPS算子开发流程.md)。
+详情可以参考文档 [BANGPy-OPS 算子开发流程.md](../docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md)。
 
 1. 在 `mlu-ops/bangpy-ops/ops/` 路径下，创建算子文件夹，添加算子实现文件，可以参考现有的 add 算子中的[add.py](./ops/add/add.py)进行添加。
 2. 在算子文件夹下创建以 `test_` 为前缀的算子测试文件，添加测试代码，可以参考[test_add.py](./ops/add/test_add.py)进行添加。

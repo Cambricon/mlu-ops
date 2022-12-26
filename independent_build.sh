@@ -11,6 +11,7 @@ python2 json_parser.py
 output='dependency.txt'
 RELEASE_TYPE="release"
 MODULE_VERSION=""
+PACKAGE_ARCH="$(uname -m)"
 # get the package type
 while getopts "t:" opt
 do
@@ -45,7 +46,7 @@ echo "PACKAGE_MODULE_VERS: $PACKAGE_MODULE_VERS"
 
 PACKAGE_SERVER="http://daily.software.cambricon.com"
 PACKAGE_OS="Linux"
-PACKAGE_ARCH="x86_64"
+
 
 arr_modules=(`echo $PACKAGE_MODULES`)
 arr_branch=(`echo $PACKAGE_BRANCH`)
@@ -72,7 +73,7 @@ if [ -f "/etc/os-release" ]; then
             PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
             echo "PACKAGE_PATH: $PACKAGE_PATH"
             REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-            echo "real_path $REAL_PATH" 
+            echo "real_path $REAL_PATH"
             wget -A deb -m -p -E -k -K -np ${PACKAGE_PATH}
             mkdir -p ${PACKAGE_EXTRACT_DIR}
             pushd ${PACKAGE_EXTRACT_DIR}
@@ -84,8 +85,8 @@ if [ -f "/etc/os-release" ]; then
                 pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
                 echo "pure_ver: ${pure_ver}"
                 for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
-                  dpkg -X $lib ./ 
-                done 
+                  dpkg -X $lib ./
+                done
               fi
             done
             popd
@@ -100,7 +101,7 @@ if [ -f "/etc/os-release" ]; then
             PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
             echo "PACKAGE_PATH: $PACKAGE_PATH"
             REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-            echo "real_path $REAL_PATH" 
+            echo "real_path $REAL_PATH"
             wget -A deb -m -p -E -k -K -np ${PACKAGE_PATH}
             mkdir -p ${PACKAGE_EXTRACT_DIR}
             pushd ${PACKAGE_EXTRACT_DIR}
@@ -112,7 +113,7 @@ if [ -f "/etc/os-release" ]; then
                 echo "pure_ver: ${pure_ver}"
                 for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
                   dpkg -X $lib ./
-                done 
+                done
               fi
             done
             popd
@@ -126,7 +127,7 @@ if [ -f "/etc/os-release" ]; then
             PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
             echo "PACKAGE_PATH: $PACKAGE_PATH"
             REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-            echo "real_path $REAL_PATH" 
+            echo "real_path $REAL_PATH"
             wget -A rpm -m -p -E -k -K -np ${PACKAGE_PATH}
             mkdir -p ${PACKAGE_EXTRACT_DIR}
             pushd ${PACKAGE_EXTRACT_DIR}
@@ -138,7 +139,32 @@ if [ -f "/etc/os-release" ]; then
                 echo "pure_ver: ${pure_ver}"
                 for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.rpm; do
                   rpm2cpio $lib | cpio -div
-                done 
+                done
+              fi
+            done
+            popd
+        done
+    elif [ ${ID} == "kylin" ]; then
+        for (( i =0; i < ${n}; i++))
+        do
+            PACKAGE_DIST="Kylin"
+            PACKAGE_DIST_VER=${VERSION_ID}
+            PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
+            echo "PACKAGE_PATH: $PACKAGE_PATH"
+            REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
+            echo "real_path $REAL_PATH"
+            wget -A rpm -m -p -E -k -K -np ${PACKAGE_PATH}
+            mkdir -p ${PACKAGE_EXTRACT_DIR}
+            pushd ${PACKAGE_EXTRACT_DIR}
+            for filename in ../${REAL_PATH}*.rpm; do
+              echo "filename: $filename"
+              rpm2cpio $filename | cpio -div
+              if [ ${arr_modules[$i]} == "cntoolkit" ]; then
+                pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
+                echo "pure_ver: ${pure_ver}"
+                for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.rpm; do
+                  rpm2cpio $lib | cpio -div
+                done
               fi
             done
             popd

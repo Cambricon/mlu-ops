@@ -238,4 +238,4 @@ TEST_F(psroipool_forward, BAD_PARAM_mapping_null) {
     FAIL() << "MLUOPAPITEST: catched " << e.what() << " in psroipool_forward";
   }
 }
-}  // mluopapitest
+}  // namespace mluopapitest

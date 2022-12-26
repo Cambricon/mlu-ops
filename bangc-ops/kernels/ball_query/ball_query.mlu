@@ -1,0 +1,196 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "ball_query.h"
+
+#include <string>
+
+#include "core/context.h"
+#include "core/logging.h"
+#include "core/runtime/device.h"
+#include "core/tensor.h"
+#include "core/type.h"
+#include "kernels/kernel.h"
+#include "mlu_op.h"
+#include "core/gen_case.h"
+
+static inline bool isSupportType(const mluOpDataType_t check_type,
+                                 const mluOpDataType_t support_type[],
+                                 const int len) {
+  for (int i = 0; i < len; ++i) {
+    if (check_type == support_type[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void policyFuncBallQuery(const mluOpHandle_t &handle,
+                         const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
+                         cnrtFunctionType_t *k_type) {
+  size_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
+  VLOG(5) << "In current device, cluster_num:" << cluster_num;
+  size_t core_in_cluster = handle->core_num_per_cluster;
+  VLOG(5) << "In current device, core_in_cluster:" << core_in_cluster;
+
+  size_t total_data_num;
+  if (desc->tensorElementsNumber(total_data_num) != MLUOP_STATUS_SUCCESS) {
+    LOG(ERROR) << "[mluOpBallQuery], In policyFuncBallQuery function, fail to "
+                  "get elem_count";
+  }
+
+  // On a core, a lot of new_xyz data element can be stored; but only one data
+  // element can be processed at a time. So a cluster can only process four data
+  // element.
+  size_t needed_cluster_num =
+      (total_data_num + core_in_cluster - 1) / core_in_cluster;
+  *k_type = CNRT_FUNC_TYPE_UNION1;
+  k_dim->x = core_in_cluster;
+  k_dim->y =
+      needed_cluster_num > cluster_num ? cluster_num : needed_cluster_num;
+  k_dim->z = 1;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t new_xyz_desc,
+    const void *new_xyz, const mluOpTensorDescriptor_t xyz_desc,
+    const void *xyz, const float min_radius, const float max_radius,
+    const int nsample, const mluOpTensorDescriptor_t idx_desc, void *idx) {
+  VLOG(5) << "go into mluOpBallQuery.";
+  mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
+  // check inputs params
+  PARAM_CHECK("[mluOpBallQuery]", min_radius >= 0);
+  PARAM_CHECK("[mluOpBallQuery]", max_radius >= 0);
+  PARAM_CHECK("[mluOpBallQuery]", nsample >= 0);
+
+  // handle and desc ptr check null
+  PARAM_CHECK("[mluOpBallQuery]", handle != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", xyz_desc != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", idx_desc != NULL);
+
+  // check dims
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dim == 3);
+  PARAM_CHECK("[mluOpBallQuery]", xyz_desc->dim == 3);
+  PARAM_CHECK("[mluOpBallQuery]", idx_desc->dim == 3);
+
+  // check dim0
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[0] == xyz_desc->dims[0]);
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[0] == idx_desc->dims[0]);
+
+  // check dim1
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[1] == idx_desc->dims[1]);
+
+  // check dim2
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[2] == 3);
+  PARAM_CHECK("[mluOpBallQuery]", xyz_desc->dims[2] == 3);
+  PARAM_CHECK("[mluOpBallQuery]", idx_desc->dims[2] == nsample);
+
+  // check dtype
+  if (!isSupportType(new_xyz_desc->dtype, support_type, 2)) {
+    LOG(ERROR) << "[mluOpBallQuery]:Only half and float are supported in input "
+                  "new_xyz tensor, but the data type of tensor is "
+               << getNameOfDataType(new_xyz_desc->dtype) << ".";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->dtype, xyz_desc->dtype);
+
+  if (idx_desc->dtype != MLUOP_DTYPE_INT32) {
+    LOG(ERROR) << "[mluOpBallQuery]:Only int32 is supportedin output idx, but "
+                  "data type of tensor is "
+               << getNameOfDataType(idx_desc->dtype) << ".";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  // check LargeTensor
+  const size_t max_input_num = 2147483648;  // 2^31, 2G num
+  if ((mluOpGetTensorElementNum(new_xyz_desc) >= max_input_num) ||
+      (mluOpGetTensorElementNum(xyz_desc) >= max_input_num) ||
+      (mluOpGetTensorElementNum(idx_desc) >= max_input_num)) {
+    LOG(ERROR) << "ball_query Overflow max tensor num."
+               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
+  // check 0 element
+  // for new_xyz, zero elements are not supported
+  if (mluOpGetTensorElementNum(new_xyz_desc) == 0) {
+    VLOG(5) << "[mluOpBallQuery] new_xyz tensor is a zero element tensor. The "
+               "shape of new_xyz tensor is ["
+            << new_xyz_desc->dims[0] << ", " << new_xyz_desc->dims[1] << ", "
+            << new_xyz_desc->dims[2] << "].";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  // the shape of xyz is [b, n, 3]. currently only n equal to 0 is supported
+  if (xyz_desc->dims[1] == 0) {
+    return MLUOP_STATUS_SUCCESS;
+  }
+  // the shape of idx is [b, m, nsample]. currently only nsample equal to 0 is
+  // supported
+  if (idx_desc->dims[2] == 0) {
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  // check ptr
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", xyz != NULL);
+  PARAM_CHECK("[mluOpBallQuery]", idx != NULL);
+
+  if (MLUOP_GEN_CASE_ON_NEW) {
+    GEN_CASE_START("ball_query");
+    GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "input1", new_xyz, new_xyz_desc, -1, 1);
+    GEN_CASE_DATA(true, "input2", xyz, xyz_desc, -1, 1);
+    GEN_CASE_DATA(false, "output", idx, idx_desc, 0, 0);
+    GEN_CASE_OP_PARAM_SINGLE(0, "ball_query", "min_radius", min_radius);
+    GEN_CASE_OP_PARAM_SINGLE(0, "ball_query", "max_radius", max_radius);
+    GEN_CASE_OP_PARAM_SINGLE(0, "ball_query", "nsample", nsample);
+    GEN_CASE_TEST_PARAM_NEW(true, true, false, 0, 0, 0);
+  }
+  // choose the best task dimension
+  cnrtDim3_t k_dim;
+  cnrtFunctionType_t k_type;
+  policyFuncBallQuery(handle, new_xyz_desc, &k_dim, &k_type);
+
+  // launch kernel
+  int b = new_xyz_desc->dims[0];
+  int m = new_xyz_desc->dims[1];
+  int n = xyz_desc->dims[1];
+  mluOpDataType_t d_type = new_xyz_desc->dtype;
+
+  VLOG(5) << "[mluOpBallQuery] launch kernel policyFUnc[" << k_dim.x << ", "
+          << k_dim.y << ", " << k_dim.z << "]";
+  if (d_type == MLUOP_DTYPE_FLOAT) {
+    VLOG(5) << "In mluOpBallQuery, go into MLUUnion1KernelBallQuery<float>";
+    KERNEL_CHECK(
+        (MLUUnion1KernelBallQuery<float><<<k_dim, k_type, handle->queue>>>(
+            b, n, m, min_radius, max_radius, nsample, (float *)new_xyz,
+            (float *)xyz, (int32_t *)idx)));
+  } else {
+    VLOG(5) << "In mluOpBallQuery, go into MLUUnion1KernelBallQuery<half>";
+    KERNEL_CHECK(
+        (MLUUnion1KernelBallQuery<half><<<k_dim, k_type, handle->queue>>>(
+            b, n, m, min_radius, max_radius, nsample, (half *)new_xyz,
+            (half *)xyz, (int32_t *)idx)));
+  }
+  GEN_CASE_END();
+  return MLUOP_STATUS_SUCCESS;
+}

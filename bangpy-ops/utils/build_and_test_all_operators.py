@@ -28,6 +28,17 @@ import pytest
 build_entrys = []
 test_entrys = []
 test_files = []
+pb_test_op = [
+    "add",
+    "logaddexp2",
+    "kldivloss",
+    "cross",
+    "hard_sigmoid",
+    "cosine_embedding_loss",
+    "lerp",
+    "frac",
+    "hardshrink",
+]
 
 
 def collect_build_test_funcs(op, cur_file_name):
@@ -68,9 +79,9 @@ def test_all_op(target, opname, cases_dir):
     else:
         flag = True
         if target is not None:
-            pytest.main(["-s", "--target=" + target, *test_files])
+            pytest.main(["-s", "-x", "--target=" + target, *test_files])
         else:
-            pytest.main(["-s", *test_files])
+            pytest.main(["-s", "-x", *test_files])
     return flag
 
 
@@ -127,19 +138,25 @@ def main():
         for k, v in operator_statuts.items():
             if not v & 1:
                 print(
-                    "Build Warning: Operator %s was skipped, please check whether\
-                     there is a function start with 'build' prefix in the operator."
-                    % (k)
+                    "Build Warning: Operator %s was skipped, please check whether" % (k)
+                    + " there is a function start with 'build' prefix in the operator."
                 )
     if test_enable:
+        print("======================")
+        print("Test all operators with pb case...")
         for op_name in operator_lists:
-            flag = test_all_op(target, op_name, cases_dir)
-            for k, v in operator_statuts.items():
+            if op_name in pb_test_op:
+                test_op(target, op_name, cases_dir)
+        flag = False
+        if len(test_files) != 0:
+            flag = test_all_op(target, "", cases_dir)
+        for k, v in operator_statuts.items():
+            if k not in pb_test_op:
                 if not v & 2 and flag is True:
                     print(
-                        "Test Warning: Operator %s was skipped, please check whether\
-                            there is a function start with 'test' prefix in the operator."
+                        "Test Warning: Operator %s was skipped, please check whether"
                         % (k)
+                        + " there is a function start with 'test' prefix in the operator."
                     )
 
 

@@ -95,10 +95,68 @@ bool isFile(std::string dir) {
   return false;
 }
 
+std::string int2str(const int src_int, const mluoptest::DataType dtype) {
+  // 9: size that float represented as hex, and add one '\0'
+  char value_char[9];
+  if (dtype == mluoptest::DTYPE_HALF) {
+    snprintf(value_char, sizeof(value_char), "%hx", src_int);
+  } else {
+    snprintf(value_char, sizeof(value_char), "%x", src_int);
+  }
+  return value_char;
+}
+
+std::string long2str(const int64_t src_int) {
+  char value_char[17];
+  snprintf(value_char, sizeof(value_char), "%lx", src_int);
+  return value_char;
+}
+
+bool isIntDtype(const mluoptest::Tensor *ts) {
+  return ts->dtype() == mluoptest::DTYPE_INT8 ||
+         ts->dtype() == mluoptest::DTYPE_INT16 ||
+         ts->dtype() == mluoptest::DTYPE_INT32 ||
+         ts->dtype() == mluoptest::DTYPE_INT64;
+}
+
+bool isBoolDtype(const mluoptest::Tensor *ts) {
+  return ts->dtype() == mluoptest::DTYPE_BOOL;
+}
+
+void tensorInt2Hex(mluoptest::Tensor *ts) {
+  // if dtype is int and save as value_i, no need change to value_h.
+  if (isIntDtype(ts) || isBoolDtype(ts)) {
+    return;
+  }
+  if (ts->value_i_size()) {
+    for (auto value = 0; value < ts->value_i_size(); value++) {
+      ts->add_value_h(int2str(ts->value_i(value), ts->dtype()));
+    }
+    ts->clear_value_i();
+  } else if (ts->value_l_size()) {
+    for (auto value = 0; value < ts->value_l_size(); value++) {
+      ts->add_value_h(long2str(ts->value_l(value)));
+    }
+    ts->clear_value_l();
+  }
+}
+
+void nodeInt2Hex(mluoptest::Node *node) {
+  for (size_t i = 0; i < node->input_size(); ++i) {
+    mluoptest::Tensor *input_tensor = node->mutable_input(i);
+    tensorInt2Hex(input_tensor);
+  }
+  for (size_t i = 0; i < node->output_size(); ++i) {
+    mluoptest::Tensor *output_tensor = node->mutable_output(i);
+    tensorInt2Hex(output_tensor);
+  }
+}
+
 // read in pb.
 bool readIn(const std::string &filename, google::protobuf::Message *proto) {
   std::string ext_pattern = ".pb";
-  std::string ext = filename.substr(filename.length() - ext_pattern.length(), filename.length());
+  std::string ext = filename.substr(filename.length() - ext_pattern.length(),
+                                    filename.length());
   if (ext == ext_pattern) {
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd == -1) {
@@ -106,10 +164,12 @@ bool readIn(const std::string &filename, google::protobuf::Message *proto) {
       std::cout << "File not found: " << filename << std::endl;
       return false;
     }
-    google::protobuf::io::FileInputStream *input = new google::protobuf::io::FileInputStream(fd);
+    google::protobuf::io::FileInputStream *input =
+        new google::protobuf::io::FileInputStream(fd);
     google::protobuf::io::CodedInputStream *coded_stream =
         new google::protobuf::io::CodedInputStream(input);
-    // Total bytes hard limit / warning limit are set to 1GB and 512MB, as same as TensorFlow.
+    // Total bytes hard limit / warning limit are set to 1GB and 512MB, as same
+    // as TensorFlow.
     coded_stream->SetTotalBytesLimit(INT_MAX, 512LL << 20);
     proto->ParseFromCodedStream(coded_stream);
 
@@ -125,11 +185,13 @@ bool readIn(const std::string &filename, google::protobuf::Message *proto) {
 }
 
 // write to prototxt
-bool writeTo(const google::protobuf::Message *proto, const std::string &filename) {
+bool writeTo(const google::protobuf::Message *proto,
+             const std::string &filename) {
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd != -1) {
     close(fd);
-    std::cout << filename << " already exists, create file failed." << std::endl;
+    std::cout << filename << " already exists, create file failed."
+              << std::endl;
     return false;
   }
 
@@ -138,7 +200,8 @@ bool writeTo(const google::protobuf::Message *proto, const std::string &filename
     std::cout << "Create file failed: " << filename << std::endl;
     return false;
   }
-  google::protobuf::io::FileOutputStream *output = new google::protobuf::io::FileOutputStream(fd);
+  google::protobuf::io::FileOutputStream *output =
+      new google::protobuf::io::FileOutputStream(fd);
   google::protobuf::TextFormat::Print(*proto, output);
   delete output;
   close(fd);
@@ -176,7 +239,8 @@ std::vector<std::string> grepExtPb(std::vector<std::string> files) {
   std::vector<std::string> res;
   for (int i = 0; i < files.size(); ++i) {
     std::string filename = files[i];
-    std::string ext = filename.substr(filename.length() - ext_pattern.length(), filename.length());
+    std::string ext = filename.substr(filename.length() - ext_pattern.length(),
+                                      filename.length());
     if (ext == ext_pattern) {
       res.push_back(filename);
     }
@@ -226,6 +290,7 @@ int main(int argc, char **argv) {
                 dst_path + prefix + "/" + name + ".prototxt");
     }
   } else {
-    std::cout << "Can't read in from " << src_path << " and write to " << dst_path << std::endl;
+    std::cout << "Can't read in from " << src_path << " and write to "
+              << dst_path << std::endl;
   }
 }

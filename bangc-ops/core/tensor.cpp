@@ -165,10 +165,12 @@ mluOpStatus_t mluOpCreateGroupTensorDescriptors(
     mluOpTensorDescriptor_t *group_desc[], const int desc_num) {
   PARAM_CHECK("[mluOpCreateGroupTensorDescriptors]", group_desc != NULL);
   PARAM_CHECK("[mluOpCreateGroupTensorDescriptors]", desc_num > 0);
+
   for (int i = 0; i < desc_num; ++i) {
     mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
     *(group_desc[i]) = ts;
   }
+
   return MLUOP_STATUS_SUCCESS;
 }
 

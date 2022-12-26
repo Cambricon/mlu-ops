@@ -30,9 +30,9 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include "gtest/gtest.h"
-#include "pb_test_tools.h"
+#include "tools.h"
 #include "variable.h"
+#include "gtest/gtest.h"
 
 class Collector {
  public:

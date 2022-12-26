@@ -1,22 +1,24 @@
 #! /bin/bash
 
-bangc_core="bangc-ops/core|"
-bangc_kernel="bangc-ops/kernels|"
-bangc_test_zoo="bangc-ops/test/mlu_op_gtest/src/zoo"
-check_list=${bangc_core}${bangc_kernel}${bangc_test_zoo}
+bangc_ops="bangc-ops"
+bangpy_ops="bangpy-ops"
+bangc_check_list=${bangc_ops}
+bangpy_check_list=${bangpy_ops}
 
-bangc_core_op_h="bangc-ops/core/mlu_op_core.h"
-exclude_list=${bangc_core_op_h}
+bangc_mlu_op_h="bangc-ops/mlu_op.h"
+bangc_gtest_json_file="jsoncppDist/"
+
+bangc_exclude_list=${bangc_gtest_json_file}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --name-only ${1} \
-    | grep -v ${exclude_list} \
-    | grep -E ${check_list})
+    | grep -v ${bangc_exclude_list} \
+    | grep -E ${bangc_check_list})
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -v ${exclude_list} \
-    | grep -E ${check_list}) 
+    | grep -v ${bangc_exclude_list} \
+    | grep -E ${bangc_check_list})
 fi
 
 ret=0
@@ -28,10 +30,17 @@ fi
 
 echo "-- [pre-commit] Using cpplint to check patch by .git/hooks/pre-commit..."
 for i in ${filenames} ; do
-  cpplint $i 2>&1 \
-    | grep -v Ignoring \
-    | grep -v "Total errors" \
-    | grep -v "Done processing"
+  if [[ $i == *$bangc_mlu_op_h ]]; then
+    cpplint --linelength=200 $i 2>&1 \
+      | grep -v Ignoring \
+      | grep -v "Total errors" \
+      | grep -v "Done processing"
+  else
+    cpplint --linelength=80 $i 2>&1 \
+      | grep -v Ignoring \
+      | grep -v "Total errors" \
+      | grep -v "Done processing"
+  fi
 
   if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     ret=1
@@ -53,7 +62,7 @@ for i in ${filenames} ; do
   check_dir=$(echo $i | grep -E "^core\/|^kernels\/")
   #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
   if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
-    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \ 
+    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \
       /\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
     for line in ${printf_log};
     do
@@ -85,15 +94,15 @@ fi
 #   include_mlu=$(echo $i | grep "\.mlu")
 #   if [[ -n "${include_mlu}" ]]; then
 #     # step1
-#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>". 
-#     # launch_kenel_indexs is an array, duo to there are many places to launch 
+#     # launch_kernel_indexs represents the line index of "<<<.*queue>>>".
+#     # launch_kenel_indexs is an array, duo to there are many places to launch
 #     # kernel.
 #     launch_kernel_indexs=$(sed -n '/<<<.*queue>>>/=' $i)
 #     if [[ launch_kernel_indexs ]]; then
 #       for launch_kernel_index in ${launch_kernel_indexs}; do
 #         forward_line_num=1
 #         # step2
-#         # forward_line_num represents how many lines before "launch_kenel_index", 
+#         # forward_line_num represents how many lines before "launch_kenel_index",
 #         # attempting to find the starting line of launch kernel
 #         while [[ ${forward_line_num} -le ${launch_kernel_index} ]]; do
 #           start_index_launch_kernel=`expr ${launch_kernel_index} - ${forward_line_num}`
@@ -127,27 +136,43 @@ else
   echo "-- [pre-commit] check printf PASSED."
 fi
 
-if [[ "$(which pylint)" == "" ]]; then
-  echo "Please pip install pylint!(pylint==2.9)"
-  exit -1
-fi
+echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
+for i in $filenames; do
+  python tools/check_log_error.py $i
+done
 
-echo "-- [pre-commit] Using pylint to check bangpy/ops \
-by .git/hooks/pre-commit..."
-python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
-     | grep -v "Your code" \
-     | grep -v "Module bangpy" \
-     | grep -E ".py"
-
-if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-  ret=1
-fi
-
-if [[ ${ret} != 0 ]]; then
-  echo "-- [pre-commit] pylint FAILED: Please fix pylint errors."
-  exit ${ret}
+if [[ $# -eq 1 ]]; then
+  bangpy_filenames=$(git diff --name-only ${1} \
+    | grep -E ${bangpy_check_list})
 else
-  echo "-- [pre-commit] pylint PASSED."
+  bangpy_filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
+    --diff-filter=R --diff-filter=T --cached --name-only \
+    | grep -E ${bangpy_check_list})
+fi
+
+if [[ ${bangpy_filenames} != "" ]]; then
+  if [[ "$(which pylint)" == "" ]]; then
+    echo "Please pip install pylint!(pylint==2.9)"
+    exit -1
+  fi
+
+  echo "-- [pre-commit] Using pylint to check bangpy/ops \
+  by .git/hooks/pre-commit..."
+  python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
+       | grep -v "Your code" \
+       | grep -v "Module bangpy" \
+       | grep -E ".py"
+
+  if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+    ret=1
+  fi
+
+  if [[ ${ret} != 0 ]]; then
+    echo "-- [pre-commit] pylint FAILED: Please fix pylint errors."
+    exit ${ret}
+  else
+    echo "-- [pre-commit] pylint PASSED."
+  fi
 fi
 
 exit 0

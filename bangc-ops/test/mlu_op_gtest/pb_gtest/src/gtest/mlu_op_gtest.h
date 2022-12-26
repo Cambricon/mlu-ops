@@ -45,7 +45,8 @@ using namespace ::testing;  // NOLINT
 // string is op name
 // size_t is case_id
 // for multi thread: get case_list by op_name, and case_id is useless.
-// for single thread: get case_list by op_name, and get case_path by case_list + case_id
+// for single thread: get case_list by op_name, and get case_path by case_list +
+// case_id
 class TestSuite : public TestWithParam<std::tuple<std::string, size_t>> {
  public:
   TestSuite() {}
@@ -73,7 +74,7 @@ class TestSuite : public TestWithParam<std::tuple<std::string, size_t>> {
 
   void print(mluoptest::EvaluateResult eva, bool average = false);
   void report(mluoptest::EvaluateResult eva);
-  void recordXml(mluoptest::EvaluateResult eva);
+  void recordXml(mluoptest::EvaluateResult &eva);
 };
 
 #endif  // TEST_MLU_OP_GTEST_SRC_GTEST_MLU_OP_GTEST_H_

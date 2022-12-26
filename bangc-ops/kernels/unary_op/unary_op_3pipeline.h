@@ -24,6 +24,8 @@
 #define KERNELS_UNARY_OP_UNARY_OP_3PIPELINE_H_
 
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
 #define UNARY_ALIGN_NUM 64
 
 #define UNARY_OP_KERNEL_3PIPELINE_DECLARE(Op, DType, Prefer)           \
@@ -47,6 +49,9 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
                               int32_t offset_x_half, int32_t offset_aux_a,
                               int32_t offset_aux_b, int32_t num_deal,
                               int32_t num_pong, float coef) {
+  if (coreId == 0x80) {
+    return;
+  }
   int32_t num_per_core = num_total / taskDim;
   int32_t num_rem = num_total % taskDim;
   T *addr_x = (T *)x + taskId * num_per_core;

@@ -40,7 +40,8 @@ struct deviceName name_list_table[] = {
     {"MLU220", MLUOP_MLU220},
     {"MLU220 SOC", MLUOP_MLU220},
     {"MLU290", MLUOP_MLU290},
-    {"MLU370", MLUOP_MLU370}
+    {"MLU370", MLUOP_MLU370},
+    {"MLU590", MLUOP_MLU590}
     // mluOp not support mlu100 only for error case.
     // {"MLU100", MLUOP_MLU100},
 };
@@ -133,6 +134,8 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
   CNctxConfigParam ctx_conf_param;
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetCurrent(&drv_ctx));
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetDevice(&mlu_dev));
+  INTERNAL_CHECK("[mluOpCreate]",
+                 CN_SUCCESS == cnSharedContextAcquire(&drv_ctx, mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
       CN_SUCCESS == cnDeviceGetAttribute(&cluster_num,
@@ -174,15 +177,37 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
       "[mluOpCreate]",
       CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
                                         &ctx_conf_param));
+  // set parallel job num
+  if (MLUOP_STATUS_SUCCESS != ctx->initJobNum(drv_ctx, "[mluOpCreate]")) {
+    return MLUOP_STATUS_INTERNAL_ERROR;
+  }
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
+  ctx->arch =
+      convertDeviceName(device_name);  // warning: possible return unknown.
+  ctx->sram_size = sram_size - REM_FOR_STACK;
   ctx->device = mlu_dev;
   ctx->cluster_num = cluster_num;
   ctx->core_num_per_cluster = core_num_per_cluster;
   ctx->nram_size = nram_size - REM_FOR_STACK;
-  ctx->wram_size = wram_size;
-  ctx->sram_size = sram_size - REM_FOR_STACK;
-  ctx->arch =
-      convertDeviceName(device_name);  // warning: possible return unknown.
+  if (ctx->arch == 290) {
+#ifdef CONV_WARM_UP
+    ctx->wram_size = wram_size - 8 * 1024;
+#else
+    ctx->wram_size = wram_size;
+#endif
+  } else {
+    ctx->wram_size = wram_size;
+  }
+  if (ctx->arch < 322) {
+    ctx->round_mode = MLUOP_ROUND_HALF_OFF_ZERO;
+  } else {
+    // round to even is supported by hardware since arch >= 322.
+    // default usage mode is round to even when arch >= 322.
+    // which change accuracy because of using round off zero beform.
+    ctx->round_mode = MLUOP_ROUND_HALF_TO_EVEN;
+  }
+  ctx->atomics_mode =
+      MLUOP_ATOMICS_NOT_ALLOWED;  // note : mluOp disallows atomics by defalut
   *handle = ctx;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -208,6 +233,15 @@ mluOpStatus_t mluOpUpdateContextInformation(mluOpHandle_t handle) {
 }
 
 mluOpStatus_t mluOpSetAtomicsMode(mluOpHandle_t handle,
+                                  mluOpAtomicsMode_t atomics_mode) {
+  PARAM_CHECK("[mluOpSetAtomicsMode]", handle != NULL);
+
+  handle->atomics_mode = atomics_mode;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t mluOpGetAtomicsMode(mluOpHandle_t handle,
                                   mluOpAtomicsMode_t *atomics_mode) {
   PARAM_CHECK("[mluOpGetAtomicsMode]", handle != NULL);
   PARAM_CHECK("[mluOpGetAtomicsMode]", atomics_mode != NULL);

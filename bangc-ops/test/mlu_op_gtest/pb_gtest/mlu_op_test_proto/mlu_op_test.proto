@@ -25,53 +25,89 @@ package mluoptest;
 
 // mluOpTensorLayout_t;
 enum TensorLayout {
-  LAYOUT_NCHW  = 0;
-  LAYOUT_NHWC  = 1;
-  LAYOUT_HWCN  = 2;
-  LAYOUT_NDHWC = 3;
-  LAYOUT_ARRAY = 4;
-  LAYOUT_NCDHW = 5;
+  LAYOUT_NCHW  = 1;
+  LAYOUT_NHWC  = 2;
+  LAYOUT_HWCN  = 3;
+  LAYOUT_NDHWC = 4;
+  LAYOUT_ARRAY = 5;
   LAYOUT_TNC   = 6;
   LAYOUT_NTC   = 7;
-  LAYOUT_NC    = 8;
-  LAYOUT_NLC   = 9;
+  LAYOUT_NCDHW = 8;
+  LAYOUT_NC    = 9;
+  LAYOUT_NLC   = 10;
+}
+
+enum SeqDataLayout {
+  SEQDATA_TNC        = 0;
+  SEQDATA_TNC_PACKED = 1;
+  SEQDATA_NTC        = 2;
+  SEQDATA_NC         = 3;
+  SEQDATA_TNBC       = 4;
+  SEQDATA_TBNC       = 5;
+  SEQDATA_NBTC       = 6;
+  SEQDATA_NTBC       = 7;
+  SEQDATA_BNTC       = 8;
+  SEQDATA_BTNC       = 9;
 }
 
 // mluOpDataType_t;
 enum DataType {
-  DTYPE_INVALID         = 0;
   DTYPE_HALF            = 1;
   DTYPE_FLOAT           = 2;
-  DTYPE_DOUBLE          = 3;
-  DTYPE_INT8            = 4;
-  DTYPE_INT16           = 5;
+  DTYPE_INT8            = 3;
+  DTYPE_INT16           = 4;
   DTYPE_INT32           = 6;
-  DTYPE_INT64           = 7;
-  DTYPE_UINT8           = 8;
-  DTYPE_UINT16          = 9;
-  DTYPE_UINT32          = 10;
-  DTYPE_UINT64          = 11;
+  DTYPE_INT64           = 16;
+  DTYPE_BFLOAT16        = 7;
+  DTYPE_DOUBLE          = 8;
+  DTYPE_UINT8           = 9;
+  DTYPE_UINT16          = 10;
+  DTYPE_UINT32          = 11;
+  DTYPE_UINT64          = 17;
   DTYPE_BOOL            = 12;
-  DTYPE_COMPLEX_HALF    = 13;
-  DTYPE_COMPLEX_FLOAT   = 14;
+  DTYPE_COMPLEX64       = 13;   // deprecated, use DTYPE_COMPLEX_FLOAT instead
+  DTYPE_COMPLEX128      = 14;   // deprecated, use DTYPE_COMPLEX_DOUBLE instead
+  DTYPE_INVALID         = 15;
+  DTYPE_COMPLEX_HALF    = 18;   // complex dtype of half precision
+  DTYPE_COMPLEX_FLOAT   = 19;   // complex dtype of float precision
+  DTYPE_COMPLEX_DOUBLE  = 20;   // complex dtype of double precision
+  DTYPE_UNSET           = 0;
 }
 
 enum Device {
   CPU           = 1;
   GPU           = 2;
+  CMODEL        = 3;
+  GENERATOR_CPU = 4;
 }
 
 enum EvaluationCriterion {
-  DIFF1   = 1;
-  DIFF2   = 2;
-  DIFF3   = 3;
-  DIFF3_2 = 4;
-  DIFF4   = 5;
+  MAPE    = 1;
+  SMAPE   = 2;
+  MAXAPE  = 3;
+  SMAXAPE = 4;
+  NRMSE   = 5;
+  DIFF1   = 6;
+  DIFF2   = 7;
+  DIFF3   = 8;
+  DIFF3_2 = 9;
+  DIFF4   = 10;
 }
 
 enum MLUPlatform {
   MLU200 = 1;
   MLU370 = 2;
+  MLU590 = 4;
+}
+
+enum PointerMode {
+  POINTER_MODE_HOST   = 0;
+  POINTER_MODE_DEVICE = 1;
+}
+
+
+message RuntimeEnvironment {
+  required string dl_framework  =  1;
 }
 
 message Shape {
@@ -95,13 +131,15 @@ message Tensor {
   optional DataType onchip_dtype  = 13;
 
   optional int32 position         = 5;
-  optional float scale            = 6;     
-  optional int32 offset           = 14;    
+  optional float scale            = 6;
+  optional int32 offset           = 14;
 
   // data
   repeated float value_f          = 7;
   repeated int32 value_i          = 8;
   repeated int64 value_l          = 17;
+  repeated uint32 value_ui        = 18;
+  repeated uint64 value_ul        = 19;
   repeated string value_h         = 9;
   // else data source
   optional string path            = 11;
@@ -112,6 +150,32 @@ message Tensor {
   optional int32 threshold_use    = 16;
 }
 
+message SeqData {
+  required string id                    = 1;
+  required Shape shape                  = 2;
+  required TensorLayout layout          = 3 [default = LAYOUT_ARRAY];
+  required DataType dtype               = 4 [default = DTYPE_FLOAT];
+  optional DataType mlu_dtype           = 5;
+
+
+  required int32 seq_length_array_size  = 6;
+  required int32 seq_length_array       = 7;
+
+
+  optional int32 position               = 8;
+  optional float scale                  = 9;
+
+
+  // data
+  repeated float value_f                = 10;
+  repeated int32 value_i                = 11;
+  repeated string value_h               = 12;
+  // else data source
+  optional string path                  = 13;
+  // random data = delete
+  optional RandomData random_data       = 14;
+}
+
 message Node {
   optional string valid                               = 1 [default = "True"];
   optional string pattern                             = 2 [default = "random"];
@@ -120,6 +184,7 @@ message Node {
   required string op_name                             = 5 [default = "unknown"];    // op_name
   repeated Tensor input                               = 6;
   repeated Tensor output                              = 7;
+  optional string op_type                             = 8;     // add op_type for mmcv op
 
   // evaluation
   optional TestParam test_param                       = 10;    // remove this param later = delete
@@ -128,24 +193,33 @@ message Node {
   optional double efficiency                          = 13;    // efficiency
   repeated EvaluationCriterion evaluation_criterion   = 14;
   repeated double evaluation_threshold                = 15;
-  repeated double evaluation_threshold_imag           = 23;
+  repeated double evaluation_threshold_imag           = 4832;
   optional double theory_io_size                      = 16;
   optional double theory_compute_ops                  = 17;
   optional double workspace_size                      = 18;
   repeated double threshold_rate                      = 21;   // determine the magnification of dynamic threshold
   repeated MLUPlatform supported_mlu_platform         = 22;
+  optional RuntimeEnvironment runtime_env             = 37;
+
+  optional HandleParam handle_param                   = 23451;
 
   extensions 3000 to 4000;
 
-  optional DivParam    div_param                      = 4001;   // param
-  optional LogParam    log_param                      = 4002;     // param
-  optional SqrtParam   sqrt_param                     = 4003;  // param
-  optional PsRoiPoolForwardParam psroipool_forward_param = 4004; //param
-  optional PsRoiPoolBackwardParam psroipool_backward_param  = 4005;  //param
-  optional PriorBoxParam prior_box_param              = 4006;   // PriorBoxParam
-  optional PolyNmsParam poly_nms_param                = 4010;   // PolyNmsParam
+  optional DivParam    div_param                                = 4001;   // param
+  optional LogParam    log_param                                = 4002;   // param
+  optional SqrtParam   sqrt_param                               = 4003;   // param
+  optional PsRoiPoolForwardParam psroipool_forward_param        = 4004;   // param
+  optional PsRoiPoolBackwardParam psroipool_backward_param      = 4005;   // param
+  optional PriorBoxParam prior_box_param                        = 4006;   // PriorBoxParam
+  optional PolyNmsParam poly_nms_param                          = 4010;   // PolyNmsParam
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
+  optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
+  optional BallQueryParam  ball_query_param             = 4008;  // param
+  optional FillParam       fill_param                   = 13199;  // param
+  optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
+  optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
+  optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
 }
 
 
@@ -155,10 +229,13 @@ message Node {
 
 // random data
 enum RandomDistribution {
-  UNIFORM  = 1;
-  GAUSSIAN = 2;
-  SAMPLE   = 3;
-  BINOMIAL = 4;
+  UNIFORM           = 1;
+  GAUSSIAN          = 2;
+  SAMPLE            = 3;
+  BINOMIAL          = 4;
+  DISCRETE_UNIFORM  = 5;
+  CERTAIN           = 6;
+  UNIQUE_INDEX      = 7;
 }
 
 message RandomData {
@@ -166,14 +243,23 @@ message RandomData {
   // only for uniform
   optional float lower_bound               = 2 [default = -1.0];
   optional float upper_bound               = 3 [default = 1.0];
-  optional float lower_bound_double        = 8 [default = -1.0];
-  optional float upper_bound_double        = 9 [default = 1.0];
+  optional double lower_bound_double       = 8 [default = -1.0];
+  optional double upper_bound_double       = 9 [default = 1.0];
 
   // only for gaussian
   optional float mu                        = 6 [default = 0.0];
   optional float sigma                     = 7 [default = 1.0];
   optional double mu_double                = 10 [default = 0.0];
   optional double sigma_double             = 11 [default = 1.0];
+
+  //only for certain
+  optional int32 true_number               = 12 [default = 0];
+  //only for unique and sorted_unique
+  optional int32 begin_index               = 13 [default = 0];
+  optional int32 end_index                 = 14 [default = 0];
+  optional int32 dim_shape                 = 15 [default = 1];
+  optional float negative_ratio            = 16 [default = 0];
+  optional int32 sorted_status             = 17 [default = 0];
 
   optional RandomDistribution distribution = 4 [default = UNIFORM];
   optional bool convert_dtype = 5 [default = false];  // convert float to int
@@ -184,15 +270,16 @@ message TestParam {
   repeated EvaluationCriterion error_func = 1;
   repeated double error_threshold         = 2;
   repeated double error_threshold_imag    = 3;
-  
+
   optional double latency                 = 5;    //   latency
   optional double efficiency              = 6;    //   efficiency
   optional Device baseline_device         = 7;
 }
 
 enum ComputationPreference {
-  COMPUTATION_FAST            = 0;
-  COMPUTATION_HIGH_PRECISION  = 1;
+  COMPUTATION_FAST                = 0;
+  COMPUTATION_HIGH_PRECISION      = 1;
+  COMPUTATION_ULTRAHISH_PRECISION = 2;
 }
 
 // param to call mluopSetQuantizeRoundMode()/mluopGetQuantizeRoundMode()
@@ -216,7 +303,7 @@ enum mluOpLogBase {
 // param to call mluOpLog()
 message LogParam {
   required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
-  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];
+  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];     
 }
 
 // param to call mluOpSqrt()
@@ -228,8 +315,8 @@ message DivParam {
   optional ComputationPreference prefer = 1 [default = COMPUTATION_HIGH_PRECISION];
 }
 
- // param to call mluOpGenerateProposalsV2()
- message GenerateProposalsV2Param {
+// param to call mluOpGenerateProposalsV2()
+message GenerateProposalsV2Param {
   optional int32 pre_nms_top_n = 1 [default = 6000];
   optional int32 post_nms_top_n = 2 [default = 2000];
   optional float nms_thresh = 3 [default = 0.5];
@@ -274,6 +361,16 @@ message PriorBoxParam {
   required bool min_max_aspect_ratios_order = 10 [default = true];
 }
 
+// param to call mluOpVoxelPoolingForward()
+message VoxelPoolingForwardParam {
+  optional int32 batch_size   = 1;
+  optional int32 num_points   = 2;
+  optional int32 num_channels = 3;
+  optional int32 num_voxel_x  = 4;
+  optional int32 num_voxel_y  = 5;
+  optional int32 num_voxel_z  = 6;
+}
+
 // param to call mluOpYoloBox()
 message YoloBoxParam {
   optional int32 class_num        = 1 [default = 1];
@@ -283,4 +380,41 @@ message YoloBoxParam {
   optional float scale_x_y        = 5 [default = 1.0];
   optional bool iou_aware         = 6 [default = true];
   optional float iou_aware_factor = 7 [default = 0.5];
+}
+
+// param to call mluOpBallQuery()
+message BallQueryParam  {
+  optional float min_radius = 1 [default = 0.0];
+  optional float max_radius = 2 [default = 1.0];
+  optional int32   nsample  = 3 [default = 1];
+}
+
+// param to call mluOpFill()
+message FillParam  {
+  optional float value = 1        [default = 0.0];
+  optional int32 version = 2      [default = 1];
+  optional PointerMode mode = 3   [default = POINTER_MODE_HOST];
+  optional string   value_hex = 4 [default = "0X00000000"];
+}
+
+// param to call mluOpPsamaskForward()
+message PsamaskForwardParam {
+  required int32 h_mask = 1;
+  required int32 w_mask = 2;
+  required int32 psa_type = 3;
+}
+
+// param to call mluOpPsamaskBackward()
+message PsamaskBackwardParam {
+  required int32 h_mask = 1;
+  required int32 w_mask = 2;
+  required int32 psa_type = 3;
+}
+
+// param to call mluOpVoxelization()
+message VoxelizationParam {
+  optional int32 max_points   = 1 [default = 35];
+  optional int32 max_voxels   = 2 [default = 20000];
+  optional int32 ndim         = 3 [default = 3];
+  optional bool deterministic = 4 [default = true];
 }
