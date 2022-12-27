@@ -2307,7 +2307,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the features tensor. The shape of \b features 
  * is [batch_num, H, W, C].
  * @param[in] rois_desc
- * The descriptor of rois tensor, containing dimension and the layout of rois.
+ * The descriptor of rois tensor, which contains dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists of [batch_id, 
@@ -2415,7 +2415,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @param[in] top_grad
  * Pointer to the MLU memory that stores the top_grad tensor.
  * @param[in] rois_desc
- * Descriptor of rois tensor, containing dimension and the layout of rois.
+ * The descriptor of rois tensor, which contains dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists
@@ -2437,7 +2437,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @param[in] clockwise
  * A boolean value which determines whether the rotation of ROI is clockwise.
  * @param[in] bottom_grad_desc
- * Descriptor of the gradient tensor of the origin feature map.
+ * The descriptor of the gradient tensor of the origin feature map.
  * @param[out] bottom_grad
  * Pointer to the MLU memory that stores the bottom_grad tensor. The shape of 
  * bottom_grad is [batch_num, H, W, C].
@@ -2447,7 +2447,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the following Data types for input tensor \b top_grad, \b rois,
- *   and output tensor \b bottom_grad. Data type of all tensors should be the same.
+ *   and output tensor \b bottom_grad. Data types of all tensors should be the same.
  *   - top_grad tensor: half, float.
  *   - rois tensor: half, float.
  *   - bottom_grad tensor: half, float.
@@ -2669,7 +2669,7 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] bboxes_desc
- * The descriptor of bboxes, containing the dimension and layout of bboxes tensor.
+ * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] bboxes
  * Pointer to the MLU memory that stores the bboxes tensor.
@@ -2678,7 +2678,7 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * @param[in] points
  * An int value that is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
  * @param[in] output_desc
- * The descriptor of output tensor, containing the dimension and layout of output tensor.
+ * The descriptor of output tensor, which contains the dimension and layout of output tensor.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  * 
@@ -2759,7 +2759,7 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
  * @param[in] top_output
  * Pointer to the MLU memory that stores the top_output tensor.
  * @param[in] bboxes_desc
- * The descriptor of bboxes, containing the dimension and layout of bboxes tensor. For detailed 
+ * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor. For detailed 
  * information, see ::mluOpTensorDescriptor_t.
  * @param[in] bboxes
  * Pointer to the MLU memory that stores the bboxes tensor.
@@ -2768,7 +2768,7 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
  * @param[in] points
  * An int value that is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
  * @param[in] bottom_input_desc
- * The descriptor of bottom_input tensor, containing the dimension and layout of bottom_input tensor.
+ * The descriptor of bottom_input tensor, which contains the dimension and layout of bottom_input tensor.
  * @param[out] bottom_input
  * Pointer to the MLU memory that stores the bottom_input tensor.
  * 
