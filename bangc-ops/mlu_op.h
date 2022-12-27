@@ -2293,6 +2293,224 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t bottom_grad_desc,
                        void *bottom_grad);
 
+// Group:RoiAlignRotated
+/*!
+ * @brief Extracts the corresponding \b features information to \b output by bilinear interpolation 
+ * according to the \b rois with rotation. 
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignRotatedForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of the features tensor.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the features tensor. The shape of \b features 
+ * is [batch_num, H, W, C].
+ * @param[in] rois_desc
+ * The descriptor of rois tensor, containing dimension and the layout of rois.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists of [batch_id, 
+ * x, y, w, h, theta], where \p batch_id is the ID of the batch, \p x and \p y are the coordinate
+ * of center point, \p w and \p h are the width and height of rois, and \p theta is the rotated angle.
+ * @param[in] pooled_height
+ * The height of output.
+ * @param[in] pooled_width
+ * The width of output.
+ * @param[in] sample_ratio
+ * The number of sampling points in the bin which is used to compute the output.
+ * @param[in] spatial_scale
+ * The spatial scale of each ROI in the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the ROI by 0.5 pixel. If the 
+ * value of \b aligned is set to true, the ROI is shifted by 0.5. If the value of \b aligned 
+ * is set to false, the ROI is not shifted.
+ * @param[in] clockwise
+ * A boolean value which determines whether the rotation of ROI is clockwise.
+ * @param[out] output_desc
+ * The descriptor of output, which contains dimension and the layout of output.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b features, \b rois,
+ *   and output tensor \b output. Data type of all tensors should be the same.
+ *   - input tensor: half, float.
+ *   - rois tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b features, \b rois, and \b output are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The \b features tensor and \b output tensor should be 4D.
+ * - The half data type is not recommended due to low precision.
+ * - Size of the lowest dimension of \b features tensor and \b output tensor should be the same.
+ * - The \b rois tensor should be 2D array.
+ * - Size of the highest dimension of \b output tensor and \b rois tensor should be the same.
+ * - The shape of \b rois should be [rois_num, 6].
+ * - \p batch_id should be in the range of [0, \p batch_num - 1]; \p x and \p y should be greater than or
+ *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
+ *   and less than \p H and \p W respectively.
+ * - \p spatial_scale and \p sample_ratio should not be less than zero.
+ *
+ * @note
+ * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y parameters
+ *   that support infinity.
+ * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p spatial_scale cannot exceed
+ *   the range that can be represented by the parameter type.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the roi_align_rotated_forward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 3 * 3 * 1 and 1 * 6 --> input: [[[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]]]]
+
+     --> rois: [[0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
+
+     param:
+            pooled_height: 2, pooled_width: 2, spatial_scale: 1.0,
+            sampling_ratio: 2, aligned: false, clockwise: false
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[1],[1]],[[1],[1]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/roi_align_rotated.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
+                            const mluOpTensorDescriptor_t features_desc,
+                            const void* features,
+                            const mluOpTensorDescriptor_t rois_desc,
+                            const void* rois,
+                            const int pooled_height,
+                            const int pooled_width,
+                            const int sample_ratio,
+                            const float spatial_scale,
+                            const bool aligned,
+                            const bool clockwise,
+                            const mluOpTensorDescriptor_t output_desc,
+                            void* output);
+
+// Group:RoiAlignRotated
+/*!
+ * @brief Computes the gradients of feature map \b bottom_grad based on the input \b top_grad and
+ * \b rois to perform the backpropagation of the ::mluOpRoiAlignRotatedForward operation.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignRotatedBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] top_grad_desc
+ * The descriptor of the gradient tensor in the backpropagation process.
+ * @param[in] top_grad
+ * Pointer to the MLU memory that stores the top_grad tensor.
+ * @param[in] rois_desc
+ * Descriptor of rois tensor, containing dimension and the layout of rois.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists
+ * of [batch_id, x, y, w, h, theta], where \p batch_id is the ID of the batch, \p x
+ * and \p y are the coordinate of center point, \p w and \p h are the width and height
+ * of rois, and \p theta is the rotated angle.
+ * @param[in] pooled_height
+ * The height of output.
+ * @param[in] pooled_width
+ * The width of output.
+ * @param[in] sample_ratio
+ * The number of sampling points in the bin used to compute the output.
+ * @param[in] spatial_scale
+ * The spatial scale of each ROI in the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the ROI by 0.5 pixel. 
+ * If the value of \b aligned is set to true, the ROI is shifted by 0.5. If the value
+ * of \b aligned is set to false, the ROI is not shifted.
+ * @param[in] clockwise
+ * A boolean value which determines whether the rotation of ROI is clockwise.
+ * @param[in] bottom_grad_desc
+ * Descriptor of the gradient tensor of the origin feature map.
+ * @param[out] bottom_grad
+ * Pointer to the MLU memory that stores the bottom_grad tensor. The shape of 
+ * bottom_grad is [batch_num, H, W, C].
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - This function supports the following Data types for input tensor \b top_grad, \b rois,
+ *   and output tensor \b bottom_grad. Data type of all tensors should be the same.
+ *   - top_grad tensor: half, float.
+ *   - rois tensor: half, float.
+ *   - bottom_grad tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b top_grad, \b rois, and \b bottom_grad are as follows:
+ *   - top_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - bottom_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The \b bottom_grad tensor and \b top_grad tensor should be 4D.
+ * - The half data type is not recommended due to low precision.
+ * - Size of the lowest dimension of \b bottom_grad tensor and \b top_grad tensor should be the same.
+ * - The \b rois tensor should be 2D array.
+ * - Size of the highest dimension of \b top_grad tensor and \b rois tensor should be the same.
+ * - \p batch_id should be in the range of [0, \p batch_num - 1], \p x and \p y should be greater than or
+ *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
+ *   and less than \p H and \p W respectively.
+ * - \p spatial_scale and \p sample_ratio should not be less than zero.
+ *
+ * @note
+ * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y parameters
+ *   that support infinity.
+ * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p spatial_scale cannot exceed
+ *   the range that can be represented by the parameter type.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the roi_align_rotated_backward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 1 * 1 * 1 and 1 * 6 --> input: [[[[1.0]]]]
+
+     --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0, 0.0]]
+
+     param:
+            pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
+            sampling_ratio: 2, aligned: false, clockwise: false
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[0.25], [0.25]], [[0.25], [0.25]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/roi_align_rotated.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t top_grad_desc,
+                             const void* top_grad,
+                             const mluOpTensorDescriptor_t rois_desc,
+                             const void* rois,
+                             const int pooled_height,
+                             const int pooled_width,
+                             const int sample_ratio,
+                             const float spatial_scale,
+                             const bool aligned,
+                             const bool clockwise,
+                             const mluOpTensorDescriptor_t bottom_grad_desc,
+                             void* bottom_grad);
+
 // Group:RoiCrop
 /*!
  * @brief Generates fixed size feature map for each grid. Each value in the

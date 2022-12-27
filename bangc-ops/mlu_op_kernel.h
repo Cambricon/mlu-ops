@@ -38,6 +38,16 @@
 extern "C" {
 #endif  // __cplusplus
 
+/* RoiAlignRotated */
+struct mluOpRoiAlignRotatedParams {
+  int pooled_height;
+  int pooled_width;
+  int sample_ratio;
+  float spatial_scale;
+  bool aligned;
+  bool clockwise;
+};
+
 /* Abs */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
@@ -155,6 +165,29 @@ void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
     const void *geom_xyz, const void *input_features, void *output_features,
     void *pos_memo);
+
+/* RoiAlignRotated */
+void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *features, const void *rois, const int batch, const int height,
+    const int width, const int channel, const int rois_num,
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
+void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *features, const void *rois, const int batch, const int height,
+    const int width, const int channel, const int rois_num,
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
+
+void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_grad, const void *rois, const int batch, const int height,
+    const int width, const int channel, const int rois_num,
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad);
+void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_grad, const void *rois, const int batch, const int height,
+    const int width, const int channel, const int rois_num,
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad);
 
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(

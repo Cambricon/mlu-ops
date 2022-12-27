@@ -1,0 +1,100 @@
+device: GPU
+op_name: "roi_align_rotated_forward"
+input {
+  id: "input1"
+  shape {
+    dims: 1
+    dims: 4
+    dims: 7
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  value_i: -1031164493
+  value_i: 1103260957
+  value_i: -1042527386
+  value_i: 1083962711
+  value_i: 1094146049
+  value_i: -1030488799
+  value_i: -1042457828
+  value_i: -1039557010
+  value_i: 1112671299
+  value_i: -1034335161
+  value_i: 1106451047
+  value_i: 1119030862
+  value_i: 1118822507
+  value_i: 1107915540
+  value_i: -1038712051
+  value_i: -1027168961
+  value_i: 1117980219
+  value_i: 1092966200
+  value_i: 1107740706
+  value_i: 1118189440
+  value_i: 1082169948
+  value_i: -1032026715
+  value_i: 1104543078
+  value_i: -1027102670
+  value_i: 1103719771
+  value_i: 1116870632
+  value_i: 1103202581
+  value_i: 1053203596
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100.0
+    upper_bound_double: 100.0
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 1
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_i: 0
+  value_i: 1073741824
+  value_i: 1065353216
+  value_i: 1065353216
+  value_i: 1073741824
+  value_i: 1067700942
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: 0.0
+    upper_bound_double: 0.0
+  }
+}
+output {
+  id: "output1"
+  shape {
+    dims: 1
+    dims: 2
+    dims: 3
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  value_i: 1106541761
+  value_i: 1103856561
+  value_i: 1100358023
+  value_i: 1087108204
+  value_i: -1069245416
+  value_i: -1054929278
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100.0
+    upper_bound_double: 100.0
+  }
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_threshold: 0.003
+evaluation_threshold: 0.003
+roi_align_rotated_forward_param {
+  pooled_height: 2
+  pooled_width: 3
+  sample_ratio: 8
+  spatial_scale: 0.6123321652412415
+  aligned: false
+  clockwise: false
+}

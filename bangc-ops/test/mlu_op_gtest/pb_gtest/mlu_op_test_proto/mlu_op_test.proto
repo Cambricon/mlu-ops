@@ -220,6 +220,8 @@ message Node {
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
   optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
   optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
+  optional RoiAlignRotatedForwardParam roi_align_rotated_forward_param  = 134660;  //param
+  optional RoiAlignRotatedBackwardParam roi_align_rotated_backward_param = 134661;  // param  
 }
 
 
@@ -417,4 +419,24 @@ message VoxelizationParam {
   optional int32 max_voxels   = 2 [default = 20000];
   optional int32 ndim         = 3 [default = 3];
   optional bool deterministic = 4 [default = true];
+}
+
+// param to call mluOpRoiAlignRotatedForward()
+message RoiAlignRotatedForwardParam {
+  required int32 pooled_height  = 1;
+  required int32 pooled_width   = 2;
+  optional int32 sample_ratio   = 3 [default = 0];
+  required float spatial_scale  = 4;
+  optional bool aligned         = 5 [default = true];
+  optional bool clockwise       = 6 [default = false];
+}
+
+// param to call mluOpRoiAlignRotatedBackward()
+message RoiAlignRotatedBackwardParam {
+  required int32 pooled_height  = 1;
+  required int32 pooled_width   = 2;
+  optional int32 sample_ratio   = 3 [default = 0];
+  required float spatial_scale  = 4;
+  optional bool aligned         = 5 [default = true];
+  optional bool clockwise       = 6 [default = false];
 }
