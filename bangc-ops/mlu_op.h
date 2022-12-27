@@ -2295,8 +2295,8 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
 
 // Group:RoiAlignRotated
 /*!
- * @brief According to the \b rois with rotation, extracts the corresponding \b features information to \b output
- * by bilinear interpolation.
+ * @brief Extracts the corresponding \b features information to \b output by bilinear interpolation 
+ * according to the \b rois with rotation. 
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
@@ -2307,7 +2307,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the features tensor. The shape of \b features 
  * is [batch_num, H, W, C].
  * @param[in] rois_desc
- * Descriptor of rois tensor, containing dimension and the layout of rois.
+ * The descriptor of rois tensor, containing dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists of [batch_id, 
@@ -2318,17 +2318,17 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  * @param[in] pooled_width
  * The width of output.
  * @param[in] sample_ratio
- * The number of sampling points in the bin used to compute the output.
+ * The number of sampling points in the bin which is used to compute the output.
  * @param[in] spatial_scale
- * The spatial scale of each regions of interest in the output.
+ * The spatial scale of each ROI in the output.
  * @param[in] aligned
- * A boolean value which determines whether to shift the roi by 0.5 pixel. If the 
- * value of \b aligned is set to true, the roi is shifted by 0.5. If the value of \b aligned 
- * is set to false, the roi is not shifted.
+ * A boolean value which determines whether to shift the ROI by 0.5 pixel. If the 
+ * value of \b aligned is set to true, the ROI is shifted by 0.5. If the value of \b aligned 
+ * is set to false, the ROI is not shifted.
  * @param[in] clockwise
- * A boolean value which determines whether the rotation of roi is clockwise.
+ * A boolean value which determines whether the rotation of ROI is clockwise.
  * @param[out] output_desc
- * Descriptor of output, containing dimension and the layout of output.
+ * The descriptor of output, which contains dimension and the layout of output.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  * 
@@ -2343,7 +2343,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  *   - output tensor: half, float.
  *
  * @par Data Layout
- * - The supported data layout of \b features, \b rois, and \b output are as follows:
+ * - The supported data layouts of \b features, \b rois, and \b output are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC.
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - output tensor: \p MLUOP_LAYOUT_NHWC.
@@ -2355,7 +2355,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  * - The \b rois tensor should be 2D array.
  * - Size of the highest dimension of \b output tensor and \b rois tensor should be the same.
  * - The shape of \b rois should be [rois_num, 6].
- * - \p batch_id should be in the range of [0, \p batch_num - 1], \p x and \p y should be greater than or
+ * - \p batch_id should be in the range of [0, \p batch_num - 1]; \p x and \p y should be greater than or
  *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
  *   and less than \p H and \p W respectively.
  * - \p spatial_scale and \p sample_ratio should not be less than zero.
@@ -2405,7 +2405,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
 // Group:RoiAlignRotated
 /*!
  * @brief Computes the gradients of feature map \b bottom_grad based on the input \b top_grad and
- * \b rois to perform the backpropagation of the ::mluOpRoiAlignRotatedForward operator.
+ * \b rois to perform the backpropagation of the ::mluOpRoiAlignRotatedForward operation.
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
@@ -2429,13 +2429,13 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @param[in] sample_ratio
  * The number of sampling points in the bin used to compute the output.
  * @param[in] spatial_scale
- * The spatial scale of each regions of interest in the output.
+ * The spatial scale of each ROI in the output.
  * @param[in] aligned
- * A boolean value which determines whether to shift the roi by 0.5 pixel. 
- * If the value of \b aligned is set to true, the roi is shifted by 0.5. If the value
- * of \b aligned is set to false, the roi is not shifted.
+ * A boolean value which determines whether to shift the ROI by 0.5 pixel. 
+ * If the value of \b aligned is set to true, the ROI is shifted by 0.5. If the value
+ * of \b aligned is set to false, the ROI is not shifted.
  * @param[in] clockwise
- * A boolean value which determines whether the rotation of roi is clockwise.
+ * A boolean value which determines whether the rotation of ROI is clockwise.
  * @param[in] bottom_grad_desc
  * Descriptor of the gradient tensor of the origin feature map.
  * @param[out] bottom_grad
@@ -2446,14 +2446,14 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b top_grad, \b rois,
+ * - This function supports the following Data types for input tensor \b top_grad, \b rois,
  *   and output tensor \b bottom_grad. Data type of all tensors should be the same.
  *   - top_grad tensor: half, float.
  *   - rois tensor: half, float.
  *   - bottom_grad tensor: half, float.
  *
  * @par Data Layout
- * - The supported data layout of \b top_grad, \b rois, and \b bottom_grad are as follows:
+ * - The supported data layouts of \b top_grad, \b rois, and \b bottom_grad are as follows:
  *   - top_grad tensor: \p MLUOP_LAYOUT_NHWC.
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - bottom_grad tensor: \p MLUOP_LAYOUT_NHWC.
