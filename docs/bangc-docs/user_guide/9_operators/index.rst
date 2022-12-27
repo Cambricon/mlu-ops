@@ -259,3 +259,17 @@ mluOpPsamaskForward
 - ``n``、``h``、``w`` 和 ``c`` 分别表示当前的NHWC维度。
 - ``x`` 是输入的数据。
 - ``y`` 是输出的数据。
+
+mluOpRoiAlignRotatedForward
+-------------------
+该算子当前应用于 FOTS 网络结构中，以双线性插值的方式提取非整数大小且带有旋转的 rois 的特征图。
+
+其中 rois 是一个二维的Tensor，其第一维度与 output 的第一维度相同，最后一维必须等于 6 。每个 roi 包含（batch_id, x, y, w, h, theta），其中，x 和 y 表示的是 roi 中心点的坐标，w 和 h 分别是 roi 的宽和高，theta 表示边框逆时针旋转的角度。
+
+rois 中 batch_id 的值在 [0, batch-1] 范围内，其中 batch 是输入 featrues 的第一维的大小。
+
+output 的最高维与 rois 的最高维度相等，最后一维度大小与 features 的最后一维相等。
+
+mluOpRoiAlignRotatedBackward
+-------------------
+mluOpRoiAlignRotatedForward 算子的反向, 根据 rois 定位的位置信息，将输入梯度数据平均回传到 features 相应位置上，该操作需使用 atomic_add 来控制执行顺序。
