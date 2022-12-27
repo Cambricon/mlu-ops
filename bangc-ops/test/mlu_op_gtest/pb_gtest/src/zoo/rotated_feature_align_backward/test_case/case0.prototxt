@@ -1,0 +1,61 @@
+device: CPU
+op_name: "rotated_feature_align_backward"
+input {
+  id: "input1"
+  shape {
+    dims: 10
+    dims: 30
+    dims: 20
+    dims: 1000
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+   random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 10
+    dims: 30
+    dims: 20
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output1"
+  shape {
+    dims: 10
+    dims: 30
+    dims: 20
+    dims: 1000
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 0
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_threshold: 0.003
+evaluation_threshold: 0.003
+rotated_feature_align_backward_param {
+  spatial_scale: 0.5
+  points: 5
+}

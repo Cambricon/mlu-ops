@@ -2655,6 +2655,177 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
                      const mluOpTensorDescriptor_t grad_input_desc,
                      void *grad_input);
 
+// Group:RotatedFeatureAlign
+/*!
+ * @brief Use the feature interpolation to obtain the position information corresponding to the
+ * refined rotate anchors \b bboxes and reconstructs the feature maps \b output in pixel-wise
+ * manner to achieve feature alignment.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRotatedFeatureAlignForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] bboxes_desc
+ * The descriptor of bboxes, containing the dimension and layout of bboxes tensor.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bboxes
+ * Pointer to the MLU memory that stores the bboxes tensor.
+ * @param[in] spatial_scale
+ * A float value that is the scale factor of coordinates of bboxes.
+ * @param[in] points
+ * An int value that is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * @param[in] output_desc
+ * The descriptor of output tensor, containing the dimension and layout of output tensor.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input, bboxes tensor \b
+ *   bboxes, and output tensor \b output. Data types of all tensors should be the same.
+ *   - input tensor: half, float.
+ *   - bboxes tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b input, \b bboxes and \b output are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - bboxes tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must be 4D.
+ * - Size of the each dimension of input tensor and output tensor must be the same.
+ * - The bboxes tensor must be 4D.
+ * - The information of the fourth dimension of bboxes tensor consists of [y, x, w, h, a].
+ * - Size of the first dimension of input tensor and bboxes tensor must be the same.
+ * - Size of the second dimension of input tensor and bboxes tensor must be the same.
+ * - Size of the third dimension of input tensor and bboxes tensor must be the same.
+ * - The shape of \b input should be [batch_num, height, width, channels].
+ * - The shape of \b bboxes should be [batch_num, height, width, 5].
+ * - The shape of \b output should be [batch_num, height, width, channels].
+ * - \b points is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * - The value of \b spatial_scale is larger than zero.
+ *
+ * @note
+ * - The inputs \b bboxes and \b spatial_scale with NaN or infinity are not supported.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the rotated_feature_align_forward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 2 * 2 * 1 and 1 * 2 * 2 * 5
+     --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
+     --> bboxes: [[0.0, 2.0, 2.0, 1.0, 1.0]]
+
+     param:
+            spatial_scale: 1.0, points: 1
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[5.0], [6.0]], [[6.0], [8.0]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const void *input_ptr,
+                                const mluOpTensorDescriptor_t bboxes_desc,
+                                const void *bboxes_ptr,
+                                const float spatial_scale,
+                                const int points,
+                                const mluOpTensorDescriptor_t output_desc,
+                                void *output_ptr);
+
+// Group:RotatedFeatureAlign
+/*!
+ * @brief Computes the gradients of feature map \b bottom_input based on the inputs \b top_output
+ * and \b bboxes to perform the backpropagation of the ::mluOpRotatedFeatureAlignForward operation.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRotatedFeatureAlignBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] top_output_desc
+ * The descriptor of the top_output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] top_output
+ * Pointer to the MLU memory that stores the top_output tensor.
+ * @param[in] bboxes_desc
+ * The descriptor of bboxes, containing the dimension and layout of bboxes tensor. For detailed 
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bboxes
+ * Pointer to the MLU memory that stores the bboxes tensor.
+ * @param[in] spatial_scale
+ * A float value that is the scale factor of coordinates of bboxes.
+ * @param[in] points
+ * An int value that is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * @param[in] bottom_input_desc
+ * The descriptor of bottom_input tensor, containing the dimension and layout of bottom_input tensor.
+ * @param[out] bottom_input
+ * Pointer to the MLU memory that stores the bottom_input tensor.
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
+ *
+ * @par Data Type
+ * - This function supports the following data types for top_output tensor \b top_output, bboxes
+ *   tensor \b
+ *   bboxes, and bottom_input tensor \b bottom_input. Data types of all tensors should be the same.
+ *   - top_output tensor: half, float.
+ *   - bboxes tensor: half, float.
+ *   - bottom_input tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b top_output, \b bboxes and \b bottom_input are as follows:
+ *   - top_output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - bboxes tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - bottom_input tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The top_output tensor and bottom_input tensor must be 4D.
+ * - Size of the each dimension of top_output tensor and bottom_input tensor must be the same.
+ * - The bboxes tensor must be 4D.
+ * - The information of the fourth dimension of bboxes tensor consists of [y, x, w, h, a].
+ * - Size of the first dimension of top_output tensor and bboxes tensor must be the same.
+ * - Size of the second dimension of top_output tensor and bboxes tensor must be the same.
+ * - Size of the third dimension of top_output tensor and bboxes tensor must be the same.
+ * - The shape of \b top_output should be [batch_num, height, width, channels].
+ * - The shape of \b bboxes should be [batch_num, height, width, 5].
+ * - The shape of \b bottom_input should be [batch_num, height, width, channels].
+ * - \b points is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * - The value of \b spatial_scale is larger than zero.
+ *
+ * @note
+ * - The inputs \b bboxes and \b spatial_scale with NaN or infinity are not supported.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle_,
+                                 const mluOpTensorDescriptor_t top_output_desc,
+                                 const void *top_output_ptr,
+                                 const mluOpTensorDescriptor_t bboxes_desc,
+                                 const void *bboxes_ptr,
+                                 const float spatial_scale,
+                                 const int points,
+                                 const mluOpTensorDescriptor_t bottom_input_desc,
+                                 void *bottom_input_ptr);
+
 // Group:Sqrt
 /*!
  * @brief Computes sqrt on input tensor \b x, and returns the results in the

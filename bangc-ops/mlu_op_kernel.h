@@ -202,6 +202,31 @@ void MLUOP_WIN_API mluOpBlockKernelRoiCropBackwardFloat(
     const int height, const int width, const int channels, const int grid_n,
     const int output_h, const int output_w, void *grad_input);
 
+/* RotatedFeatureAlign */
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *bboxes, const int batches, const int height,
+    const int width, const int channels, const int offset_rois,
+    const float spatial_scale, const int points, void *output);
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *bboxes, const int batches, const int height,
+    const int width, const int channels, const int offset_rois,
+    const float spatial_scale, const int points, void *output);
+
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_output, const void *bboxes, const int batches,
+    const int height, const int width, const int channels,
+    const int offset_rois, const float spatial_scale, const int points,
+    void *bottom_input);
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_output, const void *bboxes, const int batches,
+    const int height, const int width, const int channels,
+    const int offset_rois, const float spatial_scale, const int points,
+    void *bottom_input);
+
 /* Sqrt */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
