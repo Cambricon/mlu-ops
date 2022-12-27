@@ -6,9 +6,9 @@ export CPLUS_INCLUDE_PATH=${BANGPY_HOME}/include/:${CPLUS_INCLUDE_PATH}
 export PYTHONPATH=${BANGPY_HOME}:${PYTHONPATH}
 if [[ -z ${NEUWARE_HOME} ]]; then
   export NEUWARE_HOME=/usr/local/neuware
-  echo "set env 'NEUWRAE_HOME' to default: ${NEUWARE_HOME}."
+  echo "set env 'NEUWARE_HOME' to default: ${NEUWARE_HOME}."
 else
-  echo "env 'NEUWRAE_HOME': ${NEUWARE_HOME}."
+  echo "env 'NEUWARE_HOME': ${NEUWARE_HOME}."
 fi
 
 export PATH=${NEUWARE_HOME}/bin:${PATH}
