@@ -377,9 +377,7 @@ for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 
 4、对 large tensor 进行防呆，暂不支持 2G 以上 num 的 tensor；
 
-5、0 元素检查防呆；
-
-6、算子存在的自身的相关参数防呆，需要保证传入的标量参数与 tensor 参数的含义一致。
+5、算子存在的自身的相关参数防呆，需要保证传入的标量参数与 tensor 参数的含义一致。
 
 ## 4 算子性能优化记录
 
