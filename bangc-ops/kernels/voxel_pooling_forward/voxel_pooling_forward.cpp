@@ -97,14 +97,6 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
                << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  // check zero element
-  if ((mluOpGetTensorElementNum(geom_xyz_desc) == 0) ||
-      (mluOpGetTensorElementNum(input_features_desc) == 0) ||
-      (mluOpGetTensorElementNum(output_features_desc) == 0) ||
-      (mluOpGetTensorElementNum(pos_memo_desc) == 0)) {
-    LOG(ERROR) << op_name << " Check zero element tensor failure.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
   // check ptr
   PARAM_CHECK(op_name, geom_xyz != NULL);
   PARAM_CHECK(op_name, input_features != NULL);
