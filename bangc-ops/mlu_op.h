@@ -2337,7 +2337,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b features, \b rois,
- *   and output tensor \b output. Data type of all tensors should be the same.
+ *   and output tensor \b output. Data types of all tensors should be the same.
  *   - input tensor: half, float.
  *   - rois tensor: half, float.
  *   - output tensor: half, float.
@@ -2427,7 +2427,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @param[in] pooled_width
  * The width of output.
  * @param[in] sample_ratio
- * The number of sampling points in the bin used to compute the output.
+ * The number of sampling points in the bin which is used to compute the output.
  * @param[in] spatial_scale
  * The spatial scale of each ROI in the output.
  * @param[in] aligned
@@ -2657,7 +2657,7 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
 
 // Group:RotatedFeatureAlign
 /*!
- * @brief Use the feature interpolation to obtain the position information corresponding to the
+ * @brief Uses the feature interpolation to obtain the position information corresponding to the
  * refined rotate anchors \b bboxes and reconstructs the feature maps \b output in pixel-wise
  * manner to achieve feature alignment.
  *
@@ -2676,14 +2676,14 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * @param[in] spatial_scale
  * A float value that is the scale factor of coordinates of bboxes.
  * @param[in] points
- * An int value that is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * An int value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
  * @param[in] output_desc
  * The descriptor of output tensor, which contains the dimension and layout of output tensor.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  * 
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b input, bboxes tensor \b
@@ -2702,14 +2702,14 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * - The input tensor and output tensor must be 4D.
  * - Size of the each dimension of input tensor and output tensor must be the same.
  * - The bboxes tensor must be 4D.
- * - The information of the fourth dimension of bboxes tensor consists of [y, x, w, h, a].
- * - Size of the first dimension of input tensor and bboxes tensor must be the same.
- * - Size of the second dimension of input tensor and bboxes tensor must be the same.
- * - Size of the third dimension of input tensor and bboxes tensor must be the same.
+ * - The 4D information of bboxes tensor consists of [y, x, w, h, a].
+ * - The 1D sizes of input tensor and bboxes tensor must be the same.
+ * - The 2D sizes of input tensor and bboxes tensor must be the same.
+ * - The 3D sizes of input tensor and bboxes tensor must be the same.
  * - The shape of \b input should be [batch_num, height, width, channels].
  * - The shape of \b bboxes should be [batch_num, height, width, 5].
  * - The shape of \b output should be [batch_num, height, width, channels].
- * - \b points is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * - \b points is the number of sample points. Only 1 and 5 are supported. The default value is 1.
  * - The value of \b spatial_scale is larger than zero.
  *
  * @note
@@ -2766,14 +2766,14 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
  * @param[in] spatial_scale
  * A float value that is the scale factor of coordinates of bboxes.
  * @param[in] points
- * An int value that is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * An int value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
  * @param[in] bottom_input_desc
  * The descriptor of bottom_input tensor, which contains the dimension and layout of bottom_input tensor.
  * @param[out] bottom_input
  * Pointer to the MLU memory that stores the bottom_input tensor.
  * 
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED.
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for top_output tensor \b top_output, bboxes
@@ -2791,16 +2791,16 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
  *
  * @par Scale Limitation
  * - The top_output tensor and bottom_input tensor must be 4D.
- * - Size of the each dimension of top_output tensor and bottom_input tensor must be the same.
+ * - Sizes of the each dimension of top_output tensor and bottom_input tensor must be the same.
  * - The bboxes tensor must be 4D.
- * - The information of the fourth dimension of bboxes tensor consists of [y, x, w, h, a].
- * - Size of the first dimension of top_output tensor and bboxes tensor must be the same.
- * - Size of the second dimension of top_output tensor and bboxes tensor must be the same.
- * - Size of the third dimension of top_output tensor and bboxes tensor must be the same.
+ * - The 4D information of bboxes tensor consists of [y, x, w, h, a].
+ * - The 1D sizes of top_output tensor and bboxes tensor must be the same.
+ * - The 2D sizes of top_output tensor and bboxes tensor must be the same.
+ * - The 3D sizes of top_output tensor and bboxes tensor must be the same.
  * - The shape of \b top_output should be [batch_num, height, width, channels].
  * - The shape of \b bboxes should be [batch_num, height, width, 5].
  * - The shape of \b bottom_input should be [batch_num, height, width, channels].
- * - \b points is the number of sample points. Only 1 and 5 are supported. Defaults to 1.
+ * - \b points is the number of sample points. Only 1 and 5 are supported. The default value is 1.
  * - The value of \b spatial_scale is larger than zero.
  *
  * @note
