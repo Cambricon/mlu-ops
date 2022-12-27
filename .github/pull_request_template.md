@@ -25,7 +25,7 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 
 |     No.      |           Details            |      Check Results       |
 |----------------|---------------------------|---------------------|
-|        1       |          Supported hardware         | MLU270 <br> MLU290 <br>MLU370|
+|        1       |          Supported hardware         | MLU270 <br> MLU290 <br>MLU370<br>MLU590|
 |        2       |          Job types          |    block <br> U1 <br> U4    |
 |        3       |         Layouts            |  NHWC 、NCHW、ARRAY etc    |
 |        4       |         Whether multi-dimensions are supported              |                |
@@ -79,6 +79,13 @@ Platform ：MLU290
 |op_name|   |    |     |    |    |    |     |
 
 Platform：MLU370
+
+|Operator|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
+|-----|----|----|----|----|----|------|-----|
+|op_name|   |    |     |    |    |    |     |
+|op_name|   |    |     |    |    |    |     |
+
+Platform：MLU590
 
 |Operator|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
 |-----|----|----|----|----|----|------|-----|
