@@ -1,0 +1,759 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "mlu_op_kernel.h"
+
+#define SEG_NUM 10
+#define BBOXES_ALIGN 64
+
+__nram__ char data_nram[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_func__ void swap_ptr(T &a, T &b) {
+  T tmp = a;
+  a = b;
+  b = tmp;
+}
+
+template <typename T>
+__mlu_func__ void bilinearInterpolate(const int height, const int width, T x,
+                                      T y, T *w1, T *w2, T *w3, T *w4,
+                                      int *x_low, int *y_low, int *x_high,
+                                      int *y_high, bool *bboxes_flag) {
+  if (y < -1.0 || y > (T)height || x < -1.0 || x > (T)width) {
+    *bboxes_flag = true;
+    return;
+  }
+  if (y <= 0) y = 0;
+  if (x <= 0) x = 0;
+
+  *y_low = int(y);
+  *x_low = int(x);
+
+  if ((*y_low) >= height - 1) {
+    *y_high = *y_low = height - 1;
+    y = T(*y_low);
+  } else {
+    *y_high = (*y_low) + 1;
+  }
+
+  if ((*x_low) >= width - 1) {
+    *x_high = *x_low = width - 1;
+    x = T(*x_low);
+  } else {
+    *x_high = (*x_low) + 1;
+  }
+
+  T ly = y - (T)(*y_low);
+  T lx = x - (T)(*x_low);
+  T hy = 1. - ly, hx = 1. - lx;
+  *w1 = hy * hx;
+  *w2 = hy * lx;
+  *w3 = ly * hx;
+  *w4 = ly * lx;
+  *bboxes_flag = false;
+  return;
+}
+
+template <typename T>
+__mlu_func__ void bilinearInterpolateGradient(const int height, const int width,
+                                              T x, T y, T *w1, T *w2, T *w3,
+                                              T *w4, int *x_low, int *y_low,
+                                              int *x_high, int *y_high) {
+  if (y < -1.0 || y > (T)height || x < -1.0 || x > (T)width) {
+    *w1 = *w2 = *w3 = *w4 = 0.;
+    *x_low = *x_high = *y_low = *y_high = -1;
+    return;
+  }
+  if (y <= 0) y = 0;
+  if (x <= 0) x = 0;
+  *y_low = int(y);
+  *x_low = int(x);
+  if ((*y_low) >= height - 1) {
+    *y_high = *y_low = height - 1;
+    y = T(*y_low);
+  } else {
+    *y_high = (*y_low) + 1;
+  }
+  if ((*x_low) >= width - 1) {
+    *x_high = *x_low = width - 1;
+    x = T(*x_low);
+  } else {
+    *x_high = (*x_low) + 1;
+  }
+  T ly = y - (T)(*y_low);
+  T lx = x - (T)(*x_low);
+  T hy = 1. - ly, hx = 1. - lx;
+  *w1 = hy * hx;
+  *w2 = hy * lx;
+  *w3 = ly * hx;
+  *w4 = ly * lx;
+  return;
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelRotatedFeatureAlignForward(
+    const T *input, const T *bboxes, const int batches, const int height,
+    const int width, const int channels, const int offset_rois,
+    const T spatial_scale, const int points, T *output) {
+  const int type_align = NFU_ALIGN_SIZE / sizeof(T);
+  const int deal_num = FLOOR_ALIGN(
+      (MAX_NRAM_SIZE - BBOXES_ALIGN) / SEG_NUM / sizeof(T), type_align);
+  const int channel_rem = channels % deal_num;
+  const int channel_loops = channels / deal_num + (channel_rem != 0 ? 1 : 0);
+  const int pixel_end = batches * height * width;
+  T px[5] = {0, 0, 0, 0, 0};
+  T py[5] = {0, 0, 0, 0, 0};
+  int pixel_i = 0;
+  T *ping_out = NULL;
+  T *pong_out = NULL;
+  T *nram_ping = NULL;
+  T *nram_pong = NULL;
+  // deal pixel
+  for (int pixel_index = taskId; pixel_index < pixel_end;
+       pixel_index += taskDim) {
+    pixel_i++;
+    const int pw = pixel_index % width;
+    const int ph = pixel_index / width % height;
+    const int n = pixel_index / width / height;
+    const int bboxes_offset = n * width * height * offset_rois +
+                              ph * width * offset_rois + pw * offset_rois;
+    const T *cur_bboxes = bboxes + bboxes_offset;
+    T *bboxes_ptr = (T *)data_nram;
+    const int input_n_offset = n * width * height * channels;
+    // deal channels
+    for (int channel_loop_index = 0; channel_loop_index < channel_loops;
+         ++channel_loop_index) {
+      int channels_num = deal_num >= channels ? channels : deal_num;
+      int channel_offset = channel_loop_index * channels_num;
+      const int c_offset = input_n_offset + ph * width * channels +
+                           pw * channels + channel_offset;
+      const T *cur_input = input + c_offset;
+      T *cur_output = output + c_offset;
+      if (channel_loop_index + 1 == channel_loops && channel_rem != 0) {
+        channels_num = channel_rem;
+      }
+      const int channels_align = CEIL_ALIGN(channels_num, type_align);
+      /* NRAM partition
+       *
+       *|            |    ping      |   pong     |      ping         | pong |
+       *|------------|--------------|------------|-------------------|-------------------|
+       *| bboxes_ptr |   ping_out   |  pong_out  | p1 | p2 | p3 | p4 | p1 | p2 |
+       *p3 | p4 |
+       *
+       */
+
+      // only deal one to load input and bboxes
+      if (channel_loop_index == 0 && pixel_i == 1) {
+        ping_out = bboxes_ptr + BBOXES_ALIGN;
+        pong_out = ping_out + deal_num;
+        nram_ping = pong_out + deal_num;
+        nram_pong = nram_ping + 4 * deal_num;
+        __memcpy(bboxes_ptr, cur_bboxes, offset_rois * sizeof(T), GDRAM2NRAM);
+        T roi_y = bboxes_ptr[0] * spatial_scale;
+        T roi_x = bboxes_ptr[1] * spatial_scale;
+        px[0] = roi_x;
+        py[0] = roi_y;
+        if (points > 1) {
+          T roi_w = bboxes_ptr[2] * spatial_scale;
+          T roi_h = bboxes_ptr[3] * spatial_scale;
+          T roi_a = bboxes_ptr[4];
+          T w_2 = roi_w / 2, h_2 = roi_h / 2;
+          T cosa = cosf(roi_a), sina = sinf(roi_a);
+          T wx = cosa * w_2, wy = sina * w_2;
+          T hx = -sina * h_2, hy = cosa * h_2;
+          px[1] = roi_x + wx + hx;
+          py[1] = roi_y + wy + hy;
+          px[2] = roi_x - wx + hx;
+          py[2] = roi_y - wy + hy;
+          px[3] = roi_x - wx - hx;
+          py[3] = roi_y - wy - hy;
+          px[4] = roi_x + wx - hx;
+          py[4] = roi_y + wy - hy;
+        }
+        // load input_c to nram_ping
+        __memcpy_async(ping_out, cur_input, channels_num * sizeof(T),
+                       GDRAM2NRAM);
+        // load L0
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bool bboxes_flag = false;
+        bilinearInterpolate(height, width, px[0], py[0], &w1, &w2, &w3, &w4,
+                            &x_low, &y_low, &x_high, &y_high, &bboxes_flag);
+        if (!bboxes_flag) {
+          const T *cur_input_tl = input + input_n_offset +
+                                  y_low * width * channels + x_low * channels +
+                                  channel_offset;
+          const T *cur_input_tr = input + input_n_offset +
+                                  y_low * width * channels + x_high * channels +
+                                  channel_offset;
+          const T *cur_input_bl = input + input_n_offset +
+                                  y_high * width * channels + x_low * channels +
+                                  channel_offset;
+          const T *cur_input_br = input + input_n_offset +
+                                  y_high * width * channels +
+                                  x_high * channels + channel_offset;
+          __memcpy_async(nram_ping, cur_input_tl, channels_num * sizeof(T),
+                         GDRAM2NRAM);
+          __memcpy_async(nram_ping + deal_num, cur_input_tr,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_ping + 2 * deal_num, cur_input_bl,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_ping + 3 * deal_num, cur_input_br,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+        }
+        // load next bboxes
+        if (pixel_index + taskDim < pixel_end) {
+          const int pw = (pixel_index + taskDim) % width;
+          const int ph = (pixel_index + taskDim) / width % height;
+          const int n = (pixel_index + taskDim) / width / height;
+          const int bboxes_offset = n * width * height * offset_rois +
+                                    ph * width * offset_rois + pw * offset_rois;
+          const T *cur_bboxes_next = bboxes + bboxes_offset;
+          __memcpy_async((T *)data_nram, cur_bboxes_next,
+                         offset_rois * sizeof(T), GDRAM2NRAM);
+        }
+        __asm__ volatile("sync;\n\t");
+      }
+      // deal L1/C0 L2/C1 L3/C2 L4/C4
+      for (int i = 1; i < points; i++) {
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bool next_bboxes_flag = false;
+        bilinearInterpolate(height, width, px[i], py[i], &w1, &w2, &w3, &w4,
+                            &x_low, &y_low, &x_high, &y_high,
+                            &next_bboxes_flag);
+        if (!next_bboxes_flag) {
+          const T *cur_input_tl = input + input_n_offset +
+                                  y_low * width * channels + x_low * channels +
+                                  channel_offset;
+          const T *cur_input_tr = input + input_n_offset +
+                                  y_low * width * channels + x_high * channels +
+                                  channel_offset;
+          const T *cur_input_bl = input + input_n_offset +
+                                  y_high * width * channels + x_low * channels +
+                                  channel_offset;
+          const T *cur_input_br = input + input_n_offset +
+                                  y_high * width * channels +
+                                  x_high * channels + channel_offset;
+          // load
+          __memcpy_async(nram_pong, cur_input_tl, channels_num * sizeof(T),
+                         GDRAM2NRAM);
+          __memcpy_async(nram_pong + deal_num, cur_input_tr,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_pong + 2 * deal_num, cur_input_bl,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_pong + 3 * deal_num, cur_input_br,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+        }
+        // compute
+        T p_w1 = 0, p_w2 = 0, p_w3 = 0, p_w4 = 0;
+        int p_x_low = 0, p_y_low = 0, p_x_high = 0, p_y_high = 0;
+        bool bboxes_flag = false;
+        bilinearInterpolate(height, width, px[i - 1], py[i - 1], &p_w1, &p_w2,
+                            &p_w3, &p_w4, &p_x_low, &p_y_low, &p_x_high,
+                            &p_y_high, &bboxes_flag);
+        if (!bboxes_flag) {
+          __bang_mul_scalar(nram_ping, nram_ping, p_w1, channels_align);
+          __bang_mul_scalar(nram_ping + deal_num, nram_ping + deal_num, p_w2,
+                            channels_align);
+          __bang_mul_scalar(nram_ping + 2 * deal_num, nram_ping + 2 * deal_num,
+                            p_w3, channels_align);
+          __bang_mul_scalar(nram_ping + 3 * deal_num, nram_ping + 3 * deal_num,
+                            p_w4, channels_align);
+          __bang_add(ping_out, ping_out, nram_ping, channels_align);
+          __bang_add(ping_out, ping_out, nram_ping + deal_num, channels_align);
+          __bang_add(ping_out, ping_out, nram_ping + 2 * deal_num,
+                     channels_align);
+          __bang_add(ping_out, ping_out, nram_ping + 3 * deal_num,
+                     channels_align);
+        }
+        __asm__ volatile("sync;\n\t");
+        swap_ptr(nram_ping, nram_pong);
+      }
+      // compute for last point
+      T l_w1 = 0, l_w2 = 0, l_w3 = 0, l_w4 = 0;
+      int l_x_low = 0, l_y_low = 0, l_x_high = 0, l_y_high = 0;
+      bool bboxes_flag = false;
+      bilinearInterpolate(height, width, px[points - 1], py[points - 1], &l_w1,
+                          &l_w2, &l_w3, &l_w4, &l_x_low, &l_y_low, &l_x_high,
+                          &l_y_high, &bboxes_flag);
+      if (!bboxes_flag) {
+        __bang_mul_scalar(nram_ping, nram_ping, l_w1, channels_align);
+        __bang_mul_scalar(nram_ping + deal_num, nram_ping + deal_num, l_w2,
+                          channels_align);
+        __bang_mul_scalar(nram_ping + 2 * deal_num, nram_ping + 2 * deal_num,
+                          l_w3, channels_align);
+        __bang_mul_scalar(nram_ping + 3 * deal_num, nram_ping + 3 * deal_num,
+                          l_w4, channels_align);
+        __bang_add(ping_out, ping_out, nram_ping, channels_align);
+        __bang_add(ping_out, ping_out, nram_ping + deal_num, channels_align);
+        __bang_add(ping_out, ping_out, nram_ping + 2 * deal_num,
+                   channels_align);
+        __bang_add(ping_out, ping_out, nram_ping + 3 * deal_num,
+                   channels_align);
+      }
+      // load next rem c
+      if (channel_loop_index + 1 < channel_loops) {
+        int channels_num_rem = channels_num;
+        channel_offset += channels_num_rem;
+        cur_input = input + input_n_offset + ph * width * channels +
+                    pw * channels + channel_offset;
+        if (channel_loop_index + 2 == channel_loops && channel_rem != 0) {
+          channels_num_rem = channel_rem;
+        }
+        __memcpy_async(pong_out, cur_input, channels_num_rem * sizeof(T),
+                       GDRAM2NRAM);
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bool bboxes_flag = false;
+        bilinearInterpolate(height, width, px[0], py[0], &w1, &w2, &w3, &w4,
+                            &x_low, &y_low, &x_high, &y_high, &bboxes_flag);
+        if (!bboxes_flag) {
+          const T *cur_input_tl = input + input_n_offset +
+                                  y_low * width * channels + x_low * channels +
+                                  channel_offset;
+          const T *cur_input_tr = input + input_n_offset +
+                                  y_low * width * channels + x_high * channels +
+                                  channel_offset;
+          const T *cur_input_bl = input + input_n_offset +
+                                  y_high * width * channels + x_low * channels +
+                                  channel_offset;
+          const T *cur_input_br = input + input_n_offset +
+                                  y_high * width * channels +
+                                  x_high * channels + channel_offset;
+          __memcpy_async(nram_pong, cur_input_tl, channels_num_rem * sizeof(T),
+                         GDRAM2NRAM);
+          __memcpy_async(nram_pong + deal_num, cur_input_tr,
+                         channels_num_rem * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_pong + 2 * deal_num, cur_input_bl,
+                         channels_num_rem * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_pong + 3 * deal_num, cur_input_br,
+                         channels_num_rem * sizeof(T), GDRAM2NRAM);
+        }
+      } else if (pixel_index + taskDim < pixel_end) {  // load next pixel
+        const int pw = (pixel_index + taskDim) % width;
+        const int ph = (pixel_index + taskDim) / width % height;
+        const int n = (pixel_index + taskDim) / width / height;
+        // load next input
+        const int input_n_offset = n * width * height * channels;
+        int channels_num = deal_num >= channels ? channels : deal_num;
+        const int c_offset =
+            input_n_offset + ph * width * channels + pw * channels;
+        const T *cur_input = input + c_offset;
+        if (1 == channel_loops && channel_rem != 0) {
+          channels_num = channel_rem;
+        }
+        // load L0
+        __memcpy_async(pong_out, cur_input, channels_num * sizeof(T),
+                       GDRAM2NRAM);
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bool bboxes_flag = false;
+        T *bboxes_ptr_next = (T *)data_nram;
+        T roi_y = bboxes_ptr_next[0] * spatial_scale;
+        T roi_x = bboxes_ptr_next[1] * spatial_scale;
+        px[0] = roi_x;
+        py[0] = roi_y;
+        if (points > 1) {
+          T roi_w = bboxes_ptr_next[2] * spatial_scale;
+          T roi_h = bboxes_ptr_next[3] * spatial_scale;
+          T roi_a = bboxes_ptr_next[4];
+          T w_2 = roi_w / 2, h_2 = roi_h / 2;
+          T cosa = cosf(roi_a), sina = sinf(roi_a);
+          T wx = cosa * w_2, wy = sina * w_2;
+          T hx = -sina * h_2, hy = cosa * h_2;
+          px[1] = roi_x + wx + hx;
+          py[1] = roi_y + wy + hy;
+          px[2] = roi_x - wx + hx;
+          py[2] = roi_y - wy + hy;
+          px[3] = roi_x - wx - hx;
+          py[3] = roi_y - wy - hy;
+          px[4] = roi_x + wx - hx;
+          py[4] = roi_y + wy - hy;
+        }
+        bilinearInterpolate(height, width, px[0], py[0], &w1, &w2, &w3, &w4,
+                            &x_low, &y_low, &x_high, &y_high, &bboxes_flag);
+        if (!bboxes_flag) {
+          const T *cur_input_tl = input + input_n_offset +
+                                  y_low * width * channels + x_low * channels;
+          const T *cur_input_tr = input + input_n_offset +
+                                  y_low * width * channels + x_high * channels;
+          const T *cur_input_bl = input + input_n_offset +
+                                  y_high * width * channels + x_low * channels;
+          const T *cur_input_br = input + input_n_offset +
+                                  y_high * width * channels + x_high * channels;
+          __memcpy_async(nram_pong, cur_input_tl, channels_num * sizeof(T),
+                         GDRAM2NRAM);
+          __memcpy_async(nram_pong + deal_num, cur_input_tr,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_pong + 2 * deal_num, cur_input_bl,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+          __memcpy_async(nram_pong + 3 * deal_num, cur_input_br,
+                         channels_num * sizeof(T), GDRAM2NRAM);
+        }
+        if (pixel_index + 2 * taskDim < pixel_end) {
+          const int pw = (pixel_index + 2 * taskDim) % width;
+          const int ph = (pixel_index + 2 * taskDim) / width % height;
+          const int n = (pixel_index + 2 * taskDim) / width / height;
+          const int bboxes_offset = n * width * height * offset_rois +
+                                    ph * width * offset_rois + pw * offset_rois;
+          const T *cur_bboxes_next = bboxes + bboxes_offset;
+          // load next bboxes
+          __memcpy_async((T *)data_nram, cur_bboxes_next,
+                         offset_rois * sizeof(T), GDRAM2NRAM);
+        }
+      }
+      __asm__ volatile("sync;\n\t");
+      swap_ptr(nram_ping, nram_pong);
+      swap_ptr(pong_out, ping_out);
+      __memcpy_async(cur_output, pong_out, channels_num * sizeof(T),
+                     NRAM2GDRAM);
+    }
+  }
+  __asm__ volatile("sync;\n\t");
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
+    const T *top_output, const T *bboxes, const int batches, const int height,
+    const int width, const int channels, const int offset_rois,
+    const T spatial_scale, const int points, T *bottom_input) {
+  const int type_align = NFU_ALIGN_SIZE / sizeof(T);
+  const int deal_num = FLOOR_ALIGN(
+      (MAX_NRAM_SIZE - BBOXES_ALIGN) / SEG_NUM / sizeof(T), type_align);
+  const int channel_rem = channels % deal_num;
+  const int channel_loops = channels / deal_num + (channel_rem != 0 ? 1 : 0);
+  const int pixel_end = batches * height * width;
+  T px[5] = {0, 0, 0, 0, 0};
+  T py[5] = {0, 0, 0, 0, 0};
+  int pixel_i = 0;
+  T *ping_out = NULL;
+  T *pong_out = NULL;
+  T *nram_ping = NULL;
+  T *nram_pong = NULL;
+  // deal pixel
+  for (int pixel_index = taskId; pixel_index < pixel_end;
+       pixel_index += taskDim) {
+    pixel_i++;
+    const int pw = pixel_index % width;
+    const int ph = pixel_index / width % height;
+    const int n = pixel_index / width / height;
+    const int bboxes_offset = n * width * height * offset_rois +
+                              ph * width * offset_rois + pw * offset_rois;
+    const T *cur_bboxes = bboxes + bboxes_offset;
+    T *bboxes_ptr = (T *)data_nram;
+    const int n_offset = n * width * height * channels;
+    // deal channels
+    for (int channel_loop_index = 0; channel_loop_index < channel_loops;
+         ++channel_loop_index) {
+      int channels_num = deal_num >= channels ? channels : deal_num;
+      int channel_offset = channel_loop_index * channels_num;
+      const int c_offset =
+          n_offset + ph * width * channels + pw * channels + channel_offset;
+      T *cur_bottom_input = bottom_input + c_offset;
+      const T *cur_top_output = top_output + c_offset;
+      if (channel_loop_index + 1 == channel_loops && channel_rem != 0) {
+        channels_num = channel_rem;
+      }
+      const int channels_align = CEIL_ALIGN(channels_num, type_align);
+      /* NRAM partition
+       *
+       *|            |      ping    |    pong   |       ping          | pong |
+       *|-----       |--------------|-----------|-------------------
+       *|-------------------| | bboxes_ptr | ping_out      |pong_out   | p1 | p2
+       *| p3  | p4 | p1 | p2 | p3 | p4 |
+       *
+       */
+      // only deal one to load input and bboxes
+      if (channel_loop_index == 0 && pixel_i == 1) {
+        ping_out = bboxes_ptr + BBOXES_ALIGN;
+        pong_out = ping_out + deal_num;
+        nram_ping = pong_out + deal_num;
+        nram_pong = nram_ping + 4 * deal_num;
+        __memcpy(bboxes_ptr, cur_bboxes, offset_rois * sizeof(T), GDRAM2NRAM);
+        T roi_y = bboxes_ptr[0] * spatial_scale;
+        T roi_x = bboxes_ptr[1] * spatial_scale;
+        px[0] = roi_x;
+        py[0] = roi_y;
+        if (points > 1) {
+          T roi_w = bboxes_ptr[2] * spatial_scale;
+          T roi_h = bboxes_ptr[3] * spatial_scale;
+          T roi_a = bboxes_ptr[4];
+          T w_2 = roi_w / 2, h_2 = roi_h / 2;
+          T cosa = cosf(roi_a), sina = sinf(roi_a);
+          T wx = cosa * w_2, wy = sina * w_2;
+          T hx = -sina * h_2, hy = cosa * h_2;
+          px[1] = roi_x + wx + hx;
+          py[1] = roi_y + wy + hy;
+          px[2] = roi_x - wx + hx;
+          py[2] = roi_y - wy + hy;
+          px[3] = roi_x - wx - hx;
+          py[3] = roi_y - wy - hy;
+          px[4] = roi_x + wx - hx;
+          py[4] = roi_y + wy - hy;
+        }
+        // load top_output_c to nram_ping
+        __memcpy(ping_out, cur_top_output, channels_num * sizeof(T),
+                 GDRAM2NRAM);
+        // C0
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bilinearInterpolateGradient(height, width, px[0], py[0], &w1, &w2, &w3,
+                                    &w4, &x_low, &y_low, &x_high, &y_high);
+        __bang_mul_scalar(nram_ping, ping_out, w1, channels_align);
+        __bang_mul_scalar(nram_ping + deal_num, ping_out, w2, channels_align);
+        __bang_mul_scalar(nram_ping + 2 * deal_num, ping_out, w3,
+                          channels_align);
+        __bang_mul_scalar(nram_ping + 3 * deal_num, ping_out, w4,
+                          channels_align);
+        // load next bboxes
+        if (pixel_index + taskDim < pixel_end) {
+          const int pw = (pixel_index + taskDim) % width;
+          const int ph = (pixel_index + taskDim) / width % height;
+          const int n = (pixel_index + taskDim) / width / height;
+          const int bboxes_offset = n * width * height * offset_rois +
+                                    ph * width * offset_rois + pw * offset_rois;
+          const T *cur_bboxes_next = bboxes + bboxes_offset;
+          __memcpy_async((T *)data_nram, cur_bboxes_next,
+                         offset_rois * sizeof(T), GDRAM2NRAM);
+        }
+      }
+      __asm__ volatile("sync;\n\t");
+      // load next C
+      if (channel_loop_index + 1 < channel_loops) {
+        int channels_num_rem = channels_num;
+        cur_top_output = top_output + n_offset + ph * width * channels +
+                         pw * channels + channel_offset + channels_num_rem;
+        if (channel_loop_index + 2 == channel_loops && channel_rem != 0) {
+          channels_num_rem = channel_rem;
+        }
+        __memcpy_async(pong_out, cur_top_output, channels_num_rem * sizeof(T),
+                       GDRAM2NRAM);
+      } else if (pixel_index + taskDim < pixel_end) {  // load next pixel
+        const int pw = (pixel_index + taskDim) % width;
+        const int ph = (pixel_index + taskDim) / width % height;
+        const int n = (pixel_index + taskDim) / width / height;
+        // load next top_output
+        const int n_offset = n * width * height * channels;
+        int channels_num = deal_num >= channels ? channels : deal_num;
+        const int c_offset = n_offset + ph * width * channels + pw * channels;
+        const T *cur_top_output = top_output + c_offset;
+        if (1 == channel_loops && channel_rem != 0) {
+          channels_num = channel_rem;
+        }
+        __memcpy_async(pong_out, cur_top_output, channels_num * sizeof(T),
+                       GDRAM2NRAM);
+      }
+      // deal C1/S0 C2/S1 C3/S2 C4/S4
+      for (int i = 1; i < points; i++) {
+        // compute
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bilinearInterpolateGradient(height, width, px[i], py[i], &w1, &w2, &w3,
+                                    &w4, &x_low, &y_low, &x_high, &y_high);
+        __bang_mul_scalar(nram_pong, ping_out, w1, channels_align);
+        __bang_mul_scalar(nram_pong + deal_num, ping_out, w2, channels_align);
+        __bang_mul_scalar(nram_pong + 2 * deal_num, ping_out, w3,
+                          channels_align);
+        __bang_mul_scalar(nram_pong + 3 * deal_num, ping_out, w4,
+                          channels_align);
+        // store
+        T p_w1 = 0, p_w2 = 0, p_w3 = 0, p_w4 = 0;
+        int p_x_low = 0, p_y_low = 0, p_x_high = 0, p_y_high = 0;
+        bilinearInterpolateGradient(height, width, px[i - 1], py[i - 1], &p_w1,
+                                    &p_w2, &p_w3, &p_w4, &p_x_low, &p_y_low,
+                                    &p_x_high, &p_y_high);
+        if (p_x_low >= 0 && p_x_high >= 0 && p_y_low >= 0 && p_y_high >= 0) {
+          const T *cur_tl = bottom_input + n_offset +
+                            p_y_low * width * channels + p_x_low * channels +
+                            channel_offset;
+          const T *cur_tr = bottom_input + n_offset +
+                            p_y_low * width * channels + p_x_high * channels +
+                            channel_offset;
+          const T *cur_bl = bottom_input + n_offset +
+                            p_y_high * width * channels + p_x_low * channels +
+                            channel_offset;
+          const T *cur_br = bottom_input + n_offset +
+                            p_y_high * width * channels + p_x_high * channels +
+                            channel_offset;
+          __bang_atomic_add((T *)nram_ping, (T *)cur_tl, (T *)nram_ping,
+                            channels_num);
+          __bang_atomic_add((T *)(nram_ping + deal_num), (T *)cur_tr,
+                            (T *)(nram_ping + deal_num), channels_num);
+          __bang_atomic_add((T *)(nram_ping + 2 * deal_num), (T *)cur_bl,
+                            (T *)(nram_ping + 2 * deal_num), channels_num);
+          __bang_atomic_add((T *)(nram_ping + 3 * deal_num), (T *)cur_br,
+                            (T *)(nram_ping + 3 * deal_num), channels_num);
+        }
+        __asm__ volatile("sync;\n\t");
+        swap_ptr(nram_ping, nram_pong);
+      }
+      // store for last point
+      T p_w1 = 0, p_w2 = 0, p_w3 = 0, p_w4 = 0;
+      int p_x_low = 0, p_y_low = 0, p_x_high = 0, p_y_high = 0;
+      bilinearInterpolateGradient(height, width, px[points - 1], py[points - 1],
+                                  &p_w1, &p_w2, &p_w3, &p_w4, &p_x_low,
+                                  &p_y_low, &p_x_high, &p_y_high);
+      if (p_x_low >= 0 && p_x_high >= 0 && p_y_low >= 0 && p_y_high >= 0) {
+        const T *cur_tl = bottom_input + n_offset + p_y_low * width * channels +
+                          p_x_low * channels + channel_offset;
+        const T *cur_tr = bottom_input + n_offset + p_y_low * width * channels +
+                          p_x_high * channels + channel_offset;
+        const T *cur_bl = bottom_input + n_offset +
+                          p_y_high * width * channels + p_x_low * channels +
+                          channel_offset;
+        const T *cur_br = bottom_input + n_offset +
+                          p_y_high * width * channels + p_x_high * channels +
+                          channel_offset;
+        __bang_atomic_add((T *)nram_ping, (T *)cur_tl, (T *)nram_ping,
+                          channels_num);
+        __bang_atomic_add((T *)(nram_ping + deal_num), (T *)cur_tr,
+                          (T *)(nram_ping + deal_num), channels_num);
+        __bang_atomic_add((T *)(nram_ping + 2 * deal_num), (T *)cur_bl,
+                          (T *)(nram_ping + 2 * deal_num), channels_num);
+        __bang_atomic_add((T *)(nram_ping + 3 * deal_num), (T *)cur_br,
+                          (T *)(nram_ping + 3 * deal_num), channels_num);
+      }
+      // So
+      __bang_atomic_add((T *)ping_out, (T *)cur_bottom_input, (T *)ping_out,
+                        channels_num);
+      // load next rem c
+      if (channel_loop_index + 1 < channel_loops) {
+        int channels_num_rem = channels_num;
+        if (channel_loop_index + 2 == channel_loops && channel_rem != 0) {
+          channels_num_rem = channel_rem;
+        }
+        const int channels_align = CEIL_ALIGN(channels_num_rem, type_align);
+        // compute next rem c
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        bilinearInterpolateGradient(height, width, px[0], py[0], &w1, &w2, &w3,
+                                    &w4, &x_low, &y_low, &x_high, &y_high);
+        __bang_mul_scalar(nram_pong, pong_out, w1, channels_align);
+        __bang_mul_scalar(nram_pong + deal_num, pong_out, w2, channels_align);
+        __bang_mul_scalar(nram_pong + 2 * deal_num, pong_out, w3,
+                          channels_align);
+        __bang_mul_scalar(nram_pong + 3 * deal_num, pong_out, w4,
+                          channels_align);
+      } else if (pixel_index + taskDim < pixel_end) {  // load next pixel
+        // load next top_output
+        int channels_num = deal_num >= channels ? channels : deal_num;
+        if (1 == channel_loops && channel_rem != 0) {
+          channels_num = channel_rem;
+        }
+        const int channels_align = CEIL_ALIGN(channels_num, type_align);
+        // C0
+        T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+        int x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+        T *bboxes_ptr_next = (T *)data_nram;
+        T roi_y = bboxes_ptr_next[0] * spatial_scale;
+        T roi_x = bboxes_ptr_next[1] * spatial_scale;
+        px[0] = roi_x;
+        py[0] = roi_y;
+        if (points > 1) {
+          T roi_w = bboxes_ptr_next[2] * spatial_scale;
+          T roi_h = bboxes_ptr_next[3] * spatial_scale;
+          T roi_a = bboxes_ptr_next[4];
+          T w_2 = roi_w / 2, h_2 = roi_h / 2;
+          T cosa = cosf(roi_a), sina = sinf(roi_a);
+          T wx = cosa * w_2, wy = sina * w_2;
+          T hx = -sina * h_2, hy = cosa * h_2;
+          px[1] = roi_x + wx + hx;
+          py[1] = roi_y + wy + hy;
+          px[2] = roi_x - wx + hx;
+          py[2] = roi_y - wy + hy;
+          px[3] = roi_x - wx - hx;
+          py[3] = roi_y - wy - hy;
+          px[4] = roi_x + wx - hx;
+          py[4] = roi_y + wy - hy;
+        }
+        bilinearInterpolateGradient(height, width, px[0], py[0], &w1, &w2, &w3,
+                                    &w4, &x_low, &y_low, &x_high, &y_high);
+        __bang_mul_scalar(nram_pong, pong_out, w1, channels_align);
+        __bang_mul_scalar(nram_pong + deal_num, pong_out, w2, channels_align);
+        __bang_mul_scalar(nram_pong + 2 * deal_num, pong_out, w3,
+                          channels_align);
+        __bang_mul_scalar(nram_pong + 3 * deal_num, pong_out, w4,
+                          channels_align);
+        if (pixel_index + 2 * taskDim < pixel_end) {
+          const int pw = (pixel_index + 2 * taskDim) % width;
+          const int ph = (pixel_index + 2 * taskDim) / width % height;
+          const int n = (pixel_index + 2 * taskDim) / width / height;
+          const int bboxes_offset = n * width * height * offset_rois +
+                                    ph * width * offset_rois + pw * offset_rois;
+          const T *cur_bboxes_next = bboxes + bboxes_offset;
+          // load next bboxes
+          __memcpy_async((T *)data_nram, cur_bboxes_next,
+                         offset_rois * sizeof(T), GDRAM2NRAM);
+        }
+      }
+      __asm__ volatile("sync;\n\t");
+      swap_ptr(nram_ping, nram_pong);
+      swap_ptr(pong_out, ping_out);
+    }
+  }
+  __asm__ volatile("sync;\n\t");
+}
+
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *bboxes, const int batches, const int height,
+    const int width, const int channels, const int offset_rois,
+    const float spatial_scale, const int points, void *output) {
+  MLUKernelRotatedFeatureAlignForward<<<k_dim, k_type, queue>>>(
+      (float *)input, (float *)bboxes, batches, height, width, channels,
+      offset_rois, spatial_scale, points, (float *)output);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *bboxes, const int batches, const int height,
+    const int width, const int channels, const int offset_rois,
+    const float spatial_scale, const int points, void *output) {
+  MLUKernelRotatedFeatureAlignForward<<<k_dim, k_type, queue>>>(
+      (half *)input, (half *)bboxes, batches, height, width, channels,
+      offset_rois, (half)spatial_scale, points, (half *)output);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_output, const void *bboxes, const int batches,
+    const int height, const int width, const int channels,
+    const int offset_rois, const float spatial_scale, const int points,
+    void *bottom_input) {
+  MLUKernelRotatedFeatureAlignBackward<<<k_dim, k_type, queue>>>(
+      (float *)top_output, (float *)bboxes, batches, height, width, channels,
+      offset_rois, spatial_scale, points, (float *)bottom_input);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *top_output, const void *bboxes, const int batches,
+    const int height, const int width, const int channels,
+    const int offset_rois, const float spatial_scale, const int points,
+    void *bottom_input) {
+  MLUKernelRotatedFeatureAlignBackward<<<k_dim, k_type, queue>>>(
+      (half *)top_output, (half *)bboxes, batches, height, width, channels,
+      offset_rois, (half)spatial_scale, points, (half *)bottom_input);
+}
