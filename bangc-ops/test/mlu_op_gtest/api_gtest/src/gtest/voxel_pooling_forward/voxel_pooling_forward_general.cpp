@@ -404,7 +404,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({2, 4, 3}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM))); 
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_num_voxel_x, voxel_pooling_forward_general,
@@ -419,7 +419,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({2, 4, 3}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));      
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_num_voxel_y, voxel_pooling_forward_general,
@@ -434,7 +434,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({2, 4, 3}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));                          
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_large_tensor, voxel_pooling_forward_general,
