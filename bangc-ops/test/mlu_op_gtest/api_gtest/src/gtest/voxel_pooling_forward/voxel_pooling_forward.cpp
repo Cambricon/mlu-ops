@@ -107,6 +107,7 @@ class voxel_pooling_forward : public testing::Test {
   void destroy() {
     VLOG(4) << "Destroy parameters.";
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }
