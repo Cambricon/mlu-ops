@@ -17,7 +17,7 @@ README
 1. cd ~ (推荐安装到自己的home目录下)
 2. virtualenv venv --python=python3
 3. source ~/venv/bin/activate
-4. pip install -r mlu_ops/tools/perf_analyse/requirements.txt
+4. pip install -r mlu-ops/tools/perf_analyse/requirements.txt
 
 说明： 通过第 2 步后会在当前目录下生成 venv  目录，第三方包就安装在这里面，下次使用只需进行第 3 步激活环境，无需重新生成，如果 requirements.txt 文件有更新，请再次执行第 3、4步。
 
