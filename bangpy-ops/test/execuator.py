@@ -24,9 +24,10 @@ import os
 from pathlib import Path
 import sys
 import bangpy
+import numpy as np
 from .parser import Parser
 from .optest import OpTestFactory
-import numpy as np
+
 
 def execuate_kernel(proto_file, target: str, op_name):
     """execuate_kernel is used for invoking kernel and comparing
