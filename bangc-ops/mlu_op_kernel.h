@@ -166,6 +166,12 @@ void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
     const void *geom_xyz, const void *input_features, void *output_features,
     void *pos_memo);
 
+/* BoxIouRotated */
+void MLUOP_WIN_API mluOpUnionKernelBoxIouRotatedFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *box1, const void *box2, void *ious, const int num_box1,
+    const int num_box2, const int mode, const bool aligned);
+
 /* RoiAlignRotated */
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
