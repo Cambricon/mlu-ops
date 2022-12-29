@@ -60,7 +60,7 @@ def execuate_kernel(proto_file, target: str, op_name):
     # launch kernel in factory model
     if op_name == "frac":
         print("aaa",target, dtype, inputs, output, data.read_prototxt())
-        op_test = OpTestFactory.factory(op_name)(target, 
+        op_test = OpTestFactory.factory(op_name)(target,
                                                  dtype,
                                                  inputs,
                                                  output,
