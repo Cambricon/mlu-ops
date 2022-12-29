@@ -130,12 +130,16 @@ mluOpSqrtBackward
 .. math::
 
    diff_x = 0.5 * \frac{diff_y}{y}
- 
+
 .. _voxel_pooling_forward:
 
 mluOpVoxelPoolingForward
 -------------------------
 voxel_pooling_forward 算子用于 BEVDepth 网络，将给定若干个相同的 x,y 坐标上的所有通道上的特征值分别相加，再投射到对应坐标上的 bev 2D 区域内的对应通道，该算子有两个输入 tensor，两个输出 tensor，输入 geom_xyz 维度 [B, N, 3]，输入 input_features 维度 [B, N, C]，输出 output_features 维度 [B, H, W, C]，输出 pos_memo 维度 [B, N, 3]。
+
+mluOpBoxIouRotated
+-------------------------
+box_iou_rotated 算子用于计算给定两个旋转框的交并比(Intersection over Union,IOU)。该算子两个输入 tensor 分别为 Box1[N,5], Box2[M,5]。参数 `aligned` 为 True 时，输出对位计算的交并比，为 False 时，输出两两相交的交并比。参数 `mode` 为 0 时，结果为 `IOU` (intersection/(area1+area2))，为 1 时，结果为 `IOF` (intersection/area1)，其中 intersection 表示重叠面积，area1、area2 分别表示两个框的面积。
 
 mluOpYoloBox
 -------------------
