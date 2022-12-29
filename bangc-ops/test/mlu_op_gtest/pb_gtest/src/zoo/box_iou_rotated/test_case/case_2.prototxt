@@ -1,0 +1,71 @@
+op_name: "box_iou_rotated"
+input {
+  id: "input1"
+  shape: {
+    dims: 3
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 3.0
+  value_f: 4.0
+  value_f: 0.5
+  value_f: 2.0
+  value_f: 2.0
+  value_f: 3.0
+  value_f: 4.0
+  value_f: 0.6
+  value_f: 7.0
+  value_f: 7.0
+  value_f: 8.0
+  value_f: 8.0
+  value_f: 0.4
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 3
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 0.0
+  value_f: 2.0
+  value_f: 2.0
+  value_f: 5.0
+  value_f: 0.3
+  value_f: 2.0
+  value_f: 1.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 0.5
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 6.0
+  value_f: 7.0
+  value_f: 0.4
+}
+output {
+  id: "output"
+  shape: {
+    dims: 3
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+box_iou_rotated_param {
+  mode: 0
+  aligned: false
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_func: DIFF3_2
+  error_threshold: 3e-3
+  error_threshold: 3e-3
+  error_threshold: 3e-3
+  baseline_device: CPU
+}

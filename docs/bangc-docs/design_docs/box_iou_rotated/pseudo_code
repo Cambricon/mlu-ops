@@ -1,0 +1,376 @@
+box iou rotated operator pseudo_code
+Author: Songjin, 2021.11.8
+
+1. job partition strategy
+  - when aligned = true
+  shape check N==M, load Nx5 and Mx5, box1 and box2, element-wise compute
+  - when aligned = false
+  (load Nx5 only once, adjust N = num_box1, and M onchip size) or
+  (load N and M, M is large, N is same as M, loop N onchip;
+   loop N offchip, reuse large M compute result onchip, mark first_box2;
+   loop M offchip, compute large M compute, restore N offchip offset back to 0)
+
+// each box1 size N could also equal to M, compute Area->new_box_pts->
+// judge short size and num_boxes1, loop-or-remainder
+for (i=0, i<num_boxes1, i+=N) {
+  load N of boxes1, set first_box2=true
+  // num_boxes2 divided M, loop-or-remainder for num_boxes2
+  for (j=0, j<num_boxes2, j+=M) {
+    broadcast current boxes1 to M size.  // only reuse area1 data
+    for (ii = 0, ii < N, ii++) {
+      element-wise compute, mostly like aligned=True
+    }
+  }
+}
+
+NOTE: 1. TODO: when one ipu core each loop M >= num_boxes2, means can modify a
+               larger N, but should also align to 64
+      2. multi-core and cluster partition:
+         (when aligned == false)
+         Each Union1 deal (num_boxes1/jobLimit), set taskDimX and Y,
+         only launch kernel once. And each U1 set loop to deal an
+         ipuCoreNumsEachCluster*N of num_boxes1 (BUT NOT USE SM).
+         In cluster, ipu-cores load DIFFERENT boxes1 from DDR to CT,
+         and each ipu core computes WHOLE LOOP at num_boxes2.
+         TODO(perf): Further more, when num_boxes2 >> num_boxes1, and num_boxes1
+                     is small enough that not all ipu cores do effective works,
+                     can do optimization, use each cluster's different ipu core,
+                     partition on boxes2, in the future.
+         (when aligned == true)
+         just make plane task partition on N, num of box1 and box2,
+         be care of deal_num that should be divided by 64.
+
+Job partition graph
+
+ |    Cluster 1    |    Cluster 2    |    Cluster ...    |    Cluster X    |
+ |Core 0|...|Core X|  \                  ...                               |
+ |                        \
+ |                            \
+ |                                \
+ | n=n0~n1, m=m0~m1| n=n1~n2, m=m0~m1|...|
+ |     Block       |  Block job is also supported, because not use SM
+
+2. aligned = true,  transpose Nx5 -> 5xN, Mx5 -> 5xM (N==M),
+   aligned = false, only transpose boxes2,
+   because the output layout is NxM, we need continuous output data to store.
+   NOTE: func Transpose part should distinguish MLU arch.
+   RAM: 64xN, 64xM
+
+3. aligned == true,  Compute 1xArea1(scalar), RAM size(0),
+   aligned == false, Compute NxArea1(vector), RAM size(N),
+   Then, Compute MxArea2(vector), RAM size(M)
+   NOTE: Where Area1 or Area2 < 1e-14, set ious=0, set valid_box to false:
+           if (valid_box==false) set ious=0,
+           else compute Intersect/Area.
+         if (aligned==false)&&(scalar area1<1e-14), store num_box2 ious out,
+         mark output store_addr offset to next box1's pair.
+         (use a bool first_box2 to indicate if judge area1 and compute Area2)
+   RAM: N+M(area), M(condition, valid_box, init to true)
+   if not all 1e-14, next step call 4. compute new_box_pts
+
+4. func Compute new_box_pts
+   // when aligned = false, need box_raw data for next pair box1
+   //                       use scalar calculate new_box1
+   // when aligned = true,  reuse ram space
+   // RAM: new box pts, 2x2xM new_box1/2_x/y ptr
+   center_shift_x = (box1_raw[0] + box2_raw[0]) * 0.5  // a Temp space
+   new_box1.x_ctr = box1_raw[0] - center_shift_x;
+   new_box2.x_ctr = box2_raw[0] - center_shift_x;
+
+   center_shift_y = (box1_raw[1] + box2_raw[1]) * 0.5  // reuse center_shift_x
+   new_box1.y_ctr = box1_raw[1] - center_shift_y;
+   new_box2.y_ctr = box2_raw[1] - center_shift_y;
+
+   // box's width and height and theta are the same, actually don't need memcpy
+   // BE CAREFUL: when aligned=false, should reuse box2_raw_data, cannot be
+   //             over-written! new box2 should use another space.
+   // box1.w = box1_raw[2];
+   // box1.h = box1_raw[3];
+   // box1.a = box1_raw[4];
+
+   // box2.w = box2_raw[2];
+   // box2.h = box2_raw[3];
+   // box2.a = box2_raw[4];
+
+   call 5. func rotated_boxes_intersection(new_box1, new_box2), get Intersection
+
+   // use active_reciphp or surpass to compute (1/Area)
+   Last compute Intersection/(Area1+Area2-Intersection) when mode=IoU,
+                Intersection/Area1 when mode=Iof.
+
+5. func rotated_boxes_intersection(box1, box2) {
+     // RAM decl, points need double ram to store (x, y)
+     Point intersectPts[24xM], orderedPts[24xM]  // 96xM RAM
+     Point pts1, pts2[4xM]       // 2x8xM RAM
+     Point pts1[4xM], pts2[4xM]  //  16xM RAM
+     nums[M], valid_pts[24xM]    //  25xM RAM
+
+     // pts space not use box space, because box2 should reuse next box1 pair
+     call 6. func get_rotated_vertices(box1, box2, pts1, pts2)
+
+     // pts can not be reused between box-pairs, because centre is different
+     call 7. func get_intersection_points(pts1, pts2, intersectPts, nums_in);
+
+     where (nums_in <= 2), set valid_box to false, ious=0.0
+
+     // Convex Hull to order the intersection points in clockwise order
+     // and find the contour area
+     // num_convex reuse nums_in space, indicate after convex_hull_graham nums
+     call 8. convex_hull_graham(intersectPts, nums_in, orderedPts)
+     call 9. polygon_area(orderedPts, nums_in);
+   }
+
+   // declare cross_2d inline func, maybe directly program
+   inline cross_2d<T>(p1, p2) {
+     Temp1 = p1.x * p2.y;
+     Temp2 = p2.x * p1.y;
+     return (Temp1 - Temp2)
+   }
+
+   // declare dot_2d inline func, maybe directly program
+   inline dot_2d<T>(p1, p2) {
+     Temp1 = p1.x * p2.x;
+     Temp2 = p1.y * p2.y;
+     return (Temp1 + Temp2)
+   }
+
+6. func get_rotated_vertices(box1, box2, pts1, pts2) {
+   // sin cos func should distinguish MLU arch, need high_precision api?
+   // there are no scalar sin/cos functions in 200 MLU arch series...Orz
+   // local RAM: 2xM cos/sin theta2
+   //            2xM Temp
+     // pts1 compute, scalar compute when aligned = false
+     cosTheta2 = cos(box1.a) * 0.5  // use active or surpass
+     sinTheta2 = sin(box1.a) * 0.5  // use active or surpass
+
+     Temp1 = sinTheta2 * box1.h[3];
+     Temp2 = cosTheta2 * box1.w[2];
+     pts1[0].x = box1.x_ctr[0] - Temp1 - Temp2;
+     pts1[1].x = box1.x_ctr[0] + Temp1 - Temp2;
+
+     Temp1 = cosTheta2 * box1.h[3];  // reuse Temp space
+     Temp2 = sinTheta2 * box1.w[2];  // reuse Temp space
+     pts1[0].y = box1.y_ctr[1] + Temp1 - Temp2;
+     pts1[1].y = box1.y_ctr[0] - Temp1 - Temp2;
+
+     pts1[2].x = 2*box1.x_ctr[0] - pts1[0].x
+     pts1[2].y = 2*box1.y_ctr[0] - pts1[0].y
+     pts1[3].x = 2*box1.x_ctr[0] - pts1[1].x
+     pts1[3].y = 2*box1.y_ctr[0] - pts1[1].y
+
+     // pts2 compute, vector
+     cosTheta2 = cos(box2.a) * 0.5  // use Float datatype
+     sinTheta2 = sin(box2.a) * 0.5  // use Float datatype
+
+     Temp1 = sinTheta2 * box2.h[3];
+     Temp2 = cosTheta2 * box2.w[2];
+     pts2[0].x = box2.x_ctr[0] - Temp1 - Temp2;
+     pts2[1].x = box2.x_ctr[0] + Temp1 - Temp2;
+
+     Temp1 = cosTheta2 * box2.h[3];  // reuse Temp space
+     Temp2 = sinTheta2 * box2.w[2];  // reuse Temp space
+     pts2[0].y = box2.y_ctr[1] + Temp1 - Temp2;
+     pts2[1].y = box2.y_ctr[0] - Temp1 - Temp2;
+
+     pts2[2].x = 2*box2.x_ctr[0] - pts2[0].x
+     pts2[2].y = 2*box2.y_ctr[0] - pts2[0].y
+     pts2[3].x = 2*box2.x_ctr[0] - pts2[1].x
+     pts2[3].y = 2*box2.y_ctr[0] - pts2[1].y
+     // calculate each box 4 points by new_box
+   }  // func over
+
+ 7. func get_intersection points(pts1, pts2, intersectPts, nums_in) {
+     Point vec1[4], vec2[4xM];  // each point has (x, y)
+     // calculate each box vector, start with point[0]
+     // scalar compute vec1 when aligned = false
+     vec1[0].x = pts1[1].x - pts1[0].x;
+     vec1[0].y = pts1[1].y - pts1[0].y;
+     vec1[1].x = pts1[2].x - pts1[1].x;
+     vec1[1].y = pts1[2].y - pts1[1].y;
+     vec1[2].x = pts1[3].x - pts1[2].x;
+     vec1[2].y = pts1[3].y - pts1[2].y;
+     vec1[3].x = pts1[0].x - pts1[3].x;
+     vec1[3].y = pts1[0].y - pts1[3].y;
+     // vector compute vec2
+     vec2[0].x = pts2[1].x - pts2[0].x;
+     vec2[0].y = pts2[1].y - pts2[0].y;
+     vec2[1].x = pts2[2].x - pts2[1].x;
+     vec2[1].y = pts2[2].y - pts2[1].y;
+     vec2[2].x = pts2[3].x - pts2[2].x;
+     vec2[2].y = pts2[3].y - pts2[2].y;
+     vec2[3].x = pts2[0].x - pts2[3].x;
+     vec2[3].y = pts2[0].y - pts2[3].y;
+
+     // initialize all nums to 0
+     nums_in[24xM] = 0;
+
+     // RAM: 4x2xM Temp for cycle cross det
+     //        M   vec12
+     //      8xM   t1,t2
+     // loop unroll, not use for loop
+     for (i=0; i<4; i++) {
+       // cycle compute when aligned=true, multconst when aligned=false
+       det[0~3] = vec2[0~3] cycle_cross_2d vec1[i]
+       if (fabs(det) <= 1e-14) set valid_box to false, iou=0;
+
+       // each loop change different vec12
+       vec12[i].x = pts2[0~3].x - pts1[i].x   // scalar when aligned=false
+       vec12[i].y = pts2[0~3].y - pts1[i].y   // scalar when aligned=false
+
+       // where valid_box = true, compute * (1/det[0~3])
+       // use active_reciphp or surpass to compute (1/det)
+       t1[0~3] = cross_2d(vec2[0~3], vec12[0~3]) * valid_box / det[0~3]
+       t2[0~3] = cross_2d(vec1[i], vec12[0~3]) * valid_box  / det[0~3]
+
+       valid_pts[i*4+0~3] = (t1>=0.0f && t1<=1.0f && t2>=0.0f && t2<=1.0f);
+       intersections[i*4+0~3] = (t1[0~3]*vec1[i]+pts1[i])*valid_pts[i*4+0~3];
+       nums_in+= valid_pts[i];   // sum for all valid intersect points
+     }
+
+     // Here, we get first part of intersections and nums_in
+     // Then check if rect1 inside rect2 or rect2 inside rect1
+     const AB = vec2[0];
+     const DA = vec2[3];
+     ABdotAB = dot_2d(AB, AB);
+     ADdotAD = dot_2d(DA, DA);
+
+     // assume ABCD is a rectangle, and P is the point to be judged
+     // P is inside ABCD iff. P's projection on AB lies within AB
+     // and P's projection on AD lies within AD
+     // scalar compute, while pts1 use scalar
+     AP[0~3] = pts1[0~3] - pts2[0];
+
+     // AP is scalar
+     APdotAB = dot_2d(AP, AB);
+     APdotAD = - dot_2d(AP, DA);
+
+     valid_pts[16+0~3] = ((APdotAB>=0) && (APdotAD>=0)
+         && (APdotAB<=ABdotAB) && (APdotAD<=ADdotAD));
+     intersections[16+0~3] = pts1[0~3] * valid_pts[16+0~3];
+     nums_in+= valid_pts[i];   // sum for all valid intersect points
+
+     // scalar compute when aligned=false
+     const AB = vec1[0];
+     const DA = vec1[3];
+     ABdotAB = dot_2d(AB, AB);
+     ADdotAD = dot_2d(DA, DA);
+
+     // reverse the check - check for vertices of rect2 inside rect1
+     AP[0~3] = pts2[0~3] cycle_sub pts1[0];  // sub scalar
+
+     // AP is vector, AB, AD are scalar
+     APdotAB = dot_2d(AP, AB);
+     APdotAD = - dot_2d(AP, DA);
+
+     valid_pts[20+0~3] = ((APdotAB>=0) && (APdotAD>=0)
+         && (APdotAB<=ABdotAB) && (APdotAD<=ADdotAD));
+     intersections[20+0~3] = pts2[0~3] * valid_pts[20+0~3];
+     nums_in+= valid_pts[i];   // sum for all valid intersect points
+     // here we get all posible intersect points and nums_in
+   };
+
+ // shift_to_zero in mmcv src code, only true, ignore it...
+ 8. convex_hull_graham(p[24xM], nums_in[M], q[24xM], num_convex[M]) {
+   // here nums_in must >= 2, means valid boxes intersect points are at least 2
+
+   // Step1. Find the point with minimum y, if more than 1 points have the same minimun y,
+   //        pick the one with the minimum x.
+   // set p[i] to inf_sat_value if !valid_pts[i]
+   min_y_value[M] = minpool(p[24xM].y, c=M, divided by 64, h=ky=1, w=kx=24);
+   sub_y_value[24xM] = p[24xM].y cycle_sub min_y_value[M],
+   y_not_equal_min[24xM] = (sub_y_value!=0)
+   // set not equal min's sub_x_value to inf_sat_value;
+   sub_x_value[24xM] = p[24xM].x cycle_add(y_not_equal_min[24xM] cycle_mul inf_sat_value)
+   min_x_value[M] = minpool(sub_x_value[24xM], c=M, divided by 64, h=ky=1, w=kx=24)
+   // min_x_value and min_y_value are the start point indices, use at next step
+
+   // Step2. All points subtract starting-point (for sorting in the next step)
+   q[24xM].x = p[24xM].x cycle_sub start.x[M];
+   q[24xM].y = p[24xM].y cycle_sub start.y[M];
+
+   // Step3. Sort every intersection point according to their relative
+   //        cross-product values (essentially sorting according to angles)
+   //        If the angles are the same, sort according to distance to origin
+   dist[24xM] = dot_2d(q[24xM], q[24xM])
+
+   // loop M, use SCALAR insts to sort each q, using bubble-sorting
+   if (nums_in > 2) begin to sort, else set valid_box false, continue next pair
+   for (i=0; i<24; i++) {
+     if (dist[i]==0) {  //  means point i is the start point
+       swap q[i] and q[0];  // q[i] = q[0]; q[0] = 0;
+       swap dist[i] and dist[0];  // dist[i] = dist[0]; dist[0] = 0;
+       swap valid[i] and valid[0];
+       break;
+     }
+   }
+   for (i=1; i<24; i++) {
+     for (j=i+1; j<24; j++) {
+       if (valid_pts[i]) {  //  this position is a valid intersection point
+         if (valid_pts[j]) {
+           Temp1 = cross_2d(q[i], q[j]);
+           if ((fabs(Temp1) < 1e-6) && (dist[i] > dist[j])) {
+             swap q[j] and q[i];
+             swap dist[j] and dist[i];
+             // both valid points, don't need swap valid_pts
+           }
+         }
+       } else {  // i is not valid and j is valid, swap j to the i
+         if (valid_pts[j]) {
+           swap q[j] and q[i];
+           swap dist[j] and dist[i];
+           // swap valid_pts
+           valid_pts[i] = true;
+           valid_pts[j] = false;
+         }
+       }
+     }  // end for j
+   }  // end for i
+   // then, loop next scalar insts to sort
+
+   // Step4. make sure there are at least 2 points in the stack
+   int k;  // index of the non-overlapped second point
+   for (k=1; k<num_in; k++) {
+     if (dist[k]>1e-8) {
+       break;
+     }
+   }
+   if (k == num_in) {
+     // the convex hull is just one point
+     q[0] = start_point;  // min_value of (x, y)
+     set valid_box to false, break, next box pair
+   }
+   q[1] = q[k];  // front k points seem as overlapped points
+
+   int m = 2;  // 2 points in the stack
+   // Step5. Graham-Scanning process.
+   // When a non-convex relationship between the 3 points is found
+   // (either concave shape or duplicated points),
+   // we pop the previous point from the stack
+   // until the 3-point relationship is convex again, or
+   // until the stack only contains two points
+   for (int i = k+1; i < num_in; i++) {
+     while (m>1 && cross_2d(q[i]-q[m-2], q[m-1]-q[m-2])>=0) {
+       m--;
+     }
+     q[m] = q[i];
+     m++;
+   }
+   if (m>2) set last(24-m) q = q[0], use to erase invalid q in polygon area
+   else set valid_box to false, break, next box pair
+   nums_in = m;  // set valid intersect points nums to nums_in, as num_convex
+   // Step6. shift points back to zero, ignored because of mmcv src code
+   // ignored...
+
+   // At last, compute Polygon Area, has erased invalid q[24-m~24], set to q[0]
+   // vectorize calculate intersection
+   9. polygon_area compute
+   area[M] = 0;
+   m = bang_max(nums_in);
+   if (m<=2) flush all ious to 0  // all box-pair contain less than 3 valid pts
+   else compute polygon area:
+     for (int i=1; i<m; i++) {
+       area[M] += fabs(cross_2d(q[i][M]-q[0][M], q[i+1][M]-q[0][M]));
+     }
+     area = area * 0.5;  // multconst
+ }
+

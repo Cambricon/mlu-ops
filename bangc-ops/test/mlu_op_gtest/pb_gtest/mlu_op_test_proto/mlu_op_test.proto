@@ -215,6 +215,7 @@ message Node {
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
+  optional BoxIouRotatedParam box_iou_rotated_param = 200;   // BoxIouRotatedParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
@@ -303,7 +304,7 @@ enum mluOpLogBase {
 // param to call mluOpLog()
 message LogParam {
   required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
-  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];     
+  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];
 }
 
 // param to call mluOpSqrt()
@@ -369,6 +370,12 @@ message VoxelPoolingForwardParam {
   optional int32 num_voxel_x  = 4;
   optional int32 num_voxel_y  = 5;
   optional int32 num_voxel_z  = 6;
+}
+
+// param to call mluOpBoxIouRotated()
+message BoxIouRotatedParam {
+  optional int32 mode   = 1 [default = 0];  // 0 is IOU, 1 is IOF
+  optional bool aligned = 2 [default = false];
 }
 
 // param to call mluOpYoloBox()

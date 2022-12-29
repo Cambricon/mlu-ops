@@ -2912,6 +2912,99 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(mluOpHandle_t handle,
                                                      const mluOpTensorDescriptor_t pos_memo_desc,
                                                      void *pos_memo);
 
+// Group:BoxIouRotated
+/*!
+ * @brief Computes the intersection-over-union (Jaccard index, IOU) of rotated
+ * bounding-boxes. If \b aligned is false, then calculate the IOUs
+ * between each rotated bounding-box of \b bbox1 and \b bbox2, otherwise calculate
+ * the IOUs between each aligned pair of rotated bounding-box of \b bbox1
+ * and \b bbox2.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the box_iou_rotated operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] mode
+ * An integer value which decides to return a result of
+ * IOUs (Intersection Over Union) or IOFs (Intersection Over Foreground).
+ * The integer 0 represents IOU and 1 represents IOF.
+ * @param[in] aligned
+ * A boolean value. If it is false, then calculate the IOUs[i][j]
+ * or IOFs[i][j] between the row i of \b bbox1 and the row j of \b bbox2,
+ * otherwise calculate the IOUs[i] or IOFs[i] between the row i of \b bbox1
+ * and the row i of \b bbox2. Significantly, the numbers of rows of \b bbox1
+ * and \b bbox2 must be equal when \b aligned is true.
+ * @param[in] bbox1_desc
+ * The descriptor of the input tensor \b bbox1 (rotated bounding-box).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox1
+ * Pointer to the MLU memory that stores the input tensor \b bbox1.
+ * It has shape (n, 5), indicating (x, y, w, h, theta) for each row.
+ * Note that theta is in radian.
+ * @param[in] bbox2_desc
+ * The descriptor of the input tensor \b bbox2 (rotated bounding-box).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox2
+ * Pointer to the MLU memory that stores the input tensor \b bbox2.
+ * It has shape (m, 5), indicating (x, y, w, h, theta) for each row.
+ * Note that theta is in radian.
+ * @param[in] ious_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] ious
+ * IOUs or IOFs of input rotated bounding-boxes. Pointer to the MLU
+ * memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - By the order of \b bbox1 - \b bbox2 - \b ious, the supported data types of
+ *    \b bbox1, \b bbox2 and \b ious are as follows:
+ *   - float - float - float.
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \b bbox1 and \b bbox2 tensors must be 2.
+ * - The length of lowest dimension of \b bbox1 and \b bbox2 tensors must be 5.
+ * - Both sets of boxes are expected to be in
+ *   (x_center, y_center, width, height, angle) format.
+ *   - \b bbox1 (Tensor): shape [n, 5] in (x, y, w, h, theta) format.
+ *   - \b bbox2 (Tensor): shape [m, 5] in (x, y, w, h, theta) format.
+ * - When aligned mode is true, for input \b bbox1 and \b bbox2 with n-rows,
+ *   the output \b ious must be a 1D array with n-elements. When
+ *   \b aligned is false, for input \b bbox1 with n-rows and \b bbox2 with
+ *   m-rows, the output \b ious must be a 2D matrix with shape n*m.
+ *
+ * @note
+ * - When finding the point with minimum y and minimum x in convex-hull-graham,
+ *   BoxIouRotated performs min-pooling operation. If the input data of pooling
+ * contains NaN:
+ *   - On MLU200 series:
+ *    - The \b output value is the NaN.
+ *   - On MLU300 series:
+ *    - If the last value in the kernel of the pooling is NaN, the \b output
+ *      value is NaN. Otherwise, the \b output value is the minimum value after
+ *      the last NaN.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/box_iou_rotated.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBoxIouRotated(mluOpHandle_t handle,
+                   const int mode,
+                   const bool aligned,
+                   const mluOpTensorDescriptor_t bbox1_desc,
+                   const void *bbox1,
+                   const mluOpTensorDescriptor_t bbox2_desc,
+                   const void *bbox2,
+                   const mluOpTensorDescriptor_t ious_desc,
+                   void *ious);
+
 // Group: ThreeInterpolate
 /*!
  * @brief Computes weighted linear interpolation on 3 points by using
