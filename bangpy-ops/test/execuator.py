@@ -26,7 +26,7 @@ import sys
 import bangpy
 from .parser import Parser
 from .optest import OpTestFactory
-
+import numpy as np
 
 def execuate_kernel(proto_file, target: str, op_name):
     """execuate_kernel is used for invoking kernel and comparing
@@ -59,7 +59,7 @@ def execuate_kernel(proto_file, target: str, op_name):
         raise TypeError("Unsupported data type %s" % (data.get_output_dtype()))
     # launch kernel in factory model
     if op_name == "frac":
-        print("aaa",target, dtype, inputs.shape(), output.shape())
+        print("aaa",target, dtype, np.array(inputs).shape, np.array(output).shape)
     op_test = OpTestFactory.factory(op_name)(target,
                                              dtype,
                                              inputs,
