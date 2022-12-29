@@ -114,8 +114,8 @@ class Frac(object):
         task_id = 0
         data_calculated_each_task = self.length // self.task_num
         data_remain = self.length % self.task_num
-        loop_num = data_calculated_each_task * self.dtype_sz * (10//5) // self.single_buffer_size 
-        data_calculated_each_time = self.single_buffer_size // (self.dtype_sz * 10//5)
+        loop_num = data_calculated_each_task * self.dtype_sz * (20//5) // self.single_buffer_size 
+        data_calculated_each_time = self.single_buffer_size // (self.dtype_sz * 20//5)
         each_task_remain = data_calculated_each_task % data_calculated_each_time
 
         buffer_in = buffer_in.reshape((self.length,))
