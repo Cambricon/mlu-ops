@@ -65,3 +65,4 @@ def execuate_kernel(proto_file, target: str, op_name):
                                              inputs,
                                              output,
                                              data.read_prototxt())
+    op_test.compute()
