@@ -47,8 +47,8 @@ __mlu_func__ void bilinearInterpolate(const int height, const int width, T x,
   if (y <= 0) y = 0;
   if (x <= 0) x = 0;
 
-  *y_low = int(y);
-  *x_low = int(x);
+  *y_low = __float2int((float)y);
+  *x_low = __float2int((float)x);
 
   if ((*y_low) >= height - 1) {
     *y_high = *y_low = height - 1;
@@ -87,8 +87,8 @@ __mlu_func__ void bilinearInterpolateGradient(const int height, const int width,
   }
   if (y <= 0) y = 0;
   if (x <= 0) x = 0;
-  *y_low = int(y);
-  *x_low = int(x);
+  *y_low = __float2int((float)y);
+  *x_low = __float2int((float)x);
   if ((*y_low) >= height - 1) {
     *y_high = *y_low = height - 1;
     y = T(*y_low);
