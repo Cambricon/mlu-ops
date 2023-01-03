@@ -263,14 +263,14 @@ void three_interpolate_backward_cuda_kernel(
 
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(mluOpHandle_t handle,
-                                                         const mluOpTensorDescriptor_t grad_output_desc,
-                                                         const void *grad_output,
-                                                         const mluOpTensorDescriptor_t indices_desc,
-                                                         const void *indices,
-                                                         const mluOpTensorDescriptor_t weights_desc,
-                                                         const void *weights,
-                                                         const mluOpTensorDescriptor_t grad_features_desc,
-                                                         void *grad_features);
+                                                          const mluOpTensorDescriptor_t grad_output_desc,
+                                                          const void *grad_output,
+                                                          const mluOpTensorDescriptor_t indices_desc,
+                                                          const void *indices,
+                                                          const mluOpTensorDescriptor_t weights_desc,
+                                                          const void *weights,
+                                                          const mluOpTensorDescriptor_t grad_features_desc,
+                                                          void *grad_features);
 ```
 
 ## 3 实现方案设计

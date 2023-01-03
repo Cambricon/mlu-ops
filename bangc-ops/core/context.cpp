@@ -233,6 +233,15 @@ mluOpStatus_t mluOpUpdateContextInformation(mluOpHandle_t handle) {
 }
 
 mluOpStatus_t mluOpSetAtomicsMode(mluOpHandle_t handle,
+                                  mluOpAtomicsMode_t atomics_mode) {
+  PARAM_CHECK("[mluOpSetAtomicsMode]", handle != NULL);
+
+  handle->atomics_mode = atomics_mode;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t mluOpGetAtomicsMode(mluOpHandle_t handle,
                                   mluOpAtomicsMode_t *atomics_mode) {
   PARAM_CHECK("[mluOpGetAtomicsMode]", handle != NULL);
   PARAM_CHECK("[mluOpGetAtomicsMode]", atomics_mode != NULL);

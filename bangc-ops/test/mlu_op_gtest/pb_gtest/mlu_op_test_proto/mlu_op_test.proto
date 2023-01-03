@@ -215,11 +215,16 @@ message Node {
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
+  optional BoxIouRotatedParam box_iou_rotated_param = 41227;   // BoxIouRotatedParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
   optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
   optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
+  optional RoiAlignRotatedForwardParam roi_align_rotated_forward_param  = 134660;  //param
+  optional RoiAlignRotatedBackwardParam roi_align_rotated_backward_param = 134661;  // param  
+  optional RotatedFeatureAlignForwardParam rotated_feature_align_forward_param = 20229510;  //param
+  optional RotatedFeatureAlignBackwardParam rotated_feature_align_backward_param = 20221008;  //param
 }
 
 
@@ -303,7 +308,7 @@ enum mluOpLogBase {
 // param to call mluOpLog()
 message LogParam {
   required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
-  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];     
+  optional ComputationPreference prefer = 2 [default = COMPUTATION_HIGH_PRECISION];
 }
 
 // param to call mluOpSqrt()
@@ -371,6 +376,12 @@ message VoxelPoolingForwardParam {
   optional int32 num_voxel_z  = 6;
 }
 
+// param to call mluOpBoxIouRotated()
+message BoxIouRotatedParam {
+  optional int32 mode   = 1 [default = 0];  // 0 is IOU, 1 is IOF
+  optional bool aligned = 2 [default = false];
+}
+
 // param to call mluOpYoloBox()
 message YoloBoxParam {
   optional int32 class_num        = 1 [default = 1];
@@ -417,4 +428,36 @@ message VoxelizationParam {
   optional int32 max_voxels   = 2 [default = 20000];
   optional int32 ndim         = 3 [default = 3];
   optional bool deterministic = 4 [default = true];
+}
+
+// param to call mluOpRoiAlignRotatedForward()
+message RoiAlignRotatedForwardParam {
+  required int32 pooled_height  = 1;
+  required int32 pooled_width   = 2;
+  optional int32 sample_ratio   = 3 [default = 0];
+  required float spatial_scale  = 4;
+  optional bool aligned         = 5 [default = true];
+  optional bool clockwise       = 6 [default = false];
+}
+
+// param to call mluOpRoiAlignRotatedBackward()
+message RoiAlignRotatedBackwardParam {
+  required int32 pooled_height  = 1;
+  required int32 pooled_width   = 2;
+  optional int32 sample_ratio   = 3 [default = 0];
+  required float spatial_scale  = 4;
+  optional bool aligned         = 5 [default = true];
+  optional bool clockwise       = 6 [default = false];
+}
+
+// param to call mluOpRotatedFeatureAlignForward()
+message RotatedFeatureAlignForwardParam{
+  required float spatial_scale = 1 [default = 1.0];
+  required int32 points = 2 [default = 1]; 
+}
+
+// param to call mluOpRotatedFeatureAlignBackward()
+message RotatedFeatureAlignBackwardParam{
+  required float spatial_scale = 1 [default = 1.0];
+  required int32 points = 2 [default = 1]; 
 }

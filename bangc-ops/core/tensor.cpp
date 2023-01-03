@@ -153,42 +153,11 @@ mluOpStatus_t mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size) {
   }
 }
 
-#if MLUOP_TENSOR_QUEUE_ENABLE
-mluOpTensorDescriptorQueueStruct *queue_array = NULL;
-std::hash<std::thread::id> hasher;
-
-MLUOP_ATTRIBUTE_CONSTRUCTOR MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN void mluOpInit() {
-  if (!queue_array) {
-    queue_array =
-        new (std::nothrow) mluOpTensorDescriptorQueueStruct[QUEUE_ARRAY_LENGTH];
-  }
-}
-
-MLUOP_ATTRIBUTE_DESTRUCTOR MLUOP_ATTRIBUTE_VISIBILITY_HIDDEN void mluOpExit() {
-  if (queue_array) {
-    delete[] queue_array;
-    queue_array = NULL;
-  }
-}
-#endif
 /* MLUOP interface */
 mluOpStatus_t mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc) {
   PARAM_CHECK("[mluOpCreateTensorDescriptor]", desc != NULL);
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  if (MLUOP_PREDICT_FALSE(queue_array[id].queue.empty())) {
-    queue_array[id].extend(queue_array[id].extend_num);
-    queue_array[id].extend_num *= 2;
-  }
-  *desc = queue_array[id].queue.front();
-  queue_array[id].queue.pop();
-  queue_array[id].unlock();
-#else
   mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
   *desc = ts;
-#endif
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -197,28 +166,10 @@ mluOpStatus_t mluOpCreateGroupTensorDescriptors(
   PARAM_CHECK("[mluOpCreateGroupTensorDescriptors]", group_desc != NULL);
   PARAM_CHECK("[mluOpCreateGroupTensorDescriptors]", desc_num > 0);
 
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  if (MLUOP_PREDICT_FALSE(queue_array[id].queue.empty() ||
-                          (size_t)desc_num >
-                              (size_t)queue_array[id].queue.size())) {
-    queue_array[id].extend(
-        std::max((size_t)queue_array[id].extend_num, (size_t)desc_num));
-    queue_array[id].extend_num =
-        2 * std::max((size_t)queue_array[id].extend_num, (size_t)desc_num);
-  }
-  for (int i = 0; i < desc_num; ++i) {
-    *(group_desc[i]) = queue_array[id].queue.front();
-    queue_array[id].queue.pop();
-  }
-  queue_array[id].unlock();
-#else
   for (int i = 0; i < desc_num; ++i) {
     mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
     *(group_desc[i]) = ts;
   }
-#endif
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -509,15 +460,7 @@ mluOpStatus_t mluOpGetTensorDescriptorPositionScaleAndOffset(
 mluOpStatus_t mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc) {
   PARAM_CHECK("[mluOpDestroyTensorDescriptor]", desc != NULL);
   desc->reset();
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  queue_array[id].queue.emplace(desc);
-  queue_array[id].unlock();
-#else
   delete desc;
-#endif
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -525,21 +468,10 @@ mluOpStatus_t mluOpDestroyGroupTensorDescriptors(
     mluOpTensorDescriptor_t **group_desc, const int desc_num) {
   PARAM_CHECK("[mluOpDestroyGroupTensorDescriptors]", group_desc != NULL);
   PARAM_CHECK("[mluOpDestroyGroupTensorDescriptors]", desc_num > 0);
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-  size_t id = hasher(std::this_thread::get_id()) % QUEUE_ARRAY_LENGTH;
-  queue_array[id].lock();
-  for (int i = 0; i < desc_num; ++i) {
-    (*(group_desc[i]))->reset();
-    queue_array[id].queue.emplace(*(group_desc[i]));
-  }
-  queue_array[id].unlock();
-#else
   for (int i = 0; i < desc_num; ++i) {
     (*(group_desc[i]))->reset();
     delete (*(group_desc[i]));
   }
-#endif
 
   return MLUOP_STATUS_SUCCESS;
 }

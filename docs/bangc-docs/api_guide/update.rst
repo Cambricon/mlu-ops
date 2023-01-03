@@ -14,7 +14,8 @@ This section lists contents that were made for each product release.
 
     - voxel_pooling_forward
     - voxelization
-    - psa_mask
+    - psa_mask_forward
+    - psa_mask_backward
     - fill
 
 * V0.3.0

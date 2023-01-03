@@ -123,7 +123,7 @@ function main () {
         echo " NEUWARE_HOME:  "${NEUWARE_HOME}
         export PATH="${NEUWARE_HOME}/bin":$PATH
         export LD_LIBRARY_PATH="${NEUWARE_HOME}/lib64":$LD_LIBRARY_PATH
-        export MLUOPS_GTEST_FILL_RAM=OFF
+        export MLUOP_GTEST_FILL_RAM=OFF
     else
         printf "${RED} ERROR: please export NEUWARE_HOME variable first!\n${NC}"
         exit 1
@@ -137,12 +137,12 @@ function main () {
         echo "--Coverage test failed, please install genhtml"
         exit 0
     fi
-    
+
     if [[ "$(which html2text)" == "" ]]; then
         echo "--Coverage test failed, please install html2text."
         exit 0
     fi
-    
+
     parse_args "$@"
     export MLU_VISIBLE_DEVICES=${DEVICE_ID}
     process

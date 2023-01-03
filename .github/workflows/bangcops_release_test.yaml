@@ -10,35 +10,35 @@ jobs:
     strategy:
       matrix:
         runner: [mlu270-x5k, mlu290-m5, mlu370-m8]
-        os: [ubuntu16.04, ubuntu18.04, ubuntu20.04, debian9, debian10, centos7, centos8]
+        os: [ubuntu18.04, ubuntu20.04, debian10, centos7, centos8]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
 
       - name: pull_images
         run: |
-          docker pull docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
+          docker pull docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
 
       - name: build_bangc_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
           ./build.sh --sub_module=bangc
 
       - name: mlu_ops_version_check
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
-          bash version_check.sh 0.4.0
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
+          bash version_check.sh 0.4.1
 
       - name: bangc_ops_release_test_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/default_platform
 
       - name: bangc_ops_release_temp_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/default_platform
 
 
@@ -46,14 +46,14 @@ jobs:
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/370
 
       - name: bangc_ops_release_temp_370_cases
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-${{matrix.os}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-${{matrix.os}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
 
 

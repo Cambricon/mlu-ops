@@ -11,16 +11,13 @@ README
 
 ## Prerequisites
 
-运行 mlu-ops/tools/perf_analyse/ 下 python 脚本需要依赖第三方包，可通过 virtualenv 进行安装，需要使用内部 pip 镜像源，在文件 ～/.pip/pip.conf（不存在则创建）中添加以下内容：<br>
-    [global]<br>
-    index-url = http://mirrors.cambricon.com/pypi/web/simple<br>
-    trusted-host = mirrors.cambricon.com<br>
+运行 mlu-ops/tools/perf_analyse/ 下 python 脚本需要依赖第三方包，可通过 virtualenv 进行安装
 
 第三方包安装步骤如下：
 1. cd ~ (推荐安装到自己的home目录下)
 2. virtualenv venv --python=python3
 3. source ~/venv/bin/activate
-4. pip install -r {your_path}/tools/Perf_Analyse/requirements.txt
+4. pip install -r mlu-ops/tools/perf_analyse/requirements.txt
 
 说明： 通过第 2 步后会在当前目录下生成 venv  目录，第三方包就安装在这里面，下次使用只需进行第 3 步激活环境，无需重新生成，如果 requirements.txt 文件有更新，请再次执行第 3、4步。
 

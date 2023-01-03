@@ -25,7 +25,7 @@
 
 #define MLUOP_MAJOR 0
 #define MLUOP_MINOR 4
-#define MLUOP_PATCHLEVEL 0
+#define MLUOP_PATCHLEVEL 1
 
 #include <stdint.h>
 
@@ -1800,7 +1800,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  *
  * @par Reference
  * -
- * https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_v2_kernel.cu
+ * https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_kernel.cu
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGenerateProposalsV2(mluOpHandle_t handle,
@@ -2293,6 +2293,224 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t bottom_grad_desc,
                        void *bottom_grad);
 
+// Group:RoiAlignRotated
+/*!
+ * @brief Extracts the corresponding \b features information to \b output by bilinear interpolation
+ * according to the \b rois with rotation.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignRotatedForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of the features tensor.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the features tensor. The shape of \b features
+ * is [batch_num, H, W, C].
+ * @param[in] rois_desc
+ * The descriptor of rois tensor, which contains dimension and the layout of rois.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists of [batch_id,
+ * x, y, w, h, theta], where \p batch_id is the ID of the batch, \p x and \p y are the coordinate
+ * of center point, \p w and \p h are the width and height of rois, and \p theta is the rotated angle.
+ * @param[in] pooled_height
+ * The height of output.
+ * @param[in] pooled_width
+ * The width of output.
+ * @param[in] sample_ratio
+ * The number of sampling points in the bin which is used to compute the output.
+ * @param[in] spatial_scale
+ * The spatial scale of each ROI in the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the ROI by 0.5 pixel. If the
+ * value of \b aligned is set to true, the ROI is shifted by 0.5. If the value of \b aligned
+ * is set to false, the ROI is not shifted.
+ * @param[in] clockwise
+ * A boolean value which determines whether the rotation of ROI is clockwise.
+ * @param[out] output_desc
+ * The descriptor of output, which contains dimension and the layout of output.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b features, \b rois,
+ *   and output tensor \b output. Data types of all tensors should be the same.
+ *   - input tensor: half, float.
+ *   - rois tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b features, \b rois, and \b output are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The \b features tensor and \b output tensor should be 4D.
+ * - The half data type is not recommended due to low precision.
+ * - Size of the lowest dimension of \b features tensor and \b output tensor should be the same.
+ * - The \b rois tensor should be 2D array.
+ * - Size of the highest dimension of \b output tensor and \b rois tensor should be the same.
+ * - The shape of \b rois should be [rois_num, 6].
+ * - \p batch_id should be in the range of [0, \p batch_num - 1]; \p x and \p y should be greater than or
+ *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
+ *   and less than \p H and \p W respectively.
+ * - \p spatial_scale and \p sample_ratio should not be less than zero.
+ *
+ * @note
+ * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y parameters
+ *   that support infinity.
+ * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p spatial_scale cannot exceed
+ *   the range that can be represented by the parameter type.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the roi_align_rotated_forward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 3 * 3 * 1 and 1 * 6 --> input: [[[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]]]]
+
+     --> rois: [[0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
+
+     param:
+            pooled_height: 2, pooled_width: 2, spatial_scale: 1.0,
+            sampling_ratio: 2, aligned: false, clockwise: false
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[1],[1]],[[1],[1]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/roi_align_rotated.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
+                            const mluOpTensorDescriptor_t features_desc,
+                            const void* features,
+                            const mluOpTensorDescriptor_t rois_desc,
+                            const void* rois,
+                            const int pooled_height,
+                            const int pooled_width,
+                            const int sample_ratio,
+                            const float spatial_scale,
+                            const bool aligned,
+                            const bool clockwise,
+                            const mluOpTensorDescriptor_t output_desc,
+                            void* output);
+
+// Group:RoiAlignRotated
+/*!
+ * @brief Computes the gradients of feature map \b bottom_grad based on the input \b top_grad and
+ * \b rois to perform the backpropagation of the ::mluOpRoiAlignRotatedForward operation.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignRotatedBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] top_grad_desc
+ * The descriptor of the gradient tensor in the backpropagation process.
+ * @param[in] top_grad
+ * Pointer to the MLU memory that stores the top_grad tensor.
+ * @param[in] rois_desc
+ * The descriptor of rois tensor, which contains dimension and the layout of rois.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists
+ * of [batch_id, x, y, w, h, theta], where \p batch_id is the ID of the batch, \p x
+ * and \p y are the coordinate of center point, \p w and \p h are the width and height
+ * of rois, and \p theta is the rotated angle.
+ * @param[in] pooled_height
+ * The height of output.
+ * @param[in] pooled_width
+ * The width of output.
+ * @param[in] sample_ratio
+ * The number of sampling points in the bin which is used to compute the output.
+ * @param[in] spatial_scale
+ * The spatial scale of each ROI in the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the ROI by 0.5 pixel.
+ * If the value of \b aligned is set to true, the ROI is shifted by 0.5. If the value
+ * of \b aligned is set to false, the ROI is not shifted.
+ * @param[in] clockwise
+ * A boolean value which determines whether the rotation of ROI is clockwise.
+ * @param[in] bottom_grad_desc
+ * The descriptor of the gradient tensor of the origin feature map.
+ * @param[out] bottom_grad
+ * Pointer to the MLU memory that stores the bottom_grad tensor. The shape of
+ * bottom_grad is [batch_num, H, W, C].
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - This function supports the following Data types for input tensor \b top_grad, \b rois,
+ *   and output tensor \b bottom_grad. Data types of all tensors should be the same.
+ *   - top_grad tensor: half, float.
+ *   - rois tensor: half, float.
+ *   - bottom_grad tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b top_grad, \b rois, and \b bottom_grad are as follows:
+ *   - top_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - bottom_grad tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The \b bottom_grad tensor and \b top_grad tensor should be 4D.
+ * - The half data type is not recommended due to low precision.
+ * - Size of the lowest dimension of \b bottom_grad tensor and \b top_grad tensor should be the same.
+ * - The \b rois tensor should be 2D array.
+ * - Size of the highest dimension of \b top_grad tensor and \b rois tensor should be the same.
+ * - \p batch_id should be in the range of [0, \p batch_num - 1], \p x and \p y should be greater than or
+ *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
+ *   and less than \p H and \p W respectively.
+ * - \p spatial_scale and \p sample_ratio should not be less than zero.
+ *
+ * @note
+ * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y parameters
+ *   that support infinity.
+ * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p spatial_scale cannot exceed
+ *   the range that can be represented by the parameter type.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the roi_align_rotated_backward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 1 * 1 * 1 and 1 * 6 --> input: [[[[1.0]]]]
+
+     --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0, 0.0]]
+
+     param:
+            pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
+            sampling_ratio: 2, aligned: false, clockwise: false
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[0.25], [0.25]], [[0.25], [0.25]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/roi_align_rotated.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t top_grad_desc,
+                             const void* top_grad,
+                             const mluOpTensorDescriptor_t rois_desc,
+                             const void* rois,
+                             const int pooled_height,
+                             const int pooled_width,
+                             const int sample_ratio,
+                             const float spatial_scale,
+                             const bool aligned,
+                             const bool clockwise,
+                             const mluOpTensorDescriptor_t bottom_grad_desc,
+                             void* bottom_grad);
+
 // Group:RoiCrop
 /*!
  * @brief Generates fixed size feature map for each grid. Each value in the
@@ -2436,6 +2654,177 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
                      const void *grid,
                      const mluOpTensorDescriptor_t grad_input_desc,
                      void *grad_input);
+
+// Group:RotatedFeatureAlign
+/*!
+ * @brief Uses the feature interpolation to obtain the position information corresponding to the
+ * refined rotate anchors \b bboxes and reconstructs the feature maps \b output in pixel-wise
+ * manner to achieve feature alignment.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRotatedFeatureAlignForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] bboxes_desc
+ * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bboxes
+ * Pointer to the MLU memory that stores the bboxes tensor.
+ * @param[in] spatial_scale
+ * A float value that is the scale factor of coordinates of bboxes.
+ * @param[in] points
+ * An int value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
+ * @param[in] output_desc
+ * The descriptor of output tensor, which contains the dimension and layout of output tensor.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input, bboxes tensor \b
+ *   bboxes, and output tensor \b output. Data types of all tensors should be the same.
+ *   - input tensor: half, float.
+ *   - bboxes tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b input, \b bboxes and \b output are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - bboxes tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must be 4D.
+ * - Size of the each dimension of input tensor and output tensor must be the same.
+ * - The bboxes tensor must be 4D.
+ * - The 4D information of bboxes tensor consists of [y, x, w, h, a].
+ * - The 1D sizes of input tensor and bboxes tensor must be the same.
+ * - The 2D sizes of input tensor and bboxes tensor must be the same.
+ * - The 3D sizes of input tensor and bboxes tensor must be the same.
+ * - The shape of \b input should be [batch_num, height, width, channels].
+ * - The shape of \b bboxes should be [batch_num, height, width, 5].
+ * - The shape of \b output should be [batch_num, height, width, channels].
+ * - \b points is the number of sample points. Only 1 and 5 are supported. The default value is 1.
+ * - The value of \b spatial_scale is larger than zero.
+ *
+ * @note
+ * - The inputs \b bboxes and \b spatial_scale with NaN or infinity are not supported.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the rotated_feature_align_forward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 2 * 2 * 1 and 1 * 2 * 2 * 5
+     --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
+     --> bboxes: [[0.0, 2.0, 2.0, 1.0, 1.0]]
+
+     param:
+            spatial_scale: 1.0, points: 1
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[5.0], [6.0]], [[6.0], [8.0]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const void *input_ptr,
+                                const mluOpTensorDescriptor_t bboxes_desc,
+                                const void *bboxes_ptr,
+                                const float spatial_scale,
+                                const int points,
+                                const mluOpTensorDescriptor_t output_desc,
+                                void *output_ptr);
+
+// Group:RotatedFeatureAlign
+/*!
+ * @brief Computes the gradients of feature map \b bottom_input based on the inputs \b top_output
+ * and \b bboxes to perform the backpropagation of the ::mluOpRotatedFeatureAlignForward operation.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRotatedFeatureAlignBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] top_output_desc
+ * The descriptor of the top_output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] top_output
+ * Pointer to the MLU memory that stores the top_output tensor.
+ * @param[in] bboxes_desc
+ * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bboxes
+ * Pointer to the MLU memory that stores the bboxes tensor.
+ * @param[in] spatial_scale
+ * A float value that is the scale factor of coordinates of bboxes.
+ * @param[in] points
+ * An int value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
+ * @param[in] bottom_input_desc
+ * The descriptor of bottom_input tensor, which contains the dimension and layout of bottom_input tensor.
+ * @param[out] bottom_input
+ * Pointer to the MLU memory that stores the bottom_input tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the following data types for top_output tensor \b top_output, bboxes
+ *   tensor \b
+ *   bboxes, and bottom_input tensor \b bottom_input. Data types of all tensors should be the same.
+ *   - top_output tensor: half, float.
+ *   - bboxes tensor: half, float.
+ *   - bottom_input tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b top_output, \b bboxes and \b bottom_input are as follows:
+ *   - top_output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - bboxes tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - bottom_input tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The top_output tensor and bottom_input tensor must be 4D.
+ * - Sizes of the each dimension of top_output tensor and bottom_input tensor must be the same.
+ * - The bboxes tensor must be 4D.
+ * - The 4D information of bboxes tensor consists of [y, x, w, h, a].
+ * - The 1D sizes of top_output tensor and bboxes tensor must be the same.
+ * - The 2D sizes of top_output tensor and bboxes tensor must be the same.
+ * - The 3D sizes of top_output tensor and bboxes tensor must be the same.
+ * - The shape of \b top_output should be [batch_num, height, width, channels].
+ * - The shape of \b bboxes should be [batch_num, height, width, 5].
+ * - The shape of \b bottom_input should be [batch_num, height, width, channels].
+ * - \b points is the number of sample points. Only 1 and 5 are supported. The default value is 1.
+ * - The value of \b spatial_scale is larger than zero.
+ *
+ * @note
+ * - The inputs \b bboxes and \b spatial_scale with NaN or infinity are not supported.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle_,
+                                 const mluOpTensorDescriptor_t top_output_desc,
+                                 const void *top_output_ptr,
+                                 const mluOpTensorDescriptor_t bboxes_desc,
+                                 const void *bboxes_ptr,
+                                 const float spatial_scale,
+                                 const int points,
+                                 const mluOpTensorDescriptor_t bottom_input_desc,
+                                 void *bottom_input_ptr);
 
 // Group:Sqrt
 /*!
@@ -2912,6 +3301,99 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(mluOpHandle_t handle,
                                                      const mluOpTensorDescriptor_t pos_memo_desc,
                                                      void *pos_memo);
 
+// Group:BoxIouRotated
+/*!
+ * @brief Computes the intersection-over-union (Jaccard index, IOU) of rotated
+ * bounding-boxes. If \b aligned is false, then calculate the IOUs
+ * between each rotated bounding-box of \b bbox1 and \b bbox2, otherwise calculate
+ * the IOUs between each aligned pair of rotated bounding-box of \b bbox1
+ * and \b bbox2.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the box_iou_rotated operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] mode
+ * An integer value which decides to return a result of
+ * IOUs (Intersection Over Union) or IOFs (Intersection Over Foreground).
+ * The integer 0 represents IOU and 1 represents IOF.
+ * @param[in] aligned
+ * A boolean value. If it is false, then calculate the IOUs[i][j]
+ * or IOFs[i][j] between the row i of \b bbox1 and the row j of \b bbox2,
+ * otherwise calculate the IOUs[i] or IOFs[i] between the row i of \b bbox1
+ * and the row i of \b bbox2. Significantly, the numbers of rows of \b bbox1
+ * and \b bbox2 must be equal when \b aligned is true.
+ * @param[in] bbox1_desc
+ * The descriptor of the input tensor \b bbox1 (rotated bounding-box).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox1
+ * Pointer to the MLU memory that stores the input tensor \b bbox1.
+ * It has shape (n, 5), indicating (x, y, w, h, theta) for each row.
+ * Note that theta is in radian.
+ * @param[in] bbox2_desc
+ * The descriptor of the input tensor \b bbox2 (rotated bounding-box).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox2
+ * Pointer to the MLU memory that stores the input tensor \b bbox2.
+ * It has shape (m, 5), indicating (x, y, w, h, theta) for each row.
+ * Note that theta is in radian.
+ * @param[in] ious_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] ious
+ * IOUs or IOFs of input rotated bounding-boxes. Pointer to the MLU
+ * memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - By the order of \b bbox1 - \b bbox2 - \b ious, the supported data types of
+ *    \b bbox1, \b bbox2 and \b ious are as follows:
+ *   - float - float - float.
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \b bbox1 and \b bbox2 tensors must be 2.
+ * - The length of lowest dimension of \b bbox1 and \b bbox2 tensors must be 5.
+ * - Both sets of boxes are expected to be in
+ *   (x_center, y_center, width, height, angle) format.
+ *   - \b bbox1 (Tensor): shape [n, 5] in (x, y, w, h, theta) format.
+ *   - \b bbox2 (Tensor): shape [m, 5] in (x, y, w, h, theta) format.
+ * - When aligned mode is true, for input \b bbox1 and \b bbox2 with n-rows,
+ *   the output \b ious must be a 1D array with n-elements. When
+ *   \b aligned is false, for input \b bbox1 with n-rows and \b bbox2 with
+ *   m-rows, the output \b ious must be a 2D matrix with shape n*m.
+ *
+ * @note
+ * - When finding the point with minimum y and minimum x in convex-hull-graham,
+ *   BoxIouRotated performs min-pooling operation. If the input data of pooling
+ * contains NaN:
+ *   - On MLU200 series:
+ *    - The \b output value is the NaN.
+ *   - On MLU300 series:
+ *    - If the last value in the kernel of the pooling is NaN, the \b output
+ *      value is NaN. Otherwise, the \b output value is the minimum value after
+ *      the last NaN.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/box_iou_rotated.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBoxIouRotated(mluOpHandle_t handle,
+                   const int mode,
+                   const bool aligned,
+                   const mluOpTensorDescriptor_t bbox1_desc,
+                   const void *bbox1,
+                   const mluOpTensorDescriptor_t bbox2_desc,
+                   const void *bbox2,
+                   const mluOpTensorDescriptor_t ious_desc,
+                   void *ious);
+
 // Group: ThreeInterpolate
 /*!
  * @brief Computes weighted linear interpolation on 3 points by using
@@ -2959,7 +3441,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data type of features tensor, weights tensor and output tensor should be the same.
+ * - Data types of features tensor, weights tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - features tensor: half, float.
  *   - indices tensor: int.
@@ -2967,7 +3449,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(mluOpHandle_t handle,
  *   - output tensor: half, float.
  *
  *  @par Data Layout
- *  - The supported data layout of \b features, \b indices, \b weights, \b output are
+ *  - The supported data layouts of \b features, \b indices, \b weights, \b output are
  *    as follows:
  *
  *   - features tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -3010,6 +3492,93 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
                              const void *weights,
                              const mluOpTensorDescriptor_t output_desc,
                              void *output);
+
+// Group: ThreeInterpolate
+/*!
+ * @brief Computes the gradients of feature map \b grad_features based on the
+ *  inputs \b grad_output , \b indices and \b weights to perform the backpropagation
+ *  of the ::mluOpThreeInterpolateForward operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the three_interpolate_forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] grad_output_desc
+ * The descriptor of the grad_output tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the gradients of output tensor. The grad_output's
+ * shape (B, C, N), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] indices_desc
+ * The descriptor of the indices tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the input indicies tensor. The indices'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] weights_desc
+ * The descriptor of the weights tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] weights
+ * Pointer to the MLU memory that stores the input weights tensor. The weights'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] grad_features_desc
+ * The descriptor of the grad_features tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] grad_features
+ * Pointer to the MLU memory that stores the gradients of features tensor. The
+ * grad_features' shape (B, C, M), B is batch size, C is channel size, M is number
+ * of elements in one input channel.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - Data types of grad_output tensor, weights tensor and grad_features tensor should be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - grad_output tensor: half, float.
+ *   - indices tensor: int.
+ *   - weights tensor: half, float.
+ *   - grad_features tensor: half, float.
+ *
+ *  @par Data Layout
+ *  - The supported data layouts of \b grad_output, \b indices, \b weights, \b grad_features are
+ *    as follows:
+ *
+ *   - grad_output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - indices tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - weights tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - grad_features tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ *  @par Scale Limitation
+ *  - The dimension of \b grad_output should be equal to 3.
+ *  - The dimension of \b indices should be equal to 3.
+ *  - The dimension of \b weights should be equal to 3.
+ *  - The dimension of \b grad_features should be equal to 3.
+ *
+ * @par Requirements
+ * - None.
+ *
+ *  @par Note
+ *  - The value of \b indices must be in the range of [0, M-1], otherwise the output result
+ *    is meaningless and the corresponding output will be set to 0.
+ *  - In MLU270 and MLU290, the maximum value in the \b indices should be less than
+ *    2^23, otherwise the output result is not guaranteed to be correct.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t grad_output_desc,
+    const void *grad_output, const mluOpTensorDescriptor_t indices_desc, const void *indices,
+    const mluOpTensorDescriptor_t weights_desc, const void *weights,
+    const mluOpTensorDescriptor_t grad_features_desc, void *grad_features);
 
 // Group:Ballquery
 /*!
@@ -3287,7 +3856,7 @@ mluOpExpand(mluOpHandle_t handle,
      @endverbatim
  *
  * @par Reference
- * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
+ * - https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
  *
  */
 mluOpStatus_t MLUOP_WIN_API mluOpFill(
@@ -3363,7 +3932,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(
  * - None.
  *
  * @par Reference
- * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
  *
  */
 mluOpStatus_t MLUOP_WIN_API
@@ -3445,7 +4014,7 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
  *
  */
 mluOpStatus_t MLUOP_WIN_API
@@ -3457,96 +4026,6 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
                      const int w_mask,
                      const mluOpTensorDescriptor_t dx_desc,
                      void *dx);
-
-// Group: ThreeInterpolate
-/*!
- * @brief Computes weighted linear interpolation on 3 points by using
- * 3 indices in \b indices to select 3 points in \b features, uses the
- * 3 points to multiply with corresponding 3 weights in \b weights,
- * adds the 3 multiplication results to get one interpolation result,
- * for each batch repeats the above process N times on each channel,
- * and returns the results in the output tensor \b output.
- *
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the three_interpolate_forward operation. For detailed information,
- * see ::mluOpHandle_t.
- * @param[in] grad_output_desc
- * The descriptor of the grad_output tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] grad_output
- * Pointer to the MLU memory that stores the input features tensor. The features'
- * shape (B, C, N), B is batch size, C is channel size, N is the number of
- * elements in one input channel.
- * @param[in] indices_desc
- * The descriptor of the indices tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] indices
- * Pointer to the MLU memory that stores the input indicies tensor. The indices'
- * shape (B, N, 3), B is batch size, C is channel size, N is the number of
- * elements in one output channel.
- * @param[in] weights_desc
- * The descriptor of the weights tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] weights
- * Pointer to the MLU memory that stores the input weights tensor. The weights'
- * shape (B, N, 3), B is batch size, C is channel size, N is the number of
- * elements in one output channel.
- * @param[in] grad_features_desc
- * The descriptor of the output tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[out] grad_features
- * Pointer to the MLU memory that stores the output features tensor. The
- * output's shape (B, C, M), B is batch size, C is channel size, M is number
- * of elements in one output channel.
- *
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *   ::MLUOP_STATUS_NOT_SUPPORTED
- *
- * @par Data Type
- * - Data type of features tensor, weights tensor and output tensor should be the same.
- * - The supported data types of input and output tensors are as follows:
- *   - features tensor: half, float.
- *   - indices tensor: int.
- *   - weights tensor: half, float.
- *   - output tensor: half, float.
- *
- *  @par Data Layout
- *  - The supported data layout of \b features, \b indices, \b weights, \b output are
- *    as follows:
- *
- *   - features tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - indices tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - weights tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - output tensor: \p MLUOP_LAYOUT_ARRAY.
- *
- *  @par Scale Limitation
- *  - The dimension of \b grad_output should be equal to 3.
- *  - The dimension of \b indices should be equal to 3.
- *  - The dimension of \b weights should be equal to 3.
- *  - The dimension of \b grad_features should be equal to 3.
- *
- * @par Requirements
- * - None.
- *
- *  @par Note
- *  - The value of \b indices must be in the range of [0, M-1], otherwise the output result
- *    is meaningless and the corresponding output will be set to 0.
- *  - In MLU270 and MLU290, the maximum value in the \b indices should be less than
- *    2^23, otherwise the output result is not guaranteed to be correct.
- *
- * @par Example
- * - None.
- *
- * @par Reference
- * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
- */
-mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t grad_output_desc,
-    const void *grad_output, const mluOpTensorDescriptor_t indices_desc, const void *indices,
-    const mluOpTensorDescriptor_t weights_desc, const void *weights,
-    const mluOpTensorDescriptor_t grad_features_desc, void *grad_features);
 
 #if defined(__cplusplus)
 }

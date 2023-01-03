@@ -40,10 +40,11 @@
 #define REPEATS_TIME_GAP 1
 #define REPEATS_TIME_MOD 0
 
-void PolicyFuncThreeInterpolateForward(
-    const mluOpHandle_t &handle, const mluOpTensorDescriptor_t &desc, int b,
-    int c, int m, int n, cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type,
-    int &c_limit_size, int &m_limit_size, int &n_limit_size) {
+static void PolicyFuncThreeInterpolateForward(
+    const mluOpHandle_t &handle, const mluOpTensorDescriptor_t &desc,
+    const int b, const int c, const int m, const int n, cnrtDim3_t *k_dim,
+    cnrtFunctionType_t *k_type, int *c_limit_size, int *m_limit_size,
+    int *n_limit_size) {
   size_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   size_t core_in_cluster = handle->core_num_per_cluster;
   size_t cores_in_device = cluster_num * core_in_cluster;
@@ -120,10 +121,10 @@ void PolicyFuncThreeInterpolateForward(
       int current_repeats = b * n_aligned_limit / n_limit;
       int current_repeats_mod = current_repeats % cores_in_device;
       int current_repeats_div = current_repeats / cores_in_device;
+      bool update_best = false;
       if ((best_repeats_div - current_repeats_div) > REPEATS_TIME_GAP) {
         // minimize the repeats time
-        best_n_limit = n_limit;
-        best_n_aligned_limit = n_aligned_limit;
+        update_best = true;
       } else if (((best_repeats_div - current_repeats_div) ==
                   REPEATS_TIME_GAP) &&
                  (best_repeats_mod ||
@@ -131,21 +132,22 @@ void PolicyFuncThreeInterpolateForward(
                    current_repeats_mod == REPEATS_TIME_MOD))) {
         // when current repeats time is only one number less than the best
         // check the repeats mod to make use of the most cores
-        best_n_limit = n_limit;
-        best_n_aligned_limit = n_aligned_limit;
+        update_best = true;
       } else if (best_repeats_div == current_repeats_div) {
         // when repeats time is the same, make use of the most cores
         if ((best_repeats_mod && current_repeats_mod &&
              (best_repeats_mod < current_repeats_mod)) ||
             (best_repeats_mod && current_repeats_mod == REPEATS_TIME_MOD)) {
-          best_n_limit = n_limit;
-          best_n_aligned_limit = n_aligned_limit;
+          update_best = true;
         }
       } else if (((current_repeats_div - best_repeats_div) ==
                   REPEATS_TIME_GAP) &&
                  best_repeats_mod && current_repeats_mod == REPEATS_TIME_MOD) {
         // when current repeats time is only one number more than the best
         // check the repeats mod to make use of the most cores
+        update_best = true;
+      }
+      if (update_best) {
         best_n_limit = n_limit;
         best_n_aligned_limit = n_aligned_limit;
       }
@@ -183,9 +185,9 @@ void PolicyFuncThreeInterpolateForward(
           limit_size - align_base_128 * align_base_128 * align_base_128;
     }
   }
-  c_limit_size = c_limit;
-  m_limit_size = m_limit;
-  n_limit_size = n_limit;
+  *c_limit_size = c_limit;
+  *m_limit_size = m_limit;
+  *n_limit_size = n_limit;
 
   int n_aligned_limit = CEIL_ALIGN(n, n_limit);
   n_limit = n_limit > n_aligned_limit ? n_aligned_limit : n_limit;
@@ -319,8 +321,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   int m_limit_size = c_limit_size;
   int n_limit_size = c_limit_size;
   PolicyFuncThreeInterpolateForward(handle, features_desc, b, c, m, n, &k_dim,
-                                    &k_type, c_limit_size, m_limit_size,
-                                    n_limit_size);
+                                    &k_type, &c_limit_size, &m_limit_size,
+                                    &n_limit_size);
   VLOG(5) << "[mluOpThreeInterpolateForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "]";
   if (features_desc->dtype == MLUOP_DTYPE_HALF) {

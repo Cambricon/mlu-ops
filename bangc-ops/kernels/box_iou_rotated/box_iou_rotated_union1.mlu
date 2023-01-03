@@ -1,0 +1,123 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/box_iou_rotated/box_iou_rotated_aligned.h"
+#include "kernels/box_iou_rotated/box_iou_rotated_nonaligned.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "mlu_op_kernel.h"
+
+__mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
+                                           float *ious, const int32_t num_box1,
+                                           const int32_t num_box2,
+                                           const int32_t mode,
+                                           const bool aligned) {
+  // At first, judge current ipu core deal box range, aligned or non-aligned
+  //
+  // For multi-core partition strategy:
+  // - When aligned = false
+  // Each ipu core does different box1 range, and all box2 with whole loop.
+  // TODO(perf): Further more, when num_boxes2 >> num_boxes1, and num_boxes1
+  //             is small enough that not all ipu cores do effective works,
+  //             should adjust job partition strategy to optimize,
+  //             different ipu cores in each cluster, also partition on box2,
+  //             to improve efficiency.
+  // - When aligned = true
+  // Just make plane job partition on N, num of box1 is equal with num of box2,
+  //
+  // Job partition graph
+  //
+  //  |    Cluster 1    |    Cluster 2    |    Cluster ...  |  Cluster X  |
+  //  |Core 0|...|Core X|  \                  ...                         |
+  //  |                        \
+  //  |                            \
+  //  |                                \
+  //  | n=n0~n1, m=m0~m1| n=n1~n2, m=m0~m1|...|
+  //  |     Block       |  Block job is also supported, because not using SM
+
+  // For ipu core loop algorithm:
+  // - When aligned = true
+  //  Load Nx5 and Mx5, box1 and box2, do element-wise computing
+  // - When aligned = false
+  //  load N and M, M is large, N broadcast 1x5 box data once, loop N onchip;
+  //  loop N offchip, reuse area2 result onchip;
+  //  loop M offchip, compute area2, trans, restore N offchip offset back to 0
+  //
+  // For ipu core computing algorithm:
+  // 1. load input box1 and box2
+  // 2. transpose (distinguish MLU arch >= 300)
+  // 3. calculate new points and area, set which area < 1e-14 valid_box = false
+  // 4. calculate rotated vertices
+  // 5. calculate intersection points, set which nums_in <= 2 valid_box = false
+  // 6. convex-hull-graham, set which num_convex <= 2 valid_box = false
+  // 7. compute polygon area and final ious according to mode
+
+  // Not use shared memory core
+  if (__is_mpu()) {
+    return;
+  }
+
+  uint32_t num_total = num_box1;
+  uint32_t num_per_core = FLOOR_ALIGN(num_total / taskDim, COMPUTE_COUNT_ALIGN);
+  uint32_t rem_for_all = num_total - taskDim * num_per_core;
+  // last ipu core does more work
+  uint32_t current_core_num =
+      num_per_core + (taskId == taskDim - 1) * rem_for_all;
+  uint32_t current_box1_offset = taskId * num_per_core * SINGLE_BOX_DIM;
+  uint32_t current_box2_offset;
+  uint32_t current_ious_offset;
+
+  MLULOG("taskId             : %d\n", taskId);
+  MLULOG("taskDim            : %d\n", taskDim);
+  MLULOG("num_total          : %d\n", num_total);
+  MLULOG("num_per_core       : %d\n", num_per_core);
+  MLULOG("rem_for_all        : %d\n", rem_for_all);
+  MLULOG("current_core_num   : %d\n", current_core_num);
+  MLULOG("current_box1_offset: %d\n", current_box1_offset);
+
+  if (aligned) {
+    current_box2_offset = current_box1_offset;
+    current_ious_offset = taskId * num_per_core;
+    MLULOG("aligned current_box2_offset: %d\n", current_box2_offset);
+    MLULOG("aligned current_ious_offset: %d\n", current_ious_offset);
+    MLUUnion1BoxIouRotatedAligned(
+        box1 + current_box1_offset, box2 + current_box2_offset,
+        ious + current_ious_offset, current_core_num, mode);
+  } else {
+    current_box2_offset = 0;
+    current_ious_offset = taskId * num_per_core * num_box2;
+    MLULOG("non-aligned current_box2_offset: %d\n", current_box2_offset);
+    MLULOG("non-aligned current_ious_offset: %d\n", current_ious_offset);
+    MLUUnion1BoxIouRotatedNonAligned(box1 + current_box1_offset, box2,
+                                     ious + current_ious_offset,
+                                     current_core_num, num_box2, mode);
+  }
+}
+
+void MLUOP_WIN_API mluOpUnionKernelBoxIouRotatedFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *box1, const void *box2, void *ious, const int num_box1,
+    const int num_box2, const int mode, const bool aligned) {
+  MLUKernelBoxIouRotated<<<k_dim, k_type, queue>>>((float *)box1, (float *)box2,
+                                                   (float *)ious, num_box1,
+                                                   num_box2, mode, aligned);
+}

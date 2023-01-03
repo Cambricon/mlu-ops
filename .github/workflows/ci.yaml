@@ -21,7 +21,7 @@ jobs:
 
       - name: build_bangc_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-ubuntu16.04
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-ubuntu18.04
           ./build.sh --sub_module=bangc
 
       - name: build_bangpy_ops
@@ -32,14 +32,14 @@ jobs:
       - name: bangc_ops_release_temp_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-ubuntu16.04
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-ubuntu18.04
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/default_platform
 
       - name: test_bangc_ops_release_temp_370_cases
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.0-devel-x86_64-ubuntu16.04
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.4.1-devel-x86_64-ubuntu18.04
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
 
       - name: test_bangpy_ops

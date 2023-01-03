@@ -48,8 +48,9 @@ void ThreeInterpolateBackwardExecutor::compute() {
   VLOG(4) << "call mluOpThreeInterpolateBackward()";
   interface_timer_.start();
   MLUOP_CHECK(mluOpThreeInterpolateBackward(
-      handle_, grad_output_desc, grad_output_data_ptr, indices_desc, indices_data_ptr,
-      weights_desc, weights_data_ptr, grad_features_desc, grad_features_data_ptr));
+      handle_, grad_output_desc, grad_output_data_ptr, indices_desc,
+      indices_data_ptr, weights_desc, weights_data_ptr, grad_features_desc,
+      grad_features_data_ptr));
   interface_timer_.stop();
   VLOG(4) << "ThreeInterpolateBackwardExecutor call compute end.";
 }
@@ -68,11 +69,11 @@ void ThreeInterpolateBackwardExecutor::cpuCompute() {
         auto indices_index = weights_index;
         auto grad_features_index = batch * c_ * m_ + channel * m_;
         grad_features[grad_features_index + (int)indices[indices_index + 0]] +=
-          grad_output[grad_output_index] * weights[weights_index + 0];
+            grad_output[grad_output_index] * weights[weights_index + 0];
         grad_features[grad_features_index + (int)indices[indices_index + 1]] +=
-          grad_output[grad_output_index] * weights[weights_index + 1];
+            grad_output[grad_output_index] * weights[weights_index + 1];
         grad_features[grad_features_index + (int)indices[indices_index + 2]] +=
-          grad_output[grad_output_index] * weights[weights_index + 2];
+            grad_output[grad_output_index] * weights[weights_index + 2];
       }
     }
   }

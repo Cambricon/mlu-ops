@@ -31,9 +31,9 @@ class ThreeInterpolateForwardExecutor : public Executor {
   ThreeInterpolateForwardExecutor() {}
   ~ThreeInterpolateForwardExecutor() {}
 
-  void paramCheck();
-  void compute();
-  void cpuCompute();
+  void paramCheck() override;
+  void compute() override;
+  void cpuCompute() override;
   int64_t getTheoryOps() override;
 
  private:
