@@ -56,8 +56,8 @@ __mlu_func__ void bilinearInterpolate(const int input_height,
   if (y <= 0) y = (T)0;
   if (x <= 0) x = (T)0;
 
-  *y_low = int(y);
-  *x_low = int(x);
+  *y_low = __float2int((float)y);
+  *x_low = __float2int((float)x);
 
   if (*y_low >= input_height - 1) {
     *y_high = *y_low = input_height - 1;
@@ -104,8 +104,8 @@ __mlu_func__ void getRoiBinInfo(const T *rois_dram, const int bin_i,
     *theta = -(*theta);
   }
   if (!params.aligned) {
-    *roi_width = __mluop_max(*roi_width, (T)1.0);
-    *roi_height = __mluop_max(*roi_height, (T)1.0);
+    *roi_width = fmaxf(*roi_width, (T)1.0);
+    *roi_height = fmaxf(*roi_height, (T)1.0);
   }
 }
 
