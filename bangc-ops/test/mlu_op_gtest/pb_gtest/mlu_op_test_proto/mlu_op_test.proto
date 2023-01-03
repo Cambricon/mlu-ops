@@ -215,7 +215,7 @@ message Node {
   optional GenerateProposalsV2Param generate_proposals_v2_param = 5930;   // GenerateProposalsV2Param
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
-  optional BoxIouRotatedParam box_iou_rotated_param = 41227;   // BoxIouRotatedParam
+  optional BoxIouRotatedParam box_iou_rotated_param = 200;   // BoxIouRotatedParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
