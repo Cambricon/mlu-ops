@@ -62,16 +62,16 @@ When a new operator is submitted, the test points are given and the test results
 
 ### 3.2 Accuracy Test
 
-For the cases used in the New Feature Test section, the features and the quantity of cases are recorded here. When multiple ops are tested, each op is supposed to record one particular table.
+For the cases used in the New Feature Test section, the features and the number of cases are recorded here. When multiple operations are tested, multiple tables are needed to include details of these operations.
 
-Operator:
+Operation:
 
 |Test Point           | Description      | Quantity |  Comment |
 |----------           |----------        |----------|   ----------    |
 |Data type test       |half/float/int8|          |                 |
 |Mult-tensor test     |Supports 1-8 dims|          |                 |
 |Layout test          |Supports NCHW/NHWC|          |                 |
-|Zero element test    |Whether to support the test |          |                 |
+|Zero element test    |Whether to support this test |          |                 |
 |Stability test       |--gtest_repeat=NUM<br>--thread=NUM |          |                 |
 |Mult-platform test   |MLU270/MLU290/MLU370/MLU590  |          |                 |
 |Nan/INF test        |Whether to support this test   |          |                 |
