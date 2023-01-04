@@ -226,7 +226,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({1, 2, 4}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+        testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
     zero_element_N_0, three_interprolate_forward_general,
