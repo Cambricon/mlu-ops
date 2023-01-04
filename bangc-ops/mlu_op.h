@@ -3441,7 +3441,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data type of features tensor, weights tensor and output tensor should be the same.
+ * - Data types of features tensor, weights tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - features tensor: half, float.
  *   - indices tensor: int.
@@ -3449,7 +3449,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  *   - output tensor: half, float.
  *
  *  @par Data Layout
- *  - The supported data layout of \b features, \b indices, \b weights, \b output are
+ *  - The supported data layouts of \b features, \b indices, \b weights, \b output are
  *    as follows:
  *
  *   - features tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -3492,6 +3492,93 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
                              const void *weights,
                              const mluOpTensorDescriptor_t output_desc,
                              void *output);
+
+// Group: ThreeInterpolate
+/*!
+ * @brief Computes the gradients of feature map \b grad_features based on the
+ *  inputs \b grad_output , \b indices and \b weights to perform the backpropagation
+ *  of the ::mluOpThreeInterpolateForward operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the three_interpolate_forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] grad_output_desc
+ * The descriptor of the grad_output tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the gradients of output tensor. The grad_output's
+ * shape (B, C, N), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] indices_desc
+ * The descriptor of the indices tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the input indicies tensor. The indices'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] weights_desc
+ * The descriptor of the weights tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] weights
+ * Pointer to the MLU memory that stores the input weights tensor. The weights'
+ * shape (B, N, 3), B is batch size, C is channel size, N is the number of
+ * elements in one output channel.
+ * @param[in] grad_features_desc
+ * The descriptor of the grad_features tensors. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] grad_features
+ * Pointer to the MLU memory that stores the gradients of features tensor. The
+ * grad_features' shape (B, C, M), B is batch size, C is channel size, M is number
+ * of elements in one input channel.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - Data types of grad_output tensor, weights tensor and grad_features tensor should be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - grad_output tensor: half, float.
+ *   - indices tensor: int.
+ *   - weights tensor: half, float.
+ *   - grad_features tensor: half, float.
+ *
+ *  @par Data Layout
+ *  - The supported data layouts of \b grad_output, \b indices, \b weights, \b grad_features are
+ *    as follows:
+ *
+ *   - grad_output tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - indices tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - weights tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - grad_features tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ *  @par Scale Limitation
+ *  - The dimension of \b grad_output should be equal to 3.
+ *  - The dimension of \b indices should be equal to 3.
+ *  - The dimension of \b weights should be equal to 3.
+ *  - The dimension of \b grad_features should be equal to 3.
+ *
+ * @par Requirements
+ * - None.
+ *
+ *  @par Note
+ *  - The value of \b indices must be in the range of [0, M-1], otherwise the output result
+ *    is meaningless and the corresponding output will be set to 0.
+ *  - In MLU270 and MLU290, the maximum value in the \b indices should be less than
+ *    2^23, otherwise the output result is not guaranteed to be correct.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t grad_output_desc,
+    const void *grad_output, const mluOpTensorDescriptor_t indices_desc, const void *indices,
+    const mluOpTensorDescriptor_t weights_desc, const void *weights,
+    const mluOpTensorDescriptor_t grad_features_desc, void *grad_features);
 
 // Group:Ballquery
 /*!

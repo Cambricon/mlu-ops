@@ -271,17 +271,32 @@ void MLUOP_WIN_API mluOpBlockKernelYoloBoxFloat(
     const float iou_aware_factor, const int n_in, const int anchor_s,
     const int c_in, const int h_in, const int w_in, void *boxes, void *scores);
 
-/* ThreeInterpolateForward*/
+/* ThreeInterpolate*/
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *indices, const void *weights, const int b,
     const int c, const int m, const int n, const int c_limit_size,
     const int m_limit_size, const int n_limit_size, void *output);
+
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *indices, const void *weights, const int b,
     const int c, const int m, const int n, const int c_limit_size,
     const int m_limit_size, const int n_limit_size, void *output);
+
+void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *indices, const void *weights,
+    const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features);
+
+void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *indices, const void *weights,
+    const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features);
 
 /* Expand */
 void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(

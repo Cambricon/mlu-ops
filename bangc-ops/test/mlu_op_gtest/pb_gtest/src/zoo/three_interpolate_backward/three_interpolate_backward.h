@@ -20,16 +20,18 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_THREE_INTERPOLATE_THREE_INTERPOLATE_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_THREE_INTERPOLATE_THREE_INTERPOLATE_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_THREE_INTERPOLATE_BACKWARD\
+_THREE_INTERPOLATE_BACKWARD_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_THREE_INTERPOLATE_BACKWARD\
+_THREE_INTERPOLATE_BACKWARD_H_
 #include "executor.h"
 
 namespace mluoptest {
 
-class ThreeInterpolateForwardExecutor : public Executor {
+class ThreeInterpolateBackwardExecutor : public Executor {
  public:
-  ThreeInterpolateForwardExecutor() {}
-  ~ThreeInterpolateForwardExecutor() {}
+  ThreeInterpolateBackwardExecutor() {}
+  ~ThreeInterpolateBackwardExecutor() {}
 
   void paramCheck() override;
   void compute() override;
@@ -44,4 +46,5 @@ class ThreeInterpolateForwardExecutor : public Executor {
 };
 
 }  // namespace mluoptest
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_THREE_INTERPOLATE_THREE_INTERPOLATE_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_THREE_INTERPOLATE_BACKWARD\
+_THREE_INTERPOLATE_BACKWARD_H_
