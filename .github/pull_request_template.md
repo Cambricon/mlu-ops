@@ -60,7 +60,20 @@ When a new operator is submitted, the test points are given and the test results
 | Whether it conforms to the operator restriction | Normal error |                      |
 | Whether illegal parameters are passed  | Normal error |                      |
 
-### 3.2 Performance Test
+### 3.2 Accuracy Test
+For the cases used in the New Feature Test section, the features of these cases are mainly described here.
+
+|Test Point           | Description      | Quantity |  comment |
+|----------           |----------        |----------|   ----------    |
+|Data type test       |eg:half/float/int8|          |                 |
+|Mult-tensor test     |eg:support 1-8 dims|          |                 |
+|Layout test          |eg:support NCHW/NHWC|          |                 |
+|zero element test    | support or not     |          |                 |
+|stability test       |--gtest_repeat=NUM<br>--thread=NUM |          |                 |
+|Mult-platform test   |eg:270/290/370/590  |          |                 |
+|Nan/INF tests        |   support or not   |          |                 |
+
+### 3.3 Performance Test
 
 See [MLU-OPS Performance Acceptance Standard](../docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
 
@@ -92,6 +105,6 @@ Platform：MLU590
 |op_name|   |    |     |    |    |    |     |
 |op_name|   |    |     |    |    |    |     |
 
-### 3.3 Summary Analysis
+### 3.4 Summary Analysis
 
 Please give a brief overview here, if you want to note and summarize the content.
