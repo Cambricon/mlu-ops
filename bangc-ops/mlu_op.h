@@ -3419,15 +3419,13 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the input indicies tensor. The indices'
- * shape (B, N, 3), B is batch size, C is channel size, N is the number of
- * elements in one output channel.
+ * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] weights_desc
  * The descriptor of the weights tensors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] weights
  * Pointer to the MLU memory that stores the input weights tensor. The weights'
- * shape (B, N, 3), B is batch size, C is channel size, N is the number of
- * elements in one output channel.
+ * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] output_desc
  * The descriptor of the output tensors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -3515,15 +3513,13 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
  * ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the input indicies tensor. The indices'
- * shape (B, N, 3), B is batch size, C is channel size, N is the number of
- * elements in one output channel.
+ * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] weights_desc
  * The descriptor of the weights tensors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] weights
  * Pointer to the MLU memory that stores the input weights tensor. The weights'
- * shape (B, N, 3), B is batch size, C is channel size, N is the number of
- * elements in one output channel.
+ * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] grad_features_desc
  * The descriptor of the grad_features tensors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
