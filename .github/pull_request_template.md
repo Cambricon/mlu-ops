@@ -82,28 +82,28 @@ See [MLU-OPS Performance Acceptance Standard](../docs/MLU-OPS-Performance-Accept
 
 Platform ：MLU270
 
-|Operator|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
+|Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
 |-----|----|----|----|----|----|------|-----|
 |op_name|   |    |     |    |    |    |     |
 |op_name|   |    |     |    |    |    |     |
 
 Platform ：MLU290
 
-|Operator|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
+|Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
 |-----|----|----|----|----|----|------|-----|
 |op_name|   |    |     |    |    |    |     |
 |op_name|   |    |     |    |    |    |     |
 
 Platform：MLU370
 
-|Operator|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
+|Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
 |-----|----|----|----|----|----|------|-----|
 |op_name|   |    |     |    |    |    |     |
 |op_name|   |    |     |    |    |    |     |
 
 Platform：MLU590
 
-|Operator|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
+|Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
 |-----|----|----|----|----|----|------|-----|
 |op_name|   |    |     |    |    |    |     |
 |op_name|   |    |     |    |    |    |     |
