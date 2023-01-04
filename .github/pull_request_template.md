@@ -74,7 +74,7 @@ Operator:
 |Zero element test    |eg: support or not     |          |                 |
 |Stability test       |eg: --gtest_repeat=NUM<br>--thread=NUM |          |                 |
 |Mult-platform test   |eg: MLU270/MLU290/MLU370/MLU590  |          |                 |
-|Nan/INF tests        |eg: support or not   |          |                 |
+|Nan/INF test        |eg: support or not   |          |                 |
 
 ### 3.3 Performance Test
 
