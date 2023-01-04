@@ -61,17 +61,20 @@ When a new operator is submitted, the test points are given and the test results
 | Whether illegal parameters are passed  | Normal error |                      |
 
 ### 3.2 Accuracy Test
-For the cases used in the New Feature Test section, the features of these cases are mainly described here.
 
-|Test Point           | Description      | Quantity |  comment |
+For the cases used in the New Feature Test section, the features and the quantity of cases are recorded here. When multiple ops are tested, each op is supposed to record one particular table.
+
+Operator:
+
+|Test Point           | Description      | Quantity |  Comment |
 |----------           |----------        |----------|   ----------    |
-|Data type test       |eg:half/float/int8|          |                 |
-|Mult-tensor test     |eg:support 1-8 dims|          |                 |
-|Layout test          |eg:support NCHW/NHWC|          |                 |
-|zero element test    | support or not     |          |                 |
-|stability test       |--gtest_repeat=NUM<br>--thread=NUM |          |                 |
-|Mult-platform test   |eg:270/290/370/590  |          |                 |
-|Nan/INF tests        |   support or not   |          |                 |
+|Data type test       |eg: half/float/int8|          |                 |
+|Mult-tensor test     |eg: support 1-8 dims|          |                 |
+|Layout test          |eg: support NCHW/NHWC|          |                 |
+|Zero element test    |eg: support or not     |          |                 |
+|Stability test       |eg: --gtest_repeat=NUM<br>--thread=NUM |          |                 |
+|Mult-platform test   |eg: MLU270/MLU290/MLU370/MLU590  |          |                 |
+|Nan/INF tests        |eg: support or not   |          |                 |
 
 ### 3.3 Performance Test
 
