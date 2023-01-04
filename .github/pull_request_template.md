@@ -68,13 +68,13 @@ Operator:
 
 |Test Point           | Description      | Quantity |  Comment |
 |----------           |----------        |----------|   ----------    |
-|Data type test       |eg: half/float/int8|          |                 |
-|Mult-tensor test     |eg: support 1-8 dims|          |                 |
-|Layout test          |eg: support NCHW/NHWC|          |                 |
-|Zero element test    |eg: support or not     |          |                 |
-|Stability test       |eg: --gtest_repeat=NUM<br>--thread=NUM |          |                 |
-|Mult-platform test   |eg: MLU270/MLU290/MLU370/MLU590  |          |                 |
-|Nan/INF test        |eg: support or not   |          |                 |
+|Data type test       |half/float/int8|          |                 |
+|Mult-tensor test     |Supports 1-8 dims|          |                 |
+|Layout test          |Supports NCHW/NHWC|          |                 |
+|Zero element test    |Whether to support the test |          |                 |
+|Stability test       |--gtest_repeat=NUM<br>--thread=NUM |          |                 |
+|Mult-platform test   |MLU270/MLU290/MLU370/MLU590  |          |                 |
+|Nan/INF test        |Whether to support this test   |          |                 |
 
 ### 3.3 Performance Test
 
