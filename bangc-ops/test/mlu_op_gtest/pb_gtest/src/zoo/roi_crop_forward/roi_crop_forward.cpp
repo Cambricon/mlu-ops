@@ -64,11 +64,9 @@ void RoiCropForwardExecutor::printDataInfo() {
 
 int RoiCropForwardExecutor::getTopLeft(const float grid_yx_value,
                                        const int input_hw, float* weight) {
-  VLOG(4) << "[RoiCropForwardExecutor] call getTopLeft() Begin.";
   float xcoord = (grid_yx_value + 1) * (input_hw - 1) / 2;
   int point = floor(xcoord);
   *weight = 1 - (xcoord - point);
-  VLOG(4) << "[RoiCropForwardExecutor] call getTopLeft() End.";
   return point;
 }
 
