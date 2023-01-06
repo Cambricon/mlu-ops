@@ -155,6 +155,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
   void destroy() {
     VLOG(4) << "Destroy parameters.";
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }

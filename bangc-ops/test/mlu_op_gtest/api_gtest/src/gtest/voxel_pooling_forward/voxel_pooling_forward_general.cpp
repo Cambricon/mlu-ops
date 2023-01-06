@@ -30,6 +30,7 @@
 #include "core/tensor.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "core/context.h"
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 

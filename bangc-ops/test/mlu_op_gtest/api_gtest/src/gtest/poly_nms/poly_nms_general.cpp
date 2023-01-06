@@ -100,6 +100,7 @@ class poly_nms_general : public testing::TestWithParam<PolyNmsParam> {
  protected:
   void destroy() {
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }
