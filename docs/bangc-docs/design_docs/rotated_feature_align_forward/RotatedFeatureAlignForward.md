@@ -55,7 +55,7 @@ RotatedFeatureAlignForward 算子功能是：利用旋转锚点框中的位置�
 
 ![point_one](./point_one.png)
 
-图中，黄色点 P: (x ，y ) 为锚点框中心点坐标，由于 P 点不一定落在整数像素坐标位置上，如图右侧，因此需要计算 P 点最邻近的四个整数点像素位置进行双线性插值计算 P 点的像素值。将 P 点的左上角位置 top_left 点的坐标索引定为 tl，相应的权重为 w1 = v2 * u2；将 P 点的右上角位置 top_right 点的坐标索引定为 tr，相应的权重为 w2 = v2 * u1；将 P 点的左下角位置 bottom_left 点的坐标引定为 bl，相应的权重为 w3 = v1 * u2；将 P 点的右下角位置 bottom_right 点的坐标索引定为 br，相应的权重为 w4 = v1 * u1。由双线性插值定义可以得到 P 点像素值 valuep:
+图中，黄色点 P: (x ，y ) 为锚点框中心点坐标，由于 P 点不一定落在整数像素坐标位置上，如图右侧，因此需要计算 P 点最邻近的四个整数点像素位置进行双线性插值计算 P 点的像素值。将 P 点的左上角位置 top_left 点的坐标索引定为 tl，相应的卷积滤波张量为 w1 = v2 * u2；将 P 点的右上角位置 top_right 点的坐标索引定为 tr，相应的卷积滤波张量为 w2 = v2 * u1；将 P 点的左下角位置 bottom_left 点的坐标引定为 bl，相应的卷积滤波张量为 w3 = v1 * u2；将 P 点的右下角位置 bottom_right 点的坐标索引定为 br，相应的卷积滤波张量为 w4 = v1 * u1。由双线性插值定义可以得到 P 点像素值 valuep:
 
 valuep = input[tl] \* w1 + input[tr] \* w2 + input[bl] \* w3 + input[br] \* w4
 
@@ -73,7 +73,7 @@ P3：(x - wb / 2 \* cosf(a) + hb / 2 \* sinf(a)，y - w / 2 \* consf(a) - hb / 2
 
 P4：(x + wb / 2 \* cosf(a) - hb / 2 \* sinf(a)，y + w / 2 \* consf(a) - hb / 2 \* sinf(a))
 
-分别对 P、P1、P2、P3、P4 这五个点进行双线性插值计算每个点对应的像素值，以 P1 点为例子，如上图左侧，将 P1点的左上角位置 top_left_1 点的坐标索引定为 tl1，相应的权重为 w11 = v21 * u21；将 P1 点的右上角位置 top_right_1 点的坐标索引定为 tr1，相应的权重为 w21 = v21 * u11；将 P1 点的左下角位置 bottom_left_1 点的坐标索引定为 bl1，相应的权重为 w31 = v11 * u21；将 P1 点的右下角位置 bottom_right_1 点的坐标索引定为 br1，相应的权重为 w41 = v11 * u11。由双线性插值定义可以得到 P1 点像素值 valuep1:
+分别对 P、P1、P2、P3、P4 这五个点进行双线性插值计算每个点对应的像素值，以 P1 点为例子，如上图左侧，将 P1点的左上角位置 top_left_1 点的坐标索引定为 tl1，相应的卷积滤波张量为 w11 = v21 * u21；将 P1 点的右上角位置 top_right_1 点的坐标索引定为 tr1，相应的卷积滤波张量为 w21 = v21 * u11；将 P1 点的左下角位置 bottom_left_1 点的坐标索引定为 bl1，相应的卷积滤波张量为 w31 = v11 * u21；将 P1 点的右下角位置 bottom_right_1 点的坐标索引定为 br1，相应的卷积滤波张量为 w41 = v11 * u11。由双线性插值定义可以得到 P1 点像素值 valuep1:
 
 valuep1 = input[tl1] * w11 + input[tr1] * w21 + input[bl1] * w31 + input[br1] * w41
 

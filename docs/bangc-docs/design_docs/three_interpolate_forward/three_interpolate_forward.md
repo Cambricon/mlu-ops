@@ -159,7 +159,7 @@ RuntimeError: CUDA error: invalid configuration argument
 | indices_desc |   输入 indices 的形状描述   | 输入              | mluOpTensorDescriptor_t | /        | 无       |
 | indices      |   表示输出特征上三个最近邻特征的索引，shape是[B, N, 3], B是batch大小，N表示一个输出channel上特征点的个数，3表示有三个最近邻特征索引   | 输入              | int | ARRAY    | 无       |
 | weights_desc |   输入 weights 的形状描述   | 输入              | mluOpTensorDescriptor_t | /        | 无       |
-| weights      |   表示输出特征上三个最近邻特征的权重，shape是[B, N, 3], B是batch大小，N表示一个输出channel上特征点的个数，3表示有三个最近邻特征权重   | 输入              | half, float | ARRAY     | 无       |
+| weights      |   表示输出特征上三个最近邻特征的卷积滤波张量，shape是[B, N, 3], B是batch大小，N表示一个输出channel上特征点的个数，3表示有三个最近邻特征卷积滤波张量   | 输入              | half, float | ARRAY     | 无       |
 | output_desc |   输出 output 的形状描述   | 输入              | mluOpTensorDescriptor_t | /        | 无       |
 | output      |   表示输出特征数据，shape是[B, C, N], B是batch大小，C是channel大小，N表示一个输出channel上特征点的个数   | 输出              | half, float | ARRAY     | 无       |
 

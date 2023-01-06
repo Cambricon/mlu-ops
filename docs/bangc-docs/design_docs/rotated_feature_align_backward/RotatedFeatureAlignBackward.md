@@ -52,7 +52,7 @@ RotatedFeatureAlignBackward 算子是 RotatedFeatureAlignForward 算子的反向
 
 前向计算过程：
 
-图中，黄色点 P:(x，y) 为锚点框中心点坐标，由于 P 点不一定落在像素整数坐标位置上，因此需要计算 P 点邻近的四个整数像素点位置进行双线性插值计算 P 点的像素值。这里将 P 点的左上角位置 top_left 点的像素值定为 input[tl]，相应的权重为 w1 = v2 * u2；将 P 点的右上角位置 top_right 点的像素值定为 input[tr]，相应的权重为 w2 = v2 * u1；将 P 点的左下角位置 bottom_left 点的像素值定为 input[bl]，相应的权重为 w3 = v1 * u2；将 P 点的右下角位置 bottom_right 点的像素值定为 input[br]，相应的权重为 w4 = v1 * u1, 将Q 点在 input 上的像素值定位像素值定为 input[index]。这样可得到 Q 点像素值 valueq:
+图中，黄色点 P:(x，y) 为锚点框中心点坐标，由于 P 点不一定落在像素整数坐标位置上，因此需要计算 P 点邻近的四个整数像素点位置进行双线性插值计算 P 点的像素值。这里将 P 点的左上角位置 top_left 点的像素值定为 input[tl]，相应的卷积滤波张量为 w1 = v2 * u2；将 P 点的右上角位置 top_right 点的像素值定为 input[tr]，相应的卷积滤波张量为 w2 = v2 * u1；将 P 点的左下角位置 bottom_left 点的像素值定为 input[bl]，相应的卷积滤波张量为 w3 = v1 * u2；将 P 点的右下角位置 bottom_right 点的像素值定为 input[br]，相应的卷积滤波张量为 w4 = v1 * u1, 将Q 点在 input 上的像素值定位像素值定为 input[index]。这样可得到 Q 点像素值 valueq:
 
 valueq = input[index] + input[tl] \* w1 + input[tr] \* w2 + input[bl] \* w3 + input[br] \* w4
 
@@ -80,7 +80,7 @@ P4：(x + wb / 2 \* cosf(a) - hb / 2 \* sinf(a)，y + w / 2 \* consf(a) - hb / 2
 
 前向计算过程：
 
-分别对 P、P1、P2、P3、P4 这五个点进行双线性插值计算每个点对应的像素值，以 P1 点为例子，如上图左侧，将 P1点的左上角位置 top_left_1 点的像素值定为 input[tl1]，相应的权重为 w11 = v21 * u21；将 P1 点的右上角位置 top_right_1 点的像素值定为 input[tr1]，相应的权重为 w21 = v21 * u11；将 P1 点的左下角位置 bottom_left_1 点的像素值定为 input[bl1]，相应的权重为 w31 = v11 * u21；将 P1 点的右下角位置 bottom_right_1 点的像素值定为 input[br1]，相应的权重为 w41 = v11 * u11。则可以得到 P1 点像素值 valuep1:
+分别对 P、P1、P2、P3、P4 这五个点进行双线性插值计算每个点对应的像素值，以 P1 点为例子，如上图左侧，将 P1点的左上角位置 top_left_1 点的像素值定为 input[tl1]，相应的卷积滤波张量为 w11 = v21 * u21；将 P1 点的右上角位置 top_right_1 点的像素值定为 input[tr1]，相应的卷积滤波张量为 w21 = v21 * u11；将 P1 点的左下角位置 bottom_left_1 点的像素值定为 input[bl1]，相应的卷积滤波张量为 w31 = v11 * u21；将 P1 点的右下角位置 bottom_right_1 点的像素值定为 input[br1]，相应的卷积滤波张量为 w41 = v11 * u11。则可以得到 P1 点像素值 valuep1:
 
 valuep1 = input[tl1] * w11 + input[tr1] * w21 + input[bl1] * w31 + input[br1] * w41
 
@@ -196,7 +196,7 @@ SEG_NUM = (1 + 4 ) * 2 + 1
 其中，pixel1、pixel2 …… 为每个 core 处理的任务数量，Lob 为加载一个 pixel 位置的 top_output 数据和对应的 bboxes 信息，Lo 为加载的一个 pixel 位置的 top_output 数据，channel_loop 为对 C 通过拆分的份数(见伪代码)，So 是对 index 位置进行 atomic_add 操作，C0、S0、C1 S1 …… 为 points = 5 的五次计算。整个计算过程可以梳理为：
 
 step1：加载 top_output 中 C 通道数据到 nram_ping，并 atomic_add 到 bottom_input 中对应位置，加载 bboxes 中位置信息到 bboxes_ptr(64 字节对齐)。<br>
-setp2: 根据 bboxes_ptr 中信息计算 P 点在 bottom_input 四领域的权重，分别为：w1、w2、w3、w4。
+setp2: 根据 bboxes_ptr 中信息计算 P 点在 bottom_input 四领域的卷积滤波张量，分别为：w1、w2、w3、w4。
 step3：通过 Q 点计算 P 点在 bottom_input 四领域中梯度数据到 ping_tl、ping_tr、ping_bl、ping_br，如果一次无法加载 C 中数据，需对 C 通道进行拆分<br>
 step4：将 step3 中的计算结果通过 atomic_add 方式存储到 bottom_input 中<br>
 step5：当 points = 5 时，循环处理 step2、step3<br>

@@ -23,7 +23,7 @@ for (i=0, i<num_boxes1, i+=N) {
   }
 }
 
-NOTE: 1. TODO: when one ipu core each loop M >= num_boxes2, means can modify a
+NOTE: 1. TODO: when one mlu core each loop M >= num_boxes2, means can modify a
                larger N, but should also align to 64
       2. multi-core and cluster partition:
          (when aligned == false)
@@ -31,10 +31,10 @@ NOTE: 1. TODO: when one ipu core each loop M >= num_boxes2, means can modify a
          only launch kernel once. And each U1 set loop to deal an
          ipuCoreNumsEachCluster*N of num_boxes1 (BUT NOT USE SM).
          In cluster, ipu-cores load DIFFERENT boxes1 from DDR to CT,
-         and each ipu core computes WHOLE LOOP at num_boxes2.
+         and each mlu core computes WHOLE LOOP at num_boxes2.
          TODO(perf): Further more, when num_boxes2 >> num_boxes1, and num_boxes1
                      is small enough that not all ipu cores do effective works,
-                     can do optimization, use each cluster's different ipu core,
+                     can do optimization, use each cluster's different mlu core,
                      partition on boxes2, in the future.
          (when aligned == true)
          just make plane task partition on N, num of box1 and box2,

@@ -62,7 +62,7 @@ inline int32_t getJobLimitCapability(mluOpHandle_t handle) {
 
 /******************************************************************************
  * mluOp FUNC: getCoreNumOfJobLimitCapability
- * get ipu core number of every single CNRT_FUNC_TYPE with maximum job capacity.
+ * get mlu core number of every single CNRT_FUNC_TYPE with maximum job capacity.
  * param 'handle' is the handle of mluOpHandle_t.
  ******************************************************************************/
 inline int32_t getCoreNumOfJobLimitCapability(mluOpHandle_t handle) {
