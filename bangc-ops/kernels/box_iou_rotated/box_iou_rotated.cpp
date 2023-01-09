@@ -55,7 +55,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
 
-  // if total_num < 64, use only one ipu core;
+  // if total_num < 64, use only one mlu core;
   const uint32_t single_core_small_case = 64;
 
   if (single_core_small_case >= num_box1) {  // only 1 ipu-core enough

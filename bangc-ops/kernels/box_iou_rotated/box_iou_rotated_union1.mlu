@@ -31,11 +31,11 @@ __mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
                                            const int32_t num_box2,
                                            const int32_t mode,
                                            const bool aligned) {
-  // At first, judge current ipu core deal box range, aligned or non-aligned
+  // At first, judge current mlu core deal box range, aligned or non-aligned
   //
   // For multi-core partition strategy:
   // - When aligned = false
-  // Each ipu core does different box1 range, and all box2 with whole loop.
+  // Each mlu core does different box1 range, and all box2 with whole loop.
   // TODO(perf): Further more, when num_boxes2 >> num_boxes1, and num_boxes1
   //             is small enough that not all ipu cores do effective works,
   //             should adjust job partition strategy to optimize,
@@ -54,7 +54,7 @@ __mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
   //  | n=n0~n1, m=m0~m1| n=n1~n2, m=m0~m1|...|
   //  |     Block       |  Block job is also supported, because not using SM
 
-  // For ipu core loop algorithm:
+  // For mlu core loop algorithm:
   // - When aligned = true
   //  Load Nx5 and Mx5, box1 and box2, do element-wise computing
   // - When aligned = false
@@ -62,7 +62,7 @@ __mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
   //  loop N offchip, reuse area2 result onchip;
   //  loop M offchip, compute area2, trans, restore N offchip offset back to 0
   //
-  // For ipu core computing algorithm:
+  // For mlu core computing algorithm:
   // 1. load input box1 and box2
   // 2. transpose (distinguish MLU arch >= 300)
   // 3. calculate new points and area, set which area < 1e-14 valid_box = false
@@ -79,7 +79,7 @@ __mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
   uint32_t num_total = num_box1;
   uint32_t num_per_core = FLOOR_ALIGN(num_total / taskDim, COMPUTE_COUNT_ALIGN);
   uint32_t rem_for_all = num_total - taskDim * num_per_core;
-  // last ipu core does more work
+  // last mlu core does more work
   uint32_t current_core_num =
       num_per_core + (taskId == taskDim - 1) * rem_for_all;
   uint32_t current_box1_offset = taskId * num_per_core * SINGLE_BOX_DIM;

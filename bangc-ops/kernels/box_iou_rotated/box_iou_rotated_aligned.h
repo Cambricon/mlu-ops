@@ -47,12 +47,12 @@
                                          -------------------------------------
 */
 
-// The addresses have already add offsets for each ipu core in union.mlu
+// The addresses have already add offsets for each mlu core in union.mlu
 template <typename T>
 __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
                                                 T *ious, const int32_t num_box,
                                                 const int32_t mode) {
-  // If current ipu core don't need to work
+  // If current mlu core don't need to work
   if (num_box <= 0) {
     return;
   }
@@ -78,7 +78,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
   int remainder = num_box % max_box_pair;
   repeat += int(remainder > 0);
 
-  // Only consider loop offset in one ipu core
+  // Only consider loop offset in one mlu core
   size_t current_box_offset = 0;
   size_t current_ious_offset = 0;
   for (int loop_box_i = 0; loop_box_i < repeat; loop_box_i++) {

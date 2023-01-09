@@ -138,7 +138,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 
 1. aligned=true, box1 和 box2 是做对位的`box_iou_rotated`计算，参考 element-wise 的算子方案，输出维度为(N)。 (N==M)
 2. aligned=false, 则 box1 每次只取一个标量，与片上长向量 box2 做“向量标量计算”，存储连续的 iou-pairs 在 box2 的维度(M)，输出维度为 (N, M)。
-   每个 ipu core 做 box2 的全循环，存储完整的 M 维度的输出，不同的 ipu core、cluster 以不同的 box1 作为任务划分。
+   每个 mlu core 做 box2 的全循环，存储完整的 M 维度的输出，不同的 mlu core、cluster 以不同的 box1 作为任务划分。
 
 - 计算步骤：
 
@@ -158,9 +158,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 参考文档：[伪代码实现](./pseudo_code)
 拆分建议分几个维度来写，job 间拆分，cluster 间拆分，cluster 内拆分：
 
-1、基本任务类型是什么：U1（Block 类型也支持，如果该 MLU arch 只支持 Block 任务类型，或者 1 个 ipu core 就足够了的话）
-如果 aligned=false, job 间拆分 & cluster 间拆分 & cluster 内拆分：num of boxes1, 每个 IPU CORE 对 box2 做完整的循环运算；
-如果 aligned=true， 则对 num of boxes 划分，每个 IPU CORE 内做 element-wise 的计算；
+1、基本任务类型是什么：U1（Block 类型也支持，如果该 MLU arch 只支持 Block 任务类型，或者 1 个 mlu core 就足够了的话）
+如果 aligned=false, job 间拆分 & cluster 间拆分 & cluster 内拆分：num of boxes1, 每个 MLU CORE 对 box2 做完整的循环运算；
+如果 aligned=true， 则对 num of boxes 划分，每个 MLU CORE 内做 element-wise 的计算；
 
 ### 3.4 性能优化设计
 
@@ -200,7 +200,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 
 - 边界 case：
 
-  1. aligned=true, 1 ipu core(Block), 1 cluster, 4 cluster, 6 cluster, 8 cluster, 16 cluster, with/without remainder.
+  1. aligned=true, 1 mlu core(Block), 1 cluster, 4 cluster, 6 cluster, 8 cluster, 16 cluster, with/without remainder.
   2. aligned=false, box1 once, box2 once ...
   3. area1/2 has/are all 1e-14.
   4. intersection points, all 24 conditions, rect1 in 2, 2 in 1, `nums_in` is 1/2/more points.

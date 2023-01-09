@@ -236,7 +236,7 @@ class CosineEmbeddingLoss(object):
         for cluster_id in tcp.thread_binding(0, tgt.cluster_num, thread="blockIdx.x"):
             for core_id in tcp.thread_binding(0, tgt.core_num, thread="threadIdx.x"):
                 task_id = cluster_id * tgt.core_num + core_id
-                # Batch num assigned to one IPU core.
+                # Batch num assigned to one MLU Core.
                 task_row_num = data_num // task_num
                 task_row_base = data_num - (task_num - task_id) * task_row_num
                 if data_num - task_row_num * task_num > task_id:

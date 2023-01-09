@@ -92,7 +92,7 @@ output_value = Ax_weight * Ay_weight * top_left
 
 ![roi_crop_backward](./roi_crop_backward.png)
 
-根据 grid 中 bin 的索引获取 grad_output 中对应的梯度值 grad_output_v，从 grid 中获取的每个（y, x）坐标映射参数，可以反映射到 grad_input 中的A处得到坐标信息(Ax, Ay) ，获取 A 点附近四处整数点位偏移地址 tl_address、tr_address、bl_address、br_address；最后根据权重信息计算 A 点附近四处整数点位可获得的梯度值。
+根据 grid 中 bin 的索引获取 grad_output 中对应的梯度值 grad_output_v，从 grid 中获取的每个（y, x）坐标映射参数，可以反映射到 grad_input 中的A处得到坐标信息(Ax, Ay) ，获取 A 点附近四处整数点位偏移地址 tl_address、tr_address、bl_address、br_address；最后根据卷积滤波张量信息计算 A 点附近四处整数点位可获得的梯度值。
 
 **2) 主要计算公式**
 
