@@ -252,7 +252,7 @@ void saveHexDataToFile(const std::string &file, void *data,
     } break;
 
     default: {
-      VLOG(4) << "Unsupported dtype " << getNameOfDataType(dtype);
+      VLOG(4) << "Unsupported dtype " << mluop::getNameOfDataType(dtype);
     } break;
   }
   fout.close();

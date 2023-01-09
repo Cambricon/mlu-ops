@@ -29,11 +29,12 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-#define DEP_CHECK_LOG(level)                                                 \
-  cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, true, \
-                    true)                                                    \
+#define DEP_CHECK_LOG(level)                                                  \
+  mluop::cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, \
+                    true, true)                                               \
       .stream()
 
+namespace mluop {
 // see cnrt_function.c deviceCoreVersion for more info.
 struct deviceName name_list_table[] = {
     {"MLU270", MLUOP_MLU270},
@@ -66,6 +67,7 @@ mluOpDevType_t convertDeviceName(char *name) {
              << name << "\n";
   return MLUOP_UNKNOWN_DEVICE;
 }
+}  // namespace mluop
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
                                    DepCheckLevel level) {
@@ -183,7 +185,7 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
   }
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
   ctx->arch =
-      convertDeviceName(device_name);  // warning: possible return unknown.
+      mluop::convertDeviceName(device_name);  // warning: may return unknown.
   ctx->sram_size = sram_size - REM_FOR_STACK;
   ctx->device = mlu_dev;
   ctx->cluster_num = cluster_num;
@@ -321,7 +323,7 @@ mluOpStatus_t mluOpGetReservedMemSize(uint64_t *mem_size) {
 
   uint64_t default_reserved_size = 2081ULL * 1024 * 1024;
   uint64_t env_size =
-      getUintEnvVar("MLUOP_MEM_POOL_SIZE", default_reserved_size);
+      mluop::getUintEnvVar("MLUOP_MEM_POOL_SIZE", default_reserved_size);
   *mem_size = static_cast<uint64_t>(env_size);
 
   return MLUOP_STATUS_SUCCESS;

@@ -278,11 +278,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
   }
   // generate mluOpRotatedFeatureAlignBackward prototxt end!
 
-  VLOG(5) << "mluOpFill start.";
+  VLOG(5) << "mluOpFill_v3 start.";
   const uint32_t fill_value = 0x00;
-  MLUOP_CHECK(mluOpFill(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                         bottom_input_desc, bottom_input));
-  VLOG(5) << "mluOpFill end.";
+  VLOG(5) << "mluOpFill_v3 end.";
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;

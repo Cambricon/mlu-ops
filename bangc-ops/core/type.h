@@ -29,6 +29,7 @@
 #include "core/logging.h"
 #include "mlu_op.h"
 
+namespace mluop {
 // This function is used to get high 32bit and low 32bit of param value.
 // The hardware hasn't support 8 bytes operation, so if the sizeof(dtype) is 8
 // bytes, sometimes we need to separate 8bytes to two 4bytes. Example:for
@@ -59,4 +60,5 @@ size_t getSizeOfDataType(const mluOpDataType_t dtype);
 std::string getNameOfDataType(const mluOpDataType_t dtype);
 
 std::string getNameOfTensorLayout(const mluOpTensorLayout_t layout);
+}  // namespace mluop
 #endif  // CORE_TYPE_H_

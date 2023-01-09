@@ -61,6 +61,7 @@
 #define SECONDS_PER_HOUR 3600
 #define HOURS_DIFFERENCE 8
 
+namespace mluop {
 namespace cnlog {
 
 std::ofstream logFile;                       // which file to save log message.
@@ -541,3 +542,4 @@ int initCNLog() {
 
 __attribute__((__unused__)) static int initlog = initCNLog();
 }  // namespace cnlog
+}  // namespace mluop

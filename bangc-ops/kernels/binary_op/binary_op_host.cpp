@@ -41,7 +41,8 @@ void binaryOpPolicyFunc(const mluOpHandle_t &handle,
 
   int element_num = mluOpGetTensorElementNum(desc);
   int size =
-      CEIL_ALIGN(element_num * getSizeOfDataType(desc->dtype), align_param);
+      CEIL_ALIGN(element_num * mluop::getSizeOfDataType(desc->dtype),
+                 align_param);
   int core_used = CEIL_ALIGN(size / align_param, core_dim);
   core_used = core_used > core_number ? core_number : core_used;
 

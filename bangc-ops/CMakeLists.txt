@@ -128,12 +128,26 @@ foreach(kernel ${build_kernel})
   file(GLOB_RECURSE obj_files ${obj_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/${kernel}/${MLUOP_TARGET_CPU_ARCH}/*.o")
 endforeach()
 
+file(GLOB_RECURSE object_files ${object_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/*.so")
+file(GLOB_RECURSE o_files ${o_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/*.o")
+
 file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
 bang_add_library(mluops SHARED ${core_src_files} ${src_files})
-target_link_libraries(mluops cnrt cndrv dl)
-target_link_libraries(mluops ${obj_files})
+if (object_files MATCHES ".so")
+  message(STATUS "Build MLUOP with shared object file.")
+  message("${object_files}")
+  target_link_libraries(mluops ${object_files} ${obj_files})
+else()
+  message(STATUS "Build External lib with object files.")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/")
+  file(GLOB_RECURSE srcs "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/wrapper.cpp")
+  add_library(external_lib SHARED ${srcs})
+  target_link_libraries(external_lib ${o_files} ${obj_files} cnrt cndrv dl)
+  target_link_libraries(mluops external_lib)
+endif()
+# target_link_libraries(mluops)
 set_target_properties(mluops PROPERTIES
   OUTPUT_NAME "mluops"
   PREFIX      "lib"

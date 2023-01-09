@@ -90,63 +90,6 @@ bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc) {
   return true;
 }
 
-// Tensor may be a stride case, but if the stride of a tensor is dense,
-// and all tensors are consistent dense,
-// they can be processd with common default stride method with a high
-// performance in element-wise kernel.
-bool strideCaseWithNotConsistentDense(int tensor_num, ...) {
-  bool is_stride_case = false;
-  va_list ap;
-  va_start(ap, tensor_num);
-  // if one of a tensor is strided, set is_fake_stride_case true.
-  for (auto i = 0; i < tensor_num; i++) {
-    mluOpTensorDescriptor_t this_tensor = va_arg(ap, mluOpTensorDescriptor_t);
-    if (ifNeedTensorStrideProcess(this_tensor)) {
-      is_stride_case = true;
-      break;
-    }
-  }
-  if (!is_stride_case) {
-    va_end(ap);
-    return false;
-  } else {
-    va_start(ap, tensor_num);
-    mluOpTensorDescriptor_t first_tensor = va_arg(ap, mluOpTensorDescriptor_t);
-    if (!isDenseStrideTensor(first_tensor)) {
-      va_end(ap);
-      return true;
-    }
-    int first_dims[MLUOP_DIM_MAX] = {0};
-    int first_stride[MLUOP_DIM_MAX] = {0};
-    auto first_dim = first_tensor->dim;
-    // get first tensor's shape and stride info
-    for (auto i = 0; i < first_dim; i++) {
-      first_dims[i] = first_tensor->dims[i];
-      first_stride[i] = first_tensor->strides[i];
-    }
-    // judge whether shapes and strides of tensors are same,
-    // if not, need stride process
-    // note: we should ignore the dim if the shape at this dim is 1.
-    for (auto i = 0; i < tensor_num - 1; i++) {
-      mluOpTensorDescriptor_t this_tensor = va_arg(ap, mluOpTensorDescriptor_t);
-      if (this_tensor->dim != first_dim) {
-        va_end(ap);
-        return true;
-      }
-      for (auto j = 0; j < first_dim; j++) {
-        if (first_dims[j] != this_tensor->dims[j] ||
-            ((first_dims[j] != 1) &&
-             (first_stride[j] != this_tensor->strides[j]))) {
-          va_end(ap);
-          return true;
-        }
-      }
-    }
-  }
-  va_end(ap);
-  return false;
-}
-
 // From tensor_desc get tensor's dims and strides.
 void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
                     TensorShape *tensor_shape) {

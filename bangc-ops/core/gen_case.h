@@ -405,7 +405,7 @@ class PbNode {
     mluOpDataType_t dtype;
     mluOpGetTensorDescriptor(tensors[index].desc, nullptr, &dtype, nullptr,
                              nullptr);
-    uint64_t data_size = total_num * getSizeOfDataType(dtype);
+    uint64_t data_size = total_num * mluop::getSizeOfDataType(dtype);
     void *data = malloc(data_size);
     if (CNRT_RET_SUCCESS ==
         cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),

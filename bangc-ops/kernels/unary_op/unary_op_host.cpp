@@ -38,7 +38,7 @@ void unaryOpPolicyFunc(const mluOpHandle_t &handle,
   size_t core_in_cluster = handle->core_num_per_cluster;
   size_t core_number = union_number * core_in_cluster;
   size_t element_num = mluOpGetTensorElementNum(desc);
-  size_t tensor_size = element_num * getSizeOfDataType(desc->dtype);
+  size_t tensor_size = element_num * mluop::getSizeOfDataType(desc->dtype);
   tensor_size = CEIL_ALIGN(tensor_size, NFU_ALIGN_SIZE);
   size_t need_core = CEIL_ALIGN(tensor_size / NFU_ALIGN_SIZE, core_in_cluster);
   *k_type = CNRT_FUNC_TYPE_UNION1;  // default func type

@@ -94,16 +94,16 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
     }
   }
   if ((mluOpGetTensorElementNum(output_desc) *
-           getSizeOfDataType(output_desc->dtype) >=
+           mluop::getSizeOfDataType(output_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(input_desc) *
-           getSizeOfDataType(input_desc->dtype) >=
+           mluop::getSizeOfDataType(input_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(rois_desc) *
-           getSizeOfDataType(rois_desc->dtype) >=
+           mluop::getSizeOfDataType(rois_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(mapping_channel_desc) *
-           getSizeOfDataType(mapping_channel_desc->dtype) >=
+           mluop::getSizeOfDataType(mapping_channel_desc->dtype) >=
        LARGE_TENSOR_SIZE)) {
     LOG(ERROR) << api << " Overflow max tensor size."
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
@@ -182,16 +182,16 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   }
 
   if ((mluOpGetTensorElementNum(top_grad_desc) *
-           getSizeOfDataType(top_grad_desc->dtype) >=
+           mluop::getSizeOfDataType(top_grad_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(bottom_grad_desc) *
-           getSizeOfDataType(bottom_grad_desc->dtype) >=
+           mluop::getSizeOfDataType(bottom_grad_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(rois_desc) *
-           getSizeOfDataType(rois_desc->dtype) >=
+           mluop::getSizeOfDataType(rois_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(mapping_channel_desc) *
-           getSizeOfDataType(mapping_channel_desc->dtype) >=
+           mluop::getSizeOfDataType(mapping_channel_desc->dtype) >=
        LARGE_TENSOR_SIZE)) {
     LOG(ERROR) << api << " Overflow max tensor size."
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";

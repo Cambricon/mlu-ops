@@ -199,10 +199,10 @@ void FillExecutor::compute() {
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemcpy(value_device, host_value_ptr,
                                                mluOpDataTypeBytes(data_type),
                                                CNRT_MEM_TRANS_DIR_HOST2DEV));
-    MLUOP_CHECK(mluOpFill(handle_, MLUOP_POINTER_MODE_DEVICE, value_device,
+    MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_DEVICE, value_device,
                           tensor_input, dev_out));
   } else {
-    MLUOP_CHECK(mluOpFill(handle_, MLUOP_POINTER_MODE_HOST, host_value_ptr,
+    MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_HOST, host_value_ptr,
                           tensor_input, dev_out));
   }
   interface_timer_.stop();
@@ -259,7 +259,7 @@ int64_t FillExecutor::getTheoryOps() {
 int64_t FillExecutor::getTheoryIoSize() {
   auto dtype = parser_->output(0)->dtype;
   int64_t theory_ios =
-      parser_->output(0)->total_count * getSizeOfDataType(dtype);
+      parser_->output(0)->total_count * mluop::getSizeOfDataType(dtype);
   VLOG(4) << "getTheoryIOs: " << theory_ios << " bytes";
   return theory_ios;
 }
