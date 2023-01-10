@@ -28,6 +28,7 @@
 #include "core/tensor.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "core/context.h"
 
 namespace mluopapitest {
 class voxel_pooling_forward : public testing::Test {

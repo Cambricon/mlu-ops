@@ -29,6 +29,7 @@
 #include "core/tensor.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "core/context.h"
 
 namespace mluopapitest {
 class yolo_box : public testing::Test {
@@ -119,6 +120,7 @@ class yolo_box : public testing::Test {
   void destroy() {
     VLOG(4) << "Destroy parameters.";
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }

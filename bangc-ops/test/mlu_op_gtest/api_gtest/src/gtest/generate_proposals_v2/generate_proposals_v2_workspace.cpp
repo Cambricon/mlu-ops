@@ -61,6 +61,7 @@ class generate_proposals_v2_workspace : public testing::Test {
  protected:
   void destroy() {
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }

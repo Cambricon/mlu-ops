@@ -30,6 +30,7 @@
 #include "core/tensor.h"
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "core/context.h"
 
 namespace mluopapitest {
 class psroipool_forward : public testing::Test {
@@ -104,6 +105,7 @@ class psroipool_forward : public testing::Test {
  protected:
   void destroy() {
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }

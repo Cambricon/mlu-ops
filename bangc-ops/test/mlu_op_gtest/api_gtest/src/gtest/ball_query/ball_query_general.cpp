@@ -114,6 +114,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
  protected:
   void destroy() {
     if (handle_) {
+      CNRT_CHECK(cnrtQueueSync(handle_->queue));
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = NULL;
     }
