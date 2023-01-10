@@ -291,3 +291,7 @@ mluOpRotatedFeatureAlignForward
 mluOpRotatedFeatureAlignBackward
 -------------------
 该算子是 mluOpRotatedFeatureAlignForward 算子的反向，算子的功能是根据 output 的梯度，计算 input 的梯度。
+
+mluOpActiveRotatedFilterForward
+-------------------------------
+该算子根据位置信息对输入进行旋转。这个算子编码方向信息并生成方向敏感特征。

@@ -401,6 +401,19 @@ void MLUOP_WIN_API mluOpUnionKernelAssignVoxelsCoors(
     void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,
     const int32_t num_points, const int32_t num_features);
 
+/*ActiveRotatedFilter*/
+void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int output_planes, const int input_planes, const int orientations,
+    const int kH, const int kW, const int rotations, const void *input_gdram,
+    const void *indices_gdram, const void *workspace_gdram, void *output_gdram);
+
+void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int output_planes, const int input_planes, const int orientations,
+    const int kH, const int kW, const int rotations, const void *input_gdram,
+    const void *indices_gdram, const void *workspace_gdram, void *output_gdram);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus
