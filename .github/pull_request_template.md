@@ -25,7 +25,7 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 
 |     No.      |           Details            |      Check Results       |
 |----------------|---------------------------|---------------------|
-|        1       |          Supported hardware         | MLU270 <br> MLU290 <br>MLU370<br>MLU590|
+|        1       |          Supported hardware         | MLU370<br>MLU590|
 |        2       |          Job types          |    block <br> U1 <br> U4    |
 |        3       |         Layouts            |  NHWC 、NCHW、ARRAY etc    |
 |        4       |         Whether multi-dimensions are supported              |                |
@@ -73,26 +73,12 @@ Operation:
 |Layout test          |Supports NCHW/NHWC|          |                 |
 |Zero element test    |Whether to support this test |          |                 |
 |Stability test       |--gtest_repeat=NUM<br>--thread=NUM |          |                 |
-|Mult-platform test   |MLU270/MLU290/MLU370/MLU590  |          |                 |
+|Mult-platform test   |MLU370/MLU590  |          |                 |
 |Nan/INF test        |Whether to support this test   |          |                 |
 
 ### 3.3 Performance Test
 
 See [MLU-OPS Performance Acceptance Standard](../docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
-
-Platform ：MLU270
-
-|Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
-|-----|----|----|----|----|----|------|-----|
-|op_name|   |    |     |    |    |    |     |
-|op_name|   |    |     |    |    |    |     |
-
-Platform ：MLU290
-
-|Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
-|-----|----|----|----|----|----|------|-----|
-|op_name|   |    |     |    |    |    |     |
-|op_name|   |    |     |    |    |    |     |
 
 Platform：MLU370
 
