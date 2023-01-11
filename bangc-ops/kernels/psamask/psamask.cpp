@@ -173,9 +173,9 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
     LOG(ERROR) << api
                << " Check failed: Only support MLUOP_LAYOUT_NHWC input and "
                   "output, but now input is "
-               << getNameOfTensorLayout(input_desc->layout)
+               << mluop::getNameOfTensorLayout(input_desc->layout)
                << ", and output is "
-               << getNameOfTensorLayout(output_desc->layout) << ".";
+               << mluop::getNameOfTensorLayout(output_desc->layout) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->dtype != output_desc->dtype ||
@@ -257,7 +257,7 @@ mluOpStatus_t mluOpPsamaskForward(mluOpHandle_t handle, const int psa_type,
   policyFunc(handle, &k_dim, &k_type, &partition_info, n, h_feature);
   int n_limit_seg, h_limit_seg, w_limit_seg;
   ret = findLimit(handle, partition_info.n_per_core, partition_info.h_per_core,
-                  w_feature, x_c, y_c, getSizeOfDataType(x_data_type),
+                  w_feature, x_c, y_c, mluop::getSizeOfDataType(x_data_type),
                   &n_limit_seg, &h_limit_seg, &w_limit_seg, psa_type, api);
   if (ret != MLUOP_STATUS_SUCCESS) {
     GEN_CASE_END();
@@ -325,7 +325,7 @@ mluOpStatus_t mluOpPsamaskBackward(mluOpHandle_t handle, const int psa_type,
   policyFunc(handle, &k_dim, &k_type, &partition_info, n, h_feature);
   int n_limit_seg, h_limit_seg, w_limit_seg;
   ret = findLimit(handle, partition_info.n_per_core, partition_info.h_per_core,
-                  w_feature, dx_c, dy_c, getSizeOfDataType(dy_type),
+                  w_feature, dx_c, dy_c, mluop::getSizeOfDataType(dy_type),
                   &n_limit_seg, &h_limit_seg, &w_limit_seg, psa_type, api);
   if (ret != MLUOP_STATUS_SUCCESS) {
     GEN_CASE_END();

@@ -22,11 +22,11 @@
  *************************************************************************/
 #include "core/mlu_env.h"
 
-__attribute__((__unused__)) int cambricon_tf32_override_ =
-    getUintEnvVar("CAMBRICON_TF32_OVERRIDE", 1);
-
 namespace mluop {
+__attribute__((__unused__)) int cambricon_tf32_override_ =
+    mluop::getUintEnvVar("CAMBRICON_TF32_OVERRIDE", 1);
+
 namespace mlu_env {
-int getCambriconTF32Override() { return cambricon_tf32_override_; }
+int getCambriconTF32Override() { return mluop::cambricon_tf32_override_; }
 }  // namespace mlu_env
 }  // namespace mluop

@@ -29,6 +29,7 @@
 #define INT31_BITWIDTH 31
 #define INT16_BITWIDTH 16
 
+namespace mluop {
 mluOpStatus_t castDtypeToBitwidth(mluOpDataType_t quantize_dtype,
                                   int *bitwidth) {
   if (bitwidth == NULL) {
@@ -453,3 +454,4 @@ bool getBoolEnvVar(const std::string &str, bool default_para) {
   return (env_var == "1" || env_var == "ON" || env_var == "YES" ||
           env_var == "TRUE");
 }
+}  // namespace mluop

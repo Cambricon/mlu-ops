@@ -23,6 +23,7 @@
 #include "core/type.h"
 #define to_string(a) #a
 
+namespace mluop {
 size_t getSizeOfDataType(mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_BOOL:
@@ -145,3 +146,4 @@ std::string getNameOfTensorLayout(const mluOpTensorLayout_t layout) {
   }
   return layout_name;
 }
+}  // namespace mluop

@@ -262,7 +262,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
 
   VLOG(5) << "mluopFill start.";
   const size_t fill_value = 0x0;
-  MLUOP_CHECK(mluOpFill(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                         bottom_grad_desc, bottom_grad));
   VLOG(5) << "mluopFill end.";
 
