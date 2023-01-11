@@ -172,6 +172,18 @@ void MLUOP_WIN_API mluOpUnionKernelBoxIouRotatedFloat(
     const void *box1, const void *box2, void *ious, const int num_box1,
     const int num_box2, const int mode, const bool aligned);
 
+/* BboxOverlaps */
+void MLUOP_WIN_API mluOpUnion1BboxOverlapsKernelFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *bbox1, const void *bbox2, void *ious, const int32_t num_bboxl,
+    const int32_t num_bbox2, const int32_t mode, const bool aligned,
+    const int32_t offset);
+void MLUOP_WIN_API mluOpUnion1BboxOverlapsKernelHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *bbox1, const void *bbox2, void *ious, const int32_t num_bboxl,
+    const int32_t num_bbox2, const int32_t mode, const bool aligned,
+    const int32_t offset);
+
 /* RoiAlignRotated */
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

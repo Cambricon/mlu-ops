@@ -141,6 +141,10 @@ mluOpBoxIouRotated
 -------------------------
 box_iou_rotated 算子用于计算给定两个旋转框的交并比(Intersection over Union,IOU)。该算子两个输入 tensor 分别为 Box1[N,5], Box2[M,5]。参数 `aligned` 为 True 时，输出对位计算的交并比，为 False 时，输出两两相交的交并比。参数 `mode` 为 0 时，结果为 `IOU` (intersection/(area1+area2))，为 1 时，结果为 `IOF` (intersection/area1)，其中 intersection 表示重叠面积，area1、area2 分别表示两个框的面积。
 
+mluOpBboxOverlaps
+-------------------------
+bbox_overlaps 算子用于计算给定两个矩形框的交并比。该算子两个输入 tensor 分别为 Box1[N,4], Box2[M,4]。参数 `aligned` 为 True 时，输出对位计算的交并比，为 False 时，输出两两相交的交并比，参数 `offset` 为 True 时，计算过程坐标有偏置, 为 False 时，计算过程坐标没有偏置，参数 `mode` 为 0 时，结果为 `IOU` (intersection/(area1+area2))，为 1 时，结果为 `IOF` (intersection/area1)，其中 intersection 表示重叠面积，area1、area2 分别表示两个框的面积。
+
 mluOpYoloBox
 -------------------
 yolo_box 负责从检测网络的 backbone 输出部分，计算真实检测框 bbox 信息。该算子三个输入 tensor，两个输出 tensor，输入 x 维度 [N, C, H, W]，输入 img_size 维度 [N, 2]，输入 anchors 维度 [2*S]，其中S表示每个像素点应预测的框的数量，输出 boxes 维度 [N, S, 4, H*W]，输出 scores 维度 [N, S, class_num, H*W]。
