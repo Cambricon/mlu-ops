@@ -403,3 +403,14 @@ mluOpIndiceConvolutionBackwardFilter
 mluOpThreeNNForward
 -----------------------------
 该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。
+.. _carafe_forward:
+
+mluOpCarafeBackward
+----------------------------------
+CarafeForward的反向功能，即根据输入特征图、上采样核函数的滤波器张量以及损失函数对输出特征图的梯度张量，得到损失函数对输入特征图和上采样核函数滤波器的梯度张量。
+
+.. _carafe_backward:
+
+mluOpCarafeForward
+----------------------------------
+一种通用、轻量且非常有效的上采样算法，在物体识别、语义分割、图像修复等任务上都展示出很好的效果。

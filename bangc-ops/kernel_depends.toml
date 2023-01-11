@@ -52,3 +52,6 @@ three_interpolate_backward = ["three_interpolate"]
 active_rotated_filter_forward = ["active_rotated_filter"]
 deform_roi_pool_forward = ["deform_roi_pool"]
 deform_roi_pool_backward = ["deform_roi_pool"]
+carafe_forward = ["carafe"]
+carafe_backward = ["carafe", "fill", "tensor_stride_process"]
+

@@ -792,6 +792,17 @@ typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
  *  ::mluOpDestroyUniqueDescriptor function.*/
 typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
 
+/*! The descriptor of CARAFE (Content-Aware ReAssembly of FEatures) operation that holds
+ *  CARAFE information including the number of input dimensions, kernel size, group size,
+ *  and scale factor.
+ *
+ *  You need to call the ::mluOpCreateCarafeDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetCarafeDescriptor function to set the information of the CARAFE operation
+ *  to the descriptor. Also, you need to destroy the MLUOP context at the end with the
+ *  ::mluOpDestroyCarafeDescriptor function.
+ */
+typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
+
 // Group:Tensor
 /*!
  *  @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, data type,
@@ -2195,6 +2206,335 @@ mluOpLog(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t y_desc,
          void *y);
 
+// Group:Carafe
+/*!
+ * @brief Creates a descriptor pointed by \b carafe_desc for CARAFE upsampling forward and backward operations,
+ * and allocates memory holding the configuration parameters.The information is defined in ::mluOpCarafeDescriptor_t.
+ * For more information about descriptor, see "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] carafe_desc
+ * A host pointer to the CARAFE descriptor that holds information about the
+ * CARAFE operation.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_NOT_INITIALIZED
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpSetCarafeDescriptor function to initialize
+ *   and set the information to the CARAFE descriptor.
+ * - You need to call the ::mluOpDestroyCarafeDescriptor function to destroy the descriptor.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateCarafeDescriptor(mluOpCarafeDescriptor_t *carafe_desc);
+
+// Group:Carafe
+/*!
+ * @brief Initializes the CARAFE descriptor \b carafe_desc that was previously created with
+ * the ::mluOpCreateCarafeDescriptor function, and sets the information about the
+ * CARAFE forward and backward operations to the descriptor \b carafe_desc.
+ *
+ * @param[in] carafe_desc
+ * The descriptor of the CARAFE operation. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @param[in] dimNb
+ * The number of dimensions in the input tensor of the CARAFE operation.
+ * @param[in] kernel_size
+ * The width of the upsampling kernel window.
+ * @param[in] group_size
+ * The number of channel groups. The channels in the same group share the same upsampling filter.
+ * @param[in] scale_factor
+ * The upsampling ratio by which the resolution of the input feature map will be
+ * increased, i.e., the height and width of the output feature maps would be \b scale_factor times
+ * of the height and width of the input feature maps, respectively.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - Before calling this function, ::mluOpCreateCarafeDescriptor should be called.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc,
+                         const int dimNb,
+                         const int kernel_size,
+                         const int group_size,
+                         const int scale_factor);
+
+// Group:Carafe
+/*!
+ * @brief Destroys a CARAFE descriptor \b carafe_desc that was previously created by
+ * the ::mluOpCreateCarafeDescriptor function.
+ *
+ * The CARAFE descriptor is defined in ::mluOpCarafeDescriptor_t
+ * and holds the information about the CARAFE forward or backward operations.
+ *
+ * @param[in] carafe_desc
+ * The CARAFE descriptor to be destroyed. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - You need to call this function after calling the ::mluOpCarafeForward,
+ *   or ::mluOpCarafeBackward function. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
+ * - This function should be called to destroy the CARAFE descriptor.
+ *   Otherwise, memory leak may occur.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
+
+// Group:Carafe
+/*!
+ * @brief Performs the CARAFE upsampling operation
+ * on the input feature maps \b input using weighted combination, where the
+ * filter is set with \b mask. The upsampled feature maps are returned in
+ * the output tensor \b output.
+ *
+ * CARAFE performs upsampling at each output location by weighted summation in a nearby mask
+ * window around the corresponding input location. The mask filters are defined separately
+ * for each output location, which offers the ability of content-aware handling.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the carafe forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] carafe_desc
+ * The descriptor of the CARAFE operation. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @param[in] input_desc
+ * The tensor descriptor of the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] mask_desc
+ * The tensor descriptor of the mask applied to the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask
+ * Pointer to the MLU memory that stores the mask tensor.
+ * @param[in] output_desc
+ * The tensor descriptor of the output upsampled feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "CARAFE operation" section in "Cambricon BANGC OPS User Guide" for details
+ *
+ * @par Data Type
+ * - Data types of \b input, \b mask and \b output tensors must be the same.
+ * - The supported data types of input， output, and mask tensors are as follows:
+ *   - input tensor: half, float
+ *   - mask tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - Data layout of the \b input, \b mask, and \b output tensors should be \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - Parameters specified in \b carafe_desc should satisfy:
+ * - The \b dimNb should be equal to 4.
+ * - The \b kernel_size should be an odd number, i.e., 2*n+1 (n>=0), and \b kernel_size <= 45.
+ * - The \b group_size is positive integers,
+ * - The \b scale_factor is positive integers, and \b scale_factor <= 5.
+ * - The shape of \b input_desc should be [N, H, W, C].
+ * - The shape of \b mask_desc should be [N, Ho, Wo, Cm].
+ * - The shape of \b output_desc should be [N, Ho, Wo, C].
+ * - The length of all dimensions should be non-negative integers.
+ * - The dimensions denoted by the same symbol should have the same value.
+ * - The \b C should be divisible by \b group_size, i.e., C = N * group_size (N>=1).
+ * - The formula of \b Cm is that \b Cm = \b group_size * \b kernel_size * \b kernel_size.
+ * - The formula of \b Ho is that \b Ho = \b scale_factor * \b H.
+ * - The formula of \b Wo is that \b Wo = \b scale_factor * \b W.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement CARAFE forward operation, you need to
+ *   prepare all the parameters passed to this function. See each parameter description
+ *   for details.
+ *
+ * @par Performance Optimization
+ * - None.
+ *
+ * @note
+ * - If any dimension in \b input_desc, \b mask_desc, or \b output_desc is zero,
+ *   which represents an empty tensor, ::MLUOP_STATUS_SUCCESS is returned without
+ *   any changes to the \b output tensor.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - Example of CARAFE forward operation is as follows:
+     @verbatim
+      input tensor by 1 * 2 * 2 * 1 --> input:
+        [[[[ 0.34064351], [-0.8246629 ]],
+          [[-0.71797801], [-0.51707748]]]]
+
+      mask tensor by 1 * 4 * 4 * 1 --> mask:
+        [[[[ 0.97630979], [-0.06261992], [ 0.91232837], [-0.1598553 ]],
+          [[-0.72060206], [ 0.48904262], [-0.65568251], [ 0.12801235]],
+          [[-0.85134485], [-1.27589059], [ 3.00143314], [ 0.61258706]],
+          [[-0.50308504], [-0.93015218], [-1.1125597 ], [ 0.67302385]]]]
+
+      param:
+        kernel_size: 3, group_size: 1, scale_factor: 2
+
+      output tensor by 1 * 4 * 4 * 1 --> output:
+        [[[[ 0.33257359], [-0.02133107], [-0.75236336], [ 0.13182674]],
+          [[-0.24546842], [ 0.1665892 ], [ 0.54071704], [-0.10556703]],
+          [[ 0.61124688], [ 0.91606138], [-1.55197348], [-0.31675497]],
+          [[ 0.36120399], [ 0.66782881], [ 0.57527956], [-0.34800548]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/carafe.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCarafeForward(mluOpHandle_t handle,
+                   const mluOpCarafeDescriptor_t carafe_desc,
+                   const mluOpTensorDescriptor_t input_desc,
+                   const void *input,
+                   const mluOpTensorDescriptor_t mask_desc,
+                   const void *mask,
+                   const mluOpTensorDescriptor_t output_desc,
+                   void *output);
+
+// Group:Carafe
+/*!
+ * @brief Performs the back-propagation of CARAFE.
+ * operation to compute the gradient with respect to input \b grad_input and
+ * mask \b grad_mask based on the gradient of response \b grad_output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the CARAFE backward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] carafe_desc
+ * The descriptor of the CARAFE operation. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @param[in] input_desc
+ * The tensor descriptor of the input feature maps. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] mask_desc
+ * The tensor descriptor of the mask applied to the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask
+ * Pointer to the MLU memory that stores the mask tensor.
+ * @param[in] grad_output_desc
+ * The tensor descriptor of the gradient with respect to the output feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the gradient with respect to the
+ * upsampled feature maps.
+ * @param[in] grad_input_desc
+ * The tensor descriptor of the gradient with respect to the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_input
+ * Pointer to the MLU memory that stores the gradient with respect to the
+ * input feature maps.
+ * @param[in] grad_mask_desc
+ * The descriptor of the gradient tensor with respect to the \b mask tensor.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_mask
+ * Pointer to the MLU memory that stores the gradient with respect to \b mask.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "CARAFE operation" section in "Cambricon BANGC OPS User Guide" for details.
+ *
+ * @par Data Type
+ * - Data types of \b input, \b mask, \b grad_output, \b grad_input and \b grad_mask
+ *   tensors must be the same.
+ * - For MLU200 series, it is not recommended to use half data type for tensors due to the
+ *   low precision.
+ * - The supported data types of input， mask and output tensors are as follows:
+ *   - input tensor: half, float
+ *   - mask tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - Data layout of the \b input, \b mask, \b grad_output, \b grad_input and \b grad_mask
+ *   tensors should be \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - Parameters specified in \b carafe_desc should satisfy:
+ * - The \b dimNb = 4.
+ * - The \b kernel_size should be an odd number, i.e., 2*n+1 (n>=0), and \b kernel_size <= 137.
+ * - The \b group_size and \b scale_factor should be positive integers.
+ * - The shape of \b input_desc should be [N, H, W, C].
+ * - The shape of \b mask_desc should be [N, Ho, Wo, Cm].
+ * - The shape of \b grad_output_desc should be [N, Ho, Wo, C].
+ * - The shape of \b grad_input_desc should be [N, H, W, C].
+ * - The shape of \b grad_mask_desc should be [N, Ho, Wo, Cm].
+ * - The length of all dimensions should be non-negative integers.
+ * - The dimensions denoted by the same symbol should have the same value.
+ * - \b C should be divisible by \b group_size, i.e., C = n * group_size (n>=1).
+ * - \b Cm = \b group_size * \b kernel_size * \b kernel_size.
+ * - \b Ho = \b scale_factor * \b H.
+ * - \b Wo = \b scale_factor * \b W.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement CARAFE backward operation, you need to
+ *   prepare all the parameters passed to this function. See each parameter description
+ *   for details.
+ *
+ * @par Performance Optimization
+ * - None.
+ *
+ * @note
+ * - If any dimension in \b input_desc, \b mask_desc, \b grad_output_desc, \b grad_input_desc
+ *   or \b grad_mask_desc is zero, which represents an empty tensor, ::MLUOP_STATUS_SUCCESS is
+ *   returned without any changes to the \b grad_output and \b grad_input tensors.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/carafe.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCarafeBackward(mluOpHandle_t handle,
+                    const mluOpCarafeDescriptor_t carafe_desc,
+                    const mluOpTensorDescriptor_t input_desc,
+                    const void *input,
+                    const mluOpTensorDescriptor_t mask_desc,
+                    const void *mask,
+                    const mluOpTensorDescriptor_t grad_output_desc,
+                    const void *grad_output,
+                    const mluOpTensorDescriptor_t grad_input_desc,
+                    void *grad_input,
+                    const mluOpTensorDescriptor_t grad_mask_desc,
+                    void *grad_mask);
 // Group:Div
 /*!
  * @brief Computes division on input tensors \b x and \b y, and returns the

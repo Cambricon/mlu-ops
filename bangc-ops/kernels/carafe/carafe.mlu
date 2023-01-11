@@ -1,0 +1,498 @@
+/*******************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *******************************************************************************/
+#include <algorithm>
+#include "carafe.h"
+#include "kernels/utils/common.h"
+
+__nram__ char nram_buf[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_global__ void MLUKernelCarafeForward(
+    T *input, T *mask, T *output, int input_dimN, int input_dimH,
+    int input_dimW, int input_dimC, int kernel_size, int group_size,
+    int scale_factor, int block_dimH, int block_dimW, int block_dimG,
+    int block_dimC, int grid_dimH, int grid_dimW, int grid_dimG,
+    int grid_dimC) {
+  // useful variables
+  const int dtype_size = sizeof(T);
+  const int align_size_NRAM = WRAM_ALIGN_SIZE / dtype_size;
+  const int align_size_NFU = NFU_ALIGN_SIZE / dtype_size;
+  const int kernel_size_sq = kernel_size * kernel_size;
+  const int kernel_half_width = (kernel_size - 1) / 2;
+  const int channels_per_group =
+      input_dimC / group_size;  // number of channels per group
+  const int output_dimH = scale_factor * input_dimH;
+  const int output_dimW = scale_factor * input_dimW;  // output[N,Ho,Wo,C]
+
+  // input[N,H,W,C]
+  const int input_stride_w = input_dimC;
+  const int input_stride_h = input_dimW * input_stride_w;
+  const int input_stride_n = input_dimH * input_stride_h;
+  // mask[N,Ho,Wo,G*K^2]
+  const int mask_stride_w = group_size * kernel_size_sq;
+  const int mask_stride_h = output_dimW * mask_stride_w;
+  const int mask_stride_n = output_dimH * mask_stride_h;
+  // output[N,Ho,Wo,C]
+  const int output_stride_w = input_dimC;
+  const int output_stride_h = output_dimW * output_stride_w;
+  const int output_stride_n = output_dimH * output_stride_h;
+
+  // set pointers and shapes of variables on NRAM
+
+  const int block_c_stride = CEIL_ALIGN(block_dimC, align_size_NRAM);
+  const int block_c_size_NFU = CEIL_ALIGN(block_dimC, align_size_NFU);
+  const int sum_array_size_bang_add =
+      CEIL_ALIGN(block_c_stride * block_dimG, align_size_NFU);
+
+  // input_nram[block_H+K-1, block_W+K-1, block_dimC * block_dimG]
+  T *input_nram = (T *)nram_buf;
+  const int input_nram_stride_w = block_c_stride * block_dimG;
+  const int input_nram_stride_h =
+      (block_dimW + kernel_size - 1) * input_nram_stride_w;
+  const int input_nram_size =
+      (block_dimH + kernel_size - 1) * input_nram_stride_h;
+
+  // mask_nram[sigma*block_H, sigma*block_W, K*K * block_dimG]
+  T *mask_nram = input_nram + input_nram_size;
+  const int mask_nram_stride_w = kernel_size_sq * block_dimG;
+  const int mask_nram_stride_h =
+      (scale_factor * block_dimW) * mask_nram_stride_w;
+  const int mask_nram_size = CEIL_ALIGN(
+      (scale_factor * block_dimH) * mask_nram_stride_h, align_size_NRAM);
+
+  // output_nram[sigma*D_H, sigma*D_W, block_dimC * block_dimG]
+  T *output_nram = mask_nram + mask_nram_size;
+  const int output_nram_stride_w = sum_array_size_bang_add;
+  const int output_nram_stride_h =
+      (scale_factor * block_dimW) * output_nram_stride_w;
+  const int output_nram_size =
+      (scale_factor * block_dimH) * output_nram_stride_h;
+
+  // sum_array[block_dimC * block_dimG]
+  T *sum_array = output_nram + output_nram_size;
+
+  /* ===== loop over N,grid_H,grid_W,grid_G,grid_C
+   * iterations are distributed over computing cores
+   */
+  int job_num = input_dimN * grid_dimH * grid_dimW * grid_dimG * grid_dimC;
+  for (int loop_index = taskId; loop_index < job_num; loop_index += taskDim) {
+    int igrid_C = loop_index % grid_dimC;
+    int igrid_G = (loop_index / grid_dimC) % grid_dimG;
+    int igrid_W = (loop_index / grid_dimC / grid_dimG) % grid_dimW;
+    int igrid_H = (loop_index / grid_dimC / grid_dimG / grid_dimW) % grid_dimH;
+    int isample = loop_index / grid_dimC / grid_dimG / grid_dimW / grid_dimH;
+
+    // input block's beginning indices
+    int h_0 = igrid_H * block_dimH;
+    int w_0 = igrid_W * block_dimW;
+    int g_0 = igrid_G * block_dimG;
+    int c_0 = g_0 * channels_per_group + igrid_C * block_dimC;
+
+    // input block's dimension
+    int block_H = block_dimH;
+    int block_W = block_dimW;
+    int block_G = block_dimG;
+    int block_C = block_dimC;
+    // take care of blocks near the end of each dimension
+    if (igrid_H == (grid_dimH - 1)) {
+      block_H = input_dimH - (grid_dimH - 1) * block_dimH;
+    }
+    if (igrid_W == (grid_dimW - 1)) {
+      block_W = input_dimW - (grid_dimW - 1) * block_dimW;
+    }
+    if (igrid_G == (grid_dimG - 1)) {
+      block_G = group_size - (grid_dimG - 1) * block_dimG;
+    }
+    if (igrid_C == (grid_dimC - 1)) {
+      block_C = channels_per_group - (grid_dimC - 1) * block_dimC;
+    }
+
+    // corresponding mask & output blocks' beginning indices and dimension
+    int ho_0 = scale_factor * h_0;
+    int wo_0 = scale_factor * w_0;
+    int block_Ho = scale_factor * block_H;
+    int block_Wo = scale_factor * block_W;
+
+    /* ===== load mask block from gdram2nram
+     * mask_nram[    0:Ho_prime-1,         0:Wo_prime-1, 0:(g1-g0+1)*K^2-1] =
+     * mask[ n, ho_0:ho_0+Ho_prime-1, wo_0:wo_0+Wo_prime-1,
+     * (g0*K^2):(g1*K^2+K^2-1)]; NOTE: a:b = [a,a+1,...,b]
+     */
+    int src_offset = INDEX3(isample, ho_0, wo_0, g_0 * kernel_size_sq,
+                            mask_stride_n, mask_stride_h, mask_stride_w);
+    T *src = mask + src_offset;
+    loadStr3D(mask_nram, src, block_G * kernel_size_sq, block_Wo, block_Ho,
+              mask_nram_stride_w, mask_nram_stride_h, mask_stride_w,
+              mask_stride_h);
+
+    /* ===== load input block from gdram2nram
+     *
+     * input_nram[  [0,H'+K-2],         [0,W'+K-2], [0, C'-1]]
+     *    = input[n,[h_0-r,h_0+H'-1+r], [w_0-r,w_0+W'-1+r], [c_0,c_0+C'-1]]
+     *
+     * zero padding for out of bound indices
+     *
+     * input_nram[   dst_i0:dst_i1, dst_j0:dst_j1, 0:C'-1]
+     *    = input[n, src_i0:src_i1, src_j0:src_j1, c_0:c0+C'-1]
+     */
+    // calculate proper indices on H, W for zero padding.
+    // example at the left boundary:
+    // kernel_size = 11, r = 5
+    //  (src_i0 = 0)-v  v-(h_0): index relative to the whole input data
+    // block:  000xx[0:block_H-1]xxxxx, where x is data element, and 0 is padded
+    // zero.
+    //            ^-(dst_i0 = 3): index relative to the current block
+    int i0 = h_0 - kernel_half_width;
+    int dst_i0 = 0;
+    int src_i0 = i0;
+    if (i0 < 0) {
+      dst_i0 = -i0;
+      src_i0 = 0;
+    }
+    // example at the right boundary:
+    // kernel_size = 11, r = 5
+    //        v-(h_0)       v-(src_i1 = input_dimH)
+    //  xxxxx[0:block_H-1]xx000: x is data elements, and 0 is padded zeros.
+    //                     ^-dst_i1 = (last index in the block) - (excessive
+    //                     elements)
+    int i1 = h_0 + block_H - 1 + kernel_half_width;
+    int dst_i1 = block_H + kernel_size - 2;
+    int src_i1 = i1;
+    if (i1 > input_dimH - 1) {
+      dst_i1 = (block_H + kernel_size - 2) - (i1 - (input_dimH - 1));
+      src_i1 = input_dimH - 1;
+    }
+    int j0 = w_0 - kernel_half_width;
+    int dst_j0 = 0;
+    int src_j0 = j0;
+    if (j0 < 0) {
+      dst_j0 = -j0;
+      src_j0 = 0;
+    }
+    int j1 = w_0 + block_W - 1 + kernel_half_width;
+    int dst_j1 = block_W + kernel_size - 2;
+    int src_j1 = j1;
+    if (j1 > input_dimW - 1) {
+      dst_j1 = (block_W + kernel_size - 2) - (j1 - (input_dimW - 1));
+      src_j1 = input_dimW - 1;
+    }
+    int input_seg_num_w = dst_j1 - dst_j0 + 1;
+    int input_seg_num_h = dst_i1 - dst_i0 + 1;
+
+    // input_nram[   dst_i0:dst_i1, dst_j0:dst_j1, block_G * block_C]
+    //    = input[n, src_i0:src_i1, src_j0:src_j1, block_G * block_C]
+    int dst_offset =
+        input_nram_stride_h * dst_i0 + input_nram_stride_w * dst_j0;
+    T *dst = input_nram + dst_offset;
+    src_offset = INDEX3(isample, src_i0, src_j0, c_0, input_stride_n,
+                        input_stride_h, input_stride_w);
+    src = input + src_offset;
+    for (int i = 0; i < input_seg_num_h; ++i) {
+      loadStr3D(dst, src, block_C, block_G, input_seg_num_w, block_c_stride,
+                input_nram_stride_w, block_C, input_stride_w);
+      dst += input_nram_stride_h;
+      src += input_stride_h;
+    }
+
+    // ===== loop each pixel inside the input block
+    __bang_write_value(output_nram, output_nram_size, T(0));
+
+    // For each (h',w') \in [0,H'-1] \times [0,W'-1]:
+    for (int h = 0; h < block_H; ++h) {
+      // exclude zero padded indices
+      // this is required when mask has nan/inf on these padded locations,
+      // otherwise the summed value will be contaminated since 0 * nan/inf =
+      // nan.
+      int k_h_min = std::max(0, dst_i0 - h);
+      int k_h_max = std::min(kernel_size - 1, dst_i1 - h);
+      for (int w = 0; w < block_W; ++w) {
+        // exclude zero padded indices
+        int k_w_min = std::max(0, dst_j0 - w);
+        int k_w_max = std::min(kernel_size - 1, dst_j1 - w);
+        // loop corresponding output pixels
+        // For each (i,j) \in [0,\sigma -1] \times [0, \sigma -1]:
+        for (int i = 0; i < scale_factor; ++i) {
+          for (int j = 0; j < scale_factor; ++j) {
+            // corresponding pixel in the mask&output block
+            int ho = scale_factor * h + i;
+            int wo = scale_factor * w + j;
+            // output_nram[    ho_prime, wo_prime, g_c0:g_c1] =
+            // sum(mask_nram[ho_prime, wo_prime, g*K^2 + K *k_h +    k_w]
+            //       * input_nram[                         h'+k_h,  w'+k_w,
+            //       g_c0:g_c1], for (k_h,k_w,g) in [0,K-1]x[0,K-1]x[0,G'])
+            T *mask_array =
+                mask_nram + mask_nram_stride_h * ho + mask_nram_stride_w * wo;
+            for (int k_h = k_h_min; k_h <= k_h_max; ++k_h) {
+              for (int k_w = k_w_min; k_w <= k_w_max; ++k_w) {
+                src = input_nram + input_nram_stride_h * (h + k_h) +
+                      input_nram_stride_w * (w + k_w);
+                int mask_index = kernel_size * k_h + k_w;
+                T *sum = sum_array;
+                // mlutiply mask weight with channels for each channel group
+                for (int g = 0; g < block_G; ++g) {
+                  __bang_mul_scalar(sum, src, mask_array[mask_index],
+                                    block_c_size_NFU);
+                  // NOTE: block_c_size_NFU >= block_c_stride, so overlapped
+                  // written will occur on sum_array. So this loop must be
+                  // executed in order to avoid data contamination, as shown
+                  // below.
+                  //
+                  // |-----block_c_size_NFU-----|
+                  // xxxxxxxxxxxxxxxxxxxxyyyzzzzz------------
+                  // |---block_c_stride ---|^^^^^will be overwritten in the next
+                  // iteration.
+                  //
+                  // x: actual data used, y: not used, z: overwritten
+                  sum += block_c_stride;
+                  src += block_c_stride;
+                  mask_index += kernel_size_sq;
+                }  // loop g
+                // cumulative sum over entire kernel window
+                dst = output_nram + output_nram_stride_h * ho +
+                      output_nram_stride_w * wo;
+                __bang_add(dst, dst, sum_array, sum_array_size_bang_add);
+              }  // loop k_w
+            }    // loop k_h
+          }      // loop wo
+        }        // loop ho
+      }          // loop block_W
+    }            // loop block_H
+
+    /*===== write output from nram2gdram
+     *  output[n,     ho_0:ho_0+Ho_prime-1, wo_0:wo_0+Wo_prime-1, c_0:c_0+C'-1]
+     *  = output_nram[0:Ho_prime-1,         0:Wo_prime-1,         0:C'-1]
+     */
+    dst_offset = INDEX3(isample, ho_0, wo_0, c_0, output_stride_n,
+                        output_stride_h, output_stride_w);
+    dst = output + dst_offset;
+    src = output_nram;
+    for (int i = 0; i < block_Ho; ++i) {
+      storeStr3D(dst, src, block_C, block_G, block_Wo, block_C, output_stride_w,
+                 block_c_stride, output_nram_stride_w);
+      dst += output_stride_h;
+      src += output_nram_stride_h;
+    }
+  }  // loop sample,grid_H,grid_W,grid_G,grid_C
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
+                                            T *grad_input, T *grad_mask, int n,
+                                            int hi, int wi, int c, int k_up,
+                                            int group, int scale) {
+  int wo = wi * scale;
+  int ho = hi * scale;
+  int out_num = n * ho * wo * group;
+  int group_size = c / group;
+  int repeat = out_num / taskDim + (int)(taskId < out_num % taskDim);
+  int num_align = PAD_DOWN(NRAM_BLOCK / sizeof(T), NFU_ALIGN_SIZE / sizeof(T));
+  int num_per_loop = group_size / num_align;
+  int rem_for_loop = group_size % num_align;
+  int rem_for_loop_align = PAD_UP(rem_for_loop, NFU_ALIGN_SIZE / sizeof(T));
+  for (int k = 0; k < repeat; k++) {
+    int iter = k * taskDim + taskId;
+    int group_k = iter % group;
+    int w_k = (iter / group) % wo;
+    int h_k = (iter / wo / group) % ho;
+    int n_k = (iter / ho / wo / group) % n;
+    int h_i = h_k / scale;
+    int w_i = w_k / scale;
+    int start_h = h_i - ((k_up - 1) / 2);
+    int end_h = h_i + ((k_up - 1) / 2) + 1;
+    int start_w = w_i - ((k_up - 1) / 2);
+    int end_w = w_i + ((k_up - 1) / 2) + 1;
+    T *base_mask = (T *)mask + n_k * ho * wo * group * k_up * k_up +
+                   h_k * wo * group * k_up * k_up + w_k * group * k_up * k_up +
+                   group_k * k_up * k_up;
+    T *base_grad_mask = (T *)grad_mask + n_k * ho * wo * group * k_up * k_up +
+                        h_k * wo * group * k_up * k_up +
+                        w_k * group * k_up * k_up + group_k * k_up * k_up;
+
+    __bang_write_zero((T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
+                      NRAM_BLOCK / sizeof(T));
+    __bang_write_zero((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T),
+                      NRAM_BLOCK / sizeof(T));
+    __bang_write_zero((T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+                      NRAM_BLOCK / sizeof(T));
+
+    __memcpy((T *)nram_buf + NRAM_BLOCK / sizeof(T), (T *)base_mask,
+             k_up * k_up * sizeof(T), GDRAM2NRAM);
+    for (int i = 0; i < num_per_loop; i++) {
+      __bang_write_zero((T *)nram_buf, NRAM_BLOCK / sizeof(T));
+      T *base_grad_output = (T *)grad_output + n_k * ho * wo * c +
+                            h_k * wo * c + w_k * c + group_k * group_size +
+                            i * num_align;
+      __memcpy((T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+               (T *)base_grad_output, num_align * sizeof(T), GDRAM2NRAM);
+      for (int ih = start_h; ih < end_h; ih++) {
+        for (int iw = start_w; iw < end_w; iw++) {
+          if (ih < 0 || ih > hi - 1 || iw < 0 || iw > wi - 1) {
+            continue;
+          }
+          int mask_ih = ih - h_i + (k_up - 1) / 2;
+          int mask_iw = iw - w_i + (k_up - 1) / 2;
+          int mask_index = mask_ih * k_up + mask_iw;
+          int input_index = n_k * hi * wi * c + ih * wi * c + iw * c +
+                            group_k * group_size + i * num_align;
+          T *base_input = (T *)input + input_index;
+          T *base_grad_input = (T *)grad_input + input_index;
+          __memcpy((T *)nram_buf, (T *)base_input, num_align * sizeof(T),
+                   GDRAM2NRAM);
+          __bang_mul_scalar(
+              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
+              (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+              ((T *)nram_buf + NRAM_BLOCK / sizeof(T))[mask_index], num_align);
+          __bang_atomic_add(
+              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T), (T *)base_grad_input,
+              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T), num_align);
+          __bang_mul((T *)nram_buf, (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+                     (T *)nram_buf, num_align);
+
+          __bang_sumpool((T *)nram_buf, (T *)nram_buf,
+                         NFU_ALIGN_SIZE / sizeof(T),
+                         num_align / (NFU_ALIGN_SIZE / sizeof(T)), 1,
+                         num_align / (NFU_ALIGN_SIZE / sizeof(T)), 1, 1, 1);
+
+          __bang_reduce_sum((T *)nram_buf, (T *)nram_buf,
+                            NFU_ALIGN_SIZE / sizeof(T));
+          ((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T))[mask_index] +=
+              ((T *)nram_buf)[0];
+        }
+      }
+    }
+    if (rem_for_loop) {
+      __bang_write_zero((T *)nram_buf, NRAM_BLOCK / sizeof(T));
+      T *base_grad_output = (T *)grad_output + n_k * ho * wo * c +
+                            h_k * wo * c + w_k * c + group_k * group_size +
+                            num_per_loop * num_align;
+      __memcpy((T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+               (T *)base_grad_output, rem_for_loop * sizeof(T), GDRAM2NRAM);
+      for (int ih = start_h; ih < end_h; ih++) {
+        for (int iw = start_w; iw < end_w; iw++) {
+          if (ih < 0 || ih > hi - 1 || iw < 0 || iw > wi - 1) {
+            continue;
+          }
+          int mask_ih = ih - h_i + (k_up - 1) / 2;
+          int mask_iw = iw - w_i + (k_up - 1) / 2;
+          int mask_index = mask_ih * k_up + mask_iw;
+          int input_index = n_k * hi * wi * c + ih * wi * c + iw * c +
+                            group_k * group_size + num_per_loop * num_align;
+          T *base_input = (T *)input + input_index;
+          T *base_grad_input = (T *)grad_input + input_index;
+          __memcpy((T *)nram_buf, (T *)base_input, rem_for_loop * sizeof(T),
+                   GDRAM2NRAM);
+          __bang_mul_scalar(
+              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
+              (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+              ((T *)nram_buf + NRAM_BLOCK / sizeof(T))[mask_index],
+              rem_for_loop_align);
+          __bang_atomic_add(
+              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T), (T *)base_grad_input,
+              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T), rem_for_loop);
+          __bang_mul((T *)nram_buf, (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+                     (T *)nram_buf, rem_for_loop_align);
+
+          __bang_sumpool(
+              (T *)nram_buf, (T *)nram_buf, NFU_ALIGN_SIZE / sizeof(T),
+              rem_for_loop_align / (NFU_ALIGN_SIZE / sizeof(T)), 1,
+              rem_for_loop_align / (NFU_ALIGN_SIZE / sizeof(T)), 1, 1, 1);
+          __bang_reduce_sum((T *)nram_buf, (T *)nram_buf,
+                            NFU_ALIGN_SIZE / sizeof(T));
+
+          ((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T))[mask_index] +=
+              ((T *)nram_buf)[0];
+        }
+      }
+    }
+    __memcpy((T *)base_grad_mask, (T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T),
+             k_up * k_up * sizeof(T), NRAM2GDRAM);
+  }
+}
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *mask, void *output,
+    int input_dimN,    // number of input samples
+    int input_dimH,    // input feature map height
+    int input_dimW,    // input feature map width
+    int input_dimC,    // number of input channels
+    int kernel_size,   // upsampling kernel side size
+    int group_size,    // number of channel groups
+    int scale_factor,  // upscaling factor
+    int block_dimH,    // block height
+    int block_dimW,    // block width
+    int block_dimG,    // block of channel groups
+    int block_dimC,    // block of channels in each group
+    int grid_dimH,     // nb. of blocks along height
+    int grid_dimW,     // nb. of blocks along width
+    int grid_dimG,     // nb. of group blocks
+    int grid_dimC) {   // nb. of channel blocks
+  MLUKernelCarafeForward<<<k_dim, k_type, queue>>>(
+      (float *)input, (float *)mask, (float *)output, input_dimN, input_dimH,
+      input_dimW, input_dimC, kernel_size, group_size, scale_factor, block_dimH,
+      block_dimW, block_dimG, block_dimC, grid_dimH, grid_dimW, grid_dimG,
+      grid_dimC);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *mask, void *output,
+    int input_dimN,    // number of input samples
+    int input_dimH,    // input feature map height
+    int input_dimW,    // input feature map width
+    int input_dimC,    // number of input channels
+    int kernel_size,   // upsampling kernel side size
+    int group_size,    // number of channel groups
+    int scale_factor,  // upscaling factor
+    int block_dimH,    // block height
+    int block_dimW,    // block width
+    int block_dimG,    // block of channel groups
+    int block_dimC,    // block of channels in each group
+    int grid_dimH,     // nb. of blocks along height
+    int grid_dimW,     // nb. of blocks along width
+    int grid_dimG,     // nb. of group blocks
+    int grid_dimC) {   // nb. of channel blocks
+  MLUKernelCarafeForward<<<k_dim, k_type, queue>>>(
+      (half *)input, (half *)mask, (half *)output, input_dimN, input_dimH,
+      input_dimW, input_dimC, kernel_size, group_size, scale_factor, block_dimH,
+      block_dimW, block_dimG, block_dimC, grid_dimH, grid_dimW, grid_dimG,
+      grid_dimC);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *input,
+    void *mask, void *grad_output, void *grad_input, void *grad_mask, int n,
+    int hi, int wi, int c, int k_up, int group, int scale) {
+  MLUKernelCarafeBackward<<<k_dim, k_type, queue>>>(
+      (float *)input, (float *)mask, (float *)grad_output, (float *)grad_input,
+      (float *)grad_mask, n, hi, wi, c, k_up, group, scale);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *input,
+    void *mask, void *grad_output, void *grad_input, void *grad_mask, int n,
+    int hi, int wi, int c, int k_up, int group, int scale) {
+  MLUKernelCarafeBackward<<<k_dim, k_type, queue>>>(
+      (half *)input, (half *)mask, (half *)grad_output, (half *)grad_input,
+      (half *)grad_mask, n, hi, wi, c, k_up, group, scale);
+}

@@ -233,6 +233,8 @@ message Node {
   optional DeformRoiPoolBackwardParam deform_roi_pool_backward_param = 10127;  //param
   optional IndiceConvolutionBackwardDataParam indice_convolution_backward_data_param = 22120599;  // param
   optional IndiceConvolutionBackwardParam indice_convolution_backward_param = 20230131;  //param
+  optional CarafeForwardParam  carafe_forward_param     = 408;  // CarafeForwardParam
+  optional CarafeBackwardParam  carafe_backward_param   = 409;  // CarafeBackwardParam
 }
 
 
@@ -545,4 +547,20 @@ message IndiceConvolutionBackwardParam{
   optional int64 inverse     = 1 [default = 0];
   optional int64 sub_m       = 2 [default = 0];
   repeated int64 indice_num  = 3;
+}
+
+// param to call mluOpCarafeForward()
+message CarafeForwardParam {
+  optional int32 dimnb        = 1;
+  optional int32 kernel_size  = 2;
+  optional int32 group_size   = 3;
+  optional int32 scale_factor = 4;
+}
+
+// param to call mluOpCarafeBackward()
+message CarafeBackwardParam {
+  optional int32 dimnb        = 1;
+  optional int32 kernel_size  = 2;
+  optional int32 group_size   = 3;
+  optional int32 scale_factor = 4;
 }
