@@ -53,22 +53,22 @@
 
 ## 运行测试用例
 
-首先确定当前的测试平台，如 `mlu270`，`mlu290` 等，之后可以用如下几种命令对算子进行测试：
+首先确定当前的测试平台，如 `mlu370`，之后可以用如下几种命令对算子进行测试：
 
 - 测试ops目录下的全部算子
   ```sh
   cd mlu-ops/bangpy-ops
-  ./utils/test_operators.sh --target=mlu2xx
+  ./utils/test_operators.sh --target=mlu3xx
   ```
 - 使用 `--filter` 测试指定的一个或多个算子
   ```sh
   cd mlu-ops/bangpy-ops
-  ./utils/test_operators.sh --filter=axx,bxx,cxx --target=mlu2xx
+  ./utils/test_operators.sh --filter=axx,bxx,cxx --target=mlu3xx
   ```
 - 使用 `--opsfile` 从存放算子列表的文件中读取指定算子并进行测试
   ```sh
   cd mlu-ops/bangpy-ops
-  ./utils/test_operators.sh --opsfile=./ops_xxx.txt --target=mlu2xx
+  ./utils/test_operators.sh --opsfile=./ops_xxx.txt --target=mlu3xx
   ```
 
 `注意` :
@@ -76,7 +76,7 @@
 - 该脚本默认是每个算子先进行编译，再进行测试，如果想跳过编译阶段而直接进行测试，那么请在保证已完成算子编译的情况下对以上三种不同的 `./utils/test_operators.sh` 调用加上 `--only_test` 选项，例如
   ```sh
   cd mlu-ops/bangpy-ops
-  ./utils/test_operators.sh --target=mlu2xx --only_test
+  ./utils/test_operators.sh --target=mlu3xx --only_test
   ```
 测试结果会在所有算子测试完毕后显示。
 
@@ -92,7 +92,7 @@
 - 生成并测试该包含ops目录下全部算子的算子库文件
   ```sh
   cd mlu-ops/bangpy-ops
-  ./release.sh -r -t --target=mlu2xx
+  ./release.sh -r -t --target=mlu3xx
   ```
 - `--filter` 及 `--opsfile` 参数对该脚本同样适用
   ```sh

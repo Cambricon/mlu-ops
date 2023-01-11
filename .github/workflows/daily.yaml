@@ -8,7 +8,7 @@ jobs:
   test:
     strategy:
       matrix:
-        runner: [mlu270-x5k, mlu290-m5, mlu370-m8]
+        runner: [mlu370-m8]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3

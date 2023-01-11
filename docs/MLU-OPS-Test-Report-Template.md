@@ -18,7 +18,7 @@
 
 |      序号      |           需求            |      需求详情       |
 |----------------|---------------------------|---------------------|
-|        1       |          支持硬件         | MLU270 <br> MLU290 <br>MLU370|
+|        1       |          支持硬件         | MLU370|
 |        2       |          job类型          |    block <br> U1 <br> U4    |
 |        3       |         layout            |  支持NHWC 、NCHW、ARRAY等layout    |
 |        4       |         多维              |       是否支持多维         |
@@ -55,20 +55,6 @@
 # 2. 性能测试
 
 详见：[MLU-OPS性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md)
-
-平台：MLU270
-
-|operator|mlu_hardware_time(us)|mlu_interface_time(us)|mlu_io_efficiency|mlu_compute_efficiency|mlu_workwpace_size(Bytes)|data_type|shape|
-|-----|----|----|----|----|----|------|-----|
-|op_name|   |    |     |    |    |    |     |
-|op_name|   |    |     |    |    |    |     |
-
-平台：MLU290
-
-|operator|mlu_hardware_time(us)|mlu_interface_time(us)|mlu_io_efficiency|mlu_compute_efficiency|mlu_workwpace_size(Bytes)|data_type|shape|
-|-----|----|----|----|----|----|------|-----|
-|op_name|   |    |     |    |    |    |     |
-|op_name|   |    |     |    |    |    |     |
 
 平台：MLU370
 
