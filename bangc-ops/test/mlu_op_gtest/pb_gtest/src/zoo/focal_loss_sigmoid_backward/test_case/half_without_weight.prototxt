@@ -6,7 +6,7 @@ input {
     dims: 330
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
+  dtype: DTYPE_HALF
   random_data: {
     seed: 23
     upper_bound: 20
@@ -14,6 +14,7 @@ input {
     distribution: UNIFORM
   }
 }
+
 input {
   id:"target"
   shape: {
@@ -28,21 +29,7 @@ input {
     distribution: UNIFORM
   }
 }
-input {
-  id:"grad_output"
-  shape: {
-    dims: 1280
-    dims: 330
-  }
-  layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
-  random_data: {
-    seed: 23
-    upper_bound:  30
-    lower_bound:  -30
-    distribution: UNIFORM
-  }
-}
+
 output {
   id:"grad_input"
   shape: {
@@ -50,7 +37,7 @@ output {
     dims: 330
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
+  dtype: DTYPE_HALF
 }
 focal_loss_sigmoid_backward_param: {
   prefer: 0

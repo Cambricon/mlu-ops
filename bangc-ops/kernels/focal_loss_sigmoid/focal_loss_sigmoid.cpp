@@ -292,12 +292,10 @@ void getDealNAndThresholdC(const mluOpHandle_t handle,
 mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
                           const mluOpTensorDescriptor_t target_desc,
                           const mluOpTensorDescriptor_t weight_desc,
-                          const mluOpTensorDescriptor_t grad_desc,
                           const mluOpTensorDescriptor_t output_desc) {
   const std::string interface_name = "[mluOpFocalLossSigmoidBackward]: ";
 
   // check shape
-  PARAM_CHECK(interface_name, input_desc->dim == grad_desc->dim);
   PARAM_CHECK(interface_name, input_desc->dim == output_desc->dim);
   if (input_desc->dim != 2) {
     LOG(ERROR) << interface_name << "input_desc->dim shoule be 2"
@@ -310,16 +308,6 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int i = 0; i < input_desc->dim; ++i) {
-    if (input_desc->dims[i] != grad_desc->dims[i]) {
-      LOG(ERROR) << interface_name << "input_desc->dims[" << i
-                 << "] should be equal to "
-                 << "grad_desc->dims[" << i << "]. But now "
-                 << "input_desc->dims[" << i << "] is " << input_desc->dims[i]
-                 << ", "
-                 << "grad_desc->dims[" << i << "] is " << grad_desc->dims[i]
-                 << ".";
-      return MLUOP_STATUS_BAD_PARAM;
-    }
     if (input_desc->dims[i] != output_desc->dims[i]) {
       LOG(ERROR) << interface_name << "input_desc->dims[" << i
                  << "] should be equal to "
@@ -342,7 +330,6 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   // check data type
   auto input_dtype = input_desc->dtype;
   auto target_dtype = target_desc->dtype;
-  PARAM_CHECK(interface_name, input_desc->dtype == grad_desc->dtype);
   PARAM_CHECK(interface_name, input_desc->dtype == output_desc->dtype);
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
     LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
@@ -393,7 +380,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
     const mluOpTensorDescriptor_t input_desc, const void *input,
     const mluOpTensorDescriptor_t target_desc, const void *target,
     const mluOpTensorDescriptor_t weight_desc, const void *weight,
-    const mluOpTensorDescriptor_t grad_desc, const void *grad,
     const float alpha, const float gamma,
     const mluOpTensorDescriptor_t output_desc, void *output) {
   const std::string interface_name = "[mluOpFocalLossSigmoidBackward]: ";
@@ -401,10 +387,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   PARAM_CHECK(interface_name, handle != NULL);
   PARAM_CHECK(interface_name, input_desc != NULL);
   PARAM_CHECK(interface_name, target_desc != NULL);
-  PARAM_CHECK(interface_name, grad_desc != NULL);
   PARAM_CHECK(interface_name, output_desc != NULL);
 
-  if (checkParams(input_desc, target_desc, weight_desc, grad_desc,
+  if (checkParams(input_desc, target_desc, weight_desc,
                   output_desc) != MLUOP_STATUS_SUCCESS) {
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -442,9 +427,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   getDealNAndThresholdC(handle, compute_data_bytes, target_data_bytes, dim_c,
                         &deal_n, &threshold_c, has_weight, is_half);
 
+  VLOG(5) << interface_name << "threshold_c: " << threshold_c;
   // check C
-  PARAM_CHECK(interface_name, input_desc->dim == grad_desc->dim);
-
   if (dim_c > threshold_c) {
     LOG(ERROR) << interface_name
                << " input_desc->dims[1] should be in the range of "
@@ -455,16 +439,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
 
   size_t input_size = mluOpGetTensorElementNum(input_desc);
   size_t target_size = mluOpGetTensorElementNum(target_desc);
-  size_t grad_size = mluOpGetTensorElementNum(grad_desc);
   size_t output_size = mluOpGetTensorElementNum(output_desc);
-  if (input_size == 0 || target_size == 0 || grad_size == 0 ||
-      output_size == 0) {
+  if (input_size == 0 || target_size == 0 || output_size == 0) {
     VLOG(5) << interface_name << "skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
   PARAM_CHECK(interface_name, input != NULL);
   PARAM_CHECK(interface_name, target != NULL);
-  PARAM_CHECK(interface_name, grad != NULL);
   PARAM_CHECK(interface_name, output != NULL);
 
   // generate focal_loss_sigmoid_backward prototxt
@@ -474,11 +455,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
     GEN_CASE_DATA(true, "input", input, input_desc, 20, -20);
     if (weight != NULL) {
       GEN_CASE_DATA_REAL(true, "target", target, target_desc);
-      GEN_CASE_DATA(true, "grad", grad, grad_desc, 20, -20);
       GEN_CASE_DATA(true, "weight", weight, weight_desc, 1, 0);
     } else {
       GEN_CASE_DATA(true, "target", target, target_desc, dim_c, 0);
-      GEN_CASE_DATA(true, "grad", grad, grad_desc, 20, -20);
     }
     GEN_CASE_DATA(false, "output", output, output_desc, 20, -20);
     GEN_CASE_OP_PARAM_SINGLE(0, "focal_loss_sigmoid_backward", "prefer",
@@ -498,12 +477,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   VLOG(5) << "Launch Kernel MLUBlockFocalLossSigmoidBackward<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelFocalLossSigmoidBackwardHalf(
-      k_dim, k_type, handle->queue, input, target, weight, gamma, alpha, dim_n,
-      deal_n, dim_c, output)));
-  KERNEL_CHECK((KernelFocalLossSigmoidBackwardFloat(
-      k_dim, k_type, handle->queue, input, target, weight, gamma, alpha, dim_n,
-      deal_n, dim_c, output)));
+  if (dwidth == 2) {
+    KERNEL_CHECK((KernelFocalLossSigmoidBackwardHalf(
+        k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
+        dim_n, deal_n, dim_c, output)));
+  } else {
+    KERNEL_CHECK((KernelFocalLossSigmoidBackwardFloat(
+        k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
+        dim_n, deal_n, dim_c, output)));
+  }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
