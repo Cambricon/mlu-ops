@@ -161,7 +161,7 @@ void MLUOP_WIN_API mluOpUBestKernelGenerateProposalsV2Float(
     const bool pixel_offset, const int batch_size, const int Anchors_num,
     const int H, const int W);
 
-/* poly_nms */
+/* PolyNms */
 void MLUOP_WIN_API mluOpBlockKernelPolyNmsCalcAreaFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *boxes, const int box_num, const int real_width,
@@ -373,7 +373,7 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *y, const void *diff_y, void *x, int num);
 
-/* yolo_box */
+/* YoloBox */
 void MLUOP_WIN_API mluOpBlockKernelYoloBoxFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *img_size, const void *anchors,
@@ -423,6 +423,27 @@ void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
     const void *input, void *output, const uint32_t high_num,
     const uint32_t expand_num, const uint32_t low_num, const int dtype_size);
 
+/* FocalLossSigmoid */
+void MLUOP_WIN_API KernelFocalLossSigmoidForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *target, const void *weight, const int32_t N,
+    const int32_t C, const float alpha, const float gamma, void *output);
+void MLUOP_WIN_API KernelFocalLossSigmoidForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *target, const void *weight, const int32_t N,
+    const int32_t C, const float alpha, const float gamma, void *output);
+
+void MLUOP_WIN_API KernelFocalLossSigmoidBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *target, const void *weight,
+    const float gamma, const float alpha, const int32_t dim_n,
+    const int32_t deal_n, const int32_t dim_c, void *output);
+
+void MLUOP_WIN_API KernelFocalLossSigmoidBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *target, const void *weight,
+    const float gamma, const float alpha, const int32_t dim_n,
+    const int32_t deal_n, const int32_t dim_c, void *output);
 /* Psamask */
 typedef enum {
   COLLECT = 0,
