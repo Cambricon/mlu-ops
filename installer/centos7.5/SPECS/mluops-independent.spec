@@ -56,6 +56,7 @@ install -d $RPM_BUILD_ROOT%{neuware_dir}/include
 install -d $RPM_BUILD_ROOT/etc/ld.so.conf.d
 strip %{build_dir}/lib/libmluops.so*
 cp %{build_dir}/lib/libmluops.so* $RPM_BUILD_ROOT%{neuware_dir}/lib64/
+cp bangc-ops/kernels/kernel_wrapper/lib/libexternal_lib.so $RPM_BUILD_ROOT%{neuware_dir}/lib64/
 cp bangc-ops/mlu_op.h bangc-ops/mlu_op_kernel.h $RPM_BUILD_ROOT%{neuware_dir}/include/
 cp -r samples/ $RPM_BUILD_ROOT%{neuware_dir}/
 cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
@@ -69,6 +70,7 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %{neuware_dir}/include/mlu_op.h
 %{neuware_dir}/include/mlu_op_kernel.h
 %{neuware_dir}/lib64/libmluops.so*
+%{neuware_dir}/lib64/libexternal_lib.so
 %{neuware_dir}/samples/bangc-ops
 /etc/ld.so.conf.d/neuware-env.conf
 
