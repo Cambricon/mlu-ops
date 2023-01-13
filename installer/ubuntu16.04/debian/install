@@ -1,4 +1,0 @@
-../../bangc-ops/build/lib/libmluops.so* /usr/local/neuware/lib64
-../../bangc-ops/mlu_op.h /usr/local/neuware/include
-../../bangc-ops/mlu_op_kernel.h /usr/local/neuware/include
-../../samples/ /usr/local/neuware/
