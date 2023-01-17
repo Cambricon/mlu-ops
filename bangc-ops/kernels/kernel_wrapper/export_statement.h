@@ -24,7 +24,6 @@
 #define KERNELS_KERNEL_WRAPPER_EXPORT_STATEMENT_H
 
 #include "mlu_op.h"
-#include "core/tensor.h"
 
 /************************************************************************* 
  *                   MLUOP Export Structure Statement                    *

@@ -25,9 +25,9 @@
 
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 #include "mlu_op.h"
-#include "core/tensor.h"
 #include "export_statement.h"
 
 #define KERNEL_REGISTER(OP_NAME, PARAMS, ...)                                 \
