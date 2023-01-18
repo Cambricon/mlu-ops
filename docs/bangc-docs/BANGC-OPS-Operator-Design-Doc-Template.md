@@ -38,26 +38,26 @@
 
 example:
 
-| 算子功能简介                 | 简要填写算子功能，详细描述在 1.2 中进行说明                 |
-| -----------------------------| ----------------------------------------------------------- |
-| 需求来源                     | PyTorch/TensorFlow/...                                      |
-| 应用网络                     | resnet50/...                                                |
-| 输入数据类型                 | half, float                                                 |
-| 输入标量参数                 | 标准数据类型                                                |
-| 输入 Shape                   | input1: [batches, hi, wi, channels]; input2: [batches, 4]   |
-| 输入 Layout                  | input1: NHWC; input2: ARRAY                                 |
-| 输出数据类型                 | half, float...                                              |
-| 输出 Shape                   | [batches, ho, wo, channels]                                 |
-| 输出 Layout                  | NHWC                                                        |
-| 模式(可选）                  |                                                             |
+| 算子功能简介                                  | 简要填写算子功能，详细描述在 1.2 中进行说明                 |
+| ----------------------------------------------| ----------------------------------------------------------- |
+| 需求来源                                      | PyTorch/TensorFlow/...                                      |
+| 应用网络                                      | resnet50/...                                                |
+| 输入数据类型                                  | half, float                                                 |
+| 输入标量参数                                  | 标准数据类型                                                |
+| 输入 Shape                                    | input1: [batches, hi, wi, channels]; input2: [batches, 4]   |
+| 输入 Layout                                   | input1: NHWC; input2: ARRAY                                 |
+| 输出数据类型                                  | half, float...                                              |
+| 输出 Shape                                    | [batches, ho, wo, channels]                                 |
+| 输出 Layout                                   | NHWC                                                        |
+| 模式(可选）                                   |                                                             |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理| 有 dim/axis 参数且需要支持负数 / 不含带 dim/axis 语义的参数等<br>(例如 scatter 算子接口中的 dim 参数支持为负，当 dim=-1 时，实际在最低维上做计算) |
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 有 labels 参数，labels 取值在 dim 范围之外时输出为 Nan / 有 index 参数，要求 index 支持负数 / 不含带 labels/index 语义的参数等<br>(例如 sparse_softmax_ce_logits 算子支持 label 取值在 dim 范围之外，advanced_index 算子支持负数 index 等) |
-| 是否需要支持原位             | 是/                                                         |
-| 是否需要支持 stride 机制     | 是/否                                                       |
-| 是否需要支持广播             | 是/否 (若是，列清楚具体哪些参数要支持)                      |
-| 0 元素检查是否直接返回       | 是/否                                                       |
-| 其他特殊需求(在线量化，融合，转数提前等，可选) |                                           |
-| 本次开发优先支持的规模/模式  | 优先支持 xxx 模式/NHWC 的 layout                            |
+| 是否需要支持原位                               | 是/                                                         |
+| 是否需要支持 stride 机制                       | 是/否                                                       |
+| 是否需要支持广播                               | 是/否 (若是，列清楚具体哪些参数要支持)                      |
+| 0 元素检查是否直接返回                         | 是/否                                                       |
+| 其他特殊需求(在线量化，融合，转数提前等，可选) |                                                             |
+| 本次开发优先支持的规模/模式                    | 优先支持 xxx 模式/NHWC 的 layout                            |
 
 ### 1.2 算子功能和应用场景描述
 
