@@ -62,8 +62,8 @@ mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order);
 int16_t cvtFloatToHalf(float x);
 float cvtHalfToFloat(int16_t);
 
-cnrtRet_t warpRtConvertFloatToHalf(uint16_t *f16, float d);
-cnrtRet_t warpRtConvertHalfToFloat(float *d, uint16_t f16);
+cnrtRet_t wrapRtConvertFloatToHalf(uint16_t *f16, float d);
+cnrtRet_t wrapRtConvertHalfToFloat(float *d, uint16_t f16);
 
 void arrayCastFloatToHalf(int16_t *dst, float *src, size_t num);
 void arrayCastHalfToFloat(float *dst, int16_t *src, size_t num);
