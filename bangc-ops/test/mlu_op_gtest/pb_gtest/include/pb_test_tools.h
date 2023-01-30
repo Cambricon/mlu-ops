@@ -46,7 +46,7 @@ namespace mluoptest {
 void saveDataToFile(const std::string &file, float *data, size_t count);
 void saveDataToFile(const std::string &file, void *data, mluOpDataType_t dtype,
                     size_t count);
-void readDataFromFile(const std::string &file, void *data, size_t count);
+void readDataFromFile(const std::string &file, float *data, size_t count);
 void saveHexDataToFile(const std::string &file, void *data,
                        mluOpDataType_t dtype, size_t count);
 
