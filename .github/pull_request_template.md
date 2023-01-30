@@ -23,15 +23,15 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 
 #### 3.1.2 Operator Scheme checklist
 
-|     No.      |           Details            |      Check Results       |
-|----------------|---------------------------|---------------------|
-|        1       |          Supported hardware         | MLU370<br>MLU590|
-|        2       |          Job types          |    block <br> U1 <br> U4    |
-|        3       |         Layouts            |  NHWC 、NCHW、ARRAY etc    |
-|        4       |         Whether multi-dimensions are supported              |                |
-|        5       |          Whether element zero is supported             |               |
-|        6       |         Data type(half/float)       |         half / float etc           |
-|        7      |        Whether there is size limit           |             |
+|     No.        |                 Details              |            Check Results             |
+|----------------|--------------------------------------|--------------------------------------|
+|        1       |Supported hardware                    |             MLU370<br>MLU590         |
+|        2       |Job types                             |          block <br> U1 <br> U4       |
+|        3       |Layouts                               |          NHWC 、NCHW、ARRAY etc      |
+|        4       |Whether multi-dimensions are supported|                                      |
+|        5       |Whether element zero is supported     |                                      |
+|        6       |Data type(half/float)                 |           half / float etc           |
+|        7       |Whether there is size limit           |                                      |
 
 #### 3.1.3 New Feature Test
 
@@ -55,10 +55,10 @@ If you have checked the following items, please tick the relevant box.
 
 When a new operator is submitted, the test points are given and the test results are stated.
 
-| Test Point         | Acceptance Standard | Test Result (Error Message) |
-| -------------- | -------- | -------------------- |
-| Whether it conforms to the operator restriction | Normal error |                      |
-| Whether illegal parameters are passed  | Normal error |                      |
+|                   Test Point                    | Acceptance Standard | Test Result (Error Message) |
+| ----------------------------------------------- | --------------------| --------------------------- |
+| Whether it conforms to the operator restriction |     Normal error    |                             |
+| Whether illegal parameters are passed           |     Normal error    |                             |
 
 ### 3.2 Accuracy Test
 
@@ -66,15 +66,15 @@ For the cases used in the New Feature Test section, the features and the number 
 
 Operation:
 
-|Test Point           | Description      | Quantity |  Comment |
-|----------           |----------        |----------|   ----------    |
-|Data type test       |half/float/int8|          |                 |
-|Mult-tensor test     |Supports 1-8 dims|          |                 |
-|Layout test          |Supports NCHW/NHWC|          |                 |
-|Zero element test    |Whether to support this test |          |                 |
-|Stability test       |--gtest_repeat=NUM<br>--thread=NUM |          |                 |
-|Mult-platform test   |MLU370/MLU590  |          |                 |
-|Nan/INF test        |Whether to support this test   |          |                 |
+|Test Point           | Description                      | Quantity |  Comment |
+|----------           |----------------------------------|----------|  --------|
+|Data type test       |half/float/int8                   |          |          |
+|Mult-tensor test     |Supports 1-8 dims                 |          |          |
+|Layout test          |Supports NCHW/NHWC                |          |          |
+|Zero element test    |Whether to support this test      |          |          |
+|Stability test       |--gtest_repeat=NUM<br>--thread=NUM|          |          |
+|Mult-platform test   |MLU370/MLU590                     |          |          |
+|Nan/INF test         |Whether to support this test      |          |          |
 
 ### 3.3 Performance Test
 
@@ -83,16 +83,16 @@ See [MLU-OPS Performance Acceptance Standard](../docs/MLU-OPS-Performance-Accept
 Platform：MLU370
 
 |Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
-|-----|----|----|----|----|----|------|-----|
-|op_name|   |    |     |    |    |    |     |
-|op_name|   |    |     |    |    |    |     |
+|-------|----|----|-----|----|----|----|-----|
+|op_name|    |    |     |    |    |    |     |
+|op_name|    |    |     |    |    |    |     |
 
 Platform：MLU590
 
 |Operation|Mlu_hardware_time(us)|Mlu_interface_time(us)|Mlu_io_efficiency|Mlu_compute_efficiency|Mlu_workwpace_size(Bytes)|Data_type|Shape|
-|-----|----|----|----|----|----|------|-----|
-|op_name|   |    |     |    |    |    |     |
-|op_name|   |    |     |    |    |    |     |
+|-------|----|----|----|----|----|----|-----|
+|op_name|    |    |    |    |    |    |     |
+|op_name|    |    |    |    |    |    |     |
 
 ### 3.4 Summary Analysis
 

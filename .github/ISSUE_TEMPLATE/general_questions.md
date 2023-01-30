@@ -1,6 +1,6 @@
-|Name|About|Labels|Assigness|
-|----|-----|------|---------|
-|General questions| Consult the general question you want to ask|||
+|Name             |About                                        |Labels|Assigness|
+|-----------------|---------------------------------------------|------|---------|
+|General questions| Consult the general question you want to ask|      |         |
 
 ### Checklist
 
