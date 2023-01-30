@@ -7,8 +7,7 @@ Standards-Version: 0.1.1
 Build-Depends:
  debhelper (>= 9.0), cmake, texinfo, lsb-release,
  patchutils, diffstat, xz-utils, python-dev,
- swig, python-six, pkg-config,
- cncc (>= 2.6.0), cnas (>= 2.6.0)
+ swig, python-six, pkg-config
 
 Package: mluops
 Architecture: amd64
