@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
 
 project(mluops VERSION ${BUILD_VERSION})
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
@@ -138,7 +138,7 @@ if (object_files MATCHES ".a")
   bang_add_library(mluops SHARED ${core_src_files} ${src_files})
   message(STATUS "Build MLUOP with static object file.")
   message("${object_files}")
-  target_link_libraries(mluops 
+  target_link_libraries(mluops
     -Wl,--start-group
     ${object_files} ${obj_files} cnrt cndrv dl
     -Wl,--end-group)
