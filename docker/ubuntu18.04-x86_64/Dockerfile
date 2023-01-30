@@ -13,7 +13,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
-ARG CNTOOLKIT_VERSION="3.2.1-1"
+ARG CNTOOLKIT_VERSION="3.3.0-1"
 # NOTE: the url below is only for internal usage, you could replace with your own cntoolkit package.
 ADD http://daily.software.cambricon.com/release/cntoolkit/Linux/x86_64/Ubuntu/18.04/${CNTOOLKIT_VERSION}/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu18.04_amd64.deb /tmp/
 
