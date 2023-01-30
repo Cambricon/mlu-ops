@@ -6458,7 +6458,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
 // Group:ActiveRotatedFilterForward
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ActiveRotatedFilterForward operation. The size of the extra
+ * workspace to optimize the mluOpActiveRotatedFilterForward operation. The size of the extra
  * workspace is based on the given information of the ActiveRotatedFilterForward operation,
  * including the input tensor descriptor \b input_desc. For more information about the workspace,
  * see "Cambricon BANGC OPS User Guide".
@@ -6495,7 +6495,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
 
 // Group:ActiveRotatedFilterForward
 /*!
- * @brief Rotate \b input according to \b indices . This function encodes
+ * @brief Rotates \b input according to \b indices. This function encodes
  * the orientation information and generates orientation-sensitive features.
  *
  * @param[in] handle
@@ -6547,10 +6547,10 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * @par Scale Limitation
  * - The \b input is 5D array, and \b indices and \b output are 4D array.
  * - The dims[2] of \b input should be equal to the power of 2 and less than or
- * equanl to 128, dims[3] should be equal to 1 or 3, and dims[3] shoule be equal
+ * equal to 128, dims[3] should be equal to 1 or 3, and dims[3] should be equal
  * to dims[4].
  * - The dims[0] of \b indices should be equal to \b input dims[2], and dims[1]
- * and dims[2] of \b indices should be equanl to dims[3] and dims[4] of \b input
+ * and dims[2] of \b indices should be equal to dims[3] and dims[4] of \b input
  * respectively.
  * - The dims[3] of \b indices should be equal to 2, 4, or 8.
  * - The dims[0] of \b output should be equal to dims[0] of \b input times
@@ -6564,9 +6564,6 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * - Before calling this function, you need to call
  * ::mluOpGetActiveRotatedFilterForwardWorkspaceSize to get the extra space size
  * needed in ActiveRotatedFilterForward operation.
- *
- * @par Performance Optimization
- * - None.
  *
  * @note
  * - None.
