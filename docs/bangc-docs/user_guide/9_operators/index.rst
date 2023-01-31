@@ -284,6 +284,14 @@ mluOpRoiAlignRotatedBackward
 -------------------
 mluOpRoiAlignRotatedForward 算子的反向, 根据 rois 定位的位置信息，将输入梯度数据平均回传到 features 相应位置上，该操作需使用 atomic_add 来控制执行顺序。
 
+mluOpRoiawarePool3dForward
+-------------------------------
+给定一组点和点的特征值，以及一组长方体框，将框中的点的特征进行池化，输出指定数量的体素中的最大或者平均特征值以及点在对应体素中的索引。
+
+mluOpRoiawarePool3dBackward
+-------------------------------
+mluOpRoiawarePool3dForward 的反向算子，输入体素中的 idx 以及前向的池化特征值，计算反向梯度值。
+
 mluOpRotatedFeatureAlignForward
 -------------------
 该算子是利用旋转锚点框中的位置信息对输入特征图中的像素值进行特征插值矫正，逐像素的重建输入特征图特征信息，该特征插值方法是根据旋转锚点的位置信息进行一次或是五次双线性插值。

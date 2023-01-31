@@ -338,6 +338,22 @@ __mlu_func__ void __float2int32(int32_t *dst, float *dst_addition, float *src,
 #endif
 }
 
+/******************************************************************************
+ * MLUOPS FUNC: __float2half
+ * param 'dst' is the destination pointer in NRAM.
+ * param 'src' is the source pointer in NRAM.
+ * param 'src_count' is the src element count.
+ * Note:
+ *      The rounding mode on MLU200 is rd, on MLU300 is rn.
+ ******************************************************************************/
+__mlu_func__ inline void __float2half(half *dst, float *src, int src_count) {
+#if __BANG_ARCH__ >= 300
+  __bang_float2half_rn(dst, src, src_count);
+#else
+  __bang_float2half_rd(dst, src, src_count);
+#endif
+}
+
 __mlu_func__ void pvLock() {
 #if __BANG_ARCH__ == 270
   if (coreId != 0x80) {

@@ -398,7 +398,7 @@ typedef struct mluOpContext *mluOpHandle_t;
  *  parameters.
  *  At last, you need to destroy the descriptor at the end with the
  *  ::mluOpDestroyTensorSetDescriptor function.
- */ 
+ */
 typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
 
 // Group:Runtime Management
@@ -4231,6 +4231,248 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill_v2(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API mluOpFill_v3(
     mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
     const void *value, const mluOpTensorDescriptor_t output_desc, void *output);
+
+// Group:RoiawarePool3d
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpRoiawarePool3dForward operation.
+ *
+ * The size of extra workspace is based on the given information of the ::mluOpRoiawarePool3dForward
+ * operation, including the input tensor descriptors \b pts_desc.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpRoiawarePool3dForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] rois_desc
+ * The descriptor of rois, which contains the dimension and layout of the rois tensor.
+ * @param[in] pts_desc
+ * The descriptor of pts, which contains the dimension and layout of the pts tensor.
+ * @param[in] pts_feature_desc
+ * The descriptor of pts, which contains the dimension and layout of the pts tensor.
+ * @param[out] workspace_size
+ * Pointer to the returned size of the extra workspace in bytes that is used in the
+ * ::mluOpRoiawarePool3dForward operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
+                                           const mluOpTensorDescriptor_t rois_desc,
+                                           const mluOpTensorDescriptor_t pts_desc,
+                                           const mluOpTensorDescriptor_t pts_feature_desc,
+                                           size_t *workspace_size);
+
+// Group:RoiawarePool3d
+/*!
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiawarePool3dForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] pool_method
+ * Pooling method of Roiaware, 0 is 'maxpool', 1 is 'avgpool'. The default value is 0.
+ * @param[in] boxes_num
+ * An integer value which is the number of the rois.
+ * @param[in] pts_num
+ * An integer value which is the number of the pts.
+ * @param[in] channels
+ * An integer value which is the number of the pts feature of channels.
+ * @param[in] rois_desc
+ * The descriptor of rois, which contains the dimension and layout of the rois tensor.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores the rois tensor.
+ * @param[in] pts_desc
+ * The descriptor of pts, which contains the dimension and layout of the pts tensor.
+ * @param[in] pts
+ * Pointer to the MLU memory that stores the pts tensor.
+ * @param[in] pts_feature_desc
+ * The descriptor of pts_feature, which contains the dimension and layout of the pts_feature tensor.
+ * @param[in] pts_feature
+ * Pointer to the MLU memory that stores the pts_feature tensor.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ::mluOpRoiawarePool3dForward operation.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in
+ * the ::mluOpRoiawarePool3dForward operation. You can get the size of the workspace with
+ * the ::mluOpGetRoiawarePool3dForwardWorkspaceSize function.
+ * @param[in] max_pts_each_voxel
+ * The maximum number of points per each voxel. An integer value which is the dimension of the pts_idx_of_voxels.
+ * @param[in] out_x
+ * An integer value which is the dimension of the pooled_features.
+ * @param[in] out_y
+ * An integer value which is the dimension of the pooled_features.
+ * @param[in] out_z
+ * An integer value which is the dimension of the pooled_features.
+ * @param[in] argmax_desc
+ * The descriptor of argmax, which contains the dimension and layout of the argmax tensor.
+ * @param[out] argmax
+ * Pointer to the MLU memory that stores the argmax tensor.
+ * @param[in] pts_idx_of_voxels_desc
+ * The descriptor of pts_idx_of_voxels, which contains the dimension and layout of the pts_idx_of_voxels tensor.
+ * @param[out] pts_idx_of_voxels
+ * Pointer to the MLU memory that stores the pts_idx_of_voxels tensor.
+ * @param[in] pooled_features_desc
+ * The descriptor of pooled_features, which contains the dimension and layout of the pooled_features tensor.
+ * @param[out] pooled_features
+ * Pointer to the MLU memory that stores the pooled_features tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b rois , \b pts , \b pts_feature
+ *   and output tensor \b argmax , \b pts_idx_of_voxels , \b pooled_features .
+ *   - rois tensor: half, float.
+ *   - pts tensor: half, float.
+ *   - pts_feature tensor: half, float.
+ *   - argmax tensor: int32.
+ *   - pts_idx_of_voxels tensor: int32.
+ *   - pooled_features tensor: half, float.
+ *
+ * @par Scale Limitation
+ * - The shape of \b rois should be [boxes_num, 7].
+ * - The shape of \b pts should be [pts_num, 3].
+ * - The shape of \b pts_feature should be [pts_num, channels].
+ * - The shape of \b argmax should be [boxes_num, out_x, out_y, out_z, channels].
+ * - The shape of \b pts_idx_of_voxels should be [boxes_num, out_x, out_y, out_z, max_pts_each_voxel].
+ * - The shape of \b pooled_features should be [boxes_num, out_x, out_y, out_z, channels].
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @note
+ * - The inputs \b rois and \b pts with NaN or infinity are not supported currently.
+ * - The inputs \b pts_feature with NaN are not supported currently.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Reference
+ * - Encodes the geometry-specific features of each 3D proposal.
+ *   Please refer to "PartA2 <https://arxiv.org/pdf/1907.03670.pdf>" for more details.
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/roiaware_pool3d.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiawarePool3dForward(mluOpHandle_t handle,
+                           const int pool_method,
+                           const int boxes_num,
+                           const int pts_num,
+                           const int channels,
+                           const mluOpTensorDescriptor_t rois_desc,
+                           const void *rois,
+                           const mluOpTensorDescriptor_t pts_desc,
+                           const void *pts,
+                           const mluOpTensorDescriptor_t pts_feature_desc,
+                           const void *pts_feature,
+                           void *workspace,
+                           size_t workspace_size,
+                           const int max_pts_each_voxel,
+                           const int out_x,
+                           const int out_y,
+                           const int out_z,
+                           const mluOpTensorDescriptor_t argmax_desc,
+                           void *argmax,
+                           const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+                           void *pts_idx_of_voxels,
+                           const mluOpTensorDescriptor_t pooled_features_desc,
+                           void *pooled_features);
+
+// Group:RoiawarePool3d
+/*!
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiawarePool3dBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] pool_method
+ * Pooling method of Roiaware. 0 is maxpool and 1 is avgpool. The default value is 0.
+ * @param[in] boxes_num
+ * An integer value which is the dimension of the pts_idx_of_voxels and argmax.
+ * @param[in] out_x
+ * An integer value which is the dimension of the pts_idx_of_voxels and argmax.
+ * @param[in] out_y
+ * An integer value which is the dimension of the pts_idx_of_voxels and argmax.
+ * @param[in] out_z
+ * An integer value which is the dimension of the pts_idx_of_voxels and argmax.
+ * @param[in] channels
+ * An integer value which is the number of the argmax and grad_out of channels.
+ * @param[in] max_pts_each_voxel
+ * The maximum number of points per each voxel. An integer value which is the dimension of the pts_idx_of_voxels.
+ * @param[in] pts_idx_of_voxels_desc
+ * The descriptor of pts_idx_of_voxels, which contains the dimension and layout of the pts_idx_of_voxels tensor.
+ * @param[out] pts_idx_of_voxels
+ * Pointer to the MLU memory that stores the pts_idx_of_voxels tensor.
+ * @param[in] argmax_desc
+ * The descriptor of argmax, which contains the dimension and layout of the argmax tensor.
+ * @param[out] argmax
+ * Pointer to the MLU memory that stores the argmax tensor.
+ * @param[in] grad_out_desc
+ * The descriptor of grad_out, which contains the dimension and layout of the grad_out tensor.
+ * @param[out] grad_out
+ * Pointer to the MLU memory that stores the grad_out tensor.
+ * @param[in] grad_in_desc
+ * The descriptor of grad_in, which contains the dimension and layout of the grad_in tensor.
+ * @param[in] grad_in
+ * Pointer to the MLU memory that stores the grad_in tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b pts_idx_of_voxels , \b argmax , \b grad_out
+ *   and output tensor \b grad_in .
+ *   - pts_idx_of_voxels tensor: int32.
+ *   - argmax tensor: int32.
+ *   - grad_out tensor: half, float.
+ *   - grad_in tensor: half, float.
+ *
+ * @par Scale Limitation
+ * - The shape of \b pts_idx_of_voxels should be [boxes_num, out_x, out_y, out_z, max_pts_each_voxel].
+ * - The shape of \b argmax should be [boxes_num, out_x, out_y, out_z, channels].
+ * - The shape of \b grad_out should be [boxes_num, out_x, out_y, out_z, channels].
+ * - The shape of \b grad_in should be [pts_num, channels].
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Reference
+ * - Encodes the geometry-specific features of each 3D proposal.
+ *   Please refer to "PartA2 <https://arxiv.org/pdf/1907.03670.pdf>" for more details.
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/roiaware_pool3d.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
+                            const int pool_method,
+                            const int boxes_num,
+                            const int out_x,
+                            const int out_y,
+                            const int out_z,
+                            const int channels,
+                            const int max_pts_each_voxel,
+                            const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+                            const void *pts_idx_of_voxels,
+                            const mluOpTensorDescriptor_t argmax_desc,
+                            const void *argmax,
+                            const mluOpTensorDescriptor_t grad_out_desc,
+                            const void *grad_out,
+                            const mluOpTensorDescriptor_t grad_in_desc,
+                            void *grad_in);
 
 // Group:Psamask
 /*!

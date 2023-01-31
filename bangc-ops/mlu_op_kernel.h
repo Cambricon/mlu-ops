@@ -146,6 +146,49 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackwardFloat(
     const int output_dim, const int rois_num, const int rois_offset,
     const float spatial_scale);
 
+/* RoiawarePool3d */
+void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int pool_method, const int boxes_num, const int pts_num,
+    const int max_pts_each_voxel, const int out_x,
+    const int out_y, const int out_z, const void *rois, const void *pts,
+    void *pts_idx_of_voxels);
+
+void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int pool_method, const int boxes_num, const int pts_num,
+    const int max_pts_each_voxel, const int out_x,
+    const int out_y, const int out_z, const void *rois, const void *pts,
+    void *pts_idx_of_voxels);
+
+void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int pool_method, const int boxes_num, const int pts_num,
+    const int channels, const int max_pts_each_voxel, const int out_x,
+    const int out_y, const int out_z, const void *pts_feature,
+    const void *pts_idx_of_voxels, void *pooled_features, void *argmax);
+
+void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int pool_method, const int boxes_num, const int pts_num,
+    const int channels, const int max_pts_each_voxel, const int out_x,
+    const int out_y, const int out_z, const void *pts_feature,
+    const void *pts_idx_of_voxels, void *pooled_features, void *argmax);
+
+void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int pool_method, const int boxes_num, const int out_x,
+    const int out_y, const int out_z, const int channels,
+    const int max_pts_each_voxel, const void *pts_idx_of_voxels,
+    const void *argmax, const void *grad_out, void *grad_in);
+
+void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int pool_method, const int boxes_num, const int out_x,
+    const int out_y, const int out_z, const int channels,
+    const int max_pts_each_voxel, const void *pts_idx_of_voxels,
+    const void *argmax, const void *grad_out, void *grad_in);
+
 /*PriorBox*/
 void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     cnrtDim3_t k_dim_box, cnrtFunctionType_t k_type, cnrtQueue_t queue,
