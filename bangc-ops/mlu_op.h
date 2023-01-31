@@ -196,7 +196,6 @@ typedef enum {
 
 /*!
  * @brief Describes the modes of quantization method.
- *
  */
 typedef enum {
   MLUOP_QUANTIZE_POSITION = 0,
@@ -208,10 +207,8 @@ typedef enum {
 } mluOpQuantizeMode_t;
 
 /*!
- *
  * @brief Describes the bases that are used in the implementation
  * of the log function.
- *
  */
 typedef enum {
   MLUOP_LOG_E  = 0, /*!< The base e is used.*/
@@ -349,7 +346,6 @@ typedef enum {
 
 /*!
  * @brief Describes whether the indices are computed in the implementation of the reduce function.
- *
  */
 typedef enum {
   MLUOP_REDUCE_NO_INDICES = 0,        /*!< The indices are not computed.*/
@@ -372,7 +368,6 @@ typedef enum {
 /*!
  * @struct mluOpContext
  * @brief Describes the MLUOP context.
- *
  */
 struct mluOpContext;
 /*!
@@ -385,7 +380,6 @@ struct mluOpContext;
  * The MLUOP context is created with ::mluOpCreate and the returned
  * handle should be passed to all the subsequent function calls.
  * You need to destroy the MLUOP context at the end with ::mluOpDestroy.
- *
  */
 typedef struct mluOpContext *mluOpHandle_t;
 
@@ -412,6 +406,7 @@ typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
  *  @param[out] handle
  *  Pointer to an MLUOP context that is used to manage MLU devices and
  *  queues. For detailed information, see ::mluOpHandle_t.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -423,7 +418,6 @@ typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreate(mluOpHandle_t *handle);
@@ -438,6 +432,7 @@ mluOpCreate(mluOpHandle_t *handle);
  *  @param[in] handle
  *  Pointer to an MLUOP context that is used to manage MLU devices.
  *  For detailed information, see ::mluOpHandle_t.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -449,7 +444,6 @@ mluOpCreate(mluOpHandle_t *handle);
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpUpdateContextInformation(mluOpHandle_t handle);
@@ -462,6 +456,7 @@ mluOpUpdateContextInformation(mluOpHandle_t handle);
  *
  *  @param[in] handle
  *  Pointer to the MLU devices that holds information to be destroyed.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -490,6 +485,7 @@ mluOpDestroy(mluOpHandle_t handle);
  *  queues. For detailed information, see ::mluOpHandle_t.
  *  @param[in] queue
  *  The runtime queue to be set to the MLUOP handle.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -514,6 +510,7 @@ mluOpSetQueue(mluOpHandle_t handle, cnrtQueue_t queue);
  *  queues. For detailed information, see ::mluOpHandle_t.
  *  @param[out] queue
  *  Pointer to the queue that was previously set to the specified handle.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -551,7 +548,6 @@ mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue);
  *
  *  @par Example
  *  - None.
- *
  */
 const char *
 mluOpGetErrorString(mluOpStatus_t status);
@@ -564,6 +560,7 @@ mluOpGetErrorString(mluOpStatus_t status);
  *  The data type. For detailed information, see ::mluOpDataType_t.
  *  @param[out] size
  *  Host pointer to the size of the data type.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -595,7 +592,6 @@ mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size);
  *  A pointer to scale factor that gets the patch version of MLUOP
  *  library.
  *
- *
  *  @note
  *  - None.
  *
@@ -619,6 +615,7 @@ mluOpGetLibVersion(int *major, int *minor, int *patch);
  *  queues. For detailed information, see ::mluopHandle_t.
  *  @param[in] round_mode
  *  The rounding mode of quantization conversion to be set to the MLUOP handle.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -797,6 +794,7 @@ typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
  *
  *  @param[in] desc
  *  Pointer to the struct that holds information about the tensor descriptor.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -826,6 +824,7 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
  *  tensor descriptor.
  *  @param[in] desc_num
  *  The length of the input array \b group_desc.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -871,6 +870,7 @@ mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const i
  *  The number of dimensions in the input tensor of the initialized operation.
  *  @param[in] dimSize
  *  An array that contains the size of the tensor for each dimension.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -923,6 +923,7 @@ mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
  *  An array that stores the size of each dimension of all tensors.
  *  @param[in] desc_num
  *  The length of the input array \b group_desc.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -959,6 +960,7 @@ mluOpSetGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[],
  *
  *  @param[in] desc
  *  The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1002,6 +1004,7 @@ mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
  *  An array that contains the size of the tensor for each dimension.
  *  @param[in] dimStride
  *  An array that contains the stride of the tensor for each dimension.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1014,7 +1017,6 @@ mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
@@ -1041,6 +1043,7 @@ mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
  *  The number of dimensions in the input tensor of the initialized operation.
  *  @param[in] dimSize
  *  An array that contains the size of the tensor for each dimension.
+ *
  *  @par Return
  *   - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1071,6 +1074,7 @@ mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc, int dimNb, const int *
  *  @param[in] onchip_dtype
  *  The on-chip data type of the tensor used in the operations that support fixed-point
  *  computing.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1100,6 +1104,7 @@ mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc, mluOpDataTy
  *  see ::mluOpTensorDescriptor_t.
  *  @param[in] position
  *  A scalar of fixed position factor that is used for quantization.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1111,7 +1116,6 @@ mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc, mluOpDataTy
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
@@ -1128,6 +1132,7 @@ mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
  *  A scalar of fixed position factor that is used for quantization.
  *  @param[in] scale
  *  A scalar of scale factor that is used for quantization.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1139,7 +1144,6 @@ mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int position, float scale);
@@ -1157,6 +1161,7 @@ mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int posit
  *  A scalar of scale factor that is used for quantization.
  *  @param[in] offset
  *  A scalar of offset factor that is used for quantization.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1168,7 +1173,6 @@ mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int posit
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc,
@@ -1197,6 +1201,7 @@ mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc,
  *  Pointer to the host memory that holds information about the dimension of input tensor.
  *  @param[out] dimSize
  *  An array that contains the size of the tensor for each dimension.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1240,6 +1245,7 @@ mluOpGetTensorDescriptor(const mluOpTensorDescriptor_t desc,
  *  An array that contains the size of the tensor for each dimension.
  *  @param[out] dimStride
  *  An array that contains the stride of the tensor for each dimension.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1306,6 +1312,7 @@ mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
  *  @param[in] onchip_dtype
  *  Pointer to the MLU memory that holds information about the on-chip data type of the
  *  tensor.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1321,7 +1328,6 @@ mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc,
@@ -1337,6 +1343,7 @@ mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc,
  *  see ::mluOpTensorDescriptor_t.
  *  @param[out] position
  *  A host pointer of fixed position factor that is used for quantization.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1348,7 +1355,6 @@ mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc,
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *position);
@@ -1367,6 +1373,7 @@ mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *positi
  *  @param[out] scale
  *  Pointer to the MLU memory that holds information about scale factor
  *  used for quantization.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1378,7 +1385,6 @@ mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *positi
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc,
@@ -1398,6 +1404,7 @@ mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc,
  *  A host pointer of scale factor that is used for quantization.
  *  @param[in] offset
  *  A host pointer of offset factor that is used for quantization.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1409,7 +1416,6 @@ mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc,
  *
  *  @par Example
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t desc,
@@ -1424,6 +1430,7 @@ mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t des
  *
  *  @param[in] desc
  *  A tensor descriptor created by ::mluOpCreateTensorDescriptor.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1449,6 +1456,7 @@ mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
  *  tensor descriptor.
  *  @param[in] desc_num
  *  The length of the input array \b group_desc.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1480,6 +1488,7 @@ mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const 
  *  @param[in] setDimSize
  *  An array that contains the number of the tensors for each dimension
  *  of the tensor set.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1514,6 +1523,7 @@ mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet,
  *  @param[out] setDimSize
  *  An array that contains the number of the tensor for each dimension
  *  of the tensor set.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1543,6 +1553,7 @@ mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
  *
  *  @param[in] desc
  *  A tensor descriptor created by ::mluOpCreateTensorSetDescriptor.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1585,6 +1596,7 @@ mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
  *  @param[in] dimSize
  *  An array that contains the size of the member tensor for each
  *  dimension.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1632,6 +1644,7 @@ mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
  *  quantification.
  *  @param[in] scale
  *  A scalar of scale factor that is used for quantification.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1681,7 +1694,6 @@ mluOpInitTensorSetMemberDescriptorPositionAndScale(mluOpTensorSetDescriptor_t te
  *
  *  @par Requirements
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, int *sizeInBytes);
@@ -1716,7 +1728,6 @@ mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, int *s
  *
  *  @par Requirements
  *  - None.
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
@@ -1919,6 +1930,7 @@ mluOpDiv(mluOpHandle_t handle,
  *  see ::mluOpTensorDescriptor_t.
  *  @param[out] size
  *  A host pointer to the returned size of extra space in bytes.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  */
@@ -2106,6 +2118,7 @@ mluOpGenerateProposalsV2(mluOpHandle_t handle,
  *  see ::mluOpTensorDescriptor_t.
  *  @param[out] size
  *  A host pointer to the returned size of extra space in bytes.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  */
@@ -2255,6 +2268,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  *  PriorBox.
  *  @param[out] var
  *  Pointer to the MLU memory that stores the var tensor.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
  *    ::MLUOP_STATUS_NOT_SUPPORTED
@@ -3172,7 +3186,6 @@ mluOpSqrt(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- *
  * @par Data Type
  * - Data types of input tensors and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
@@ -3245,6 +3258,7 @@ mluOpSqrtBackward(mluOpHandle_t handle,
  * ::mluOpTensorDescriptor_t.
  *  @param[out] size
  *  A host pointer to the returned size of extra space in bytes.
+ *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
  *    ::MLUOP_STATUS_NOT_SUPPORTED
@@ -4107,7 +4121,6 @@ mluOpExpand(mluOpHandle_t handle,
  *
  * @par Reference
  * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
- *
  */
 mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
                                       float value,
@@ -4164,7 +4177,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
  *
  * @par Reference
  * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
- *
  */
 mluOpStatus_t MLUOP_WIN_API mluOpFill_v2(mluOpHandle_t handle,
                                          const mluOpTensorDescriptor_t value_desc,
@@ -4226,7 +4238,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill_v2(mluOpHandle_t handle,
  *
  * @par Reference
  * - https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
- *
  */
 mluOpStatus_t MLUOP_WIN_API mluOpFill_v3(
     mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
@@ -4544,7 +4555,6 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
  *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPsamaskForward(mluOpHandle_t handle,
@@ -4626,7 +4636,6 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
- *
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpPsamaskBackward(mluOpHandle_t handle,
