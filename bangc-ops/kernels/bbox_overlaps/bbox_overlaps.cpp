@@ -48,7 +48,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   return;
 }
 
-mluOpStatus_t mluOpBboxOverlaps(
+mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
     mluOpHandle_t handle, const int mode, const bool aligned, const int offset,
     const mluOpTensorDescriptor_t bbox1_desc, const void *bbox1,
     const mluOpTensorDescriptor_t bbox2_desc, const void *bbox2,
@@ -197,9 +197,7 @@ mluOpStatus_t mluOpBboxOverlaps(
   VLOG(5) << "  kDim :[ " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
           << " ]";
   switch (k_datatype) {
-    default: {
-      VLOG(5) << "Not Implemented.";
-    }
+    default: { VLOG(5) << "Not Implemented."; }
     case MLUOP_DTYPE_HALF: {
       KERNEL_CHECK(mluOpUnion1BboxOverlapsKernelHalf(
           k_dim, k_type, handle->queue, bbox1, bbox2, ious, rows, cols, mode,
