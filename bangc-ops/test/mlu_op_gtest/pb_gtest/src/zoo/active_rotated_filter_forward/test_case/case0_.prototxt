@@ -1,0 +1,120 @@
+
+op_name: "active_rotated_filter_forward"
+input {
+  id: "input"
+  shape: {
+    dims: 4
+    dims: 10
+    dims: 1
+    dims: 3
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "indices"
+  shape: {
+    dims: 1
+    dims: 3
+    dims: 3
+    dims: 8
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 1
+  value_i: 2
+  value_i: 3
+  value_i: 6
+  value_i: 9
+  value_i: 8
+  value_i: 7
+  value_i: 4
+  value_i: 2
+  value_i: 3
+  value_i: 6
+  value_i: 9
+  value_i: 8
+  value_i: 7
+  value_i: 4
+  value_i: 1
+  value_i: 3
+  value_i: 6
+  value_i: 9
+  value_i: 8
+  value_i: 7
+  value_i: 4
+  value_i: 1
+  value_i: 2
+  value_i: 4
+  value_i: 1
+  value_i: 2
+  value_i: 3
+  value_i: 6
+  value_i: 9
+  value_i: 8
+  value_i: 7
+  value_i: 5
+  value_i: 5
+  value_i: 5
+  value_i: 5
+  value_i: 5
+  value_i: 5
+  value_i: 5
+  value_i: 5
+  value_i: 6
+  value_i: 9
+  value_i: 8
+  value_i: 7
+  value_i: 4
+  value_i: 1
+  value_i: 2
+  value_i: 3
+  value_i: 7
+  value_i: 4
+  value_i: 1
+  value_i: 2
+  value_i: 3
+  value_i: 6
+  value_i: 9
+  value_i: 8
+  value_i: 8
+  value_i: 7
+  value_i: 4
+  value_i: 1
+  value_i: 2
+  value_i: 3
+  value_i: 6
+  value_i: 9
+  value_i: 9
+  value_i: 8
+  value_i: 7
+  value_i: 4
+  value_i: 1
+  value_i: 2
+  value_i: 3
+  value_i: 6
+}
+output {
+  id: "output"
+  shape: {
+    dims: 32
+    dims: 10
+    dims: 3
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0
+  baseline_device: CPU
+}
+

@@ -6455,8 +6455,144 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
                                                           const mluOpReduceDescriptor_t reduce_op,
                                                           size_t *workspace_size_inbytes);
 
+// Group:ActiveRotatedFilterForward
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the mluOpActiveRotatedFilterForward operation. The size of the extra
+ * workspace is based on the given information of the ActiveRotatedFilterForward operation,
+ * including the input tensor descriptor \b input_desc. For more information about the workspace,
+ * see "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ActiveRotatedFilterForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of input data \b input, which contains dimension, data type and data layout.
+ * @param[out] workspace_size
+ * A host pointer to the returned size of the extra workspace in bytes that is used in
+ * the ActiveRotatedFilterForward operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - This function must be called before the ::mluOpActiveRotatedFilterForward function.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
+                                                const mluOpTensorDescriptor_t input_desc,
+                                                size_t *workspace_size);
+
+// Group:ActiveRotatedFilterForward
+/*!
+ * @brief Rotates \b input according to \b indices. This function encodes
+ * the orientation information and generates orientation-sensitive features.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * the ActiveRotatedFilterForward operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of input data \b input, which contains dimension, data type
+ * and data layout.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] indices_desc
+ * The descriptor of input data \b indices, which contains dimension, data type
+ * and data layout.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the indices tensor. It is used to
+ * specify the position of each element of canonical filter after rotations.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ActiveRotatedFilterForward operation. For more information about workspace,
+ * see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that is used in
+ * the ActiveRotatedFilterForward operation.
+ * @param[in] output_desc
+ * The descriptor of output data \b output, which contains dimension, data type
+ * and data layout.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the \b output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - None.
+ *
+ * @par Data Type
+ * - The supported data types of \b input, \b indices and \b output are as follows:
+ *   Data types of input tensor and output tensor should be the same.
+ *   - input tensor: half, float
+ *   - output tensor: half, float
+ *   - indices tensor: int32
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b input, \b indices, and \b output are as follows:
+ *   - input tensor: MLUOP_LAYOUT_ARRAY
+ *   - output tensor: MLUOP_LAYOUT_ARRAY
+ *   - indices tensor: MLUOP_LAYOUT_ARRAY
+ *
+ * @par Scale Limitation
+ * - The \b input is 5D array, and \b indices and \b output are 4D array.
+ * - The dims[2] of \b input should be equal to the power of 2 and less than or
+ * equal to 128, dims[3] should be equal to 1 or 3, and dims[3] should be equal
+ * to dims[4].
+ * - The dims[0] of \b indices should be equal to \b input dims[2], and dims[1]
+ * and dims[2] of \b indices should be equal to dims[3] and dims[4] of \b input
+ * respectively.
+ * - The dims[3] of \b indices should be equal to 2, 4, or 8.
+ * - The dims[0] of \b output should be equal to dims[0] of \b input times
+ * dims[3] of \b indices.
+ * - The dims[1] of \b ouput should be equal to dims[1] of \b input times
+ * dims[2] of \b input.
+ * - The dims[2] and dims[3] of \b output should be equal to dims[3] and dims[4]
+ * of \b input respectively.
+ *
+ * @par API Dependency
+ * - Before calling this function, you need to call
+ * ::mluOpGetActiveRotatedFilterForwardWorkspaceSize to get the extra space size
+ * needed in ActiveRotatedFilterForward operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * -
+ * https://github.com/open-mmlab/mmcv/blob/v1.5.2/mmcv/ops/csrc/pytorch/cuda/active_rotated_filter_cuda.cu
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const void *input,
+                                const mluOpTensorDescriptor_t indices_desc,
+                                const void *indices,
+                                void *workspace,
+                                const size_t workspace_size,
+                                const mluOpTensorDescriptor_t output_desc,
+                                void *output);
+
 #if defined(__cplusplus)
 }
 #endif
 
 #endif  // MLUOP_EXAMPLE_H_
+
