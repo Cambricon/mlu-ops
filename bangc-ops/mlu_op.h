@@ -3672,6 +3672,120 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t ious_desc,
                    void *ious);
 
+// Group:BboxOverlaps
+/*!
+ * @brief Computes the IOUs or IOFs between two sets of
+ * bounding-boxes. If \b aligned is false, this operation calculates the IOU of each row between each bounding-box
+ * of \b bbox1 and \b bbox2, otherwise, it calculates the IOU of the corresponding row between each aligned
+ * pair of \b bbox1 and \b bbox2. For input placed in the order of <x1, y1, x2, y2>, (x1, y1) and (x2, y2)
+ * respectively represents the top-left and bottom-right corner coordinates of bounding-box.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * bounding-box overlaps operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] mode
+ * An integer value which decides to return a result IOU or IOF.
+ * The integer 0 represents IOU and 1 represents IOF.
+ * @param[in] aligned
+ * A boolean value. If it is false, this operation calculates the IOUs[i][j] or IOFs[i][j] between
+ * the row i of \b bbox1 and the row j of \b bbox2, otherwise the IOU[i] or IOF[i] between
+ * the row i of \b bbox1 and the row i of \b bbox2 are calculated. The number of row of \b bbox1
+ * and \b bbox2 must be equal if \b aligned is true.
+ * @param[in] offset
+ * An integer value determines whether to increase the length and the width of the bounding-box by 0 or 1
+ * before calculating the area.
+ * @param[in] bbox1_desc
+ * The descriptor of the input tensor \b bbox1. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox1
+ * Pointer to the MLU memory that stores the input tensor \b bbox1.
+ * @param[in] bbox2_desc
+ * The descriptor of the input tensor \b bbox2. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox2
+ * Pointer to the MLU memory that stores the input tensor \b bbox2.
+ * @param[in] ious_desc
+ * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] ious
+ * IOU or IOF. Pointer to the MLU memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - See "Bounding-Box Overlaps Operation" section in "Cambricon BANGC OPS User Guide" for details.
+ *
+ * @par Data Type
+ * By the order of \b bbox1 - \b bbox2 - \b ious, the supported data types of
+ * \b bbox1, \b bbox2 and \b ious are as follows:
+ * - float - float - float
+ * - half  - half  - half
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \b bbox1 and \b bbox2 tensors must be 2
+ * - The lowest dimension of input tensor must be 4
+ *   \b bbox1 (Tensor): shape [m, 4] in <x1, y1, x2, y2> format
+ *   \b bbox2 (Tensor): shape [n, 4] in <x1, y1, x2, y2> format
+ * - Input with NaN is not supported currently. Also you need to exclude the input with (inf - inf) or (inf - (-inf)),
+ *   where inf represents infinity (because the result is NaN, the actual impact is that the input has NaN)
+ * - For input in type <x1, y1, x2, y2>, the coordinates must satisfy x2 > x1, y2 > y1,
+ *   otherwise incorrect results will be obtained
+ * - When aligned mode is true, for input \b bbox1 and \b bbox2 with n-rows, if n is zero, the output IOU
+ *   must be a 2D matrix with shape n * 1, otherwise the output IOU must be a 1D
+ *   array with n-elements. When aligned mode is false, for input \b bbox1 with n-rows and
+ *   \b bbox2 with m-rows, the output IOU must be a 2D matrix with shape n * m.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @note
+ * - The input tensor \b x should be in the following range to guarantee the accuracy of output:
+ * If bbox_overlaps works on (m)tp_2xx :
+ *    - half : [-300, 100]
+ *    - float : [-300, 100]
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the bounding-box overlaps operation is as follows:
+     @verbatim
+      input array by 3 * 4, type is float -->
+          input: bbox1 = [
+            [0, 0, 10, 10],
+            [10, 10, 20, 20],
+            [32, 32, 38, 42],
+          ]
+      input array by 3 * 4, type is float -->
+          input: bbox2 = [
+            [0, 0, 10, 20],
+            [0, 10, 10, 19],
+            [10, 10, 20, 20],
+          ]
+      param:
+        mode = 0
+        aligned = False
+        offset = 0
+
+
+      output array by 3 * 3, type is float -->
+          output: [[0.5000, 0.0000, 0.0000],
+                   [0.0000, 0.0000, 1.0000],
+                   [0.0000, 0.0000, 0.0000]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/bbox_overlaps_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBboxOverlaps(mluOpHandle_t handle,
+                  const int mode,
+                  const bool aligned,
+                  const int offset,
+                  const mluOpTensorDescriptor_t bbox1_desc,
+                  const void *bbox1,
+                  const mluOpTensorDescriptor_t bbox2_desc,
+                  const void *bbox2,
+                  const mluOpTensorDescriptor_t ious_desc,
+                  void *ious);
+
 // Group: ThreeInterpolate
 /*!
  * @brief Computes weighted linear interpolation on 3 points by using
@@ -4705,7 +4819,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The input tensors and output tensor must meet the following requirements:
- *   - The \b a and \b b must be two dimensions.
+ *   - The \b a and \b b must be a 2D tensor.
  *   - The number of \b a matrix's columns must be equal to the number of \b b matrix's rows after both inputs
  *   perform transpose operations according to parameters.
  *
@@ -4886,7 +5000,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The input tensors and output tensor must meet the following requirements:
- *   - The \b a and \b b must be two dimensions.
+ *   - The \b a and \b b must be a 2D tensor.
  *   - The number of \b a matrix's columns must be equal to the number of \b b matrix's rows after both inputs
  *   perform transpose operations according to parameters.
  *   - The product of the max size for \b a dimension and the size of \b a data type should be less than 2G.

@@ -216,6 +216,7 @@ message Node {
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
   optional BoxIouRotatedParam box_iou_rotated_param = 200;   // BoxIouRotatedParam
+  optional BboxOverlapsParam bbox_overlaps_param    = 2041;  // BboxOverlapsParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
   optional RoiawarePool3dForwardParam  roiaware_pool3d_forward_param = 10120;  // param
@@ -382,6 +383,13 @@ message VoxelPoolingForwardParam {
 message BoxIouRotatedParam {
   optional int32 mode   = 1 [default = 0];  // 0 is IOU, 1 is IOF
   optional bool aligned = 2 [default = false];
+}
+
+// param to call mluOpBboxOverlaps()
+message BboxOverlapsParam {
+  optional int32 mode = 1 [default = 0];
+  optional bool aligned = 2 [default = false];
+  optional int32 offset = 3 [default = 0];
 }
 
 // param to call mluOpYoloBox()

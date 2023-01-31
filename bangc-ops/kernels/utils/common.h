@@ -41,6 +41,89 @@ __mlu_func__ inline T __mluop_max(T a, T b) {
   return a > b ? a : b;
 }
 
+/******************************************************************************
+ * MLUOP FUNC: __mluop_float2half
+ * param 'dst' is the destination pointer in NRAM.
+ * param 'src' is the source pointer in NRAM.
+ * param 'src_count' is the src element count.
+ * Note:
+ *      The rounding mode on MLU200 is rd, on MLU300 is rn.
+ ******************************************************************************/
+__mlu_func__ inline void __mluop_float2half(half *dst, float *src,
+                                            int src_count) {
+#if __BANG_ARCH__ >= 300
+  __bang_float2half_rn(dst, src, src_count);
+#else
+  __bang_float2half_rd(dst, src, src_count);
+#endif
+}
+
+__mlu_func__ inline half __mluop_float2half(float a) {
+#if __BANG_ARCH__ >= 300
+  return __float2half_rn(a);
+#else
+  return __float2half_rd(a);
+#endif
+}
+
+/******************************************************************************
+ * MLUOP FUNC: computeDiv
+ * param 'nram_dst' is the nram destination address, which supports half or
+float data type.  * param 'nram_src0' is the nram source address, which has the
+same data type as nram_dst.  * param 'nram_src1' is the nram source address,
+which has the same data type as nram_dst.  * param 'nram_addition' is the nram
+addition address. Pass NULL if the data type of nram_src  *   is float and
+architecture >= 300, otherwise the space size is at least twice as much as
+ *nram_src.
+ * param 'deal_num' is the num of input data.
+ * remarks:
+ *   1. nram_dst and nram_src can not be homologous operand if architecture <
+300.  *   2. On MLU2XX, nram_src1(dividend) must be positive due to limitations
+of bang_active_reciphp.
+ ******************************************************************************************/
+template <typename T>
+static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
+                                    T *nram_addition, int is_high_precision,
+                                    int deal_num) {
+  if (sizeof(T) == sizeof(float)) {
+#if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
+    __bang_div((float *)nram_dst, (float *)nram_src0, (float *)nram_src1,
+               deal_num);
+#else
+    __bang_active_reciphp((float *)nram_dst, (float *)nram_src1, deal_num);
+    __bang_mul((float *)nram_dst, (float *)nram_src0, (float *)nram_dst,
+               deal_num);
+#endif
+  } else if (sizeof(T) == sizeof(half)) {
+#if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
+    __bang_div((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
+               deal_num);
+#else
+    if (is_high_precision) {
+#if __BANG_ARCH__ == 372
+      __bang_half2float((float *)nram_addition, (half *)nram_src1, deal_num);
+      __bang_recip((float *)nram_addition, (float *)nram_addition, deal_num);
+      __mluop_float2half((half *)nram_src1, (float *)nram_addition, deal_num);
+      __bang_mul((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
+                 deal_num);
+#else
+      __bang_half2float((float *)nram_addition, (half *)nram_src1, deal_num);
+      __bang_active_reciphp((float *)nram_addition, (float *)nram_addition,
+                            deal_num);
+      __mluop_float2half((half *)nram_src1, (float *)nram_addition, deal_num);
+      __bang_mul((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
+                 deal_num);
+#endif
+    } else {
+      __bang_active_reciphp((T *)nram_dst, (T *)nram_src1, deal_num);
+      __bang_mul((T *)nram_dst, (T *)nram_src0, (T *)nram_dst, deal_num);
+    }
+#endif
+  } else {
+    return;
+  }
+}
+
 /******************************************************************************************
  * MLUOPS FUNC: computeRecip
  * param 'nram_dst' is the nram destination address, which supports half or
