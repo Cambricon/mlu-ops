@@ -1794,6 +1794,209 @@ mluOpAbs(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t y_desc,
          void *y);
 
+// Group:AddN
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpAddN_v2 operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the add_n
+ * operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_descs[]
+ * Array of descriptors for all input tensors. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input_num
+ * The number of tensors in array inputs[].
+ * @param[in] output_desc
+ * The descriptor of the output tensor, For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * Host pointer to the returned size of the extra workspace in bytes that is
+ * used in add_n operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
+                                                      const mluOpTensorDescriptor_t input_descs[],
+                                                      const uint32_t input_num,
+                                                      const mluOpTensorDescriptor_t output_desc,
+                                                      size_t *workspace_size);
+// Group:AddN
+/*!
+ * @brief Computes the sum of input tensors.
+ *
+ * AddN operation is wildly used in artificial intelligence as a kind of basic mathematical
+ * operations. Also, this operation is supported in almost all common frameworks, like
+ * PyTorch and TensorFlow.
+ * Compared with ::mluOpAddN, this function supports multidirectional broadcasting of input tensors.
+ *
+ * This function may need extra MLU memory as the workspace to support multidirectional broadcasting.
+ * You can get the size of the workspace \b workspace_size with the ::mluOpGetAddNWorkspaceSize
+ * function.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in add_n
+ * operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_descs[]
+ * Array of descriptors for all input tensors. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] inputs[]
+ * Array of device pointers to the MLU memory for the input tensors.
+ * @param[in] input_num
+ * Number of tensors in array inputs[].
+ * @param[in] output_desc
+ * Descriptor of the output tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Device pointer to the MLU memory that stores the output tensor.
+ * @param[in] workspace
+ * Device pointer to the MLU memory that is used as an extra workspace for this
+ * operation. For more information about workspace, see "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ * Size of the extra workspace in bytes that needs to be used in this
+ * operation. You can get the size of workspace with the ::mluOpGetAddNWorkspaceSize
+ * function.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - Before calling this function to perform AddN operation, you need to get the size
+ *   of workspace by the ::mluOpGetAddNWorkspaceSize function.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input and output tensors.
+ * Note that the data type of output should be same with input.
+ *   - input tensor: float, half, int32, int16, int8, uint8.
+ *   - output tensor: float, half, int32, int16, int8, uint8.
+
+ *
+ * @par Scale Limitation
+ * - The maximum dimension of both input and output tensors is 8.
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of this operation is as follows:
+     @verbatim
+       Input tensor  1 :   [[1, 2, 3]]
+
+
+       Input tensor  2 :   [[1],
+                            [4],
+                            [7]]
+
+       Input tensor  3 :   [[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]
+
+       Input num       :   3
+
+       Output tensor   :   [[3,  5,  7],
+                            [9, 11, 13],
+                            [15,17, 19]]
+     @endverbatim
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpAddN_v2(mluOpHandle_t handle,
+                                         const mluOpTensorDescriptor_t input_descs[],
+                                         const void *const inputs[],
+                                         const uint32_t input_num,
+                                         const mluOpTensorDescriptor_t output_desc,
+                                         void *output,
+                                         void * workspace,
+                                         size_t workspace_size);
+// Group:AddN
+/*!
+ * @brief Computes the sum of input tensors.
+ *
+ * @par Deprecated
+ * - ::mluOpAddN is deprecated and will be removed in the future release. It is recommended to use
+ *   ::mluOpAddN_v2 instead.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in this
+ * operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_descs[]
+ * Array of descriptor for the all input tensors. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] inputs[]
+ * Array of device pointers to the MLU memory for the all input tensors.
+ * @param[in] input_num
+ * Number of tensors in array inputs[].
+ * @param[in] output_desc
+ * Descriptor of the output tensor, For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Device pointer to the MLU memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the following data types for input and output tensors.
+ *   - input tensor: float, half.
+ *   - output tensor: float, half.
+ *   <b>Note that the data type of output should be same with inputs.</b>
+ *
+ * @par Data Layout
+ * - Data layouts of all input tensors and output tensor must be the same.
+ *
+ * @par Scale Limitation
+ * - The dimensions of input tensors and output tensor must be the same.
+ * - The shape of input tensors and output tensor must be the same.
+ * - The number of input tensors must be greater than or equal to one.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of this operation is as follows:
+     @verbatim
+       Input tensor  1 :   [[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]
+
+       Input tensor  2 :   [[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]
+
+       Input tensor  3 :   [[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]
+
+       Input num       :   3
+
+       Output tensor   :   [[3,  6,  9],
+                            [12, 15, 18],
+                            [21, 24, 27]]
+     @endverbatim
+ *
+ */
+
+mluOpStatus_t MLUOP_WIN_API mluOpAddN(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t input_descs[],
+                                      const void *const inputs[],
+                                      uint32_t input_num,
+                                      const mluOpTensorDescriptor_t output_desc,
+                                      void *output);
+
 // Group:Log
 /*!
  * @brief Computes logarithm of input tensor \b x, and returns the results in
