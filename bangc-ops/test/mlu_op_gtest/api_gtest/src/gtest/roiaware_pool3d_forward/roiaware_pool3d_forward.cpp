@@ -306,7 +306,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_handle_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -317,7 +317,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_rois_desc_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -328,7 +328,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_rois_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -339,7 +339,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pts_desc_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -350,7 +350,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pts_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -361,7 +361,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pts_feature_desc_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -372,7 +372,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pts_feature_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -383,7 +383,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_workspace_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -394,7 +394,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_argmax_desc_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -405,7 +405,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_argmax_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -416,7 +416,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pts_idx_of_voxels_desc_null) {
              true, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -427,7 +427,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pts_idx_of_voxels_null) {
              false, true, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -438,7 +438,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pooled_features_desc_null) {
              true, false, true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }
@@ -449,7 +449,7 @@ TEST_F(roiaware_pool3d_forward, BAD_PARAM_pooled_features_null) {
              true, true, false);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
-    FAIL() << "CNNLAPIGTEST: catched " << e.what()
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in roiaware_pool3d_forward";
   }
 }

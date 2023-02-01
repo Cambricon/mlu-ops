@@ -119,7 +119,7 @@ class roiaware_pool3d_forward_general
       target_device_ = std::get<7>(GetParam());
       expected_status_ = std::get<8>(GetParam());
     } catch (const std::exception &e) {
-      FAIL() << "CNNLAPIGTEST: catched " << e.what()
+      FAIL() << "MLUOPAPIGTEST: catched " << e.what()
              << " in roiaware_pool3d_forward general.";
     }
   }
@@ -221,7 +221,7 @@ class roiaware_pool3d_forward_general
         pooled_features_ = nullptr;
       }
     } catch (const std::exception &e) {
-      FAIL() << "CNNLAPIGTEST: catched " << e.what()
+      FAIL() << "MLUOPAPIGTEST: catched " << e.what()
              << " in roiaware_pool3d_forward_general";
     }
   }
