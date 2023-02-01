@@ -378,22 +378,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     return status;
   }
 
-  int core_dim = mluop::runtime::getClusterLimitCapability(handle);
+  int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
              "MLUUnionKernelPtsIdxOfVoxels<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
   if (rois_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Kernel "
-               "mluOpUnionKernelPtsIdxOfVoxelsHalf";
+    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+               "mluOpUnionKernelPtsIdxOfVoxelsHalf().";
     KERNEL_CHECK((mluOpUnionKernelPtsIdxOfVoxelsHalf(
         k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num,
         max_pts_each_voxel, out_x, out_y, out_z, rois, pts_workspace,
         pts_idx_of_voxels)));
   } else {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Kernel "
-               "mluOpUnionKernelPtsIdxOfVoxelsFloat";
+    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+               "mluOpUnionKernelPtsIdxOfVoxelsFloat().";
     KERNEL_CHECK((mluOpUnionKernelPtsIdxOfVoxelsFloat(
         k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num,
         max_pts_each_voxel, out_x, out_y, out_z, rois, pts_workspace,
@@ -415,15 +415,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
   if (pooled_features_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Kernel "
-               "mluOpUnionKernelRoiawarePool3dForwardHalf";
+    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+               "mluOpUnionKernelRoiawarePool3dForwardHalf().";
     KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dForwardHalf(
         k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num, channels,
         max_pts_each_voxel, out_x, out_y, out_z, pts_feature_workspace,
         pts_idx_of_voxels, pooled_features, argmax)));
   } else {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Kernel "
-               "mluOpUnionKernelRoiawarePool3dForwardFloat";
+    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+               "mluOpUnionKernelRoiawarePool3dForwardFloat().";
     KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dForwardFloat(
         k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num, channels,
         max_pts_each_voxel, out_x, out_y, out_z, pts_feature_workspace,
@@ -577,22 +577,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
     return status;
   }
 
-  int core_dim = mluop::runtime::getClusterLimitCapability(handle);
+  int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
              "MLUUnionKernelRoiawarePool3dBackward<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
   if (grad_out_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "[mluOpRoiawarePool3dBackward] Kernel "
-               "mluOpUnionKernelRoiawarePool3dBackwardHalf";
+    VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
+               "mluOpUnionKernelRoiawarePool3dBackwardHalf().";
     KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dBackwardHalf(
         k_dim, k_type, handle->queue, pool_method, boxes_num, out_x, out_y,
         out_z, channels, max_pts_each_voxel, pts_idx_of_voxels, argmax,
         grad_out, grad_in)));
   } else {
-    VLOG(5) << "[mluOpRoiawarePool3dBackward] Kernel "
-               "mluOpUnionKernelRoiawarePool3dBackwardFloat";
+    VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
+               "mluOpUnionKernelRoiawarePool3dBackwardFloat().";
     KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dBackwardFloat(
         k_dim, k_type, handle->queue, pool_method, boxes_num, out_x, out_y,
         out_z, channels, max_pts_each_voxel, pts_idx_of_voxels, argmax,
