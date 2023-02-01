@@ -5,7 +5,7 @@
 
 下面具体介绍Cambricon BANGC OPS支持的算子及其功能描述。有关算子详情，请参见《Cambricon BANGC OPS Developer Guide》。
 
-.. _log:
+.. _abs:
 
 mluOpAbs
 --------
@@ -353,8 +353,3 @@ mluOpActiveRotatedFilterForward
 -------------------------------
 该算子根据位置信息对输入进行旋转。这个算子编码方向信息并生成方向敏感特征。
 
-.. _three_nn_forward:
-
-mluOpThreeNNForward
--------------------
-该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。
