@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # check
-message("[MLUOP GTEST STYLE]: ")
+message(STATUS "[MLUOP GTEST STYLE]: ")
 set(MLUOP_BUILD_SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
 
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/gtest_style.py ${MLUOP_BUILD_SPECIFIC_OP} RESULT_VARIABLE STYLE_CHECK)
@@ -13,7 +13,7 @@ if (STYLE_CHECK)
   message(FATAL_ERROR "-- Pleace check gtest code manually.")
 endif()
 
-message("[MLUOP GTEST REGISTER OP]: ")
+message(STATUS "[MLUOP GTEST REGISTER OP]: ")
 file(GLOB CASE_LIST "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*case_list.cpp")
 execute_process(COMMAND rm -f ${CASE_LIST})
 execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/register_op.py ${MLUOP_BUILD_SPECIFIC_OP})
@@ -70,7 +70,7 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif()
 
-message("[MLUOP GTEST PROTOC]: ")
+message(STATUS "[MLUOP GTEST PROTOC]: ")
 set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu_op_test_proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
 

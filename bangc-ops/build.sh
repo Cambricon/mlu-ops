@@ -194,6 +194,10 @@ else
   exit -1
 fi
 
+prog_log_info "generator libmluops.map file: python3 gen_mluops.py ./mlu_op.h"
+rm -f ./libmluops.map
+python3 gen_mluops.py ./mlu_op.h
+
 pushd ${BUILD_PATH} > /dev/null
   rm -rf *
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
