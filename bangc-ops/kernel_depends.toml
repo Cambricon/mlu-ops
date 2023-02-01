@@ -21,6 +21,7 @@ tensor_stride_process = ["copy"]
 roiaware_pool3d = ["fill","transpose"]
 voxelization = ["fill_zero"]
 yolo_box = ["fill_zero"]
+deform_roi_pool = ["fill"]
 
 
 [bangc-ops.gtest]
@@ -45,3 +46,5 @@ psamask_backward = ["psamask"]
 three_interpolate_forward = ["three_interpolate"]
 three_interpolate_backward = ["three_interpolate"]
 active_rotated_filter_forward = ["active_rotated_filter"]
+deform_roi_pool_forward = ["deform_roi_pool"]
+deform_roi_pool_backward = ["deform_roi_pool"]

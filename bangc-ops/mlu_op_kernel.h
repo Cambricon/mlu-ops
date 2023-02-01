@@ -342,16 +342,14 @@ void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n,
-    const int c_limit_size, const int m_limit_size, const int n_limit_size,
-    void *grad_features);
+    const int b, const int c, const int m, const int n, const int c_limit_size,
+    const int m_limit_size, const int n_limit_size, void *grad_features);
 
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n,
-    const int c_limit_size, const int m_limit_size, const int n_limit_size,
-    void *grad_features);
+    const int b, const int c, const int m, const int n, const int c_limit_size,
+    const int m_limit_size, const int n_limit_size, void *grad_features);
 
 /* Expand */
 void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
@@ -468,6 +466,36 @@ void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardHalf(
     const int output_planes, const int input_planes, const int orientations,
     const int kH, const int kW, const int rotations, const void *input_gdram,
     const void *indices_gdram, const void *workspace_gdram, void *output_gdram);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *rois, const void *offset, void *output,
+    const int batches, const int channels, const int height, const int width,
+    const int num_rois, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int sampling_ratio, const float gamma);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *rois, const void *offset, void *output,
+    const int batches, const int channels, const int height, const int width,
+    const int num_rois, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int sampling_ratio, const float gamma);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *input, const void *rois,
+    const void *offset, void *grad_input, void *grad_offset, const int batches,
+    const int channels, const int height, const int width, const int num_rois,
+    const int pooled_height, const int pooled_width, const float spatial_scale,
+    const int sampling_ratio, const float gamma);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *input, const void *rois,
+    const void *offset, void *grad_input, void *grad_offset, const int batches,
+    const int channels, const int height, const int width, const int num_rois,
+    const int pooled_height, const int pooled_width, const float spatial_scale,
+    const int sampling_ratio, const float gamma);
 
 #if defined(__cplusplus)
 }
