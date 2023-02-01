@@ -1,3 +1,25 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
 #include "indice_convolution_backward_filter.h"
 #include <vector>
 #include <string>
@@ -17,9 +39,10 @@ void IndiceConvolutionBackwardFilterExecutor::initParam() {
     indice_num_.push_back(op_param.indice_num(i));
   }
 
-  if (MLUOP_LAYOUT_HWCN != diffw_desc_->layout) {
-    diffw_trans_ = true;
-  }
+  diffw_trans_ = false;
+  // if (MLUOP_LAYOUT_HWCN != diffw_desc_->layout) {
+  //   diffw_trans_ = true;
+  // }
 }
 
 void IndiceConvolutionBackwardFilterExecutor::paramCheck() {
@@ -66,7 +89,8 @@ void IndiceConvolutionBackwardFilterExecutor::compute() {
 
 void IndiceConvolutionBackwardFilterExecutor::cpuTranspose(
     float *output, const float *input, const int64_t kernel_volume,
-    const int64_t ci, const int64_t co, const mluOpTensorLayout_t diffw_layout) {
+    const int64_t ci, const int64_t co,
+    const mluOpTensorLayout_t diffw_layout) {
   int64_t in_shape[3] = {kernel_volume, ci, co};
   int64_t dim[3] = {0};
   int64_t permute[3] = {2, 0, 1};
@@ -180,8 +204,10 @@ int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryIoSize() {
   int64_t in_active_num = input_indice_desc_->dims[0];
   int64_t kernel_volume = indice_pair_desc_->dims[0];
   int64_t theory_ios = 0;
-  auto input_indice_dwidth = mluop::getSizeOfDataType(input_indice_desc_->dtype);
-  auto diffy_indice_dwidth = mluop::getSizeOfDataType(diffy_indice_desc_->dtype);
+  auto input_indice_dwidth =
+      mluop::getSizeOfDataType(input_indice_desc_->dtype);
+  auto diffy_indice_dwidth =
+      mluop::getSizeOfDataType(diffy_indice_desc_->dtype);
   auto indice_pair_dwidth = mluop::getSizeOfDataType(indice_pair_desc_->dtype);
   auto diffw_dwidth = mluop::getSizeOfDataType(diffw_desc_->dtype);
 

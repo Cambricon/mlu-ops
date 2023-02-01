@@ -111,7 +111,7 @@
     if ((__status__) != MLUOP_STATUS_SUCCESS) {                            \
       LOG(ERROR) << api << "BAD return status: " << #status << " returns " \
                  << (__status__) << " (FILE: " << __FILE__                 \
-                 << ", LINE: " << __LINE__ << "). " __VA_ARGS__;              \
+                 << ", LINE: " << __LINE__ << "). " __VA_ARGS__;           \
       return (__status__);                                                 \
     }                                                                      \
   }
