@@ -35,7 +35,7 @@ for file in ${file_list}; do
   echo "clang-formating ${file} ..."
   if [[ $file == *${mluop_name} ]]; then
     clang-format -style="{BasedOnStyle: google,AlwaysBreakAfterReturnType: TopLevel, \
-      BinPackParameters: false, AlignConsecutiveAssignments: true, ColumnLimit: 100 }" -i ${file}
+      BinPackParameters: false, AlignConsecutiveAssignments: true, ColumnLimit: 120 }" -i ${file}
   else
     clang-format -style="{BasedOnStyle: google, PointerAlignment: Right, \
       SortIncludes: false, ColumnLimit: 80}" -i ${file}
