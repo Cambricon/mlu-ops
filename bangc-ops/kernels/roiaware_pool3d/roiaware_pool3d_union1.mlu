@@ -441,9 +441,12 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
           T max_val = ((T *)one_pooled_feature)[0];
           int max_idx = (int)(*(uint32_t *)((T *)one_pooled_feature + 1));
           nram_pooled_features_cur_voxel[channel_idx] =
-              (max_val == -INFINITY) ? 0 : max_val;
+              ((max_val == -INFINITY) || (isnan(max_val) == true)) ? 0
+                                                                   : max_val;
           nram_argmax_cur_voxel[channel_idx] =
-              (max_val == -INFINITY) ? -1 : nram_pts_idx_cur_voxel[max_idx + 1];
+              ((max_val == -INFINITY) || (isnan(max_val) == true))
+                  ? -1
+                  : nram_pts_idx_cur_voxel[max_idx + 1];
 #else
           // __bang_max need align num on mlu200 series
           if (std::is_same<T, float>::value) {
@@ -462,10 +465,12 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
             int max_idx = (int)__bang_findfirst1(
                 (float *)nram_max_pts_feature_tmp, align_max_pts_each_voxel);
             nram_pooled_features_cur_voxel[channel_idx] =
-                (max_val == -INFINITY) ? 0 : max_val;
+                ((max_val == -INFINITY) || (isnan(max_val) == true)) ? 0
+                                                                     : max_val;
             nram_argmax_cur_voxel[channel_idx] =
-                (max_val == -INFINITY) ? -1
-                                       : nram_pts_idx_cur_voxel[max_idx + 1];
+                ((max_val == -INFINITY) || (isnan(max_val) == true))
+                    ? -1
+                    : nram_pts_idx_cur_voxel[max_idx + 1];
           } else {
             int max_idx = -1;
             float max_val = -INFINITY;
@@ -622,7 +627,7 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
   // pts_idx_of_voxels: (boxes_num, out_x, out_y, out_z, max_pts_each_voxel)
   // grad_out: (boxes_num, out_x, out_y, out_z, channels)
   // grad_in: (pts_num, channels)
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   int align_num = NFU_ALIGN_SIZE / sizeof(T);
