@@ -7195,7 +7195,7 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
 /*!
  * @brief Computes deformable roi pooling over \b input tensor. This function firstly divides the obtained
  * candidate region into regions with the same size according to the specified pooling width and pooling height,
- * then add offsets to rois, and finally calculates the mean value of the sampling points in each bin as output.
+ * then adds offsets to rois, and finally calculates the mean value of the sampling points in each bin as output.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -7221,7 +7221,7 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * @param[in] spatial_scale
  * A float value which is the scale factor of coordinates of rois.
  * @param[in] sampling_ratio
- * An integer value which is the number of sample in one bin. This parameter
+ * An integer value which is the number of samples in one bin. This parameter
  * only works when it is greater than zero.
  * @param[in] gamma
  * A float value which is the scale factor of offset.
@@ -7233,22 +7233,22 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Formula
- * - See "DeformRoiPoolForward Operator" section in "Cambricon BANGC OPS User Guide" for details.
+ * - See "DeformRoiPoolForward Operation" section in "Cambricon BANGC OPS User Guide" for details.
  *
  * @par Data Type
  * - The supported data types of \b input, \b rois, \b offset and \b output are as follows:
  *   Data types of all tensors should be the same.
- *   - input tensor: half, float.
- *   - rois tensor: half, float.
- *   - offset tensor: half, float.
- *   - output tensor: half, float.
+ *   - input tensor: half, float
+ *   - rois tensor: half, float
+ *   - offset tensor: half, float
+ *   - output tensor: half, float
  *
  * @par Data Layout
  * - The supported data layouts of \b input, \b rois, \b offset and \b output are as follows:
- *   - input tensor: \p MLUOP_LAYOUT_NHWC.
- *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - offset tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC
+ *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - offset tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
  * - The input tensor and output tensor must be 4D.
@@ -7256,7 +7256,8 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * - The rois tensor must be 2D.
  * - The offset tensor must be 4D.
  * - The sizes of the highest dimension of output tensor, rois tensor and offset tensor must be the same.
- * - The sizes of the middle two dimensions of output tensor and the sizes of the lower two dimensions of offset tensor must be the same.
+ * - The sizes of the middle two dimensions of output tensor and the sizes of the lower two dimensions of offset tensor
+ *   must be the same.
  * - The shape of \b input should be [batch_num, height, width, channels].
  * - The shape of \b rois should be [rois_num, 5].
  * - The shape of \b offset should be [rois_num, 2, pooled_height, pooled_width].
@@ -7264,9 +7265,6 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * - \b rois[i] consists of [batch_id, x1, y1, x2, y2]. \p batch_id should be in the range of [0, batch_num - 1].
  *
  * @par API Dependency
- * - None.
- *
- * @par Performance Optimization
  * - None.
  *
  * @note
@@ -7293,22 +7291,23 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  *
  *
  * @par Reference
- * - http://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
  */
-mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
-                                                      const mluOpTensorDescriptor_t input_desc,
-                                                      const void *input,
-                                                      const mluOpTensorDescriptor_t rois_desc,
-                                                      const void *rois,
-                                                      const mluOpTensorDescriptor_t offset_desc,
-                                                      const void *offset,
-                                                      const int pooled_height,
-                                                      const int pooled_width,
-                                                      const float spatial_scale,
-                                                      const int sampling_ratio,
-                                                      const float gamma,
-                                                      const mluOpTensorDescriptor_t output_desc,
-                                                      void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
+                          const mluOpTensorDescriptor_t input_desc,
+                          const void *input,
+                          const mluOpTensorDescriptor_t rois_desc,
+                          const void *rois,
+                          const mluOpTensorDescriptor_t offset_desc,
+                          const void *offset,
+                          const int pooled_height,
+                          const int pooled_width,
+                          const float spatial_scale,
+                          const int sampling_ratio,
+                          const float gamma,
+                          const mluOpTensorDescriptor_t output_desc,
+                          void *output);
 
 // Group:DeformRoiPool
 /*!
@@ -7343,7 +7342,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
  * @param[in] spatial_scale
  * A float value which is the scale factor of coordinates of rois.
  * @param[in] sampling_ratio
- * An integer value which is the number of sample in one bin. This parameter
+ * An integer value which is the number of samples in one bin. This parameter
  * only works when it is greater than zero.
  * @param[in] gamma
  * A float value which is the scale factor of offset.
@@ -7352,7 +7351,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the gradient of the input tensor.
  * @param[in] grad_offset_desc
- * DThe descriptor of grad_offset tensor, which contains the dimension and layout of grad_offset tensor.
+ * The descriptor of grad_offset tensor, which contains the dimension and layout of grad_offset tensor.
  * @param[out] grad_offset
  * Pointer to the MLU memory that stores the gradient of the offset tensor.
  * @par Return
@@ -7365,31 +7364,32 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
  * - The supported data types of grad_output tensor \b grad_output, input tensor \b input, rois tensor \b rois,
  *   offset tensor \b offset, grad_input tensor \b grad_input and grad_offset tensor \b grad_offset are as follows:
  *   Data types of all tensors should be the same.
- *   - grad_output tensor: half, float.
- *   - input tensor: half, float.
- *   - rois tensor: half, float.
- *   - offset tensor: half, float.
- *   - grad_input tensor: half, float.
- *   - grad_offset tensor: half, float.
+ *   - grad_output tensor: half, float
+ *   - input tensor: half, float
+ *   - rois tensor: half, float
+ *   - offset tensor: half, float
+ *   - grad_input tensor: half, float
+ *   - grad_offset tensor: half, float
  *
  * @par Data Layout
  * - The supported data layouts of grad_output tensor \b grad_output, input tensor \b input, rois tensor \b rois,
  *   offset tensor \b offset, grad_input tensor \b grad_input and grad_offset tensor \b grad_offset are as follows:
- *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC.
- *   - input tensor: \p MLUOP_LAYOUT_NHWC.
- *   - rois tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - offset tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - grad_input tensor: \p MLUOP_LAYOUT_NHWC.
- *   - grad_offset tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC
+ *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - offset tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - grad_input tensor: \p MLUOP_LAYOUT_NHWC
+ *   - grad_offset tensor: \p MLUOP_LAYOUT_ARRAY
  *
  * @par Scale Limitation
  * - The grad_output tensor, input tensor and grad_input tensor must be 4D.
- * - the sizes of the lowest dimension of grad_output tensor, input tensor and grad_input tensor must be the same.
+ * - The sizes of the lowest dimension of grad_output tensor, input tensor and grad_input tensor must be the same.
  * - The rois tensor must be 2D.
  * - The offset tensor and grad_offset tensor must be 4D.
- * - The sizes of the highest dimension of output tensor, rois tensor, offset tensor and grad_offset tensor must be the same.
- * - The sizes of the middle two dimensions of grad_output tensor, the sizes of the lower two dimensions of offset tensor
- *   and the sizes of the lower two dimensions of grad_offset tensor must be the same.
+ * - The sizes of the highest dimension of output tensor, rois tensor, offset tensor and grad_offset tensor must be the
+ *   same.
+ * - The sizes of the middle two dimensions of grad_output tensor, the sizes of the lower two dimensions of offset
+ *   tensor and the sizes of the lower two dimensions of grad_offset tensor must be the same.
  * - The shape of \b grad_output should be [rois_num, pooled_height, pooled_width, channels].
  * - The shape of \b input should be [batch_num, height, width, channels].
  * - The shape of \b rois should be [rois_num, 5].
@@ -7399,9 +7399,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
  * - \b rois[i] consists of [batch_id, x1, y1, x2, y2]. \p batch_id should be in the range of [0, batch_num - 1].
  *
  * @par API Dependency
- * - None.
- *
- * @par Performance Optimization
  * - None.
  *
  * @note
@@ -7414,26 +7411,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
  * - None.
  *
  * @par Reference
- * - http://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
  */
-mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
-                              const mluOpTensorDescriptor_t grad_output_desc,
-                              const void *grad_output,
-                              const mluOpTensorDescriptor_t input_desc,
-                              const void *input,
-                              const mluOpTensorDescriptor_t rois_desc,
-                              const void *rois,
-                              const mluOpTensorDescriptor_t offset_desc,
-                              const void *offset,
-                              const int pooled_height,
-                              const int pooled_width,
-                              const float spatial_scale,
-                              const int sampling_ratio,
-                              const float gamma,
-                              const mluOpTensorDescriptor_t grad_input_desc,
-                              void *grad_input,
-                              const mluOpTensorDescriptor_t grad_offset_desc,
-                              void *grad_offset);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
+                           const mluOpTensorDescriptor_t grad_output_desc,
+                           const void *grad_output,
+                           const mluOpTensorDescriptor_t input_desc,
+                           const void *input,
+                           const mluOpTensorDescriptor_t rois_desc,
+                           const void *rois,
+                           const mluOpTensorDescriptor_t offset_desc,
+                           const void *offset,
+                           const int pooled_height,
+                           const int pooled_width,
+                           const float spatial_scale,
+                           const int sampling_ratio,
+                           const float gamma,
+                           const mluOpTensorDescriptor_t grad_input_desc,
+                           void *grad_input,
+                           const mluOpTensorDescriptor_t grad_offset_desc,
+                           void *grad_offset);
 
 #if defined(__cplusplus)
 }
