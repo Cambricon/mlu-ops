@@ -135,13 +135,17 @@ file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
 if (object_files MATCHES ".a")
+  if ("${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/wrapper.cpp" IN_LIST src_files)
+    list(REMOVE_ITEM src_files "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/wrapper.cpp")
+  endif()
   bang_add_library(mluops SHARED ${core_src_files} ${src_files})
   message(STATUS "Build MLUOP with static object file.")
   message("${object_files}")
   target_link_libraries(mluops
-    -Wl,--start-group
-    ${object_files} ${obj_files} cnrt cndrv dl
-    -Wl,--end-group)
+    -Wl,--whole-archive
+    ${object_files}
+    -Wl,--no-whole-archive)
+  target_link_libraries(mluops ${obj_files} cnrt cndrv dl)
 else()
   bang_add_library(mluops SHARED ${core_src_files} ${src_files})
   target_link_libraries(mluops ${o_files} cnrt cndrv dl)
