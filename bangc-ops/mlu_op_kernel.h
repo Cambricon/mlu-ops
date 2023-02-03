@@ -43,12 +43,12 @@ extern "C" {
 void MLUOP_WIN_API mluOpKernelMlNmsFloatFast(cnrtDim3_t k_dim,
     cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t data_type,
     void* boxes_data_ptr, float nms_thres, int input_boxes_num,
-    uint8_t* output_boxes_index);
+    int boxes_start_position, uint8_t* output_boxes_index);
 
 void MLUOP_WIN_API mluOpKernelMlNmsHalfFast(cnrtDim3_t k_dim,
     cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t data_type,
     void* boxes_data_ptr, float nms_thres, int input_boxes_num,
-    uint8_t* output_boxes_index);
+    int boxes_start_position, uint8_t* output_boxes_index);
 
 /* Abs */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsHalfFast(
