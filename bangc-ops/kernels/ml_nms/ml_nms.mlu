@@ -26,32 +26,35 @@
 
 #define NRAM_SIZE 2 * 1024
 #define UNION_OP_KERNEL_DECLARE(Op, DType, Prefer)           \
-  __mlu_global__ void MLUBlockKernel##Op##DType##Prefer(\
+  __mlu_global__ void MLUBlockKernel##Op##DType##Prefer( \
     mluOpDataType_t data_type, void* boxes_data_ptr, \
-    float nms_thres, int input_boxes_num, uint8_t* output_boxes_index);\
+    float nms_thres, int input_boxes_num, int boxes_start_position, \
+    uint8_t* output_boxes_index); \
 
 #define UNION_OP_KERNEL_IMPLE(Op, DType, Prefer)                 \
   __mlu_global__ void MLUOpKernel##Op##DType##Prefer(     \
     mluOpDataType_t data_type, void* boxes_data_ptr, \
-    float nms_thres, int input_boxes_num, uint8_t* output_boxes_index) {\
+    float nms_thres, int input_boxes_num, int boxes_start_position, \
+    uint8_t* output_boxes_index) { \
     int offset, seg; \
     getOffsetNum##Op##Prefer(input_boxes_num, &offset); \
     getSegNumMlNmsFast(input_boxes_num, &seg); \
     unionImple<DType, compute##Op##Prefer>( \
     (DType*)boxes_data_ptr, (DType)nms_thres, \
-    offset, seg, input_boxes_num, output_boxes_index);}
+    offset, seg, input_boxes_num, boxes_start_position, output_boxes_index);}
 
 template <typename T, void (*OpFunc)(T*, T, int, int, int, uint8_t*)>
-__mlu_device__ void unionImple(T* boxes_data_ptr, T nms_thres, int offset,
-  int seg, int input_boxes_num, uint8_t* output_boxes_index) {
+__mlu_device__ void unionImple(T* boxes_data_ptr,
+  T nms_thres, int offset, int seg, int input_boxes_num,
+  int boxes_start_position, uint8_t* output_boxes_index) {
   __nram__ char worke_space[MAX_NRAM_SIZE / 16];
   __memcpy((T*)worke_space,
-           boxes_data_ptr + (offset * 4),
-           seg * 4 * sizeof(T),
+           boxes_data_ptr + ((boxes_start_position + offset) * 6),
+           seg * 6 * sizeof(T),
            GDRAM2NRAM);
-  __memcpy((T*)worke_space + (seg * 4),
+  __memcpy((T*)worke_space + (seg * 6),
            boxes_data_ptr,
-           4 * sizeof(T),
+           6 * sizeof(T),
            GDRAM2NRAM);
   OpFunc((T*)worke_space, nms_thres, input_boxes_num, offset,
     seg, output_boxes_index);
@@ -106,26 +109,20 @@ __mlu_func__ void computeMlNmsFast(T* worke_space,
   __nram__ T* nms_thres_ptr;
   __nram__ T* scores_max_boxes_ptr;
   __nram__ T* tem;
+  __nram__ uint8_t* similar_index;
   __nram__ uint8_t* result;
   int compute_len;
   int i, j;
-  int data_len = seg * 4 + 4;
+  int data_len = seg * 6 + 6;
 
+  //  ----------------------allocate memory---------------------
   getComputeLen(seg, sizeof(T), &compute_len);
-  scores_max_boxes = worke_space + (seg * 4);
+  scores_max_boxes = worke_space + (seg * 6);
   x1 = worke_space + data_len;
   y1 = worke_space + (data_len + compute_len);
   x2 = worke_space + (data_len + (compute_len * 2));
   y2 = worke_space + (data_len + (compute_len * 3));
-
   data_len = data_len + (compute_len * 4);
-
-  for (i = 0, j = 0; i < seg * 4; i+=4, j++) {
-    x1[j] = worke_space[i];
-    y1[j] = worke_space[i + 1];
-    x2[j] = worke_space[i + 2];
-    y2[j] = worke_space[i + 3];
-  }
   w = worke_space + data_len;
   h = worke_space + (data_len + compute_len);
   area_ptr = worke_space + (data_len + (compute_len * 2));
@@ -134,7 +131,30 @@ __mlu_func__ void computeMlNmsFast(T* worke_space,
   nms_thres_ptr = worke_space + (data_len + (compute_len * 5));
   scores_max_boxes_ptr = worke_space + (data_len + (compute_len * 6));
   tem = worke_space + (data_len + (compute_len * 7));
-  result = (uint8_t*)worke_space + (data_len + (compute_len * 8));
+  if (sizeof(T) == sizeof(uint8_t)) {
+    similar_index = (uint8_t*)worke_space + (data_len + (compute_len * 8));
+    result = (uint8_t*)worke_space + (data_len + (compute_len * 8) + seg);
+  } else {
+    similar_index = (uint8_t*)worke_space + ((data_len + (compute_len * 8)) *
+                                                (sizeof(T) / sizeof(uint8_t)));
+    result = (uint8_t*)worke_space + ((data_len + (compute_len * 8)) *
+                                         (sizeof(T) / sizeof(uint8_t)) + seg);
+  }
+  for (i = 0, j = 0; i < seg * 6; i+=6, j++) {
+    if (*(scores_max_boxes + 5) == worke_space[i + 5]) {
+      similar_index[j] = 1;
+      x1[j] = worke_space[i];
+      y1[j] = worke_space[i + 1];
+      x2[j] = worke_space[i + 2];
+      y2[j] = worke_space[i + 3];
+    } else {
+      similar_index[j] = 0;
+      x1[j] = 0.0;
+      y1[j] = 0.0;
+      x2[j] = 0.0;
+      y2[j] = 0.0;
+    }
+  }
 
   // -----------------iou detect--------------------
   // fing all boxes area
@@ -198,7 +218,7 @@ __mlu_func__ void computeMlNmsFast(T* worke_space,
   __bang_le(tem, inter_area_ptr, tem, compute_len);
 
   for (int i = 0; i < seg; i++) {
-    if (tem[i]) {
+    if (tem[i] && similar_index[i]) {
       result[i] = 1;
     } else {
       result[i] = 0;
@@ -213,18 +233,20 @@ UNION_OP_KERNEL_IMPLE(MlNms, half, Fast);
 
 void MLUOP_WIN_API mluOpKernelMlNmsFloatFast(
   cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-  mluOpDataType_t data_type, void* boxes_data_ptr, float nms_thres,
-  int input_boxes_num, uint8_t* output_boxes_index) {
+  mluOpDataType_t data_type, void* boxes_data_ptr,
+  float nms_thres, int input_boxes_num, int boxes_start_position,
+  uint8_t* output_boxes_index) {
   MLUOpKernelMlNmsfloatFast<<<k_dim, k_type, queue>>>(
     data_type, boxes_data_ptr, nms_thres,
-    input_boxes_num, output_boxes_index);
+    input_boxes_num, boxes_start_position, output_boxes_index);
 }
 
 void MLUOP_WIN_API mluOpKernelMlNmsHalfFast(
   cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-  mluOpDataType_t data_type, void* boxes_data_ptr, float nms_thres,
-  int input_boxes_num, uint8_t* output_boxes_index) {
+  mluOpDataType_t data_type, void* boxes_data_ptr,
+  float nms_thres, int input_boxes_num, int boxes_start_position,
+  uint8_t* output_boxes_index) {
   MLUOpKernelMlNmshalfFast<<<k_dim, k_type, queue>>>(
     data_type, boxes_data_ptr, nms_thres,
-    input_boxes_num, output_boxes_index);
+    input_boxes_num, boxes_start_position, output_boxes_index);
 }
