@@ -1800,22 +1800,22 @@ mluOpAbs(mluOpHandle_t handle,
  * workspace to optimize the ::mluOpAddN_v2 operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the add_n
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the ::mluOpAddN
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
  * Array of descriptors for all input tensors. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] input_num
- * The number of tensors in array inputs[].
+ * Number of tensors in array inputs[].
  * @param[in] output_desc
- * The descriptor of the output tensor, For detailed information, see
+ * The descriptor of the output tensor. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * Host pointer to the returned size of the extra workspace in bytes that is
  * used in add_n operation.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @note
  * - None.
@@ -1846,7 +1846,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * function.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in add_n
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in ::mluOpAddN
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
  * Array of descriptors for all input tensors. For detailed information,
@@ -1856,13 +1856,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * @param[in] input_num
  * Number of tensors in array inputs[].
  * @param[in] output_desc
- * Descriptor of the output tensor. For detailed information, see
+ * The descriptor of the output tensor. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Device pointer to the MLU memory that stores the output tensor.
  * @param[in] workspace
  * Device pointer to the MLU memory that is used as an extra workspace for this
- * operation. For more information about workspace, see "Cambricon MLUOP User Guide".
+ * operation.
  * @param[in] workspace_size
  * Size of the extra workspace in bytes that needs to be used in this
  * operation. You can get the size of workspace with the ::mluOpGetAddNWorkspaceSize
@@ -1871,18 +1871,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par API Dependency
- * - Before calling this function to perform AddN operation, you need to get the size
- *   of workspace by the ::mluOpGetAddNWorkspaceSize function.
+ * - Before calling this function to perform ::mluOpAddN operation, you need to get
+ *   the size of workspace by the ::mluOpGetAddNWorkspaceSize function.
  *
  * @par Data Type
- * - This function supports the following data types for input and output tensors.
- * Note that the data type of output should be same with input.
- *   - input tensor: float, half, int32, int16, int8, uint8.
- *   - output tensor: float, half, int32, int16, int8, uint8.
-
+ * This function supports the following data types for input and output tensors.
+ * Note that the data type of output should be same with that of input.
+ *   - input tensor: float, half, int32, int16, int8, uint8
+ *   - output tensor: float, half, int32, int16, int8, uint8
  *
  * @par Scale Limitation
  * - The maximum dimension of both input and output tensors is 8.
+ *
  * @note
  * - None.
  *
@@ -1931,14 +1931,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpAddN_v2(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in this
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
- * Array of descriptor for the all input tensors. For detailed information,
+ * Array of descriptor for all the input tensors. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] inputs[]
  * Array of device pointers to the MLU memory for the all input tensors.
  * @param[in] input_num
  * Number of tensors in array inputs[].
  * @param[in] output_desc
- * Descriptor of the output tensor, For detailed information, see
+ * The descriptor of the output tensor, For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Device pointer to the MLU memory that stores the output tensor.
@@ -1948,8 +1948,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpAddN_v2(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the following data types for input and output tensors.
- *   - input tensor: float, half.
- *   - output tensor: float, half.
+ *   - input tensor: float, half
+ *   - output tensor: float, half
  *   <b>Note that the data type of output should be same with inputs.</b>
  *
  * @par Data Layout
