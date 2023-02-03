@@ -28,6 +28,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/kernel.h"
 #include "mlu_op_kernel.h"
 #include "mlu_op.h"
 #include "cnrt.h"
@@ -91,21 +92,49 @@ mluOpStatus_t MLUOP_WIN_API mluOpMlNms(mluOpHandle_t handle,
     cnrtDim3_t k_dim;
     cnrtFunctionType_t k_type;
     policyFunc(handle, boxes_data_ptr_desc, &k_dim, &k_type);
-    int input_boxes_num = boxes_data_ptr_desc->total_element_num / 4;
+    int input_boxes_num = boxes_data_ptr_desc->total_element_num / 6;
+    int apply_nram_size = 0;
+    int boxes_start_position = 0;
+    int loop_num = 0;
     void (*mluOpFuncKernel)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
       cnrtQueue_t queue, mluOpDataType_t data_type, void* boxes_data_ptr,
-      float nmsThres, int input_boxes_num, uint8_t* output_boxes_index);
+      float nmsThres, int input_boxes_num, int boxes_start_position,
+      uint8_t* output_boxes_index);
 
-      if (boxes_data_ptr_desc->dtype == MLUOP_DTYPE_HALF) {
-          mluOpFuncKernel = mluOpKernelMlNmsHalfFast;
-      } else {
-          mluOpFuncKernel = mluOpKernelMlNmsFloatFast;
+    if (boxes_data_ptr_desc->dtype == MLUOP_DTYPE_HALF) {
+      mluOpFuncKernel = mluOpKernelMlNmsHalfFast;
+      apply_nram_size = (input_boxes_num * 6 * 2) + (input_boxes_num * 14 * 2);
+    } else {
+      mluOpFuncKernel = mluOpKernelMlNmsFloatFast;
+      apply_nram_size = (input_boxes_num * 6 * 4) + (input_boxes_num * 14 * 4);
+    }
+    if (apply_nram_size > MAX_NRAM_SIZE) {
+      if ((apply_nram_size % MAX_NRAM_SIZE) !=0) {
+        loop_num = (apply_nram_size / MAX_NRAM_SIZE) + 1;
+      } else  {
+        loop_num = apply_nram_size / MAX_NRAM_SIZE;
       }
-
-    KERNEL_CHECK(
-      (mluOpFuncKernel(k_dim, k_type, handle->queue,
-         boxes_data_ptr_desc->dtype, boxes_data_ptr,
-         iou_threshold, input_boxes_num, (uint8_t*)output_boxes_index)));
+    }
+    if (loop_num > 0) {
+      for (int i = 0; i < loop_num; i++) {
+        boxes_start_position = i * (input_boxes_num / loop_num);
+        KERNEL_CHECK((mluOpFuncKernel(k_dim, k_type, handle->queue,
+                                        boxes_data_ptr_desc->dtype,
+                                        boxes_data_ptr,
+                                        iou_threshold,
+                                        input_boxes_num,
+                                        boxes_start_position,
+                                        (uint8_t*)output_boxes_index)));
+      }
+    } else {
+      KERNEL_CHECK((mluOpFuncKernel(k_dim, k_type, handle->queue,
+                                      boxes_data_ptr_desc->dtype,
+                                      boxes_data_ptr,
+                                      iou_threshold,
+                                      input_boxes_num,
+                                      boxes_start_position,
+                                      (uint8_t*)output_boxes_index)));
+    }
     GEN_CASE_END();
 
     return MLUOP_STATUS_SUCCESS;
