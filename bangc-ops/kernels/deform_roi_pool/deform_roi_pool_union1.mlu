@@ -140,8 +140,8 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
       __bang_write_value((T *)nram_out, channels_align, (T)0);
       __bang_write_value((T *)nram_ping, FOURSPLIT * c_slice, (T)0);
       __bang_write_value((T *)nram_pong, FOURSPLIT * c_slice, (T)0);
-      const T num_bins =
-          static_cast<T>(std::max(roi_bin_grid_height * roi_bin_grid_width, 1));
+      const T num_bins = static_cast<T>(
+          __mluop_max(roi_bin_grid_height * roi_bin_grid_width, 1));
       const T value_div = 1.0f / num_bins;
       bool is_ping_empty = true;
       for (int iy = 0; iy < roi_bin_grid_height; ++iy) {
@@ -403,8 +403,8 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
         __bang_write_value((T *)nram_pong_input, FOURSPLIT * c_slice, (T)0);
         __asm__ volatile("sync;");
       }
-      const T num_bins =
-          static_cast<T>(std::max(roi_bin_grid_height * roi_bin_grid_width, 1));
+      const T num_bins = static_cast<T>(
+          __mluop_max(roi_bin_grid_height * roi_bin_grid_width, 1));
       const T value_div = 1.0f / num_bins;
       bool is_ping_empty = true;
       __memcpy(nram_grad_output,
