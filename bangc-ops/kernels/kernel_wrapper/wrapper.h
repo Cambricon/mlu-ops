@@ -40,6 +40,15 @@
     };
 
 /* Kernel param types macro defination */
+
+#define ADDN_PARAM_TYPE                                                       \
+    mluOpHandle_t, const mluOpTensorDescriptor_t[], const void *const *,      \
+    uint32_t, const mluOpTensorDescriptor_t, void *
+
+#define ADDNV2_PARAM_TYPE                                                     \
+    mluOpHandle_t, const mluOpTensorDescriptor_t[], const void *const *,      \
+    uint32_t, const mluOpTensorDescriptor_t, void *, void *, size_t
+
 #define COPY_PARAM_TYPE                                                       \
     mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,               \
     const mluOpTensorDescriptor_t, void *
@@ -116,6 +125,8 @@
     void *
 
 /* Kernel register */
+KERNEL_REGISTER(addN, ADDN_PARAM_TYPE);
+KERNEL_REGISTER(addNV2, ADDNV2_PARAM_TYPE);
 KERNEL_REGISTER(copy, COPY_PARAM_TYPE);
 KERNEL_REGISTER(expand, EXPAND_PARAM_TYPE);
 KERNEL_REGISTER(fill, FILL_PARAM_TYPE);
