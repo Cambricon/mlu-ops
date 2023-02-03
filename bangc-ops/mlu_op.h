@@ -1812,7 +1812,7 @@ mluOpAbs(mluOpHandle_t handle,
  * ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * Host pointer to the returned size of the extra workspace in bytes that is
- * used in add_n operation.
+ * used in ::mluOpAddN operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -1875,8 +1875,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  *   the size of workspace by the ::mluOpGetAddNWorkspaceSize function.
  *
  * @par Data Type
- * This function supports the following data types for input and output tensors.
- * Note that the data type of output should be same with that of input.
+ * - This function supports the following data types for input and output tensors.
+ * Note that the data types of output should be the same with that of input.
  *   - input tensor: float, half, int32, int16, int8, uint8
  *   - output tensor: float, half, int32, int16, int8, uint8
  *
