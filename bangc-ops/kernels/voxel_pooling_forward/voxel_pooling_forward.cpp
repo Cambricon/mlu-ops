@@ -133,12 +133,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("voxel_pooling_forward");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA(true, "geom_xyz", geom_xyz, geom_xyz_desc, -100, 200);
-    GEN_CASE_DATA(true, "input_features", input_features, input_features_desc,
-                  -10, 10);
+    GEN_CASE_DATA_REAL(true, "geom_xyz", geom_xyz, geom_xyz_desc);
+    GEN_CASE_DATA_REAL(true, "input_features", input_features,
+                       input_features_desc);
     GEN_CASE_DATA(false, "output_features", output_features,
                   output_features_desc, 0, 0);
     GEN_CASE_DATA(false, "pos_memo", pos_memo, pos_memo_desc, 0, 0);
+    GEN_CASE_OP_PARAM_SINGLE(0, "voxel_pooling_forward", "batch_size",
+                             batch_size);
+    GEN_CASE_OP_PARAM_SINGLE(1, "voxel_pooling_forward", "num_points",
+                             num_points);
+    GEN_CASE_OP_PARAM_SINGLE(2, "voxel_pooling_forward", "num_channels",
+                             num_channels);
+    GEN_CASE_OP_PARAM_SINGLE(3, "voxel_pooling_forward", "num_voxel_x",
+                             num_voxel_x);
+    GEN_CASE_OP_PARAM_SINGLE(4, "voxel_pooling_forward", "num_voxel_y",
+                             num_voxel_y);
+    GEN_CASE_OP_PARAM_SINGLE(5, "voxel_pooling_forward", "num_voxel_z",
+                             num_voxel_z);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
