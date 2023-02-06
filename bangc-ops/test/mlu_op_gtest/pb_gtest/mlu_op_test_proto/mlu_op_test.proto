@@ -230,6 +230,7 @@ message Node {
   optional RotatedFeatureAlignBackwardParam rotated_feature_align_backward_param = 20221008;  //param
   optional DeformRoiPoolForwardParam deform_roi_pool_forward_param = 10126;  //param
   optional DeformRoiPoolBackwardParam deform_roi_pool_backward_param = 10127;  //param
+  optional IndiceConvolutionBackwardDataParam indice_convolution_backward_data_param = 22120599;  // param
 }
 
 
@@ -513,4 +514,11 @@ message DeformRoiPoolBackwardParam{
   required float gamma = 3 [default = 0.1];
   required int32 pooled_height = 4 [default = 7];
   required int32 pooled_width = 5 [default = 7];
+}
+
+// param to call mluOpIndiceConvolutionBackwardData()
+message IndiceConvolutionBackwardDataParam {
+  optional int64 inverse = 1 [default = 0];
+  optional int64 sub_m = 2 [default = 0];
+  repeated int32 indice_num = 3;
 }
