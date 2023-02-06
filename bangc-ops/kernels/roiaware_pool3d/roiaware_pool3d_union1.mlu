@@ -38,6 +38,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
     const int pool_method, const int boxes_num, const int pts_num,
     const int max_pts_each_voxel, const int out_x, const int out_y,
     const int out_z, const T *rois, const T *pts, int *pts_idx_of_voxels) {
+#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -151,14 +152,8 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_sub_scalar((T *)temp_buffer1, (T *)Z, (T)(cz + dz_2),
                         compute_pts_num);
       __bang_active_abs((T *)temp_buffer1, (T *)temp_buffer1, compute_pts_num);
-#if __BANG_ARCH__ >= 322
       __bang_le_scalar((T *)nram_pts_in_flag, (T *)temp_buffer1, (T)(dz_2),
                        compute_pts_num);
-#else
-      __bang_write_value((void *)temp_buffer2, compute_pts_num, (T)(dz_2));
-      __bang_le((T *)nram_pts_in_flag, (T *)temp_buffer1, (T *)temp_buffer2,
-                compute_pts_num);
-#endif
       T cosa = std::cos(-rz);
       T sina = std::sin(-rz);
       __bang_sub_scalar((T *)temp_buffer3, (T *)X, (T)cx, compute_pts_num);
@@ -173,14 +168,8 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       // fabs(local_x)
       __bang_active_abs((T *)temp_buffer1, (T *)local_X, compute_pts_num);
       // fabs(local_x) < dx/2 ? 1 : 0
-#if __BANG_ARCH__ >= 322
       __bang_lt_scalar((T *)temp_buffer1, (T *)temp_buffer1, (T)(dx_2),
                        compute_pts_num);
-#else
-      __bang_write_value((void *)temp_buffer2, compute_pts_num, (T)(dx_2));
-      __bang_lt((T *)temp_buffer1, (T *)temp_buffer1, (T *)temp_buffer2,
-                compute_pts_num);
-#endif
       __bang_and((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
                  (T *)temp_buffer1,
                  compute_pts_num);  // flush res
@@ -195,14 +184,8 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       // fabs(local_y)
       __bang_active_abs((T *)temp_buffer1, (T *)local_Y, compute_pts_num);
       // fabs(local_y) < dy/2 ? 1 : 0
-#if __BANG_ARCH__ >= 322
       __bang_lt_scalar((T *)temp_buffer1, (T *)temp_buffer1, (T)(dy_2),
                        compute_pts_num);
-#else
-      __bang_write_value((void *)temp_buffer2, compute_pts_num, (T)(dy_2));
-      __bang_lt((T *)temp_buffer1, (T *)temp_buffer1, (T *)temp_buffer2,
-                compute_pts_num);
-#endif
       __bang_and((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
                  (T *)temp_buffer1,
                  compute_pts_num);  // flush res
@@ -227,7 +210,6 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
 #endif
       // float = float2int + int2float, half = half2int + int2float
       if (std::is_same<T, float>::value) {
-#if __BANG_ARCH__ >= 322
         __bang_float2int32_tz((int *)temp_buffer1, (float *)local_X,
                               compute_pts_num, 0);
         __bang_float2int32_tz((int *)temp_buffer2, (float *)local_Y,
@@ -240,32 +222,11 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
                               compute_pts_num, 0);
         __bang_int322float_rn((float *)fp_local_Z, (int *)temp_buffer3,
                               compute_pts_num, 0);
-#else
-        __float2int32((int *)temp_buffer1, (float *)temp_buffer2,
-                      (float *)fp_local_X, (float *)temp_buffer3,
-                      compute_pts_num);
-        __float2int32((int *)temp_buffer2, (float *)temp_buffer3,
-                      (float *)fp_local_Y, (float *)temp_buffer4,
-                      compute_pts_num);
-        __float2int32((int *)temp_buffer3, (float *)temp_buffer4,
-                      (float *)fp_local_Z, (float *)temp_buffer5,
-                      compute_pts_num);
-        __int322float((float *)fp_local_X, (float *)temp_buffer4,
-                      (int *)temp_buffer1, (float *)temp_buffer5,
-                      compute_pts_num);
-        __int322float((float *)fp_local_Y, (float *)temp_buffer4,
-                      (int *)temp_buffer2, (float *)temp_buffer5,
-                      compute_pts_num);
-        __int322float((float *)fp_local_Z, (float *)temp_buffer4,
-                      (int *)temp_buffer3, (float *)temp_buffer5,
-                      compute_pts_num);
-#endif
       } else {
         __bang_half2float((float *)temp_buffer4, (half *)nram_pts_in_flag,
                           compute_pts_num);
         __bang_move((void *)fp_nram_pts_in_flag, (void *)temp_buffer4,
                     compute_pts_num * sizeof(float));
-#if __BANG_ARCH__ >= 322
         __bang_half2int32_tz((int *)temp_buffer1, (half *)local_X,
                              compute_pts_num, 0);
         __bang_half2int32_tz((int *)temp_buffer2, (half *)local_Y,
@@ -278,20 +239,6 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
                               compute_pts_num, 0);
         __bang_int322float_rn((float *)fp_local_Z, (int *)temp_buffer3,
                               compute_pts_num, 0);
-#else
-        __bang_half2int16_tz((int16_t *)temp_buffer1, (half *)local_X,
-                             compute_pts_num, 0);
-        __bang_half2int16_tz((int16_t *)temp_buffer2, (half *)local_Y,
-                             compute_pts_num, 0);
-        __bang_half2int16_tz((int16_t *)temp_buffer3, (half *)local_Z,
-                             compute_pts_num, 0);
-        __bang_int162float((float *)fp_local_X, (int16_t *)temp_buffer1,
-                           compute_pts_num, 0);
-        __bang_int162float((float *)fp_local_Y, (int16_t *)temp_buffer2,
-                           compute_pts_num, 0);
-        __bang_int162float((float *)fp_local_Z, (int16_t *)temp_buffer3,
-                           compute_pts_num, 0);
-#endif
       }
       // process index >= 0
       __bang_write_value((float *)temp_buffer4, compute_pts_num, (float)0.0f);
@@ -349,6 +296,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       }
     }
   }
+#endif
 }
 
 template <typename T>
@@ -361,6 +309,7 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
   // pts_idx_of_voxels: (boxes_num, out_x, out_y, out_z, max_pts_each_voxel)
   // argmax: (boxes_num, out_x, out_y, out_z, channels)
   // pooled_features: (boxes_num, out_x, out_y, out_z, channels)
+#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -411,18 +360,6 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
         break;
       }
       int channels_offset = nram_channels_limit * channels_loop_idx;
-
-#if ((__BANG_ARCH__ >= 200) && (__BANG_ARCH__ < 300))
-      int compute_channels_num = (channels_loop_idx == channels_loop_times)
-                                     ? PAD_UP(rem_channels, align_num)
-                                     : nram_channels_limit;
-      if (pool_method == 0) {
-        __bang_write_value((void *)nram_pts_feature_in_voxel,
-                           compute_channels_num * align_max_pts_each_voxel,
-                           (T)-INFINITY);
-      }
-#endif
-
       T *pts_feature_cur_loop = (T *)pts_feature + channels_offset * pts_num;
       for (int idx = 0; idx < pts_num_cur_voxel; idx++) {
         __memcpy((T *)nram_pts_feature_in_voxel + idx,
@@ -433,7 +370,6 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
       for (int channel_idx = 0; channel_idx < actual_channels_num;
            channel_idx++) {
         if (pool_method == 0) {
-#if __BANG_ARCH__ >= 322
           __bang_argmax((T *)one_pooled_feature,
                         (T *)nram_pts_feature_in_voxel +
                             channel_idx * align_max_pts_each_voxel,
@@ -447,48 +383,6 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
               ((max_val == -INFINITY) || (isnan(max_val) == true))
                   ? -1
                   : nram_pts_idx_cur_voxel[max_idx + 1];
-#else
-          // __bang_max need align num on mlu200 series
-          if (std::is_same<T, float>::value) {
-            __bang_max((float *)one_pooled_feature,
-                       (float *)nram_pts_feature_in_voxel +
-                           channel_idx * align_max_pts_each_voxel,
-                       align_max_pts_each_voxel);
-            float max_val = ((float *)one_pooled_feature)[0];
-            __bang_write_value((void *)nram_max_pts_feature_tmp,
-                               align_max_pts_each_voxel, (float)max_val);
-            __bang_eq((float *)nram_max_pts_feature_tmp,
-                      (float *)nram_pts_feature_in_voxel +
-                          channel_idx * align_max_pts_each_voxel,
-                      (float *)nram_max_pts_feature_tmp,
-                      align_max_pts_each_voxel);
-            int max_idx = (int)__bang_findfirst1(
-                (float *)nram_max_pts_feature_tmp, align_max_pts_each_voxel);
-            nram_pooled_features_cur_voxel[channel_idx] =
-                ((max_val == -INFINITY) || (isnan(max_val) == true)) ? 0
-                                                                     : max_val;
-            nram_argmax_cur_voxel[channel_idx] =
-                ((max_val == -INFINITY) || (isnan(max_val) == true))
-                    ? -1
-                    : nram_pts_idx_cur_voxel[max_idx + 1];
-          } else {
-            int max_idx = -1;
-            float max_val = -INFINITY;
-            for (int k = 0; k < pts_num_cur_voxel; k++) {
-              float pts_feature_cur_channel = __half2float_rd(
-                  *((half *)nram_pts_feature_in_voxel +
-                    channel_idx * align_max_pts_each_voxel + k));
-              if (pts_feature_cur_channel > max_val) {
-                max_val = pts_feature_cur_channel;
-                max_idx = k;
-              }
-            }
-            nram_pooled_features_cur_voxel[channel_idx] =
-                (max_idx == -1) ? 0 : max_val;
-            nram_argmax_cur_voxel[channel_idx] =
-                (max_idx == -1) ? -1 : nram_pts_idx_cur_voxel[max_idx + 1];
-          }
-#endif
         } else if (pool_method == 1) {
           float sum_val_cur_channel = 0;
           for (int k = 0; k < pts_num_cur_voxel; k++) {
@@ -512,6 +406,7 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
       }
     }
   }
+#endif
 }
 
 void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsHalf(
@@ -567,6 +462,7 @@ __mlu_entry__ void MLUMultiKernelRoiawareMaxPool3dBackward(
   // argmax: (boxes_num, out_x, out_y, out_z, channels)
   // grad_out: (boxes_num, out_x, out_y, out_z, channels)
   // grad_in: (pts_num, channels)
+#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -613,10 +509,11 @@ __mlu_entry__ void MLUMultiKernelRoiawareMaxPool3dBackward(
             grad_in + nram_argmax_cur_channel[0] * channels +
             nram_channels_limit * channels_loop_idx + channel_idx;
         __bang_atomic_reduce_add((T *)grad_in_cur_channel,
-                                 (T *)(nram_grad_out_cur_channel), 1);
+                                 (T *)nram_grad_out_cur_channel, 1);
       }
     }
   }
+#endif
 }
 
 template <typename T>
@@ -627,6 +524,7 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
   // pts_idx_of_voxels: (boxes_num, out_x, out_y, out_z, max_pts_each_voxel)
   // grad_out: (boxes_num, out_x, out_y, out_z, channels)
   // grad_in: (pts_num, channels)
+#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -698,6 +596,7 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
       }
     }
   }
+#endif
 }
 
 void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dBackwardHalf(
