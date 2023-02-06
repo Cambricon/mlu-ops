@@ -342,14 +342,16 @@ void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *grad_features);
+    const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features);
 
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *grad_features);
+    const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features);
 
 /* Expand */
 void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
