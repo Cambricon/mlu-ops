@@ -46,8 +46,8 @@
 - ![grad_backward](./grad_backward.png)
 - 输出的每个梯度`grad_bin`对应一个bin中所有点的梯度和，故bin中每个点的梯度`grad_pixel` = `grad_bin` / `count`。
 - `count`为一个bin中采样像素总数量。
-- offset的梯度可通过链式法则求得，对于一个bin，offset对应有两个值[$`x_{offset}`$, $`y_{offset}`$]，以任意一点的$`x_{offset}`$的求取为例：
-- $`x_1`$、$`x_2`$、$`x_3`$、$`x_4`$是像素(x,y)对应的四邻域像素值，$`w_1`$、$`w_2`$、$`w_3`$、$`w_4`$则是四邻域对应的权重。
+- offset的梯度可通过链式法则求得，对于一个bin，offset对应有两个值[$x_{offset}$, $y_{offset}$]，以任意一点的$x_{offset}$的求取为例：
+- $x_1$、$x_2$、$x_3$、$x_4$是像素(x,y)对应的四邻域像素值，$w_1$、$w_2$、$w_3$、$w_4$则是四邻域对应的权重。
 ```math
 x = x_{start} + x_{offset}
 ```
@@ -66,11 +66,11 @@ val = w_1*x_1 + w_2*x_2 + w_3*x_3 + w_4*x_4
 ```math
 \frac{\partial val}{\partial x_{offset}} = x_1*\frac{\partial w_1}{\partial x_{offset}} + x_2*\frac{\partial w_2}{\partial x_{offset}} + x_3*\frac{\partial w_3}{\partial x_{offset}}+x_4*\frac{\partial w_4}{\partial x_{offset}}
 ```
-其中以$`\frac{\partial w_1}{\partial x_{offset}}`$为例
+其中以$\frac{\partial w_1}{\partial x_{offset}}$为例
 ```math
 \frac{\partial w_1}{\partial x_{offset}} = \frac{\partial [(y_{high} - y)*(x_{high} - x)]}{\partial x_{offset}} = y - y_{high}
 ```
-- $`\frac{\partial y}{\partial val}`$是输出像素的梯度，即`grad_pixel`。
+- $\frac{\partial y}{\partial val}$是输出像素的梯度，即`grad_pixel`。
 
 1、需要说明对nan/inf的特殊处理，输入存在nan/inf的，分为输入当中只包含nan、只包含inf、同时包含nan和inf的情况。
 
@@ -286,8 +286,8 @@ for (int bin_index = 0; bin_index < num_rois * pooled_height * pooled_width) {
 }
 ```
 ### 3.3 拆分(任务拆分，多核拆分)
-- 对grad_output进行拆分，共计$`num\_rois * pooled\_height * pooled\_width * channls`$个点。
-- 每次处理一整个channel，故需$`num\_rois * pooled\_height * pooled\_width`$次。
+- 对grad_output进行拆分，共计$num\_rois * pooled\_height * pooled\_width * channls$个点。
+- 每次处理一整个channel，故需$num\_rois * pooled\_height * pooled\_width$次。
 - 当无法一次处理整个channel时，需要对channel进行拆分，每次处理NRAM能够容纳的最大C的整数倍数据。
 ### 3.4 性能优化设计
 1、资源分配

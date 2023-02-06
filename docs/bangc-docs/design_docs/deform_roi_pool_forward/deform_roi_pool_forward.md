@@ -51,19 +51,19 @@
 ```math
 y(i,j) = \frac{1}{n_{ij}} * \sum_{p\in bin(i,j)} x(p0 + p)
 ```
-- $`n_{ij}`$表示`bin`中采样像素的个数，$`bin(i,j)`$可以解释为$`\lfloor i\frac{w}{k}\rfloor\leq p_x < \lceil (i+1)\frac{w}{k} \rceil`$
-,$`\lfloor j\frac{h}{k}\rfloor\leq p_y < \lceil (j+1)\frac{h}{k} \rceil`$
+- $n_{ij}$表示`bin`中采样像素的个数，$bin(i,j)$可以解释为$\lfloor i\frac{w}{k}\rfloor\leq p_x < \lceil (i+1)\frac{w}{k} \rceil$
+,$\lfloor j\frac{h}{k}\rfloor\leq p_y < \lceil (j+1)\frac{h}{k} \rceil$
 
 2、Deform Roi Pooling
-- 在Roi Pooling的基础之上对`k * k`个bins中的每一个bin都对应添加一个偏移量$`\{\triangle p_{i,j}|0\leq i,j<k \}`$，使得每个bin产生位置修正。
+- 在Roi Pooling的基础之上对`k * k`个bins中的每一个bin都对应添加一个偏移量$\{\triangle p_{i,j}|0\leq i,j<k \}$，使得每个bin产生位置修正。
 - ![deform_roi_pool](./deform_roi_pool.png)
 ```math
 y(i,j) = \frac{1}{n_{ij}}*\sum_{p\in bin(i,j)} x(p0 + p + \triangle p_{i,j})\\
 \triangle p_{i,j} = \gamma * \triangle \hat p_{i,j} \circ(w,h)
 ```
-- $`\triangle \hat p_{i,j}`$是通过全连接层获得的归一化偏移量
-- $`\triangle p_{i,j}`$是一个分数
-- $`\gamma`$是预先设定的标量
+- $\triangle \hat p_{i,j}$是通过全连接层获得的归一化偏移量
+- $\triangle p_{i,j}$是一个分数
+- $\gamma$是预先设定的标量
 
 1、需要说明对nan/inf的特殊处理，输入存在nan/inf的，分为输入当中只包含nan、只包含inf、同时包含nan和inf的情况。
 
@@ -171,18 +171,18 @@ mluOpStatus_t mluOp_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
 - 将通道内所有数据一次性拷贝至nram上，执行多次__bang_mul_scalar和__bang_add，最终获得每个channel上的平均值。
 - (2) roi选中的所有通道数据不可以一次处理完：`8 * channels > nram_limit - channels_align`
 - 分批拷贝数据，每次拷贝NRAM能够容纳的最大通道的整数倍数据。
-- $`c = (nram_limit - channels_align) / 8`$
-- $`max\_channels\_per\_core = nram\_limit / c`$
-- $`remain\_channel = w * h % max\_channels\_per\_core`$
-- $`loop\_num  = w * h / max\_channels\_per\_core + remain\_channel > 0`$
+- $c = (nram_limit - channels_align) / 8$
+- $max\_channels\_per\_core = nram\_limit / c$
+- $remain\_channel = w * h % max\_channels\_per\_core$
+- $loop\_num  = w * h / max\_channels\_per\_core + remain\_channel > 0$
 - ping指针指向的内存一直进行计算，pong指针指向的内存一直进行数据加载，每次循环结束两者进行地址交换。
 - 在一个bin内进行流水，当在ping上进行计算时，pong上进行数据拷贝。
 - 每次都计算当前所有channel的均值，然后和上一次的均值再求平均，然后保存下来。最终获得所有channel的均值。
 ### 3.2 伪代码实现（可选）
 
 ### 3.3 拆分(任务拆分，多核拆分)
-- 对output进行拆分，共计$`num\_rois * pooled\_height * pooled\_width * channls`$个点。
-- 每次处理一整个通道的数据，故需$`num\_rois * pooled\_height * pooled\_width`$次。
+- 对output进行拆分，共计$num\_rois * pooled\_height * pooled\_width * channls$个点。
+- 每次处理一整个通道的数据，故需$num\_rois * pooled\_height * pooled\_width$次。
 - 当无法一次处理整个通道的数据时，需要对通道进行拆分，每次处理NRAM能够容纳的最大`c`的整数倍数据。
 ### 3.4 性能优化设计
 1、资源分配
