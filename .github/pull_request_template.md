@@ -10,16 +10,16 @@ Please briefly describe what modification is made in this pull request, and indi
 
 ## 3. Test Report
 
-If you want to know how to do operator testing, you can see [GTest-User-Guide-zh](../docs/GTest-User-Guide-zh.md).
+If you want to know how to do operator testing, you can see [GTest-User-Guide-zh](https://github.com/Cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md).
 
 ### 3.1 Modification Details
 
 #### 3.1.1 Accuracy Acceptance Standard
 
-For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standard](../docs/MLU-OPS-Accuracy-Acceptance-Standard.md).
+For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Accuracy-Acceptance-Standard.md).
 
-- [ ] diff1, diff1 <= 3e-3
-- [ ] diff2, diff2 <= 3e-3
+- [ ] diff1: diff1 <= 3e-3
+- [ ] diff2: diff2 <= 3e-3
 
 #### 3.1.2 Operator Scheme checklist
 
@@ -47,9 +47,9 @@ If you have checked the following items, please tick the relevant box.
 - [ ] Gen_case module test
 - [ ] Nan/INF tests 
 - [ ] Bug fix tests
-- [ ] For memory leak check details, see[GTest-User-Guide-zh](../docs/GTest-User-Guide-zh.md).
-- [ ] For code coverage check details, see: [GTest-User-Guide-zh](../docs/GTest-User-Guide-zh.md).
-- [ ] For I/O calculation efficiency check details, see: [MLU-OPS Performance Acceptance Standard](../docs/MLU-OPS-Performance-Acceptance-Standard.md).
+- [ ] For memory leak check details, see[GTest-User-Guide-zh](https://github.com/Cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md).
+- [ ] For code coverage check details, see: [GTest-User-Guide-zh](https://github.com/Cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md).
+- [ ] For I/O calculation efficiency check details, see: [MLU-OPS Performance Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md).
 
 #### 3.1.4 Parameter Check
 
@@ -78,7 +78,7 @@ Operation:
 
 ### 3.3 Performance Test
 
-See [MLU-OPS Performance Acceptance Standard](../docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
+See [MLU-OPS Performance Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
 
 Platform：MLU370
 
