@@ -22,6 +22,7 @@ roiaware_pool3d = ["fill","transpose"]
 voxelization = ["fill_zero"]
 yolo_box = ["fill_zero"]
 deform_roi_pool = ["fill"]
+indice_convolution_backward_filter = ["fill", "transpose", "gather_nd", "matmul"]
 
 
 [bangc-ops.gtest]

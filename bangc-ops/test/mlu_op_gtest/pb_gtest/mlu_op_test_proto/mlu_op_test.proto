@@ -231,6 +231,7 @@ message Node {
   optional DeformRoiPoolForwardParam deform_roi_pool_forward_param = 10126;  //param
   optional DeformRoiPoolBackwardParam deform_roi_pool_backward_param = 10127;  //param
   optional IndiceConvolutionBackwardDataParam indice_convolution_backward_data_param = 22120599;  // param
+  optional IndiceConvolutionBackwardParam indice_convolution_backward_param = 20230131;  //param
 }
 
 
@@ -521,4 +522,10 @@ message IndiceConvolutionBackwardDataParam {
   optional int64 inverse = 1 [default = 0];
   optional int64 sub_m = 2 [default = 0];
   repeated int32 indice_num = 3;
+}
+// param to call indice mluOpIndiceConvolutionBackwardFilter
+message IndiceConvolutionBackwardParam{
+  optional int64 inverse     = 1 [default = 0];
+  optional int64 sub_m       = 2 [default = 0];
+  repeated int64 indice_num  = 3;
 }
