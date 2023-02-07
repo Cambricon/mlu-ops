@@ -355,3 +355,33 @@ mluOpActiveRotatedFilterForward
 ----------------------------------
 该算子根据位置信息对输入进行旋转。这个算子编码方向信息并生成方向敏感特征。
 
+.. _deform_roi_pool_backward:
+
+mluOpDeformRoiPoolBackward
+--------------------------
+mluOpDeformRoiPoolForward 的反向算子。根据输出的梯度、输入特征图、ROI 框的位置和 offset 值，计算输入特征图和 offset 的梯度。
+
+.. _deform_roi_pool_forward:
+
+mluOpDeformRoiPoolForward
+--------------------------
+对输入的可形变的感兴趣区域进行池化。该池化过程如下：
+
+1. 将任意尺寸的候选区域转换为固定尺寸的特征图。假设输入特征图为 ``x``，roi 为 w * h 大小且左上角点为 p0 的区域，ROI Pooling 将把 ROI 区域分为 k * k 个 bins，输出 y 为 k * k 大小的特征图。
+对于第 (i, j) 个格子 (0 <= i,j < k)，其计算公式:
+
+.. math::
+
+   y(i,j) = \frac{1}{n_{ij}} * \sum_{p\in bin(i,j)} x(p0 + p)
+
+其中 :math:`n_{ij}` 表示 ``bin`` 中采样像素的个数，:math:`bin(i,j)` 解释为 :math:`\lfloor i\frac{w}{k}\rfloor\leq p_x < \lceil (i+1)\frac{w}{k} \rceil`
+， :math:`\lfloor j\frac{h}{k}\rfloor\leq p_y < \lceil (j+1)\frac{h}{k} \rceil` 。
+
+2. 在ROI Pooling 的基础之上对 k * k 个 bins 中的每一个 bin 都对应添加一个偏移量 :math:`\{\triangle p_{i,j}|0\leq i,j<k \}` ，使得每个bin产生位置修正。
+
+.. math::
+
+   y(i,j) = \frac{1}{n_{ij}}*\sum_{p\in bin(i,j)} x(p0 + p + \triangle p_{i,j})\\
+   \triangle p_{i,j} = \gamma * \triangle \hat p_{i,j} \circ(w,h)
+
+其中 :math:`\triangle \hat p_{i,j}` 是通过全连接层获得的归一化偏移量；:math:`\triangle p_{i,j}` 是一个分数；:math:`\gamma` 是预先设定的标量。

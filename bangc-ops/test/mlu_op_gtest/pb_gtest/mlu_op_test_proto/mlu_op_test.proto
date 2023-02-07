@@ -228,6 +228,8 @@ message Node {
   optional RoiAlignRotatedBackwardParam roi_align_rotated_backward_param = 134661;  // param
   optional RotatedFeatureAlignForwardParam rotated_feature_align_forward_param = 20229510;  //param
   optional RotatedFeatureAlignBackwardParam rotated_feature_align_backward_param = 20221008;  //param
+  optional DeformRoiPoolForwardParam deform_roi_pool_forward_param = 10126;  //param
+  optional DeformRoiPoolBackwardParam deform_roi_pool_backward_param = 10127;  //param
 }
 
 
@@ -493,4 +495,22 @@ message RotatedFeatureAlignForwardParam{
 message RotatedFeatureAlignBackwardParam{
   required float spatial_scale = 1 [default = 1.0];
   required int32 points = 2 [default = 1];
+}
+
+// param to call mluOpDeformRoiPoolForward()
+message DeformRoiPoolForwardParam{
+  required int32 sampling_ratio = 1 [default = 0];
+  required float spatial_scale = 2 [default = 1.0];
+  required float gamma = 3 [default = 0.1];
+  required int32 pooled_height = 4 [default = 7];
+  required int32 pooled_width = 5 [default = 7];
+}
+
+// param to call mluOpDeformRoiPoolBackward()
+message DeformRoiPoolBackwardParam{
+  required int32 sampling_ratio = 1 [default = 0];
+  required float spatial_scale = 2 [default = 1.0];
+  required float gamma = 3 [default = 0.1];
+  required int32 pooled_height = 4 [default = 7];
+  required int32 pooled_width = 5 [default = 7];
 }

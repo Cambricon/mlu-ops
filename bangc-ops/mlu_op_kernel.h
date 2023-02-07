@@ -469,6 +469,36 @@ void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardHalf(
     const int kH, const int kW, const int rotations, const void *input_gdram,
     const void *indices_gdram, const void *workspace_gdram, void *output_gdram);
 
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *rois, const void *offset, void *output,
+    const int batches, const int channels, const int height, const int width,
+    const int num_rois, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int sampling_ratio, const float gamma);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *rois, const void *offset, void *output,
+    const int batches, const int channels, const int height, const int width,
+    const int num_rois, const int pooled_height, const int pooled_width,
+    const float spatial_scale, const int sampling_ratio, const float gamma);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *input, const void *rois,
+    const void *offset, void *grad_input, void *grad_offset, const int batches,
+    const int channels, const int height, const int width, const int num_rois,
+    const int pooled_height, const int pooled_width, const float spatial_scale,
+    const int sampling_ratio, const float gamma);
+
+void MLUOP_WIN_API MLUUnion1DeformRoiPoolBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *input, const void *rois,
+    const void *offset, void *grad_input, void *grad_offset, const int batches,
+    const int channels, const int height, const int width, const int num_rois,
+    const int pooled_height, const int pooled_width, const float spatial_scale,
+    const int sampling_ratio, const float gamma);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus
