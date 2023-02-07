@@ -392,3 +392,8 @@ mluOpIndiceConvolutionBackwardFilter
 ----------------------------------
 该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算权值的梯度。
 
+.. _three_nn_forward:
+
+mluOpThreeNNForward
+-----------------------------
+该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。

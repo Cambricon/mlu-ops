@@ -499,6 +499,17 @@ void MLUOP_WIN_API MLUUnion1DeformRoiPoolBackwardFloat(
     const int pooled_height, const int pooled_width, const float spatial_scale,
     const int sampling_ratio, const float gamma);
 
+/* three_nn */
+void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int b,
+    const int n, const int m, const void *unknown, const void *known,
+    void *dist2, void *idx);
+
+void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int b,
+    const int n, const int m, const void *unknown, const void *known,
+    void *dist2, void *idx);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus

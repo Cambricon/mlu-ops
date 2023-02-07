@@ -7283,11 +7283,9 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
      --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
      --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0]]
      --> offset: [[[[0.5]], [[0.5]]]]
-
      param:
             pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
             sampling_ratio: 1, gamma: 1
-
      output array by 1  1  1 * 1 -->
          output: [[[[2.25]]]]
      @endverbatim
@@ -7786,6 +7784,129 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t h
                                                                  const size_t workspace_size,
                                                                  const mluOpTensorDescriptor_t filters_grad_desc,
                                                                  void *filters_grad);
+
+// Group:ThreeNNForward
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpThreeNNForward operation. The size of the extra workspace is
+ * based on the given information of the ::mluOpThreeNNForward operation, including the input
+ * tensor descriptor \b known_desc. For more information about the workspace, see
+ * "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpThreeNNForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] known_desc
+ * The descriptor of input data \b known, which contains dimension, data type and data layout.
+ * @param[out] workspace_size
+ * A host pointer to the returned size of the extra workspace in bytes that is used in
+ * the ::mluOpThreeNNForward operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - This function must be called before the ::mluOpThreeNNForward function.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
+                                    const mluOpTensorDescriptor_t known_desc,
+                                    size_t *workspace_size);
+
+// Group:ThreeNNForward
+/*!
+ * @brief Finds the closest 3 points of \b unknown among \b known, and outputs \b dist and index
+ * \b idx tensor. This function firstly computes dist of each known point to a unknown point, and
+ * finds the closest 3 points, and outputs the dist and index of the known point in known dataset.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpThreeNNForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] unknown_desc
+ * The descriptor of input data \b unknown, which contains dimension, data type and data layout.
+ * @param[in] unknown
+ * Pointer to the MLU memory that stores the unknown tensor.
+ * @param[in] known_desc
+ * The descriptor of input data \b known, which contains dimension, data type and data layout.
+ * @param[in] known
+ * Pointer to the MLU memory that stores the known tensor.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the ::mluOpThreeNNForward
+ * operation. For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that is used in the ::mluOpThreeNNForward operation.
+ * @param[in] dist2_desc
+ * The descriptor of output data \b dist2, which contains dimension, data type and data layout.
+ * @param[out] dist2
+ * Pointer to the MLU memory that stores the \b dist2 tensor.
+ * @param[in] idx_desc
+ * The descriptor of output data \b idx, which contains dimension, data type and data layout.
+ * @param[out] idx
+ * Pointer to the MLU memory that stores the \b idx tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - None.
+ *
+ * @par Data Type
+ * - The supported data types for unknown tensor \b unknown, known tensor \b known, dist2
+ * tensor \b dist2 and idx tensor \b idx. Data types of unknown tensor, known tensor and
+ * dist2 should be the same.
+ *   - unknown tensor: half, float
+ *   - known tensor: half, float
+ *   - known tensor: half, float
+ *   - idx tensor: int32
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b unknown, \b known, \b dist2 and \b idx:
+ *   \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The shape of \b unknown, \b dist2 and \b idx should be [b, n, 3].
+ * - The shape of \b known should be [b, m, 3].
+ * - The shape of \b unknown, \b dist2, \b idx and \b known dims[0](b) should be equal.
+ * - The shape of \b unknown, \b dist2, \b idx and \b known dims[2](3) should be equal to 3.
+ * - The shape of \b unknown, \b dist2, \b idx and \b known dims[1](n) should be equal and larger
+ *   than 0.
+ *
+ * @par API Dependency
+ * - Before calling this function you need to call ::mluOpGetThreeNNForwardWorkspaceSize
+ *   to get the extra space size needed in ::mluOpThreeNNForward operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/v1.5.2/mmcv/ops/csrc/pytorch/cuda/three_nn_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpThreeNNForward(const mluOpHandle_t handle,
+                    const mluOpTensorDescriptor_t unknown_desc,
+                    const void *unknown,
+                    const mluOpTensorDescriptor_t known_desc,
+                    const void *known,
+                    void *workspace,
+                    const size_t workspace_size,
+                    const mluOpTensorDescriptor_t dist2_desc,
+                    void *dist2,
+                    const mluOpTensorDescriptor_t idx_desc,
+                    void *idx);
 
 #if defined(__cplusplus)
 }

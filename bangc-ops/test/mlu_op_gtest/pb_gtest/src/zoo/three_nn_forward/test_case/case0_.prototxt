@@ -1,0 +1,61 @@
+op_name: "three_nn_forward"
+input {
+  id: "input1"
+  shape: {
+    dims: 3
+    dims: 1024
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 3
+    dims: 256
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "output1"
+  shape: {
+    dims: 3
+    dims: 1024
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+output {
+  id: "output2"
+  shape: {
+    dims: 3
+    dims: 1024
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0
+  baseline_device: CPU
+}
