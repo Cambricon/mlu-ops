@@ -275,32 +275,7 @@ struct mluOpTensorDescriptorQueueStruct {
 #endif
 
 inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
-  switch (dt) {
-    case MLUOP_DTYPE_HALF:
-      return 2;
-    case MLUOP_DTYPE_FLOAT:
-    case MLUOP_DTYPE_COMPLEX_HALF:
-      return 4;
-    case MLUOP_DTYPE_DOUBLE:
-    case MLUOP_DTYPE_COMPLEX_FLOAT:
-      return 8;
-    case MLUOP_DTYPE_INT8:
-    case MLUOP_DTYPE_UINT8:
-    case MLUOP_DTYPE_BOOL:
-      return 1;
-    case MLUOP_DTYPE_INT16:
-    case MLUOP_DTYPE_UINT16:
-      return 2;
-    // case MLUOP_DTYPE_INT23:   return 3;
-    case MLUOP_DTYPE_INT32:
-    case MLUOP_DTYPE_UINT32:
-      return 4;
-    case MLUOP_DTYPE_INT64:
-    case MLUOP_DTYPE_UINT64:
-      return 8;
-    default:
-      return -1;
-  }
+  return mluop::getSizeOfDataType(dt);
 }
 
 inline int mluOpGetTensordimN(const mluOpTensorDescriptor_t desc) {
