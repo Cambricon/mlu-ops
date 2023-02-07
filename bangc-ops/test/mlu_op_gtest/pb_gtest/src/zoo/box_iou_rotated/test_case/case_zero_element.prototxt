@@ -1,0 +1,40 @@
+op_name: "box_iou_rotated"
+input {
+  id: "input1"
+  shape: {
+    dims: 0
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 0
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "output"
+  shape: {
+    dims: 0
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+box_iou_rotated_param {
+  mode: 0
+  aligned: true
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_func: DIFF3_2
+  error_threshold: 3e-3
+  error_threshold: 3e-3
+  error_threshold: 3e-3
+  baseline_device: CPU
+}
