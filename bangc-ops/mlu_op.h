@@ -3718,7 +3718,8 @@ mluOpYoloBox(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the output tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -4662,7 +4663,8 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the pooled_features tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b rois , \b pts , \b pts_feature
@@ -4687,7 +4689,8 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @note
  * - The inputs \b rois and \b pts with NaN or infinity are not supported currently.
- * - The inputs \b pts_feature with NaN are not supported currently.
+ * - The inputs \b pts_feature with NaN are not supported on MLU300 series.
+ * - The operation does not support MLU200 series.
  *
  * @par Requirements
  * - None.
@@ -4759,7 +4762,8 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the grad_in tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b pts_idx_of_voxels , \b argmax , \b grad_out
@@ -4779,7 +4783,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @note
- * - None.
+ * - The operation does not support MLU200 series.
  *
  * @par Requirements
  * - None.

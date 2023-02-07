@@ -269,6 +269,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     PARAM_CHECK(API, argmax != NULL);
   }
 
+  // check arch
+  if (handle->arch < MLUOP_MLU370) {
+    LOG(ERROR) << API
+               << " The operator does not match the current architecture.";
+    return MLUOP_STATUS_ARCH_MISMATCH;
+  }
+
   // generate mluOpRoiawarePool3dForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("roiaware_pool3d_forward");
@@ -525,6 +532,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   PARAM_CHECK(API, argmax != NULL);
   PARAM_CHECK(API, grad_out != NULL);
   PARAM_CHECK(API, grad_in != NULL);
+
+  // check arch
+  if (handle->arch < MLUOP_MLU370) {
+    LOG(ERROR) << API
+               << " The operator does not match the current architecture.";
+    return MLUOP_STATUS_ARCH_MISMATCH;
+  }
 
   VLOG(5) << "pool_method = " << pool_method
           << ", boxes_num = " << boxes_num
