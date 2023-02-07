@@ -275,7 +275,7 @@ struct mluOpTensorDescriptorQueueStruct {
 #endif
 
 inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
-  return getSizeOfDataType(dt);
+  return mluop::getSizeOfDataType(dt);
 }
 
 inline int mluOpGetTensordimN(const mluOpTensorDescriptor_t desc) {
