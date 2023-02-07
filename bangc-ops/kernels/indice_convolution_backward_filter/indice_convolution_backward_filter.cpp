@@ -66,7 +66,7 @@ inline mluOpStatus_t setMatmulDescInfo(const std::string api_name,
 inline std::string getTensorShapeString(const mluOpTensorDescriptor_t desc) {
   std::string res;
   res.push_back('[');
-  for (int i = 0; i < desc->dim - 1; i++) {
+  for (int32_t i = 0; i < desc->dim - 1; i++) {
     res.append(std::to_string(desc->dims[i]) + ',');
   }
   res.append(std::to_string(desc->dims[desc->dim - 1]) + ']');
@@ -80,8 +80,6 @@ static void indiceConvFilterGencase(
     const void *indice_pairs, const int64_t indice_num[], const int64_t inverse,
     const int64_t subm, void *workspace, size_t workspace_size,
     const mluOpTensorDescriptor_t filters_grad_desc, void *filters_grad) {
-  double indice_num_max =
-      std::max(features_desc->dims[0], output_grad_desc->dims[0]);
   GEN_CASE_START("indice_convolution_backward_filter");
   GEN_CASE_HANDLE(handle);
   GEN_CASE_DATA_REAL(true, "features", features, features_desc);
@@ -121,8 +119,8 @@ static mluOpStatus_t indiceConvDtypeVaild(
       !isFloatDtype(filters_grad_dtype)) {
     LOG(ERROR)
         << api_name << " The data type of features_desc, output_grad_desc "
-        << "and filters_grad_desc should be same and both are half or float."
-        << "But now the data types are "
+        << "and filters_grad_desc should be the same and the three should "
+        << "be either half or float. But now the data types are "
         << mluop::getNameOfDataType(input_dtype) << "-"
         << mluop::getNameOfDataType(diffy_dtype) << "-"
         << mluop::getNameOfDataType(filters_grad_dtype) << ".";
@@ -165,8 +163,7 @@ static mluOpStatus_t indiceConvDtypeVaild(
         << "if it is set, only half or float types are supported, "
         << "and the bit width of on-chip data type can not be smaller than "
         << "that of off-chip data type. But now two data types of "
-           "filters_grad_desc "
-           "are "
+           "filters_grad_desc are "
         << mluop::getNameOfDataType(filters_grad_dtype) << "-"
         << mluop::getNameOfDataType(filters_grad_on_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
@@ -203,23 +200,6 @@ static mluOpStatus_t baseParamCheck(
     return dtype_check;
   }
 
-  // check filters_grad layout
-  // auto filters_grad_layout = filters_grad_desc->layout;
-  // if (!(MLUOP_LAYOUT_HWCN == filters_grad_layout ||
-  //       MLUOP_LAYOUT_NCHW == filters_grad_layout ||
-  //       MLUOP_LAYOUT_NHWC == filters_grad_layout ||
-  //       MLUOP_LAYOUT_NCDHW == filters_grad_layout ||
-  //       MLUOP_LAYOUT_NDHWC == filters_grad_layout)) {
-  //   LOG(ERROR) << api_name << " The layout of filters_grad_desc is "
-  //              << mluop::getNameOfTensorLayout(filters_grad_layout)
-  //              << ", which is unsupported.";
-  //   return MLUOP_STATUS_BAD_PARAM;
-  // }
-  // auto ci = mluOpGetTensordimC(filters_grad_desc);
-  // auto co = mluOpGetTensordimN(filters_grad_desc);
-  // int32_t kd = filters_grad_desc->dim == 4 ? 1 :
-  // mluOpGetTensordimD(filters_grad_desc);
-
   bool shape_check = true;
   if (2 != features_desc->dim || 2 != output_grad_desc->dim ||
       3 != indice_pairs_desc->dim ||
@@ -228,7 +208,7 @@ static mluOpStatus_t baseParamCheck(
   }
 
   // only DHWCN/HWCN layout of filter_grad is supported, currently
-  int filter_dim_len = filters_grad_desc->dim;
+  int32_t filter_dim_len = filters_grad_desc->dim;
   auto ci = filters_grad_desc->dims[filter_dim_len - 2];
   auto co = filters_grad_desc->dims[filter_dim_len - 1];
   auto kd = filter_dim_len == 4 ? 1 : filters_grad_desc->dims[0];
@@ -260,11 +240,11 @@ static mluOpStatus_t insertTranspose(
     const std::string api_name, mluOpHandle_t handle,
     const mluOpTensorDescriptor_t filters_grad_desc,
     const void *filters_grad_temp, void *filters_grad_buffer, void *workspace,
-    size_t *size, const bool is_get_workspace, const int kernel_volume,
-    const int ci, const int co) {
-  int trans_in_shape[3] = {kernel_volume, ci, co};
-  int trans_out_shape[3] = {co, kernel_volume, ci};  // NHWC or NDHWC
-  int permute[3] = {2, 0, 1};
+    size_t *size, const bool is_get_workspace, const int32_t kernel_volume,
+    const int32_t ci, const int32_t co) {
+  int32_t trans_in_shape[3] = {kernel_volume, ci, co};
+  int32_t trans_out_shape[3] = {co, kernel_volume, ci};  // NHWC or NDHWC
+  int32_t permute[3] = {2, 0, 1};
   if (MLUOP_LAYOUT_NCHW == filters_grad_desc->layout ||
       MLUOP_LAYOUT_NCDHW == filters_grad_desc->layout) {
     trans_out_shape[0] = co;
@@ -308,7 +288,7 @@ static mluOpStatus_t insertTranspose(
 
 // called by getWorkspace and compute api
 // workspace_size is not nullptr when it's from getWorkspace api.
-mluOpStatus_t internalIndiceConvBackwardFilter(
+static mluOpStatus_t internalIndiceConvBackwardFilter(
     const std::string api_name, mluOpHandle_t handle,
     const mluOpTensorDescriptor_t features_desc, const void *features,
     const mluOpTensorDescriptor_t output_grad_desc, const void *output_grad,
@@ -318,18 +298,12 @@ mluOpStatus_t internalIndiceConvBackwardFilter(
   bool is_get_workspace = workspace_size != nullptr ? true : false;
   bool filters_grad_need_trans = false;
 
-  // only DHWCN/HWCN layout of filter_grad is supported, currently
-  // if (MLUOP_LAYOUT_HWCN == filters_grad_desc->layout || MLUOP_LAYOUT_DHWCN ==
-  // filters_grad_desc->layout) {
-  //   filters_grad_need_trans = false;
-  // }
-
   // call gather_nd and matmul to finish indice conv.
   int32_t kernel_volume = indice_pairs_desc->dims[0];
   int32_t ci = features_desc->dims[1];
   int32_t co = output_grad_desc->dims[1];
   int32_t max_active_num = 0;
-  for (int i = 0; i < kernel_volume; ++i) {
+  for (int32_t i = 0; i < kernel_volume; ++i) {
     max_active_num =
         indice_num[i] > max_active_num ? indice_num[i] : max_active_num;
   }
@@ -363,7 +337,7 @@ mluOpStatus_t internalIndiceConvBackwardFilter(
       api_name,
       setMatmulDescInfo(api_name, matmul_desc, 1, 0,
                         (uint32_t)getOnchipDataType(filters_grad_desc), 0));
-  int requested_algo_count = 1, return_algo_count = 0;
+  int32_t requested_algo_count = 1, return_algo_count = 0;
   float alpha = 1.0, beta = 0.0, fill_value = 0;
   size_t matmul_ws_size = 0, temp_matmul_size = 0;
 
@@ -381,7 +355,7 @@ mluOpStatus_t internalIndiceConvBackwardFilter(
   int64_t pair_low_size =
       in_active_num * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
 
-  for (int i = 0; i < kernel_volume; ++i) {
+  for (int32_t i = 0; i < kernel_volume; ++i) {
     int32_t active_point_num = indice_num[i];
     if (active_point_num <= 0) {
       continue;
