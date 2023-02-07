@@ -7289,7 +7289,6 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
          output: [[[[2.25]]]]
      @endverbatim
  *
- *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
  */

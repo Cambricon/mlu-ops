@@ -38,7 +38,7 @@
 | 是否需要支持原位        | 否                                                  |
 | 是否需要支持stride机制  | 否                                                  |
 | 是否需要支持广播  | 否                        |
-| 0元素检查是否直接返回  | 是                               |
+| 0元素检查是否直接返回  | 当grad_input的hi、wi为0时，正常执行，其余情况直接返回MLUOP_STATUS_BAD_PARAM                |
 
 ### 1.2 算子功能和应用场景描述
 
@@ -327,7 +327,7 @@ for (int bin_index = 0; bin_index < num_rois * pooled_height * pooled_width) {
 
 ### 3.7 测试用例设计
 
-- 框架在需求列表中给出的算子在网络中用到的规模：
+- 该算子在网络中用到的规模：
 - case1:
 input: [2, 256, 200, 304], float32; rois: [998, 5], float32; grad_output: (998, 256, 7, 7);
 spatial_scale: 0.25;

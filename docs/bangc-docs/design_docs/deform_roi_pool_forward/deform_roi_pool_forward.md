@@ -210,7 +210,7 @@ mluOpStatus_t mluOp_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
 
 ### 3.7 测试用例设计
 
-- 框架在需求列表中给出的算子在网络中用到的规模：
+- 该算子在网络中用到的规模：
 - case1:
 input: [2, 256, 200, 304], float32; rois: [998, 5], float32; output: (998, 256, 7, 7);
 spatial_scale: 0.25;
