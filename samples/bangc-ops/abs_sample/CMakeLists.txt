@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
 
 project(abs_sample)
 
@@ -58,4 +58,4 @@ file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
 
 add_executable(${PROJECT_NAME} ${src_files})
 
-target_link_libraries(${PROJECT_NAME} cnrt cndrv mluops)
+target_link_libraries(${PROJECT_NAME} mluops cnrt cndrv)

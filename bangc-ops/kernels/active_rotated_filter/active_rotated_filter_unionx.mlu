@@ -1,0 +1,430 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "mlu_op_kernel.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+#define ROWS 8
+#define COLS 9
+#define CYCLE_ROTATE 360
+#define ROTATE_BASE_ANGLE 45
+#define ROTATE_EIGHT 8
+#define ROTATE_FOUR 4
+#define ROTATE_TWO 2
+#define KH_KW_3 3
+#define SEG_NUM_MAX 65536
+
+template <typename T>
+__mlu_func__ void orientation_move(T *workspace, T *input, const int kH,
+                                   const int kW, const int block_num,
+                                   const int total_num, const int stride,
+                                   const int num_deal) {
+  const int pre_size = block_num * kH * kW;
+  const int later_size = (total_num - block_num) * kH * kW;
+  const int total_seg_size = pre_size + later_size;
+  const int seg_num_loop = num_deal / SEG_NUM_MAX;
+  const int seg_rem = num_deal % SEG_NUM_MAX;
+  int seg_offset = 0;
+  for (int i = 0; i < seg_num_loop; i++) {
+    seg_offset = i * total_seg_size * SEG_NUM_MAX;
+    if (pre_size > 0) {
+      __memcpy(workspace + seg_offset, input + seg_offset + later_size,
+               pre_size * sizeof(T), GDRAM2GDRAM, stride * sizeof(T),
+               stride * sizeof(T), SEG_NUM_MAX - 1);
+    }
+
+    if (later_size > 0) {
+      __memcpy(workspace + seg_offset + pre_size, input + seg_offset,
+               later_size * sizeof(T), GDRAM2GDRAM, stride * sizeof(T),
+               stride * sizeof(T), SEG_NUM_MAX - 1);
+    }
+  }
+  if (seg_rem > 0) {
+    seg_offset = seg_num_loop * SEG_NUM_MAX * total_seg_size;
+    if (pre_size > 0) {
+      __memcpy(workspace + seg_offset, input + seg_offset + later_size,
+               pre_size * sizeof(T), GDRAM2GDRAM, stride * sizeof(T),
+               stride * sizeof(T), seg_rem - 1);
+    }
+
+    if (later_size > 0) {
+      __memcpy(workspace + seg_offset + pre_size, input + seg_offset,
+               later_size * sizeof(T), GDRAM2GDRAM, stride * sizeof(T),
+               stride * sizeof(T), seg_rem - 1);
+    }
+  }
+}
+
+template <typename T>
+__mlu_func__ void rotateHW(T *workspace_aux, T *workspace,
+                           const int trans[][COLS], const int kH, const int kW,
+                           const int dst_stride, const int src_stride,
+                           const int num_deal, const int rotate_id) {
+  if (kH == KH_KW_3) {
+    const int seg_num_loop = num_deal / SEG_NUM_MAX;
+    const int seg_rem = num_deal % SEG_NUM_MAX;
+    const int total_seg_size = kH * kW;
+    int seg_offset = 0;
+    for (int i = 0; i < COLS; i++) {
+      for (int j = 0; j < seg_num_loop; j++) {
+        seg_offset = j * SEG_NUM_MAX * total_seg_size;
+        __memcpy(workspace_aux + seg_offset + i,
+                 workspace + seg_offset + trans[rotate_id][i], sizeof(T),
+                 GDRAM2GDRAM, dst_stride * sizeof(T), src_stride * sizeof(T),
+                 SEG_NUM_MAX - 1);
+      }
+      if (seg_rem > 0) {
+        seg_offset = seg_num_loop * SEG_NUM_MAX * total_seg_size;
+        __memcpy(workspace_aux + seg_offset + i,
+                 workspace + seg_offset + trans[rotate_id][i], sizeof(T),
+                 GDRAM2GDRAM, dst_stride * sizeof(T), src_stride * sizeof(T),
+                 seg_rem - 1);
+      }
+    }
+  } else {
+    __memcpy(workspace_aux, workspace, num_deal * src_stride * sizeof(T),
+             GDRAM2GDRAM);
+  }
+}
+
+template <typename T>
+__mlu_func__ void load_input(T *nram_input, T *input, const uint32_t op_offset,
+                             const uint32_t core_offset, const uint32_t op_seg,
+                             const uint32_t op_seg_size, const uint32_t repeat,
+                             const uint32_t span_num_deal,
+                             const uint32_t num_deal, const uint32_t size) {
+  const uint32_t input_offset = (op_offset + op_seg * op_seg_size +
+                                 core_offset + repeat * span_num_deal) *
+                                size;
+  __memcpy_async(nram_input, input + input_offset, num_deal * size * sizeof(T),
+                 GDRAM2NRAM);
+}
+
+template <typename T>
+__mlu_func__ void stride_store_output(
+    T *output, T *nram_output, const uint32_t op_offset,
+    const uint32_t core_offset, const uint32_t op_seg,
+    const uint32_t op_seg_size, const uint32_t rotations,
+    const uint32_t compute_time, const uint32_t span_num_deal,
+    const uint32_t repeat, const uint32_t num_deal, const uint32_t size) {
+  const uint32_t output_offset =
+      ((op_offset + op_seg * op_seg_size) * rotations + core_offset +
+       repeat * span_num_deal + compute_time * op_seg_size) *
+      size;
+  if (rotations == ROTATE_EIGHT) {
+    __memcpy_async(output + output_offset, nram_output,
+                   num_deal * size * sizeof(T), NRAM2GDRAM,
+                   2 * op_seg_size * size * sizeof(T),
+                   num_deal * size * sizeof(T), rotations / 2 - 1);
+  } else {
+    __memcpy_async(output + output_offset, nram_output,
+                   num_deal * size * sizeof(T), NRAM2GDRAM,
+                   op_seg_size * size * sizeof(T), num_deal * size * sizeof(T),
+                   rotations - 1);
+  }
+}
+
+template <typename T>
+__mlu_func__ void computeRotation(T *nram_output, T *nram_input,
+                                  const int span_num_deal, const int num_deal,
+                                  const int kH, const int kW,
+                                  const int orientations, const int rotations) {
+  const float delta_orientation = (float)CYCLE_ROTATE / (float)orientations;
+  float delta_rotation = 0;
+  int rotate_time = 0;
+  if (rotations >= ROTATE_FOUR) {
+    rotate_time = ROTATE_FOUR;
+    delta_rotation = (float)CYCLE_ROTATE / (float)rotate_time;
+  } else {
+    rotate_time = rotations;
+    delta_rotation = (float)CYCLE_ROTATE / (float)rotations;
+  }
+
+  __bang_write_value((T *)nram_output,
+                     rotate_time * span_num_deal * orientations * kH * kW,
+                     (T)0);
+
+  for (int r = 0; r < rotate_time; ++r) {
+    for (int k = 0; k < num_deal; ++k) {
+      const int offset = k * kH * kW * orientations;
+      T *src_base = (T *)nram_input + offset;
+      T *dst_base =
+          (T *)nram_output + r * num_deal * orientations * kH * kW + offset;
+      for (int j = 0; j < orientations; ++j) {
+        const float angle = delta_rotation * (float)r;
+        const int layer = (j + int(angle / delta_orientation)) % orientations;
+        T *src_ro = src_base + j * kH * kW;
+        T *dst_ro = dst_base + layer * kH * kW;
+        switch (r) {
+          case 0: {
+            __bang_bor((char *)(dst_ro), (char *)(dst_ro), (char *)src_ro,
+                       kH * kW * sizeof(T));
+          };
+            continue;
+          case 1: {
+            if (rotate_time == ROTATE_FOUR) {
+              __bang_rotate90(dst_ro, src_ro, kH, kW);
+            } else if (rotate_time == ROTATE_TWO) {
+              __bang_rotate180(dst_ro, src_ro, kH, kW);
+            }
+          };
+            continue;
+          case 2: {
+            __bang_rotate180(dst_ro, src_ro, kH, kW);
+          };
+            continue;
+          case 3: {
+            __bang_rotate270(dst_ro, src_ro, kH, kW);
+          }
+        }
+      }
+    }
+  }
+}
+
+template <typename T>
+__mlu_func__ void auxFuncARF(int &output_input_gap, int &ping_pong_gap,
+                             int &span_num_deal, const int align_kernel_size) {
+  /*
+    |------------PING------------|--------------PONG-----------|
+    |-input-|-------output-------|-input-|------output---------|
+    |i_size |    4 * i_size      | i_size|      4 * i_size     |
+  */
+  span_num_deal = MAX_NRAM_SIZE / (10 * align_kernel_size * sizeof(T));
+  output_input_gap = 4 * span_num_deal * align_kernel_size;
+  ping_pong_gap = output_input_gap + span_num_deal * align_kernel_size;
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelActiveRotatedFilterForward(
+    const int output_planes, const int input_planes, const int orientations,
+    const int kH, const int kW, const int rotations, T *input, T *indices,
+    T *workspace, T *output) {
+  if (coreId == 0x80) {
+    return;
+  }
+
+  int num_op_per_core = output_planes / taskDim;
+  const int num_op_rem_core = output_planes % taskDim;
+
+  num_op_per_core += int(num_op_rem_core > taskId);
+  const int op_core_offset = taskId * num_op_per_core +
+                             (num_op_rem_core > taskId ? 0 : num_op_rem_core);
+
+  const int kernel_size = orientations * kH * kW;
+  const float delta_orientation = (float)CYCLE_ROTATE / (float)orientations;
+  const float delta_rotation = (float)CYCLE_ROTATE / (float)rotations;
+  const int total_num = orientations;
+  int block_num = 0;
+  float angle = 0;
+
+  const int trans[ROWS][COLS] = {
+      {0, 1, 2, 3, 4, 5, 6, 7, 8}, {3, 0, 1, 6, 4, 2, 7, 8, 5},
+      {6, 3, 0, 7, 4, 1, 8, 5, 2}, {7, 6, 3, 8, 4, 0, 5, 2, 1},
+      {8, 7, 6, 5, 4, 3, 2, 1, 0}, {5, 8, 7, 2, 4, 6, 1, 0, 3},
+      {2, 5, 8, 1, 4, 7, 0, 3, 6}, {1, 2, 5, 0, 4, 8, 3, 6, 7}};
+
+#if __BANG_ARCH__ < 322
+  for (int i = 0; i < num_op_per_core; i++) {
+    T *workspace_core =
+        workspace + (op_core_offset + i) * input_planes * kernel_size;
+    T *input_core = input + (op_core_offset + i) * input_planes * kernel_size;
+    T *output_core =
+        output + (op_core_offset + i) * rotations * input_planes * kernel_size;
+
+    const int src_stride = kH * kW;
+
+    for (int k = 0; k < rotations; k++) {
+      angle = delta_rotation * (float)k;
+      block_num = int(angle / delta_orientation);
+
+      orientation_move<T>(workspace_core, input_core, kH, kW, block_num,
+                          total_num, kernel_size, input_planes);
+      rotateHW<T>(output_core + k * input_planes * kernel_size, workspace_core,
+                  trans, kH, kW, src_stride, src_stride,
+                  orientations * input_planes, int(angle) / ROTATE_BASE_ANGLE);
+    }
+  }
+#else
+  if (rotations == 8) {
+    for (int i = 0; i < num_op_per_core; i++) {
+      T *workspace_core =
+          workspace + (op_core_offset + i) * input_planes * kernel_size;
+      T *input_core = input + (op_core_offset + i) * input_planes * kernel_size;
+      T *output_core =
+          output + (op_core_offset + i) * input_planes * kernel_size;
+
+      const int src_stride = kH * kW;
+      angle = delta_rotation;
+      block_num = int(angle / delta_orientation);
+
+      orientation_move<T>(output_core, input_core, kH, kW, block_num, total_num,
+                          kernel_size, input_planes);
+      rotateHW<T>(workspace_core, output_core, trans, kH, kW, src_stride,
+                  src_stride, orientations * input_planes,
+                  int(angle) / ROTATE_BASE_ANGLE);
+    }
+    __sync_all_ipu();
+  }
+
+  int output_input_gap = 0, ping_pong_gap = 0;
+  int span_num_deal = 0;
+  auxFuncARF<T>(output_input_gap, ping_pong_gap, span_num_deal, kernel_size);
+
+  int num_op_per_cluster = output_planes / clusterDim;
+  const int num_op_rem = output_planes % clusterDim;
+
+  num_op_per_cluster += int(num_op_rem > clusterId);
+  const int op_offset =
+      input_planes * (clusterId * num_op_per_cluster +
+                      (num_op_rem > clusterId ? 0 : num_op_rem));
+
+  int num_per_core = input_planes / coreDim;
+  const int num_rem = input_planes % coreDim;
+
+  num_per_core += int(num_rem > coreId);
+  const int core_offset =
+      coreId * num_per_core + (num_rem > coreId ? 0 : num_rem);
+
+  const int repeat = num_per_core / span_num_deal;
+  const int rem = num_per_core % span_num_deal;
+  T *ping_output = (T *)nram_buffer;
+  T *ping_input = (T *)nram_buffer + output_input_gap;
+
+  int pipeline_times = 0;
+  if (rotations == ROTATE_EIGHT) {
+    pipeline_times = 2;
+  } else {
+    pipeline_times = 1;
+  }
+
+  for (int op_seg = 0; op_seg < num_op_per_cluster; op_seg++) {
+    for (int j = 0; j < pipeline_times; j++) {
+      T *gdram_input = NULL;
+      if (j == 0) {
+        gdram_input = input;
+      } else {
+        gdram_input = workspace;
+      }
+
+      if (repeat > 0) {
+        load_input<T>(ping_input, gdram_input, op_offset, core_offset, op_seg,
+                      input_planes, 0, span_num_deal, span_num_deal,
+                      kernel_size);
+        __asm__ volatile("sync;");
+      }
+
+      if (repeat > 1) {
+        load_input<T>(ping_input + ping_pong_gap, gdram_input, op_offset,
+                      core_offset, op_seg, input_planes, 1, span_num_deal,
+                      span_num_deal, kernel_size);
+        computeRotation<T>(ping_output, ping_input, span_num_deal,
+                           span_num_deal, kH, kW, orientations, rotations);
+        __asm__ volatile("sync;");
+      }
+
+      for (int i = 0; i < repeat - 2; i++) {
+        stride_store_output<T>(output, ping_output + (i % 2) * ping_pong_gap,
+                               op_offset, core_offset, op_seg, input_planes,
+                               rotations, j, span_num_deal, i, span_num_deal,
+                               kernel_size);
+
+        load_input<T>(ping_input + (i % 2) * ping_pong_gap, gdram_input,
+                      op_offset, core_offset, op_seg, input_planes, i + 2,
+                      span_num_deal, span_num_deal, kernel_size);
+
+        computeRotation<T>(ping_output + ((i + 1) % 2) * ping_pong_gap,
+                           ping_input + ((i + 1) % 2) * ping_pong_gap,
+                           span_num_deal, span_num_deal, kH, kW, orientations,
+                           rotations);
+        __asm__ volatile("sync;");
+      }
+
+      if (repeat > 1) {
+        stride_store_output<T>(
+            output, ping_output + ((repeat - 2) % 2) * ping_pong_gap, op_offset,
+            core_offset, op_seg, input_planes, rotations, j, span_num_deal,
+            repeat - 2, span_num_deal, kernel_size);
+      }
+
+      if (rem > 0) {
+        load_input<T>(ping_input + (repeat % 2) * ping_pong_gap, gdram_input,
+                      op_offset, core_offset, op_seg, input_planes, repeat,
+                      span_num_deal, rem, kernel_size);
+      }
+
+      if (repeat > 0) {
+        computeRotation<T>(ping_output + ((repeat - 1) % 2) * ping_pong_gap,
+                           ping_input + ((repeat - 1) % 2) * ping_pong_gap,
+                           span_num_deal, span_num_deal, kH, kW, orientations,
+                           rotations);
+      }
+      __asm__ volatile("sync;");
+
+      if (repeat > 0) {
+        stride_store_output<T>(
+            output, ping_output + ((repeat - 1) % 2) * ping_pong_gap, op_offset,
+            core_offset, op_seg, input_planes, rotations, j, span_num_deal,
+            repeat - 1, span_num_deal, kernel_size);
+      }
+
+      if (rem > 0) {
+        computeRotation<T>(ping_output + (repeat % 2) * ping_pong_gap,
+                           ping_input + (repeat % 2) * ping_pong_gap,
+                           span_num_deal, rem, kH, kW, orientations, rotations);
+        __asm__ volatile("sync;");
+
+        stride_store_output<T>(
+            output, ping_output + (repeat % 2) * ping_pong_gap, op_offset,
+            core_offset, op_seg, input_planes, rotations, j, span_num_deal,
+            repeat, rem, kernel_size);
+      }
+      __asm__ volatile("sync;");
+    }
+  }
+#endif
+}
+
+void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int output_planes, const int input_planes, const int orientations,
+    const int kH, const int kW, const int rotations, const void *input_gdram,
+    const void *indices_gdram, const void *workspace_gdram,
+    void *output_gdram) {
+  MLUKernelActiveRotatedFilterForward<float><<<k_dim, k_type, queue>>>(
+      output_planes, input_planes, orientations, kH, kW, rotations,
+      (float *)input_gdram, (float *)indices_gdram, (float *)workspace_gdram,
+      (float *)output_gdram);
+}
+
+void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int output_planes, const int input_planes, const int orientations,
+    const int kH, const int kW, const int rotations, const void *input_gdram,
+    const void *indices_gdram, const void *workspace_gdram,
+    void *output_gdram) {
+  MLUKernelActiveRotatedFilterForward<half><<<k_dim, k_type, queue>>>(
+      output_planes, input_planes, orientations, kH, kW, rotations,
+      (half *)input_gdram, (half *)indices_gdram, (half *)workspace_gdram,
+      (half *)output_gdram);
+}

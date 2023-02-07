@@ -1,0 +1,119 @@
+op_name: "deform_roi_pool_backward"
+input {
+  id: "input1"
+  shape {
+    dims: 1
+    dims: 4
+    dims: 1
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 233
+    lower_bound: -1.0
+    upper_bound: 1.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 1
+    dims: 9
+    dims: 9
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 233
+    lower_bound: -1.0
+    upper_bound: 1.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input3"
+  shape {
+    dims: 1
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_h: "00000000"
+  value_h: "00000000"
+  value_h: "00000000"
+  value_h: "40000000"
+  value_h: "40000000"
+}
+input {
+  id: "input4"
+  shape {
+    dims: 1
+    dims: 2
+    dims: 4
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 233
+    lower_bound: 1.0
+    upper_bound: 1.0
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "output1"
+  shape {
+    dims: 1
+    dims: 9
+    dims: 9
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  mlu_dtype: DTYPE_FLOAT
+  random_data {
+    seed: 233
+    lower_bound: 0.0
+    upper_bound: 0.0
+    distribution: UNIFORM
+  }
+  threshold_use: 1
+}
+output {
+  id: "output2"
+  shape {
+    dims: 1
+    dims: 2
+    dims: 4
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 233
+    lower_bound: 1.0
+    upper_bound: 1.0
+    distribution: UNIFORM
+  }
+  threshold_use: 1
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
+
+deform_roi_pool_backward_param {
+  sampling_ratio: 5
+  spatial_scale: 0.7941938638687134
+  gamma: 0.6350110173225403
+  pooled_height: 4
+  pooled_width: 1
+}

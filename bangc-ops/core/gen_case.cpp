@@ -227,7 +227,7 @@ void genCaseData(PbNode *node, bool is_input, std::string id,
     node->appendTensor(is_input, id, device_data, desc_, true, params,
                        distribution, dump_data);
   } else {
-    node->appendTensor(is_input, id, device_data, desc, true, params,
+    node->appendTensor(is_input, id, device_data, desc, false, params,
                        distribution, dump_data);
   }
 }

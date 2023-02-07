@@ -1,0 +1,102 @@
+op_name: "roiaware_pool3d_forward"
+input {
+  id: "rois"
+  shape: {
+    dims: 32
+    dims: 7
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 21
+    upper_bound: 20
+    lower_bound: -20
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "pts"
+  shape: {
+    dims: 1024
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 20
+    lower_bound: -20
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "pts_feature"
+  shape: {
+    dims: 1024
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 24
+    upper_bound: 20
+    lower_bound: -20
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "argmax"
+  shape: {
+    dims: 32
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "pts_idx_of_voxels"
+  shape: {
+    dims: 32
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 32
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "pooled_features"
+  shape: {
+    dims: 32
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+roiaware_pool3d_forward_param: {
+  boxes_num: 32
+  pts_num: 1024
+  channels: 1
+  max_pts_each_voxel: 32
+  out_x: 2
+  out_y: 2
+  out_z: 2
+  pool_method: 1
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
