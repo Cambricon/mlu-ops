@@ -219,6 +219,7 @@ message Node {
   optional BboxOverlapsParam bbox_overlaps_param    = 2041;  // BboxOverlapsParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
+  optional GetIndicePairsParam get_indice_pairs_param   = 202302031;  // param
   optional RoiawarePool3dForwardParam  roiaware_pool3d_forward_param = 10120;  // param
   optional RoiawarePool3dBackwardParam  roiaware_pool3d_backward_param = 10121;  // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
@@ -344,6 +345,21 @@ message PsRoiPoolForwardParam{
   optional int32 output_dim = 3 [default = 8];
   optional int32 pooled_height = 4 [default = 7];
   optional int32 pooled_width = 5 [default = 7];
+}
+
+// param to call mluOpGetIndicePairs()
+message GetIndicePairsParam{
+   required int32 dimnb = 1;
+   required int32 batch = 2;
+   repeated int32 pad = 3;
+   repeated int32 stride = 4;
+   repeated int32 dilation = 5;
+   repeated int32 input_space = 6;
+   repeated int32 filter_space = 7;
+   repeated int32 output_space = 8;
+   optional int32 sub_m = 9 [default = 0];
+   optional int32 transpose = 10 [default = 0];
+   optional int32 inverse = 11 [default = 0];
 }
 
 // param to call mluOpPsRoiPoolbackward()

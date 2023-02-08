@@ -325,6 +325,12 @@ mluOpRoiAlignRotatedBackward
 -----------------------------
 mluOpRoiAlignRotatedForward 算子的反向, 根据 rois 定位的位置信息，将输入梯度数据平均回传到 features 相应位置上，该操作需使用 atomic_add 来控制执行顺序。
 
+.. _get_indice_pairs:
+
+mluOpGetIndicePairs
+--------------------------
+该算子是sparse convolution所用到的重要算子， 主要是构建卷积中input,filter与output产生计算的index关系；
+
 .. _roi_aware_pool3d_forward:
 
 mluOpRoiawarePool3dForward
