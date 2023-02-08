@@ -133,13 +133,13 @@ file(GLOB_RECURSE archive_binary_files ${archive_binary_files} "${CMAKE_CURRENT_
 file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libmluops.map)
-  message(STATUS "libmluops.map exists.")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${MLUOP_SYMBOL_VIS_FILE})
+  message(STATUS "${MLUOP_SYMBOL_VIS_FILE} exists.")
 else()
-  message(FATAL_ERROR "libmluops.map doesn't exist.")
+  message(FATAL_ERROR "${MLUOP_SYMBOL_VIS_FILE} doesn't exist.")
 endif()
 
-set(LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libmluops.map")
+set(LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
 add_library(mluopscore STATIC ${core_src_files})
 

@@ -78,9 +78,9 @@
   <op_name> = ["dep_op1", "dep_op2", ...]
   ```
 
-- gen_mluops.py
+- gen_symbol_visibility_map.py
 
-  - `gen_mluops.py`脚本用于解析`mlu_op.h`头文件，获取函数名，生成`libmluops.map`配置文件。
+  - `gen_symbol_visibility_map.py`脚本用于解析`mlu_op.h`头文件，获取函数名，生成`symbol_visibility.map`配置文件。
     ```sh
     MLUOP_ABI {
 	    global: op1_func;op2_func;
@@ -89,8 +89,8 @@
     ```
     global：表示符号是全局的（外部的）
     local：表示符号是本地的，即对外不可见
-  - 执行build.sh编译时，将自动执行`gen_mluops.py`生成`libmluops.map`配置文件。
-  - 在编译阶段依据`libmluops.map`文件中global字段定义的符号表，将动态库`libmluops.so`中除global中定义的符号外其他符号定义为local。
+  - 执行build.sh编译时，将自动执行`gen_symbol_visibility_map.py`生成`symbol_visibility.map`配置文件。
+  - 在编译阶段依据`symbol_visibility.map`文件中global字段定义的符号表，将动态库`libmluops.so`中除global中定义的符号外其他符号定义为local。
 
 - 命令行参数
 

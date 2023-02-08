@@ -1,7 +1,6 @@
 import re
 import sys
 
-map_file = "libmluops.map"
 mluop_abi_version = "MLUOP_ABI_1.0 {"
 
 def get_mluops(input_file):
@@ -15,7 +14,7 @@ def get_mluops(input_file):
                 ops_str += op
     return ops_str
 
-def create_map_file(ops_str):
+def create_map_file(map_file,ops_str):
     with open(map_file,'w') as f:
         f.writelines(mluop_abi_version + "\n")
         global_str = "\t" + "global: " + ops_str + "\n"
@@ -24,10 +23,11 @@ def create_map_file(ops_str):
         f.writelines("};")
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        ops_str=""
-        for arg in sys.argv[1:]:
+    if len(sys.argv) > 2:
+        map_file = sys.argv[1]
+        ops_str = ""
+        for arg in sys.argv[2:]:
             ops_str += get_mluops(arg)
-        create_map_file(ops_str)
+        create_map_file(map_file,ops_str)
     else:
-        print("[ERROR] please input a file path")
+        print("[ERROR] Missing script parameter. Call this script in 'python gen_symbol_visibility_map.py dst_path src_path' way.")
