@@ -539,6 +539,7 @@ message IndiceConvolutionBackwardDataParam {
   optional int64 sub_m = 2 [default = 0];
   repeated int64 indice_num = 3;
 }
+
 // param to call indice mluOpIndiceConvolutionBackwardFilter
 message IndiceConvolutionBackwardParam{
   optional int64 inverse     = 1 [default = 0];
