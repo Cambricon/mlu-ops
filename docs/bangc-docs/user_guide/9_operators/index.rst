@@ -325,6 +325,12 @@ mluOpRoiAlignRotatedBackward
 -----------------------------
 mluOpRoiAlignRotatedForward 算子的反向, 根据 rois 定位的位置信息，将输入梯度数据平均回传到 features 相应位置上，该操作需使用 atomic_add 来控制执行顺序。
 
+.. _get_indice_pairs:
+
+mluOpGetIndicePairs
+--------------------------
+该算子是sparse convolution所用到的重要算子， 主要是构建卷积中input,filter与output产生计算的index关系；
+
 .. _roi_aware_pool3d_forward:
 
 mluOpRoiawarePool3dForward
@@ -385,3 +391,15 @@ mluOpDeformRoiPoolForward
    \triangle p_{i,j} = \gamma * \triangle \hat p_{i,j} \circ(w,h)
 
 其中 :math:`\triangle \hat p_{i,j}` 是通过全连接层获得的归一化偏移量；:math:`\triangle p_{i,j}` 是一个分数；:math:`\gamma` 是预先设定的标量。
+
+.. _indice_convolution_backward_filter:
+
+mluOpIndiceConvolutionBackwardFilter
+----------------------------------
+该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算权值的梯度。
+
+.. _three_nn_forward:
+
+mluOpThreeNNForward
+-----------------------------
+该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。

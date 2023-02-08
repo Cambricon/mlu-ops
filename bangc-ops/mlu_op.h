@@ -611,7 +611,7 @@ mluOpGetLibVersion(int *major, int *minor, int *patch);
  *
  *  @param[in] handle
  *  Pointer to an MLUOP context that is used to manage MLU devices and
- *  queues. For detailed information, see ::mluopHandle_t.
+ *  queues. For detailed information, see ::mluOpHandle_t.
  *  @param[in] round_mode
  *  The rounding mode of quantization conversion to be set to the MLUOP handle.
  *
@@ -638,7 +638,7 @@ mluOpSetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_m
  *
  *  @param[in] handle
  *  Pointer to an MLUOP context that is used to manage MLU devices and
- *  queues. For detailed information, see ::mluopHandle_t.
+ *  queues. For detailed information, see ::mluOpHandle_t.
  *
  *  @param[out] round_mode
  *  The rounding mode of quantization conversion that was previously set to the specified handle.
@@ -647,7 +647,7 @@ mluOpSetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_m
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  *  @note
- *  - The default round mode of default initialized ::mluopHandle_t is MLUOP_ROUND_TO_EVEN.
+ *  - The default round mode of default initialized ::mluOpHandle_t is MLUOP_ROUND_TO_EVEN.
  *
  *  @par Requirements
  *  - None.
@@ -736,6 +736,16 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  */
 typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
 
+/*! The descriptor of a tensor that holds the information including tensor
+ *  shape, the number of dimensions, pad, strides, dalition, sub_m, transpose.
+ *
+ *  You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information to
+ *  the descriptor. Also, you need to destroy the MLUOP context at the end with
+ *  the ::mluOpDestroySparseConvolutionDescriptor function.
+ */
+typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
+
 /*! The descriptor of the matrix multiplication that holds the configured matrix multiplication
  *  algorithm descriptor and its runtime properties.
  *
@@ -810,6 +820,60 @@ typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
+
+// Group:Tensor
+/*!
+ *  @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, pad,
+ *  stride, dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape.
+ *  The::mluOpSetSparseConvolutionDescriptor function needs to be called to set parameters.
+ *
+ *  The ::mluOpDestroySparseConvolutionDescriptor function needs to be called to destroy the
+ *  tensor descriptor later.
+ *
+ *  @param[in] desc
+ *  Pointer to the struct that holds information about the tensor descriptor.
+ *
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc);
+
+// Group:Tensor
+/*!
+ * @brief Destroys a convolution descriptor \b desc that is previously created with the
+ * ::mluOpCreateSparseConvolutionDescriptor function.
+ *
+ * The sparse convolution descriptor is defined in ::mluOpSparseConvolutionDescriptor_t
+ * and holds the information about the sparse convolution forward or backward operation.
+ *
+ *
+ * @param[in] desc
+ * The sparse convolution descriptor to be destroyed.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+ *
+ * @note
+ * - This function should be called to destroy the sparse convolution descriptor.
+ * Otherwise, the memory leak may occur.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroySparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc);
 
 // Group:Tensor
 /*!
@@ -890,6 +954,95 @@ mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const i
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptor(
     mluOpTensorDescriptor_t desc, mluOpTensorLayout_t layout, mluOpDataType_t dtype, int dimNb, const int dimSize[]);
+
+// Group:tensor
+/*!
+ * @brief Initializes the sparse convolution descriptor \b desc that is previously created
+ * with the ::mluOpCreateSparseConvolutionDescriptor function, and sets the information
+ * about the convolution forward and backward operation to the convolution descriptor
+ * \b desc. The information includes the number of the convolution dimensions \b dimNb,
+ * the padding size for each dimension \b pad, the stride of the sliding window for
+ * each dimension \b stride, the dilation
+ * factor for each dimension \b dilation, and the size of \b input , \b filter , \b output.
+ *
+ * @param[in] desc
+ * The descriptor of the sparse convolution operation. For detailed information,
+ * see ::mluOpSparseConvolutionDescriptor_t.
+ * @param[in] dimNb
+ * The number of dimensions in the input tensor of the convolution operation.
+ * Currently, the value of this parameter can only be set to 4 or 5. The value of this parameter
+ * should be the same as the one you set in the input tensor descriptor.
+ * @param[in] batch_size
+ * The number of N-dimensions in the tensor.
+ * @param[in] pad
+ * An array that stores the zero-padding size for each dimension of the input tensor
+ * used in the convolution operation.
+ * For each dimension, the padding size represents the number of zeros to be concatenated at the
+ * start and end of that dimension. If \b dimNb is set to 4, the padding is on top, bottom, left,
+ * and right. If \b dimNb is set to 5, the padding is on front, back, top, bottom, left,
+ * and right. The value of this parameter should be greater than or equal to 0.
+ * @param[in] stride
+ * An array that stores the filter stride for each dimension of the input tensor
+ * used in the convolution operation. For each dimension, the filter stride represents
+ * the number of elements to slide over the input tensor. If \b dimNb is set to 4,
+ * the stride is in height and width. If \b dimNb is set to 5,
+ * the stride is in depth_stride, height and width.
+ * The value of this parameter should be greater than or equal
+ * to 1.
+ * @param[in] dilation
+ * An array that stores the dilation factor for each dimension of the filter tensor
+ * used in the convolution operation. For each dimension, the dilation factor represents
+ * the spacing between the kernel points. If \b dimNb is set to 4, the dilation should be set in
+ * height and width dimension. The value of this parameter
+ * should be greater than or equal to 1. If \b dimNb is set to 5, the dilation should be set in
+ * depth, height and width dimension. The value of this parameter should be greater than or equal to 1.
+ * @param[in] input_space
+ * An array that stores the input size for each dimension of the input tensor used in sparse
+ * convolution operation. If \b dimNb is set to 4, the input_space should be set in height and width
+ * dimension. If \b dimNb is set to 5, the input_space should be set in depth, height and width dimension.
+ * @param[in] filter_space
+ * An array that stores the filter size for each dimension of the input tensor used in sparse
+ * convolution operation. if \b dimNb is set to 4, the filter_space should be set in height and width
+ * dimension, If \b dimNb is set to 5, the filter_space should be set in depth, height and width dimension.
+ * @param[in] output_space
+ * An array that stores the output size for each dimension of the input tensor used in sparse
+ * convolution operation. If \b dimNb is set to 4, the output_space should be set in height and width
+ * dimension. If \b dimNb is set to 5, the output_space should be set in depth, height and width dimension.
+ * @param[in] sub_m
+ * An value that determine the algorithms for sparse convolution. If \b sub_m is set to 0, the
+ * algorithms will be the default sparse convolution. If \b sub_m is set to 0, the algorithms will be the
+ * submanifold sparse convolution.
+ * @param[in] transpose
+ * An value that determines transpose.
+ * @param[in] inverse
+ * An value that determines inverse.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_EXECUTION_FAILED
+ *   ::MLUOP_STATUS_NOT_INITIALIZED
+ *
+ * @note
+ * - Currently, only 5D input tensors are supported for convolution
+ * forward or backward operation.
+ *
+ * @par Requirements
+ * - The data width of compute_type must not be less than output tensor's data type.
+ *
+ * @par Example
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
+                                    int dimNb,
+                                    int batch_size,
+                                    const int pad[],
+                                    const int stride[],
+                                    const int dilation[],
+                                    const int input_space[],
+                                    const int filter_space[],
+                                    const int output_spcae[],
+                                    const int subm,
+                                    const int transpose,
+                                    const int inverse);
 
 // Group:Tensor
 /*!
@@ -1809,11 +1962,12 @@ mluOpAbs(mluOpHandle_t handle,
  * - None.
  *
  */
-mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
-                                                      const mluOpTensorDescriptor_t input_descs[],
-                                                      const uint32_t input_num,
-                                                      const mluOpTensorDescriptor_t output_desc,
-                                                      size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
+                          const mluOpTensorDescriptor_t input_descs[],
+                          const uint32_t input_num,
+                          const mluOpTensorDescriptor_t output_desc,
+                          size_t *workspace_size);
 // Group:AddN
 /*!
  * @brief Computes the sum of input tensors.
@@ -1893,14 +2047,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
      @endverbatim
  *
  */
-mluOpStatus_t MLUOP_WIN_API mluOpAddN_v2(mluOpHandle_t handle,
-                                         const mluOpTensorDescriptor_t input_descs[],
-                                         const void *const inputs[],
-                                         const uint32_t input_num,
-                                         const mluOpTensorDescriptor_t output_desc,
-                                         void *output,
-                                         void * workspace,
-                                         size_t workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpAddN_v2(mluOpHandle_t handle,
+             const mluOpTensorDescriptor_t input_descs[],
+             const void *const inputs[],
+             const uint32_t input_num,
+             const mluOpTensorDescriptor_t output_desc,
+             void *output,
+             void *workspace,
+             size_t workspace_size);
 // Group:AddN
 /*!
  * @brief Computes the sum of input tensors.
@@ -1972,12 +2127,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpAddN_v2(mluOpHandle_t handle,
  *
  */
 
-mluOpStatus_t MLUOP_WIN_API mluOpAddN(mluOpHandle_t handle,
-                                      const mluOpTensorDescriptor_t input_descs[],
-                                      const void *const inputs[],
-                                      uint32_t input_num,
-                                      const mluOpTensorDescriptor_t output_desc,
-                                      void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpAddN(mluOpHandle_t handle,
+          const mluOpTensorDescriptor_t input_descs[],
+          const void *const inputs[],
+          uint32_t input_num,
+          const mluOpTensorDescriptor_t output_desc,
+          void *output);
 
 // Group:Log
 /*!
@@ -6353,6 +6509,156 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
                   const mluOpTensorDescriptor_t output_desc,
                   void *output);
 
+/// Group:indiceConvolution
+/*!
+ * @brief Computes the get_indice_paris operation, then returns the results in the output
+ * tensor \b out_indices, \b indice_pairs and \b indice_num.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * get_indice_pairs operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] sparse_conv_desc
+ * The descriptor of sparse_conv parameter that needs convolution. For detailed information,
+ * see ::mluOpSparseConvolutionDescriptor_t.
+ * @param[in] indices_desc
+ * The descriptor of output grad. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the indices tensor.
+ * @param[in] out_indices_desc
+ * The descriptor of out_indices including output locations. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] out_indices
+ * Pointer to the MLU memory that stores the out_indices tensor.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indice_pairs between input locations and output locations.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] indice_pairs
+ * Pointer to the MLU memory that stores the indice_pairs tensor.
+ * @param[in] indice_num_desc
+ * The descriptor of indice_num including the number of input points while calculating with every kernel points.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] indice_num
+ * Pointer to the MLU memory that stores the indice_num tensor.
+ * @param[in] features_desc
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the get_indice_pairs operation.
+ * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - This function supports the combinations of the following data types for
+ *   input tensor \b indices and output tensor \b out_indices, \b indice_pairs and \b indice_num.
+ *   - \b indices, \b out_indices, \b indice_pairs and \b indice_num data type: int32, int32, int32, int32
+ *
+ * @note
+ * - This function only supports on MLU300 series or above platforms.
+ *
+ * @par Scale Limitation
+ * - The params inverse and transpose are not supported now.
+ * - Get_indice_pairs only supported 3d.
+ * - The input tensor and output tensor must meet the following requirements:
+ *   - The \b indices must be two dimensions.
+ *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to kernel size,
+ *     the second dimension must be 2, and the last dimension must be the same as the number of 
+ *     product of the first n-1 dimensions of the input tensor in sparse convolution.
+ *   - The \b out_indices should be 2 dimensions. The first dimension of \b out_indices is the number effective output point.
+ *     and the second dimension of must product of the first n-1 dimensions of the input tensor in sparse convolution.
+ *   - The \b indice_num should be 1 dimensions. The first dimension of \b indice_num is the kernel size.
+ *
+ * @par API Dependency
+ * - Before calling this function, you need to prepare
+ *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Example
+ * - The example of the operation is as follows:
+     @verbatim
+      Dimension of indices tensor:  [input_active_in, dimnb -1]
+      Dimension of out_indices tensor:  [output_active_num, dimnb - 1]
+      Dimension of indice_pairs tensor: [kd * kh * kw, 2, input_active_in]
+      Dimension of indice_num tensor: [kd * kh * kw]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndicePairs(mluOpHandle_t handle,
+                   const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+                   const mluOpTensorDescriptor_t indices_desc,
+                   const void *indices,
+                   void *workspace,
+                   const size_t workspace_size,
+                   const mluOpTensorDescriptor_t indice_pairs_desc,
+                   void *indice_pairs,
+                   const mluOpTensorDescriptor_t out_indices_desc,
+                   void *out_indices,
+                   const mluOpTensorDescriptor_t indice_num_desc,
+                   void *indice_num);
+
+// Group:indiceConvolution
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
+ * to optimize the get_indice_pairs operation.
+ *
+ * The size of extra workspace is based on the given information of the get_indice_pairs
+ * operation, including the input tensor descriptor \b sparse_conv_desc, and \b indices_desc, output
+ * tensor descriptor \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc. 
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * get_indice_pairs operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] sparse_conv_desc
+ * The descriptor of sparse_conv parameter that needs convolution. For detailed information,
+ * see ::mluOpSparseConvolutionDescriptor_t.
+ * @param[in] indices_desc
+ * The descriptor of output grad. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] out_indices_desc
+ * The descriptor of out_indices including output locations. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indice_pairs between input locations and output locations.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_num_desc
+ * The descriptor of indice_num including the number of input points while calculating with every kernel points.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
+ *
+ * @par API Dependency
+ * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
+ *   tensor descriptors \b indices_desc, \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc before
+ *   calling this function.
+ * - You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
+ *   and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information for 
+ *   the descriptor \b sparse_conv_desc.
+ * - The allocated extra workspace should be passed to the ::mluOpGetIndicePairs function to
+ *   perform the ge_indice_pairs operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
+                                const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+                                const mluOpTensorDescriptor_t indices_desc,
+                                const mluOpTensorDescriptor_t indice_pairs_desc,
+                                const mluOpTensorDescriptor_t out_indices_desc,
+                                const mluOpTensorDescriptor_t indice_num_desc,
+                                size_t *workspace_size);
+
 // Group:Transpose
 /*!
  * @brief Creates a descriptor pointed by \b desc for a transpose operation,
@@ -7280,11 +7586,9 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
      --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
      --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0]]
      --> offset: [[[[0.5]], [[0.5]]]]
-
      param:
             pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
             sampling_ratio: 1, gamma: 1
-
      output array by 1  1  1 * 1 -->
          output: [[[[2.25]]]]
      @endverbatim
@@ -7431,6 +7735,481 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
                            void *grad_input,
                            const mluOpTensorDescriptor_t grad_offset_desc,
                            void *grad_offset);
+
+// Group:IndiceConvolutionBackwardData
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as
+ * an extra workspace to optimize the indice convolution backward data operation.
+ *
+ * The size of extra workspace is based on the given information of the indice
+ * convolution backward data operation, including the input descriptor
+ * \b input_grad_desc, the filter descriptor \b filter_desc, the indice pairs
+ * descriptor \b indice_pairs_desc, the output descriptor \b indice_pairs_desc,
+ * the array \b indice_num and the scaler \b inverse. For more information
+ * about the workspace, see "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * the ::mluOpIndiceConvolutionBackwardData operation. For detailed
+ * information, see ::mluOpHandle_t.
+ * @param[in] output_grad_desc
+ * The descriptor of the output_grad tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] filters_desc
+ * The descriptor of the filters tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] indice_pairs_desc
+ * The descriptor of the indice_pairs tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] input_grad_desc
+ * The descriptor of the input_grad tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] indice_num
+ * The array to describe the valid data number in the indice_pairs tensor.
+ * @param[in] inverse
+ * The parameter to describe whether the operation performs deconvolution logic.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that is used in the
+ * ::mluOpIndiceConvolutionBackwardData operation.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - This function must be called before the ::mluOpIndiceConvolutionBackwardData
+ *   function.
+ * - The ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
+ *   create and set the tensor descriptor \b output_grad_desc, \b filters_desc,
+ *   \b indice_pairs_desc and \b input_grad_desc before this function is called.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
+                                                   const mluOpTensorDescriptor_t output_grad_desc,
+                                                   const mluOpTensorDescriptor_t filters_desc,
+                                                   const mluOpTensorDescriptor_t indice_pairs_desc,
+                                                   const mluOpTensorDescriptor_t input_grad_desc,
+                                                   const int64_t indice_num[],
+                                                   const int64_t inverse,
+                                                   size_t *workspace_size);
+
+// Group:IndiceConvolutionBackwardData
+/*!
+ * @brief Performs the back propagation of an indice convolution operation to
+ * compute the gradient of input \b input_grad based on the gradient of response
+ * \b output_grad, the filter tensor \b filter, the indice tensor \b indice_pairs
+ * and helper parameters: array \b indice_num, scaler \b inverse and \b sub_m.
+ *
+ * The tensors \b input_grad and \b output_grad are reordered from origin input
+ * gradient and output gradient. The tensor \b indice_pairs describes the
+ * calculation logic between the tensors \b input_grad and \b output_grad.
+ * Every pair in \b indice_pairs points to part of \b filters and the single
+ * line in \b input_grad and \b output_grad. Every single line in \b input_grad
+ * is calculated from matmul calculation logic with data mentioned above.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * the ::mluOpIndiceConvolutionBackwardData operation. For detailed
+ * information, see ::mluOpHandle_t.
+ * @param[in] output_grad_desc
+ * The descriptor of input data \b output_grad, which contains dimension, data
+ * type and data layout.
+ * @param[in] output_grad
+ * Pointer to the MLU memory that stores the output_grad tensor. It is the
+ * gradient data of output tensor after reordered.
+ * @param[in] filters_desc
+ * The descriptor of input data \b filters, which contains dimension, data type
+ * and data layout. It contains N, H, W and C information when it is a 4D
+ * tensor, or N, D, H, W and C information when it is a 5D tensor.
+ * @param[in] filters
+ * Pointer to the MLU memory that stores the filter tensor.
+ * @param[in] indice_pairs_desc
+ * The descriptor of input data \b indice_pairs, which contains dimension,
+ * data type and data layout.
+ * @param[in] indice_pairs
+ * Pointer to the MLU memory that stores the indice_pairs tensor. It is used to
+ * specify the calculation pairs between \b input_grad and \b output_grad.
+ * @param[in] indice_num
+ * The array to describe the valid data number in \b indice_pairs.
+ * @param[in] inverse
+ * The parameter to describe whether the operation performs deconvolution logic.
+ * @param[in] sub_m
+ * The parameter to describe whether the operation performs sub_m convolution
+ * logic or sparce convolution logic.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ::mluOpIndiceConvolutionBackwardData operation. For more information about
+ * workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that is used in the
+ * ::mluOpIndiceConvolutionBackwardData operation.
+ * @param[in] input_grad_desc
+ * The descriptor of output data \b input_grad, which contains dimension, data
+ * type and data layout.
+ * @param[out] input_grad
+ * Pointer to the MLU memory that stores the \b output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - None.
+ *
+ * @par Data Type
+ * - The supported data types of \b output_grad, \b filters, \b indice_pairs and
+ *   \b input_grad are as follows:
+ *   Data types of output_grad tensor, filters tensor and input_grad tensor should
+ *   be the same.
+ *   - output_grad tensor: half, float
+ *   - filters tensor: half, float
+ *   - indice_pairs tensor: int32
+ *   - input_grad tensor: half, float
+ *
+ * - The supported data type of array \b indice_num, scaler \b inverse and
+ *   \b sub_m is int64.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b output_grad, \b filters and \b input_grad
+ *   are as follows:
+ *   The layout MLUOP_LAYOUT_ARRAY of filters tensor is recognized as DHWCN,
+ *   which is not defined yet.
+ *   - output_grad tensor: MLUOP_LAYOUT_ARRAY
+ *   - filters tensor: MLUOP_LAYOUT_ARRAY, MLUOP_LAYOUT_HWCN, MLUOP_LAYOUT_NCHW,
+ *     MLUOP_LAYOUT_NHWC, MLUOP_LAYOUT_NCDHW, MLUOP_LAYOUT_NDHWC
+ *   - input_grad tensor: MLUOP_LAYOUT_ARRAY
+ *
+ * @par Scale Limitation
+ * - The \b output_grad and \b input_grad are 2D arrays.
+ * - The \b indice_pairs is 3D array.
+ * - The \b filter is 4D or 5D tensor.
+ * - The dims[1] of \b indice_pairs should be equal to 2.
+ * - When \b filter is a 4D tensor, the dims[0] of \b indice_pairs should be
+ *   equal to H * W corresponding to filter layout.
+ * - When \b filter is a 5D tensor, the dims[0] of \b indice_pairs should be
+ *   equal to D * H * W corresponding to filter layout.
+ * - The dims[1] of \b output_grad should be equal to N corresponding to filter layout.
+ * - The dims[1] of \b input_grad should be equal to C corresponding to filter layout.
+ * - The dims[0] of \b input_grad should be equal to the dims[2] of \b indice_pairs.
+ * - Each value in array \b indice_num should be no smaller than 0, no
+ *   larger than the dims[0] of \b output_grad and no larger than the dims[2]
+ *   of \b indice_pairs.
+ * - The value of \b inverse and \b sub_m should be 0 or 1.
+ *
+ * @par API Dependency
+ * - The function ::mluOpGetIndiceConvolutionBackwardDataWorkspaceSize should
+ *   be called to get the extra space size before this function is called.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/v1.6.1/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
+                                   const mluOpTensorDescriptor_t output_grad_desc,
+                                   const void *output_grad,
+                                   const mluOpTensorDescriptor_t filters_desc,
+                                   const void *filters,
+                                   const mluOpTensorDescriptor_t indice_pairs_desc,
+                                   const void *indice_pairs,
+                                   const int64_t indice_num[],
+                                   const int64_t inverse,
+                                   const int64_t sub_m,
+                                   void *workspace,
+                                   const size_t workspace_size,
+                                   const mluOpTensorDescriptor_t input_grad_desc,
+                                   void *input_grad);
+
+// Group:indiceConvolution
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
+ * to optimize the indice_convolution_backward_filter operation.
+ *
+ * The size of extra workspace is based on the given information of the indice_convolution_backward_filter
+ * operation, including the input tensor descriptor \b features_desc, \b output_grad_desc and \b indice_pairs_desc, output
+ * tensor descriptor \b filters_grad_desc, and the array \b indice_num[]. 
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * indice_convolution_backward_filter operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of features that need convolution. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] output_grad_desc
+ * The descriptor of output grad. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indice pairs between input locations and output locations. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] filters_grad_desc
+ * The descriptor of filters grad tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_num
+ * Pointer to the host memory that stores the indice pairs number.
+ * @param[in] inverse
+ * Currently it is not supported and should be set to 0.
+ * @param[in] sub_m
+ * The sub_m mode of convolution if the value is not 0.
+ * @param[out] workspace_size
+ * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
+ *
+ * @par API Dependency
+ * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
+ *   tensor descriptors \b features_desc, \b output_grad_desc, \b indice_pairs_desc and \b filters_grad_desc before
+ *   calling this function.
+ * - The allocated extra workspace should be passed to the ::mluOpIndiceConvolutionBackwardFilter function to
+ *   perform the indice_convolution_backward_filter operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
+                                                                                 const mluOpTensorDescriptor_t features_desc,
+                                                                                 const mluOpTensorDescriptor_t output_grad_desc,
+                                                                                 const mluOpTensorDescriptor_t indice_pairs_desc,
+                                                                                 const mluOpTensorDescriptor_t filters_grad_desc,
+                                                                                 const int64_t indice_num[],
+                                                                                 const int64_t inverse,
+                                                                                 const int64_t sub_m,
+                                                                                 size_t *workspace_size);
+
+// Group:indiceConvolution
+/*!
+ * @brief Computes the indice_convolution_backward_filter operation, then returns the results in the output
+ * tensor \b filters_grad.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * indice_convolution_backward_filter operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of features that need convolution. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the features tensor.
+ * @param[in] output_grad_desc
+ * The descriptor of output grad. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] output_grad
+ * Pointer to the MLU memory that stores the output grad tensor.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indice pairs between inputs locations and outputs locations. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_pairs
+ * Pointer to the MLU memory that stores the indice pairs tensor.
+ * @param[in] indice_num
+ * Pointer to the host memory that stores the indice pairs num.
+ * @param[in] inverse
+ * Currently it is not supported and should be set to 0.
+ * @param[in] sub_m
+ * The sub_m mode of convolution if the value is not 0.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the indice_convolution_backward_filter operation.
+ * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * @param[in] filters_grad_desc
+ * The descriptor of filters grad tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] filters_grad
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - This function supports the combinations of the following data types for
+ *   input tensor \b features, \b output_grad, \b indice_pairs_num and output tensor \b filters_grad.
+ *   - \b features, \b output_grad, \b indice_pairs \b filters_grad data type: half, half, int32, half
+ *   - \b features, \b output_grad, \b indice_pairs \b filters_grad data type: float, float, int32, float
+ *
+ * @note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - This function does not support setting tensor onchip data type with fixed-point type.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must meet the following requirements:
+ *   - The \b features and \b output_grad must be two dimensions.
+ *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to kernel size of \b filters_grad,
+ *     the second dimension must be 2, and the last dimension must be the same as the number of \b features first dimension.
+ *   - The \b filters_grad should be four or five dimensions. The last dimension of \b filters_grad must be the same as the last dimension of \b output_grad,
+ *     and the penultimate dimension of \b filters_grad must be same as the last dimension of \b features.
+ *   - The array length of indice_num must be the same as the first dimension of \b indice_pairs.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement matrix multiplication, you need to prepare
+ *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Example
+ * - The example of the operation is as follows:
+     @verbatim
+      Dimension of features tensor:  [in_active_num, ci]
+      Dimension of output_grad tensor:  [output_active_num, co]
+      Dimension of indice_pairs tensor: [kd * kh * kw, 2, in_active_num]
+      Dimension of filters_grad tensor: [kd, kh, kw, ci, co]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
+                                                                 const mluOpTensorDescriptor_t features_desc,
+                                                                 const void *features,
+                                                                 const mluOpTensorDescriptor_t output_grad_desc,
+                                                                 const void *output_grad,
+                                                                 const mluOpTensorDescriptor_t indice_pairs_desc,
+                                                                 const void *indice_pairs,
+                                                                 const int64_t indice_num[],
+                                                                 const int64_t inverse,
+                                                                 const int64_t sub_m,
+                                                                 void *workspace,
+                                                                 const size_t workspace_size,
+                                                                 const mluOpTensorDescriptor_t filters_grad_desc,
+                                                                 void *filters_grad);
+
+// Group:ThreeNNForward
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpThreeNNForward operation. The size of the extra workspace is
+ * based on the given information of the ::mluOpThreeNNForward operation, including the input
+ * tensor descriptor \b known_desc. For more information about the workspace, see
+ * "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpThreeNNForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] known_desc
+ * The descriptor of input data \b known, which contains dimension, data type and data layout.
+ * @param[out] workspace_size
+ * A host pointer to the returned size of the extra workspace in bytes that is used in
+ * the ::mluOpThreeNNForward operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - This function must be called before the ::mluOpThreeNNForward function.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
+                                    const mluOpTensorDescriptor_t known_desc,
+                                    size_t *workspace_size);
+
+// Group:ThreeNNForward
+/*!
+ * @brief Finds the closest 3 points of \b unknown among \b known, and outputs \b dist and index
+ * \b idx tensor. This function firstly computes dist of each known point to a unknown point, and
+ * finds the closest 3 points, and outputs the dist and index of the known point in known dataset.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpThreeNNForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] unknown_desc
+ * The descriptor of input data \b unknown, which contains dimension, data type and data layout.
+ * @param[in] unknown
+ * Pointer to the MLU memory that stores the unknown tensor.
+ * @param[in] known_desc
+ * The descriptor of input data \b known, which contains dimension, data type and data layout.
+ * @param[in] known
+ * Pointer to the MLU memory that stores the known tensor.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the ::mluOpThreeNNForward
+ * operation. For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that is used in the ::mluOpThreeNNForward operation.
+ * @param[in] dist2_desc
+ * The descriptor of output data \b dist2, which contains dimension, data type and data layout.
+ * @param[out] dist2
+ * Pointer to the MLU memory that stores the \b dist2 tensor.
+ * @param[in] idx_desc
+ * The descriptor of output data \b idx, which contains dimension, data type and data layout.
+ * @param[out] idx
+ * Pointer to the MLU memory that stores the \b idx tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - None.
+ *
+ * @par Data Type
+ * - The supported data types for unknown tensor \b unknown, known tensor \b known, dist2
+ * tensor \b dist2 and idx tensor \b idx. Data types of unknown tensor, known tensor and
+ * dist2 should be the same.
+ *   - unknown tensor: half, float
+ *   - known tensor: half, float
+ *   - known tensor: half, float
+ *   - idx tensor: int32
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b unknown, \b known, \b dist2 and \b idx:
+ *   \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The shape of \b unknown, \b dist2 and \b idx should be [b, n, 3].
+ * - The shape of \b known should be [b, m, 3].
+ * - The shape of \b unknown, \b dist2, \b idx and \b known dims[0](b) should be equal.
+ * - The shape of \b unknown, \b dist2, \b idx and \b known dims[2](3) should be equal to 3.
+ * - The shape of \b unknown, \b dist2, \b idx and \b known dims[1](n) should be equal and larger
+ *   than 0.
+ *
+ * @par API Dependency
+ * - Before calling this function you need to call ::mluOpGetThreeNNForwardWorkspaceSize
+ *   to get the extra space size needed in ::mluOpThreeNNForward operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/v1.5.2/mmcv/ops/csrc/pytorch/cuda/three_nn_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpThreeNNForward(const mluOpHandle_t handle,
+                    const mluOpTensorDescriptor_t unknown_desc,
+                    const void *unknown,
+                    const mluOpTensorDescriptor_t known_desc,
+                    const void *known,
+                    void *workspace,
+                    const size_t workspace_size,
+                    const mluOpTensorDescriptor_t dist2_desc,
+                    void *dist2,
+                    const mluOpTensorDescriptor_t idx_desc,
+                    void *idx);
 
 #if defined(__cplusplus)
 }
