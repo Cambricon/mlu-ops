@@ -37,10 +37,18 @@ struct TensorShape {
   bool is_contiguous = 1;
 };
 
+bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc);
+
+bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc);
+
 bool strideCaseWithNotConsistentDense(int tensor_num, ...);
 
 void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
                     TensorShape *tensor_shape);
+
+void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
+                          int *target_shape, int target_dim,
+                          TensorShape *tensor_shape);
 
 mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
