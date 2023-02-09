@@ -101,11 +101,12 @@ Indice convolution backward data 算子执行与上一段 space convolution 相�
 | 限制类型    | 详细说明                                            |
 | ----------- | ------------------------------------------------------------ |
 | 数据类型限制| output_grad、filter 和 input_grad 的数据类型必须相同  |
-| 布局限制    | 仅支持 filter 维度为 4 或 5，且 D/H/W 维度大小必须为正奇数  |
+| 布局限制    | 仅支持 filter 维度为 4 或 5                          |
 | 规模限制    | 各个 tensor 的各维度大小不能超过 2^31-1（int32 的表示范围）          |
 | 规模限制    | K = Kh * Kw 或 K = Kd * Kh * Kw |
 | 规模限制    | 当 sub_m = 1 时，Kd * Kh * Kw 不可以为偶数 |
-| 功能限制    |                             |
+| 规模限制    | 当 sub_m = 1 时，L 与 Y 要相等 |
+| 功能限制    | 此版本不支持 inverse = 1 |
 | 数据范围限制| indices_pairs 数据必须为非负正数，且上限不能超过其指向的 output_grad 或 input_grad 的 shape 范围（Y 或 L）|
 | 原位限制    | 不支持原位|
 | stride限制  | 不支持stride机制|

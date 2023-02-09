@@ -7857,7 +7857,8 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * @param[out] input_grad
  * Pointer to the MLU memory that stores the \b output tensor.
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Formula
  * - None.
@@ -7900,7 +7901,12 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * - Each value in array \b indice_num should be no smaller than 0, no
  *   larger than the dims[0] of \b output_grad and no larger than the dims[2]
  *   of \b indice_pairs.
- * - The value of \b inverse and \b sub_m should be 0 or 1.
+ * - The value \b sub_m should be 0 or 1.
+ * - The value \b inverse should be 0.
+ * - When the value of \b sub_m is 1, the dims D, H and W corresponding to
+ *   filter layout should be odd numbers.
+ * - When the value of \b sub_m is 1, the dims[0] of \b input_grad and the dims[0] of \b output_grad
+ *   should be the same.
  *
  * @par API Dependency
  * - The function ::mluOpGetIndiceConvolutionBackwardDataWorkspaceSize should
