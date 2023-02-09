@@ -5,6 +5,7 @@ SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
 MLUOP_TARGET_CPU_ARCH=`uname -m`
+MLUOP_SYMBOL_VIS_FILE="symbol_visibility.map"
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
 
@@ -194,9 +195,10 @@ else
   exit -1
 fi
 
-prog_log_info "generator libmluops.map file: python3 gen_mluops.py ./mlu_op.h"
-rm -f ./libmluops.map
-python3 gen_mluops.py ./mlu_op.h
+prog_log_info "generate ${MLUOP_SYMBOL_VIS_FILE} file."
+rm -f ${MLUOP_SYMBOL_VIS_FILE}
+prog_log_info "python3 gen_symbol_visibility_map.py ${MLUOP_SYMBOL_VIS_FILE} ./mlu_op.h"
+python3 gen_symbol_visibility_map.py ${MLUOP_SYMBOL_VIS_FILE} ./mlu_op.h
 
 pushd ${BUILD_PATH} > /dev/null
   rm -rf *
@@ -208,7 +210,8 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
                 -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
-                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}"
+                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
+                -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}"
 
 popd > /dev/null
 ${CMAKE} --build build --  -j
