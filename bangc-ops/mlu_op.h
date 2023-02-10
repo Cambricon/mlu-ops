@@ -8562,6 +8562,193 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
                     const mluOpTensorDescriptor_t idx_desc,
                     void *idx);
 
+// Group:indiceConvolutionForward
+/*!
+ * @brief Returns in \b workspace_size of the MLU memory which is used as an extra workspace
+ * to boost up indice_convolution_forward computation.
+ *
+ * The size of workspace is deduced from the input including input tensor descriptor
+ * \b features_desc, \b filters_desc, \b indice_pairs_desc, output tensor descriptor
+ * \b features_out_desc and array indice_num[].
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * indice_convolution_forward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of input features. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] filters_desc
+ * The descriptor of filters. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] features_out_desc
+ * The descriptor of features_out. For detailed information,
+ * see ::mluOptensorDescriptor_t.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indices mapping pairs of features_in and filters.
+ * For detailed information, see ::mluOptensorDescriptor_t.
+ * @param[in] features_out_desc
+ * The descriptor of features_out. For detailed information,
+ * see ::mluOptensorDescriptor_t.
+ * @param[in] indice_num
+ * Pointer to the host memory that stores the indice pairs number.
+ * @param[in] inverse
+ * Currently, it is not supported and should be set to 0.
+ * @param[in] sub_m
+ * The sub_m mode of convolution if the value is not 0.
+ * @param[out] workspace_size
+ * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par API Dependency
+ * - Call ::mluOpCreateTensorDescripttor and ::mluOpSetTensorDescriptor before this function
+ *   to create and set tensor descriptor \b features_desc, \b filters_desc, \b indice_pairs_desc
+ *   and \b features_out_desc.
+ * - Output \b workspace_size should later be passed to ::mluOpIndiceConvolutionForward function
+ *   to complete computation.
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
+                                              const mluOpTensorDescriptor_t features_desc,
+                                              const mluOpTensorDescriptor_t filters_desc,
+                                              const mluOpTensorDescriptor_t indice_pairs_desc,
+                                              const mluOpTensorDescriptor_t features_out_desc,
+                                              const int64_t indice_num[],
+                                              const int64_t num_act_out,
+                                              const int64_t inverse,
+                                              const int64_t sub_m,
+                                              size_t *workspace_size);
+
+// Group:indiceConvolutionForward
+/*!
+ * @bried Performs convolution on input sparse tensor \b features with kernel \b filters,
+ * then returns the output sparse tensor \b features_out.
+ *
+ * @param[in] handle
+ * Handle to an MLU context that is used to manage MLU devices and queues in the
+ * indice_convolution_forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of features that needs convolution. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the features tensor.
+ * @param[in] filters_desc
+ * The descriptor of filters that convolves input. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] filters
+ * Pointer to the MLU memory that stores the convolution kernel.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indices mappping pairs of input indices and filters location.
+ * For deatailed informationm, see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_pairs
+ * Pointer to the MLU memory that stores the indice pairs tensor.
+ * @param[in] indice_num
+ * Pointer to the host memory that stores the indice pairs number.
+ * @param[in] num_act_out
+ * The number of non-zero element in output sparse tensor.
+ * @param[in] inverse
+ * Currently it is not supported and should be set to 0.
+ * @param[in] sub_m
+ * The sub_m mode of convolution if the value is not 0.
+ * @param[in] workspace
+ * Pointer to the MLU memory that stores temporary tensor and extra computation space.
+ * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * @param[in] features_out_desc
+ * The descriptor of the output features tensor. For detailed information,
+ * see ::mluOptensorDescriptor_t.
+ * @param[out] features_out
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the combination of the following data types:
+ *   - input tensor \b featues, \b filters, \b indice_pairs and output tensor \b features_out: half, half, int32, half
+ *   - input tensor \b featues, \b filters, \b indice_pairs and output tensor \b features_out: float, float, int32,
+ * float
+ * - The supported data type of array \b indice_num, scalar \b inverse and \b sub_m is int64.
+ *
+ * @par Data Layout
+ * - This function supports the following tensor layouts:
+ *   - features tensor: MLUOP_LAYOUT_ARRAY
+ *   - filters tensor: MLUOP_LAYOUT_NDHWC, MLUOP_LAYOUT_NCDHW, MLUOP_LAYOUT_ARRAY
+ *   - indice_pairs tensor: MLUOP_LAYOUT_ARRAY
+ *   - features_out tensor: MLUOP_LAYOUT_ARRAY
+ *
+ * @note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - This function does not support tensor onchip data type with fixed-point type.
+ * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
+ *   of \b features. Such value is illegal and not checked, the output result is
+ *   not guaranteed.
+ * - The output indices in \b indice_pairs tensor should be no larger than dims[0]
+ *   of \b features_out. Such value is illegal and not checked, the output result is
+ *   not guaranteed.
+ * - The input indices used to generate \b indice_pairs tensor should not point to
+ *   the same location of \b features. Such value is illegal and not checked, the
+ *   output result is not guaranteed.
+ *
+ * @par Scale Limitation
+ * - The \b features and \b features_out are 2D tensor.
+ * - The \b filters is 5D tensor.
+ * - The \b indice_pairs is 3D tensor.
+ * - The dims[1] of \b features equals to input channel of \b filters.
+ * - The dims[1] of \b features_out equals to onput channel of \b filters.
+ * - The dims[0] of \b indice_pairs equals to D * H * W of \b filters.
+ * - The dims[1] of \b indice_pairs equals to 2.
+ * - The dims[2] of \b indice_pairs equals to dims[0] of \b features.
+ * - The length of \b indice_num equals to D * H * W of \b filters.
+ * - Values in \b indice_num should be no smaller than 0, no larger
+ *   than dims[0] of \b features.
+ * - The dims[0] of \b features_out equals to num_act_out.
+ * - The value of \b inverse and \b sub_m should be 0 or 1.
+ *
+ * @par API Dependency
+ * - The function ::mluOpGetIndiceConvolutionForwardWorkspaceSize should be
+ *   called before this function to get extra space size.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/v1.6.1/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionForward(mluOpHandle_t handle,
+                              const mluOpTensorDescriptor_t features_desc,
+                              const void *features,
+                              const mluOpTensorDescriptor_t filters_desc,
+                              const void *filters,
+                              const mluOpTensorDescriptor_t indice_pairs_desc,
+                              const void *indice_pairs,
+                              const int64_t indice_num[],
+                              const int64_t num_act_out,
+                              const int64_t inverse,
+                              const int64_t sub_m,
+                              void *workspace,
+                              size_t workspace_size,
+                              const mluOpTensorDescriptor_t features_out_desc,
+                              void *features_out);
+
 #if defined(__cplusplus)
 }
 #endif
