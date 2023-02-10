@@ -821,7 +821,7 @@ typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 
-// Group:Tensor
+// Group:GetIndicePairs
 /*!
  *  @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, pad,
  *  stride, dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape.
@@ -848,7 +848,7 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc);
 
-// Group:Tensor
+// Group:GetIndicePairs
 /*!
  * @brief Destroys a convolution descriptor \b desc that is previously created with the
  * ::mluOpCreateSparseConvolutionDescriptor function.
@@ -955,7 +955,7 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptor(
     mluOpTensorDescriptor_t desc, mluOpTensorLayout_t layout, mluOpDataType_t dtype, int dimNb, const int dimSize[]);
 
-// Group:tensor
+// Group:GetIndicePairs
 /*!
  * @brief Initializes the sparse convolution descriptor \b desc that is previously created
  * with the ::mluOpCreateSparseConvolutionDescriptor function, and sets the information
@@ -6509,7 +6509,7 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
                   const mluOpTensorDescriptor_t output_desc,
                   void *output);
 
-/// Group:indiceConvolution
+/// Group:GetIndicePairs
 /*!
  * @brief Computes the get_indice_paris operation, then returns the results in the output
  * tensor \b out_indices, \b indice_pairs and \b indice_num.
@@ -6562,10 +6562,11 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * - The input tensor and output tensor must meet the following requirements:
  *   - The \b indices must be two dimensions.
  *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to kernel size,
- *     the second dimension must be 2, and the last dimension must be the same as the number of 
+ *     the second dimension must be 2, and the last dimension must be the same as the number of
  *     product of the first n-1 dimensions of the input tensor in sparse convolution.
- *   - The \b out_indices should be 2 dimensions. The first dimension of \b out_indices is the number effective output point.
- *     and the second dimension of must product of the first n-1 dimensions of the input tensor in sparse convolution.
+ *   - The \b out_indices should be 2 dimensions. The first dimension of \b out_indices is the number effective
+ *     output point. and the second dimension of must product of the first n-1 dimensions of the input tensor
+ *     in sparse convolution.
  *   - The \b indice_num should be 1 dimensions. The first dimension of \b indice_num is the kernel size.
  *
  * @par API Dependency
@@ -6586,26 +6587,26 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetIndicePairs(mluOpHandle_t handle,
-                   const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
-                   const mluOpTensorDescriptor_t indices_desc,
-                   const void *indices,
-                   void *workspace,
-                   const size_t workspace_size,
-                   const mluOpTensorDescriptor_t indice_pairs_desc,
-                   void *indice_pairs,
-                   const mluOpTensorDescriptor_t out_indices_desc,
-                   void *out_indices,
-                   const mluOpTensorDescriptor_t indice_num_desc,
-                   void *indice_num);
+                    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+                    const mluOpTensorDescriptor_t indices_desc,
+                    const void *indices,
+                    void *workspace,
+                    const size_t workspace_size,
+                    const mluOpTensorDescriptor_t indice_pairs_desc,
+                    void *indice_pairs,
+                    const mluOpTensorDescriptor_t out_indices_desc,
+                    void *out_indices,
+                    const mluOpTensorDescriptor_t indice_num_desc,
+                    void *indice_num);
 
-// Group:indiceConvolution
+// Group:GetIndicePairs
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the get_indice_pairs operation.
  *
  * The size of extra workspace is based on the given information of the get_indice_pairs
  * operation, including the input tensor descriptor \b sparse_conv_desc, and \b indices_desc, output
- * tensor descriptor \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc. 
+ * tensor descriptor \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
@@ -6636,7 +6637,7 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  *   tensor descriptors \b indices_desc, \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc before
  *   calling this function.
  * - You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
- *   and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information for 
+ *   and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information for
  *   the descriptor \b sparse_conv_desc.
  * - The allocated extra workspace should be passed to the ::mluOpGetIndicePairs function to
  *   perform the ge_indice_pairs operation.
@@ -6652,12 +6653,12 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
-                                const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
-                                const mluOpTensorDescriptor_t indices_desc,
-                                const mluOpTensorDescriptor_t indice_pairs_desc,
-                                const mluOpTensorDescriptor_t out_indices_desc,
-                                const mluOpTensorDescriptor_t indice_num_desc,
-                                size_t *workspace_size);
+                                 const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+                                 const mluOpTensorDescriptor_t indices_desc,
+                                 const mluOpTensorDescriptor_t indice_pairs_desc,
+                                 const mluOpTensorDescriptor_t out_indices_desc,
+                                 const mluOpTensorDescriptor_t indice_num_desc,
+                                 size_t *workspace_size);
 
 // Group:Transpose
 /*!
@@ -7856,7 +7857,8 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * @param[out] input_grad
  * Pointer to the MLU memory that stores the \b output tensor.
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Formula
  * - None.
@@ -7899,7 +7901,12 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * - Each value in array \b indice_num should be no smaller than 0, no
  *   larger than the dims[0] of \b output_grad and no larger than the dims[2]
  *   of \b indice_pairs.
- * - The value of \b inverse and \b sub_m should be 0 or 1.
+ * - The value \b sub_m should be 0 or 1.
+ * - The value \b inverse should be 0.
+ * - When the value of \b sub_m is 1, the dims D, H and W corresponding to
+ *   filter layout should be odd numbers.
+ * - When the value of \b sub_m is 1, the dims[0] of \b input_grad and the dims[0] of \b output_grad
+ *   should be the same.
  *
  * @par API Dependency
  * - The function ::mluOpGetIndiceConvolutionBackwardDataWorkspaceSize should
@@ -7933,14 +7940,14 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
                                    const mluOpTensorDescriptor_t input_grad_desc,
                                    void *input_grad);
 
-// Group:indiceConvolution
+// Group:IndiceConvolutionBackwardFilter
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the indice_convolution_backward_filter operation.
  *
  * The size of extra workspace is based on the given information of the indice_convolution_backward_filter
- * operation, including the input tensor descriptor \b features_desc, \b output_grad_desc and \b indice_pairs_desc, output
- * tensor descriptor \b filters_grad_desc, and the array \b indice_num[]. 
+ * operation, including the input tensor descriptor \b features_desc, \b output_grad_desc and \b indice_pairs_desc,
+ * output tensor descriptor \b filters_grad_desc, and the array \b indice_num[].
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
@@ -7985,17 +7992,18 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
-                                                                                 const mluOpTensorDescriptor_t features_desc,
-                                                                                 const mluOpTensorDescriptor_t output_grad_desc,
-                                                                                 const mluOpTensorDescriptor_t indice_pairs_desc,
-                                                                                 const mluOpTensorDescriptor_t filters_grad_desc,
-                                                                                 const int64_t indice_num[],
-                                                                                 const int64_t inverse,
-                                                                                 const int64_t sub_m,
-                                                                                 size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
+                                                     const mluOpTensorDescriptor_t features_desc,
+                                                     const mluOpTensorDescriptor_t output_grad_desc,
+                                                     const mluOpTensorDescriptor_t indice_pairs_desc,
+                                                     const mluOpTensorDescriptor_t filters_grad_desc,
+                                                     const int64_t indice_num[],
+                                                     const int64_t inverse,
+                                                     const int64_t sub_m,
+                                                     size_t *workspace_size);
 
-// Group:indiceConvolution
+// Group:IndiceConvolutionBackwardFilter
 /*!
  * @brief Computes the indice_convolution_backward_filter operation, then returns the results in the output
  * tensor \b filters_grad.
@@ -8021,7 +8029,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize
  * @param[in] indice_num
  * Pointer to the host memory that stores the indice pairs num.
  * @param[in] inverse
- * Currently it is not supported and should be set to 0.
+ * Currently it is not supported and must be set to 0.
  * @param[in] sub_m
  * The sub_m mode of convolution if the value is not 0.
  * @param[in] workspace
@@ -8051,11 +8059,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize
  * @par Scale Limitation
  * - The input tensor and output tensor must meet the following requirements:
  *   - The \b features and \b output_grad must be two dimensions.
- *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to kernel size of \b filters_grad,
- *     the second dimension must be 2, and the last dimension must be the same as the number of \b features first dimension.
- *   - The \b filters_grad should be four or five dimensions. The last dimension of \b filters_grad must be the same as the last dimension of \b output_grad,
- *     and the penultimate dimension of \b filters_grad must be same as the last dimension of \b features.
- *   - The array length of indice_num must be the same as the first dimension of \b indice_pairs.
+ *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to the
+ *     kernel size of \b filters_grad, the second dimension must be 2, and the last dimension must be
+ *     equal to the number of \b features first dimension.
+ *   - The \b filters_grad must be four or five dimensions. The last dimension of \b filters_grad must
+ *     be euqal to the last dimension of \b output_grad, and the penultimate dimension of \b filters_grad
+ *     must be equal to the last dimension of \b features.
+ *   - The array length of indice_num must be euqal to the first dimension of \b indice_pairs.
  *
  * @par API Dependency
  * - Before calling this function to implement matrix multiplication, you need to prepare
@@ -8073,20 +8083,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
  */
-mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
-                                                                 const mluOpTensorDescriptor_t features_desc,
-                                                                 const void *features,
-                                                                 const mluOpTensorDescriptor_t output_grad_desc,
-                                                                 const void *output_grad,
-                                                                 const mluOpTensorDescriptor_t indice_pairs_desc,
-                                                                 const void *indice_pairs,
-                                                                 const int64_t indice_num[],
-                                                                 const int64_t inverse,
-                                                                 const int64_t sub_m,
-                                                                 void *workspace,
-                                                                 const size_t workspace_size,
-                                                                 const mluOpTensorDescriptor_t filters_grad_desc,
-                                                                 void *filters_grad);
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
+                                     const mluOpTensorDescriptor_t features_desc,
+                                     const void *features,
+                                     const mluOpTensorDescriptor_t output_grad_desc,
+                                     const void *output_grad,
+                                     const mluOpTensorDescriptor_t indice_pairs_desc,
+                                     const void *indice_pairs,
+                                     const int64_t indice_num[],
+                                     const int64_t inverse,
+                                     const int64_t sub_m,
+                                     void *workspace,
+                                     const size_t workspace_size,
+                                     const mluOpTensorDescriptor_t filters_grad_desc,
+                                     void *filters_grad);
 
 // Group:ThreeNNForward
 /*!

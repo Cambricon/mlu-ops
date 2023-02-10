@@ -65,8 +65,7 @@ static mluOpStatus_t foolCheckNoPtr(
                        filters_desc->dtype == MLUOP_DTYPE_HALF);
   PARAM_CHECK(api, input_grad_desc->dtype == MLUOP_DTYPE_FLOAT ||
                        input_grad_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(api,
-              indice_pairs_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(api, indice_pairs_desc->dtype == MLUOP_DTYPE_INT32);
 
   // check layout
   bool layout_check = filters_desc->layout == MLUOP_LAYOUT_NHWC ||
@@ -110,6 +109,10 @@ static mluOpStatus_t foolCheckNoPtr(
   for (int kk = 0; kk < K; ++kk) {
     PARAM_CHECK(api, indice_num[kk] >= 0);
   }
+  if (inverse == 1) {
+    LOG(ERROR) << api << " Not support inverse == 1 yet.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
 
   // check algorithm, relationship between params
   if (K != indice_pairs_desc->dims[0]) {
@@ -145,6 +148,14 @@ static mluOpStatus_t foolCheckNoPtr(
                << " The data in indice_num array should be smaller or equal to"
                << " the dims[2] of indice_pairs.";
     return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (sub_m == 1) {
+    if (input_grad_desc->dims[0] != output_grad_desc->dims[0]) {
+      LOG(ERROR) << api
+                 << " The dims[0] of input_grad should be equal to the dims[0]"
+                 << " of output_grad when sub_m is 1.";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
   }
 
   if (output_grad_desc->dims[0] < max_indice_num) {
@@ -378,9 +389,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
   }
   output_grad_condence_size = max_indice_num * output_grad_desc->dims[1] *
                               mluOpDataTypeBytes(filters_desc->dtype);
-  input_grad_condence_size =
-      max_indice_num * input_grad_desc->dims[1] *
-      mluOpDataTypeBytes(filters_desc->dtype);
+  input_grad_condence_size = max_indice_num * input_grad_desc->dims[1] *
+                             mluOpDataTypeBytes(filters_desc->dtype);
 
   // matmul workspace
   {
@@ -591,7 +601,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
   char *workspace_addn = NULL;
 
   // filters DHW dim loop
+  int kk_count = 0;
   for (int kk = 0; kk < K; ++kk) {
+    VLOG(5) << "indice_num " << indice_num[kk];
+    if (indice_num[kk] == 0) {
+      continue;
+    }
     const int int_dwidth = 4;
     char *sub_filter = filter_transpose + kk * dyc * dxc * cal_dwidth;
 
@@ -651,7 +666,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     float alpha_gemm = 1.0f, beta_gemm = 0.0f;
     MLUOP_CHECK(mluOpGetMatMulHeuristicResult(heuristic_result, matmul_algo,
                                               &workspace_size_matmul));
-    if (kk == 0) {
+    if (kk_count == 0) {
       workspace_matmul = workspace_size_matmul == 0
                              ? NULL
                              : reinterpret_cast<void *>(workspace_base);
@@ -672,7 +687,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     uint64_t input_grad_tmp_workspace_size =
         mluOpGetTensorElementNum(input_grad_desc) *
         mluOpDataTypeBytes(input_grad_desc->dtype);
-    if (kk == 0) {
+    if (kk_count == 0) {
       workspace_input_grad_tmp = workspace_base;
       workspace_base += input_grad_tmp_workspace_size;
     }
@@ -690,7 +705,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
         workspace_input_grad_tmp, input_grad_desc, workspace_input_grad_tmp));
 
     // add workspace_input_grad_tmp tensor back to input_grad
-    if (kk == 0) {
+    if (kk_count == 0) {
       workspace_addn = workspace_base;
     }
     mluOpTensorDescriptor_t addn_desc_array[2] = {input_grad_desc,
@@ -709,6 +724,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_grad_condence_desc));
     MLUOP_CHECK(mluOpDestroyTensorDescriptor(gather_indices_desc));
     MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_grad_condence_desc));
+    kk_count++;
   }
   MLUOP_CHECK(mluOpDestroyTensorDescriptor(sub_filters_desc));
   GEN_CASE_END();

@@ -395,7 +395,7 @@ mluOpDeformRoiPoolForward
 .. _indice_convolution_backward_filter:
 
 mluOpIndiceConvolutionBackwardFilter
-----------------------------------
+-------------------------------------------
 该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算权值的梯度。
 
 .. _three_nn_forward:

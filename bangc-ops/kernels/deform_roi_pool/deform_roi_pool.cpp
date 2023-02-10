@@ -111,11 +111,11 @@ static mluOpStatus_t DeformRoiPoolForwardPreCheck(
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);
   const size_t rois_element_num = mluOpGetTensorElementNum(rois_desc);
   const size_t output_element_num = mluOpGetTensorElementNum(output_desc);
-  TENSOR_NUM_CHECK("[mluOpDeformRoiPoolBackward]", input_element_num,
+  TENSOR_NUM_CHECK("[mluOpDeformRoiPoolForward]", input_element_num,
                    LARGE_TENSOR_NUM, "");
-  TENSOR_NUM_CHECK("[mluOpDeformRoiPoolBackward]", rois_element_num,
+  TENSOR_NUM_CHECK("[mluOpDeformRoiPoolForward]", rois_element_num,
                    LARGE_TENSOR_NUM, "");
-  TENSOR_NUM_CHECK("[mluOpDeformRoiPoolBackward]", output_element_num,
+  TENSOR_NUM_CHECK("[mluOpDeformRoiPoolForward]", output_element_num,
                    LARGE_TENSOR_NUM, "");
   return MLUOP_STATUS_SUCCESS;
 }
