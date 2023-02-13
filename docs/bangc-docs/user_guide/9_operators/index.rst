@@ -392,6 +392,12 @@ mluOpDeformRoiPoolForward
 
 其中 :math:`\triangle \hat p_{i,j}` 是通过全连接层获得的归一化偏移量；:math:`\triangle p_{i,j}` 是一个分数；:math:`\gamma` 是预先设定的标量。
 
+.. _indice_convolution_backward_data:
+
+mluOpIndiceConvolutionBackwardData
+-------------------------------------------
+该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算输入的梯度。
+
 .. _indice_convolution_backward_filter:
 
 mluOpIndiceConvolutionBackwardFilter
