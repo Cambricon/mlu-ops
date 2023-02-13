@@ -398,6 +398,12 @@ mluOpIndiceConvolutionBackwardFilter
 -------------------------------------------
 该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算权值的梯度。
 
+.. _indice_convolution_forward:
+
+mluOpIndiceConvolutionForward
+--------------------------------
+该算子对稀疏张量处理后的2维张量进行卷积操作，算子输出稀疏输入的卷积结果，结果也以2维张量形式给出。
+
 .. _three_nn_forward:
 
 mluOpThreeNNForward
