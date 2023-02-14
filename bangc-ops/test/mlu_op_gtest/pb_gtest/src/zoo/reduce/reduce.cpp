@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <vector>
+#include <set>
 #include <algorithm>
 #include <functional>
 #include "reduce.h"
@@ -527,7 +528,8 @@ void ReduceExecutor::reduceComputeValue(std::vector<int> input_dims,
           case MLUOP_REDUCE_NORM2: {
             float result = 0.0;
             for (int m = 0; m < mid; m++) {
-              result += powf(input_tmp[i * mid * right + m * right + j], (float)2.0);
+              result +=
+                  powf(input_tmp[i * mid * right + m * right + j], (float)2.0);
             }
             output_tmp[i * right + j] = sqrt(result);
             break;
@@ -536,7 +538,8 @@ void ReduceExecutor::reduceComputeValue(std::vector<int> input_dims,
             float result = 0.0;
             float p = parser_->getProtoNode()->reduce_param().p();
             for (int m = 0; m < mid; m++) {
-              float input_data = fabs(input_tmp[i * mid * right + m * right + j]);
+              float input_data =
+                  fabs(input_tmp[i * mid * right + m * right + j]);
               if (p == 0.0) {
                 result += input_data > 0 ? 1 : 0;
               } else {

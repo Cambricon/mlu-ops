@@ -107,13 +107,15 @@ void ScatterNdExecutor::diffPreprocess() {
     desc_output = tensor_desc_[3].tensor;
   }
   // indices_size
-  int indices_size = desc_indices->dims[desc_indices->dim - 1];  // inner_dim_size
+  int indices_size = desc_indices->dims[desc_indices->dim - 1];
+  // inner_dim_size
   int inner_dim_size = 1;
   for (int i = desc_indices->dim - 1; i < desc_updates->dim; ++i) {
     inner_dim_size *= desc_updates->dims[i];
   }
   //  // batch_strides
-  int batch_strides[8];  // max dims of a tensor
+  int batch_strides[8];
+  // max dims of a tensor
   for (int i = 0; i < 8; i++) {
     batch_strides[i] = 1;
   }
@@ -204,13 +206,15 @@ void ScatterNdExecutor::cpuCompute() {
     }
   }
   // indices_size
-  int indices_size = desc_indices->dims[desc_indices->dim - 1];  // inner_dim_size
+  int indices_size = desc_indices->dims[desc_indices->dim - 1];
+  // inner_dim_size
   int inner_dim_size = 1;
   for (int i = desc_indices->dim - 1; i < desc_updates->dim; ++i) {
     inner_dim_size *= desc_updates->dims[i];
   }
   //  // batch_strides
-  int batch_strides[8];  // max dims of a tensor
+  int batch_strides[8];
+  // max dims of a tensor
   for (int i = 0; i < 8; i++) {
     batch_strides[i] = 1;
   }
@@ -228,7 +232,7 @@ void ScatterNdExecutor::cpuCompute() {
         invalid_index = true;
         break;
       }
-      offset += (int32_t)(cpu_fp32_input_[0][i * indices_size + j]) * batch_strides[j];
+      offset += (int32_t)(cpu_fp32_input_[0][i * indices_size + j]) * batch_strides[j];  // NOLINT
     }
     if (invalid_index) {
       continue;
@@ -236,14 +240,16 @@ void ScatterNdExecutor::cpuCompute() {
     for (int k = 0; k < inner_dim_size; k++) {
       switch (mode) {
         case SCATTERND_ADD:
-          cpu_fp32_output_[0][offset + k] += cpu_fp32_input_[1][i * inner_dim_size + k];
+          cpu_fp32_output_[0][offset + k] +=
+              cpu_fp32_input_[1][i * inner_dim_size + k];
           break;
         case SCATTERND_SUB:
           break;
         case SCATTERND_MUL:
           break;
         case SCATTERND_UPDATE:
-          cpu_fp32_output_[0][offset + k] = cpu_fp32_input_[1][i * inner_dim_size + k];
+          cpu_fp32_output_[0][offset + k] =
+              cpu_fp32_input_[1][i * inner_dim_size + k];
           break;
         default:
           LOG(ERROR) << "scatter_nd not support mode. ";
@@ -255,7 +261,8 @@ void ScatterNdExecutor::cpuCompute() {
 
 int64_t ScatterNdExecutor::getTheoryOps() {
   int64_t theory_ops = 0;
-  baselineOutputMalloc();  auto output_count = parser_->getOutputDataCount(0);
+  baselineOutputMalloc();
+  auto output_count = parser_->getOutputDataCount(0);
   auto input_count = parser_->getInputDataCount(1);
   auto desc_indices = tensor_desc_[0].tensor;
   auto desc_updates = tensor_desc_[1].tensor;
@@ -268,9 +275,11 @@ int64_t ScatterNdExecutor::getTheoryOps() {
   if (device == Device::GPU) {
     auto indices_dtype = desc_indices->dtype;
     int indices_num = parser_-> getInputDataCount(0);
-    float *indices_host = (float *)cpu_runtime_.allocate(indices_num * sizeof(float));
-    castDataOut(data_vector_[0].host_ptr, indices_dtype, (float *)indices_host, MLUOP_DTYPE_FLOAT,
-        indices_num, NO_QUANT, 0, 1, 0);
+    float *indices_host =
+        (float *)cpu_runtime_.allocate(indices_num * sizeof(float));
+    castDataOut(data_vector_[0].host_ptr, indices_dtype,
+                (float *)indices_host, MLUOP_DTYPE_FLOAT,
+                indices_num, NO_QUANT, 0, 1, 0);
     fp32_input = indices_host;
   } else {
     fp32_input = cpu_fp32_input_[0];
@@ -278,13 +287,15 @@ int64_t ScatterNdExecutor::getTheoryOps() {
     cpu_fp32_output_[0][i] = 0;
   }
   // indices_size
-  int indices_size = desc_indices->dims[desc_indices->dim - 1];  // inner_dim_size
+  int indices_size = desc_indices->dims[desc_indices->dim - 1];
+  // inner_dim_size
   int inner_dim_size = 1;
   for (int i = desc_indices->dim - 1; i < desc_updates->dim; ++i) {
     inner_dim_size *= desc_updates->dims[i];
   }
   //  // batch_strides
-  int batch_strides[8];  // max dims of a tensor
+  int batch_strides[8];
+  // max dims of a tensor
   for (int i = 0; i < 8; i++) {
     batch_strides[i] = 1;
   }
@@ -343,14 +354,18 @@ int64_t ScatterNdExecutor::getTheoryIoSize() {
   if (device == Device::GPU) {
     auto indices_dtype = desc_indices->dtype;
     int indices_num = parser_-> getInputDataCount(0);
-    float *indices_host = (float *)cpu_runtime_.allocate(indices_num * sizeof(float));
-    castDataOut(data_vector_[0].host_ptr, indices_dtype, (float *)indices_host, MLUOP_DTYPE_FLOAT,
-        indices_num, NO_QUANT, 0, 1, 0);
+    float *indices_host =
+        (float *)cpu_runtime_.allocate(indices_num * sizeof(float));
+    castDataOut(data_vector_[0].host_ptr, indices_dtype,
+                (float *)indices_host, MLUOP_DTYPE_FLOAT,
+                indices_num, NO_QUANT, 0, 1, 0);
     fp32_input = indices_host;
   } else {
     fp32_input = cpu_fp32_input_[0];
-  }  // indices_size
-  int indices_size = desc_indices->dims[desc_indices->dim - 1];  // inner_dim_size
+  }
+  // indices_size
+  int indices_size = desc_indices->dims[desc_indices->dim - 1];
+  // inner_dim_size
   int inner_dim_size = 1;
   for (int i = desc_indices->dim - 1; i < desc_updates->dim; ++i) {
     inner_dim_size *= desc_updates->dims[i];
@@ -370,9 +385,12 @@ int64_t ScatterNdExecutor::getTheoryIoSize() {
       continue;
     }
     theory_io_size += inner_dim_size;
-  }  theory_io_size = index_count + theory_io_size + input_count_ + output_count;
-  theory_io_size = theory_io_size * mluop::getSizeOfDataType(desc_updates -> dtype);
-  VLOG(4) << "scatter_nd Executor: getTheoryIOs: " << theory_io_size  << " bytes";
+  }
+  theory_io_size = index_count + theory_io_size + input_count_ + output_count;
+  theory_io_size =
+      theory_io_size * mluop::getSizeOfDataType(desc_updates -> dtype);
+  VLOG(4) << "scatter_nd Executor: getTheoryIOs: "
+          << theory_io_size  << " bytes";
   if (device == Device::GPU) {
     cpu_runtime_.deallocate(fp32_input);
   }

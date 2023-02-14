@@ -23,12 +23,14 @@
 #ifndef TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_REDUCE_REDUCE_H_
 #define TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_REDUCE_REDUCE_H_
 #include <vector>
+#include <set>
 #include "executor.h"
 namespace mluoptest {
 class ReduceExecutor : public Executor {
  private:
   size_t workspace_size_ = 0;
   void* workspace_ptr = nullptr;
+
  public:
   ReduceExecutor() {}
   ~ReduceExecutor() {}

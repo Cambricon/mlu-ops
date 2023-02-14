@@ -23,6 +23,7 @@
 #ifndef TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_SCATTER_ND_SCATTER_ND_H_
 #define TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_SCATTER_ND_SCATTER_ND_H_
 #include <vector>
+#include <set>
 #include "executor.h"
 namespace mluoptest {
 class ScatterNdExecutor : public Executor {

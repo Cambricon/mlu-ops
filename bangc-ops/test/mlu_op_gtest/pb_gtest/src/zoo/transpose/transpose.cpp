@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include <vector>
 #include "transpose.h"
 #include "kernels/kernel_wrapper/export_statement.h"
 #define TRANSPOSE_MAX_DIM (8)
@@ -41,7 +42,7 @@ static void transposeCpuNd(const int loop_d,
   for (int loop_t = 0; loop_t < loop_d; loop_t++) {
     T *output = (T *)(y + sum * loop_t);
     T *input = (T *)(x + sum * loop_t);
-    uint64_t in_index = 0, out_index = 0;    for (dim[0] = 0; dim[0] < DIM[0]; dim[0]++) {
+    uint64_t in_index = 0, out_index = 0;    for (dim[0] = 0; dim[0] < DIM[0]; dim[0]++) {  // NOLINT
       for (dim[1] = 0; dim[1] < DIM[1]; dim[1]++) {
         for (dim[2] = 0; dim[2] < DIM[2]; dim[2]++) {
           for (dim[3] = 0; dim[3] < DIM[3]; dim[3]++) {
@@ -50,22 +51,22 @@ static void transposeCpuNd(const int loop_d,
                 for (dim[6] = 0; dim[6] < DIM[6]; dim[6]++) {
                   for (dim[7] = 0; dim[7] < DIM[7]; dim[7]++) {
                     in_index =
-                        dim[0] * DIM[1] * DIM[2] * DIM[3] * DIM[4] * DIM[5] * DIM[6] * DIM[7] +
-                        dim[1] * DIM[2] * DIM[3] * DIM[4] * DIM[5] * DIM[6] * DIM[7] +
+                        dim[0] * DIM[1] * DIM[2] * DIM[3] * DIM[4] * DIM[5] * DIM[6] * DIM[7] +  // NOLINT
+                        dim[1] * DIM[2] * DIM[3] * DIM[4] * DIM[5] * DIM[6] * DIM[7] +  // NOLINT
                         dim[2] * DIM[3] * DIM[4] * DIM[5] * DIM[6] * DIM[7] +
                         dim[3] * DIM[4] * DIM[5] * DIM[6] * DIM[7] +
-                        dim[4] * DIM[5] * DIM[6] * DIM[7] + dim[5] * DIM[6] * DIM[7] +
+                        dim[4] * DIM[5] * DIM[6] * DIM[7] + dim[5] * DIM[6] * DIM[7] +  // NOLINT
                         dim[6] * DIM[7] + dim[7];
                     out_index =
-                        dim[permute[0]] * DIM[permute[1]] * DIM[permute[2]] * DIM[permute[3]] *
-                            DIM[permute[4]] * DIM[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +
-                        dim[permute[1]] * DIM[permute[2]] * DIM[permute[3]] * DIM[permute[4]] *
-                            DIM[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +
-                        dim[permute[2]] * DIM[permute[3]] * DIM[permute[4]] * DIM[permute[5]] *
+                        dim[permute[0]] * DIM[permute[1]] * DIM[permute[2]] * DIM[permute[3]] *  // NOLINT
+                            DIM[permute[4]] * DIM[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +  // NOLINT
+                        dim[permute[1]] * DIM[permute[2]] * DIM[permute[3]] * DIM[permute[4]] *  // NOLINT
+                            DIM[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +  // NOLINT
+                        dim[permute[2]] * DIM[permute[3]] * DIM[permute[4]] * DIM[permute[5]] *  // NOLINT
                             DIM[permute[6]] * DIM[permute[7]] +
-                        dim[permute[3]] * DIM[permute[4]] * DIM[permute[5]] * DIM[permute[6]] *
+                        dim[permute[3]] * DIM[permute[4]] * DIM[permute[5]] * DIM[permute[6]] *  // NOLINT
                             DIM[permute[7]] +
-                        dim[permute[4]] * DIM[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +
+                        dim[permute[4]] * DIM[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +  // NOLINT
                         dim[permute[5]] * DIM[permute[6]] * DIM[permute[7]] +
                         dim[permute[6]] * DIM[permute[7]] + dim[permute[7]];
                     output[out_index] = input[in_index];
@@ -98,7 +99,8 @@ mluOpStatus_t mluOpTransposeCpu(const mluOpTransposeDescriptor_t desc,
   // 8 is used to match TRANSPOSE_MAX_DIM, which can make the loop below
   // applies to all-dims transpose, from 2D transpose to 8D transpose
   // if you change macro TRANSPOSE_MAX_DIM, the inited value(8) should alse be
-  // changed to TRANSPOSE_MAX_DIM. And the loop level should be equal to TRANSPOSE_MAX_DIM
+  // changed to TRANSPOSE_MAX_DIM. And the loop level should be equal to
+  // TRANSPOSE_MAX_DIM
   uint64_t permute[TRANSPOSE_MAX_DIM] = {8, 8, 8, 8, 8, 8, 8, 8};
   uint64_t DIM[TRANSPOSE_MAX_DIM + 1] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
   uint64_t dim[TRANSPOSE_MAX_DIM + 1] = {0};
@@ -125,7 +127,8 @@ mluOpStatus_t mluOpTransposeCpu(const mluOpTransposeDescriptor_t desc,
 void TransposeExecutor::paramCheck() {
   if (parser_->getInputNum() != 1) {
     LOG(ERROR) << "transpose input number is wrong. ";
-  }  if (parser_->getOutputNum() != 1) {
+  }
+  if (parser_->getOutputNum() != 1) {
     LOG(ERROR) << "transpose output number is wrong. ";
   }
   flag_quant_mode_ = NO_QUANT;
@@ -139,7 +142,8 @@ void TransposeExecutor::compute() {
   auto x_ptr = data_vector_[0].device_ptr;
   // data_vector_[1].device_ptr = data_vector_[0].device_ptr;
   auto y_ptr = data_vector_[1].device_ptr;
-  VLOG(4) << "call mluOpTranspose()";  int permute[8];
+  VLOG(4) << "call mluOpTranspose()";
+  int permute[8];
   for (int i = 0; i < d; i++) {
     permute[i] = parser_->getProtoNode()->transpose_param().permute(i);
   }  mluOpTransposeDescriptor_t trans_desc = nullptr;

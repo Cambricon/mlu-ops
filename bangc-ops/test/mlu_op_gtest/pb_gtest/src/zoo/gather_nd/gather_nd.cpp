@@ -179,4 +179,5 @@ int64_t GatherNdExecutor::getTheoryIoSize() {
     cpu_runtime_.deallocate(indices_ptr);
   }
   return theory_ios;
-}}  // namespace mluoptest
+}
+}  // namespace mluoptest

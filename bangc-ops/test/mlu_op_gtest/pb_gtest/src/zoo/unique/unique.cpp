@@ -301,7 +301,8 @@ void UniqueExecutor::workspaceMalloc() {
       cpu_runtime_.allocate(mluOpCreateUniqueDescriptor,
                             mluOpDestroyUniqueDescriptor);
   MLUOP_CHECK(mluOpSetUniqueDescriptor(unique_desc, mode_, dim_,
-                                       return_inverse_, return_counts_));  // allocate extra space for tmp.
+                                       return_inverse_, return_counts_));
+  // allocate extra space for tmp.
   if (version_ == 1) {
     MLUOP_CHECK(mluOpGetUniqueWorkSpace(handle_, unique_desc, tensor_input,
                                         &workspace_size_));
@@ -327,4 +328,5 @@ int64_t UniqueExecutor::getTheoryOps() {
   int64_t theory_ops = parser_->getOutputDataCount(0);
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
-}}  // namespace mluoptest
+}
+}  // namespace mluoptest

@@ -27,6 +27,7 @@ namespace mluoptest {
 class TransposeExecutor : public Executor {
  private:
   size_t size_workspace_ = 0;
+
  public:
   TransposeExecutor() {}
   ~TransposeExecutor() {}  void paramCheck();

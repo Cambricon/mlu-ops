@@ -22,8 +22,7 @@
  *************************************************************************/
 #include <vector>
 #include "add_n.h"
-namespace mluoptest 
-{
+namespace mluoptest {
 bool AddNExecutor::canBroadCast(std::vector<int> shape0,
                                 std::vector<int> shape1) {
   int ndim = shape1.size();
@@ -72,7 +71,8 @@ void AddNExecutor::compute() {
   interface_timer_.start();
   MLUOP_CHECK(mluOpAddN_v2(handle_, inputs_desc, inputs, num, c_desc,
                            c, workspace, workspace_size));
-  interface_timer_.stop();  data_vector_[num].is_output = true;
+  interface_timer_.stop();
+  data_vector_[num].is_output = true;
 }
 
 void AddNExecutor::cpuCompute() {
@@ -153,7 +153,8 @@ void AddNExecutor::workspaceMalloc() {
     inputs[i] = data_vector_[i].device_ptr;
   }
   auto c_desc = tensor_desc_[num].tensor;
-  auto c = data_vector_[num].device_ptr;  void *workspace = NULL;
+  auto c = data_vector_[num].device_ptr;
+  void *workspace = NULL;
   MLUOP_CHECK(mluOpGetAddNWorkspaceSize(handle_, inputs_desc, num,
                                         c_desc, &workspace_size));
   if (workspace_size != 0) {
