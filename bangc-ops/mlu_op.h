@@ -24,8 +24,8 @@
 #define MLUOP_EXAMPLE_H_
 
 #define MLUOP_MAJOR 0
-#define MLUOP_MINOR 4
-#define MLUOP_PATCHLEVEL 1
+#define MLUOP_MINOR 5
+#define MLUOP_PATCHLEVEL 0
 
 #include <stdint.h>
 
@@ -8562,7 +8562,7 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
                     const mluOpTensorDescriptor_t idx_desc,
                     void *idx);
 
-// Group:indiceConvolutionForward
+// Group:IndiceConvolutionForward
 /*!
  * @brief Returns in \b workspace_size of the MLU memory which is used as an extra workspace
  * to boost up indice_convolution_forward computation.
@@ -8630,7 +8630,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
                                               const int64_t sub_m,
                                               size_t *workspace_size);
 
-// Group:indiceConvolutionForward
+// Group:IndiceConvolutionForward
 /*!
  * @bried Performs convolution on input sparse tensor \b features with kernel \b filters,
  * then returns the output sparse tensor \b features_out.

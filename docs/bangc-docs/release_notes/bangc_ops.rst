@@ -20,6 +20,8 @@
     +----------------------------+-----------------------------+
     | Cambricon BANGC OPS 版本   | 依赖组件版本                |
     +============================+=============================+
+    | Cambricon BANGC OPS v0.5.z | CNToolkit >= v3.3.0         |
+    +----------------------------+-----------------------------+
     | Cambricon BANGC OPS v0.4.z | CNToolkit >= v3.2.0         |
     +----------------------------+-----------------------------+
     | Cambricon BANGC OPS v0.3.z | CNToolkit >= v3.1.2         |
@@ -38,6 +40,8 @@
     +----------------------------+------------------------+--------------------------------+
     | Cambricon BANGC OPS 版本   | 支持的CPU架构          | 支持的MLU架构                  |
     +============================+========================+================================+
+    | Cambricon BANGC OPS v0.5.z | x86_64                 | MLU370、MLU590                 |
+    +----------------------------+------------------------+--------------------------------+
     | Cambricon BANGC OPS v0.4.z | x86_64                 | MLU290、MLU370、MLU590         |
     +----------------------------+------------------------+--------------------------------+
     | Cambricon BANGC OPS v0.3.z | x86_64                 | MLU270、MLU290、MLU370         |
@@ -46,6 +50,64 @@
     +----------------------------+------------------------+--------------------------------+
     | Cambricon BANGC OPS v0.2.z | x86_64                 | MLU270、MLU290、MLU370         |
     +----------------------------+------------------------+--------------------------------+
+
+v0.5.0
+-----------------
+
+特性变更
+~~~~~~~~~~~~~~~~~~~~~~
+
+-  不再支持MLU290。
+-  新增支持以下算子：
+
+   * ``active_rotated_filter_forward``
+
+   * ``bbox_overlaps``
+
+   * ``box_iou_rotated``
+
+   * ``carafe_backward``
+
+   * ``carafe_forward``
+
+   * ``deform_roi_pool_backward``
+
+   * ``deform_roi_pool_forward``
+
+   * ``get_indice_pairs``
+
+   * ``indice_convolution_backward_data``
+
+   * ``indice_convolution_backward_filter``
+
+   * ``indice_convolution_forward``
+
+   * ``roi_align_rotated_backward``
+
+   * ``roi_align_rotated_forward``
+
+   * ``roi_aware_pool3d_backward``
+
+   * ``roi_aware_pool3d_forward``
+
+   * ``rotated_feature_align_backward``
+
+   * ``rotated_feature_align_forward``
+
+   * ``three_interpolate_backward``
+
+   * ``three_nn_forward``
+
+已修复问题
+~~~~~~~~~~~~~~~~~~~~~~
+
+无。
+
+已知遗留问题
+~~~~~~~~~~~~~~~~~~~~~~
+
+无。
+
 
 
 v0.4.1
