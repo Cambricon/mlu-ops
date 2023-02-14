@@ -1,0 +1,69 @@
+op_name: "add_n"
+op_type: "ADDN"
+input {
+  id: "input1"
+  shape: {
+    dims: 10
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 10
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 10
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 10
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 100
+    lower_bound: -100
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 10
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 10
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+addn_param: {
+  num: 2
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

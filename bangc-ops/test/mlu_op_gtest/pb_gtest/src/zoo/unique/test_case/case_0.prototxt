@@ -1,0 +1,47 @@
+op_name: "unique"
+op_type: "UNIQUE"
+input {
+  id: "input"
+  shape: {
+    dims: 1321
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 1
+    upper_bound: 321
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output_len"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output_data"
+  shape: {
+    dims: 1321
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "output_index"
+  shape: {
+    dims: 1321
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0
+  error_threshold: 0
+  baseline_device: CPU
+}

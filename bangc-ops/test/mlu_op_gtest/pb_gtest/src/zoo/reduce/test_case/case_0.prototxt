@@ -1,0 +1,36 @@
+op_name: "reduce"
+op_type: "REDUCE"
+input {
+  id: "input1"
+  shape: {
+    dims: 234
+    dims: 12256
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}output {
+  id: "output1"
+  shape: {
+    dims: 234
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}reduce_param: {
+  axises: 1
+  mode: REDUCE_TENSOR_ADD 
+  is_indices: REDUCE_TENSOR_NO_INDICES
+  indices_type: BIT32_INDICES
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

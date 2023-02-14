@@ -205,7 +205,12 @@ message Node {
 
   extensions 3000 to 4000;
 
+  optional AddNParam   addn_param                               = 104;    // param
+  optional TransposeParam transpose_param                       = 62;     // param
+  optional ScatterNdParam scatter_nd_param                      = 117;    // param
+  optional UniqueParam unique_param                             = 9111;   // param
   optional DivParam    div_param                                = 4001;   // param
+  optional ReduceParam reduce_param                             = 85;     // param
   optional LogParam    log_param                                = 4002;   // param
   optional SqrtParam   sqrt_param                               = 4003;   // param
   optional PsRoiPoolForwardParam psroipool_forward_param        = 4004;   // param
@@ -314,6 +319,88 @@ enum mluOpLogBase {
   MLUOP_LOG_E  = 0; /**< base is e*/
   MLUOP_LOG_2  = 1; /**< base is 2*/
   MLUOP_LOG_10 = 2; /**< base is 10*/
+}
+
+enum ReduceTensorOp{
+  REDUCE_TENSOR_ADD = 0;
+  REDUCE_TENSOR_AVG = 1;
+  REDUCE_TENSOR_MUL = 2;
+  REDUCE_TENSOR_MAX = 3;
+  REDUCE_TENSOR_MIN = 4;
+  REDUCE_TENSOR_AND = 5;
+  REDUCE_TENSOR_OR = 6;
+  REDUCE_TENSOR_NORM1 = 7;
+  REDUCE_TENSOR_NORM2 = 8;
+  REDUCE_TENSOR_MAX_LAST_INDEX = 9;
+  REDUCE_TENSOR_MIN_LAST_INDEX = 10;
+  REDUCE_TENSOR_NORMP = 11;
+  REDUCE_TENSOR_ASUM = 12;
+  REDUCE_TENSOR_SUMSQ = 13;
+}
+
+enum ReduceTensorIndices{
+  REDUCE_TENSOR_NO_INDICES        = 0;
+  REDUCE_TENSOR_FLATTENED_INDICES = 1;
+  REDUCE_TENSOR_ONLY_INDICES      = 2;
+}
+
+enum NanPropagation {
+  NOT_PROPAGATE_NAN = 0;
+  PROPAGATE_NAN     = 1;
+}
+
+enum IndicesType{
+  BIT32_INDICES = 0;
+  BIT16_INDICES = 1;
+}
+
+message ReduceParam {
+  optional int32 axis          = 1 [default = 0];
+  required ReduceTensorOp mode = 2 [default = REDUCE_TENSOR_MUL];
+  optional ReduceTensorIndices is_indices = 3 [default = REDUCE_TENSOR_NO_INDICES];
+  optional IndicesType indices_type       = 4 [default = BIT32_INDICES];
+  repeated int32 axises                   = 5;
+  optional DataType compute_dtype         = 6 [default = DTYPE_FLOAT];
+  optional bool keep_dims = 7 [default = false];
+  optional float p = 8 [default = 1.0];
+  optional float alpha = 9 [default = 1.0];
+  optional float beta = 10 [default = 0.0];
+  optional NanPropagation nan_prop = 11 [default = NOT_PROPAGATE_NAN];
+}
+
+enum ScatterNdMode {
+  SCATTERND_ADD = 0;
+  SCATTERND_SUB = 1;
+  SCATTERND_MUL = 2;
+  SCATTERND_UPDATE = 3;
+}
+
+message AddNParam {
+  required int32 num = 1;
+}
+
+message TransposeParam {
+  required int32 dim     = 1;
+  repeated int32 permute = 2;
+}
+
+message ScatterNdParam {
+  optional int32 version = 1 [default = 1];
+  optional ScatterNdMode mode = 2 [default = SCATTERND_ADD];
+}
+
+enum UniqueSort {
+  UNIQUE_UNSORT_FORWARD = 0;
+  UNIQUE_SORT_ASCEND = 1;
+  UNIQUE_UNSORT_REVERSE = 2;
+}
+
+message UniqueParam {
+  required UniqueSort mode = 1 [default = UNIQUE_UNSORT_FORWARD];
+  optional int32 dim = 2 [default = 0];
+  optional bool return_inverse = 3 [default = false];
+  optional bool return_counts = 4 [default = false];
+  optional int32 version = 5 [default = 1];
 }
 
 // param to call mluOpLog()

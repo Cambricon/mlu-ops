@@ -1,0 +1,77 @@
+op_name: "unique"
+op_type: "UNIQUE"
+input {
+  id: "input"
+  shape: {
+    dims: 20
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+  value_f: 2.0
+  value_f: 2.0
+  value_f: 3.0
+  value_f: 4.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 4.0
+  value_f: 1.0
+  value_f: 0.0
+  value_f: 2.0
+  value_f: 4.0
+  value_f: 6.0
+  value_f: 8.0
+  value_f: 10.0
+  value_f: 13.0
+  value_f: 15.0
+  value_f: 16.0
+  value_f: 17.0
+  value_f: 20.0
+}
+output {
+  id: "output_len"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  position: 0
+  scale: 1
+  offset: 0
+}
+output {
+  id: "output_data"
+  shape: {
+    dims: 20
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  position: 0
+  scale: 1
+  offset: 0
+}
+output {
+  id: "output_index"
+  shape: {
+    dims: 20
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  position: 0
+  scale: 1
+  offset: 0
+}
+unique_param {
+  mode: 0
+  dim: 0
+  return_inverse: 0
+  return_counts: 0
+}
+test_param {
+  error_func: DIFF3
+  error_threshold: 0
+  baseline_device: CPU
+}
