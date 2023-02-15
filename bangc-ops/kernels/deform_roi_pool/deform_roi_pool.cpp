@@ -300,7 +300,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
   }
   if (input_desc->dims[0] == 0 || mluOpGetTensorElementNum(rois_desc) == 0 ||
       mluOpGetTensorElementNum(output_desc) == 0) {
-    VLOG(5) << "[mluOpDeformRoiPoolForward] Zero element tensor failure";
+    LOG(ERROR) << "[mluOpDeformRoiPoolForward] Zero element tensor failure";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0 ||
@@ -395,7 +395,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
 
   if (mluOpGetTensorElementNum(grad_output_desc) == 0 ||
       input_desc->dims[0] == 0 || mluOpGetTensorElementNum(rois_desc) == 0) {
-    VLOG(5) << "[mluOpDeformRoiPoolBackward] Zero element tensor failure";
+    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] Zero element tensor failure";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0) {
