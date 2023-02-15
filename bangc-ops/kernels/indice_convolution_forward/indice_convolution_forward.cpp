@@ -382,8 +382,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionForwardWorkspaceSize(
 
   // foolproof check
   auto fool_proof = foolProof(api_name, handle, features_desc, filters_desc,
-                              indice_pairs_desc, indice_num, num_act_out, sub_m,
-                              inverse, features_out_desc);
+                              indice_pairs_desc, indice_num, num_act_out,
+                              inverse, sub_m, features_out_desc);
   if (fool_proof != MLUOP_STATUS_SUCCESS) {
     return fool_proof;
   }

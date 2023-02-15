@@ -35,6 +35,8 @@ void IndiceConvolutionForwardExecutor::paramInit() {
     indice_num_.push_back(op_param.indice_num(i));
   }
   num_active_out_ = (int64_t)op_param.num_active_out();
+  sub_m_ = (int64_t)op_param.sub_m();
+  inverse_ = (int64_t)op_param.inverse();
 }
 
 void IndiceConvolutionForwardExecutor::paramCheck() {
