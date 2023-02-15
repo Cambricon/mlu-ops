@@ -1050,7 +1050,7 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
                                     const int dilation[],
                                     const int input_space[],
                                     const int filter_space[],
-                                    const int output_spcae[],
+                                    const int output_space[],
                                     const int subm,
                                     const int transpose,
                                     const int inverse);

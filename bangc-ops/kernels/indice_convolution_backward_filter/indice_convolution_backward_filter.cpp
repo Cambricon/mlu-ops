@@ -454,6 +454,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(
     const int64_t inverse, const int64_t subm, size_t *size) {
   const std::string api_name =
       "[mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize]";
+  PARAM_CHECK(api_name, size != nullptr);
   auto basic_check =
       baseParamCheck(api_name, handle, features_desc, output_grad_desc,
                      indice_pairs_desc, filters_grad_desc, indice_num);

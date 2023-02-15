@@ -599,7 +599,8 @@ func: balance index distribution
 mluOpStatus_t launchBalanceKernel(
     mluOpHandle_t handle, const std::string interface_name,
     void *balance_input_addr, void *balance_output_addr,
-    void *balance_mask_addr, int input_active_site, int kernel_volume) {
+    void *balance_mask_addr, int input_active_site, int kernel_volume,
+    int output_size) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -620,7 +621,8 @@ mluOpStatus_t launchBalanceKernel(
           << kDim3.z << ">>>";
   KERNEL_CHECK((mluOpBlockBalanceGetIndicePairKernel(
       kDim3, func_type, handle->queue, balance_input_addr, balance_mask_addr,
-      balance_output_addr, input_active_site, kernel_volume, core_num_l)));
+      balance_output_addr, input_active_site, kernel_volume, core_num_l,
+      output_size)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -1136,11 +1138,10 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     balance_output_addr = out_indices_expand_ptr;
     balance_mask_addr = mask_all_ptr;
     INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchBalanceKernel(handle, interface_name, balance_input_addr,
-                                balance_output_addr, balance_mask_addr,
-                                input_active_site, kernel_volume));
+        interface_name, MLUOP_STATUS_SUCCESS ==
+        launchBalanceKernel(handle, interface_name, balance_input_addr,
+                            balance_output_addr, balance_mask_addr,
+                            input_active_site, kernel_volume, output_size));
 
     // call scatter_nd unique_output_addr + step_index_addr = grid_out_addr
     void *scatter_input_addr = NULL, *scatter_output_addr = NULL,

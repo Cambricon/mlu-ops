@@ -190,7 +190,8 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
 
 __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
     void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l) {
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size) {
 #if __BANG_ARCH__ >= 370
   int32_t len_job, offset_job = 0;
   assignTask(len_l * kernel_volume, taskIdY, taskDimY, offset_job, len_job);
@@ -203,7 +204,8 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
   int32_t *nram_output = (int32_t *)nbuf_total + 3 * core_num_l;
   int32_t ping_pong_num = 3 * core_num_l;
   int32_t *nram_aux = (int32_t *)nbuf_total + 7 * core_num_l;
-  stepIndex(nram_random_num, taskId * core_num_l, core_num_l);
+  int32_t  multi_max = output_size / taskDimY;
+  stepIndex(nram_random_num, taskId * multi_max, core_num_l);
   for (int i = 0; i < repeat + 2; ++i) {
     if (i < repeat) {
       int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
@@ -535,10 +537,11 @@ void  mluOpBlockDefaultGetIndicePairKernel4(
 void  mluOpBlockBalanceGetIndicePairKernel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l) {
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size) {
   MLUBlockBalanceGetIndicePairKernel<<<k_dim, k_type, queue>>>(
       balance_input, balance_mask, balance_output, len_l, kernel_volume,
-      core_num_l);
+      core_num_l, output_size);
 }
 
 void  mluOpBlockSubmGetIndicePairKernel1(
