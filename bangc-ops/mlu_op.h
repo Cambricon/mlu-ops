@@ -8231,14 +8231,14 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * - The \b indice_pairs is 3D array.
  * - The \b filter is 4D or 5D tensor.
  * - The dims[1] of \b indice_pairs should be equal to 2.
- * - When \b filter is a 4D tensor, the dims[0] of \b indice_pairs should be
+ * - When the \b filter is a 4D tensor, the dims[0] of \b indice_pairs should be
  *   equal to H * W corresponding to filter layout.
- * - When \b filter is a 5D tensor, the dims[0] of \b indice_pairs should be
+ * - When the \b filter is a 5D tensor, the dims[0] of \b indice_pairs should be
  *   equal to D * H * W corresponding to filter layout.
  * - The dims[1] of \b output_grad should be equal to N corresponding to filter layout.
  * - The dims[1] of \b input_grad should be equal to C corresponding to filter layout.
  * - The dims[0] of \b input_grad should be equal to the dims[2] of \b indice_pairs.
- * - Each value in array \b indice_num should be no smaller than 0, no
+ * - Each value in the array \b indice_num should be no smaller than 0, no
  *   larger than the dims[0] of \b output_grad and no larger than the dims[2]
  *   of \b indice_pairs.
  * - The value \b sub_m should be 0 or 1.
@@ -8253,7 +8253,14 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  *   be called to get the extra space size before this function is called.
  *
  * @note
- * - None.
+ * - When the \b filter is a 5D tensor, the layout MLUOP_LAYOUT_ARRAY represents
+ *   the data layout of (D, H, W, C, N).
+ * - The length of the array \b indice_num should be equal to the dims[0] of \b indice_pairs.
+ * - The data values of \b indice_pairs should be no smaller than 0.
+ * - The data values of tensor slices indice_pairs[:,0,:] should be no larger
+ *   than the dims[0] of \b input_grad.
+ * - The data values of tensor slices indice_pairs[:,1,:] should be no larger
+ *   than the dims[0] of \b output_grad.
  *
  * @par Requirements
  * - None.
