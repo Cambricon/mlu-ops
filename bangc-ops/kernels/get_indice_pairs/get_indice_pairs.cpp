@@ -41,10 +41,10 @@ static void getIndicePairsGencase(
     const mluOpTensorDescriptor_t indice_num_desc, void *indice_num) {
   GEN_CASE_START("get_indice_pairs");
   GEN_CASE_HANDLE(handle);
-  GEN_CASE_DATA(true, "indices", indices, indices_desc, 1, 100);
-  GEN_CASE_DATA(false, "indice_pairs", indice_pairs, indice_pairs_desc, 0, 0);
-  GEN_CASE_DATA(false, "out_indices", out_indices, out_indices_desc, 0, 0);
-  GEN_CASE_DATA(false, "indice_num", indice_num, indice_num_desc, 0, 0);
+  GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);
+  GEN_CASE_DATA_REAL(false, "indice_pairs", indice_pairs, indice_pairs_desc);
+  GEN_CASE_DATA_REAL(false, "out_indices", out_indices, out_indices_desc);
+  GEN_CASE_DATA_REAL(false, "indice_num", indice_num, indice_num_desc);
   GEN_CASE_OP_PARAM_SINGLE(0, "get_indice_pairs", "dimnb",
                            sparse_conv_desc->dimNb);
   GEN_CASE_OP_PARAM_ARRAY(1, "get_indice_pairs", "pad", sparse_conv_desc->pad,
@@ -64,6 +64,8 @@ static void getIndicePairsGencase(
   GEN_CASE_OP_PARAM_ARRAY(1, "get_indice_pairs", "output_space",
                           sparse_conv_desc->output_space,
                           sparse_conv_desc->dimNb == 4 ? 2 : 3);
+  GEN_CASE_OP_PARAM_SINGLE(2, "get_indice_pairs", "sub_m",
+                           sparse_conv_desc->sub_m);
   GEN_CASE_OP_PARAM_SINGLE(2, "get_indice_pairs", "transpose",
                            sparse_conv_desc->transpose);
   GEN_CASE_OP_PARAM_SINGLE(2, "get_indice_pairs", "inverse",
@@ -106,7 +108,6 @@ static mluOpStatus_t internalGetIndicePairs(
   PARAM_CHECK(interface_name, out_indices_desc->dim == 2);
   PARAM_CHECK(interface_name, indice_num_desc->dim == 1);
 
-
   PARAM_CHECK(interface_name, indices_desc->dims[1] == 4);
   PARAM_CHECK(interface_name, out_indices_desc->dims[1] == 4);
   PARAM_CHECK(interface_name, indice_pairs_desc->dims[1] == 2);
@@ -119,9 +120,24 @@ static mluOpStatus_t internalGetIndicePairs(
     kernel_volume *= sparse_conv_desc->filter_space[i];
   }
   int output_spaces = sparse_conv_desc->batch_size;
+  int input_spaces = sparse_conv_desc->batch_size;
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
     output_spaces *= sparse_conv_desc->output_space[i];
+    input_spaces *= sparse_conv_desc->input_space[i];
   }
+  PARAM_CHECK_GT(interface_name, indices_desc->dims[0], 0);
+  PARAM_CHECK_LE(interface_name, indices_desc->dims[0], input_spaces);
+
+  for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
+    PARAM_CHECK_GE(interface_name, sparse_conv_desc->pad[i], 0);
+    PARAM_CHECK_GE(interface_name, sparse_conv_desc->dilation[i], 1);
+    PARAM_CHECK_GE(interface_name, sparse_conv_desc->stride[i], 1);
+    if (sparse_conv_desc->dilation[i] != 1 &&
+        sparse_conv_desc->stride[i] != 1) {
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
+
   PARAM_CHECK(interface_name, indice_pairs_desc->dims[0] == kernel_volume);
   PARAM_CHECK_LE(interface_name, kernel_volume, 4096);
   PARAM_CHECK_LE(interface_name, out_indices_desc->dims[0], output_spaces);
@@ -137,6 +153,7 @@ static mluOpStatus_t internalGetIndicePairs(
       PARAM_CHECK_EQ(interface_name, sparse_conv_desc->input_space[i],
                      sparse_conv_desc->output_space[i]);
       PARAM_CHECK_EQ(interface_name, sparse_conv_desc->stride[i], 1);
+      PARAM_CHECK_EQ(interface_name, sparse_conv_desc->dilation[i], 1);
     }
   }
   // gencase
@@ -169,11 +186,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairs(
     const mluOpTensorDescriptor_t out_indices_desc, void *out_indices,
     const mluOpTensorDescriptor_t indice_num_desc, void *indice_num) {
   std::string interface_name = "[mluOpGetIndicesPairs]";
-  return internalGetIndicePairs(handle, interface_name, sparse_conv_desc,
-                                indices_desc, indices, workspace,
-                                workspace_size, indice_pairs_desc, indice_pairs,
-                                out_indices_desc, out_indices, indice_num_desc,
-                                indice_num, false, NULL);
+  return internalGetIndicePairs(
+      handle, interface_name, sparse_conv_desc, indices_desc, indices,
+      workspace, workspace_size, indice_pairs_desc, indice_pairs,
+      out_indices_desc, out_indices, indice_num_desc, indice_num, false, NULL);
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairsWorkspaceSize(
@@ -184,8 +200,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairsWorkspaceSize(
     const mluOpTensorDescriptor_t out_indices_desc,
     const mluOpTensorDescriptor_t indice_num_desc, size_t *workspace_size) {
   std::string interface_name = "[mluOpGetIndicePairsWorkspaceSize]";
-  return internalGetIndicePairs(
-      handle, interface_name, sparse_conv_desc, indices_desc, NULL, NULL,
-      0, indice_pairs_desc, NULL, out_indices_desc, NULL, indice_num_desc,
-      NULL, true, workspace_size);
+  PARAM_CHECK(interface_name, handle != NULL);
+  PARAM_CHECK(interface_name, sparse_conv_desc != NULL);
+  PARAM_CHECK(interface_name, indices_desc != NULL);
+  PARAM_CHECK(interface_name, indice_pairs_desc != NULL);
+  PARAM_CHECK(interface_name, out_indices_desc != NULL);
+  PARAM_CHECK(interface_name, indice_num_desc != NULL);
+  if (mluOpGetTensorElementNum(indices_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
+      mluOpGetTensorElementNum(out_indices_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_num_desc) == 0) {
+    workspace_size[0] = 0;
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  return internalGetIndicePairs(handle, interface_name, sparse_conv_desc,
+                                indices_desc, NULL, NULL, 0, indice_pairs_desc,
+                                NULL, out_indices_desc, NULL, indice_num_desc,
+                                NULL, true, workspace_size);
 }

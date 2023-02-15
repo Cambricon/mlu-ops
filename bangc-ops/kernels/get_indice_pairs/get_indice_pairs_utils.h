@@ -180,8 +180,14 @@ __mlu_func__ void computeMask(float *nram_output, float *nram_input,
     __bang_float2int32_tz((int32_t *)temp, (float *)nram_input + offset,
                           deal_num, 0);
     __bang_int322float_rn((float *)temp, (int32_t *)temp, deal_num, 0);
-    __bang_eq((float *)temp + offset_temp2, (float *)temp,
-              (float *)nram_input + offset, deal_num);  // mask_valid
+    __bang_sub((float *)temp + offset_temp2, (float *)temp,
+              (float *)nram_input + offset, deal_num);
+    __bang_le_scalar((float *)temp + offset_temp3, (float *)temp + offset_temp2,
+              (float)0.000001, deal_num);  //  < 1e-6
+    __bang_ge_scalar((float *)temp + offset_temp2, (float *)temp + offset_temp2,
+              (float)-0.000001, deal_num);  //  > -1e-6
+    __bang_and((float *)temp + offset_temp2, (float *)temp + offset_temp2,
+               (float *)temp + offset_temp3, deal_num);
     __bang_ge_scalar((float *)temp + offset_temp3, (float *)temp, (float)0.0,
                      deal_num);
     __bang_and((float *)temp + offset_temp2, (float *)temp + offset_temp2,

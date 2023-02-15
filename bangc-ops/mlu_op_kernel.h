@@ -154,7 +154,8 @@ void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel4(
 void MLUOP_WIN_API mluOpBlockBalanceGetIndicePairKernel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l);
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size);
 
 void MLUOP_WIN_API mluOpBlockSubmGetIndicePairKernel1(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
