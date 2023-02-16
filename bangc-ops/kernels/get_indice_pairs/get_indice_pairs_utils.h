@@ -207,13 +207,13 @@ input: nram_input  int32_t l,4   n do ho wo
 output: nram_output int32_t l indice_out_expand
 func: generate  all_index from  n do ho wo index
 */
-__mlu_func__ void genIndiceOutput(int32_t *nram_output, float *batch_size,
+__mlu_func__ void genIndiceOutput(int32_t *nram_output, float *batch,
                                   float *nram_input, int32_t *temp,
                                   int32_t deal_num, OutputSpace output_space) {
   int32_t o_d = output_space.o_d, o_h = output_space.o_h,
           o_w = output_space.o_w;
   int32_t o_hw = o_h * o_w, o_dhw = o_d * o_h * o_w;
-  __bang_float2int32_tz((int32_t *)temp + deal_num, (float *)batch_size,
+  __bang_float2int32_tz((int32_t *)temp + deal_num, (float *)batch,
                         deal_num, 0);  // n
   __bang_mul_scalar((int32_t *)temp, (int32_t *)temp + deal_num, (int32_t)o_dhw,
                     deal_num);  // n * odhw

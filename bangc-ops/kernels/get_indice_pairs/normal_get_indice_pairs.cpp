@@ -204,10 +204,10 @@ mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
   // workspace for get_indice_pairs
   size_t total_size = 0;
   int sub_m = sparse_conv_desc->sub_m;
-  int batch_size = sparse_conv_desc->batch_size;
+  int batch = sparse_conv_desc->batch;
   int kernel_volume = indice_pairs_desc->dims[0];
   int input_active_site = indice_pairs_desc->dims[2];
-  int output_size = batch_size * sparse_conv_desc->output_space[0] *
+  int output_size = batch * sparse_conv_desc->output_space[0] *
                             sparse_conv_desc->output_space[1] *
                             sparse_conv_desc->output_space[2] +
                         1;
@@ -286,7 +286,7 @@ mluOpStatus_t launchDefaultKernel1(
     mluOpHandle_t handle,
     const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const void *indices, void *mask_all_ws, void *indice_index_in_ws,
-    void *out_indices_expand_ws, int batch_size, int kernel_volume,
+    void *out_indices_expand_ws, int batch, int kernel_volume,
     int input_active_site) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
@@ -331,7 +331,7 @@ mluOpStatus_t launchDefaultKernel1(
       kDim3, func_type, handle->queue, (void *)mask_all_ws,
       (void *)indice_index_in_ws, (void *)out_indices_expand_ws,
       (void *)indices, filter_space, input_space, output_space, stride,
-      dilation, padding, core_num_l, input_active_site, batch_size)));
+      dilation, padding, core_num_l, input_active_site, batch)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -349,7 +349,7 @@ mluOpStatus_t launchSubmKernel1(
     const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const void *indices, void *mask_all_ptr, void *indice_index_in_ptr,
     void *indice_in_expand_ptr, void *out_indices_expand_ptr,
-    int batch_size, int kernel_volume, int input_active_site) {
+    int batch, int kernel_volume, int input_active_site) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -395,7 +395,7 @@ mluOpStatus_t launchSubmKernel1(
       (void *)indice_index_in_ptr, (void *)indice_in_expand_ptr,
       (void *)out_indices_expand_ptr, (void *)indices, filter_space,
       input_space, output_space, stride, dilation, padding, core_num_l,
-      input_active_site, batch_size)));
+      input_active_site, batch)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -852,10 +852,10 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     void *out_indices, const mluOpTensorDescriptor_t indice_num_desc,
     void *indice_num) {
   int sub_m = sparse_conv_desc->sub_m;
-  int batch_size = sparse_conv_desc->batch_size;
+  int batch = sparse_conv_desc->batch;
   int kernel_volume = indice_pairs_desc->dims[0];
   int input_active_site = indice_pairs_desc->dims[2];
-  int output_size = batch_size * sparse_conv_desc->output_space[0] *
+  int output_size = batch * sparse_conv_desc->output_space[0] *
                             sparse_conv_desc->output_space[1] *
                             sparse_conv_desc->output_space[2] +
                         1;
@@ -913,7 +913,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
             launchSubmKernel1(handle, sparse_conv_desc, compute_indices_ptr,
                               mask_all_ptr, indice_index_in_ptr,
                               indice_in_expand_ptr, out_indices_expand_ptr,
-                              batch_size, kernel_volume, input_active_site));
+                              batch, kernel_volume, input_active_site));
 
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
@@ -1060,7 +1060,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
         MLUOP_STATUS_SUCCESS ==
             launchDefaultKernel1(handle, sparse_conv_desc, compute_indices_ptr,
                                  mask_all_ptr, indice_index_in_ptr,
-                                 out_indices_expand_ptr, batch_size,
+                                 out_indices_expand_ptr, batch,
                                  kernel_volume, input_active_site));
 
     //  call reduce_sum mask_all to indice_num

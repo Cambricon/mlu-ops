@@ -42,11 +42,13 @@ static void getIndicePairsGencase(
   GEN_CASE_START("get_indice_pairs");
   GEN_CASE_HANDLE(handle);
   GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);
-  GEN_CASE_DATA_REAL(false, "indice_pairs", indice_pairs, indice_pairs_desc);
   GEN_CASE_DATA_REAL(false, "out_indices", out_indices, out_indices_desc);
+  GEN_CASE_DATA_REAL(false, "indice_pairs", indice_pairs, indice_pairs_desc);
   GEN_CASE_DATA_REAL(false, "indice_num", indice_num, indice_num_desc);
   GEN_CASE_OP_PARAM_SINGLE(0, "get_indice_pairs", "dimnb",
                            sparse_conv_desc->dimNb);
+  GEN_CASE_OP_PARAM_SINGLE(0, "get_indice_pairs", "batch",
+                           sparse_conv_desc->batch);
   GEN_CASE_OP_PARAM_ARRAY(1, "get_indice_pairs", "pad", sparse_conv_desc->pad,
                           sparse_conv_desc->dimNb == 4 ? 2 : 3);
   GEN_CASE_OP_PARAM_ARRAY(1, "get_indice_pairs", "stride",
@@ -119,8 +121,8 @@ static mluOpStatus_t internalGetIndicePairs(
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
     kernel_volume *= sparse_conv_desc->filter_space[i];
   }
-  int output_spaces = sparse_conv_desc->batch_size;
-  int input_spaces = sparse_conv_desc->batch_size;
+  int output_spaces = sparse_conv_desc->batch;
+  int input_spaces = sparse_conv_desc->batch;
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
     output_spaces *= sparse_conv_desc->output_space[i];
     input_spaces *= sparse_conv_desc->input_space[i];
@@ -136,6 +138,16 @@ static mluOpStatus_t internalGetIndicePairs(
         sparse_conv_desc->stride[i] != 1) {
       return MLUOP_STATUS_BAD_PARAM;
     }
+  }
+
+  // large tensor
+  if (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(out_indices_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(indice_num_desc) >= LARGE_TENSOR_NUM) {
+    LOG(ERROR) << interface_name << " Overflow max tensor num."
+               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   PARAM_CHECK(interface_name, indice_pairs_desc->dims[0] == kernel_volume);
