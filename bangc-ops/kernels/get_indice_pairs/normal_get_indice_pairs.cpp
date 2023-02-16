@@ -196,7 +196,7 @@ static mluOpStatus_t getUniqueOpWS(mluOpHandle_t handle,
 
 mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
     mluOpHandle_t handle, const std::string interface_name,
-    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc,
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const mluOpTensorDescriptor_t out_indices_desc,
@@ -845,7 +845,7 @@ mluOpStatus_t launchDefaultKernel4(
 
 mluOpStatus_t NormalGetIndicePairsKernel(
     mluOpHandle_t handle, const std::string interface_name,
-    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
     void *workspace, const mluOpTensorDescriptor_t indice_pairs_desc,
     void *indice_pairs, const mluOpTensorDescriptor_t out_indices_desc,
@@ -1122,6 +1122,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                                       kernel_volume, fill_value));
       return MLUOP_STATUS_SUCCESS;
     }
+    sparse_conv_desc->num_act_out = num_act_out;
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
     step_index_addr =
@@ -1205,7 +1206,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
 
 mluOpStatus_t normalGetIndicePairs(
     mluOpHandle_t handle, const std::string interface_name,
-    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
     void *workspace, size_t workspace_size,
     const mluOpTensorDescriptor_t indice_pairs_desc, void *indice_pairs,

@@ -110,6 +110,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
   return MLUOP_STATUS_SUCCESS;
 }
 
+mluOpStatus_t MLUOP_WIN_API mluOpGetSparseConvolutionNumActOut(
+    mluOpSparseConvolutionDescriptor_t desc,
+    int *num_act_out) {
+  if (desc == NULL || num_act_out == NULL) {
+    LOG(ERROR) << "mluOpCreateSparseConvolutionDescriptor or "
+               << "num_act_out failed "
+               << " Passing NULL ptr to this API.";
+    return MLUOP_STATUS_NOT_INITIALIZED;
+  }
+  int size = 0;
+  size = desc->num_act_out;
+  num_act_out[0] =  size;
+  return MLUOP_STATUS_SUCCESS;
+}
+
 mluOpStatus_t MLUOP_WIN_API mluOpDestroySparseConvolutionDescriptor(
     mluOpSparseConvolutionDescriptor_t desc) {
   if (desc == NULL) {

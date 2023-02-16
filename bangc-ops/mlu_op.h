@@ -1055,6 +1055,31 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
                                     const int transpose,
                                     const int inverse);
 
+// Group:: GetIndicePairs
+/*!
+ *  @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionStruct.
+ *
+ *  @param[in] desc
+ *  Pointer to the parameter num_act_out that holds information about the tensor descriptor.
+ *  @param[out] num_act_out
+ *  The parameter num_act_out will be obtained from the ::mluOpSparseConvolutionStruct.
+ *
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_NOT_INITIALIZED
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc,
+                                   int *num_act_out);
+
 // Group:Tensor
 /*!
  *  @brief Initializes the group of tensor descriptors stored by \b group_desc
@@ -6896,6 +6921,7 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  *
  * @note
  * - This function only supports on MLU300 series or above platforms.
+ * - The parameter num_act_out will be obtained from the mluOpSparseConvolutionStruct.
  *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
