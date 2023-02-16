@@ -92,6 +92,7 @@ struct mluOpSparseConvolutionStruct {
   int sub_m = 0;
   int transpose = 0;
   int inverse = 0;
+  int num_act_out = 0;
 };
 
 #endif  //  KERNELS_GET_INDICE_PAIRS_GET_INDICE_PAIRS_STRUCTS_H_

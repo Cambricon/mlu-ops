@@ -450,6 +450,7 @@ message GetIndicePairsParam{
    optional int32 sub_m = 9 [default = 0];
    optional int32 transpose = 10 [default = 0];
    optional int32 inverse = 11 [default = 0];
+   optional int32 num_act_out = 12 [default = 0];
 }
 
 // param to call mluOpPsRoiPoolbackward()
