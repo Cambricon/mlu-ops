@@ -157,15 +157,13 @@ static mluOpStatus_t indiceConvDtypeVaild(
        !isFloatDtype(filters_grad_on_dtype)) ||
       (filters_grad_dtype == MLUOP_DTYPE_FLOAT &&
        filters_grad_on_dtype == MLUOP_DTYPE_HALF)) {
-    LOG(ERROR)
-        << api_name
-        << " The on-chip data type of filters_grad_desc may not be set, "
-        << "if it is set, only half or float types are supported, "
-        << "and the bit width of on-chip data type can not be smaller than "
-        << "that of off-chip data type. But now two data types of "
-           "filters_grad_desc are "
-        << mluop::getNameOfDataType(filters_grad_dtype) << "-"
-        << mluop::getNameOfDataType(filters_grad_on_dtype) << ".";
+    LOG(ERROR) << api_name << " The on-chip data type of filters_grad_desc "
+               << "may not be set, if it is set, only half or float types are "
+               << "supported, and the bit width of on-chip data type can not "
+               << "be smaller than that of off-chip data type. But now two "
+               << "data types of filters_grad_desc are "
+               << mluop::getNameOfDataType(filters_grad_dtype) << "-"
+               << mluop::getNameOfDataType(filters_grad_on_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   return MLUOP_STATUS_SUCCESS;
@@ -188,7 +186,7 @@ static mluOpStatus_t baseParamCheck(
   // check mlu platform
   if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
     LOG(ERROR) << api_name << " Only mlu300 and above devices are supported."
-               << "Please check the device version!";
+               << " Please check the device version!";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -200,6 +198,14 @@ static mluOpStatus_t baseParamCheck(
     return dtype_check;
   }
 
+  if (mluOpGetTensorElementNum(features_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(output_grad_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(filters_grad_desc) >= LARGE_TENSOR_NUM) {
+    LOG(ERROR) << api_name << " Overflow max tensor num."
+               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
   bool shape_check = true;
   if (2 != features_desc->dim || 2 != output_grad_desc->dim ||
       3 != indice_pairs_desc->dim ||
