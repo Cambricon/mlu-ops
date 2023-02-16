@@ -82,7 +82,7 @@ struct Padding {
 
 struct mluOpSparseConvolutionStruct {
   int dimNb;
-  int batch_size;
+  int batch;
   int pad[MAX_PAD_DIM];
   int stride[MAX_STRIDE_DIM];
   int dilation[MAX_DILATION_DIM];
