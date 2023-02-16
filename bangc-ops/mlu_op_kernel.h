@@ -268,6 +268,13 @@ void MLUOP_WIN_API mluOpUnionKernelBoxIouRotatedFloat(
     const void *box1, const void *box2, void *ious, const int num_box1,
     const int num_box2, const int mode, const bool aligned);
 
+/* NmsRotated */
+void MLUOP_WIN_API mluOpUnionKernelNmsRotatedFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *boxes, void *box_workspace, const void *scores,
+    void *scores_workspace, void *output, int32_t *result_num,
+    const int32_t box_num, const int32_t box_dim, const float iou_threshold);
+
 /* BboxOverlaps */
 void MLUOP_WIN_API mluOpUnion1BboxOverlapsKernelFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
