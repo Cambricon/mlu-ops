@@ -1,0 +1,79 @@
+op_name: "roipoint_pool3d"
+input {
+  id: "points"
+  shape: {
+    dims: 1
+    dims: 16384
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "point_features"
+  shape: {
+    dims: 1
+    dims: 16384
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 100
+    lower_bound: -100
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "boxes3d"
+  shape: {
+    dims: 1
+    dims: 128
+    dims: 7
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 32
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "pooled_features"
+  shape: {
+    dims: 1
+    dims: 128
+    dims: 512
+    dims: 131
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "pooled_empty_flag"
+  shape: {
+    dims: 1
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+roipoint_pool3d_param: {
+  num_sampled_points: 512
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

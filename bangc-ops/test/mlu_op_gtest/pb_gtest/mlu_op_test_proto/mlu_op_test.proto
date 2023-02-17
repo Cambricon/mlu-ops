@@ -227,6 +227,7 @@ message Node {
   optional GetIndicePairsParam get_indice_pairs_param   = 202302031;  // param
   optional RoiawarePool3dForwardParam  roiaware_pool3d_forward_param = 10120;  // param
   optional RoiawarePool3dBackwardParam  roiaware_pool3d_backward_param = 10121;  // param
+  optional RoiPointPool3dParam roipoint_pool3d_param = 16002; // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
   optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
   optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
@@ -550,6 +551,11 @@ message RoiawarePool3dBackwardParam {
   optional int32 out_z = 5;
   optional int32 channels = 6;
   optional int32 max_pts_each_voxel = 7 [default = 128];
+}
+
+// param to call mluOpRoiPointPool3d
+message RoiPointPool3dParam {
+  optional int32 num_sampled_points = 1 [default = 512];
 }
 
 // param to call mluOpPsamaskForward()

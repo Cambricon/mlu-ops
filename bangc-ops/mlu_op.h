@@ -8669,6 +8669,185 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
                                      const mluOpTensorDescriptor_t filters_grad_desc,
                                      void *filters_grad);
 
+// Group:RoiPointPool3d
+/*!
+ * @brief Returns in \b size the size of the MLU memory in bytes that is used as
+ * an extra workspace to optimize the ::mluOpRoiPointPool3d operation.
+ *
+ * The size of extra workspace is based on the given information of the input
+ * and output tensor descriptors, including \b points_desc, \b point_features_desc,
+ * \b boxes3d_desc, \b pooled_features_desc, and \b pooled_empty_flag_desc.
+ * For more information about the workspace, see "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * in the ::mluOpRoiPointPool3d operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] batch_size
+ * The number of batches of the input.
+ * @param[in] pts_num
+ * The number of points of the input.
+ * @param[in] boxes_num
+ * The number of boxes of the input.
+ * @param[in] feature_in_len
+ * The number of features of the input.
+ * @param[in] sampled_pts_num
+ * The number of sampled points of the input.
+ * @param[in] points_desc
+ * The descriptor of the first input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] point_features_desc
+ * The descriptor of the second input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes3d_desc
+ * The descriptor of the third input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] pooled_features_desc
+ * The descriptor of the first output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] pooled_empty_flag_desc
+ * The descriptor of the second output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] size
+ * A host pointer to the returned size of the extra workspace in bytes that is
+ * used in the ::mluOpRoiPointPool3d operation.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None
+ *
+ * @par Data Layout
+ * - None
+ * 
+ * @par Scale Limitation
+ * - None.
+ * 
+ * @par API Dependency
+ * - The allocated extra workspace should be passed to the ::mluOpRoiPointPool3d.
+ *
+ * @note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ * 
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
+                                    const int batch_size,
+                                    const int pts_num,
+                                    const int boxes_num,
+                                    const int feature_in_len,
+                                    const int sampled_pts_num,
+                                    const mluOpTensorDescriptor_t points_desc,
+                                    const mluOpTensorDescriptor_t point_features_desc,
+                                    const mluOpTensorDescriptor_t boxes3d_desc,
+                                    const mluOpTensorDescriptor_t pooled_features_desc,
+                                    const mluOpTensorDescriptor_t pooled_empty_flag_desc,
+                                    size_t *size);
+
+// Group:RoiPointPool3d
+/*!
+ * @brief Implements a linear interpolation of two tensors \b a and \b b based on
+ * a scalar or tensor \b w and returns the results in \b d tensor.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * in the ::mluOpRoiPointPool3d operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] batch_size
+ * The number of batches of the input.
+ * @param[in] pts_num
+ * The number of points of the input.
+ * @param[in] boxes_num
+ * The number of boxes of the input.
+ * @param[in] feature_in_len
+ * The number of features of the input.
+ * @param[in] sampled_pts_num
+ * The number of sampled points of the input.
+ * @param[in] points_desc
+ * The descriptor of the first input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] points
+ * Pointer to the MLU memory that stores the first input tensor.
+ * @param[in] point_features_desc
+ * The descriptor of the second input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] point_features
+ * Pointer to the MLU memory that stores the second input tensor.
+ * @param[in] boxes3d_desc
+ * The descriptor of the third input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes3d
+ * Pointer to the MLU memory that stores the third input tensor.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ::mluOpRoiPointPool3d operation. For more information about workspace,
+ * see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in
+ * the ::mluOpRoiPointPool3d operation. You can get the size of the workspace with
+ * the ::mluOpGetRoiPointPool3dWorkspaceSize function.
+ * @param[in] pooled_features_desc
+ * The descriptor of the first output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] pooled_features
+ * Pointer to the MLU memory that stores the first output tensor.
+ * @param[in] pooled_empty_flag_desc
+ * The descriptor of the second output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] pooled_empty_flag
+ * Pointer to the MLU memory that stores the second output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - The supported data types for input and output are as follows:
+ *   <b>Note that the data type of \b points, \b point_features, \b boxes3d, and
+ *   \b pooled_features must be the same.
+ *   - points: half, float
+ *   - point_features: half, float
+ *   - boxes3d: half, float
+ *   - pooled_features: half, float
+ *   - pooled_empty_flag: int32
+ *
+ * @par Data Layout
+ * - None
+ * 
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - Before calling this function to perform ::mluOpRoiPointPool3d operation, you need to
+ *   get the size of workspace by the ::mluOpGetRoiPointPool3dWorkspaceSize function.
+ *
+ * @par Example
+ * - None.
+ * 
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/v1.5.1/mmcv/ops/csrc/pytorch/cuda/roipoint_pool3d_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiPointPool3d(mluOpHandle_t handle,
+                    const int batch_size,
+                    const int pts_num,
+                    const int boxes_num,
+                    const int feature_in_len,
+                    const int sampled_pts_num,
+                    const mluOpTensorDescriptor_t points_desc,
+                    const void *points,
+                    const mluOpTensorDescriptor_t point_features_desc,
+                    const void *point_features,
+                    const mluOpTensorDescriptor_t boxes3d_desc,
+                    const void *boxes3d,
+                    void *workspace,
+                    size_t workspace_size,
+                    const mluOpTensorDescriptor_t pooled_features_desc,
+                    void *pooled_features,
+                    const mluOpTensorDescriptor_t pooled_empty_flag_desc,
+                    void *pooled_empty_flag);
+
 // Group:ThreeNNForward
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
