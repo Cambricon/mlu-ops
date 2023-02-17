@@ -46,12 +46,14 @@ namespace mluoptest {
 class RoiAlignRotatedForwardExecutor : public Executor {
  public:
   RoiAlignRotatedForwardExecutor() {}
-  ~RoiAlignRotatedForwardExecutor() {}
+  ~RoiAlignRotatedForwardExecutor() { workspaceFree(); }
 
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
   int64_t getTheoryOps() override;
+  void workspaceMalloc() override;
+  void workspaceFree() override;
 
  private:
   void preCalcForBilinearInterpolate(
@@ -62,6 +64,7 @@ class RoiAlignRotatedForwardExecutor : public Executor {
       const float roi_center_x, const float roi_center_y, const float cos_theta,
       const float sin_theta, std::vector<PreCalc> &pre_calc);
   int64_t theory_ops_ = 0;
+  size_t workspace_size_ = 0;
 };
 
 }  // namespace mluoptest

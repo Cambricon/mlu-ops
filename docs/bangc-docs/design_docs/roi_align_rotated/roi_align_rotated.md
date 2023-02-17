@@ -79,6 +79,8 @@ roi_align_rotated算子应用于FOTS网络结构中，以双线性插值的方�
 | spatial_scale | rois在feature map上的缩放比例     | 输入              | float       | /        | 无       |
 | aligned       | 决定rois中的像素是否需要偏移     | 输入              | bool        | /        | 无       |
 | clockwise     | 是否顺时针旋转     | 输入              | bool        | /        | 无       |
+| workspace        |   指向额外GDRAM空间的指针          | 输入             |  void *                  | /          | 无       |
+| workspace_size   |   输入参数，workspace的空间大小   | 输入             |  size_t                  | /          | 无       |
 | bottom_grad_desc   |  输出数据的描述信息    | 输入              |             | /        | bottom_grad的维度必须是4       |
 | bottom_grad        | 输出数据，指向特征图的梯度数据的mlu首地址     | 输出              | half, float | NHWC     | 无       |
 ### 1.4 算子限制
@@ -151,6 +153,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
                                                         const float spatial_scale,
                                                         const bool aligned,
                                                         const bool clockwise,
+                                                        void *workspace,
+                                                        size_t workspace_size,
                                                         const mluOpTensorDescriptor_t output_desc,
                                                         void *output);
 

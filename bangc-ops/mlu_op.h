@@ -3250,6 +3250,29 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
 
 // Group:RoiAlignRotated
 /*!
+ * @brief Gets extra space size that is needed in RoiAlignRotated operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the RoiAlignRotated operation.
+ * @param[in] rois_desc
+ * The descriptor of rois tensor, which contains dimension and the layout of rois.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] size
+ *  A host pointer to the returned size of extra space in bytes.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, 
+ *  - ::MLUOP_STATUS_BAD_PARAM,
+ *  - ::MLUOP_STATUS_NOT_SUPPORTED.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetRoiAlignRotatedForwardWorkspaceSize(mluOpHandle_t handle,
+                                            const mluOpTensorDescriptor_t rois_desc,
+                                            size_t *size);
+
+// Group:RoiAlignRotated
+/*!
  * @brief Extracts the corresponding \b features information to \b output by bilinear interpolation
  * according to the \b rois with rotation.
  *
@@ -3355,6 +3378,8 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
                             const float spatial_scale,
                             const bool aligned,
                             const bool clockwise,
+                            void *workspace,
+                            size_t workspace_size,
                             const mluOpTensorDescriptor_t output_desc,
                             void *output);
 

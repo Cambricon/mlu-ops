@@ -99,10 +99,6 @@ __mlu_func__ void getRoiBinInfo(const T *rois_dram, const int bin_i,
   *roi_center_y = roi_info[2] * (T)params.spatial_scale - offset;
   *roi_width = roi_info[3] * (T)params.spatial_scale;
   *roi_height = roi_info[4] * (T)params.spatial_scale;
-  *theta = roi_info[5];
-  if (params.clockwise) {
-    *theta = -(*theta);
-  }
   if (!params.aligned) {
     *roi_width = fmaxf(*roi_width, (T)1.0);
     *roi_height = fmaxf(*roi_height, (T)1.0);
@@ -113,10 +109,8 @@ template <typename T>
 __mlu_global__ void roiAlignRotatedForward(
     const T *input_dram, const T *rois_dram, const int batch, const int height,
     const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams params, T *output_dram) {
-  if (coreId == 0x80) {
-    return;
-  }
+    const mluOpRoiAlignRotatedParams params, T *workspace,
+    size_t workspace_size, T *output_dram) {
   const int align_base_128 = NFU_ALIGN_SIZE / sizeof(T);
   int channel_max_cap = MAX_NRAM_SIZE / sizeof(T) / (2 * SAMPLING_NUM + 1);
   channel_max_cap = channel_max_cap / align_base_128 * align_base_128;
@@ -126,9 +120,23 @@ __mlu_global__ void roiAlignRotatedForward(
   T *nram_out = (T *)nram_buffer;
   T *nram_ping = nram_out + channel_align;
   T *nram_pong = nram_ping + channel_align * SAMPLING_NUM;
+  T *sin_temp = (T *)workspace;
+  T *cos_temp = sin_temp + rois_num;
 
   const int bin_first = taskId;
   const int bin_end = rois_num * params.pooled_height * params.pooled_width;
+  for (int roi_i = taskId; roi_i < rois_num; roi_i += taskDim) {
+    const T *roi_info = rois_dram + roi_i * ROI_OFFSET;
+    T theta_temp = roi_info[5];
+    if (params.clockwise) {
+      theta_temp = -(theta_temp);
+    }
+    T cos_theta_temp = __cn_scalar_cos_f32((float)theta_temp);
+    T sin_theta_temp = __cn_scalar_sin_f32((float)theta_temp);
+    sin_temp[roi_i] = sin_theta_temp;
+    cos_temp[roi_i] = cos_theta_temp;
+  }
+  __sync_all();
 
   for (int bin_i = bin_first; bin_i < bin_end; bin_i += taskDim) {
     T roi_center_x, roi_center_y, roi_width, roi_height, theta;
@@ -150,8 +158,8 @@ __mlu_global__ void roiAlignRotatedForward(
     T roi_start_y = -roi_height / 2;
     T roi_start_x = -roi_width / 2;
     const int bin_dim = __mluop_max(roi_bin_grid_h * roi_bin_grid_w, 1);
-    T cos_theta = std::cos(theta);
-    T sin_theta = std::sin(theta);
+    T cos_theta = __cn_scalar_cos_f32((float)theta);
+    T sin_theta = __cn_scalar_sin_f32((float)theta);
     T zero_sign = 1.0f / bin_dim;
 
     bool is_first_sample = true;
@@ -454,19 +462,21 @@ void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *rois, const int batch, const int height,
     const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output) {
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *workspace,
+    size_t workspace_size, void *output) {
   roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
       (float *)features, (float *)rois, batch, height, width, channel, rois_num,
-      rroiAlignParams, (float *)output);
+      rroiAlignParams, (float *)workspace, workspace_size, (float *)output);
 }
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *rois, const int batch, const int height,
     const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output) {
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *workspace,
+    size_t workspace_size, void *output) {
   roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
       (half *)features, (half *)rois, batch, height, width, channel, rois_num,
-      rroiAlignParams, (half *)output);
+      rroiAlignParams, (half *)workspace, workspace_size, (half *)output);
 }
 
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardFloat(

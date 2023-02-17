@@ -114,6 +114,28 @@ void RoiAlignRotatedForwardExecutor::paramCheck() {
   }
 }
 
+void RoiAlignRotatedForwardExecutor::workspaceMalloc() {
+  VLOG(4) << "[RoiAlignRotatedForwardExecutor] call workspaceMalloc() Begin.";
+  auto tensor_rois = tensor_desc_[1].tensor;
+
+  void *workspace_ptr = nullptr;
+  MLUOP_CHECK(mluOpGetRoiAlignRotatedForwardWorkspaceSize(handle_, tensor_rois,
+                                                          &workspace_size_));
+  if (workspace_size_) {
+    workspace_ptr = mlu_runtime_.allocate(workspace_size_);
+  }
+  workspace_.push_back(workspace_ptr);
+  eva_->setMluWorkspaceSize(workspace_size_);
+  VLOG(4) << "[RoiAlignRotatedForwardExecutor] call workspaceMalloc() End.";
+}
+void RoiAlignRotatedForwardExecutor::workspaceFree() {
+  if (workspace_[0]) {
+    VLOG(4) << "[RoiAlignRotatedForwardExecutor] Free device workspace space.";
+    mlu_runtime_.deallocate(workspace_[0]);
+    workspace_[0] = nullptr;
+  }
+}
+
 void RoiAlignRotatedForwardExecutor::compute() {
   VLOG(4) << "RoiAlignRotatedForwardExecutor compute.";
   const int pooled_height = parser_->getProtoNode()
@@ -142,7 +164,7 @@ void RoiAlignRotatedForwardExecutor::compute() {
   MLUOP_CHECK(mluOpRoiAlignRotatedForward(
       handle_, features_desc, features_ptr, rois_desc, rois_ptr, pooled_height,
       pooled_width, sample_ratio, spatial_scale, aligned, clockwise,
-      output_desc, output_ptr));
+      workspace_[0], workspace_size_, output_desc, output_ptr));
   interface_timer_.stop();
 }
 
@@ -238,10 +260,14 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
           for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
             for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
               auto pc = pre_calc[pre_calc_idx];
-              output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
-                            pc.w2 * offset_features[pc.pos2 + c_idx] +
-                            pc.w3 * offset_features[pc.pos3 + c_idx] +
-                            pc.w4 * offset_features[pc.pos4 + c_idx];
+              if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
+                output_val += 0;
+              } else {
+                output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
+                              pc.w2 * offset_features[pc.pos2 + c_idx] +
+                              pc.w3 * offset_features[pc.pos3 + c_idx] +
+                              pc.w4 * offset_features[pc.pos4 + c_idx];
+              }
               ++pre_calc_idx;
               theory_ops_ += 8;
             }

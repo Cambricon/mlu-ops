@@ -329,12 +329,14 @@ void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *rois, const int batch, const int height,
     const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *workspace,
+    size_t workspace_size, void *output);
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *rois, const int batch, const int height,
     const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
+    const mluOpRoiAlignRotatedParams rroiAlignParams, void *workspace,
+    size_t workspace_size, void *output);
 
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

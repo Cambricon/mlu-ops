@@ -38,8 +38,56 @@ static void policyFunc(const mluOpHandle_t handle, const int bin_num,
   *k_type = CNRT_FUNC_TYPE_UNION1;
   k_dim->x = core_num;
   size_t use_cluster = (bin_num + core_num - 1) / core_num;
-  k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;
+  int num_y = use_cluster > cluster_num ? cluster_num : use_cluster;
+  if (num_y == 1) {
+    *k_type = CNRT_FUNC_TYPE_UNION1;
+    k_dim->x = core_num * 1;
+  } else if (num_y == 2) {
+    *k_type = CNRT_FUNC_TYPE_UNION2;
+    k_dim->x = core_num * 2;
+  } else if (num_y == 4) {
+    *k_type = CNRT_FUNC_TYPE_UNION4;
+    k_dim->x = core_num * 4;
+  } else if (num_y == 8) {
+    *k_type = CNRT_FUNC_TYPE_UNION8;
+    k_dim->x = core_num * 8;
+  }
+  k_dim->y = 1;
   k_dim->z = 1;
+}
+mluOpStatus_t MLUOP_WIN_API mluOpGetRoiAlignRotatedForwardWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t rois_desc,
+    size_t *size) {
+  const std::string API = "[mluOpGetRoiAlignRotatedForwardWorkspaceSize]";
+  // handle and desc ptr check null
+  PARAM_CHECK(API, handle != NULL);
+  PARAM_CHECK(API, rois_desc != NULL);
+  PARAM_CHECK(API, size != NULL);
+  // check params
+  PARAM_CHECK_EQ(API, rois_desc->dim, 2);
+  PARAM_CHECK_EQ(API, rois_desc->dims[1], 6);
+  PARAM_CHECK(API, rois_desc->dtype == MLUOP_DTYPE_FLOAT ||
+                       rois_desc->dtype == MLUOP_DTYPE_HALF);
+  // check large tensor
+  size_t rois_element_num = mluOpGetTensorElementNum(rois_desc);
+  if (rois_element_num >= LARGE_TENSOR_NUM) {
+    LOG(ERROR) << "[mluOpRoiAlignRotatedForward] Overflow max tensor num."
+               << "Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+  // check element num zero
+  if (rois_element_num == 0) {
+    LOG(ERROR) << "[mluOpRoiAlignRotatedForward] Check failed: rois zero "
+                  "element tensor.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (rois_desc->dtype == MLUOP_DTYPE_FLOAT) {
+    *size = rois_desc->dims[0] * 2 * sizeof(float);
+  } else {
+    *size = rois_desc->dims[0] * 2 * 2;
+  }
+
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
@@ -47,8 +95,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
     const void *features, const mluOpTensorDescriptor_t rois_desc,
     const void *rois, const int pooled_height, const int pooled_width,
     const int sample_ratio, const float spatial_scale, const bool aligned,
-    const bool clockwise, const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+    const bool clockwise, void *workspace, size_t workspace_size,
+    const mluOpTensorDescriptor_t output_desc, void *output) {
   const std::string API = "[mluOpRoiAlignRotatedForward]";
 
   PARAM_CHECK(API, handle != nullptr);
@@ -145,12 +193,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   if (features_desc->dtype == MLUOP_DTYPE_FLOAT) {
     KERNEL_CHECK((mluOpBlockKernelRoiAlignRotatedForwardFloat(
         k_dim, k_type, handle->queue, features, rois, batch, height, width,
-        channel, rois_nums, roiAlignRotatedParams, output)));
+        channel, rois_nums, roiAlignRotatedParams, workspace, workspace_size,
+        output)));
     VLOG(5) << "Kernel mluOpBlockKernelRoiAlignRotatedForwardFloat.";
   } else {
     KERNEL_CHECK((mluOpBlockKernelRoiAlignRotatedForwardHalf(
         k_dim, k_type, handle->queue, features, rois, batch, height, width,
-        channel, rois_nums, roiAlignRotatedParams, output)));
+        channel, rois_nums, roiAlignRotatedParams, workspace, workspace_size,
+        output)));
     VLOG(5) << "Kernel mluOpBlockKernelRoiAlignRotatedForwardHalf.";
   }
   GEN_CASE_END();
@@ -263,19 +313,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
   VLOG(5) << "mluopFill start.";
   const size_t fill_value = 0x0;
   MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                        bottom_grad_desc, bottom_grad));
+                           bottom_grad_desc, bottom_grad));
   VLOG(5) << "mluopFill end.";
 
   if (top_grad_desc->dtype == MLUOP_DTYPE_FLOAT) {
     KERNEL_CHECK((mluOpBlockKernelRoiAlignRotatedBackwardFloat(
         k_dim, k_type, handle->queue, top_grad, rois, batch, height, width,
         channel, rois_nums, roiAlignRotatedParams, bottom_grad)));
-    VLOG(5) << "Kernel mluOpBlockKernelRoiAlignRotatedForwardFloat.";
+    VLOG(5) << "Kernel mluOpBlockKernelRoiAlignRotatedBackwardFloat.";
   } else {
     KERNEL_CHECK((mluOpBlockKernelRoiAlignRotatedBackwardHalf(
         k_dim, k_type, handle->queue, top_grad, rois, batch, height, width,
         channel, rois_nums, roiAlignRotatedParams, bottom_grad)));
-    VLOG(5) << "Kernel mluOpBlockKernelRoiAlignRotatedForwardHalf.";
+    VLOG(5) << "Kernel mluOpBlockKernelRoiAlignRotatedBackwardHalf.";
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
