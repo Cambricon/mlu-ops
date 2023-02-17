@@ -1062,7 +1062,7 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
  *  @param[in] desc
  *  Pointer to the parameter num_act_out that holds information about the tensor descriptor.
  *  @param[out] num_act_out
- *  The parameter num_act_out will be obtained from the ::mluOpSparseConvolutionStruct.
+ *  The active point number of output space in sparse convolution mode.
  *
  *  @par Return
  *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_NOT_INITIALIZED
@@ -6920,8 +6920,8 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  *   - \b indices, \b out_indices, \b indice_pairs and \b indice_num data type: int32, int32, int32, int32
  *
  * @note
- * - This function only supports on MLU300 series or above platforms.
- * - The parameter num_act_out will be obtained from the mluOpSparseConvolutionStruct.
+ * - This function is only supported on MLU300 series or above platforms.
+ * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionStruct.
  *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
