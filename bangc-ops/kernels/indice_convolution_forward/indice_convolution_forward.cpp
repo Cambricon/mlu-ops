@@ -98,6 +98,16 @@ static mluOpStatus_t foolProof(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
+  // large tensor
+  if (mluOpGetTensorElementNum(features_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(filters_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||
+      mluOpGetTensorElementNum(features_out_desc) >= LARGE_TENSOR_NUM) {
+    LOG(ERROR) << api_name << "Max tensor number overflow. Currently, "
+               << "MLU-OPS supports tensor elemenets number smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
   auto ci = 0;
   auto num_filter = 0;
   auto co = 0;
@@ -180,8 +190,13 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     workspaceSize_transpose =
         num_filter * ci * co * mluop::getSizeOfDataType(filters_desc->dtype);
   }
+  size_t workspaceSize_scatter =
+      num_act_out * co * mluop::getSizeOfDataType(features_out_desc->dtype);
   size_t workspaceSize_matmulExtra = 0;
   size_t tempSize_matmulExtra = 0;
+  size_t workspaceSize_addNExtra = 0;
+  size_t tempSize_addNExtra = 0;
+  size_t workspaceSize_maximum = 0;
 
   float matmul_alpha = 1.0;
   float matmul_beta = 0.0;
@@ -194,14 +209,20 @@ static mluOpStatus_t mainIndiceConvolutionForward(
 
   // allocate workspace segment for intermediate data
   void *validFilters_ptr = filters_need_trans ? workspace : (void *)filters;
-  void *gatherResult_ptr = (char *)workspace + workspaceSize_transpose;
-  void *matmulResult_ptr = (char *)gatherResult_ptr + workspaceSize_gather;
-  void *matmulExtra_ptr = (char *)matmulResult_ptr + workspaceSize_matmul;
+  void *transposeExtra_ptr = (char *)workspace + workspaceSize_transpose;
+  void *matmulResult_ptr = (char *)workspace + workspaceSize_transpose;
+  void *gatherResult_ptr = (char *)matmulResult_ptr + workspaceSize_matmul;
+  void *matmulExtra_ptr = (char *)gatherResult_ptr + workspaceSize_gather;
+  void *scatterResult_ptr = (char *)matmulResult_ptr + workspaceSize_matmul;
+  void *addNExtra_ptr = (char *)scatterResult_ptr + workspaceSize_scatter;
+  void *addN_ptrs[2] = {scatterResult_ptr, features_out};
 
   // create intermediate tensor
   mluOpTensorDescriptor_t active_indice_desc;
   mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, matmul_c_desc;
   mluOpMatMulDescriptor_t matmul_desc;
+  mluOpTensorDescriptor_t addN_descriptors[2] = {features_out_desc,
+                                                 features_out_desc};
   mluOpMatMulAlgo_t matmul_algo;
   mluOpMatMulHeuristicResult_t heuristic_result;
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&active_indice_desc));
@@ -264,7 +285,7 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     if (!is_workspace_compute) {
       auto trans_status = mluOpTranspose_v2(
           handle, trans_desc, trans_in_desc, filters, trans_out_desc,
-          validFilters_ptr, gatherResult_ptr, workspaceSize_transposeExtra);
+          validFilters_ptr, transposeExtra_ptr, workspaceSize_transposeExtra);
       KERNEL_CALL_CHECK(api_name, "mluOpTranspose_v2", trans_status, "");
     }
     CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(trans_in_desc));
@@ -278,9 +299,9 @@ static mluOpStatus_t mainIndiceConvolutionForward(
   int32_t matmul_a_shape[2] = {0, ci};
   int32_t matmul_b_shape[2] = {ci, co};
   int32_t matmul_c_shape[2] = {0, co};
+  float init_val = 0;
 
   if (!is_workspace_compute) {
-    float init_val = 0;
     auto fill_status = mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &init_val,
                                     features_out_desc, features_out);
     KERNEL_CALL_CHECK(api_name, "mluOpFill_v3", fill_status, "");
@@ -314,12 +335,18 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     CHECK_RETURN(api_name,
                  mluOpGetMatMulHeuristicResult(heuristic_result, matmul_algo,
                                                &tempSize_matmulExtra));
+    CHECK_RETURN(api_name, mluOpGetAddNWorkspaceSize(handle, addN_descriptors,
+                                                     2, features_out_desc,
+                                                     &tempSize_addNExtra))
 
     if (is_workspace_compute) {
       workspaceSize_matmulExtra =
           tempSize_matmulExtra > workspaceSize_matmulExtra
               ? tempSize_matmulExtra
               : workspaceSize_matmulExtra;
+      workspaceSize_addNExtra = tempSize_addNExtra > workspaceSize_addNExtra
+                                    ? tempSize_addNExtra
+                                    : workspaceSize_addNExtra;
     } else {
       void *filters_buffer = (char *)validFilters_ptr + i * elementSize_filters;
       void *gatherIndice_buffer =
@@ -340,20 +367,34 @@ static mluOpStatus_t mainIndiceConvolutionForward(
           matmul_c_desc, matmulResult_ptr, matmulExtra_ptr,
           tempSize_matmulExtra, matmul_c_desc, matmulResult_ptr);
       KERNEL_CALL_CHECK(api_name, "mluOpMatMul_v2", matmul_status, "");
+
+      auto fill_status =
+          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &init_val,
+                       features_out_desc, scatterResult_ptr);
+      KERNEL_CALL_CHECK(api_name, "mluOpFill_v3", fill_status, "");
+
       // invoke scatter_add to add intermediate result to final result:
       // [indice_num[i], co] -> [num_act_out, co]
       auto scatter_add_status = mluOpScatterNd_v2(
-          handle, MLUOP_SCATTERND_ADD, active_indice_desc,
+          handle, MLUOP_SCATTERND_UPDATE, active_indice_desc,
           scatterAddIndice_buffer, matmul_c_desc, matmulResult_ptr,
-          features_out_desc, features_out, features_out_desc, features_out);
+          features_out_desc, scatterResult_ptr, features_out_desc,
+          scatterResult_ptr);
       KERNEL_CALL_CHECK(api_name, "mluOpScatterNd_v2", scatter_add_status, "");
+
+      auto addN_status = mluOpAddN_v2(handle, addN_descriptors, addN_ptrs, 2,
+                                      features_out_desc, features_out,
+                                      addNExtra_ptr, tempSize_addNExtra);
     }
   }
   if (is_workspace_compute) {
-    *workspace_size = workspaceSize_transpose +
-                      std::max(workspaceSize_gather + workspaceSize_matmul +
-                                   workspaceSize_matmulExtra,
-                               workspaceSize_transposeExtra);
+    workspaceSize_maximum = std::max(
+        workspaceSize_matmul + workspaceSize_gather + workspaceSize_matmulExtra,
+        workspaceSize_transposeExtra);
+    workspaceSize_maximum = std::max(
+        workspaceSize_matmul + workspaceSize_scatter + workspaceSize_addNExtra,
+        workspaceSize_maximum);
+    *workspace_size = workspaceSize_transpose + workspaceSize_maximum;
   }
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(active_indice_desc));
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(matmul_a_desc));
@@ -369,7 +410,10 @@ static mluOpStatus_t mainIndiceConvolutionForward(
 // | transposed filters | transpose_extra |
 //                      ||
 //                      \/
-// | transposed filters | matmul_result | gathered features | matmul_extra |
+// | transposed filters | matmul_result | gather_result | matmul_extra |
+//                      ||
+//                      \/
+// | transposed filters | matmul_result | scatter_result | addN_extra |
 mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionForwardWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t features_desc,
     const mluOpTensorDescriptor_t filters_desc,
