@@ -64,6 +64,59 @@ void MLUOP_WIN_API mluOpBlockKernel5StagePipelineAbsFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
 
+/* Carafe */
+void MLUOP_WIN_API mluOpBlockKernelCarafeForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *mask, void *output,
+    int input_dimN,    // number of input samples
+    int input_dimH,    // input feature map height
+    int input_dimW,    // input feature map width
+    int input_dimC,    // number of input channels
+    int kernel_size,   // upsampling kernel side size
+    int group_size,    // number of channel groups
+    int scale_factor,  // upscaling factor
+    int block_dimH,    // block height
+    int block_dimW,    // block width
+    int block_dimG,    // block of channel groups
+    int block_dimC,    // block of channels in each group
+    int grid_dimH,     // nb. of blocks along height
+    int grid_dimW,     // nb. of blocks along width
+    int grid_dimG,     // nb. of group blocks
+    int grid_dimC);     // nb. of channel blocks
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeForwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *mask, void *output,
+    int input_dimN,    // number of input samples
+    int input_dimH,    // input feature map height
+    int input_dimW,    // input feature map width
+    int input_dimC,    // number of input channels
+    int kernel_size,   // upsampling kernel side size
+    int group_size,    // number of channel groups
+    int scale_factor,  // upscaling factor
+    int block_dimH,    // block height
+    int block_dimW,    // block width
+    int block_dimG,    // block of channel groups
+    int block_dimC,    // block of channels in each group
+    int grid_dimH,     // nb. of blocks along height
+    int grid_dimW,     // nb. of blocks along width
+    int grid_dimG,     // nb. of group blocks
+    int grid_dimC);     // nb. of channel blocks
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *input, void *mask,
+    void *grad_output, void *grad_input,
+    void *grad_mask, int n, int hi, int wi,
+    int c, int k_up, int group, int scale);
+
+void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *input, void *mask,
+    void *grad_output, void *grad_input,
+    void *grad_mask, int n, int hi, int wi,
+    int c, int k_up, int group, int scale);
+
 /* Div */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
@@ -101,7 +154,8 @@ void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel4(
 void MLUOP_WIN_API mluOpBlockBalanceGetIndicePairKernel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l);
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size);
 
 void MLUOP_WIN_API mluOpBlockSubmGetIndicePairKernel1(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

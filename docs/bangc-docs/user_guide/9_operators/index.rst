@@ -392,14 +392,37 @@ mluOpDeformRoiPoolForward
 
 其中 :math:`\triangle \hat p_{i,j}` 是通过全连接层获得的归一化偏移量；:math:`\triangle p_{i,j}` 是一个分数；:math:`\gamma` 是预先设定的标量。
 
+.. _indice_convolution_backward_data:
+
+mluOpIndiceConvolutionBackwardData
+-------------------------------------------
+该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算输入的梯度。
+
 .. _indice_convolution_backward_filter:
 
 mluOpIndiceConvolutionBackwardFilter
 -------------------------------------------
 该算子是 indiceConvolutionForward 算子的反向，算子的功能是根据稀疏卷积输出的梯度，计算权值的梯度。
 
+.. _indice_convolution_forward:
+
+mluOpIndiceConvolutionForward
+--------------------------------
+该算子对稀疏张量处理后的2维张量进行卷积操作，算子输出稀疏输入的卷积结果，结果也以2维张量形式给出。
+
 .. _three_nn_forward:
 
 mluOpThreeNNForward
 -----------------------------
 该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。
+.. _carafe_forward:
+
+mluOpCarafeBackward
+----------------------------------
+CarafeForward的反向功能，即根据输入特征图、上采样核函数的滤波器张量以及损失函数对输出特征图的梯度张量，得到损失函数对输入特征图和上采样核函数滤波器的梯度张量。
+
+.. _carafe_backward:
+
+mluOpCarafeForward
+----------------------------------
+一种通用、轻量且非常有效的上采样算法，在物体识别、语义分割、图像修复等任务上都展示出很好的效果。

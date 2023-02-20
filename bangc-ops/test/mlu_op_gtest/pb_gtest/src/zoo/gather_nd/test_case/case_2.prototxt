@@ -1,0 +1,48 @@
+op_name: "gather_nd"
+op_type: "GATHER_ND"
+input {
+  id: "params"
+  shape: {
+    dims: 4
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_UINT64
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "indices"
+  shape: {
+    dims: 400
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  random_data: {
+    seed: 25
+    upper_bound: 2
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 400
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_UINT64
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

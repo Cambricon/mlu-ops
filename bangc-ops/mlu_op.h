@@ -792,6 +792,17 @@ typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
  *  ::mluOpDestroyUniqueDescriptor function.*/
 typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
 
+/*! The descriptor of CARAFE (Content-Aware ReAssembly of FEatures) operation that holds
+ *  CARAFE information including the number of input dimensions, kernel size, group size,
+ *  and scale factor.
+ *
+ *  You need to call the ::mluOpCreateCarafeDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetCarafeDescriptor function to set the information of the CARAFE operation
+ *  to the descriptor. Also, you need to destroy the MLUOP context at the end with the
+ *  ::mluOpDestroyCarafeDescriptor function.
+ */
+typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
+
 // Group:Tensor
 /*!
  *  @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, data type,
@@ -1039,10 +1050,35 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
                                     const int dilation[],
                                     const int input_space[],
                                     const int filter_space[],
-                                    const int output_spcae[],
+                                    const int output_space[],
                                     const int subm,
                                     const int transpose,
                                     const int inverse);
+
+// Group:: GetIndicePairs
+/*!
+ *  @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionStruct.
+ *
+ *  @param[in] desc
+ *  Pointer to the parameter num_act_out that holds information about the tensor descriptor.
+ *  @param[out] num_act_out
+ *  The active point number of output space in sparse convolution mode.
+ *
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_NOT_INITIALIZED
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc,
+                                   int *num_act_out);
 
 // Group:Tensor
 /*!
@@ -2195,6 +2231,335 @@ mluOpLog(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t y_desc,
          void *y);
 
+// Group:Carafe
+/*!
+ * @brief Creates a descriptor pointed by \b carafe_desc for CARAFE upsampling forward and backward operations,
+ * and allocates memory holding the configuration parameters.The information is defined in ::mluOpCarafeDescriptor_t.
+ * For more information about descriptor, see "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] carafe_desc
+ * A host pointer to the CARAFE descriptor that holds information about the
+ * CARAFE operation.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_NOT_INITIALIZED
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpSetCarafeDescriptor function to initialize
+ *   and set the information to the CARAFE descriptor.
+ * - You need to call the ::mluOpDestroyCarafeDescriptor function to destroy the descriptor.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateCarafeDescriptor(mluOpCarafeDescriptor_t *carafe_desc);
+
+// Group:Carafe
+/*!
+ * @brief Initializes the CARAFE descriptor \b carafe_desc that was previously created with
+ * the ::mluOpCreateCarafeDescriptor function, and sets the information about the
+ * CARAFE forward and backward operations to the descriptor \b carafe_desc.
+ *
+ * @param[in] carafe_desc
+ * The descriptor of the CARAFE operation. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @param[in] dimNb
+ * The number of dimensions in the input tensor of the CARAFE operation.
+ * @param[in] kernel_size
+ * The width of the upsampling kernel window.
+ * @param[in] group_size
+ * The number of channel groups. The channels in the same group share the same upsampling filter.
+ * @param[in] scale_factor
+ * The upsampling ratio by which the resolution of the input feature map will be
+ * increased, i.e., the height and width of the output feature maps would be \b scale_factor times
+ * of the height and width of the input feature maps, respectively.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - Before calling this function, ::mluOpCreateCarafeDescriptor should be called.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc,
+                         const int dimNb,
+                         const int kernel_size,
+                         const int group_size,
+                         const int scale_factor);
+
+// Group:Carafe
+/*!
+ * @brief Destroys a CARAFE descriptor \b carafe_desc that was previously created by
+ * the ::mluOpCreateCarafeDescriptor function.
+ *
+ * The CARAFE descriptor is defined in ::mluOpCarafeDescriptor_t
+ * and holds the information about the CARAFE forward or backward operations.
+ *
+ * @param[in] carafe_desc
+ * The CARAFE descriptor to be destroyed. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - You need to call this function after calling the ::mluOpCarafeForward,
+ *   or ::mluOpCarafeBackward function. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
+ * - This function should be called to destroy the CARAFE descriptor.
+ *   Otherwise, memory leak may occur.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
+
+// Group:Carafe
+/*!
+ * @brief Performs the CARAFE upsampling operation
+ * on the input feature maps \b input using weighted combination, where the
+ * filter is set with \b mask. The upsampled feature maps are returned in
+ * the output tensor \b output.
+ *
+ * CARAFE performs upsampling at each output location by weighted summation in a nearby mask
+ * window around the corresponding input location. The mask filters are defined separately
+ * for each output location, which offers the ability of content-aware handling.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the carafe forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] carafe_desc
+ * The descriptor of the CARAFE operation. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @param[in] input_desc
+ * The tensor descriptor of the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] mask_desc
+ * The tensor descriptor of the mask applied to the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask
+ * Pointer to the MLU memory that stores the mask tensor.
+ * @param[in] output_desc
+ * The tensor descriptor of the output upsampled feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "CARAFE operation" section in "Cambricon BANGC OPS User Guide" for details
+ *
+ * @par Data Type
+ * - Data types of \b input, \b mask and \b output tensors must be the same.
+ * - The supported data types of input， output, and mask tensors are as follows:
+ *   - input tensor: half, float
+ *   - mask tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - Data layout of the \b input, \b mask, and \b output tensors should be \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - Parameters specified in \b carafe_desc should satisfy:
+ * - The \b dimNb should be equal to 4.
+ * - The \b kernel_size should be an odd number, i.e., 2*n+1 (n>=0), and \b kernel_size <= 45.
+ * - The \b group_size is positive integers,
+ * - The \b scale_factor is positive integers, and \b scale_factor <= 5.
+ * - The shape of \b input_desc should be [N, H, W, C].
+ * - The shape of \b mask_desc should be [N, Ho, Wo, Cm].
+ * - The shape of \b output_desc should be [N, Ho, Wo, C].
+ * - The length of all dimensions should be non-negative integers.
+ * - The dimensions denoted by the same symbol should have the same value.
+ * - The \b C should be divisible by \b group_size, i.e., C = N * group_size (N>=1).
+ * - The formula of \b Cm is that \b Cm = \b group_size * \b kernel_size * \b kernel_size.
+ * - The formula of \b Ho is that \b Ho = \b scale_factor * \b H.
+ * - The formula of \b Wo is that \b Wo = \b scale_factor * \b W.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement CARAFE forward operation, you need to
+ *   prepare all the parameters passed to this function. See each parameter description
+ *   for details.
+ *
+ * @par Performance Optimization
+ * - None.
+ *
+ * @note
+ * - If any dimension in \b input_desc, \b mask_desc, or \b output_desc is zero,
+ *   which represents an empty tensor, ::MLUOP_STATUS_SUCCESS is returned without
+ *   any changes to the \b output tensor.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - Example of CARAFE forward operation is as follows:
+     @verbatim
+      input tensor by 1 * 2 * 2 * 1 --> input:
+        [[[[ 0.34064351], [-0.8246629 ]],
+          [[-0.71797801], [-0.51707748]]]]
+
+      mask tensor by 1 * 4 * 4 * 1 --> mask:
+        [[[[ 0.97630979], [-0.06261992], [ 0.91232837], [-0.1598553 ]],
+          [[-0.72060206], [ 0.48904262], [-0.65568251], [ 0.12801235]],
+          [[-0.85134485], [-1.27589059], [ 3.00143314], [ 0.61258706]],
+          [[-0.50308504], [-0.93015218], [-1.1125597 ], [ 0.67302385]]]]
+
+      param:
+        kernel_size: 3, group_size: 1, scale_factor: 2
+
+      output tensor by 1 * 4 * 4 * 1 --> output:
+        [[[[ 0.33257359], [-0.02133107], [-0.75236336], [ 0.13182674]],
+          [[-0.24546842], [ 0.1665892 ], [ 0.54071704], [-0.10556703]],
+          [[ 0.61124688], [ 0.91606138], [-1.55197348], [-0.31675497]],
+          [[ 0.36120399], [ 0.66782881], [ 0.57527956], [-0.34800548]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/carafe.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCarafeForward(mluOpHandle_t handle,
+                   const mluOpCarafeDescriptor_t carafe_desc,
+                   const mluOpTensorDescriptor_t input_desc,
+                   const void *input,
+                   const mluOpTensorDescriptor_t mask_desc,
+                   const void *mask,
+                   const mluOpTensorDescriptor_t output_desc,
+                   void *output);
+
+// Group:Carafe
+/*!
+ * @brief Performs the back-propagation of CARAFE.
+ * operation to compute the gradient with respect to input \b grad_input and
+ * mask \b grad_mask based on the gradient of response \b grad_output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the CARAFE backward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] carafe_desc
+ * The descriptor of the CARAFE operation. For detailed information,
+ * see ::mluOpCarafeDescriptor_t.
+ * @param[in] input_desc
+ * The tensor descriptor of the input feature maps. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] mask_desc
+ * The tensor descriptor of the mask applied to the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask
+ * Pointer to the MLU memory that stores the mask tensor.
+ * @param[in] grad_output_desc
+ * The tensor descriptor of the gradient with respect to the output feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the gradient with respect to the
+ * upsampled feature maps.
+ * @param[in] grad_input_desc
+ * The tensor descriptor of the gradient with respect to the input feature maps.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_input
+ * Pointer to the MLU memory that stores the gradient with respect to the
+ * input feature maps.
+ * @param[in] grad_mask_desc
+ * The descriptor of the gradient tensor with respect to the \b mask tensor.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_mask
+ * Pointer to the MLU memory that stores the gradient with respect to \b mask.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "CARAFE operation" section in "Cambricon BANGC OPS User Guide" for details.
+ *
+ * @par Data Type
+ * - Data types of \b input, \b mask, \b grad_output, \b grad_input and \b grad_mask
+ *   tensors must be the same.
+ * - For MLU200 series, it is not recommended to use half data type for tensors due to the
+ *   low precision.
+ * - The supported data types of input， mask and output tensors are as follows:
+ *   - input tensor: half, float
+ *   - mask tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - Data layout of the \b input, \b mask, \b grad_output, \b grad_input and \b grad_mask
+ *   tensors should be \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - Parameters specified in \b carafe_desc should satisfy:
+ * - The \b dimNb = 4.
+ * - The \b kernel_size should be an odd number, i.e., 2*n+1 (n>=0), and \b kernel_size <= 137.
+ * - The \b group_size and \b scale_factor should be positive integers.
+ * - The shape of \b input_desc should be [N, H, W, C].
+ * - The shape of \b mask_desc should be [N, Ho, Wo, Cm].
+ * - The shape of \b grad_output_desc should be [N, Ho, Wo, C].
+ * - The shape of \b grad_input_desc should be [N, H, W, C].
+ * - The shape of \b grad_mask_desc should be [N, Ho, Wo, Cm].
+ * - The length of all dimensions should be non-negative integers.
+ * - The dimensions denoted by the same symbol should have the same value.
+ * - \b C should be divisible by \b group_size, i.e., C = n * group_size (n>=1).
+ * - \b Cm = \b group_size * \b kernel_size * \b kernel_size.
+ * - \b Ho = \b scale_factor * \b H.
+ * - \b Wo = \b scale_factor * \b W.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement CARAFE backward operation, you need to
+ *   prepare all the parameters passed to this function. See each parameter description
+ *   for details.
+ *
+ * @par Performance Optimization
+ * - None.
+ *
+ * @note
+ * - If any dimension in \b input_desc, \b mask_desc, \b grad_output_desc, \b grad_input_desc
+ *   or \b grad_mask_desc is zero, which represents an empty tensor, ::MLUOP_STATUS_SUCCESS is
+ *   returned without any changes to the \b grad_output and \b grad_input tensors.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/carafe.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCarafeBackward(mluOpHandle_t handle,
+                    const mluOpCarafeDescriptor_t carafe_desc,
+                    const mluOpTensorDescriptor_t input_desc,
+                    const void *input,
+                    const mluOpTensorDescriptor_t mask_desc,
+                    const void *mask,
+                    const mluOpTensorDescriptor_t grad_output_desc,
+                    const void *grad_output,
+                    const mluOpTensorDescriptor_t grad_input_desc,
+                    void *grad_input,
+                    const mluOpTensorDescriptor_t grad_mask_desc,
+                    void *grad_mask);
 // Group:Div
 /*!
  * @brief Computes division on input tensors \b x and \b y, and returns the
@@ -6546,7 +6911,8 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * For more information about workspace, see "Cambricon BANGC OPS User Guide".
  * @param[in] workspace_size
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the combinations of the following data types for
@@ -6554,7 +6920,8 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  *   - \b indices, \b out_indices, \b indice_pairs and \b indice_num data type: int32, int32, int32, int32
  *
  * @note
- * - This function only supports on MLU300 series or above platforms.
+ * - This function is only supported on MLU300 series or above platforms.
+ * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionStruct.
  *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
@@ -6630,7 +6997,8 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par API Dependency
  * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
@@ -7891,14 +8259,14 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * - The \b indice_pairs is 3D array.
  * - The \b filter is 4D or 5D tensor.
  * - The dims[1] of \b indice_pairs should be equal to 2.
- * - When \b filter is a 4D tensor, the dims[0] of \b indice_pairs should be
+ * - When the \b filter is a 4D tensor, the dims[0] of \b indice_pairs should be
  *   equal to H * W corresponding to filter layout.
- * - When \b filter is a 5D tensor, the dims[0] of \b indice_pairs should be
+ * - When the \b filter is a 5D tensor, the dims[0] of \b indice_pairs should be
  *   equal to D * H * W corresponding to filter layout.
  * - The dims[1] of \b output_grad should be equal to N corresponding to filter layout.
  * - The dims[1] of \b input_grad should be equal to C corresponding to filter layout.
  * - The dims[0] of \b input_grad should be equal to the dims[2] of \b indice_pairs.
- * - Each value in array \b indice_num should be no smaller than 0, no
+ * - Each value in the array \b indice_num should be no smaller than 0, no
  *   larger than the dims[0] of \b output_grad and no larger than the dims[2]
  *   of \b indice_pairs.
  * - The value \b sub_m should be 0 or 1.
@@ -7913,7 +8281,14 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  *   be called to get the extra space size before this function is called.
  *
  * @note
- * - None.
+ * - When the \b filter is a 5D tensor, the layout MLUOP_LAYOUT_ARRAY represents
+ *   the data layout of (D, H, W, C, N).
+ * - The length of the array \b indice_num should be equal to the dims[0] of \b indice_pairs.
+ * - The data values of \b indice_pairs should be no smaller than 0.
+ * - The data values of tensor slices indice_pairs[:,0,:] should be no larger
+ *   than the dims[0] of \b input_grad.
+ * - The data values of tensor slices indice_pairs[:,1,:] should be no larger
+ *   than the dims[0] of \b output_grad.
  *
  * @par Requirements
  * - None.
@@ -7974,7 +8349,8 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par API Dependency
  * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
@@ -8044,7 +8420,8 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the output tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
  * - This function supports the combinations of the following data types for
@@ -8221,6 +8598,193 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
                     void *dist2,
                     const mluOpTensorDescriptor_t idx_desc,
                     void *idx);
+
+// Group:indiceConvolutionForward
+/*!
+ * @brief Returns in \b workspace_size of the MLU memory which is used as an extra workspace
+ * to boost up indice_convolution_forward computation.
+ *
+ * The size of workspace is deduced from the input including input tensor descriptor
+ * \b features_desc, \b filters_desc, \b indice_pairs_desc, output tensor descriptor
+ * \b features_out_desc and array indice_num[].
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * indice_convolution_forward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of input features. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] filters_desc
+ * The descriptor of filters. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] features_out_desc
+ * The descriptor of features_out. For detailed information,
+ * see ::mluOptensorDescriptor_t.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indices mapping pairs of features_in and filters.
+ * For detailed information, see ::mluOptensorDescriptor_t.
+ * @param[in] features_out_desc
+ * The descriptor of features_out. For detailed information,
+ * see ::mluOptensorDescriptor_t.
+ * @param[in] indice_num
+ * Pointer to the host memory that stores the indice pairs number.
+ * @param[in] inverse
+ * Currently, it is not supported and should be set to 0.
+ * @param[in] sub_m
+ * The sub_m mode of convolution if the value is not 0.
+ * @param[out] workspace_size
+ * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par API Dependency
+ * - Call ::mluOpCreateTensorDescripttor and ::mluOpSetTensorDescriptor before this function
+ *   to create and set tensor descriptor \b features_desc, \b filters_desc, \b indice_pairs_desc
+ *   and \b features_out_desc.
+ * - Output \b workspace_size should later be passed to ::mluOpIndiceConvolutionForward function
+ *   to complete computation.
+ *
+ *  @note
+ *  - None.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
+                                              const mluOpTensorDescriptor_t features_desc,
+                                              const mluOpTensorDescriptor_t filters_desc,
+                                              const mluOpTensorDescriptor_t indice_pairs_desc,
+                                              const mluOpTensorDescriptor_t features_out_desc,
+                                              const int64_t indice_num[],
+                                              const int64_t num_act_out,
+                                              const int64_t inverse,
+                                              const int64_t sub_m,
+                                              size_t *workspace_size);
+
+// Group:indiceConvolutionForward
+/*!
+ * @bried Performs convolution on input sparse tensor \b features with kernel \b filters,
+ * then returns the output sparse tensor \b features_out.
+ *
+ * @param[in] handle
+ * Handle to an MLU context that is used to manage MLU devices and queues in the
+ * indice_convolution_forward operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] features_desc
+ * The descriptor of features that needs convolution. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] features
+ * Pointer to the MLU memory that stores the features tensor.
+ * @param[in] filters_desc
+ * The descriptor of filters that convolves input. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] filters
+ * Pointer to the MLU memory that stores the convolution kernel.
+ * @param[in] indice_pairs_desc
+ * The descriptor of indices mappping pairs of input indices and filters location.
+ * For deatailed informationm, see ::mluOpTensorDescriptor_t.
+ * @param[in] indice_pairs
+ * Pointer to the MLU memory that stores the indice pairs tensor.
+ * @param[in] indice_num
+ * Pointer to the host memory that stores the indice pairs number.
+ * @param[in] num_act_out
+ * The number of non-zero element in output sparse tensor.
+ * @param[in] inverse
+ * Currently it is not supported and should be set to 0.
+ * @param[in] sub_m
+ * The sub_m mode of convolution if the value is not 0.
+ * @param[in] workspace
+ * Pointer to the MLU memory that stores temporary tensor and extra computation space.
+ * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * @param[in] features_out_desc
+ * The descriptor of the output features tensor. For detailed information,
+ * see ::mluOptensorDescriptor_t.
+ * @param[out] features_out
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the combination of the following data types:
+ *   - input tensor \b featues, \b filters, \b indice_pairs and output tensor \b features_out: half, half, int32, half
+ *   - input tensor \b featues, \b filters, \b indice_pairs and output tensor \b features_out: float, float, int32,
+ * float
+ * - The supported data type of array \b indice_num, scalar \b inverse and \b sub_m is int64.
+ *
+ * @par Data Layout
+ * - This function supports the following tensor layouts:
+ *   - features tensor: MLUOP_LAYOUT_ARRAY
+ *   - filters tensor: MLUOP_LAYOUT_NDHWC, MLUOP_LAYOUT_NCDHW, MLUOP_LAYOUT_ARRAY
+ *   - indice_pairs tensor: MLUOP_LAYOUT_ARRAY
+ *   - features_out tensor: MLUOP_LAYOUT_ARRAY
+ *
+ * @note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - This function does not support tensor onchip data type with fixed-point type.
+ * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
+ *   of \b features. Such value is illegal and not checked, the output result is
+ *   not guaranteed.
+ * - The output indices in \b indice_pairs tensor should be no larger than dims[0]
+ *   of \b features_out. Such value is illegal and not checked, the output result is
+ *   not guaranteed.
+ * - The input indices used to generate \b indice_pairs tensor should not point to
+ *   the same location of \b features. Such value is illegal and not checked, the
+ *   output result is not guaranteed.
+ *
+ * @par Scale Limitation
+ * - The \b features and \b features_out are 2D tensor.
+ * - The \b filters is 5D tensor.
+ * - The \b indice_pairs is 3D tensor.
+ * - The dims[1] of \b features equals to input channel of \b filters.
+ * - The dims[1] of \b features_out equals to onput channel of \b filters.
+ * - The dims[0] of \b indice_pairs equals to D * H * W of \b filters.
+ * - The dims[1] of \b indice_pairs equals to 2.
+ * - The dims[2] of \b indice_pairs equals to dims[0] of \b features.
+ * - The length of \b indice_num equals to D * H * W of \b filters.
+ * - Values in \b indice_num should be no smaller than 0, no larger
+ *   than dims[0] of \b features.
+ * - The dims[0] of \b features_out equals to num_act_out.
+ * - The value of \b inverse and \b sub_m should be 0 or 1.
+ *
+ * @par API Dependency
+ * - The function ::mluOpGetIndiceConvolutionForwardWorkspaceSize should be
+ *   called before this function to get extra space size.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/v1.6.1/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionForward(mluOpHandle_t handle,
+                              const mluOpTensorDescriptor_t features_desc,
+                              const void *features,
+                              const mluOpTensorDescriptor_t filters_desc,
+                              const void *filters,
+                              const mluOpTensorDescriptor_t indice_pairs_desc,
+                              const void *indice_pairs,
+                              const int64_t indice_num[],
+                              const int64_t num_act_out,
+                              const int64_t inverse,
+                              const int64_t sub_m,
+                              void *workspace,
+                              size_t workspace_size,
+                              const mluOpTensorDescriptor_t features_out_desc,
+                              void *features_out);
 
 #if defined(__cplusplus)
 }

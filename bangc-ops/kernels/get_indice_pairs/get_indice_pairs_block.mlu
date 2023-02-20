@@ -44,12 +44,12 @@ __mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
                                OutputSpace output_space, Stride stride,
                                Dilation dilation, Padding padding,
                                int32_t deal_num, int32_t step_index_start,
-                               int32_t k_dhw, int32_t batch_size) {
+                               int32_t k_dhw, int32_t batch) {
 #if __BANG_ARCH__ >= 370
   int32_t len_l_dim = deal_num * (Ndim + 1);
   int32_t deal_num_lk = deal_num * k_dhw;
   int32_t output_size =
-      batch_size * output_space.o_d * output_space.o_h * output_space.o_w + 1;
+      batch * output_space.o_d * output_space.o_h * output_space.o_w + 1;
   __bang_transpose((int32_t *)nram_aux_a, (int32_t *)nram_input, deal_num,
                    Ndim);
   stepIndex((int32_t *)nram_aux_a + deal_num * Ndim, step_index_start,
@@ -91,7 +91,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
     void *indices_in, FilterSpace host_filter_space,
     InputSpace host_input_space, OutputSpace host_output_space,
     Stride host_stride, Dilation host_dilation, Padding host_padding,
-    int32_t core_num_l, int32_t input_active_site, int32_t batch_size) {
+    int32_t core_num_l, int32_t input_active_site, int32_t batch) {
 #if __BANG_ARCH__ >= 370
   /*  nram_space
    |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
@@ -139,7 +139,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
           (int32_t *)nram_output + ((i - 1) % 2) * ping_pong_num;
       computeIndex(nram_output_t, nram_input_t, (int32_t *)nram_aux_a,
                    nram_aux_b, output_space, stride, dilation, padding,
-                   deal_num, step_index_start, k_dhw, batch_size);
+                   deal_num, step_index_start, k_dhw, batch);
       step_index_start += deal_num;
     }
     if (i >= 2) {
@@ -190,7 +190,8 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
 
 __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
     void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l) {
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size) {
 #if __BANG_ARCH__ >= 370
   int32_t len_job, offset_job = 0;
   assignTask(len_l * kernel_volume, taskIdY, taskDimY, offset_job, len_job);
@@ -203,7 +204,8 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
   int32_t *nram_output = (int32_t *)nbuf_total + 3 * core_num_l;
   int32_t ping_pong_num = 3 * core_num_l;
   int32_t *nram_aux = (int32_t *)nbuf_total + 7 * core_num_l;
-  stepIndex(nram_random_num, taskId * core_num_l, core_num_l);
+  int32_t  multi_max = output_size / taskDimY;
+  stepIndex(nram_random_num, taskId * multi_max, core_num_l);
   for (int i = 0; i < repeat + 2; ++i) {
     if (i < repeat) {
       int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
@@ -364,7 +366,7 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
     FilterSpace host_filter_space, InputSpace host_input_space,
     OutputSpace host_output_space, Stride host_stride, Dilation host_dilation,
     Padding host_padding, int32_t core_num_l, int32_t input_active_site,
-    int32_t batch_size) {
+    int32_t batch) {
 #if __BANG_ARCH__ >= 370
   /*  nram_space
   |input| mask_all | indice_index_in |  indice_out_expand | indice_in_expand |
@@ -414,7 +416,7 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
                         (int32_t *)nram_aux_a, deal_num, input_space);
       computeIndex(nram_output_t, nram_input_t, (int32_t *)nram_aux_a,
                    nram_aux_b, output_space, stride, dilation, padding,
-                   deal_num, step_index_start, k_dhw, batch_size);
+                   deal_num, step_index_start, k_dhw, batch);
       step_index_start += deal_num;
     }
     if (i >= 2) {
@@ -500,12 +502,12 @@ void  mluOpBlockDefaultGetIndicePairKernel1(
     void *mask_all_ws, void *indice_index_in_ws, void *out_indices_expand_ws,
     void *indices, FilterSpace filter_space, InputSpace input_space,
     OutputSpace output_space, Stride stride, Dilation dilation, Padding padding,
-    int32_t core_num_l, int32_t input_active_site, int32_t batch_size) {
+    int32_t core_num_l, int32_t input_active_site, int32_t batch) {
   MLUBlockDefaultGetIndicePairKernel1<<<k_dim, k_type, queue>>>(
       (void *)mask_all_ws, (void *)indice_index_in_ws,
       (void *)out_indices_expand_ws, (void *)indices, filter_space, input_space,
       output_space, stride, dilation, padding, core_num_l, input_active_site,
-      batch_size);
+      batch);
 }
 
 void  mluOpBlockDefaultGetIndicePairKernel2(
@@ -535,10 +537,11 @@ void  mluOpBlockDefaultGetIndicePairKernel4(
 void  mluOpBlockBalanceGetIndicePairKernel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l) {
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size) {
   MLUBlockBalanceGetIndicePairKernel<<<k_dim, k_type, queue>>>(
       balance_input, balance_mask, balance_output, len_l, kernel_volume,
-      core_num_l);
+      core_num_l, output_size);
 }
 
 void  mluOpBlockSubmGetIndicePairKernel1(
@@ -547,12 +550,12 @@ void  mluOpBlockSubmGetIndicePairKernel1(
     void *out_indices_expand_ptr, void *indices, FilterSpace filter_space,
     InputSpace input_space, OutputSpace output_space, Stride stride,
     Dilation dilation, Padding padding, int32_t core_num_l,
-    int32_t input_active_site, int32_t batch_size) {
+    int32_t input_active_site, int32_t batch) {
   MLUBlockSubmGetIndicePairKernel1<<<k_dim, k_type, queue>>>(
       (void *)mask_all_ptr, (void *)indice_index_in_ptr,
       (void *)indice_in_expand_ptr, (void *)out_indices_expand_ptr,
       (void *)indices, filter_space, input_space, output_space, stride,
-      dilation, padding, core_num_l, input_active_site, batch_size);
+      dilation, padding, core_num_l, input_active_site, batch);
 }
 
 void  mluOpBlockSubmGetIndicePairKernel2(

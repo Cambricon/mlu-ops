@@ -196,7 +196,7 @@ static mluOpStatus_t getUniqueOpWS(mluOpHandle_t handle,
 
 mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
     mluOpHandle_t handle, const std::string interface_name,
-    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc,
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const mluOpTensorDescriptor_t out_indices_desc,
@@ -204,10 +204,10 @@ mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
   // workspace for get_indice_pairs
   size_t total_size = 0;
   int sub_m = sparse_conv_desc->sub_m;
-  int batch_size = sparse_conv_desc->batch_size;
+  int batch = sparse_conv_desc->batch;
   int kernel_volume = indice_pairs_desc->dims[0];
   int input_active_site = indice_pairs_desc->dims[2];
-  int output_size = batch_size * sparse_conv_desc->output_space[0] *
+  int output_size = batch * sparse_conv_desc->output_space[0] *
                             sparse_conv_desc->output_space[1] *
                             sparse_conv_desc->output_space[2] +
                         1;
@@ -286,7 +286,7 @@ mluOpStatus_t launchDefaultKernel1(
     mluOpHandle_t handle,
     const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const void *indices, void *mask_all_ws, void *indice_index_in_ws,
-    void *out_indices_expand_ws, int batch_size, int kernel_volume,
+    void *out_indices_expand_ws, int batch, int kernel_volume,
     int input_active_site) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
@@ -331,7 +331,7 @@ mluOpStatus_t launchDefaultKernel1(
       kDim3, func_type, handle->queue, (void *)mask_all_ws,
       (void *)indice_index_in_ws, (void *)out_indices_expand_ws,
       (void *)indices, filter_space, input_space, output_space, stride,
-      dilation, padding, core_num_l, input_active_site, batch_size)));
+      dilation, padding, core_num_l, input_active_site, batch)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -349,7 +349,7 @@ mluOpStatus_t launchSubmKernel1(
     const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const void *indices, void *mask_all_ptr, void *indice_index_in_ptr,
     void *indice_in_expand_ptr, void *out_indices_expand_ptr,
-    int batch_size, int kernel_volume, int input_active_site) {
+    int batch, int kernel_volume, int input_active_site) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -395,7 +395,7 @@ mluOpStatus_t launchSubmKernel1(
       (void *)indice_index_in_ptr, (void *)indice_in_expand_ptr,
       (void *)out_indices_expand_ptr, (void *)indices, filter_space,
       input_space, output_space, stride, dilation, padding, core_num_l,
-      input_active_site, batch_size)));
+      input_active_site, batch)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -599,7 +599,8 @@ func: balance index distribution
 mluOpStatus_t launchBalanceKernel(
     mluOpHandle_t handle, const std::string interface_name,
     void *balance_input_addr, void *balance_output_addr,
-    void *balance_mask_addr, int input_active_site, int kernel_volume) {
+    void *balance_mask_addr, int input_active_site, int kernel_volume,
+    int output_size) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -620,7 +621,8 @@ mluOpStatus_t launchBalanceKernel(
           << kDim3.z << ">>>";
   KERNEL_CHECK((mluOpBlockBalanceGetIndicePairKernel(
       kDim3, func_type, handle->queue, balance_input_addr, balance_mask_addr,
-      balance_output_addr, input_active_site, kernel_volume, core_num_l)));
+      balance_output_addr, input_active_site, kernel_volume, core_num_l,
+      output_size)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -843,17 +845,17 @@ mluOpStatus_t launchDefaultKernel4(
 
 mluOpStatus_t NormalGetIndicePairsKernel(
     mluOpHandle_t handle, const std::string interface_name,
-    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
     void *workspace, const mluOpTensorDescriptor_t indice_pairs_desc,
     void *indice_pairs, const mluOpTensorDescriptor_t out_indices_desc,
     void *out_indices, const mluOpTensorDescriptor_t indice_num_desc,
     void *indice_num) {
   int sub_m = sparse_conv_desc->sub_m;
-  int batch_size = sparse_conv_desc->batch_size;
+  int batch = sparse_conv_desc->batch;
   int kernel_volume = indice_pairs_desc->dims[0];
   int input_active_site = indice_pairs_desc->dims[2];
-  int output_size = batch_size * sparse_conv_desc->output_space[0] *
+  int output_size = batch * sparse_conv_desc->output_space[0] *
                             sparse_conv_desc->output_space[1] *
                             sparse_conv_desc->output_space[2] +
                         1;
@@ -911,7 +913,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
             launchSubmKernel1(handle, sparse_conv_desc, compute_indices_ptr,
                               mask_all_ptr, indice_index_in_ptr,
                               indice_in_expand_ptr, out_indices_expand_ptr,
-                              batch_size, kernel_volume, input_active_site));
+                              batch, kernel_volume, input_active_site));
 
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
@@ -1058,7 +1060,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
         MLUOP_STATUS_SUCCESS ==
             launchDefaultKernel1(handle, sparse_conv_desc, compute_indices_ptr,
                                  mask_all_ptr, indice_index_in_ptr,
-                                 out_indices_expand_ptr, batch_size,
+                                 out_indices_expand_ptr, batch,
                                  kernel_volume, input_active_site));
 
     //  call reduce_sum mask_all to indice_num
@@ -1120,6 +1122,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                                       kernel_volume, fill_value));
       return MLUOP_STATUS_SUCCESS;
     }
+    sparse_conv_desc->num_act_out = num_act_out;
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
     step_index_addr =
@@ -1136,11 +1139,10 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     balance_output_addr = out_indices_expand_ptr;
     balance_mask_addr = mask_all_ptr;
     INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchBalanceKernel(handle, interface_name, balance_input_addr,
-                                balance_output_addr, balance_mask_addr,
-                                input_active_site, kernel_volume));
+        interface_name, MLUOP_STATUS_SUCCESS ==
+        launchBalanceKernel(handle, interface_name, balance_input_addr,
+                            balance_output_addr, balance_mask_addr,
+                            input_active_site, kernel_volume, output_size));
 
     // call scatter_nd unique_output_addr + step_index_addr = grid_out_addr
     void *scatter_input_addr = NULL, *scatter_output_addr = NULL,
@@ -1204,7 +1206,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
 
 mluOpStatus_t normalGetIndicePairs(
     mluOpHandle_t handle, const std::string interface_name,
-    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
     void *workspace, size_t workspace_size,
     const mluOpTensorDescriptor_t indice_pairs_desc, void *indice_pairs,
