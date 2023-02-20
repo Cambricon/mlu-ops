@@ -5,7 +5,7 @@ This section lists contents that were made for each product release.
 
 * V0.5.0
 
-  **Date:** February 14, 2023
+  **Date:** February 20, 2023
 
   **Changes:**
 
@@ -30,6 +30,14 @@ This section lists contents that were made for each product release.
      - rotated_feature_align_forward
      - three_interpolate_backward
      - three_nn_forward
+
+* V0.4.1
+
+  **Date:** December 20, 2022
+
+  **Changes:**
+
+  - None.
 
 * V0.4.0
 

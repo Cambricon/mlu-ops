@@ -2,13 +2,13 @@
 ========
 * **V0.5.0**
 
-  **更新时间**：2023年2月14日
+  **更新时间**：2023年2月20日
 
   **更新内容**：
 
-  -  不再支持MLU290。
+  - 不再支持MLU290。
   - 新增以下算子章节内容：
-  
+
      + :ref:`active_rotated_filter_forward`
      + :ref:`bbox_overlaps`
      + :ref:`box_iou_rotated`
@@ -45,8 +45,8 @@
   **更新内容**：
 
   - 新增以下算子章节内容：
-  
-     + :ref:`voxel_pooling_forward` 
+
+     + :ref:`voxel_pooling_forward`
      + :ref:`voxelization`
      + :ref:`psa_mask_forward`
      + :ref:`psa_mask_backward`
