@@ -107,7 +107,7 @@ class indice_convolution_backward_filter_general
           filters_grad_desc_, filters_grad_params.get_layout(),
           filters_grad_params.get_dtype(), filters_grad_params.get_dim_nb(),
           filters_grad_params.get_dim_size().data()));
-      if (mluOpGetTensorElementNum(indice_pairs_desc_) >= LARGE_TENSOR_NUM) {
+      if (mluOpGetTensorElementNum(filters_grad_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
             cnrtMalloc(
@@ -118,7 +118,7 @@ class indice_convolution_backward_filter_general
             CNRT_RET_SUCCESS ==
             cnrtMalloc(&filters_grad_,
                        mluOpDataTypeBytes(filters_grad_params.get_dtype()) *
-                           mluOpGetTensorElementNum(indice_pairs_desc_)));
+                           mluOpGetTensorElementNum(filters_grad_desc_)));
       }
 
       std::vector<int64_t> num = {1, 2, 3, 4, 5, 6, 7, 8, 9};
