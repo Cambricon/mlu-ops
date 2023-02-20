@@ -126,11 +126,10 @@ class indice_convolution_backward_filter : public testing::Test {
       }
     }
 
-    int nums = 1;
-    int num_size = 1;
-    for (int i = 0; i < nums; i++) {
+    std::vector<int> num = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    for (int i = 0; i < num.size(); i++) {
       if (indice_num) {
-        indice_num_.push_back(num_size);
+        indice_num_.push_back(num[i]);
       }
     }
 

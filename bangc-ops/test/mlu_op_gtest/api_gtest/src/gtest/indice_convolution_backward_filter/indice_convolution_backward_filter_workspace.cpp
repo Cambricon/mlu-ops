@@ -35,8 +35,8 @@ namespace mluopapitest {
 class indice_convolution_backward_filter_workspace : public testing::Test {
  public:
   void setParam(bool handle, bool features_desc, bool output_grad_desc,
-                bool indice_pairs_desc, bool filters_grad_desc,
-                bool indice_num) {
+                bool indice_pairs_desc, bool filters_grad_desc, bool indice_num,
+                bool workspace_size) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
@@ -72,12 +72,17 @@ class indice_convolution_backward_filter_workspace : public testing::Test {
           filters_grad_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
           filters_grad_dims.data()));
     }
-    int nums = 1;
-    int num_size = 1;
-    for (int i = 0; i < nums; i++) {
+
+    std::vector<int> num = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    for (int i = 0; i < num.size(); i++) {
       if (indice_num) {
-        indice_num_.push_back(num_size);
+        indice_num_.push_back(num[i]);
       }
+    }
+
+    if (workspace_size) {
+      size_t size_temp;
+      workspace_size_ = &size_temp;
     }
   }
 
@@ -142,12 +147,12 @@ class indice_convolution_backward_filter_workspace : public testing::Test {
   std::vector<int64_t> indice_num_;
   int64_t inverse_ = 0;
   int64_t sub_m_ = 0;
-  size_t *workspace_size_;
+  size_t *workspace_size_ = nullptr;
 };
 
 TEST_F(indice_convolution_backward_filter_workspace, BAD_PARAM_handle_null) {
   try {
-    setParam(false, true, true, true, true, true);
+    setParam(false, true, true, true, true, true, true);
     EXPECT_TRUE(
         compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
   } catch (std::exception &e) {
@@ -159,7 +164,7 @@ TEST_F(indice_convolution_backward_filter_workspace, BAD_PARAM_handle_null) {
 TEST_F(indice_convolution_backward_filter_workspace,
        BAD_PARAM_features_desc_null) {
   try {
-    setParam(true, false, true, true, true, true);
+    setParam(true, false, true, true, true, true, true);
     EXPECT_TRUE(
         compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
   } catch (std::exception &e) {
@@ -171,7 +176,7 @@ TEST_F(indice_convolution_backward_filter_workspace,
 TEST_F(indice_convolution_backward_filter_workspace,
        BAD_PARAM_output_grad_desc_null) {
   try {
-    setParam(true, true, false, true, true, true);
+    setParam(true, true, false, true, true, true, true);
     EXPECT_TRUE(
         compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
   } catch (std::exception &e) {
@@ -183,7 +188,7 @@ TEST_F(indice_convolution_backward_filter_workspace,
 TEST_F(indice_convolution_backward_filter_workspace,
        BAD_PARAM_indice_pairs_desc_null) {
   try {
-    setParam(true, true, true, false, true, true);
+    setParam(true, true, true, false, true, true, true);
     EXPECT_TRUE(
         compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
   } catch (std::exception &e) {
@@ -195,7 +200,7 @@ TEST_F(indice_convolution_backward_filter_workspace,
 TEST_F(indice_convolution_backward_filter_workspace,
        BAD_PARAM_filters_grad_desc_null) {
   try {
-    setParam(true, true, true, true, false, true);
+    setParam(true, true, true, true, false, true, true);
     EXPECT_TRUE(
         compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
   } catch (std::exception &e) {
@@ -207,7 +212,7 @@ TEST_F(indice_convolution_backward_filter_workspace,
 TEST_F(indice_convolution_backward_filter_workspace,
        BAD_PARAM_indice_num_null) {
   try {
-    setParam(true, true, true, true, true, false);
+    setParam(true, true, true, true, true, false, true);
     EXPECT_TRUE(
         compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
   } catch (std::exception &e) {
@@ -216,4 +221,15 @@ TEST_F(indice_convolution_backward_filter_workspace,
   }
 }
 
+TEST_F(indice_convolution_backward_filter_workspace,
+       BAD_PARAM_workspace_size_null) {
+  try {
+    setParam(true, true, true, true, true, true, false);
+    EXPECT_TRUE(
+        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+  } catch (std::exception &e) {
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in indice_convolution_backward_filter_workspace";
+  }
+}
 }  // namespace mluopapitest

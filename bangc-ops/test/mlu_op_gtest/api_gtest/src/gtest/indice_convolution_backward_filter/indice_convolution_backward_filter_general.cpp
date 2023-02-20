@@ -49,10 +49,17 @@ class indice_convolution_backward_filter_general
           features_desc_, features_params.get_layout(),
           features_params.get_dtype(), features_params.get_dim_nb(),
           features_params.get_dim_size().data()));
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&features_,
-                     mluOpDataTypeBytes(features_params.get_dtype()) * 10));
+      if (mluOpGetTensorElementNum(features_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&features_,
+                       mluOpDataTypeBytes(features_params.get_dtype()) * 10));
+      } else {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&features_,
+                               mluOpDataTypeBytes(features_params.get_dtype()) *
+                                   mluOpGetTensorElementNum(features_desc_)));
+      }
 
       MLUOpTensorParam output_grad_params = std::get<1>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_grad_desc_));
@@ -87,7 +94,7 @@ class indice_convolution_backward_filter_general
           cnrtMalloc(&filters_grad_,
                      mluOpDataTypeBytes(filters_grad_params.get_dtype()) * 10));
 
-      std::vector<int64_t> num = {1};
+      std::vector<int64_t> num = {1, 2, 3, 4, 5, 6, 7, 8, 9};
       for (int i = 0; i < num.size(); i++) {
         indice_num_.push_back(num[i]);
       }
@@ -251,6 +258,20 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
+    zero_element_4, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({0, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 0, 5, 3}))),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_SUCCESS)));
+
+INSTANTIATE_TEST_CASE_P(
     bad_unsupport_dtype, indice_convolution_backward_filter_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
@@ -286,7 +307,47 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_features_dim_0, indice_convolution_backward_filter_general,
+    bad_indice_pairs_dim_shape_dtype,
+    indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT64,
+                                         3, std::vector<int>({9, 2, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({11, 2, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({9, 1, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({9, 2, 3, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 5, 3}))),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_output_grad_dim_shape_dtype, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_HALF,
+                                         2, std::vector<int>({3, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({3, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 4}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({9, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 5, 3}))),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_filters_grad_dim_shape_dtype,
+    indice_convolution_backward_filter_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({3, 5}))),
@@ -294,90 +355,72 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({3, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({9, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_HALF,
+                                         4, std::vector<int>({3, 3, 5, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({3, 3, 5, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 15, 3})),
+                        MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 5, 13}))),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_features, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1147483648, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({9, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
+        testing::Values(MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
-// INSTANTIATE_TEST_CASE_P(
-//     bad_indice_pairs_dim_shape_dtype,
-//     indice_convolution_backward_filter_general, testing::Combine(
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 5}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 3}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_INT64,
-//                                          3, std::vector<int>({9, 2, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_INT32,
-//                                          3, std::vector<int>({11, 2, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_INT32,
-//                                          3, std::vector<int>({9, 1, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_INT32,
-//                                          4, std::vector<int>({9, 2, 3, 4})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_INT32,
-//                                          3, std::vector<int>({9, 2, 4}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          4, std::vector<int>({3, 3, 5, 3}))),
-//         testing::Values(MLUOP_MLU370, MLUOP_MLU590),
-//         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_output_grad, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({715827883, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({9, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 5, 3}))),
+        testing::Values(MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
-// INSTANTIATE_TEST_CASE_P(
-//     bad_output_grad_dim_shape_dtype,
-//     indice_convolution_backward_filter_general, testing::Combine(
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 5}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_HALF,
-//                                          2, std::vector<int>({3, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_FLOAT,
-//                                          3, std::vector<int>({3, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 4}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_INT32,
-//                                          3, std::vector<int>({9, 2, 3}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          4, std::vector<int>({3, 3, 5, 3}))),
-//         testing::Values(MLUOP_MLU370, MLUOP_MLU590),
-//         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_indice_pairs, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3,
+                                         std::vector<int>({715827883, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 5, 3}))),
+        testing::Values(MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
-// INSTANTIATE_TEST_CASE_P(
-//     bad_filters_grad_dim_shape_dtype,
-//     indice_convolution_backward_filter_general, testing::Combine(
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 5}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 3}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_INT32,
-//                                          3, std::vector<int>({9, 2, 3}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_HALF,
-//                                          4, std::vector<int>({3, 3, 5, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_FLOAT,
-//                                          3, std::vector<int>({3, 3, 5, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_FLOAT,
-//                                          4, std::vector<int>({3, 3, 15, 3})),
-//                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//                         MLUOP_DTYPE_FLOAT,
-//                                          4, std::vector<int>({3, 3, 5,
-//                                          13}))),
-//         testing::Values(MLUOP_MLU370, MLUOP_MLU590),
-//         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_filters_grad, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({9, 2, 3}))),
+        testing::Values(
+            MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+                             std::vector<int>({47721859, 3, 5, 3}))),
+        testing::Values(MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 }  // namespace mluopapitest
