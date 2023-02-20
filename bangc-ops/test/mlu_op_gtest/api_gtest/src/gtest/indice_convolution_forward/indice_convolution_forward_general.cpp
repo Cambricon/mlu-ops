@@ -135,7 +135,7 @@ class indice_convolution_forward_general
   }
 
   bool compute() {
-    if (!(target_device_ == MLUOP_UNKNOWN_DEVICE ||
+    if (!(target_device_ == MLUOP_MLU370, MLUOP_MLU590 ||
           target_device_ == handle_->arch)) {
       destroy();
       return true;
@@ -256,7 +256,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({0, 0, 0, 0}), 9, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -272,7 +272,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({0, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 0, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -295,7 +295,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 9, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -311,7 +311,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 9, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -330,7 +330,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 9, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -355,7 +355,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 9, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -378,7 +378,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 6}))),  // co
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 9, 0, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -403,7 +403,7 @@ INSTANTIATE_TEST_CASE_P(
                                              9, 2, 0),
             IndiceConvForwardAdditionalParam(std::vector<int64_t>({1, 1, 1, 1}),
                                              9, 0, 2)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -419,7 +419,7 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({9, 5}))),
         testing::Values(IndiceConvForwardAdditionalParam(
             std::vector<int64_t>({1, 1, 1, 1}), 9, 1, 0)),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 // INSTANTIATE_TEST_CASE_P(
