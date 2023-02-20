@@ -67,10 +67,19 @@ class indice_convolution_backward_filter_general
           output_grad_desc_, output_grad_params.get_layout(),
           output_grad_params.get_dtype(), output_grad_params.get_dim_nb(),
           output_grad_params.get_dim_size().data()));
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&output_grad_,
-                     mluOpDataTypeBytes(output_grad_params.get_dtype()) * 10));
+      if (mluOpGetTensorElementNum(output_grad_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(
+                &output_grad_,
+                mluOpDataTypeBytes(output_grad_params.get_dtype()) * 10));
+      } else {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&output_grad_,
+                       mluOpDataTypeBytes(output_grad_params.get_dtype()) *
+                           mluOpGetTensorElementNum(output_grad_desc_)));
+      }
 
       MLUOpTensorParam indice_pairs_params = std::get<2>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&indice_pairs_desc_));
@@ -78,10 +87,19 @@ class indice_convolution_backward_filter_general
           indice_pairs_desc_, indice_pairs_params.get_layout(),
           indice_pairs_params.get_dtype(), indice_pairs_params.get_dim_nb(),
           indice_pairs_params.get_dim_size().data()));
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&indice_pairs_,
-                     mluOpDataTypeBytes(indice_pairs_params.get_dtype()) * 10));
+      if (mluOpGetTensorElementNum(indice_pairs_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(
+                &indice_pairs_,
+                mluOpDataTypeBytes(indice_pairs_params.get_dtype()) * 10));
+      } else {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&indice_pairs_,
+                       mluOpDataTypeBytes(indice_pairs_params.get_dtype()) *
+                           mluOpGetTensorElementNum(indice_pairs_desc_)));
+      }
 
       MLUOpTensorParam filters_grad_params = std::get<3>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&filters_grad_desc_));
@@ -89,10 +107,19 @@ class indice_convolution_backward_filter_general
           filters_grad_desc_, filters_grad_params.get_layout(),
           filters_grad_params.get_dtype(), filters_grad_params.get_dim_nb(),
           filters_grad_params.get_dim_size().data()));
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&filters_grad_,
-                     mluOpDataTypeBytes(filters_grad_params.get_dtype()) * 10));
+      if (mluOpGetTensorElementNum(indice_pairs_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(
+                &filters_grad_,
+                mluOpDataTypeBytes(filters_grad_params.get_dtype()) * 10));
+      } else {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&filters_grad_,
+                       mluOpDataTypeBytes(filters_grad_params.get_dtype()) *
+                           mluOpGetTensorElementNum(indice_pairs_desc_)));
+      }
 
       std::vector<int64_t> num = {1, 2, 3, 4, 5, 6, 7, 8, 9};
       for (int i = 0; i < num.size(); i++) {
@@ -268,6 +295,20 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({0, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 0, 5, 3}))),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_SUCCESS)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_value, indice_convolution_backward_filter_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 5}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({3, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({9, 2, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({3, 3, 5, 3}))),
         testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
