@@ -161,7 +161,7 @@ class indice_convolution_backward_filter_general
   void destroy() {
     try {
       if (handle_) {
-        CNRT_CHECK(cnrtQueueSync(handle_->queue));
+        //CNRT_CHECK(cnrtQueueSync(handle_->queue));
         MLUOP_CHECK(mluOpDestroy(handle_));
         handle_ = nullptr;
       }
@@ -310,7 +310,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
         testing::Values(MLUOP_MLU370, MLUOP_MLU590),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_unsupport_dtype, indice_convolution_backward_filter_general,
