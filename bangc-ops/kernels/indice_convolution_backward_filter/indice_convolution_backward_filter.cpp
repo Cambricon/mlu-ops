@@ -175,13 +175,14 @@ static mluOpStatus_t baseParamCheck(
     const mluOpTensorDescriptor_t output_grad_desc,
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const mluOpTensorDescriptor_t filters_grad_desc,
-    const int64_t indice_num[]) {
+    const int64_t indice_num[], const int64_t inverse) {
   PARAM_CHECK(api_name, handle != nullptr);
   PARAM_CHECK(api_name, features_desc != nullptr);
   PARAM_CHECK(api_name, output_grad_desc != nullptr);
   PARAM_CHECK(api_name, indice_pairs_desc != nullptr);
   PARAM_CHECK(api_name, filters_grad_desc != nullptr);
   PARAM_CHECK(api_name, indice_num != nullptr);
+  PARAM_CHECK(api_name, inverse == 0);
 
   // check mlu platform
   if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
@@ -222,9 +223,9 @@ static mluOpStatus_t baseParamCheck(
                                 : filters_grad_desc->dims[1];
   auto kw = filter_dim_len == 4 ? filters_grad_desc->dims[1]
                                 : filters_grad_desc->dims[2];
-  if (ci != features_desc->dims[1] || co != output_grad_desc->dims[1] ||
-      kd * kh * kw != indice_pairs_desc->dims[0] ||
-      2 != indice_pairs_desc->dims[1]) {
+  if (ci != features_desc->dims[1] || ci != indice_pairs_desc->dims[2] ||
+      co != output_grad_desc->dims[1] || 2 != indice_pairs_desc->dims[1] ||
+      kd * kh * kw != indice_pairs_desc->dims[0]) {
     shape_check = false;  // interdependent dimension check failed!
   }
 
@@ -463,7 +464,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(
   PARAM_CHECK(api_name, size != nullptr);
   auto basic_check =
       baseParamCheck(api_name, handle, features_desc, output_grad_desc,
-                     indice_pairs_desc, filters_grad_desc, indice_num);
+                     indice_pairs_desc, filters_grad_desc, indice_num, inverse);
   if (MLUOP_STATUS_SUCCESS != basic_check) {
     return basic_check;
   }
@@ -496,7 +497,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardFilter(
 
   auto basic_check =
       baseParamCheck(api_name, handle, features_desc, output_grad_desc,
-                     indice_pairs_desc, filters_grad_desc, indice_num);
+                     indice_pairs_desc, filters_grad_desc, indice_num, inverse);
   if (MLUOP_STATUS_SUCCESS != basic_check) {
     return basic_check;
   }

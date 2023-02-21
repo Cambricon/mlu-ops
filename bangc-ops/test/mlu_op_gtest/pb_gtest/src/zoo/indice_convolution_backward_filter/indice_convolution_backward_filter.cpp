@@ -38,6 +38,8 @@ void IndiceConvolutionBackwardFilterExecutor::initParam() {
   for (int i = 0; i < op_param.indice_num_size(); i++) {
     indice_num_.push_back(op_param.indice_num(i));
   }
+  inverse_ = op_param.inverse();
+  subm_ = op_param.sub_m();
 
   diffw_trans_ = false;
   // if (MLUOP_LAYOUT_HWCN != diffw_desc_->layout) {
