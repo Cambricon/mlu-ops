@@ -433,11 +433,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionForwardWorkspaceSize(
   }
 
   // zero element
-    if (mluOpGetTensorElementNum(filters_desc) == 0) {
+  if (mluOpGetTensorElementNum(filters_desc) == 0) {
     LOG(ERROR) << api_name << "filters contains zero element. Error.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  
   if (mluOpGetTensorElementNum(features_desc) == 0 ||
       mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
       mluOpGetTensorElementNum(features_out_desc) == 0) {
