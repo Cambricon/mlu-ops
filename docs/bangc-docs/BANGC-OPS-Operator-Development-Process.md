@@ -4,8 +4,6 @@
 
 [算子设计文档](./BANGC-OPS-Operator-Development-Process.md#算子设计文档)
 
-[算子实现代码](./BANGC-OPS-Operator-Development-Process.md#算子实现代码)
-
 [算子测试报告](./BANGC-OPS-Operator-Development-Process.md#算子测试报告)
 
 [代码提交流程](./BANGC-OPS-Operator-Development-Process.md#代码提交流程)
