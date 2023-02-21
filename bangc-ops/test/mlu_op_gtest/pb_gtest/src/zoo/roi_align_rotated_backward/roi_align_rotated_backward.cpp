@@ -250,12 +250,12 @@ void RoiAlignRotatedBackwardExecutor::cpuCompute() {
               float g2 = pc.w2 * top_grad_val * 1 / count;
               float g3 = pc.w3 * top_grad_val * 1 / count;
               float g4 = pc.w4 * top_grad_val * 1 / count;
-              if(pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0){
+              if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
                 bottom_grad[bottom_grad_offset + pc.pos1] += 0;
                 bottom_grad[bottom_grad_offset + pc.pos2] += 0;
                 bottom_grad[bottom_grad_offset + pc.pos3] += 0;
                 bottom_grad[bottom_grad_offset + pc.pos4] += 0;
-              }else{
+              } else {
                 bottom_grad[bottom_grad_offset + pc.pos1] += g1;
                 bottom_grad[bottom_grad_offset + pc.pos2] += g2;
                 bottom_grad[bottom_grad_offset + pc.pos3] += g3;
