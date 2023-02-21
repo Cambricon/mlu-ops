@@ -1,0 +1,7 @@
+# Python files
+*.pyc
+*.pyd
+__pycache__
+
+# rst files
+*.rst
