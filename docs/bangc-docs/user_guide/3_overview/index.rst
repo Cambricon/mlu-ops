@@ -17,17 +17,38 @@ Cambricon BANGC OPS具有以下特点：
 
   -  常见的网络算子：
 
-     * abs、copy、expand、fill、log、div、sqrt、sqrtBackward
+     * AddN、Abs、Copy、Div、Expand、Fill、Log、MatMul、Sqrt、SqrtBackward
   
   -  领域类算子：
   
+     * ActiveRotatedFilterForward
      * BallQuery
-     * GenerateProposalsV2、PriorBox、YoloBox
+     * BboxOverlaps
+     * BoxIouRotated
+     * CarafeBackward、CarafeForward
+     * DeformRoiPoolBackward、DeformRoiPoolForward
+     * GenerateProposalsV2
+     * GatherNd
+     * GetIndicePairs
+     * IndiceConvolutionBackwardData、IndiceConvolutionBackwardFilter
+     * IndiceConvolutionForward
      * PolyNms
-     * PsRoiPoolForward、PsRoiPoolBackward
-     * RoiCropForward、RoiCropBackward
-     * PsaMaskForward、PsaMaskBackward
-     * VoxelPoolingForward、Voxelization
+     * PriorBox
+     * RoiCropBackward、RoiCropForward
+     * RoiAlignRotatedBackward、RoiAlignRotatedForward
+     * RoiawarePool3dBackward、RoiawarePool3dForward
+     * RotatedFeatureAlignBackward、RotatedFeatureAlignForward
+     * PsRoiPoolBackward、PsRoiPoolForward
+     * PsaMaskBackward、PsaMaskForward
+     * Reduce
+     * ScatterNd
+     * ThreeInterpolateBackward、ThreeInterpolateForward
+     * ThreeNNForward
+     * Transpose
+     * Unique
+     * VoxelPoolingForward
+     * Voxelization
+     * YoloBox
 
 	 
 
