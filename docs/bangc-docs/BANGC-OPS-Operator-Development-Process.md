@@ -2,6 +2,8 @@
 
 [概述](./BANGC-OPS-Operator-Development-Process.md#概述)
 
+[需要添加的文件](./BANGC-OPS-Operator-Development-Process.md#需要添加的文件)
+
 [算子设计文档](./BANGC-OPS-Operator-Development-Process.md#算子设计文档)
 
 [算子测试报告](./BANGC-OPS-Operator-Development-Process.md#算子测试报告)
