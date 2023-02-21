@@ -25,7 +25,6 @@
 
 #include <stdint.h>
 #include "cnrt.h"
-#include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 
 #ifndef MLUOP_WIN_API
 #ifdef _WIN32
@@ -127,49 +126,6 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivHalfHighAcc(
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
-
-/* getIndicePairs */
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel1(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *mask_all_ws, void *indice_index_in_ws, void *indice_out_expand_ws,
-    void *indices, FilterSpace filter_space, InputSpace input_space,
-    OutputSpace output_space, Stride stride, Dilation dilation,
-    Padding padding, int32_t core_num_l, int32_t input_active_site,
-    int32_t batch_size);
-
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel2(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *step_index_ptr, int32_t num_act_out, int32_t core_num_l);
-
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel3(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *indice_pairs, void *input_addr, void *mask_addr,
-    int32_t input_active_site, int32_t kernel_volume, int32_t core_num_l);
-
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel4(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *out_indices, void *input_addr, OutputSpace host_output_space,
-    int32_t len_l, int32_t core_num_l);
-
-void MLUOP_WIN_API mluOpBlockBalanceGetIndicePairKernel(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
-    int32_t output_size);
-
-void MLUOP_WIN_API mluOpBlockSubmGetIndicePairKernel1(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *mask_all_ptr, void *indice_index_in_ptr, void *indice_in_expand_ptr,
-    void *out_indices_expand_ptr, void *indices, FilterSpace host_filter_space,
-    InputSpace host_input_space, OutputSpace host_output_space,
-    Stride host_stride, Dilation host_dilation, Padding host_padding,
-    int32_t core_num_l, int32_t input_active_site, int32_t batch_size);
-
-void MLUOP_WIN_API mluOpBlockSubmGetIndicePairKernel2(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *out_indices, void *mask_all_ptr, void *out_indices_expand_ptr,
-    void *indices, int32_t len_1_one, int32_t len_l_two,
-    int32_t core_num_l_one, int32_t core_num_l_two);
 
 /* FillZero */
 void MLUOP_WIN_API mluOpBlockKernelFillZeroByte(cnrtDim3_t k_dim,
