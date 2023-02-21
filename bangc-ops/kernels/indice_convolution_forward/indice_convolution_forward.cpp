@@ -63,7 +63,7 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, features_out_desc->dtype == MLUOP_DTYPE_FLOAT ||
                             features_out_desc->dtype == MLUOP_DTYPE_HALF);
   PARAM_CHECK(api_name, features_desc->dtype == features_out_desc->dtype &&
-                            features_desc->dtype == features_out_desc->dtype);
+                            features_desc->dtype == filters_desc->dtype);
 
   // inverse not supported now
   PARAM_CHECK(api_name, sub_m == 0 || sub_m == 1);
@@ -432,13 +432,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionForwardWorkspaceSize(
     return fool_proof;
   }
 
+  // nullptr check
+  PARAM_CHECK(api_name, size != nullptr);
+
   // zero element
-  if (mluOpGetTensorElementNum(filters_desc) == 0) {
-    LOG(ERROR) << api_name << "filters contains zero element. Error.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
   if (mluOpGetTensorElementNum(features_desc) == 0 ||
       mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
+      mluOpGetTensorElementNum(filters_desc) == 0 ||
       mluOpGetTensorElementNum(features_out_desc) == 0) {
     VLOG(5) << api_name << "Skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
