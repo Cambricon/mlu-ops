@@ -326,12 +326,20 @@ step 8：若 k == K - 1，结束循环，否则回到 step 2，k = k + 1。
     dxc = filters_desc->dims[_dim - 2];
     dyc = filters_desc->dims[_dim - 1];
   }
-  int K = kd * kh * kw;  // check param
+  int K = kd * kh * kw;
+
+  // check param
   PARAM_CHECK(api, inverse == 0 || inverse == 1);
   PARAM_CHECK(api, sub_m == 0 || sub_m == 1);
   for (int kk = 0; kk < K; ++kk) {
     PARAM_CHECK(api, indice_num[kk] >= 0);
-  }  // check algorithm, relationship between params
+  }
+  if (inverse == 1) {
+    LOG(ERROR) << api << " Not support inverse == 1 yet.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
+  // check algorithm, relationship between params
   if (K != indice_pairs_desc->dims[0]) {
     LOG(ERROR) << api
                << " The dims[0] of indice_pairs should be equal to the "
@@ -359,12 +367,29 @@ step 8：若 k == K - 1，结束循环，否则回到 step 2，k = k + 1。
   int max_indice_num = getMaxNumInArray(indice_num, K);
 
   if (indice_pairs_desc->dims[2] < max_indice_num) {
-    VLOG(5) << "indice_pairs_desc->dims[2] "<< indice_pairs_desc->dims[2]
+    VLOG(5) << "indice_pairs_desc->dims[2] " << indice_pairs_desc->dims[2]
             << " max_indice_num " << max_indice_num;
     LOG(ERROR) << api
                << " The data in indice_num array should be smaller or equal to"
                << " the dims[2] of indice_pairs.";
     return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (sub_m == 1) {
+    if (input_grad_desc->dims[0] != output_grad_desc->dims[0]) {
+      LOG(ERROR) << api
+                 << " The dims[0] of input_grad should be equal to the dims[0]"
+                 << " of output_grad when sub_m is 1.";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+
+    if (indice_num[K / 2] < max_indice_num) {
+      LOG(ERROR) << api
+                 << " The middle number of the indice_num array should be the "
+                 << "maximum of the array when sub_m is 1. Now the maximum is "
+                 << max_indice_num << " while the middle number of the array "
+                 << "is " << indice_num[K / 2] << ".";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
   }
 
   if (output_grad_desc->dims[0] < max_indice_num) {
