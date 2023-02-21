@@ -8273,8 +8273,10 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * - The value \b inverse should be 0.
  * - When the value of \b sub_m is 1, the dims D, H and W corresponding to
  *   filter layout should be odd numbers.
- * - When the value of \b sub_m is 1, the dims[0] of \b input_grad and the dims[0] of \b output_grad
- *   should be the same.
+ * - When the value of \b sub_m is 1, the dims[0] of \b input_grad and the dims[0] of
+ *   \b output_grad should be the same.
+ * - When the value of \b sub_m is 1, the middle number of \b indice_num should be the
+ *   maximum number of \b indice_num.
  *
  * @par API Dependency
  * - The function ::mluOpGetIndiceConvolutionBackwardDataWorkspaceSize should
