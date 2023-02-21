@@ -260,7 +260,7 @@ typedef enum {
   /*!< Specifies the epilogue function. It is not supported now. */
   MLUOP_MATMUL_DESC_BIAS_POINTER = 7,
   /*!< Pointer to bias vector on MLU device memory. Currently, it is only supported to set
-   *   the attribute \b matmul_desc in ::mluOpMatMulInference. */
+   *   the attribute \b matmul_desc. */
   MLUOP_MATMUL_DESC_EPILOGUE_TYPE = 8,
   /*!< Specifies matmul multiplication epilogue fusion type. */
   MLUOP_MATMUL_DESC_EPILOGUE_OPERAND = 9,
@@ -836,7 +836,7 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 /*!
  *  @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, pad,
  *  stride, dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape.
- *  The::mluOpSetSparseConvolutionDescriptor function needs to be called to set parameters.
+ *  The ::mluOpSetSparseConvolutionDescriptor function needs to be called to set parameters.
  *
  *  The ::mluOpDestroySparseConvolutionDescriptor function needs to be called to destroy the
  *  tensor descriptor later.
@@ -3072,7 +3072,7 @@ mluOpPriorBox(mluOpHandle_t handle,
  *  @param[in] handle
  *  Handle to an MLUOP context that is used to manage MLU devices
  *  and queues in the psroipool_forward operation. For detailed information,
- *  see::mluOpHandle_t.
+ *  see ::mluOpHandle_t.
  *  @param[in] spatial_scale
  *  The spatial scale of each ROI in the output.
  *  @param[in] group_size
@@ -4864,12 +4864,12 @@ mluOpCopy(mluOpHandle_t handle,
  * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information,
- * see::mluOpTensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] output_desc
  * The descriptor of the output tensor. For detailed information,
- * see::mluOpTensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
