@@ -223,8 +223,9 @@ static mluOpStatus_t baseParamCheck(
                                 : filters_grad_desc->dims[1];
   auto kw = filter_dim_len == 4 ? filters_grad_desc->dims[1]
                                 : filters_grad_desc->dims[2];
-  if (ci != features_desc->dims[1] || ci != indice_pairs_desc->dims[2] ||
-      co != output_grad_desc->dims[1] || 2 != indice_pairs_desc->dims[1] ||
+  if (ci != features_desc->dims[1] || co != output_grad_desc->dims[1] ||
+      features_desc->dims[0] != indice_pairs_desc->dims[2] ||
+      2 != indice_pairs_desc->dims[1] ||
       kd * kh * kw != indice_pairs_desc->dims[0]) {
     shape_check = false;  // interdependent dimension check failed!
   }
