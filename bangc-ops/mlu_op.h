@@ -6556,11 +6556,11 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *       output_index: [5, 5, 4, 3, 3, 2, 1, 0, 0]
  *       output_counts: [2, 1, 1, 2, 1, 2]
  *  @endverbatim
-*
-* @par Reference
-* - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Unique.cpp
-*
-*/
+ *
+ * @par Reference
+ * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Unique.cpp
+ *
+ */
 mluOpStatus_t MLUOP_WIN_API
 mluOpUnique(mluOpHandle_t handle,
             const mluOpUniqueDescriptor_t unique_desc,
