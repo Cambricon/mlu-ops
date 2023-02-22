@@ -184,9 +184,16 @@ test_param: {
 
 ### 7. 代码覆盖率
 
-代码覆盖率测测试需要在docker开发环境下进行测试，具体测试方法如下：
+#### 7.1 环境配置
 
-#### 7.1 编译
+在进行代码覆盖率检查时，可直接在 mlu-ops 编译环境下进行，只需要再安装三个依赖包
+
+```
+apt install lcov
+apt install genhtml
+apt install html2text
+```
+#### 7.2 编译
 
 当前 mlu-ops 采用了 -c 编译选项 ，指定编译板卡和算子名
 ```
@@ -195,15 +202,15 @@ source env.sh
 cd bangc-ops
 ./build.sh -c --mlu370 --filter=\*算子名称\*
 ```
-#### 7.2 测试
+#### 7.3 测试
 
 这里我们以 three_nn_forward 算子为例
 ```
 cd build/test
 ../../../tools/coverage.sh "./mluop_gtest --gtest_filter=\*three_nn_forward\*"
 ```
-在当前文件下的 result 文件中可以可视化查看 html 文件 index.html；测试要求代码覆盖率不低于95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种情况。
-测试报告只需贴上如下信息：（算子 kernel 代码 Line Coverage 必须达到 100% ）
+在当前文件下的 result 文件中可以可视化查看 html 文件 index.html；测试要求算子 kernel 各代码文本 Line Coverage 不低于 95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种条件。
+测试报告只需贴上如下信息：
 ```
 Filename [Sort by name]     Line Coverage [Sort_by_line Functions [Sort_by
                               coverage]                   function_coverage]
