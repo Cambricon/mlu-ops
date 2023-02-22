@@ -260,7 +260,7 @@ typedef enum {
   /*!< Specifies the epilogue function. It is not supported now. */
   MLUOP_MATMUL_DESC_BIAS_POINTER = 7,
   /*!< Pointer to bias vector on MLU device memory. Currently, it is only supported to set
-   *   the attribute \b matmul_desc in ::mluOpMatMulInference. */
+   *   the attribute \b matmul_desc. */
   MLUOP_MATMUL_DESC_EPILOGUE_TYPE = 8,
   /*!< Specifies matmul multiplication epilogue fusion type. */
   MLUOP_MATMUL_DESC_EPILOGUE_OPERAND = 9,
@@ -1057,7 +1057,7 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
 
 // Group:: GetIndicePairs
 /*!
- *  @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionStruct.
+ *  @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionDescriptor_t.
  *
  *  @param[in] desc
  *  Pointer to the parameter num_act_out that holds information about the tensor descriptor.
@@ -1655,8 +1655,7 @@ mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const 
  *  @brief Creates a descriptor \b tensorSetDesc of tensor set that holds a
  *  series of tensors. The number of tensors of tensor set is jointly determined
  *  by \b setDimNb and \b setDimSize. Use ::mluOpInitTensorSetMemberDescriptor to
- *  set information for descriptor and ::mluOpDestroySeqDataDescriptor function
- *  to destroy the tensor set descriptor.
+ *  set information for descriptor.
  *
  *  @param[out] tensorSetDesc
  *  Pointer to the memory that holds information about the descriptor
@@ -1692,8 +1691,7 @@ mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet, const int 
  *  created with the ::mluOpCreateTensorSetDescriptor function.
  *
  *  @param[in] tensorSetDesc
- *  The descriptor of the tensor set. For detailed information,
- *  see ::mluOpSeqDataDescriptor_t.
+ *  The descriptor of the tensor set.
  *  @param[out] setDimNb
  *  The number of dimensions of the tensor set.
  *  @param[out] setDimSize
@@ -3072,7 +3070,7 @@ mluOpPriorBox(mluOpHandle_t handle,
  *  @param[in] handle
  *  Handle to an MLUOP context that is used to manage MLU devices
  *  and queues in the psroipool_forward operation. For detailed information,
- *  see::mluOpHandle_t.
+ *  see ::mluOpHandle_t.
  *  @param[in] spatial_scale
  *  The spatial scale of each ROI in the output.
  *  @param[in] group_size
@@ -4864,12 +4862,12 @@ mluOpCopy(mluOpHandle_t handle,
  * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information,
- * see::mluOpTensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] output_desc
  * The descriptor of the output tensor. For detailed information,
- * see::mluOpTensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -6066,8 +6064,6 @@ mluOpGetMatMulDescAttr(const mluOpMatMulDescriptor_t matmul_desc,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpGetQuantizeMatMulAlgorithm function to initialize
- *   and set the information to the matrix multiplication algorithm.
  * - You need to call the ::mluOpMatMulAlgoDestroy function to destroy the descriptor.
  *
  * @note
@@ -6921,7 +6917,7 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  *
  * @note
  * - This function is only supported on MLU300 series or above platforms.
- * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionStruct.
+ * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
@@ -7349,9 +7345,7 @@ mluOpTranspose_v2(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpSetReorgDescriptor function to
- *   initialize and set the information to the reduce descriptor.
- * - You need to call the ::mluOpDestroyReorgDescriptor function to destroy the descriptor.
+ * - None.
  *
  * @note
  * - None.
@@ -8621,13 +8615,13 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] features_out_desc
  * The descriptor of features_out. For detailed information,
- * see ::mluOptensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
  * The descriptor of indices mapping pairs of features_in and filters.
- * For detailed information, see ::mluOptensorDescriptor_t.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] features_out_desc
  * The descriptor of features_out. For detailed information,
- * see ::mluOptensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_num
  * Pointer to the host memory that stores the indice pairs number.
  * @param[in] inverse
@@ -8642,7 +8636,7 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par API Dependency
- * - Call ::mluOpCreateTensorDescripttor and ::mluOpSetTensorDescriptor before this function
+ * - Call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor before this function
  *   to create and set tensor descriptor \b features_desc, \b filters_desc, \b indice_pairs_desc
  *   and \b features_out_desc.
  * - Output \b workspace_size should later be passed to ::mluOpIndiceConvolutionForward function
@@ -8708,7 +8702,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * The size of the extra workspace in bytes.
  * @param[in] features_out_desc
  * The descriptor of the output features tensor. For detailed information,
- * see ::mluOptensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[out] features_out
  * Pointer to the MLU memory that stores the output tensor.
  *
