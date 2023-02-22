@@ -2186,7 +2186,7 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  *     Input tensor  3 :   [[1, 2, 3],
  *                          [4, 5, 6],
  *                          [7, 8, 9]]
- *     Input num       :   3 *
+ *     Input num       :   3
  *     Output tensor   :   [[3,  5,  7],
  *                          [9, 11, 13],
  *                          [15,17, 19]]
@@ -2263,7 +2263,7 @@ mluOpAddN_v2(mluOpHandle_t handle,
  *     Input tensor  3 :   [[1, 2, 3],
  *                          [4, 5, 6],
  *                          [7, 8, 9]]
- *     Input num       :   3 *
+ *     Input num       :   3
  *     Output tensor   :   [[3,  6,  9],
  *                          [12, 15, 18],
  *                          [21, 24, 27]]
@@ -4967,6 +4967,7 @@ mluOpBallQuery(mluOpHandle_t handle,
  *   @verbatim
  *    input array by 2 * 2
  *    --> then: [[1, 8], [6, 4]]
+ *
  *    output array by 2 * 2
  *    --> output: [[1, 8], [6, 4]]
  *   @endverbatim
@@ -5083,6 +5084,7 @@ mluOpExpand(mluOpHandle_t handle,
  * - The example of the fill operation is as follows:
  *   @verbatim
  *    param:value: 5
+ *
  *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
  *                                           [[5,5],[5,5],[5,5]]]
  *   @endverbatim
@@ -5136,6 +5138,7 @@ mluOpFill(mluOpHandle_t handle, float value, const mluOpTensorDescriptor_t outpu
  * - The example of the fill operation is as follows:
  *   @verbatim
  *    input array by 1 --> value: [1]
+ *
  *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
  *                                           [[5,5],[5,5],[5,5]]]
  *   @endverbatim
@@ -6533,7 +6536,7 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *       mode: MLUOP_UNSORT_FORWARD
  *     output array:
  *       output_data: [1, 2, 4, 9, 7, 8]
- *       output_index: [0, 0, 1, 2, 2, 3, 4, 5, 5] *
+ *       output_index: [0, 0, 1, 2, 2, 3, 4, 5, 5]
  *     Example 2:
  *     input array:
  *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
@@ -6542,7 +6545,7 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *     output array:
  *       output_data: [1, 2, 4, 7, 8, 9]
  *       output_index: [0, 0, 1, 2, 2, 5, 3, 4, 4]
- *       output_counts: [2, 1, 2, 1, 2, 1] *
+ *       output_counts: [2, 1, 2, 1, 2, 1]
  *     Example 3:
  *     input array:
  *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
@@ -6722,7 +6725,7 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  *       mode: MLUOP_UNSORT_FORWARD
  *     output array:
  *       output: [1, 2, 4, 9, 7, 8]
- *       inverse_indices: [0, 0, 1, 2, 2, 3, 4, 5, 5] *
+ *       inverse_indices: [0, 0, 1, 2, 2, 3, 4, 5, 5]
  *     Example 2:
  *     input array:
  *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
@@ -6731,7 +6734,7 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  *     output array:
  *       output: [1, 2, 4, 7, 8, 9]
  *       inverse_indices: [0, 0, 1, 2, 2, 5, 3, 4, 4]
- *       counts: [2, 1, 2, 1, 2, 1] *
+ *       counts: [2, 1, 2, 1, 2, 1]
  *     Example 3:
  *     input array:
  *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
@@ -6742,10 +6745,10 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  *       inverse_indices: [5, 5, 4, 3, 3, 2, 1, 0, 0]
  *       counts: [2, 1, 1, 2, 1, 2]
  *  @endverbatim
-*
-* @par Reference
-* - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Unique.cpp
-*/
+ *
+ * @par Reference
+ * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Unique.cpp
+ */
 mluOpStatus_t MLUOP_WIN_API
 mluOpUnique_v2(mluOpHandle_t handle,
                const mluOpUniqueDescriptor_t unique_desc,
@@ -6808,8 +6811,8 @@ mluOpUnique_v2(mluOpHandle_t handle,
  * @par Example
  * - The example of the gather_nd operation is as follows:
  *   @verbatim
- *   input two arrays both by 3 * 2 --> params: [[1., 2.], [3., 4.], [5., 6.]] *
- *   --> indices: [[-1, 0], [1, 1]] *
+ *   input two arrays both by 3 * 2 --> params: [[1., 2.], [3., 4.], [5., 6.]]
+ *   --> indices: [[-1, 0], [1, 1]]
  *   output array by 2 --> output: [5., 4.]
  *   @endverbatim
  *
@@ -6894,11 +6897,11 @@ mluOpGatherNd(mluOpHandle_t handle,
  *  updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
  *             [7, 7, 7, 7], [8, 8, 8, 8]],
  *            [[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]]] *
+ *             [7, 7, 7, 7], [8, 8, 8, 8]]]
  *  -->output: [[[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
  *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
  *              [[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
- *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]] *
+ *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
  * @endverbatim
  *
  * @par Reference
@@ -6984,11 +6987,11 @@ mluOpScatterNd(mluOpHandle_t handle,
  *  input:   [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
  *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
  *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
- *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]] *
+ *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]]
  *  updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
  *             [7, 7, 7, 7], [8, 8, 8, 8]],
  *            [[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]]] *
+ *             [7, 7, 7, 7], [8, 8, 8, 8]]]
  *  -->output: [[[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
  *              [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
  *              [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
@@ -7001,7 +7004,7 @@ mluOpScatterNd(mluOpHandle_t handle,
  *  updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
  *             [7, 7, 7, 7], [8, 8, 8, 8]],
  *            [[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]]] *
+ *             [7, 7, 7, 7], [8, 8, 8, 8]]]
  *  -->output: [[[10, 10, 10, 10], [12, 12, 12, 12], [14, 14, 14, 14], [16, 16, 16, 16]],
  *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
  *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
@@ -7389,7 +7392,7 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  *                [2, 5],
  *                [3, 6]]
  *    param:
- *      dims: 2, permute: (1, 0), *
+ *      dims: 2, permute: (1, 0),
  *    output array by 2 * 3 --> output: [[1, 2, 3],
  *                                       [4, 5, 6]]
  *   @endverbatim
