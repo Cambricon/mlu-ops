@@ -20,20 +20,20 @@
      + :ref:`mluOpGetIndicePairs`
      + :ref:`mluOpIndiceConvolutionBackwardData`
      + :ref:`mluOpIndiceConvolutionBackwardFilter`
-     + :ref:`indice_convolution_forward`
-     + :ref:`mat_mul`
-     + :ref:`reduce`
-     + :ref:`roi_align_rotated_backward`
-     + :ref:`roi_align_rotated_forward`
-     + :ref:`roi_aware_pool3d_backward`
-     + :ref:`roi_aware_pool3d_forward`
-     + :ref:`rotated_feature_align_backward`
-     + :ref:`rotated_feature_align_forward`
-     + :ref:`scatter_nd`
-     + :ref:`three_interpolate_backward`
-     + :ref:`three_nn_forward`
-     + :ref:`transpose`
-     + :ref:`unique`
+     + :ref:`mluOpIndiceConvolutionForward`
+     + :ref:`mluOpMatMul`
+     + :ref:`mluOpReduce`
+     + :ref:`mluOpRoiAlignRotatedBackward`
+     + :ref:`mluOpRoiAlignRotatedForward`
+     + :ref:`mluOpRoiawarePool3dBackward`
+     + :ref:`mluOpRoiawarePool3dForward`
+     + :ref:`mluOpRotatedFeatureAlignBackward`
+     + :ref:`mluOpRotatedFeatureAlignForward`
+     + :ref:`mluOpScatterNd`
+     + :ref:`mluOpThreeInterpolateBackward`
+     + :ref:`mluOpThreeNNForward`
+     + :ref:`mluOpTranspose`
+     + :ref:`mluOpUnique`
 
 * **V0.4.1**
 

@@ -2179,13 +2179,13 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * @par Example
  * - The example of this operation is as follows:
  *   @verbatim
- *     Input tensor  1 :   [[1, 2, 3]] *
+ *     Input tensor  1 :   [[1, 2, 3]]
  *     Input tensor  2 :   [[1],
  *                          [4],
- *                          [7]] *
+ *                          [7]]
  *     Input tensor  3 :   [[1, 2, 3],
  *                          [4, 5, 6],
- *                          [7, 8, 9]] *
+ *                          [7, 8, 9]]
  *     Input num       :   3 *
  *     Output tensor   :   [[3,  5,  7],
  *                          [9, 11, 13],
@@ -2256,13 +2256,13 @@ mluOpAddN_v2(mluOpHandle_t handle,
  *   @verbatim
  *     Input tensor  1 :   [[1, 2, 3],
  *                          [4, 5, 6],
- *                          [7, 8, 9]] *
+ *                          [7, 8, 9]]
  *     Input tensor  2 :   [[1, 2, 3],
  *                          [4, 5, 6],
- *                          [7, 8, 9]] *
+ *                          [7, 8, 9]]
  *     Input tensor  3 :   [[1, 2, 3],
  *                          [4, 5, 6],
- *                          [7, 8, 9]] *
+ *                          [7, 8, 9]]
  *     Input num       :   3 *
  *     Output tensor   :   [[3,  6,  9],
  *                          [12, 15, 18],
@@ -4966,7 +4966,7 @@ mluOpBallQuery(mluOpHandle_t handle,
  * - The example of the copy operation is as follows:
  *   @verbatim
  *    input array by 2 * 2
- *    --> then: [[1, 8], [6, 4]] *
+ *    --> then: [[1, 8], [6, 4]]
  *    output array by 2 * 2
  *    --> output: [[1, 8], [6, 4]]
  *   @endverbatim
@@ -5082,7 +5082,7 @@ mluOpExpand(mluOpHandle_t handle,
  * @par Example
  * - The example of the fill operation is as follows:
  *   @verbatim
- *    param:value: 5 *
+ *    param:value: 5
  *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
  *                                           [[5,5],[5,5],[5,5]]]
  *   @endverbatim
@@ -5135,7 +5135,7 @@ mluOpFill(mluOpHandle_t handle, float value, const mluOpTensorDescriptor_t outpu
  * @par Example
  * - The example of the fill operation is as follows:
  *   @verbatim
- *    input array by 1 --> value: [1] *
+ *    input array by 1 --> value: [1]
  *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
  *                                           [[5,5],[5,5],[5,5]]]
  *   @endverbatim
@@ -5196,7 +5196,7 @@ mluOpFill_v2(mluOpHandle_t handle,
  * @par Example
  * - The example of the fill operation is as follows:
  *   @verbatim
- *    param:value: 5 *
+ *    param:value: 5
  *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
  *                                           [[5,5],[5,5],[5,5]]]
  *   @endverbatim
