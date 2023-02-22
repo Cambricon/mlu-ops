@@ -200,14 +200,14 @@ apt install html2text
 cd mlu-ops
 source env.sh
 cd bangc-ops
-./build.sh -c --mlu370 --filter=\*算子名称\*
+./build.sh -c --mlu370 --filter=*算子名称*
 ```
 #### 7.3 测试
 
 这里我们以 three_nn_forward 算子为例
 ```
 cd build/test
-../../../tools/coverage.sh "./mluop_gtest --gtest_filter=\*three_nn_forward\*"
+../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*three_nn_forward*"
 ```
 在当前文件下的 result 文件中可以可视化查看 html 文件 index.html；测试要求算子 kernel 各代码文本 Line Coverage 不低于 95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种条件。
 测试报告只需贴上如下信息：
