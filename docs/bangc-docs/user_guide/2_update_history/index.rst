@@ -8,25 +8,32 @@
 
   - 新增以下算子章节内容：
 
-     + :ref:`active_rotated_filter_forward`
-     + :ref:`bbox_overlaps`
-     + :ref:`box_iou_rotated`
-     + :ref:`carafe_backward`
-     + :ref:`carafe_forward`
-     + :ref:`deform_roi_pool_backward`
-     + :ref:`deform_roi_pool_forward`
-     + :ref:`get_indice_pairs`
-     + :ref:`indice_convolution_backward_data`
-     + :ref:`indice_convolution_backward_filter`
+     + :ref:`mluOpActiveRotatedFilterForward`
+     + :ref:`mluOpAddN`
+     + :ref:`mluOpBboxOverlaps`
+     + :ref:`mluOpBoxIouRotated`
+     + :ref:`mluOpCarafeBackward`
+     + :ref:`mluOpCarafeForward`
+     + :ref:`mluOpDeformRoiPoolBackward`
+     + :ref:`mluOpDeformRoiPoolForward`
+     + :ref:`mluOpGatherNd`
+     + :ref:`mluOpGetIndicePairs`
+     + :ref:`mluOpIndiceConvolutionBackwardData`
+     + :ref:`mluOpIndiceConvolutionBackwardFilter`
      + :ref:`indice_convolution_forward`
+     + :ref:`mat_mul`
+     + :ref:`reduce`
      + :ref:`roi_align_rotated_backward`
      + :ref:`roi_align_rotated_forward`
      + :ref:`roi_aware_pool3d_backward`
      + :ref:`roi_aware_pool3d_forward`
      + :ref:`rotated_feature_align_backward`
      + :ref:`rotated_feature_align_forward`
+     + :ref:`scatter_nd`
      + :ref:`three_interpolate_backward`
      + :ref:`three_nn_forward`
+     + :ref:`transpose`
+     + :ref:`unique`
 
 * **V0.4.1**
 

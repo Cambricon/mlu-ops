@@ -12,24 +12,30 @@ This section lists contents that were made for each product release.
   - Added the following new operations:
 
      - active_rotated_filter_forward
+     - add_n
      - bbox_overlaps
      - box_iou_rotated
      - carafe_backward
      - carafe_forward
      - deform_roi_pool_backward
      - deform_roi_pool_forward
+     - gather_nd
      - get_indice_pairs
      - indice_convolution_backward_data
      - indice_convolution_backward_filter
      - indice_convolution_forward
+     - mat_mul
+     - reduce
      - roi_align_rotated_backward
      - roi_align_rotated_forward
      - roi_aware_pool3d_backward
      - roi_aware_pool3d_forward
      - rotated_feature_align_backward
      - rotated_feature_align_forward
+     - scatter_nd
      - three_interpolate_backward
      - three_nn_forward
+     - transpose
 
 * V0.4.1
 
