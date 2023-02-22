@@ -311,10 +311,10 @@ for (int i = 0; i < samples; ++i) {
        int hidden_data_offet = 0;
        // 根据taskId，计算起始索引 sample_idx
        if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
-       	sample_idx = (int)(taskId / (one_sample_task_num + 1));
-       	one_sample_task_num = one_sample_task_num + 1:
+           sample_idx = (int)(taskId / (one_sample_task_num + 1));
+           one_sample_task_num = one_sample_task_num + 1:
        } else {
-       	sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
+           sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
        }
        
        // 根据tadkId，计算需要处理的hidden的大小及偏移
@@ -380,10 +380,9 @@ for (int i = 0; i < samples; ++i) {
              // 从 workspace load所有中间计算结果
              T *nram_grad_gates = (T *)nram_buffer;
              __bang_write_zero(nram_grad_gates, taskDim);
-         
-         	for (int ti = 0; ti < taskDim; ti++) {
-         		if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
-         			int sample_idx = (int)(ti / (one_sample_task_num + 1));
+             for (int ti = 0; ti < taskDim; ti++) {
+                 if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
+                     int sample_idx = (int)(ti / (one_sample_task_num + 1));
                  } else {
                      int sample_idx = (int)((ti - rem_task) / one_sample_task_num);
                  }
@@ -461,10 +460,10 @@ for (int i = 0; i < samples; ++i) {
               // 判断 nram_indices < 0 
               __bang_lt_scalar(nram_indices, nram_indices, 0, deal_s);
               // 生成 mask
-          	__bang_or(nram_indices, nram_indices, nram_location, deal_s);
-          	__bang_not(nram_indices, nram_indices, deal_s);
+              __bang_or(nram_indices, nram_indices, nram_location, deal_s);
+              __bang_not(nram_indices, nram_indices, deal_s);
               int32_t * nram_mask_int32 = (int32_t*)nram_indices;
-          	int *tabel = (int *)nram_location;
+              int *tabel = (int *)nram_location;
               tabel[0] = 0;
               tabel[1] = (int)0xffffffff;
               __bang_float2int32_rd(nram_mask_int32, nram_indices, deal_s, 0);
@@ -472,9 +471,8 @@ for (int i = 0; i < samples; ++i) {
           
               // 复用nram_location空间
               T *nram_grad_gates = nram_location;
-          	__bang_write_zero(nram_grad_gates, deal_s);
-          
-          	for(int j = 0; j < repeat_h + 1; j++) {
+              __bang_write_zero(nram_grad_gates, deal_s);
+              for(int j = 0; j < repeat_h + 1; j++) {
                   // 计算读取input数据的地址
                   T *input_addr = base_input + i * deal_s * hidden + j * deal_h; 
                   // load input 数据，地址input_addr，共deal_s个，每个长度deal_h
@@ -487,7 +485,7 @@ for (int i = 0; i < samples; ++i) {
                   __bang_mul(nram_input, nram_input, nram_dispatch, deal_s * deal_h);
           
                   // 规约求和：先__bang_transposem，将[deal_s,deal_h]转成[deal_h,deal_s],然后在bang_sumpool  
-          	}
+              }
               // 处理不合法的结果
               __bang_band((char*)nram_grad_gates, (char*)nram_grad_gates, (char*)nram_mask_int32, sizeof(int)*deal_s);
               // store: 保存 nram_grad_gates 结果到 base_grad_gates
@@ -519,10 +517,10 @@ for (int i = 0; i < samples; ++i) {
     // 根据taskId，计算起始索引 sample_idx
     int sample_idx = 0;
     if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
-    	sample_idx = (int)(taskId / (one_sample_task_num + 1));
-    	one_sample_task_num = one_sample_task_num + 1:
+        sample_idx = (int)(taskId / (one_sample_task_num + 1));
+        one_sample_task_num = one_sample_task_num + 1:
     } else {
-    	sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
+        sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
     }
     ```
   
