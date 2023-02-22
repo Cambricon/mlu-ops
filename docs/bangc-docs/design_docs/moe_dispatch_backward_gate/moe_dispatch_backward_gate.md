@@ -259,12 +259,12 @@ MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计
 
 ```c
 for (int i = 0; i < samples; ++i) {
-      grad_gates[i] = 0;
-      if (locations[i] >= capacity || indices[i] < 0)
+    grad_gates[i] = 0;
+    if (locations[i] >= capacity || indices[i] < 0)
         continue;
-      for (int j = 0; j < hidden; ++j) {
+    for (int j = 0; j < hidden; ++j) {
         grad_gates[i] += dispatch[(indices[i] * capacity + locations[i]) * (hidden) + j] * input[i * hidden + j];
-      }
+    }
 }
 ```
 
@@ -285,6 +285,8 @@ for (int i = 0; i < samples; ++i) {
   - 因为要对`hidden`维度进行规约求和，因此`deal_h`应尽可能等于`hidden`大小 ，这样可以一次将`hidden`维度的数据全部load上来进行计算、规约求和；
 
 #### 3.1.3 实现方案
+
+- 
 
 - 实现步骤
 
@@ -309,10 +311,10 @@ for (int i = 0; i < samples; ++i) {
        int hidden_data_offet = 0;
        // 根据taskId，计算起始索引 sample_idx
        if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
-       	sample_idx = (int)(taskId / (one_sample_task_num + 1));
+           sample_idx = (int)(taskId / (one_sample_task_num + 1));
            one_sample_task_num = one_sample_task_num + 1:
        } else {
-       	sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
+           sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
        }
        
        // 根据tadkId，计算需要处理的hidden的大小及偏移
@@ -370,7 +372,7 @@ for (int i = 0; i < samples; ++i) {
        - 核间规约：task0上进行最后的核间规约求和
   
          ```c
-         if (taskId == 0){
+         if (taskId == 0) {
              // 每个sample由多少个task来并行计算
              int one_sample_task_num = taskDim / samples;
              // 剩余task数，均分给前n个sample
@@ -378,8 +380,8 @@ for (int i = 0; i < samples; ++i) {
              // 从 workspace load所有中间计算结果
              T *nram_grad_gates = (T *)nram_buffer;
              __bang_write_zero(nram_grad_gates, taskDim);
-             
-         	for (int ti = 0; ti < taskDim; ti++) {
+         
+             for (int ti = 0; ti < taskDim; ti++) {
                  if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
                      int sample_idx = (int)(ti / (one_sample_task_num + 1));
                  } else {
@@ -387,9 +389,9 @@ for (int i = 0; i < samples; ++i) {
                  }
                  nram_grad_gates[sample_idx] += workspace[ti];
              }
-             // store
-             __memcpy(base_grad_gates, nram_grad_gates, samples, NRAM2GDRAM);
-         }
+          	// store
+           	__memcpy(base_grad_gates, nram_grad_gates, samples, NRAM2GDRAM);
+          }
          ```
   
   2. 当 samples > taskDim 时，调用`MLUKernelMoeDispatchBwdGate2`，主要实现步骤：
@@ -420,10 +422,9 @@ for (int i = 0; i < samples; ++i) {
          int repeat_s = samples_num / deal_s;
          int rem_s = samples_num % deal_s;
          ```
-  
-  
+       
        - 根据`hidden` 和 `deal_h` 计算 repeat_h 和 rem_h
-      
+       
          ```c
          int repeat_h = hidden / deal_h;
          int rem_h = hidden % deal_h;
@@ -446,47 +447,47 @@ for (int i = 0; i < samples; ++i) {
   
           ```c
           for (int i = 0; i < repeat_s + 1; i++) {
-          	// load indices 和 location 的数据，长度deal_s
+              // load indices 和 location 的数据，长度deal_s
               __memcpy(nram_indices, base_indices, deal_s, GDRAM2NRAM);
               __memcpy(nram_location, base_locations, deal_s, GDRAM2NRAM);
-          	
+          
               // 计算 idx = (nram_indices * capacity + nram_location) * hidden
               __bang_mul_scalar(nram_idx, nram_indices, capacity, deal_s);
               __bang_add(nram_idx, nram_idx, nram_location, deal_s);
               __bang_mul_scalar(nram_idx, nram_idx, hidden, deal_s);
-              
+          
               // 判断 nram_location >= capacity
               __bang_ge_scalar(nram_location, nram_location, capacity, deal_s);
               // 判断 nram_indices < 0 
               __bang_lt_scalar(nram_indices, nram_indices, 0, deal_s);
               // 生成 mask
-          	__bang_or(nram_indices, nram_indices, nram_location, deal_s);
+              __bang_or(nram_indices, nram_indices, nram_location, deal_s);
               __bang_not(nram_indices, nram_indices, deal_s);
               int32_t * nram_mask_int32 = (int32_t*)nram_indices;
-          	int *tabel = (int *)nram_location;
+              int *tabel = (int *)nram_location;
               tabel[0] = 0;
               tabel[1] = (int)0xffffffff;
               __bang_float2int32_rd(nram_mask_int32, nram_indices, deal_s, 0);
               __bang_lut_s32((int*)nram_mask_int32, (int*)nram_mask_int32, (int*)tabel, deal_s, 64);
-              
+          
               // 复用nram_location空间
               T *nram_grad_gates = nram_location;
-          	__bang_write_zero(nram_grad_gates, deal_s);
-              
-          	for(int j = 0; j < repeat_h + 1; j++) {
+              __bang_write_zero(nram_grad_gates, deal_s);
+          
+              for(int j = 0; j < repeat_h + 1; j++) {
                   // 计算读取input数据的地址
-              	T *input_addr = base_input + i * deal_s * hidden + j * deal_h; 
+                  T *input_addr = base_input + i * deal_s * hidden + j * deal_h; 
                   // load input 数据，地址input_addr，共deal_s个，每个长度deal_h
                   __memcpy(nram_input, input_addr, deal_h, GARAM2NRAM, deal_h, hidden, deal_s - 1);
-          		
+          
                   // 将 idx[deal_s] 每个值作为地址(跳过不合法地址)，
                   // 从 dispatch 中读取数据，因此共deal_s个，每次读取长度deal_h，此处存在离散IO
-          		
+          
                   // 计算 input * dispatch
                   __bang_mul(nram_input, nram_input, nram_dispatch, deal_s * deal_h);
-                  
-          		// 规约求和：先__bang_transposem，将[deal_s,deal_h]转成[deal_h,deal_s],然后在bang_sumpool  
-          	}
+          
+                  // 规约求和：先__bang_transposem，将[deal_s,deal_h]转成[deal_h,deal_s],然后在bang_sumpool  
+              }
               // 处理不合法的结果
               __bang_band((char*)nram_grad_gates, (char*)nram_grad_gates, (char*)nram_mask_int32, sizeof(int)*deal_s);
               // store: 保存 nram_grad_gates 结果到 base_grad_gates
@@ -518,10 +519,10 @@ for (int i = 0; i < samples; ++i) {
     // 根据taskId，计算起始索引 sample_idx
     int sample_idx = 0;
     if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
-    	sample_idx = (int)(taskId / (one_sample_task_num + 1));
+        sample_idx = (int)(taskId / (one_sample_task_num + 1));
         one_sample_task_num = one_sample_task_num + 1:
     } else {
-    	sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
+        sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
     }
     ```
   
