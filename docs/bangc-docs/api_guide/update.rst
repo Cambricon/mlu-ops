@@ -36,6 +36,7 @@ This section lists contents that were made for each product release.
      - three_interpolate_backward
      - three_nn_forward
      - transpose
+     - unique
 
 * V0.4.1
 
