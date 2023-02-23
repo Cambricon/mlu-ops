@@ -44,7 +44,7 @@ static mluOpStatus_t foolCheckNoPtr(
   PARAM_CHECK(api, input_grad_desc != NULL);
 
   // check platform
-  if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
+  if (handle->arch < 372) {
     LOG(ERROR) << api << " Only support hardware over MLU300 .";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
