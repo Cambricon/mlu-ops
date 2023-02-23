@@ -91,15 +91,15 @@ static mluOpStatus_t internalGetIndicePairs(
   PARAM_CHECK(interface_name, indice_pairs_desc != NULL);
   PARAM_CHECK(interface_name, out_indices_desc != NULL);
   PARAM_CHECK(interface_name, indice_num_desc != NULL);
-  if (!is_get_workspace) {
-    PARAM_CHECK(interface_name, indices != NULL);
-    PARAM_CHECK(interface_name, indice_pairs != NULL);
-    PARAM_CHECK(interface_name, out_indices != NULL);
-    PARAM_CHECK(interface_name, indice_num != NULL);
-    if (workspace_size != 0) {
-      PARAM_CHECK(interface_name, workspace != NULL);
-    }
+
+  // check platform
+  if (handle->arch < 372) {
+    LOG(ERROR) << interface_name
+               << " Only mlu300 and above devices are supported."
+               << " Please check the device version!";
+    return MLUOP_STATUS_ARCH_MISMATCH;
   }
+
   // sparse_conv_desc dimNb  check
   int sparse_conv_dimNb = sparse_conv_desc->dimNb;
 
@@ -109,10 +109,11 @@ static mluOpStatus_t internalGetIndicePairs(
   PARAM_CHECK(interface_name, indice_pairs_desc->dim == 3);
   PARAM_CHECK(interface_name, out_indices_desc->dim == 2);
   PARAM_CHECK(interface_name, indice_num_desc->dim == 1);
-
   PARAM_CHECK(interface_name, indices_desc->dims[1] == 4);
   PARAM_CHECK(interface_name, out_indices_desc->dims[1] == 4);
   PARAM_CHECK(interface_name, indice_pairs_desc->dims[1] == 2);
+
+  // check shape
   PARAM_CHECK(interface_name,
               indice_pairs_desc->dims[2] == indices_desc->dims[0]);
   PARAM_CHECK(interface_name,
@@ -127,9 +128,7 @@ static mluOpStatus_t internalGetIndicePairs(
     output_spaces *= sparse_conv_desc->output_space[i];
     input_spaces *= sparse_conv_desc->input_space[i];
   }
-  PARAM_CHECK_GT(interface_name, indices_desc->dims[0], 0);
   PARAM_CHECK_LE(interface_name, indices_desc->dims[0], input_spaces);
-
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
     PARAM_CHECK_GE(interface_name, sparse_conv_desc->pad[i], 0);
     PARAM_CHECK_GE(interface_name, sparse_conv_desc->dilation[i], 1);
@@ -139,6 +138,9 @@ static mluOpStatus_t internalGetIndicePairs(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
+  PARAM_CHECK(interface_name, indice_pairs_desc->dims[0] == kernel_volume);
+  PARAM_CHECK_LE(interface_name, kernel_volume, 4096);
+  PARAM_CHECK_LE(interface_name, out_indices_desc->dims[0], output_spaces);
 
   // large tensor
   if (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM ||
@@ -150,9 +152,6 @@ static mluOpStatus_t internalGetIndicePairs(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
-  PARAM_CHECK(interface_name, indice_pairs_desc->dims[0] == kernel_volume);
-  PARAM_CHECK_LE(interface_name, kernel_volume, 4096);
-  PARAM_CHECK_LE(interface_name, out_indices_desc->dims[0], output_spaces);
   // tensor  datatype check
   PARAM_CHECK_EQ(interface_name, indices_desc->dtype, MLUOP_DTYPE_INT32);
   PARAM_CHECK_EQ(interface_name, indice_pairs_desc->dtype, MLUOP_DTYPE_INT32);
@@ -166,6 +165,26 @@ static mluOpStatus_t internalGetIndicePairs(
                      sparse_conv_desc->output_space[i]);
       PARAM_CHECK_EQ(interface_name, sparse_conv_desc->stride[i], 1);
       PARAM_CHECK_EQ(interface_name, sparse_conv_desc->dilation[i], 1);
+    }
+  }
+
+  // check zero elment
+  if (mluOpGetTensorElementNum(indices_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
+      mluOpGetTensorElementNum(out_indices_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_num_desc) == 0) {
+    sparse_conv_desc->num_act_out = 0;
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  // check nullptr
+  if (!is_get_workspace) {
+    PARAM_CHECK(interface_name, indices != NULL);
+    PARAM_CHECK(interface_name, indice_pairs != NULL);
+    PARAM_CHECK(interface_name, out_indices != NULL);
+    PARAM_CHECK(interface_name, indice_num != NULL);
+    if (workspace_size != 0) {
+      PARAM_CHECK(interface_name, workspace != NULL);
     }
   }
   // gencase
@@ -190,8 +209,7 @@ static mluOpStatus_t internalGetIndicePairs(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairs(
-    mluOpHandle_t handle,
-    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpHandle_t handle, mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
     void *workspace, const size_t workspace_size,
     const mluOpTensorDescriptor_t indice_pairs_desc, void *indice_pairs,
@@ -205,8 +223,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairs(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairsWorkspaceSize(
-    mluOpHandle_t handle,
-    mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+    mluOpHandle_t handle, mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const mluOpTensorDescriptor_t indices_desc,
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const mluOpTensorDescriptor_t out_indices_desc,
@@ -218,6 +235,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairsWorkspaceSize(
   PARAM_CHECK(interface_name, indice_pairs_desc != NULL);
   PARAM_CHECK(interface_name, out_indices_desc != NULL);
   PARAM_CHECK(interface_name, indice_num_desc != NULL);
+  PARAM_CHECK(interface_name, workspace_size != NULL);
   if (mluOpGetTensorElementNum(indices_desc) == 0 ||
       mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
       mluOpGetTensorElementNum(out_indices_desc) == 0 ||
