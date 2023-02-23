@@ -458,7 +458,6 @@ Transpose
 公式如下：
 
 .. figure:: ../images/transpose.png
-:scale: 60%
 
 其中 ``permute`` 为用户希望的对输入张量转置的规则。例如 ``input shape = (11,22,33), permute[3] = {2,1,0}``，则输出 ``output shape = [33,22,11]``。
 
@@ -659,6 +658,5 @@ Unique
 公式如下：
 
 .. figure:: ../images/unique.png
-:scale: 60%
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
