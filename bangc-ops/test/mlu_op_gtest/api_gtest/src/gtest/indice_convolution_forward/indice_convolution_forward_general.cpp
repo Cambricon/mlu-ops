@@ -163,7 +163,7 @@ class indice_convolution_forward_general
   void destroy() {
     try {
       if (handle_) {
-        // CNRT_CHECK(cnrtQueueSync(handle_->queue));
+        CNRT_CHECK(cnrtQueueSync(handle_->queue));
         MLUOP_CHECK(mluOpDestroy(handle_));
         handle_ = nullptr;
       }
