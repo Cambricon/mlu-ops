@@ -4524,6 +4524,89 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t ious_desc,
                    void *ious);
 
+// Group:NmsRotated
+/*!
+ * @brief Computes the index of nms with intersection-over-union
+ * (Jaccard index, IOU) of rotated bounding-boxes.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the nms_rotated operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] iou_threshold
+ * The threshold of iou.
+ * @param[in] multi_label
+ * When multi_label is 1, the labels of boxes are at the last column of \b dets,
+ * in this case, box dim will be 6. Otherwise the box dim is 5. At present,
+ * this parameter is not used and box dim must be 5.
+ * @param[in] dets_desc
+ * The descriptor of the input tensor \b dets (rotated bounding-box).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] dets
+ * Pointer to the MLU memory that stores the input tensor \b dets.
+ * It has shape (n, 5), indicating (x, y, w, h, theta) for each row.
+ * Note that theta is in radian.
+ * @param[in] scores_desc
+ * The descriptor of the input tensor \b scores (rotated bounding-box).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] scores
+ * Pointer to the MLU memory that stores the input tensor \b scores.
+ * It has shape (n), indicating score of each box in \b dets.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the Nms operation.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that need to be used in the Nms operation.
+ * @param[in] inds_des
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] inds
+ * Pointer to the MLU memory that stores the output tensor, which indicates
+ * the index of each output boxes.
+ * @param[out] result_num
+ * Pointer to the MLU memory that stores the number of output boxes.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - By the order of \b dets - \b scores - \b inds, the supported data types of
+ *    \b dets, \b scores and \b inds are as follows:
+ *   - float - float - int64
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \b dets tensors must be 2.
+ * - The number of dimensions of \b scores and \b inds tensors must be 1.
+ * - The highest dimension of \b dets and \b scores must be equal.
+ * - The lowest dimension of \b dets tensors must be 5.
+ * - Boxes are expected to be in (x_center, y_center, width, height, angle) format.
+ *   - \b dets (Tensor): shape [n, 5] in (x, y, w, h, theta) format.
+ *
+ * @note
+ * - None
+ * 
+ * @par API Dependency
+ * - You need to call the ::mluOpGetNmsRotatedWorkspaceSize function to allocate extra
+ *   workspace for \b workspace.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/nms.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpNmsRotated(mluOpHandle_t handle,
+                const float iou_threshold,
+                const int multi_label,
+                const mluOpTensorDescriptor_t dets_desc,
+                const void *dets,
+                const mluOpTensorDescriptor_t scores_desc,
+                const void *scores,
+                void *workspace,
+                size_t workspace_size,
+                const mluOpTensorDescriptor_t inds_desc,
+                void *inds,
+                int32_t *result_num);
+
 // Group:BboxOverlaps
 /*!
  * @brief Computes the IOUs or IOFs between two sets of
@@ -5214,6 +5297,43 @@ mluOpFill_v3(mluOpHandle_t handle,
              const void *value,
              const mluOpTensorDescriptor_t output_desc,
              void *output);
+
+// Group:NmsRotated
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpNmsRotated operation.
+ *
+ * The size of extra workspace is based on the given information of the ::mluOpNmsRotated
+ * operation, including the input tensor descriptors \b dets_desc.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpNmsRotated operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] dets_desc
+ * The descriptor of dets, which contains the dimension and layout of the dets tensor.
+ * @param[out] workspace_size
+ * Pointer to the returned size of the extra workspace in bytes that is used in the
+ * ::mluOpNmsRotated operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t dets_desc,
+                                size_t *workspace_size);
 
 // Group:RoiawarePool3d
 /*!
