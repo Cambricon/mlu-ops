@@ -5,12 +5,34 @@ on:
     branches: [master, r*]
       paths-ignore:
         - 'docs/**'
-        - 'bangpy/**'
+        - 'bangpy-ops/**'
+        - 'docker/**'
+        - 'samples/**'
+        - 'installer/**'
+        - '.github/ISSUE_TEMPLATE/**'
+        - '.github/pull_request_template.md'
+        - 'CONTRIBUTION.md'
+        - 'CPPLINT.cfg'
+        - 'LICENSE'
+        - 'README.md'
+        - 'bangc-ops/README.md'
+        - 'requirements.txt'
   pull_request:
     branches: [master, r*]
       paths-ignore:
         - 'docs/**'
         - 'bangpy-ops/**'
+        - 'docker/**'
+        - 'samples/**'
+        - 'installer/**'
+        - '.github/ISSUE_TEMPLATE/**'
+        - '.github/pull_request_template.md'
+        - 'CONTRIBUTION.md'
+        - 'CPPLINT.cfg'
+        - 'LICENSE'
+        - 'README.md'
+        - 'bangc-ops/README.md'
+        - 'requirements.txt'
 
 jobs:
   test:
