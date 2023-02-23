@@ -137,16 +137,7 @@ class indice_convolution_forward : public testing::Test {
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
     }
   }
-  bool compute(std::vector<mluOpDevType_t> target_device_) {
-    if (handle_) {
-      CNRT_CHECK(cnrtQueueSync(handle_->queue));
-      if (std::find(target_device_.begin(), target_device_.end(),
-                    handle_->arch) == target_device_.end()) {
-        destroy();
-        return true;
-      }
-    }
-
+  mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpIndiceConvolutionForward(
         handle_, features_desc_, features_, filters_desc_, filters_,
         indice_pairs_desc_, indice_pairs_, indice_num_.data(), num_act_out_,
@@ -241,8 +232,7 @@ class indice_convolution_forward : public testing::Test {
 TEST_F(indice_convolution_forward, BAD_PARAM_handle_null) {
   try {
     setParam(false, true, true, true, true, true, true, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -252,8 +242,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_handle_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_features_desc_null) {
   try {
     setParam(true, false, true, true, true, true, true, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -263,8 +252,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_features_desc_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_features_null) {
   try {
     setParam(true, true, false, true, true, true, true, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -274,8 +262,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_features_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_filters_desc_null) {
   try {
     setParam(true, true, true, false, true, true, true, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -285,8 +272,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_filters_desc_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_filters_null) {
   try {
     setParam(true, true, true, true, false, true, true, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -296,8 +282,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_filters_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_indice_pairs_desc_null) {
   try {
     setParam(true, true, true, true, true, false, true, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -307,8 +292,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_indice_pairs_desc_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_indice_pairs_null) {
   try {
     setParam(true, true, true, true, true, true, false, true, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -318,8 +302,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_indice_pairs_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_features_out_desc_null) {
   try {
     setParam(true, true, true, true, true, true, true, false, true, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -329,8 +312,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_features_out_desc_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_features_out_null) {
   try {
     setParam(true, true, true, true, true, true, true, true, false, true, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -340,8 +322,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_features_out_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_indice_num_null) {
   try {
     setParam(true, true, true, true, true, true, true, true, true, false, true);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
@@ -351,8 +332,7 @@ TEST_F(indice_convolution_forward, BAD_PARAM_indice_num_null) {
 TEST_F(indice_convolution_forward, BAD_PARAM_workspace_null) {
   try {
     setParam(true, true, true, true, true, true, true, true, true, true, false);
-    EXPECT_TRUE(
-        compute(std::vector<mluOpDevType_t>({MLUOP_MLU370, MLUOP_MLU590})));
+    EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in indice_convolution_forward";
