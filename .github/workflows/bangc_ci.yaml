@@ -1,10 +1,16 @@
-name: ci
+name: bangc_ci
 
 on:
   push:
     branches: [master, r*]
+      paths-ignore:
+        - 'docs/**'
+        - 'bangpy/**'
   pull_request:
     branches: [master, r*]
+      paths-ignore:
+        - 'docs/**'
+        - 'bangpy-ops/**'
 
 jobs:
   test:
@@ -42,4 +48,3 @@ jobs:
       - name: clean
         run: |
           rm -rf bangc-ops/build
-          rm -rf bangpy-ops/outs
