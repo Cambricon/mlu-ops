@@ -603,7 +603,7 @@ reduce_or 公式如下：
    y_{(0,j,k,m,n)} = x_{(0,j,k,m,n)} ||{i=1}^{I} x{(i,j,k,m,n)}
    \end{aligned}
 
-.. _matmul:
+.. _mat_mul:
 
 MatMul
 ---------------------------------
