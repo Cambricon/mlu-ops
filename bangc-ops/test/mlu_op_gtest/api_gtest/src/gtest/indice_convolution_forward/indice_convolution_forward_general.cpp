@@ -135,8 +135,8 @@ class indice_convolution_forward_general
   }
 
   bool compute() {
-    if (!(target_device_ == MLUOP_MLU370, MLUOP_MLU590 ||
-          target_device_ == handle_->arch)) {
+    if (!(target_device_ == MLUOP_MLU370,
+          MLUOP_MLU590 || target_device_ == handle_->arch)) {
       destroy();
       return true;
     }
@@ -422,21 +422,72 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_MLU370, MLUOP_MLU590),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
-// INSTANTIATE_TEST_CASE_P(
-//     bad_large_tensor_features_out, indice_convolution_forward_general,
-//     testing::Combine(
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 5}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_FLOAT,
-//                                          2, std::vector<int>({3, 3}))),
-//         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
-//         MLUOP_DTYPE_INT32,
-//                                          3, std::vector<int>({9, 2, 3}))),
-//         testing::Values(
-//             MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
-//                              std::vector<int>({47721859, 3, 5, 3}))),
-//         testing::Values(MLUOP_MLU590),
-//         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_features, indice_convolution_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({21474837, 10}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NDHWC, MLUOP_DTYPE_FLOAT,
+                                         5, std::vector<int>({5, 1, 2, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3,
+                                         std::vector<int>({4, 2, 21474837}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({9, 5}))),
+        testing::Values(IndiceConvForwardAdditionalParam(
+            std::vector<int64_t>({1, 1, 1, 1}), 9, 0, 0)),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_filters, indice_convolution_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 3000}))),
+        testing::Values(
+            MLUOpTensorParam(MLUOP_LAYOUT_NDHWC, MLUOP_DTYPE_FLOAT, 5,
+                             std::vector<int>({89479, 2, 2, 2, 3000}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({4, 2, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({9, 89479}))),
+        testing::Values(IndiceConvForwardAdditionalParam(
+            std::vector<int64_t>({1, 1, 1, 1, 1, 1, 1, 1}), 9, 0, 0)),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_indice_pairs, indice_convolution_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({89478486, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NDHWC, MLUOP_DTYPE_FLOAT,
+                                         5, std::vector<int>({5, 3, 2, 2, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3,
+                                         std::vector<int>({12, 2, 89478486}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({9, 5}))),
+        testing::Values(IndiceConvForwardAdditionalParam(
+            std::vector<int64_t>({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}), 9, 0,
+            0)),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_large_tensor_features_output, indice_convolution_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_NDHWC, MLUOP_DTYPE_FLOAT,
+                                         5,
+                                         std::vector<int>({500, 1, 2, 2, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({4, 2, 2}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({4294968, 500}))),
+        testing::Values(IndiceConvForwardAdditionalParam(
+            std::vector<int64_t>({1, 1, 1, 1}), 4294968, 0, 0)),
+        testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 }  // namespace mluopapitest
