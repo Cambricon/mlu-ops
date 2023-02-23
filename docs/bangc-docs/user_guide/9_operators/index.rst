@@ -436,6 +436,7 @@ mluOpIndiceConvolutionForward
 mluOpThreeNNForward
 -----------------------------
 该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。
+
 .. _carafe_forward:
 
 mluOpCarafeBackward
@@ -457,7 +458,6 @@ Transpose
 公式如下：
 
 .. figure:: ../images/transpose.png
-:scale: 60%
 
 其中 ``permute`` 为用户希望的对输入张量转置的规则。例如 ``input shape = (11,22,33), permute[3] = {2,1,0}``，则输出 ``output shape = [33,22,11]``。
 
@@ -487,9 +487,7 @@ reduce_mean 公式如下：
 
    \begin{aligned}
    Y_{(I,J,K,M,N)}=ReduceMean(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\frac{\sum_
-
-   {i=0}^{I}x_{(i,j,k,m,n)}}{I}
+   y_{(0,j,k,m,n)}=\frac{\sum_{i=0}^{I}x_{(i,j,k,m,n)}}{I}
    \end{aligned}
 
 reduce_prod 公式如下：
@@ -535,9 +533,7 @@ reduce_norm2 公式如下：
 
    \begin{aligned}
    Y_{(I,J,K,M,N)}=ReduceNorm2(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sqrt{\sum_{i=0}
-
-   ^{I}x_{(i,j,k,m,n)}^2}
+   y_{(0,j,k,m,n)}=\sqrt{\sum_{i=0}^{I}x_{(i,j,k,m,n)}^2}
    \end{aligned}
 
 reduce_normp 公式如下：
@@ -603,7 +599,7 @@ reduce_or 公式如下：
    y_{(0,j,k,m,n)} = x_{(0,j,k,m,n)} ||{i=1}^{I} x{(i,j,k,m,n)}
    \end{aligned}
 
-.. _matmul:
+.. _mat_mul:
 
 MatMul
 ---------------------------------
@@ -658,6 +654,5 @@ Unique
 公式如下：
 
 .. figure:: ../images/unique.png
-:scale: 60%
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
