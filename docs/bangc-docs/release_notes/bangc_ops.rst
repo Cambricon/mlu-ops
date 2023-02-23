@@ -62,6 +62,8 @@ v0.5.0
 
    * ``active_rotated_filter_forward``
 
+   * ``add_n``
+
    * ``bbox_overlaps``
 
    * ``box_iou_rotated``
@@ -74,6 +76,8 @@ v0.5.0
 
    * ``deform_roi_pool_forward``
 
+   * ``gather_nd``
+
    * ``get_indice_pairs``
 
    * ``indice_convolution_backward_data``
@@ -81,6 +85,10 @@ v0.5.0
    * ``indice_convolution_backward_filter``
 
    * ``indice_convolution_forward``
+
+   * ``mat_mul``
+
+   * ``reduce``
 
    * ``roi_align_rotated_backward``
 
@@ -94,9 +102,15 @@ v0.5.0
 
    * ``rotated_feature_align_forward``
 
+   * ``scatter_nd``
+
    * ``three_interpolate_backward``
 
    * ``three_nn_forward``
+
+   * ``transpose``
+
+   * ``unique``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~
