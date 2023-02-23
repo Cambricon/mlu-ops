@@ -185,7 +185,7 @@ static mluOpStatus_t baseParamCheck(
   PARAM_CHECK(api_name, inverse == 0);
 
   // check mlu platform
-  if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
+  if (handle->arch < 372) {
     LOG(ERROR) << api_name << " Only mlu300 and above devices are supported."
                << " Please check the device version!";
     return MLUOP_STATUS_ARCH_MISMATCH;
