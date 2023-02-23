@@ -487,9 +487,7 @@ reduce_mean 公式如下：
 
    \begin{aligned}
    Y_{(I,J,K,M,N)}=ReduceMean(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\frac{\sum_
-
-   {i=0}^{I}x_{(i,j,k,m,n)}}{I}
+   y_{(0,j,k,m,n)}=\frac{\sum_{i=0}^{I}x_{(i,j,k,m,n)}}{I}
    \end{aligned}
 
 reduce_prod 公式如下：
@@ -535,9 +533,7 @@ reduce_norm2 公式如下：
 
    \begin{aligned}
    Y_{(I,J,K,M,N)}=ReduceNorm2(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sqrt{\sum_{i=0}
-
-   ^{I}x_{(i,j,k,m,n)}^2}
+   y_{(0,j,k,m,n)}=\sqrt{\sum_{i=0}^{I}x_{(i,j,k,m,n)}^2}
    \end{aligned}
 
 reduce_normp 公式如下：
