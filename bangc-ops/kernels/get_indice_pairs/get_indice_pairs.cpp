@@ -91,15 +91,6 @@ static mluOpStatus_t internalGetIndicePairs(
   PARAM_CHECK(interface_name, indice_pairs_desc != NULL);
   PARAM_CHECK(interface_name, out_indices_desc != NULL);
   PARAM_CHECK(interface_name, indice_num_desc != NULL);
-  if (!is_get_workspace) {
-    PARAM_CHECK(interface_name, indices != NULL);
-    PARAM_CHECK(interface_name, indice_pairs != NULL);
-    PARAM_CHECK(interface_name, out_indices != NULL);
-    PARAM_CHECK(interface_name, indice_num != NULL);
-    if (workspace_size != 0) {
-      PARAM_CHECK(interface_name, workspace != NULL);
-    }
-  }
   // sparse_conv_desc dimNb  check
   int sparse_conv_dimNb = sparse_conv_desc->dimNb;
 
@@ -127,7 +118,6 @@ static mluOpStatus_t internalGetIndicePairs(
     output_spaces *= sparse_conv_desc->output_space[i];
     input_spaces *= sparse_conv_desc->input_space[i];
   }
-  PARAM_CHECK_GT(interface_name, indices_desc->dims[0], 0);
   PARAM_CHECK_LE(interface_name, indices_desc->dims[0], input_spaces);
 
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
@@ -166,6 +156,22 @@ static mluOpStatus_t internalGetIndicePairs(
                      sparse_conv_desc->output_space[i]);
       PARAM_CHECK_EQ(interface_name, sparse_conv_desc->stride[i], 1);
       PARAM_CHECK_EQ(interface_name, sparse_conv_desc->dilation[i], 1);
+    }
+  }
+  if (mluOpGetTensorElementNum(indices_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
+      mluOpGetTensorElementNum(out_indices_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_num_desc) == 0) {
+    sparse_conv_desc->num_act_out = 0;
+    return MLUOP_STATUS_SUCCESS;
+  }
+  if (!is_get_workspace) {
+    PARAM_CHECK(interface_name, indices != NULL);
+    PARAM_CHECK(interface_name, indice_pairs != NULL);
+    PARAM_CHECK(interface_name, out_indices != NULL);
+    PARAM_CHECK(interface_name, indice_num != NULL);
+    if (workspace_size != 0) {
+      PARAM_CHECK(interface_name, workspace != NULL);
     }
   }
   // gencase
@@ -218,6 +224,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndicePairsWorkspaceSize(
   PARAM_CHECK(interface_name, indice_pairs_desc != NULL);
   PARAM_CHECK(interface_name, out_indices_desc != NULL);
   PARAM_CHECK(interface_name, indice_num_desc != NULL);
+  PARAM_CHECK(interface_name, workspace_size != NULL);
   if (mluOpGetTensorElementNum(indices_desc) == 0 ||
       mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
       mluOpGetTensorElementNum(out_indices_desc) == 0 ||
