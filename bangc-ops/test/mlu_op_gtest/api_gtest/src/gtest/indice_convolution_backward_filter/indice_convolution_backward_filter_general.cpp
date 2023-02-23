@@ -254,7 +254,7 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({9, 2, 0}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -268,7 +268,7 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({9, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -282,7 +282,7 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({0, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 0, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -299,7 +299,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY,
                                          MLUOP_DTYPE_COMPLEX_FLOAT, 4,
                                          std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -319,7 +319,7 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({9, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -340,7 +340,7 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({9, 2, 3, 4}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -358,7 +358,7 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({9, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -379,7 +379,7 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({3, 3, 15, 3})),
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 13}))),
-        testing::Values(0), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(0), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
@@ -393,7 +393,7 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({9, 2, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({3, 3, 5, 3}))),
-        testing::Values(1), testing::Values(MLUOP_MLU370, MLUOP_MLU590),
+        testing::Values(1), testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
