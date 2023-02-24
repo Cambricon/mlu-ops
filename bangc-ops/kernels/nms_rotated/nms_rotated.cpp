@@ -53,60 +53,61 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetNmsRotatedWorkspaceSize(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t dets_desc,
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
     size_t *workspace_size) {
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", handle != nullptr);
-  PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", dets_desc != nullptr);
+  PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", boxes_desc != nullptr);
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", workspace_size != nullptr);
-  const int box_num = dets_desc->dims[0];
-  const int box_dim = dets_desc->dims[1];
+  const int box_num = boxes_desc->dims[0];
+  const int box_dim = boxes_desc->dims[1];
   int total_num = box_num * box_dim + box_num;
-  *workspace_size = total_num * mluop::getSizeOfDataType(dets_desc->dtype);
+  *workspace_size = total_num * mluop::getSizeOfDataType(boxes_desc->dtype);
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
-                const int multi_label, const mluOpTensorDescriptor_t dets_desc,
-                const void *dets, const mluOpTensorDescriptor_t scores_desc,
+                const mluOpTensorDescriptor_t boxes_desc,
+                const void *boxes, const mluOpTensorDescriptor_t scores_desc,
                 const void *scores, void *workspace, size_t workspace_size,
-                const mluOpTensorDescriptor_t inds_desc, void *inds,
+                const mluOpTensorDescriptor_t output_desc, void *output,
                 int32_t *result_num) {
   // desc null pointer check
   PARAM_CHECK("[mluOpNmsRotated]", handle != NULL);
-  PARAM_CHECK("[mluOpNmsRotated]", dets_desc != NULL);
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc != NULL);
   PARAM_CHECK("[mluOpNmsRotated]", scores_desc != NULL);
-  PARAM_CHECK("[mluOpNmsRotated]", inds_desc != NULL);
+  PARAM_CHECK("[mluOpNmsRotated]", output_desc != NULL);
 
   // datatype check
-  PARAM_CHECK("[mluOpNmsRotated]", dets_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", dets_desc->dtype, scores_desc->dtype);
-  PARAM_CHECK("[mluOpNmsRotated]", inds_desc->dtype == MLUOP_DTYPE_INT64);
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->dtype, scores_desc->dtype);
+  PARAM_CHECK("[mluOpNmsRotated]", output_desc->dtype == MLUOP_DTYPE_INT64);
 
   // dims and shape check
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", dets_desc->dim, 2);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->dim, 2);
   PARAM_CHECK_EQ("[mluOpNmsRotated]", scores_desc->dim, 1);
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", inds_desc->dim, 1);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", output_desc->dim, 1);
 
-  PARAM_CHECK("[mluOpNmsRotated]", dets_desc->dims[0] == scores_desc->dims[0]);
-  PARAM_CHECK("[mluOpNmsRotated]", dets_desc->dims[0] == inds_desc->dims[0]);
-  if (dets_desc->dims[1] != SINGLE_BOX_DIM) {
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == scores_desc->dims[0]);
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == output_desc->dims[0]);
+  if (boxes_desc->dims[1] != SINGLE_BOX_DIM &&
+        boxes_desc->dims[1] != (SINGLE_BOX_DIM + 1)) {
     LOG(ERROR)
       << "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "
-          "should be 5. Now is " << dets_desc->dims[0] << ".";
+          "should be 5 or 6. Now is " << boxes_desc->dims[1] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // 0-element check, after dim and shape check
-  if (dets_desc->dims[0] == 0) {
+  if (boxes_desc->dims[0] == 0) {
     VLOG(5) << "[mluOpNmsRotated] Skip zero element boxes.";
     return MLUOP_STATUS_SUCCESS;
   }
 
   // data nullptr should check after 0-element check
-  PARAM_CHECK("[mluOpNmsRotated]", dets != NULL);
+  PARAM_CHECK("[mluOpNmsRotated]", boxes != NULL);
   PARAM_CHECK("[mluOpNmsRotated]", scores != NULL);
-  PARAM_CHECK("[mluOpNmsRotated]", inds != NULL);
+  PARAM_CHECK("[mluOpNmsRotated]", output != NULL);
   PARAM_CHECK("[mluOpNmsRotated]", result_num != NULL);
   if (workspace_size != 0) {
     PARAM_CHECK("[mluOpNmsRotated]", workspace != NULL);
@@ -116,18 +117,17 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("nms_rotated");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA_REAL(true, "input1", dets, dets_desc);
+    GEN_CASE_DATA_REAL(true, "input1", boxes, boxes_desc);
     GEN_CASE_DATA_REAL(true, "input2", scores, scores_desc);
-    GEN_CASE_DATA_REAL(false, "output1", inds, inds_desc);
+    GEN_CASE_DATA_REAL(false, "output1", output, output_desc);
     GEN_CASE_DATA_UNFOLD(false, "output2", result_num, 1, {1},
                 MLUOP_DTYPE_INT32, MLUOP_LAYOUT_ARRAY, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "nms_rotated", "iou_threshold", iou_threshold);
-    GEN_CASE_OP_PARAM_SINGLE(2, "nms_rotated", "multi_label", multi_label);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 3e-3, 3e-3, 0);
   }
 
-  int32_t box_num = dets_desc->dims[0];
-  int32_t box_dim = dets_desc->dims[1];
+  int32_t box_num = boxes_desc->dims[0];
+  int32_t box_dim = boxes_desc->dims[1];
   // Choose the best task dimension.
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -136,14 +136,14 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   // transpose box [N, box_dim] -> [box_dim, N]
   char *box_workspace = (char*)workspace;
   char *scores_workspace = box_workspace +
-        mluop::getSizeOfDataType(dets_desc->dtype) * box_num * box_dim;
+        mluop::getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
 
   VLOG(5) << "[mluOpNmsRotated] launch kernel [" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "].";
 
   KERNEL_CHECK((mluOpUnionKernelNmsRotatedFloat(
-      k_dim, k_type, handle->queue, dets, box_workspace, scores,
-      scores_workspace, inds, result_num, box_num, box_dim, iou_threshold)));
+      k_dim, k_type, handle->queue, boxes, box_workspace, scores,
+      scores_workspace, output, result_num, box_num, box_dim, iou_threshold)));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

@@ -37,8 +37,9 @@ void NmsRotatedExecutor::paramCheck() {
 
 void NmsRotatedExecutor::workspaceMalloc() {
   size_t workspace_size = 0;
-  auto dets = tensor_desc_[0].tensor;
-  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(handle_, dets, &workspace_size));
+  auto boxes_desc = tensor_desc_[0].tensor;
+  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(handle_, boxes_desc,
+                &workspace_size));
   VLOG(4) << "Malloc workspace space.";
   void *temp = mlu_runtime_.allocate(workspace_size);
   workspace_.push_back(temp);
@@ -58,32 +59,34 @@ void NmsRotatedExecutor::compute() {
 
   float iou_threshold =
     parser_->getProtoNode()->nms_rotated_param().iou_threshold();
-  auto dets = tensor_desc_[0].tensor;
-  auto dev_dets = data_vector_[0].device_ptr;
+  auto boxes = tensor_desc_[0].tensor;
+  auto dev_boxes = data_vector_[0].device_ptr;
   auto scores = tensor_desc_[1].tensor;
   auto dev_scores = data_vector_[1].device_ptr;
-  auto inds = tensor_desc_[2].tensor;
-  auto dev_inds = data_vector_[2].device_ptr;
+  auto output = tensor_desc_[2].tensor;
+  auto dev_output = data_vector_[2].device_ptr;
   auto result_num = data_vector_[3].device_ptr;
   size_t workspace_size = 0;
   size_t output_size = parser_->getMetaTensor("output1").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(dev_inds, 0, output_size));
+  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(dev_output, 0, output_size));
 
-  // GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(dev_inds, 0,
-  //   inds->dims[0] * sizeof(int32_t)));
+  // GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(dev_output, 0,
+  //   output->dims[0] * sizeof(int64_t)));
   VLOG(4) << "call mluOpNmsRotated()";
   interface_timer_.start();
-  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(handle_, dets, &workspace_size));
+  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(
+              handle_, boxes, &workspace_size));
   MLUOP_CHECK(mluOpNmsRotated(
-                handle_, iou_threshold, 0, dets, dev_dets, scores, dev_scores,
-                workspace_[0], workspace_size, inds, dev_inds, (int32_t *)result_num));
+      handle_, iou_threshold, boxes, dev_boxes, scores, dev_scores,
+      workspace_[0], workspace_size, output, dev_output,
+      (int32_t *)result_num));
   interface_timer_.stop();
   VLOG(4) << "mluOpNmsRotated() finished!";
 }
 
 void NmsRotatedExecutor::cpuCompute() {
-  auto count_dets = parser_->getInputDataCount(0);
-  if (count_dets == 0) {
+  auto count_boxes = parser_->getInputDataCount(0);
+  if (count_boxes == 0) {
     return;
   }
 
@@ -104,9 +107,9 @@ void NmsRotatedExecutor::cpuCompute() {
 }
 
 template <typename T>
-void NmsRotatedExecutor::cpuNmsRotated(const T *dets,
+void NmsRotatedExecutor::cpuNmsRotated(const T *boxes,
                                        const T *scores,
-                                       T *inds_output,
+                                       T *output,
                                        const int num_box,
                                        const float iou_threshold,
                                        const int box_dim) {
@@ -117,23 +120,23 @@ void NmsRotatedExecutor::cpuNmsRotated(const T *dets,
 
   std::vector<uint8_t> suppressed(num_box, 0);
   int64_t num_to_keep = 0;
-  auto ndets = num_box;
+  auto nboxes = num_box;
 
-  for (int32_t _i = 0; _i < ndets; _i++) {
+  for (int32_t _i = 0; _i < nboxes; _i++) {
     auto i = order[_i];
     if (suppressed[i] == 1) {
       continue;
     }
 
-    inds_output[num_to_keep++] = i;
+    output[num_to_keep++] = i;
 
-    for (int32_t _j = _i + 1; _j < ndets; _j++) {
+    for (int32_t _j = _i + 1; _j < nboxes; _j++) {
       auto j = order[_j];
       if (suppressed[j] == 1) {
         continue;
       }
-      auto ovr = singleBoxIouRotated(dets + i * box_dim,
-                                    dets + j * box_dim, 0);
+      auto ovr = singleBoxIouRotated(boxes + i * box_dim,
+                                    boxes + j * box_dim, 0);
       if (ovr > iou_threshold) {
         suppressed[j] = 1;
       }

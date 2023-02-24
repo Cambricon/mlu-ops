@@ -2,10 +2,10 @@
 
 - #### 文档基本信息
 
-| 算子名称    | `nms_rotated`     |
+| 算子名称    | `nms_rotated`          |
 | ----------- | --------------------- |
 | 编制人/日期 | liuyuan1/2022-02-06     |
-| 审批人/日期 | xxx/2022-02-xx |
+| 审批人/日期 | 袁梦，张双林/2022-02-17   |
 
 - #### 修改记录
 
@@ -37,9 +37,9 @@
 | 需求来源                  | mmcv                                                           |
 | 应用网络                  | fcos3d/pointpillar                                             |
 | 输入数据类型               | float                                                          |
-| 输入 Shape                | dets:[N,5]; scores:[N]; multi_label:int; iou_threshold:float;  |
+| 输入 Shape                | boxes:[N,5]; scores:[N]; iou_threshold:float;                  |
 | 输出数据类型               | int64                                                          |
-| 输出 Shape                | inds:[N], result_num: int32, 表示输出box的个数                   |
+| 输出 Shape                | output:[N]; result_num: int32, 表示输出box的个数                 |
 | 是否需要支持原位            | 否                                                              |
 | 是否需要支持 stride 机制    | 否                                                              |
 | 是否需要支持广播            | 否                                                              |
@@ -47,11 +47,11 @@
 
 ### 1.2 算子功能和应用场景描述
 
-NmsRotated 算子有 2 个输入 Tensor，分别为 `dets`[N,5], `scores`[N]，`dets`输入低维度的 5 个数字包括的信息为： `x_ctr`, `y_ctr`, `height`, `width`, `radian`.
+NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scores`[N]，`boxes`输入低维度的数字包括的信息为： `x_ctr`, `y_ctr`, `width`, `height`, `radian` 或者为： `x_ctr`， `y_ctr`， `width`， `height`， `radian`, `label`.
 
 计算过程简单描述：
 
-1. 对scores进行由大到小的排序，将最大score对应的index输出到`inds`。
+1. 对scores进行由大到小的排序，将最大score对应的index输出到`output`。
 2. 计算最大score的box与其他box的`IOU`，`IOU`的计算参考 [box_iou_rotated设计文档](../box_iou_rotated/box_iou_rotated.md)，其计算过程如下：
     1. 根据中心点计算旋转后的 rotatedbox1/box2.
     2. 根据 rotatedbox1/box2 的坐标点，计算每条边相交与否，是否有互相包含的情况，得到交点坐标（总共 24 种可能性）。
@@ -65,26 +65,25 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `dets`[N,5], `scores`[N]，`
 | 参数           | 语义                       | 类型（输入/输出） | 支持类型                 | 物理布局        | 规模限制 |
 | -----------   | -------------------------- | -------------- | ----------------------- | ------------- | -------- |
 | handle        | 操作句柄                    | 输入            | mluOpHandle_t           | /             | /        |
-| dets_desc     | 输入数据，box 的描述符        | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| dets          | 输入数据，box 的坐标          | 输入            | float/half\*            | [N, 5]        | /        |
+| boxes_desc    | 输入数据，box 的描述符        | 输入            | mluOpTensorDescriptor_t | /             | /        |
+| boxes         | 输入数据，box 的坐标          | 输入            | float\*                 | [N, 5] or [N, 6]  | /    |
 | scores_desc   | 输入数据，scores 的描述符     | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| scores        | 输入数据，scores 的大小       | 输入            | float/half\*            | [N]           | /        |
-| workspace     | 输入数据，GDRAM上面的辅助空间  | 输入            | void *\*                | /             | /        |
+| scores        | 输入数据，scores 的大小       | 输入            | float\*                 | [N]           | /        |
+| workspace     | 输入数据，GDRAM上面的辅助空间  | 输入            | void\*                  | /             | /        |
 | workspace_size| 输入数据，辅助空间的大小       | 输入            | size_t\*                | /             | /        |
 | iou_threshold | 输入数据，IOU 的阈值          | 输入            | float                   | scalar        | /        |
-| inds_desc     | 输入数据，输出 index 的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| inds          | 输出数据，输出 index 的数据    | 输出            | int32\*                 | [N]           | /        |
-| result_num    | 输出数据，输出 box 的个数      | 输出            | int32 *\*               | /             | /        |
+| output_desc   | 输入数据，输出 index 的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
+| output        | 输出数据，输出 index 的数据    | 输出            | int64 \*                | [N]           | /        |
+| result_num    | 输出数据，输出 box 的个数      | 输出            | int32 \*                | /             | /        |
 
 ### 1.4 算子限制
 
 | 限制类型     | 详细说明                                                                         |
 | ----------- | ------------------------------------------------------------------------------ |
-| 输入限制     | 输入参数`dets`，`scores`的shape 必须满足要求: dets[N, 5]和 scores:[N]               |  
-| 输出限制     | 输出参数`out_inds`的shape 必须满足: [N]                                            |
-| 输入限制     | 输入 `iou_threshold` 仅支持输入float                                              |
-| 输入限制     | 输入 `multi_label` 仅支持 int32, 该参数目前对结果不产生影响                           |
-| 数据类型限制  | 输入 `dets`，`scores` 数据类型一致，`inds` 仅支持 int32_t 类型                       |
+| 输入限制     | 输入参数`boxes`，`scores`的shape 必须满足要求: boxes[N, 5] or boxes[N, 6] 和 scores:[N] |  
+| 输出限制     | 输出参数`output`的shape 必须满足: [N]                                              |
+| 输入限制     | 输入 `iou_threshold` 仅支持输入float, 输入 `result_num` 仅支持 int32\* 类型          |
+| 数据类型限制  | 输入 `boxes`，`scores` 数据类型一致，`output` 仅支持 int64_t 类型                    |
 | 原位限制     | 不支持原位                                                                        |
 | stride 限制 | 不支持 stride 机制                                                                |
 | 广播限制     | 不支持广播                                                                        |
@@ -93,7 +92,7 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `dets`[N,5], `scores`[N]，`
 
 #### 1.5.1 精度验收标准
 
-- 该算子输出`inds`为所选择的box的索引数据。`inds`是 int32_t 数据类型。因此，该算子采用静态阈值，阈值标准：diff3 = 0.
+- 该算子输出`output`为所选择的box的索引数据。`output`是 int64_t 数据类型。因此，该算子采用静态阈值，阈值标准：diff3 = 0.
 
 - 注意：MLU200 系列精度需要限定数值范围和规模大小，避免计算IOU时出现大规模随机错误。
 
@@ -122,23 +121,22 @@ Tensor nms_rotated_cpu_kernel (
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
                                             const float iou_threshold,
-                                            const int multi_label,
-                                            const mluOpTensorDescriptor_t dets_desc,
-                                            const void *dets,
+                                            const mluOpTensorDescriptor_t boxes_desc,
+                                            const void *boxes,
                                             const mluOpTensorDescriptor_t scores_desc,
                                             const void *scores,
                                             void *workspace,
                                             size_t workspace_size,
-                                            const mluOpTensorDescriptor_t inds_desc,
-                                            void *inds,
-                                            void *result_num);
+                                            const mluOpTensorDescriptor_t output_desc,
+                                            void *output,
+                                            int32_t *result_num);
 ```
 
 ## 3 实现方案设计
 
 ### 3.1 实现方案
 
-1. 将`dets`中N个box拆分到一个core或一个cluster，分别对应block和union1任务类型。
+1. 将`boxes`中N个box拆分到一个core或一个cluster，分别对应block和union1任务类型。
 2. 分别计算每个core上的最大score。如果是union1任务类型，则还需通过SRAM取得全局最大score以及对应的index和box信息。
 3. 将得到的全局最大score的box信息传到每个core的NRAM中，每个core分别计算最大score的box和其他box的iou，将iou大于iou_threshold的box的score置0, 等价于移除box。
 4. 重复步骤2,直至每个box都被遍历。
@@ -177,14 +175,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
 
 ### 3.7 测试用例设计
 
-- 框架在需求列表中给出的算子在网络中用到的规模：`dets` 为 [34,5], [66,5]
+- 框架在需求列表中给出的算子在网络中用到的规模：`boxes` 为 [34,5], [78,5]
+
+- 单核BLOCK任务下：
+  1. MLU590： box_num < 3500 不超时
+  2. MLU290： box_num < 4500 不超时
 
 - 边界 case：
 
-  1. 相同score的box.
+  1. 相同score的box：与CPU和GPU保持对齐
   
-  2. IOU计算可参考[box_iou_rotated设计方案](../box_iou_rotated/box_iou_rotated.md)
-
 ### 3.8 算子防呆检查
 
 - 列出算子需要做的防呆，比如

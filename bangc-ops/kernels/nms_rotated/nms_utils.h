@@ -115,7 +115,8 @@ __mlu_func__ void BoxesTranpose(const T *boxes,
                                 const int32_t box_dim) {
   int32_t task_per_core = box_num / taskDim;
   int32_t task_rem = box_num % taskDim;
-  int32_t offset = task_per_core * taskId + (taskId < task_rem ? taskId : task_rem);
+  int32_t offset = task_per_core * taskId +
+                  (taskId < task_rem ? taskId : task_rem);
   task_per_core += taskId < task_rem ? 1 : 0;
   int32_t limit = MAX_NRAM_SIZE / sizeof(T) / 2;
 #if __BANG_ARCH__ > 300

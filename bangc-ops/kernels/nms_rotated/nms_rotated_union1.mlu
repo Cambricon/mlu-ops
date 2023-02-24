@@ -74,8 +74,8 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
   IN_DT *max_box = temp + NFU_ALIGN_SIZE;
 
   // memory layout for compute iou
-  // every box require 239 * sizeof(float) space in nram;
-  int32_t copies_of_nram = 239 * sizeof(float);
+  // every box require 244 * sizeof(float) space in nram;
+  int32_t copies_of_nram = 244 * sizeof(float);
   limit = (MAX_NRAM_SIZE - nram_save_limit_count * sizeof(OUT_DT)) /
            copies_of_nram;
 
@@ -98,6 +98,7 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
   void *nums_in_ram = (float *)valid_pts + 24 * max_seg_iou_pad;
   IN_DT *box1 = (IN_DT *)((float *)nums_in_ram + 1 * max_seg_iou_pad);
   IN_DT *box2 = (IN_DT *)((float *)box1 + 5 * max_seg_iou_pad);
+  IN_DT *box1_buffer = (IN_DT *)((float *)box2 + 5 * max_seg_iou_pad);
 
   // reuse memeory
   void *rotated_pts1_x = ((char *)dist_ram);
@@ -114,10 +115,10 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
     __sync_cluster();
 
     /******FIND MAX START******/
-    int32_t max_index = 0;        // the max score index
-    int32_t global_max_index = 0; // for U1
-    float max_area = 0;           // the max socre area
-    max_box[0] = 0;               // init 0
+    int32_t max_index = 0;        //  the max score index
+    int32_t global_max_index = 0; //  for U1
+    float max_area = 0;           //  the max socre area
+    max_box[0] = 0;               //  init 0
 
     findCoreMaxBox(input_data_score, score, temp, max_box, input_x_ptr,
                    input_y_ptr, input_dx_ptr, input_dy_ptr, scores_load_dir,
@@ -184,6 +185,8 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
     __bang_write_value((float *)box1 + 4 * max_seg_iou_pad, max_seg_iou_pad,
                        float(input_angle_ptr[global_max_index]));
 
+    __memcpy(box1_buffer, box1, max_seg_iou_pad * 5 * sizeof(float), NRAM2NRAM);
+
     // update score
     for (int i = 0; i <= repeat_iou_compute; i++) {
       if (i == repeat_iou_compute && remain_iou_compute == 0) {
@@ -247,9 +250,10 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
 
       // center_shift_x = (box1_raw.x_ctr + box2_raw.x_ctr) / 2.0;  ----temp1
       // center_shift_y = (box1_raw.y_ctr + box2_raw.y_ctr) / 2.0;  ----temp2
-      __bang_add((float *)temp1_ram, (float *)box1, (float *)box2, seg_len);
-      __bang_add((float *)temp2_ram, (float *)box1 + 1 * seg_len,
-                  (float *)box2 + 1 * seg_len, seg_len);
+      __bang_add((float *)temp1_ram, (float *)box1_buffer, (float *)box2,
+                  seg_len);
+      __bang_add((float *)temp2_ram, (float *)box1_buffer + seg_len,
+                  (float *)box2 + seg_len, seg_len);
       __bang_mul_scalar((float *)temp1_ram, (float *)temp1_ram, (float)0.5,
                         seg_len);
       __bang_mul_scalar((float *)temp2_ram, (float *)temp2_ram, (float)0.5,
@@ -258,11 +262,12 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
       // box1.y_ctr = box1_raw.y_ctr - center_shift_y;
       // box2.x_ctr = box2_raw.x_ctr - center_shift_x;
       // box2.y_ctr = box2_raw.y_ctr - center_shift_y;
-      __bang_sub((float *)box1, (float *)box1, (float *)temp1_ram, seg_len);
-      __bang_sub((float *)box1 + 1 * seg_len, (float *)box1 + 1 * seg_len,
+      __bang_sub((float *)box1, (float *)box1_buffer, (float *)temp1_ram,
+                  seg_len);
+      __bang_sub((float *)box1 + seg_len, (float *)box1_buffer + seg_len,
                  (float *)temp2_ram, seg_len);
       __bang_sub((float *)box2, (float *)box2, (float *)temp1_ram, seg_len);
-      __bang_sub((float *)box2 + 1 * seg_len, (float *)box2 + 1 * seg_len,
+      __bang_sub((float *)box2 + seg_len, (float *)box2 + seg_len,
                  (float *)temp2_ram, seg_len);
 
       getRotatedVertices((float *)rotated_pts1_x, (float *)rotated_pts1_y,
@@ -373,7 +378,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
                                         T *input_boxes,
                                         const T *scores,
                                         T *input_scores,
-                                        int64_t *inds,
+                                        int64_t *output,
                                         int32_t *result_num,
                                         const int32_t box_num,
                                         const int32_t box_dim,
@@ -391,7 +396,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
   mluMemcpyDirection_t boxes_load_dir = GDRAM2NRAM;
   int32_t output_box_num = 0;
   int32_t cluster_score_size = box_num * sizeof(T);
-  int32_t cluster_boxes_size = box_num * 5 * sizeof(T);
+  int32_t cluster_boxes_size = box_num * SINGLE_BOX_DIM * sizeof(T);
 
   if (clusterDim == 1 &&
       (SIZE_SRAM_BUF - REDUCE_NUM * sizeof(T)) > cluster_score_size) {
@@ -418,7 +423,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
   }
   __sync_cluster();
 
-  nms_detection(output_box_num, inds, scores_data, boxes_data,
+  nms_detection(output_box_num, output, scores_data, boxes_data,
                 sram, taskDim, box_num, iou_threshold,
                 scores_load_dir, scores_store_dir, boxes_load_dir, exit);
 
@@ -429,11 +434,11 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
 void MLUOP_WIN_API mluOpUnionKernelNmsRotatedFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *boxes, void *box_workspace, const void *scores,
-    void * scores_workspace, void *inds, int32_t *result_num,
+    void * scores_workspace, void *output, int32_t *result_num,
     const int32_t box_num, const int32_t box_dim,
     const float iou_threshold) {
   MLUKernelNmsRotated<<<k_dim, k_type, queue>>>((float *)boxes,
         (float *)box_workspace, (float *)scores, (float *)scores_workspace,
-        (int64_t *)inds, (int32_t *)result_num, box_num, box_dim,
+        (int64_t *)output, (int32_t *)result_num, box_num, box_dim,
         iou_threshold);
 }
