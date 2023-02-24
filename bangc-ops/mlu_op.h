@@ -260,7 +260,7 @@ typedef enum {
   /*!< Specifies the epilogue function. It is not supported now. */
   MLUOP_MATMUL_DESC_BIAS_POINTER = 7,
   /*!< Pointer to bias vector on MLU device memory. Currently, it is only supported to set
-   *   the attribute \b matmul_desc in ::mluOpMatMulInference. */
+   *   the attribute \b matmul_desc. */
   MLUOP_MATMUL_DESC_EPILOGUE_TYPE = 8,
   /*!< Specifies matmul multiplication epilogue fusion type. */
   MLUOP_MATMUL_DESC_EPILOGUE_OPERAND = 9,
@@ -427,7 +427,7 @@ mluOpCreate(mluOpHandle_t *handle);
 // Group:Runtime Management
 /*!
  *  @brief Updates the MLUOP context information that is held by the \b handle. This function
- *  should be called if you call Cambriocn CNDrv API cnSetCtxConfigParam to set the context
+ *  should be called if you call CNDrv API cnSetCtxConfigParam to set the context
  *  information. The related context information will be synchronized to MLUOP with this function.
  *  For detailed information, see "Cambricon CNDrv Developer Guide".
  *
@@ -767,7 +767,7 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
 
 /*! The descriptor of a tensor that holds the information including tensor
- *  shape, the number of dimensions, pad, strides, dalition, sub_m, transpose.
+ *  shape, the number of dimensions, pad, strides, dilation, sub_m, transpose.
  *
  *  You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
  *  and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information to
@@ -1104,9 +1104,9 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
                                     const int transpose,
                                     const int inverse);
 
-// Group:: GetIndicePairs
+// Group:GetIndicePairs
 /*!
- *  @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionStruct.
+ *  @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionDescriptor_t.
  *
  *  @param[in] desc
  *  Pointer to the parameter num_act_out that holds information about the tensor descriptor.
@@ -1752,8 +1752,7 @@ mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const 
  *  @brief Creates a descriptor \b tensorSetDesc of tensor set that holds a
  *  series of tensors. The number of tensors of tensor set is jointly determined
  *  by \b setDimNb and \b setDimSize. Use ::mluOpInitTensorSetMemberDescriptor to
- *  set information for descriptor and ::mluOpDestroySeqDataDescriptor function
- *  to destroy the tensor set descriptor.
+ *  set information for descriptor.
  *
  *  @param[out] tensorSetDesc
  *  Pointer to the memory that holds information about the descriptor
@@ -2179,19 +2178,19 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of this operation is as follows:
- *   @verbatim
- *     Input tensor  1 :   [[1, 2, 3]]
- *     Input tensor  2 :   [[1],
- *                          [4],
- *                          [7]]
- *     Input tensor  3 :   [[1, 2, 3],
- *                          [4, 5, 6],
- *                          [7, 8, 9]]
- *     Input num       :   3
- *     Output tensor   :   [[3,  5,  7],
- *                          [9, 11, 13],
- *                          [15,17, 19]]
- *   @endverbatim
+     @verbatim
+      Input tensor  1 :   [[1, 2, 3]]
+      Input tensor  2 :   [[1],
+                           [4],
+                           [7]]
+      Input tensor  3 :   [[1, 2, 3],
+                           [4, 5, 6],
+                           [7, 8, 9]]
+      Input num       :   3
+      Output tensor   :   [[3,  5,  7],
+                            [9, 11, 13],
+                            [15,17, 19]]
+     @endverbatim
  *
  *  @par Reference
  *  - None.
@@ -2254,21 +2253,21 @@ mluOpAddN_v2(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of this operation is as follows:
- *   @verbatim
- *     Input tensor  1 :   [[1, 2, 3],
- *                          [4, 5, 6],
- *                          [7, 8, 9]]
- *     Input tensor  2 :   [[1, 2, 3],
- *                          [4, 5, 6],
- *                          [7, 8, 9]]
- *     Input tensor  3 :   [[1, 2, 3],
- *                          [4, 5, 6],
- *                          [7, 8, 9]]
- *     Input num       :   3
- *     Output tensor   :   [[3,  6,  9],
- *                          [12, 15, 18],
- *                          [21, 24, 27]]
- *   @endverbatim
+     @verbatim
+      Input tensor  1 :   [[1, 2, 3],
+                           [4, 5, 6],
+                           [7, 8, 9]]
+      Input tensor  2 :   [[1, 2, 3],
+                           [4, 5, 6],
+                           [7, 8, 9]]
+      Input tensor  3 :   [[1, 2, 3],
+                           [4, 5, 6],
+                           [7, 8, 9]]
+      Input num       :   3
+      Output tensor   :   [[3,  6,  9],
+                            [12, 15, 18],
+                            [21, 24, 27]]
+     @endverbatim
  *
  *  @par Reference
  *  - None.
@@ -2899,7 +2898,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  *  @par Note
  *  - This commit does not support nan/inf or adaptive NMS.
  *  - The attribute `eta` should not be less than 1.
- *  - 'nms_thresh' should be more than 0.
+ *  - ``nms_thresh`` should be more than 0.
  *
  * @par Reference
  * -
@@ -3198,7 +3197,7 @@ mluOpPriorBox(mluOpHandle_t handle,
  *  @param[in] handle
  *  Handle to an MLUOP context that is used to manage MLU devices
  *  and queues in the psroipool_forward operation. For detailed information,
- *  see::mluOpHandle_t.
+ *  see ::mluOpHandle_t.
  *  @param[in] spatial_scale
  *  The spatial scale of each ROI in the output.
  *  @param[in] group_size
@@ -3478,17 +3477,17 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  * @par Example
  * - The example of the roi_align_rotated_forward operation is as follows:
      @verbatim
-     input two arrays by 1 * 3 * 3 * 1 and 1 * 6 -->
-     input:[[[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]]]]
-
-     --> rois: [[0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
-
-     param:
-            pooled_height: 2, pooled_width: 2, spatial_scale: 1.0,
-            sampling_ratio: 2, aligned: false, clockwise: false
-
-     output array by 1 * 2 * 2 * 1 -->
-         output: [[[[1],[1]],[[1],[1]]]]
+      input two arrays by 1 * 3 * 3 * 1 and 1 * 6 -->
+      input:[[[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]]]]
+	  
+      --> rois: [[0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
+	  
+      param:
+             pooled_height: 2, pooled_width: 2, spatial_scale: 1.0,
+             sampling_ratio: 2, aligned: false, clockwise: false
+	  
+      output array by 1 * 2 * 2 * 1 -->
+          output: [[[[1],[1]],[[1],[1]]]]
      @endverbatim
  *
  * @par Reference
@@ -3588,16 +3587,16 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @par Example
  * - The example of the roi_align_rotated_backward operation is as follows:
      @verbatim
-     input two arrays by 1 * 1 * 1 * 1 and 1 * 6 --> input: [[[[1.0]]]]
-
-     --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0, 0.0]]
-
-     param:
-            pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
-            sampling_ratio: 2, aligned: false, clockwise: false
-
-     output array by 1 * 2 * 2 * 1 -->
-         output: [[[[0.25], [0.25]], [[0.25], [0.25]]]]
+      input two arrays by 1 * 1 * 1 * 1 and 1 * 6 --> input: [[[[1.0]]]]
+	  
+      --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0, 0.0]]
+	  
+      param:
+             pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
+             sampling_ratio: 2, aligned: false, clockwise: false
+	  
+      output array by 1 * 2 * 2 * 1 -->
+          output: [[[[0.25], [0.25]], [[0.25], [0.25]]]]
      @endverbatim
  *
  * @par Reference
@@ -3828,15 +3827,15 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * @par Example
  * - The example of the rotated_feature_align_forward operation is as follows:
      @verbatim
-     input two arrays by 1 * 2 * 2 * 1 and 1 * 2 * 2 * 5
-     --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
-     --> bboxes: [[0.0, 2.0, 2.0, 1.0, 1.0]]
-
-     param:
-            spatial_scale: 1.0, points: 1
-
-     output array by 1 * 2 * 2 * 1 -->
-         output: [[[[5.0], [6.0]], [[6.0], [8.0]]]]
+      input two arrays by 1 * 2 * 2 * 1 and 1 * 2 * 2 * 5
+      --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
+      --> bboxes: [[0.0, 2.0, 2.0, 1.0, 1.0]]
+	  
+      param:
+             spatial_scale: 1.0, points: 1
+	  
+      output array by 1 * 2 * 2 * 1 -->
+          output: [[[[5.0], [6.0]], [[6.0], [8.0]]]]
      @endverbatim
  *
  * @par Reference
@@ -4252,7 +4251,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * The detection boxes with the confidence score below the threshold should be ignored.
  * @param[in] downsample_ratio
  * The downsample ratio from network input to yolo_box operation input,
- * so 32, 16, 8 should be set for the first, second, and thrid into yolo_box operation.
+ * so 32, 16, 8 should be set for the first, second, and third into yolo_box operation.
  * @param[in] clip_bbox
  * Whether clip output bounding box in img_size boundary.
  * @param[in] scale
@@ -4486,8 +4485,8 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  * - The length of lowest dimension of \b bbox1 and \b bbox2 tensors must be 5.
  * - Both sets of boxes are expected to be in
  *   (x_center, y_center, width, height, angle) format.
- *   - \b bbox1 (Tensor): shape [n, 5] in (x, y, w, h, theta) format.
- *   - \b bbox2 (Tensor): shape [m, 5] in (x, y, w, h, theta) format.
+ *   - bbox1 (Tensor): shape [n, 5] in (x, y, w, h, theta) format.
+ *   - bbox2 (Tensor): shape [m, 5] in (x, y, w, h, theta) format.
  * - When aligned mode is true, for input \b bbox1 and \b bbox2 with n-rows,
  *   the output \b ious must be a 1D array with n-elements. When
  *   \b aligned is false, for input \b bbox1 with n-rows and \b bbox2 with
@@ -4526,105 +4525,105 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
 
 // Group:BboxOverlaps
 /*!
- * @brief Computes the IOUs or IOFs between two sets of
- * bounding-boxes. If \b aligned is false, this operation calculates the IOU of each row between each bounding-box
- * of \b bbox1 and \b bbox2, otherwise, it calculates the IOU of the corresponding row between each aligned
- * pair of \b bbox1 and \b bbox2. For input placed in the order of <x1, y1, x2, y2>, (x1, y1) and (x2, y2)
- * respectively represents the top-left and bottom-right corner coordinates of bounding-box.
- *
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * bounding-box overlaps operation. For detailed information, see ::mluOpHandle_t.
- * @param[in] mode
- * An integer value which decides to return a result IOU or IOF.
- * The integer 0 represents IOU and 1 represents IOF.
- * @param[in] aligned
- * A boolean value. If it is false, this operation calculates the IOUs[i][j] or IOFs[i][j] between
- * the row i of \b bbox1 and the row j of \b bbox2, otherwise the IOU[i] or IOF[i] between
- * the row i of \b bbox1 and the row i of \b bbox2 are calculated. The number of row of \b bbox1
- * and \b bbox2 must be equal if \b aligned is true.
- * @param[in] offset
- * An integer value determines whether to increase the length and the width of the bounding-box by 0 or 1
- * before calculating the area.
- * @param[in] bbox1_desc
- * The descriptor of the input tensor \b bbox1. For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] bbox1
- * Pointer to the MLU memory that stores the input tensor \b bbox1.
- * @param[in] bbox2_desc
- * The descriptor of the input tensor \b bbox2. For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] bbox2
- * Pointer to the MLU memory that stores the input tensor \b bbox2.
- * @param[in] ious_desc
- * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[out] ious
- * IOU or IOF. Pointer to the MLU memory that stores the output tensor.
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @par Formula
- * - See "Bounding-Box Overlaps Operation" section in "Cambricon BANGC OPS User Guide" for details.
- *
- * @par Data Type
- * By the order of \b bbox1 - \b bbox2 - \b ious, the supported data types of
+ * @brief Computes the IOUs or IOFs between two sets of
+ * bounding-boxes. If \b aligned is false, this operation calculates the IOU of each row between each bounding-box
+ * of \b bbox1 and \b bbox2, otherwise, it calculates the IOU of the corresponding row between each aligned
+ * pair of \b bbox1 and \b bbox2. For input placed in the order of <x1, y1, x2, y2>, (x1, y1) and (x2, y2)
+ * respectively represents the top-left and bottom-right corner coordinates of bounding-box.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * bounding-box overlaps operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] mode
+ * An integer value which decides to return a result IOU or IOF.
+ * The integer 0 represents IOU and 1 represents IOF.
+ * @param[in] aligned
+ * A boolean value. If it is false, this operation calculates the IOUs[i][j] or IOFs[i][j] between
+ * the row i of \b bbox1 and the row j of \b bbox2, otherwise the IOU[i] or IOF[i] between
+ * the row i of \b bbox1 and the row i of \b bbox2 are calculated. The number of row of \b bbox1
+ * and \b bbox2 must be equal if \b aligned is true.
+ * @param[in] offset
+ * An integer value determines whether to increase the length and the width of the bounding-box by 0 or 1
+ * before calculating the area.
+ * @param[in] bbox1_desc
+ * The descriptor of the input tensor \b bbox1. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox1
+ * Pointer to the MLU memory that stores the input tensor \b bbox1.
+ * @param[in] bbox2_desc
+ * The descriptor of the input tensor \b bbox2. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bbox2
+ * Pointer to the MLU memory that stores the input tensor \b bbox2.
+ * @param[in] ious_desc
+ * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] ious
+ * IOU or IOF. Pointer to the MLU memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - See "Bounding-Box Overlaps Operation" section in "Cambricon BANGC OPS User Guide" for details.
+ *
+ * @par Data Type
+ * By the order of \b bbox1 - \b bbox2 - \b ious, the supported data types of
  * \b bbox1, \b bbox2 and \b ious are as follows:
  * - float - float - float
  * - half  - half  - half
- *
- * @par Scale Limitation
- * - The number of dimensions of \b bbox1 and \b bbox2 tensors must be 2
- * - The lowest dimension of input tensor must be 4
- *   \b bbox1 (Tensor): shape [m, 4] in <x1, y1, x2, y2> format
- *   \b bbox2 (Tensor): shape [n, 4] in <x1, y1, x2, y2> format
- * - Input with NaN is not supported currently. Also you need to exclude the input with (inf - inf) or (inf - (-inf)),
- *   where inf represents infinity (because the result is NaN, the actual impact is that the input has NaN)
- * - For input in type <x1, y1, x2, y2>, the coordinates must satisfy x2 > x1, y2 > y1,
- *   otherwise incorrect results will be obtained
- * - When aligned mode is true, for input \b bbox1 and \b bbox2 with n-rows, if n is zero, the output IOU
- *   must be a 2D matrix with shape n * 1, otherwise the output IOU must be a 1D
- *   array with n-elements. When aligned mode is false, for input \b bbox1 with n-rows and
- *   \b bbox2 with m-rows, the output IOU must be a 2D matrix with shape n * m.
- *
- * @par API Dependency
- * - None.
- *
- * @note
- * - The input tensor \b x should be in the following range to guarantee the accuracy of output:
- *   If bbox_overlaps works on (m)tp_2xx :
- *    - half : [-300, 100]
- *    - float : [-300, 100]
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - The example of the bounding-box overlaps operation is as follows:
- *   @verbatim
- *    input array by 3 * 4, type is float -->
- *        input: bbox1 = [
- *          [0, 0, 10, 10],
- *          [10, 10, 20, 20],
- *          [32, 32, 38, 42],
- *        ]
- *    input array by 3 * 4, type is float -->
- *        input: bbox2 = [
- *          [0, 0, 10, 20],
- *          [0, 10, 10, 19],
- *          [10, 10, 20, 20],
- *        ]
- *    param:
- *      mode = 0
- *      aligned = False
- *      offset = 0
- *
- *
- *    output array by 3 * 3, type is float -->
- *        output: [[0.5000, 0.0000, 0.0000],
- *                 [0.0000, 0.0000, 1.0000],
- *                 [0.0000, 0.0000, 0.0000]]
- *   @endverbatim
- *
- * @par Reference
- * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/bbox_overlaps_cuda.cu
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \b bbox1 and \b bbox2 tensors must be 2
+ * - The lowest dimension of input tensor must be 4
+ *   - bbox1 (Tensor): shape [m, 4] in <x1, y1, x2, y2> format
+ *   - bbox2 (Tensor): shape [n, 4] in <x1, y1, x2, y2> format
+ * - Input with NaN is not supported currently. Also you need to exclude the input with (inf - inf) or (inf - (-inf)),
+ *   where inf represents infinity (because the result is NaN, the actual impact is that the input has NaN)
+ * - For input in type <x1, y1, x2, y2>, the coordinates must satisfy x2 > x1, y2 > y1,
+ *   otherwise incorrect results will be obtained
+ * - When aligned mode is true, for input \b bbox1 and \b bbox2 with n-rows, if n is zero, the output IOU
+ *   must be a 2D matrix with shape n * 1, otherwise the output IOU must be a 1D
+ *   array with n-elements. When aligned mode is false, for input \b bbox1 with n-rows and
+ *   \b bbox2 with m-rows, the output IOU must be a 2D matrix with shape n * m.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @note
+ * - The input tensor \b x should be in the following range to guarantee the accuracy of output:
+ *   If bbox_overlaps works on (m)tp_2xx :
+ *    - half : [-300, 100]
+ *    - float : [-300, 100]
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the bounding-box overlaps operation is as follows:
+     @verbatim
+      input array by 3 * 4, type is float -->
+          input: bbox1 = [
+            [0, 0, 10, 10],
+            [10, 10, 20, 20],
+            [32, 32, 38, 42],
+          ]
+      input array by 3 * 4, type is float -->
+          input: bbox2 = [
+            [0, 0, 10, 20],
+            [0, 10, 10, 19],
+            [10, 10, 20, 20],
+          ]
+      param:
+        mode = 0
+        aligned = False
+        offset = 0
+  
+  
+      output array by 3 * 3, type is float -->
+          output: [[0.5000, 0.0000, 0.0000],
+                   [0.0000, 0.0000, 1.0000],
+                   [0.0000, 0.0000, 0.0000]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/bbox_overlaps_cuda.cu
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpBboxOverlaps(mluOpHandle_t handle,
@@ -4965,13 +4964,13 @@ mluOpBallQuery(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the copy operation is as follows:
- *   @verbatim
- *    input array by 2 * 2
- *    --> then: [[1, 8], [6, 4]]
- *
- *    output array by 2 * 2
- *    --> output: [[1, 8], [6, 4]]
- *   @endverbatim
+     @verbatim
+      input array by 2 * 2
+      --> then: [[1, 8], [6, 4]]
+  
+      output array by 2 * 2
+      --> output: [[1, 8], [6, 4]]
+     @endverbatim
  *
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/raw_ops/Snapshot
@@ -4993,12 +4992,12 @@ mluOpCopy(mluOpHandle_t handle,
  * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information,
- * see::mluOpTensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] output_desc
  * The descriptor of the output tensor. For detailed information,
- * see::mluOpTensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -5031,12 +5030,12 @@ mluOpCopy(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the expand operation is as follows:
- *   @verbatim
- *   input one array by 2 * 2 --> input: [[1, 2], [3, 4]]
- *   output array by 3 * 2 * 2 --> output: [[[1, 2], [3, 4]],
- *                                          [[1, 2], [3, 4]],
- *                                          [[1, 2], [3, 4]]]
- *   @endverbatim
+     @verbatim
+      input one array by 2 * 2 --> input: [[1, 2], [3, 4]]
+      output array by 3 * 2 * 2 --> output: [[[1, 2], [3, 4]],
+                                             [[1, 2], [3, 4]],
+                                             [[1, 2], [3, 4]]]
+     @endverbatim
  *
  * @par Reference
  * - https://pytorch.org/docs/stable/tensors.html#torch.Tensor.expand
@@ -5083,12 +5082,12 @@ mluOpExpand(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the fill operation is as follows:
- *   @verbatim
- *    param:value: 5
- *
- *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
- *                                           [[5,5],[5,5],[5,5]]]
- *   @endverbatim
+     @verbatim
+      param:value: 5
+  
+      output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
+                                             [[5,5],[5,5],[5,5]]]
+     @endverbatim
  *
  * @par Reference
  * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
@@ -5137,12 +5136,12 @@ mluOpFill(mluOpHandle_t handle, float value, const mluOpTensorDescriptor_t outpu
  *
  * @par Example
  * - The example of the fill operation is as follows:
- *   @verbatim
- *    input array by 1 --> value: [1]
- *
- *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
- *                                           [[5,5],[5,5],[5,5]]]
- *   @endverbatim
+     @verbatim
+      input array by 1 --> value: [1]
+  
+      output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
+                                             [[5,5],[5,5],[5,5]]]
+     @endverbatim
  *
  * @par Reference
  * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
@@ -5199,11 +5198,11 @@ mluOpFill_v2(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the fill operation is as follows:
- *   @verbatim
- *    param:value: 5
- *    output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
- *                                           [[5,5],[5,5],[5,5]]]
- *   @endverbatim
+     @verbatim
+      param:value: 5
+      output array by 2 * 3 * 2 --> output: [[[5,5],[5,5],[5,5]],
+                                             [[5,5],[5,5],[5,5]]]
+     @endverbatim
  *
  * @par Reference
  * - https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Fill.cpp
@@ -5659,10 +5658,10 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  * @par Data Type
  * - On all hardware platforms, this function supports any combinations of the following data types for
  *   input tensor \b a, \b b and output tensor \b c.
- *   - \b a data type: int8, int16
- *   - \b b data type: int8, int16
- *   - \b c offchip data type: half, float
- *   - \b c onchip data type: half, float
+ *   - a data type: int8, int16
+ *   - b data type: int8, int16
+ *   - c offchip data type: half, float
+ *   - c onchip data type: half, float
  * - On MLU300 series or above, this function supports the combinations of the following data types for
  *   input tensor \b a, \b b and output tensor \b c.
  *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, half
@@ -5690,13 +5689,13 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the operation is as follows:
- *   @verbatim
- *    is_trans_a:                    false
- *    is_trans_b:                    false
- *    Dimension of input tensor a:  [99, 128]
- *    Dimension of input tensor b:  [128, 256]
- *    Dimension of output tensor c: [99, 256]
- *   @endverbatim
+     @verbatim
+      is_trans_a:                    false
+      is_trans_b:                    false
+      Dimension of input tensor a:  [99, 128]
+      Dimension of input tensor b:  [128, 256]
+      Dimension of output tensor c: [99, 256]
+     @endverbatim
  *
  * @par Reference
  * - https://pytorch.org/docs/stable/torch.html?highlight=matmul#torch.matmul
@@ -5841,10 +5840,10 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * @par Data Type
  * - On all hardware platforms, this function supports any combinations of the following data types for
  *   input tensor \b a, \b b and output tensor \b d.
- *   - \b a data type: int8, int16
- *   - \b b data type: int8, int16
- *   - \b d offchip data type: half, float
- *   - \b d onchip data type: half, float
+ *   - a data type: int8, int16
+ *   - b data type: int8, int16
+ *   - d offchip data type: half, float
+ *   - d onchip data type: half, float
  * - On MLU300 series or above, this function supports the combinations of the following data types for
  *   input tensor \b a, \b b and output tensor \b d:
  *   - \b a, \b b, \b d offchip data type, \b d onchip data type: half, half, half, half
@@ -5876,15 +5875,15 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the operation is as follows:
- *   @verbatim
- *    MLUOP_MATMUL_DESC_TRANSA:      false
- *    MLUOP_MATMUL_DESC_TRANSB:      false
- *    MLUOP_MATMUL_USE_BETA:         false
- *    Dimension of input tensor a:  [99, 128]
- *    Dimension of input tensor b:  [128, 256]
- *    Dimension of input tensor c:  [99, 256]
- *    Dimension of output tensor d: [99, 256]
- *   @endverbatim
+     @verbatim
+      MLUOP_MATMUL_DESC_TRANSA:      false
+      MLUOP_MATMUL_DESC_TRANSB:      false
+      MLUOP_MATMUL_USE_BETA:         false
+      Dimension of input tensor a:  [99, 128]
+      Dimension of input tensor b:  [128, 256]
+      Dimension of input tensor c:  [99, 256]
+      Dimension of output tensor d: [99, 256]
+     @endverbatim
  *
  * @par Reference
  * - https://pytorch.org/docs/stable/torch.html?highlight=matmul#torch.matmul
@@ -6202,8 +6201,6 @@ mluOpGetMatMulDescAttr(const mluOpMatMulDescriptor_t matmul_desc,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpGetQuantizeMatMulAlgorithm function to initialize
- *   and set the information to the matrix multiplication algorithm.
  * - You need to call the ::mluOpMatMulAlgoDestroy function to destroy the descriptor.
  *
  * @note
@@ -6506,9 +6503,9 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  * - Date types of input tensor \b input and output tensor \b output_data must be the same.
  * - The supported data types of input tensor \b input and output tensors are as follows:
  *   - input tensor: float, int32
- *   - \b output_data: float, int32
- *   - \b output_index: int32
- *   - \b output_counts: int32
+ *   - output_data: float, int32
+ *   - output_index: int32
+ *   - output_counts: int32
  *
  * @par Scale Limitation
  * - The input tensor \b input must meet the following requirement:
@@ -6531,34 +6528,34 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the unique operation is as follows:
- *   @verbatim
- *     Example 1:
- *     input array:
- *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
- *     param:
- *       mode: MLUOP_UNSORT_FORWARD
- *     output array:
- *       output_data: [1, 2, 4, 9, 7, 8]
- *       output_index: [0, 0, 1, 2, 2, 3, 4, 5, 5]
- *     Example 2:
- *     input array:
- *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
- *     param:
- *       mode: MLUOP_SORT_ASCEND, return_inverse: true, return_counts: true,
- *     output array:
- *       output_data: [1, 2, 4, 7, 8, 9]
- *       output_index: [0, 0, 1, 2, 2, 5, 3, 4, 4]
- *       output_counts: [2, 1, 2, 1, 2, 1]
- *     Example 3:
- *     input array:
- *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
- *     param:
- *       mode: MLUOP_SORT_REVERSE, return_inverse: true, return_counts: true,
- *     output array:
- *       output_data: [8, 7, 9, 4, 2, 1]
- *       output_index: [5, 5, 4, 3, 3, 2, 1, 0, 0]
- *       output_counts: [2, 1, 1, 2, 1, 2]
- *  @endverbatim
+     @verbatim
+       Example 1:
+       input array:
+         input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
+       param:
+         mode: MLUOP_UNSORT_FORWARD
+       output array:
+         output_data: [1, 2, 4, 9, 7, 8]
+         output_index: [0, 0, 1, 2, 2, 3, 4, 5, 5]
+       Example 2:
+       input array:
+         input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
+       param:
+         mode: MLUOP_SORT_ASCEND, return_inverse: true, return_counts: true,
+       output array:
+         output_data: [1, 2, 4, 7, 8, 9]
+         output_index: [0, 0, 1, 2, 2, 5, 3, 4, 4]
+         output_counts: [2, 1, 2, 1, 2, 1]
+       Example 3:
+       input array:
+         input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
+       param:
+         mode: MLUOP_SORT_REVERSE, return_inverse: true, return_counts: true,
+       output array:
+         output_data: [8, 7, 9, 4, 2, 1]
+         output_index: [5, 5, 4, 3, 3, 2, 1, 0, 0]
+         output_counts: [2, 1, 1, 2, 1, 2]
+    @endverbatim
  *
  * @par Reference
  * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Unique.cpp
@@ -6693,11 +6690,11 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * @par Data Type
  * - Date types of input tensor \b input and output tensor \b output must be the same.
  * - The supported data types of input tensor \b input and output tensors are as follows:
- *   - \b input: float, int32
- *   - \b output_num: int32
- *   - \b output: float, int32
- *   - \b inverse_indices: int32
- *   - \b counts: int32
+ *   - input: float, int32
+ *   - output_num: int32
+ *   - output: float, int32
+ *   - inverse_indices: int32
+ *   - counts: int32
  *
  * @par Scale Limitation
  * - The input tensor \b input must meet the following requirement:
@@ -6720,34 +6717,34 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the unique operation is as follows:
- *   @verbatim
- *     Example 1:
- *     input array:
- *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
- *     param:
- *       mode: MLUOP_UNSORT_FORWARD
- *     output array:
- *       output: [1, 2, 4, 9, 7, 8]
- *       inverse_indices: [0, 0, 1, 2, 2, 3, 4, 5, 5]
- *     Example 2:
- *     input array:
- *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
- *     param:
- *       mode: MLUOP_SORT_ASCEND, return_inverse: true, return_counts: true,
- *     output array:
- *       output: [1, 2, 4, 7, 8, 9]
- *       inverse_indices: [0, 0, 1, 2, 2, 5, 3, 4, 4]
- *       counts: [2, 1, 2, 1, 2, 1]
- *     Example 3:
- *     input array:
- *       input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
- *     param:
- *       mode: MLUOP_SORT_REVERSE, return_inverse: true, return_counts: true,
- *     output array:
- *       output: [8, 7, 9, 4, 2, 1]
- *       inverse_indices: [5, 5, 4, 3, 3, 2, 1, 0, 0]
- *       counts: [2, 1, 1, 2, 1, 2]
- *  @endverbatim
+     @verbatim
+      Example 1:
+      input array:
+        input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
+      param:
+        mode: MLUOP_UNSORT_FORWARD
+      output array:
+        output: [1, 2, 4, 9, 7, 8]
+        inverse_indices: [0, 0, 1, 2, 2, 3, 4, 5, 5]
+      Example 2:
+      input array:
+        input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
+      param:
+        mode: MLUOP_SORT_ASCEND, return_inverse: true, return_counts: true,
+      output array:
+        output: [1, 2, 4, 7, 8, 9]
+        inverse_indices: [0, 0, 1, 2, 2, 5, 3, 4, 4]
+        counts: [2, 1, 2, 1, 2, 1]
+      Example 3:
+      input array:
+        input: [1, 1, 2, 4, 4, 9, 7, 8, 8]
+      param:
+        mode: MLUOP_SORT_REVERSE, return_inverse: true, return_counts: true,
+      output array:
+        output: [8, 7, 9, 4, 2, 1]
+        inverse_indices: [5, 5, 4, 3, 3, 2, 1, 0, 0]
+        counts: [2, 1, 1, 2, 1, 2]
+    @endverbatim
  *
  * @par Reference
  * - http://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Unique.cpp
@@ -6813,11 +6810,11 @@ mluOpUnique_v2(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the gather_nd operation is as follows:
- *   @verbatim
- *   input two arrays both by 3 * 2 --> params: [[1., 2.], [3., 4.], [5., 6.]]
- *   --> indices: [[-1, 0], [1, 1]]
- *   output array by 2 --> output: [5., 4.]
- *   @endverbatim
+     @verbatim
+      input two arrays both by 3 * 2 --> params: [[1., 2.], [3., 4.], [5., 6.]]
+      --> indices: [[-1, 0], [1, 1]]
+      output array by 2 --> output: [5., 4.]
+     @endverbatim
  *
  * @par Reference
  * - https://tensorflow.org/api_docs/python/tf/raw_ops/GatherNd
@@ -6894,18 +6891,18 @@ mluOpGatherNd(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of scatter_nd operation is as follows:
- * @verbatim
- *  The shape of output: [4,4,4].
- *  indices: [[0], [2]]
- *  updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]],
- *            [[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]]]
- *  -->output: [[[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
- *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
- *              [[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
- *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
- * @endverbatim
+     @verbatim
+      The shape of output: [4,4,4].
+      indices: [[0], [2]]
+      updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
+                 [7, 7, 7, 7], [8, 8, 8, 8]],
+                [[5, 5, 5, 5], [6, 6, 6, 6],
+                 [7, 7, 7, 7], [8, 8, 8, 8]]]
+      -->output: [[[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
+                  [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                  [[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
+                  [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
+     @endverbatim
  *
  * @par Reference
  * - None.
@@ -6982,37 +6979,37 @@ mluOpScatterNd(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of scatter_nd operation is as follows:
- * @verbatim
- *  Example 1:
- *  The shape of output: [4,4,4].
- *  mode:    MLUOP_SCATTERND_UPDATE
- *  indices: [[0], [0]]
- *  input:   [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
- *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
- *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
- *            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]]
- *  updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]],
- *            [[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]]]
- *  -->output: [[[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
- *              [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
- *              [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
- *              [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]]
- *  Example 2:
- *  The shape of \b output: [4,4,4].
- *  mode:    MLUOP_SCATTERND_ADD
- *  indices: [[0], [0]]
- *  input:   NULL
- *  updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]],
- *            [[5, 5, 5, 5], [6, 6, 6, 6],
- *             [7, 7, 7, 7], [8, 8, 8, 8]]]
- *  -->output: [[[10, 10, 10, 10], [12, 12, 12, 12], [14, 14, 14, 14], [16, 16, 16, 16]],
- *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
- *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
- *              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
- * @endverbatim
+     @verbatim
+      Example 1:
+      The shape of output: [4,4,4].
+      mode:    MLUOP_SCATTERND_UPDATE
+      indices: [[0], [0]]
+      input:   [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
+                [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
+                [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
+                [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]]
+      updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
+                 [7, 7, 7, 7], [8, 8, 8, 8]],
+                [[5, 5, 5, 5], [6, 6, 6, 6],
+                 [7, 7, 7, 7], [8, 8, 8, 8]]]
+      -->output: [[[5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7], [8, 8, 8, 8]],
+                  [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
+                  [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
+                  [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]]
+      Example 2:
+      The shape of output: [4,4,4].
+      mode:    MLUOP_SCATTERND_ADD
+      indices: [[0], [0]]
+      input:   NULL
+      updates: [[[5, 5, 5, 5], [6, 6, 6, 6],
+                 [7, 7, 7, 7], [8, 8, 8, 8]],
+                [[5, 5, 5, 5], [6, 6, 6, 6],
+                 [7, 7, 7, 7], [8, 8, 8, 8]]]
+      -->output: [[[10, 10, 10, 10], [12, 12, 12, 12], [14, 14, 14, 14], [16, 16, 16, 16]],
+                  [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                  [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                  [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
+     @endverbatim
  *
  * @par Reference
  * - None.
@@ -7029,7 +7026,7 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
                   const mluOpTensorDescriptor_t output_desc,
                   void *output);
 
-/// Group:GetIndicePairs
+// Group:GetIndicePairs
 /*!
  * @brief Computes the get_indice_paris operation, then returns the results in the output
  * tensor \b out_indices, \b indice_pairs and \b indice_num.
@@ -7076,14 +7073,14 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  *
  * @note
  * - This function is only supported on MLU300 series or above platforms.
- * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionStruct.
+ * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
  * - Get_indice_pairs only supported 3d.
  * - The input tensor and output tensor must meet the following requirements:
  *   - The \b indices must be two dimensions.
- *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to kernel size,
+ *   - The \b indice_pairs must be three dimensions, and the first dimension value must be equal to kernel size,
  *     the second dimension must be 2, and the last dimension must be the same as the number of
  *     product of the first n-1 dimensions of the input tensor in sparse convolution.
  *   - The \b out_indices should be 2 dimensions. The first dimension of \b out_indices is the number effective
@@ -7097,12 +7094,12 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the operation is as follows:
- *   @verbatim
- *    Dimension of indices tensor:  [input_active_in, dimnb -1]
- *    Dimension of out_indices tensor:  [output_active_num, dimnb - 1]
- *    Dimension of indice_pairs tensor: [kd * kh * kw, 2, input_active_in]
- *    Dimension of indice_num tensor: [kd * kh * kw]
- *   @endverbatim
+     @verbatim
+      Dimension of indices tensor:  [input_active_in, dimnb -1]
+      Dimension of out_indices tensor:  [output_active_num, dimnb - 1]
+      Dimension of indice_pairs tensor: [kd * kh * kw, 2, input_active_in]
+      Dimension of indice_num tensor: [kd * kh * kw]
+     @endverbatim
  *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
@@ -7389,16 +7386,16 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the transpose operation is as follows:
- *   @verbatim
- *    input array by 3 * 2 -->
- *        input: [[1, 4],
- *                [2, 5],
- *                [3, 6]]
- *    param:
- *      dims: 2, permute: (1, 0),
- *    output array by 2 * 3 --> output: [[1, 2, 3],
- *                                       [4, 5, 6]]
- *   @endverbatim
+     @verbatim
+      input array by 3 * 2 -->
+          input: [[1, 4],
+                  [2, 5],
+                  [3, 6]]
+      param:
+        dims: 2, permute: (1, 0),
+      output array by 2 * 3 --> output: [[1, 2, 3],
+                                         [4, 5, 6]]
+     @endverbatim
  *
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/transpose
@@ -7479,17 +7476,17 @@ mluOpTranspose(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the transpose operation is as follows:
- *   @verbatim
- *    input array by 3 * 2 -->
- *         input: [[1, 4],
- *                 [2, 5],
- *                 [3, 6]]
- *     param:
- *       dims: 2, permute: (1, 0),
- *
- *     output array by 2 * 3 --> output: [[1, 2, 3],
- *                                        [4, 5, 6]]
- *    @endverbatim
+     @verbatim
+      input array by 3 * 2 -->
+           input: [[1, 4],
+                   [2, 5],
+                   [3, 6]]
+       param:
+         dims: 2, permute: (1, 0),
+  
+       output array by 2 * 3 --> output: [[1, 2, 3],
+                                          [4, 5, 6]]
+      @endverbatim
  *
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/transpose
@@ -7829,27 +7826,27 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  *
  * @par Example
  * - The examples of the layer normalization forward operation are as follows:
- *   @verbatim
- *   input dimension = [n,c,h,w,d],
- *   When axis = 0:
- *    output dimension = [1,c,h,w,d].
- *    (indices dimension = [1,c,h,w,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
- *   When axis = 1:
- *    output dimension = [n,1,h,w,d].
- *    (indices dimension = [n,1,h,w,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
- *   When axis = 2:
- *    output dimension = [n,c,1,w,d].
- *    (indices dimension = [n,c,1,w,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
- *   When axis = 3:
- *    output dimension = [n,c,h,1,d].
- *    (indices dimension = [n,c,h,1,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
- *   When axis = 4:
- *    output dimension = [n,c,h,w,1].
- *    (indices dimension = [n,c,h,w,1], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
- *   When axis = -1:
- *    output dimension = [1,1,1,1,1].
- *    (indices dimension = [1,1,1,1,1], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
- *   @endverbatim
+     @verbatim
+      input dimension = [n,c,h,w,d],
+      When axis = 0:
+       output dimension = [1,c,h,w,d].
+       (indices dimension = [1,c,h,w,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
+      When axis = 1:
+       output dimension = [n,1,h,w,d].
+       (indices dimension = [n,1,h,w,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
+      When axis = 2:
+       output dimension = [n,c,1,w,d].
+       (indices dimension = [n,c,1,w,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
+      When axis = 3:
+       output dimension = [n,c,h,1,d].
+       (indices dimension = [n,c,h,1,d], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
+      When axis = 4:
+       output dimension = [n,c,h,w,1].
+       (indices dimension = [n,c,h,w,1], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
+      When axis = -1:
+       output dimension = [1,1,1,1,1].
+       (indices dimension = [1,1,1,1,1], reduce_op == MLUOP_REDUCE_MAX or MLUOP_REDUCE_MIN).
+     @endverbatim
  *
  * @par Reference
  * - https://tensorflow.google.cn/api_docs/python/tf/math/reduce_sum
@@ -7918,19 +7915,19 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
 // Group:ActiveRotatedFilterForward
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the mluOpActiveRotatedFilterForward operation. The size of the extra
+ * workspace to optimize the ::mluOpActiveRotatedFilterForward operation. The size of the extra
  * workspace is based on the given information of the ActiveRotatedFilterForward operation,
  * including the input tensor descriptor \b input_desc. For more information about the workspace,
  * see "Cambricon BANGC OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ActiveRotatedFilterForward operation. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpActiveRotatedFilterForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of input data \b input, which contains dimension, data type and data layout.
  * @param[out] workspace_size
  * A host pointer to the returned size of the extra workspace in bytes that is used in
- * the ActiveRotatedFilterForward operation.
+ * the ::mluOpActiveRotatedFilterForward operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -8017,7 +8014,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * - The dims[3] of \b indices should be equal to 2, 4, or 8.
  * - The dims[0] of \b output should be equal to dims[0] of \b input times
  * dims[3] of \b indices.
- * - The dims[1] of \b ouput should be equal to dims[1] of \b input times
+ * - The dims[1] of \b output should be equal to dims[1] of \b input times
  * dims[2] of \b input.
  * - The dims[2] and dims[3] of \b output should be equal to dims[3] and dims[4]
  * of \b input respectively.
@@ -8025,7 +8022,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * @par API Dependency
  * - Before calling this function, you need to call
  * ::mluOpGetActiveRotatedFilterForwardWorkspaceSize to get the extra space size
- * needed in ActiveRotatedFilterForward operation.
+ * needed in ::mluOpActiveRotatedFilterForward operation.
  *
  * @note
  * - None.
@@ -8135,17 +8132,17 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the deform_roi_pool_forward operation is as follows:
- *   @verbatim
- *   input three arrays by 1  2  2  1, 1  5 and 1  2  1 * 1
- *   --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
- *   --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0]]
- *   --> offset: [[[[0.5]], [[0.5]]]]
- *   param:
- *          pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
- *          sampling_ratio: 1, gamma: 1
- *   output array by 1  1  1 * 1 -->
- *       output: [[[[2.25]]]]
- *   @endverbatim
+     @verbatim
+      input three arrays by 1  2  2  1, 1  5 and 1  2  1 * 1
+      --> input: [[[[1.0], [2.0]], [[2.0], [4.0]]]]
+      --> rois: [[0.0, 0.0, 0.0, 1.0, 1.0]]
+      --> offset: [[[[0.5]], [[0.5]]]]
+      param:
+             pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
+             sampling_ratio: 1, gamma: 1
+      output array by 1  1  1 * 1 -->
+          output: [[[[2.25]]]]
+     @endverbatim
  *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
@@ -8169,7 +8166,7 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
 // Group:DeformRoiPool
 /*!
  * @brief Computes the gradient of input \b grad_input and the gradient of offset \b grad_offset
- * based on the gradient of ouput \b grad_output, input \b input, ROI \b rois and offset \b offset.
+ * based on the gradient of output \b grad_output, input \b input, ROI \b rois and offset \b offset.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -8629,13 +8626,13 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The input tensor and output tensor must meet the following requirements:
  *   - The \b features and \b output_grad must be two dimensions.
- *   - The \b indice_pairs must be three dimensions, and the first dimension value must be euqal to the
+ *   - The \b indice_pairs must be three dimensions, and the first dimension value must be equal to the
  *     kernel size of \b filters_grad, the second dimension must be 2, and the last dimension must be
  *     equal to the number of \b features first dimension.
  *   - The \b filters_grad must be four or five dimensions. The last dimension of \b filters_grad must
- *     be euqal to the last dimension of \b output_grad, and the penultimate dimension of \b filters_grad
+ *     be equal to the last dimension of \b output_grad, and the penultimate dimension of \b filters_grad
  *     must be equal to the last dimension of \b features.
- *   - The array length of indice_num must be euqal to the first dimension of \b indice_pairs.
+ *   - The array length of indice_num must be equal to the first dimension of \b indice_pairs.
  *
  * @par API Dependency
  * - Before calling this function to implement matrix multiplication, you need to prepare
@@ -8643,12 +8640,12 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Example
  * - The example of the operation is as follows:
- *   @verbatim
- *    Dimension of features tensor:  [in_active_num, ci]
- *    Dimension of output_grad tensor:  [output_active_num, co]
- *    Dimension of indice_pairs tensor: [kd * kh * kw, 2, in_active_num]
- *    Dimension of filters_grad tensor: [kd, kh, kw, ci, co]
- *   @endverbatim
+     @verbatim
+      Dimension of features tensor:  [in_active_num, ci]
+      Dimension of output_grad tensor:  [output_active_num, co]
+      Dimension of indice_pairs tensor: [kd * kh * kw, 2, in_active_num]
+      Dimension of filters_grad tensor: [kd, kh, kw, ci, co]
+     @endverbatim
  *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
@@ -8815,13 +8812,13 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] features_out_desc
  * The descriptor of features_out. For detailed information,
- * see ::mluOptensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
  * The descriptor of indices mapping pairs of features_in and filters.
- * For detailed information, see ::mluOptensorDescriptor_t.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] features_out_desc
  * The descriptor of features_out. For detailed information,
- * see ::mluOptensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_num
  * Pointer to the host memory that stores the indice pairs number.
  * @param[in] inverse
@@ -8836,7 +8833,7 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par API Dependency
- * - Call ::mluOpCreateTensorDescripttor and ::mluOpSetTensorDescriptor before this function
+ * - Call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor before this function
  *   to create and set tensor descriptor \b features_desc, \b filters_desc, \b indice_pairs_desc
  *   and \b features_out_desc.
  * - Output \b workspace_size should later be passed to ::mluOpIndiceConvolutionForward function
@@ -8886,8 +8883,8 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * @param[in] filters
  * Pointer to the MLU memory that stores the convolution kernel.
  * @param[in] indice_pairs_desc
- * The descriptor of indices mappping pairs of input indices and filters location.
- * For deatailed informationm, see ::mluOpTensorDescriptor_t.
+ * The descriptor of indices mapping pairs of input indices and filters location.
+ * For detailed informationm, see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs
  * Pointer to the MLU memory that stores the indice pairs tensor.
  * @param[in] indice_num
@@ -8905,7 +8902,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * The size of the extra workspace in bytes.
  * @param[in] features_out_desc
  * The descriptor of the output features tensor. For detailed information,
- * see ::mluOptensorDescriptor_t.
+ * see ::mluOpTensorDescriptor_t.
  * @param[out] features_out
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -8915,8 +8912,8 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the combination of the following data types:
- *   - input tensor \b featues, \b filters, \b indice_pairs and output tensor \b features_out: half, half, int32, half
- *   - input tensor \b featues, \b filters, \b indice_pairs and output tensor \b features_out: float, float, int32,
+ *   - input tensor \b features, \b filters, \b indice_pairs and output tensor \b features_out: half, half, int32, half
+ *   - input tensor \b features, \b filters, \b indice_pairs and output tensor \b features_out: float, float, int32,
  * float
  * - The supported data type of array \b indice_num, scalar \b inverse and \b sub_m is int64.
  *
@@ -8945,7 +8942,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * - The \b filters is 5D tensor.
  * - The \b indice_pairs is 3D tensor.
  * - The dims[1] of \b features equals to input channel of \b filters.
- * - The dims[1] of \b features_out equals to onput channel of \b filters.
+ * - The dims[1] of \b features_out equals to output channel of \b filters.
  * - The dims[0] of \b indice_pairs equals to D * H * W of \b filters.
  * - The dims[1] of \b indice_pairs equals to 2.
  * - The dims[2] of \b indice_pairs equals to dims[0] of \b features.
