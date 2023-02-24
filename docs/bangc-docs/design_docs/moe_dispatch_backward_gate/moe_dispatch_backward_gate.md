@@ -13,7 +13,7 @@
 
 | 版本号 | 修订人 | 修订日期  | 修订描述 |
 | ------ | ------ | --------- | -------- |
-| V1.0   | wushaoqiang    | 2023-2-22 | 首次提交 |
+| V1.0   | 吴少强 | 2023-2-22 | 首次提交 |
 
 - #### 内容描述
 
@@ -41,11 +41,11 @@
 | 需求来源                                                     | tutel                                                        |
 | 应用网络                                                     | swin-transformer                                             |
 | 输入数据类型                                                 | half, float                                                  |
-| 输入标量参数                                                 | samples: int<br />capacity: int<br />hidden: int             |
-| 输入 Shape                                                   | indices: [samples]<br />locations: [samples]<br />input: [samples, hidden]<br />dispatch: [num_experts * samples, hidden] |
+| 输入标量参数                                                 | samples: int<br />capacity: int<br />hidden: int<br />num_experts: int |
+| 输入 Shape                                                   | indices: [samples]<br />locations: [samples]<br />input: [samples, hidden]<br />dispatch: [num_experts * capacity, hidden] |
 | 输入 Layout                                                  | ARRAY                                                        |
 | 输出数据类型                                                 | half, float...                                               |
-| 输出 Shape                                                   | grad_gates: [samples, num_experts]                           |
+| 输出 Shape                                                   | grad_gates: [samples]                                        |
 | 输出 Layout                                                  | ARRAY                                                        |
 | 模式(可选）                                                  | 否                                                           |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 无                                                           |
@@ -85,6 +85,7 @@
 | samples         | 输入数据，表示输入的个数，等效于batch-size                   | 输入              | int                     | /        | 无       |
 | capacity        | 输入数据，表述专家能处理的最大输入个数                       | 输入              | int                     | /        | 无       |
 | hidden          | 输入数据，表述单个token的向量长度                            | 输入              | int                     | /        | 无       |
+| num_experts     | 输入数据，表述专家个数                                       | 输入              | int                     | /        | 无       |
 | workspace       | 输入数据，算子所需的额外空间                                 | 输入              | void*                   | /        | 无       |
 | workspace_size  | 输入数据，workspace的大小                                    | 输入              | size_t                  | /        | 无       |
 | grad_gates_desc | 输出数据 grad_gates 的描述符，包含了 grad_gates 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
@@ -101,7 +102,7 @@
 | 原位限制     | 不支持原位                                                   |
 | stride 限制  | 不支持 stride 机制                                           |
 | 广播限制     | 不支持广播                                                   |
-| 规模限制     | samples == indices.shape[0] == locations.shape[0] == grad_gates.shape[0]<br />hidden == input.shape[1] == dispatch.shape[1]<br />dispatch.shape[0] == samples * num_experts，其中num_experts = grad_gates.shape[1] |
+| 规模限制     | samples == indices.shape[0] == locations.shape[0] == input.shape[0] == grad_gates.shape[0]<br />hidden == input.shape[1] == dispatch.shape[1]<br />dispatch.shape[0] == num_experts * capacity |
 
 ### 1.5 验收标准
 
@@ -217,7 +218,7 @@
 ```c
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
-                                             const int samples,
+                                             const mluOpTensorDescriptor_t input_desc,
                                              size_t *workspace_size);
 ```
 
@@ -237,6 +238,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
                              const int samples,
                              const int capacity,
                              const int hidden,
+                             const int num_experts,
                              void *workspace,
                              const size_t workspace_size,
                              const mluOpTensorDescriptor_t grad_gates_desc,
@@ -249,9 +251,9 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
 
 #### 3.1.1 计算原理说明
 
-MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度`grad_gates`。该算子有四个输入tensor，一个输出tensor，输入`indices`维度`[samples]`，输入`locations`维度`[samples]`，输入`input` 维度`[samples, hidden]`，输入`dispatch`维度`[num_experts * samples, hidden]`，输出`grad_gates`维度`[samples, num_experts]`，三个标量参数`samples,capacity,hidden`。
+MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度`grad_gates`。该算子有四个输入tensor，一个输出tensor，输入`indices`维度`[samples]`，输入`locations`维度`[samples]`，输入`input` 维度`[samples, hidden]`，输入`dispatch`维度`[num_experts * capacity, hidden]`，输出`grad_gates`维度`[samples]`，四个标量参数`samples,capacity,hidden,num_experts`。
 
-根据输入`indices`、`locations`、`input`、`dispatch`计算gates的梯度`grad_gates`。在计算时，对于每个grad_gates[i]，需要将`input[samples, hidden]`和`dispatch[num_experts * samples, hidden]`的计算结果在hidden维度做规约求和，如下图所示：
+根据输入`indices`、`locations`、`input`、`dispatch`计算gates的梯度`grad_gates`。在计算时，对于每个`grad_gates[i]`，需要将`input[samples, hidden]`和`dispatch[num_experts * capacity, hidden]`的计算结果在hidden维度做规约求和，如下图所示：
 
 ![moe_dispatch_backward_gate](./res/backward_gates.png)
 
@@ -270,11 +272,11 @@ for (int i = 0; i < samples; ++i) {
 
 #### 3.1.2 nram空间划分
 
-- 当 samples < taskDim 时，`nram_indices,nram_location,nram_idx` 空间大小为 1（deal_s = 1），采用三级流水实现，因此将nram空间划分为两份：每一份的大小`MAX_NRAM_SIZE/2`，其中一份的空间划分如下：
+- 当 samples <= taskDim 时，`nram_indices,nram_location,nram_idx` 空间大小为 1（deal_s = 1），采用三级流水实现，因此将nram空间划分为两份：每一份的大小`MAX_NRAM_SIZE/2`，其中一份的空间划分如下：
   
   ![moe_dispatch_backward_gate](./res/nram_space1.png)
   
-- 当 samples >= taskDim 时
+- 当 samples > taskDim 时
 
   ![moe_dispatch_backward_gate](./res/nram_space2.png)
 
@@ -286,8 +288,6 @@ for (int i = 0; i < samples; ++i) {
 
 #### 3.1.3 实现方案
 
-- 
-
 - 实现步骤
 
   根据 samples 大小，分两个kernel计算：
@@ -295,110 +295,113 @@ for (int i = 0; i < samples; ++i) {
   1. 当 samples <= taskDim 时，调用`MLUKernelMoeDispatchBwdGate1`计算，主要实现步骤：
 
      - 任务拆分：根据3.3 拆分(任务拆分，多核拆分)章节介绍，对`samples`进行拆分；
-  
+
        根据samples大小，计算每个sample由多少个task并行计算；
-  
+
        根据`taskId` 计算起始索引`sample_idx` ，并计算每个task处理的hidden的大小和偏移，伪代码如下：
-  
+
        ```c
        // 每个sample由多少个task来并行计算
        int one_sample_task_num = taskDim / samples;
        // 剩余task数，均分前n个sample
        int rem_task = taskDim / samples;
        int sample_idx = 0;
-       int logic_tid = 0;
-       int hidden_seg_num = 0;
-       int hidden_data_offet = 0;
        // 根据taskId，计算起始索引 sample_idx
-       if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
+       if ((rem_task > 0) && (taskId < (one_sample_task_num + 1) * rem_task)) {
            sample_idx = (int)(taskId / (one_sample_task_num + 1));
-           one_sample_task_num = one_sample_task_num + 1:
+           one_sample_task_num = one_sample_task_num + 1;
        } else {
            sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
        }
        
        // 根据tadkId，计算需要处理的hidden的大小及偏移
-       logic_tid = taskId % one_sample_task_num;
+       int logic_tid = taskId % one_sample_task_num;
        int hidden_per_task = hidden / one_sample_task_num;
        int rem_hidden_num = hidden % one_sample_task_num;
-       hidden_seg_num = hidden_per_task + (int)(logic_tid < rem_hidden_num);
-       hidden_data_offet = logic_tid * hidden_per_task + ((logic_tid < rem_hidden_num) ? logic_tid : rem_hidden_num);
+       int hidden_seg_num = hidden_per_task + (int)(logic_tid < rem_hidden_num);
+       int hidden_data_offet = logic_tid * hidden_per_task + ((logic_tid < rem_hidden_num) ? logic_tid : rem_hidden_num);
        ```
-  
+       
      - 初始化阶段
-  
+
        - 初始化`base_grad_gates`内存：host端将输出`base_grad_gates`空间初始化为0；
-  
+
        - nram空间划分：根据3.1.2 nram空间划分，计算得到`deal_h`的大小；
-  
+
        - 根据`hidden_seg_num` 和 `deal_h` 计算 repeat_h 和 rem_h；
-  
+
          ```c
          int repeat_h = hidden_seg_num / deal_h;
          int rem_h = hidden_seg_num % deal_h;
          ```
-  
+
        - 计算输入input 的 GDRAM地址偏移
-  
+
          ```c
-         uint32_t input_addr_offset = sample_idx * hidden + hidden_data_offet；
-         T *input_addr = (T *)input + input_addr_offset;
+         int input_addr_offset = sample_idx * hidden + hidden_data_offet;
+         T *base_input_addr = (T *)input + input_addr_offset;
          ```
-  
+
        - 计算输入dispatch的GDRAM地址偏移 
-  
+
          ```c
-         int indice = indices[sample_idx];
-         int location = locations[sample_idx];
          int idx = (indice * capacity + location) * hidden;
-         T *dispatch_addr = (T *)dispatch + idx;
+         T *base_dispatch_addr = (T *)dispatch + idx;
          ```
-  
+
      - 处理阶段：三级流水LCS
-  
+
        - 多task并行计算：每个task将中间计算结果暂存至workspace空间
-  
+
          ```c
          T gard_gates = 0;
          for(int i = 0; i < repeat_h + 1; i++) {
+             T *input_addr = base_input_addr + i * deal_h;
+             T *dispatch_addr = base_dispatch_addr + i * deal_h;
              // load input数据，地址input_addr，大小deal_h
              // load dispatch数据，地址dispatch_addr，大小deal_h
-             // compute：计算 input * dispatch，规约求和
+             // compute：计算 input * dispatch，规约求和 gard_gates += 
          }
-         // store ：暂存workspace空间 
-         workspace[taskId] = gard_gates;
+         if (samples == taskDim) {
+             base_grad_gates[taskId] = gard_gates;
+         } else {
+         	// store ：暂存workspace空间 
+         	workspace[taskId] = gard_gates;
+         }
          ```
-  
+       
        - 核间规约：task0上进行最后的核间规约求和
-  
+       
          ```c
-         if (taskId == 0) {
+         __sync_all_ipu();
+         if ((samples < taskDim) && (taskId == 0)) {
              // 每个sample由多少个task来并行计算
              int one_sample_task_num = taskDim / samples;
              // 剩余task数，均分给前n个sample
              int rem_task = taskDim / samples;
+             int sample_idx = 0;
              // 从 workspace load所有中间计算结果
              T *nram_grad_gates = (T *)nram_buffer;
-             __bang_write_zero(nram_grad_gates, taskDim);
+             __bang_write_zero(nram_grad_gates, samples);
              for (int ti = 0; ti < taskDim; ti++) {
-                 if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
-                     int sample_idx = (int)(ti / (one_sample_task_num + 1));
+                 if ((rem_task > 0) && (ti < (one_sample_task_num + 1) * rem_task)) {
+                     sample_idx = (int)(ti / (one_sample_task_num + 1));
                  } else {
-                     int sample_idx = (int)((ti - rem_task) / one_sample_task_num);
+                     sample_idx = (int)((ti - rem_task) / one_sample_task_num);
                  }
                  nram_grad_gates[sample_idx] += workspace[ti];
              }
-          	// store
-           	__memcpy(base_grad_gates, nram_grad_gates, samples, NRAM2GDRAM);
+             // store
+             __memcpy(base_grad_gates, nram_grad_gates, samples * sizeof(T), NRAM2GDRAM);
           }
          ```
-  
+
   2. 当 samples > taskDim 时，调用`MLUKernelMoeDispatchBwdGate2`，主要实现步骤：
-  
+
      - 任务拆分：根据3.3 拆分(任务拆分，多核拆分)章节介绍，对`samples`进行拆分；
-  
+
        根据`samples` 计算每个`taskId` 要处理的数量`samples_num`，以及起始索引`sample_idx` ，伪代码如下；
-  
+
        ```c
        // 一个task需要处理多个sample
        int per_task_sample_num = samples / taskDim;
@@ -408,15 +411,15 @@ for (int i = 0; i < samples; ++i) {
        // 根据taskId，计算起始索引 sample_idx
        int sample_idx = taskId * per_task_sample_num + ((taskId < rem_sample_num) ? taskId : rem_sample_num); 
        ```
-  
+
      - 初始化阶段
-  
+
        - 初始化`base_grad_gates`内存：host端将输出`base_grad_gates`空间初始化为0；
-  
+
        - nram空间划分：根据3.1.2 nram空间划分，计算得到`deal_s`和`deal_h`的大小；
-  
+
        - 根据`samples_num`和`deal_s` 计算repeat_s和rem_s 
-  
+
          ```c
          int repeat_s = samples_num / deal_s;
          int rem_s = samples_num % deal_s;
@@ -428,66 +431,53 @@ for (int i = 0; i < samples; ++i) {
          int repeat_h = hidden / deal_h;
          int rem_h = hidden % deal_h;
          ```
-  
+
      - 处理阶段
-  
+
         - 计算各输入tensor的GDRAM地址偏移
-  
+
           ```c
-          // 计算input数据的地址偏移
-          uint32_t input_addr_offset = sample_idx * hidden；
+          int *base_indices = (int *)indices + sample_idx;
+          int *base_locations = (int *)locations + sample_idx;
+          int input_addr_offset = sample_idx * hidden;
           T *base_input = (T *)input + input_addr_offset;
-          T *base_indices = (T *)indices + sample_idx;
-          T *base_locations = (T *)locations + sample_idx;
           T *base_grad_gates = (T *)grad_gates + sample_idx;
           ```
-  
+
         - 循环处理
-  
+
           ```c
           for (int i = 0; i < repeat_s + 1; i++) {
               // load indices 和 location 的数据，长度deal_s
-              __memcpy(nram_indices, base_indices, deal_s, GDRAM2NRAM);
-              __memcpy(nram_location, base_locations, deal_s, GDRAM2NRAM);
+              __memcpy(nram_indices, base_indices, deal_s * sizeof(T), GDRAM2NRAM);
+              __memcpy(nram_location, base_locations, deal_s * sizeof(T), GDRAM2NRAM);
           
               // 计算 idx = (nram_indices * capacity + nram_location) * hidden
               __bang_mul_scalar(nram_idx, nram_indices, capacity, deal_s);
               __bang_add(nram_idx, nram_idx, nram_location, deal_s);
               __bang_mul_scalar(nram_idx, nram_idx, hidden, deal_s);
           
-              // 判断 nram_location >= capacity
-              __bang_ge_scalar(nram_location, nram_location, capacity, deal_s);
-              // 判断 nram_indices < 0 
-              __bang_lt_scalar(nram_indices, nram_indices, 0, deal_s);
-              // 生成 mask
-              __bang_or(nram_indices, nram_indices, nram_location, deal_s);
-              __bang_not(nram_indices, nram_indices, deal_s);
-              int32_t * nram_mask_int32 = (int32_t*)nram_indices;
-              int *tabel = (int *)nram_location;
-              tabel[0] = 0;
-              tabel[1] = (int)0xffffffff;
-              __bang_float2int32_rd(nram_mask_int32, nram_indices, deal_s, 0);
-              __bang_lut_s32((int*)nram_mask_int32, (int*)nram_mask_int32, (int*)tabel, deal_s, 64);
+              // 判断 0 <= nram_location < capacity
+              // 判断 0 <= nram_indices < num_experts  
+              // 生成 mask: nram_mask
           
               // 复用nram_location空间
-              T *nram_grad_gates = nram_location;
+              T *nram_grad_gates = (T*)nram_location;
               __bang_write_zero(nram_grad_gates, deal_s);
               for(int j = 0; j < repeat_h + 1; j++) {
                   // 计算读取input数据的地址
                   T *input_addr = base_input + i * deal_s * hidden + j * deal_h; 
                   // load input 数据，地址input_addr，共deal_s个，每个长度deal_h
-                  __memcpy(nram_input, input_addr, deal_h, GARAM2NRAM, deal_h, hidden, deal_s - 1);
+                  __memcpy(nram_input, input_addr, deal_h * sizeof(T), GARAM2NRAM, deal_h, hidden, deal_s - 1);
           
-                  // 将 idx[deal_s] 每个值作为地址(跳过不合法地址)，
+                  // 将 idx[deal_s] 每个值作为地址(跳过不合法地址 nram_mask[j] != 1)，
                   // 从 dispatch 中读取数据，因此共deal_s个，每次读取长度deal_h，此处存在离散IO
           
                   // 计算 input * dispatch
                   __bang_mul(nram_input, nram_input, nram_dispatch, deal_s * deal_h);
           
-                  // 规约求和：先__bang_transposem，将[deal_s,deal_h]转成[deal_h,deal_s],然后在bang_sumpool  
+                  // 规约求和：先__bang_transpose，将[deal_s,deal_h]转成[deal_h,deal_s]，然后bang_sumpool，最终bang_add  
               }
-              // 处理不合法的结果
-              __bang_band((char*)nram_grad_gates, (char*)nram_grad_gates, (char*)nram_mask_int32, sizeof(int)*deal_s);
               // store: 保存 nram_grad_gates 结果到 base_grad_gates
           }
           ```
@@ -516,7 +506,7 @@ for (int i = 0; i < samples; ++i) {
     ```c
     // 根据taskId，计算起始索引 sample_idx
     int sample_idx = 0;
-    if ((rem_task > 0) && (taskId < ((one_sample_task_num + 1) * rem_task)) {
+    if ((rem_task > 0) && (taskId < (one_sample_task_num + 1) * rem_task)) {
         sample_idx = (int)(taskId / (one_sample_task_num + 1));
         one_sample_task_num = one_sample_task_num + 1:
     } else {
@@ -617,7 +607,7 @@ for (int i = 0; i < samples; ++i) {
           indices: [8192]，int类型
           locations: [8192], int类型
           input: [8192, 0]，float类型
-          dispatch: [8192, 0]， float类型
+          dispatch: [16384, 0]， float类型
   ```
 
 其他可根据需要进行补充。算子开发完毕后，补充测试报告链接。
@@ -631,7 +621,7 @@ for (int i = 0; i < samples; ++i) {
   3. dim防呆：
      1. indices_desc、locations_desc、grad_gates_desc、input_desc的第一个维度大小相等且等于samples；
      2. input_desc、dispatch_desc的第2个维度大小相等且等于hidden；
-     3. dispatch_desc的第1个维度大小等于num_experts * samples;
+     3. dispatch_desc的第1个维度大小等于num_experts * capacity;
 - 0 元素检查防呆：返回MLUOP_STATUS_SUCCESS；
 - 指针为空防呆：indices、locations、input、dispatch、grad_gates；
 - large tensor防呆 ：indices_desc、 locations_desc、input_desc、dispatch_desc、grad_gates_desc；
