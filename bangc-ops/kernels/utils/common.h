@@ -197,7 +197,7 @@ static __mlu_func__ void computeSigmoid(T *nram_dst, T *nram_src,
  * space in NRAM
  * param 'src_count' is the src element count
  * Notes:
- *   the sapces pointed by dst and src can not overlap
+ *   the spaces pointed by dst and src can not overlap
  *   src_count*sizeof(float) should be divisible by 128
  *   src input must be in range of [-2^23, 2^23-1] for MLU270 and MLU290
  *****************************************************************************/
