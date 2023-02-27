@@ -340,14 +340,18 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
                         float(max_area), seg_len);
       __bang_sub((float *)temp2_ram, (float *)temp2_ram,
                  (float *)temp1_ram, seg_len);  // area_U
-
-      __bang_write_zero((float *)temp3_ram, seg_len);      
-      __bang_gt((float *)temp3_ram, (float *)temp2_ram, (float *)temp3_ram, seg_len);
-      __bang_mul((float *)temp5_ram, (float *)temp2_ram, (float *)temp3_ram,  seg_len);
+      // set negative area_U to positive
+      __bang_write_zero((float *)temp3_ram, seg_len);
+      __bang_gt((float *)temp3_ram, (float *)temp2_ram,
+                (float *)temp3_ram, seg_len);
+      __bang_mul((float *)temp5_ram, (float *)temp2_ram,
+                (float *)temp3_ram,  seg_len);
       __bang_not((float *)temp4_ram, (float *)temp3_ram, seg_len);
-      __bang_add((float *)temp2_ram, (float *)temp5_ram, (float *)temp4_ram, seg_len);
+      __bang_add((float *)temp2_ram, (float *)temp5_ram,
+                 (float *)temp4_ram, seg_len);
       // temp1: area_I
       // temp2: area_U
+      // area_I < iou_threshold * area_U
       __bang_mul_scalar((float *)temp2_ram, (float *)temp2_ram,
                         iou_threshold, seg_len);
       if (iou_threshold == 0.0f) {
@@ -357,8 +361,6 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
         __bang_gt((float *)temp1_ram, (float *)temp2_ram,
                 (float *)temp1_ram, seg_len);
       }
-      
-
       if (std::is_same<IN_DT, half>::value) {
         __bang_float2half_dn((half *)temp1_ram, (float *)temp1_ram, seg_len);
       }
