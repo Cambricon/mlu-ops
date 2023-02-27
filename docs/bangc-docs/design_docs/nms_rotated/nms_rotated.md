@@ -38,7 +38,7 @@
 | 应用网络                  | fcos3d/pointpillar                                             |
 | 输入数据类型               | float                                                          |
 | 输入 Shape                | boxes:[N,5]; scores:[N]; iou_threshold:float;                  |
-| 输出数据类型               | int64                                                          |
+| 输出数据类型               | int32                                                          |
 | 输出 Shape                | output:[N]; result_num: int32, 表示输出box的个数                 |
 | 是否需要支持原位            | 否                                                              |
 | 是否需要支持 stride 机制    | 否                                                              |
@@ -73,20 +73,22 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 | workspace_size| 输入数据，辅助空间的大小       | 输入            | size_t\*                | /             | /        |
 | iou_threshold | 输入数据，IOU 的阈值          | 输入            | float                   | scalar        | /        |
 | output_desc   | 输入数据，输出 index 的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| output        | 输出数据，输出 index 的数据    | 输出            | int64 \*                | [N]           | /        |
+| output        | 输出数据，输出 index 的数据    | 输出            | int32 \*                | [N]           | /        |
 | result_num    | 输出数据，输出 box 的个数      | 输出            | int32 \*                | /             | /        |
 
 ### 1.4 算子限制
 
-| 限制类型     | 详细说明                                                                         |
-| ----------- | ------------------------------------------------------------------------------ |
-| 输入限制     | 输入参数`boxes`，`scores`的shape 必须满足要求: boxes[N, 5] or boxes[N, 6] 和 scores:[N] |  
-| 输出限制     | 输出参数`output`的shape 必须满足: [N]                                              |
-| 输入限制     | 输入 `iou_threshold` 仅支持输入float, 输入 `result_num` 仅支持 int32\* 类型          |
-| 数据类型限制  | 输入 `boxes`，`scores` 数据类型一致，`output` 仅支持 int64_t 类型                    |
-| 原位限制     | 不支持原位                                                                        |
-| stride 限制 | 不支持 stride 机制                                                                |
-| 广播限制     | 不支持广播                                                                        |
+| 限制类型     | 详细说明                                                                              |
+| ----------- | ----------------------------------------------------------------------------------- |
+| 输入限制     | 输入 `boxes`，`scores`的shape 必须满足要求: boxes[N, 5] or boxes[N, 6] 和 scores:[N]    |
+| 输入限制     | 输入 `boxes`，`scores` 不支持输入 nan 或 inf                                           |
+| 输入限制     | 输入参数 `iou_threshold` 仅支持输入float, 可支持nan与inf                                 |
+| 输出限制     | 输出 `output`的shape 必须满足: [N]                                                     |
+| 输出限制     | 输出 `result_num` 仅支持 int32\* 类型                                                  |
+| 数据类型限制  | 输入 `boxes`，`scores` 数据类型保持一致且仅支持float `output` 仅支持 int32                |
+| 原位限制     | 不支持原位                                                                            |
+| stride 限制 | 不支持 stride 机制                                                                     |
+| 广播限制     | 不支持广播                                                                             |
 
 ### 1.5 验收标准
 
@@ -178,12 +180,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
 - 框架在需求列表中给出的算子在网络中用到的规模：`boxes` 为 [34,5], [78,5]
 
 - 单核BLOCK任务下：
-  1. MLU590： box_num < 3500 不超时
-  2. MLU290： box_num < 4500 不超时
+  1. MLU590: box_num < 3000 不超时
+  2. MLU370: box_num < 3200 不超时
+  2. MLU290: box_num < 1100 不超时
 
 - 边界 case：
 
   1. 相同score的box：与CPU和GPU保持对齐
+  2. iou_threshold: 支持nan与inf，nan的输出和inf保持一致
   
 ### 3.8 算子防呆检查
 

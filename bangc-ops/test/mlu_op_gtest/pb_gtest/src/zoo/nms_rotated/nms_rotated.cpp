@@ -26,6 +26,39 @@
 
 namespace mluoptest {
 
+template <typename T>
+struct Box {
+  T x_ctr, y_ctr, w, h, a;
+};
+
+template <typename T>
+struct Point {
+  T x, y;
+  explicit inline Point(const T &px = 0, const T &py = 0) : x(px), y(py) {}
+  inline Point operator+(const Point &p) const {
+    return Point(x + p.x, y + p.y);
+  }
+  inline Point operator-(const Point &p) const {
+    return Point(x - p.x, y - p.y);
+  }
+  inline Point operator+=(const Point &p) const {
+    x += p.x;
+    y += p.y;
+    return *this;
+  }
+  inline Point operator*(const T coeff) const {
+    return Point(x * coeff, y * coeff);
+  }
+};
+template <typename T>
+inline T dot2d(const Point<T> &A, const Point<T> &B) {
+  return A.x * B.x + A.y * B.y;
+}
+template <typename T>
+inline T cross2d(const Point<T> &A, const Point<T> &B) {
+  return A.x * B.y - A.y * B.x;
+}
+
 void NmsRotatedExecutor::paramCheck() {
   GTEST_CHECK(parser_->inputs().size() == 2,
               "nms_rotated tensor input number is wrong.");
@@ -69,6 +102,7 @@ void NmsRotatedExecutor::compute() {
   size_t workspace_size = 0;
   size_t output_size = parser_->getMetaTensor("output1").size_in_bytes;
   GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(dev_output, 0, output_size));
+  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(result_num, 0, sizeof(int32_t)));
 
   // GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(dev_output, 0,
   //   output->dims[0] * sizeof(int64_t)));
@@ -137,8 +171,14 @@ void NmsRotatedExecutor::cpuNmsRotated(const T *boxes,
       }
       auto ovr = singleBoxIouRotated(boxes + i * box_dim,
                                     boxes + j * box_dim, 0);
-      if (ovr > iou_threshold) {
-        suppressed[j] = 1;
+      if (iou_threshold == 0) {
+        if (ovr > iou_threshold) {
+          suppressed[j] = 1;
+        }
+      } else {
+        if (ovr >= iou_threshold) {
+          suppressed[j] = 1;
+        }
       }
     }
   }

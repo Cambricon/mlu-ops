@@ -30,7 +30,6 @@
 
 // each box data contains 5 number: x, y, w, h, a
 #define SINGLE_BOX_DIM (5)
-#define SINGLE_CORE_THRESHOLD (64)
 
 static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type, const int box_num) {
@@ -81,7 +80,7 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   // datatype check
   PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->dtype, scores_desc->dtype);
-  PARAM_CHECK("[mluOpNmsRotated]", output_desc->dtype == MLUOP_DTYPE_INT64);
+  PARAM_CHECK("[mluOpNmsRotated]", output_desc->dtype == MLUOP_DTYPE_INT32);
 
   // dims and shape check
   PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->dim, 2);
@@ -126,6 +125,11 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 3e-3, 3e-3, 0);
   }
 
+  float p = iou_threshold;
+  if (std::isnan(iou_threshold)) {
+    p = INFINITY;
+  }
+
   int32_t box_num = boxes_desc->dims[0];
   int32_t box_dim = boxes_desc->dims[1];
   // Choose the best task dimension.
@@ -143,7 +147,7 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
 
   KERNEL_CHECK((mluOpUnionKernelNmsRotatedFloat(
       k_dim, k_type, handle->queue, boxes, box_workspace, scores,
-      scores_workspace, output, result_num, box_num, box_dim, iou_threshold)));
+      scores_workspace, output, result_num, box_num, box_dim, p)));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

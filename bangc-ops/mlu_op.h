@@ -4566,7 +4566,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * @par Data Type
  * - By the order of \b boxes - \b scores - \b output, the supported data types of
  *    \b boxes, \b scores and \b output are as follows:
- *   - float - float - int64
+ *   - float - float - int32
  *
  * @par Scale Limitation
  * - The number of dimensions of \b boxes tensors must be 2.

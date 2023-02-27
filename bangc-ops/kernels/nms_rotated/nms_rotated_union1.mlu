@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "mlu_op_kernel.h"
-#include "kernels/box_iou_rotated/box_iou_rotated_utils.h"
 #include "nms_utils.h"
 
 __mlu_shared__ char sram_buffer[SIZE_SRAM_BUF];
@@ -43,7 +42,6 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
   exit_flag[0] = 0;
   // temp nram buffer to store selected target.
   int nram_save_limit_count = 256;
-  float div_thresh_iou = 1.0 / iou_threshold;
   int32_t nram_save_count = 0;
 
   // input data ptr
@@ -116,7 +114,7 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
 
     /******FIND MAX START******/
     int32_t max_index = 0;        //  the max score index
-    int32_t global_max_index = 0; //  for U1
+    int32_t global_max_index = 0;  //  for U1
     float max_area = 0;           //  the max socre area
     max_box[0] = 0;               //  init 0
 
@@ -231,23 +229,6 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
       void *temp3_ram = ((char *)temp_buffer) + 2 * seg_len * sizeof(float);
       void *temp4_ram = ((char *)temp_buffer) + 3 * seg_len * sizeof(float);
 
-      __bang_write_value(((float *)valid_box), seg_len, 1.0f);
-      // Each box data: x, y, w, h, a
-      // area1 = max_area
-      // area2 = box2.h * box2.w;
-      // Where area < 1e-14(@float), valid_box set to 0
-      if (max_area < (float)1e-14) {
-        __bang_write_value((float *)valid_box, seg_len, 0.0f);
-      } else {
-        __bang_mul((float *)temp2_ram, (float *)box2 + seg_len * 2,
-                  (float *)box2 + seg_len * 3, seg_len);
-        __bang_write_value((float *)temp1_ram, NMS_SIZE, (float)1e-14);
-        __bang_cycle_ge((float *)temp2_ram, (float *)temp2_ram,
-                        (float *)temp1_ram, seg_len, NMS_SIZE);
-        __bang_and((float *)valid_box, (float *)valid_box, (float *)temp2_ram,
-                  seg_len);
-      }
-
       // center_shift_x = (box1_raw.x_ctr + box2_raw.x_ctr) / 2.0;  ----temp1
       // center_shift_y = (box1_raw.y_ctr + box2_raw.y_ctr) / 2.0;  ----temp2
       __bang_add((float *)temp1_ram, (float *)box1_buffer, (float *)box2,
@@ -306,6 +287,7 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
                       (float *)temp10_ram, seg_len);
 
       // Where nums_in <= 2, set valid_box to false
+      __bang_write_value(((float *)valid_box), seg_len, 1.0f);
       __bang_write_value((float *)temp9_ram, NMS_SIZE, (float)2);
       __bang_cycle_gt((float *)temp1_ram, (float *)nums_in_ram,
                       (float *)temp9_ram, seg_len, NMS_SIZE);
@@ -333,6 +315,23 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
                   (float *)temp2_ram, (float *)temp3_ram, (float *)temp4_ram,
                   (float *)temp5_ram, (float *)temp6_ram, (float *)temp7_ram,
                   (float *)temp8_ram, (float *)temp9_ram, seg_len);
+
+      // Each box data: x, y, w, h, a
+      // area1 = max_area
+      // area2 = box2.h * box2.w;
+      // set areaI to 0 when area < 1e-14(@float)
+      if (max_area < (float)1e-14) {
+        __bang_write_value((float *)temp1_ram, seg_len, 0.0f);
+      } else {
+        __bang_mul((float *)temp5_ram, (float *)box2 + seg_len * 2,
+                  (float *)box2 + seg_len * 3, seg_len);
+        __bang_write_value((float *)temp6_ram, NMS_SIZE, (float)1e-14);
+        __bang_cycle_gt((float *)temp5_ram, (float *)temp5_ram,
+                        (float *)temp6_ram, seg_len, NMS_SIZE);
+        __bang_mul((float *)temp1_ram, (float *)temp1_ram, (float *)temp5_ram,
+                  seg_len);
+      }
+
       // area
       __bang_mul((float *)temp2_ram, (float *)box2 + seg_len * 2,
                   (float *)box2 + seg_len * 3, seg_len);
@@ -341,17 +340,24 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
                         float(max_area), seg_len);
       __bang_sub((float *)temp2_ram, (float *)temp2_ram,
                  (float *)temp1_ram, seg_len);  // area_U
+
+      __bang_write_zero((float *)temp3_ram, seg_len);      
+      __bang_gt((float *)temp3_ram, (float *)temp2_ram, (float *)temp3_ram, seg_len);
+      __bang_mul((float *)temp5_ram, (float *)temp2_ram, (float *)temp3_ram,  seg_len);
+      __bang_not((float *)temp4_ram, (float *)temp3_ram, seg_len);
+      __bang_add((float *)temp2_ram, (float *)temp5_ram, (float *)temp4_ram, seg_len);
       // temp1: area_I
       // temp2: area_U
-      if (iou_threshold > 0.0) {
-        __bang_mul_scalar((float *)temp1_ram, (float *)temp1_ram,
-                          div_thresh_iou, seg_len);
-      } else {
-        __bang_mul_scalar((float *)temp2_ram, (float *)temp2_ram,
-                          iou_threshold, seg_len);
-      }
-      __bang_ge((float *)temp1_ram, (float *)temp2_ram,
+      __bang_mul_scalar((float *)temp2_ram, (float *)temp2_ram,
+                        iou_threshold, seg_len);
+      if (iou_threshold == 0.0f) {
+        __bang_ge((float *)temp1_ram, (float *)temp2_ram,
                 (float *)temp1_ram, seg_len);
+      } else {
+        __bang_gt((float *)temp1_ram, (float *)temp2_ram,
+                (float *)temp1_ram, seg_len);
+      }
+      
 
       if (std::is_same<IN_DT, half>::value) {
         __bang_float2half_dn((half *)temp1_ram, (float *)temp1_ram, seg_len);
@@ -378,7 +384,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
                                         T *input_boxes,
                                         const T *scores,
                                         T *input_scores,
-                                        int64_t *output,
+                                        int32_t *output,
                                         int32_t *result_num,
                                         const int32_t box_num,
                                         const int32_t box_dim,
@@ -439,6 +445,6 @@ void MLUOP_WIN_API mluOpUnionKernelNmsRotatedFloat(
     const float iou_threshold) {
   MLUKernelNmsRotated<<<k_dim, k_type, queue>>>((float *)boxes,
         (float *)box_workspace, (float *)scores, (float *)scores_workspace,
-        (int64_t *)output, (int32_t *)result_num, box_num, box_dim,
+        (int32_t *)output, (int32_t *)result_num, box_num, box_dim,
         iou_threshold);
 }

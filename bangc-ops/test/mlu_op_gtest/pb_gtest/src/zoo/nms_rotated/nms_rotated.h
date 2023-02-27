@@ -23,8 +23,19 @@
 #ifndef TEST_MLU_OP_GTEST_SRC_ZOO_NMS_ROTATED_NMS_ROTATED_H_
 #define TEST_MLU_OP_GTEST_SRC_ZOO_NMS_ROTATED_NMS_ROTATED_H_
 #include "executor.h"
-#include "box_iou_rotated/box_iou_rotated.h"
 namespace mluoptest {
+
+template <typename T>
+struct Box;
+
+template <typename T>
+struct Point;
+
+template <typename T>
+inline T dot2d(const Point<T> &A, const Point<T> &B);
+
+template <typename T>
+inline T cross2d(const Point<T> &A, const Point<T> &B);
 
 class NmsRotatedExecutor : public Executor {
  public:
