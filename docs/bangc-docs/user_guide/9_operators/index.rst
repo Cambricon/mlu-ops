@@ -100,6 +100,12 @@ mluOpPolyNms
 -----------------------------
 计算不规则四边形的非极大值抑制，用于删除高度冗余的不规则四边形输入框。
 
+.. _nms_rotated:
+
+mluOpNmsRotated
+-----------------------------
+计算旋转Box的非极大值抑制。
+
 .. _generate_proposal_v2:
 
 mluOpGenerateProposalsV2
@@ -656,3 +662,4 @@ Unique
 .. figure:: ../images/unique.png
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
+=======

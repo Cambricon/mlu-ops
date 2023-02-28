@@ -4526,24 +4526,23 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
 
 // Group:NmsRotated
 /*!
- * @brief Computes the index of nms with intersection-over-union
- * (Jaccard index, IOU) of rotated bounding-boxes.
+ * @brief Computes the index of nms with IOU of rotated bounding boxes.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the nms_rotated operation. For detailed information, see
- * ::mluOpHandle_t.
+ * queues in the ::mluOpNmsRotated operation. For detailed information,
+ * see ::mluOpHandle_t.
  * @param[in] iou_threshold
- * The threshold of iou.
+ * The threshold of IOU.
  * @param[in] boxes_desc
- * The descriptor of the input tensor \b boxes (rotated bounding-box).
+ * The descriptor of the input tensor \b boxes (rotated bounding boxes).
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
- * Pointer to the MLU memory that stores the input tensor \b dets.
+ * Pointer to the MLU memory that stores the input tensor \b boxes.
  * It has shape (n, 5) or (n, 6), indicating (x, y, w, h, theta) or
  * (x, y, w, h, theta, label) for each row. Note that theta is in radian.
  * @param[in] scores_desc
- * The descriptor of the input tensor \b scores (rotated bounding-box).
+ * The descriptor of the input tensor \b scores (rotated bounding boxes).
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] scores
  * Pointer to the MLU memory that stores the input tensor \b scores.
@@ -4551,13 +4550,13 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the Nms operation.
  * @param[in] workspace_size
- * The size of the extra workspace in bytes that need to be used in the Nms operation.
+ * The size of the extra workspace in bytes that needs to be used in the Nms operation.
  * @param[in] output_desc
  * The descriptor of the output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor, which indicates
- * the index of each output boxes.
+ * the index of each output box.
  * @param[out] result_num
  * Pointer to the MLU memory that stores the number of output boxes.
  * @par Return

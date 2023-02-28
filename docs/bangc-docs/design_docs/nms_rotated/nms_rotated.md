@@ -78,23 +78,23 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 
 ### 1.4 算子限制
 
-| 限制类型     | 详细说明                                                                              |
-| ----------- | ----------------------------------------------------------------------------------- |
-| 输入限制     | 输入 `boxes`，`scores`的shape 必须满足要求: boxes[N, 5] or boxes[N, 6] 和 scores:[N]    |
-| 输入限制     | 输入 `boxes`，`scores` 不支持输入 nan 或 inf                                           |
-| 输入限制     | 输入参数 `iou_threshold` 仅支持输入float, 可支持nan与inf                                 |
-| 输出限制     | 输出 `output`的shape 必须满足: [N]                                                     |
-| 输出限制     | 输出 `result_num` 仅支持 int32\* 类型                                                  |
-| 数据类型限制  | 输入 `boxes`，`scores` 数据类型保持一致且仅支持float `output` 仅支持 int32                |
-| 原位限制     | 不支持原位                                                                            |
-| stride 限制 | 不支持 stride 机制                                                                     |
-| 广播限制     | 不支持广播                                                                             |
+| 限制类型     | 详细说明                                                                           |
+| -----------  | ---------------------------------------------------------------------------------- |
+| 输入限制     | 输入 `boxes`，`scores`的shape 必须满足要求: boxes[N, 5]或[N, 6] 和 scores:[N]      |
+| 输入限制     | 输入 `boxes`，`scores` 不支持输入 nan 或 inf。输入 `scores`不支持负数              |
+| 输入限制     | 输入参数 `iou_threshold` 仅支持输入float, 可支持nan与inf                           |
+| 输出限制     | 输出 `output`的shape 必须满足: [N]                                                 |
+| 输出限制     | 输出 `result_num` 仅支持 int32\* 类型                                              |
+| 数据类型限制 | 输入 `boxes`，`scores` 数据类型保持一致且仅支持float。`output` 仅支持 int32        |
+| 原位限制     | 不支持原位                                                                         |
+| stride 限制  | 不支持 stride 机制                                                                 |
+| 广播限制     | 不支持广播                                                                         |
 
 ### 1.5 验收标准
 
 #### 1.5.1 精度验收标准
 
-- 该算子输出`output`为所选择的box的索引数据。`output`是 int64_t 数据类型。因此，该算子采用静态阈值，阈值标准：diff3 = 0.
+- 该算子输出`output`为所选择的box的索引数据。`output`是 int32_t 数据类型。因此，该算子采用静态阈值，阈值标准：diff3 = 0.
 
 - 注意：MLU200 系列精度需要限定数值范围和规模大小，避免计算IOU时出现大规模随机错误。
 
@@ -154,10 +154,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
 1、资源分配
 
 | 表项 | 分配策略                                          |
-| ---- | ----------------------------------------------- |
-| NRAM | 存储每个box的数据以及计算所使用的中间结果              |
-| SRAM | 存储每个core的最大score;存储box数据和score数据       |
-| DRAM | 输入输出数据的存储                                 |
+| ---- | -----------------------------------------------   |
+| NRAM | 存储每个box的数据以及计算所使用的中间结果         |
+| SRAM | 存储每个core的最大score;存储box数据和score数据    |
+| DRAM | 输入输出数据的存储                                |
 
 2、流水设计
 
