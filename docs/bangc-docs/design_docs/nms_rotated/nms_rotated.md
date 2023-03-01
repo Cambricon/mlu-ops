@@ -81,7 +81,7 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 | 限制类型     | 详细说明                                                                           |
 | -----------  | ---------------------------------------------------------------------------------- |
 | 输入限制     | 输入 `boxes`，`scores`的shape 必须满足要求: boxes[N, 5]或[N, 6] 和 scores:[N]      |
-| 输入限制     | 输入 `boxes`，`scores` 不支持输入 nan 或 inf。输入 `scores`不支持负数              |
+| 输入限制     | 输入 `boxes`不支持输入 nan 或 inf。                                               |
 | 输入限制     | 输入参数 `iou_threshold` 仅支持输入float, 可支持nan与inf                           |
 | 输出限制     | 输出 `output`的shape 必须满足: [N]                                                 |
 | 输出限制     | 输出 `result_num` 仅支持 int32\* 类型                                              |
@@ -89,6 +89,12 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 | 原位限制     | 不支持原位                                                                         |
 | stride 限制  | 不支持 stride 机制                                                                 |
 | 广播限制     | 不支持广播                                                                         |
+
+限制说明：
+
+- 不支持`scores`中存在相同score的情况。竞品和mlu所选择框的index不一致。
+- `scores`中可支持inf，不支持nan。支持出现一个inf，多个inf时不满足上述说明。不支持nan，因为竞品nan score等同于inf，优先被选择。mlu中__bang_max选择正常数据，不选择nan。
+- `boxes`不支持nan/inf, sin/cos和竞品的bit级无法保持一致。
 
 ### 1.5 验收标准
 
@@ -184,11 +190,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
   2. MLU370: box_num < 3200 不超时
   2. MLU290: box_num < 1100 不超时
 
-- 边界 case：
-
-  1. 相同score的box：与CPU和GPU保持对齐
-  2. iou_threshold: 支持nan与inf，nan的输出和inf保持一致
-  
 ### 3.8 算子防呆检查
 
 - 列出算子需要做的防呆，比如

@@ -21,6 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "mlu_op_kernel.h"
+
+#if __BANG_ARCH__ < 300
+  #ifdef INFINITY
+  #undef INFINITY
+  #endif
+  #define INFINITY (340282346638528859811704183484516925440.000000)
+#endif
+
 #include "nms_utils.h"
 
 __mlu_shared__ char sram_buffer[SIZE_SRAM_BUF];
@@ -113,10 +121,10 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
     __sync_cluster();
 
     /******FIND MAX START******/
-    int32_t max_index = 0;        //  the max score index
-    int32_t global_max_index = 0;  //  for U1
-    float max_area = 0;           //  the max socre area
-    max_box[0] = 0;               //  init 0
+    int32_t max_index = 0;           //  the max score index
+    int32_t global_max_index = 0;    //  for U1
+    float max_area = 0;              //  the max socre area
+    max_box[0] = IN_DT(-INFINITY);   //  init -inf
 
     findCoreMaxBox(input_data_score, score, temp, max_box, input_x_ptr,
                    input_y_ptr, input_dx_ptr, input_dy_ptr, scores_load_dir,
@@ -132,11 +140,11 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
     }
 
     if (core_limit == 1) {
-      if (float(max_box[0]) <= 0) {
+      if (float(max_box[0]) == float(-INFINITY)) {
         break;
       }
     } else {
-      if (float(max_box[0]) <= 0) {
+      if (float(max_box[0]) == float(-INFINITY)) {
         if (coreId == 0) {
           exit_flag[0] = 1;
         }
@@ -154,7 +162,7 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
     // save result
     nram_save[nram_save_count++] = global_max_index;
     output_box_num++;
-    input_data_score[global_max_index] = 0;
+    input_data_score[global_max_index] = IN_DT(-INFINITY);
 
     if (nram_save_count == nram_save_limit_count) {
       if (taskId == 0) {
@@ -198,26 +206,13 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
       // score
       __memcpy(score, input_data_score + input_offset + i * max_seg_iou_pad,
                cpy_len * sizeof(IN_DT), scores_load_dir);
-      // x
+      // x,y,w,h
       __memcpy(box2 + half_offset,
                input_x_ptr + input_offset + i * max_seg_iou_pad,
-               cpy_len * 1 * sizeof(IN_DT), boxes_load_dir);
-      // y
-      __memcpy(box2 + half_offset + seg_len * 1,
-               input_y_ptr + input_offset + i * max_seg_iou_pad,
-               cpy_len * 1 * sizeof(IN_DT), boxes_load_dir);
-      // dx
-      __memcpy(box2 + half_offset + seg_len * 2,
-               input_dx_ptr + input_offset + i * max_seg_iou_pad,
-               cpy_len * 1 * sizeof(IN_DT), boxes_load_dir);
-      // dy
-      __memcpy(box2 + half_offset + seg_len * 3,
-               input_dy_ptr + input_offset + i * max_seg_iou_pad,
-               cpy_len * 1 * sizeof(IN_DT), boxes_load_dir);
-      // angle
-      __memcpy(box2 + half_offset + seg_len * 4,
-               input_angle_ptr + input_offset + i * max_seg_iou_pad,
-               cpy_len * 1 * sizeof(IN_DT), boxes_load_dir);
+               cpy_len * sizeof(IN_DT), boxes_load_dir,
+               seg_len * sizeof(IN_DT),
+               input_box_num * sizeof(IN_DT), 4);
+
       if (std::is_same<IN_DT, half>::value) {
         __bang_half2float((float *)box2, (half *)(box2 + half_offset),
                            seg_len * 5);
@@ -364,7 +359,15 @@ __mlu_func__ void nms_detection(int32_t &output_box_num,
       if (std::is_same<IN_DT, half>::value) {
         __bang_float2half_dn((half *)temp1_ram, (float *)temp1_ram, seg_len);
       }
-      __bang_mul((IN_DT *)score, (IN_DT *)score, (IN_DT *)temp1_ram, seg_len);
+
+      __bang_mul_scalar((IN_DT *)temp1_ram, (IN_DT *)temp1_ram,
+                        IN_DT(2), seg_len);
+      __bang_sub_scalar((IN_DT *)temp1_ram, (IN_DT *)temp1_ram,
+                        IN_DT(1), seg_len);
+      __bang_mul_scalar((IN_DT *)temp1_ram, (IN_DT *)temp1_ram,
+                        IN_DT(INFINITY), seg_len);
+      __bang_minequal((IN_DT *)score, (IN_DT *)score,
+                      (IN_DT *)temp1_ram, seg_len);
 
       pvLock();
       __memcpy(input_data_score + input_offset + i * max_seg_iou_pad, score,

@@ -59,7 +59,7 @@ __mlu_func__ void findCoreMaxBox(IN_DT *input_score_ptr,
       }
       i == repeat ? cpy_len = remain : cpy_len = max_seg_pad;
       /******NMS LOAD START******/
-      __bang_write_zero(score, seg_len);
+      __bang_write_value(score, seg_len, IN_DT(-INFINITY));
       __memcpy(score, input_score_ptr + input_offset + i * max_seg_pad,
                cpy_len * sizeof(IN_DT), load_dir);
 
@@ -99,7 +99,7 @@ __mlu_func__ void findClusterMaxBox(IN_DT *sram,
   __sync_cluster();
 
   // copy score from sram to nram and find the max
-  __bang_write_zero(temp, 64);
+  __bang_write_value(temp, 64, IN_DT(-INFINITY));
   __memcpy(temp, sram, sizeof(IN_DT), SRAM2NRAM, sizeof(IN_DT),
            REDUCE_NUM * sizeof(IN_DT), coreDim - 1);
   __bang_max(max_box, temp, 64);
