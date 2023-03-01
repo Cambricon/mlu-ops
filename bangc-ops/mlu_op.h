@@ -10109,6 +10109,111 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
                               const mluOpTensorDescriptor_t features_out_desc,
                               void *features_out);
 
+// Group:MoeDispatchForward
+/*!
+ * @brief Dispatches the order of \b input tensor, and returns the
+ * results in the output tensor \b dispatch in the MoE algorithm.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpMoeDispatchForward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] gates_desc
+ * The descriptor of \b gates tensor, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] gates
+ * Pointer to the MLU memory that stores the \b gates tensor.
+ * @param[in] indices_desc
+ * The descriptor of \b indices tensor, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] indices
+ * Pointer to the MLU memory that stores the \b indices tensor.
+ * @param[in] locations_desc
+ * The descriptor of \b locations tensor, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] locations
+ * Pointer to the MLU memory that stores the \b locations tensor.
+ * @param[in] input_desc
+ * The descriptor of \b input tensor, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the \b input tensor.
+ * @param[in] dispatch_desc
+ * The descriptor of \b dispatch tensor, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] dispatch
+ * Pointer to the MLU memory that stores the \b dispatch tensor.
+ * @param[in] samples
+ * The number of elements in the \b gates tensor, the \b indices tensor and the \b locations tensor.
+ * @param[in] capacity
+ * The maximum number of inputs that experts can process.
+ * @param[in] hidden
+ * The vector length of a single token.
+ * @param[in] num_experts
+ * The number of experts.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b gates , \b indices ,
+ *   \b locations , \b input , \b dispatch .
+ *   - gates tensor: float
+ *   - indices tensor: int32
+ *   - locations tensor: int32
+ *   - input tensor: float
+ *   - dispatch tensor: float
+ *
+ * @par Data Layout
+ * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The first dimension of \b gates tensor, \b indices tensor, \b locations tensor and \b input
+ *   tensor must be the same size and equal to \b samples .
+ * - The second dimension of \b input tensor and \b dispatch tensor must be equal to \b hidden .
+ * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
+ *   the \b capacity and \b num_experts .
+ * - The samples must be less than or equal to the multiplication result of the \b capacity and \b
+ *   num_experts.
+ * - The values of indices must be between 0 and (num_experts-1) .
+ * - The values of locations must be between 0 and (capacity-1) .
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - The parameters \b samples , \b capacity , \b hidden and \b num_experts should not be negative.
+ *
+ * @par Example
+ * - The example of the function is as follows:
+     @verbatim
+      Dimension of gates tensor:  [samples]
+      Dimension of indices tensor:  [samples]
+      Dimension of locations tensor:  [samples]
+      Dimension of input tensor: [samples, hidden]
+      Dimension of dispatch tensor: [num_experts * capacity, hidden]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/microsoft/tutel/blob/v0.2.0/tutel/jit_kernels/sparse.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpMoeDispatchForward(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t gates_desc,
+                        const void *gates,
+                        const mluOpTensorDescriptor_t indices_desc,
+                        const void *indices,
+                        const mluOpTensorDescriptor_t locations_desc,
+                        const void *locations,
+                        const mluOpTensorDescriptor_t input_desc,
+                        const void *input,
+                        const int samples,
+                        const int capacity,
+                        const int hidden,
+                        const int num_experts,
+                        const mluOpTensorDescriptor_t dispatch_desc,
+                        void *dispatch);
+
 // Group:MoeDispatchBackwardGate
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
