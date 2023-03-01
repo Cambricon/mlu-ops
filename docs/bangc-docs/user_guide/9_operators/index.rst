@@ -663,11 +663,31 @@ Unique
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
 
+.. _moe_dispatch_forward:
+
+MoeDispatchForward
+-----------------------------------------
+
+MoE算法中对输入进行重新分配。
+
 .. _moe_dispatch_backward_data:
 
 mluOpMoeDispatchBackwardData
 ----------------------------------
 MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算 input 的梯度 `grad_input`。
+
+.. _roipoint_pool3d:
+
+mluOpRoiPointPool3d
+----------------------------------
+该算子功能是筛选出3D bounding boxes内的点云数据坐标和特征。LiDAR坐标系下，判断点云数据坐标是否在bounding box边框内的计算公式为：
+
+.. math::
+
+   cz = cz + \frac{dz}{2} \\
+   local\_x = (x - cx) * cos(-rz) - (y - cy) * sin(-rz) \\
+   local\_y = (x - cx) * sin(-rz) + (y - cy) * cos(-rz) \\
+   in\_flag = |local\_x| < \frac{dx}{2} \& |local\_y| < \frac{dy}{2} \& |z - cz| <= \frac{dz}{2}
 
 .. _moe_dispatch_backward_gate:
 

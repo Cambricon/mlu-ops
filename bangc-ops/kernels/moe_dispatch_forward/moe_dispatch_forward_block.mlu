@@ -1,0 +1,155 @@
+
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subh_iterect to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "mlu_op_kernel.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_global__ void MLUKernelMoeDispatchFwd(
+    const T *gates, const int *indices, const int *locations, const T *input,
+    const int samples, const int capacity, const int hidden,
+    const int num_experts, T *dispatch) {
+#if __BANG_ARCH__ >= 372
+  if (__is_mpu()) {
+    return;
+  }
+
+  int max_deal_h = (MAX_NRAM_SIZE - 4 * sizeof(int) - sizeof(T)) / (sizeof(T));
+  int hidden_per_task = hidden / taskDim;
+  int hidden_rem = hidden % taskDim;
+  hidden_per_task += (taskId < hidden_rem) ? 1 : 0;
+  int deal_h = 0;
+  int deal_s = 0;
+  if (hidden_per_task > max_deal_h) {
+    deal_h = max_deal_h;
+    deal_s = 1;
+  } else {
+    deal_h = hidden_per_task;
+    deal_s = (MAX_NRAM_SIZE - deal_h * sizeof(T)) / (4*sizeof(int) + sizeof(T));
+    deal_s = deal_s < samples ? deal_s : samples;
+  }
+
+
+  // | nram space partion       | data num |
+  // | ------------------------ | -------- |
+  // | nram_input               |  deal_h  |
+  // | nram_gates               |  deal_s  |
+  // | nram_indices             |  deal_s  |
+  // | nram_location            |  deal_s  |
+  // | nram_idx                 |  deal_s  |
+  // | nram_mask                |  deal_s  |
+
+
+  T *nram_input = (T *)nram_buffer;
+  T *nram_gates = nram_input + deal_h;
+  int *nram_indices = (int *)nram_gates + deal_s;
+  int *nram_locations = nram_indices + deal_s;
+  int *nram_idx = nram_locations + deal_s;
+  int *nram_mask = nram_idx + deal_s;
+
+  int repeat_s = samples / deal_s;
+  int rem_s = samples % deal_s;
+  int repeat_h = hidden_per_task / deal_h;
+  int rem_h = hidden_per_task % deal_h;
+
+  for (int s_iter = 0; s_iter <= repeat_s; ++s_iter) {
+    int deal_s_num = (s_iter == repeat_s) ? rem_s : deal_s;
+    if (deal_s_num == 0) {
+      break;
+    }
+
+    // load gates indices locations
+    T *base_gates = (T *)gates + s_iter * deal_s_num;
+    int *base_indices = (int *)indices + s_iter * deal_s_num;
+    int *base_locations = (int *)locations + s_iter * deal_s_num;
+
+    __memcpy(nram_gates, base_gates, deal_s_num * sizeof(T), GDRAM2NRAM);
+    __memcpy(nram_indices, base_indices, deal_s_num * sizeof(int), GDRAM2NRAM);
+    __memcpy(nram_locations, base_locations, deal_s_num * sizeof(int),
+             GDRAM2NRAM);
+
+    // compute dispatch idx = (nram_indices * capacity + nram_locations)
+    __bang_mul_scalar(nram_idx, nram_indices, capacity, deal_s_num);
+    __bang_add(nram_idx, nram_idx, nram_locations, deal_s_num);
+
+    // 0 <= nram_locations < capacity
+    __bang_ge_scalar(nram_mask, nram_locations, (int)0, deal_s_num);
+    __bang_lt_scalar(nram_locations, nram_locations, capacity, deal_s_num);
+    __bang_and(nram_locations, nram_locations, nram_mask, deal_s_num);
+
+    // 0 <= nram_indices < num_experts
+    __bang_ge_scalar(nram_mask, nram_indices, (int)0, deal_s_num);
+    __bang_lt_scalar(nram_indices, nram_indices, num_experts, deal_s_num);
+    __bang_and(nram_indices, nram_indices, nram_mask, deal_s_num);
+    __bang_and(nram_mask, nram_indices, nram_locations, deal_s_num);
+
+    T *base_input = (T *)input + s_iter * deal_s_num * hidden;
+    for (int ds_iter = 0; ds_iter < deal_s_num; ++ds_iter) {
+      if (nram_mask[ds_iter] == 1) {
+        T *base_input_s = base_input + ds_iter * hidden;
+        T *base_dispatch_s = dispatch + nram_idx[ds_iter] * hidden;
+
+        for (int h_iter = 0; h_iter <= repeat_h; ++h_iter) {
+          int deal_h_num = (h_iter == repeat_h) ? rem_h : deal_h;
+          if (deal_h_num == 0) {
+            break;
+          }
+          int input_rem_num = (taskId < hidden_rem ? taskId : hidden_rem);
+          int input_offset = (hidden/taskDim)* taskId + input_rem_num;
+          T *base_input_h = base_input_s + input_offset + h_iter * deal_h;
+          T *base_dispatch_h = base_dispatch_s + input_offset + h_iter * deal_h;
+          __memcpy(nram_input, base_input_h, deal_h_num * sizeof(T),
+                   GDRAM2NRAM);
+
+          // dispatch = input * gates
+          __bang_mul_scalar(nram_input, nram_input, nram_gates[ds_iter],
+                            deal_h_num);
+
+          // store dispatch to GDRAM
+          __memcpy(base_dispatch_h, nram_input, deal_h_num * sizeof(T),
+                   NRAM2GDRAM);
+        }  // repeat h
+      }
+    }  // deal s
+  }  // repeat s
+#endif
+}
+
+void MLUOP_WIN_API mluOpBlockKernelMoeDispatchFwdFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *input, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *dispatch) {
+  MLUKernelMoeDispatchFwd<<<k_dim, k_type, queue>>>(
+      (float *)gates, (int *)indices, (int *)locations, (float *)input,
+      samples, capacity, hidden, num_experts, (float *)dispatch);
+}
+
+void MLUOP_WIN_API mluOpBlockKernelMoeDispatchFwdHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *input, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *dispatch) {}
