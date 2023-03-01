@@ -1,0 +1,64 @@
+name: bangpy_ci
+
+on:
+  push:
+    branches: [master, r*]
+    paths-ignore:
+      - 'docs/**'
+      - 'bangc-ops/**'
+      - 'docker/**'
+      - 'samples/**'
+      - 'installer/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - 'CONTRIBUTION.md'
+      - 'CPPLINT.cfg'
+      - 'LICENSE'
+      - 'README.md'
+      - 'requirements.txt'
+      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/bangc_ci.yaml'
+      - '.github/workflows/daily.yaml'
+  pull_request:
+    branches: [master, r*]
+    paths-ignore:
+      - 'docs/**'
+      - 'bangc-ops/**'
+      - 'docker/**'
+      - 'samples/**'
+      - 'installer/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - 'CONTRIBUTION.md'
+      - 'CPPLINT.cfg'
+      - 'LICENSE'
+      - 'README.md'
+      - 'requirements.txt'
+      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/bangc_ci.yaml'
+      - '.github/workflows/daily.yaml'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        runner: [mlu370-m8]
+        mlu_ops_version : [v0.5.0]
+        cntoolkit_version : [cntoolkit3.3.1]
+    runs-on: ${{matrix.runner}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: build_bangpy_ops
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
+          ./build.sh --sub_module=bangpy
+
+      - name: test_bangpy_ops
+        run: >
+          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
+          ./test.sh --sub_module=bangpy --cases_dir=/testdata/bangpy
+
+      - name: clean
+        run: |
+          rm -rf bangpy-ops/outs
