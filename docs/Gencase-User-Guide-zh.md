@@ -73,7 +73,7 @@ gen_case宏函数说明，gen_case.h 主要定义了多个宏函数，在使用�
 #include "core/gen_case.h"
 ```
 
-2) 功能代码编写
+2）功能代码编写
 
 ```
 mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
