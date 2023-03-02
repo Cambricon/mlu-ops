@@ -553,7 +553,7 @@ message RoiawarePool3dBackwardParam {
   optional int32 max_pts_each_voxel = 7 [default = 128];
 }
 
-// param to call mluOpRoiPointPool3d
+// param to call mluOpRoiPointPool3d()
 message RoiPointPool3dParam {
   optional int32 num_sampled_points = 1 [default = 512];
 }
