@@ -4526,6 +4526,40 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
 
 // Group:NmsRotated
 /*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpNmsRotated operation.
+ *
+ * The size of extra workspace is based on the given information of the ::mluOpNmsRotated
+ * operation, including the input tensor descriptors \b boxes_desc.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpNmsRotated operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] boxes_desc
+ * The descriptor of boxes, which contains the dimension and layout of the boxes tensor.
+ * @param[out] workspace_size
+ * Pointer to the returned size of the extra workspace in bytes that is used in the
+ * ::mluOpNmsRotated operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t boxes_desc,
+                                size_t *workspace_size);
+
+// Group:NmsRotated
+/*!
  * @brief Computes the index of nms with IOU of rotated bounding boxes.
  *
  * @param[in] handle
@@ -4559,12 +4593,13 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * the index of each output box.
  * @param[out] result_num
  * Pointer to the MLU memory that stores the number of output boxes.
+ *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
  * - By the order of \b boxes - \b scores - \b output, the supported data types of
- *    \b boxes, \b scores and \b output are as follows:
+ *   \b boxes, \b scores and \b output are as follows:
  *   - float - float - int32
  *
  * @par Scale Limitation
@@ -4573,14 +4608,14 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * - The highest dimension of \b boxes and \b scores must be equal.
  * - The lowest dimension of \b boxes tensors must be 5 or 6.
  *
- * @note
- * - The input \b boxes and \b scores with inf/nan are not supported currently. 
- * 
+ * @par note
+ * - The input \b boxes and \b scores with inf/nan are not supported currently.
+ *
  * @par API Dependency
  * - You need to call the ::mluOpGetNmsRotatedWorkspaceSize function to allocate extra
  *   workspace for \b workspace.
  *
- * @par Requirements
+ * @par Example
  * - None.
  *
  * @par Reference
@@ -5289,43 +5324,6 @@ mluOpFill_v3(mluOpHandle_t handle,
              const void *value,
              const mluOpTensorDescriptor_t output_desc,
              void *output);
-
-// Group:NmsRotated
-/*!
- * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ::mluOpNmsRotated operation.
- *
- * The size of extra workspace is based on the given information of the ::mluOpNmsRotated
- * operation, including the input tensor descriptors \b boxes_desc.
- *
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ::mluOpNmsRotated operation. For detailed information, see ::mluOpHandle_t.
- * @param[in] boxes_desc
- * The descriptor of boxes, which contains the dimension and layout of the boxes tensor.
- * @param[out] workspace_size
- * Pointer to the returned size of the extra workspace in bytes that is used in the
- * ::mluOpNmsRotated operation.
- *
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *
- * @par Scale Limitation
- * - None.
- *
- * @par Requirements
- * - None.
- *
- * @par Example
- * - None.
- *
- * @par Reference
- * - None.
- */
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle,
-                                const mluOpTensorDescriptor_t boxes_desc,
-                                size_t *workspace_size);
 
 // Group:RoiawarePool3d
 /*!

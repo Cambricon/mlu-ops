@@ -92,9 +92,9 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 
 限制说明：
 
-- 不支持`scores`中存在相同score的情况。竞品和mlu所选择框的index不一致。
-- `scores`中可支持inf，不支持nan。支持出现一个inf，多个inf时不满足上述说明。不支持nan，因为竞品nan score等同于inf，优先被选择。mlu中__bang_max选择正常数据，不选择nan。
-- `boxes`不支持nan/inf, sin/cos和竞品的bit级无法保持一致。
+- 不支持`scores`中存在相同score的情况。参考接口和mlu所选择框的index不一致。
+- `scores`中可支持inf，不支持nan和-inf。支持出现一个inf，多个inf时不满足上述说明。不支持nan，因为参考接口nan score等同于inf，优先被选择。mlu中`__bang_max` 选择正常数据，不选择nan。不支持-inf，因为-inf的score等价于box被移除，不会被选择。
+- `boxes`不支持nan/inf, sin/cos和参考接口的bit级无法保持一致。
 
 ### 1.5 验收标准
 

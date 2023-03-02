@@ -662,4 +662,3 @@ Unique
 .. figure:: ../images/unique.png
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
-=======
