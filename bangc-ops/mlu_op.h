@@ -1807,6 +1807,7 @@ mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
       input: [[1,2,3],[4,5,6]]
       output: 6
      @endverbatim
+ *
  *  @par Reference
  *  - None.
  */
@@ -3289,13 +3290,16 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  *  - The dimension of \b rpn_rois_num should be equal to 1.
  *  - The dimension of \b rpn_rois_batch_size should be equal to 1.
  *
- *  @par Example
+ *  @par API Dependency
  *  - None.
  *
  *  @par Note
  *  - This commit does not support nan/inf or adaptive NMS.
  *  - The attribute `eta` should not be less than 1.
  *  - ``nms_thresh`` should be more than 0.
+ *
+ *  @par Example
+ *  - None.
  *
  * @par Reference
  * -
@@ -3425,9 +3429,6 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  *  @par API Dependency
  *  - None.
  *
- *  @par Example
- *  - None.
- *
  *  @par Note
  *  - This commit does not support nan/inf.
  *  - The coordinates of the input boxes must all be sorted clockwise or
@@ -3438,6 +3439,9 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  *    results may be inconsistent with the results of competing products.
  *  - The number of input boxes on MLU270, MLU290 and MLU370 does not exceed
  *    9770.
+ *
+ *  @par Example
+ *  - None.
  *
  * @par Reference
  * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
@@ -3572,12 +3576,12 @@ mluOpPolyNms(mluOpHandle_t handle,
  *  @par API Dependency
  *  - None.
  *
- *  @par Example
- *  - None.
- *
  *  @par Note
  *  - The shape[2] of the \b output and \b var must be
  *    less than 2100 in MLU200 series, while less than 2900 in MLU300 series.
+ *
+ *  @par Example
+ *  - None.
  *
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/prior_box_kernel.cu
@@ -3688,11 +3692,11 @@ mluOpPriorBox(mluOpHandle_t handle,
  *  @par API Dependency
  *  - None.
  *
- *  @par Example
- *  - None.
- *
  *  @par Note
  *  - On MLU300 series, \b rois does not support NAN/INF.
+ *
+ *  @par Example
+ *  - None.
  *
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/psroi_pooling
@@ -5419,6 +5423,12 @@ mluOpBallQuery(mluOpHandle_t handle,
  * @par Data Layout
  * - None.
  *
+ * @par Scale Limitation
+ * - When the input or output tensor is non-contiguous, for example with non-contiguous
+ *   strides set in the tensor descriptor, the total number of bytes spanned by
+ *   either of the input or output tensor should be less than or equal to
+ *   \f$2^{23}-1\f$ (the maximum value for int32).
+ *
  * @par API Dependency
  * - None.
  *
@@ -5428,12 +5438,6 @@ mluOpBallQuery(mluOpHandle_t handle,
  * - Data type of input tensor and output tensor must be the same.
  * - Data layout of input tensor and output tensor must be the same.
  * - The shape of input tensor and output tensor must be the same.
- *
- * @par Scale Limitation
- * - When the input or output tensor is non-contiguous, for example with non-contiguous
- *   strides set in the tensor descriptor, the total number of bytes spanned by
- *   either of the input or output tensor should be less than or equal to
- *   \f$2^{23}-1\f$ (the maximum value for int32).
  *
  * @par Example
  * - The example of the copy operation is as follows:
@@ -6173,13 +6177,6 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  * @par Data Layout
  * - None.
  *
- * @par Note
- * - On all hardware platforms, the combinations of the data types should satisfy the following rules:
- *   - The data type bitwidth of \b c onchip data type for operation computing is not shorter than \b c
- *     offchip data type.
- * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
- *   needs to transpose.
- *
  * @par Scale Limitation
  * - The input tensors and output tensor must meet the following requirements:
  *   - The \b a and \b b must be a 2D tensor.
@@ -6189,6 +6186,13 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  * @par API Dependency
  * - Before calling this function to implement matrix multiplication, you need to prepare
  *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Note
+ * - On all hardware platforms, the combinations of the data types should satisfy the following rules:
+ *   - The data type bitwidth of \b c onchip data type for operation computing is not shorter than \b c
+ *     offchip data type.
+ * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
+ *   needs to transpose.
  *
  * @par Example
  * - The example of the operation is as follows:
@@ -6366,14 +6370,6 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * @par Data Layout
  * - None.
  *
- * @par Note
- * - The value of \b c_desc is the same as that of \b d_desc.
- * - On all hardware platforms, the combinations of the data types should satisfy the following rules:
- *   - The data type bitwidth of \b d onchip data type for operation computing is not shorter than \b d
- *     offchip data type.
- * - For best practices, to have a better performance, matrix \b a should not be transposed and matrix \b b
- *   should be transposed.
- *
  * @par Scale Limitation
  * - The input tensors and output tensor must meet the following requirements:
  *   - The \b a and \b b must be a 2D tensor.
@@ -6386,6 +6382,14 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * @par API Dependency
  * - Before calling this function to implement matrix multiplication operation, you need to prepare
  *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Note
+ * - The value of \b c_desc is the same as that of \b d_desc.
+ * - On all hardware platforms, the combinations of the data types should satisfy the following rules:
+ *   - The data type bitwidth of \b d onchip data type for operation computing is not shorter than \b d
+ *     offchip data type.
+ * - For best practices, to have a better performance, matrix \b a should not be transposed and matrix \b b
+ *   should be transposed.
  *
  * @par Example
  * - The example of the operation is as follows:
@@ -7061,6 +7065,12 @@ mluOpGetUniqueWorkSpace(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
+ * @par Data Type
+ * - Date types of input tensor \b input and output tensor \b unique_data must be the same.
+ * - The supported data types of input tensor \b input and output tensor \b unique_data are as follows:
+ *   - input tensor: float, int32
+ *   - output tensor: float, int32
+ *
  * @par Data Layout
  * - None.
  *
@@ -7070,12 +7080,6 @@ mluOpGetUniqueWorkSpace(mluOpHandle_t handle,
  * @par API Dependency
  * - You need to call the ::mluOpGetUniqueWorkSpace function to allocate extra workspace for
  *   \b unique_data.
- *
- * @par Data Type
- * - Date types of input tensor \b input and output tensor \b unique_data must be the same.
- * - The supported data types of input tensor \b input and output tensor \b unique_data are as follows:
- *   - input tensor: float, int32
- *   - output tensor: float, int32
  *
  * @par Note
  * - None.
@@ -7135,13 +7139,6 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_INTERNAL_ERROR
  *
- * @par Data Layout
- * - None.
- *
- * @par API Dependency
- * - You need to call the ::mluOpUniqueGetOutLen function to get the length of unique data
- *   of input tensor \b output_len and the unique data \b unique_data.
- *
  * @par Data Type
  * - Date types of input tensor \b input and output tensor \b output_data must be the same.
  * - The supported data types of input tensor \b input and output tensors are as follows:
@@ -7150,10 +7147,17 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *   - output_index: int32
  *   - output_counts: int32
  *
+ * @par Data Layout
+ * - None.
+ *
  * @par Scale Limitation
  * - The input tensor \b input must meet the following requirement:
  *   - When the \b mode is set to \p MLUOP_UNSORT_FORWARD, the dimension of \b input must be
  *     one-dimensional.
+ *
+ * @par API Dependency
+ * - You need to call the ::mluOpUniqueGetOutLen function to get the length of unique data
+ *   of input tensor \b output_len and the unique data \b unique_data.
  *
  * @par Note
  * - The \b input with NaN is not supported currently, and the data range of \b input should
@@ -7328,13 +7332,6 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
- * @par Data Layout
- * - None.
- *
- * @par API Dependency
- * - You need to call the ::mluOpGetUniqueWorkspaceSize function to allocate extra
- *   workspace for \b workspace.
- *
  * @par Data Type
  * - Date types of input tensor \b input and output tensor \b output must be the same.
  * - The supported data types of input tensor \b input and output tensors are as follows:
@@ -7344,12 +7341,19 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  *   - inverse_indices: int32
  *   - counts: int32
  *
+ * @par Data Layout
+ * - None.
+ *
  * @par Scale Limitation
  * - The input tensor \b input must meet the following requirement:
  *   - When the \b mode is set to \p MLUOP_UNSORT_FORWARD, the dimension of \b input must be
  *     one-dimensional.
  * - Currently, the dimension \b dim do not support to apply unique, and the \b output is the unique
  *   of the flattened \b input. It is recommended to set the dimension \b dim to -1.
+ *
+ * @par API Dependency
+ * - You need to call the ::mluOpGetUniqueWorkspaceSize function to allocate extra
+ *   workspace for \b workspace.
  *
  * @par Note
  * - The \b input with NaN is not supported currently, and the data range of \b input should
@@ -7727,10 +7731,6 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * @par Data Layout
  * - None.
  *
- * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
- *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
  * - Get_indice_pairs only supported 3d.
@@ -7747,6 +7747,10 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * @par API Dependency
  * - Before calling this function, you need to prepare
  *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @par Example
  * - The example of the operation is as follows:
@@ -8065,6 +8069,10 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  * @par Data Layout
  * - The dimension of input tensor should be less than or equal to 8D.
  *
+ * @par API Dependency
+ * - Before calling this function to implement transpose, you need to prepare all the parameters
+ *   passed to this function. See each parameter description for details.
+ *
  * @par Scale Limitation
  * - The \b x, \b y and \b permute have the same shape.
  * - The dimension size of \b x, \b y and \b permute should be less than or equal to
@@ -8072,10 +8080,6 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
  * - The \b y i-th dimension will correspond to the \b x permute[i]-th dimension.
  * - The process of computing, the copy times of memcpy should be less than 65536.
- *
- * @par API Dependency
- * - Before calling this function to implement transpose, you need to prepare all the parameters
- *   passed to this function. See each parameter description for details.
  *
  * @par Note
  * - None.
@@ -8137,13 +8141,6 @@ mluOpTranspose(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
- * @par Scale Limitation
- * - The \b x, \b y and \b permute have the same shape.
- * - The dimension size of \b x, \b y and \b permute should be less than or equal to MLUOP_DIM_MAX.
- * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
- * - The \b y i-th dimension will correspond to \b x permute[i]-th dimension.
- * - The process of computing, the copy times of memcpy should be less than 65536.
- *
  * @par Data Type
  * - This function supports the following data types for input tensor \b x and
  *   output tensor \b y.
@@ -8155,7 +8152,14 @@ mluOpTranspose(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - The dimension of input tensor should be less than or equal to 8D.
-
+ *
+ * @par Scale Limitation
+ * - The \b x, \b y and \b permute have the same shape.
+ * - The dimension size of \b x, \b y and \b permute should be less than or equal to MLUOP_DIM_MAX.
+ * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
+ * - The \b y i-th dimension will correspond to \b x permute[i]-th dimension.
+ * - The process of computing, the copy times of memcpy should be less than 65536.
+ *
  * @par API Dependency
  * - Before calling this function to implement transpose, you need to prepare
  *   all the parameters passed to this function. See each parameter description
@@ -8473,6 +8477,23 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * @par Data Layout
  * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
+ * @par Scale Limitations
+ * - When \b reduce_op == \p MLUOP_REDUCE_NORMP on MLU200 series:
+ *   - The sum of p power of input absolute should be in range[7.2e-9, 507903] when data type is
+ *     float and [6.1e-5,65504] when data type is half.
+ *   - The p power of input absolute should be in range[-3.4e38, 16] when data type is float and
+ *     [-65504,10.25] when data type is half.
+ *   - The product of 1/p and sum of p power of input absolute should be in range[-3.4e38, 16]
+ *     when data type is float and [-65504,10.25] when data type is half.
+ * - When \b reduce_op == \p MLUOP_REDUCE_MAX_LAST_INDEX || \b reduce_op == \p MLUOP_REDUCE_MIN_LAST_INDEX:
+ *   - The \b input with NaN or INFINITY is not supported.
+ *   - The data range of \b input should satisfy the conditions: (-INFINITY, INFINITY).
+ * - When input data contains NaN on MLU300 series:
+ *   - The MLUOP_REDUCE_MIN and MLUOP_REDUCE_MAX results are different with IEEE754.
+ *     - If the first operand is NaN and the second operand is finite value, then output is NaN.
+ *     - If the first operand is finite value and the second operand is finite value, then output is finite value.
+ *   - The \p MLUOP_REDUCE_NORMP results are different with IEEE754 when \b p is 0.0.
+ *
  * @par API Dependency
  * - Before calling this function to implement reduce, you need to prepare all the parameters
  *   passed to this function. Call ::mluOpCreateReduceDescriptor to create the parameter \b reduce_desc.
@@ -8517,23 +8538,6 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  *       and \p MLUOP_REDUCE_NORMP.
  *   - The \b alpha and \b beta can set NULL, or the \b alpha float value is 1.0 and the \b beta float value
  *     is 0.0 for modes that not support \b alpha and \b beta.
- *
- * @par Scale Limitations
- * - When \b reduce_op == \p MLUOP_REDUCE_NORMP on MLU200 series:
- *   - The sum of p power of input absolute should be in range[7.2e-9, 507903] when data type is
- *     float and [6.1e-5,65504] when data type is half.
- *   - The p power of input absolute should be in range[-3.4e38, 16] when data type is float and
- *     [-65504,10.25] when data type is half.
- *   - The product of 1/p and sum of p power of input absolute should be in range[-3.4e38, 16]
- *     when data type is float and [-65504,10.25] when data type is half.
- * - When \b reduce_op == \p MLUOP_REDUCE_MAX_LAST_INDEX || \b reduce_op == \p MLUOP_REDUCE_MIN_LAST_INDEX:
- *   - The \b input with NaN or INFINITY is not supported.
- *   - The data range of \b input should satisfy the conditions: (-INFINITY, INFINITY).
- * - When input data contains NaN on MLU300 series:
- *   - The MLUOP_REDUCE_MIN and MLUOP_REDUCE_MAX results are different with IEEE754.
- *     - If the first operand is NaN and the second operand is finite value, then output is NaN.
- *     - If the first operand is finite value and the second operand is finite value, then output is finite value.
- *   - The \p MLUOP_REDUCE_NORMP results are different with IEEE754 when \b p is 0.0.
  *
  * @par Example
  * - The examples of the layer normalization forward operation are as follows:
@@ -9341,10 +9345,6 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * @par Data Layout
  * - None.
  *
- * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - This function does not support setting tensor onchip data type with fixed-point type.
- *
  * @par Scale Limitation
  * - The input tensor and output tensor must meet the following requirements:
  *   - The \b features and \b output_grad must be two dimensions.
@@ -9359,6 +9359,10 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * @par API Dependency
  * - Before calling this function to implement matrix multiplication, you need to prepare
  *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - This function does not support setting tensor onchip data type with fixed-point type.
  *
  * @par Example
  * - The example of the operation is as follows:
@@ -9643,7 +9647,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * - This function supports the combination of the following data types:
  *   - input tensor \b features, \b filters, \b indice_pairs and output tensor \b features_out: half, half, int32, half
  *   - input tensor \b features, \b filters, \b indice_pairs and output tensor \b features_out: float, float, int32,
- * float
+ *     float.
  * - The supported data type of array \b indice_num, scalar \b inverse and \b sub_m is int64.
  *
  * @par Data Layout
@@ -9652,19 +9656,6 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *   - filters tensor: MLUOP_LAYOUT_NDHWC, MLUOP_LAYOUT_NCDHW, MLUOP_LAYOUT_ARRAY
  *   - indice_pairs tensor: MLUOP_LAYOUT_ARRAY
  *   - features_out tensor: MLUOP_LAYOUT_ARRAY
- *
- * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - This function does not support tensor onchip data type with fixed-point type.
- * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
- *   of \b features. Such value is illegal and not checked, the output result is
- *   not guaranteed.
- * - The output indices in \b indice_pairs tensor should be no larger than dims[0]
- *   of \b features_out. Such value is illegal and not checked, the output result is
- *   not guaranteed.
- * - The input indices used to generate \b indice_pairs tensor should not point to
- *   the same location of \b features. Such value is illegal and not checked, the
- *   output result is not guaranteed.
  *
  * @par Scale Limitation
  * - The \b features and \b features_out are 2D tensor.
@@ -9684,6 +9675,19 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * @par API Dependency
  * - The function ::mluOpGetIndiceConvolutionForwardWorkspaceSize should be
  *   called before this function to get extra space size.
+ *
+ * @par Note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - This function does not support tensor onchip data type with fixed-point type.
+ * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
+ *   of \b features. Such value is illegal and not checked, the output result is
+ *   not guaranteed.
+ * - The output indices in \b indice_pairs tensor should be no larger than dims[0]
+ *   of \b features_out. Such value is illegal and not checked, the output result is
+ *   not guaranteed.
+ * - The input indices used to generate \b indice_pairs tensor should not point to
+ *   the same location of \b features. Such value is illegal and not checked, the
+ *   output result is not guaranteed.
  *
  * @par Example
  * - None.
