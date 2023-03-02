@@ -169,41 +169,6 @@ void MLUOP_WIN_API mluOpUnionKernelNmsRotatedFloat(
     void *scores_workspace, void *output, int32_t *result_num,
     const int32_t box_num, const int32_t box_dim, const float iou_threshold);
 
-/* BboxOverlaps */
-void MLUOP_WIN_API mluOpUnion1BboxOverlapsKernelFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *bbox1, const void *bbox2, void *ious, const int32_t num_bboxl,
-    const int32_t num_bbox2, const int32_t mode, const bool aligned,
-    const int32_t offset);
-void MLUOP_WIN_API mluOpUnion1BboxOverlapsKernelHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *bbox1, const void *bbox2, void *ious, const int32_t num_bboxl,
-    const int32_t num_bbox2, const int32_t mode, const bool aligned,
-    const int32_t offset);
-
-/* RoiAlignRotated */
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
-
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *top_grad, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad);
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *top_grad, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad);
-
 /* RoICrop*/
 void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
