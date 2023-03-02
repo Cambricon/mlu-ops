@@ -60,7 +60,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsRotatedWorkspaceSize(
   const int box_num = boxes_desc->dims[0];
   const int box_dim = boxes_desc->dims[1];
   int total_num = box_num * box_dim + box_num;
-  *workspace_size = total_num * mluop::getSizeOfDataType(boxes_desc->dtype);
+  *workspace_size = total_num * getSizeOfDataType(boxes_desc->dtype);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -140,7 +140,7 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   // transpose box [N, box_dim] -> [box_dim, N]
   char *box_workspace = (char*)workspace;
   char *scores_workspace = box_workspace +
-        mluop::getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
+        getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
 
   VLOG(5) << "[mluOpNmsRotated] launch kernel [" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "].";
