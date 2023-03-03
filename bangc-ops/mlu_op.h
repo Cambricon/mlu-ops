@@ -5027,9 +5027,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
-mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle,
-                                const mluOpTensorDescriptor_t boxes_desc,
-                                size_t *workspace_size);
+mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc, size_t *workspace_size);
 
 // Group:NmsRotated
 /*!
@@ -9544,10 +9542,10 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - None
- * 
+ *
  * @par Scale Limitation
  * - None.
- * 
+ *
  * @par API Dependency
  * - The allocated extra workspace should be passed to the ::mluOpRoiPointPool3d.
  *
@@ -9556,7 +9554,7 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  *
  * @par Example
  * - None.
- * 
+ *
  * @par Reference
  * - None.
  */
@@ -9640,7 +9638,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - None
- * 
+ *
  * @par Scale Limitation
  * - None.
  *
@@ -9650,7 +9648,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Example
  * - None.
- * 
+ *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/v1.5.1/mmcv/ops/csrc/pytorch/cuda/roipoint_pool3d_cuda.cu
  */
