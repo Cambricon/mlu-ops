@@ -1063,7 +1063,7 @@ mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc)
  *
  * @par Note
  * - This function should be called to destroy the sparse convolution descriptor.
- *  Otherwise, the memory leak may occur.
+ *   Otherwise, the memory leak may occur.
  *
  * @par Example
  * - None.
@@ -3423,7 +3423,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  *
  * @par Data Layout
  * - The supported data layout of \b input, \b output,
- *    \b output_size are as follows:
+ *   \b output_size are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output_size tensor: \p MLUOP_LAYOUT_ARRAY
@@ -3571,10 +3571,10 @@ mluOpPolyNms(mluOpHandle_t handle,
  * - The shape[0] of the \b output should be equal to the input height.
  * - The shape[1] of the \b output should be equal to the input width.
  * - The shape[2] of the \b output and \b var must be less than 2100
- *    in MLU200 series, and less than 2900 in MLU300 series.
+ *   in MLU200 series, and less than 2900 in MLU300 series.
  * - The shape[2] of \b output and \b var should be equal to
- *    the product of shape[0] of \b min_sizes and \b aspect_ratios
- *    plus shape[0] of \b max_sizes.
+ *   the product of shape[0] of \b min_sizes and \b aspect_ratios
+ *   plus shape[0] of \b max_sizes.
  * - The height should be greater than or equal to 0.
  * - The width should be greater than or equal to 0.
  * - The step_h should be greater than 0.
@@ -4007,9 +4007,9 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  *
  * @par Note
  * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y parameters
- *  that support infinity.
+ *   that support infinity.
  * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p spatial_scale cannot exceed
- *  the range that can be represented by the parameter type.
+ *   the range that can be represented by the parameter type.
  *
  * @par Example
  * - The example of the roi_align_rotated_backward operation is as follows:
@@ -4165,13 +4165,13 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The grad_output tensor, grid tensor and grad_input tensor must have four
- *  dimensions.
+ *   dimensions.
  * - Size of the first dimension of grad_input tensor is divided by size of
- *  the first dimension of grid tensor.
+ *   the first dimension of grid tensor.
  * - The second dimension of grid tensor and grad_output tensor must be the same size.
  * - The third dimension of grid tensor and grad_output tensor must be the same size.
  * - The fourth dimension of grad_input \b grad_input tensor and grad_output tensor
- *  \b grad_output must be the same size.
+ *   \b grad_output must be the same size.
  * - Size of the fourth dimension of grid tensor \b grid must be equal to 2.
  * - Grid tensor \b grid must meet the following data range:
  * - Float: [-1.0,1.0]
@@ -4641,7 +4641,7 @@ mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *  ::MLUOP_STATUS_NOT_SUPPORTED
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -4846,7 +4846,7 @@ mluOpYoloBox(mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *  ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -5370,9 +5370,9 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
  *
  * @par Note
  * - Take the point in new_xyz as the center of the sphere, there may be no points in xyz within the
- *  sphere with min_radius and max_radius as diameters. At this time, the value of the
- *  corresponding position in idx is the value when it is passed into the kernel. Generally, before
- *  passing idx into the kernel, initialize all the values in idx to 0 or other const values.
+ *   sphere with min_radius and max_radius as diameters. At this time, the value of the
+ *   corresponding position in idx is the value when it is passed into the kernel. Generally, before
+ *   passing idx into the kernel, initialize all the values in idx to 0 or other const values.
  *
  * @par Example
  * - None.
@@ -5820,7 +5820,7 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *  ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b rois , \b pts , \b pts_feature
@@ -5920,7 +5920,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *  ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
+ *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for input tensor \b pts_idx_of_voxels , \b argmax , \b grad_out
@@ -6166,15 +6166,15 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  * @par Data Type
  * - On all hardware platforms, this function supports any combinations of the following data types for
  *   input tensor \b a, \b b and output tensor \b c.
- *    - a data type: int8, int16
- *    - b data type: int8, int16
- *    - c offchip data type: half, float
- *    - c onchip data type: half, float
- *    - On MLU300 series or above, this function supports the combinations of the following data types for
- *      input tensor \b a, \b b and output tensor \b c.
- *    - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, half
- *    - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, float
- *    - \b a, \b b, \b c offchip data type, \b c onchip data type: float, float, float, float
+ *   - a data type: int8, int16
+ *   - b data type: int8, int16
+ *   - c offchip data type: half, float
+ *   - c onchip data type: half, float
+ *   - On MLU300 series or above, this function supports the combinations of the following data types for
+ *     input tensor \b a, \b b and output tensor \b c.
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, half
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, float
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: float, float, float, float
  *
  * @par Data Layout
  * - None.
