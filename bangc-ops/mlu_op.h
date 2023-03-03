@@ -3005,6 +3005,116 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t ious_desc,
                    void *ious);
 
+// Group:NmsRotated
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the ::mluOpNmsRotated operation.
+ *
+ * The size of extra workspace is based on the given information of the ::mluOpNmsRotated
+ * operation, including the input tensor descriptors \b boxes_desc.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpNmsRotated operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] boxes_desc
+ * The descriptor of boxes, which contains the dimension and layout of the boxes tensor.
+ * @param[out] workspace_size
+ * Pointer to the returned size of the extra workspace in bytes that is used in the
+ * ::mluOpNmsRotated operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t boxes_desc,
+                                size_t *workspace_size);
+
+// Group:NmsRotated
+/*!
+ * @brief Computes the index of nms with IOU of rotated bounding boxes.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the ::mluOpNmsRotated operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] iou_threshold
+ * The threshold of IOU.
+ * @param[in] boxes_desc
+ * The descriptor of the input tensor \b boxes (rotated bounding boxes).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores the input tensor \b boxes.
+ * It has shape (n, 5) or (n, 6), indicating (x, y, w, h, theta) or
+ * (x, y, w, h, theta, label) for each row. Note that theta is in radian.
+ * @param[in] scores_desc
+ * The descriptor of the input tensor \b scores (rotated bounding boxes).
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] scores
+ * Pointer to the MLU memory that stores the input tensor \b scores.
+ * It has shape (n), indicating score of each box in \b boxes.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the Nms operation.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in the Nms operation.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor, which indicates
+ * the index of each output box.
+ * @param[out] result_num
+ * Pointer to the MLU memory that stores the number of output boxes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - By the order of \b boxes - \b scores - \b output, the supported data types of
+ *   \b boxes, \b scores and \b output are as follows:
+ *   - float - float - int32
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \b boxes tensors must be 2.
+ * - The number of dimensions of \b scores and \b output tensors must be 1.
+ * - The highest dimension of \b boxes and \b scores must be equal.
+ * - The lowest dimension of \b boxes tensors must be 5 or 6.
+ *
+ * @par note
+ * - The input \b boxes and \b scores with inf/nan are not supported currently.
+ *
+ * @par API Dependency
+ * - You need to call the ::mluOpGetNmsRotatedWorkspaceSize function to allocate extra
+ *   workspace for \b workspace.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/nms.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpNmsRotated(mluOpHandle_t handle,
+                const float iou_threshold,
+                const mluOpTensorDescriptor_t boxes_desc,
+                const void *boxes,
+                const mluOpTensorDescriptor_t scores_desc,
+                const void *scores,
+                void *workspace,
+                size_t workspace_size,
+                const mluOpTensorDescriptor_t output_desc,
+                void *output,
+                int32_t *result_num);
+
 // Group: ThreeInterpolate
 /*!
  * @brief Computes weighted linear interpolation on 3 points by using
