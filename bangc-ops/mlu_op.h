@@ -31,12 +31,6 @@
 #define MLUOP_MINOR 5
 #define MLUOP_PATCHLEVEL 0
 
-/******************************************************************************
- * Deprecate MLUOP_VERSION is not recommended to use, it is recommended to
- * directly use MLUOP_MAJOR, MLUOP_MINOR, MLUOP_PATCHLEVEL to get mluop version.
- ******************************************************************************/
-#define MLUOP_VERSION (MLUOP_MAJOR * 1000 + MLUOP_MINOR * 100 + MLUOP_PATCHLEVEL)
-
 #define MLUOP_DIM_MAX 8
 
 #include <stdint.h>
