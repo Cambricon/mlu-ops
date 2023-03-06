@@ -25,7 +25,6 @@
 
 #include <stdint.h>
 #include "cnrt.h"
-#include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 
 #ifndef MLUOP_WIN_API
 #ifdef _WIN32
@@ -82,7 +81,7 @@ void MLUOP_WIN_API mluOpBlockKernelCarafeForwardFloat(
     int grid_dimH,     // nb. of blocks along height
     int grid_dimW,     // nb. of blocks along width
     int grid_dimG,     // nb. of group blocks
-    int grid_dimC);     // nb. of channel blocks
+    int grid_dimC);    // nb. of channel blocks
 
 void MLUOP_WIN_API mluOpBlockKernelCarafeForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
@@ -101,21 +100,17 @@ void MLUOP_WIN_API mluOpBlockKernelCarafeForwardHalf(
     int grid_dimH,     // nb. of blocks along height
     int grid_dimW,     // nb. of blocks along width
     int grid_dimG,     // nb. of group blocks
-    int grid_dimC);     // nb. of channel blocks
+    int grid_dimC);    // nb. of channel blocks
 
 void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *input, void *mask,
-    void *grad_output, void *grad_input,
-    void *grad_mask, int n, int hi, int wi,
-    int c, int k_up, int group, int scale);
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *input,
+    void *mask, void *grad_output, void *grad_input, void *grad_mask, int n,
+    int hi, int wi, int c, int k_up, int group, int scale);
 
 void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *input, void *mask,
-    void *grad_output, void *grad_input,
-    void *grad_mask, int n, int hi, int wi,
-    int c, int k_up, int group, int scale);
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *input,
+    void *mask, void *grad_output, void *grad_input, void *grad_mask, int n,
+    int hi, int wi, int c, int k_up, int group, int scale);
 
 /* Div */
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivHalfFast(
@@ -127,49 +122,6 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivHalfHighAcc(
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
-
-/* getIndicePairs */
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel1(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *mask_all_ws, void *indice_index_in_ws, void *indice_out_expand_ws,
-    void *indices, FilterSpace filter_space, InputSpace input_space,
-    OutputSpace output_space, Stride stride, Dilation dilation,
-    Padding padding, int32_t core_num_l, int32_t input_active_site,
-    int32_t batch_size);
-
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel2(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *step_index_ptr, int32_t num_act_out, int32_t core_num_l);
-
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel3(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *indice_pairs, void *input_addr, void *mask_addr,
-    int32_t input_active_site, int32_t kernel_volume, int32_t core_num_l);
-
-void MLUOP_WIN_API mluOpBlockDefaultGetIndicePairKernel4(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *out_indices, void *input_addr, OutputSpace host_output_space,
-    int32_t len_l, int32_t core_num_l);
-
-void MLUOP_WIN_API mluOpBlockBalanceGetIndicePairKernel(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *balance_input, void *balance_mask, void *balance_output,
-    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
-    int32_t output_size);
-
-void MLUOP_WIN_API mluOpBlockSubmGetIndicePairKernel1(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *mask_all_ptr, void *indice_index_in_ptr, void *indice_in_expand_ptr,
-    void *out_indices_expand_ptr, void *indices, FilterSpace host_filter_space,
-    InputSpace host_input_space, OutputSpace host_output_space,
-    Stride host_stride, Dilation host_dilation, Padding host_padding,
-    int32_t core_num_l, int32_t input_active_site, int32_t batch_size);
-
-void MLUOP_WIN_API mluOpBlockSubmGetIndicePairKernel2(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    void *out_indices, void *mask_all_ptr, void *out_indices_expand_ptr,
-    void *indices, int32_t len_1_one, int32_t len_l_two,
-    int32_t core_num_l_one, int32_t core_num_l_two);
 
 /* FillZero */
 void MLUOP_WIN_API mluOpBlockKernelFillZeroByte(cnrtDim3_t k_dim,
@@ -247,15 +199,15 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackwardFloat(
 void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int pool_method, const int boxes_num, const int pts_num,
-    const int max_pts_each_voxel, const int out_x,
-    const int out_y, const int out_z, const void *rois, const void *pts,
+    const int max_pts_each_voxel, const int out_x, const int out_y,
+    const int out_z, const void *rois, const void *pts,
     void *pts_idx_of_voxels);
 
 void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int pool_method, const int boxes_num, const int pts_num,
-    const int max_pts_each_voxel, const int out_x,
-    const int out_y, const int out_z, const void *rois, const void *pts,
+    const int max_pts_each_voxel, const int out_x, const int out_y,
+    const int out_z, const void *rois, const void *pts,
     void *pts_idx_of_voxels);
 
 void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dForwardHalf(
@@ -311,6 +263,13 @@ void MLUOP_WIN_API mluOpUnionKernelBoxIouRotatedFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *box1, const void *box2, void *ious, const int num_box1,
     const int num_box2, const int mode, const bool aligned);
+
+/* NmsRotated */
+void MLUOP_WIN_API mluOpUnionKernelNmsRotatedFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *boxes, void *box_workspace, const void *scores,
+    void *scores_workspace, void *output, int32_t *result_num,
+    const int32_t box_num, const int32_t box_dim, const float iou_threshold);
 
 /* BboxOverlaps */
 void MLUOP_WIN_API mluOpUnion1BboxOverlapsKernelFloat(
@@ -439,16 +398,14 @@ void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n,
-    const int c_limit_size, const int m_limit_size, const int n_limit_size,
-    void *grad_features);
+    const int b, const int c, const int m, const int n, const int c_limit_size,
+    const int m_limit_size, const int n_limit_size, void *grad_features);
 
 void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n,
-    const int c_limit_size, const int m_limit_size, const int n_limit_size,
-    void *grad_features);
+    const int b, const int c, const int m, const int n, const int c_limit_size,
+    const int m_limit_size, const int n_limit_size, void *grad_features);
 
 /* Expand */
 void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
@@ -595,6 +552,72 @@ void MLUOP_WIN_API MLUUnion1DeformRoiPoolBackwardFloat(
     const int channels, const int height, const int width, const int num_rois,
     const int pooled_height, const int pooled_width, const float spatial_scale,
     const int sampling_ratio, const float gamma);
+
+/* roipoint_pool3d */
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dLargeBoxesNumFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dLargeBoxesNumHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+/* roipoint_pool3d */
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dLargeBoxesNumFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
+
+void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dLargeBoxesNumHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const char *points_xyz_gdram, const char *point_features_gdram,
+    const char *boxes3d_gdram, char *pooled_features_gdram,
+    char *pooled_empty_flag_gdram);
 
 /* three_nn */
 void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardFloat(

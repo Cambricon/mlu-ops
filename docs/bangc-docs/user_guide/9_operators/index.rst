@@ -23,6 +23,27 @@ mluOpAbs
 - ``i`` 表示一个多元组的索引，例如在4维时可以表示（n,c,h,w）。
 - ``xi`` 和 ``yi`` 表示多元组中 ``i`` 索引处的元素。
 
+.. _add_n:
+
+mluOpAddN
+-----------------------------
+
+多个张量的加法操作。
+
+公式如下：
+
+已知形状完全一致的输入张量 ``A``、``B``、``C`` 等若干，构成张量集合 ``X``。
+
+len = length(A) = length(B)= …… = length(D)
+
+AddN(A,B...)公式如下：
+
+.. math::
+
+   Z[i]=\sum_{n=0}^{len-1}Tn[i],i\epsilon[0,len-1],n\epsilon[0,|X|-1]
+
+其中 ``Tn`` 指集合 ``X`` 中任意一个张量，``Z`` 表示输出数据，是所有输入张量对位相加后的结果。
+
 .. _log:
 
 mluOpLog
@@ -78,6 +99,12 @@ mluOpDiv
 mluOpPolyNms
 -----------------------------
 计算不规则四边形的非极大值抑制，用于删除高度冗余的不规则四边形输入框。
+
+.. _nms_rotated:
+
+mluOpNmsRotated
+-----------------------------
+计算旋转Box的非极大值抑制。
 
 .. _generate_proposal_v2:
 
@@ -415,14 +442,236 @@ mluOpIndiceConvolutionForward
 mluOpThreeNNForward
 -----------------------------
 该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。
-.. _carafe_forward:
+
+.. _carafe_backward:
 
 mluOpCarafeBackward
 ----------------------------------
 CarafeForward的反向功能，即根据输入特征图、上采样核函数的滤波器张量以及损失函数对输出特征图的梯度张量，得到损失函数对输入特征图和上采样核函数滤波器的梯度张量。
 
-.. _carafe_backward:
+.. _carafe_forward:
 
 mluOpCarafeForward
 ----------------------------------
 一种通用、轻量且非常有效的上采样算法，在物体识别、语义分割、图像修复等任务上都展示出很好的效果。
+
+.. _transpose:
+
+Transpose
+----------------
+维度转换。
+
+公式如下：
+
+.. figure:: ../images/transpose.png
+
+其中 ``permute`` 为用户希望的对输入张量转置的规则。例如 ``input shape = (11,22,33), permute[3] = {2,1,0}``，则输出 ``output shape = [33,22,11]``。
+
+.. _reduce:
+
+Reduce
+------------
+
+根据axis参数，对相应维度的元素进行累加、累乘、求最大、求最小、求均值等操作。
+
+公式如下：
+
+以 axis = 0 为例， 其中 ``X`` 和 ``Y`` 为 ``shape=(I,J,K,M,N)`` 的向量，``x`` 为 ``X`` 中第 ``(i,j,k,m,n)`` 个元素 ，``y`` 为 ``Y`` 中第 ``(0,j,k,m,n)`` 个元素。
+
+reduce_sum 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceSum(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}x_{(i,j,k,m,n)}
+   \end{aligned}
+
+reduce_mean 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceMean(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\frac{\sum_{i=0}^{I}x_{(i,j,k,m,n)}}{I}
+   \end{aligned}
+
+reduce_prod 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceProd(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\prod_{i=0}^{I}x_{(i,j,k,m,n)}
+   \end{aligned}
+
+reduce_asum 公式如下：
+
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceASum(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}|x_{(i,j,k,m,n)}|
+   \end{aligned}
+
+reduce_sumsq 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceSumSq(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}(x_{(i,j,k,m,n)})^2
+   \end{aligned}
+
+reduce_norm1 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceNorm1(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}\mid x_{(i,j,k,m,n)}\mid
+   \end{aligned}
+
+reduce_norm2 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceNorm2(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\sqrt{\sum_{i=0}^{I}x_{(i,j,k,m,n)}^2}
+   \end{aligned}
+
+reduce_normp 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceNormP(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=(\sum_{i=0}{I}x_{(i,j,k,m,n)}^p)(1/p)
+   \end{aligned}
+
+reduce_max 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{I,J,K,M,N}=ReduceMax(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\max_{i=0}^{I}{x_{(i,j,k,m,n)}}
+   \end{aligned}
+
+reduce_min 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{I,J,K,M,N}=ReduceMin(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\min_{i=0}^{I}{x_{(i,j,k,m,n)}}
+   \end{aligned}
+
+reduce_max_last_index 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{I,J,K,M,N}=ReduceMaxLastIndex(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\max_{i=0}^{I}{x_{(i,j,k,m,n)}}
+   \end{aligned}
+
+reduce_min_last_index 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{I,J,K,M,N}=ReduceMinLastIndex(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)}=\min_{i=0}^{I}{x_{(i,j,k,m,n)}}
+   \end{aligned}
+
+reduce_and 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceAnd(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)} = x_{(0,j,k,m,n)} \&\&{i=1}^{I} x{(i,j,k,m,n)}
+   \end{aligned}
+
+reduce_or 公式如下：
+
+.. math::
+
+   \begin{aligned}
+   Y_{(I,J,K,M,N)}=ReduceOr(X_{(I,J,K,M,N)}),
+   y_{(0,j,k,m,n)} = x_{(0,j,k,m,n)} ||{i=1}^{I} x{(i,j,k,m,n)}
+   \end{aligned}
+
+.. _mat_mul:
+
+MatMul
+---------------------------------
+
+对张量进行矩阵乘计算。
+
+公式如下：
+
+.. math::
+
+   D=alpha*(op(A)*op(B))+beta*C
+
+其中：
+
+``op(A)`` 代表对A矩阵进行转置或者不进行操作，``op(A)`` 也是一个矩阵。
+``op(A)*op(B)`` 代表对两个矩阵进行矩阵乘。
+C可以和D的指针地址相同，此时为原位操作。
+beta!=0时才会计算beta*C。
+
+
+.. _gather_nd:
+
+GatherNd
+--------------
+
+用于输入数据的抽取后聚集，即将一个张量根据其indices抽取其中部分数据，最后将抽取出的数据聚合为一个输出张量，是ScatterNd的逆运算。
+
+与Gather算子的区别是，GatherNd算子可以按照从高维开始以多维坐标的索引方式抽取，而Gather算子只能按照一维方式索引抽取。
+
+设输入为 ``params``，index为 ``indices``，输出为output。
+其中 ``indices`` 的最后一维是坐标，其他维的乘积则代表坐标的个数N，每一个坐标值（x,y,z...）映射到输入数据的高维，通过坐标要抽取的数据可称为是输入数据的低维，
+最后将抽取的N个数据块聚合为输出张量。则output的shape应满足如下公式如下：
+
+.. math::
+
+   indices.shape[:-1] + params.shape[indices.shape[-1]:]
+
+.. _scatter_nd:
+
+ScatterNd
+----------------
+
+用于输入数据的抽取后分发，即将一个张量根据其indices将updates散布到新的张量（初始为零）。该算子根据索引对给定shape的零张量中的单个值或切片应用稀疏updates来创建新的张量。是GatherNd的逆运算。如果indices中存在重复>值，那么与之对应updates中的值或切片会在output上进行累加运算。对于indices中的非法值（比如负数或者超过输出边界的值）自动跳过，不进行报错。
+
+.. _unique:
+
+Unique
+-------------
+
+对一维数组去重。
+
+公式如下：
+
+.. figure:: ../images/unique.png
+
+其中 ``x`` 表示输入数据，``y`` 表示输出数据。
+
+.. _roipoint_pool3d:
+
+mluOpRoiPointPool3d
+----------------------------------
+该算子功能是筛选出3D bounding boxes内的点云数据坐标和特征。LiDAR坐标系下，判断点云数据坐标是否在bounding box边框内的计算公式为：
+
+.. math::
+
+   cz = cz + \frac{dz}{2} \\
+   local\_x = (x - cx) * cos(-rz) - (y - cy) * sin(-rz) \\
+   local\_y = (x - cx) * sin(-rz) + (y - cy) * cos(-rz) \\
+   in\_flag = |local\_x| < \frac{dx}{2} \& |local\_y| < \frac{dy}{2} \& |z - cz| <= \frac{dz}{2}

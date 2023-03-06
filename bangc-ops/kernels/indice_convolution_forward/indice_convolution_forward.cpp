@@ -48,8 +48,8 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, features_out_desc != nullptr);
 
   // platform check
-  if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
-    LOG(ERROR) << api_name << "Only mlu300 and above devices are suppoterd."
+  if (handle->arch < 372) {
+    LOG(ERROR) << api_name << "Only mlu300 and above devices are supported."
                << "Please check the device version!";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
@@ -63,7 +63,7 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, features_out_desc->dtype == MLUOP_DTYPE_FLOAT ||
                             features_out_desc->dtype == MLUOP_DTYPE_HALF);
   PARAM_CHECK(api_name, features_desc->dtype == features_out_desc->dtype &&
-                            features_desc->dtype == features_out_desc->dtype);
+                            features_desc->dtype == filters_desc->dtype);
 
   // inverse not supported now
   PARAM_CHECK(api_name, sub_m == 0 || sub_m == 1);
@@ -433,17 +433,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionForwardWorkspaceSize(
   }
 
   // zero element
-  if (mluOpGetTensorElementNum(filters_desc) == 0) {
-    LOG(ERROR) << api_name << "filters contains zero element. Error.";
-    return MLUOP_STATUS_BAD_PARAM;
-  }
   if (mluOpGetTensorElementNum(features_desc) == 0 ||
       mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
+      mluOpGetTensorElementNum(filters_desc) == 0 ||
       mluOpGetTensorElementNum(features_out_desc) == 0) {
     VLOG(5) << api_name << "Skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
 
+  // nullptr check
+  PARAM_CHECK(api_name, size != nullptr);
+
+  // main process
   CHECK_RETURN(api_name,
                mainIndiceConvolutionForward(
                    api_name, handle, features_desc, nullptr, filters_desc,
@@ -469,6 +470,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionForward(
                               inverse, sub_m, features_out_desc);
   if (fool_proof != MLUOP_STATUS_SUCCESS) {
     return fool_proof;
+  }
+
+  // zero element
+  if (mluOpGetTensorElementNum(filters_desc) == 0 ||
+      mluOpGetTensorElementNum(features_desc) == 0 ||
+      mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
+      mluOpGetTensorElementNum(features_out_desc) == 0) {
+    VLOG(5) << api_name << "Skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
   }
 
   // data pointer nullptr check
@@ -498,15 +508,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionForward(
                              num_act_out);
     GEN_CASE_HANDLE_PARAM();
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
-  }
-
-  // zero element
-  if (mluOpGetTensorElementNum(filters_desc) == 0 ||
-      mluOpGetTensorElementNum(features_desc) == 0 ||
-      mluOpGetTensorElementNum(indice_pairs_desc) == 0 ||
-      mluOpGetTensorElementNum(features_out_desc) == 0) {
-    VLOG(5) << api_name << "Skip zero element tensor.";
-    return MLUOP_STATUS_SUCCESS;
   }
 
   // main process

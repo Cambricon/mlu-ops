@@ -238,10 +238,14 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
           for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
             for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
               auto pc = pre_calc[pre_calc_idx];
-              output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
-                            pc.w2 * offset_features[pc.pos2 + c_idx] +
-                            pc.w3 * offset_features[pc.pos3 + c_idx] +
-                            pc.w4 * offset_features[pc.pos4 + c_idx];
+              if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
+                output_val += 0;
+              } else {
+                output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
+                              pc.w2 * offset_features[pc.pos2 + c_idx] +
+                              pc.w3 * offset_features[pc.pos3 + c_idx] +
+                              pc.w4 * offset_features[pc.pos4 + c_idx];
+              }
               ++pre_calc_idx;
               theory_ops_ += 8;
             }

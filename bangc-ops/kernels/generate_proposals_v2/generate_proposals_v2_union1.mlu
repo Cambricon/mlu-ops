@@ -1109,6 +1109,7 @@ __mlu_func__ void ProposalForOneImage(
                      im_shape, anchors, variances, workspace_buffer, k_score,
                      HWA, pre_nms_top_n, min_size, pixel_offset, need_top_k,
                      &proposals_num);
+  rpn_rois_num[0] = 0;
   if (proposals_num == 0) {
     rpn_rois_num[0] = 1;
     one_image_proposals_num[0] += rpn_rois_num[0];

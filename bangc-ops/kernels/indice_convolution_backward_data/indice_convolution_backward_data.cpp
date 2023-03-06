@@ -44,7 +44,7 @@ static mluOpStatus_t foolCheckNoPtr(
   PARAM_CHECK(api, input_grad_desc != NULL);
 
   // check platform
-  if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
+  if (handle->arch < 372) {
     LOG(ERROR) << api << " Only support hardware over MLU300 .";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
@@ -154,6 +154,15 @@ static mluOpStatus_t foolCheckNoPtr(
       LOG(ERROR) << api
                  << " The dims[0] of input_grad should be equal to the dims[0]"
                  << " of output_grad when sub_m is 1.";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+
+    if (indice_num[K / 2] < max_indice_num) {
+      LOG(ERROR) << api
+                 << " The middle number of the indice_num array should be the "
+                 << "maximum of the array when sub_m is 1. Now the maximum is "
+                 << max_indice_num << " while the middle number of the array "
+                 << "is " << indice_num[K / 2] << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

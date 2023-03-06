@@ -83,3 +83,15 @@ MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开
 | [bangpy-ops](bangpy-ops) | Python 接口算子开发目录                   |
 | [docker](docker)         | 存放docker打包脚本，提供CI构建环境。        |
 | [docs](docs)             | 算子开发、测试、精度验收的说明文档。         |
+
+
+## 常用环境变量
+
+|   |        环境变量        |                         功能说明                        |                 备注                    |
+|---|------------------------|---------------------------------------------------------|-----------------------------------------|
+| 1 | MLUOP_BUILD_GTEST      | ON: build.sh 会编译 GTEST;<br>其它情况下不会编译        | 在 build 脚本中默认设为 ON              |
+| 2 | MLUOP_GTEST_DUMP_DATA  | ON: 保存 GTEST 测试过程中用到的输入输出数据             | 不使用此环境变量时需要unset环境变量     |
+| 3 | MLUOP_BUILD_ASAN_CHECK | ON: 表示编译ASAN内存检查;<br>OFF: 表示编译ASAN内存不检查| 默认不开启                              |
+| 4 | MLUOP_GEN_CASE         |0: 关闭 gen_case 模块功能;<br>1: 生成 prototxt，输入输出只保留 shape 等信息（GEN_CASE_DATA_REAL 将无效）;<br>2: 生成 prototxt,并保留输入真实真;<br>3: 不生成 prototxt,只在屏幕上打印输入输出的 shape 等信息;<br> 详情见: [Gencase-User-Guide-zh.md](docs/Gencase-User-Guide-zh.md)|   |
+| 5 | MLUOP_MIN_LOG_LEVEL    | 0: enable INFO/WARNING/ERROR/FATAL;<br>1: enable WARNING/ERROR/FATAL;<br>2: enable ERROR/FATAL;<br>3: enable FATAL |默认为0  |
+| 6 | MLUOP_MIN_VLOG_LEVEL   |0: enable VLOG(0);<br>1: enable VLOG(0)-VLOG(1);<br>2: enable VLOG(0)-VLOG(2);<br>3: enable VLOG(0)-VLOG(3);<br>4: enable VLOG(0)-VLOG(4);<br>5: enable VLOG(0)-VLOG(5);<br>6: enable VLOG(0)-VLOG(6);<br>7: enable VLOG(0)-VLOG(7); | 默认为0| 

@@ -55,6 +55,15 @@ else
   echo "-- [pre-commit] cpplint PASSED."
 fi
 
+format_mluop_h=$(tools/format2google ${bangc_mlu_op_h})
+diff_mluop_h=$(git diff ${bangc_mlu_op_h})
+
+if [[ ${diff_mluop_h} != "" ]]; then
+  echo ${diff_mluop_h}
+  echo "Please tools/format2google bangc-ops/mlu_op.h!"
+  exit -1
+fi
+
 echo "-- [pre-commit] Check __bang_printf or printf or std::cout or \
 assert() in kernel code..."
 for i in ${filenames} ; do
