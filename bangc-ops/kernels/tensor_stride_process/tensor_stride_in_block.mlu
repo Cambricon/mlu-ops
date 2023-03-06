@@ -27,13 +27,13 @@
 __nram__ char ram[SIZE_NRAM_BUF];
 
 template <typename T>
-__mlu_func__ void blockTensorStridedIn(T *input,
-                                       TensorShape &input_shape,
+__mlu_func__ void blockTensorStridedIn(T *input, TensorShape &input_shape,
                                        T *output) {
   uint64_t total_num = input_shape.total_num;
   uint64_t data_per_core = total_num / taskDim;
   uint64_t data_last_core = total_num / taskDim + total_num % taskDim;
-  // currently SIZE_NRAM_BUF does not exceed 2GB, keep int32 for performance reasons
+  // currently SIZE_NRAM_BUF does not exceed 2GB, keep int32 for performance
+  // reasons
   int load_once = SIZE_NRAM_BUF / sizeof(T);
   uint64_t load_repeat;
   int load_remain;
@@ -48,15 +48,16 @@ __mlu_func__ void blockTensorStridedIn(T *input,
   }
   for (uint64_t i = 0; i < load_repeat; i++) {
     tensorStrideLoad<T>((T *)ram, input, i * load_once + taskId * data_per_core,
-                     load_once, sizeof(T), input_shape);
+                        load_once, sizeof(T), input_shape);
     __memcpy(output + i * load_once + taskId * data_per_core, (T *)ram,
              load_once * sizeof(T), NRAM2GDRAM);
   }
   if (load_remain > 0) {
-    tensorStrideLoad<T>((T *)ram, input, load_repeat * load_once + taskId * data_per_core,
-                     load_remain, sizeof(T), input_shape);
-    __memcpy(output + load_repeat * load_once + taskId * data_per_core, (T *)ram,
-             load_remain * sizeof(T), NRAM2GDRAM);
+    tensorStrideLoad<T>((T *)ram, input,
+                        load_repeat * load_once + taskId * data_per_core,
+                        load_remain, sizeof(T), input_shape);
+    __memcpy(output + load_repeat * load_once + taskId * data_per_core,
+             (T *)ram, load_remain * sizeof(T), NRAM2GDRAM);
   }
 }
 
@@ -64,17 +65,15 @@ template <typename T>
 __mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
                                                  TensorShape input_shape,
                                                  void *output) {
-  PERF_TIME_BEGIN();
   blockTensorStridedIn((T *)input, input_shape, (T *)output);
-  PERF_TIME_END();
 }
 
-template __mlu_global__ void MLUUnionKernelTensorStrideIn<int8>(const void *input,
-                                                                TensorShape input_shape,
-                                                                void *output);
-template __mlu_global__ void MLUUnionKernelTensorStrideIn<half>(const void *input,
-                                                                TensorShape input_shape,
-                                                                void *output);
-template __mlu_global__ void MLUUnionKernelTensorStrideIn<float>(const void *input,
-                                                                 TensorShape input_shape,
-                                                                 void *output);
+template void MLUUnionKernelTensorStrideIn<int8>(const void *input,
+                                                 TensorShape input_shape,
+                                                 void *output);
+template void MLUUnionKernelTensorStrideIn<half>(const void *input,
+                                                 TensorShape input_shape,
+                                                 void *output);
+template void MLUUnionKernelTensorStrideIn<float>(const void *input,
+                                                  TensorShape input_shape,
+                                                  void *output);

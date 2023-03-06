@@ -31,9 +31,9 @@
 #include "core/tool.h"
 
 struct TensorShape {
-  int64_t tensor_dims[CNNL_DIM_MAX];
-  int64_t tensor_strides[CNNL_DIM_MAX];
-  uint64_t total_num = 1;
+  int tensor_dims[MLUOP_DIM_MAX];
+  int tensor_strides[MLUOP_DIM_MAX];
+  int total_num = 1;
   bool is_contiguous = 1;
 };
 
@@ -43,13 +43,14 @@ bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc);
 
 bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc);
 
-bool isTransPadStride(TensorShape& tensor_shape, int64_t* dims, int64_t* strides);
+bool isTransPadStride(TensorShape &tensor_shape, int *dims, int *strides);
 
 void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
                     TensorShape *tensor_shape);
 
-void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc, int64_t *target_shape,
-                          int target_dim, TensorShape *tensor_shape);
+void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
+                          int *target_shape, int target_dim,
+                          TensorShape *tensor_shape);
 
 mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,

@@ -23,6 +23,7 @@
 #ifndef KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_MLU_H_
 #define KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_MLU_H_
 
+#include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "mlu_op.h"
 #include "tensor_stride_process.h"
