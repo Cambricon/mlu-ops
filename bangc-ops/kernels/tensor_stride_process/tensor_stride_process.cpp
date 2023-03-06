@@ -35,29 +35,73 @@
 
 using std::vector;
 
-// Check if tensor need stride process.
-bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc) {
-  bool needStrideProcess = false;
-  int tensor_dim = tensor_desc->dim;
-  int stride_base = 1;
-  for (int i = tensor_dim - 1; i >= 0; i--) {
-    if (tensor_desc->dims[i] != 1) {
-      if (tensor_desc->strides[i] == stride_base) {
-        stride_base *= tensor_desc->dims[i];
-      } else {
-        needStrideProcess = true;
-        break;
+// Tensor may be a stride case, but if the stride of a tensor is dense,
+// and all tensors are consistent dense,
+// they can be processd with common default stride method with a high
+// performance in element-wise kernel.
+bool strideCaseWithNotConsistentDense(int tensor_num, ...) {
+  bool is_stride_case = false;
+  mluOpTensorDescriptor_t first_stride_tensor = NULL;
+  va_list ap;
+  va_start(ap, tensor_num);
+  // if one of a tensor is strided, set is_fake_stride_case true.
+  for (auto i = 0; i < tensor_num; i++) {
+    mluOpTensorDescriptor_t this_tensor = va_arg(ap, const mluOpTensorDescriptor_t);
+    if (ifNeedTensorStrideProcess(this_tensor)) {
+      is_stride_case = true;
+      first_stride_tensor = this_tensor;
+      break;
+    }
+  }
+  if (!is_stride_case) {
+    va_end(ap);
+    return false;
+  } else {
+    va_start(ap, tensor_num);
+    if (!isDenseStrideTensor(first_stride_tensor)) {
+      va_end(ap);
+      return true;
+    }
+    int64_t first_dims[MLUOP_DIM_MAX] = {0};
+    int64_t first_stride[MLUOP_DIM_MAX] = {0};
+    auto first_dim = first_stride_tensor->dim;
+    // get first tensor's shape and stride info
+    for (auto i = 0; i < first_dim; i++) {
+      first_dims[i] = first_stride_tensor->dims[i];
+      first_stride[i] = first_stride_tensor->strides[i];
+    }
+    // judge whether shapes and strides of tensors are same,
+    // if not, need stride process
+    // note: we should ignore the dim if the shape at this dim is 1.
+    for (auto i = 0; i < tensor_num; i++) {
+      mluOpTensorDescriptor_t this_tensor = va_arg(ap, const mluOpTensorDescriptor_t);
+      if (mluOpGetTensorElementNum(this_tensor) == 1) {
+        // ignore scalar
+        continue;
+      }
+      if (this_tensor->dim != first_dim) {
+        va_end(ap);
+        return true;
+      }
+      for (auto j = 0; j < first_dim; j++) {
+        if (first_dims[j] != this_tensor->dims[j] ||
+            ((first_dims[j] != 1) &&
+             (first_stride[j] != this_tensor->strides[j]))) {
+          va_end(ap);
+          return true;
+        }
       }
     }
   }
-  return needStrideProcess;
+  va_end(ap);
+  return false;
 }
 
 bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc) {
   int tensor_dim = tensor_desc->dim;
-  std::vector<int> dims;
-  std::vector<int> strides;
-  std::vector<int> perm;
+  std::vector<int64_t> dims;
+  std::vector<int64_t> strides;
+  std::vector<int64_t> perm;
   for (int i = 0; i < tensor_dim; i++) {
     dims.emplace_back(tensor_desc->dims[i]);
     strides.emplace_back(tensor_desc->strides[i]);
@@ -90,61 +134,89 @@ bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc) {
   return true;
 }
 
-// Tensor may be a stride case, but if the stride of a tensor is dense,
-// and all tensors are consistent dense,
-// they can be processd with common default stride method with a high
-// performance in element-wise kernel.
-bool strideCaseWithNotConsistentDense(int tensor_num, ...) {
-  bool is_stride_case = false;
-  va_list ap;
-  va_start(ap, tensor_num);
-  // if one of a tensor is strided, set is_fake_stride_case true.
-  for (auto i = 0; i < tensor_num; i++) {
-    mluOpTensorDescriptor_t this_tensor = va_arg(ap, mluOpTensorDescriptor_t);
-    if (ifNeedTensorStrideProcess(this_tensor)) {
-      is_stride_case = true;
-      break;
+// Check if tensor need stride process.
+bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc) {
+  bool needStrideProcess = false;
+  int tensor_dim = tensor_desc->dim;
+  int64_t stride_base = 1;
+  for (int i = tensor_dim - 1; i >= 0; i--) {
+    if (tensor_desc->dims[i] != 1) {
+      if (tensor_desc->strides[i] == stride_base) {
+        stride_base *= tensor_desc->dims[i];
+      } else {
+        needStrideProcess = true;
+        break;
+      }
     }
   }
-  if (!is_stride_case) {
-    va_end(ap);
-    return false;
-  } else {
-    va_start(ap, tensor_num);
-    mluOpTensorDescriptor_t first_tensor = va_arg(ap, mluOpTensorDescriptor_t);
-    if (!isDenseStrideTensor(first_tensor)) {
-      va_end(ap);
-      return true;
-    }
-    int first_dims[MLUOP_DIM_MAX] = {0};
-    int first_stride[MLUOP_DIM_MAX] = {0};
-    auto first_dim = first_tensor->dim;
-    // get first tensor's shape and stride info
-    for (auto i = 0; i < first_dim; i++) {
-      first_dims[i] = first_tensor->dims[i];
-      first_stride[i] = first_tensor->strides[i];
-    }
-    // judge whether shapes and strides of tensors are same,
-    // if not, need stride process
-    // note: we should ignore the dim if the shape at this dim is 1.
-    for (auto i = 0; i < tensor_num - 1; i++) {
-      mluOpTensorDescriptor_t this_tensor = va_arg(ap, mluOpTensorDescriptor_t);
-      if (this_tensor->dim != first_dim) {
-        va_end(ap);
-        return true;
-      }
-      for (auto j = 0; j < first_dim; j++) {
-        if (first_dims[j] != this_tensor->dims[j] ||
-            ((first_dims[j] != 1) &&
-             (first_stride[j] != this_tensor->strides[j]))) {
-          va_end(ap);
-          return true;
+  return needStrideProcess;
+}
+
+// Check if stride out is 021 trans and dimension 1 or 2 pad
+// for stride in, the operation is crop actually
+// dims_ptr != nullptr will fill tensor_shape with merged stride and dim
+bool isTransPadStride(TensorShape& tensor_shape, int64_t* dims_ptr, int64_t* strides_ptr) {
+  // get valid dims and merging dims
+  vector<int64_t> dims;
+  vector<int64_t> strides;
+  int begin = 0;
+  while (begin < CNNL_DIM_MAX) {
+    // skip the leading 1
+    if (tensor_shape.tensor_dims[begin] != 1) {
+      // start scanning on following dims and stride
+      int dim = tensor_shape.tensor_dims[begin];
+      int stride = tensor_shape.tensor_strides[begin];
+      while (begin + 1 < CNNL_DIM_MAX) {
+        // means can be merged
+        if (tensor_shape.tensor_strides[begin] ==
+            (tensor_shape.tensor_strides[begin + 1] * tensor_shape.tensor_dims[begin + 1])) {
+          dim *= tensor_shape.tensor_dims[begin + 1];
+          stride = tensor_shape.tensor_strides[begin + 1];
+          begin++;
+        } else {
+          break;
         }
       }
+      // fillin the merged dim and stride
+      dims.push_back(dim);
+      strides.push_back(stride);
+    }
+    begin++;
+  }
+  // only handle three dimension of which notation is nhw
+  if (dims.size() != 3) {
+    return false;
+  }
+  // the stride of h == 1 means transpose
+  bool is_trans = false;
+  if (strides[1] == 1) {
+    is_trans = true;
+  }
+  // there are two kinds of pad: pad ho or pad wo
+  bool is_pad = false;
+  // if pad ho, wo should be equal to hi
+  if (strides[2] == dims[1] && (strides[0] % strides[2]) == 0
+                            && (strides[0] / strides[2]) > dims[2]) {
+    is_pad = true;
+  }
+  // if pad wo, ho should be equal to wi
+  if (strides[2] > dims[1] && strides[0] == (dims[2] * strides[2])) {
+    is_pad = true;
+  }
+  // return merges dims and strides
+  if (is_trans && is_pad) {
+    if (dims_ptr != nullptr) {
+      for (int i = 0; i < dims.size(); i++) {
+        dims_ptr[i] = dims[i];
+      }
+    }
+    if (strides_ptr != nullptr) {
+      for (int i = 0; i < strides.size(); i++) {
+        strides_ptr[i] = strides[i];
+      }
     }
   }
-  va_end(ap);
-  return false;
+  return is_trans && is_pad;
 }
 
 // From tensor_desc get tensor's dims and strides.
@@ -156,11 +228,11 @@ void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
     tensor_shape->is_contiguous = false;
   }
   int tensor_dim = tensor_desc->dim;
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
-  int tensor_temp_dims[MLUOP_DIM_MAX];
-  int tensor_temp_strides[MLUOP_DIM_MAX];
-  int total_num = 1;
+  int64_t tensor_dims[MLUOP_DIM_MAX];
+  int64_t tensor_strides[MLUOP_DIM_MAX];
+  int64_t tensor_temp_dims[MLUOP_DIM_MAX];
+  int64_t tensor_temp_strides[MLUOP_DIM_MAX];
+  uint64_t total_num = 1;
   // dims:    (2, 3) -> (1, 1, 1, 1, 1, 1, 2, 3)
   // strides: (2, 3) -> (0, 0, 0, 0, 0, 0, 2, 3)
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
@@ -218,15 +290,15 @@ void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
 // expand dimension; output: tensor_shape: used for stride input and output
 // kernel.
 void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
-                          int *target_shape, int target_dim,
+                          int64_t *target_shape, int target_dim,
                           TensorShape *tensor_shape) {
   tensor_shape->is_contiguous = false;
   int tensor_dim = target_dim;
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
-  int tensor_temp_dims[MLUOP_DIM_MAX];
-  int tensor_temp_strides[MLUOP_DIM_MAX];
-  int total_num = 1;
+  int64_t tensor_dims[MLUOP_DIM_MAX];
+  int64_t tensor_strides[MLUOP_DIM_MAX];
+  int64_t tensor_temp_dims[MLUOP_DIM_MAX];
+  int64_t tensor_temp_strides[MLUOP_DIM_MAX];
+  uint64_t total_num = 1;
   // target_shape:      (7, 3, 4, 5)
   // tensor_desc_shape:    (3, 1, 5)
   // tensor_desc_stride:   (s1, s2, s3)
@@ -240,8 +312,7 @@ void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
       total_num *= target_shape[i + tensor_dim - MLUOP_DIM_MAX];
       tensor_dims[i] =
           target_shape[i + tensor_dim - MLUOP_DIM_MAX];  // set shape
-      if (i >=
-          MLUOP_DIM_MAX -
+      if (i >= MLUOP_DIM_MAX -
               tensor_desc->dim) {  // set stride if tensor_desc has this stride
         if (tensor_desc->dims[i + tensor_desc->dim - MLUOP_DIM_MAX] != 1) {
           tensor_strides[i] =
@@ -290,12 +361,16 @@ void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
 
 // Policy function
 static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                                cnrtFunctionType_t *k_type, int total_num) {
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+                                cnrtFunctionType_t *k_type, uint64_t total_num) {
+  if (handle -> sram_size <= 0) {
+    *k_type = CNRT_FUNC_TYPE_BLOCK;
+  } else {
+    *k_type = CNRT_FUNC_TYPE_UNION1;
+  }
   uint32_t union_number = mluop::runtime::getClusterLimitCapability(handle);
 
   // Split to different cores according to total_num.
-  int need_cluster = total_num / CORE_DIM;
+  uint64_t need_cluster = total_num / CORE_DIM;
   need_cluster = (need_cluster == 0) ? 1 : need_cluster;
   k_dim->x = CORE_DIM;
   k_dim->y = need_cluster > union_number ? union_number : need_cluster;
@@ -307,6 +382,12 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, void *output) {
+  if (handle->arch < MLUOP_MLU590) {
+    uint64_t num_with_stride = shapeStrideCount(input_desc);
+    TENSOR_NUM_CHECK("[mluOpTensorStrideIn]", num_with_stride, LARGE_TENSOR_NUM,
+                     "input tensor num with stride is too large. ");
+  }
+
   TensorShape input_shape;
   getTensorShape(input_desc, &input_shape);
   mluOpDataType_t data_type = input_desc->dtype;
@@ -318,8 +399,30 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
   VLOG(5) << "Launch Kernel mluOpUnion1KernelTensorStrideIn<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  KERNEL_CHECK((mluOpUnion1KernelTensorStrideIn(
-      k_dim, k_type, handle->queue, input, input_shape, output, data_type)));
+  switch (data_type) {
+    case MLUOP_DTYPE_INT8:
+    case MLUOP_DTYPE_BOOL:
+    case MLUOP_DTYPE_UINT8: {
+      KERNEL_CHECK((MLUUnionKernelTensorStrideIn<int8>
+          <<<k_dim, k_type, handle->queue>>>(input, input_shape, output)));
+    } break;
+
+    case MLUOP_DTYPE_INT16:
+    case MLUOP_DTYPE_HALF: {
+      KERNEL_CHECK((MLUUnionKernelTensorStrideIn<half>
+          <<<k_dim, k_type, handle->queue>>>(input, input_shape, output)));
+    } break;
+
+    case MLUOP_DTYPE_INT32:
+    case MLUOP_DTYPE_FLOAT: {
+      KERNEL_CHECK((MLUUnionKernelTensorStrideIn<float>
+          <<<k_dim, k_type, handle->queue>>>(input, input_shape, output)));
+    } break;
+
+    default:{
+      VLOG(5) << "Not Implemented.";
+    } break;
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -328,6 +431,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
     const void *input, void *output) {
   TensorShape output_shape;
   getTensorShape(input_desc, &output_shape);
+
+  if (handle->arch < MLUOP_MLU590) {
+    uint64_t num_with_stride = shapeStrideCount(input_desc);
+    TENSOR_NUM_CHECK("[mluOpTensorStrideOut]", num_with_stride, LARGE_TENSOR_NUM,
+                     "input tensor num with stride is too large. ");
+  }
 
   mluOpDataType_t data_type = input_desc->dtype;
   cnrtDim3_t k_dim;
@@ -338,14 +447,36 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
   VLOG(5) << "Launch Kernel mluOpUnion1KernelTensorStrideOut<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  KERNEL_CHECK((mluOpUnion1KernelTensorStrideOut(
-      k_dim, k_type, handle->queue, input, output, output_shape, data_type)));
+   switch (data_type) {
+    case MLUOP_DTYPE_INT8:
+    case MLUOP_DTYPE_BOOL:
+    case MLUOP_DTYPE_UINT8: {
+      KERNEL_CHECK((MLUUnionKernelTensorStrideOut<int8>
+          <<<k_dim, k_type, handle->queue>>>(input, output, output_shape)));
+    } break;
+
+    case MLUOP_DTYPE_INT16:
+    case MLUOP_DTYPE_HALF: {
+      KERNEL_CHECK((MLUUnionKernelTensorStrideOut<half>
+          <<<k_dim, k_type, quehandle->queueue>>>(input, output, output_shape)));
+    } break;
+
+    case MLUOP_DTYPE_INT32:
+    case MLUOP_DTYPE_FLOAT: {
+      KERNEL_CHECK((MLUUnionKernelTensorStrideOut<float>
+          <<<k_dim, k_type, handle->queue>>>(input, output, output_shape)));
+    } break;
+
+    default:{
+      VLOG(5) << "Not Implemented.";
+    } break;
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
-static vector<int> getDefaultStride(int *dims, int dim) {
-  vector<int> default_stride(dim, 1);
-  int temp = 1;
+static vector<int64_t> getDefaultStride(int64_t *dims, int dim) {
+  vector<int64_t> default_stride(dim, 1);
+  int64_t temp = 1;
   for (int i = 0; i < dim; i++) {
     int offset = dim - 1 - i;
     default_stride[offset] = temp;

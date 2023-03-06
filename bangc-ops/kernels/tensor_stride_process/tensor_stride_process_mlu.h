@@ -27,14 +27,14 @@
 #include "mlu_op.h"
 #include "tensor_stride_process.h"
 
-void MLUOP_WIN_API mluOpUnion1KernelTensorStrideIn(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, TensorShape input_shape, void *output,
-    mluOpDataType_t dtype);
+template <typename T>
+__mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
+                                                 TensorShape input_shape,
+                                                 void *output);
 
-void MLUOP_WIN_API mluOpUnion1KernelTensorStrideOut(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, void *output, TensorShape output_shape,
-    mluOpDataType_t dtype);
+template <typename T>
+__mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
+                                                  void *output,
+                                                  TensorShape output_shape);
 
 #endif  // KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_MLU_H_
