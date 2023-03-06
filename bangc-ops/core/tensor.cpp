@@ -144,7 +144,7 @@ mluOpStatus_t mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size) {
   PARAM_CHECK("[mluOpGetSizeOfDataType]", size != NULL);
 
   if (MLUOP_DTYPE_INVALID != data_type) {
-    *size = getSizeOfDataType(data_type);
+    *size = mluop::getSizeOfDataType(data_type);
     return MLUOP_STATUS_SUCCESS;
   } else {
     LOG(ERROR) << "[mluOpGetSizeOfDataType]:data_type should not be "
@@ -230,7 +230,7 @@ mluOpStatus_t mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc,
   }
   desc->total_element_num = stride_base;
   desc->total_tensor_size =
-      desc->total_element_num * getSizeOfDataType(desc->dtype);
+      desc->total_element_num * mluop::getSizeOfDataType(desc->dtype);
   // judge int overflow situation
   if (MLUOP_PREDICT_FALSE(is_overflow)) {
     std::stringstream tensor_info;
@@ -240,7 +240,8 @@ mluOpStatus_t mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc,
     }
 
     tensor_info << dimSize[dimNb - 1]
-                << "), data_width:" << getSizeOfDataType(desc->dtype) << ".";
+                << "), data_width:"
+                << mluop::getSizeOfDataType(desc->dtype) << ".";
     LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow max tensor num."
                  << "Currently, mluOp supports tensor num smaller than 2^31,"
                  << "now tensor " << tensor_info.str();
@@ -287,7 +288,7 @@ mluOpStatus_t mluOpSetGroupTensorDescriptors(
     (*(group_desc[i]))->total_element_num = strideBase;
     (*(group_desc[i]))->total_tensor_size =
         (*(group_desc[i]))->total_element_num *
-        getSizeOfDataType(group_dtype[i]);
+        mluop::getSizeOfDataType(group_dtype[i]);
 
     // compute new iterator for next loop.
     group_dimSize_iterator += group_dimNb[i];
@@ -324,7 +325,8 @@ mluOpStatus_t mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
   for (int i = 0; i < dimNb; ++i) {
     desc->total_element_num *= dimSize[i];
   }
-  desc->total_tensor_size = desc->total_element_num * getSizeOfDataType(dtype);
+  desc->total_tensor_size =
+      desc->total_element_num * mluop::getSizeOfDataType(dtype);
 
   desc->dtype = dtype;
   desc->layout = layout;

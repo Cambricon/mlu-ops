@@ -5,6 +5,7 @@ SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
 MLUOP_TARGET_CPU_ARCH=`uname -m`
+MLUOP_SYMBOL_VIS_FILE="symbol_visibility.map"
 PACKAGE_EXTRACT_DIR="dep_libs_extract"
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
@@ -71,7 +72,7 @@ add_mlu_arch_support () {
 }
 
 usage () {
-    echo "USAGE: ./build.sh <options>"
+    echo "USAGE: ./independent_build.sh <options>"
     echo
     echo "OPTIONS:"
     echo "      -h, --help         Print usage."
@@ -322,9 +323,9 @@ if [ $# != 0 ]; then
 fi
 
 script_path=`dirname $0`
-pushd $script_path/../
+pushd $script_path/../  > /dev/null
 BUILD_VERSION=$(cat build.property|grep "version"|cut -d ':' -f2|cut -d '-' -f1|cut -d '"' -f2|cut -d '.' -f1-3)
-popd
+popd > /dev/null
 MAJOR_VERSION=$(echo ${BUILD_VERSION}|cut -d '-' -f1|cut -d '.' -f1)
 prog_log_info "build_version = $BUILD_VERSION"
 prog_log_info "major_version = ${MAJOR_VERSION}"
@@ -374,6 +375,11 @@ else
   fi
 fi
 
+prog_log_info "generate ${MLUOP_SYMBOL_VIS_FILE} file."
+rm -f ${MLUOP_SYMBOL_VIS_FILE}
+prog_log_info "python3 gen_symbol_visibility_map.py ${MLUOP_SYMBOL_VIS_FILE} ./mlu_op.h"
+python3 gen_symbol_visibility_map.py ${MLUOP_SYMBOL_VIS_FILE} ./mlu_op.h
+
 pushd ${BUILD_PATH} > /dev/null
   rm -rf *
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
@@ -384,7 +390,8 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
                 -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
-                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}"
+                -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
+                -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}"
 
 popd > /dev/null
 ${CMAKE} --build build --  -j

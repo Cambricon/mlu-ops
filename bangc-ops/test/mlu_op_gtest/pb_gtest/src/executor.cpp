@@ -356,7 +356,7 @@ EvaluateResult Executor::evaluate() {
     if (!ts->stride.empty()) {
       VLOG(4) << "[WARNING] Executor: " << ts->name
               << " cpu ptr been strided_out.";
-      size_t cpu_dtype_size = getSizeOfDataType(getCpuDtype(ts->dtype));
+      size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
       void *temp = cpu_runtime_.allocate(ts->total_count * cpu_dtype_size);
       if (!flag_input_reuse_) {
         memset(temp, 0x0, ts->total_count * cpu_dtype_size);
@@ -1001,9 +1001,10 @@ void Executor::initHostData() {
       cpu_fp32_stride_input_.push_back(
           (float *)cpu_runtime_.allocate(ts->total_count * sizeof(float)));
       void *temp_gpu =
-          cpu_runtime_.allocate(ts->total_count * getSizeOfDataType(ts->dtype));
+          cpu_runtime_.allocate(
+                ts->total_count * mluop::getSizeOfDataType(ts->dtype));
       memcpy(temp_gpu, data_vector_[i].host_ptr,
-             ts->total_count * getSizeOfDataType(ts->dtype));
+             ts->total_count * mluop::getSizeOfDataType(ts->dtype));
       castDataOut(temp_gpu, ts->dtype, cpu_fp32_stride_input_[i],
                   MLUOP_DTYPE_FLOAT, ts->total_count, NO_QUANT);
       cpu_runtime_.deallocate(temp_gpu);
@@ -1043,7 +1044,7 @@ void Executor::baselineInputMalloc() {
     }
     // malloc a ptr with stride, to get random value
     // if this tensor has stride, will stride_in in castIn()
-    size_t cpu_dtype_size = getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
     ts->cpu_ptr = (float *)cpu_runtime_.allocate(
         ts->total_count * cpu_dtype_size, ts->name);
     cpu_fp32_input_.push_back(ts->cpu_ptr);
@@ -1066,7 +1067,7 @@ void Executor::baselineOutputMalloc() {
       cpu_fp32_output_.push_back(nullptr);
       continue;
     }
-    size_t cpu_dtype_size = getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
     ts->cpu_ptr = (float *)cpu_runtime_.allocate(
         ts->shape_count * cpu_dtype_size, ts->name);
     cpu_fp32_output_.push_back(ts->cpu_ptr);
@@ -1123,7 +1124,7 @@ void Executor::initBaselineInput() {
       continue;
     }
     mluOpDataType_t cpu_dtype = getCpuDtype(ts->dtype);
-    size_t cpu_dtype_size = getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
     if (VALUE_RANDOM == ts->value_type) {
       // generate random or read from path
       parser_->getInputTensorValue(i, cpu_fp32_input_[i], ts->total_count);
@@ -1158,7 +1159,7 @@ void Executor::mluOutputMalloc() {
       mlu_fp32_output_.push_back(nullptr);
       continue;
     }
-    size_t cpu_dtype_size = getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
     void *temp =
         cpu_runtime_.allocate(ts->total_count * cpu_dtype_size, ts->name);
     mlu_fp32_output_.push_back((float *)temp);
@@ -1290,17 +1291,18 @@ void Executor::getQuantizedParam(float *src_data, size_t count,
   if (MLUOP_DTYPE_INT8 == dst_dtype || MLUOP_DTYPE_INT16 == dst_dtype) {
     // get position scale offset
     if (ONLY_POSITION == quant_mode) {
-      MLUOP_CHECK(getPosition(src_data, count, dst_dtype, position));
+      MLUOP_CHECK(mluop::getPosition(src_data, count, dst_dtype, position));
     } else if (POSITION_SCALE == quant_mode) {
       MLUOP_CHECK(
-          getPositionAndScale(src_data, count, dst_dtype, position, scale));
+          mluop::getPositionAndScale(src_data, count, dst_dtype,
+                                     position, scale));
       // only for symmetric quantify int8/16
       if (parser_->negative_scale_) {
         *scale = -*scale;
       }
     } else if (POS_SCALE_OFFSET == quant_mode && nullptr != offset) {
-      MLUOP_CHECK(getPositionScaleAndOffset(src_data, count, dst_dtype,
-                                            position, scale, offset));
+      MLUOP_CHECK(mluop::getPositionScaleAndOffset(src_data, count, dst_dtype,
+                                                   position, scale, offset));
     } else if (NO_QUANT == quant_mode) {
       // don't need quant.
       // aka, set pos == 0; scale == 1; offset == 0
@@ -1327,7 +1329,7 @@ void Executor::castDataIn(float *src_data, mluOpDataType_t src_dtype,
     return;
   }
   if (src_dtype == dst_dtype) {
-    memcpy(dst_data, src_data, count * getSizeOfDataType(src_dtype));
+    memcpy(dst_data, src_data, count * mluop::getSizeOfDataType(src_dtype));
   } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
               dst_dtype == MLUOP_DTYPE_INT8) ||
              (src_dtype == MLUOP_DTYPE_FLOAT &&
@@ -1341,18 +1343,19 @@ void Executor::castDataIn(float *src_data, mluOpDataType_t src_dtype,
     }
     VLOG(4) << "skip castDataIn: count is zero" << *scale;
     if (dst_dtype == MLUOP_DTYPE_INT8) {
-      MLUOP_CHECK(castFloat32ToFixed(src_data, (int8_t *)dst_data, count, *pos,
-                                     *scale, *offset, handle_->round_mode));
+      MLUOP_CHECK(mluop::castFloat32ToFixed(src_data, (int8_t *)dst_data,
+          count, *pos, *scale, *offset, handle_->round_mode));
       if (dequantify) {
-        MLUOP_CHECK(castFixedToFloat32((int8_t *)dst_data, src_data, count,
-                                       *pos, *scale, *offset));
+        MLUOP_CHECK(mluop::castFixedToFloat32((int8_t *)dst_data, src_data,
+            count, *pos, *scale, *offset));
       }
     } else if (dst_dtype == MLUOP_DTYPE_INT16) {
-      MLUOP_CHECK(castFloat32ToFixed(src_data, (int16_t *)dst_data, count, *pos,
-                                     *scale, *offset, handle_->round_mode));
+      MLUOP_CHECK(mluop::castFloat32ToFixed(src_data, (int16_t *)dst_data,
+          count, *pos, *scale, *offset, handle_->round_mode));
       if (dequantify) {
-        MLUOP_CHECK(castFixedToFloat32((int16_t *)dst_data, src_data, count,
-                                       *pos, *scale, *offset));
+        MLUOP_CHECK(
+            mluop::castFixedToFloat32((int16_t *)dst_data, src_data, count,
+                                      *pos, *scale, *offset));
       }
     }
   } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
@@ -1392,8 +1395,8 @@ void Executor::cnrtCastDataTypeWrap(void *src_data,
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType(src, in_dtype, dst,
                                                      out_dtype, INT_MAX,
                                                      quant_param));
-    src += INT_MAX * getSizeOfDataType(src_dtype);
-    dst += INT_MAX * getSizeOfDataType(dst_dtype);
+    src += INT_MAX * mluop::getSizeOfDataType(src_dtype);
+    dst += INT_MAX * mluop::getSizeOfDataType(dst_dtype);
   }
   if (count_remain) {
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType(src, in_dtype, dst,
@@ -1412,7 +1415,7 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
     return;
   }
   if (src_dtype == dst_dtype) {
-    memcpy(dst_data, src_data, count * getSizeOfDataType(src_dtype));
+    memcpy(dst_data, src_data, count * mluop::getSizeOfDataType(src_dtype));
   } else if (src_dtype == MLUOP_DTYPE_COMPLEX_HALF &&
              dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
     arrayCastFloatAndNormal(src_data, src_dtype, dst_data, dst_dtype, count);
@@ -1437,11 +1440,11 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtDestroyQuantizedParam(quant_param));
     } else {
       if (src_dtype == MLUOP_DTYPE_INT8) {
-        MLUOP_CHECK(castFixedToFloat32((int8_t *)src_data, dst_data, count, pos,
-                                       scale, offset));
+        MLUOP_CHECK(mluop::castFixedToFloat32((int8_t *)src_data, dst_data,
+            count, pos, scale, offset));
       } else if (src_dtype == MLUOP_DTYPE_INT16) {
-        MLUOP_CHECK(castFixedToFloat32((int16_t *)src_data, dst_data, count,
-                                       pos, scale, offset));
+        MLUOP_CHECK(mluop::castFixedToFloat32((int16_t *)src_data, dst_data,
+            count, pos, scale, offset));
       }
     }
   } else if (dst_dtype == MLUOP_DTYPE_FLOAT &&
@@ -1460,8 +1463,9 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
                          nullptr);
   } else {
     LOG(WARNING) << "Executor::castDataOut(): Cast "
-                 << getNameOfDataType(src_dtype) << " to "
-                 << getNameOfDataType(dst_dtype) << " is not supported.";
+                 << mluop::getNameOfDataType(src_dtype) << " to "
+                 << mluop::getNameOfDataType(dst_dtype)
+                 << " is not supported.";
     GTEST_CHECK(false, "Executor: Unsupported dtype cast.");
   }
 }
@@ -1482,7 +1486,8 @@ void Executor::quantizeTensorByChannel(float *src_data, void *dst_data,
   int deal_count = count / co;
   for (int co_index = 0; co_index < co; ++co_index) {
     castDataIn(src_data + deal_count, MLUOP_DTYPE_FLOAT,
-               (char *)dst_data + deal_count * getSizeOfDataType(dst_dtype),
+               (char *)dst_data +
+                   deal_count * mluop::getSizeOfDataType(dst_dtype),
                dst_dtype, deal_count, flag_quant_mode_, position + co_index,
                scale + co_index, offset + co_index, true);
   }
@@ -1548,7 +1553,8 @@ void Executor::castIn() {
 
       // get oc_dt's p/s and set to tensor.
       void *temp =
-          cpu_runtime_.allocate(ts->total_count * getSizeOfDataType(ts->oc_dt));
+          cpu_runtime_.allocate(
+              ts->total_count * mluop::getSizeOfDataType(ts->oc_dt));
       castDataIn(src_data, MLUOP_DTYPE_FLOAT,  // src data
                  temp, ts->oc_dt,              // dst data
                  ts->total_count,              // count
@@ -1561,7 +1567,7 @@ void Executor::castIn() {
     }
     if (!ts->stride.empty()) {
       VLOG(4) << "Executor: " << ts->name << " host ptr been strided_out.";
-      size_t cpu_dtype_size = getSizeOfDataType(getCpuDtype(ts->dtype));
+      size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
       void *temp = cpu_runtime_.allocate(ts->shape_count * cpu_dtype_size);
       memset(temp, 0x0, ts->shape_count * cpu_dtype_size);
       if (flag_input_reuse_) {
@@ -1841,7 +1847,7 @@ void Executor::castHalfOuput() {
     MetaTensor *ts = parser_->output(i);
     if (ts->dtype == MLUOP_DTYPE_HALF) {
       int16_t *half_data = (int16_t *)cpu_runtime_.allocate(
-          ts->shape_count * getSizeOfDataType(ts->dtype));
+          ts->shape_count * mluop::getSizeOfDataType(ts->dtype));
       arrayCastFloatToHalf(half_data, cpu_fp32_output_[i], ts->shape_count);
       arrayCastHalfToFloat(cpu_fp32_output_[i], half_data, ts->shape_count);
     }

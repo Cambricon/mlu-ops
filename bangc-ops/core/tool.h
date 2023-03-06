@@ -33,6 +33,7 @@
 #include "mlu_op.h"
 
 
+namespace mluop {
 // The API is used for no scling factor quantization.
 mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
                           int *position);
@@ -130,5 +131,6 @@ mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
   }
   return MLUOP_STATUS_SUCCESS;
 }
+}  // namespace mluop
 
 #endif  // CORE_TOOL_H_

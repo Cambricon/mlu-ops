@@ -230,7 +230,7 @@ void Parser::parse(const std::string &file) {
     // shape_count come from value_f/value_i/value_h/value_ui/value_ul and
     // shape. not include stride
     mt->shape_count = getTensorShapeCount(pt);
-    mt->sizeof_dtype = getSizeOfDataType(mt->dtype);
+    mt->sizeof_dtype = mluop::getSizeOfDataType(mt->dtype);
     mt->size_in_bytes = mt->total_count * mt->sizeof_dtype;
 
     if (mt->total_count != mt->shape_count) {

@@ -78,7 +78,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
   PARAM_CHECK_NE(API, H, 0);
   PARAM_CHECK_NE(API, W, 0);
   if ((mluOpGetTensorElementNum(scores_desc) *
-           getSizeOfDataType(scores_desc->dtype) >=
+           mluop::getSizeOfDataType(scores_desc->dtype) >=
        LARGE_TENSOR_SIZE)) {
     LOG(ERROR) << API << " Overflow max tensor size."
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
@@ -220,16 +220,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   }
 
   if ((mluOpGetTensorElementNum(scores_desc) *
-           getSizeOfDataType(scores_desc->dtype) >=
+           mluop::getSizeOfDataType(scores_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(bbox_deltas_desc) *
-           getSizeOfDataType(bbox_deltas_desc->dtype) >=
+           mluop::getSizeOfDataType(bbox_deltas_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(anchors_desc) *
-           getSizeOfDataType(anchors_desc->dtype) >=
+           mluop::getSizeOfDataType(anchors_desc->dtype) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(variances_desc) *
-           getSizeOfDataType(variances_desc->dtype) >=
+           mluop::getSizeOfDataType(variances_desc->dtype) >=
        LARGE_TENSOR_SIZE)) {
     LOG(ERROR) << API << " Overflow max tensor size."
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";

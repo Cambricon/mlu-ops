@@ -47,35 +47,35 @@ __attribute__((__unused__)) std::mutex stacks_mutex_;
 // MLUOP_GEN_CASE=2: Generate gen_case file with input data
 // MLUOP_GEN_CASE=3: Print gen_case simple infomation on screen
 __attribute__((__unused__)) int gen_case_mode_ =
-    getUintEnvVar("MLUOP_GEN_CASE", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE", 0);
 
 // MLUOP_GEN_CASE_DUMP_INTERNAL control whether dump internal mluOpapi call
 __attribute__((__unused__)) bool dump_internal_ =
-    getBoolEnvVar("MLUOP_GEN_CASE_DUMP_INTERNAL", false);
+    mluop::getBoolEnvVar("MLUOP_GEN_CASE_DUMP_INTERNAL", false);
 
 // MLUOP_GEN_CASE_OP_NAME control generating prototxt
 // "conv;abs" means only generate prototxt for conv and abs
 // "-conv;-abs" means only not generate prototxt for conv and abs
 __attribute__((__unused__)) std::string op_name_ =
-    getStringEnvVar("MLUOP_GEN_CASE_OP_NAME", "all");
+    mluop::getStringEnvVar("MLUOP_GEN_CASE_OP_NAME", "all");
 
 // MLUOP_GEN_CASE_DUMP_DATA control whether dump input device data in prototxt
 // or not 0 : means not dump 1 : means dump readable value, is default value 2 :
 // means dump hex value
 __attribute__((__unused__)) int dump_data_ =
-    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA", 0);
 
 // MLUOP_GEN_CASE_DUMP_DATA_OUTPUT control whether dump output device data in
 // prototxt or not 0 : means not dump, is default value 1 : means dump readable
 // value 2 : means dump hex value
 __attribute__((__unused__)) int dump_data_output_ =
-    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_OUTPUT", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_OUTPUT", 0);
 
 // MLUOP_GEN_CASE_DUMP_DATA_FILE control whether dump data file separately
 // 0 : means not dump file
 // 1 : means dump file
 __attribute__((__unused__)) int dump_data_file_ =
-    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_FILE", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_FILE", 0);
 
 bool isGenCaseOn() { return gen_case_mode_ > 0; }
 
@@ -227,7 +227,7 @@ void genCaseData(PbNode *node, bool is_input, std::string id,
     node->appendTensor(is_input, id, device_data, desc_, true, params,
                        distribution, dump_data);
   } else {
-    node->appendTensor(is_input, id, device_data, desc, true, params,
+    node->appendTensor(is_input, id, device_data, desc, false, params,
                        distribution, dump_data);
   }
 }
@@ -471,7 +471,7 @@ void PbNode::dumpDataFile(std::string file_name, std::string folder_name,
         std::ofstream tensor_file;
         tensor_file.open(tensor_file_name.c_str(), std::ios::binary);
         tensor_file.write(reinterpret_cast<const char *>(data),
-                          total_num * getSizeOfDataType(dtype));
+                          total_num * mluop::getSizeOfDataType(dtype));
         tensor_file.close();
       } else {
         if (!shouldDump) {
@@ -480,7 +480,7 @@ void PbNode::dumpDataFile(std::string file_name, std::string folder_name,
           std::ofstream tensor_file;
           tensor_file.open(tensor_file_name.c_str(), std::ios::binary);
           tensor_file.write(reinterpret_cast<const char *>(data),
-                            total_num * getSizeOfDataType(dtype));
+                            total_num * mluop::getSizeOfDataType(dtype));
           tensor_file.close();
         }
       }
@@ -533,7 +533,7 @@ void PbNode::dumpOutputFile() {
             std::ofstream tensor_file;
             tensor_file.open(tensor_file_name.c_str(), std::ios::binary);
             tensor_file.write(reinterpret_cast<const char *>(data),
-                              total_num * getSizeOfDataType(dtype));
+                              total_num * mluop::getSizeOfDataType(dtype));
             tensor_file.close();
           }
         }

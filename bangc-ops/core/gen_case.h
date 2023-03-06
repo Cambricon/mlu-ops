@@ -94,7 +94,7 @@
       std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_NAME(pos, param_node_name, param_name, value) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, param_node_name)
-#define GEN_CASE_OP_PARAM_ARRAY(pos, op_name, param_name, value, num) \
+#define GEN_CASE_OP_PARAM_ARRAY(pos, param_node_name, param_name, value, num) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, num, \
                     std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_SUB(pos, param_node_name, param_name, value,  \
@@ -405,7 +405,7 @@ class PbNode {
     mluOpDataType_t dtype;
     mluOpGetTensorDescriptor(tensors[index].desc, nullptr, &dtype, nullptr,
                              nullptr);
-    uint64_t data_size = total_num * getSizeOfDataType(dtype);
+    uint64_t data_size = total_num * mluop::getSizeOfDataType(dtype);
     void *data = malloc(data_size);
     if (CNRT_RET_SUCCESS ==
         cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),

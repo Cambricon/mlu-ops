@@ -133,9 +133,25 @@ endforeach()
 file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
-bang_add_library(mluops SHARED ${core_src_files} ${src_files})
-target_link_libraries(mluops cnrt cndrv dl)
-target_link_libraries(mluops ${obj_files})
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${MLUOP_SYMBOL_VIS_FILE})
+  message(STATUS "${MLUOP_SYMBOL_VIS_FILE} exists.")
+else()
+  message(FATAL_ERROR "${MLUOP_SYMBOL_VIS_FILE} doesn't exist.")
+endif()
+
+set(LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
+message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
+add_library(mluopscore STATIC ${core_src_files})
+
+bang_add_library(mluops SHARED ${src_files})
+target_link_libraries(mluops
+  -Wl,--start-group
+  ${obj_files} 
+  -Wl,--whole-archive mluopscore -Wl,--no-whole-archive
+  cnrt cndrv dl
+  -Wl,--end-group
+)
+target_link_libraries(mluops ${LINK_FLAGS})
 set_target_properties(mluops PROPERTIES
   OUTPUT_NAME "mluops"
   PREFIX      "lib"

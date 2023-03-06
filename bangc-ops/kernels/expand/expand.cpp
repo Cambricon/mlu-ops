@@ -55,8 +55,8 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("[mluOpExpand]", output_desc->dim <= MLUOP_DIM_MAX);
   size_t input_num = mluOpGetTensorElementNum(input_desc);
   size_t output_num = mluOpGetTensorElementNum(output_desc);
-  if (getSizeOfDataType(input_desc->dtype) ==
-      getSizeOfDataType(MLUOP_DTYPE_INT64)) {
+  if (mluop::getSizeOfDataType(input_desc->dtype) ==
+      mluop::getSizeOfDataType(MLUOP_DTYPE_INT64)) {
     auto statement_error = "the data type is int64 or complex, ";
     TENSOR_NUM_CHECK("[mluOpExpand]", input_num, INT64_LARGE_TENSOR_NUM,
                      statement_error);
@@ -169,8 +169,8 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   k_dim.z = 1;
   mluOpDataType_t data_type = input_desc->dtype;
 
-  if (getSizeOfDataType(input_desc->dtype) ==
-      getSizeOfDataType(MLUOP_DTYPE_INT64)) {
+  if (mluop::getSizeOfDataType(input_desc->dtype) ==
+      mluop::getSizeOfDataType(MLUOP_DTYPE_INT64)) {
     input_size *= 2;
     output_size *= 2;
     redims_input[MLUOP_DIM_MAX] = 2;

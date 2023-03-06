@@ -95,10 +95,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
   PARAM_CHECK("[mluOpCopy]", input_desc->dtype == output_desc->dtype);
   size_t num_input = mluOpGetTensorElementNum(input_desc);
   size_t num_output = mluOpGetTensorElementNum(output_desc);
-  size_t size_input =
-      shapeStrideCount(input_desc) * getSizeOfDataType(input_desc->dtype);
-  size_t size_output =
-      shapeStrideCount(output_desc) * getSizeOfDataType(output_desc->dtype);
+  size_t size_input = shapeStrideCount(input_desc) *
+                      mluop::getSizeOfDataType(input_desc->dtype);
+  size_t size_output = shapeStrideCount(output_desc) *
+                       mluop::getSizeOfDataType(output_desc->dtype);
   bool stride_kernel = false;
   if (strideCaseWithNotConsistentDense(2, input_desc, output_desc)) {
     stride_kernel = true;
@@ -127,7 +127,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
   size_t total_num = num_input;
 
   // set kernel datatype to int8, set total_num to size
-  const int kDTypeSize = getSizeOfDataType(k_data_type);
+  const int kDTypeSize = mluop::getSizeOfDataType(k_data_type);
   total_num = num_input * kDTypeSize;
 
   // generate copy prototxt start!

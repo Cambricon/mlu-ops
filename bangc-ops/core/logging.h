@@ -34,7 +34,7 @@
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
-#define LOG(severity) cnlog::CLOG(MLUOP, severity)
+#define LOG(severity) mluop::cnlog::CLOG(MLUOP, severity)
 
 #define TOKENPASTE(x, y, z) x##y##z
 #define TOKENPASTE2(x, y, z) TOKENPASTE(x, y, z)
@@ -42,7 +42,7 @@
 #define LOG_FIRST_N(severity, n)                                            \
   static std::atomic<int> TOKENPASTE2(LOG_, __LINE__, _OCCURRENCES)(0);     \
   if (MLUOP_PREDICT_FALSE(TOKENPASTE2(LOG_, __LINE__, _OCCURRENCES)++ < n)) \
-  cnlog::CLOG(MLUOP, severity)
+  mluop::cnlog::CLOG(MLUOP, severity)
 
 // CHECK with a error if condition is not true.
 #define CHECK(condition, ...)                                    \
@@ -111,7 +111,7 @@
     if ((__status__) != MLUOP_STATUS_SUCCESS) {                            \
       LOG(ERROR) << api << "BAD return status: " << #status << " returns " \
                  << (__status__) << " (FILE: " << __FILE__                 \
-                 << ", LINE: " << __LINE__ "). " __VA_ARGS__;              \
+                 << ", LINE: " << __LINE__ << "). " __VA_ARGS__;           \
       return (__status__);                                                 \
     }                                                                      \
   }
