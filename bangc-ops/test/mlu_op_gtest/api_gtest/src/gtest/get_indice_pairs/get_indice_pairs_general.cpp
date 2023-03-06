@@ -67,27 +67,11 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       VLOG(4) << "Device does not match, skip testing.";
       return;
     }
-    /*int dimNb_;
-    int batch_size_;
-    std::vector<int> pad_;
-    std::vector<int> stride_;
-    std::vector<int> dilation_;
-    std::vector<int> input_space_;
-    std::vector<int> filter_space_;
-    std::vector<int> output_space_;
-    int subm_;
-    int transpose_;
-    int inverse_;*/
     GetIndicePairsParam GetIndicePairs = std::get<0>(GetParam());
     std::tie(dimNb_, batch_size_, pad_, stride_, dilation_, input_space_,
              filter_space_, output_space_, subm_, transpose_, inverse_) =
         GetIndicePairs;
-    // std::cout << "general:batch_size_tie: " << batch_size_ << std::endl;
     MLUOP_CHECK(mluOpCreateSparseConvolutionDescriptor(&sparse_conv_desc_));
-    // MLUOP_CHECK(mluOpSetSparseConvolutionDescriptor(sparse_conv_desc_,
-    // dimNb_, batch_size_, pad_.data(), stride_.data(), dilation_.data(),
-    // input_space_.data(), filter_space_.data(), output_space_.data(), subm_,
-    // transpose_, inverse_));
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&indices_desc_));
     MLUOpTensorParam indices_params = std::get<1>(GetParam());
@@ -151,14 +135,6 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
                   cnrtMalloc(&out_indices_,
                              108 * mluOpDataTypeBytes(out_indices_dtype)));
     }
-    // std::cout << "general:out_indices: " << out_indices_desc_->dims[0] <<
-    // std::endl; std::cout << "output_space0: " << output_space_.dims[0] <<
-    // std::endl; std::cout << "output_space1: " << output_space_.dims[1] <<
-    // std::endl; std::cout << "output_space2: " << output_space_.dims[2] <<
-    // std::endl; std::cout << "general:batch_size2: " << batch_size_ <<
-    // std::endl; for(int i=0; i<output_space_.size();i++){ std::cout <<
-    // "general:output_space: " << output_space_[i] << std::endl;
-    //}
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&indice_num_desc_));
     MLUOpTensorParam indice_num_params = std::get<4>(GetParam());
@@ -189,8 +165,6 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       return true;
     }
 
-    // std::cout << "general:batch_size: " << sparse_conv_desc_->batch_size <<
-    // std::endl;
     mluOpStatus_t status = mluOpSetSparseConvolutionDescriptor(
         sparse_conv_desc_, dimNb_, batch_size_, pad_.data(), stride_.data(),
         dilation_.data(), input_space_.data(), filter_space_.data(),
@@ -205,11 +179,9 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
         dilation_.data(), input_space_.data(), filter_space_.data(),
         output_space_.data(), subm_, transpose_, inverse_));
 
-    // std::cout << "general:batch_size: " << batch_size_ << std::endl;
     status = mluOpGetIndicePairsWorkspaceSize(
         handle_, sparse_conv_desc_, indices_desc_, indice_pairs_desc_,
         out_indices_desc_, indice_num_desc_, &workspace_size_);
-    // std::cout << "general:batch_size: " << batch_size_ << std::endl;
     if (MLUOP_STATUS_SUCCESS != status) {
       destroy();
       return expected_status_ == status;
