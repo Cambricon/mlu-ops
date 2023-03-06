@@ -2100,7 +2100,7 @@ mluOpDiv(mluOpHandle_t handle,
 
 // Group:GenerateProposalsV2
 /*!
- * @brief Gets extra space size that is needed in poly_nms operation.
+ * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
@@ -2151,7 +2151,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
- * and queues in the poly_nms operation.
+ * and queues in the GenerateProposalsV2 operation.
  * @param[in] pre_nms_top_n
  * Number of top scoring RPN proposals to keep before applying
  * NMS.
