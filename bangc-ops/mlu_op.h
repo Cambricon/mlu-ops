@@ -1632,6 +1632,7 @@ mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int position, float scale);
+
 // Group:Tensor
 /*!
  * @brief Sets the \b position, \b scale and \b offset factors to the descriptor of fixed-point
@@ -1937,6 +1938,7 @@ mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *positi
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc, int *position, float *scale);
+
 // Group:Tensor
 /*!
  * @brief Gets the \b position, \b scale and \b offset factors to the descriptor \b desc of
@@ -2499,6 +2501,7 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
                           const uint32_t input_num,
                           const mluOpTensorDescriptor_t output_desc,
                           size_t *workspace_size);
+
 // Group:AddN
 /*!
  * @brief Computes the sum of input tensors.
@@ -2580,6 +2583,7 @@ mluOpAddN_v2(mluOpHandle_t handle,
              void *output,
              void *workspace,
              size_t workspace_size);
+
 // Group:AddN
 /*!
  * @brief Computes the sum of input tensors.
@@ -3063,6 +3067,7 @@ mluOpCarafeBackward(mluOpHandle_t handle,
                     void *grad_input,
                     const mluOpTensorDescriptor_t grad_mask_desc,
                     void *grad_mask);
+
 // Group:Div
 /*!
  * @brief Computes division on input tensors \b x and \b y, and returns the
@@ -3339,7 +3344,7 @@ mluOpGenerateProposalsV2(mluOpHandle_t handle,
 
 // Group:PolyNms
 /*!
- * @brief Gets extra space size that is needed in poly_nms operation.
+ * @brief Gets extra space size that is needed in the poly_nms operation.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
@@ -3379,7 +3384,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
 
 // Group:PolyNms
 /*!
- * @brief Polygon Non Maximum Suppression.
+ * @brief Computes the non-maximum suppression of polygon.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
@@ -3401,8 +3406,8 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  * @param[in] output_size
- * Pointer to the MLU memory that stores the output tensor. Indicates
- * the number of return values of output.
+ * Pointer to the MLU memory that stores the output_size. Indicates
+ * the actual output size of the output tensor.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
@@ -4421,6 +4426,7 @@ mluOpSqrt(mluOpHandle_t handle,
           const void *x,
           const mluOpTensorDescriptor_t y_desc,
           void *y);
+
 // Group:Sqrt
 
 /*!
@@ -7143,6 +7149,7 @@ mluOpGetUniqueWorkSpace(mluOpHandle_t handle,
                         const mluOpUniqueDescriptor_t unique_desc,
                         const mluOpTensorDescriptor_t input_desc,
                         size_t *size);
+
 // Group:Unique
 /*!
  * @brief Computes the length of unique data of input tensor, and returns the results
@@ -7201,6 +7208,7 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
                      const void *input,
                      void *unique_data,
                      int *output_len);
+
 // Group:Unique
 /*!
  * @brief Retrieves unique elements in the input tensor.
@@ -8395,6 +8403,7 @@ mluOpSetReduceDescriptor(mluOpReduceDescriptor_t reduce_desc,
                          mluOpNanPropagation_t nan_propagation,
                          mluOpReduceIndices_t tensor_indices,
                          mluOpIndicesType_t indices_type);
+
 // Group:Reduce
 /*!
  * @brief Initializes the reduce descriptor \b reduce_desc that is previously created with
@@ -8463,6 +8472,7 @@ mluOpSetReduceDescriptor_v2(mluOpReduceDescriptor_t reduce_desc,
                             mluOpReduceIndices_t tensor_indices,
                             mluOpIndicesType_t indices_type,
                             float p);
+
 // Group:Reduce
 /*!
  * @brief Destroys a reduce descriptor \b reduce_desc that is previously created with
