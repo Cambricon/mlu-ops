@@ -794,7 +794,7 @@ mluOpSetTensorDescriptor(mluOpTensorDescriptor_t desc,
  * you do not need to specify the strides of all dimensions. The strides are inferred
  * by parameters passed to this function. Also, the data will be treated as contiguous
  * in memory with no padding between dimensions. To specify the strides of all dimensions,
- * you can call ::mluOpSetTensorDescriptorEx. But the data might not be treated as 
+ * you can call ::mluOpSetTensorDescriptorEx. But the data might not be treated as
  * contiguous in memory.
  *
  * @param[in] group_desc
@@ -1041,7 +1041,7 @@ mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc, mluOpDataTy
 // Group:Tensor
 /*!
  * @brief Sets the \b position factor to the descriptor \b desc of fixed-point data in
- * fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION mode.
+ * fixed-point quantization.
  *
  * @param[in] desc
  * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -1078,7 +1078,7 @@ mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
 // Group:Tensor
 /*!
  * @brief Sets the \b position and \b scale factors to the descriptor of fixed-point
- * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE mode.
+ * data in fixed-point quantization.
  *
  * @param[in] desc
  * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -1117,7 +1117,7 @@ mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int posit
 // Group:Tensor
 /*!
  * @brief Sets the \b position, \b scale and \b offset factors to the descriptor of fixed-point
- * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE_OFFSET mode.
+ * data in fixed-point quantization.
  *
  * @param[in] desc
  * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
