@@ -36,7 +36,18 @@ This section lists contents that were made for each product release.
      - three_interpolate_backward
      - three_nn_forward
      - transpose
-     - unique
+     - Unique
+
+* V0.4.2
+
+  **Date:** March 6, 2023
+
+  **Changes:**
+
+  - Added the following new operations:
+
+    - box_iou_rotated
+    - nms_rotated
 
 * V0.4.1
 
