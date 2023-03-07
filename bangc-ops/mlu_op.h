@@ -1083,19 +1083,20 @@ mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc)
  * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
+ *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
- * @par Formula
- * - See "Focal Loss Sigmoid Forward Operator" section in "Cambricon BANGC OPS User Guide" for details.
- *
  * @par Data Type
- * - The supported data types of input tenspr \b input, \b target, \b weight and output
+ * - The supported data types of input tensors \b input, \b target, \b weight and output
  *   tensor \b output are as follows：
  *   - input: half, float
  *   - target: int32
  *   - weight: half, float
  *   - output: half, float
+ *
+ * @par Data Layout
+ * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
  * - The shape of \b input must be [N, C].
@@ -1110,7 +1111,10 @@ mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc)
  *   shape of \b input is [N, C].
  * - \b gamma should be greater than or equal to 0.
  *
- * @note
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
  * - When input data or parameter contains NaN/infinity:
  *   - On MLU200 series:
  *     - If \b input, \b weight, \b alpha or \b gamma is NaN, then \b output is finite value.
@@ -1133,9 +1137,6 @@ mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc)
  *       then \b output is NAN or finite value.
  *     - If \b gamma is positive infinity, but \b input, \b weight and \b alpha are finite value,
  *       then \b output is NAN or 0.
- *
- * @par Requirements
- * - None.
  *
  * @par Example
  * - None.
@@ -1209,20 +1210,21 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the \b grad_input tensor.
+ *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
- * @par Formula
- * - See "Focal Loss Sigmoid Backward Operator" section in "Cambricon BANGC OPS User Guide" for details.
- *
  * @par Data Type
- * - The supported data types of input tenspr \b input, \b target, \b weight and output
+ * - The supported data types of input tensor \b input, \b target, \b weight and output
  *   tensor \b output are as follows：
  *   - input: float
  *   - target: int32
  *   - weight: float
  *   - grad_input: float
  *   - grad_output: float
+ *
+ * @par Data Layout
+ * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
  * - The shape of \b input must be [N, C].
@@ -1238,7 +1240,10 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - reduction only supports \p MLUOP_LOSS_REDUCTION_NONE currently.
  * - The layout of \b input, \b target, \b weight, \b grad_output and \b grad_input must be ARRAY.
  *
- * @note
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
  * - If the shape of \b input is set to [N, C]. The length of C should be in the range of [0, 13615] when
  *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 12544] when
  *   \b weight is not NULL on MLU300 series.
@@ -1249,9 +1254,6 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - \b grad_output does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 8] on MLU200 series, and should be in the range of [0, 10000]
  *   on MLU300 series.
- *
- * @par Requirements
- * - None.
  *
  * @par Example
  * - None.

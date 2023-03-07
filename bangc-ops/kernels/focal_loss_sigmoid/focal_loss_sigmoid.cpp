@@ -41,6 +41,9 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
 }
 
+/*
+ * FocalLossSigmoidForwrad
+ */
 static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
     const mluOpTensorDescriptor_t input_desc,
     const mluOpTensorDescriptor_t target_desc,
@@ -227,11 +230,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   return MLUOP_STATUS_SUCCESS;
 }
 
-void getDealNAndThresholdC(const mluOpHandle_t handle,
-                           const int compute_data_bytes,
-                           const int target_data_bytes, const int total_c,
-                           int *deal_n_ptr, int *threshold_c_ptr,
-                           const bool has_weight, const bool is_half) {
+/*
+ * FocalLossSigmoidBackwrad
+ */
+static void getDealNAndThresholdC(const mluOpHandle_t handle,
+                                  const int compute_data_bytes,
+                                  const int target_data_bytes,
+                                  const int total_c, int *deal_n_ptr,
+                                  int *threshold_c_ptr, const bool has_weight,
+                                  const bool is_half) {
   /* NRAM partition:
    *
    * |-----------------ping pong--------------------|
@@ -242,11 +249,11 @@ void getDealNAndThresholdC(const mluOpHandle_t handle,
   const int nram_split_num = 5;
   const int nram_split_pingpong = 2;
   const int max_nram_size = handle->nram_size;
-  int32_t compute_align_size = NFU_ALIGN_SIZE;
+  int compute_align_size = NFU_ALIGN_SIZE;
   if (is_half) {
     compute_align_size += NFU_ALIGN_SIZE;
   }
-  const int32_t compute_align_num = compute_align_size / compute_data_bytes;
+  const int compute_align_num = compute_align_size / compute_data_bytes;
   // reservered_align_size: including input(ping pong), pt(ping pong),
   //                        alpha_t(ping pong), temp(ping pong),
   //                        output(ping pong), target(ping pong),
@@ -290,10 +297,10 @@ void getDealNAndThresholdC(const mluOpHandle_t handle,
   *threshold_c_ptr = threshold_c;
 }
 
-mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
-                          const mluOpTensorDescriptor_t target_desc,
-                          const mluOpTensorDescriptor_t weight_desc,
-                          const mluOpTensorDescriptor_t output_desc) {
+static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
+                                 const mluOpTensorDescriptor_t target_desc,
+                                 const mluOpTensorDescriptor_t weight_desc,
+                                 const mluOpTensorDescriptor_t output_desc) {
   const std::string interface_name = "[mluOpFocalLossSigmoidBackward]: ";
 
   // check shape
@@ -419,9 +426,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   int deal_n = 0;
   int compute_data_bytes = sizeof(float);
   int target_data_bytes = mluOpDataTypeBytes(target_desc->dtype);
-  int32_t threshold_c = 0;
-  int32_t dim_n = input_desc->dims[0];
-  int32_t dim_c = input_desc->dims[1];
+  int threshold_c = 0;
+  int dim_n = input_desc->dims[0];
+  int dim_c = input_desc->dims[1];
 
   bool is_half = input_desc->dtype == MLUOP_DTYPE_HALF;
   // calculate deal_n and threshold_c
@@ -472,7 +479,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  const int32_t dwidth = mluOpDataTypeBytes(input_desc->dtype);
+  const int dwidth = mluOpDataTypeBytes(input_desc->dtype);
   policyFunc(handle, &k_dim, &k_type);
 
   VLOG(5) << "Launch Kernel MLUBlockFocalLossSigmoidBackward<<<Union"
