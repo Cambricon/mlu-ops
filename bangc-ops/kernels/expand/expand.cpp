@@ -73,18 +73,18 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("[mluOpExpand]", input != NULL);
   PARAM_CHECK("[mluOpExpand]", output != NULL);
 
-  uint64_t dims_input[MLUOP_DIM_MAX];
-  uint64_t dims_output[MLUOP_DIM_MAX];
-  uint64_t redims_input[MLUOP_DIM_MAX + 1];
-  uint64_t redims_output[MLUOP_DIM_MAX + 1];
+  int32_t dims_input[MLUOP_DIM_MAX];
+  int32_t dims_output[MLUOP_DIM_MAX];
+  int32_t redims_input[MLUOP_DIM_MAX + 1];
+  int32_t redims_output[MLUOP_DIM_MAX + 1];
   int32_t count_flag = 0;
   int32_t count_index[MLUOP_DIM_MAX + 1];
 
-  int fix_num = 0;
+  int32_t fix_num = 0;
   size_t input_size = input_num;
 
   // Reshape dims: A(a, b, c) ---> A(1, 1, 1, 1, 1, a, b, c, 1)
-  for (int i = 0; i < MLUOP_DIM_MAX; i++) {
+  for (int32_t i = 0; i < MLUOP_DIM_MAX; ++i) {
     dims_input[i] = 1;
     dims_output[i] = 1;
     redims_input[i] = 1;
@@ -93,19 +93,23 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   redims_input[MLUOP_DIM_MAX] = 1;
   redims_output[MLUOP_DIM_MAX] = 1;
 
-  for (int i = 0; i < input_desc->dim; i++) {
+  for (int32_t i = 0; i < input_desc->dim; ++i) {
     dims_input[MLUOP_DIM_MAX - i - 1] =
         input_desc->dims[input_desc->dim - i - 1];
   }
-  for (int i = 0; i < output_desc->dim; i++) {
+  for (int32_t i = 0; i < output_desc->dim; ++i) {
     dims_output[MLUOP_DIM_MAX - i - 1] =
         output_desc->dims[output_desc->dim - i - 1];
   }
-  while (dims_output[MLUOP_DIM_MAX - 1 - fix_num] == 1) {
-    fix_num++;
+  for (int i = 0; i < MLUOP_DIM_MAX; ++i) {
+    if (dims_output[MLUOP_DIM_MAX - 1 - i] != 1) {
+      break;
+    } else {
+      fix_num++;
+    }
   }
 
-  for (int i = 0; i < MLUOP_DIM_MAX; i++) {
+  for (int32_t i = 0; i < MLUOP_DIM_MAX; ++i) {
     if (dims_output[i] % dims_input[i] != 0) {
       LOG(ERROR) << "[mluOpExpand] In expand dimension, the size of output"
                  << " should be times of the size of input. But now in expand "
@@ -117,7 +121,7 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   }
 
   // Reshape: dims(1, A, 1, 1, B, 1) change to redims(A, 1, B)
-  for (int i = MLUOP_DIM_MAX - 1, j = fix_num; i - j >= 0; i--) {
+  for (int32_t i = MLUOP_DIM_MAX - 1, j = fix_num; i - j >= 0; --i) {
     redims_input[i] = dims_input[i - j];
     redims_output[i] = dims_output[i - j];
     while ((i - j) > 0 && dims_input[i - j] == 1 &&
@@ -129,7 +133,7 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
 
   size_t output_size = output_num;
   // Count how many dims need to expand.
-  for (int i = 0; i < MLUOP_DIM_MAX + 1; i++) {
+  for (int32_t i = 0; i < MLUOP_DIM_MAX + 1; ++i) {
     count_index[i] = 0;
     if (redims_input[i] != redims_output[i]) {
       count_flag += 1;
@@ -162,7 +166,7 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   cnrtFunctionType_t k_type;
 
   k_type = CNRT_FUNC_TYPE_UNION1;
-  int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
+  int32_t core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   int32_t union_number = mluop::runtime::getClusterLimitCapability(handle);
   k_dim.x = core_dim;
   k_dim.y = union_number;
@@ -179,14 +183,14 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   }
 
   if (count_flag == 1) {
-    uint64_t high_num = 1;
-    uint64_t expand_num =
+    int32_t high_num = 1;
+    int32_t expand_num =
         redims_output[count_index[0]] / redims_input[count_index[0]];
-    uint64_t low_num = 1;
-    for (int i = 0; i < count_index[0]; i++) {
+    int32_t low_num = 1;
+    for (int32_t i = 0; i < count_index[0]; ++i) {
       high_num *= redims_output[i];
     }
-    for (int i = count_index[0] + 1; i < MLUOP_DIM_MAX + 1; i++) {
+    for (int32_t i = count_index[0] + 1; i < MLUOP_DIM_MAX + 1; ++i) {
       low_num *= redims_output[i];
     }
     if (redims_input[count_index[0]] != 1) {
@@ -196,9 +200,8 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
             << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
             << k_dim.z << ">>>";
     KERNEL_CHECK((mluOpUnion1KernelExpandOneDim(
-        k_dim, k_type, handle->queue, (void *)input, output, (uint32_t)high_num,
-        (uint32_t)expand_num, (uint32_t)low_num,
-        mluOpDataTypeBytes(data_type))));
+        k_dim, k_type, handle->queue, (void *)input, (void *)output, high_num,
+        expand_num, low_num, mluOpDataTypeBytes(data_type))));
   } else {
     INTERNAL_CHECK("mluOpExpand",
                    MLUOP_STATUS_SUCCESS == policyFunc(handle, &k_dim, &k_type));
@@ -206,15 +209,11 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
             << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
             << k_dim.z << ">>>";
     KERNEL_CHECK((mluOpUnion1KernelExpandTensor(
-        k_dim, k_type, handle->queue, (void *)input, output,
-        (uint32_t)dims_input[0], (uint32_t)dims_input[1],
-        (uint32_t)dims_input[2], (uint32_t)dims_input[3],
-        (uint32_t)dims_input[4], (uint32_t)dims_input[5],
-        (uint32_t)dims_input[6], (uint32_t)dims_input[7],
-        (uint32_t)dims_output[0], (uint32_t)dims_output[1],
-        (uint32_t)dims_output[2], (uint32_t)dims_output[3],
-        (uint32_t)dims_output[4], (uint32_t)dims_output[5],
-        (uint32_t)dims_output[6], (uint32_t)dims_output[7],
+        k_dim, k_type, handle->queue, (void *)input, (void *)output,
+        dims_input[0], dims_input[1], dims_input[2], dims_input[3],
+        dims_input[4], dims_input[5], dims_input[6], dims_input[7],
+        dims_output[0], dims_output[1], dims_output[2], dims_output[3],
+        dims_output[4], dims_output[5], dims_output[6], dims_output[7],
         mluOpDataTypeBytes(input_desc->dtype))));
   }
 

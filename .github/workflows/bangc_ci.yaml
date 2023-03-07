@@ -1,10 +1,41 @@
-name: daily
+name: bangc_ci
 
 on:
-  schedule:
-    - cron: '0 15 * * *'
+  push:
+    branches: [master, r*]
+    paths-ignore:
+      - 'docs/**'
+      - 'bangpy-ops/**'
+      - 'docker/**'
+      - 'samples/**'
+      - 'installer/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - 'CONTRIBUTION.md'
+      - 'CPPLINT.cfg'
+      - 'LICENSE'
+      - 'README.md'
+      - 'bangc-ops/README.md'
+      - 'requirements.txt'
+      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/daily.yaml'
   pull_request:
-    paths:
+    branches: [master, r*]
+    paths-ignore:
+      - 'docs/**'
+      - 'bangpy-ops/**'
+      - 'docker/**'
+      - 'samples/**'
+      - 'installer/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - 'CONTRIBUTION.md'
+      - 'CPPLINT.cfg'
+      - 'LICENSE'
+      - 'README.md'
+      - 'bangc-ops/README.md'
+      - 'requirements.txt'
+      - '.github/workflows/bangc_all_system_ci.yaml'
       - '.github/workflows/daily.yaml'
 
 jobs:
@@ -27,24 +58,11 @@ jobs:
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-ubuntu18.04-${{matrix.cntoolkit_version}}
           ./build.sh --sub_module=bangc
 
-      - name: bangc_ops_release_test_cases
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-ubuntu18.04-${{matrix.cntoolkit_version}}
-          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/default_platform
-
       - name: bangc_ops_release_temp_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
           -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-ubuntu18.04-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/default_platform
-
-      - name: test_bangc_ops_release_test_370_cases
-        if: matrix.runner == 'mlu370-m8'
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-ubuntu18.04-${{matrix.cntoolkit_version}}
-          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/370
 
       - name: test_bangc_ops_release_temp_370_cases
         if: matrix.runner == 'mlu370-m8'
