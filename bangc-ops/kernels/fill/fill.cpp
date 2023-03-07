@@ -95,7 +95,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
         << "[mluOpFill] output_desc only support "
            "bool/int8/uint8/int16/int32/int64/half/"
         << "float/uint64/uint32/uint16 type. Current output data type is "
-        << getNameOfDataType(output_dtype) << ".";
+        << mluop::getNameOfDataType(output_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -114,7 +114,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
     GEN_CASE_DATA(true, "input", NULL, output_desc, 10, 1);
     GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
     if (pointer_mode == MLUOP_POINTER_MODE_DEVICE) {
-      size_t output_dtype_size = getSizeOfDataType(output_desc->dtype);
+      size_t output_dtype_size = mluop::getSizeOfDataType(output_desc->dtype);
       void *value_host = malloc(output_dtype_size);
       cnrtMemcpyAsync(value_host, const_cast<void *>(value), output_dtype_size,
                       handle->queue, CNRT_MEM_TRANS_DIR_DEV2HOST);
@@ -185,7 +185,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
       getTensorShape(output_desc, &output_shape);
       uint32_t value_high = 0, value_low = 0;
       uint64_t host_value = *(uint64_t *)value;
-      getLowAndHighValueFrom64Bits(host_value, &value_high, &value_low);
+      mluop::getLowAndHighValueFrom64Bits(host_value, &value_high, &value_low);
       VLOG(5) << "mluOpFill:Launch Kernel "
                  "MLUUnion1KernelFillHostValueWithStride<<<Union"
               << k_type / CORE_DIM << "," << k_dim.x << ", " << k_dim.y << ", "
@@ -198,7 +198,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
       uint32_t value_high = 0, value_low = 0;
       uint64_t host_value = *(uint64_t *)value;
 
-      getLowAndHighValueFrom64Bits(host_value, &value_high, &value_low);
+      mluop::getLowAndHighValueFrom64Bits(host_value, &value_high, &value_low);
       VLOG(5) << "mluOpFill:Launch Kernel MLUUnion1KernelFillHostValue<<<Union"
               << k_type / CORE_DIM << "," << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>"

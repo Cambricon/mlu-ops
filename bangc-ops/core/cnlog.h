@@ -28,6 +28,7 @@
 #include <fstream>
 #include <string>
 
+namespace mluop {
 namespace cnlog {
 /**
  * @brief: define save in file or not, show on screen or not.
@@ -205,5 +206,6 @@ bool getBoolEnvVar(const std::string &str, bool default_para = false);
 int getLevelEnvVar(const std::string &str, int default_para = false);
 
 }  // namespace cnlog
+}  // namespace mluop
 
 #endif  // CORE_CNLOG_H_

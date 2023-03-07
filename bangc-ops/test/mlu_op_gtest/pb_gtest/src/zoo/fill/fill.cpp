@@ -259,7 +259,7 @@ int64_t FillExecutor::getTheoryOps() {
 int64_t FillExecutor::getTheoryIoSize() {
   auto dtype = parser_->output(0)->dtype;
   int64_t theory_ios =
-      parser_->output(0)->total_count * getSizeOfDataType(dtype);
+      parser_->output(0)->total_count * mluop::getSizeOfDataType(dtype);
   VLOG(4) << "getTheoryIOs: " << theory_ios << " bytes";
   return theory_ios;
 }
