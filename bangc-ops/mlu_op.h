@@ -3135,7 +3135,7 @@ mluOpDiv(mluOpHandle_t handle,
 
 // Group:GenerateProposalsV2
 /*!
- * @brief Gets extra space size that is needed in GenerateProposalsV2 operation.
+ * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
