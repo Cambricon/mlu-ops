@@ -343,6 +343,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     const mluOpTensorDescriptor_t input_grad_desc, const int64_t indice_num[],
     const int64_t inverse, size_t *workspace_size) {
   bool is_zero_element = false;
+  if (workspace_size == NULL) {
+    LOG(ERROR) << "[mluOpGetIndiceConvolutionBackwardDataWorkspaceSize] "
+               << "The pointer workspace_size should not be nullptr.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
   mluOpStatus_t ret =
       foolCheckNoPtr(handle, output_grad_desc, filters_desc, indice_pairs_desc,
                      indice_num, inverse, 0, input_grad_desc, &is_zero_element);
