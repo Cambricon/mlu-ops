@@ -3,6 +3,16 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V0.5.1
+
+  **Date:** March 7, 2023
+
+  **Changes:**
+
+  - Added the following new operations:
+
+     - nms_rotated
+
 * V0.5.0
 
   **Date:** February 20, 2023
