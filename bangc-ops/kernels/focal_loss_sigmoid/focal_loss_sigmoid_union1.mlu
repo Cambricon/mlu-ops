@@ -31,6 +31,8 @@
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
+namespace forward {
+
 /*
  * Functions Table
  * |----------|---------------------------------------------|
@@ -39,11 +41,8 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
  * |  Convert | inplaceConvert                              |
  * |----------|---------------------------------------------|
  * |  I0      | loadInputFwd, loadWeightFwd, storeOutputFwd |
- * |          | loadInputBwd, loadWeightBwd, storeOutputBwd |
  * |----------|---------------------------------------------|
  */
-
-namespace forward {
 template <typename T>
 __mlu_func__ void expf(T *n_dst, T *n_src, const int32_t count) {
   if (sizeof(T) == sizeof(float)) {
@@ -334,25 +333,25 @@ __mlu_func__ void startPipelineFwd(
   /*
    * Pipeline: The pipeline is processed in three stages: Load, Compute, Store.
    *           The allocated memory space of NRAM is divided into two parts:
-   * PING and Pong. In a single time slice, PING is used to process IO stream
-   *           and PONG is used for computation. Both of them are processed
-   *           synchronously until finished.
+   *           PING and Pong. In a single time slice, PING is used to process
+   *           IO stream and PONG is used for computation. Both of them are
+   *           processed synchronously until finished.
    *
    * diagram of PINGPONG:
-   * |--------|-----------------------------------------------------------------|
-   * |        |                              space |
-   * |--------|-----------------------------------------------------------------|
-   * |        |   Ping   |   Pong   |   Ping   |   Pong   |   Ping   |   Pong |
-   * |--------|-----------------------------------------------------------------|
-   * | time 0 |    L0    |          |          |          |          | | | 1 |
-   * C0    |    L1    |          |          |          |          | |      2 |
-   * S0    |    C1    |    L2    |          |          |          | |      3 |
-   * |    S1    |    C2    |    L3    |          |          | |      4 | | | S2
-   * |    C3    |    L4    |          | |      5 |          |          | |    S3
-   * |    C4    |    L5    | |      6 |          |          |          | |    S4
-   * |    C5    | |      7 |          |          |          |          | |    S5
-   * |
-   * |--------|-----------------------------------------------------------------|
+   * |------|-----------------------------------------------------------------|
+   * |      |                              space                              |
+   * |------|-----------------------------------------------------------------|
+   * | time |   Ping   |   Pong   |   Ping   |   Pong   |   Ping   |   Pong   |
+   * |------|-----------------------------------------------------------------|
+   * |  0   |    L0    |          |          |          |          |          |
+   * |  1   |    C0    |    L1    |          |          |          |          |
+   * |  2   |    S0    |    C1    |    L2    |          |          |          |
+   * |  3   |          |    S1    |    C2    |    L3    |          |          |
+   * |  4   |          |          |    S2    |    C3    |    L4    |          |
+   * |  5   |          |          |          |    S3    |    C4    |    L5    |
+   * |  6   |          |          |          |          |    S4    |    C5    |
+   * |  7   |          |          |          |          |          |    S5    |
+   * |------|-----------------------------------------------------------------|
    */
 
   // diagram of PINGPONG: L0
@@ -609,6 +608,15 @@ __mlu_global__ void MLUUnion1KernelFocalLossSigmoidForward(
 }  // namespace forward
 
 namespace backward {
+
+/*
+ * Functions Table
+ * |----------|---------------------------------------------|
+ * |  Math    | sigmoid                                     |
+ * |----------|---------------------------------------------|
+ * |  I0      | loadInputFwd, loadWeightFwd, storeOutputFwd |
+ * |----------|---------------------------------------------|
+ */
 template <typename T>
 __mlu_func__ void sigmoid(T *dst_data, const T *src_data,
                           const int32_t elem_count) {
@@ -1054,7 +1062,7 @@ __mlu_global__ void MLUUnion1KernelFocalLossSigmoidBackward(
 }
 }  // namespace backward
 
-void MLUOP_WIN_API KernelFocalLossSigmoidForwardHalf(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight, const int32_t N,
     const int32_t C, const float alpha, const float gamma, void *output) {
@@ -1063,7 +1071,7 @@ void MLUOP_WIN_API KernelFocalLossSigmoidForwardHalf(
                                  output);
 }
 
-void MLUOP_WIN_API KernelFocalLossSigmoidForwardFloat(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight, const int32_t N,
     const int32_t C, const float alpha, const float gamma, void *output) {
@@ -1072,7 +1080,7 @@ void MLUOP_WIN_API KernelFocalLossSigmoidForwardFloat(
                                  output);
 }
 
-void MLUOP_WIN_API KernelFocalLossSigmoidBackwardHalf(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t dim_n,
@@ -1082,7 +1090,7 @@ void MLUOP_WIN_API KernelFocalLossSigmoidBackwardHalf(
                                  deal_n, dim_c, output);
 }
 
-void MLUOP_WIN_API KernelFocalLossSigmoidBackwardFloat(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t dim_n,

@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -9,30 +20,30 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #include "focal_loss_sigmoid_backward.h"
 
-#include <math.h>
 #include <float.h>
-#include <iostream>
+#include <math.h>
+
 #include <algorithm>
+#include <iostream>
 
 namespace mluoptest {
 
 void FocalLossSigmoidBackwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_focal_loss_sigmoid_backward_param()) {
-    LOG(ERROR) << "Lose focal_loss_sigmoid_backward param. ";
+    LOG(ERROR) << "Lose focal_loss_sigmoid_backward param.";
   }
   if (parser_->getInputNum() != 3 && parser_->getInputNum() != 2) {
-    LOG(ERROR) << "focal_loss_sigmoid_backward input number is wrong. ";
+    LOG(ERROR) << "focal_loss_sigmoid_backward input number is wrong.";
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "focal_loss_sigmoid_backward output number is wrong. ";
+    LOG(ERROR) << "focal_loss_sigmoid_backward output number is wrong.";
   }
 }
 
 void FocalLossSigmoidBackwardExecutor::compute() {
-  VLOG(4) << "FocalLossSigmoidBackwardExecutor compute";
+  VLOG(4) << "FocalLossSigmoidBackwardExecutor compute. ";
   mluOpComputationPreference_t prefer =
       (mluOpComputationPreference_t)parser_->getProtoNode()
           ->focal_loss_sigmoid_backward_param()

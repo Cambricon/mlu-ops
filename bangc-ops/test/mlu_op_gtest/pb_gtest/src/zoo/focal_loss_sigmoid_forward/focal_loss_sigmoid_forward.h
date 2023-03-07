@@ -20,13 +20,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_FOCAL_LOSS_SIGMOID_FORWARD_FOCAL_LOSS_SIGMOID_FORWARD_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_FOCAL_LOSS_SIGMOID_FORWARD_FOCAL_LOSS_SIGMOID_FORWARD_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_FOCAL_LOSS_SIGMOID_\
+FORWARD_FOCAL_LOSS_SIGMOID_FORWARD_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_FOCAL_LOSS_SIGMOID_\
+FORWARD_FOCAL_LOSS_SIGMOID_FORWARD_H_
 
-#include <vector>
+#include <set>
 
 #include "executor.h"
-#include "core/type.h"
 
 namespace mluoptest {
 
@@ -42,7 +43,18 @@ class FocalLossSigmoidForwardExecutor : public Executor {
   void cpuCompute() override;
   int64_t getTheoryOps() override;
   std::set<Evaluator::Formula> getCriterionsUse() const override;
+
+ private:
+  void focalLossSigmoidForwardCpuHighPrecisionDoub(
+      const float *input, const size_t input_num, const float *target,
+      const size_t target_num, const float *weight, const size_t weight_num,
+      const float alpha, const float gamma, float *output);
+  void focalLossSigmoidForwardCpuFast(
+      const float *input, const size_t input_num, const float *target,
+      const size_t target_num, const float *weight, const size_t weight_num,
+      const float alpha, const float gamma, float *output);
 };
 
 }  // namespace mluoptest
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_FOCAL_LOSS_SIGMOID_FORWARD_FOCAL_LOSS_SIGMOID_FORWARD_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_FOCAL_LOSS_SIGMOID_\
+FORWARD_FOCAL_LOSS_SIGMOID_FORWARD_H_

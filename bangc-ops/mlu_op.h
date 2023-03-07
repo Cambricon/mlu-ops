@@ -354,6 +354,18 @@ typedef enum {
   MLUOP_16BIT_INDICES = 1, /*!< The data type of indices is unsigned short. */
 } mluOpIndicesType_t;
 
+/*!
+ * @brief Describes the reduction applied to the output in the implementation of the loss function.
+ */
+typedef enum {
+  MLUOP_LOSS_REDUCTION_NONE = 0,
+  /*!< No reduction is applied in the operation.*/
+  MLUOP_LOSS_REDUCTION_SUM = 1,
+  /*!< The elements of output are summed in the operation.*/
+  MLUOP_LOSS_REDUCTION_MEAN = 2,
+  /*!< The weighted mean of the output is applied in the operation.*/
+} mluOpLossReduction_t;
+
 /******************************************************************************
  * MLUOP Runtime Management
  ******************************************************************************/
@@ -1028,6 +1040,239 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc);
+
+// Group:FocalLossSigmoid
+/*!
+ * @brief Computes cross entropy loss with weighting factor and focusing factor
+ * to reduce the filter of samples which are easy to classify.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * in the ::mluOpFocalLossSigmoidForward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] prefer
+ * An enum to indicate the algorithm used to compute the output.
+ * For detailed information, see ::mluOpComputationPreference_t. Only supports
+ * \p MLUOP_COMPUTATION_HIGH_PRECISION currently.
+ * @param[in] reduction
+ * An enum to indicate the reduction mode used to compute the operation.
+ * For detailed information, see ::mluOpLossReduction_t. Only supports
+ * \p MLUOP_LOSS_REDUCTION_NONE currently.
+ * @param[in] input_desc
+ * The descriptor of input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] target_desc
+ * The descriptor of target tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] target
+ * Pointer to the MLU memory that stores the target tensor which is the target
+ * of input.
+ * @param[in] weight_desc
+ * The descriptor of weight tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] weight
+ * Pointer to the MLU memory that stores the weight tensor. which is the weight
+ * value of input.
+ * @param[in] alpha
+ * A float value which is the weighting factor of the focal loss sigmoid forward.
+ * @param[in] gamma
+ * A float value which is the focusing factor of the focal loss sigmoid forward.
+ * @param[in] output_desc
+ * The descriptor of output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "Focal Loss Sigmoid Forward Operator" section in "Cambricon BANGC OPS User Guide" for details.
+ *
+ * @par Data Type
+ * - The supported data types of input tenspr \b input, \b target, \b weight and output
+ *   tensor \b output are as follows：
+ *   - input: half, float
+ *   - target: int32
+ *   - weight: half, float
+ *   - output: half, float
+ *
+ * @par Scale Limitation
+ * - The shape of \b input must be [N, C].
+ * - The shape of \b input and \b output must be equal.
+ * - The shape of \b target is [N] when the shape of \b input is [N, C].
+ * - The shape of \b weight is [C] when the shape of \b input is [N, C].
+ * - \b input value should be in the range of [-20, 20] when the data type of \b input is float.
+ * - \b input value should be in the range of [-5, 5] when the data type of \b input is half.
+ * - \b target value should be in the range of [0, C] when \b weight is NULL and the shape of
+ *   \b input is [N, C].
+ * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the
+ *   shape of \b input is [N, C].
+ * - \b gamma should be greater than or equal to 0.
+ *
+ * @note
+ * - When input data or parameter contains NaN/infinity:
+ *   - On MLU200 series:
+ *     - If \b input, \b weight, \b alpha or \b gamma is NaN, then \b output is finite value.
+ *     - If \b input, \b weight or \b alpha is infinity, but \b gamma is finite value,
+ *       then \b output is finite value.
+ *     - If \b gamma is positive infinity, but \b input, \b weight and \b alpha are finite value,
+ *       then \b output is finite value.
+ *   - On MLU300 series and CE3226:
+ *     - If \b input is infinity, but \b weight, \b alpha and \b gamma are finite value,
+ *       then \b output is NaN or finite value.
+ *     - If \b weight is positive infinity, but \b input, \b alpha and \b gamma are finite value,
+ *       then \b output is NAN or positive infinity.
+ *     - If \b weight is negative infinity, but \b input, \b alpha and \b gamma are finite value,
+ *       then \b output is NAN or negative infinity.
+ *     - If \b alpha is infinity and data type of \b input is float,
+ *       but \b input, \b weight and \b gamma are finite value,
+ *       then \b output is NAN or infinity.
+ *     - If \b alpha is infinity and data type of \b input is half,
+ *       but \b input, \b weight and \b gamma are finite value,
+ *       then \b output is NAN or finite value.
+ *     - If \b gamma is positive infinity, but \b input, \b weight and \b alpha are finite value,
+ *       then \b output is NAN or 0.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, Piotr Dollar. Proceedings of the IEEE
+ *   International Conference on Computer Vision(ICCV), 2017, oo.2980-2988
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/focal_loss.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
+                             const mluOpComputationPreference_t prefer,
+                             const mluOpLossReduction_t reduction,
+                             const mluOpTensorDescriptor_t input_desc,
+                             const void *input,
+                             const mluOpTensorDescriptor_t target_desc,
+                             const void *target,
+                             const mluOpTensorDescriptor_t weight_desc,
+                             const void *weight,
+                             const float alpha,
+                             const float gamma,
+                             const mluOpTensorDescriptor_t output_desc,
+                             void *output);
+
+// Group:FocalLossSigmoid
+/*!
+ * @brief Computes the gradients of ::mluOpFocalLossSigmoidBackward with \b input tensor,
+ * \b target tensor, \b weight tensor, \b grad_output tensor, and returns the results in
+ * the \b grad_input tensor.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in the ::mluOpFocalLossSigmoidBackward. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] prefer
+ * An enum to indicate the algorithm used to compute the output.
+ * For detailed information, see ::mluOpComputationPreference_t. Only supports
+ * \p MLUOP_COMPUTATION_FAST currently.
+ * @param[in] reduction
+ * An enum to indicate the reduction mode used to compute the operation.
+ * For detailed information, see ::mluOpLossReduction_t. Only supports
+ * \p MLUOP_LOSS_REDUCTION_NONE currently.
+ * @param[in] input_desc
+ * The descriptor of input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] target_desc
+ * The descriptor of target tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] target
+ * Pointer to the MLU memory that stores the target tensor which is the target
+ * of input.
+ * @param[in] weight_desc
+ * The descriptor of weight tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] weight
+ * Pointer to the MLU memory that stores the weight tensor, which is the weight
+ * value of input.
+ * @param[in] grad_output_desc
+ * The descriptor of \b grad_output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the gradient tensor.
+ * @param[in] alpha
+ * A float value which is the weighting factor of the focal loss sigmoid backward.
+ * @param[in] gamma
+ * A float value which is the focusing factor of the focal loss sigmoid backward.
+ * @param[in] grad_input_desc
+ * The descriptor of \b grad_input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_input
+ * Pointer to the MLU memory that stores the \b grad_input tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Formula
+ * - See "Focal Loss Sigmoid Backward Operator" section in "Cambricon BANGC OPS User Guide" for details.
+ *
+ * @par Data Type
+ * - The supported data types of input tenspr \b input, \b target, \b weight and output
+ *   tensor \b output are as follows：
+ *   - input: float
+ *   - target: int32
+ *   - weight: float
+ *   - grad_input: float
+ *   - grad_output: float
+ *
+ * @par Scale Limitation
+ * - The shape of \b input must be [N, C].
+ * - The shape of \b input and \b grad_output must be consistent.
+ * - The shape of \b input and \b grad_input must be consistent.
+ * - The shape of \b target is [N] when the shape of \b input is [N, C].
+ * - The shape of \b weight is [C] when the shape of \b input is [N, C].
+ * - \b target value should be in the range of [0, C] when \b weight is NULL and the shape of
+ *   \b input is [N, C].
+ * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the
+ *   shape of \b input is [N, C].
+ * - prefer only supports MLUOP_COMPUTATION_FAST currently.
+ * - reduction only supports \p MLUOP_LOSS_REDUCTION_NONE currently.
+ * - The layout of \b input, \b target, \b weight, \b grad_output and \b grad_input must be ARRAY.
+ *
+ * @note
+ * - If the shape of \b input is set to [N, C]. The length of C should be in the range of [0, 13615] when
+ *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 12544] when
+ *   \b weight is not NULL on MLU300 series.
+ * - If the shape of \b input is set to [N, C]. The length of C should be in the range of [0, 8154] when
+ *   \b weight is NULL on MLU200 series. The length of C should be in the range of [0, 7520] when
+ *   \b weight is not NULL on MLU200 series.
+ * - \b weight does not support positive infinity and negative infinity currently.
+ * - \b grad_output does not support positive infinity and negative infinity currently.
+ * - \b gamma should be in the range of [0, 8] on MLU200 series, and should be in the range of [0, 10000]
+ *   on MLU300 series.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/focal_loss.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
+                              const mluOpComputationPreference_t prefer,
+                              const mluOpLossReduction_t reduction,
+                              const mluOpTensorDescriptor_t input_desc,
+                              const void *input,
+                              const mluOpTensorDescriptor_t target_desc,
+                              const void *target,
+                              const mluOpTensorDescriptor_t weight_desc,
+                              const void *weight,
+                              const float alpha,
+                              const float gamma,
+                              const mluOpTensorDescriptor_t output_desc,
+                              void *output);
 
 // Group:GetIndicePairs
 /*!
@@ -1728,7 +1973,6 @@ mluOpGetTensorDescriptor(
  * ::mluOpCreateTensorDescriptor and sets the information about the dimensions, data type,
  * stride and layout of input tensor with ::mluOpSetTensorDescriptorEx.
  *
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * @param[in] desc
  * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] layout
@@ -1743,42 +1987,6 @@ mluOpGetTensorDescriptor(
  * An array that contains the size of the tensor for each dimension.
  * @param[out] dimStride
  * An array that contains the stride of the tensor for each dimension.
-=======
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * ::mluOpRoiAlignRotatedForward operation. For detailed information, see ::mluOpHandle_t.
- * @param[in] features_desc
- * The descriptor of the features tensor.
- * @param[in] features
- * Pointer to the MLU memory that stores the features tensor. The shape of \b features
- * is [batch_num, H, W, C].
- * @param[in] rois_desc
- * The descriptor of rois tensor, which contains dimension and the layout of rois.
- * For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] rois
- * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists of [batch_id,
- * x, y, w, h, theta], where \p batch_id is the ID of the batch, \p x and \p y are the coordinate
- * of center point, \p w and \p h are the width and height of rois, and \p theta is the rotated
- angle.
- * @param[in] pooled_height
- * The height of output.
- * @param[in] pooled_width
- * The width of output.
- * @param[in] sample_ratio
- * The number of sampling points in the bin which is used to compute the output.
- * @param[in] spatial_scale
- * The spatial scale of each ROI in the output.
- * @param[in] aligned
- * A boolean value which determines whether to shift the ROI by 0.5 pixel. If the
- * value of \b aligned is set to true, the ROI is shifted by 0.5. If the value of \b aligned
- * is set to false, the ROI is not shifted.
- * @param[in] clockwise
- * A boolean value which determines whether the rotation of ROI is clockwise.
- * @param[out] output_desc
- * The descriptor of output, which contains dimension and the layout of output.
- * @param[out] output
- * Pointer to the MLU memory that stores the output tensor.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -1790,30 +1998,7 @@ mluOpGetTensorDescriptor(
  * - None.
  *
  * @par Scale Limitation
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * - None.
-=======
- * - The \b features tensor and \b output tensor should be 4D.
- * - The half data type is not recommended due to low precision.
- * - Size of the lowest dimension of \b features tensor and \b output tensor should be the same.
- * - The \b rois tensor should be 2D array.
- * - Size of the highest dimension of \b output tensor and \b rois tensor should be the same.
- * - The shape of \b rois should be [rois_num, 6].
- * - \p batch_id should be in the range of [0, \p batch_num - 1]; \p x and \p y should be greater
- than or
- *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater
- than zero
- *   and less than \p H and \p W respectively.
- * - \p spatial_scale and \p sample_ratio should not be less than zero.
- *
- * @note
- * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y
- parameters
- *   that support infinity.
- * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p
- spatial_scale cannot exceed
- *   the range that can be represented by the parameter type.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par API Dependency
  * - None.
@@ -1823,51 +2008,18 @@ mluOpGetTensorDescriptor(
  *   dimension.
  *
  * @par Example
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * - None.
-=======
- * - The example of the roi_align_rotated_forward operation is as follows:
-     @verbatim
-     input two arrays by 1 * 3 * 3 * 1 and 1 * 6 --> input:
- [[[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]],[[1.0],[1.0],[1.0]]]]
-
-     --> rois: [[0.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
-
-     param:
-            pooled_height: 2, pooled_width: 2, spatial_scale: 1.0,
-            sampling_ratio: 2, aligned: false, clockwise: false
-
-     output array by 1 * 2 * 2 * 1 -->
-         output: [[[[1],[1]],[[1],[1]]]]
-     @endverbatim
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Reference
  * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
 mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
                            mluOpTensorLayout_t *layout,
                            mluOpDataType_t *dtype,
                            int *dimNb,
                            int dimSize[],
                            int dimStride[]);
-=======
-mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
-                            const mluOpTensorDescriptor_t features_desc,
-                            const void *features,
-                            const mluOpTensorDescriptor_t rois_desc,
-                            const void *rois,
-                            const int pooled_height,
-                            const int pooled_width,
-                            const int sample_ratio,
-                            const float spatial_scale,
-                            const bool aligned,
-                            const bool clockwise,
-                            const mluOpTensorDescriptor_t output_desc,
-                            void *output);
->>>>>>> [Feature](bangc-ops): add focal_loss
 
 // Group:Tensor
 /*!
@@ -1888,33 +2040,10 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Scale Limitation
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * - None.
  *
  * @par API Dependency
  * - None.
-=======
- * - The \b bottom_grad tensor and \b top_grad tensor should be 4D.
- * - The half data type is not recommended due to low precision.
- * - Size of the lowest dimension of \b bottom_grad tensor and \b top_grad tensor should be the
- same.
- * - The \b rois tensor should be 2D array.
- * - Size of the highest dimension of \b top_grad tensor and \b rois tensor should be the same.
- * - \p batch_id should be in the range of [0, \p batch_num - 1], \p x and \p y should be greater
- than or
- *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater
- than zero
- *   and less than \p H and \p W respectively.
- * - \p spatial_scale and \p sample_ratio should not be less than zero.
- *
- * @note
- * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y
- parameters
- *   that support infinity.
- * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p
- spatial_scale cannot exceed
- *   the range that can be represented by the parameter type.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Note
  * - None.
@@ -1933,25 +2062,8 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
 size_t MLUOP_WIN_API
 mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
-=======
-mluOpStatus_t MLUOP_WIN_API
-mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
-                             const mluOpTensorDescriptor_t top_grad_desc,
-                             const void *top_grad,
-                             const mluOpTensorDescriptor_t rois_desc,
-                             const void *rois,
-                             const int pooled_height,
-                             const int pooled_width,
-                             const int sample_ratio,
-                             const float spatial_scale,
-                             const bool aligned,
-                             const bool clockwise,
-                             const mluOpTensorDescriptor_t bottom_grad_desc,
-                             void *bottom_grad);
->>>>>>> [Feature](bangc-ops): add focal_loss
 
 // Group:Tensor
 /*!
@@ -2040,29 +2152,10 @@ mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *positi
  *
  * @param[in] desc
  * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * @param[out] position
  * Pointer to the MLU memory that holds information about fixed position used for quantization.
  * @param[out] scale
  * Pointer to the MLU memory that holds information about scale factor used for quantization.
-=======
- * @param[in] input
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] bboxes_desc
- * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor.
- * For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] bboxes
- * Pointer to the MLU memory that stores the bboxes tensor.
- * @param[in] spatial_scale
- * A float value that is the scale factor of coordinates of bboxes.
- * @param[in] points
- * An int value that is the number of sample points. Only 1 and 5 are supported. The default value
- is 1.
- * @param[in] output_desc
- * The descriptor of output tensor, which contains the dimension and layout of output tensor.
- * @param[out] output
- * Pointer to the MLU memory that stores the output tensor.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -2096,7 +2189,6 @@ mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc, int
  * @brief Gets the \b position, \b scale and \b offset factors to the descriptor \b desc of
  * fixed-point data in fixed-point quantization.
  *
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * @param[in] desc
  * The descriptor of the tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
@@ -2106,30 +2198,6 @@ mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc, int
  * A host pointer of scale factor that is used for quantization.
  * @param[in] offset
  * A host pointer of offset factor that is used for quantization.
-=======
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * ::mluOpRotatedFeatureAlignBackward operation. For detailed information, see ::mluOpHandle_t.
- * @param[in] top_output_desc
- * The descriptor of the top_output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] top_output
- * Pointer to the MLU memory that stores the top_output tensor.
- * @param[in] bboxes_desc
- * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor. For detailed
- * information, see ::mluOpTensorDescriptor_t.
- * @param[in] bboxes
- * Pointer to the MLU memory that stores the bboxes tensor.
- * @param[in] spatial_scale
- * A float value that is the scale factor of coordinates of bboxes.
- * @param[in] points
- * An int value that is the number of sample points. Only 1 and 5 are supported. The default value
- * is 1.
- * @param[in] bottom_input_desc
- * The descriptor of bottom_input tensor, which contains the dimension and layout of bottom_input
- * tensor.
- * @param[out] bottom_input
- * Pointer to the MLU memory that stores the bottom_input tensor.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -2239,136 +2307,12 @@ mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const 
  * The number of tensors of tensor set is jointly determined by \b setDimNb and \b setDimSize.
  * Use ::mluOpInitTensorSetMemberDescriptor to set information for descriptor.
  *
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * @param[out] tensorSetDesc
  * Pointer to the memory that holds information about the descriptor of tensor set.
  * @param[in] setDimNb
  * The number of dimensions of the tensor set.
  * @param[in] setDimSize
  * An array that contains the number of the tensors for each dimension of the tensor set.
-=======
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
- * and queues in the voxelization operation.
- * @param[in] points_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] voxel_size_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] coors_range_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] max_points
- * An integer value which is the maximum number of points contained
- * in a voxel.
- * @param[in] max_voxels
- * An integer value which is the maximum number of voxels this
- * function has created.
- * @param[in] NDim
- * An integer value which is the second dimension of coors.
- * @param[in] deterministic
- * A bool value whether to invoke the non-deterministic
- * version of hard-voxelization implementations. Currently,
- * non-deterministic mode is not supported.
- * @param[in] voxels_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] coors_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] num_points_per_voxel_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] voxel_num_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- *  @param[out] size
- *  A host pointer to the returned size of extra space in bytes.
- *
- *  @par Return
- *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *    ::MLUOP_STATUS_NOT_SUPPORTED
- */
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
-                                  const mluOpTensorDescriptor_t points_desc,
-                                  const mluOpTensorDescriptor_t voxel_size_desc,
-                                  const mluOpTensorDescriptor_t coors_range_desc,
-                                  const int32_t max_points,
-                                  const int32_t max_voxels,
-                                  const int32_t NDim,
-                                  const bool deterministic,
-                                  const mluOpTensorDescriptor_t voxels_desc,
-                                  const mluOpTensorDescriptor_t coors_desc,
-                                  const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-                                  const mluOpTensorDescriptor_t voxel_num_desc,
-                                  size_t *size);
-
-// Group:Voxelization
-/*!
- * @brief Generates voxelization of input tensor \b points. Output tensor
- * \b voxels contains points in voxels; \b coors is the voxel coordinates;
- * \b num_points_per_voxel is the number of points per voxel; \b voxel_num
- * is the number of voxels.
- *
- * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the voxelization operation. For detailed information, see
- * ::mluOpHandle_t.
- * @param[in] points_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] points
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] voxel_size_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] voxel_size
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] coors_range_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[in] coors_range
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] max_points
- * An integer value which is the maximum number of points contained
- * in a voxel.
- * @param[in] max_voxels
- * An integer value which is the maximum number of voxels this
- * function create.
- * @param[in] NDim
- * An integer value which is the second dimension of coors.
- * @param[in] deterministic
- * A bool value whether to invoke the non-deterministic
- * version of hard-voxelization implementations. Currently,
- * non-deterministic mode is not supported.
- * @param[in] workspace
- * Pointer to the MLU memory that stores the extra workspace.
- * @param[in] workspace_size
- * The size of extra space.
- * @param[in] voxels_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[out] voxels
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] coors_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[out] coors
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] num_points_per_voxel_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[out] num_points_per_voxel
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] voxel_num_desc
- * The descriptor of the tensors. For detailed information, see
- * ::mluOpTensorDescriptor_t.
- * @param[out] voxel_num
- * Pointer to the MLU memory that stores the input tensor.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -2400,34 +2344,7 @@ mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet, const int setDimNb, const int setDimSize[]);
 
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
 // Group:TensorSet
-=======
-mluOpStatus_t MLUOP_WIN_API
-mluOpVoxelization(mluOpHandle_t handle,
-                  const mluOpTensorDescriptor_t points_desc,
-                  const void *points,
-                  const mluOpTensorDescriptor_t voxel_size_desc,
-                  const void *voxel_size,
-                  const mluOpTensorDescriptor_t coors_range_desc,
-                  const void *coors_range,
-                  const int32_t max_points,
-                  const int32_t max_voxels,
-                  const int32_t NDim,
-                  const bool deterministic,
-                  void *workspace,
-                  size_t workspace_size,
-                  const mluOpTensorDescriptor_t voxels_desc,
-                  void *voxels,
-                  const mluOpTensorDescriptor_t coors_desc,
-                  void *coors,
-                  const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-                  void *num_points_per_voxel,
-                  const mluOpTensorDescriptor_t voxel_num_desc,
-                  void *voxel_num);
-
-// Group:YoloBox
->>>>>>> [Feature](bangc-ops): add focal_loss
 /*!
  * @brief Retrieves a tensor set descriptor \b tensorSetDesc that is previously created
  * with the ::mluOpCreateTensorSetDescriptor function.
@@ -2482,17 +2399,11 @@ mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setdi
  * - None.
  *
  * @par Data Layout
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * - None.
-=======
- *  - The supported data layouts of \b geom_xyz, \b input_features, \b output_features and \b
- * pos_memo are as follows:
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Scale Limitation
  * - None.
  *
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * @par API Dependency
  * - None.
  *
@@ -2508,49 +2419,6 @@ mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setdi
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
-=======
- *  @par Scale Limitation
- *  - The geom_xyz tensor, input_features tensor and pos_memo tensor must be 3D.
- *  - The output_features tensor must be 4D.
- *  - The shape of \b geom_xyz should be [batch_size, num_points, 3].
- *  - The shape of \b input_features should be [batch_size, num_points, num_channels].
- *  - The shape of \b output_features should be [batch_size, num_voxel_y, num_voxel_x,
- * num_channels].
- *  - The shape of \b pos_memo should be [batch_size, num_points, 3].
- *  - The \b batch_size, \b num_points, \b num_channels, \b num_voxel_x and \b num_voxel_y should be
- * larger than zero.
- *
- *  @par Requirements
- *  - None.
- *
- *  @par Example
- *  - None.
- *
- *  @par Note
- *  - The operation does not support MLU200 series.
- *  - You need to set the initial value for the output \b pos_memo before calling the operation, and initialize it to a negative number.
- *
- * @par Reference
- * -
- * https://github.com/Megvii-BaseDetection/BEVDepth/blob/main/bevdepth/ops/voxel_pooling/src/voxel_pooling_forward_cuda.cu
- */
-mluOpStatus_t MLUOP_WIN_API
-mluOpVoxelPoolingForward(mluOpHandle_t handle,
-                         const int batch_size,
-                         const int num_points,
-                         const int num_channels,
-                         const int num_voxel_x,
-                         const int num_voxel_y,
-                         const int num_voxel_z,
-                         const mluOpTensorDescriptor_t geom_xyz_desc,
-                         const void *geom_xyz,
-                         const mluOpTensorDescriptor_t input_features_desc,
-                         const void *input_features,
-                         const mluOpTensorDescriptor_t output_features_desc,
-                         void *output_features,
-                         const mluOpTensorDescriptor_t pos_memo_desc,
-                         void *pos_memo);
->>>>>>> [Feature](bangc-ops): add focal_loss
 
 // Group:TensorSet
 /*!
@@ -3476,16 +3344,10 @@ mluOpCarafeBackward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
-<<<<<<< 6885ffe4812103153daa0c53c3625534d7e1b2bf
  * - Data type of input tensors and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - output tensor: half, float
-=======
- * - The supported data types of input tensor \b x and output tensor \b y are as follows
- *   - dy: float.
- *   - dx: float.
->>>>>>> [Feature](bangc-ops): add focal_loss
  *
  * @par Data Layout
  * - None.
@@ -5593,7 +5455,7 @@ mluOpNmsRotated(mluOpHandle_t handle,
  *
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/bbox_overlaps_cuda.cu
- */
+ */
 mluOpStatus_t MLUOP_WIN_API
 mluOpBboxOverlaps(mluOpHandle_t handle,
                   const int mode,

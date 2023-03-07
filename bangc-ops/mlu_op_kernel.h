@@ -52,6 +52,7 @@ struct mluOpRoiAlignRotatedParams {
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
@@ -59,6 +60,7 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsFloatFast(
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineAbsHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineAbsFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
@@ -116,9 +118,11 @@ void MLUOP_WIN_API mluOpBlockKernelCarafeBackwardHalf(
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivHalfHighAcc(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineDivFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *y, void *z, int num);
@@ -133,24 +137,29 @@ void MLUOP_WIN_API mluOpBlockKernelFillZeroByte(cnrtDim3_t k_dim,
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineLogHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineLogHalfHighAcc(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineLogFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
 
+
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
+
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogHalfHighAcc(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
+
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineLogFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num, float coef);
 
-/* generate_proposals_v2 */
+/* GenerateProposalsV2 */
 void MLUOP_WIN_API mluOpUBestKernelGenerateProposalsV2Float(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *scores, const float *bbox_deltas, const float *im_shape,
@@ -289,6 +298,7 @@ void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
     const void *features, const void *rois, const int batch, const int height,
     const int width, const int channel, const int rois_num,
     const mluOpRoiAlignRotatedParams rroiAlignParams, void *output);
+
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *features, const void *rois, const int batch, const int height,
@@ -300,6 +310,7 @@ void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardFloat(
     const void *top_grad, const void *rois, const int batch, const int height,
     const int width, const int channel, const int rois_num,
     const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad);
+
 void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *top_grad, const void *rois, const int batch, const int height,
@@ -325,6 +336,7 @@ void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardFloat(
     const void *input, const void *bboxes, const int batches, const int height,
     const int width, const int channels, const int offset_rois,
     const float spatial_scale, const int points, void *output);
+
 void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *bboxes, const int batches, const int height,
@@ -337,6 +349,7 @@ void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardFloat(
     const int height, const int width, const int channels,
     const int offset_rois, const float spatial_scale, const int points,
     void *bottom_input);
+
 void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *top_output, const void *bboxes, const int batches,
@@ -348,9 +361,11 @@ void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardHalf(
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfHighAcc(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
@@ -358,9 +373,11 @@ void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtFloatFast(
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfHighAcc(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, void *y, int num);
@@ -369,6 +386,7 @@ void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtFloatFast(
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *y, const void *diff_y, void *x, int num);
+
 void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *y, const void *diff_y, void *x, int num);
@@ -424,26 +442,28 @@ void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
     const uint32_t expand_num, const uint32_t low_num, const int dtype_size);
 
 /* FocalLossSigmoid */
-void MLUOP_WIN_API KernelFocalLossSigmoidForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *target, const void *weight, const int32_t N,
-    const int32_t C, const float alpha, const float gamma, void *output);
-void MLUOP_WIN_API KernelFocalLossSigmoidForwardFloat(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight, const int32_t N,
     const int32_t C, const float alpha, const float gamma, void *output);
 
-void MLUOP_WIN_API KernelFocalLossSigmoidBackwardHalf(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, const void *target, const void *weight, const int32_t N,
+    const int32_t C, const float alpha, const float gamma, void *output);
+
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t dim_n,
     const int32_t deal_n, const int32_t dim_c, void *output);
 
-void MLUOP_WIN_API KernelFocalLossSigmoidBackwardFloat(
+void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t dim_n,
     const int32_t deal_n, const int32_t dim_c, void *output);
+
 /* Psamask */
 typedef enum {
   COLLECT = 0,

@@ -20,14 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
-#include <algorithm>
-#include <vector>
-#include <string>
-#include <memory>
-
-#include "focal_loss_sigmoid_forward_cpu.h"
 #include "focal_loss_sigmoid_forward.h"
+
+#include <string>
 
 namespace mluoptest {
 
@@ -56,9 +51,9 @@ mluOpLossReduction_t FocalLossSigmoidForwardExecutor::getLossReduction() {
     case LossReduction::LOSS_REDUCTION_SUM: {
       return mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_SUM;
     } break;
-    default:
+    default: {
       break;
-      ;
+    }
   }
   return mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_NONE;
 }
@@ -109,6 +104,97 @@ void FocalLossSigmoidForwardExecutor::compute() {
   interface_timer_.stop();
 }
 
+void FocalLossSigmoidForwardExecutor::focalLossSigmoidForwardCpuFast(
+    const float *input, const size_t input_num, const float *target,
+    const size_t target_num, const float *weight, const size_t weight_num,
+    const float alpha, const float gamma, float *output) {
+  size_t N = target_num;
+  size_t C = input_num / target_num;
+
+  if (weight_num == 0) {
+    for (int i = 0; i < input_num; ++i) {
+      int32_t row_num = i / C;
+      int32_t col_num = i % C;
+      int32_t t = target[row_num];
+      float p = 1. / (1. + exp(-input[i]));
+      float temp_p = pow(1. - p, gamma) * log(fmax(p, FLT_MIN));
+      float temp_n = pow(p, gamma) * log(fmax(1. - p, FLT_MIN));
+      if (t == col_num) {
+        output[i] = -alpha * temp_p;
+      } else {
+        output[i] = -(1 - alpha) * temp_n;
+      }
+    }
+
+  } else {
+    for (int i = 0; i < input_num; ++i) {
+      int32_t row_num = i / C;
+      int32_t col_num = i % C;
+      int32_t t = target[row_num];
+      float p = 1. / (1. + exp(-input[i]));
+      float temp_p = pow(1. - p, gamma) * log(fmax(p, FLT_MIN));
+      float temp_n = pow(p, gamma) * log(fmax(1. - p, FLT_MIN));
+      if (t == col_num) {
+        output[i] = -alpha * temp_p;
+      } else {
+        output[i] = -(1 - alpha) * temp_n;
+      }
+      output[i] *= weight[t];
+    }
+  }
+}
+
+void FocalLossSigmoidForwardExecutor::
+    focalLossSigmoidForwardCpuHighPrecisionDoub(
+        const float *input, const size_t input_num, const float *target,
+        const size_t target_num, const float *weight, const size_t weight_num,
+        const float alpha, const float gamma, float *output) {
+  double focal_loss_temp = 0.0;
+  size_t N = target_num;
+  size_t C = input_num / target_num;
+  double alpha_double = double(alpha);
+  double gamma_double = double(gamma);
+
+  if (weight_num == 0) {
+    for (int i = 0; i < input_num; ++i) {
+      int32_t row_num = i / C;
+      int32_t col_num = i % C;
+      int32_t t = target[row_num];
+      double x = double(input[i]);
+      double p = 1. / (1. + exp(-x));
+      double temp_p = pow(1. - p, gamma_double) * log(fmax(p, DBL_MIN));
+      double temp_n = pow(p, gamma_double) * log(fmax(1. - p, DBL_MIN));
+      if (t == col_num) {
+        focal_loss_temp = -alpha_double * temp_p;
+      } else {
+        focal_loss_temp = -(1 - alpha_double) * temp_n;
+      }
+      output[i] = float(focal_loss_temp);
+    }
+
+  } else {
+    for (int i = 0; i < input_num; ++i) {
+      int32_t row_num = i / C;
+      int32_t col_num = i % C;
+      int32_t t = target[row_num];
+      double x = double(input[i]);
+      double p = 1. / (1. + exp(-x));
+      double temp_p = pow(1. - p, gamma_double) * log(fmax(p, DBL_MIN));
+      double temp_n = pow(p, gamma_double) * log(fmax(1. - p, DBL_MIN));
+      if (t == col_num) {
+        focal_loss_temp = -alpha_double * temp_p;
+      } else {
+        focal_loss_temp = -(1 - alpha_double) * temp_n;
+      }
+      output[i] = float(focal_loss_temp);
+      output[i] *= weight[t];
+
+      double pow_temp = pow(1. - p, gamma);
+      double log_temp = log(fmax(p, DBL_MIN));
+    }
+  }
+}
+
 void FocalLossSigmoidForwardExecutor::cpuCompute() {
   // get params
   auto focal_proto_desc =
@@ -121,33 +207,49 @@ void FocalLossSigmoidForwardExecutor::cpuCompute() {
   // get inputs
   float *input = cpu_fp32_input_[0];
   float *target = cpu_fp32_input_[1];
-  auto input_count = parser_->getInputDataCount(0);
-  auto target_count = parser_->getInputDataCount(1);
+  auto input_num = parser_->getInputDataCount(0);
+  auto target_num = parser_->getInputDataCount(1);
 
   float *weight = nullptr;
-  int32_t weight_count = 0;
+  int32_t weight_num = 0;
   if (cpu_fp32_input_.size() > 2) {
     weight = cpu_fp32_input_[2];
-    weight_count = parser_->getInputDataCount(2);
+    weight_num = parser_->getInputDataCount(2);
   }
   float *output = cpu_fp32_output_[0];
-  auto output_count = parser_->getOutputDataCount(0);
+  auto output_num = parser_->getOutputDataCount(0);
 
-  VLOG(5) << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
-  focalLossSigmoidForwardCpu(prefer, reduction, input, input_count, target,
-                             target_count, weight, weight_count, alpha, gamma,
-                             output);
+  VLOG(5)
+      << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu....2017";
+  {
+    switch (prefer) {
+      case ComputationPreference::COMPUTATION_FAST: {
+        VLOG(5) << "[focalLossSigmoidForwardCpu] call Fast.";
+        focalLossSigmoidForwardCpuFast(input, input_num, target, target_num,
+                                       weight, weight_num, alpha, gamma,
+                                       output);
+      }; break;
+      case ComputationPreference::COMPUTATION_HIGH_PRECISION: {
+        VLOG(5) << "[focalLossSigmoidForwardCpu] call HighPrecision.";
+        focalLossSigmoidForwardCpuHighPrecisionDoub(
+            input, input_num, target, target_num, weight, weight_num, alpha,
+            gamma, output);
+      }; break;
+      default:
+        LOG(ERROR) << "[focalLossSigmoidForwardCpu] not Implemented.";
+    }
+  }
 }
 
 int64_t FocalLossSigmoidForwardExecutor::getTheoryOps() {
   // the shape of input is [N,C].
-  size_t input_count = parser_->getInputDataCount(0);
+  size_t input_num = parser_->getInputDataCount(0);
   size_t N = parser_->getInputDataCount(1);
-  int64_t theory_ops = 10 * input_count + 9 * N;
+  int64_t theory_ops = 10 * input_num + 9 * N;
 
   // with weight
   if (parser_->getInputNum() > 2) {
-    theory_ops += input_count;
+    theory_ops += input_num;
   }
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;

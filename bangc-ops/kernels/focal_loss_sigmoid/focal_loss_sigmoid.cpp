@@ -29,10 +29,8 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-
-#include "mlu_op.h"
 #include "kernels/kernel.h"
-
+#include "mlu_op.h"
 #include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -88,22 +86,23 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
   // check dtype
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
     LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
-               << "But now input_dtype is " << getNameOfDataType(input_dtype)
-               << ".";
+               << "But now input_dtype is "
+               << mluop::getNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << interface_name << "Type of target should be INT32. "
-               << "But now target_dtype is " << getNameOfDataType(input_dtype)
-               << ".";
+               << "But now target_dtype is "
+               << mluop::getNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_dtype != input_dtype) {
     LOG(ERROR) << interface_name
                << "Both types of input and output should be equal. "
-               << "But now input_dtype is " << getNameOfDataType(input_dtype)
-               << ", "
-               << "output_dtype is " << getNameOfDataType(output_dtype) << ".";
+               << "But now input_dtype is "
+               << mluop::getNameOfDataType(input_dtype) << ", "
+               << "output_dtype is " << mluop::getNameOfDataType(output_dtype)
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -112,10 +111,10 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
     if (weight_desc->dtype != input_dtype) {
       LOG(ERROR) << interface_name
                  << "Both types of weight and output should be equal. "
-                 << "But now input_dtype is " << getNameOfDataType(input_dtype)
-                 << ", "
-                 << "weight_dtype is " << getNameOfDataType(weight_desc->dtype)
-                 << ".";
+                 << "But now input_dtype is "
+                 << mluop::getNameOfDataType(input_dtype) << ", "
+                 << "weight_dtype is "
+                 << mluop::getNameOfDataType(weight_desc->dtype) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (weight_desc->dim != 1) {
@@ -211,17 +210,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
 
   // Launch Kernel
   const uint64_t core_dim = handle->core_num_per_cluster;
-  const int32_t dwidth = mluOpDataTypeBytes(input_desc->dtype);
   VLOG(5) << "Launch Kernel MLUKernelFocalLossSigmoidForward<<<Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelFocalLossSigmoidForwardHalf(k_dim, k_type, handle->queue,
-                                                  input, target, weight, N, C,
-                                                  alpha, gamma, output)));
+  if (input_desc->dtype == MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidForwardHalf(
+        k_dim, k_type, handle->queue, input, target, weight, N, C, alpha, gamma,
+        output)));
+  } else {
+    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidForwardFloat(
+        k_dim, k_type, handle->queue, input, target, weight, N, C, alpha, gamma,
+        output)));
+  }
 
-  KERNEL_CHECK((KernelFocalLossSigmoidForwardFloat(k_dim, k_type, handle->queue,
-                                                   input, target, weight, N, C,
-                                                   alpha, gamma, output)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -333,14 +334,14 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK(interface_name, input_desc->dtype == output_desc->dtype);
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
     LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
-               << "But now input_dtype is " << getNameOfDataType(input_dtype)
-               << ".";
+               << "But now input_dtype is "
+               << mluop::getNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << interface_name << "The data type of target should be int32, "
-               << "but now target dtype is " << getNameOfDataType(target_dtype)
-               << ".";
+               << "but now target dtype is "
+               << mluop::getNameOfDataType(target_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -361,10 +362,10 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
     if (weight_desc->dtype != input_dtype) {
       LOG(ERROR) << interface_name
                  << "Both types of weight and output should be equal. "
-                 << "But now input_dtype is " << getNameOfDataType(input_dtype)
-                 << ", "
-                 << "weight_dtype is " << getNameOfDataType(weight_desc->dtype)
-                 << ".";
+                 << "But now input_dtype is "
+                 << mluop::getNameOfDataType(input_dtype) << ", "
+                 << "weight_dtype is "
+                 << mluop::getNameOfDataType(weight_desc->dtype) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
@@ -389,8 +390,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   PARAM_CHECK(interface_name, target_desc != NULL);
   PARAM_CHECK(interface_name, output_desc != NULL);
 
-  if (checkParams(input_desc, target_desc, weight_desc,
-                  output_desc) != MLUOP_STATUS_SUCCESS) {
+  if (checkParams(input_desc, target_desc, weight_desc, output_desc) !=
+      MLUOP_STATUS_SUCCESS) {
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (prefer != mluOpComputationPreference_t::MLUOP_COMPUTATION_FAST) {
@@ -478,11 +479,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   if (dwidth == 2) {
-    KERNEL_CHECK((KernelFocalLossSigmoidBackwardHalf(
+    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidBackwardHalf(
         k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
         dim_n, deal_n, dim_c, output)));
   } else {
-    KERNEL_CHECK((KernelFocalLossSigmoidBackwardFloat(
+    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidBackwardFloat(
         k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
         dim_n, deal_n, dim_c, output)));
   }
