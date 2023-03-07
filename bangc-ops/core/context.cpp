@@ -58,8 +58,8 @@ mluOpDevType_t convertDeviceName(char *name) {
   for (int i = 0; i < num; i++) {
     pName = &name_list_table[i];
     if (0 == strncmp(pName->name, name, strlen(pName->name)) ||
-        i == num - 1 &&
-            0 >= strncmp(pName->name, name, CONTEXT_DEVICENAME_LEAST_SIZE)) {
+        (i == num - 1 &&
+         0 >= strncmp(pName->name, name, CONTEXT_DEVICENAME_LEAST_SIZE))) {
       return pName->type;
     }
   }
