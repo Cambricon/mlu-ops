@@ -39,8 +39,18 @@ struct TensorShape {
 
 bool strideCaseWithNotConsistentDense(int tensor_num, ...);
 
+bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc);
+
+bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc);
+
+bool isTransPadStride(TensorShape &tensor_shape, int *dims, int *strides);
+
 void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
                     TensorShape *tensor_shape);
+
+void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
+                          int *target_shape, int target_dim,
+                          TensorShape *tensor_shape);
 
 mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
