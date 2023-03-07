@@ -90,9 +90,10 @@ class nms_rotated : public testing::Test {
   }
 
   mluOpStatus_t compute() {
-    mluOpStatus_t status = mluOpNmsRotated(
-        handle_, iou_threshold_, boxes_desc_, boxes_, scores_desc_, scores_,
-        workspace_, workspace_size_, output_desc_, output_, result_num_);
+    mluOpStatus_t status =
+        mluOpNmsRotated(handle_, iou_threshold_, boxes_desc_, boxes_,
+                        scores_desc_, scores_, workspace_, workspace_size_,
+                        output_desc_, output_, (int32_t*)result_num_);
     destroy();
     return status;
   }

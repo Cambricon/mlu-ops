@@ -32,7 +32,7 @@
 #include "mlu_op.h"
 
 namespace mluopapitest {
-class poly_nms_workspace : public testing::Test {
+class nms_rotated_workspace : public testing::Test {
  public:
   void setParam(bool handle, bool boxes_desc, bool size) {
     if (handle) {
@@ -82,7 +82,7 @@ TEST_F(nms_rotated_workspace, BAD_PARAM_handle_null) {
     setParam(false, true, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
-    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in poly_nms";
+    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in nms_rotated";
   }
 }
 
@@ -91,7 +91,7 @@ TEST_F(nms_rotated_workspace, BAD_PARAM_boxes_desc_null) {
     setParam(true, false, true);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
-    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in poly_nms";
+    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in nms_rotated";
   }
 }
 
@@ -100,7 +100,7 @@ TEST_F(nms_rotated_workspace, BAD_PARAM_size_null) {
     setParam(true, true, false);
     EXPECT_TRUE(MLUOP_STATUS_BAD_PARAM == compute());
   } catch (const std::exception& e) {
-    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in poly_nms";
+    FAIL() << "MLUOPAPITEST: catched " << e.what() << " in nms_rotated";
   }
 }
 }  // namespace mluopapitest

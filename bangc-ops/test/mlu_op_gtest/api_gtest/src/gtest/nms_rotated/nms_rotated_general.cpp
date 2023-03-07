@@ -67,7 +67,7 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
     MLUOpTensorParam scores_params = std::get<1>(GetParam());
     mluOpTensorLayout_t s_layout = scores_params.get_layout();
     mluOpDataType_t s_dtype = scores_params.get_dtype();
-    int s_dim = socres_params.get_dim_nb();
+    int s_dim = scores_params.get_dim_nb();
     std::vector<int> s_dim_size = scores_params.get_dim_size();
     MLUOP_CHECK(mluOpSetTensorDescriptor(scores_desc_, s_layout, s_dtype, s_dim,
                                          s_dim_size.data()));
@@ -115,10 +115,17 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
       destroy();
       return status == expected_status_;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    if (workspace_size_ > 0) {
+      if (workspace_size_ < LARGE_TENSOR_NUM) {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&workspace_, workspace_size_));
+      } else {
+        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, 8));
+      }
+    }
     status = mluOpNmsRotated(handle_, iou_threshold_, boxes_desc_, boxes_,
                              scores_desc_, scores_, workspace_, workspace_size_,
-                             output_desc_, output_, result_num_);
+                             output_desc_, output_, (int32_t*)result_num_);
     destroy();
     return status == expected_status_;
   }
