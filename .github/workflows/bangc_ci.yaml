@@ -50,6 +50,11 @@ jobs:
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
+      - name: bangc_commit_msg_check
+        run: >
+          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
+          bash -c "git log -1 --pretty --format='%s' > commit_msg_file && ./tools/commitlint.py commit_msg_file && rm commit_msg_file"
+
       - name: bangc_lint_check
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
