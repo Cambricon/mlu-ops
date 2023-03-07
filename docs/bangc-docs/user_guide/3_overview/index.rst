@@ -45,7 +45,7 @@ Cambricon BANGC OPS具有以下特点：
      * VoxelPoolingForward
      * Voxelization
      * YoloBox
-
+     * NmsRotated
 
 
 - 设计过程中充分考虑易用性，以通用为基本设计原则，算子支持不同的数据布局、灵活的维度限制以及多样的数据类型。

@@ -38,6 +38,17 @@ This section lists contents that were made for each product release.
      - transpose
      - unique
 
+* V0.4.2
+
+  **Date:** March 6, 2023
+
+  **Changes:**
+
+  - Added the following new operations:
+
+    - box_iou_rotated
+    - nms_rotated
+
 * V0.4.1
 
   **Date:** December 20, 2022
