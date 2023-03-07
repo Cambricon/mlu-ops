@@ -48,7 +48,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateSparseConvolutionDescriptor(
  */
 mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
     mluOpSparseConvolutionDescriptor_t sparse_conv_desc, int dimNb,
-    int batch_size, const int pad[], const int stride[], const int dilation[],
+    int batch, const int pad[], const int stride[], const int dilation[],
     const int input_space[], const int filter_space[], const int output_space[],
     const int sub_m, const int transpose, const int inverse) {
   std::string interface_name = "[mluOpSetSparseConvolutionDescriptor]";
@@ -67,13 +67,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
   }
   sparse_conv_desc->dimNb = dimNb;
 
-  if (batch_size <= 0) {
+  if (batch <= 0) {
     LOG(ERROR) << interface_name << " only "
-               << "support postive batch_size. now batch_size is " << batch_size
+               << "support postive batch. now batch is " << batch
                << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  sparse_conv_desc->batch_size = batch_size;
+  sparse_conv_desc->batch = batch;
 
   sparse_conv_desc->sub_m = sub_m;
 
@@ -107,6 +107,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
     sparse_conv_desc->output_space[idx] = output_space[idx];
   }
 
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetSparseConvolutionNumActOut(
+    mluOpSparseConvolutionDescriptor_t desc,
+    int *num_act_out) {
+  if (desc == NULL || num_act_out == NULL) {
+    LOG(ERROR) << "mluOpCreateSparseConvolutionDescriptor or "
+               << "num_act_out failed "
+               << " Passing NULL ptr to this API.";
+    return MLUOP_STATUS_NOT_INITIALIZED;
+  }
+  int size = 0;
+  size = desc->num_act_out;
+  num_act_out[0] =  size;
   return MLUOP_STATUS_SUCCESS;
 }
 

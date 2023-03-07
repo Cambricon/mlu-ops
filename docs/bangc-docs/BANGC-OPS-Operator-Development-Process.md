@@ -2,9 +2,9 @@
 
 [概述](./BANGC-OPS-Operator-Development-Process.md#概述)
 
-[需要添加的文件](./BANGC-OPS-Operator-Development-Process.md#需要添加的文件)
-
 [算子设计文档](./BANGC-OPS-Operator-Development-Process.md#算子设计文档)
+
+[算子实现代码](./BANGC-OPS-Operator-Development-Process.md#算子实现代码)
 
 [算子测试报告](./BANGC-OPS-Operator-Development-Process.md#算子测试报告)
 
@@ -126,7 +126,7 @@ GTest 测试例的添加原则为能够测试到该算子的各种应用场景�
 ### 1. 测试覆盖率
 
 MLU-OPS coverage test 是面向 bangc 语言的代码覆盖率测试工具。
-关于 MLU-OPS coverage test 的使用方法见[MLU-OPS 测试报告模板.md](../MLU-OPS-Test-Report-Template.md)。
+关于 MLU-OPS coverage test 的使用方法见[GTest-User-Guide-zh](../GTest-User-Guide-zh.md)。
 
 ### 2. 算子验收标准
 

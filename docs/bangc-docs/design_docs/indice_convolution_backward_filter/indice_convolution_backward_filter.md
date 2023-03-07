@@ -16,7 +16,7 @@
 
 - #### 内容描述
 
-本文档为`indice_convolution`算子的设计文档中的一部分，只介绍`indice_convolution_backward_filter`部分的实现原理。
+本文档为稀疏卷积算子的反向，`indice_convolution_backward_filter`的实现原理。
 
 - #### 算子需求 checklist
 

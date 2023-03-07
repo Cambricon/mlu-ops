@@ -114,8 +114,17 @@ function process () {
     # generate report
     genhtml ${temp_dir_}/info/* -o result
 
+    for arg in ${test_cmd_}; do
+        if [[ ${arg} == "--gtest_filter="* ]]; then
+            op_dir_name=${arg##*=}
+        fi
+    done
     # show the coverage test report
-    html2text ${temp_dir_}/result/index.html
+    if [[ ! -z ${op_dir_name} ]]; then
+        html2text ${temp_dir_}/result/kernels/${op_dir_name}/index.html
+    else
+        html2text ${temp_dir_}/result/index.html
+    fi
 }
 
 function main () {

@@ -205,7 +205,12 @@ message Node {
 
   extensions 3000 to 4000;
 
+  optional AddNParam   addn_param                               = 104;    // param
+  optional TransposeParam transpose_param                       = 62;     // param
+  optional ScatterNdParam scatter_nd_param                      = 117;    // param
+  optional UniqueParam unique_param                             = 9111;   // param
   optional DivParam    div_param                                = 4001;   // param
+  optional ReduceParam reduce_param                             = 85;     // param
   optional LogParam    log_param                                = 4002;   // param
   optional SqrtParam   sqrt_param                               = 4003;   // param
   optional PsRoiPoolForwardParam psroipool_forward_param        = 4004;   // param
@@ -216,12 +221,14 @@ message Node {
   optional YoloBoxParam yolo_box_param                = 4011;   // YoloBoxParam
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
   optional BoxIouRotatedParam box_iou_rotated_param = 200;   // BoxIouRotatedParam
+  optional NmsRotatedParam nms_rotated_param = 201;   // NmsRotatedParam
   optional BboxOverlapsParam bbox_overlaps_param    = 2041;  // BboxOverlapsParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
   optional GetIndicePairsParam get_indice_pairs_param   = 202302031;  // param
   optional RoiawarePool3dForwardParam  roiaware_pool3d_forward_param = 10120;  // param
   optional RoiawarePool3dBackwardParam  roiaware_pool3d_backward_param = 10121;  // param
+  optional RoiPointPool3dParam roipoint_pool3d_param = 16002; // param
   optional PsamaskForwardParam psamask_forward_param    = 134658;  // PsamaskForwardParam
   optional PsamaskBackwardParam psamask_backward_param  = 134659;  // PsamaskBackwardParam
   optional VoxelizationParam  voxelization_param        = 6564;  // Voxelizationparam
@@ -233,6 +240,9 @@ message Node {
   optional DeformRoiPoolBackwardParam deform_roi_pool_backward_param = 10127;  //param
   optional IndiceConvolutionBackwardDataParam indice_convolution_backward_data_param = 22120599;  // param
   optional IndiceConvolutionBackwardParam indice_convolution_backward_param = 20230131;  //param
+  optional IndiceConvolutionForwardParam indice_convolution_forward_param = 23020721;  //param
+  optional CarafeForwardParam  carafe_forward_param     = 408;  // CarafeForwardParam
+  optional CarafeBackwardParam  carafe_backward_param   = 409;  // CarafeBackwardParam
 }
 
 
@@ -313,6 +323,88 @@ enum mluOpLogBase {
   MLUOP_LOG_10 = 2; /**< base is 10*/
 }
 
+enum ReduceTensorOp{
+  REDUCE_TENSOR_ADD = 0;
+  REDUCE_TENSOR_AVG = 1;
+  REDUCE_TENSOR_MUL = 2;
+  REDUCE_TENSOR_MAX = 3;
+  REDUCE_TENSOR_MIN = 4;
+  REDUCE_TENSOR_AND = 5;
+  REDUCE_TENSOR_OR = 6;
+  REDUCE_TENSOR_NORM1 = 7;
+  REDUCE_TENSOR_NORM2 = 8;
+  REDUCE_TENSOR_MAX_LAST_INDEX = 9;
+  REDUCE_TENSOR_MIN_LAST_INDEX = 10;
+  REDUCE_TENSOR_NORMP = 11;
+  REDUCE_TENSOR_ASUM = 12;
+  REDUCE_TENSOR_SUMSQ = 13;
+}
+
+enum ReduceTensorIndices{
+  REDUCE_TENSOR_NO_INDICES        = 0;
+  REDUCE_TENSOR_FLATTENED_INDICES = 1;
+  REDUCE_TENSOR_ONLY_INDICES      = 2;
+}
+
+enum NanPropagation {
+  NOT_PROPAGATE_NAN = 0;
+  PROPAGATE_NAN     = 1;
+}
+
+enum IndicesType{
+  BIT32_INDICES = 0;
+  BIT16_INDICES = 1;
+}
+
+message ReduceParam {
+  optional int32 axis          = 1 [default = 0];
+  required ReduceTensorOp mode = 2 [default = REDUCE_TENSOR_MUL];
+  optional ReduceTensorIndices is_indices = 3 [default = REDUCE_TENSOR_NO_INDICES];
+  optional IndicesType indices_type       = 4 [default = BIT32_INDICES];
+  repeated int32 axises                   = 5;
+  optional DataType compute_dtype         = 6 [default = DTYPE_FLOAT];
+  optional bool keep_dims = 7 [default = false];
+  optional float p = 8 [default = 1.0];
+  optional float alpha = 9 [default = 1.0];
+  optional float beta = 10 [default = 0.0];
+  optional NanPropagation nan_prop = 11 [default = NOT_PROPAGATE_NAN];
+}
+
+enum ScatterNdMode {
+  SCATTERND_ADD = 0;
+  SCATTERND_SUB = 1;
+  SCATTERND_MUL = 2;
+  SCATTERND_UPDATE = 3;
+}
+
+message AddNParam {
+  required int32 num = 1;
+}
+
+message TransposeParam {
+  required int32 dim     = 1;
+  repeated int32 permute = 2;
+}
+
+message ScatterNdParam {
+  optional int32 version = 1 [default = 1];
+  optional ScatterNdMode mode = 2 [default = SCATTERND_ADD];
+}
+
+enum UniqueSort {
+  UNIQUE_UNSORT_FORWARD = 0;
+  UNIQUE_SORT_ASCEND = 1;
+  UNIQUE_UNSORT_REVERSE = 2;
+}
+
+message UniqueParam {
+  required UniqueSort mode = 1 [default = UNIQUE_UNSORT_FORWARD];
+  optional int32 dim = 2 [default = 0];
+  optional bool return_inverse = 3 [default = false];
+  optional bool return_counts = 4 [default = false];
+  optional int32 version = 5 [default = 1];
+}
+
 // param to call mluOpLog()
 message LogParam {
   required mluOpLogBase log_base        = 1 [default = MLUOP_LOG_E];
@@ -360,6 +452,7 @@ message GetIndicePairsParam{
    optional int32 sub_m = 9 [default = 0];
    optional int32 transpose = 10 [default = 0];
    optional int32 inverse = 11 [default = 0];
+   optional int32 num_act_out = 12 [default = 0];
 }
 
 // param to call mluOpPsRoiPoolbackward()
@@ -403,6 +496,10 @@ message VoxelPoolingForwardParam {
 message BoxIouRotatedParam {
   optional int32 mode   = 1 [default = 0];  // 0 is IOU, 1 is IOF
   optional bool aligned = 2 [default = false];
+}
+
+message NmsRotatedParam {
+  optional float iou_threshold   = 1 [default = 0.5];
 }
 
 // param to call mluOpBboxOverlaps()
@@ -459,6 +556,11 @@ message RoiawarePool3dBackwardParam {
   optional int32 out_z = 5;
   optional int32 channels = 6;
   optional int32 max_pts_each_voxel = 7 [default = 128];
+}
+
+// param to call mluOpRoiPointPool3d()
+message RoiPointPool3dParam {
+  optional int32 num_sampled_points = 1 [default = 512];
 }
 
 // param to call mluOpPsamaskForward()
@@ -537,11 +639,36 @@ message DeformRoiPoolBackwardParam{
 message IndiceConvolutionBackwardDataParam {
   optional int64 inverse = 1 [default = 0];
   optional int64 sub_m = 2 [default = 0];
-  repeated int32 indice_num = 3;
+  repeated int64 indice_num = 3;
 }
+
 // param to call indice mluOpIndiceConvolutionBackwardFilter
 message IndiceConvolutionBackwardParam{
   optional int64 inverse     = 1 [default = 0];
   optional int64 sub_m       = 2 [default = 0];
   repeated int64 indice_num  = 3;
+}
+
+// param to call mluOpIndiceConvolutionForward()
+message IndiceConvolutionForwardParam {
+  required int64 num_active_out = 1;
+  optional int64 inverse = 2 [default = 0];
+  optional int64 sub_m = 3 [default = 0];
+  repeated int64 indice_num = 4;
+}
+
+// param to call mluOpCarafeForward()
+message CarafeForwardParam {
+  optional int32 dimnb        = 1;
+  optional int32 kernel_size  = 2;
+  optional int32 group_size   = 3;
+  optional int32 scale_factor = 4;
+}
+
+// param to call mluOpCarafeBackward()
+message CarafeBackwardParam {
+  optional int32 dimnb        = 1;
+  optional int32 kernel_size  = 2;
+  optional int32 group_size   = 3;
+  optional int32 scale_factor = 4;
 }

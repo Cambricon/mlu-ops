@@ -17,23 +17,37 @@ Cambricon BANGC OPS具有以下特点：
 
   -  常见的网络算子：
 
-     * abs、copy、expand、fill、log、div、sqrt、sqrtBackward
-  
-  -  领域类算子：
-  
-     * BallQuery
-     * GenerateProposalsV2、PriorBox、YoloBox
-     * PolyNms
-     * PsRoiPoolForward、PsRoiPoolBackward
-     * RoiCropForward、RoiCropBackward
-     * PsaMaskForward、PsaMaskBackward
-     * VoxelPoolingForward、Voxelization
+     * AddN、Abs、Copy、Div、Expand、Fill、Log、MatMul、Sqrt、SqrtBackward
+     * Reduce、GatherNd、ScatterNd、Transpose、Unique
 
-	 
+  -  领域类算子：
+
+     * ActiveRotatedFilterForward
+     * BallQuery
+     * BboxOverlaps
+     * BoxIouRotated
+     * CarafeBackward、CarafeForward
+     * DeformRoiPoolBackward、DeformRoiPoolForward
+     * GenerateProposalsV2
+     * GetIndicePairs
+     * IndiceConvolutionBackwardData、IndiceConvolutionBackwardFilter
+     * IndiceConvolutionForward
+     * PolyNms
+     * PriorBox
+     * RoiCropBackward、RoiCropForward
+     * RoiAlignRotatedBackward、RoiAlignRotatedForward
+     * RoiawarePool3dBackward、RoiawarePool3dForward
+     * RotatedFeatureAlignBackward、RotatedFeatureAlignForward
+     * PsRoiPoolBackward、PsRoiPoolForward
+     * PsaMaskBackward、PsaMaskForward
+     * ThreeInterpolateBackward、ThreeInterpolateForward
+     * ThreeNNForward
+     * VoxelPoolingForward
+     * Voxelization
+     * YoloBox
+
+
 
 - 设计过程中充分考虑易用性，以通用为基本设计原则，算子支持不同的数据布局、灵活的维度限制以及多样的数据类型。
 - 结合寒武纪的硬件架构特点，优化Cambricon BANGC OPS算子，使算子具有最佳性能，并且尽最大可能减少内存占用。
 - 提供包含资源管理的接口，满足用户多线程、多板卡的应用场景。
-
-
-

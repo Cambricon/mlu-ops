@@ -1,0 +1,55 @@
+op_name: "transpose"
+op_type: "TRANSPOSE"
+input {
+  id: "input"
+  shape: {
+    dims: 8
+    dims: 7
+    dims: 6
+    dims: 5
+    dims: 4
+    dims: 3
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  random_data: {
+    seed: 25
+    upper_bound: 100
+    lower_bound: -100
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 2
+    dims: 2
+    dims: 3
+    dims: 4
+    dims: 5
+    dims: 6
+    dims: 8
+    dims: 7
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+}
+transpose_param: {
+  dim:8
+  permute:7
+  permute:6
+  permute:5
+  permute:4
+  permute:3
+  permute:2
+  permute:0
+  permute:1
+}test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.000
+  error_threshold: 0.000
+  baseline_device: CPU
+}

@@ -1,3 +1,9 @@
+mluops (0.5.0-1.ubuntu16.04) xenial; urgency=medium
+
+  * Release mluops v0.5.0
+
+ -- Cambricon <service@cambricon.com>  Mon, 19 Dec 2023 00:00:00 +0100
+
 mluops (0.4.1-1.ubuntu16.04) xenial; urgency=medium
 
   * Release mluops v0.4.1
