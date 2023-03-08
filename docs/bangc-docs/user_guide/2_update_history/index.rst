@@ -7,6 +7,7 @@
   **更新内容**：
 
   -  新增以下算子章节内容：
+  
      + :ref:`box_iou_rotated`
      + :ref:`nms_rotated`
 
