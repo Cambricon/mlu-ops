@@ -998,6 +998,10 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel3_input_addr = indice_index_in_ptr;
     kernel3_output_addr = indice_pairs;
     kernel3_mask_addr = mask_all_ptr;
+    fill_value = -1;
+    INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                launchFillOp(handle, interface_name, indice_pairs,
+                kernel_volume * 2 * input_active_site, fill_value));
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS ==
@@ -1184,6 +1188,10 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel3_input_addr = indice_index_in_ptr;
     kernel3_output_addr = indice_pairs;
     kernel3_mask_addr = mask_all_ptr;
+    fill_value = -1;
+    INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                   launchFillOp(handle, interface_name, indice_pairs,
+                   kernel_volume * 2 * input_active_site, fill_value));
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS ==
