@@ -31,18 +31,16 @@
 
 #define DEP_CHECK_LOG(level)                                                  \
   mluop::cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, \
-                    true, true)                                               \
+                           true, true)                                        \
       .stream()
 
 namespace mluop {
 // see cnrt_function.c deviceCoreVersion for more info.
 struct deviceName name_list_table[] = {
     {"MLU270", MLUOP_MLU270},
-    {"MLU220", MLUOP_MLU220},
-    {"MLU220 SOC", MLUOP_MLU220},
     {"MLU290", MLUOP_MLU290},
     {"MLU370", MLUOP_MLU370},
-    {"MLU590", MLUOP_MLU590}
+    {"MLU500", MLUOP_MLU590}
     // mluOp not support mlu100 only for error case.
     // {"MLU100", MLUOP_MLU100},
 };
@@ -59,7 +57,9 @@ mluOpDevType_t convertDeviceName(char *name) {
   }
   for (int i = 0; i < num; i++) {
     pName = &name_list_table[i];
-    if (0 == strncmp(pName->name, name, strlen(pName->name))) {
+    if (0 == strncmp(pName->name, name, strlen(pName->name)) ||
+        (i == num - 1 &&
+         0 >= strncmp(pName->name, name, CONTEXT_DEVICENAME_LEAST_SIZE))) {
       return pName->type;
     }
   }
