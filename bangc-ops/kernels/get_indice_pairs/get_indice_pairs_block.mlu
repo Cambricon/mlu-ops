@@ -271,7 +271,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
     int32_t *index_job_start =
         (int32_t *)indice_index_ptr + (offset_l_job + j) * len_l;
     int32_t *mask_job_start = (int32_t *)mask_all + mask_offset * len_l;
-    int32_t core_len_l_invalid = 0, core_offset_l_valid = 0;
+    int32_t core_offset_l_valid = 0;
     int32_t valid_l_num_now = 0;
     int32_t repeat = (len_l + core_num_l - 1) / core_num_l;
     int32_t rem_num_l =
@@ -293,23 +293,6 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
       if (valid_l_num_now > 0) {
         __memcpy((char *)store_valid_ptr, (char *)nram_output,
                  valid_l_num_now * sizeof(int32_t), NRAM2GDRAM);
-      }
-    }
-    core_len_l_invalid = len_l - core_offset_l_valid;
-    if (core_len_l_invalid > 0) {
-      int32_t *store_invalid_ptr =
-          (int32_t *)indice_pair + store_offset * len_l + core_offset_l_valid;
-      int32_t repeat_store =
-          (core_len_l_invalid + 4 * core_num_l - 1) / (4 * core_num_l);
-      for (int k = 0; k < repeat_store; ++k) {
-        int32_t store_num_l = k == (repeat_store - 1)
-                                  ? core_len_l_invalid % (4 * core_num_l)
-                                  : 4 * core_num_l;
-        __bang_write_value((int32_t *)nram_input, store_num_l, (int)-1);
-        int32_t *store_invalid_ptr_last =
-            store_invalid_ptr + k * 4 * core_num_l;
-        __memcpy((char *)store_invalid_ptr_last, (char *)nram_input,
-                 store_num_l * sizeof(int), NRAM2GDRAM);
       }
     }
   }
