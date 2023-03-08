@@ -208,3 +208,6 @@ cython_debug/
 dep_libs_extract/
 package/
 test_workspace/
+daily.software.cambricon.com/
+dependency.txt
+bangc-ops/symbol_visibility.map
