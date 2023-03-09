@@ -57,9 +57,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsRotatedWorkspaceSize(
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", handle != nullptr);
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", boxes_desc != nullptr);
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", workspace_size != nullptr);
-  const int box_num = boxes_desc->dims[0];
-  const int box_dim = boxes_desc->dims[1];
-  int total_num = box_num * box_dim + box_num;
+  const uint64_t box_num = boxes_desc->dims[0];
+  const uint64_t box_dim = boxes_desc->dims[1];
+  uint64_t total_num = box_num * box_dim + box_num;
   *workspace_size = total_num * mluop::getSizeOfDataType(boxes_desc->dtype);
   return MLUOP_STATUS_SUCCESS;
 }
@@ -97,6 +97,8 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
     return MLUOP_STATUS_BAD_PARAM;
   }
 
+  const uint64_t tensor_boxes_num = mluOpGetTensorElementNum(boxes_desc);
+  TENSOR_NUM_CHECK("[mluOpNmsRotated]", tensor_boxes_num, LARGE_TENSOR_NUM, "");
   // 0-element check, after dim and shape check
   if (boxes_desc->dims[0] == 0) {
     VLOG(5) << "[mluOpNmsRotated] Skip zero element boxes.";
