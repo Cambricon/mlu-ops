@@ -55,6 +55,11 @@
     const mluOpTensorDescriptor_t, const void *,                              \
     const mluOpTensorDescriptor_t, void *
 
+#define BOXIOUROTATED_PARAM_TYPE                                              \
+    mluOpHandle_t, const int, const bool, const mluOpTensorDescriptor_t,      \
+    const void *, const mluOpTensorDescriptor_t, const void *,                \
+    const mluOpTensorDescriptor_t, void *
+
 #define COPY_PARAM_TYPE                                                       \
     mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,               \
     const mluOpTensorDescriptor_t, void *
@@ -134,6 +139,7 @@
 KERNEL_REGISTER(addN, ADDN_PARAM_TYPE);
 KERNEL_REGISTER(addNV2, ADDNV2_PARAM_TYPE);
 KERNEL_REGISTER(bboxOverlaps, BBOXOVERLAPS_PARAM_TYPE);
+KERNEL_REGISTER(boxIouRotated, BOXIOUROTATED_PARAM_TYPE);
 KERNEL_REGISTER(copy, COPY_PARAM_TYPE);
 KERNEL_REGISTER(expand, EXPAND_PARAM_TYPE);
 KERNEL_REGISTER(fill, FILL_PARAM_TYPE);
