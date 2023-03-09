@@ -47,18 +47,6 @@ Debian系统
   <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构（AMD64），例如Cambricon BANGC OPS v0.3.0版本在 debian10 系统下的包名为 ``mluops_0.3.0-1.debian10_amd64.deb``。
 
 
-Kylin系统
->>>>>>>>>>
-
-- 执行安装命令：
-
-  ::
-
-    sudo yum install mluops-<x.y.z>-1.ky10.<arch>.rpm
-
-  <x.y.z>为Cambricon BANGC OPS版本号，<arch>为CPU架构（AArch64），例如Cambricon BANGC OPS v0.3.0版本在 KylinV10 系统下的包名为 ``mluops-0.3.0-1.ky10.aarch64.rpm``。
-
-
 .. _卸载或升降级BANGC_OPS版本:
 
 卸载或升降级Cambricon BANGC OPS版本
