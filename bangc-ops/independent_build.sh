@@ -106,7 +106,7 @@ usage () {
 }
 
 prepare_cntoolkit () {
-  pushd ../
+  pushd ../ > /dev/null
   python2 json_parser.py
   output='dependency.txt'
   MODULE_VERSION=""
@@ -114,14 +114,14 @@ prepare_cntoolkit () {
   
   # dep-package-version
   PACKAGE_MODULES=`cat $output | awk -F ':' '{print $1}'`
-  echo "PACKAGE_MODULES: $PACKAGE_MODULES"
+  prog_log_info "PACKAGE_MODULES: $PACKAGE_MODULES"
 
   PACKAGE_BRANCH=`cat $output | awk -F ':' '{print $2}'`
-  echo "PACKAGE_BRANCH: $PACKAGE_BRANCH"
+  prog_log_info "PACKAGE_BRANCH: $PACKAGE_BRANCH"
 
   PACKAGE_MODULE_VERS=`cat $output | awk -F ':' '{print $3}'`
-  echo "PACKAGE_MODULE_VERS: $PACKAGE_MODULE_VERS"
-  popd
+  prog_log_info "PACKAGE_MODULE_VERS: $PACKAGE_MODULE_VERS"
+  popd > /dev/null
 
   PACKAGE_SERVER="http://daily.software.cambricon.com"
   PACKAGE_OS="Linux"
@@ -133,7 +133,7 @@ prepare_cntoolkit () {
 
   n=${#arr_vers[@]}
 
-  echo "number of dependency: $n"
+  sub_pkg_to_extract=(cncc cnas cnperf cngdb cndrv cnrt cnbin cnpapi cndev cntoolkit-cloud)
 
   if [ -f "/etc/os-release" ]; then
       source /etc/os-release
@@ -144,25 +144,25 @@ prepare_cntoolkit () {
               PACKAGE_DIST="Ubuntu"
               PACKAGE_DIST_VER=${VERSION_ID}
               PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
-              echo "PACKAGE_PATH: $PACKAGE_PATH"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-              echo "real_path $REAL_PATH"
-              wget -A deb -m -p -E -k -K -np ${PACKAGE_PATH}
+              prog_log_info "cntoolkit url: ${REAL_PATH}"
+              wget -A deb -m -p -E -k -K -np -q ${PACKAGE_PATH}
               mkdir -p ${PACKAGE_EXTRACT_DIR}
-              pushd ${PACKAGE_EXTRACT_DIR}
+              pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.deb; do
-                echo "filename: $filename"
-                dpkg -X ${filename} .
-                echo "test succeuss"
+                dpkg -x --force-overwrite ${filename} .
+                prog_log_info "extract ${filename}"
                 if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                   pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
-                  echo "pure_ver: ${pure_ver}"
-                  for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
-                    dpkg -X $lib ./
+                  for pkg in ${sub_pkg_to_extract[@]}
+                  do
+                      local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                      prog_log_info "extract ${fname}"
+                      dpkg -x --force-overwrite ${fname} ./
                   done
                 fi
               done
-              popd
+              popd > /dev/null
           done
 
       elif [ ${ID} == "debian" ]; then
@@ -170,26 +170,26 @@ prepare_cntoolkit () {
           do
               PACKAGE_DIST="Debian"
               PACKAGE_DIST_VER=${VERSION_ID}
-              echo "PACKAGE_FILE: $PACKAGE_FILE"
               PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
-              echo "PACKAGE_PATH: $PACKAGE_PATH"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-              echo "real_path $REAL_PATH"
-              wget -A deb -m -p -E -k -K -np ${PACKAGE_PATH}
+              prog_log_info "cntoolkit url: ${REAL_PATH}"
+              wget -A deb -m -p -E -k -K -np -q ${PACKAGE_PATH}
               mkdir -p ${PACKAGE_EXTRACT_DIR}
-              pushd ${PACKAGE_EXTRACT_DIR}
+              pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.deb; do
-                echo "filename: $filename"
-                dpkg -X ${filename} ./
+                prog_log_info "extract ${filename}"
+                dpkg -x --force-overwrite ${filename} ./
                 if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                   pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
-                  echo "pure_ver: ${pure_ver}"
-                  for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
-                    dpkg -X $lib ./
+                  for pkg in ${sub_pkg_to_extract[@]}
+                  do
+                      local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                      prog_log_info "extract ${fname}"
+                      dpkg -x --force-overwrite ${fname} ./
                   done
                 fi
               done
-              popd
+              popd > /dev/null
           done
 
       elif [ ${ID} == "centos" ]; then
@@ -198,24 +198,25 @@ prepare_cntoolkit () {
               PACKAGE_DIST="CentOS"
               PACKAGE_DIST_VER=${VERSION_ID}
               PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
-              echo "PACKAGE_PATH: $PACKAGE_PATH"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-              echo "real_path $REAL_PATH"
-              wget -A rpm -m -p -E -k -K -np ${PACKAGE_PATH}
+              prog_log_info "cntoolkit url: ${REAL_PATH}"
+              wget -A rpm -m -p -E -k -K -np -q ${PACKAGE_PATH}
               mkdir -p ${PACKAGE_EXTRACT_DIR}
-              pushd ${PACKAGE_EXTRACT_DIR}
+              pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.rpm; do
-                echo "filename: $filename"
-                rpm2cpio $filename | cpio -div
+                prog_log_info "extract ${filename}"
+                rpm2cpio $filename | cpio -u -di
                 if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                   pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
-                  echo "pure_ver: ${pure_ver}"
-                  for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.rpm; do
-                    rpm2cpio $lib | cpio -div
+                  for pkg in ${sub_pkg_to_extract[@]}
+                  do
+                      local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                      prog_log_info "extract ${fname}"
+                      rpm2cpio ${fname} | cpio -u -di
                   done
                 fi
               done
-              popd
+              popd > /dev/null
           done
       elif [ ${ID} == "kylin" ]; then
           for (( i =0; i < ${n}; i++))
@@ -345,8 +346,8 @@ fi
 
 if [[ "$(g++ --version | head -n1 | awk '{ print $3 }' | cut -d '.' -f1)" < "5" ]]; then
   prog_log_note "we do not support g++<5, try to activate devtoolset-7 env"
-  source /opt/rh/devtoolset-7/enable && echo "devtoolset-7 activated" \
-    || ( echo "source devtoolset-7 failed, ignore this info if you have set env TOOLCHAIN_ROOT, TARGET_C_COMPILER, TARGET_CXX_COMPILER properly (see more details in README.md)" && sleep 4 ) # I hope user will see it
+  source /opt/rh/devtoolset-7/enable && prog_log_warn "devtoolset-7 activated" \
+    || ( prog_log_warn "source devtoolset-7 failed, ignore this info if you have set env TOOLCHAIN_ROOT, TARGET_C_COMPILER, TARGET_CXX_COMPILER properly (see more details in README.md)" && sleep 4 ) # I hope user will see it
 fi
 
 if [ ! -d "$BUILD_PATH" ]; then
@@ -354,7 +355,7 @@ if [ ! -d "$BUILD_PATH" ]; then
 fi
 
 if [ "${MLUOP_BUILD_PREPARE_ONLY}" = "ON" ]; then
-  prog_log_info "You hae called prepare cntoolkit explicitly."	  
+  prog_log_info "You have called prepare cntoolkit explicitly."
   prepare_cntoolkit
   exit -1
 elif [ "${MLUOP_BUILD_PREPARE}" = "ON" ]; then
