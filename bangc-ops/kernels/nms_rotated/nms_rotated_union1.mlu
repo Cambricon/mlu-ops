@@ -394,8 +394,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
                                         const int32_t box_num,
                                         const int32_t box_dim,
                                         const float iou_threshold) {
-  PERF_TIME_BEGIN();
-
+  // PERF_TIME_BEGIN();
   BoxesTranpose(boxes, input_boxes, box_num, box_dim);
   __sync_cluster();
   T *scores_data = input_scores;
@@ -439,7 +438,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes,
                 scores_load_dir, scores_store_dir, boxes_load_dir, exit);
 
   result_num[0] = output_box_num;
-  PERF_TIME_END();
+  // PERF_TIME_END();
 }
 
 void MLUOP_WIN_API mluOpUnionKernelNmsRotatedFloat(
