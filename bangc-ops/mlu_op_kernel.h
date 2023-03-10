@@ -570,6 +570,32 @@ void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardHalf(
     const int n, const int m, const void *unknown, const void *known,
     void *dist2, void *idx);
 
+/* moe_dispatch_backward_gate */
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdGate1Half(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *indices, const void *locations, const void *input,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *workspace, void *grad_gates);
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdGate1Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *indices, const void *locations, const void *input,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *workspace,
+    void *grad_gates);
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdGate2Half(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *indices, const void *locations, const void *input,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_gates);
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdGate2Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *indices, const void *locations, const void *input,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_gates);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus

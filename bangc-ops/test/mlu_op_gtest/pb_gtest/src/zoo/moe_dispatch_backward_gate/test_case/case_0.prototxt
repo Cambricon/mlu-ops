@@ -1,0 +1,82 @@
+op_name: "moe_dispatch_backward_gate"
+input {
+  id: "indices"
+  shape {
+    dims: 35
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    lower_bound: 0
+    upper_bound: 100
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "locations"
+  shape {
+    dims: 35
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    lower_bound: 0
+    upper_bound: 100
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input"
+  shape {
+    dims: 35
+    dims: 512012
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    lower_bound: 1.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "dispatch"
+  shape {
+    dims: 35
+    dims: 512012
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    lower_bound: 1.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "grad_gates"
+  shape {
+    dims: 35
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+moe_dispatch_backward_gate_param {
+  samples: 35
+  capacity: 35
+  hidden: 512012
+  num_experts: 1
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

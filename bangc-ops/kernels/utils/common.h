@@ -22,8 +22,8 @@
  *************************************************************************/
 
 // public functions are stored in this file
-#ifndef KERNELS_UTILS__COMMON_H_
-#define KERNELS_UTILS__COMMON_H_
+#ifndef KERNELS_UTILS_COMMON_H_
+#define KERNELS_UTILS_COMMON_H_
 
 #include <type_traits>
 #include "float.h"
@@ -80,7 +80,7 @@ architecture >= 300, otherwise the space size is at least twice as much as
  *   1. nram_dst and nram_src can not be homologous operand if architecture <
 300.  *   2. On MLU2XX, nram_src1(dividend) must be positive due to limitations
 of bang_active_reciphp.
- ******************************************************************************************/
+*******************************************************************************/
 template <typename T>
 static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
                                     T *nram_addition, int is_high_precision,
@@ -124,7 +124,7 @@ static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
   }
 }
 
-/******************************************************************************************
+/*******************************************************************************
  * MLUOPS FUNC: computeRecip
  * param 'nram_dst' is the nram destination address, which supports half or
  * float data type. param 'nram_src' is the nram source address, which has the
@@ -136,7 +136,7 @@ static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
  *   2. On MLU2XX, input must be in the range [0.00391, 2e6] for float and
  * [0.00391, 65504] for half. Please refer to bangC Developer Guide for detailed
  * information.
- ******************************************************************************************/
+ ******************************************************************************/
 template <typename T>
 static __mlu_func__ void computeRecip(T *nram_dst, T *nram_src,
                                       void *nram_addition,
@@ -226,7 +226,7 @@ static __mlu_func__ void computeExp(T *nram_dst, T *nram_src,
  * size is at least twice as much as nram_src. param 'is_high_precision' is the
  * precision flag. param 'deal_num' is the num of input data. remarks: nram_dst
  * and nram_src can be homologous operand.
- ******************************************************************************************/
+ ******************************************************************************/
 template <typename T>
 static __mlu_func__ void computeSigmoid(T *nram_dst, T *nram_src,
                                         void *nram_addition,
@@ -267,6 +267,34 @@ static __mlu_func__ void computeSigmoid(T *nram_dst, T *nram_src,
   } else {
     return;
   }
+}
+
+/******************************************************************************
+ * MLUOPS FUNC: recursiveSumPool
+ * param 'dst' is the src and dst nram addr
+ * param 'low_dim' is the number of low dim
+ * param 'high_dim' is the number of high dim
+ * param 'kernel_limit' is the high_dim of sumpool per time
+ ******************************************************************************/
+template <typename T>
+__mlu_func__ void recursiveSumPool(T *dst, int low_dim, int high_dim,
+                                 int kernel_limit) {
+  for (; high_dim > 1;) {
+    int repeat_s = high_dim / kernel_limit;
+    int remain_s = high_dim % kernel_limit;
+    if (remain_s) {
+      __bang_sumpool((T *)dst, (T *)dst, low_dim, 1, remain_s, 1, remain_s, 1,
+                     1);
+    }
+    if (repeat_s) {
+      __bang_sumpool((T *)dst + (remain_s > 0 ? low_dim : 0),
+                     (T *)dst + remain_s * low_dim, low_dim,
+                     kernel_limit * repeat_s, 1, kernel_limit, 1, 1,
+                     kernel_limit);
+    }
+    high_dim = repeat_s + static_cast<int>(remain_s > 0);
+  }
+  return;
 }
 
 /*****************************************************************************
@@ -460,7 +488,7 @@ __mlu_func__ void pvUnlock() {
  * param 'dst_str' is nram stride, c_align on onchip.
  * param 'src_str' is gdram stride, as usual is equal to c_unalign.
  * Note:
- *      The data between 'size' and 'dst_str' in every seg_num 
+ *      The data between 'size' and 'dst_str' in every seg_num
  *      may be contaminated.
  ******************************************************************************/
 template <typename T>
@@ -558,4 +586,4 @@ __mlu_func__ void storeStr3D(T *dst, T *src, int size, int seg_num_in,
   }
 }
 
-#endif  // KERNELS_UTILS__COMMON_H_
+#endif  // KERNELS_UTILS_COMMON_H_
