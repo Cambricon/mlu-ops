@@ -662,3 +662,9 @@ Unique
 .. figure:: ../images/unique.png
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
+
+.. _moe_dispatch_backward_data:
+
+mluOpMoeDispatchBackwardData
+----------------------------------
+MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算 input 的梯度 `grad_input`。

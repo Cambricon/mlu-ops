@@ -1,0 +1,348 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "mlu_op_kernel.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+#if __BANG_ARCH__ >= 372
+template <typename T>
+static __mlu_func__ void load(T *dispatch_addr, T *nram_dispatch,
+                              const int deal_num, const int pingpong_num,
+                              const int pi) {
+  int offset = (pi % 2) * pingpong_num;
+  T *nram_dispatch_p = nram_dispatch + offset;
+  __memcpy_async(nram_dispatch_p, dispatch_addr, deal_num * sizeof(T),
+                 GDRAM2NRAM);
+}
+
+template <typename T>
+static __mlu_func__ void compute(T *nram_gard_input, T *nram_dispatch,
+                                 const T gates_value, const int deal_num,
+                                 const int pingpong_num, const int pi) {
+  int offset = (pi % 2) * pingpong_num;
+  T *nram_gard_input_p = nram_gard_input + offset;
+  T *nram_dispatch_p = nram_dispatch + offset;
+  __bang_mul_scalar(nram_gard_input_p, nram_dispatch_p, gates_value, deal_num);
+}
+
+template <typename T>
+static __mlu_func__ void store(T *grad_input_addr, T *nram_grad_input,
+                               const int deal_num, const int pingpong_num,
+                               const int pi) {
+  int offset = (pi % 2) * pingpong_num;
+  T *nram_grad_input_p = nram_grad_input + offset;
+  __memcpy_async(grad_input_addr, nram_grad_input_p, deal_num * sizeof(T),
+                 NRAM2GDRAM);
+}
+
+template <typename T>
+static __mlu_func__ void lcs(T *base_gard_input_addr, T *base_dispatch_addr,
+                             T *nram_gard_input, T *nram_dispatch,
+                             const T gates_value, const int repeat_num,
+                             const int rem_num, const int deal_num,
+                             const int pingpong_num) {
+  if (repeat_num > 0) {
+    // L[0]
+    T *dispatch_addr = base_dispatch_addr;
+    load(dispatch_addr, nram_dispatch, deal_num, pingpong_num, 0);
+    __sync();
+  }
+  if (repeat_num > 1) {
+    // L[1]
+    T *dispatch_addr = base_dispatch_addr + deal_num;
+    load(dispatch_addr, nram_dispatch, deal_num, pingpong_num, 1);
+    // C[0]
+    compute(nram_gard_input, nram_dispatch, gates_value, deal_num, pingpong_num,
+            0);
+    __sync();
+  }
+  for (int n_iter = 0; n_iter < repeat_num - 2; ++n_iter) {
+    // S[n_iter]
+    T *gard_input_addr = base_gard_input_addr + n_iter * deal_num;
+    store(gard_input_addr, nram_gard_input, deal_num, pingpong_num, n_iter);
+    // L[n_iter + 2]
+    T *dispatch_addr = base_dispatch_addr + (n_iter + 2) * deal_num;
+    load(dispatch_addr, nram_dispatch, deal_num, pingpong_num, n_iter + 2);
+    // C[n_iter + 1]
+    compute(nram_gard_input, nram_dispatch, gates_value, deal_num, pingpong_num,
+            n_iter + 1);
+    __sync();
+  }
+  if (repeat_num >= 2) {
+    // S[repeat_num - 2]
+    T *gard_input_addr = base_gard_input_addr + (repeat_num - 2) * deal_num;
+    store(gard_input_addr, nram_gard_input, deal_num, pingpong_num,
+          repeat_num - 2);
+  }
+  if (rem_num > 0) {
+    // L[repeat_num]
+    T *dispatch_addr = base_dispatch_addr + repeat_num * deal_num;
+    load(dispatch_addr, nram_dispatch, rem_num, pingpong_num, repeat_num);
+  }
+  if (repeat_num > 0) {
+    // C[repeat_num - 1]
+    compute(nram_gard_input, nram_dispatch, gates_value, deal_num, pingpong_num,
+            repeat_num - 1);
+  }
+  __sync();
+  if (repeat_num > 0) {
+    // S[repeat_num - 1]
+    T *gard_input_addr = base_gard_input_addr + (repeat_num - 1) * deal_num;
+    store(gard_input_addr, nram_gard_input, deal_num, pingpong_num,
+          repeat_num - 1);
+  }
+  if (rem_num > 0) {
+    // C[repeat_num]
+    compute(nram_gard_input, nram_dispatch, gates_value, rem_num, pingpong_num,
+            repeat_num);
+    __sync();
+    // S[repeat_num]
+    T *gard_input_addr = base_gard_input_addr + repeat_num * deal_num;
+    store(gard_input_addr, nram_gard_input, rem_num, pingpong_num, repeat_num);
+  }
+}
+#endif
+
+template <typename T>
+__mlu_entry__ void MLUKernelMoeDispatchBwdData1(
+    const T *gates, const int *indices, const int *locations, const T *dispatch,
+    const int samples, const int capacity, const int hidden,
+    const int num_experts, T *grad_input) {
+  // gates: (samples)
+  // indices: (samples)
+  // locations: (samples)
+  // dispatch: (num_experts * capacity, hidden)
+  // grad_input: (samples, hidden)
+#if __BANG_ARCH__ >= 372
+  if (__is_mpu()) {
+    return;
+  }
+  int one_sample_task_num = taskDim / samples;
+  int rem_task = taskDim % samples;
+  int sample_idx = 0;
+  if ((rem_task > 0) && (taskId < (one_sample_task_num + 1) * rem_task)) {
+    sample_idx = (int)(taskId / (one_sample_task_num + 1));
+    one_sample_task_num = one_sample_task_num + 1;
+  } else {
+    sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
+  }
+  int indices_value = indices[sample_idx];
+  int location_value = locations[sample_idx];
+  if (indices_value < 0 || indices_value >= num_experts || location_value < 0 ||
+      location_value >= capacity) {
+    return;
+  }
+  T gates_si_value = gates[sample_idx];
+  int logic_tid = taskId % one_sample_task_num;
+  int hidden_per_task = hidden / one_sample_task_num;
+  int rem_hidden_num = hidden % one_sample_task_num;
+  int hidden_seg_num = hidden_per_task + (int)(logic_tid < rem_hidden_num);
+  if (hidden_seg_num == 0) {
+    return;
+  }
+  int hidden_data_offset =
+      logic_tid * hidden_per_task +
+      ((logic_tid < rem_hidden_num) ? logic_tid : rem_hidden_num);
+  // | nram space partion       | data num |
+  // | ------------------------ | -------- |
+  // | nram_grad_input   ping   |  deal_h  |
+  // | nram_dispatch     ping   |  deal_h  |
+  // | nram_grad_input   pong   |  deal_h  |
+  // | nram_dispatch     pong   |  deal_h  |
+  const int max_nram_num = MAX_NRAM_SIZE / sizeof(T);
+  const int deal_h = max_nram_num / 4;
+  const int pingpong_num = 2 * deal_h;
+  T *nram_grad_input = (T *)nram_buffer;
+  T *nram_dispatch = nram_grad_input + deal_h;
+  int grad_input_addr_offset = sample_idx * hidden + hidden_data_offset;
+  T *base_grad_input_addr = (T *)grad_input + grad_input_addr_offset;
+  int dispatch_idx_offset =
+      (indices_value * capacity + location_value) * hidden;
+  T *base_dispatch_addr =
+      (T *)dispatch + dispatch_idx_offset + hidden_data_offset;
+  int repeat_h = hidden_seg_num / deal_h;
+  int rem_h = hidden_seg_num % deal_h;
+  lcs(base_grad_input_addr, base_dispatch_addr, nram_grad_input, nram_dispatch,
+      gates_si_value, repeat_h, rem_h, deal_h, pingpong_num);
+#endif
+}
+
+template <typename T>
+__mlu_entry__ void MLUKernelMoeDispatchBwdData2(
+    const T *gates, const int *indices, const int *locations, const T *dispatch,
+    const int samples, const int capacity, const int hidden,
+    const int num_experts, T *grad_input) {
+  // gates: (samples)
+  // indices: (samples)
+  // locations: (samples)
+  // dispatch: (num_experts * capacity, hidden)
+  // grad_input: (samples, hidden)
+#if __BANG_ARCH__ >= 372
+  if (__is_mpu()) {
+    return;
+  }
+  int per_task_sample_num = samples / taskDim;
+  int rem_sample_num = samples % taskDim;
+  int samples_num = per_task_sample_num + (int)((taskId < rem_sample_num));
+  int sample_idx = taskId * per_task_sample_num +
+                   ((taskId < rem_sample_num) ? taskId : rem_sample_num);
+  int max_deal_h =
+      (MAX_NRAM_SIZE - 4 * sizeof(int) - 1 * sizeof(T)) / 2 / sizeof(T);
+  int deal_h = 0;
+  int deal_s = 0;
+  if (hidden > max_deal_h) {
+    deal_s = 1;
+    deal_h = max_deal_h;
+  } else {
+    deal_h = hidden;
+    deal_s = (MAX_NRAM_SIZE - 2 * deal_h * sizeof(T)) /
+             (1 * sizeof(T) + 4 * sizeof(int));
+  }
+  // | nram space partion       | data num |
+  // | ------------------------ | -------- |
+  // | nram_gates               |  deal_s  |
+  // | nram_dispatch_idx_offset |  deal_s  |
+  // | nram_mask                |  deal_s  |
+  // | nram_indices             |  deal_s  |
+  // | nram_locations           |  deal_s  |
+  // | nram_grad_input          |  deal_h  |
+  // | nram_dispatch            |  deal_h  |
+  T *nram_gates = (T *)nram_buffer;
+  int *nram_dispatch_idx_offset = (int *)(nram_gates + deal_s);
+  int *nram_mask = nram_dispatch_idx_offset + deal_s;
+  int *nram_indices = nram_mask + deal_s;
+  int *nram_locations = nram_indices + deal_s;
+  T *nram_grad_input = (T *)(nram_locations + deal_s);
+  T *nram_dispatch = nram_grad_input + deal_h;
+  int repeat_s = samples_num / deal_s;
+  int rem_s = samples_num % deal_s;
+  int repeat_h = hidden / deal_h;
+  int rem_h = hidden % deal_h;
+  // get gdram input gates indices locations offset
+  T *base_gates = (T *)gates + sample_idx;
+  int *base_indices = (int *)indices + sample_idx;
+  int *base_locations = (int *)locations + sample_idx;
+  // get gdram output grad_input offset
+  int grad_input_offset = sample_idx * hidden;
+  T *base_grad_input = (T *)grad_input + grad_input_offset;
+  for (int s_iter = 0; s_iter <= repeat_s; ++s_iter) {
+    int deal_s_num = (s_iter == repeat_s) ? rem_s : deal_s;
+    if (deal_s_num == 0) {
+      break;
+    }
+    // load gates indices locations
+    T *base_gates_s = base_gates + s_iter * deal_s;
+    int *base_indices_s = base_indices + s_iter * deal_s;
+    int *base_locations_s = base_locations + s_iter * deal_s;
+    __memcpy(nram_gates, base_gates_s, deal_s_num * sizeof(T), GDRAM2NRAM);
+    __memcpy(nram_indices, base_indices_s, deal_s_num * sizeof(int),
+             GDRAM2NRAM);
+    __memcpy(nram_locations, base_locations_s, deal_s_num * sizeof(int),
+             GDRAM2NRAM);
+    // dispatch idx = (nram_indices * capacity + nram_locations) * hidden
+    __bang_mul_scalar(nram_dispatch_idx_offset, nram_indices, capacity,
+                      deal_s_num);
+    __bang_add(nram_dispatch_idx_offset, nram_dispatch_idx_offset,
+               nram_locations, deal_s_num);
+    __bang_mul_scalar(nram_dispatch_idx_offset, nram_dispatch_idx_offset,
+                      hidden, deal_s_num);
+    // 0 <= nram_locations < capacity
+    __bang_ge_scalar(nram_mask, nram_locations, (int)0, deal_s_num);
+    __bang_lt_scalar(nram_locations, nram_locations, capacity, deal_s_num);
+    __bang_and(nram_locations, nram_locations, nram_mask, deal_s_num);
+    // 0 <= nram_indices < num_experts
+    __bang_ge_scalar(nram_mask, nram_indices, (int)0, deal_s_num);
+    __bang_lt_scalar(nram_indices, nram_indices, num_experts, deal_s_num);
+    __bang_and(nram_indices, nram_indices, nram_mask, deal_s_num);
+    __bang_and(nram_mask, nram_indices, nram_locations, deal_s_num);
+    // get output grad_input s offset
+    T *base_grad_input_s = base_grad_input + s_iter * deal_s * hidden;
+    for (int si = 0; si < deal_s_num; ++si) {
+      if (nram_mask[si] != 1) {
+        continue;
+      }
+      T *base_dispatch_si = (T *)dispatch + nram_dispatch_idx_offset[si];
+      T *base_grad_input_s_si = base_grad_input_s + si * hidden;
+      for (int h_iter = 0; h_iter <= repeat_h; ++h_iter) {
+        int deal_h_num = (h_iter == repeat_h) ? rem_h : deal_h;
+        if (deal_h_num == 0) {
+          break;
+        }
+        // get input dispatch h offset
+        T *base_dispatch_si_h = base_dispatch_si + h_iter * deal_h;
+        // get output grad_input s h offset
+        T *base_grad_input_s_si_h = base_grad_input_s_si + h_iter * deal_h;
+        __memcpy(nram_dispatch, base_dispatch_si_h, deal_h_num * sizeof(T),
+                 GDRAM2NRAM);
+        __bang_mul_scalar(nram_grad_input, nram_dispatch, nram_gates[si],
+                          deal_h_num);
+        // store grad_input
+        __memcpy(base_grad_input_s_si_h, nram_grad_input,
+                 deal_h_num * sizeof(T), NRAM2GDRAM);
+      }  // repeat h
+    }    // repeat deal_s_num
+  }      // repeat s
+#endif
+}
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData1Half(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input) {
+  MLUKernelMoeDispatchBwdData1<<<k_dim, k_type, queue>>>(
+      (half *)gates, (int *)indices, (int *)locations, (half *)dispatch,
+      samples, capacity, hidden, num_experts, (half *)grad_input);
+}
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData1Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input) {
+  MLUKernelMoeDispatchBwdData1<<<k_dim, k_type, queue>>>(
+      (float *)gates, (int *)indices, (int *)locations, (float *)dispatch,
+      samples, capacity, hidden, num_experts, (float *)grad_input);
+}
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData2Half(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input) {
+  MLUKernelMoeDispatchBwdData2<<<k_dim, k_type, queue>>>(
+      (half *)gates, (int *)indices, (int *)locations, (half *)dispatch,
+      samples, capacity, hidden, num_experts, (half *)grad_input);
+}
+
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData2Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input) {
+  MLUKernelMoeDispatchBwdData2<<<k_dim, k_type, queue>>>(
+      (float *)gates, (int *)indices, (int *)locations, (float *)dispatch,
+      samples, capacity, hidden, num_experts, (float *)grad_input);
+}
