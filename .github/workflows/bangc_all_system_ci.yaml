@@ -1,12 +1,17 @@
-name: bangcops_release_test
+name: bangc_all_system_test
 
 on:
   push:
+    branches: [master, r*]
+    paths:
+      - 'bangc-ops/kernels/kernel_wrapper/**'
+      - 'bangc-ops/CMakeLists.txt'
+      - 'bangc-ops/independent_build.sh'
     tags:
       - v*
   pull_request:
     paths:
-      - '.github/workflows/bangcops_release_test.yaml'
+      - '.github/workflows/bangc_all_system_ci.yaml'
 
 jobs:
   test:
@@ -60,7 +65,6 @@ jobs:
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
           -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
-
 
       - name: clean
         run: |
