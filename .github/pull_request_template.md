@@ -38,7 +38,7 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 If you have checked the following items, please tick the relevant box.
 
 - [ ] Data type test
-- [ ] Multidimensional tensor test
+- [ ] Multi-dimensional tensor test
 - [ ] Layout test
 - [ ] Different size/integer remainder end segment/alignment misalignment test
 - [ ] Zero dimensional tensor test/zero element test
@@ -75,6 +75,8 @@ Operation:
 |Stability test       |--gtest_repeat=NUM<br>--thread=NUM|          |          |
 |Mult-platform test   |MLU370/MLU590                     |          |          |
 |Nan/INF test         |Whether to support this test      |          |          |
+|Memory leak check    |Test result                       |          |          |
+|Code coverage check  |Test result                       |          |          |
 
 ### 3.3 Performance Test
 

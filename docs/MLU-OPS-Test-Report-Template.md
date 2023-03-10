@@ -37,6 +37,7 @@
 - [ ] 多平台测试
 - [ ] gen_case模块测试
 - [ ] nan / inf测试  
+- [ ] bug 修复测试
 - [ ] 内存泄漏检查, 详见[GTest-User-Guide-zh](./GTest-User-Guide-zh.md)
 - [ ] 代码覆盖率检查，详见[GTest-User-Guide-zh](./GTest-User-Guide-zh.md)
 - [ ] IO计算效率检查，详见[MLU-OPS性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md) 
