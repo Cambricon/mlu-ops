@@ -226,6 +226,7 @@ message Node {
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
   optional GetIndicePairsParam get_indice_pairs_param   = 202302031;  // param
+  optional MoeDispatchBackwardDataParam moe_dispatch_backward_data_param = 20230216; // param
   optional RoiawarePool3dForwardParam  roiaware_pool3d_forward_param = 10120;  // param
   optional RoiawarePool3dBackwardParam  roiaware_pool3d_backward_param = 10121;  // param
   optional RoiPointPool3dParam roipoint_pool3d_param = 16002; // param
@@ -534,6 +535,14 @@ message FillParam  {
   optional int32 version = 2      [default = 1];
   optional PointerMode mode = 3   [default = POINTER_MODE_HOST];
   optional string   value_hex = 4 [default = "0X00000000"];
+}
+
+// param to call mluOpMoeDispatchBackwardData()
+message MoeDispatchBackwardDataParam {
+  optional int32 samples = 1;
+  optional int32 capacity = 2;
+  optional int32 hidden = 3;
+  optional int32 num_experts = 4;
 }
 
 // param to call mluOpRoiawarePool3dForward()
