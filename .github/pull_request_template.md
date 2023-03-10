@@ -38,7 +38,7 @@ For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standar
 If you have checked the following items, please tick the relevant box.
 
 - [ ] Data type test
-- [ ] Multidimensional tensor test
+- [ ] Multi-dimensional tensor test
 - [ ] Layout test
 - [ ] Different size/integer remainder end segment/alignment misalignment test
 - [ ] Zero dimensional tensor test/zero element test
