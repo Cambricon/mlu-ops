@@ -1,10 +1,44 @@
-name: ci
+name: bangc_ci
 
 on:
   push:
     branches: [master, r*]
+    paths-ignore:
+      - 'docs/**'
+      - 'bangpy-ops/**'
+      - 'docker/**'
+      - 'samples/**'
+      - 'installer/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - 'CONTRIBUTION.md'
+      - 'CPPLINT.cfg'
+      - 'LICENSE'
+      - 'README.md'
+      - 'bangc-ops/README.md'
+      - 'requirements.txt'
+      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/bangpy_ci.yaml'
+      - '.github/workflows/daily.yaml'
   pull_request:
     branches: [master, r*]
+    paths-ignore:
+      - 'docs/**'
+      - 'bangpy-ops/**'
+      - 'docker/**'
+      - 'samples/**'
+      - 'installer/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - 'CONTRIBUTION.md'
+      - 'CPPLINT.cfg'
+      - 'LICENSE'
+      - 'README.md'
+      - 'bangc-ops/README.md'
+      - 'requirements.txt'
+      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/bangpy_ci.yaml'
+      - '.github/workflows/daily.yaml'
 
 jobs:
   test:
@@ -42,4 +76,3 @@ jobs:
       - name: clean
         run: |
           rm -rf bangc-ops/build
-          rm -rf bangpy-ops/outs
