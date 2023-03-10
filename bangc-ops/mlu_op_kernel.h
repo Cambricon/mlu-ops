@@ -199,7 +199,29 @@ void MLUOP_WIN_API mluOpBlockKernelPsRoiPoolBackwardFloat(
     const int output_dim, const int rois_num, const int rois_offset,
     const float spatial_scale);
 
-/* RoiawarePool3d */
+/* moe_dispatch_backward_data */
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData1Half(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input);
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData1Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input);
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData2Half(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input);
+void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdData2Float(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *dispatch, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *grad_input);
+
+/* roiaware_pool3d_forward */
 void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int pool_method, const int boxes_num, const int pts_num,
@@ -228,6 +250,7 @@ void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dForwardFloat(
     const int out_y, const int out_z, const void *pts_feature,
     const void *pts_idx_of_voxels, void *pooled_features, void *argmax);
 
+/* roiaware_pool3d_backward */
 void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int pool_method, const int boxes_num, const int out_x,
@@ -254,7 +277,7 @@ void MLUOP_WIN_API mluOpBlockKernelPriorBoxFloat(
     const bool min_max_aspect_ratios_order, void *output, const int output_size,
     void *var, const int var_size);
 
-/* VoxelPooling */
+/* voxel_pooling_forward */
 void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int batch_size, const int num_points, const int num_channels,
@@ -262,7 +285,7 @@ void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
     const void *geom_xyz, const void *input_features, void *output_features,
     void *pos_memo);
 
-/* BoxIouRotated */
+/* box_iou_rotated */
 void MLUOP_WIN_API mluOpUnionKernelBoxIouRotatedFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *box1, const void *box2, void *ious, const int num_box1,
