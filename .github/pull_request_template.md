@@ -75,6 +75,8 @@ Operation:
 |Stability test       |--gtest_repeat=NUM<br>--thread=NUM|          |          |
 |Mult-platform test   |MLU370/MLU590                     |          |          |
 |Nan/INF test         |Whether to support this test      |          |          |
+|Memory leak check    |Test result                       |          |          |
+|Code coverage check  |Test result                       |          |          |
 
 ### 3.3 Performance Test
 
