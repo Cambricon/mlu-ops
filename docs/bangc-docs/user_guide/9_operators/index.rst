@@ -675,3 +675,9 @@ mluOpRoiPointPool3d
    local\_x = (x - cx) * cos(-rz) - (y - cy) * sin(-rz) \\
    local\_y = (x - cx) * sin(-rz) + (y - cy) * cos(-rz) \\
    in\_flag = |local\_x| < \frac{dx}{2} \& |local\_y| < \frac{dy}{2} \& |z - cz| <= \frac{dz}{2}
+
+.. _moe_dispatch_backward_gate:
+
+mluOpMoeDispatchBackwardGate
+----------------------------------
+MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度`grad_gates`。
