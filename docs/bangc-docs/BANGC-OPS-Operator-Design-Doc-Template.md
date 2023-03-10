@@ -52,7 +52,7 @@ example:
 | 模式(可选）                                   |                                                             |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理| 有 dim/axis 参数且需要支持负数 / 不含带 dim/axis 语义的参数等<br>(例如 scatter 算子接口中的 dim 参数支持为负，当 dim=-1 时，实际在最低维上做计算) |
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 有 labels 参数，labels 取值在 dim 范围之外时输出为 Nan / 有 index 参数，要求 index 支持负数 / 不含带 labels/index 语义的参数等<br>(例如 sparse_softmax_ce_logits 算子支持 label 取值在 dim 范围之外，advanced_index 算子支持负数 index 等) |
-| 是否需要支持原位                               | 是/否                                                         |
+| 是否需要支持原位                               | 是/否                                                       |
 | 是否需要支持 stride 机制                       | 是/否                                                       |
 | 是否需要支持广播                               | 是/否 (若是，列清楚具体哪些参数要支持)                      |
 | 0 元素检查是否直接返回                         | 是/否                                                       |
