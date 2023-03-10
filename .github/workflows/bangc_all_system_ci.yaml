@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         runner: [mlu370-m8]
-        mlu_ops_version : [v0.5.0]
+        mlu_ops_version : [v0.5.1]
         cntoolkit_version : [cntoolkit3.3.1]
         os: [ubuntu18.04, ubuntu20.04, debian10, centos7, centos8]
     runs-on: ${{matrix.runner}}
@@ -27,28 +27,28 @@ jobs:
 
       - name: pull_images
         run: |
-          docker pull docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          docker pull docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
 
       - name: build_bangc_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           ./build.sh --sub_module=bangc
 
       - name: mlu_ops_version_check
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           bash version_check.sh 0.5.0
 
       - name: bangc_ops_release_test_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/default_platform
 
       - name: bangc_ops_release_temp_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/default_platform
 
 
@@ -56,14 +56,14 @@ jobs:
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_test/370
 
       - name: bangc_ops_release_temp_370_cases
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.gotgo.cc:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
 
       - name: clean
