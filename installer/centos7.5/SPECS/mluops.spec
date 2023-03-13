@@ -76,7 +76,7 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %postun -p /sbin/ldconfig
 
 %changelog
-* Tue Mar 7 2023 Cambricon Software Team <service@cambricon.com>
+* Tue Mar 13 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.5.1
 * Mon Feb 20 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.5.0

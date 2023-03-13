@@ -5,13 +5,16 @@ This section lists contents that were made for each product release.
 
 * V0.5.1
 
-  **Date:** March 7, 2023
+  **Date:** March 13, 2023
 
   **Changes:**
 
   - Added the following new operations:
 
      - nms_rotated
+     - moe_dispatch_backward_data
+     - moe_dispatch_backward_gate
+     - moe_dispatch_forward
 
 * V0.5.0
 

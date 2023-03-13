@@ -3,13 +3,16 @@
 
 * **V0.5.1**
 
-  **更新时间**：2023年3月7日
+  **更新时间**：2023年3月13日
 
   **更新内容**：
 
   - 新增以下算子章节内容：
 
      + :ref:`nms_rotated`
+     + :ref:`moe_dispatch_backward_data`
+     + :ref:`moe_dispatch_backward_gate`
+     + :ref:`moe_dispatch_forward`
 
 * **V0.5.0**
 

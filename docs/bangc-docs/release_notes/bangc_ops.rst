@@ -60,11 +60,14 @@ v0.5.1
 -  新增支持以下算子：
 
    * ``nms_rotated``
+   * ``moe_dispatch_backward_data``
+   * ``moe_dispatch_backward_gate``
+   * ``moe_dispatch_forward``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~
 
-无。
+- 修复了nms_rotated未对large tensor(2GB)防呆导致的计算错误。
 
 已知遗留问题
 ~~~~~~~~~~~~~~~~~~~~~~

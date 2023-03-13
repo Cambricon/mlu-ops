@@ -46,6 +46,7 @@ Cambricon BANGC OPS具有以下特点：
      * Voxelization
      * YoloBox
      * NmsRotated
+     * mluOpMoeDispatchForward、mluOpMoeDispatchBackwardGate、mluOpMoeDispatchBackwardData
 
 
 
