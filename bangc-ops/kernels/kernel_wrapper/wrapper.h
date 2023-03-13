@@ -98,6 +98,20 @@
     const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t,     \
     void *, const mluOpTensorDescriptor_t, void *
 
+#define ROIALIGN_FORWARD_PARAM_TYPE                                           \
+    mluOpHandle_t, const mluOpRoiAlignForwardDescriptor_t,                    \
+    const mluOpTensorDescriptor_t, const void *,                              \
+    const mluOpTensorDescriptor_t, const void *,                              \
+    const mluOpTensorDescriptor_t, void *
+
+#define ROIALIGN_FORWARD_V2_PARAM_TYPE                                        \
+    mluOpHandle_t, const mluOpRoiAlignForwardDescriptor_t,                    \
+    const mluOpTensorDescriptor_t, const void *,                              \
+    const mluOpTensorDescriptor_t, const void *,                              \
+    const mluOpTensorDescriptor_t, void *,                                    \
+    const mluOpTensorDescriptor_t, void *,                                    \
+    const mluOpTensorDescriptor_t, void *
+
 #define SCATTER_ND_PARAM_TYPE                                                 \
     mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,               \
     const mluOpTensorDescriptor_t, const void *,                              \
@@ -143,6 +157,8 @@ KERNEL_REGISTER(matmul, MATMUL_PARAM_TYPE);
 KERNEL_REGISTER(matmulV2, MATMUL_V2_PARAM_TYPE);
 KERNEL_REGISTER(unique, UNIQUE_PARAM_TYPE);
 KERNEL_REGISTER(uniqueV2, UNIQUE_V2_PARAM_TYPE);
+KERNEL_REGISTER(roiAlignForward, ROIALIGN_FORWARD_PARAM_TYPE);
+KERNEL_REGISTER(roiAlignForwardV2, ROIALIGN_FORWARD_V2_PARAM_TYPE);
 KERNEL_REGISTER(scatterNd, SCATTER_ND_PARAM_TYPE);
 KERNEL_REGISTER(scatterNdV2, SCATTER_ND_V2_PARAM_TYPE);
 KERNEL_REGISTER(gatherNd, GATHER_ND_PARAM_TYPE);

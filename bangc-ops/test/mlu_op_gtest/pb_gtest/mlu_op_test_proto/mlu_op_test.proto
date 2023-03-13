@@ -222,6 +222,7 @@ message Node {
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
   optional BoxIouRotatedParam box_iou_rotated_param = 200;   // BoxIouRotatedParam
   optional NmsRotatedParam nms_rotated_param = 201;   // NmsRotatedParam
+  optional RoialignParam roialign_param = 202;  // RoiAlignForwardParam
   optional BboxOverlapsParam bbox_overlaps_param    = 2041;  // BboxOverlapsParam
   optional BallQueryParam  ball_query_param             = 4008;  // param
   optional FillParam       fill_param                   = 13199;  // param
@@ -502,6 +503,17 @@ message BoxIouRotatedParam {
 
 message NmsRotatedParam {
   optional float iou_threshold   = 1 [default = 0.5];
+}
+
+// param to call mluOpRoiAlignForward()
+message RoialignParam{
+  required int32 pooled_height = 1 [default = 7];
+  required int32 pooled_width = 2 [default = 7];
+  required int32 sampling_ratio = 3 [default = 2];
+  required float spatial_scale = 4 [default = 0.25];
+  required bool aligned = 5 [default = false];
+  optional int32 pool_mode = 6 [default = 1];
+  optional int32 version = 7 [default = 0];
 }
 
 // param to call mluOpBboxOverlaps()

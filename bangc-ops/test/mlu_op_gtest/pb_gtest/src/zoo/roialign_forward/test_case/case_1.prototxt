@@ -1,0 +1,99 @@
+op_name: "roialign_forward"
+op_type: "ROIALIGN_FORWARD"
+input {
+  id: "input0"
+  shape: {
+    dims: 18
+    dims: 250
+    dims: 250
+    dims: 50
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 2
+    lower_bound: -2
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input1"
+  shape: {
+    dims: 9
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 0
+  value_f: 3.222
+  value_f: 4.666
+  value_f: 124.323181
+  value_f: 59.33343
+  value_f: 1
+  value_f: 74.382996
+  value_f: 71.723267
+  value_f: 74.382996
+  value_f: 124.105499
+  value_f: 3
+  value_f: 9.311646
+  value_f: 71.73267
+  value_f: 4.382996
+  value_f: 24.105499
+  value_f: 1
+  value_f: 39.311646
+  value_f: 71.723267
+  value_f: 74.382996
+  value_f: 124.105499
+  value_f: 6
+  value_f: 119.311646
+  value_f: 71.723267
+  value_f: 72.382996
+  value_f: 124.105499
+  value_f: 4
+  value_f: 9.311646
+  value_f: 71.723267
+  value_f: 174.382996
+  value_f: 124.105499
+  value_f: 7
+  value_f: 139.1646
+  value_f: 71.723267
+  value_f: 174.382996
+  value_f: 124.105499
+  value_f: 4
+  value_f: 56.311646
+  value_f: 71.723267
+  value_f: 124.3996
+  value_f: 124.105499
+  value_f: 4
+  value_f: 3.1646
+  value_f: 171.723267
+  value_f: 76.82996
+  value_f: 4.105499
+}
+
+output {
+  id: "output0"
+  shape: {
+    dims: 9
+    dims: 15
+    dims: 15
+    dims: 50
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+roialign_param: {
+  pooled_height: 15
+  pooled_width: 15
+  sampling_ratio: 2
+  spatial_scale : 0.125
+  aligned : 1
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.01
+  error_threshold: 0.01
+  baseline_device: CPU
+}

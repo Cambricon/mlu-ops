@@ -1,0 +1,61 @@
+op_name: "roialign_forward"
+op_type: "ROIALIGN_FORWARD"
+input {
+  id: "input0"
+  shape: {
+    dims: 1
+    dims: 80
+    dims: 80
+    dims: 2048
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 2
+    lower_bound: -2
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input1"
+  shape: {
+    dims: 1
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 0
+  value_f: 0
+  value_f: 0
+  value_f: 80
+  value_f: 80
+}
+
+output {
+  id: "output0"
+  shape: {
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 2048
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+roialign_param: {
+  pooled_height: 1
+  pooled_width: 1
+  sampling_ratio: 0
+  spatial_scale : 1.0
+  aligned : 0
+  pool_mode : 1
+  version : 1
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
