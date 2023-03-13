@@ -928,6 +928,15 @@ typedef struct mluOpReduceStruct *mluOpReduceDescriptor_t;
  */
 typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
 
+/*! The descriptor of RoiAlignForward function that holds parameter information.
+ *
+ *  You need to call the ::mluOpCreateRoiAlignForwardDescriptor function to create a descriptor,
+ *  and call the ::mluOpSetRoiAlignForwardDescriptor function to set the information of
+ *  ::mluOpRoiAlignForward operation to the descriptor. Also, you need to destroy the MLUOP context
+ *  at the end with the ::mluOpDestroyRoiAlignForwardDescriptor function.
+ */
+typedef struct mluOpRoiAlignForwardStruct *mluOpRoiAlignForwardDescriptor_t;
+
 /*!
  * The descriptor of Unique function that holds mluOpUniqueSort_t, dim, return_inverse,
  * and return_counts.
@@ -3823,6 +3832,387 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
                        const void *mapping_channel,
                        const mluOpTensorDescriptor_t bottom_grad_desc,
                        void *bottom_grad);
+
+// Group:RoiAlignForward
+/*!
+ * @brief Creates a descriptor pointed by \b desc for ::mluOpRoiAlignForward operation, and
+ * allocates memory for holding the information about the operation. The information
+ * is defined in ::mluOpRoiAlignForwardDescriptor_t.
+ *
+ * @param[in] desc
+ * A host pointer to the descriptor that holds information about ::mluOpRoiAlignForward operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpSetRoiAlignForwardDescriptor function or
+ * ::mluOpSetRoiAlignForwardDescriptor_v2 function to initialize and set information to the descriptor.
+ * - You need to call the ::mluOpDestroyRoiAlignForwardDescriptor function to destroy the descriptor.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
+
+// Group:RoiAlignForward
+/*!
+ * @brief Initializes the descriptor \b desc that is previously created with
+ * ::mluOpCreateRoiAlignForwardDescriptor function, and sets roialign information
+ * to the descriptor \b desc. The information includes the number of the roialign
+ * feature map height \b pooled_height, the roialign feature map width \b pooled_width,
+ * the sampling_ratio for each boxes \b sampling_ratio, the of the spatial_scale for
+ * each boxes \b spatial_scale, the spatial_scale mode \b aligned.
+ *
+ * @par Deprecated
+ * - ::mluOpSetRoiAlignForwardDescriptor is deprecated and will be removed in the future
+ * release. It is recommended to use ::mluOpSetRoiAlignForwardDescriptor_v2 instead, which
+ * supports both maximum and average modes.
+ *
+ * @param[in] desc
+ * The descriptor of the roialign operation. For detailed information,
+ * see ::mluOpRoiAlignForwardDescriptor_t.
+ * @param[in] pooled_height
+ * The height of output feature map.
+ * @param[in] pooled_width
+ * The width of output feature map.
+ * @param[in] sampling_ratio
+ * The number of sampling points in the grid used to compute the output.
+ * @param[in] spatial_scale
+ * The spatial scale of each regions of interest in the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the boxes by 0.5 pixel.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc,
+                                  const int pooled_height,
+                                  const int pooled_width,
+                                  const int sampling_ratio,
+                                  const float spatial_scale,
+                                  const bool aligned);
+// Group:RoiAlignForward
+/*!
+ * @brief Initializes the roialign descriptor \b roialign_desc that is previously created with
+ * the ::mluOpCreateRoiAlignForwardDescriptor function, and sets roialign information to the
+ * descriptor \b roialign_desc. Compared with ::mluOpSetRoiAlignForwardDescriptor, this function
+ * supports both maximum and average modes defined in \b pool_mode. The information includes the height
+ * \b pooled_height, and width \b pooled_width of output feature map, the pooling mode \b pool_mode
+ * for the roialign operation, the sampling ratio \b sampling_ratio, the spatial scale
+ * \b spatial_scale and the flag of pixel shift \b aligned for each box.
+ *
+ * @param[in] roialign_desc
+ * The descriptor of the roialign operation. For detailed information,
+ * see ::mluOpRoiAlignForwardDescriptor_t.
+ * @param[in] pooled_height
+ * The height of output feature map. The value of this parameter should be greater than 0.
+ * @param[in] pooled_width
+ * The width of output feature map. The value of this parameter should be greater than 0.
+ * @param[in] sampling_ratio
+ * The number of sampling points in the grid used to compute the output.
+ * @param[in] spatial_scale
+ * The spatial scale of each regions of interest in the output.
+ * @param[in] pool_mode
+ * If the value of \b pool_mode is set to 1, the average pooling mode is used. If the value
+ * of \b pool_mode is set to 0, the maximum pooling mode is used.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the boxes by 0.5 pixel. If the value of \b aligned
+ * is set to true, the boxes is shifted by 0.5. If the value of \b aligned is set to false, the boxes is not shifted.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_desc,
+                                     const int pooled_height,
+                                     const int pooled_width,
+                                     const int sampling_ratio,
+                                     const float spatial_scale,
+                                     const int pool_mode,
+                                     const bool aligned);
+
+// Group:RoiAlignForward
+/*!
+ * @brief Destroys a roialign descriptor \b desc that is previously created with the
+ * ::mluOpCreateRoiAlignForwardDescriptor function.
+ *
+ * The roialign descriptor is defined in ::mluOpRoiAlignForwardDescriptor_t
+ * and holds the information about the ::mluOpRoiAlignForward operation.
+ *
+ * @param[in] desc
+ * The roialign descriptor to be destroyed.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+ *
+ * @par Note
+ * - You need to call this function after calling the ::mluOpRoiAlignForward.
+ * - This function should be called to destroy the roialign descriptor.
+ *   Otherwise, the memory leak may occur.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
+
+// Group:RoiAlignForward
+/*!
+ * @brief Computes the output of images \b output_image based on the input \b input_tensor and
+ * bounding boxes \b boxes to perform ::mluOpRoiAlignForward operation. To use maximum pooling mode
+ * or average pooling mode in this operation, call ::mluOpRoiAlignForward_v2.
+ *
+ * @par Deprecated
+ * - ::mluOpRoiAlignForward is deprecated and will be removed in the future release. It is
+ * recommended to use ::mluOpRoiAlignForward_v2 instead, which supports both maximum and average modes.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] roialign_desc
+ * The descriptor of the roialign operation. For detailed information, see
+ * ::mluOpRoiAlignForwardDescriptor_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor in the roialign process. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] boxes_desc
+ * Descriptor of boxes, containing dimension and the layout of boxes.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores the boxes tensor.
+ * @param[in] output_desc
+ * Descriptor of output, containing dimension and the layout of output.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input, boxes tensor
+ *   \b boxes, and output tensor \b output tensor. Data type of all tensors should be the same.
+ *   - input tensor: half, float.
+ *   - boxes tensor: half, float.
+ *   - output tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b input, \b boxes, \b output are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, only supports 2D tensor.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must have four dimensions.
+ * - data type of half is not recommended due to low precision.
+ * - Size of the lowest dimension of input tensor and output tensor must be the same.
+ * - The boxes tensor must have two dimensions.
+ * - Size of the highest dimension of output tensor and boxes tensor must be the same.
+ * - The shape of \b boxes should be [boxes_num, 5].
+ * - \b boxes[i] consists of [batch_id, x1, y1, x2, y2]. \p batch_id should be in the range of
+ *   [0, batch_num - 1]. \p x1 and \p y1 should be greater than or equal to 0. \p x2 should be
+ *   greater than \p x1. \p y2 should be greater than \p y1.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the ::mluOpRoiAlignForward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 1 * 1 * 1 and 1 * 5 --> input: [[[[1.0]]]]
+
+     --> boxes: [[1.0, 0.0, 0.0, 1.0, 1.0]]
+
+     param:
+            pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
+            sampling_ratio: 2, aligned: false
+
+     output array by 1 * 1 * 1 * 1 -->
+         output: [[[[1]]]]
+     @endverbatim
+ *
+ *
+ * @par Reference
+ * - https://pytorch.org/vision/stable/ops.html#torchvision.ops.roi_align
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignForward(mluOpHandle_t handle,
+                     const mluOpRoiAlignForwardDescriptor_t roialign_desc,
+                     const mluOpTensorDescriptor_t input_desc,
+                     const void *input,
+                     const mluOpTensorDescriptor_t boxes_desc,
+                     const void *boxes,
+                     const mluOpTensorDescriptor_t output_desc,
+                     void *output);
+
+// Group:RoiAlignForward
+/*!
+ * @brief Computes the output feature map \b output based on the input feature map \b input and
+ * bounding boxes \b boxes to perform this operation. Compared with ::mluOpRoiAlignForward, in addition to
+ * supporting average pooling mode, ::mluOpRoiAlignForward_v2 also supports maximum pooling mode with two
+ * more output \b argmax_x and \b argmax_y.
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignForward_v2 operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] roialign_desc
+ * The descriptor of the roialign operation. For detailed information, see
+ * ::mluOpRoiAlignForwardDescriptor_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor in the roialign process. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] boxes_desc
+ * The descriptor of the region proposals tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores the region proposals tensor.
+ * @param[in] output_desc
+ * The descriptor of the \b output tensor of the original images.  For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the \b output tensor.
+ * @param[in] argmax_x_desc
+ * The descriptor of the \b argmax_x tensor that stores the coordinate of x axis. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[out] argmax_x
+ * Pointer to the MLU memory that stores the \b argmax_x tensor.
+ * \b argmax_x represents \b output coordinate of x axis when \b pool_mode is maximum pooling mode.
+ * When \b pool_mode is average pooling mode, \b argmax_x is NULL.
+ * @param[in] argmax_y_desc
+ * The descriptor of the \b argmax_y tensor that stores the coordinate of y axis. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[out] argmax_y
+ * Pointer to the MLU memory that stores the \b argmax_y tensor.
+ * \b argmax_y represents \b output coordinate of y axis when \b pool_mode is maximum pooling mode.
+ * When \b pool_mode is average pooling mode, \b argmax_y is NULL.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input, boxes tensor
+ *   \b boxes, output tensor \b output tensor, argmax_x tensor \b argmax_x and argmax_y tensor
+ *   \b argmax_y. Data type of all tensors should be the same.
+ *   - input tensor: half, float.
+ *   - boxes tensor: half, float.
+ *   - output tensor: half, float.
+ *   - argmax_x tensor: half, float.
+ *   - argmax_y tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b input, \b boxes, \b output, \b argmax_x and \b argmax_y are as
+ *   follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, only supports 2D tensor.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - argmax_x tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - argmax_y tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The \b input tensor, \b output tensor, \b argmax_x tensor and \b argmax_y tensor must have four dimensions.
+ * - \b input data type of half is not recommended due to low precision.
+ * - Size of the lowest dimension of \b input tensor and \b output tensor must be the same.
+ * - Size of the lowest dimension of \b input tensor and \b argmax_x tensor must be the same.
+ * - Size of the lowest dimension of \b input tensor and \b argmax_y tensor must be the same.
+ * - The \b boxes tensor must have two dimensions.
+ * - Size of the highest dimension of \b output tensor and \b boxes tensor must be the same.
+ * - Size of the highest dimension of \b argmax_x tensor and \b boxes tensor must be the same.
+ * - Size of the highest dimension of \b argmax_y tensor and \b boxes tensor must be the same.
+ * - The shape of \b boxes should be [boxes_num, 5].
+ * - \b boxes[i] consists of [batch_id, x1, y1, x2, y2]. \p batch_id specifies which image this box
+ *   is in, and should be in the range of [0, batch_num - 1]. \p x1 and \p y1 specify the starting
+ *   coordinate of this box in origin image. \p x2 and \p y2 specify the ending coordinate of this box
+ *   in origin image. \p x1 and \p y1 should be greater than or equal to 0. \p x2 should be greater
+ *   than \p x1. \p y2 should be greater than \p y1.
+ *
+ * @par API Dependency
+ * - This function should be used with ::mluOpSetRoiAlignForwardDescriptor_v2.
+ *
+ * @par Note
+ * - When \b input contains NaN:
+ *   If \b pool_mode is maximum pooling_mode, \b output is positive saturation value on MLU200 series
+ *   and \b output gets more NaN than ieee754 on MLU300 series and CE3226.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the ::mluOpRoiAlignForward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 1 * 1 * 1 and 1 * 5 --> input: [[[[1.0]]]]
+
+     --> boxes: [[1.0, 0.0, 0.0, 1.0, 1.0]]
+
+     parameters:
+            pooled_height: 1.0, pooled_width: 1.0, spatial_scale: 1.0,
+            sampling_ratio: 0, aligned: false, pool_mode = 0
+
+     output array by 1 * 1 * 1 * 1 -->
+         output: [[[[1]]
+     argmax_x array by 1 * 1 * 1 * 1 -->
+         argmax_x: [[[[0.5]]
+     argmax_y array by 1 * 1 * 1 * 1 -->
+         argmag_y: [[[[0.5]]
+
+     @endverbatim
+ *
+ * @par Reference
+ * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/roi_align_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignForward_v2(mluOpHandle_t handle,
+                        const mluOpRoiAlignForwardDescriptor_t roialign_desc,
+                        const mluOpTensorDescriptor_t input_desc,
+                        const void *input,
+                        const mluOpTensorDescriptor_t boxes_desc,
+                        const void *boxes,
+                        const mluOpTensorDescriptor_t output_desc,
+                        void *output,
+                        const mluOpTensorDescriptor_t argmax_x_desc,
+                        void *argmax_x,
+                        const mluOpTensorDescriptor_t argmax_y_desc,
+                        void *argmax_y);
 
 // Group:RoiAlignRotated
 /*!
