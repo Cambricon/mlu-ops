@@ -5820,8 +5820,8 @@ mluOpFill_v3(mluOpHandle_t handle,
 
 // Group:MoeDispatchBackwardData
 /*!
- * @brief In the MoE algorithm, Calculates the inverse gradient of \b input tensor, and
- * returns the results in the output tensor \b grad_input .
+ * @brief Calculates the inverse gradient of \b input tensor, and returns the results in the output
+ * tensor \b grad_input.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
