@@ -1,0 +1,53 @@
+op_name: "matmul"
+op_type: "MATMUL"
+input {
+  id: "input1"
+  shape: {
+    dims: 37
+    dims: 14
+  }
+  layout: LAYOUT_NCHW
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 20
+    lower_bound: -20
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 14
+    dims: 12600
+  }
+  layout: LAYOUT_NCHW
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 20
+    lower_bound: -20
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 37
+    dims: 12600
+  }
+  layout: LAYOUT_NCHW
+  dtype: DTYPE_FLOAT
+  onchip_dtype: DTYPE_FLOAT
+}
+matmul_param: {
+  is_trans_a: false
+  is_trans_b: false
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
