@@ -334,6 +334,12 @@ mluOpPsamaskForward
 - ``x`` 是输入的数据。
 - ``y`` 是输出的数据。
 
+.. _roi_align_forward:
+
+mluOpRoiAlignForward
+-----------------------------
+该算子是在Mask-RCNN中提出的一种区域特征聚集的方式，该算子主要应用于FasterRCNN-Resnet101+FPN和MaskRCNN-Resnet+FPN网络。
+
 .. _roi_align_rotated_forward:
 
 mluOpRoiAlignRotatedForward
