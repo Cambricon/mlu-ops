@@ -1,0 +1,99 @@
+op_name: "moe_dispatch_forward"
+input {
+  id: "gates"
+  shape: {
+    dims: 4608
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 21
+    lower_bound: 0.0
+    upper_bound: 1.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "indices"
+  shape: {
+    dims: 4608
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    lower_bound: 0
+    upper_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "locations"
+  shape: {
+    dims: 4608
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 24
+    lower_bound: 0
+    upper_bound: 2879
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input"
+  shape: {
+    dims: 4608
+    dims: 1024
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    lower_bound: -1.0
+    upper_bound: 1.0
+    distribution: UNIFORM
+  }
+}
+
+input {
+  id: "dispatch"
+  shape: {
+    dims: 5760
+    dims: 1024
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    lower_bound: -2.0
+    upper_bound: 2.0
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "output"
+  shape: {
+    dims: 5760
+    dims: 1024
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+moe_dispatch_forward_param: {
+  samples: 4608
+  capacity: 2880
+  hidden: 1024
+  num_experts: 2
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

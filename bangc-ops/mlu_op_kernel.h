@@ -593,6 +593,19 @@ void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardHalf(
     const int n, const int m, const void *unknown, const void *known,
     void *dist2, void *idx);
 
+/* moe_dispatch_forward */
+void MLUOP_WIN_API mluOpBlockKernelMoeDispatchFwdFloat(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *input, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *dispatch);
+
+void MLUOP_WIN_API mluOpBlockKernelMoeDispatchFwdHalf(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *gates, const void *indices, const void *locations,
+    const void *input, const int samples, const int capacity,
+    const int hidden, const int num_experts, void *dispatch);
+
 /* moe_dispatch_backward_gate */
 void MLUOP_WIN_API mluOpUnionKernelMoeDispatchBwdGate1Half(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
