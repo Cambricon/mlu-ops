@@ -404,17 +404,14 @@ int64_t RoialignForwardExecutor::getTheoryOps() {
 
   Device device = parser_->device();
   float *input_rois = NULL;
-  if (device == Device::GPU) {
-    auto rois_dtype = input_rois_desc->dtype;
-    int rois_count_num = num_rois * input_rois_desc->dims[1];
-    float *rois_host =
-        (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
-    castDataOut(data_vector_[1].host_ptr, rois_dtype, (float *)rois_host,
-                MLUOP_DTYPE_FLOAT, rois_count_num, NO_QUANT, 0, 1, 0);
-    input_rois = rois_host;
-  } else {
-    input_rois = cpu_fp32_input_[1];
-  }
+
+  auto rois_dtype = input_rois_desc->dtype;
+  int rois_count_num = num_rois * input_rois_desc->dims[1];
+  float *rois_host =
+      (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
+  castDataOut(data_vector_[1].host_ptr, rois_dtype, (float *)rois_host,
+              MLUOP_DTYPE_FLOAT, rois_count_num, NO_QUANT, 0, 1, 0);
+  input_rois = rois_host;
 
   // roialign theory
   for (int roi_idx = 0; roi_idx < num_rois; roi_idx++) {
@@ -462,9 +459,8 @@ int64_t RoialignForwardExecutor::getTheoryOps() {
     }          // ph
   }            // roi
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
-  if (device == Device::GPU) {
-    cpu_runtime_.deallocate(input_rois);
-  }
+  cpu_runtime_.deallocate(input_rois);
+
   return theory_ops;
 }
 
@@ -490,17 +486,14 @@ int64_t RoialignForwardExecutor::getTheoryIoSize() {
 
   Device device = parser_->device();
   float *input_rois = NULL;
-  if (device == Device::GPU) {
-    auto rois_dtype = input_rois_desc->dtype;
-    int rois_count_num = num_rois * input_rois_desc->dims[1];
-    float *rois_host =
-        (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
-    castDataOut(data_vector_[1].host_ptr, rois_dtype, (float *)rois_host,
-                MLUOP_DTYPE_FLOAT, rois_count_num, NO_QUANT, 0, 1, 0);
-    input_rois = rois_host;
-  } else {
-    input_rois = cpu_fp32_input_[1];
-  }
+
+  auto rois_dtype = input_rois_desc->dtype;
+  int rois_count_num = num_rois * input_rois_desc->dims[1];
+  float *rois_host =
+      (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
+  castDataOut(data_vector_[1].host_ptr, rois_dtype, (float *)rois_host,
+              MLUOP_DTYPE_FLOAT, rois_count_num, NO_QUANT, 0, 1, 0);
+  input_rois = rois_host;
 
   // roialign theory_io
   for (int roi_idx = 0; roi_idx < num_rois; roi_idx++) {
@@ -552,9 +545,7 @@ int64_t RoialignForwardExecutor::getTheoryIoSize() {
     }    // ph
   }      // roi
   VLOG(4) << "theory_io_size: " << theory_io_size << "ops";
-  if (device == Device::GPU) {
-    cpu_runtime_.deallocate(input_rois);
-  }
+  cpu_runtime_.deallocate(input_rois);
 
   return theory_io_size;
 }
