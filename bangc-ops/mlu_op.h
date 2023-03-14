@@ -3847,13 +3847,13 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  *
  * @par Data Type
  * - None.
- * 
+ *
  * @par Data Layout
  * - None.
- * 
+ *
  * @par Scale Limitation
  * - None.
- * 
+ *
  * @par API Dependency
  * - The ::mluOpSetRoiAlignForwardDescriptor or ::mluOpSetRoiAlignForwardDescriptor_v2
  *   function should be called to initialize the descriptor after calling this function.
@@ -3863,7 +3863,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  *
  * @par Example
  * - None.
- * 
+ *
  * @par Reference
  * - None.
  */
@@ -3900,16 +3900,16 @@ mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- * 
+ *
  * @par Data Type
  * - None.
- * 
+ *
  * @par Data Layout
  * - None.
- * 
+ *
  * @par Scale Limitation
  * - None.
- * 
+ *
  * @par API Dependency
  * - This function should be called after ::mluOpCreateRoiAlignForwardDescriptor.
  *
@@ -3918,7 +3918,7 @@ mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
  *
  * @par Example
  * - None.
- * 
+ *
  * @par Reference
  * - None.
  */
@@ -3962,22 +3962,22 @@ mluOpSetRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc,
  *
  * @par Data Type
  * - None.
- * 
+ *
  * @par Data Layout
  * - None.
- * 
+ *
  * @par Scale Limitation
  * - None.
- * 
+ *
  * @par API Dependency
  * - This function should be called after ::mluOpCreateRoiAlignForwardDescriptor.
- * 
+ *
  * @par Note
  * - None.
  *
  * @par Example
  * - None.
- * 
+ *
  * @par Reference
  * - None.
  */
@@ -4006,23 +4006,23 @@ mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_d
  *
  * @par Data Type
  * - None.
- * 
+ *
  * @par Data Layout
  * - None.
- * 
+ *
  * @par Scale Limitation
  * - None.
- * 
+ *
  * @par API Dependency
  * - This function should be called after ::mluOpRoiAlignForward to
  *   destroy the descriptor, Otherwise, memory leak may occur.
- * 
+ *
  * @par Note
  * - None.
- * 
+ *
  * @par Example
  * - None.
- * 
+ *
  * @par Reference
  * - None.
  */
@@ -4129,7 +4129,7 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  * and bounding boxes \b boxes to perform this function. Compared with ::mluOpRoiAlignForward,
  * ::mluOpRoiAlignForward_v2 also supports maximum pooling mode with two more output
  * \b argmax_x and \b argmax_y.
- * 
+ *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignForward_v2. For detailed information, see ::mluOpHandle_t.
