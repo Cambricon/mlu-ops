@@ -10800,6 +10800,82 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
                              const mluOpTensorDescriptor_t grad_gates_desc,
                              void *grad_gates);
 
+// Group:PointsInBoxes
+/*!
+ * @brief Detects the first 3D box that each point belongs to in given
+ *  points cloud data.
+ *
+ * @param[in] handle
+ *   Input. Handle to a MLUOP context that is used to manage MLU devices and
+ *   queues in the box iou rotated operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] points_desc
+ *   Input. The descriptor of the input tensor \b points.
+ *   The shape of \b points is [B, npoints, 3], where '3' means
+ *   the 3D coordinate position (x, y, z) for each point,
+ *   'B' means batch size, and 'npoints' means points number.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] points
+ *   Input. Pointer to the MLU memory that stores the input tensor \b points.
+ * @param[in] boxes_desc
+ *   Input. The descriptor of the input tensor \b boxes.
+ *   The shape of \b boxes is [B, N, 7], where ``7`` means
+ *   (x, y, z, dx, dy, dz, heading) with
+ *   ``x``,``y``, and ``z`` indicating 3D center coordinate for each box, and
+ *   ``dx``, ``dy``, ``dz`` indicating max-ranges in x, y and z directions 
+ *   for each box.
+ *   Note that ``dx``, ``dy``, ``dz`` is non-negative.
+ *   ``B`` means batch size, ``N`` means boxes number.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ *   Input. Pointer to the MLU memory that stores the input tensor \b boxes.
+ * @param[out] points_indices_desc
+ *   Output. The descriptor of the output tensor \b points_indices.
+ *   The shape of \b points_indices is [B, N].
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] points_indices
+ *   Output. Pointer to the MLU memory that stores the
+ *   output tensor \b points_indices.
+ *   \b points_indices are indexs of the first 3D box that each point
+ *   belongs to in given points cloud data.
+ *   If no corresponding box exists, the output is -1.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - By the order of \b points - \b boxes - \b points_indices,
+ *   the supported data types of
+ *    \b points, \b boxes and \b points_indices are as follows:
+ *   - float - float - int32_t.
+ *
+ * @par Scale Limitation
+ * - On MLU370, the number of boxes cannot exceed 23404;
+ *   on MLU590, the number of boxes cannot exceed 14042.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - Differences between MLU and CPU/GPU may occur when the point is
+ * on the edge of the box.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/OpenPCDet/blob/master/pcdet/
+ *   ops/roiaware_pool3d/src/roiaware_pool3d_kernel.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPointsInBoxes(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t points_desc,
+                        const void *points,
+                        const mluOpTensorDescriptor_t boxes_desc,
+                        const void *boxes,
+                        const mluOpTensorDescriptor_t points_indices_desc,
+                        void *points_indices);
+
 #if defined(__cplusplus)
 }
 #endif
