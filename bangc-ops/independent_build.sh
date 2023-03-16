@@ -148,6 +148,9 @@ prepare_cntoolkit () {
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
               echo "real_path $REAL_PATH"
               wget -A deb -m -p -E -k -K -np ${PACKAGE_PATH}
+              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
+                rm -rf ${PACKAGE_EXTRACT_DIR}
+              fi
               mkdir -p ${PACKAGE_EXTRACT_DIR}
               pushd ${PACKAGE_EXTRACT_DIR}
               for filename in ../${REAL_PATH}*.deb; do
@@ -176,6 +179,9 @@ prepare_cntoolkit () {
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
               echo "real_path $REAL_PATH"
               wget -A deb -m -p -E -k -K -np ${PACKAGE_PATH}
+              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
+                rm -rf ${PACKAGE_EXTRACT_DIR}
+              fi
               mkdir -p ${PACKAGE_EXTRACT_DIR}
               pushd ${PACKAGE_EXTRACT_DIR}
               for filename in ../${REAL_PATH}*.deb; do
@@ -202,6 +208,9 @@ prepare_cntoolkit () {
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
               echo "real_path $REAL_PATH"
               wget -A rpm -m -p -E -k -K -np ${PACKAGE_PATH}
+              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
+                rm -rf ${PACKAGE_EXTRACT_DIR}
+              fi
               mkdir -p ${PACKAGE_EXTRACT_DIR}
               pushd ${PACKAGE_EXTRACT_DIR}
               for filename in ../${REAL_PATH}*.rpm; do
@@ -227,6 +236,9 @@ prepare_cntoolkit () {
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
               echo "real_path $REAL_PATH"
               wget -A rpm -m -p -E -k -K -np ${PACKAGE_PATH}
+              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
+                rm -rf ${PACKAGE_EXTRACT_DIR}
+              fi
               mkdir -p ${PACKAGE_EXTRACT_DIR}
               pushd ${PACKAGE_EXTRACT_DIR}
               for filename in ../${REAL_PATH}*.rpm; do
