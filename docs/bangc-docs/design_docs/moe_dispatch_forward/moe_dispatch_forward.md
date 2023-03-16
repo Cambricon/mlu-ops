@@ -52,7 +52,7 @@ example:
 | 模式(可选）                                   | 否 |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理| 无 |
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无 |
-| 是否需要支持原位                               | 否 |
+| 是否需要支持原位                               | 是 |
 | 是否需要支持 stride 机制                       | 否 |
 | 是否需要支持广播                               | 否 |
 | 0 元素检查是否直接返回                         | 是, 返回MLUOP_STATUS_SUCCESS |
@@ -101,7 +101,7 @@ example:
 | 布局限制     | ARRAY                                                        |
 | 功能限制     | 无                                                           |
 | 数据范围限制 | 有 indices 参数，该参数的取值范围为[0, ..., (num_experts-1)]; <br />有 locations 参数，该参数的取值范围为[0, ..., (capacity-1)] |
-| 原位限制     | 不支持原位                                                   |
+| 原位限制     | 支持原位                                                     |
 | stride 限制  | 不支持 stride 机制                                           |
 | 广播限制     | 不支持广播                                                   |
 | 规模限制     | gates_desc, indices_desc、locations_desc、input_desc的第一个维度大小等于samples <br />input_desc、dispatch_desc的第2个维度大小等于hidden <br />dispatch_desc的第1个维度大小等于num_experts * capacity |
