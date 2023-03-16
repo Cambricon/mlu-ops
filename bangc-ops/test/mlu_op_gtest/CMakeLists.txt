@@ -173,7 +173,8 @@ endif()
 add_library(mluop_api_gtest_obj OBJECT ${MLUOP_API_TEST_DIR} ${MLUOP_API_GTEST_DIR})
 target_include_directories(mluop_api_gtest_obj PRIVATE ${MLUOP_API_GTEST_INCLUDE})
 add_executable(mluop_api_gtest $<TARGET_OBJECTS:mluop_api_gtest_obj>)
-target_link_libraries(mluop_api_gtest cnrt cndev cndrv cndev pthread gtest_shared mluops stdc++ m dl)
+target_link_libraries(mluop_api_gtest mluops)
+target_link_libraries(mluop_api_gtest cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
 target_link_libraries(mluop_api_gtest ${LIBXML2_LIBRARIES} ${EXTRA_LIBS})
 set_target_properties(mluop_api_gtest
   PROPERTIES
