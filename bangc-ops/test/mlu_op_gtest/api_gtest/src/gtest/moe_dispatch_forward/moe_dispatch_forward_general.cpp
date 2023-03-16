@@ -63,9 +63,14 @@ class moe_dispatch_forward_general
                                          gates_dim, gates_shape.data()));
     uint gates_ele_num = mluOpGetTensorElementNum(gates_desc_);
     if (gates_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMalloc(&gates_, mluOpGetTensorElementNum(gates_desc_) *
-                                          mluOpDataTypeBytes(gates_dtype)))
+      if (mluOpGetTensorElementNum(gates_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&gates_, 12 * mluOpDataTypeBytes(gates_dtype)));
+      } else {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&gates_, gates_ele_num *
+                                            mluOpDataTypeBytes(gates_dtype)));
+      }
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&indices_desc_));
@@ -79,10 +84,16 @@ class moe_dispatch_forward_general
                                          indices_shape.data()));
     uint indices_ele_num = mluOpGetTensorElementNum(indices_desc_);
     if (indices_ele_num > 0) {
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&indices_, mluOpGetTensorElementNum(indices_desc_) *
-                                    mluOpDataTypeBytes(indices_dtype)));
+      if (mluOpGetTensorElementNum(indices_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&indices_, 12 * mluOpDataTypeBytes(indices_dtype)));
+      } else {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&indices_,
+                       indices_ele_num * mluOpDataTypeBytes(indices_dtype)));
+      }
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&locations_desc_));
@@ -96,10 +107,16 @@ class moe_dispatch_forward_general
                                          locations_shape.data()));
     uint locations_ele_num = mluOpGetTensorElementNum(locations_desc_);
     if (locations_ele_num > 0) {
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&locations_, mluOpGetTensorElementNum(locations_desc_) *
-                                      mluOpDataTypeBytes(locations_dtype)));
+      if (mluOpGetTensorElementNum(locations_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&locations_, 12 * mluOpDataTypeBytes(locations_dtype)));
+      } else {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&locations_, locations_ele_num *
+                                        mluOpDataTypeBytes(locations_dtype)));
+      }
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
@@ -112,9 +129,14 @@ class moe_dispatch_forward_general
                                          input_dim, input_shape.data()));
     uint input_ele_num = mluOpGetTensorElementNum(input_desc_);
     if (input_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMalloc(&input_, mluOpGetTensorElementNum(input_desc_) *
-                                          mluOpDataTypeBytes(input_dtype)));
+      if (mluOpGetTensorElementNum(input_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&input_, 12 * mluOpDataTypeBytes(input_dtype)));
+      } else {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&input_, input_ele_num *
+                                            mluOpDataTypeBytes(input_dtype)));
+      }
     }
 
     MoeDispatchForwardParam MoeDispatchForward = std::get<4>(GetParam());
@@ -131,10 +153,16 @@ class moe_dispatch_forward_general
                                          dispatch_shape.data()));
     uint dispatch_ele_num = mluOpGetTensorElementNum(dispatch_desc_);
     if (dispatch_ele_num > 0) {
-      GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
-          cnrtMalloc(&dispatch_, mluOpGetTensorElementNum(dispatch_desc_) *
-                                     mluOpDataTypeBytes(dispatch_dtype)));
+      if (mluOpGetTensorElementNum(dispatch_desc_) >= LARGE_TENSOR_NUM) {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&dispatch_, 12 * mluOpDataTypeBytes(dispatch_dtype)));
+      } else {
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&dispatch_,
+                       dispatch_ele_num * mluOpDataTypeBytes(dispatch_dtype)));
+      }
     }
   }
 
@@ -485,5 +513,22 @@ INSTANTIATE_TEST_CASE_P(
                                          2, std::vector<int>({16, 4}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    large_tensor, moe_dispatch_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         1, std::vector<int>({1073741825}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1073741825}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1073741825}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1073741825, 4}))),
+        testing::Values(MoeDispatchForwardParam{1073741825, 536870913, 4, 2}),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1073741826, 4}))),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 }  // namespace mluopapitest
