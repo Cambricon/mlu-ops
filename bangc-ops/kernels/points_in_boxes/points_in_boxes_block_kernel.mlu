@@ -1,0 +1,230 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include <type_traits>
+
+#include "kernels/kernel.h"
+
+#include "mlu_op_kernel.h"
+#include "kernels/points_in_boxes/points_in_boxes.h"
+
+#define MARGIN 1e-5
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+__mlu_func__ void check_point_in_box(
+    float *x_nram_buffer, float *y_nram_buffer, float *z_nram_buffer, float cx,
+    float cy, float cz, float dx, float dy, float dz, float rz,
+    int points_compute_num, float *temp0_nram_buffer, float *temp1_nram_buffer,
+    float *temp2_nram_buffer, float *temp3_nram_buffer,
+    float *temp4_nram_buffer) {
+  __bang_sub_scalar(temp0_nram_buffer, z_nram_buffer, cz, points_compute_num);
+  // fabs(local_z)
+  __bang_abs(temp0_nram_buffer, temp0_nram_buffer, points_compute_num);
+
+  __bang_gt_scalar(temp0_nram_buffer, temp0_nram_buffer, (float)(0.5 * dz),
+                   points_compute_num);
+  __bang_not(temp0_nram_buffer, temp0_nram_buffer, points_compute_num);
+
+  float cosa = std::cos(-rz);
+  float sina = std::sin(-rz);
+
+  __bang_sub_scalar(temp1_nram_buffer, x_nram_buffer, cx, points_compute_num);
+  __bang_sub_scalar(temp2_nram_buffer, y_nram_buffer, cy, points_compute_num);
+
+  __bang_mul_scalar(temp3_nram_buffer, temp1_nram_buffer, cosa,
+                    points_compute_num);
+  __bang_mul_scalar(temp4_nram_buffer, temp2_nram_buffer, sina,
+                    points_compute_num);
+  // local_x
+  __bang_sub(temp3_nram_buffer, temp3_nram_buffer, temp4_nram_buffer,
+             points_compute_num);
+  // fabs(local_x)
+  __bang_abs(temp3_nram_buffer, temp3_nram_buffer, points_compute_num);
+  // fabs(local_x) < dx/2 + MARGIN ? 1 : 0
+  __bang_lt_scalar(temp3_nram_buffer, temp3_nram_buffer,
+                   (float)(0.5 * dx + MARGIN), points_compute_num);
+  __bang_and(temp0_nram_buffer, temp0_nram_buffer, temp3_nram_buffer,
+             points_compute_num);  // flush res
+
+  __bang_mul_scalar(temp3_nram_buffer, temp1_nram_buffer, sina,
+                    points_compute_num);
+  __bang_mul_scalar(temp4_nram_buffer, temp2_nram_buffer, cosa,
+                    points_compute_num);
+  // local_y
+  __bang_add(temp3_nram_buffer, temp3_nram_buffer, temp4_nram_buffer,
+             points_compute_num);
+  // fabs(local_y)
+  __bang_abs(temp3_nram_buffer, temp3_nram_buffer, points_compute_num);
+  // fabs(local_y) < dy/2 + MARGIN ? 1 : 0
+  __bang_lt_scalar(temp3_nram_buffer, temp3_nram_buffer,
+                   (float)(0.5 * dy + MARGIN), points_compute_num);
+  __bang_and(temp0_nram_buffer, temp0_nram_buffer, temp3_nram_buffer,
+             points_compute_num);  // flush res
+}
+
+__mlu_func__ void noPipelineLoad(float *points_cluster_base,
+                                 float *points_nram_buffer,
+                                 uint32_t points_deal_offset,
+                                 uint32_t points_load_offset, int loop_index) {
+  uint64_t gdram_load_offset = loop_index * ((uint64_t)points_deal_offset);
+  float *points_gdram_src = points_cluster_base + gdram_load_offset;
+  // load points
+  __memcpy(points_nram_buffer, points_gdram_src,
+           points_load_offset * sizeof(float), GDRAM2NRAM);
+}
+
+__mlu_func__ void noPipelineCompute(
+    float *points_nram_buffer, int *idx_nram_buffer, float *x_nram_buffer,
+    float *boxes_nram_buffer, uint32_t boxes_num, uint32_t points_compute_num,
+    float *temp0_nram_buffer, float *temp1_nram_buffer,
+    float *temp2_nram_buffer, float *temp3_nram_buffer,
+    float *temp4_nram_buffer) {
+  __bang_transpose(x_nram_buffer, points_nram_buffer, points_compute_num, 3);
+
+  float *y_nram_buffer = x_nram_buffer + points_compute_num;
+  float *z_nram_buffer = y_nram_buffer + points_compute_num;
+
+  // init result
+  __bang_write_value((float *)idx_nram_buffer, points_compute_num, float(0.0));
+
+  float(*boxe_index)[7] = (float(*)[7])boxes_nram_buffer;
+  for (int i = 0; i < boxes_num; i++) {
+    check_point_in_box(x_nram_buffer, y_nram_buffer, z_nram_buffer,
+                       boxe_index[i][0], boxe_index[i][1], boxe_index[i][2],
+                       boxe_index[i][3], boxe_index[i][4], boxe_index[i][5],
+                       boxe_index[i][6], points_compute_num, temp0_nram_buffer,
+                       temp1_nram_buffer, temp2_nram_buffer, temp3_nram_buffer,
+                       temp4_nram_buffer);
+    __bang_gt(temp0_nram_buffer, temp0_nram_buffer, (float *)idx_nram_buffer,
+              points_compute_num);
+    __bang_mul_scalar(temp0_nram_buffer, temp0_nram_buffer, i + 1.0,
+                      points_compute_num);
+    __bang_add((float *)idx_nram_buffer, temp0_nram_buffer,
+               (float *)idx_nram_buffer, points_compute_num);
+  }
+  __bang_sub_scalar((float *)idx_nram_buffer, (float *)idx_nram_buffer, 1.0,
+                    points_compute_num);
+  __bang_float2int32_tz(idx_nram_buffer, (float *)idx_nram_buffer,
+                        points_compute_num, 0);
+}
+
+__mlu_func__ void noPipelineStore(int *idx_cluster_base, int *idx_nram_buffer,
+                                  uint32_t idx_deal_num, uint32_t idx_store_num,
+                                  int loop_index) {
+  uint64_t gdram_store_offset = loop_index * ((uint64_t)idx_deal_num);
+  int *idx_gdram_dst = idx_cluster_base + gdram_store_offset;
+
+  // store idx
+  __memcpy(idx_gdram_dst, idx_nram_buffer, idx_store_num * sizeof(int),
+           NRAM2GDRAM);
+}
+
+/*********************** ram space split ***************************/
+/* nram(no pipeline):                                              */
+/* | points/(temp0,temp1,temp2,temp3,temp4,idx) | x,y,z | boxes |  */
+__mlu_global__ void MLUBlockKernelPointsInBoxes(
+    uint32_t batch_size, uint32_t points_num, uint32_t boxes_num, float *points,
+    float *boxes, int *idx, uint32_t points_batch_offset,
+    uint32_t boxes_batch_offset, uint32_t idx_batch_offset,
+    uint32_t points_deal_num, uint32_t points_deal_offset,
+    uint32_t idx_deal_num) {
+  uint32_t points_per_ipu = points_num / taskDim;
+  uint32_t points_ipu_rem = points_num % taskDim;
+  uint64_t points_current_ipu = points_per_ipu + (taskId < points_ipu_rem);
+
+  if (points_current_ipu == 0) {
+    return;
+  }
+
+  uint64_t points_ipu_offset =
+      taskId * points_current_ipu +
+      ((uint32_t)(taskId >= points_ipu_rem)) * points_ipu_rem;
+
+  uint64_t points_gdram_offset = points_ipu_offset * 3;
+  uint64_t idx_gdram_offset = points_ipu_offset * 1;
+
+  float *points_cluster_base = points + points_gdram_offset;
+
+  float *boxes_cluster_base = boxes;
+  int *idx_cluster_base = idx + idx_gdram_offset;
+
+  float *points_nram_buffer = (float *)nram_buffer;
+  float *temp0_nram_buffer = points_nram_buffer;
+  float *temp1_nram_buffer = temp0_nram_buffer + points_deal_num;
+  float *temp2_nram_buffer = temp1_nram_buffer + points_deal_num;
+  float *temp3_nram_buffer = temp2_nram_buffer + points_deal_num;
+  float *temp4_nram_buffer = temp3_nram_buffer + points_deal_num;
+  int *idx_nram_buffer = (int *)(temp4_nram_buffer + points_deal_num);
+  float *x_nram_buffer = (float *)(idx_nram_buffer + points_deal_num);
+  float *boxes_nram_buffer = x_nram_buffer + points_deal_offset;
+
+  int nram_repeat =
+      PAD_UP(points_current_ipu, points_deal_num) / points_deal_num;
+
+  uint32_t nram_deal_points_rem = points_current_ipu % points_deal_num;
+  nram_deal_points_rem =
+      nram_deal_points_rem > 0 ? nram_deal_points_rem : points_deal_num;
+  uint32_t nram_deal_points_rem_offset = nram_deal_points_rem * 3;
+
+  for (int i = 0; i < batch_size; i++) {
+    __memcpy(boxes_nram_buffer, boxes_cluster_base,
+             boxes_batch_offset * sizeof(float), GDRAM2NRAM);
+    for (int j = 0; j < nram_repeat; j++) {
+      uint32_t points_load_offset = points_deal_offset;
+      uint32_t idx_store_num = idx_deal_num;
+      uint32_t points_compute_num = points_deal_num;
+      if (j == nram_repeat - 1) {
+        points_load_offset = nram_deal_points_rem_offset;
+        idx_store_num = nram_deal_points_rem;
+        points_compute_num = nram_deal_points_rem;
+      }
+
+      noPipelineLoad(points_cluster_base, points_nram_buffer,
+                     points_deal_offset, points_load_offset, j);
+
+      noPipelineCompute(points_nram_buffer, idx_nram_buffer, x_nram_buffer,
+                        boxes_nram_buffer, boxes_num, points_compute_num,
+                        temp0_nram_buffer, temp1_nram_buffer, temp2_nram_buffer,
+                        temp3_nram_buffer, temp4_nram_buffer);
+
+      noPipelineStore(idx_cluster_base, idx_nram_buffer, idx_deal_num,
+                      idx_store_num, j);
+    }
+    points_cluster_base += points_batch_offset;
+    boxes_cluster_base += boxes_batch_offset;
+    idx_cluster_base += idx_batch_offset;
+  }
+}
+
+void MLUOP_WIN_API mluOpBlockKernelPointsInBoxes(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    uint32_t batch_size, uint32_t points_num, uint32_t boxes_num, float *points,
+    float *boxes, int *idx, uint32_t points_batch_offset,
+    uint32_t boxes_batch_offset, uint32_t idx_batch_offset,
+    uint32_t points_deal_num, uint32_t points_deal_offset,
+    uint32_t idx_deal_num) {
+  MLUBlockKernelPointsInBoxes<<<k_dim, k_type, queue>>>(
+      batch_size, points_num, boxes_num, points, boxes, idx,
+      points_batch_offset, boxes_batch_offset, idx_batch_offset,
+      points_deal_num, points_deal_offset, idx_deal_num);
+}

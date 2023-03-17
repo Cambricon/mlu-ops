@@ -10800,6 +10800,71 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
                              const mluOpTensorDescriptor_t grad_gates_desc,
                              void *grad_gates);
 
+// Group:PointsInBoxes
+/*!
+ * @brief Detects the first 3D box that each point belongs to in given points cloud data.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * points_in_boxes operation. For detailed information, see ::mluOpHandle_t.
+ *
+ * @param[in] points_desc
+ * The descriptor of input tensor \b points, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ *
+ * @param[in] points
+ * Pointer to the MLU memory that stores the \b points tensor.
+ *
+ * @param[in] boxes_desc
+ * The descriptor of input tensor \b boxes, which contains dimension, data type and data layout.
+ *
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores the \b boxes tensor.
+ *
+ * @param[out] points_indices_desc
+ * The descriptor of input tensor \b points_indices, which contains dimension, data type and data layout.
+ *
+ * @param[out] points_indices
+ * Pointer to the MLU memory that stores the \b points_indices tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - points tensor: float
+ *   - boxes tensor: float
+ *   - points_indices tensor: int32
+ *
+ * @par Data Layout
+ * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - On MLU370, the number of boxes cannot exceed 23404;
+ *   On MLU590, the number of boxes cannot exceed 14042.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - Differences between MLU and CPU/GPU may occur when the point is on the edge of the box.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/OpenPCDet/blob/master/pcdet/
+ *   ops/roiaware_pool3d/src/roiaware_pool3d_kernel.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPointsInBoxes(mluOpHandle_t handle,
+                   const mluOpTensorDescriptor_t points_desc,
+                   const void *points,
+                   const mluOpTensorDescriptor_t boxes_desc,
+                   const void *boxes,
+                   const mluOpTensorDescriptor_t points_indices_desc,
+                   void *points_indices);
+
 #if defined(__cplusplus)
 }
 #endif
