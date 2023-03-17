@@ -1,0 +1,72 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "mlu.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_common.h"
+
+#define SIZE_NRAM_BUF (MAX_NRAM_SIZE + REM_FOR_STACK - 12 * 1024)
+__nram__ char ram[SIZE_NRAM_BUF];
+
+template <typename T>
+__mlu_func__ void blockTensorStridedOut(T *input, T *output,
+                                        TensorShape &output_shape) {
+  int total_num = output_shape.total_num;
+  int rem_per_core = total_num % taskDim;
+  int data_per_core =
+      taskId < rem_per_core ? total_num / taskDim + 1 : total_num / taskDim;
+
+  // currently SIZE_NRAM_BUF does not exceed 2GB, keep int32 for performance
+  // reasons
+  int load_once = SIZE_NRAM_BUF / sizeof(T);
+  int load_repeat = data_per_core / load_once;
+  int load_remain = data_per_core % load_once;
+
+  int gdram_offset = taskId < rem_per_core
+                         ? taskId * data_per_core
+                         : taskId * data_per_core + rem_per_core;
+  for (int i = 0; i < load_repeat; i++) {
+    __memcpy((T *)ram, input + gdram_offset + i * load_once,
+             load_once * sizeof(T), GDRAM2NRAM);
+    tensorStrideStore<T>(output, gdram_offset + i * load_once, (T *)ram,
+                         load_once, sizeof(T), output_shape);
+  }
+  if (load_remain > 0) {
+    __memcpy((T *)ram, input + gdram_offset + load_repeat * load_once,
+             load_remain * sizeof(T), GDRAM2NRAM);
+    tensorStrideStore<T>(output, gdram_offset + load_repeat * load_once,
+                         (T *)ram, load_remain, sizeof(T), output_shape);
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
+                                                  void *output,
+                                                  TensorShape output_shape) {
+  blockTensorStridedOut((T *)input, (T *)output, output_shape);
+}
+
+template __mlu_global__ void MLUUnionKernelTensorStrideOut<int8>(
+    const void *input, void *output, TensorShape output_shape);
+template __mlu_global__ void MLUUnionKernelTensorStrideOut<half>(
+    const void *input, void *output, TensorShape output_shape);
+template __mlu_global__ void MLUUnionKernelTensorStrideOut<float>(
+    const void *input, void *output, TensorShape output_shape);
