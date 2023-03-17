@@ -443,20 +443,68 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    bad_params, moe_dispatch_backward_data_general,
+    bad_samples, moe_dispatch_backward_data_general,
     testing::Combine(
-        testing::Values(MoeDispatchBackwardDataDescParam{-1, 1, 1, 1},
-                        MoeDispatchBackwardDataDescParam{1, -1, 1, 1},
-                        MoeDispatchBackwardDataDescParam{1, 1, -1, 1},
-                        MoeDispatchBackwardDataDescParam{1, 1, 1, -1}),
+        testing::Values(MoeDispatchBackwardDataDescParam{-1, 1, 1, 1}),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({1}))),
+                                         1, std::vector<int>({-1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         1, std::vector<int>({1}))),
+                                         1, std::vector<int>({-1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         1, std::vector<int>({1}))),
+                                         1, std::vector<int>({-1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({1, 1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({-1, 1}))),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_capacity, moe_dispatch_backward_data_general,
+    testing::Combine(
+        testing::Values(MoeDispatchBackwardDataDescParam{1, -1, 1, 1}),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({-1, 1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1, 1}))),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_hidden, moe_dispatch_backward_data_general,
+    testing::Combine(
+        testing::Values(MoeDispatchBackwardDataDescParam{1, 1, -1, 1}),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1, -1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1, -1}))),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    bad_num_experts, moe_dispatch_backward_data_general,
+    testing::Combine(
+        testing::Values(MoeDispatchBackwardDataDescParam{1, 1, 1, -1}),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         1, std::vector<int>({1}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({-1, 1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({1, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),

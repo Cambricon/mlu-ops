@@ -160,67 +160,67 @@ class moe_dispatch_backward_data : public testing::Test {
   void destroy() {
     if (handle_) {
       CNRT_CHECK(cnrtQueueSync(handle_->queue));
-      VLOG(4) << "Destroy handle";
+      VLOG(4) << "Destroy handle_";
       MLUOP_CHECK(mluOpDestroy(handle_));
       handle_ = nullptr;
     }
 
     if (gates_desc_) {
-      VLOG(4) << "Destroy gates_desc";
+      VLOG(4) << "Destroy gates_desc_";
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(gates_desc_));
       gates_desc_ = nullptr;
     }
 
     if (gates_) {
-      VLOG(4) << "Destroy gates";
+      VLOG(4) << "Destroy gates_";
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(gates_));
       gates_ = nullptr;
     }
 
     if (indices_desc_) {
-      VLOG(4) << "Destroy indices_desc";
+      VLOG(4) << "Destroy indices_desc_";
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(indices_desc_));
       indices_desc_ = nullptr;
     }
 
     if (indices_) {
-      VLOG(4) << "Destroy indices";
+      VLOG(4) << "Destroy indices_";
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
       indices_ = nullptr;
     }
 
     if (locations_desc_) {
-      VLOG(4) << "Destroy locations_desc";
+      VLOG(4) << "Destroy locations_desc_";
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(locations_desc_));
       locations_desc_ = nullptr;
     }
 
     if (locations_) {
-      VLOG(4) << "Destroy locations";
+      VLOG(4) << "Destroy locations_";
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(locations_));
       locations_ = nullptr;
     }
 
     if (dispatch_desc_) {
-      VLOG(4) << "Destroy dispatch_desc";
+      VLOG(4) << "Destroy dispatch_desc_";
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(dispatch_desc_));
       dispatch_desc_ = nullptr;
     }
 
     if (dispatch_) {
-      VLOG(4) << "Destroy dispatch";
+      VLOG(4) << "Destroy dispatch_";
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(dispatch_));
       dispatch_ = nullptr;
     }
 
     if (grad_input_desc_) {
-      VLOG(4) << "Destroy dispatch_desc";
+      VLOG(4) << "Destroy grad_input_desc_";
       MLUOP_CHECK(mluOpDestroyTensorDescriptor(grad_input_desc_));
       grad_input_desc_ = nullptr;
     }
 
     if (grad_input_) {
-      VLOG(4) << "Destroy dispatch";
+      VLOG(4) << "Destroy grad_input_";
       GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
       grad_input_ = nullptr;
     }
