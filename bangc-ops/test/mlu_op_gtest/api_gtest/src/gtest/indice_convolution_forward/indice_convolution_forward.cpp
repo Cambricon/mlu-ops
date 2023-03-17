@@ -97,11 +97,11 @@ class indice_convolution_forward : public testing::Test {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&indice_pairs_,
                                mluOpGetTensorElementNum(indice_pairs_desc_) *
-                                   mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+                                   mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&indice_pairs_,
-                               64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+                               64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
 
