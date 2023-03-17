@@ -9951,11 +9951,6 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the \b input tensor.
- * @param[in] dispatch_desc
- * The descriptor of \b dispatch tensor, which contains dimension, data type and data layout.
- * For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[in] dispatch
- * Pointer to the MLU memory that stores the \b dispatch tensor.
  * @param[in] samples
  * The number of elements in the \b gates tensor, the \b indices tensor and the \b locations tensor.
  * @param[in] capacity
@@ -9964,6 +9959,11 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * The vector length of a single token.
  * @param[in] num_experts
  * The number of experts.
+ * @param[in] dispatch_desc
+ * The descriptor of \b dispatch tensor, which contains dimension, data type and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] dispatch
+ * Pointer to the MLU memory that stores the \b dispatch tensor.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
