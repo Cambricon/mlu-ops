@@ -148,7 +148,6 @@ class moe_dispatch_backward_gate_general
                        mluOpDataTypeBytes(grad_gates_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_gates_desc_)));
       }
-
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
              << " in moe_dispatch_backward_gate_general.";
