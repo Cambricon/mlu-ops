@@ -34,26 +34,26 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介                                                                 | 属于moe_dispatch_forward的反向算子                                                                                 |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| 需求来源                                                                     | tutel                                                                                                              |
-| 应用网络                                                                     | swin-transformer                                                                                                   |
-| 输入数据类型                                                                 | float                                                                                                              |
-| 输入标量参数                                                                 | samples: int32<br />capacity: int32<br />hidden: int32<br />num_experts: int32                                     |
-| 输入 Shape                                                                   | gates: [samples]<br />indices: [samples]<br />locations: [samples]<br />dispatch: [num_experts * capacity, hidden] |
-| 输入 Layout                                                                  | ARRAY                                                                                                              |
-| 输出数据类型                                                                 | float                                                                                                              |
-| 输出 Shape                                                                   | grad_input: [samples, hidden]                                                                                      |
-| 输出 Layout                                                                  | ARRAY                                                                                                              |
-| 模式(可选）                                                                  | /                                                                                                                  |
-| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理              | 否                                                                                                                 |
-| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否                                                                                                                 |
-| 是否需要支持原位                                                             | 否                                                                                                                 |
-| 是否需要支持 stride 机制                                                     | 否                                                                                                                 |
-| 是否需要支持广播                                                             | 否                                                                                                                 |
-| 0 元素检查是否直接返回                                                       | 是，返回 MLUOP_STATUS_SUCCESS                                                                                      |
-| 其他特殊需求(在线量化，融合，转数提前等，可选)                               | /                                                                                                                  |
-| 本次开发优先支持的规模/模式                                                  | /                                                                                                                  |
+| 算子功能简介                                                                 | 属于moe_dispatch_forward的反向算子                                                                                                                                |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 需求来源                                                                     | tutel                                                                                                                                                             |
+| 应用网络                                                                     | swin-transformer                                                                                                                                                  |
+| 输入数据类型                                                                 | float                                                                                                                                                             |
+| 输入标量参数                                                                 | samples: int32<br />capacity: int32<br />hidden: int32<br />num_experts: int32                                                                                    |
+| 输入 Shape                                                                   | gates: [samples]<br />indices: [samples]<br />locations: [samples]<br />dispatch: [num_experts * capacity, hidden]                                                |
+| 输入 Layout                                                                  | ARRAY                                                                                                                                                             |
+| 输出数据类型                                                                 | float                                                                                                                                                             |
+| 输出 Shape                                                                   | grad_input: [samples, hidden]                                                                                                                                     |
+| 输出 Layout                                                                  | ARRAY                                                                                                                                                             |
+| 模式(可选）                                                                  | /                                                                                                                                                                 |
+| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理              | 否                                                                                                                                                                |
+| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否                                                                                                                                                                |
+| 是否需要支持原位                                                             | 否                                                                                                                                                                |
+| 是否需要支持 stride 机制                                                     | 否                                                                                                                                                                |
+| 是否需要支持广播                                                             | 否                                                                                                                                                                |
+| 0 元素检查是否直接返回                                                       | 首先判断当 samples、hidden 其一为0时，返回 MLUOP_STATUS_SUCCESS，否则，置输出空间 grad_input 为0；再判断 num_experts 或 capacity 为0时，返回 MLUOP_STATUS_SUCCESS |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)                               | /                                                                                                                                                                 |
+| 本次开发优先支持的规模/模式                                                  | /                                                                                                                                                                 |
 
 ### 1.2 算子功能和应用场景描述
 
