@@ -125,8 +125,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   TENSOR_NUM_CHECK(API, dispatch_element_num, LARGE_TENSOR_NUM, "");
   TENSOR_NUM_CHECK(API, grad_input_element_num, LARGE_TENSOR_NUM, "");
 
-  // Initialize output space
-  if (samples != 0 && hidden != 0) {
+  // check zero element
+  if (samples == 0 || hidden == 0) {
+    VLOG(5) << API << "Skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
+  } else {
+    // Initialize output space
     const size_t grad_input_initial_value = 0x00;
     PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
                          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
@@ -136,7 +140,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   }
 
   // check zero element
-  if (capacity == 0 || num_experts == 0 || samples == 0 || hidden == 0) {
+  if (capacity == 0 || num_experts == 0) {
     VLOG(5) << API << "Skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
