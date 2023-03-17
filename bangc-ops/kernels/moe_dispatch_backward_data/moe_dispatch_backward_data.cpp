@@ -131,6 +131,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
     return MLUOP_STATUS_SUCCESS;
   } else {
     // Initialize output space
+    PARAM_CHECK(API, grad_input != NULL);
     const size_t grad_input_initial_value = 0x00;
     PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
                          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
