@@ -43,6 +43,8 @@ bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc);
 
 bool strideCaseWithNotConsistentDense(int tensor_num, ...);
 
+bool isTransPadStride(TensorShape &tensor_shape, int *dims, int *strides);
+
 void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
                     TensorShape *tensor_shape);
 

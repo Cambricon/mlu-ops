@@ -35,24 +35,6 @@
 
 using std::vector;
 
-// Check if tensor need stride process.
-bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc) {
-  bool needStrideProcess = false;
-  int tensor_dim = tensor_desc->dim;
-  int stride_base = 1;
-  for (int i = tensor_dim - 1; i >= 0; i--) {
-    if (tensor_desc->dims[i] != 1) {
-      if (tensor_desc->strides[i] == stride_base) {
-        stride_base *= tensor_desc->dims[i];
-      } else {
-        needStrideProcess = true;
-        break;
-      }
-    }
-  }
-  return needStrideProcess;
-}
-
 bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc) {
   int tensor_dim = tensor_desc->dim;
   std::vector<int> dims;
@@ -88,6 +70,93 @@ bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc) {
     require_stride *= size_perm_i;
   }
   return true;
+}
+
+// Check if tensor need stride process.
+bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc) {
+  bool needStrideProcess = false;
+  int tensor_dim = tensor_desc->dim;
+  int stride_base = 1;
+  for (int i = tensor_dim - 1; i >= 0; i--) {
+    if (tensor_desc->dims[i] != 1) {
+      if (tensor_desc->strides[i] == stride_base) {
+        stride_base *= tensor_desc->dims[i];
+      } else {
+        needStrideProcess = true;
+        break;
+      }
+    }
+  }
+  return needStrideProcess;
+}
+
+// Check if stride out is 021 trans and dimension 1 or 2 pad
+// for stride in, the operation is crop actually
+// dims_ptr != nullptr will fill tensor_shape with merged stride and dim
+bool isTransPadStride(TensorShape &tensor_shape, int *dims_ptr,
+                      int *strides_ptr) {
+  // get valid dims and merging dims
+  vector<int> dims;
+  vector<int> strides;
+  int begin = 0;
+  while (begin < MLUOP_DIM_MAX) {
+    // skip the leading 1
+    if (tensor_shape.tensor_dims[begin] != 1) {
+      // start scanning on following dims and stride
+      int dim = tensor_shape.tensor_dims[begin];
+      int stride = tensor_shape.tensor_strides[begin];
+      while (begin + 1 < MLUOP_DIM_MAX) {
+        // means can be merged
+        if (tensor_shape.tensor_strides[begin] ==
+            (tensor_shape.tensor_strides[begin + 1] *
+             tensor_shape.tensor_dims[begin + 1])) {
+          dim *= tensor_shape.tensor_dims[begin + 1];
+          stride = tensor_shape.tensor_strides[begin + 1];
+          begin++;
+        } else {
+          break;
+        }
+      }
+      // fillin the merged dim and stride
+      dims.push_back(dim);
+      strides.push_back(stride);
+    }
+    begin++;
+  }
+  // only handle three dimension of which notation is nhw
+  if (dims.size() != 3) {
+    return false;
+  }
+  // the stride of h == 1 means transpose
+  bool is_trans = false;
+  if (strides[1] == 1) {
+    is_trans = true;
+  }
+  // there are two kinds of pad: pad ho or pad wo
+  bool is_pad = false;
+  // if pad ho, wo should be equal to hi
+  if (strides[2] == dims[1] && (strides[0] % strides[2]) == 0 &&
+      (strides[0] / strides[2]) > dims[2]) {
+    is_pad = true;
+  }
+  // if pad wo, ho should be equal to wi
+  if (strides[2] > dims[1] && strides[0] == (dims[2] * strides[2])) {
+    is_pad = true;
+  }
+  // return merges dims and strides
+  if (is_trans && is_pad) {
+    if (dims_ptr != nullptr) {
+      for (int i = 0; i < dims.size(); i++) {
+        dims_ptr[i] = dims[i];
+      }
+    }
+    if (strides_ptr != nullptr) {
+      for (int i = 0; i < strides.size(); i++) {
+        strides_ptr[i] = strides[i];
+      }
+    }
+  }
+  return is_trans && is_pad;
 }
 
 // From tensor_desc get tensor's dims and strides.
@@ -231,10 +300,26 @@ void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
   }
 }
 
+static size_t shapeStrideCount(const mluOpTensorDescriptor_t desc) {
+  size_t total = 1;
+  for (int i = 0; i < desc->dim; ++i) {
+    if (desc->dims[i] == 0) {
+      total = 0;
+      break;
+    }
+    total += (desc->dims[i] - 1) * desc->strides[i];
+  }
+  return total;
+}
+
 // Policy function
 static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type, int total_num) {
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  if (handle->sram_size <= 0) {
+    *k_type = CNRT_FUNC_TYPE_BLOCK;
+  } else {
+    *k_type = CNRT_FUNC_TYPE_UNION1;
+  }
   uint32_t union_number = mluop::runtime::getClusterLimitCapability(handle);
 
   // Split to different cores according to total_num.
@@ -250,6 +335,11 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, void *output) {
+  if (handle->arch < MLUOP_MLU590) {
+    size_t num_with_stride = shapeStrideCount(input_desc);
+    TENSOR_NUM_CHECK("[mluOpTensorStrideIn]", num_with_stride, LARGE_TENSOR_NUM,
+                     "input tensor num with stride is too large. ");
+  }
   TensorShape input_shape;
   getTensorShape(input_desc, &input_shape);
   mluOpDataType_t data_type = input_desc->dtype;
@@ -271,6 +361,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
     const void *input, void *output) {
   TensorShape output_shape;
   getTensorShape(input_desc, &output_shape);
+  if (handle->arch < MLUOP_MLU590) {
+    size_t num_with_stride = shapeStrideCount(input_desc);
+    TENSOR_NUM_CHECK("[mluOpTensorStrideOut]", num_with_stride,
+                     LARGE_TENSOR_NUM,
+                     "input tensor num with stride is too large. ");
+  }
 
   mluOpDataType_t data_type = input_desc->dtype;
   cnrtDim3_t k_dim;
