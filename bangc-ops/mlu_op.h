@@ -29,7 +29,7 @@
 
 #define MLUOP_MAJOR 0
 #define MLUOP_MINOR 5
-#define MLUOP_PATCHLEVEL 302
+#define MLUOP_PATCHLEVEL 1
 
 #define MLUOP_DIM_MAX 8
 

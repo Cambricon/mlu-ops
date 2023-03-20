@@ -37,7 +37,7 @@ jobs:
       - name: mlu_ops_version_check
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}
-          bash version_check.sh 0.5.302
+          bash version_check.sh 0.5.1
 
       - name: bangc_ops_release_test_cases
         run: >

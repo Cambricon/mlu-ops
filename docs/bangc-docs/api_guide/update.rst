@@ -3,9 +3,9 @@ Update History
 
 This section lists contents that were made for each product release.
 
-* V0.5.302
+* V0.5.1
 
-  **Date:** March 13, 2023
+  **Date:** March 20, 2023
 
   **Changes:**
 
