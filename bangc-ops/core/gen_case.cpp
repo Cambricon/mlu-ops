@@ -487,7 +487,12 @@ void PbNode::dumpDataFile(std::string file_name, std::string folder_name,
     } else {
       total_num *= dtypeRatio(dtype);
       for (uint64_t j = 0; j < total_num; ++j) {
-        if (dump_data_output_ == 2 && dtypeFloat(dtype)) {
+        if (dataState == "output" && dump_data_output_ == 2 &&
+            dtypeFloat(dtype)) {
+          case_file << "  value_h: " << get_data_hex_string(dtype, data, j)
+                    << "\n";
+        } else if (dataState == "input" && dump_data_ == 2 &&
+                   dtypeFloat(dtype)) {
           case_file << "  value_h: " << get_data_hex_string(dtype, data, j)
                     << "\n";
         } else {
