@@ -465,11 +465,10 @@ mluOpCarafeForward
 
 Transpose
 ----------------
-维度转换。
+维度转换。公式如下：
 
-公式如下：
-
-.. figure:: ../images/transpose.png
+.. math::
+   out_tensor.shape[i] = input_tensor.shape(permute[i])
 
 其中 ``permute`` 为用户希望的对输入张量转置的规则。例如 ``input shape = (11,22,33), permute[3] = {2,1,0}``，则输出 ``output shape = [33,22,11]``。
 
@@ -661,11 +660,11 @@ ScatterNd
 Unique
 -------------
 
-对一维数组去重。
+对一维数组去重。公式如下：
 
-公式如下：
+.. math::
 
-.. figure:: ../images/unique.png
+   y[index[i]] = x[i] for i in range(len(x))
 
 其中 ``x`` 表示输入数据，``y`` 表示输出数据。
 
