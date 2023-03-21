@@ -700,3 +700,16 @@ mluOpRoiPointPool3d
 mluOpMoeDispatchBackwardGate
 ----------------------------------
 MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度`grad_gates`。
+
+mluOpPointsInBoxes
+----------------------------------
+
+检测给定的点云数据中每个点属于哪个3D框，输出表示对应框的索引，如果不存在对应的框，输出-1。
+
+其中对于给定的points(x, y, z), box(cx, cy, cz, dx, dy, dz, rz), 检测points是否在box内的公式如下：
+
+.. math::
+
+	in\_flag = \lvert (z - cz) \rvert <= \frac{dz}{2} \ \& \\
+	\lvert (x - cx) * cos(-rz) - (y - cy) * sin(-rz)\rvert < \frac{dx}{2} \ \& \\
+	\lvert (x - cx) * sin(-rz) + (y - cy) * cos(-rz)\rvert < \frac{dy}{2}
