@@ -5839,7 +5839,7 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the sqrt backward operation. For detailed information, see
+ * queues in the Ballquery operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] new_xyz_desc
  * The descriptor of the new_xyz tensors, which indicates the center of the ball.

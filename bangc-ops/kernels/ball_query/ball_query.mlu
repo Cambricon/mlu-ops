@@ -157,8 +157,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("ball_query");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA(true, "input1", new_xyz, new_xyz_desc, -1, 1);
-    GEN_CASE_DATA(true, "input2", xyz, xyz_desc, -1, 1);
+    GEN_CASE_DATA_REAL(true, "input1", new_xyz, new_xyz_desc);
+    GEN_CASE_DATA_REAL(true, "input2", xyz, xyz_desc);
     GEN_CASE_DATA(false, "output", idx, idx_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "ball_query", "min_radius", min_radius);
     GEN_CASE_OP_PARAM_SINGLE(0, "ball_query", "max_radius", max_radius);
