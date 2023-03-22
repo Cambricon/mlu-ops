@@ -20,14 +20,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "rotated_feature_align.h"
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 // policy function
 static void policyFunc(const mluOpHandle_t handle,
@@ -231,17 +231,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignForward(
   mluOpDataType_t data_dtype = input_desc->dtype;
   VLOG(5) << "[mluOpRotatedFeatureAlignForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
-  if (data_dtype == MLUOP_DTYPE_FLOAT) {
-    KERNEL_CHECK((mluOpBlockKernelRotatedFeatureAlignForwardFloat(
-        k_dim, k_type, handle->queue, input, bboxes, batches, height, width,
-        channels, offset_rois, spatial_scale, points, output)));
-    VLOG(5) << "Kernel mluOpBlockKernelRotatedFeatureAlignForwardFloat.";
-  } else {
-    KERNEL_CHECK((mluOpBlockKernelRotatedFeatureAlignForwardHalf(
-        k_dim, k_type, handle->queue, input, bboxes, batches, height, width,
-        channels, offset_rois, spatial_scale, points, output)));
-    VLOG(5) << "Kernel mluOpBlockKernelRotatedFeatureAlignForwardHalf.";
-  }
+  KERNEL_CHECK((KernelRotatedFeatureAlignForward(
+      k_dim, k_type, handle->queue, data_dtype, input, bboxes, batches, height,
+      width, channels, offset_rois, spatial_scale, points, output)));
+  VLOG(5) << "Kernel KernelRotatedFeatureAlignForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -281,7 +274,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
   VLOG(5) << "mluOpFill_v3 start.";
   const uint32_t fill_value = 0x00;
   MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                        bottom_input_desc, bottom_input));
+                           bottom_input_desc, bottom_input));
   VLOG(5) << "mluOpFill_v3 end.";
 
   cnrtDim3_t k_dim;
@@ -296,17 +289,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
   mluOpDataType_t data_dtype = top_output_desc->dtype;
   VLOG(5) << "[mluOpRotatedFeatureAlignBackward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
-  if (data_dtype == MLUOP_DTYPE_FLOAT) {
-    KERNEL_CHECK((mluOpBlockKernelRotatedFeatureAlignBackwardFloat(
-        k_dim, k_type, handle->queue, top_output, bboxes, batches, height,
-        width, channels, offset_rois, spatial_scale, points, bottom_input)));
-    VLOG(5) << "Kernel mluOpBlockKernelRotatedFeatureAlignBackwardFloat.";
-  } else {
-    KERNEL_CHECK((mluOpBlockKernelRotatedFeatureAlignBackwardHalf(
-        k_dim, k_type, handle->queue, top_output, bboxes, batches, height,
-        width, channels, offset_rois, spatial_scale, points, bottom_input)));
-    VLOG(5) << "Kernel mluOpBlockKernelRotatedFeatureAlignBackwardHalf.";
-  }
+  KERNEL_CHECK((KernelRotatedFeatureAlignBackward(
+      k_dim, k_type, handle->queue, data_dtype, top_output, bboxes, batches,
+      height, width, channels, offset_rois, spatial_scale, points,
+      bottom_input)));
+  VLOG(5) << "Kernel KernelRotatedFeatureAlignBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

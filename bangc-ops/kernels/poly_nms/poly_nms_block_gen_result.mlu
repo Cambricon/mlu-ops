@@ -20,10 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
-#include "kernels/poly_nms/enums.h"
 #include "kernels/poly_nms/poly_nms.h"
-
+#include "kernels/poly_nms/enums.h"
 #include "kernels/kernel.h"
 
 #define GEN_RESLUT_NRAM_SIZE MAX_NRAM_SIZE

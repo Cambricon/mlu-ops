@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "voxel_pooling_forward.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,8 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t handle, const int num_points_total,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -163,11 +163,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(
   VLOG(5) << "[mluOpVoxelPoolingForward] launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((mluOpUnionKernelVoxelPoolingForwardFloat(
+  KERNEL_CHECK((KernelVoxelPoolingForward(
       k_dim, k_type, handle->queue, batch_size, num_points, num_channels,
       num_voxel_x, num_voxel_y, num_voxel_z, geom_xyz, input_features,
       output_features, pos_memo)));
-  VLOG(5) << "Launch Kernel mluOpUnionKernelVoxelPoolingForwardFloat.";
+  VLOG(5) << "Launch Kernel KernelVoxelPoolingForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

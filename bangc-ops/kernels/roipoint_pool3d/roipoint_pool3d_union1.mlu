@@ -20,12 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roipoint_pool3d.h"
+
 #include <cmath>
 
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "mlu_op_kernel.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -532,28 +533,29 @@ template __mlu_global__ void MLUKernelRoipointPool3d<half>(
     const char *boxes3d_gdram, char *pooled_features_gdram,
     char *pooled_empty_flag_gdram);
 
-void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dFloat(
+void MLUOP_WIN_API KernelRoipointPool3d(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int batch_size, const int pts_num, const int boxes_num,
-    const int feature_in_len, const int sampled_pts_num,
+    mluOpDataType_t d_type, const int batch_size, const int pts_num,
+    const int boxes_num, const int feature_in_len, const int sampled_pts_num,
     const char *points_xyz_gdram, const char *point_features_gdram,
     const char *boxes3d_gdram, char *pooled_features_gdram,
     char *pooled_empty_flag_gdram) {
-  MLUKernelRoipointPool3d<float><<<k_dim, k_type, queue>>>(
-      batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
-      points_xyz_gdram, point_features_gdram, boxes3d_gdram,
-      pooled_features_gdram, pooled_empty_flag_gdram);
-}
-
-void MLUOP_WIN_API mluOpUnion1KernelRoipointPool3dHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int batch_size, const int pts_num, const int boxes_num,
-    const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram) {
-  MLUKernelRoipointPool3d<half><<<k_dim, k_type, queue>>>(
-      batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
-      points_xyz_gdram, point_features_gdram, boxes3d_gdram,
-      pooled_features_gdram, pooled_empty_flag_gdram);
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelRoipointPool3d<float><<<k_dim, k_type, queue>>>(
+          batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
+          points_xyz_gdram, point_features_gdram, boxes3d_gdram,
+          pooled_features_gdram, pooled_empty_flag_gdram);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelRoipointPool3d<half><<<k_dim, k_type, queue>>>(
+          batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
+          points_xyz_gdram, point_features_gdram, boxes3d_gdram,
+          pooled_features_gdram, pooled_empty_flag_gdram);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

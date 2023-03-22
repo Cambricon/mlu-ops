@@ -33,10 +33,11 @@ __mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
                                                   void *output,
                                                   TensorShape output_shape);
 
-void MLUOP_WIN_API mluOpUnion1KernelTensorStrideIn(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, TensorShape input_shape, void *output,
-    mluOpDataType_t dtype) {
+void MLUOP_WIN_API KernelTensorStrideIn(cnrtDim3_t k_dim,
+                                        cnrtFunctionType_t k_type,
+                                        cnrtQueue_t queue, const void *input,
+                                        TensorShape input_shape, void *output,
+                                        mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_BOOL:
@@ -62,10 +63,11 @@ void MLUOP_WIN_API mluOpUnion1KernelTensorStrideIn(
   }
 }
 
-void MLUOP_WIN_API mluOpUnion1KernelTensorStrideOut(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, void *output, TensorShape output_shape,
-    mluOpDataType_t dtype) {
+void MLUOP_WIN_API KernelTensorStrideOut(cnrtDim3_t k_dim,
+                                         cnrtFunctionType_t k_type,
+                                         cnrtQueue_t queue, const void *input,
+                                         void *output, TensorShape output_shape,
+                                         mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_BOOL:

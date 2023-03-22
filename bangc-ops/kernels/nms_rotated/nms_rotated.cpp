@@ -20,13 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "nms_rotated.h"
+
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 // each box data contains 5 number: x, y, w, h, a
 #define SINGLE_BOX_DIM (5)
@@ -66,9 +66,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsRotatedWorkspaceSize(
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
-                const mluOpTensorDescriptor_t boxes_desc,
-                const void *boxes, const mluOpTensorDescriptor_t scores_desc,
-                const void *scores, void *workspace, size_t workspace_size,
+                const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
+                const mluOpTensorDescriptor_t scores_desc, const void *scores,
+                void *workspace, size_t workspace_size,
                 const mluOpTensorDescriptor_t output_desc, void *output,
                 int32_t *result_num) {
   // desc null pointer check
@@ -90,10 +90,10 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == scores_desc->dims[0]);
   PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == output_desc->dims[0]);
   if (boxes_desc->dims[1] != SINGLE_BOX_DIM &&
-        boxes_desc->dims[1] != (SINGLE_BOX_DIM + 1)) {
-    LOG(ERROR)
-      << "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "
-          "should be 5 or 6. Now is " << boxes_desc->dims[1] << ".";
+      boxes_desc->dims[1] != (SINGLE_BOX_DIM + 1)) {
+    LOG(ERROR) << "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "
+                  "should be 5 or 6. Now is "
+               << boxes_desc->dims[1] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -122,7 +122,7 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
     GEN_CASE_DATA_REAL(true, "input2", scores, scores_desc);
     GEN_CASE_DATA_REAL(false, "output1", output, output_desc);
     GEN_CASE_DATA_UNFOLD(false, "output2", result_num, 1, {1},
-                MLUOP_DTYPE_INT32, MLUOP_LAYOUT_ARRAY, 0, 0);
+                         MLUOP_DTYPE_INT32, MLUOP_LAYOUT_ARRAY, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "nms_rotated", "iou_threshold", iou_threshold);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 3e-3, 3e-3, 0);
   }
@@ -140,16 +140,17 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   policyFunc(handle, &k_dim, &k_type, box_num);
 
   // transpose box [N, box_dim] -> [box_dim, N]
-  char *box_workspace = (char*)workspace;
-  char *scores_workspace = box_workspace +
-        mluop::getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
+  char *box_workspace = (char *)workspace;
+  char *scores_workspace =
+      box_workspace +
+      mluop::getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
 
-  VLOG(5) << "[mluOpNmsRotated] launch kernel [" << k_dim.x << ", "
-          << k_dim.y << ", " << k_dim.z << "].";
+  VLOG(5) << "[mluOpNmsRotated] launch kernel [" << k_dim.x << ", " << k_dim.y
+          << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((mluOpUnionKernelNmsRotatedFloat(
-      k_dim, k_type, handle->queue, boxes, box_workspace, scores,
-      scores_workspace, output, result_num, box_num, box_dim, p)));
+  KERNEL_CHECK((KernelNmsRotated(k_dim, k_type, handle->queue, boxes,
+                                 box_workspace, scores, scores_workspace,
+                                 output, result_num, box_num, box_dim, p)));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

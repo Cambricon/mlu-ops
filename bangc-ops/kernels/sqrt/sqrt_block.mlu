@@ -20,10 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "sqrt.h"
+
 #include "kernels/binary_op/binary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
-#include "mlu_op_kernel.h"
+#include "kernels/debug.h"
 
 #define SQRT_HIGH_BOUND 1e4
 #define SQRT_SCALE 1e-6
@@ -222,58 +224,74 @@ UNARY_OP_KERNEL_5PIPELINE_IMPLE(Sqrt, half, HighAcc);
 BINARY_OP_3PIPELINE_IMPLE(SqrtBackward, float, Fast);
 BINARY_OP_3PIPELINE_IMPLE(SqrtBackward, half, HighAcc);
 
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfFast(
+void MLUOP_WIN_API Kernel3StagePipelineSqrt(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num) {
-  MLUBlockKernel3StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUBlockKernel3StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
+          (void *)x, (void *)y, num, 0.0);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      if (prefer == MLUOP_COMPUTATION_FAST) {
+        MLUBlockKernel3StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0);
+      } else {
+        MLUBlockKernel3StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0);
+      }
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtHalfHighAcc(
+void MLUOP_WIN_API Kernel5StagePipelineSqrt(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num) {
-  MLUBlockKernel3StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUBlockKernel5StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
+          (void *)x, (void *)y, num, 0.0);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      if (prefer == MLUOP_COMPUTATION_FAST) {
+        MLUBlockKernel5StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0);
+      } else {
+        MLUBlockKernel5StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0);
+      }
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtFloatFast(
+void MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel3StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel5StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtHalfHighAcc(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel5StagePipelineSqrthalfHighAcc<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel5StagePipelineSqrtFloatFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel5StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *y, const void *diff_y, void *x, int num) {
-  MLUBlockKernel3StagePipelineSqrtBackwardhalfHighAcc<<<k_dim, k_type, queue>>>(
-      (void *)y, (void *)diff_y, (void *)x, num);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *y, const void *diff_y, void *x, int num) {
-  MLUBlockKernel3StagePipelineSqrtBackwardfloatFast<<<k_dim, k_type, queue>>>(
-      (void *)y, (void *)diff_y, (void *)x, num);
+    mluOpDataType_t d_type, const void *y, const void *diff_y, void *x,
+    int num) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUBlockKernel3StagePipelineSqrtBackwardfloatFast<<<k_dim, k_type,
+                                                          queue>>>(
+          (void *)y, (void *)diff_y, (void *)x, num);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUBlockKernel3StagePipelineSqrtBackwardhalfHighAcc<<<k_dim, k_type,
+                                                            queue>>>(
+          (void *)y, (void *)diff_y, (void *)x, num);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

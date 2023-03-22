@@ -20,13 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
-#ifndef BANGC_OPS_KERNELS_POLY_NMS_ENUMS_H
-#define BANGC_OPS_KERNELS_POLY_NMS_ENUMS_H
+#ifndef KERNELS_POLY_NMS_ENUMS_H
+#define KERNELS_POLY_NMS_ENUMS_H
 
 enum class OutputOrder {
   HIGH_SCORE_FIRST,  // high score first output
   LOW_BOX_ID_FIRST,  // low box id first output
 };
 
-#endif  // BANGC_OPS_KERNELS_POLY_NMS_ENUMS_H
+#endif  // KERNELS_POLY_NMS_ENUMS_H

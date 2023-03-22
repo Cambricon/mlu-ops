@@ -20,9 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
-#ifndef BANGC_OPS_KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
-#define BANGC_OPS_KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+#ifndef KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+#define KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
 
 /**
  * A util function to get the working set of current core, every core will
@@ -48,4 +47,4 @@ __mlu_func__ static void getCoreWorkingSet(int input_boxes_num, int *o_box_num,
   *o_beg = box_i_beg;
 }
 
-#endif  // BANGC_OPS_KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+#endif  // KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H

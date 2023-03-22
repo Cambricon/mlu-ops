@@ -20,7 +20,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #include "kernels/poly_nms/intersect_area.h"
 #include "kernels/poly_nms/poly_nms_core_set.h"
 #include "kernels/poly_nms/poly_nms.h"
@@ -44,8 +43,9 @@ __mlu_func__ static float polyIou(const QuadClipBox *__restrict__ clipbox,
 __mlu_func__ static void maySuppress(uint32_t *mask, int j) {
   int pos_j = j / MASK_T_BITWIDTH;
   int offset = j % MASK_T_BITWIDTH;
-  constexpr uint32_t DEFAULT_MASK = 0x80000000;  // 0b 1000 0000 0000 0000
-  mask[pos_j] &= ~(DEFAULT_MASK >> offset);
+  // 0b 1000 0000 0000 0000
+  constexpr uint64_t DEFAULT_MASK = (uint64_t)0x80000000;
+  mask[pos_j] &= static_cast<uint32_t>(~(DEFAULT_MASK >> offset));
 }
 
 __mlu_func__ static void mluGenNmsMaskImpl(

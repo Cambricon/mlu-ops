@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roipoint_pool3d.h"
+
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/gen_case.h"
@@ -28,19 +30,17 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-static mluOpStatus_t paramcheck(const int batch_size, const int pts_num,
-                         const int boxes_num, const int feature_in_len,
-                         const int sampled_pts_num,
-                         const mluOpTensorDescriptor_t points_desc,
-                         const mluOpTensorDescriptor_t point_features_desc,
-                         const mluOpTensorDescriptor_t boxes3d_desc,
-                         const mluOpTensorDescriptor_t pooled_features_desc,
-                         const mluOpTensorDescriptor_t pooled_empty_flag_desc) {
+static mluOpStatus_t paramcheck(
+    const int batch_size, const int pts_num, const int boxes_num,
+    const int feature_in_len, const int sampled_pts_num,
+    const mluOpTensorDescriptor_t points_desc,
+    const mluOpTensorDescriptor_t point_features_desc,
+    const mluOpTensorDescriptor_t boxes3d_desc,
+    const mluOpTensorDescriptor_t pooled_features_desc,
+    const mluOpTensorDescriptor_t pooled_empty_flag_desc) {
   // check tensor dim
   // params points: [B, N, 3]
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", points_desc->dim, 3);
@@ -252,7 +252,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
     GEN_CASE_DATA(false, "pooled_empty_flag", pooled_empty_flag,
                   pooled_empty_flag_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "roipoint_pool3d", "num_sampled_points",
-                  sampled_pts_num);
+                             sampled_pts_num);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0, 0, 0);
   }
 
@@ -342,55 +342,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
   k_dims.z = 1;
   cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
 
-  switch (points_desc->dtype) {
-    default: {
-      VLOG(5) << "Not implemented";
-      break;
-    }
-    case MLUOP_DTYPE_FLOAT: {
-      if (boxes_num <= 10240) {
-        VLOG(5) << "Launch Kernel roipointPool3dUnion1<<<Union"
-                << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
-                << ", " << k_dims.z << ">>>";
-        KERNEL_CHECK((mluOpUnion1KernelRoipointPool3dFloat(
-            k_dims, k_type, handle->queue, batch_size, pts_num, boxes_num,
-            feature_in_len, sampled_pts_num, (char *)points_xyz,
-            (char *)point_features_transpose, (char *)boxes3d,
-            (char *)pooled_features, (char *)pooled_empty_flag)));
-      } else {
-        VLOG(5) << "Launch Kernel roipointPool3dUnion1LargeBoxesNum<<<Union"
-                << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
-                << ", " << k_dims.z << ">>>";
-        KERNEL_CHECK((mluOpUnion1KernelRoipointPool3dLargeBoxesNumFloat(
-            k_dims, k_type, handle->queue, batch_size, pts_num, boxes_num,
-            feature_in_len, sampled_pts_num, (char *)points_xyz,
-            (char *)point_features_transpose, (char *)boxes3d,
-            (char *)pooled_features, (char *)pooled_empty_flag)));
-      }
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      if (boxes_num <= 10240) {
-        VLOG(5) << "Launch Kernel roipointPool3dUnion1<<<Union"
-                << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
-                << ", " << k_dims.z << ">>>";
-        KERNEL_CHECK((mluOpUnion1KernelRoipointPool3dHalf(
-            k_dims, k_type, handle->queue, batch_size, pts_num, boxes_num,
-            feature_in_len, sampled_pts_num, (char *)points_xyz,
-            (char *)point_features_transpose, (char *)boxes3d,
-            (char *)pooled_features, (char *)pooled_empty_flag)));
-      } else {
-        VLOG(5) << "Launch Kernel roipointPool3dUnion1LargeBoxesNum<<<Union"
-                << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
-                << ", " << k_dims.z << ">>>";
-        KERNEL_CHECK((mluOpUnion1KernelRoipointPool3dLargeBoxesNumHalf(
-            k_dims, k_type, handle->queue, batch_size, pts_num, boxes_num,
-            feature_in_len, sampled_pts_num, (char *)points_xyz,
-            (char *)point_features_transpose, (char *)boxes3d,
-            (char *)pooled_features, (char *)pooled_empty_flag)));
-      }
-    }; break;
+  if (boxes_num <= 10240) {
+    VLOG(5) << "Launch Kernel KernelRoipointPool3d<<<Union" << k_type / CORE_DIM
+            << ", " << k_dims.x << ", " << k_dims.y << ", " << k_dims.z
+            << ">>>";
+    KERNEL_CHECK((KernelRoipointPool3d(
+        k_dims, k_type, handle->queue, points_desc->dtype, batch_size, pts_num,
+        boxes_num, feature_in_len, sampled_pts_num, (char *)points_xyz,
+        (char *)point_features_transpose, (char *)boxes3d,
+        (char *)pooled_features, (char *)pooled_empty_flag)));
+  } else {
+    VLOG(5) << "Launch Kernel KernelRoipointPool3dLargeBoxesNum<<<Union"
+            << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y << ", "
+            << k_dims.z << ">>>";
+    KERNEL_CHECK((KernelRoipointPool3dLargeBoxesNum(
+        k_dims, k_type, handle->queue, points_desc->dtype, batch_size, pts_num,
+        boxes_num, feature_in_len, sampled_pts_num, (char *)points_xyz,
+        (char *)point_features_transpose, (char *)boxes3d,
+        (char *)pooled_features, (char *)pooled_empty_flag)));
   }
-
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "moe_dispatch_backward_gate.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -29,8 +31,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t handle, const int samples,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -232,33 +232,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardGate(
   mluOpDataType_t data_type = input_desc->dtype;
   uint32_t taskNum = k_dim.x * k_dim.y * k_dim.z;
   if (samples <= taskNum) {
-    if (data_type == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
-                 "mluOpUnionKernelMoeDispatchBwdGate1Float";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdGate1Float(
-          k_dim, k_type, handle->queue, indices, locations, input, dispatch,
-          samples, capacity, hidden, num_experts, workspace, grad_gates)));
-    } else {
-      VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
-                 "mluOpUnionKernelMoeDispatchBwdGate1Half";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdGate1Half(
-          k_dim, k_type, handle->queue, indices, locations, input, dispatch,
-          samples, capacity, hidden, num_experts, workspace, grad_gates)));
-    }
+    VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
+               "KernelMoeDispatchBwdGate1";
+    KERNEL_CHECK((KernelMoeDispatchBwdGate1(
+        k_dim, k_type, handle->queue, data_type, indices, locations, input,
+        dispatch, samples, capacity, hidden, num_experts, workspace,
+        grad_gates)));
   } else {
-    if (data_type == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
-                 "mluOpUnionKernelMoeDispatchBwdGate2Float";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdGate2Float(
-          k_dim, k_type, handle->queue, indices, locations, input, dispatch,
-          samples, capacity, hidden, num_experts, grad_gates)));
-    } else {
-      VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
-                 "mluOpUnionKernelMoeDispatchBwdGate2Half";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdGate2Half(
-          k_dim, k_type, handle->queue, indices, locations, input, dispatch,
-          samples, capacity, hidden, num_experts, grad_gates)));
-    }
+    VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
+               "KernelMoeDispatchBwdGate2";
+    KERNEL_CHECK((KernelMoeDispatchBwdGate2(
+        k_dim, k_type, handle->queue, data_type, indices, locations, input,
+        dispatch, samples, capacity, hidden, num_experts, grad_gates)));
   }
 
   GEN_CASE_END();

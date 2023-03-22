@@ -26,7 +26,6 @@
 #include <string>
 
 #include "mlu_op.h"
-#include "mlu_op_kernel.h"
 #include "core/logging.h"
 #include "core/tensor.h"
 #include "core/runtime/device.h"
@@ -208,9 +207,9 @@ mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
   int kernel_volume = indice_pairs_desc->dims[0];
   int input_active_site = indice_pairs_desc->dims[2];
   int output_size = batch * sparse_conv_desc->output_space[0] *
-                            sparse_conv_desc->output_space[1] *
-                            sparse_conv_desc->output_space[2] +
-                        1;
+                        sparse_conv_desc->output_space[1] *
+                        sparse_conv_desc->output_space[2] +
+                    1;
   size_t mask_all_ws = 0, indice_index_in_ws = 0, indice_index_out_ws = 0;
   size_t out_indices_expand_ws = 0, grid_out_ws = 0, reduce_op_ws = 0;
   INTERNAL_CHECK(interface_name,
@@ -324,10 +323,10 @@ mluOpStatus_t launchDefaultKernel1(
   Padding padding(sparse_conv_desc->pad[0], sparse_conv_desc->pad[1],
                   sparse_conv_desc->pad[2]);
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockDefaultGetIndicePairKernel1<<<U"
+             "KernelDefaultGetIndicePairKl1<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockDefaultGetIndicePairKernel1(
+  KERNEL_CHECK((KernelDefaultGetIndicePairKl1(
       kDim3, func_type, handle->queue, (void *)mask_all_ws,
       (void *)indice_index_in_ws, (void *)out_indices_expand_ws,
       (void *)indices, filter_space, input_space, output_space, stride,
@@ -348,8 +347,8 @@ mluOpStatus_t launchSubmKernel1(
     mluOpHandle_t handle,
     const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
     const void *indices, void *mask_all_ptr, void *indice_index_in_ptr,
-    void *indice_in_expand_ptr, void *out_indices_expand_ptr,
-    int batch, int kernel_volume, int input_active_site) {
+    void *indice_in_expand_ptr, void *out_indices_expand_ptr, int batch,
+    int kernel_volume, int input_active_site) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -387,10 +386,10 @@ mluOpStatus_t launchSubmKernel1(
   Padding padding(sparse_conv_desc->pad[0], sparse_conv_desc->pad[1],
                   sparse_conv_desc->pad[2]);
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockSubmGetIndicePairKernel1<<<U"
+             "KernelSubmGetIndicePairKl1<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockSubmGetIndicePairKernel1(
+  KERNEL_CHECK((KernelSubmGetIndicePairKl1(
       kDim3, func_type, handle->queue, (void *)mask_all_ptr,
       (void *)indice_index_in_ptr, (void *)indice_in_expand_ptr,
       (void *)out_indices_expand_ptr, (void *)indices, filter_space,
@@ -434,10 +433,10 @@ mluOpStatus_t launchSubmKernel2(mluOpHandle_t handle, const void *indices,
   kDim3.y = job_num;
   kDim3.z = 1;
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockSubmGetIndicePairKernel2<<<U"
+             "KernelSubmGetIndicePairKl2<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockSubmGetIndicePairKernel2(
+  KERNEL_CHECK((KernelSubmGetIndicePairKl2(
       kDim3, func_type, handle->queue, (void *)out_indices,
       (void *)mask_all_ptr, (void *)out_indices_index_ptr, (void *)indices,
       len_1_one, len_l_two, core_num_l_one, core_num_l_two)));
@@ -535,14 +534,13 @@ mluOpStatus_t launchUniqueOp(mluOpHandle_t handle,
           mluOpSetTensorDescriptor(unique_output_desc, MLUOP_LAYOUT_ARRAY,
                                    MLUOP_DTYPE_INT32, unique_in_dims.size(),
                                    unique_in_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpUnique_v2(handle, unique_desc, unique_input_desc,
-                         unique_input_addr, unique_workspace_ptr, unique_op_ws,
-                         (int *)unique_output_num_addr, unique_output_desc,
-                         unique_output_addr, nullptr, nullptr, nullptr,
-                         nullptr));
+  INTERNAL_CHECK(interface_name,
+                 MLUOP_STATUS_SUCCESS ==
+                     mluOpUnique_v2(handle, unique_desc, unique_input_desc,
+                                    unique_input_addr, unique_workspace_ptr,
+                                    unique_op_ws, (int *)unique_output_num_addr,
+                                    unique_output_desc, unique_output_addr,
+                                    nullptr, nullptr, nullptr, nullptr));
   cnrtQueueSync(handle->queue);
   cnrtMemcpy(return_num_act, unique_output_num_addr, sizeof(float),
              CNRT_MEM_TRANS_DIR_DEV2HOST);
@@ -580,12 +578,12 @@ mluOpStatus_t launchDefaultKernel2(mluOpHandle_t handle,
   kDim3.y = job_num;
   kDim3.z = 1;
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockDefaultGetIndicePairKernel2<<<U"
+             "KernelDefaultGetIndicePairKl2<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockDefaultGetIndicePairKernel2(
-      kDim3, func_type, handle->queue, step_index_output_ptr, num_act_out,
-      core_num_l)));
+  KERNEL_CHECK((KernelDefaultGetIndicePairKl2(kDim3, func_type, handle->queue,
+                                              step_index_output_ptr,
+                                              num_act_out, core_num_l)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -596,11 +594,13 @@ mask : mask_all_ptr
 output: out_indices_expand_ptr
 func: balance index distribution
 */
-mluOpStatus_t launchBalanceKernel(
-    mluOpHandle_t handle, const std::string interface_name,
-    void *balance_input_addr, void *balance_output_addr,
-    void *balance_mask_addr, int input_active_site, int kernel_volume,
-    int output_size) {
+mluOpStatus_t launchBalanceKernel(mluOpHandle_t handle,
+                                  const std::string interface_name,
+                                  void *balance_input_addr,
+                                  void *balance_output_addr,
+                                  void *balance_mask_addr,
+                                  int input_active_site, int kernel_volume,
+                                  int output_size) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -608,18 +608,17 @@ mluOpStatus_t launchBalanceKernel(
   int core_nums = core_dim * cluster_number;
   int nram_size = handle->nram_size + REM_FOR_STACK - 12 * 1024;
   int core_num_l = (nram_size - 4 * 4096 * 3) / 8 / sizeof(int);
-  int jobs =
-      (input_active_site * kernel_volume + core_num_l - 1) / core_num_l;
+  int jobs = (input_active_site * kernel_volume + core_num_l - 1) / core_num_l;
   int job_num = jobs > core_nums ? core_nums : jobs;
   func_type = CNRT_FUNC_TYPE_BLOCK;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockBalanceGetIndicePairKernel<<<U"
+             "KernelBalanceGetIndicePair<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockBalanceGetIndicePairKernel(
+  KERNEL_CHECK((KernelBalanceGetIndicePair(
       kDim3, func_type, handle->queue, balance_input_addr, balance_mask_addr,
       balance_output_addr, input_active_site, kernel_volume, core_num_l,
       output_size)));
@@ -711,10 +710,12 @@ mluOpStatus_t launchScatterNdOp(mluOpHandle_t handle,
 }
 
 // call gather_nd op
-mluOpStatus_t launchGatherNdOp(
-    mluOpHandle_t handle, const std::string interface_name,
-    void *gather_input_addr, void *gather_output_addr, void *gather_indice_addr,
-    int input_active_site, int kernel_volume, int output_size) {
+mluOpStatus_t launchGatherNdOp(mluOpHandle_t handle,
+                               const std::string interface_name,
+                               void *gather_input_addr,
+                               void *gather_output_addr,
+                               void *gather_indice_addr, int input_active_site,
+                               int kernel_volume, int output_size) {
   VLOG(5) << interface_name << " call gatherNd";
   mluOpTensorDescriptor_t gather_input_desc, gather_output_desc,
       gather_indice_desc;
@@ -774,8 +775,7 @@ func: maskmove efficient data continuously by collect insts
 */
 mluOpStatus_t launchDefaultKernel3(mluOpHandle_t handle, void *output_addr,
                                    void *input_addr, void *mask_addr,
-                                   int input_active_site,
-                                   int kernel_volume) {
+                                   int input_active_site, int kernel_volume) {
   cnrtDim3_t kDim3;
   cnrtFunctionType_t func_type;
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
@@ -790,10 +790,10 @@ mluOpStatus_t launchDefaultKernel3(mluOpHandle_t handle, void *output_addr,
   kDim3.y = job_num;
   kDim3.z = 1;
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockDefaultGetIndicePairKernel3<<<U"
+             "KernelDefaultGetIndicePairKl3<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockDefaultGetIndicePairKernel3(
+  KERNEL_CHECK((KernelDefaultGetIndicePairKl3(
       kDim3, func_type, handle->queue, output_addr, input_addr, mask_addr,
       input_active_site, kernel_volume, core_num_l)));
   return MLUOP_STATUS_SUCCESS;
@@ -821,8 +821,7 @@ mluOpStatus_t launchDefaultKernel4(
   } else {
     core_num_split = 15;
   }
-  int core_num_l =
-      (nram_size - 4 * 4096 * 3) / core_num_split / sizeof(int);
+  int core_num_l = (nram_size - 4 * 4096 * 3) / core_num_split / sizeof(int);
   int jobs = (num_act_out + core_num_l - 1) / core_num_l;
   int job_num = jobs > core_nums ? core_nums : jobs;
   func_type = CNRT_FUNC_TYPE_BLOCK;
@@ -834,10 +833,10 @@ mluOpStatus_t launchDefaultKernel4(
                            sparse_conv_desc->output_space[2]);
 
   VLOG(5) << "[getIndicePairsDefault] Launch kernel "
-             "mluOpBlockDefaultGetIndicePairKernel4<<<U"
+             "KernelDefaultGetIndicePairKl4<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((mluOpBlockDefaultGetIndicePairKernel4(
+  KERNEL_CHECK((KernelDefaultGetIndicePairKl4(
       kDim3, func_type, handle->queue, output_addr, input_addr, output_space,
       num_act_out, core_num_l)));
   return MLUOP_STATUS_SUCCESS;
@@ -856,9 +855,9 @@ mluOpStatus_t NormalGetIndicePairsKernel(
   int kernel_volume = indice_pairs_desc->dims[0];
   int input_active_site = indice_pairs_desc->dims[2];
   int output_size = batch * sparse_conv_desc->output_space[0] *
-                            sparse_conv_desc->output_space[1] *
-                            sparse_conv_desc->output_space[2] +
-                        1;
+                        sparse_conv_desc->output_space[1] *
+                        sparse_conv_desc->output_space[2] +
+                    1;
 
   if (sub_m) {
     /*  workspace for subm mode
@@ -999,9 +998,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel3_output_addr = indice_pairs;
     kernel3_mask_addr = mask_all_ptr;
     fill_value = -1;
-    INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                launchFillOp(handle, interface_name, indice_pairs,
-                kernel_volume * 2 * input_active_site, fill_value));
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS ==
+            launchFillOp(handle, interface_name, indice_pairs,
+                         kernel_volume * 2 * input_active_site, fill_value));
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS ==
@@ -1064,8 +1065,8 @@ mluOpStatus_t NormalGetIndicePairsKernel(
         MLUOP_STATUS_SUCCESS ==
             launchDefaultKernel1(handle, sparse_conv_desc, compute_indices_ptr,
                                  mask_all_ptr, indice_index_in_ptr,
-                                 out_indices_expand_ptr, batch,
-                                 kernel_volume, input_active_site));
+                                 out_indices_expand_ptr, batch, kernel_volume,
+                                 input_active_site));
 
     //  call reduce_sum mask_all to indice_num
     void *reduce_input_addr = NULL, *reduce_output_addr = NULL;
@@ -1143,10 +1144,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     balance_output_addr = out_indices_expand_ptr;
     balance_mask_addr = mask_all_ptr;
     INTERNAL_CHECK(
-        interface_name, MLUOP_STATUS_SUCCESS ==
-        launchBalanceKernel(handle, interface_name, balance_input_addr,
-                            balance_output_addr, balance_mask_addr,
-                            input_active_site, kernel_volume, output_size));
+        interface_name,
+        MLUOP_STATUS_SUCCESS ==
+            launchBalanceKernel(handle, interface_name, balance_input_addr,
+                                balance_output_addr, balance_mask_addr,
+                                input_active_site, kernel_volume, output_size));
 
     // call scatter_nd unique_output_addr + step_index_addr = grid_out_addr
     void *scatter_input_addr = NULL, *scatter_output_addr = NULL,
@@ -1189,9 +1191,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel3_output_addr = indice_pairs;
     kernel3_mask_addr = mask_all_ptr;
     fill_value = -1;
-    INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                   launchFillOp(handle, interface_name, indice_pairs,
-                   kernel_volume * 2 * input_active_site, fill_value));
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS ==
+            launchFillOp(handle, interface_name, indice_pairs,
+                         kernel_volume * 2 * input_active_site, fill_value));
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS ==

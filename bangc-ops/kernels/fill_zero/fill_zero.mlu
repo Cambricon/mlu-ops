@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "mlu_op_kernel.h"
+#include "fill_zero.h"
 
 __mlu_global__ void MLUBlockKernelGdramFillZero(void *x, const int num) {
   uint32_t seg_n = num / taskDim;
@@ -36,9 +36,8 @@ __mlu_global__ void MLUBlockKernelGdramFillZero(void *x, const int num) {
   }
 }
 
-void MLUOP_WIN_API mluOpBlockKernelFillZeroByte(cnrtDim3_t k_dim,
-                                                cnrtFunctionType_t k_type,
-                                                cnrtQueue_t queue,
-                                                const int num_byte, void *x) {
+void MLUOP_WIN_API KernelFillZero(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                  cnrtQueue_t queue, const int num_byte,
+                                  void *x) {
   MLUBlockKernelGdramFillZero<<<k_dim, k_type, queue>>>(x, num_byte);
 }

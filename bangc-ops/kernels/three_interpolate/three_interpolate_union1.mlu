@@ -20,10 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "three_interpolate.h"
 
+#include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "mlu_op_kernel.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -36,15 +37,11 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void SelectIndicesBetweenMinAndMax(
-    int32_t *nram_indices,
-    int32_t *nram_indices_transpose,
-    float *nram_indices_transpose_addition,
-    float *nram_indices_transpose_float,
-    float *nram_indices_transpose_float_addition,
-    T *nram_weights_transpose,
-    const int32_t m_min, const int32_t m_max,
-    const int32_t index, const int32_t n_limit,
-    const int32_t c_limit, const int32_t m_limit_org) {
+    int32_t *nram_indices, int32_t *nram_indices_transpose,
+    float *nram_indices_transpose_addition, float *nram_indices_transpose_float,
+    float *nram_indices_transpose_float_addition, T *nram_weights_transpose,
+    const int32_t m_min, const int32_t m_max, const int32_t index,
+    const int32_t n_limit, const int32_t c_limit, const int32_t m_limit_org) {
   // select the offset between the m_min and m_max
   // convert indices from int32_t to float
   __int322float(nram_indices_transpose_float,
@@ -67,29 +64,23 @@ __mlu_func__ void SelectIndicesBetweenMinAndMax(
   // extra process for the nan/inf
   // set weights to be 0 for the indices not in range of [m_min, m_max)
   if (sizeof(T) == sizeof(float)) {
-    int32_t *nram_mask_int32 =
-        (int32_t *)nram_indices_transpose_float_addition;
+    int32_t *nram_mask_int32 = (int32_t *)nram_indices_transpose_float_addition;
     __bang_float2int32(nram_mask_int32, nram_indices_transpose_addition,
                        n_limit, 0);
-    __bang_mul_scalar((int32_t *)nram_mask_int32,
-                      (int32_t *)nram_mask_int32,
+    __bang_mul_scalar((int32_t *)nram_mask_int32, (int32_t *)nram_mask_int32,
                       (int32_t)INT32_MAX_MASK, n_limit);
     __bang_band((char *)(nram_weights_transpose + index * n_limit),
                 (char *)(nram_weights_transpose + index * n_limit),
-                (char *)nram_mask_int32,
-                INT32_MASK_REPEAT_TIMES * n_limit);
+                (char *)nram_mask_int32, INT32_MASK_REPEAT_TIMES * n_limit);
   } else if (sizeof(T) == sizeof(half)) {
-    int16_t *nram_mask_int16 =
-        (int16_t *)nram_indices_transpose_float_addition;
-    __bang_float2int16_rd(nram_mask_int16,
-                          nram_indices_transpose_addition, n_limit, 0);
-    __bang_mul_scalar((int16_t *)nram_mask_int16,
-                      (int16_t *)nram_mask_int16,
+    int16_t *nram_mask_int16 = (int16_t *)nram_indices_transpose_float_addition;
+    __bang_float2int16_rd(nram_mask_int16, nram_indices_transpose_addition,
+                          n_limit, 0);
+    __bang_mul_scalar((int16_t *)nram_mask_int16, (int16_t *)nram_mask_int16,
                       (int16_t)INT16_MAX_MASK, n_limit);
     __bang_band((char *)(nram_weights_transpose + index * n_limit),
                 (char *)(nram_weights_transpose + index * n_limit),
-                (char *)nram_mask_int16,
-                INT16_MASK_REPEAT_TIMES * n_limit);
+                (char *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
   }
 #endif
   // multiply the indices with values in the range of [m_min, m_max)
@@ -101,19 +92,19 @@ __mlu_func__ void SelectIndicesBetweenMinAndMax(
   // multiply the values not in the range of [m_min, m_max) with
   // m_limit_org + m_min
   __bang_mul_scalar(nram_indices_transpose_float_addition,
-                    nram_indices_transpose_float_addition,
-                    m_limit_org + m_min, n_limit);
+                    nram_indices_transpose_float_addition, m_limit_org + m_min,
+                    n_limit);
   // add the indices in range of [m_min, m_max) with the special
   // indices(same as
   // m_limit_org + m_min) not in range of [m_min, m_max)
   __bang_add(nram_indices_transpose_float, nram_indices_transpose_float,
              nram_indices_transpose_float_addition, n_limit);
   // get the relative indices by subtract m_min
-  __bang_sub_scalar(nram_indices_transpose_float,
-                    nram_indices_transpose_float, m_min, n_limit);
+  __bang_sub_scalar(nram_indices_transpose_float, nram_indices_transpose_float,
+                    m_min, n_limit);
   // get the beginning offset by multiply c_limit
-  __bang_mul_scalar(nram_indices_transpose_float,
-                    nram_indices_transpose_float, c_limit, n_limit);
+  __bang_mul_scalar(nram_indices_transpose_float, nram_indices_transpose_float,
+                    c_limit, n_limit);
   // convert the indices from float type back to int
   __float2int32(nram_indices, nram_indices_transpose_addition,
                 nram_indices_transpose_float,
@@ -295,14 +286,11 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
           __bang_write_zero(nram_features_selected, output_deal_size);
           // 2.2 select the offset between the m_min and m_max
           // convert indices from int32_t to float
-          SelectIndicesBetweenMinAndMax(nram_indices, nram_indices_transpose,
-                                        nram_indices_transpose_addition,
-                                        nram_indices_transpose_float,
-                                        nram_indices_transpose_float_addition,
-                                        nram_weights_transpose,
-                                        m_min, m_max,
-                                        index, n_limit,
-                                        c_limit, m_limit_org);
+          SelectIndicesBetweenMinAndMax(
+              nram_indices, nram_indices_transpose,
+              nram_indices_transpose_addition, nram_indices_transpose_float,
+              nram_indices_transpose_float_addition, nram_weights_transpose,
+              m_min, m_max, index, n_limit, c_limit, m_limit_org);
           // select the features from m*c to n*c
           // 2.3 select the Mo*Co according to the indices
           for (int32_t s = 0; s < actual_n_size; ++s) {
@@ -433,10 +421,9 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
     T *base_addr_weights =
         (T *)weights + current_batch * n * INDEX_WEIGHT_LAST_DIM;
     T *base_addr_grad_output = (T *)grad_output + current_batch * c * n;
-    T *base_addr_grad_features =
-        (T *)grad_features +
-        /*different batch*/ current_batch * c * m +
-        /*different m*/ current_m * m_limit;
+    T *base_addr_grad_features = (T *)grad_features +
+                                 /*different batch*/ current_batch * c * m +
+                                 /*different m*/ current_m * m_limit;
 
     int32_t m_mod_limit = m % m_limit;
     if (current_m == (m_aligned_limit / m_limit - 1) && (m_mod_limit != 0)) {
@@ -475,7 +462,7 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
         __memcpy(nram_weights,
                  base_addr_weights + k * n_limit * INDEX_WEIGHT_LAST_DIM,
                  real_indices_deal_size * sizeof(T), GDRAM2NRAM);
-         // load grad_output
+        // load grad_output
         __memcpy(nram_grad_output,
                  base_addr_grad_output + (j * n * c_limit + k * n_limit),
                  n_slice * sizeof(T), GDRAM2NRAM, n_limit_new * sizeof(T),
@@ -509,14 +496,11 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
         for (int32_t index = 0; index < INDEX_WEIGHT_LAST_DIM; ++index) {
           // select the offset between the m_min and m_max
           // convert indices from int32_t to float
-          SelectIndicesBetweenMinAndMax(nram_indices, nram_indices_transpose,
-                                        nram_indices_transpose_addition,
-                                        nram_indices_transpose_float,
-                                        nram_indices_transpose_float_addition,
-                                        nram_weights_transpose,
-                                        m_min, m_max,
-                                        index, n_limit,
-                                        c_limit, m_limit_org);
+          SelectIndicesBetweenMinAndMax(
+              nram_indices, nram_indices_transpose,
+              nram_indices_transpose_addition, nram_indices_transpose_float,
+              nram_indices_transpose_float_addition, nram_weights_transpose,
+              m_min, m_max, index, n_limit, c_limit, m_limit_org);
           // mul the grad_output and weights
           __bang_cycle_mul(nram_grad_features_transpose, nram_grad_output,
                            nram_weights_transpose + index * n_limit,
@@ -553,42 +537,50 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
   }    // batch_m_per_core
 }
 
-void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardFloat(
+void MLUOP_WIN_API KernelThreeInterpolateForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *indices, const void *weights, const int b,
-    const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *output) {
-  MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
-      (float *)features, (int *)indices, (float *)weights, b, c, m, n,
-      c_limit_size, m_limit_size, n_limit_size, (float *)output);
+    mluOpDataType_t d_type, const void *features, const void *indices,
+    const void *weights, const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *output) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
+          (float *)features, (int *)indices, (float *)weights, b, c, m, n,
+          c_limit_size, m_limit_size, n_limit_size, (float *)output);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
+          (half *)features, (int *)indices, (half *)weights, b, c, m, n,
+          c_limit_size, m_limit_size, n_limit_size, (half *)output);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
+void MLUOP_WIN_API KernelThreeInterpolateBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *indices, const void *weights, const int b,
-    const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *output) {
-  MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
-      (half *)features, (int *)indices, (half *)weights, b, c, m, n,
-      c_limit_size, m_limit_size, n_limit_size, (half *)output);
-}
-
-void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *grad_features) {
-  MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
-      (float *)grad_output, (int *)indices, (float *)weights, b, c, m, n,
-      c_limit_size, m_limit_size, n_limit_size, (float *)grad_features);
-}
-
-void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateBackwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *grad_output, const void *indices, const void *weights,
-    const int b, const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *grad_features) {
-  MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
-      (half *)grad_output, (int *)indices, (half *)weights, b, c, m, n,
-      c_limit_size, m_limit_size, n_limit_size, (half *)grad_features);
+    mluOpDataType_t d_type, const void *grad_output, const void *indices,
+    const void *weights, const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *grad_features) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
+          (float *)grad_output, (int *)indices, (float *)weights, b, c, m, n,
+          c_limit_size, m_limit_size, n_limit_size, (float *)grad_features);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
+          (half *)grad_output, (int *)indices, (half *)weights, b, c, m, n,
+          c_limit_size, m_limit_size, n_limit_size, (half *)grad_features);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

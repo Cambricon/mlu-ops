@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "active_rotated_filter.h"
+
 #include <cmath>
 #include <string>
 
@@ -30,8 +32,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetActiveRotatedFilterForwardWorkspaceSize(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
@@ -172,25 +172,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpActiveRotatedFilterForward(
       static_cast<KernelClass>(mluop::runtime::getJobLimitCapability(handle));
   k_type = mluop::runtime::castCnKernelClassToCnrtFuncType(job_type);
 
-  VLOG(5) << "Launch Kernel MLUKernelActiveRotatedFilterForward<<<Union"
+  VLOG(5) << "Launch Kernel KernelActiveRotatedFilterForward<<<Union"
           << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y << ", "
           << k_dims.z << ">>>.";
-  switch (input_dtype) {
-    case MLUOP_DTYPE_FLOAT: {
-      KERNEL_CHECK(mluOpUnionXKernelActiveRotatedFilterForwardFloat(
-          k_dims, k_type, handle->queue, output_planes, input_planes,
-          orientations, kH, kW, rotations, input, indices, workspace, output));
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      KERNEL_CHECK(mluOpUnionXKernelActiveRotatedFilterForwardHalf(
-          k_dims, k_type, handle->queue, output_planes, input_planes,
-          orientations, kH, kW, rotations, input, indices, workspace, output));
-    }; break;
-    default: {
-      VLOG(5) << "Not implemented.";
-      break;
-    }
-  }
+  KERNEL_CHECK(KernelActiveRotatedFilterForward(
+      k_dims, k_type, handle->queue, input_dtype, output_planes, input_planes,
+      orientations, kH, kW, rotations, input, indices, workspace, output));
 
   // generate gen_case prototxt
   GEN_CASE_END();

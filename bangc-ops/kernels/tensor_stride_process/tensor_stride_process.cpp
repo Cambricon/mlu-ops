@@ -348,11 +348,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
 
   policyFunc(handle, &k_dim, &k_type, input_shape.total_num);
 
-  VLOG(5) << "Launch Kernel mluOpUnion1KernelTensorStrideIn<<<Union"
-          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-          << k_dim.z << ">>>";
-  KERNEL_CHECK((mluOpUnion1KernelTensorStrideIn(
-      k_dim, k_type, handle->queue, input, input_shape, output, data_type)));
+  VLOG(5) << "Launch Kernel KernelTensorStrideIn<<<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((KernelTensorStrideIn(k_dim, k_type, handle->queue, input,
+                                     input_shape, output, data_type)));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -374,11 +373,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
 
   policyFunc(handle, &k_dim, &k_type, output_shape.total_num);
 
-  VLOG(5) << "Launch Kernel mluOpUnion1KernelTensorStrideOut<<<Union"
-          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-          << k_dim.z << ">>>";
-  KERNEL_CHECK((mluOpUnion1KernelTensorStrideOut(
-      k_dim, k_type, handle->queue, input, output, output_shape, data_type)));
+  VLOG(5) << "Launch Kernel KernelTensorStrideOut<<<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((KernelTensorStrideOut(k_dim, k_type, handle->queue, input,
+                                      output, output_shape, data_type)));
   return MLUOP_STATUS_SUCCESS;
 }
 

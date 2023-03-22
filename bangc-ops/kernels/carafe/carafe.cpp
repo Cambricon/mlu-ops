@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*************************************************************************
  * Copyright (C) [2022] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -15,15 +15,23 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *******************************************************************************/
+ *************************************************************************/
+#include "carafe.h"
 
 #include <algorithm>
 #include <vector>
-#include "carafe.h"
+
+#include "core/context.h"
+#include "core/logging.h"
+#include "core/runtime/device.h"
+#include "core/tensor.h"
+#include "core/type.h"
+#include "core/gen_case.h"
+#include "kernels/kernel.h"
 #include "kernels/tensor_stride_process/tensor_stride_process.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
 
@@ -331,14 +339,11 @@ mluOpStatus_t CarafeForwardParamCheck(
    * tensor contiguousness check
    */
   VLOG(5) << CARAFE_FORWARD_API << "Check data contiguousness.";
-  PARAM_CHECK(CARAFE_FORWARD_API,
-              !ifNeedTensorStrideProcess(input_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API, !ifNeedTensorStrideProcess(input_desc),
               "The input tensor is not contiguous!");
-  PARAM_CHECK(CARAFE_FORWARD_API,
-              !ifNeedTensorStrideProcess(mask_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API, !ifNeedTensorStrideProcess(mask_desc),
               "The mask tensor is not contiguous!");
-  PARAM_CHECK(CARAFE_FORWARD_API,
-              !ifNeedTensorStrideProcess(output_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API, !ifNeedTensorStrideProcess(output_desc),
               "The output tensor is not contiguous!");
   /*
    * off-chip data type check
@@ -803,25 +808,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
   int group_size = carafe_desc->group_size;
   int scale_factor = carafe_desc->scale_factor;
 
-  VLOG(5) << "Launch Kernel mluOpBlockKernelCarafeForward<<<k_type=" << k_type
+  VLOG(5) << "Launch Kernel KernelCarafeForward<<<k_type=" << k_type
           << ", k_dim=" << k_dim.x << "," << k_dim.y << "," << k_dim.z << ">>>";
-
-  if (input_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel mluOpBlockKernelCarafeForwardHalf";
-    KERNEL_CHECK((mluOpBlockKernelCarafeForwardHalf(
-        k_dim, k_type, handle->queue, input, mask, output, input_dimN,
-        input_dimH, input_dimW, input_dimC, kernel_size, group_size,
-        scale_factor, block_dimH, block_dimW, block_dimG, block_dimC, grid_dimH,
-        grid_dimW, grid_dimG, grid_dimC)));
-  } else {
-    VLOG(5) << "Kernel mluOpBlockKernelCarafeForwardFloat";
-    KERNEL_CHECK((mluOpBlockKernelCarafeForwardFloat(
-        k_dim, k_type, handle->queue, input, mask, output, input_dimN,
-        input_dimH, input_dimW, input_dimC, kernel_size, group_size,
-        scale_factor, block_dimH, block_dimW, block_dimG, block_dimC, grid_dimH,
-        grid_dimW, grid_dimG, grid_dimC)));
-  }
-
+  KERNEL_CHECK((KernelCarafeForward(
+      k_dim, k_type, handle->queue, input_desc->dtype, input, mask, output,
+      input_dimN, input_dimH, input_dimW, input_dimC, kernel_size, group_size,
+      scale_factor, block_dimH, block_dimW, block_dimG, block_dimC, grid_dimH,
+      grid_dimW, grid_dimG, grid_dimC)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -883,23 +876,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
   cnrtDim3_t k_dim = {task_dim_x, task_dim_y, 1};
   cnrtJobType_t k_type = CNRT_FUNC_TYPE_BLOCK;
 
-  VLOG(5) << "Launch mluOpBlockKernelCarafeBackward<<<k_type=" << k_type << ", "
+  VLOG(5) << "Launch KernelCarafeBackward<<<k_type=" << k_type << ", "
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-
-  if (input_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel mluOpBlockKernelCarafeBackwardHalf";
-    KERNEL_CHECK((mluOpBlockKernelCarafeBackwardHalf(
-        k_dim, k_type, handle->queue, (void *)input, (void *)mask,
-        (void *)grad_output, grad_input, grad_mask, n, hi, wi, c, k_up, group,
-        scale)));
-  } else {
-    VLOG(5) << "Kernel mluOpBlockKernelCarafeBackwardHalf";
-    KERNEL_CHECK((mluOpBlockKernelCarafeBackwardFloat(
-        k_dim, k_type, handle->queue, (void *)input, (void *)mask,
-        (void *)grad_output, grad_input, grad_mask, n, hi, wi, c, k_up, group,
-        scale)));
-  }
-
+  KERNEL_CHECK((KernelCarafeBackward(
+      k_dim, k_type, handle->queue, input_desc->dtype, (void *)input,
+      (void *)mask, (void *)grad_output, grad_input, grad_mask, n, hi, wi, c,
+      k_up, group, scale)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
