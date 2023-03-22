@@ -267,12 +267,12 @@ message Node {
   optional VoxelPoolingForwardParam voxel_pooling_forward_param = 4009;   // VoxelPoolingForwardParam
   optional BoxIouRotatedParam box_iou_rotated_param             = 200;   // BoxIouRotatedParam
   optional NmsRotatedParam nms_rotated_param                    = 201;   // NmsRotatedParam
-  optional RoialignParam roialign_param                         = 202;  // RoiAlignForwardParam
   optional BboxOverlapsParam bbox_overlaps_param                = 2041;  // BboxOverlapsParam
   optional BallQueryParam  ball_query_param                     = 4008;  // param
   optional FillParam       fill_param                           = 13199;  // param
   optional GetIndicePairsParam get_indice_pairs_param           = 202302031;  // param
-  optional MoeDispatchBackwardDataParam moe_dispatch_backward_data_param = 20230216; // param
+  optional NmsParam nms_param                                   = 768; // param
+  optional RoialignParam roialign_param                         = 202;  // param
   optional RoiawarePool3dForwardParam  roiaware_pool3d_forward_param     = 10120;  // param
   optional RoiawarePool3dBackwardParam  roiaware_pool3d_backward_param   = 10121;  // param
   optional RoiPointPool3dParam roipoint_pool3d_param            = 16002; // param
@@ -288,10 +288,8 @@ message Node {
   optional IndiceConvolutionBackwardDataParam indice_convolution_backward_data_param = 22120599;  // param
   optional IndiceConvolutionBackwardParam indice_convolution_backward_param = 20230131;  //param
   optional IndiceConvolutionForwardParam indice_convolution_forward_param = 23020721;  //param
-  optional CarafeForwardParam  carafe_forward_param     = 408;  // CarafeForwardParam
-  optional CarafeBackwardParam  carafe_backward_param   = 409;  // CarafeBackwardParam
-  optional MoeDispatchForwardParam moe_dispatch_forward_param = 23333;  // param
-  optional MoeDispatchBackwardGateParam  moe_dispatch_backward_gate_param   = 135246;  // param
+  optional CarafeForwardParam  carafe_forward_param             = 408;  // CarafeForwardParam
+  optional CarafeBackwardParam  carafe_backward_param           = 409;  // CarafeBackwardParam
   optional MatMulParam            matmul_param                  = 93;   // MatMulParam
 }
 
@@ -505,6 +503,17 @@ message GetIndicePairsParam{
    optional int32 num_act_out = 12 [default = 0];
 }
 
+// param to call mluOpRoiAlignForward()
+message RoialignParam{
+  required int32 pooled_height = 1 [default = 7];
+  required int32 pooled_width = 2 [default = 7];
+  required int32 sampling_ratio = 3 [default = 2];
+  required float spatial_scale = 4 [default = 0.25];
+  required bool aligned = 5 [default = false];
+  optional int32 pool_mode = 6 [default = 1];
+  optional int32 version = 7 [default = 0];
+}
+
 // param to call mluOpPsRoiPoolbackward()
 message PsRoiPoolBackwardParam{
   optional int32 output_dim = 1 [default = 8];
@@ -552,17 +561,6 @@ message NmsRotatedParam {
   optional float iou_threshold   = 1 [default = 0.5];
 }
 
-// param to call mluOpRoiAlignForward()
-message RoialignParam{
-  required int32 pooled_height = 1 [default = 7];
-  required int32 pooled_width = 2 [default = 7];
-  required int32 sampling_ratio = 3 [default = 2];
-  required float spatial_scale = 4 [default = 0.25];
-  required bool aligned = 5 [default = false];
-  optional int32 pool_mode = 6 [default = 1];
-  optional int32 version = 7 [default = 0];
-}
-
 // param to call mluOpBboxOverlaps()
 message BboxOverlapsParam {
   optional int32 mode = 1 [default = 0];
@@ -594,14 +592,6 @@ message FillParam  {
   optional int32 version = 2      [default = 1];
   optional PointerMode mode = 3   [default = POINTER_MODE_HOST];
   optional string   value_hex = 4 [default = "0X00000000"];
-}
-
-// param to call mluOpMoeDispatchBackwardData()
-message MoeDispatchBackwardDataParam {
-  optional int32 samples = 1;
-  optional int32 capacity = 2;
-  optional int32 hidden = 3;
-  optional int32 num_experts = 4;
 }
 
 // param to call mluOpRoiawarePool3dForward()
@@ -652,6 +642,51 @@ message VoxelizationParam {
   optional int32 max_voxels   = 2 [default = 20000];
   optional int32 ndim         = 3 [default = 3];
   optional bool deterministic = 4 [default = true];
+}
+
+// param to call mluOpNms()
+message NmsParam{
+  required int32 run_mode = 1 [default = 0];
+  optional int32 max_output_boxes = 2 [default = 100];
+  optional float iou_threshold = 3 [default = 0.45];
+  optional float confidence_threshold = 4 [default = 0.0];
+  optional NmsInputLayout input_layout = 5 [default = NMS_INPUT_LAYOUT_NUM_ATTR];
+  optional NmsOutputMode mode = 6 [default = NMS_INDICES];
+  optional bool is_use_v2_api = 7 [default = false];
+  optional NmsAlgo algo = 8 [default = NMS_ALGO_EXCLUDE_BOUNDARY];
+  optional float offset = 9 [default = 0.0];
+  optional NmsMethodMode method_mode = 10 [default = NMS_HARD_NMS];
+  optional NmsBoxMode box_mode = 11 [default = NMS_BOX_DIAGONAL];
+  optional float soft_nms_sigma = 12 [default = 0.0];
+  optional bool pad_to_max_output_size = 13 [default = false];
+}
+
+enum NmsBoxMode {
+  NMS_BOX_DIAGONAL = 0;
+  NMS_BOX_CENTER = 1;
+}
+
+enum NmsInputLayout {
+  NMS_INPUT_LAYOUT_NUM_ATTR = 0;
+  NMS_INPUT_LAYOUT_ATTR_NUM = 1;
+}
+
+enum NmsOutputMode {
+  NMS_INDICES = 0;
+  NMS_CONFIDENCE_AND_POS_1 = 1;
+  NMS_CONFIDENCE_AND_POS_2 = 2;
+  NMS_BATCH_AND_CLASS = 3;
+}
+
+enum NmsMethodMode {
+  NMS_HARD_NMS = 0;
+  NMS_SOFT_NMS_LINEAR = 1;
+  NMS_SOFT_NMS_GAUSSIAN = 2;
+}
+
+enum NmsAlgo {
+  NMS_ALGO_EXCLUDE_BOUNDARY = 0;
+  NMS_ALGO_INCLUDE_BOUNDARY = 1;
 }
 
 // param to call mluOpRoiAlignRotatedForward()
@@ -740,22 +775,6 @@ message CarafeBackwardParam {
   optional int32 kernel_size  = 2;
   optional int32 group_size   = 3;
   optional int32 scale_factor = 4;
-}
-
-// param to call mluOpMoeDispatchForward()
-message MoeDispatchForwardParam {
-  optional int32 samples     = 1;
-  optional int32 capacity    = 2;
-  optional int32 hidden      = 3;
-  optional int32 num_experts = 4;
-}
-
-// param to call mluOpMoeDispatchBackwardGate()
-message MoeDispatchBackwardGateParam {
-  optional int32 samples     = 1;
-  optional int32 capacity    = 2;
-  optional int32 hidden      = 3;
-  optional int32 num_experts = 4;
 }
 
 message MatMulParam {
