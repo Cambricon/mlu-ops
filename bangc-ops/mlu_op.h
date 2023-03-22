@@ -10865,6 +10865,86 @@ mluOpPointsInBoxes(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t points_indices_desc,
                    void *points_indices);
 
+// Group:MsDeformAttnForward
+/*!
+ * @brief Implements a multi-scale deformable attention module used in Deformable-Detr.
+ *        For detailed information about Deformable-Detr, see "Deformable DETR: Deformable
+ *        Transformers for End-to-End Object Detection."
+ *
+ * @param[in] handle
+ *   Input. Handle to a MLUOP context that is used to manage MLU devices and queues
+ *   in the ms_deform_attn_forward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] data_value_desc
+ *   Input. The descriptor of the first input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] data_value
+ *   Input. Pointer to the MLU memory that stores the input multi-scale feature maps.
+ * @param[in] data_spatial_shapes_desc
+ *   Input. The descriptor of the second input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] data_spatial_shapes
+ *   Input. Pointer to the MLU memory that stores the shapes of multi-scale feature maps.
+ * @param[in] data_level_start_index_desc
+ *   Input. The descriptor of the third input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] data_level_start_index
+ *   Input. Pointer to the MLU memory that stores the feature maps offset in data_value.
+ * @param[in] data_sampling_loc_desc
+ *   Input. The descriptor of the fourth input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] data_sampling_loc
+ *   Input. Pointer to the MLU memory that stores the normalized coordinates of sample points.
+ * @param[in] data_attn_weight_desc
+ *   Input. The descriptor of the fifth input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] data_attn_weight
+ *   Input. Pointer to the MLU memory that stores the attention weight.
+ * @param[in] im2col_step
+ *   Input. The value of im2col_step.
+ * @param[in] data_col_desc
+ *   Input. The descriptor of the output tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] data_col
+ *   Output. Pointer to the MLU memory that stores the output deformable attention feature.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - This function supports the following data types for input and output.
+ *   - \b data_value: float
+ *   - \b data_spatial_shapes: int32
+ *   - \b data_level_start_index: int32
+ *   - \b data_sampling_loc: float
+ *   - \b data_attn_weight: float
+ *   - \b data_col: float
+ *
+ * @note
+ * - data_value.dims[1] depends on data_spatial_shapes:
+ *   \f$data_value.dims[1]=\sum_{l=1}^{L}H_l*W_l\f$
+ * - data_level_start_index value depends on data_spatial_shapes:
+ *   \f$data_level_start_index[0]=0; data_level_start_index[i]=\sum_{l=1}^{i}H_l*W_l,i=1,...L-1 \f$
+ * - The input \b data_sampling_loc with NaN or infinity are not supported.
+ *
+ * @par Reference
+ * - Deformable DETR: Deformable Transformers for End-to-End Object Detection, Xizhou Zhu, 2020.
+ * - https://arxiv.org/pdf/2010.04159
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpMsDeformAttnForward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t data_value_desc,
+                         const void *data_value,
+                         const mluOpTensorDescriptor_t data_spatial_shapes_desc,
+                         const void *data_spatial_shapes,
+                         const mluOpTensorDescriptor_t data_level_start_index_desc,
+                         const void *data_level_start_index,
+                         const mluOpTensorDescriptor_t data_sampling_loc_desc,
+                         const void *data_sampling_loc,
+                         const mluOpTensorDescriptor_t data_attn_weight_desc,
+                         const void *data_attn_weight,
+                         const int im2col_step,
+                         const mluOpTensorDescriptor_t data_col_desc,
+                         void *data_col);
+
 #if defined(__cplusplus)
 }
 #endif

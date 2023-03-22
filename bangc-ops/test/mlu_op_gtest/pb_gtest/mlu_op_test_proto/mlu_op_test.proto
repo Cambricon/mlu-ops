@@ -293,6 +293,7 @@ message Node {
   optional MoeDispatchForwardParam moe_dispatch_forward_param = 23333;  // param
   optional MoeDispatchBackwardGateParam  moe_dispatch_backward_gate_param   = 135246;  // param
   optional MatMulParam            matmul_param                  = 93;   // MatMulParam
+  optional MsDeformAttnForwardParam ms_deform_attn_forward_param = 16005; // MsDeformAttnForward
 }
 
 
@@ -778,4 +779,8 @@ message MatMulParam {
   optional int32 generator_version = 17 [default = 1];
   optional MatMulCastMode cast_mode = 18 [default = MLUOP_MATMUL_BYPASS_QUANTIZE];
   optional bool atomics_allowed = 19 [default = false];
+}
+
+message MsDeformAttnForwardParam {
+  optional int32 im2col_step = 1 [default = 64];
 }
