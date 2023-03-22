@@ -1,5 +1,17 @@
 更新历史
 ========
+* **V0.5.1**
+
+  **更新时间**：2023年3月20日
+
+  **更新内容**：
+
+  - 新增以下算子章节内容：
+     + :ref:`nms_rotated`
+     + :ref:`moe_dispatch_backward_data`
+     + :ref:`moe_dispatch_backward_gate`
+     + :ref:`moe_dispatch_forward`
+
 * **V0.5.0**
 
   **更新时间**：2023年2月20日
@@ -43,6 +55,7 @@
   **更新内容**：
 
   -  新增以下算子章节内容：
+
      + :ref:`box_iou_rotated`
      + :ref:`nms_rotated`
 
