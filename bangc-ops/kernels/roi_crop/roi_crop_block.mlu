@@ -295,8 +295,6 @@ __mlu_global__ void MLUKernelRoiCropBackward(
         between(i_tl_x, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
     bool bottomRightIsIn =
         between(i_tl_x + 1, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
-    if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn && !bottomRightIsIn)
-      continue;
 
     // load the first input to nram
     if (is_first_bin) {
