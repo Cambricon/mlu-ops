@@ -5,7 +5,9 @@ SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
 MLUOP_TARGET_CPU_ARCH=`uname -m`
+GEN_SYMBOL_VIS_FILE_PY="./scripts/gen_symbol_visibility_map.py"
 MLUOP_SYMBOL_VIS_FILE="symbol_visibility.map"
+TARGET_SYMBOL_FILE="mlu_op.h"
 PACKAGE_EXTRACT_DIR="dep_libs_extract"
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
@@ -250,8 +252,6 @@ prepare_cntoolkit () {
   ln -sfvT usr/local/neuware neuware
   popd > /dev/null
   export NEUWARE_HOME=${PWD}/${PACKAGE_EXTRACT_DIR}/neuware
-  export PATH=${PWD}/${PACKAGE_EXTRACT_DIR}/neuware/bin:$PATH
-  export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
   prog_log_note "NEUWARE_HOME:\t${NEUWARE_HOME}"
 }
 
@@ -369,20 +369,21 @@ else
   sleep 1 # I hope user will see it.
   if [ -x "${PACKAGE_EXTRACT_DIR}/neuware/bin/cncc" ]; then
     export NEUWARE_HOME=${PWD}/${PACKAGE_EXTRACT_DIR}/neuware
-    prog_log_info "using NEUWARE_HOME = ${NEUWARE_HOME}"
   else
     prog_log_error "NEUWARE_HOME is null, refer README.md to prepare NEUWARE_HOME environment."
     exit -1
   fi
+  prog_log_warn "NEUWARE_HOME(guessed):\t${NEUWARE_HOME}"
 fi
+export PATH=${NEUWARE_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
 
+rm -rf ${BUILD_PATH}/*
 prog_log_info "generate ${MLUOP_SYMBOL_VIS_FILE} file."
-rm -f ${MLUOP_SYMBOL_VIS_FILE}
-prog_log_info "python3 gen_symbol_visibility_map.py ${MLUOP_SYMBOL_VIS_FILE} ./mlu_op.h"
-python3 gen_symbol_visibility_map.py ${MLUOP_SYMBOL_VIS_FILE} ./mlu_op.h
+prog_log_info "python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}"
+python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}
 
 pushd ${BUILD_PATH} > /dev/null
-  rm -rf *
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
                 -DNEUWARE_HOME="${NEUWARE_HOME}" \
                 -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}" \
@@ -395,4 +396,4 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}"
 
 popd > /dev/null
-${CMAKE} --build build --  -j
+${CMAKE} --build ${BUILD_PATH} --  -j
