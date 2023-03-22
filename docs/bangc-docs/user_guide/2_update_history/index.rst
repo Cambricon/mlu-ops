@@ -7,6 +7,7 @@
   **更新内容**：
 
   - 新增以下算子章节内容：
+
      + :ref:`nms_rotated`
      + :ref:`moe_dispatch_backward_data`
      + :ref:`moe_dispatch_backward_gate`
