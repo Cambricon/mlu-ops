@@ -233,7 +233,7 @@ typedef enum {
  */
 typedef enum {
   MLUOP_NMS_BOX_DIAGONAL = 0, /*!< The box mode is [x1, y1, x2, y2]. */
-  MLUOP_NMS_BOX_CENTER = 1,
+  MLUOP_NMS_BOX_CENTER   = 1,
   /*!< The box mode is * [x_center, y_center, width, height] where width > 0 and * height > 0. */
 } mluOpNmsBoxPointMode_t;
 
