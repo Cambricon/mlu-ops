@@ -4596,7 +4596,8 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - None.
+ * - On MLU300, the input \b grid with NaN or infinity is not supported.
+ * - On MLU500, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
  * - None.
