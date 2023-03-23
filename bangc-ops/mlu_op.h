@@ -4515,7 +4515,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300, the input \b grid with NaN or infinity are not supported.
+ * - On MLU300, the input \b grid with NaN or infinity is not supported.
  * - On MLU500, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
