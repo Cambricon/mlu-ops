@@ -3590,7 +3590,7 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
  * about the mluOpNms fucntion.
  *
  * @param[in] desc
- * Input. The Nms descriptor to be destroyed.
+ * The Nms descriptor to be destroyed.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
@@ -3616,44 +3616,44 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * to the Nms descriptor \b nms_desc.
  *
  * @param[in] nms_desc
- * Input. The descriptor of the Nms operation. For detailed information, see ::mluOpNmsDescriptor_t.
+ * The descriptor of the Nms operation. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] box_mode
- * Input. The box data sturcture mode of Nms descriptor to be set. For detailed information,
+ * The box data sturcture mode of Nms descriptor to be set. For detailed information,
  * see ::mluOpNmsBoxPointMode_t.
  * @param[in] output_mode
- * Input. The output mode of Nms descriptor to be set. For detailed information,
+ * The output mode of Nms descriptor to be set. For detailed information,
  * see ::mluOpNmsOutputMode_t.
  * @param[in] algo
- * Input. The computation algorithm of Nms operation. For detailed information,
+ * The computation algorithm of Nms operation. For detailed information,
  * see ::mluOpNmsAlgo_t.
  * @param[in] method_mode
- * Input. The confidence update method mode. For detailed information,
+ * The confidence update method mode. For detailed information,
  * see ::mluOpNmsMethodMode_t.
  * Please note that method mode 1 and 2 are not supported in current version,
  * and it will be supported in the future.
  * @param[in] iou_threshold
- * Input. The intersection over union (iou) threshold used in Nms computation.
+ * The intersection over union (iou) threshold used in Nms computation.
  * Boxes would be filtered out if the intersection over union is greater than or equal to \b iou_threshold.
  * @param[in] soft_nms_sigma
- * Input. The parameter used in soft Nms with Gaussian method.
+ * The parameter used in soft Nms with Gaussian method.
  * This value would be used when method_mode is ::mluOpNms_SOFT_NMS_GAUSSIAN.
  * @param[in] max_output_size
- * Input. The maximum number of output boxes. If the dimension of input box is 3, i.e.
+ * The maximum number of output boxes. If the dimension of input box is 3, i.e.
  * [batches_num, boxes_num, 4] or [batches_num, 4, boxes_num], this parameter indicates
  * the maximum number of output boxes per class.
  * @param[in] confidence_threshold
- * Input. The confidence threshold used in Nms computation.
+ * The confidence threshold used in Nms computation.
  * Boxes would be filtered out directly if the confidence of boxes are no more than this
  * threshold.
  * @param[in] offset
- * Input. The offset size of boundary used in Nms computation.
+ * The offset size of boundary used in Nms computation.
  * This value would be used when \b algo is ::mluOpNms_ALGO_INCLUDE_BOUNDARY.
  * @param[in] input_layout
- * Input. The input data layout. Supported values are 0 and 1. 0 represents
+ * The input data layout. Supported values are 0 and 1. 0 represents
  * [boxes_num, 4], [boxes_num, 7] or [batches_num, boxes_num, 4] and 1 represents
  * [4, boxes_num], [7, boxes_num] or [batches_num, 4, boxes_num].
  * @param[in] pad_to_max_output_size
- * Input. When the \b pad_to_max_output_size set is true, the \b output will be padded to max_output_size
+ * When the \b pad_to_max_output_size set is true, the \b output will be padded to max_output_size
  * with zero. Default is false.
  * @par Returns
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -3712,32 +3712,32 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * \b workspace_size with the ::mluOpGetNmsWorkspaceSize function.
  *
  * @param[in] handle
- * Input. Handle to a MLUOP context that is used to manage MLU devices and queues in the Nms function.
+ * Handle to a MLUOP context that is used to manage MLU devices and queues in the Nms function.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] nms_desc
- * Input. The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
+ * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
- * Input. The descriptor of the input boxes tensor, including the information of dimension, data type and
+ * The descriptor of the input boxes tensor, including the information of dimension, data type and
  * layout of input boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
- * Input. Pointer to the MLU memory that stores the input boxes tensor.
+ * Pointer to the MLU memory that stores the input boxes tensor.
  * @param[in] confidence_desc
- * Input. The descriptor of input confidence tensor, including the information of dimension, data type and
+ * The descriptor of input confidence tensor, including the information of dimension, data type and
  * layout of input confidence. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] confidence
- * Input. Pointer to the MLU memory that stores the input confidence tensor.
+ * Pointer to the MLU memory that stores the input confidence tensor.
  * @param[in] workspace
- * Input. Pointer to the MLU memory that is used as an extra workspace for the Nms function.
+ * Pointer to the MLU memory that is used as an extra workspace for the Nms function.
  * @param[in] workspace_size
- * Input. The size of the extra workspace in bytes that needs to be used in the Nms function. You can
+ * The size of the extra workspace in bytes that needs to be used in the Nms function. You can
  * get the size of the workspace with the ::mluOpGetNmsWorkspaceSize function.
  * @param[in] output_desc
- * Input. The descriptor of the output tensor, including the information of dimension, data type and layout
+ * The descriptor of the output tensor, including the information of dimension, data type and layout
  * of output. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
- * Output. Pointer to the MLU memory that stores the output tensor.
+ * Pointer to the MLU memory that stores the output tensor.
  * @param[out] output_size
- * Output. Pointer to the MLU memory that stores the number of output boxes.
+ * Pointer to the MLU memory that stores the number of output boxes.
  *
  * @par Returns
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_ARCH_MISMATCH
@@ -3818,16 +3818,16 @@ mluOpNms(mluOpHandle_t handle,
  * needed in Nms operation.
  *
  * @param[in] handle
- * Input. Handle to a MLUOP context that is used to manage MLU devices and
+ * Handle to a MLUOP context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] boxes_desc
- * Input. The descriptor of input boxes tensor, including the information of dimension, data type and
+ * The descriptor of input boxes tensor, including the information of dimension, data type and
  * layout of input boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] confidence_desc
- * Input. The descriptor of input confidence tensor, including the information of dimension, data type and
+ * The descriptor of input confidence tensor, including the information of dimension, data type and
  * layout of input confidence. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] size
- * Output. A host pointer to the returned size of the extra workspace in bytes that is used
+ * A host pointer to the returned size of the extra workspace in bytes that is used
  * in the Nms operation.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
