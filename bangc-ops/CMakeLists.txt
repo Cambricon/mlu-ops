@@ -160,11 +160,13 @@ else()
   execute_process(COMMAND rm ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/wrapper.cpp.o)
 endif()
 
+target_link_libraries(mluopscore cnrt cndrv)
 bang_add_library(mluops SHARED ${src_files})
 target_link_libraries(mluops
   -Wl,--start-group
   ${arch_binary_files} ${wrapper_binary_files}
-  -Wl,--whole-archive ${archive_binary_files} mluopscore -Wl,--no-whole-archive
+  -Wl,--whole-archive ${archive_binary_files} -Wl,--no-whole-archive
+  mluopscore
   cnrt cndrv dl
   -Wl,--end-group
 )
