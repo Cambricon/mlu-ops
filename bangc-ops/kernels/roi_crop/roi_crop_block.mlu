@@ -100,8 +100,6 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
         between(i_tl_x, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
     bool bottomRightIsIn =
         between(i_tl_x + 1, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
-    if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn && !bottomRightIsIn)
-      continue;
 
     if (is_first_bin) {
       // load the first input to nram
@@ -179,9 +177,6 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
             between(i_tl_x, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
         bool bottomRightIsIn = between(i_tl_x + 1, 0, width - 1) &&
                                between(i_tl_y + 1, 0, height - 1);
-        if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn &&
-            !bottomRightIsIn)
-          continue;
         int pongc_slice = c_limit < channel ? c_limit : channel;
 
         i_tl_offset = i_offset + i_tl_y * width * channel + i_tl_x * channel;
@@ -205,6 +200,18 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
           __memcpy_async(nram_pong + 3 * c_limit, input + i_br_offset,
                          pongc_slice * sizeof(T), GDRAM2NRAM);
         }
+      }
+      if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn &&
+          !bottomRightIsIn) {
+        // store
+        __memcpy(output + o_offset + c_offset, nram_ping, c_slice * sizeof(T),
+                 NRAM2GDRAM);
+        c_rem -= c_slice;
+        c_offset += c_slice;
+        swap(nram_ping, nram_pong);
+        __bang_write_value(nram_pong, 4 * c_limit, 0);
+        __asm__ volatile("sync;\n\t");
+        break;
       }
       // compute
       __bang_mul_scalar(nram_ping, nram_ping, i_tl_x_weight * i_tl_y_weight,
