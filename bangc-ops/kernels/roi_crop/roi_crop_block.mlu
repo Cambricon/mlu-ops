@@ -128,7 +128,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       }
     }
     __bang_write_value(nram_pong, 4 * c_limit, 0);
-    __asm__ volatile("sync;\n\t");
+    __sync();
     while (c_rem > 0) {
       c_slice = c_slice < c_rem ? c_slice : c_rem;
       // load the next input to nram
@@ -210,7 +210,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
         c_offset += c_slice;
         swap(nram_ping, nram_pong);
         __bang_write_value(nram_pong, 4 * c_limit, 0);
-        __asm__ volatile("sync;\n\t");
+        __sync();
         break;
       }
       // compute
@@ -234,7 +234,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       c_offset += c_slice;
       swap(nram_ping, nram_pong);
       __bang_write_value(nram_pong, 4 * c_limit, 0);
-      __asm__ volatile("sync;\n\t");
+      __sync();
     }
   }
 }
@@ -295,8 +295,6 @@ __mlu_global__ void MLUKernelRoiCropBackward(
         between(i_tl_x, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
     bool bottomRightIsIn =
         between(i_tl_x + 1, 0, width - 1) && between(i_tl_y + 1, 0, height - 1);
-    if (!topLeftIsIn && !topRightIsIn && !bottomLeftIsIn && !bottomRightIsIn)
-      continue;
 
     // load the first input to nram
     if (is_first_bin) {
@@ -358,7 +356,7 @@ __mlu_global__ void MLUKernelRoiCropBackward(
       c_offset += c_slice;
       swap(nram_ping, nram_pong);
       nram_output = nram_ping + c_limit;
-      __asm__ volatile("sync;\n\t");
+      __sync();
     }
   }
 }
