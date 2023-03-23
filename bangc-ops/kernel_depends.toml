@@ -29,6 +29,7 @@ indice_convolution_backward_filter = ["fill", "transpose", "gather_nd", "matmul"
 indice_convolution_forward = ["add_n", "fill", "gather_nd", "matmul", "scatter_nd", "transpose"]
 three_nn_forward = ["transpose"]
 roipoint_pool3d = ["transpose"]
+nms = ["transpose"]
 carafe = ["fill", "tensor_stride_process"]
 
 [bangc-ops.gtest]
