@@ -63,15 +63,15 @@ typedef enum {
        Notice that ::mluOpCreate should be called prior to any other MLUOP function. */
   MLUOP_STATUS_ALLOC_FAILED = 2,
   /*!< This error occurs when the resource allocation fails, which is usually caused by
-       failing to call cnMallocHost due to exceeded memory usage. Please make sure that
+       failing to call cnMallocHost due to exceeded memory usage. Make sure that
        the memory allocated previously is deallocated as much as possible. */
   MLUOP_STATUS_BAD_PARAM = 3,
   /*!< Invalid value or parameters are passed to the function, including data type, layout,
        dimensions, etc. */
   MLUOP_STATUS_INTERNAL_ERROR = 4,
   /*!< An error occurs inside of the function, which may indicate an internal error or bug in
-       the library. This error is usually caused by failing to call cnrtMemcpyAsync. Please
-       check whether the memory passed to the function is deallocated before the completion
+       the library. This error is usually caused by failing to call cnrtMemcpyAsync.
+       Check whether the memory passed to the function is deallocated before the completion
        of the routine. */
   MLUOP_STATUS_ARCH_MISMATCH = 5,
   /*!< Invalid MLU device which is not supported by current function. */
@@ -365,7 +365,7 @@ typedef enum {
 struct mluOpContext;
 
 /*!
- * A pointer to ::mluOpContext struct that holds the MLUOP context.
+ * Pointer to ::mluOpContext struct that holds the MLUOP context.
  *
  * MLU device resources cannot be accessed directly, so MLUOP uses
  * handle to manage MLUOP context including MLU device information
@@ -380,23 +380,23 @@ typedef struct mluOpContext *mluOpHandle_t;
 /*!
  * The descriptor of the collection of tensor which is used in the RNN operation, such as weight,
  * bias.
- * You need to call the ::mluOpCreateTensorSetDescriptor function to create a descriptor, and
- * call the ::mluOpInitTensorSetMemberDescriptor to set the information about each tensor in
+ * You need to call ::mluOpCreateTensorSetDescriptor to create a descriptor, and
+ * call ::mluOpInitTensorSetMemberDescriptor to set the information about each tensor in
  * the tensor set. If the data type of the tensor in the tensor set is in fixed-point data type,
- * call ::mluOpInitTensorSetMemberDescriptorPositionAndScale function to set quantization
+ * call ::mluOpInitTensorSetMemberDescriptorPositionAndScale to set quantization
  * parameters.
- * At last, you need to destroy the descriptor at the end with the
- * ::mluOpDestroyTensorSetDescriptor function.
+ * At last, you need to destroy the descriptor at the end with
+ * ::mluOpDestroyTensorSetDescriptor.
  */
 typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
 
 // Group:Runtime Management
 /*!
- * @brief Initializes the MLUOP library and creates a handle \b handle to a structure
+ * @brief Initializes the MLUOP library and creates a handle \b handle to a struct
  * that holds the MLUOP library context. It allocates hardware resources on the host
  * and device. You need to call this function before any other MLUOP function.
  *
- * You need to call the ::mluOpDestroy function to release the resources later.
+ * You need to call ::mluOpDestroy to release the resources later.
  *
  * @param[out] handle
  * Pointer to an MLUOP context that is used to manage MLU devices and queues.
@@ -431,7 +431,7 @@ mluOpCreate(mluOpHandle_t *handle);
 
 // Group:Runtime Management
 /*!
- * @brief Updates the MLUOP context information that is held by the \b handle. This function
+ * @brief Updates the MLUOP context information that is held by \b handle. This function
  * should be called if you call CNDrv API cnSetCtxConfigParam to set the context information.
  * The related context information will be synchronized to MLUOP with this function. For
  * detailed information, see "Cambricon CNDrv Developer Guide".
@@ -470,7 +470,7 @@ mluOpUpdateContextInformation(mluOpHandle_t handle);
 // Group:Runtime Management
 /*!
  * @brief Releases the resources of the specified MLUOP handle \b handle that was
- * created by the ::mluOpCreate function. It is usually the last call to destroy
+ * created by ::mluOpCreate. It is usually the last call to destroy
  * the handle to the MLUOP handle.
  *
  * @param[in] handle
@@ -508,8 +508,8 @@ mluOpDestroy(mluOpHandle_t handle);
  * @brief Sets the runtime queue \b queue in the handle \b handle. The queue is used to
  * launch kernels or to synchronize to this queue.
  *
- * Before setting a queue \b queue, you need to call the ::mluOpCreate function to initialize
- * MLUOP library, and call the cnrtCreateQueue function to create a queue \b queue.
+ * Before setting a queue \b queue, you need to call ::mluOpCreate to initialize
+ * MLUOP library, and call cnrtCreateQueue to create a queue \b queue.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
@@ -586,7 +586,7 @@ mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue);
  * @brief Converts the MLUOP enumerated status code to ASCIIZ static string and returns
  * a pointer to the MLU memory that holds information about ASCIIZ static string with
  * the status name. For example, when the input argument is ::MLUOP_STATUS_SUCCESS, the
- * returned string is MLUOP_STATUS_SUCCESS. When an invalid status value is passed to
+ * returned string is ::MLUOP_STATUS_SUCCESS. When an invalid status value is passed to
  * the function, the returned string is ::MLUOP_STATUS_BAD_PARAM.
  *
  * @param[in] status
@@ -624,7 +624,7 @@ mluOpGetErrorString(mluOpStatus_t status);
  * @brief Gets the size of a data type in ::mluOpDataType_t.
  *
  * @param[in] data_type
- * The data type. For detailed information, see ::mluOpDataType_t.
+ * For detailed information, see ::mluOpDataType_t.
  * @param[out] size
  * Host pointer to the size of the data type.
  *
@@ -658,15 +658,15 @@ mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size);
 // Group:Version Management
 /*!
  * @brief Retrieves the version of MLUOP library. The version of MLUOP
- * is composed of \b major, \b minor and \b patch. For instance, major = 1,
+ * is composed of \b major, \b minor, and \b patch. For instance, major = 1,
  * minor = 2, patch = 3, the version of MLUOP library is 1.2.3.
  *
  * @param[in] major
- * A pointer to scale factor that gets the major version of MLUOP library.
+ * Pointer to scale factor that gets the major version of MLUOP library.
  * @param[in] minor
- * A pointer to scale factor that gets the minor version of MLUOP library.
+ * Pointer to scale factor that gets the minor version of MLUOP library.
  * @param[in] patch
- * A pointer to scale factor that gets the patch version of MLUOP library.
+ * Pointer to scale factor that gets the patch version of MLUOP library.
  *
  * @par return
  * - None.
@@ -697,7 +697,7 @@ mluOpGetLibVersion(int *major, int *minor, int *patch);
 
 // Group:QuantizeRoundMode
 /*!
- * @brief Updates the specific rounding mode of MLUOP context information that holds by the \b
+ * @brief Updates the specific rounding mode of MLUOP context information that is held by the \b
  * handle. This function should be called if you want to change the MLUOP rounding mode that
  * is used to cumulate the results. For detailed information, see "Cambricon CNDrv Developer
  * Guide".
@@ -857,10 +857,10 @@ mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode);
  * The descriptor of a tensor that holds the information including tensor
  * layout, data type, the number of dimensions, shape and strides.
  *
- * You need to call the ::mluOpCreateTensorDescriptor function to create a descriptor,
- * and call the ::mluOpSetTensorDescriptor function or the ::mluOpSetTensorDescriptorEx
- * function to set the tensor information to the descriptor. Also, you need to destroy
- * the MLUOP context at the end with the ::mluOpDestroyTensorDescriptor function.
+ * You need to call ::mluOpCreateTensorDescriptor to create a descriptor,
+ * and call ::mluOpSetTensorDescriptor or ::mluOpSetTensorDescriptorEx
+ * to set the tensor information to the descriptor. Also, you need to destroy
+ * the MLUOP context at the end with ::mluOpDestroyTensorDescriptor.
  */
 typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 
@@ -868,10 +868,10 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  * The descriptor of the matrix multiplication function that holds compute type, bias type,
  * transpose flag, and other attributes defined in ::mluOpMatMulDescAttribute_t.
  *
- * You need to call the ::mluOpMatMulDescCreate function to create a descriptor, and call
- * the ::mluOpSetMatMulDescAttr function to set the information of the matrix multiplication
+ * You need to call ::mluOpMatMulDescCreate to create a descriptor, and call
+ * ::mluOpSetMatMulDescAttr to set the information of the matrix multiplication
  * to the descriptor. Also, you need to destroy the MLUOP context at the end with
- * the ::mluOpMatMulDescDestroy function.
+ * ::mluOpMatMulDescDestroy.
  */
 typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
 
@@ -879,10 +879,10 @@ typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
  * The descriptor of a tensor that holds the information including tensor
  * shape, the number of dimensions, pad, strides, dilation, sub_m, transpose.
  *
- * You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
- * and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information to
+ * You need to call ::mluOpCreateSparseConvolutionDescriptor to create a descriptor,
+ * and call ::mluOpSetSparseConvolutionDescriptor to set the tensor information to
  * the descriptor. Also, you need to destroy the MLUOP context at the end with
- * the ::mluOpDestroySparseConvolutionDescriptor function.
+ * ::mluOpDestroySparseConvolutionDescriptor.
  */
 typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
 
@@ -890,9 +890,9 @@ typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
  * The descriptor of the matrix multiplication that holds the configured matrix multiplication
  * algorithm descriptor and its runtime properties.
  *
- * You need to call the ::mluOpCreateMatMulHeuristicResult function to create a descriptor.
+ * You need to call ::mluOpCreateMatMulHeuristicResult to create a descriptor.
  * Also, you need to destroy the MLUOP context at the end with
- * the ::mluOpDestroyMatMulHeuristicResult function.
+ * ::mluOpDestroyMatMulHeuristicResult.
  */
 typedef struct mluOpMatMulHeuristicResult *mluOpMatMulHeuristicResult_t;
 
@@ -905,9 +905,9 @@ typedef struct mluOpMatMulPrefer *mluOpMatMulPrefer_t;
 /*!
  * The descriptor of the matrix multiplication computation algorithm.
  *
- * You need to call the ::mluOpMatMulAlgoCreate function to create a descriptor.
+ * You need to call ::mluOpMatMulAlgoCreate to create a descriptor.
  * Also, you need to destroy the MLUOP context at the end with
- * the ::mluOpMatMulAlgoDestroy function.
+ * ::mluOpMatMulAlgoDestroy.
  */
 typedef struct mluOpMatMulAlgoStruct *mluOpMatMulAlgo_t;
 
@@ -921,19 +921,19 @@ typedef struct mluOpReduceStruct *mluOpReduceDescriptor_t;
  * The descriptor of the transpose operation that holds transpose information
  * including \b dimensions and \b permute.
  *
- * You need to call the ::mluOpCreateTransposeDescriptor function to create a descriptor,
- * and call the ::mluOpSetTransposeDescriptor function to set the information of
+ * You need to call ::mluOpCreateTransposeDescriptor to create a descriptor,
+ * and call ::mluOpSetTransposeDescriptor to set the information of
  * transpose operation to the descriptor. Also, you need to destroy the MLUOP context
- * at the end with the ::mluOpDestroyTransposeDescriptor function.
+ * at the end with ::mluOpDestroyTransposeDescriptor.
  */
 typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
 
-/*! The descriptor of ::mluOpRoiAlignForward function that holds parameter information.
+/*! The descriptor of ::mluOpRoiAlignForward that holds parameter information.
  *
- *  You need to call the ::mluOpCreateRoiAlignForwardDescriptor function to create a descriptor,
- *  and call the ::mluOpSetRoiAlignForwardDescriptor function to set the information of
+ *  You need to call ::mluOpCreateRoiAlignForwardDescriptor to create a descriptor,
+ *  and call ::mluOpSetRoiAlignForwardDescriptor to set the information of
  *  ::mluOpRoiAlignForward operation to the descriptor. Also, you need to destroy the MLUOP context
- *  at the end with the ::mluOpDestroyRoiAlignForwardDescriptor function.
+ *  at the end with ::mluOpDestroyRoiAlignForwardDescriptor.
  */
 typedef struct mluOpRoiAlignForwardStruct *mluOpRoiAlignForwardDescriptor_t;
 
@@ -941,8 +941,8 @@ typedef struct mluOpRoiAlignForwardStruct *mluOpRoiAlignForwardDescriptor_t;
  * The descriptor of Unique function that holds mluOpUniqueSort_t, dim, return_inverse,
  * and return_counts.
  *
- * You need to call the ::mluOpCreateUniqueDescriptor to create a descriptor,
- * and call the ::mluOpSetUniqueDescriptor to set the information of the unique operation to
+ * You need to call ::mluOpCreateUniqueDescriptor to create a descriptor,
+ * and call ::mluOpSetUniqueDescriptor to set the information of the unique operation to
  * the descriptor. At last, you need to destroy the descriptor at the end with the
  * ::mluOpDestroyUniqueDescriptor function.*/
 typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
@@ -952,25 +952,25 @@ typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
  * CARAFE information including the number of input dimensions, kernel size, group size,
  * and scale factor.
  *
- * You need to call the ::mluOpCreateCarafeDescriptor function to create a descriptor,
- * and call the ::mluOpSetCarafeDescriptor function to set the information of the CARAFE operation
- * to the descriptor. Also, you need to destroy the MLUOP context at the end with the
- * ::mluOpDestroyCarafeDescriptor function.
+ * You need to call ::mluOpCreateCarafeDescriptor to create a descriptor,
+ * and call ::mluOpSetCarafeDescriptor to set the information of the CARAFE operation
+ * to the descriptor. Also, you need to destroy the MLUOP context at the end with
+ * ::mluOpDestroyCarafeDescriptor.
  */
 typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
 
 // Group:Tensor
 /*!
  * @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, data type,
- * and layout of input tensor. If the input tensor is in fixed-point data type, the
- * ::mluOpSetTensorDescriptorPositionAndScale function or the ::mluOpSetTensorDescriptorPosition
- * function needs to be called to set quantization parameters.
+ * and layout of input tensor. If the input tensor is in fixed-point data type,
+ * ::mluOpSetTensorDescriptorPositionAndScale or ::mluOpSetTensorDescriptorPosition
+ * needs to be called to set quantization parameters.
  *
- * The ::mluOpDestroyTensorDescriptor function needs to be called to destroy the tensor descriptor
+ * ::mluOpDestroyTensorDescriptor needs to be called to destroy the tensor descriptor
  * later.
  *
  * @param[in] desc
- * Pointer to the struct that holds information about the tensor descriptor.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -1002,10 +1002,10 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 // Group:GetIndicePairs
 /*!
  * @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, pad, stride,
- * dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape. The
- * ::mluOpSetSparseConvolutionDescriptor function needs to be called to set parameters.
+ * dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape.
+ * ::mluOpSetSparseConvolutionDescriptor needs to be called to set parameters.
  *
- * The ::mluOpDestroySparseConvolutionDescriptor function needs to be called to destroy the
+ * ::mluOpDestroySparseConvolutionDescriptor needs to be called to destroy the
  * tensor descriptor later.
  *
  * @param[in] desc
@@ -1040,7 +1040,7 @@ mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc)
 
 // Group:GetIndicePairs
 /*!
- * @brief Destroys a convolution descriptor \b desc that is previously created with the
+ * @brief Destroys a convolution descriptor \b desc that was previously created with the
  * ::mluOpCreateSparseConvolutionDescriptor function.
  *
  * The sparse convolution descriptor is defined in ::mluOpSparseConvolutionDescriptor_t
@@ -1081,8 +1081,8 @@ mluOpDestroySparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc)
 /*!
  * @brief Creates a group of tensor descriptor stored by \b group_desc that holds the
  * dimensions, data_type, and layout of input tensors. If the input tensor is in
- * fixed-point data type, the ::mluOpSetTensorDescriptorPositionAndScale function or
- * the ::mluOpSetTensorDescriptorPosition function need to be called to set quantization
+ * fixed-point data type, ::mluOpSetTensorDescriptorPositionAndScale or
+ * ::mluOpSetTensorDescriptorPosition needs to be called to set quantization
  * parameters.
  *
  * @param[in] group_desc
@@ -1103,8 +1103,8 @@ mluOpDestroySparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc)
  * - None.
  *
  * @par API Dependency
- * - The ::mluOpDestroyTensorDescriptor function needs to be called for each descriptor
- *   to destroy all tensors in group_desc or the ::mluOpDestroyGroupTensorDescriptors
+ * - ::mluOpDestroyTensorDescriptor needs to be called for each descriptor
+ *   to destroy all tensors in group_desc or ::mluOpDestroyGroupTensorDescriptors
  *   needs to be called to destroy the all tensor descriptors in group_desc later.
  *
  * @par Note
@@ -1121,8 +1121,8 @@ mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const i
 
 // Group:Tensor
 /*!
- * @brief Initializes the tensor descriptor pointed by \b desc that is previously created
- * with the ::mluOpCreateTensorDescriptor function, and sets the information about the
+ * @brief Initializes the tensor descriptor pointed by \b desc that was previously created
+ * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, data type, and layout of the input tensor.
  *
  * If ::mluOpSetTensorDescriptor is called, you do not need to specify the strides of all
@@ -1132,7 +1132,7 @@ mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const i
  * be treated as contiguous in memory.
  *
  * @param[in] desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] layout
  * The layout of the input tensor. For detailed information, see ::mluOpTensorLayout_t.
  * @param[in] dtype
@@ -1161,7 +1161,7 @@ mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const i
  * - dimSize[0] represents the highest dimension, dimSize[DIM_MAX - 1] represents the lowest
  *   dimension, and DIM_MAX represents the number of dimensions in the input tensor.
  * - This function cannot be called continuously. You need to call ::mluOpResetTensorDescriptor
- *   before calling another ::mluOpSetTensorDescriptor to avoid memory leaks.
+ *   before calling ::mluOpSetTensorDescriptor to avoid memory leaks.
  *
  * @par Example
  * - None.
@@ -1175,13 +1175,13 @@ mluOpSetTensorDescriptor(
 
 // Group:GetIndicePairs
 /*!
- * @brief Initializes the sparse convolution descriptor \b desc that is previously created
- * with the ::mluOpCreateSparseConvolutionDescriptor function, and sets the information
+ * @brief Initializes the sparse convolution descriptor \b desc that was previously created
+ * with ::mluOpCreateSparseConvolutionDescriptor, and sets the information
  * about the convolution forward and backward operation to the convolution descriptor
  * \b desc. The information includes the number of the convolution dimensions \b dimNb,
  * the padding size for each dimension \b pad, the stride of the sliding window for
  * each dimension \b stride, the dilation factor for each dimension \b dilation, and
- * the size of \b input , \b filter , \b output.
+ * the size of \b input , \b filter , and \b output.
  *
  * @param[in] desc
  * The descriptor of the sparse convolution operation. For detailed information,
@@ -1314,9 +1314,9 @@ mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc, int 
 
 // Group:Tensor
 /*!
- * @brief Initializes the group of tensor descriptors stored by \b group_desc that is
- * previously created with the ::mluOpCreateTensorDescriptor function or
- * ::mluOpCreateGroupTensorDescriptors function, and sets the information about
+ * @brief Initializes the group of tensor descriptors stored by \b group_desc that was
+ * previously created with ::mluOpCreateTensorDescriptor or
+ * ::mluOpCreateGroupTensorDescriptors, and sets the information about
  * the dimensions, data type, and layout of all the input tensors.
  *
  * If ::mluOpSetTensorDescriptor or ::mluOpSetGroupTensorDescriptors is called, you do
@@ -1326,7 +1326,7 @@ mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc, int 
  * ::mluOpSetTensorDescriptorEx. But the data might not be treated as contiguous in memory.
  *
  * @param[in] group_desc
- * An array of pointers to the struct that hold information about the tensor descriptor.
+ * An array of pointers to the structs that hold information about the tensor descriptor.
  * @param[in] group_layout
  * An array that stores the layouts of all input tensors. For detailed information, see
  * ::mluOpTensorLayout_t.
@@ -1357,12 +1357,12 @@ mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc, int 
  *
  * @par Note
  * - The group_dimSize includes dimensions of all tensors. You need to store
- *   the dimension of each tensor one by one in order. For example, If we have
+ *   the dimension of each tensor one by one in order. For example, If there are
  *   three tensors, the first tensor dimension is [3,4,5,6], the second tensor
  *   dimension is [9,7,8], and the third tensor dimension is [4,7], the
  *   group_dimSize should be [3,4,5,6,9,7,8,4,7].
  * - For better performance, there is no overflow check in this function.
- *   Please make sure that the size of each tensor is in the range of [0, 2^31].
+ *   Make sure that the size of each tensor is in the range of [0, 2^31].
  *   Otherwise, you will get wrong result.
  *
  * @par Example
@@ -1381,14 +1381,14 @@ mluOpSetGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[],
 
 // Group:Tensor
 /*!
- * @brief Resets the tensor descriptor pointed by \b desc that is previously created with
- *  the ::mluOpCreateTensorDescriptor function. If ::mluOpResetTensorDescriptor is called,
+ * @brief Resets the tensor descriptor pointed by \b desc that was previously created with
+ *  ::mluOpCreateTensorDescriptor. If ::mluOpResetTensorDescriptor is called,
  *  all the information about the tensor will be reset to initial value, which means layout
  *  is MLUOP_LAYOUT_ARRAY, dtype is MLUOP_DTYPE_FLOAT, dimsNb is 0, and dimSize points to an
  *  \b MLUOP_DIM_MAX-dimension array.
  *
  * @param[in] desc
- * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -1407,7 +1407,7 @@ mluOpSetGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[],
  *
  * @par Note
  * - This function is used to avoid memory leaks when more than one ::mluOpSetTensorDescriptor
- *   function is called. You should call this function before calling another
+ *   function is called. You should call this function before calling
  *   ::mluOpSetTensorDescriptor.
  *
  * @par Example
@@ -1421,8 +1421,8 @@ mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
 
 // Group:Tensor
 /*!
- * @brief Initializes the tensor descriptor pointed by \b desc that is previously created
- * with the ::mluOpCreateTensorDescriptor function, and sets the information about the
+ * @brief Initializes the tensor descriptor pointed by \b desc that was previously created
+ * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, strides, data type, and layout of the input tensor.
  *
  * Compare with ::mluOpSetTensorDescriptor, you can specify the strides of all dimensions with
@@ -1433,7 +1433,7 @@ mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
  * operation supports this function in the "note" section of the operation description.
  *
  * @param[in] desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] layout
  * The layout of the input tensor. For detailed information, see ::mluOpTensorLayout_t.
  * @param[in] dtype
@@ -1488,7 +1488,7 @@ mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
  * be treated as contiguous in memory.
  *
  * @param[in] desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] dimNb
  * The number of dimensions in the input tensor of the initialized operation.
  * @param[in] dimSize
@@ -1530,9 +1530,9 @@ mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc, int dimNb, const int *
  * ::MLUOP_STATUS_BAD_PARAM data type is used by default.
  *
  * @param[in] desc
- * The descriptor of input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] onchip_dtype
- * The on-chip data type of the tensor used in the operations that support fixed-point
+ * The on-chip data type of the tensor is used in the functon that supports fixed-point
  * computing.
  *
  * @par Return
@@ -1552,10 +1552,8 @@ mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc, int dimNb, const int *
  *
  * @par Note
  * - The on-chip data type is only used on the operations that support fixed-point computing. It
- *   has no effect on other operations. If you call this function to get on-chip data type for an
- *   operation that does not support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned.
- *   To check if an operation supports fixed-point computing, see the detailed description of the
- *   operation.
+ *   has no effect on other functions. If you call this function to get on-chip data type for a
+ *   function that does not support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned.
  *
  * @par Example
  * - None.
@@ -1572,7 +1570,7 @@ mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc, mluOpDataTy
  * fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION mode.
  *
  * @param[in] desc
- * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] position
  * A scalar of fixed position factor that is used for quantization.
  *
@@ -1609,7 +1607,7 @@ mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
  * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE mode.
  *
  * @param[in] desc
- * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] position
  * A scalar of fixed position factor that is used for quantization.
  * @param[in] scale
@@ -1644,11 +1642,11 @@ mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int posit
 
 // Group:Tensor
 /*!
- * @brief Sets the \b position, \b scale and \b offset factors to the descriptor of fixed-point
+ * @brief Sets the \b position , \b scale , and \b offset factors to the descriptor of fixed-point
  * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE_OFFSET mode.
  *
  * @param[in] desc
- * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] position
  * A scalar of fixed position factor that is used for quantization.
  * @param[in] scale
@@ -1685,12 +1683,12 @@ mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc, int
 
 // Group:Tensor
 /*!
- * @brief Retrieves a tensor descriptor \b desc that is previously created with the
- * ::mluOpCreateTensorDescriptor function, and sets the information about the dimensions,
+ * @brief Retrieves a tensor descriptor \b desc that was previously created with
+ * ::mluOpCreateTensorDescriptor, and sets the information about the dimensions,
  * data type, and layout of input tensor.
  *
  * @param[in] desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] layout
  * Pointer to the host memory that holds information about the layout of the input tensor.
  * For detailed information, see ::mluOpTensorLayout_t.
@@ -1733,12 +1731,12 @@ mluOpGetTensorDescriptor(
 
 // Group:Tensor
 /*!
- * @brief Retrieves a tensor descriptor \b desc that is previously created with the
+ * @brief Retrieves a tensor descriptor \b desc that was previously created with the
  * ::mluOpCreateTensorDescriptor and sets the information about the dimensions, data type,
  * stride and layout of input tensor with ::mluOpSetTensorDescriptorEx.
  *
  * @param[in] desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] layout
  * Pointer to the host memory that holds information about the layout of the input tensor.
  * For detailed information, see ::mluOpTensorLayout_t.
@@ -1788,11 +1786,11 @@ mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
 // Group:Tensor
 /*!
  * @brief Retrieves the number of elements according to the input descriptor \b desc. You
- * need to call the ::mluOpSetTensorDescriptor function first to create a tensor descriptor
+ * need to call ::mluOpSetTensorDescriptor first to create a tensor descriptor
  * before calling this function.
  *
  * @param[in] desc
- * The descriptor of input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS
@@ -1833,11 +1831,11 @@ mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
 /*!
  * @brief Retrieves the on-chip data type of a tensor descriptor \b desc set by
  * ::mluOpSetTensorDescriptorOnchipDataType. If the on-chip data type is not set
- * with the ::mluOpSetTensorDescriptorOnchipDataType function, the
+ * with ::mluOpSetTensorDescriptorOnchipDataType, the
  * ::MLUOP_STATUS_BAD_PARAM is returned.
  *
  * @param[in] desc
- * The descriptor of input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] onchip_dtype
  * Pointer to the MLU memory that holds information about the on-chip data type of the tensor.
  *
@@ -1859,9 +1857,7 @@ mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
  * @par Note
  * - The on-chip data type is only used on the operations that support fixed-point computing. It
  *   has no effect on other operations. If you call this function to get on-chip data type for an
- *   operation that does support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned. To
- *   check if an operation supports fixed-point computing, see the detailed description of the
- *   operation.
+ *   operation that does support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned.
  *
  * @par Example
  * - None.
@@ -1878,7 +1874,7 @@ mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc, mluOp
  * fixed-point quantization.
  *
  * @param[in] desc
- * The descriptor of the tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] position
  * A host pointer of fixed position factor that is used for quantization.
  *
@@ -1915,7 +1911,7 @@ mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *positi
  * fixed-point quantization.
  *
  * @param[in] desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] position
  * Pointer to the MLU memory that holds information about fixed position used for quantization.
  * @param[out] scale
@@ -1954,7 +1950,7 @@ mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc, int
  * fixed-point data in fixed-point quantization.
  *
  * @param[in] desc
- * The descriptor of the tensor. For detailed information,
+ * The descriptor of the tensor desc. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] position
  * A host pointer of fixed position factor that is used for quantization.
@@ -1998,7 +1994,7 @@ mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t des
  * @brief Destroys a tensor descriptor that was created by ::mluOpCreateTensorDescriptor.
  *
  * @param[in] desc
- * A tensor descriptor created by ::mluOpCreateTensorDescriptor.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -2029,7 +2025,7 @@ mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
 
 // Group:Tensor
 /*!
- * @brief Destroys a group of tensor descriptors that was created by
+ * @brief Destroys a group of tensor descriptors that were created by
  * ::mluOpCreateTensorDescriptor or ::mluOpCreateGroupTensorDescriptors.
  *
  * @param[in] group_desc
@@ -2094,9 +2090,9 @@ mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const 
  * - None.
  *
  * @par Note
- * - After calling this function, you can call the ::mluOpInitTensorSetMemberDescriptor
- *   function to initialize and set the information to the tensor set descriptor.
- * - You need to call the ::mluOpDestroyTensorSetDescriptor function to destroy the
+ * - After calling this function, you can call ::mluOpInitTensorSetMemberDescriptor
+ *   to initialize and set the information to the tensor set descriptor.
+ * - You need to call ::mluOpDestroyTensorSetDescriptor to destroy the
  *   descriptor.
  *
  * @par Example
@@ -2110,11 +2106,11 @@ mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet, const int 
 
 // Group:TensorSet
 /*!
- * @brief Retrieves a tensor set descriptor \b tensorSetDesc that is previously created
- * with the ::mluOpCreateTensorSetDescriptor function.
+ * @brief Retrieves a tensor set descriptor \b tensorSetDesc that was previously created
+ * with ::mluOpCreateTensorSetDescriptor.
  *
  * @param[in] tensorSetDesc
- * The descriptor of the tensor set.
+ * The descriptor of the tensor \b tensorSet.
  * @param[out] setDimNb
  * The number of dimensions of the tensor set.
  * @param[out] setDimSize
@@ -2150,11 +2146,11 @@ mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setdi
 
 // Group:TensorSet
 /*!
- * @brief Destroys a tensor set descriptor \b tensorSetDesc that is previously created by
+ * @brief Destroys a tensor set descriptor \b tensorSetDesc that was previously created by
  * ::mluOpCreateTensorSetDescriptor.
  *
  * @param[in] desc
- * A tensor descriptor created by ::mluOpCreateTensorSetDescriptor.
+ * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -2187,12 +2183,12 @@ mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
 // Group:TensorSet
 /*!
  * @brief Initializes a member tensor in the tensor set descriptors pointed by
- * \b desc that is previously created with the ::mluOpCreateTensorSetDescriptor
- * function, and sets the information about the dimensions, data type, and
+ * \b desc that was previously created with ::mluOpCreateTensorSetDescriptor,
+ * and sets the information about the dimensions, data type, and
  * layout.
  *
  * @param[in] tensorSetDesc
- * The descriptor of the tensor set. For detailed information,
+ * The descriptor of the tensor \b tensorSet. For detailed information,
  * see ::mluOpTensorSetDescriptor_t.
  * @param[in] setDimNb
  * The number of dimensions of the tensor set.
@@ -2225,8 +2221,8 @@ mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
  *
  * @par Note
  * - Before calling this function,
- *   You need to call the ::mluOpCreateTensorSetDescriptor functions to create
- *   the tensor descriptors \b tensorSetDesc.
+ *   You need to call ::mluOpCreateTensorSetDescriptor to create
+ *   the tensor descriptor \b tensorSetDesc.
  * - All member tensors in the tensor set need to call this function to
  *   initialize related properties.
  * - dimSize[0] and dimSize[DIM_MAX - 1] represent the highest and lowest
@@ -2255,7 +2251,7 @@ mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
  * fixed-point quantization with scale factor quantization method.
  *
  * @param[in] tensorSetDesc
- * The descriptor of tensor set. For detailed information,
+ * The descriptor of the tensor \b tensorSet. For detailed information,
  * see ::mluOpTensorSetDescriptor_t.
  * @param[in] setDimNb
  * The number of dimensions of the tensor set.
@@ -2288,7 +2284,7 @@ mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
  * - If the member tensor is in fixed-point data type, and  you need to call
  *   this function.
  * - Before calling this function,
- *   You need to call the ::mluOpCreateTensorSetDescriptor functions to create
+ *   You need to call ::mluOpCreateTensorSetDescriptor to create
  *   the tensor descriptors \b tensorSetDesc.
  * - The \b position should be limited in [-128, 127], otherwise the result is
  *   undefined.
@@ -2309,15 +2305,15 @@ mluOpInitTensorSetMemberDescriptorPositionAndScale(mluOpTensorSetDescriptor_t te
 // Group:TensorSet
 /*!
  * @brief Retrieves the size of tensor set according to the input descriptor \b
- * tensorSetDesc. You need to call the ::mluOpInitTensorSetMemberDescriptor
- * function first to create a tensor set descriptor before calling this
+ * tensorSetDesc. You need to call ::mluOpInitTensorSetMemberDescriptor
+ * first to create a tensor set descriptor before calling this
  * function.
  *
  * @param[in] desc
- * The descriptor of tensor set. For detailed information,
+ * The descriptor of the tensor desc. For detailed information,
  * see ::mluOpTensorSetDescriptor_t.
  * @param[out] sizeInBytes
- * Size in bytes of tensor set. You can allocate MLU memory for the
+ * The size in bytes of tensor set. You can allocate MLU memory for the
  * tensor set with this value.
  *
  * @par Return
@@ -2353,17 +2349,17 @@ mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, int *s
  * address based on the entire block of MLU memory through the index \b tensorIndex.
  *
  * @param[in] tensorSetDesc
- * The descriptor of tensor set. For detailed information, see ::mluOpTensorSetDescriptor_t.
+ * The descriptor of the tensor \b tensorSet. For detailed information, see ::mluOpTensorSetDescriptor_t.
  * @param[in] tensorIndex
  * An array that contains the position information of the member tensor in the tensor set.
  * @param[in] data
  * Pointer to the MLU memory that is described by \b tensorSetDesc.
  * @param[out] tensorDesc
- * Pointer to the host member. It is member tensor descriptor that indexed by \b tensorIndex
+ * Pointer to the host member. It is member tensor descriptor that is indexed by \b tensorIndex
  * in the tensor set. \b *tensorDesc contains tensor member information about dimensions,
  * layout, data type, position and scale.
  * @param[out] dataAddrInDevice
- * Pointer to the MLU memory that indexed by \b tensorIndex in the whole block of data
+ * Pointer to the MLU memory that is indexed by \b tensorIndex in the whole block of data
  * \b dataAddrInDevice.
  *
  * @par Return
@@ -2407,12 +2403,12 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * abs operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b x. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] y_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b y. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] y
  * Pointer to the MLU memory that stores the output tensor.
@@ -2420,7 +2416,7 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Date types of input tensor and output tensor should be the same.
+ * - The date types of input tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - output tensor: half, float
@@ -2464,18 +2460,18 @@ mluOpAbs(mluOpHandle_t handle,
 // Group:AddN
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ::mluOpAddN_v2 operation.
+ * workspace to optimize ::mluOpAddN_v2.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the ::mluOpAddN
- * operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in ::mluOpAddN
+ * . For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
  * Array of descriptors for all input tensors. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] input_num
- * Number of tensors in array inputs[].
+ * The number of tensors in array inputs[].
  * @param[in] output_desc
- * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b output. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * Host pointer to the returned size of the extra workspace in bytes that is
  * used in ::mluOpAddN operation.
@@ -2520,7 +2516,7 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * PyTorch and TensorFlow. Compared with ::mluOpAddN, this function supports multidirectional
  * broadcasting of input tensors. This function may need extra MLU memory as the workspace to
  * support multidirectional broadcasting. You can get the size of the workspace \b workspace_size
- * with the ::mluOpGetAddNWorkspaceSize function.
+ * with ::mluOpGetAddNWorkspaceSize.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in ::mluOpAddN
@@ -2531,23 +2527,23 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * @param[in] inputs[]
  * Array of device pointers to the MLU memory for the input tensors.
  * @param[in] input_num
- * Number of tensors in array inputs[].
+ * The number of tensors in array inputs[].
  * @param[in] output_desc
- * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b output. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Device pointer to the MLU memory that stores the output tensor.
  * @param[in] workspace
  * Device pointer to the MLU memory that is used as an extra workspace for this operation.
  * @param[in] workspace_size
- * Size of the extra workspace in bytes that needs to be used in this operation. You can get
- * the size of workspace with the ::mluOpGetAddNWorkspaceSize function.
+ * The size of the extra workspace in bytes that needs to be used in this operation. You can get
+ * the size of workspace with ::mluOpGetAddNWorkspaceSize.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following data types for input and output tensors.
- *   Note that the data types of output should be the same with that of input.
+ * - The data types of output should be the same with those of input.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: float, half, int32, int16, int8, uint8
  *   - output tensor: float, half, int32, int16, int8, uint8
  *
@@ -2558,8 +2554,8 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * - The maximum dimension of both input and output tensors is 8.
  *
  * @par API Dependency
- * - Before calling this function to perform ::mluOpAddN operation, you need to get
- *   the size of workspace by the ::mluOpGetAddNWorkspaceSize function.
+ * - Before calling this function to perform ::mluOpAddN, you need to get
+ *   the size of workspace by ::mluOpGetAddNWorkspaceSize.
  *
  * @par Note
  * - None.
@@ -2610,9 +2606,9 @@ mluOpAddN_v2(mluOpHandle_t handle,
  * @param[in] inputs[]
  * Array of device pointers to the MLU memory for the all input tensors.
  * @param[in] input_num
- * Number of tensors in array inputs[].
+ * The number of tensors in array inputs[].
  * @param[in] output_desc
- * The descriptor of the output tensor, For detailed information, see
+ * The descriptor of the tensor \b output, For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Device pointer to the MLU memory that stores the output tensor.
@@ -2622,12 +2618,12 @@ mluOpAddN_v2(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for input and output tensors.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: float, half
  *   - output tensor: float, half
  *
  * @par Data Layout
- * - Data layouts of all input tensors and output tensor must be the same.
+ * - The data layouts of all input tensors and output tensor must be the same.
  *
  * @par Scale Limitation
  * - The dimensions of input tensors and output tensor must be the same.
@@ -2638,7 +2634,7 @@ mluOpAddN_v2(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The data type of output should be same with inputs.
+ * - The data types of output should be same with those of inputs.
  *
  * @par Example
  * - The example of this operation is as follows:
@@ -2683,12 +2679,12 @@ mluOpAddN(mluOpHandle_t handle,
  * @param[in] base
  * An mluOpLogBase_t type value indicating the base (e, 2 or 10) to be used.
  * @param[in] x_desc
- * The descriptor of the input tensor. For detailed information, see
+ * The descriptor of the tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor \b x.
  * @param[in] y_desc
- * The descriptor of the output tensor. For detailed information, see
+ * The descriptor of the tensor \b y. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] y
  * Pointer to the MLU memory that stores the output tensor \b y.
@@ -2697,7 +2693,7 @@ mluOpAddN(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Data type of input tensor and output tensor should be the same.
+ * - The data types of input tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - output tensor: half, float
@@ -2708,8 +2704,8 @@ mluOpAddN(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The input tensor and output tensor have the same shape, and the input
  *   tensor must meet the following input data ranges:
- * - float: [1e-20, 2e5]
- * - half: [1, 60000]
+ *   - float: [1e-20, 2e5]
+ *   - half: [1, 60000]
  *
  * @par API Dependency
  * - None.
@@ -2754,9 +2750,9 @@ mluOpLog(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpSetCarafeDescriptor function to initialize
+ * - After calling this function, you can call ::mluOpSetCarafeDescriptor to initialize
  *   and set the information to the CARAFE descriptor.
- * - You need to call the ::mluOpDestroyCarafeDescriptor function to destroy the descriptor.
+ * - You need to call ::mluOpDestroyCarafeDescriptor to destroy the descriptor.
  *
  * @par Note
  * - None.
@@ -2776,11 +2772,11 @@ mluOpCreateCarafeDescriptor(mluOpCarafeDescriptor_t *carafe_desc);
 // Group:Carafe
 /*!
  * @brief Initializes the CARAFE descriptor \b carafe_desc that was previously created with
- * the ::mluOpCreateCarafeDescriptor function, and sets the information about the
+ * ::mluOpCreateCarafeDescriptor, and sets the information about the
  * CARAFE forward and backward operations to the descriptor \b carafe_desc.
  *
  * @param[in] carafe_desc
- * The descriptor of the CARAFE operation. For detailed information,
+ * The descriptor of the tensor \b carafe. For detailed information,
  * see ::mluOpCarafeDescriptor_t.
  * @param[in] dimNb
  * The number of dimensions in the input tensor of the CARAFE operation.
@@ -2827,7 +2823,7 @@ mluOpSetCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc,
 // Group:Carafe
 /*!
  * @brief Destroys a CARAFE descriptor \b carafe_desc that was previously created by
- * the ::mluOpCreateCarafeDescriptor function.
+ * ::mluOpCreateCarafeDescriptor.
  *
  * The CARAFE descriptor is defined in ::mluOpCarafeDescriptor_t
  * and holds the information about the CARAFE forward or backward operations.
@@ -2852,8 +2848,8 @@ mluOpSetCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc,
  * - None.
  *
  * @par Note
- * - You need to call this function after calling the ::mluOpCarafeForward,
- *   or ::mluOpCarafeBackward function. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
+ * - You need to call this function after calling ::mluOpCarafeForward,
+ *   or ::mluOpCarafeBackward. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
  * - This function should be called to destroy the CARAFE descriptor. Otherwise, memory
  *   leak may occur.
  *
@@ -2880,7 +2876,7 @@ mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the carafe
  * forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] carafe_desc
- * The descriptor of the CARAFE operation. For detailed information,
+ * The descriptor of the tensor \b carafe. For detailed information,
  * see ::mluOpCarafeDescriptor_t.
  * @param[in] input_desc
  * The tensor descriptor of the input feature maps. For detailed information,
@@ -2902,14 +2898,14 @@ mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data types of \b input, \b mask and \b output tensors must be the same.
- * - The supported data types of input， output, and mask tensors are as follows:
+ * - The data types of \b input, \b mask and \b output tensors must be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - mask tensor: half, float
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - Data layout of the \b input, \b mask, and \b output tensors should be \p MLUOP_LAYOUT_NHWC.
+ * - The data layouts of the \b input tensor, \b mask tensor, and \b output tensor should be \p MLUOP_LAYOUT_NHWC.
  *
  * @par Scale Limitation
  * - Parameters specified in \b carafe_desc should satisfy:
@@ -2984,7 +2980,7 @@ mluOpCarafeForward(mluOpHandle_t handle,
  * queues in the CARAFE backward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] carafe_desc
- * The descriptor of the CARAFE operation. For detailed information,
+ * The descriptor of the tensor \b carafe. For detailed information,
  * see ::mluOpCarafeDescriptor_t.
  * @param[in] input_desc
  * The tensor descriptor of the input feature maps. For detailed information,
@@ -3017,18 +3013,18 @@ mluOpCarafeForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data types of \b input, \b mask, \b grad_output, \b grad_input and \b grad_mask
- *   tensors must be the same.
+ * - The data types of \b input tensor, \b mask tensor, \b grad_output tensor, \b grad_input tensor, and \b grad_mask
+ *   tensor must be the same.
  * - For MLU200 series, it is not recommended to use half data type for tensors due to the
  *   low precision.
- * - The supported data types of input， mask and output tensors are as follows:
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - mask tensor: half, float
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - Data layout of the \b input, \b mask, \b grad_output, \b grad_input and \b grad_mask
- *   tensors should be \p MLUOP_LAYOUT_NHWC.
+ * - The data layouts of the \b input tensor, \b mask tensor, \b grad_output tensor, \b grad_input tensor, and \b
+ * grad_mask tensor should be \p MLUOP_LAYOUT_NHWC.
  *
  * @par Scale Limitation
  * - Parameters specified in \b carafe_desc should satisfy:
@@ -3089,17 +3085,17 @@ mluOpCarafeBackward(mluOpHandle_t handle,
  * @param[in] prefer
  * The \b prefer modes defined in ::mluOpComputationPreference_t.
  * @param[in] x_desc
- * The descriptor of the input tensor. For detailed information, see
+ * The descriptor of the tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the dividend tensor.
  * @param[in] y_desc
- * The descriptor of the input tensor. For detailed information, see
+ * The descriptor of the tensor \b y. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] y
  * Pointer to the MLU memory that stores the divisor tensor.
  * @param[in] z_desc
- * The descriptor of the output tensor. For detailed information, see
+ * The descriptor of the tensor \b z. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] z
  * Pointer to the MLU memory that stores the output tensor.
@@ -3108,7 +3104,7 @@ mluOpCarafeBackward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Data type of input tensors and output tensor must be the same.
+ * - The data type of input tensors and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - output tensor: half, float
@@ -3125,8 +3121,8 @@ mluOpCarafeBackward(mluOpHandle_t handle,
  * @par Note
  * - The input tensors and output tensor have the same shape, and the input
  *   tensor \b y must meet the following input data range:
- * - float: [-1e10,-1e-20] & [1e-20,1e10]
- * - half: [-65504,-1e-4] & [1e-4,65504]
+ *   - float: [-1e10,-1e-20] & [1e-20,1e10]
+ *   - half: [-65504,-1e-4] & [1e-4,65504]
  *
  * @par Example
  * - None.
@@ -3152,7 +3148,7 @@ mluOpDiv(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the GenerateProposalsV2 operation.
  * @param[in] scores_desc
- * The descriptor of the scores tensor. For detailed information,
+ * The descriptor of the tensor \b scores. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] size
  * A host pointer to the returned size of extra space in bytes.
@@ -3189,7 +3185,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * @brief Generates bounding box proposals for Faster Region-CNN.
  * This operation is the second version of generate_proposals op.
  * The proposals are generated for a list of images based on image
- * score 'Scores', bounding box regression result `BboxDeltas` as
+ * score `Scores`, bounding box regression result `BboxDeltas` as
  * well as predefined bounding box shapes `anchors`. Greedy non-maximum
  * suppression is applied to generate the final bounding boxes.
  *
@@ -3197,74 +3193,74 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the GenerateProposalsV2 operation.
  * @param[in] pre_nms_top_n
- * Number of top scoring RPN proposals to keep before applying
+ * The number of top scoring RPN proposals to keep before applying
  * NMS.
  * @param[in] post_nms_top_n
- * Number of top scoring RPN proposals to keep after applying
+ * The number of top scoring RPN proposals to keep after applying
  * NMS.
  * @param[in] nms_thresh
  * NMS threshold used on RPN proposals.
  * @param[in] min_size
- * Proposal height and width both need to be greater than this
+ * The proposal height and width both need to be greater than this
  * min_size.
  * @param[in] eta
  * The parameter for adaptive NMS.
  * @param[in] pixel_offset
  * If true, im_shape pixel offset is 1.
  * @param[in] scores_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b scores. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] scores
  * Pointer to the MLU memory that stores the input tensor. The
  * scores from conv is in shape (N, H, W, A), N is batch size, A is
  * number of anchors, H and W are height and width of the feature map.
  * @param[in] bbox_deltas_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b bbox_deltas. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] bbox_deltas
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] im_shape_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b im_shape. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] im_shape
  * Pointer to the MLU memory that stores the input tensor. Image
  * shape in shape (N, 2), in format (height, width)
  * @param[in] anchors_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b anchors. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] anchors
  * Pointer to the MLU memory that stores the input tensor.
  * Bounding box anchors from anchor_generator_op is in shape (H, W, A, 4).
  * @param[in] variances_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b variances. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] variances
  * Pointer to the MLU memory that stores the input tensor.
- * Bounding box variances with same shape as `anchors`.
+ * Bounding box variances with the same shape as `anchors`.
  * @param[in] workspace
  * Pointer to the MLU memory that stores the extra workspace.
  * @param[in] workspace_size
- * The size of extra space.
+ * The size of the extra workspace in bytes that needs to be used in ::mluOpGenerateProposalsV2.
  * @param[in] rpn_rois_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b rpn_rois. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] rpn_rois
  * Pointer to the MLU memory that stores the output tensor.
  * Output proposals with shape (N * post_nms_top_n, 4).
  * @param[in] rpn_roi_probs_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b rpn_roi_probs. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] rpn_roi_probs
  * Pointer to the MLU memory that stores the output tensor.
  * Scores of proposals with shape (N * post_nms_top_n, 1).
  * @param[in] rpn_rois_num_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b rpn_rois_num. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] rpn_rois_num
  * Pointer to the MLU memory that stores the output tensor. The
  * number of Rpn RoIs in each image.
  * @param[in] rpn_rois_batch_size
- * Pointer to the MLU memory that stores the output tensor. Indicates
+ * Pointer to the MLU memory that stores the output tensor, which indicates
  * the number of return values of output.
  *
  * @par Return
@@ -3290,12 +3286,12 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  *   - rpn_rois_batch_size: int32
  *
  * @par Data Layout
- * - The supported data layout of \b input, \b output,
- *   \b output_size are as follows:
+ * - The supported data layouts of \b input tensor, \b output tensor, and
+ *   \b output_size tensor are as follows:
  *
- * - input tensor: \p MLUOP_LAYOUT_ARRAY
- * - output tensor: \p MLUOP_LAYOUT_ARRAY
- * - output_size tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - input tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - output tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - output_size tensor: \p MLUOP_LAYOUT_ARRAY
  *
  * @par Scale Limitation
  * - The dimension of \b scores should be equal to 4.
@@ -3312,7 +3308,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * - None.
  *
  * @par Note
- * - This commit does not support nan/inf or adaptive NMS.
+ * - This commit does not support NAN/INF or adaptive NMS.
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
  *
@@ -3359,7 +3355,7 @@ mluOpGenerateProposalsV2(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the poly_nms operation.
  * @param[in] boxes_desc
- * The descriptor of the boxes tensor. For detailed information,
+ * The descriptor of the tensor \b boxes. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] size
  * A host pointer to the returned size of extra space in bytes.
@@ -3399,23 +3395,23 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the poly_nms operation.
  * @param[in] boxes_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b boxes. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] iou_threshold
- * The iou_threshold data.
+ * The threshold of IOU.
  * @param[in] workspace
  * Pointer to the MLU memory that stores the extra workspace.
  * @param[in] workspace_size
- * The size of extra space.
+ * The size of the extra workspace in bytes that needs to be used in ::mluOpPolyNms.
  * @param[in] output_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b output. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  * @param[in] output_size
- * Pointer to the MLU memory that stores the output_size. Indicates
+ * Pointer to the MLU memory that stores the output_size, which indicates
  * the actual output size of the output tensor.
  *
  * @par Return
@@ -3430,8 +3426,8 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  *   - output_size tensor: int32
  *
  * @par Data Layout
- * - The supported data layout of \b input, \b output,
- *   \b output_size are as follows:
+ * - The supported data layouts of \b input tensor, \b output tensor, and
+ *   \b output_size tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output_size tensor: \p MLUOP_LAYOUT_ARRAY
@@ -3447,14 +3443,14 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * - None.
  *
  * @par Note
- * - This commit does not support nan/inf.
+ * - This commit does not support NAN/INF.
  * - The coordinates of the input boxes must all be sorted clockwise or
  *   counterclockwise. If the coordinates of the boxes are out of order,
  *   the calculation result is not guaranteed and is consistent with the
  *   calculation result of the competitor operation.
  * - If there are cases with the same score in the input boxes, the output
  *   results may be inconsistent with the results of competing products.
- * - The number of input boxes on MLU270, MLU290 and MLU370 does not exceed
+ * - The number of input boxes on MLU270, MLU290, and MLU370 does not exceed
  *   9770.
  *
  * @par Example
@@ -3482,22 +3478,22 @@ mluOpPolyNms(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the prior_box operation.
  * @param[in] min_sizes_desc
- * The descriptor of the min_sizes tensor. The minimum sizes of generated
+ * The descriptor of the tensor \b min_sizes. The minimum size of generated
  * prior boxes.
  * @param[in] min_sizes
  * Pointer to the MLU memory that stores the min_sizes tensor.
  * @param[in] aspect_ratios_desc
- * The descriptor of the aspect_ratios tensor. The aspect ratios of
+ * The descriptor of the tensor \b aspect_ratios. The aspect ratios of
  * generated prior boxes.
  * @param[in] aspect_ratios
  * Pointer to the MLU memory that stores the aspect_ratios tensor.
  * @param[in] variances_desc
- * The descriptor of the variances tensor. The variances to be
+ * The descriptor of the tensor \b variances. The variances to be
  * encoded in prior boxes.
  * @param[in] variances
  * Pointer to the MLU memory that stores the variances tensor.
  * @param[in] max_sizes_desc
- * The descriptor of the max_sizes tensor. The maximum sizes of generated
+ * The descriptor of the tensor \b max_sizes. The maximum sizes of generated
  * prior boxes.
  * @param[in] max_sizes
  * Pointer to the MLU memory that stores the max_sizes tensor.
@@ -3516,7 +3512,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  * @param[in] offset
  * The prior box center offset.
  * @param[in] clip
- * Whether to clip out-of-boundary boxes.
+ * A bool value whether to clip out-of-boundary boxes.
  * @param[in] min_max_aspect_ratios_order
  * If the value is set as true, the \b output prior box is in
  * the order of [min, max, aspect_ratios]; otherwise the order is
@@ -3527,7 +3523,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  * @param[out] output
  * Pointer to the MLU memory that stores the \b output tensor.
  * @param[in] var_desc
- * The descriptor of the var tensor. The expanded variances of
+ * The descriptor of the \b var tensor. The expanded variances of
  * PriorBox.
  * @param[out] var
  * Pointer to the MLU memory that stores the var tensor.
@@ -3537,7 +3533,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - The supported data types of \b input and \b output are as follows:
+ * - The supported data types of input and output tensors are as follows:
  *   - min_sizes tensor: float
  *   - aspect_ratios tensor: float
  *   - variances tensor: float
@@ -3555,7 +3551,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  *   - var: float
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b output, are as follows:
+ * - The supported data layouts of input and output tensors are as follows:
  *   - input tensor:
  *     - min_sizes: \p MLUOP_LAYOUT_ARRAY
  *     - aspect_ratios: \p MLUOP_LAYOUT_ARRAY
@@ -3636,34 +3632,34 @@ mluOpPriorBox(mluOpHandle_t handle,
  * @param[in] spatial_scale
  * The spatial scale of each ROI in the output.
  * @param[in] group_size
- * Sets the number of \b rois to be divided equally in each direction.
+ * The number of \b rois to be divided equally in each direction.
  * @param[in] pooled_height
- * The pooled_height data.
+ * An integer value which is the height of the output after pooling.
  * @param[in] pooled_width
- * The pooled_width data.
+ * An integer value which is the width of the output after pooling.
  * @param[in] output_dim
- * The output_dim data.
- *  @param[in] input_desc
- * Descriptor of input tensor, which contains dimension and the layout of input.
+ * An integer value which is the channel of the output after pooling.
+ * @param[in] input_desc
+ * The descriptor of the tensor, which contains dimension and the layout of input.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor. The shape of \b input is
  * [batch_num, H, W, C].
  * @param[in] rois_desc
- * Descriptor of rois tensor, which contains dimension and the layout of rois.
+ * The descriptor of \b rois tensor, which contains dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor. \b rois[1] consists of
  * [batch_id, roi_start_w, roi_start_h, roi_end_w, roi_end_h], where \p batch_id is the ID
  * of the batch.
  * @param[in] output_desc
- * Descriptor of output tensor, containing dimension and the layout of output.
+ * The descriptor of output tensor, which contains dimension and the layout of output.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor. The shape of \b output is
  * [rois[0], pooled_height, pooled_width, output_dim].
  * @param[in] mapping_channel_desc
- * Descriptor of the mapping_channel tensor, which contains dimension and the layout of
+ * The descriptor of the tensor \b mapping_channel, which contains dimension and the layout of
  * mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] mapping_channel
  * Pointer to the MLU memory that stores the mapping_channel tensor. The shape of
@@ -3680,15 +3676,15 @@ mluOpPriorBox(mluOpHandle_t handle,
  *   - Mapping_channel tensor: int32
  *
  * @par Data Layout
- * - The supported data layout of \b input, \b rois, \b output, and \b mapping_channel
- *   are as follows:
+ * - The supported data layout of \b input tensor, \b rois tensor, \b output tensor, and \b mapping_channel
+ *   tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - Rois tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output tensor: \p MLUOP_LAYOUT_NHWC
  *   - Mapping_channel tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
- * - The input tensor, mapping_channel tensor and output tensor must have four dimensions.
+ * - The input tensors, mapping_channel and output must have four dimensions.
  * - The \b rois tensor should be 2D array.
  * - The shape of \b rois should be [rois_num, 5].
  * - \p batch_id should be in the range of [0, \p batch_num - 1].
@@ -3735,8 +3731,8 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 // Group:PsRoiPool
 /*!
  * @brief Computes the gradients of feature map \b bottom_grad based on the
- * inputs \b top_grad , \b rois and \b mapping_channel to perform the backpropagation
- * of the ::mluOpPsRoiPoolForward operation.
+ * inputs \b top_grad , \b rois , and \b mapping_channel to perform the backpropagation
+ * of ::mluOpPsRoiPoolForward.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
@@ -3750,22 +3746,22 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * @param[in] output_dim
  * An integer value which is the channel of the output after pooling.
  * @param[in] top_grad_desc
- * Descriptor of the top_grad tensor, which contains the dimension and the layout
+ * The descriptor of the tensor \b top_grad, which contains the dimension and the layout
  * of top_grad tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] top_grad
  * Pointer to the MLU memory that stores the top_grad tensor.
  * @param[in] rois_desc
- * Descriptor of the rois tensor, which contains the dimension and the layout
+ * The descriptor of the tensor \b rois, which contains the dimension and the layout
  * of rois tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor.
  * @param[in] mapping_channel_desc
- * Descriptor of the mapping_channel tensor, which contains the dimension and the
+ * The descriptor of the tensor \b mapping_channel, which contains the dimension and the
  * layout of mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] mapping_channel
  * Pointer to the MLU memory that stores the mapping_channel tensor.
  * @param[in] bottom_grad_desc
- * Descriptor of the bottom_grad tensor, which contains the dimension and the
+ * The descriptor of the \b bottom_grad tensor, which contains the dimension and the
  * layout of mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] bottom_grad
  * Pointer to the MLU memory that stores the bottom_grad tensor.
@@ -3774,18 +3770,15 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - The supported data types of top_grad tensor \b top_grad, rois tensor \b rois,
- *   mapping_channel tensor \b mapping_channel and bottom_grad tensor \b bottom_grad
- *   are as follows:
+ * - The supported data types of input and output tensors are as follows:
  *   - top_grad tensor: float
  *   - rois tensor: float
  *   - mapping_channel tensor: int
  *   - bottom_grad tensor: float
  *
  * @par Data Layout
- * - The supported data layouts of top_grad tensor \b top_grad, rois tensor \b rois,
- *   mapping_channel tensor \b mapping_channel and bottom_grad tensor \b bottom_grad
- *   are as follows:
+ * - The supported data layouts of \b top_grad tensor,  \b rois tensor, \b mapping_channel tensor,
+ *   and \b bottom_grad tensor are as follows:
  *   - top_grad tensor: \p MLUOP_LAYOUT_NHWC
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
  *   - mapping_channel tensor: \p MLUOP_LAYOUT_NHWC
@@ -3794,11 +3787,11 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The top_grad tensor, mapping_channel tensor and bottom_grad tensor must be 4-D.
  * - Each dimension of the top_grad tensor and the mapping_channel tensor must be the same.
- * - The rois tensor be be 2-D.
+ * - The rois tensor be be 2D.
  * - The shape of \b top_grad should be [rois_num, pooled_height, pooled_width, output_dim].
  * - The shape of \b rois should be [rois_num, 5].
  * - The shape of \b mapping_channel should be [rois_num, pooled_height, pooled_width, output_dim].
- * - the shape of \b bottom_grad should be [batch_num, height, width, channels].
+ * - The shape of \b bottom_grad should be [batch_num, height, width, channels].
  * - \b rois[i] consists of [batch_id, roi_start_w, roi_start_h, roi_end_w, roi_end_h].
  *   \p batch_id should be in the range of [0, batch_num -1].
  * - The \b spatial_scale should be larger than 0.
@@ -3855,8 +3848,8 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - The ::mluOpSetRoiAlignForwardDescriptor or ::mluOpSetRoiAlignForwardDescriptor_v2
- *   function should be called to initialize the descriptor after calling this function.
+ * - ::mluOpSetRoiAlignForwardDescriptor or ::mluOpSetRoiAlignForwardDescriptor_v2
+ *   should be called to initialize the descriptor after calling this function.
  *
  * @par Note
  * - None.
@@ -3873,7 +3866,7 @@ mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
 
 // Group:RoiAlignForward
 /*!
- * @brief Initializes the descriptor \b desc that is previously created with
+ * @brief Initializes the descriptor \b desc that was previously created with
  * ::mluOpCreateRoiAlignForwardDescriptor function, and sets RoiAlign information
  * to the descriptor \b desc. The information includes height \b pooled_height and
  * width \b pooled_width of RoiAlign feature map, sampling_ratio \b sampling_ratio
@@ -3932,7 +3925,7 @@ mluOpSetRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc,
                                   const bool aligned);
 // Group:RoiAlignForward
 /*!
- * @brief Initializes the descriptor \b desc that is previously created with
+ * @brief Initializes the descriptor \b desc that was previously created with
  * ::mluOpCreateRoiAlignForwardDescriptor function, and sets RoiAlign information
  * to the descriptor \b desc. The information includes height \b pooled_height and
  * width \b pooled_width of RoiAlign feature map, sampling_ratio \b sampling_ratio
@@ -3992,7 +3985,7 @@ mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_d
 
 // Group:RoiAlignForward
 /*!
- * @brief Destroys a RoiAlign descriptor \b desc that is previously created
+ * @brief Destroys a RoiAlign descriptor \b desc that was previously created
  * with ::mluOpCreateRoiAlignForwardDescriptor function.
  *
  * The RoiAlign descriptor is defined in ::mluOpRoiAlignForwardDescriptor_t
@@ -4048,12 +4041,12 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * The descriptor of the RoiAlign operation. For detailed information,
  * see ::mluOpRoiAlignForwardDescriptor_t.
  * @param[in] input_desc
- * The descriptor of \b input tensor in RoiAlign process. For detailed information,
+ * The descriptor of the input tensor in RoiAlign process. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the \b input tensor.
  * @param[in] boxes_desc
- * The descriptor of \b boxes, which contains dimension and layout of boxes.
+ * The descriptor of the tensor \b boxes, which contains dimension and layout of boxes.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
  * Pointer to the MLU memory that stores \b boxes tensor.
@@ -4066,16 +4059,16 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following data types for \b input, \b boxes and \b output
- *   tensor. Data type of all tensors should be the same.
+ * - The data type of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - boxes tensor: half, float
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b boxes, \b output are as follows:
+ * - The supported data layouts of \b input tensor, \b boxes tensor, and \b output tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
- *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, which only supports 2D tensor
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, which only supports 2D tensor.
  *   - output tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
@@ -4096,7 +4089,7 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * - None.
  *
  * @par Example
- * - The example of the ::mluOpRoiAlignForward is as follows:
+ * - The example of ::mluOpRoiAlignForward is as follows:
      @verbatim
      input two arrays by 1 * 1 * 1 * 1 and 1 * 5 --> input: [[[[1.0]]]]
 
@@ -4137,7 +4130,7 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  * The descriptor of the RoiAlign operation. For detailed information,
  * see ::mluOpRoiAlignForwardDescriptor_t.
  * @param[in] input_desc
- * The descriptor of the \b input tensor in RoiAlign process. For detailed information,
+ * The descriptor of the input tensor in RoiAlign process. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores \b input tensor.
@@ -4169,8 +4162,8 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following data types for \b input, \b boxes, \b output, \b argmax_x
- *   and \b argmax_y tensor. Data type of all tensors should be the same.
+ * - The data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - boxes tensor: half, float
  *   - output tensor: half, float
@@ -4178,8 +4171,8 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  *   - argmax_y tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b boxes, \b output, \b argmax_x
- *   and \b argmax_y are as follows:
+ * - The supported data layouts of \b input tensor, \b boxes tensor, \b output tensor, \b argmax_x tensor,
+ *   and \b argmax_y tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, which only supports 2D tensor
  *   - output tensor: \p MLUOP_LAYOUT_NHWC
@@ -4208,10 +4201,10 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  *
  * @par Note
  * - When \b input contains NaN. If \b pool_mode is maximum pooling_mode, \b output is positive
- *   saturation value on MLU200 series, and \b output gets more NaN than ieee754 on MLU300 series and CE3226.
+ *   saturation value on MLU200 series, and \b output gets more NaN than ieee754 on MLU300 series.
  *
  * @par Example
- * - The example of the ::mluOpRoiAlignForward is as follows:
+ * - The example of ::mluOpRoiAlignForward is as follows:
      @verbatim
      input two arrays by 1 * 1 * 1 * 1 and 1 * 5 --> input: [[[[1.0]]]]
 
@@ -4256,12 +4249,12 @@ mluOpRoiAlignForward_v2(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignRotatedForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
- * The descriptor of the features tensor.
+ * The descriptor of the tensor \b features.
  * @param[in] features
  * Pointer to the MLU memory that stores the features tensor. The shape of \b features
  * is [batch_num, H, W, C].
  * @param[in] rois_desc
- * The descriptor of rois tensor, which contains dimension and the layout of rois.
+ * The descriptor of \b rois tensor, which contains dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists of [batch_id,
@@ -4290,14 +4283,14 @@ mluOpRoiAlignForward_v2(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b features, \b rois,
- *   and output tensor \b output. Data types of all tensors should be the same.
+ * - The data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - rois tensor: half, float
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b features, \b rois, and \b output are as follows:
+ * - The supported data layouts of \b features tensor, \b rois tensor, and \b output tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output tensor: \p MLUOP_LAYOUT_NHWC
@@ -4305,9 +4298,9 @@ mluOpRoiAlignForward_v2(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The \b features tensor and \b output tensor should be 4D.
  * - The half data type is not recommended due to low precision.
- * - Size of the lowest dimension of \b features tensor and \b output tensor should be the same.
+ * - The size of the lowest dimension of \b features tensor and \b output tensor should be the same.
  * - The \b rois tensor should be 2D array.
- * - Size of the highest dimension of \b output tensor and \b rois tensor should be the same.
+ * - The size of the highest dimension of \b output tensor and \b rois tensor should be the same.
  * - The shape of \b rois should be [rois_num, 6].
  * - \p batch_id should be in the range of [0, \p batch_num - 1]; \p x and \p y should be greater than or
  *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
@@ -4360,17 +4353,17 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
 // Group:RoiAlignRotated
 /*!
  * @brief Computes the gradients of feature map \b bottom_grad based on the input \b top_grad and
- * \b rois to perform the backpropagation of the ::mluOpRoiAlignRotatedForward operation.
+ * \b rois to perform the backpropagation of ::mluOpRoiAlignRotatedForward.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * ::mluOpRoiAlignRotatedBackward operation. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpRoiAlignRotatedBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] top_grad_desc
- * The descriptor of the gradient tensor in the backpropagation process.
+ * The descriptor of the tensor \b top_grad in the backpropagation process.
  * @param[in] top_grad
  * Pointer to the MLU memory that stores the top_grad tensor.
  * @param[in] rois_desc
- * The descriptor of rois tensor, which contains dimension and the layout of rois.
+ * The descriptor of the tensor \b rois, which contains dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores rois tensors. \b rois[i] consists
@@ -4392,7 +4385,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @param[in] clockwise
  * A boolean value which determines whether the rotation of ROI is clockwise.
  * @param[in] bottom_grad_desc
- * The descriptor of the gradient tensor of the origin feature map.
+ * The descriptor of the tensor \b bottom_grad.
  * @param[out] bottom_grad
  * Pointer to the MLU memory that stores the bottom_grad tensor. The shape of
  * bottom_grad is [batch_num, H, W, C].
@@ -4401,14 +4394,14 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following Data types for input tensor \b top_grad, \b rois,
- *   and output tensor \b bottom_grad. Data types of all tensors should be the same.
+ * - The data types of all tensors should be the same.
+ * - The supported input and output tensors are as follows:
  *   - top_grad tensor: half, float
  *   - rois tensor: half, float
  *   - bottom_grad tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b top_grad, \b rois, and \b bottom_grad are as follows:
+ * - The supported data layouts of \b top_grad tensor, \b rois tensor, and \b bottom_grad tensor are as follows:
  *   - top_grad tensor: \p MLUOP_LAYOUT_NHWC
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
  *   - bottom_grad tensor: \p MLUOP_LAYOUT_NHWC
@@ -4416,9 +4409,9 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The \b bottom_grad tensor and \b top_grad tensor should be 4D.
  * - The half data type is not recommended due to low precision.
- * - Size of the lowest dimension of \b bottom_grad tensor and \b top_grad tensor should be the same.
+ * - The size of the lowest dimension of \b bottom_grad tensor and \b top_grad tensor should be the same.
  * - The \b rois tensor should be 2D array.
- * - Size of the highest dimension of \b top_grad tensor and \b rois tensor should be the same.
+ * - The size of the highest dimension of \b top_grad tensor and \b rois tensor should be the same.
  * - \p batch_id should be in the range of [0, \p batch_num - 1], \p x and \p y should be greater than or
  *   equal to 0 and less than \p H and \p W respectively. Both of \p h and \p w should be greater than zero
  *   and less than \p H and \p W respectively.
@@ -4430,7 +4423,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @par Note
  * - NaN and infinity are not supported for all parameters in \b boxes, except for the \p x and \p y parameters
  *   that support infinity.
- * - The values of the parameters \p x , \p y, \p w and \p h in \b rois multiplied by \p spatial_scale cannot exceed
+ * - The values of the parameters \p x , \p y , \p w , and \p h in \b rois multiplied by \p spatial_scale cannot exceed
  *   the range that can be represented by the parameter type.
  *
  * @par Example
@@ -4481,7 +4474,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] grid_desc
- * The descriptor of the grid tensor. For detailed information, see
+ * The descriptor of the tensor \b grid. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] grid
  * Pointer to the MLU memory that stores the grid tensor. NaN and INF
@@ -4496,27 +4489,27 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Data types of input tensors and output tensor must be the same.
+ * - The data types of input tensors and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: float
  *   - Grid tensor: float
  *   - output tensor: float
  * @par Data Layout
- * - The supported data layout of \b input , \b grid , \b output are as follows:
+ * - The supported data layouts of \b input tensor, \b grid tensor, and \b output tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - Grid tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
  * - The input tensor, grid tensor and output tensor must have four dimensions.
- * - Size of the first dimension of input tensor is divided by size of the
+ * - The size of the first dimension of input tensor is divided by size of the
  *   first dimension of grid tensor.
  * - The second dimension of grid tensor and output tensor must be the same size.
  * - The third dimension of grid tensor and output tensor must be the same size.
  * - The fourth dimension of input tensor and output tensor must be the same size.
- * - Size of the fourth dimension of grid tensor must be equal to 2.
+ * - The size of the fourth dimension of grid tensor must be equal to 2.
  * - Grid tensor \b grid must meet the following data range:
- * - Float: [-1.0,1.0].
+ *   - Float: [-1.0,1.0].
  *
  * @par API Dependency
  * - None.
@@ -4550,19 +4543,19 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * queues in ::mluOpRoiCropBackward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] grad_output_desc
- * The descriptor of the grad_output tensor. For detailed information,
+ * The descriptor of the \b grad_output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] grad_output
  * Pointer to the MLU memory that stores the gradient tensor \b grad_output
  * in the backpropagation process.
  * @param[in] grid_desc
- * The descriptor of the grid tensor. For detailed information, see
+ * The descriptor of the tensor \b grid. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] grid
  * Pointer to the MLU memory that stores the coordinate mapping
  * tensor.
  * @param[in] grad_input_desc
- * The descriptor of the grad_input tensor. For detailed information,
+ * The descriptor of the tensor \b grad_input. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the gradient tensor of the
@@ -4572,31 +4565,31 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Data types of all tensors must be the same.
- * - The supported data types of all tensors are as follows:
+ * - The data types of all tensors must be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - Grad_input tensor: float
  *   - Grad_output tensor: float
  *   - Grid tensor: float
  *
  * @par Data Layout
- * - The supported data layout of \b grad_output , \b grid , \b grad_input are as
- *   follows.
+ * - The supported data layouts of \b Grad_output tensor, \b Grid tensor tensor, and \b Grad_input
+ *   tensor are as follows:
  *   - Grad_output tensor: \p MLUOP_LAYOUT_NHWC
  *   - Grid tensor: \p MLUOP_LAYOUT_ARRAY
  *   - Grad_input tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
- * - The grad_output tensor, grid tensor and grad_input tensor must have four
+ * - The grad_output tensor, grid tensor, and grad_input tensor must have four
  *   dimensions.
- * - Size of the first dimension of grad_input tensor is divided by size of
+ * - The size of the first dimension of grad_input tensor is divided by size of
  *   the first dimension of grid tensor.
  * - The second dimension of grid tensor and grad_output tensor must be the same size.
  * - The third dimension of grid tensor and grad_output tensor must be the same size.
  * - The fourth dimension of grad_input \b grad_input tensor and grad_output tensor
  *   \b grad_output must be the same size.
- * - Size of the fourth dimension of grid tensor \b grid must be equal to 2.
+ * - The size of the fourth dimension of grid tensor \b grid must be equal to 2.
  * - Grid tensor \b grid must meet the following data range:
- * - Float: [-1.0,1.0]
+ *   - Float: [-1.0,1.0]
  *
  * @par API Dependency
  * - None.
@@ -4633,7 +4626,7 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] bboxes_desc
- * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor.
+ * The descriptor of the tensor \b bboxes, which contains the dimension and layout of bboxes tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] bboxes
  * Pointer to the MLU memory that stores the bboxes tensor.
@@ -4642,7 +4635,7 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * @param[in] points
  * An int value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
  * @param[in] output_desc
- * The descriptor of output tensor, which contains the dimension and layout of output tensor.
+ * The descriptor of the output tensor, which contains the dimension and layout of output tensor.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -4650,21 +4643,21 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b input, bboxes tensor \b
- *   bboxes, and output tensor \b output. Data types of all tensors should be the same.
+ * - The data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - bboxes tensor: half, float
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b bboxes and \b output are as follows:
+ * - The supported data layouts of \b input tensor, \b bboxes tensor, and \b output tensor are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - bboxes tensor: \p MLUOP_LAYOUT_ARRAY
  *   - output tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
  * - The input tensor and output tensor must be 4D.
- * - Size of the each dimension of input tensor and output tensor must be the same.
+ * - The size of each dimension of input tensor and output tensor must be the same.
  * - The bboxes tensor must be 4D.
  * - The 4D information of bboxes tensor consists of [y, x, w, h, a].
  * - The 1D sizes of input tensor and bboxes tensor must be the same.
@@ -4713,26 +4706,26 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
 // Group:RotatedFeatureAlign
 /*!
  * @brief Computes the gradients of feature map \b bottom_input based on the inputs \b top_output
- * and \b bboxes to perform the backpropagation of the ::mluOpRotatedFeatureAlignForward operation.
+ * and \b bboxes to perform the backpropagation of ::mluOpRotatedFeatureAlignForward.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
  * ::mluOpRotatedFeatureAlignBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] top_output_desc
- * The descriptor of the top_output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b top_output. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] top_output
  * Pointer to the MLU memory that stores the top_output tensor.
  * @param[in] bboxes_desc
- * The descriptor of bboxes, which contains the dimension and layout of bboxes tensor. For detailed
+ * The descriptor of the tensor \b bboxes, which contains the dimension and layout of bboxes tensor. For detailed
  * information, see ::mluOpTensorDescriptor_t.
  * @param[in] bboxes
  * Pointer to the MLU memory that stores the bboxes tensor.
  * @param[in] spatial_scale
  * A float value that is the scale factor of coordinates of bboxes.
  * @param[in] points
- * An int value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
+ * An integer value that is the number of sample points. Only 1 and 5 are supported. The default value is 1.
  * @param[in] bottom_input_desc
- * The descriptor of bottom_input tensor, which contains the dimension and layout of bottom_input tensor.
+ * The descriptor of the tensor \b bottom_input, which contains the dimension and layout of bottom_input tensor.
  * @param[out] bottom_input
  * Pointer to the MLU memory that stores the bottom_input tensor.
  *
@@ -4740,15 +4733,14 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for top_output tensor \b top_output, bboxes
- *   tensor \b bboxes, and bottom_input tensor \b bottom_input. Data types of all tensors should
- *   be the same.
+ * - The data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - top_output tensor: half, float
  *   - bboxes tensor: half, float
  *   - bottom_input tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b top_output, \b bboxes and \b bottom_input are as follows:
+ * - The supported data layouts of \b top_output tensor, \b bboxes tensor, and \b bottom_input tensor are as follows:
  *   - top_output tensor: \p MLUOP_LAYOUT_NHWC
  *   - bboxes tensor: \p MLUOP_LAYOUT_ARRAY
  *   - bottom_input tensor: \p MLUOP_LAYOUT_NHWC
@@ -4802,12 +4794,12 @@ mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle_,
  * @param[in] prefer
  * The \b prefer modes defined in ::mluOpComputationPreference_t.
  * @param[in] x_desc
- * The descriptor of the input tensor. For detailed information, see
+ * The descriptor of the tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] y_desc
- * The descriptor of the output tensor. For detailed information, see
+ * The descriptor of the tensor \b y. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] y
  * Pointer to the MLU memory that stores the output tensor.
@@ -4816,7 +4808,7 @@ mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle_,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Data type of input tensor and output tensor should be the same.
+ * - The data types of input tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - output tensor: half, float
@@ -4861,17 +4853,17 @@ mluOpSqrt(mluOpHandle_t handle,
  * queues in the sqrt backward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] y_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b y. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] y
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] dy_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b dy. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] diff_y
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] dx_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b dx. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] diff_x
  * Pointer to the MLU memory that stores the output tensor.
@@ -4880,7 +4872,7 @@ mluOpSqrt(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - Data types of input tensors and output tensor must be the same.
+ * - The data types of input tensors and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensors: half, float
  *   - output tensor: half, float
@@ -4923,13 +4915,13 @@ mluOpSqrtBackward(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the voxelization operation.
  * @param[in] points_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b points. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] voxel_size_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b voxel_size. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] coors_range_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b coors_range. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] max_points
  * An integer value which is the maximum number of points contained
@@ -4944,16 +4936,16 @@ mluOpSqrtBackward(mluOpHandle_t handle,
  * version of hard-voxelization implementations. Currently,
  * non-deterministic mode is not supported.
  * @param[in] voxels_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b voxels. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] coors_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b coors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] num_points_per_voxel_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b num_points_per_voxel. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] voxel_num_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b voxel_num. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] size
  * A host pointer to the returned size of extra space in bytes.
@@ -5011,17 +5003,17 @@ mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
  * queues in the voxelization operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] points_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b points. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] points
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] voxel_size_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b voxel_size. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] voxel_size
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] coors_range_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b coors_range. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] coors_range
  * Pointer to the MLU memory that stores the input tensor.
@@ -5040,24 +5032,24 @@ mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that stores the extra workspace.
  * @param[in] workspace_size
- * The size of extra space.
+ * The size of the extra workspace in bytes that needs to be used in ::mluOpVoxelization.
  * @param[in] voxels_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b voxels. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] voxels
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] coors_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b coors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] coors
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] num_points_per_voxel_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b num_points_per_voxel. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] num_points_per_voxel
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] voxel_num_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b voxel_num. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] voxel_num
  * Pointer to the MLU memory that stores the input tensor.
@@ -5126,17 +5118,17 @@ mluOpVoxelization(mluOpHandle_t handle,
  * queues in the yolo_box operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] x_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] img_size_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b img_size. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] img_size
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] anchors_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b anchors. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] anchors
  * Pointer to the MLU memory that stores the input tensor.
@@ -5148,20 +5140,20 @@ mluOpVoxelization(mluOpHandle_t handle,
  * The downsample ratio from network input to yolo_box operation input,
  * so 32, 16, 8 should be set for the first, second, and third into yolo_box operation.
  * @param[in] clip_bbox
- * Whether clip output bounding box in img_size boundary.
+ * If the value is True, the bounding box is clipped in img_size boundary.
  * @param[in] scale
- * Scale the center point of decoded bounding box.
+ * The scaling coefficient of the coordinate of the center point of the decoded bounding box.
  * @param[in] iou_aware
- * Whether use iou aware.
+ * If the value is True, the parameter iou_aware_factor is used.
  * @param[in] iou_aware_factor
- * iou aware factor.
+ * The IOU aware factor, the default value is 0.5.
  * @param[in] boxes_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b boxes. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] boxes
  * Pointer to the MLU memory that stores the output tensor.
  * @param[in] scores_desc
- * The descriptor of the tensors. For detailed information, see
+ * The descriptor of the tensor \b scores. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] scores
  * Pointer to the MLU memory that stores the output tensor.
@@ -5171,7 +5163,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data types of input tensors and output tensor must be the same.
+ * - The data types of input and output tensors must be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - input x tensor: float
  *   - input img_size and anchors tensors: int
@@ -5183,7 +5175,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The first dimension of x tensor, img_size tensor, boxes tensor and scores
  *   tensor must be the same size.
- * - The second dimension(the channel dimension) of x tensor , C should be equal to S * (5 +
+ * - The second dimension (the channel dimension) of x tensor , C should be equal to S * (5 +
  *   class_num) if \b iou_aware is false, otherwise C should be equal to S * (6 + class_num),
  *   the value S is equal to the anchors tensor size divided by 2.
  * - The first dimension of anchors tensor should be larger than 0.
@@ -5231,8 +5223,8 @@ mluOpYoloBox(mluOpHandle_t handle,
 
 // Group:VoxelPooling
 /*!
- * @brief Computes bounding box information from the backbone output of the
- * detected network.
+ * @brief Adds the eigenvalues of all the channels on the same x and y coordinates,
+ * and then pools them to all the channels in the bev 2D area on the corresponding coordinates.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
@@ -5251,19 +5243,19 @@ mluOpYoloBox(mluOpHandle_t handle,
  * @param[in] num_voxel_z
  * The number of voxels for dimZ.
  * @param[in] geom_xyz_desc
- * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b geom_xyz. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] geom_xyz
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] input_features_desc
- * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b input_features. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input_features
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] output_features_desc
- * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b output_features. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output_features
  * Pointer to the MLU memory that stores the output tensor.
  * @param[in] pos_memo_desc
- * The descriptor of the tensors. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b pos_memo. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] pos_memo
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -5279,8 +5271,7 @@ mluOpYoloBox(mluOpHandle_t handle,
  *   - pos_memo tensor: int
  *
  * @par Data Layout
- * - The supported data layouts of \b geom_xyz, \b input_features, \b output_features and \b pos_memo are
- *   as follows:
+ * - The supported data layouts of input and output tensors are as follows:
  *   - input tensor:
  *     - geom_xyz tensor: \p MLUOP_LAYOUT_ARRAY
  *     - input_features tensor: \p MLUOP_LAYOUT_ARRAY
@@ -5304,8 +5295,8 @@ mluOpYoloBox(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The operation does not support MLU200 series.
- * - You need to set the initial value for the output \b pos_memo before calling the operation, and initialize it to a
+ * - The function does not support MLU200 series.
+ * - You need to set the initial value for the output \b pos_memo before calling the funtion, and initialize it to a
  *   negative number.
  *
  * @par Reference
@@ -5332,9 +5323,9 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
 // Group:BoxIouRotated
 /*!
  * @brief Computes the intersection-over-union (Jaccard index, IOU) of rotated
- * bounding-boxes. If \b aligned is false, then calculate the IOUs
- * between each rotated bounding-box of \b bbox1 and \b bbox2, otherwise calculate
- * the IOUs between each aligned pair of rotated bounding-box of \b bbox1
+ * bounding-boxes. If \b aligned is false, then calculates the IOU
+ * between each rotated bounding-box of \b bbox1 and \b bbox2, otherwise calculates
+ * the IOU between each aligned pair of rotated bounding-box of \b bbox1
  * and \b bbox2.
  *
  * @param[in] handle
@@ -5343,33 +5334,33 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  * ::mluOpHandle_t.
  * @param[in] mode
  * An integer value which decides to return a result of
- * IOUs (Intersection Over Union) or IOFs (Intersection Over Foreground).
+ * IOU (Intersection Over Union) or IOF (Intersection Over Foreground).
  * The integer 0 represents IOU and 1 represents IOF.
  * @param[in] aligned
- * A boolean value. If it is false, then calculate the IOUs[i][j]
- * or IOFs[i][j] between the row i of \b bbox1 and the row j of \b bbox2,
- * otherwise calculate the IOUs[i] or IOFs[i] between the row i of \b bbox1
+ * A boolean value. If it is false, then calculate the IOU[i][j]
+ * or IOF[i][j] between the row i of \b bbox1 and the row j of \b bbox2,
+ * otherwise calculate the IOU[i] or IOFs[i] between the row i of \b bbox1
  * and the row i of \b bbox2. Significantly, the numbers of rows of \b bbox1
  * and \b bbox2 must be equal when \b aligned is true.
  * @param[in] bbox1_desc
- * The descriptor of the input tensor \b bbox1 (rotated bounding-box).
+ * The descriptor of the tensor \b bbox1 (rotated bounding-box).
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] bbox1
  * Pointer to the MLU memory that stores the input tensor \b bbox1.
  * It has shape (n, 5), indicating (x, y, w, h, theta) for each row.
  * Note that theta is in radian.
  * @param[in] bbox2_desc
- * The descriptor of the input tensor \b bbox2 (rotated bounding-box).
+ * The descriptor of the tensor \b bbox2 (rotated bounding-box).
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] bbox2
  * Pointer to the MLU memory that stores the input tensor \b bbox2.
  * It has shape (m, 5), indicating (x, y, w, h, theta) for each row.
  * Note that theta is in radian.
  * @param[in] ious_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b ious. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] ious
- * IOUs or IOFs of input rotated bounding-boxes. Pointer to the MLU
+ * IOU or IOF of input rotated bounding-boxes. Pointer to the MLU
  * memory that stores the output tensor.
  *
  * @par Return
@@ -5377,7 +5368,7 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  *
  * @par Data Type
  * - By the order of \b bbox1 - \b bbox2 - \b ious, the supported data types of
- *   \b bbox1, \b bbox2 and \b ious are as follows:
+ *   \b bbox1, \b bbox2 and \b ious tensors are as follows:
  *   - float - float - float
  *
  * @par Data Layout
@@ -5429,19 +5420,18 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
 // Group:NmsRotated
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ::mluOpNmsRotated operation.
+ * workspace to optimize ::mluOpNmsRotated.
  *
- * The size of extra workspace is based on the given information of the ::mluOpNmsRotated
- * operation, including the input tensor descriptors \b boxes_desc.
+ * The size of extra workspace is based on the given information of ::mluOpNmsRotated,
+ * including the input tensor descriptors \b boxes_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ::mluOpNmsRotated operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpNmsRotated. For detailed information, see ::mluOpHandle_t.
  * @param[in] boxes_desc
- * The descriptor of boxes, which contains the dimension and layout of the boxes tensor.
+ * The descriptor of the tensor \b boxes, which contains the dimension and layout of the boxes tensor.
  * @param[out] workspace_size
- * Pointer to the returned size of the extra workspace in bytes that is used in the
- * ::mluOpNmsRotated operation.
+ * Pointer to the MLU global memory that stores the returned size of the extra workspace in bytes.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -5464,29 +5454,29 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the ::mluOpNmsRotated operation. For detailed information,
+ * queues in ::mluOpNmsRotated. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] iou_threshold
  * The threshold of IOU.
  * @param[in] boxes_desc
- * The descriptor of the input tensor \b boxes (rotated bounding boxes).
+ * The descriptor of the tensor \b boxes (rotated bounding boxes).
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
  * Pointer to the MLU memory that stores the input tensor \b boxes.
  * It has shape (n, 5) or (n, 6), indicating (x, y, w, h, theta) or
  * (x, y, w, h, theta, label) for each row. Note that theta is in radian.
  * @param[in] scores_desc
- * The descriptor of the input tensor \b scores (rotated bounding boxes).
+ * The descriptor of the tensor \b scores (rotated bounding boxes).
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] scores
  * Pointer to the MLU memory that stores the input tensor \b scores.
  * It has shape (n), indicating score of each box in \b boxes.
  * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the Nms operation.
+ * Pointer to the MLU memory that stores the extra workspace.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the Nms operation.
  * @param[in] output_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor output. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor, which indicates
@@ -5499,7 +5489,7 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  *
  * @par Data Type
  * - By the order of \b boxes - \b scores - \b output, the supported data types of
- *   \b boxes, \b scores and \b output are as follows:
+ *   \b boxes , \b scores , and \b output tensors are as follows:
  *   - float - float - int32
  *
  * @par Scale Limitation
@@ -5509,10 +5499,10 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  * - The lowest dimension of \b boxes tensors must be 5 or 6.
  *
  * @par note
- * - The input \b boxes and \b scores with inf/nan are not supported currently.
+ * - The input \b boxes and \b scores with NAN/INF are not supported currently.
  *
  * @par API Dependency
- * - You need to call the ::mluOpGetNmsRotatedWorkspaceSize function to allocate extra
+ * - You need to call::mluOpGetNmsRotatedWorkspaceSize to allocate extra
  *   workspace for \b workspace.
  *
  * @par Example
@@ -5557,15 +5547,15 @@ mluOpNmsRotated(mluOpHandle_t handle,
  * An integer value determines whether to increase the length and the width of the bounding-box by 0 or 1
  * before calculating the area.
  * @param[in] bbox1_desc
- * The descriptor of the input tensor \b bbox1. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b bbox1. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] bbox1
  * Pointer to the MLU memory that stores the input tensor \b bbox1.
  * @param[in] bbox2_desc
- * The descriptor of the input tensor \b bbox2. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b bbox2. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] bbox2
  * Pointer to the MLU memory that stores the input tensor \b bbox2.
  * @param[in] ious_desc
- * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b ious. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] ious
  * IOU or IOF. Pointer to the MLU memory that stores the output tensor.
  *
@@ -5660,26 +5650,26 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  * queues in the three_interpolate_forward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] features_desc
- * The descriptor of the features tensors. For detailed information, see
+ * The descriptor of the tensor \b features. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] features
  * Pointer to the MLU memory that stores the input features tensor. The features'
  * shape (B, C, M), B is batch size, C is channel size, M is the number of
  * elements in one input channel.
  * @param[in] indices_desc
- * The descriptor of the indices tensors. For detailed information, see
+ * The descriptor of the tensor \b indices. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the input indices tensor. The indices'
  * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] weights_desc
- * The descriptor of the weights tensors. For detailed information, see
+ * The descriptor of the tensor \b weights. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] weights
  * Pointer to the MLU memory that stores the input weights tensor. The weights'
  * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] output_desc
- * The descriptor of the output tensors. For detailed information, see
+ * The descriptor of the output tensor. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output features tensor. The
@@ -5691,7 +5681,7 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  *  ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data types of features tensor, weights tensor and output tensor should be the same.
+ * - The data types of features tensor, weights tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - features tensor: half, float
  *   - indices tensor: int
@@ -5699,7 +5689,7 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b features, \b indices, \b weights, \b output are
+ * - The supported data layouts of \b features tensor, \b indices tensor, \b weights tensor, and \b output tensor are
  *   as follows:
  *   - features tensor: \p MLUOP_LAYOUT_ARRAY
  *   - indices tensor: \p MLUOP_LAYOUT_ARRAY
@@ -5707,12 +5697,12 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  *   - output tensor: \p MLUOP_LAYOUT_ARRAY
  *
  * @par Scale Limitation
- * - The dimension of \b features, \b indices, \b weights and \b output
+ * - The dimension of \b features , \b indices , \b weights , and \b output
  *   should be equal to 3.
- * - The shape[0] of \b features, \b indices, \b weights and \b output
+ * - The shape[0] of \b features , \b indices , \b weights , and \b output
  *   should be the same.
  * - The shape[1] of \b features and \b output should be the same.
- * - The shape[1] of \b indices, \b weights and the shape[2] of \b output
+ * - The shape[1] of \b indices , \b weights , and the shape[2] of \b output
  *   should be the same.
  * - The shape[2] of \b indices and \b weights should be equal to 3.
  *
@@ -5745,34 +5735,34 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
 // Group: ThreeInterpolate
 /*!
  * @brief Computes the gradients of feature map \b grad_features based on the
- * inputs \b grad_output , \b indices and \b weights to perform the backpropagation
- * of the ::mluOpThreeInterpolateForward operation.
+ * inputs \b grad_output , \b indices , and \b weights to perform the backpropagation
+ * of ::mluOpThreeInterpolateForward.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
  * queues in the three_interpolate_forward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] grad_output_desc
- * The descriptor of the grad_output tensors. For detailed information, see
+ * The descriptor of the tensor \b grad_output. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] grad_output
  * Pointer to the MLU memory that stores the gradients of output tensor. The grad_output's
  * shape (B, C, N), B is batch size, C is channel size, N is the number of
  * elements in one output channel.
  * @param[in] indices_desc
- * The descriptor of the indices tensors. For detailed information, see
+ * The descriptor of the tensor \b indices. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the input indices tensor. The indices'
  * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] weights_desc
- * The descriptor of the weights tensors. For detailed information, see
+ * The descriptor of the tensor \b weights. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] weights
  * Pointer to the MLU memory that stores the input weights tensor. The weights'
  * shape (B, N, 3), B is batch size, N is the number of elements in one output channel.
  * @param[in] grad_features_desc
- * The descriptor of the grad_features tensors. For detailed information, see
+ * The descriptor of the tensor \b grad_features. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] grad_features
  * Pointer to the MLU memory that stores the gradients of features tensor. The
@@ -5784,16 +5774,16 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - Data types of grad_output tensor, weights tensor and grad_features tensor should be the same.
+ * - The data types of grad_output tensor, weights tensor and grad_features tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
- *   - grad_output tensor: half, float.
- *   - indices tensor: int.
- *   - weights tensor: half, float.
- *   - grad_features tensor: half, float.
+ *   - grad_output tensor: half, float
+ *   - indices tensor: int
+ *   - weights tensor: half, float
+ *   - grad_features tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b grad_output, \b indices, \b weights, \b grad_features are
- *   as follows:
+ * - The supported data layouts of \b grad_output tensor, \b indices tensor, \b weights tensor, and \b grad_features
+ * tensor are as follows:
  *   - grad_output tensor: \p MLUOP_LAYOUT_ARRAY
  *   - indices tensor: \p MLUOP_LAYOUT_ARRAY
  *   - weights tensor: \p MLUOP_LAYOUT_ARRAY
@@ -5842,14 +5832,14 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
  * queues in the Ballquery operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] new_xyz_desc
- * The descriptor of the new_xyz tensors, which indicates the center of the ball.
+ * The descriptor of the tensor \b new_xyz, which indicates the center of the ball.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] new_xyz
  * Pointer to the MLU memory that stores the new_xyz tensor.
  * The shape of new_xyz is [B, M, 3]. B: the batch size; M: the number of elements in a batch;
  * 3: the dimension of the 3D coordinate.
  * @param[in] xyz_desc
- * The descriptor of the xyz tensors, which means cloud points. For detailed information,
+ * The descriptor of the tensor \b xyz, which means cloud points. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] xyz
  * Pointer to the MLU memory that stores the xyz tensor.
@@ -5862,7 +5852,7 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
  * @param[in] nsample
  * An integer value which is the selected points index.
  * @param[in] idx_desc
- * The descriptor of the idx tensors, which contains output indexes. For detailed information,
+ * The descriptor of the tensor \b idx, which contains output indexes. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] idx
  * Pointer to the MLU memory that stores the xyz tensor.
@@ -5873,14 +5863,14 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - The data types of new_xyz and xyz must be the same. The supported data types of new_xyz
- *   tensor \b new_xyz, xyz tensor \b xyz and idx tensor \b idx are as follows:
+ * - The data types of new_xyz and xyz must be the same.
+ * - The supported data types of input and output tensors as follows:
  *   - new_xyz tensor: float or half
  *   - xyz tensor: float or half
  *   - idx tensor: int
  *
  * @par Data Layout
- * - The supported data layouts of \b new_xyz, \b xyz, \b idx are
+ * - The supported data layouts of \b new_xyz tensor, \b xyz tensor, and \b idx tensor are
  *   as follows:
  *   - new_xyz tensor: \p MLUOP_LAYOUT_ARRAY
  *   - xyz tensor: \p MLUOP_LAYOUT_ARRAY
@@ -5946,12 +5936,12 @@ mluOpBallQuery(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - Data types of input tensor \b input and output tensor \b output must be the
+ * - The data types of input tensor \b input and output tensor \b output must be the
  *   same. The supported data types are as follows:
  *   - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
- *     bool, half, float, double, complex_half, complex_float.
+ *     bool, half, float, double, complex_half, complex_float
  *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
- *     bool, half, float, double, complex_half, complex_float.
+ *     bool, half, float, double, complex_half, complex_float
  *
  * @par Data Layout
  * - None.
@@ -5968,8 +5958,8 @@ mluOpBallQuery(mluOpHandle_t handle,
  * @par Note
  * - You can specify the stride of all dimensions for input_desc and output_desc
  *   with ::mluOpSetTensorDescriptorEx.
- * - Data type of input tensor and output tensor must be the same.
- * - Data layout of input tensor and output tensor must be the same.
+ * - The data type of input tensor and output tensor must be the same.
+ * - The data layout of input tensor and output tensor must be the same.
  * - The shape of input tensor and output tensor must be the same.
  *
  * @par Example
@@ -6015,9 +6005,8 @@ mluOpCopy(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b input
- *   and output tensor \b output.
- *   Data type of both tensors should be the same.
+ * - The data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *  - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
  *    bool, half, float, complex_half, complex_float
  *  - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
@@ -6081,8 +6070,8 @@ mluOpExpand(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - This function supports the following data types for output tensor \b output.
- *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float.
+ * - The supported data types of input and output tensors are as follows:
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float
  *
  * @par Data Layout
  * - None.
@@ -6139,7 +6128,7 @@ mluOpFill(mluOpHandle_t handle, float value, const mluOpTensorDescriptor_t outpu
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following data types for value tensor \b value and output tensor \b output.
+ * - The supported data types of input and output tensors are as follows:
  *   - value tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float
  *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float
  *
@@ -6153,7 +6142,7 @@ mluOpFill(mluOpHandle_t handle, float value, const mluOpTensorDescriptor_t outpu
  * - None.
  *
  * @par Note
- * - Data types of value tensor \b value and output tensor \b output should be the same.
+ * - The data types of value tensor \b value and output tensor \b output should be the same.
  * - The number of elements of value tensor \b value only supports one.
  * - You can specify the stride of all dimensions for \b output_desc with
  *   ::mluOpSetTensorDescriptorEx.
@@ -6185,7 +6174,7 @@ mluOpFill_v2(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues
  * in the fill operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pointer_mode
- * An enum value which indicates that the scalar value \b value is passed
+ * The scalar value \b value is passed
  * by reference on the host or device. The information is defined in
  * ::mluOpPointerMode_t.
  * @param[in] value
@@ -6204,8 +6193,7 @@ mluOpFill_v2(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - This function supports the following data types for \b value and output
- *   tensor \b output.
+ * - The supported data types of input and output tensors are as follows:
  *   - value: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool,
  *     half, float
  *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64,
@@ -6221,7 +6209,7 @@ mluOpFill_v2(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - Data types of \b value and output tensor \b output should be the same.
+ * - The data types of \b value and output tensor \b output should be the same.
  * - The number of elements of \b value can only be one.
  * - You can specify the stride of all dimensions for \b output_desc with
  *   ::mluOpSetTensorDescriptorEx.
@@ -6253,27 +6241,27 @@ mluOpFill_v3(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
  * ::mluOpMoeDispatchBackwardData. For detailed information, see ::mluOpHandle_t.
  * @param[in] gates_desc
- * The descriptor of \b gates tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b gates, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] gates
  * Pointer to the MLU memory that stores the \b gates tensor.
  * @param[in] indices_desc
- * The descriptor of \b indices tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b indices, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the \b indices tensor.
  * @param[in] locations_desc
- * The descriptor of \b locations tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b locations, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] locations
  * Pointer to the MLU memory that stores the \b locations tensor.
  * @param[in] dispatch_desc
- * The descriptor of \b dispatch tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b dispatch, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] dispatch
  * Pointer to the MLU memory that stores the \b dispatch tensor.
  * @param[in] samples
- * The number of elements in the \b gates tensor, the \b indices tensor and the \b locations tensor.
+ * The number of elements in the \b gates tensor, the \b indices tensor, and the \b locations tensor.
  * @param[in] capacity
  * The maximum number of inputs that experts can process.
  * @param[in] hidden
@@ -6281,7 +6269,7 @@ mluOpFill_v3(mluOpHandle_t handle,
  * @param[in] num_experts
  * The number of experts.
  * @param[in] grad_input_desc
- * The descriptor of \b grad_input tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b grad_input, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the \b grad_input tensor.
@@ -6290,8 +6278,7 @@ mluOpFill_v3(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b gates , \b indices ,
- *   \b locations , \b dispatch and output tensor \b grad_input .
+ * - The supported data types of input and output tensors are as follows:
  *   - gates tensor: float
  *   - indices tensor: int32
  *   - locations tensor: int32
@@ -6302,12 +6289,12 @@ mluOpFill_v3(mluOpHandle_t handle,
  * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - The first dimension of \b gates tensor, \b indices tensor, \b locations tensor and \b grad_input
+ * - The first dimension of \b gates tensor, \b indices tensor, \b locations tensor, and \b grad_input
  *   tensor must be the same size and equal to \b samples .
  * - The second dimension of \b grad_input tensor and \b dispatch tensor must be equal to \b hidden .
  * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
  *   the \b capacity and \b num_experts .
- * - The value of the input parameters \b samples, \b capacity, \b hidden and \b num_experts
+ * - The value of the input parameters \b samples , \b capacity , \b hidden , and \b num_experts
  *   must be greater than or equal to 0.
  * - The value range of the input parameter \b indices tensor must be greater than or equal to 0 and less than
  *   \b num_experts.
@@ -6319,10 +6306,10 @@ mluOpFill_v3(mluOpHandle_t handle,
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
- * - The parameter \b samples , \b capacity , \b hidden and \b num_experts should not be negative.
+ * - The parameter \b samples , \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
- * - The example of the operation is as follows:
+ * - The example of the function is as follows:
      @verbatim
       Dimension of gates tensor:  [samples]
       Dimension of indices tensor:  [samples]
@@ -6354,20 +6341,20 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
 // Group:RoiawarePool3d
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ::mluOpRoiawarePool3dForward operation.
+ * workspace to optimize ::mluOpRoiawarePool3dForward.
  *
- * The size of extra workspace is based on the given information of the ::mluOpRoiawarePool3dForward
- * operation, including the input tensor descriptors \b pts_desc.
+ * The size of extra workspace is based on the given information of ::mluOpRoiawarePool3dForward,
+ * including the input tensor descriptors \b pts_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ::mluOpRoiawarePool3dForward operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiawarePool3dForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] rois_desc
- * The descriptor of rois, which contains the dimension and layout of the rois tensor.
+ * The descriptor of the tensor \b rois, which contains the dimension and layout of the rois tensor.
  * @param[in] pts_desc
- * The descriptor of pts, which contains the dimension and layout of the pts tensor.
+ * The descriptor of the tensor \b pts, which contains the dimension and layout of the pts tensor.
  * @param[in] pts_feature_desc
- * The descriptor of pts, which contains the dimension and layout of the pts tensor.
+ * The descriptor of the tensor \b pts_feature, which contains the dimension and layout of the pts tensor.
  * @param[out] workspace_size
  * Pointer to the returned size of the extra workspace in bytes that is used in the
  * ::mluOpRoiawarePool3dForward operation.
@@ -6417,15 +6404,15 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * @param[in] channels
  * An integer value which is the number of the pts feature of channels.
  * @param[in] rois_desc
- * The descriptor of rois, which contains the dimension and layout of the rois tensor.
+ * The descriptor of the tensor \b rois, which contains the dimension and layout of the rois tensor.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor.
  * @param[in] pts_desc
- * The descriptor of pts, which contains the dimension and layout of the pts tensor.
+ * The descriptor of the tensor \b pts, which contains the dimension and layout of the pts tensor.
  * @param[in] pts
  * Pointer to the MLU memory that stores the pts tensor.
  * @param[in] pts_feature_desc
- * The descriptor of pts_feature, which contains the dimension and layout of the pts_feature tensor.
+ * The descriptor of the tensor \b pts_feature, which contains the dimension and layout of the pts_feature tensor.
  * @param[in] pts_feature
  * Pointer to the MLU memory that stores the pts_feature tensor.
  * @param[in] workspace
@@ -6433,8 +6420,8 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpRoiawarePool3dForward operation.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in
- * the ::mluOpRoiawarePool3dForward operation. You can get the size of the workspace with
- * the ::mluOpGetRoiawarePool3dForwardWorkspaceSize function.
+ * ::mluOpRoiawarePool3dForward. You can get the size of the workspace with
+ * ::mluOpGetRoiawarePool3dForwardWorkspaceSize.
  * @param[in] max_pts_each_voxel
  * The maximum number of points per each voxel. An integer value which is the dimension of the pts_idx_of_voxels.
  * @param[in] out_x
@@ -6444,15 +6431,17 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * @param[in] out_z
  * An integer value which is the dimension of the pooled_features.
  * @param[in] argmax_desc
- * The descriptor of argmax, which contains the dimension and layout of the argmax tensor.
+ * The descriptor of the tensor \b argmax, which contains the dimension and layout of the argmax tensor.
  * @param[out] argmax
  * Pointer to the MLU memory that stores the argmax tensor.
  * @param[in] pts_idx_of_voxels_desc
- * The descriptor of pts_idx_of_voxels, which contains the dimension and layout of the pts_idx_of_voxels tensor.
+ * The descriptor of the tensor \b pts_idx_of_voxels, which contains the dimension and layout of the pts_idx_of_voxels
+ * tensor.
  * @param[out] pts_idx_of_voxels
  * Pointer to the MLU memory that stores the pts_idx_of_voxels tensor.
  * @param[in] pooled_features_desc
- * The descriptor of pooled_features, which contains the dimension and layout of the pooled_features tensor.
+ * The descriptor of the tensor \b pooled_features, which contains the dimension and layout of the pooled_features
+ * tensor.
  * @param[out] pooled_features
  * Pointer to the MLU memory that stores the pooled_features tensor.
  *
@@ -6461,14 +6450,13 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b rois , \b pts , \b pts_feature
- *   and output tensor \b argmax , \b pts_idx_of_voxels , \b pooled_features .
- *   - rois tensor: half, float.
- *   - pts tensor: half, float.
- *   - pts_feature tensor: half, float.
- *   - argmax tensor: int32.
- *   - pts_idx_of_voxels tensor: int32.
- *   - pooled_features tensor: half, float.
+ * - The supported data types of input and output tensors are as follows:
+ *   - rois tensor: half, float
+ *   - pts tensor: half, float
+ *   - pts_feature tensor: half, float
+ *   - argmax tensor: int32
+ *   - pts_idx_of_voxels tensor: int32
+ *   - pooled_features tensor: half, float
  *
  * @par Data Layout
  * - None.
@@ -6487,7 +6475,7 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * @par Note
  * - The inputs \b rois and \b pts with NaN or infinity are not supported currently.
  * - The inputs \b pts_feature with NaN are not supported on MLU300 series.
- * - The operation does not support MLU200 series.
+ * - The function does not support MLU200 series.
  *
  * @par Example
  * - None.
@@ -6540,19 +6528,20 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * @param[in] max_pts_each_voxel
  * The maximum number of points per each voxel. An integer value which is the dimension of the pts_idx_of_voxels.
  * @param[in] pts_idx_of_voxels_desc
- * The descriptor of pts_idx_of_voxels, which contains the dimension and layout of the pts_idx_of_voxels tensor.
+ * The descriptor of the tensor \b pts_idx_of_voxels, which contains the dimension and layout of the pts_idx_of_voxels
+ * tensor.
  * @param[out] pts_idx_of_voxels
  * Pointer to the MLU memory that stores the pts_idx_of_voxels tensor.
  * @param[in] argmax_desc
- * The descriptor of argmax, which contains the dimension and layout of the argmax tensor.
+ * The descriptor of the tensor \b argmax, which contains the dimension and layout of the argmax tensor.
  * @param[out] argmax
  * Pointer to the MLU memory that stores the argmax tensor.
  * @param[in] grad_out_desc
- * The descriptor of grad_out, which contains the dimension and layout of the grad_out tensor.
+ * The descriptor of the tensor \b grad_out, which contains the dimension and layout of the grad_out tensor.
  * @param[out] grad_out
  * Pointer to the MLU memory that stores the grad_out tensor.
  * @param[in] grad_in_desc
- * The descriptor of grad_in, which contains the dimension and layout of the grad_in tensor.
+ * The descriptor of the tensor \b grad_in, which contains the dimension and layout of the grad_in tensor.
  * @param[in] grad_in
  * Pointer to the MLU memory that stores the grad_in tensor.
  *
@@ -6561,12 +6550,11 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b pts_idx_of_voxels , \b argmax , \b grad_out
- *   and output tensor \b grad_in .
- *   - pts_idx_of_voxels tensor: int32.
- *   - argmax tensor: int32.
- *   - grad_out tensor: half, float.
- *   - grad_in tensor: half, float.
+ * - The supported data types of input and output tensors are as follows:
+ *   - pts_idx_of_voxels tensor: int32
+ *   - argmax tensor: int32
+ *   - grad_out tensor: half, float
+ *   - grad_in tensor: half, float
  *
  * @par Data Layout
  * - None.
@@ -6581,7 +6569,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The operation does not support MLU200 series.
+ * - The function does not support MLU200 series.
  *
  * @par Example
  * - None.
@@ -6609,16 +6597,16 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
 
 // Group:Psamask
 /*!
- * @brief Moves the \b x tensor to \b y tensor according to \b h_mask,
- * \b w_mask and \b psa_type.
+ * @brief Moves the \b x tensor to \b y tensor according to \b h_mask , \b w_mask , and \b psa_type.
+ *
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the ::mluOpPsamaskForward. For detailed information, see ::mluOpHandle_t.
+ * queues in ::mluOpPsamaskForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] psa_type
- * Type of the psamask computation, including COLLECT and DISTRIBUTE.
+ * The types of the psamask computation, including COLLECT and DISTRIBUTE.
  * @param[in] x_desc
- * The descriptor of data of input tensor. For detailed information,
+ * The descriptor of data of input tensor \b x. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the data of input tensor.
@@ -6627,7 +6615,7 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
  * @param[in] w_mask
  * An integer value which is the w_mask factor of the psamask.
  * @param[in] y_desc
- * The descriptor of data of output tensor. For detailed information,
+ * The descriptor of the tensor \b y. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] y
  * Pointer to the MLU memory that stores the data of output tensor.
@@ -6636,21 +6624,21 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - The supported data types of input tensor \b x and output tensor \b y are as follows:
+ * - The supported data types of input and output tensors are as follows:
  *   - x: float
  *   - y: float
  *
  * @par Data Layout
- * - The supported data layouts of input tensor \b x and output tensor \b y are as follows
- *  - x: NHWC
- *  - y: NHWC
+ * - The supported data layouts of input and output tensors are as follows:
+ *   - x: NHWC
+ *   - y: NHWC
  *
  * @par Scale Limitation
  * - The shape of \b x must be [N, H, W, C].
  * - The shape of \b y must be [N, H, W, C].
- * - All dimension size of \b x and \b y must be the same, except the C dimension.
+ * - All dimension sizes of \b x and \b y must be the same, except the C dimension.
  * - If the shape of \b x is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
- *   w_mask .
+ *   w_mask.
  * - If the shape of \b y is set to [N, H, W, C], the size of C dimension should be H * W.
  *   - On MLU200 series:
  *     - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
@@ -6688,13 +6676,13 @@ mluOpPsamaskForward(mluOpHandle_t handle,
 // Group:Psamask
 /*!
  * @brief Computes the gradients of input tensor \b dx with the gradients of output tensor \b dy
- * according to \b h_mask , \b w_mask and \b psa_type.
+ * according to \b h_mask , \b w_mask , and \b psa_type.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
- * queues in the ::mluOpPsamaskBackward. For detailed information, see ::mluOpHandle_t.
+ * queues in ::mluOpPsamaskBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] psa_type
- * Type of the psamask computation, including COLLECT and DISTRIBUTE.
+ * The types of the psamask computation, including COLLECT and DISTRIBUTE.
  * @param[in] dy_desc
  * The descriptor of gradient of output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
@@ -6714,19 +6702,19 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - The supported data types of input tensor \b x and output tensor \b y are as follows
+ * - The supported data types of input and output tensors are as follows:
  *   - dy: float
  *   - dx: float
  *
  * @par Data Layout
- * - The supported data layouts of input tensor \b x and output tensor \b y are as follows:
+ * - The supported data layouts of input and output tensors are as follows:
  *   - dy: NHWC
  *   - dx: NHWC
  *
  * @par Scale Limitation
  * - The shape of \b dy must be [N, H, W, C].
  * - The shape of \b dx must be [N, H, W, C].
- * - All dimension size of \b dy and \b dx must be the same, except the C dimension.
+ * - All dimension sizes of \b dy and \b dx must be the same, except the C dimension.
  * - If the shape of \b dx is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask .
  * - If the shape of \b dy is set to [N, H, W, C], the size of C dimension should be H * W.
@@ -6770,7 +6758,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *
  * @par Deprecated
  * - ::mluOpMatMul is deprecated and will be removed in the future release.
- *   Please use ::mluOpMatMul_v2 instead.
+ *   Use ::mluOpMatMul_v2 instead.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
@@ -6803,16 +6791,16 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *
  * @par Data Type
  * - On all hardware platforms, this function supports any combinations of the following data types for
- *   input tensor \b a, \b b and output tensor \b c.
+ *   input tensor \b a , \b b , and output tensor \b c.
  *   - a data type: int8, int16
  *   - b data type: int8, int16
  *   - c offchip data type: half, float
  *   - c onchip data type: half, float
  *   - On MLU300 series or above, this function supports the combinations of the following data types for
  *     input tensor \b a, \b b and output tensor \b c.
- *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, half
- *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, float
- *   - \b a, \b b, \b c offchip data type, \b c onchip data type: float, float, float, float
+ *   - \b a , \b b , \b c offchip data type, \b c onchip data type: half, half, half, half
+ *   - \b a , \b b , \b c offchip data type, \b c onchip data type: half, half, half, float
+ *   - \b a , \b b , \b c offchip data type, \b c onchip data type: float, float, float, float
  *
  * @par Data Layout
  * - None.
@@ -6829,8 +6817,8 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *
  * @par Note
  * - On all hardware platforms, the combinations of the data types should satisfy the following rules:
- * - The data type bitwidth of \b c onchip data type for operation computing is not shorter than \b c
- *   offchip data type.
+ * - The data types bitwidth of \b c onchip for operation computing is not shorter than \b c
+ *   offchip.
  * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
  *   needs to transpose.
  *
@@ -6888,14 +6876,14 @@ mluOpMatMul(mluOpHandle_t handle,
  * The descriptor of the input tensor of right matrix. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] c_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b c. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] d_desc
- * The descriptor of the output tensor. Needed to be set in out-of-place matrix multiplication.
- * Currently not supported and should be set to NULL.
+ * The descriptor of the tensor \b d. It needs to be set in out-of-place matrix multiplication.
+ * Currently it is not supported and should be set to NULL.
  * @param[in] algo
  * Host pointer to the most suitable algorithm to compute the matrix multiplication.
- * Currently not supported and should be set to NULL.
+ * Currently it is not supported and should be set to NULL.
  * @param[out] workspace_size
  * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
  *
@@ -6912,10 +6900,10 @@ mluOpMatMul(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - This function must be called after ::mluOpSetMatMulDescAttr function. You also need to
- *   call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
+ * - This function must be called after ::mluOpSetMatMulDescAttr. You also need to
+ *   call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor to create and set
  *   tensor descriptors \b a_desc, \b b_desc, \b c_desc before calling this function.
- * - The allocated extra workspace should be passed to the ::mluOpMatMul_v2 function to
+ * - The allocated extra workspace should be passed to ::mluOpMatMul_v2 to
  *   perform the matrix multiplication operation.
  *
  * @par Note
@@ -6948,8 +6936,8 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * like ::MLUOP_MATMUL_DESC_TRANSA.
  *
  * This function needs extra MLU memory as the workspace to improve the matrix multiplication
- * performance. You can get the size of the workspace \b workspace_size with the
- * ::mluOpGetMatMulAlgoHeuristic and ::mluOpGetMatMulHeuristicResult functions in turn.
+ * performance. You can get the size of the workspace \b workspace_size with
+ * ::mluOpGetMatMulAlgoHeuristic and ::mluOpGetMatMulHeuristicResult in turn.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
@@ -6984,8 +6972,8 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * operation.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the matrix multiplication
- * operation. You can get the size of the workspace with the ::mluOpGetMatMulAlgoHeuristic and
- * ::mluOpGetMatMulHeuristicResult functions in turn.
+ * operation. You can get the size of the workspace with ::mluOpGetMatMulAlgoHeuristic and
+ * ::mluOpGetMatMulHeuristicResult in turn.
  * @param[in] d_desc
  * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] d
@@ -7026,8 +7014,8 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * @par Note
  * - The value of \b c_desc is the same as that of \b d_desc.
  * - On all hardware platforms, the combinations of the data types should satisfy the following rules:
- * - The data type bitwidth of \b d onchip data type for operation computing is not shorter than \b d
- *   offchip data type.
+ * - The data type bitwidth of \b d onchip for operation computing is not shorter than \b d
+ *   offchip.
  * - For best practices, to have a better performance, matrix \b a should not be transposed and matrix \b b
  *   should be transposed.
  *
@@ -7084,7 +7072,7 @@ mluOpMatMul_v2(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpDestroyMatMulHeuristicResult function to destroy the descriptor.
+ * - You need to call ::mluOpDestroyMatMulHeuristicResult to destroy the descriptor.
  *
  * @par Note
  * - None.
@@ -7100,8 +7088,8 @@ mluOpCreateMatMulHeuristicResult(mluOpMatMulHeuristicResult_t *result);
 
 // Group:MatMul
 /*!
- * @brief Destroys a matrix multiplication heuristic result, that is previously created with
- * the ::mluOpCreateMatMulHeuristicResult.
+ * @brief Destroys a matrix multiplication heuristic result, which was previously created with
+ * ::mluOpCreateMatMulHeuristicResult.
  *
  * @param[in] result
  * The matrix multiplication heuristic result to be destroyed.
@@ -7195,7 +7183,7 @@ mluOpGetMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMatMulAl
  * Not supported currently and should be set to NULL.
  * @param[in] preference
  * The descriptor of the matrix multiplication that holds the preferences for ::mluOpMatMulHeuristicResult_t
- * configuration. Currently not supported and should be set to NULL.
+ * configuration. Currently it is not supported and should be set to NULL.
  * @param[in] requested_algo_count
  * The number of requested algorithms. The maximum number of algorithms to be returned.
  * Currently this value only supports 1.
@@ -7264,9 +7252,9 @@ mluOpGetMatMulAlgoHeuristic(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpSetMatMulDescAttr function to initialize
+ * - After calling this function, you can call ::mluOpSetMatMulDescAttr to initialize
  *   and set the information to the matrix multiplication descriptor.
- * - You need to call the ::mluOpMatMulDescDestroy function to destroy the descriptor.
+ * - You need to call ::mluOpMatMulDescDestroy to destroy the descriptor.
  *
  * @par Note
  * - The default compute data type of c is c_desc->dtype, use ::mluOpSetTensorDescriptorOnchipDataType to
@@ -7284,7 +7272,7 @@ mluOpMatMulDescCreate(mluOpMatMulDescriptor_t *matmul_desc);
 // Group:MatMul
 /*!
  * @brief Destroys a matrix multiplication descriptor \b matmul_desc
- * that is previously created with the ::mluOpMatMulDescCreate.
+ * that was previously created with ::mluOpMatMulDescCreate.
  *
  * The matrix multiplication descriptor is defined in ::mluOpMatMulDescriptor_t
  * and holds the information about the matrix multiplication operation.
@@ -7322,7 +7310,7 @@ mluOpMatMulDescDestroy(mluOpMatMulDescriptor_t matmul_desc);
 // Group:MatMul
 /*!
  * @brief Initializes the matrix multiplication descriptor \b matmul_desc
- * that is previously created with the ::mluOpMatMulDescCreate function, and sets
+ * that was previously created with ::mluOpMatMulDescCreate, and sets
  * the information about the matrix multiplication operation to the matrix multiplication
  * descriptor \b matmul_desc. The information includes the attribute defined in
  * ::mluOpMatMulDescAttribute_t \b attr, the host pointer to the attribute value \b buf, and
@@ -7444,7 +7432,7 @@ mluOpGetMatMulDescAttr(const mluOpMatMulDescriptor_t matmul_desc,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpMatMulAlgoDestroy function to destroy the descriptor.
+ * - You need to call ::mluOpMatMulAlgoDestroy to destroy the descriptor.
  *
  * @par Note
  * - None.
@@ -7461,7 +7449,7 @@ mluOpMatMulAlgoCreate(mluOpMatMulAlgo_t *algo);
 // Group:MatMul
 /*!
  * @brief Destroys a matrix multiplication algorithm descriptor \b algo
- * that is previously created with the ::mluOpMatMulAlgoCreate.
+ * that was previously created with ::mluOpMatMulAlgoCreate.
  *
  * The matrix multiplication descriptor is defined in ::mluOpMatMulAlgo_t
  * and holds the information about the matrix multiplication algorithm.
@@ -7518,9 +7506,9 @@ mluOpMatMulAlgoDestroy(mluOpMatMulAlgo_t algo);
  * - None.
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpSetUniqueDescriptor function to initialize
+ * - After calling this function, you can call ::mluOpSetUniqueDescriptor to initialize
  *   and set the information to the descriptor.
- * - You need to call the ::mluOpDestroyUniqueDescriptor function to destroy the descriptor.
+ * - You need to call ::mluOpDestroyUniqueDescriptor to destroy the descriptor.
  *
  * @par Note
  * - None.
@@ -7536,8 +7524,8 @@ mluOpCreateUniqueDescriptor(mluOpUniqueDescriptor_t *unique_desc);
 
 // Group:Unique
 /*!
- * @brief Destroys a unique descriptor \b unique_desc that is previously created with the
- * ::mluOpCreateUniqueDescriptor function.
+ * @brief Destroys a unique descriptor \b unique_desc that was previously created with
+ * ::mluOpCreateUniqueDescriptor.
  *
  * The unique descriptor is defined in ::mluOpUniqueDescriptor_t and holds the information
  * about the unique operation.
@@ -7561,7 +7549,7 @@ mluOpCreateUniqueDescriptor(mluOpUniqueDescriptor_t *unique_desc);
  * - None.
  *
  * @par Note
- * - You need to call this function after calling the ::mluOpUnique.
+ * - You need to call this function after calling ::mluOpUnique.
  * - This function should be called to destroy the unique descriptor. Otherwise, the memory
  *   leak may occur.
  *
@@ -7576,8 +7564,8 @@ mluOpDestroyUniqueDescriptor(mluOpUniqueDescriptor_t unique_desc);
 
 // Group:Unique
 /*!
- * @brief Initializes the unique descriptor \b unique_desc that is previously created
- * with the ::mluOpCreateUniqueDescriptor function, and sets the information about the
+ * @brief Initializes the unique descriptor \b unique_desc that was previously created
+ * with ::mluOpCreateUniqueDescriptor, and sets the information about the
  * unique operation to the unique descriptor \b unique_desc. The information includes
  * the sorted mode of the unique \b mode, the number of the unique dimensions \b dim,
  * whether to output index \b return_inverse, and whether to output counts \b return_counts.
@@ -7586,7 +7574,7 @@ mluOpDestroyUniqueDescriptor(mluOpUniqueDescriptor_t unique_desc);
  * The descriptor of the unique operation. For detailed information,
  * see ::mluOpUniqueDescriptor_t.
  * @param[in] mode
- * The sorted mode of unique operation. The sorted modes are define in the ::mluOpUniqueSort_t.
+ * The sorted mode of unique operation. The sorted modes are define in ::mluOpUniqueSort_t.
  * @param[in] dim
  * The number of dimensions in the input tensor of the unique operation.
  * Currently, only the unique of the flattened input is supported. It is recommended to set
@@ -7658,11 +7646,11 @@ mluOpSetUniqueDescriptor(
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
+ * - You need to call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor
  *   to create and set the tensor descriptor \b input_desc before calling this function, and
- *   call the ::mluOpCreateUniqueDescriptor and ::mluOpSetUniqueDescriptor functions to create
+ *   call ::mluOpCreateUniqueDescriptor and ::mluOpSetUniqueDescriptor to create
  *   and set the unique descriptor \b unique_desc.
- * - The allocated extra workspace should be passed to the ::mluOpUnique function to perform the
+ * - The allocated extra workspace should be passed to ::mluOpUnique to perform the
  *   unique operation.
  *
  * @par Note
@@ -7707,8 +7695,8 @@ mluOpGetUniqueWorkSpace(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
- * - Date types of input tensor \b input and output tensor \b unique_data must be the same.
- * - The supported data types of input tensor \b input and output tensor \b unique_data are as follows:
+ * - The date types of input tensor \b input and output tensor \b unique_data must be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: float, int32
  *   - output tensor: float, int32
  *
@@ -7719,7 +7707,7 @@ mluOpGetUniqueWorkSpace(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpGetUniqueWorkSpace function to allocate extra workspace for
+ * - You need to call ::mluOpGetUniqueWorkSpace to allocate extra workspace for
  *   \b unique_data.
  *
  * @par Note
@@ -7782,8 +7770,8 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - Date types of input tensor \b input and output tensor \b output_data must be the same.
- * - The supported data types of input tensor \b input and output tensors are as follows:
+ * - The date types of input tensor \b input and output tensor \b output_data must be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: float, int32
  *   - output_data: float, int32
  *   - output_index: int32
@@ -7794,18 +7782,17 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The input tensor \b input must meet the following requirement:
- *   - When the \b mode is set to \p MLUOP_UNSORT_FORWARD, the dimension of \b input must be
- *     one-dimensional.
+ *   - When the \b mode is set to \p MLUOP_UNSORT_FORWARD, the dimension of \b input must be 1D
  *
  * @par API Dependency
- * - You need to call the ::mluOpUniqueGetOutLen function to get the length of unique data
+ * - You need to call ::mluOpUniqueGetOutLen to get the length of unique data
  *   of input tensor \b output_len and the unique data \b unique_data.
  *
  * @par Note
  * - The \b input with NaN is not supported currently, and the data range of \b input should
  *   satisfy the following conditions:
  *   - (-inf, +inf), where inf represents infinity.
- * - You need to call the ::mluOpUniqueGetOutLen function to get the scale \b output_len and
+ * - You need to call ::mluOpUniqueGetOutLen to get the scale \b output_len and
  *   the tensor \b unique_data before calling this function.
  * - The tensor \b output_index is same shape as input tensor \b input, and the tensor
  *   \b output_counts is same shape as \b output_data.
@@ -7864,7 +7851,7 @@ mluOpUnique(mluOpHandle_t handle,
  * optimize the unique operation.
  * Compared with ::mluOpGetUniqueWorkSpace, this function has a better performance for unique operation.
  * The size of extra workspace is based on the given information of the unique operation,
- * including the input tensor descriptors \b input_desc, and the unique operation
+ * including the input tensor descriptor \b input_desc, and the unique operation
  * descriptor \b unique_desc.
  *
  * @param[in] handle
@@ -7893,11 +7880,11 @@ mluOpUnique(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
+ * - You need to call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor
  *   to create and set the tensor descriptor \b input_desc before calling this function, and
- *   call the ::mluOpCreateUniqueDescriptor and ::mluOpSetUniqueDescriptor functions to create
+ *   call ::mluOpCreateUniqueDescriptor and ::mluOpSetUniqueDescriptor to create
  *   and set the unique descriptor \b unique_desc.
- * - The allocated extra workspace should be passed to the ::mluOpUnique_v2 function to perform the
+ * - The allocated extra workspace should be passed to ::mluOpUnique_v2 to perform the
  *   unique operation.
  *
  * @par Note
@@ -7922,8 +7909,8 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * Compared with ::mluOpUniqueGetOutLen and ::mluOpUnique, this function has a better performance.
  *
  * This function need extra MLU memory as the workspace to improve the unique
- * performance. You can get the size of the workspace \b workspace_size with the
- * ::mluOpGetUniqueWorkspaceSize function.
+ * performance. You can get the size of the workspace \b workspace_size with
+ * ::mluOpGetUniqueWorkspaceSize.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -7941,8 +7928,8 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * operation.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the unique
- * operation. You can get the size of the workspace with the
- * ::mluOpGetUniqueWorkspaceSize function.
+ * operation. You can get the size of the workspace with
+ * ::mluOpGetUniqueWorkspaceSize.
  * @param[out] output_num
  * Pointer to the MLU memory that stores the number of output unique data.
  * @param[in] output_desc
@@ -7951,7 +7938,7 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor \b output.
  * @param[in] indices_desc
- * The descriptor of the inverse indices tensor. For detailed information,
+ * The descriptor of the inverse tensot \b indices. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] inverse_indices
  * Pointer to the MLU memory that stores the index of input elements that are in
@@ -7960,7 +7947,7 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * parameter returns meaningless value. It is recommended to set this parameter to NULL
  * if \b return_inverse is to false.
  * @param[in] counts_desc
- * The descriptor of the counts tensor. For detailed information,
+ * The descriptor of the tensor \b counts. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] counts
  * Pointer to the MLU memory that stores the number of duplicate values for each
@@ -7973,8 +7960,8 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
- * - Date types of input tensor \b input and output tensor \b output must be the same.
- * - The supported data types of input tensor \b input and output tensors are as follows:
+ * - The date types of input tensor \b input and output tensor \b output must be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input: float, int32
  *   - output_num: int32
  *   - output: float, int32
@@ -7992,7 +7979,7 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  *   of the flattened \b input. It is recommended to set the dimension \b dim to -1.
  *
  * @par API Dependency
- * - You need to call the ::mluOpGetUniqueWorkspaceSize function to allocate extra
+ * - You need to call ::mluOpGetUniqueWorkspaceSize to allocate extra
  *   workspace for \b workspace.
  *
  * @par Note
@@ -8061,7 +8048,7 @@ mluOpUnique_v2(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the gather_nd
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_params
- * The descriptor of the input tensor. For detailed information, see
+ * The descriptor of the tensor desc_params. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] params
  * Pointer to the MLU memory that stores the input tensor.
@@ -8082,7 +8069,7 @@ mluOpUnique_v2(mluOpHandle_t handle,
  *
  * @par Data Type
  * - The (I/O)function supports the following byte-width data types for \b params and \b output tensors.
- *   The byte width of a data type can be got with the ::mluOpGetSizeOfDataType function.
+ *   The byte width of a data type can be got with ::mluOpGetSizeOfDataType.
  *   - params tensor: 1-byte, 2-byte, 4-byte, 8-byte
  *   - index tensor: int32, int64
  *   - output tensor: 1-byte, 2-byte, 4-byte, 8-byte
@@ -8091,14 +8078,14 @@ mluOpUnique_v2(mluOpHandle_t handle,
  * - None.
  *
  * @par Scale Limitation
- * - The data type of input tensor \b params and output tensor \b output must be the same.
+ * - The data types of input tensor \b params and output tensor \b output must be the same.
  *
  * @par API Dependency
  * - None.
  *
  * @par Note
  * - The item in \b indices must be in the range of [-rank, rank), where rank is the element size
- *   of each dimension of \b params. E.g.,params.shape is [3,2], indices' first data item be in
+ *   of each dimension of \b params. For example, params.shape is [3,2], indices' first data item be in
  *   [-3, 3) and second item must be in [-2, 2).
  *
  * @par Example
@@ -8125,7 +8112,7 @@ mluOpGatherNd(mluOpHandle_t handle,
 /*!
  * @brief Distributes the elements in tensor \b updates to tensor \b output according to the coordinates
  * in tensor \b indices. If \b indices contains duplicates, then their \b updates are accumulated. This
- * operation is the inverse of the ::mluOpGatherNd operation which extracts values or slices from a given tensor.
+ * operation is the inverse of ::mluOpGatherNd which extracts values or slices from a given tensor.
  *
  * @par Deprecated
  * - ::mluOpScatterNd is deprecated and will be removed in the future release. It is recommended
@@ -8135,13 +8122,13 @@ mluOpGatherNd(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the scatter_nd operation.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] indices_desc
- * The descriptor of the \b indices tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b indices. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the index data. The value of the lowest dimension in \b indices
  * represents the coordinate of the element of \b updates in \b output tensor. If the coordinate contains negative
  * numbers or numbers that exceeds the range, then it will be deprecated.
  * @param[in] updates_desc
- * The descriptor of the \b updates tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b updates. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] updates
  * Pointer to the MLU memory that stores the input data.
  * @param[in] output_desc
@@ -8155,13 +8142,13 @@ mluOpGatherNd(mluOpHandle_t handle,
  * @par Data Type
  * - The ScatterNd operation supports the following data types for input tensor \b indices, \b updates,
  *   and output tensor \b output (except UPDATE mode on MLU590).
- *   The data type of \b updates and \b output must be the same.
+ *   The data types of \b updates and \b output must be the same.
  *   - indices: int32, int64
  *   - updates: int32, half, float
  *   - output: int32, half, float
- * - When using the update mode in MLU590, The ScatterNd operation supports the following data types
+ * - When using the update mode in MLU590, the ScatterNd operation supports the following data types
  *   for input tensor \b indices, \b updates, and output tensor \b output.
- *   The data type of \b updates and \b output must be the same.
+ *   The data types of \b updates and \b output must be the same.
  *   - indices: int32, int64
  *   - updates: bool, int8, uint8, int16, uint16, half, int32, uint32, float, int64, uint64
  *   - output: bool, int8, uint8, int16, uint16, half, int32, uint32, float, int64, uint64
@@ -8180,7 +8167,7 @@ mluOpGatherNd(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This operation only supports TensorFlow framework.
+ * - This function only supports TensorFlow framework.
  *
  * @par Example
  * - The example of scatter_nd operation is as follows:
@@ -8213,8 +8200,8 @@ mluOpScatterNd(mluOpHandle_t handle,
 /*!
  * @brief Distributes the elements in tensor \b updates to tensor \b output according to the coordinates
  * in tensor \b indices. Compared with ::mluOpScatterNd, this function supports the \b mode parameter that contains
- * more calculation methods when \b indices contains duplicates. This operation is the inverse of the ::mluOpGatherNd
- * operation which extracts values or slices from a given tensor.
+ * more calculation methods when \b indices contains duplicates. This operation is the inverse of ::mluOpGatherNd
+ * which extracts values or slices from a given tensor.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the scatter_nd operation.
@@ -8223,13 +8210,13 @@ mluOpScatterNd(mluOpHandle_t handle,
  * The scatter_nd mode used when \b indices contains duplicates. For detailed information,
  * see ::mluOpScatterNdMode_t.
  * @param[in] indices_desc
- * The descriptor of the \b indices tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b indices. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the index data. The value of the lowest dimension in \b indices
  * represents the coordinate of the element of \b updates in \b output tensor. If the coordinate contains negative
  * numbers or numbers that exceeds the range, then it will be ignored.
  * @param[in] updates_desc
- * The descriptor of the \b updates tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b updates. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] updates
  * Pointer to the MLU memory that stores the data for updating.
  * @param[in] input_desc
@@ -8247,9 +8234,9 @@ mluOpScatterNd(mluOpHandle_t handle,
  * @par Data Type
  * - The ScatterNd operation supports the following data types for input tensor \b indices, \b updates,
  *   and output tensor \b output. The data type of \b updates and \b output must be the same.
- *   - indices: int32, int64, uint32, uint64.
- *   - updates: int32, half, float.
- *   - output: int32, half, float.
+ *   - indices: int32, int64, uint32, uint64
+ *   - updates: int32, half, float
+ *   - output: int32, half, float
  *
  * @par Data Layout
  * - None.
@@ -8323,31 +8310,32 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
 // Group:GetIndicePairs
 /*!
  * @brief Computes the get_indice_paris operation, then returns the results in the output
- * tensor \b out_indices, \b indice_pairs and \b indice_num.
+ * tensor \b out_indices , \b indice_pairs and \b ind, ice_num.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * get_indice_pairs operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] sparse_conv_desc
- * The descriptor of sparse_conv parameter that needs convolution. For detailed information,
+ * The descriptor of the tensor \b sparse_conv that needs convolution. For detailed information,
  * see ::mluOpSparseConvolutionDescriptor_t.
  * @param[in] indices_desc
- * The descriptor of output grad. For detailed information,
+ * The descriptor of the output grad. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the indices tensor.
  * @param[in] out_indices_desc
- * The descriptor of out_indices including output locations. For detailed information,
+ * The descriptor of the tensor \b out_indices including output locations. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] out_indices
  * Pointer to the MLU memory that stores the out_indices tensor.
  * @param[in] indice_pairs_desc
- * The descriptor of indice_pairs between input locations and output locations.
+ * The descriptor of the tensor \b indice_pairs between input locations and output locations.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] indice_pairs
  * Pointer to the MLU memory that stores the indice_pairs tensor.
  * @param[in] indice_num_desc
- * The descriptor of indice_num including the number of input points while calculating with every kernel points.
+ * The descriptor of the tensor \b indice_num including the number of input points while calculating with every kernel
+ points.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] indice_num
  * Pointer to the MLU memory that stores the indice_num tensor.
@@ -8364,23 +8352,23 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * @par Data Type
  * - This function supports the combinations of the following data types for
  *   input tensor \b indices and output tensor \b out_indices, \b indice_pairs and \b indice_num.
- * - \b indices, \b out_indices, \b indice_pairs and \b indice_num data type: int32, int32, int32, int32
+ * - \b indices , \b out_indices , \b indice_pairs , and \b indice_num data type: int32, int32, int32, int32
  *
  * @par Data Layout
  * - None.
  *
  * @par Scale Limitation
  * - The params inverse and transpose are not supported now.
- * - Get_indice_pairs only supported 3d.
+ * - Get_indice_pairs only supports 3D.
  * - The input tensor and output tensor must meet the following requirements:
- * - The \b indices must be two dimensions.
- * - The \b indice_pairs must be three dimensions, and the first dimension value must be equal to kernel size,
- *   the second dimension must be 2, and the last dimension must be the same as the number of
- *   product of the first n-1 dimensions of the input tensor in sparse convolution.
- * - The \b out_indices should be 2 dimensions. The first dimension of \b out_indices is the number effective
- *   output point. and the second dimension of must product of the first n-1 dimensions of the input tensor
- *   in sparse convolution.
- * - The \b indice_num should be 1 dimensions. The first dimension of \b indice_num is the kernel size.
+ *   - The \b indices must be two dimensions.
+ *   - The \b indice_pairs must be three dimensions, and the first dimension value must be equal to kernel size,
+ *     the second dimension must be 2, and the last dimension must be the same as the number of
+ *     product of the first n-1 dimensions of the input tensor in sparse convolution.
+ *   - The \b out_indices should be 2 dimensions. The first dimension of \b out_indices is the number effective
+ *     output point. and the second dimension of must product of the first n-1 dimensions of the input tensor
+ *     in sparse convolution.
+ *   - The \b indice_num should be 1 dimension. The first dimension of \b indice_num is the kernel size.
  *
  * @par API Dependency
  * - Before calling this function, you need to prepare
@@ -8422,26 +8410,26 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  * to optimize the get_indice_pairs operation.
  *
  * The size of extra workspace is based on the given information of the get_indice_pairs
- * operation, including the input tensor descriptor \b sparse_conv_desc, and \b indices_desc, output
- * tensor descriptor \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc.
+ * operation, including the input tensor descriptor \b sparse_conv_desc , and \b indices_desc, output
+ * tensor descriptor \b out_indices_desc , \b indice_pairs_desc , and \b indice_num_desc.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * get_indice_pairs operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] sparse_conv_desc
- * The descriptor of sparse_conv parameter that needs convolution. For detailed information,
+ * The descriptor of the tensor \b sparse_conv that needs convolution. For detailed information,
  * see ::mluOpSparseConvolutionDescriptor_t.
  * @param[in] indices_desc
- * The descriptor of output grad. For detailed information,
+ * The descriptor of the tensor \b indices. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] out_indices_desc
- * The descriptor of out_indices including output locations. For detailed information,
+ * The descriptor of the tensor \b out_indices including output locations. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
- * The descriptor of indice_pairs between input locations and output locations.
+ * The descriptor of the tensor \b indice_pairs between input locations and output locations.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] indice_num_desc
- * The descriptor of indice_num including the number of input points while calculating with every kernel points.
+ * The descriptor of the tensor \b indice_num, the number of input points while calculating with every kernel points.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
@@ -8460,13 +8448,13 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
- *   tensor descriptors \b indices_desc, \b out_indices_desc, \b indice_pairs_desc and \b indice_num_desc before
+ * - You need to call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor to create and set
+ *   tensor descriptors \b indices_desc , \b out_indices_desc , \b indice_pairs_desc , and \b indice_num_desc before
  *   calling this function.
- * - You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
- *   and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information for
+ * - You need to call ::mluOpCreateSparseConvolutionDescriptor to create a descriptor,
+ *   and call ::mluOpSetSparseConvolutionDescriptor to set the tensor information for
  *   the descriptor \b sparse_conv_desc.
- * - The allocated extra workspace should be passed to the ::mluOpGetIndicePairs function to
+ * - The allocated extra workspace should be passed to ::mluOpGetIndicePairs to
  *   perform the ge_indice_pairs operation.
  *
  * @par Note
@@ -8511,9 +8499,9 @@ mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpSetTransposeDescriptor
- *   function to initialize and set information to the transpose descriptor.
- * - You need to call the ::mluOpDestroyTransposeDescriptor function to destroy the descriptor.
+ * - After calling this function, you can call ::mluOpSetTransposeDescriptor
+ *   to initialize and set information to the transpose descriptor.
+ * - You need to call ::mluOpDestroyTransposeDescriptor to destroy the descriptor.
  *
  * @par Note
  * - None.
@@ -8529,8 +8517,8 @@ mluOpCreateTransposeDescriptor(mluOpTransposeDescriptor_t *desc);
 
 // Group:Transpose
 /*!
- * @brief Initializes the transpose descriptor \b desc that is previously created
- * with the ::mluOpCreateTransposeDescriptor function, and set the information
+ * @brief Initializes the transpose descriptor \b desc that was previously created
+ * with ::mluOpCreateTransposeDescriptor, and set the information
  * about the transpose operation to the transpose descriptor \b desc.
  * The information includes the permute dimensions \b dims and permute rules \b permute.
  *
@@ -8573,7 +8561,7 @@ mluOpSetTransposeDescriptor(mluOpTransposeDescriptor_t desc, const int dims, con
 
 // Group:Transpose
 /*!
- * @brief Destroys a transpose descriptor \b desc that is previously created with the
+ * @brief Destroys a transpose descriptor \b desc that was previously created with the
  * ::mluOpCreateTensorDescriptor function.
  *
  * The transpose descriptor is defined in ::mluOpTransposeDescriptor_t and holds the information
@@ -8624,7 +8612,7 @@ mluOpDestroyTransposeDescriptor(mluOpTransposeDescriptor_t desc);
  * queues in the transpose operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in]  x_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b x. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] desc
  * The descriptor of the transpose operation. For detailed information,
@@ -8646,9 +8634,9 @@ mluOpDestroyTransposeDescriptor(mluOpTransposeDescriptor_t desc);
  * - None.
  *
  * @par API Dependency
- * - This function must be called after the ::mluOpCreateTensorDescriptor and
- *   ::mluOpSetTensorDescriptor functions to create and set the tensor descriptors \b x_desc.
- * - The allocated extra workspace should be passed to the ::mluOpTranspose_v2 function
+ * - This function must be called after ::mluOpCreateTensorDescriptor and
+ *   ::mluOpSetTensorDescriptor to create and set the tensor descriptor \b x_desc.
+ * - The allocated extra workspace should be passed to ::mluOpTranspose_v2
  *   to perform the transpose operation.
  *
  * @par Note
@@ -8669,7 +8657,7 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
 // Group:Transpose
 /*!
  * @brief Reorders the dimension according to the value of \b permute. To have better performance
- * for over 4D transpose with large-scale cases, call the * ::mluOpTranspose_v2 function.
+ * for over 4D transpose with large-scale cases, call ::mluOpTranspose_v2.
  *
  * @par Deprecated
  * - ::mluOpTranspose is deprecated and will be removed in the further release. It is recommended
@@ -8682,12 +8670,12 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  * The descriptor of the transpose operation. For detailed information,
  * see ::mluOpTransposeDescriptor_t.
  * @param[in] x_desc
- * The descriptor of the input tensor. For detailed information,
+ * The descriptor of the tensor \b x. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] y_desc
- * The descriptor of the output tensor. For detailed information,
+ * The descriptor of the tensor \b y. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] y
  * Pointer to the MLU memory that stores the output tensor.
@@ -8711,13 +8699,13 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  *   passed to this function. See each parameter description for details.
  *
  * @par Scale Limitation
- * - The \b x, \b y and \b permute have the same shape.
- * - The dimension size of \b x, \b y and \b permute should be less than or equal to
+ * - The \b x , \b y , and \b permute have the same shape.
+ * - The dimension size of \b x , \b y , and \b permute should be less than or equal to
  *   MLUOP_DIM_MAX.
  * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
  * - The \b y i-th dimension will correspond to the \b x permute[i]-th dimension.
  * - The process of computing, the copy times of memcpy should be less than 65536.
- * - The data type of input tensor and output tensor should be same.
+ * - The data types of input tensor and output tensor should be same.
  *
  * @par Note
  * - None.
@@ -8753,8 +8741,8 @@ mluOpTranspose(mluOpHandle_t handle,
  * transpose with extra input space.
  *
  * This function needs extra MLU memory as the workspace to work.
- * You can get the size of the workspace \b workspace_size with the
- * ::mluOpGetTransposeWorkspaceSize function.
+ * You can get the size of the workspace \b workspace_size with
+ * ::mluOpGetTransposeWorkspaceSize.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and
@@ -8763,18 +8751,18 @@ mluOpTranspose(mluOpHandle_t handle,
  * @param[in] desc
  * The descriptor of the transpose operation. For detailed information, see ::mluOpTransposeDescriptor_t.
  * @param[in] x_desc
- * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b x. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor.
  * @param[out] y_desc
- * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b y. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] y
  * Pointer to the MLU memory that stores the output tensor.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the transpose operation.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the transpose operation.
- * You can get the size of the workspace with the ::mluOpGetTransposeWorkspaceSize function.
+ * You can get the size of the workspace with ::mluOpGetTransposeWorkspaceSize.
 
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
@@ -8791,12 +8779,12 @@ mluOpTranspose(mluOpHandle_t handle,
  * - The dimension of input tensor should be less than or equal to 8D.
  *
  * @par Scale Limitation
- * - The \b x, \b y and \b permute have the same shape.
- * - The dimension size of \b x, \b y and \b permute should be less than or equal to MLUOP_DIM_MAX.
+ * - The \b x , \b y , and \b permute have the same shape.
+ * - The dimension size of \b x , \b y , and \b permute should be less than or equal to MLUOP_DIM_MAX.
  * - The \b permute i-th dimension is in the range [0,...n-1], where n is the rank of the \b x.
  * - The \b y i-th dimension will correspond to \b x permute[i]-th dimension.
  * - The process of computing, the copy times of memcpy should be less than 65536.
- * - The data type of input tensor and output tensor should be same.
+ * - The data types of input tensor and output tensor should be same.
  *
  * @par API Dependency
  * - Before calling this function to implement transpose, you need to prepare
@@ -8835,8 +8823,8 @@ mluOpTranspose_v2(mluOpHandle_t handle,
 
 // Group:Reduce
 /*!
- * @brief Creates a descriptor pointed by \b reduce_desc that holds the \b axis,\b reduce_op,
- * \b tensor_type, \b nan_propagation, \b tensor_indices, \b indices_type and \b p.
+ * @brief Creates a descriptor pointed by \b reduce_desc that holds the \b axis , \b reduce_op ,
+ * \b tensor_type , \b nan_propagation , \b tensor_indices , \b indices_type , and \b p.
  * The information is defined in ::mluOpReduceDescriptor_t.
  *
  * @param[out] reduce_desc
@@ -8856,7 +8844,7 @@ mluOpTranspose_v2(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpDestroyReduceDescriptor function to destroy the descriptor.
+ * - You need to call ::mluOpDestroyReduceDescriptor to destroy the descriptor.
  *
  * @par Note
  * - None.
@@ -8872,12 +8860,12 @@ mluOpCreateReduceDescriptor(mluOpReduceDescriptor_t *reduce_desc);
 
 // Group:Reduce
 /*!
- * @brief Initializes the reduce descriptor \b reduce_desc that is previously created with
- * the ::mluOpCreateReduceDescriptor function, and sets the information about the reduce
+ * @brief Initializes the reduce descriptor \b reduce_desc that was previously created with
+ * ::mluOpCreateReduceDescriptor, and sets the information about the reduce
  * operation. To use p-norm in this operation, call ::mluOpSetReduceDescriptor_v2.
  *
  * @param[in] reduce_desc
- * The descriptor of the reduce operation. For detailed information,
+ * The descriptor of the tensor \b reduce. For detailed information,
  * see ::mluOpReduceDescriptor_t.
  * @param[in] axis[]
  * The axis dimension vector of the reduce operation.
@@ -8936,26 +8924,26 @@ mluOpSetReduceDescriptor(mluOpReduceDescriptor_t reduce_desc,
 
 // Group:Reduce
 /*!
- * @brief Initializes the reduce descriptor \b reduce_desc that is previously created with
- * the ::mluOpCreateReduceDescriptor function, and sets the information about the reduce
+ * @brief Initializes the reduce descriptor \b reduce_desc that was previously created with
+ * ::mluOpCreateReduceDescriptor, and sets the information about the reduce
  * operation. Compared with ::mluOpSetReduceDescriptor, this function supports \b
  * reduce_op == \p MLUOP_REDUCE_NORMP, and includes more information such as \b p.
  *
  * @param[in] reduce_desc
- * The descriptor of the reduce operation.
+ * The descriptor of the the tensor \b reduce.
  * For detailed information, see ::mluOpReduceDescriptor_t.
  * @param[in] axis[]
  * The axis dimension vector of the reduce operation.
  * @param[in] axis_num
  * The size of axis vector.
  * @param[in] reduce_op
- * Enumeration to specify the reduce mode.
+ * The reduce mode.
  * For detailed information, see ::mluOpReduceOp_t.
  * @param[in] tensor_type
  * The data type is used in computing the reduce operation.
  * For detailed information, see ::mluOpDataType_t.
  * @param[in] nan_propagation
- * The NaN propagation mode. Default
+ * The NaN propagation mode. The default
  * value is NOT_PROPAGATE_NAN. Now reduce does not support this parameter.
  * For detailed information, see ::mluOpNanPropagation_t.
  * @param[in] tensor_indices
@@ -9005,8 +8993,8 @@ mluOpSetReduceDescriptor_v2(mluOpReduceDescriptor_t reduce_desc,
 
 // Group:Reduce
 /*!
- * @brief Destroys a reduce descriptor \b reduce_desc that is previously created with
- * the ::mluOpCreateReduceDescriptor.
+ * @brief Destroys a reduce descriptor \b reduce_desc that was previously created with
+ * ::mluOpCreateReduceDescriptor.
  *
  * The reduce descriptor is defined in ::mluOpReduceDescriptor_t and holds the information
  * about the reduce.
@@ -9058,13 +9046,13 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * For more information about workspace, see "Cambricon BANGC OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the reduce operation.
- * You can get the size of the workspace with the ::mluOpGetReduceOpWorkspaceSize function.
+ * You can get the size of the workspace with ::mluOpGetReduceOpWorkspaceSize.
  * @param[in] alpha
  * Host pointer to scaling factor of tensor output. The value of this parameter can be NULL.
  * @param[in] beta
  * Host pointer to bias factor of tensor output. The value of this parameter can be NULL.
  * @param[in] input_desc
- * Descriptor of input data. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the input data. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] indices_size_inbytes
@@ -9072,7 +9060,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * @param[out] indices
  * Pointer to the MLU memory that stores the indices tensor.
  * @param[in] output_desc
- * Descriptor of output data. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -9080,7 +9068,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - Data types of input tensor and output tensor must be the same.
+ * - The data types of input tensor and output tensor must be the same.
  * - The supported data types of input and output tensors are as follows:
  *   - When \b reduce_op == \p MLUOP_REDUCE_MAX || \b reduce_op == \p MLUOP_REDUCE_MIN:
  *     - input: float, half, int32
@@ -9139,7 +9127,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  *   passed to this function. Call ::mluOpCreateReduceDescriptor to create the parameter \b reduce_desc.
  *   Then call ::mluOpSetReduceDescriptor_v2 to set information about the parameter \b reduce_desc and
  *   call ::mluOpGetReduceOpWorkspaceSize to get extra MLU memory size in reduce operation.
- * - After calling this function, the ::mluOpDestroyReduceDescriptor needs to be called to destroyed the
+ * - After calling this function, ::mluOpDestroyReduceDescriptor needs to be called to destroyed the
  *   parameter \b reduce_desc.
  *
  * @par Note
@@ -9169,12 +9157,14 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  *   - Whether you set \b tensor_type parameter or not, the data type used in computing the reduce operation
  *     of these two modes is fixed as float.
  * - The following modes support input with stride:
- *   - \p MLUOP_REDUCE_ADD, \p MLUOP_REDUCE_AVG, \p MLUOP_REDUCE_MUL, \p MLUOP_REDUCE_MAX, \p MLUOP_REDUCE_MIN,
- *     \p MLUOP_REDUCE_OR, \p MLUOP_REDUCE_AND, \p MLUOP_REDUCE_NORM1, \p MLUOP_REDUCE_NORM2 and MLUOP_REDUCE_NORMP.
+ *   - \p MLUOP_REDUCE_ADD , \p MLUOP_REDUCE_AVG , \p MLUOP_REDUCE_MUL , \p MLUOP_REDUCE_MAX , \p MLUOP_REDUCE_MIN ,
+ *     \p MLUOP_REDUCE_OR , \p MLUOP_REDUCE_AND , \p MLUOP_REDUCE_NORM1 , \p MLUOP_REDUCE_NORM2 , and
+ MLUOP_REDUCE_NORMP.
  * - This function reduces tensor input by implementing the equation output = alpha * reduce(input) + beta,
  *   given tensors \b input and \b output and scaling factors \b alpha and \b beta.
  *   - The following modes support \b alpha and \b beta:
- *     - \p MLUOP_REDUCE_ADD, \p MLUOP_REDUCE_AVG, \p MLUOP_REDUCE_MUL, \p MLUOP_REDUCE_NORM1, \p MLUOP_REDUCE_NORM2,
+ *     - \p MLUOP_REDUCE_ADD , \p MLUOP_REDUCE_AVG , \p MLUOP_REDUCE_MUL , \p MLUOP_REDUCE_NORM1 , \p MLUOP_REDUCE_NORM2
+ ,
  *       and \p MLUOP_REDUCE_NORMP.
  * - The \b alpha and \b beta can set NULL, or the \b alpha float value is 1.0 and the \b beta float value
  *   is 0.0 for modes that not support \b alpha and \b beta.
@@ -9234,13 +9224,13 @@ mluOpReduce(mluOpHandle_t handle,
  * queues in the reduce peration.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
- * A descriptor of input tensor.
+ * The descriptor of input tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] output_desc
- * A descriptor of output tensor.
+ * The descriptor of output tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] reduce_op
- * An operation enum, which indicates a specific reduce operation.
+ * A specific reduce operation.
  * For detailed information, see ::mluOpReduceDescriptor_t.
  * @param[out] workspace_size_inbytes
  * Pointer to the returned size of the extra workspace in bytes that is
@@ -9280,19 +9270,19 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
 // Group:ActiveRotatedFilterForward
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ::mluOpActiveRotatedFilterForward operation. The size of the extra
+ * workspace to optimize ::mluOpActiveRotatedFilterForward. The size of the extra
  * workspace is based on the given information of the ActiveRotatedFilterForward operation,
  * including the input tensor descriptor \b input_desc. For more information about the workspace,
  * see "Cambricon BANGC OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ::mluOpActiveRotatedFilterForward operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpActiveRotatedFilterForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
- * The descriptor of input data \b input, which contains dimension, data type and data layout.
+ * The descriptor of the input data, which contains dimension, data type, and data layout.
  * @param[out] workspace_size
  * A host pointer to the returned size of the extra workspace in bytes that is used in
- * the ::mluOpActiveRotatedFilterForward operation.
+ * ::mluOpActiveRotatedFilterForward.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -9307,7 +9297,7 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - This function must be called before the ::mluOpActiveRotatedFilterForward function.
+ * - This function must be called before ::mluOpActiveRotatedFilterForward.
  *
  * @par Note
  * - None.
@@ -9333,13 +9323,11 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * the ActiveRotatedFilterForward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] input_desc
- * The descriptor of input data \b input, which contains dimension, data type
- * and data layout.
+ * The descriptor of input data, which contains dimension, data type, and data layout.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] indices_desc
- * The descriptor of input data \b indices, which contains dimension, data type
- * and data layout.
+ * The descriptor of input data \b indices, which contains dimension, data type, and data layout.
  * @param[in] indices
  * Pointer to the MLU memory that stores the indices tensor. It is used to
  * specify the position of each element of canonical filter after rotations.
@@ -9351,8 +9339,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * The size of the extra workspace in bytes that is used in
  * the ActiveRotatedFilterForward operation.
  * @param[in] output_desc
- * The descriptor of output data \b output, which contains dimension, data type
- * and data layout.
+ * The descriptor of output data, which contains dimension, data type, and data layout.
  * @param[out] output
  * Pointer to the MLU memory that stores the \b output tensor.
  *
@@ -9360,14 +9347,14 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
- * - The supported data types of \b input, \b indices and \b output are as follows:
- *   Data types of input tensor and output tensor should be the same.
+ * - The data types of input tensor and output tensor should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - output tensor: half, float
  *   - indices tensor: int32
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b indices, and \b output are as follows:
+ * - The supported data layouts of \b input tensor, \b indices tensor, and \b output tensor are as follows:
  *   - input tensor: MLUOP_LAYOUT_ARRAY
  *   - output tensor: MLUOP_LAYOUT_ARRAY
  *   - indices tensor: MLUOP_LAYOUT_ARRAY
@@ -9391,7 +9378,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * @par API Dependency
  * - Before calling this function, you need to call
  *   ::mluOpGetActiveRotatedFilterForwardWorkspaceSize to get the extra space size
- *   needed in ::mluOpActiveRotatedFilterForward operation.
+ *   needed in ::mluOpActiveRotatedFilterForward.
  *
  * @par Note
  * - None.
@@ -9428,12 +9415,12 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] rois_desc
- * The descriptor of rois tensor, which contains the dimension and layout of rois tensor.
+ * The descriptor of the tensor \b rois, which contains the dimension and layout of rois tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor.
  * @param[in] offset_desc
- * The descriptor of offset tensor, which contains the dimension and layout of offset tensor.
+ * The descriptor of the tensor \b offset, which contains the dimension and layout of offset tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] offset
  * Pointer to the MLU memory that stores the offset tensor.
@@ -9449,7 +9436,7 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * @param[in] gamma
  * A float value which is the scale factor of offset.
  * @param[in] output_desc
- * The descriptor of output tensor, which contains the dimension and layout of output tensor.
+ * The descriptor of the output tensor, which contains the dimension and layout of output tensor.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
@@ -9457,15 +9444,15 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - The supported data types of \b input, \b rois, \b offset and \b output are as follows:
- *   Data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - rois tensor: half, float
  *   - offset tensor: half, float
  *   - output tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b rois, \b offset and \b output are as follows:
+ * - The supported data layouts of \b input tensor, \b rois tensor, \b offset tensor, and \b output tensor are as
+ follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
  *   - offset tensor: \p MLUOP_LAYOUT_ARRAY
@@ -9527,26 +9514,26 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
 // Group:DeformRoiPool
 /*!
  * @brief Computes the gradient of input \b grad_input and the gradient of offset \b grad_offset
- * based on the gradient of output \b grad_output, input \b input, ROI \b rois and offset \b offset.
+ * based on the gradient of output \b grad_output , input \b input , ROI \b rois , and offset \b offset.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * ::mluOpDeformRoiPoolBackward operation. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpDeformRoiPoolBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] grad_output_desc
- * The descriptor of grad_output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b grad_output. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] grad_output
  * Pointer to the MLU memory that stores the grad_output tensor.
  * @param[in] input_desc
- * The descriptor of input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b input. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] rois_desc
- * The descriptor of rois tensor, which contains the dimension and layout of rois tensor.
+ * The descriptor of the tensor \b rois, which contains the dimension and layout of rois tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor.
  * @param[in] offset_desc
- * The descriptor of offset tensor, which contains the dimension and layout of offset tensor.
+ * The descriptor of the tensor \b offset, which contains the dimension and layout of offset tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] offset
  * Pointer to the MLU memory that stores the offset tensor.
@@ -9562,11 +9549,11 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
  * @param[in] gamma
  * A float value which is the scale factor of offset.
  * @param[in] grad_input_desc
- * The descriptor of grad_input tensor, which contains the dimension and layout of grad_input tensor.
+ * The descriptor of the tensor \b grad_input, which contains the dimension and layout of grad_input tensor.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the gradient of the input tensor.
  * @param[in] grad_offset_desc
- * The descriptor of grad_offset tensor, which contains the dimension and layout of grad_offset tensor.
+ * The descriptor of the tensor \b grad_offset, which contains the dimension and layout of grad_offset tensor.
  * @param[out] grad_offset
  * Pointer to the MLU memory that stores the gradient of the offset tensor.
  *
@@ -9574,9 +9561,7 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - The supported data types of grad_output tensor \b grad_output, input tensor \b input, rois tensor \b rois,
- *   offset tensor \b offset, grad_input tensor \b grad_input and grad_offset tensor \b grad_offset are as follows:
- *   Data types of all tensors should be the same.
+ * - The supported data types of input and output tentors are as follows:
  *   - grad_output tensor: half, float
  *   - input tensor: half, float
  *   - rois tensor: half, float
@@ -9585,8 +9570,8 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
  *   - grad_offset tensor: half, float
  *
  * @par Data Layout
- * - The supported data layouts of grad_output tensor \b grad_output, input tensor \b input, rois tensor \b rois,
- *   offset tensor \b offset, grad_input tensor \b grad_input and grad_offset tensor \b grad_offset are as follows:
+ * - The supported data layouts of \b grad_output tensor, \b input tensor, \b rois tensor,
+ *   \b offset tensor, \b grad_input tensor, and \b grad_offset tensor are as follows:
  *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - rois tensor: \p MLUOP_LAYOUT_ARRAY
@@ -9650,34 +9635,34 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  *
  * The size of extra workspace is based on the given information of the indice
  * convolution backward data operation, including the input descriptor
- * \b input_grad_desc, the filter descriptor \b filter_desc, the indice pairs
- * descriptor \b indice_pairs_desc, the output descriptor \b indice_pairs_desc,
- * the array \b indice_num and the scaler \b inverse. For more information
+ * \b input_grad_desc, the filter descriptor \b filter_desc , the indice pairs
+ * descriptor \b indice_pairs_desc , the output descriptor \b indice_pairs_desc ,
+ * the array \b indice_num , and the scaler \b inverse. For more information
  * about the workspace, see "Cambricon BANGC OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * the ::mluOpIndiceConvolutionBackwardData operation. For detailed
+ * ::mluOpIndiceConvolutionBackwardData. For detailed
  * information, see ::mluOpHandle_t.
  * @param[in] output_grad_desc
- * The descriptor of the output_grad tensor. For detailed information, see
+ * The descriptor of the tensor \b output_grad. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] filters_desc
- * The descriptor of the filters tensor. For detailed information, see
+ * The descriptor of the tensor \b filters. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
- * The descriptor of the indice_pairs tensor. For detailed information, see
+ * The descriptor of the tensor \b indice_pairs. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] input_grad_desc
- * The descriptor of the input_grad tensor. For detailed information, see
+ * The descriptor of the tensor \b input_grad. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] indice_num
  * The array to describe the valid data number in the indice_pairs tensor.
  * @param[in] inverse
  * The parameter to describe whether the operation performs deconvolution logic.
  * @param[in] workspace_size
- * The size of the extra workspace in bytes that is used in the
- * ::mluOpIndiceConvolutionBackwardData operation.
+ * The size of the extra workspace in bytes that is used in
+ * ::mluOpIndiceConvolutionBackwardData.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -9692,10 +9677,9 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - This function must be called before the ::mluOpIndiceConvolutionBackwardData
- *   function.
- * - The ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
- *   create and set the tensor descriptor \b output_grad_desc, \b filters_desc,
+ * - This function must be called before ::mluOpIndiceConvolutionBackwardData.
+ * - ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor
+ *   create and set the tensor descriptor \b output_grad_desc , \b filters_desc ,
  *   \b indice_pairs_desc and \b input_grad_desc before this function is called.
  *
  * @par Note
@@ -9721,7 +9705,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
 /*!
  * @brief Performs the back propagation of an indice convolution operation to
  * compute the gradient of input \b input_grad based on the gradient of response
- * \b output_grad, the filter tensor \b filter, the indice tensor \b indice_pairs
+ * \b output_grad , the filter tensor \b filter , the indice tensor \b indice_pairs ,
  * and helper parameters: array \b indice_num, scaler \b inverse and \b sub_m.
  *
  * The tensors \b input_grad and \b output_grad are reordered from origin input
@@ -9733,25 +9717,25 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * the ::mluOpIndiceConvolutionBackwardData operation. For detailed
+ * ::mluOpIndiceConvolutionBackwardData. For detailed
  * information, see ::mluOpHandle_t.
  * @param[in] output_grad_desc
  * The descriptor of input data \b output_grad, which contains dimension, data
- * type and data layout.
+ * type, and data layout.
  * @param[in] output_grad
- * Pointer to the MLU memory that stores the output_grad tensor. It is the
+ * Pointer to the MLU memory that stores the \b output_grad tensor. It is the
  * gradient data of output tensor after reordered.
  * @param[in] filters_desc
- * The descriptor of input data \b filters, which contains dimension, data type
- * and data layout. It contains N, H, W and C information when it is a 4D
+ * The descriptor of input data \b filters, which contains dimension, data type,
+ * and data layout. It contains N, H, W, and C information when it is a 4D
  * tensor, or N, D, H, W and C information when it is a 5D tensor.
  * @param[in] filters
  * Pointer to the MLU memory that stores the filter tensor.
  * @param[in] indice_pairs_desc
  * The descriptor of input data \b indice_pairs, which contains dimension,
- * data type and data layout.
+ * data type, and data layout.
  * @param[in] indice_pairs
- * Pointer to the MLU memory that stores the indice_pairs tensor. It is used to
+ * Pointer to the MLU memory that stores the \b indice_pairs tensor. It is used to
  * specify the calculation pairs between \b input_grad and \b output_grad.
  * @param[in] indice_num
  * The array to describe the valid data number in \b indice_pairs.
@@ -9761,15 +9745,15 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * The parameter to describe whether the operation performs sub_m convolution
  * logic or sparce convolution logic.
  * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the
- * ::mluOpIndiceConvolutionBackwardData operation. For more information about
+ * Pointer to the MLU memory that is used as an extra workspace for
+ * ::mluOpIndiceConvolutionBackwardData. For more information about
  * workspace, see "Cambricon BANGC OPS User Guide".
  * @param[in] workspace_size
- * The size of the extra workspace in bytes that is used in the
- * ::mluOpIndiceConvolutionBackwardData operation.
+ * The size of the extra workspace in bytes that is used in
+ * ::mluOpIndiceConvolutionBackwardData.
  * @param[in] input_grad_desc
- * The descriptor of output data \b input_grad, which contains dimension, data
- * type and data layout.
+ * The descriptor of the output data \b input_grad, which contains dimension, data
+ * type, and data layout.
  * @param[out] input_grad
  * Pointer to the MLU memory that stores the \b output tensor.
  *
@@ -9778,20 +9762,17 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - The supported data types of \b output_grad, \b filters, \b indice_pairs and
- *   \b input_grad are as follows:
- *   Data types of output_grad tensor, filters tensor and input_grad tensor should
- *   be the same.
+ * - The supported data types of input and output tensors are as follows:
  *   - output_grad tensor: half, float
  *   - filters tensor: half, float
  *   - indice_pairs tensor: int32
  *   - input_grad tensor: half, float
  *
- * - The supported data type of array \b indice_num, scaler \b inverse and
- *   \b sub_m is int64.
+ * - The supported data type of array \b indice_num tensor, scaler \b inverse tensor, and
+ *   \b sub_m tensor is int64.
  *
  * @par Data Layout
- * - The supported data layouts of \b output_grad, \b filters and \b input_grad
+ * - The supported data layouts of \b output_grad tensor, \b filters tensor, and \b input_grad tensor
  *   are as follows:
  *   The layout MLUOP_LAYOUT_ARRAY of filters tensor is recognized as DHWCN,
  *   which is not defined yet.
@@ -9825,7 +9806,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  *   maximum number of \b indice_num.
  *
  * @par API Dependency
- * - The function ::mluOpGetIndiceConvolutionBackwardDataWorkspaceSize should
+ * - ::mluOpGetIndiceConvolutionBackwardDataWorkspaceSize should
  *   be called to get the extra space size before this function is called.
  *
  * @par Note
@@ -9866,23 +9847,23 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  * to optimize the indice_convolution_backward_filter operation.
  *
  * The size of extra workspace is based on the given information of the indice_convolution_backward_filter
- * operation, including the input tensor descriptor \b features_desc, \b output_grad_desc and \b indice_pairs_desc,
- * output tensor descriptor \b filters_grad_desc, and the array \b indice_num[].
+ * operation, including the input tensor descriptor \b features_desc , \b output_grad_desc , and \b indice_pairs_desc ,
+ * output tensor descriptor \b filters_grad_desc , and the array \b indice_num[].
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * indice_convolution_backward_filter operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
- * The descriptor of features that need convolution. For detailed information,
+ * The descriptor of the tensor \b features that need convolution. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] output_grad_desc
- * The descriptor of output grad. For detailed information,
+ * The descriptor of the tensor \b output_grad. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
- * The descriptor of indice pairs between input locations and output locations. For detailed information,
+ * The descriptor of the tensor \b indice_pairs between input locations and output locations. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] filters_grad_desc
- * The descriptor of filters grad tensor. For detailed information,
+ * The descriptor of the tensor \b filters_grad. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_num
  * Pointer to the host memory that stores the indice pairs number.
@@ -9907,10 +9888,10 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
- *   tensor descriptors \b features_desc, \b output_grad_desc, \b indice_pairs_desc and \b filters_grad_desc before
+ * - You need to call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor to create and set
+ *   tensor descriptors \b features_desc , \b output_grad_desc , \b indice_pairs_desc , and \b filters_grad_desc before
  *   calling this function.
- * - The allocated extra workspace should be passed to the ::mluOpIndiceConvolutionBackwardFilter function to
+ * - The allocated extra workspace should be passed to ::mluOpIndiceConvolutionBackwardFilter to
  *   perform the indice_convolution_backward_filter operation.
  *
  * @par Note
@@ -9942,17 +9923,18 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * indice_convolution_backward_filter operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
- * The descriptor of features that need convolution. For detailed information,
+ * The descriptor of the tensor \b features that need convolution. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] features
  * Pointer to the MLU memory that stores the features tensor.
  * @param[in] output_grad_desc
- * The descriptor of output grad. For detailed information,
+ * The descriptor of the tensor \b output_grad. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] output_grad
  * Pointer to the MLU memory that stores the output grad tensor.
  * @param[in] indice_pairs_desc
- * The descriptor of indice pairs between inputs locations and outputs locations. For detailed information,
+ * The descriptor of the tensor \b indice_pairs between inputs locations and outputs locations. For detailed
+ information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs
  * Pointer to the MLU memory that stores the indice pairs tensor.
@@ -9968,7 +9950,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] filters_grad_desc
- * The descriptor of filters grad tensor. For detailed information,
+ * The descriptor of the tensor \b filters_grad. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] filters_grad
  * Pointer to the MLU memory that stores the output tensor.
@@ -9979,9 +9961,9 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the combinations of the following data types for
- *   input tensor \b features, \b output_grad, \b indice_pairs_num and output tensor \b filters_grad.
- *   - \b features, \b output_grad, \b indice_pairs \b filters_grad data type: half, half, int32, half
- *   - \b features, \b output_grad, \b indice_pairs \b filters_grad data type: float, float, int32, float
+ *   input tensor \b features , \b output_grad , \b indice_pairs_num , and output tensor \b filters_grad.
+ *   - \b features , \b output_grad , \b indice_pairs , \b filters_grad data type: half, half, int32, half
+ *   - \b features , \b output_grad , \b indice_pairs , \b filters_grad data type: float, float, int32, float
  *
  * @par Data Layout
  * - None.
@@ -10036,16 +10018,16 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
 // Group:RoiPointPool3d
 /*!
  * @brief Returns in \b size the size of the MLU memory in bytes that is used as
- * an extra workspace to optimize the ::mluOpRoiPointPool3d operation.
+ * an extra workspace to optimize ::mluOpRoiPointPool3d.
  *
  * The size of extra workspace is based on the given information of the input
- * and output tensor descriptors, including \b points_desc, \b point_features_desc,
- * \b boxes3d_desc, \b pooled_features_desc, and \b pooled_empty_flag_desc.
+ * and output tensor descriptors, including \b points_desc , \b point_features_desc ,
+ * \b boxes3d_desc , \b pooled_features_desc , and \b pooled_empty_flag_desc.
  * For more information about the workspace, see "Cambricon BANGC OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues
- * in the ::mluOpRoiPointPool3d operation. For detailed information, see ::mluOpHandle_t.
+ * in ::mluOpRoiPointPool3d. For detailed information, see ::mluOpHandle_t.
  * @param[in] batch_size
  * The number of batches of the input.
  * @param[in] pts_num
@@ -10073,7 +10055,7 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] size
  * A host pointer to the returned size of the extra workspace in bytes that is
- * used in the ::mluOpRoiPointPool3d operation.
+ * used in ::mluOpRoiPointPool3d.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -10087,7 +10069,7 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - The allocated extra workspace should be passed to the ::mluOpRoiPointPool3d.
+ * - The allocated extra workspace should be passed to ::mluOpRoiPointPool3d.
  *
  * @note
  * - None.
@@ -10119,7 +10101,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues
- * in the ::mluOpRoiPointPool3d operation. For detailed information, see ::mluOpHandle_t.
+ * in ::mluOpRoiPointPool3d. For detailed information, see ::mluOpHandle_t.
  * @param[in] batch_size
  * The number of batches of the input.
  * @param[in] pts_num
@@ -10151,8 +10133,8 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  * see "Cambricon BANGC OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in
- * the ::mluOpRoiPointPool3d operation. You can get the size of the workspace with
- * the ::mluOpGetRoiPointPool3dWorkspaceSize function.
+ * ::mluOpRoiPointPool3d. You can get the size of the workspace with
+ * ::mluOpGetRoiPointPool3dWorkspaceSize.
  * @param[in] pooled_features_desc
  * The descriptor of the first output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
@@ -10168,7 +10150,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - The supported data types for input and output are as follows:
- *   <b>Note that the data type of \b points, \b point_features, \b boxes3d, and
+ *   <b>Note that the data type of \b points , \b point_features , \b boxes3d , and
  *   \b pooled_features must be the same.
  *   - points: half, float
  *   - point_features: half, float
@@ -10183,8 +10165,8 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - Before calling this function to perform ::mluOpRoiPointPool3d operation, you need to
- *   get the size of workspace by the ::mluOpGetRoiPointPool3dWorkspaceSize function.
+ * - Before calling this function to perform ::mluOpRoiPointPool3d, you need to
+ *   get the size of workspace by ::mluOpGetRoiPointPool3dWorkspaceSize.
  *
  * @par Example
  * - None.
@@ -10215,19 +10197,19 @@ mluOpRoiPointPool3d(mluOpHandle_t handle,
 // Group:ThreeNNForward
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the ::mluOpThreeNNForward operation. The size of the extra workspace is
- * based on the given information of the ::mluOpThreeNNForward operation, including the input
+ * workspace to optimize ::mluOpThreeNNForward. The size of the extra workspace is
+ * based on the given information of ::mluOpThreeNNForward, including the input
  * tensor descriptor \b known_desc. For more information about the workspace, see
  * "Cambricon BANGC OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ::mluOpThreeNNForward operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpThreeNNForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] known_desc
- * The descriptor of input data \b known, which contains dimension, data type and data layout.
+ * The descriptor of input data \b known, which contains dimension, data type, and data layout.
  * @param[out] workspace_size
  * A host pointer to the returned size of the extra workspace in bytes that is used in
- * the ::mluOpThreeNNForward operation.
+ * ::mluOpThreeNNForward.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -10242,7 +10224,7 @@ mluOpRoiPointPool3d(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - This function must be called before the ::mluOpThreeNNForward function.
+ * - This function must be called before ::mluOpThreeNNForward.
  *
  * @par Note
  * - None.
@@ -10265,27 +10247,27 @@ mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
  * finds the closest 3 points, and outputs the dist and index of the known point in known dataset.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * ::mluOpThreeNNForward operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpThreeNNForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] unknown_desc
- * The descriptor of input data \b unknown, which contains dimension, data type and data layout.
+ * The descriptor of input data \b unknown, which contains dimension, data type, and data layout.
  * @param[in] unknown
  * Pointer to the MLU memory that stores the unknown tensor.
  * @param[in] known_desc
- * The descriptor of input data \b known, which contains dimension, data type and data layout.
+ * The descriptor of input data \b known, which contains dimension, data type, and data layout.
  * @param[in] known
  * Pointer to the MLU memory that stores the known tensor.
  * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the ::mluOpThreeNNForward
- * operation. For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * Pointer to the MLU memory that is used as an extra workspace for ::mluOpThreeNNForward.
+ * For more information about workspace, see "Cambricon BANGC OPS User Guide".
  * @param[in] workspace_size
- * The size of the extra workspace in bytes that is used in the ::mluOpThreeNNForward operation.
+ * The size of the extra workspace in bytes that is used in ::mluOpThreeNNForward.
  * @param[in] dist2_desc
- * The descriptor of output data \b dist2, which contains dimension, data type and data layout.
+ * The descriptor of the output data \b dist2, which contains dimension, data type, and data layout.
  * @param[out] dist2
  * Pointer to the MLU memory that stores the \b dist2 tensor.
  * @param[in] idx_desc
- * The descriptor of output data \b idx, which contains dimension, data type and data layout.
+ * The descriptor of the output data \b idx, which contains dimension, data type, and data layout.
  * @param[out] idx
  * Pointer to the MLU memory that stores the \b idx tensor.
  *
@@ -10302,20 +10284,20 @@ mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
  *   - idx tensor: int32
  *
  * @par Data Layout
- * - The supported data layouts of \b unknown, \b known, \b dist2 and \b idx:
+ * - The supported data layouts of \b unknown tensor, \b known tensor, \b dist2 tensor, and \b idx tensor:
  *   \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
  * - The shape of \b unknown, \b dist2 and \b idx should be [b, n, 3].
  * - The shape of \b known should be [b, m, 3].
- * - The shape of \b unknown, \b dist2, \b idx and \b known dims[0](b) should be equal.
- * - The shape of \b unknown, \b dist2, \b idx and \b known dims[2](3) should be equal to 3.
- * - The shape of \b unknown, \b dist2, \b idx and \b known dims[1](n) should be equal and larger
+ * - The shape of \b unknown , \b dist2 , \b idx , and \b known dims[0](b) should be equal.
+ * - The shape of \b unknown , \b dist2 , \b idx , and \b known dims[2](3) should be equal to 3.
+ * - The shape of \b unknown , \b dist2 , \b idx , and \b known dims[1](n) should be equal and larger
  *   than 0.
  *
  * @par API Dependency
  * - Before calling this function you need to call ::mluOpGetThreeNNForwardWorkspaceSize
- *   to get the extra space size needed in ::mluOpThreeNNForward operation.
+ *   to get the extra space size needed in ::mluOpThreeNNForward.
  *
  * @par Note
  * - None.
@@ -10345,26 +10327,26 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  * to boost up indice_convolution_forward computation.
  *
  * The size of workspace is deduced from the input including input tensor descriptor
- * \b features_desc, \b filters_desc, \b indice_pairs_desc, output tensor descriptor
- * \b features_out_desc and array indice_num[].
+ * \b features_desc , \b filters_desc , \b indice_pairs_desc , output tensor descriptor
+ * \b features_out_desc , and array indice_num[].
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * indice_convolution_forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
- * The descriptor of input features. For detailed information,
+ * The descriptor of the tensor \b features. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] filters_desc
- * The descriptor of filters. For detailed information,
+ * The descriptor of the tensor \b filters. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] features_out_desc
- * The descriptor of features_out. For detailed information,
+ * The descriptor of the tensor \b features_out. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
- * The descriptor of indices mapping pairs of features_in and filters.
+ * The descriptor of the tensor \b indice_pair of features_in and filters.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] features_out_desc
- * The descriptor of features_out. For detailed information,
+ * The descriptor of the tensor \b features_out. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_num
  * Pointer to the host memory that stores the indice pairs number.
@@ -10390,9 +10372,9 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  *
  * @par API Dependency
  * - Call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor before this function
- *   to create and set tensor descriptor \b features_desc, \b filters_desc, \b indice_pairs_desc
+ *   to create and set tensor descriptor \b features_desc , \b filters_desc , \b indice_pairs_desc ,
  *   and \b features_out_desc.
- * - Output \b workspace_size should later be passed to ::mluOpIndiceConvolutionForward function
+ * - Output \b workspace_size should later be passed to ::mluOpIndiceConvolutionForward
  *   to complete computation.
  *
  * @par Note
@@ -10436,7 +10418,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * @param[in] filters
  * Pointer to the MLU memory that stores the convolution kernel.
  * @param[in] indice_pairs_desc
- * The descriptor of indices mapping pairs of input indices and filters location.
+ * The descriptor of the tensor \b indice_pairs of input indices and filters location.
  * For detailed informationm, see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs
  * Pointer to the MLU memory that stores the indice pairs tensor.
@@ -10454,7 +10436,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] features_out_desc
- * The descriptor of the output features tensor. For detailed information,
+ * The descriptor of the the tensor \b features_out. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] features_out
  * Pointer to the MLU memory that stores the output tensor.
@@ -10465,10 +10447,11 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the combination of the following data types:
- *   - input tensor \b features, \b filters, \b indice_pairs and output tensor \b features_out: half, half, int32, half
- *   - input tensor \b features, \b filters, \b indice_pairs and output tensor \b features_out: float, float, int32,
- *     float.
- * - The supported data type of array \b indice_num, scalar \b inverse and \b sub_m is int64.
+ *   - input tensor \b features , \b filters , \b indice_pairs , and output tensor \b features_out: half, half, int32,
+ * half
+ *   - input tensor \b features , \b filters , \b indice_pairs , and output tensor \b features_out: float, float, int32,
+ * float
+ * - The supported data type of array \b indice_num , scalar \b inverse , and \b sub_m is int64.
  *
  * @par Data Layout
  * - This function supports the following tensor layouts:
@@ -10493,7 +10476,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * - The value of \b inverse and \b sub_m should be 0 or 1.
  *
  * @par API Dependency
- * - The function ::mluOpGetIndiceConvolutionForwardWorkspaceSize should be
+ * - ::mluOpGetIndiceConvolutionForwardWorkspaceSize should be
  *   called before this function to get extra space size.
  *
  * @par Note
@@ -10541,27 +10524,27 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
  * ::mluOpMoeDispatchForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] gates_desc
- * The descriptor of \b gates tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b gates, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] gates
  * Pointer to the MLU memory that stores the \b gates tensor.
  * @param[in] indices_desc
- * The descriptor of \b indices tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b indices, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the \b indices tensor.
  * @param[in] locations_desc
- * The descriptor of \b locations tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b locations, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] locations
  * Pointer to the MLU memory that stores the \b locations tensor.
  * @param[in] input_desc
- * The descriptor of \b input tensor, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b input, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the \b input tensor.
  * @param[in] samples
- * The number of elements in the \b gates tensor, the \b indices tensor and the \b locations tensor.
+ * The number of elements in the \b gates tensor, the \b indices tensor, and the \b locations tensor.
  * @param[in] capacity
  * The maximum number of inputs that experts can process.
  * @param[in] hidden
@@ -10569,7 +10552,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * @param[in] num_experts
  * The number of experts.
  * @param[in] dispatch_desc
- * The descriptor of \b dispatch tensor, which contains dimension, data type and data layout.
+ * The descriptor of \b dispatch tensor, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] dispatch
  * Pointer to the MLU memory that stores the \b dispatch tensor.
@@ -10578,8 +10561,8 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
- * - This function supports the following data types for input tensor \b gates , \b indices ,
- *   \b locations , \b input , \b dispatch .
+ * - This function supports the following data types for input tensors \b gates , \b indices ,
+ *   \b locations , \b input , and \b dispatch.
  *   - gates tensor: float
  *   - indices tensor: int32
  *   - locations tensor: int32
@@ -10590,8 +10573,8 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - The first dimension of \b gates tensor, \b indices tensor, \b locations tensor and \b input
- *   tensor must be the same size and equal to \b samples .
+ * - The first dimension of \b gates tensor, \b indices tensor, \b locations tensor, and \b input
+ *   tensor must be the same size and equal to \b samples.
  * - The second dimension of \b input tensor and \b dispatch tensor must be equal to \b hidden .
  * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
  *   the \b capacity and \b num_experts .
@@ -10605,7 +10588,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
- * - The parameters \b samples , \b capacity , \b hidden and \b num_experts should not be negative.
+ * - The parameters \b samples , \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
  * - The example of the function is as follows:
@@ -10649,7 +10632,7 @@ mluOpMoeDispatchForward(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * moe_dispatch_backward_gate operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
- * The descriptor of input tensor \b input, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b input, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
@@ -10694,27 +10677,27 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * moe_dispatch_backward_gate operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] indices_desc
- * The descriptor of input tensor \b indices, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b indices, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the \b indices tensor.
  * @param[in] locations_desc
- * The descriptor of input tensor \b locations, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b locations, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] locations
  * Pointer to the MLU memory that stores the \b locations tensor.
  * @param[in] input_desc
- * The descriptor of input tensor \b input, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b input, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
- * Pointer to the MLU memory that stores the \b input tensor.
+ * Pointer to the MLU memory that stores the input tensor.
  * @param[in] dispatch_desc
- * The descriptor of input tensor \b dispatch, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b dispatch, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] dispatch
  * Pointer to the MLU memory that stores the \b dispatch tensor.
  * @param[in] samples
- * The number of elements in the \b indices tensor, \b locations tensor and \b grad_gates tensor.
+ * The number of elements in the \b indices tensor, \b locations tensor, and \b grad_gates tensor.
  * @param[in] capacity
  * The maximum number of inputs that experts can process.
  * @param[in] hidden
@@ -10727,7 +10710,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] grad_gates_desc
- * The descriptor of output tensor \b grad_gates, which contains dimension, data type and data layout.
+ * The descriptor of the tensor \b grad_gates , which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] grad_gates
  * Pointer to the MLU memory that stores the \b grad_gates tensor.
@@ -10745,15 +10728,15 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  *   - grad_gates tensor: float
  *
  * @par Data Layout
- * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ * - The supported layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - The first dimension of \b indices tensor, \b locations tensor, \b input tensor and \b grad_gates
+ * - The first dimension of \b indices tensor, \b locations tensor, \b input tensor, and \b grad_gates
  *   tensor must be the same size and equal to \b samples.
  * - The second dimension of \b input tensor and \b dispatch tensor must be equal to \b hidden.
  * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
  *   the \b capacity and \b num_experts.
- * - The value of the input parameters \b samples, \b capacity, \b hidden and \b num_experts
+ * - The value of the input parameters \b samples , \b capacity , \b hidden , and \b num_experts
  *   must be greater than or equal to 0.
  * - The value range of the input parameter \b indices tensor must be greater than or equal to 0 and less than
  *   \b num_experts.
@@ -10761,12 +10744,12 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  *   \b capacity.
  *
  * @par API Dependency
- * - Before calling this function to perform ::mluOpMoeDispatchBackwardGate operation, you need to get
- *   the size of workspace by the ::mluOpGetMoeDispatchBackwardGateWorkspaceSize function.
+ * - Before calling this function to perform ::mluOpMoeDispatchBackwardGate, you need to get
+ *   the size of workspace by ::mluOpGetMoeDispatchBackwardGateWorkspaceSize.
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
- * - The parameter \b samples , \b capacity , \b hidden and \b num_experts should not be negative.
+ * - The parameters \b samples , \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
  * - The example of the operation is as follows:
