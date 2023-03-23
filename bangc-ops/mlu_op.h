@@ -229,18 +229,16 @@ typedef enum {
 } mluOpPointerMode_t;
 
 /*!
- * @brief Enumeration variables describing the input box modes that can be used
- * in the implementation of the Nms function.
+ * @brief Describing the input box modes that can be used to implement the nms operation.
  */
 typedef enum {
   MLUOP_NMS_BOX_DIAGONAL = 0, /*!< The box mode is [x1, y1, x2, y2]. */
-  MLUOP_NMS_BOX_CENTER =
-      1, /*!< The box mode is * [x_center, y_center, width, height] where width > 0 and * height > 0. */
+  MLUOP_NMS_BOX_CENTER = 1,
+  /*!< The box mode is * [x_center, y_center, width, height] where width > 0 and * height > 0. */
 } mluOpNmsBoxPointMode_t;
 
 /*!
- * @brief Enumeration variables describing the output modes that can be used
- * in the implementation of the Nms function.
+ * @brief Describing the output modes that can be used to implement the nms operation.
  */
 typedef enum {
   MLUOP_NMS_OUTPUT_TARGET_INDICES = 0,
@@ -265,8 +263,7 @@ typedef enum {
 } mluOpNmsOutputMode_t;
 
 /*!
- * @brief Enumeration variables describing the algorithms that can be used
- * in the update of confidence in Nms function.
+ * @brief Describing the algorithms that can be used to implement the nms operation.
  */
 typedef enum {
   MLUOP_NMS_HARD_NMS = 0,
@@ -284,8 +281,7 @@ typedef enum {
 } mluOpNmsMethodMode_t;
 
 /*!
- * @brief Enumeration variables describing the algorithms that can be used in
- * the implementation of the NMS function.
+ * @brief Describing the algorithms that can be used to implement the nms operation.
  */
 typedef enum {
   MLUOP_NMS_ALGO_EXCLUDE_BOUNDARY = 0,
@@ -946,13 +942,13 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
 
 /*!
- * The descriptor of the Nms function that holds ::mluOpNmsOutputMode_t, ::mluOpNmsAlgo_t,
- * iou_threshold, max_output_size, confidence_threshold, offset and input_layout.
+ * The descriptor of the nms function that holds compute type, bias type,
+ * transpose flag, and other attributes defined in ::mluOpMatMulDescAttribute_t.
  *
- * You need to call the ::mluOpNmsCreateNmsDescriptor to create a descriptor, and call
- * the ::mluOpNmsSetNmsDescriptor_v5, to set the information of
- * the Nms function to the descriptor. At last, you need to destroy the descriptor
- * at the end with the ::mluOpNmsDestroyNmsDescriptor function.
+ * You need to call the ::mluOpCreateNmsDescriptor function to create a descriptor, and call
+ * the ::mluOpSetNmsDescriptor function to set the information of the nms
+ * to the descriptor. Also, you need to destroy the MLUOP context at the end with
+ * the ::mluOpDestroyNmsDescriptor function.
  */
 typedef struct mluOpNmsStruct *mluOpNmsDescriptor_t;
 
@@ -3557,12 +3553,12 @@ mluOpPolyNms(mluOpHandle_t handle,
 
 // Group:Nms
 /*!
- * @brief Creates a descriptor pointed by \b desc for ::mluOpNms_2, and allocates
+ * @brief Creates a descriptor pointed by \b desc for ::mluOpNms, and allocates
  * memory for holding the information about the Nms function. The information
  * is defined in ::mluOpNmsNmsDescriptor_t.
  *
  * @param[out] desc
- * A host pointer to the Nms descriptor that holds information about the ::mluOpNms_2.
+ * A host pointer to the Nms descriptor that holds information about the ::mluOpNms.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
@@ -3707,7 +3703,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
 
 // Group:Nms
 /*!
- * @brief Computes the subset of input tensor \b boxes with the scores of \b confidence, and returns
+ * @brief Calculates the subset of input tensor \b boxes with the scores of \b confidence, and returns
  * the results in the output tensor \b output and \b output_size.
  * *
  * NMS(Non-Maximum Suppression) function is a necessary procedure in detection networks. And this
@@ -3744,7 +3740,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * Output. Pointer to the MLU memory that stores the number of output boxes.
  *
  * @par Returns
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - This function supports combinations of the following data types for input boxes tensor \b boxes,
@@ -3774,8 +3770,8 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * respectively.
  *
  * @par API Dependency
- * - Before calling this function to implement Nms, you need to prepare all the parameters passed to this function.
- * See each parameter description for details.
+ * - Before calling this function to perform ::mluOpSetNmsDescriptor, you need to get
+ *   the size of workspace by ::mluOpGetNmsWorkspaceSize.
  *
  * @par Performance Optimization
  * - For best practices, to have better performance, set the shape of input boxes tensor to [4, num_boxes].
