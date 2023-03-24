@@ -229,7 +229,7 @@ typedef enum {
 } mluOpPointerMode_t;
 
 /*!
- * @brief Describing the input box modes that can be used to implement the nms operation.
+ * @brief Describes the input box modes that can be used to implement the Nms operation.
  */
 typedef enum {
   MLUOP_NMS_BOX_DIAGONAL = 0, /*!< The box mode is [x1, y1, x2, y2]. */
@@ -238,58 +238,58 @@ typedef enum {
 } mluOpNmsBoxPointMode_t;
 
 /*!
- * @brief Describing the output modes that can be used to implement the nms operation.
+ * @brief Describes the output modes that can be used to implement the Nms operation.
  */
 typedef enum {
   MLUOP_NMS_OUTPUT_TARGET_INDICES = 0,
-  /*!< Returns target indices, sorted in decreasing order of confidences. */
+  /*!< Returns target indices, which are sorted in decreasing order of confidences. */
   MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_1 = 1,
-  /*!< Returns target confidences and positions with the order of: confidence_0, x_01, y_01, x_02, y_02,
+  /*!< Returns target confidences and positions with the order of confidence_0, x_01, y_01, x_02, y_02,
    * confidence_1, x_11, y_11, x_12, y_12, ... ,
    * confidence_n, x_n1, y_n1, x_n2, y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner
-   * and bottom right corner coordinates of first box, respectively.
+   * and bottom right corner coordinates of the first box, respectively.
    */
   MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_2 = 2,
-  /*!< Returns target confidences and positions with the order of: * confidence_0,
+  /*!< Returns target confidences and positions with the order of confidence_0,
    * confidence_1, ... , confidence_n, x_01, x_11, ... , x_n1, y_01, y_11, ... , y_n1, x_02, x_12, ... , x_n2, y_02,
    * y_12, ... , y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner and
-   * bottom right corner coordinates of first box, respectively.
+   * bottom right corner coordinates of the first box, respectively.
    */
   MLUOP_NMS_OUTPUT_TARGET_BATCH_AND_CLASS = 3,
-  /*!< Returns batch indices, class indices and positions with the order of: batch_0, class_0, box_0,
+  /*!< Returns batch indices, class indices, and positions with the order of batch_0, class_0, box_0,
    * ... ,batch_0, class_0, box_m, batch_0, class_1, box_0, ... , batch_0, class_1, box_m, ... , ... ,
    * batch_s, class_n, box_m.
    */
 } mluOpNmsOutputMode_t;
 
 /*!
- * @brief Describing the algorithms that can be used to implement the nms operation.
+ * @brief Describes the algorithms that can be used to implement the Nms operation.
  */
 typedef enum {
   MLUOP_NMS_HARD_NMS = 0,
-  /*!< A type of algorithm which updates confidence using hard nms, i.e.
+  /*!< A type of algorithm which updates confidence using hard Nms, for example
    *confidence = IOU < IOU_threshold ? confidence : 0
    */
   MLUOP_NMS_SOFT_NMS_LINEAR = 1,
-  /*!< A type of algorithm which updates confidence using linear method, i.e.
+  /*!< A type of algorithm which updates confidence using linear method, for example
    * confidence = IOU < IOU_threshold ? confidence : confidence * (1 - IOU)
    */
   MLUOP_NMS_SOFT_NMS_GAUSSIAN = 2,
-  /*!< A type of algorithm which updates confidence using Gaussian method, i.e.
+  /*!< A type of algorithm which updates confidence using Gaussian method, for example
    *confidence = confidence * exp{- \f$IOU^2\f$ / (2 * sigma)}
    */
 } mluOpNmsMethodMode_t;
 
 /*!
- * @brief Describing the algorithms that can be used to implement the nms operation.
+ * @brief Describes the algorithms that can be used to implement the Nms operation.
  */
 typedef enum {
   MLUOP_NMS_ALGO_EXCLUDE_BOUNDARY = 0,
-  /*!< Implements NMS with boundary excluded. In this mode,
+  /*!< Implements Nms with boundary excluded. In this mode,
    * the height or width of boxes is ``(x2 - x1)``.
    */
   MLUOP_NMS_ALGO_INCLUDE_BOUNDARY = 1,
-  /*!< Implements NMS with boundary included. In this mode,
+  /*!< Implements Nms with boundary included. In this mode,
    * the height or width of boxes is ``(x2 - x1 + offset)``.
    */
 } mluOpNmsAlgo_t;
@@ -942,19 +942,19 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
 
 /*!
- * The descriptor of the nms function that holds compute type, bias type,
+ * The descriptor of the Nms function that holds compute type, bias type,
  * transpose flag, and other attributes defined in ::mluOpMatMulDescAttribute_t.
  *
- * You need to call the ::mluOpCreateNmsDescriptor function to create a descriptor, and call
- * the ::mluOpSetNmsDescriptor function to set the information of the nms
+ * You need to call ::mluOpCreateNmsDescriptor function to create a descriptor, and call
+ * ::mluOpSetNmsDescriptor function to set the information of the Nms
  * to the descriptor. Also, you need to destroy the MLUOP context at the end with
- * the ::mluOpDestroyNmsDescriptor function.
+ * ::mluOpDestroyNmsDescriptor function.
  */
 typedef struct mluOpNmsStruct *mluOpNmsDescriptor_t;
 
 /*!
  * The descriptor of a tensor that holds the information including tensor
- * shape, the number of dimensions, pad, strides, dilation, sub_m, transpose.
+ * shape, the number of dimensions, pad, strides, dilation, sub_m, and transpose.
  *
  * You need to call the ::mluOpCreateSparseConvolutionDescriptor function to create a descriptor,
  * and call the ::mluOpSetSparseConvolutionDescriptor function to set the tensor information to
@@ -3553,12 +3553,12 @@ mluOpPolyNms(mluOpHandle_t handle,
 
 // Group:Nms
 /*!
- * @brief Creates a descriptor pointed by \b desc for ::mluOpNms, and allocates
+ * @brief Creates a descriptor pointed to \b desc for ::mluOpNms, and allocates
  * memory for holding the information about the Nms function. The information
  * is defined in ::mluOpNmsNmsDescriptor_t.
  *
  * @param[out] desc
- * A host pointer to the Nms descriptor that holds information about the ::mluOpNms.
+ * A host pointer to the Nms descriptor that holds information about ::mluOpNms.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
@@ -3566,7 +3566,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  * @par API Dependency
  * - After calling this function, you can call the ::mluOpNmsSetNmsDescriptor_v5 function to
  * initialize and set the information to Nms descriptor.
- * - You need to call the ::mluOpNmsDestroyNmsDescriptor function to destroy the descriptor.
+ * - You need to call ::mluOpNmsDestroyNmsDescriptor function to destroy the descriptor.
  *
  * @note
  * - None.
@@ -3583,11 +3583,11 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
 // Group:Nms
 /*!
  *
- * @brief Destroys a Nms descriptor \b desc that is previously created with the
+ * @brief Destroys a Nms descriptor \b desc that iwass previously created with the
  * ::mluOpNmsCreateNmsDescriptor function.
  *
  * The Nms descriptor is defined in ::mluOpNmsDescriptor_t and holds the information
- * about the mluOpNms fucntion.
+ * about mluOpNms function.
  *
  * @param[in] desc
  * The Nms descriptor to be destroyed.
@@ -3611,14 +3611,14 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
 
 // Group:Nms
 /*!
- * @brief Initializes the Nms descriptor \b nms_desc that is previously created with the
+ * @brief Initializes the Nms descriptor \b nms_desc that was previously created with
  * ::mluOpCreateNmsDescriptor function, and sets the information about the Nms operation
  * to the Nms descriptor \b nms_desc.
  *
  * @param[in] nms_desc
  * The descriptor of the Nms operation. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] box_mode
- * The box data sturcture mode of Nms descriptor to be set. For detailed information,
+ * The box mode strcut mode of Nms descriptor to be set. For detailed information,
  * see ::mluOpNmsBoxPointMode_t.
  * @param[in] output_mode
  * The output mode of Nms descriptor to be set. For detailed information,
@@ -3629,27 +3629,27 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * @param[in] method_mode
  * The confidence update method mode. For detailed information,
  * see ::mluOpNmsMethodMode_t.
- * Please note that method mode 1 and 2 are not supported in current version,
- * and it will be supported in the future.
+ * Note that method modes 1 and 2 are not supported in current version,
+ * and they will be supported in the future.
  * @param[in] iou_threshold
- * The intersection over union (iou) threshold used in Nms computation.
+ * The IOU threshold used in Nms computation.
  * Boxes would be filtered out if the intersection over union is greater than or equal to \b iou_threshold.
  * @param[in] soft_nms_sigma
  * The parameter used in soft Nms with Gaussian method.
  * This value would be used when method_mode is ::mluOpNms_SOFT_NMS_GAUSSIAN.
  * @param[in] max_output_size
- * The maximum number of output boxes. If the dimension of input box is 3, i.e.
+ * The maximum number of output boxes. If the dimension of input box is 3, for example
  * [batches_num, boxes_num, 4] or [batches_num, 4, boxes_num], this parameter indicates
  * the maximum number of output boxes per class.
  * @param[in] confidence_threshold
  * The confidence threshold used in Nms computation.
- * Boxes would be filtered out directly if the confidence of boxes are no more than this
+ * Boxes would be filtered out directly if the confidence of boxes is no more than this
  * threshold.
  * @param[in] offset
  * The offset size of boundary used in Nms computation.
  * This value would be used when \b algo is ::mluOpNms_ALGO_INCLUDE_BOUNDARY.
  * @param[in] input_layout
- * The input data layout. Supported values are 0 and 1. 0 represents
+ * The supported values are 0 and 1. 0 represents
  * [boxes_num, 4], [boxes_num, 7] or [batches_num, boxes_num, 4] and 1 represents
  * [4, boxes_num], [7, boxes_num] or [batches_num, 4, boxes_num].
  * @param[in] pad_to_max_output_size
@@ -3659,12 +3659,12 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  * *
  * @par Scale Limitation
- * - \b confidence_threshold should be in the range of [0, 1].
- * - \b soft_nms_sigma should not be less than 0.0.
- * - \b offset should be 0.0 or 1.0.
- * - \b input_layout should be 0 or 1.
- * - \b max_output_size should not be less than 0.
- * - \b pad_to_max_output_size should be true or false.
+ * - confidence_threshold should be in the range of [0, 1].
+ * - soft_nms_sigma should not be less than 0.0.
+ * - offset should be 0.0 or 1.0.
+ * - input_layout should be 0 or 1.
+ * - max_output_size should not be less than 0.
+ * - pad_to_max_output_size should be true or false.
  * *
  * @note
  * - If the dimension of input box is 3 ([batches_num, boxes_num, 4] or
@@ -3677,7 +3677,7 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * are supported only in the case of batches_num = 1 and classes_num = 1.
  * - Method mode 1 and 2 are not supported in current version,
  * and they will be supported in the future.
- * - When the input boxes are in NMS3D format([boxes_num, 7] or [7, boxes_num]),
+ * - When the input boxes are in Nms3D format([boxes_num, 7] or [7, boxes_num]),
  * only parameters iou_threshold and layout are valid and other parameters
  * can be arbitrary. Besides, the mode is set as 0 during the computation.
  * *
@@ -3779,10 +3779,10 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * - When the dimension of input box is 2, it has better performance.
  *
  * @note
- * - When the input boxes are in NMS3D format([boxes_num, 7] or [7, boxes_num]),
+ * - When the input boxes is in Nms3D format([boxes_num, 7] or [7, boxes_num]),
  * both of confidence_desc and confidence should be provided as null pointer.
- * - In NMS3D mode, ::mluOpNms will get low precision on MLU200 platform.
- * - In NMS3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
+ * - In Nms3D mode, ::mluOpNms will get low precision on MLU200 platform.
+ * - In Nms3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
  * it performs min-pooling operation. If the input data of pooling contains NaN:
  * - On MLU200 series:
  * - The \b output value is the NaN.
@@ -3818,14 +3818,14 @@ mluOpNms(mluOpHandle_t handle,
  * needed in Nms operation.
  *
  * @param[in] handle
- * Handle to a MLUOP context that is used to manage MLU devices and
+ * Handle to an MLUOP context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] boxes_desc
- * The descriptor of input boxes tensor, including the information of dimension, data type and
- * layout of input boxes. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of input \b boxes, which contains dimension, data type and
+ * data layout of input \b boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] confidence_desc
- * The descriptor of input confidence tensor, including the information of dimension, data type and
- * layout of input confidence. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of input confidence tensor, which contains dimension, data type and
+ * data layout of input confidence. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] size
  * A host pointer to the returned size of the extra workspace in bytes that is used
  * in the Nms operation.
@@ -3833,10 +3833,10 @@ mluOpNms(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  * *
  * @par API Dependency
- * - The allocated extra workspace should be passed to the ::mluOpNms function to perform the NMS operation.
+ * - The allocated extra workspace should be passed to ::mluOpNms to function to perform the Nms operation.
  * *
  * @note
- * - When the input boxes are in NMS3D format([boxes_num, 7] or [7, boxes_num]),
+ * - When the input boxes is in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
  * the confidence_desc must be provided with null pointer.
  * *
  * @par Requirements
