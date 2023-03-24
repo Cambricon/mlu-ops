@@ -246,19 +246,19 @@ typedef enum {
   MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_1 = 1,
   /*!< Returns target confidences and positions with the order of confidence_0, x_01, y_01, x_02, y_02,
    * confidence_1, x_11, y_11, x_12, y_12, ... ,
-   * confidence_n, x_n1, y_n1, x_n2, y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner
+   * confidence_n, x_n1, y_n1, x_n2, and y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner
    * and bottom right corner coordinates of the first box, respectively.
    */
   MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_2 = 2,
   /*!< Returns target confidences and positions with the order of confidence_0,
    * confidence_1, ... , confidence_n, x_01, x_11, ... , x_n1, y_01, y_11, ... , y_n1, x_02, x_12, ... , x_n2, y_02,
-   * y_12, ... , y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner and
+   * y_12, ... , and y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner and
    * bottom right corner coordinates of the first box, respectively.
    */
   MLUOP_NMS_OUTPUT_TARGET_BATCH_AND_CLASS = 3,
   /*!< Returns batch indices, class indices, and positions with the order of batch_0, class_0, box_0,
-   * ... ,batch_0, class_0, box_m, batch_0, class_1, box_0, ... , batch_0, class_1, box_m, ... , ... ,
-   * batch_s, class_n, box_m.
+   * ... , batch_0, class_0, box_m, batch_0, class_1, box_0, ... , batch_0, class_1, box_m, ... , ... ,
+   * batch_s, class_n, and box_m.
    */
 } mluOpNmsOutputMode_t;
 
@@ -268,15 +268,15 @@ typedef enum {
 typedef enum {
   MLUOP_NMS_HARD_NMS = 0,
   /*!< A type of algorithm which updates confidence using hard Nms, for example
-   *confidence = IOU < IOU_threshold ? confidence : 0
+   *confidence = IOU < IOU_threshold ? confidence : 0.
    */
   MLUOP_NMS_SOFT_NMS_LINEAR = 1,
   /*!< A type of algorithm which updates confidence using linear method, for example
-   * confidence = IOU < IOU_threshold ? confidence : confidence * (1 - IOU)
+   * confidence = IOU < IOU_threshold ? confidence : confidence * (1 - IOU).
    */
   MLUOP_NMS_SOFT_NMS_GAUSSIAN = 2,
   /*!< A type of algorithm which updates confidence using Gaussian method, for example
-   *confidence = confidence * exp{- \f$IOU^2\f$ / (2 * sigma)}
+   *confidence = confidence * exp{- \f$IOU^2\f$ / (2 * sigma)}.
    */
 } mluOpNmsMethodMode_t;
 
@@ -945,10 +945,10 @@ typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
  * The descriptor of the Nms function that holds compute type, bias type,
  * transpose flag, and other attributes defined in ::mluOpMatMulDescAttribute_t.
  *
- * You need to call ::mluOpCreateNmsDescriptor function to create a descriptor, and call
- * ::mluOpSetNmsDescriptor function to set the information of the Nms
+ * You need to call ::mluOpCreateNmsDescriptor to create a descriptor, and call
+ * ::mluOpSetNmsDescriptor to set the information of the Nms
  * to the descriptor. Also, you need to destroy the MLUOP context at the end with
- * ::mluOpDestroyNmsDescriptor function.
+ * ::mluOpDestroyNmsDescriptor.
  */
 typedef struct mluOpNmsStruct *mluOpNmsDescriptor_t;
 
@@ -3470,7 +3470,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
 
 // Group:PolyNms
 /*!
- * @brief Computes the non-maximum suppression of polygon.
+ * @brief Computes the NMS NMS (Non-Maximum Suppression) of polygon.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
@@ -3524,7 +3524,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * - None.
  *
  * @par Note
- * - This commit does not support nan/inf.
+ * - This commit does not support NAN/INF.
  * - The coordinates of the input boxes must all be sorted clockwise or
  *   counterclockwise. If the coordinates of the boxes are out of order,
  *   the calculation result is not guaranteed and is consistent with the
@@ -3564,9 +3564,9 @@ mluOpPolyNms(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpNmsSetNmsDescriptor_v5 function to
+ * - After calling this function, you can call ::mluOpNmsSetNmsDescriptor_v5 to
  * initialize and set the information to Nms descriptor.
- * - You need to call ::mluOpNmsDestroyNmsDescriptor function to destroy the descriptor.
+ * - You need to call ::mluOpNmsDestroyNmsDescriptor to destroy the descriptor.
  *
  * @note
  * - None.
@@ -3583,11 +3583,11 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
 // Group:Nms
 /*!
  *
- * @brief Destroys a Nms descriptor \b desc that iwass previously created with the
- * ::mluOpNmsCreateNmsDescriptor function.
+ * @brief Destroys a Nms descriptor \b desc that was previously created with
+ * ::mluOpNmsCreateNmsDescriptor.
  *
  * The Nms descriptor is defined in ::mluOpNmsDescriptor_t and holds the information
- * about mluOpNms function.
+ * about ::mluOpNms.
  *
  * @param[in] desc
  * The Nms descriptor to be destroyed.
@@ -3612,7 +3612,7 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
 // Group:Nms
 /*!
  * @brief Initializes the Nms descriptor \b nms_desc that was previously created with
- * ::mluOpCreateNmsDescriptor function, and sets the information about the Nms operation
+ * ::mluOpCreateNmsDescriptor, and sets the information about the Nms operation
  * to the Nms descriptor \b nms_desc.
  *
  * @param[in] nms_desc
@@ -3633,7 +3633,7 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * and they will be supported in the future.
  * @param[in] iou_threshold
  * The IOU threshold used in Nms computation.
- * Boxes would be filtered out if the intersection over union is greater than or equal to \b iou_threshold.
+ * Boxes would be filtered out if the IOU is greater than or equal to \b iou_threshold.
  * @param[in] soft_nms_sigma
  * The parameter used in soft Nms with Gaussian method.
  * This value would be used when method_mode is ::mluOpNms_SOFT_NMS_GAUSSIAN.
@@ -3647,14 +3647,14 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * threshold.
  * @param[in] offset
  * The offset size of boundary used in Nms computation.
- * This value would be used when \b algo is ::mluOpNms_ALGO_INCLUDE_BOUNDARY.
+ * This value would be used when \b algo is ::MLUOP_NMS_ALGO_INCLUDE_BOUNDARY.
  * @param[in] input_layout
  * The supported values are 0 and 1. 0 represents
  * [boxes_num, 4], [boxes_num, 7] or [batches_num, boxes_num, 4] and 1 represents
  * [4, boxes_num], [7, boxes_num] or [batches_num, 4, boxes_num].
  * @param[in] pad_to_max_output_size
  * When the \b pad_to_max_output_size set is true, the \b output will be padded to max_output_size
- * with zero. Default is false.
+ * with zero. The default value is false.
  * @par Returns
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  * *
@@ -3673,11 +3673,11 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * is 2 ([boxes_num, 4], [4, boxes_num], [boxes_num, 7] or [7, boxes_num]),
  * the dimension of input confidence is 1 ([boxes_num]).
  * - When the dimension of input confidence is 3, the box mode 1 is supported.
- * - When the dimension of input confidence is 3, the output mode of 0, 1 and 2
+ * - When the dimension of input confidence is 3, the output modes of 0, 1 and 2
  * are supported only in the case of batches_num = 1 and classes_num = 1.
- * - Method mode 1 and 2 are not supported in current version,
+ * - Method modes 1 and 2 are not supported in current version,
  * and they will be supported in the future.
- * - When the input boxes are in Nms3D format([boxes_num, 7] or [7, boxes_num]),
+ * - When the input boxes are in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
  * only parameters iou_threshold and layout are valid and other parameters
  * can be arbitrary. Besides, the mode is set as 0 during the computation.
  * *
@@ -3704,12 +3704,12 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
 // Group:Nms
 /*!
  * @brief Calculates the subset of input tensor \b boxes with the scores of \b confidence, and returns
- * the results in the output tensor \b output and \b output_size.
+ * the results in the output tensors \b output and \b output_size.
  * *
- * NMS(Non-Maximum Suppression) function is a necessary procedure in detection networks. And this
+ * NMS function is a necessary procedure in detection networks. And this
  * function selects no more than \b max_output_size targets with high confidence, based on their
- * intersection over union. This function needs extra MLU memory, and you can get the size of workspace
- * \b workspace_size with the ::mluOpGetNmsWorkspaceSize function.
+ * iou. This function needs extra MLU memory, and you can get the size of workspace
+ * \b workspace_size with ::mluOpGetNmsWorkspaceSize.
  *
  * @param[in] handle
  * Handle to a MLUOP context that is used to manage MLU devices and queues in the Nms function.
@@ -3717,12 +3717,12 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * @param[in] nms_desc
  * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
- * The descriptor of the input boxes tensor, including the information of dimension, data type and
+ * The descriptor of the tensor \b boxes , including the information of dimension, data type, and
  * layout of input boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
  * Pointer to the MLU memory that stores the input boxes tensor.
  * @param[in] confidence_desc
- * The descriptor of input confidence tensor, including the information of dimension, data type and
+ * The descriptor of the tensor \b confidence , including the information of dimension, data type, and
  * layout of input confidence. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] confidence
  * Pointer to the MLU memory that stores the input confidence tensor.
@@ -3730,9 +3730,9 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * Pointer to the MLU memory that is used as an extra workspace for the Nms function.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the Nms function. You can
- * get the size of the workspace with the ::mluOpGetNmsWorkspaceSize function.
+ * get the size of the workspace with ::mluOpGetNmsWorkspaceSize.
  * @param[in] output_desc
- * The descriptor of the output tensor, including the information of dimension, data type and layout
+ * The descriptor of the output tensor, including the information of dimension, data type, and layout
  * of output. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
@@ -3743,17 +3743,16 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
- * - This function supports combinations of the following data types for input boxes tensor \b boxes,
- * input confidence tensor \b confidence, and output tensor \b output.
- * - input boxes tensor: half, float.
+ * - The supported combinations of data types for input and output tensors are as follows:
+ * - input boxes tensor: half, float
  * - input confidence tensor: half, float
- * - output tensor: half, float, int32, uint32.
- * - output size: int32, uint32.
+ * - output tensor: half, float, int32, uint32
+ * - output size: int32, uint32
  * - If the output is the indices of boxes, the output data type should be int32 or uint32, otherwise
- * the output data type should the same as input boxes data type. The data type of output size is int32 or uint32.
- * <b> Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num]
- * , the combinations of input boxes tensor and input confidence tensor can be float-half, otherwise the data
- * type of input boxes and input confidence tensor must be same.
+ * the output data type should be the same as input boxes data type. The data type of output size is int32 or uint32.
+ * <b> Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num],
+ * the combinations of input boxes tensor and input confidence tensor can be float-half, otherwise the data
+ * type of input boxes and input confidence tensor must be the same.
  *
  * @par Data Layout
  * - The input boxes tensor should be a 2D tensor, and the input confidence tensor should be a 1D tensor.
@@ -3764,6 +3763,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * - For the input boxes tensor, if the shape is [boxes_num, 4], the order of coordinates is x_01, y_01, x_02, y_02,
  * x_11, y_11, x_12, y_12, ... x_n1, y_n1, x_n2, y_n2. And x_i1 must be less than x_i2, y_i1 must be less than y_i2.
  * The (x_i1, y_i1) and (x_i2, y_i2) represent the top left corner and bottom right corner coordinates, respectively.
+ *
  * - For the input boxes tensor, if the shape is [4, boxes_num], the order of coordinates is x_01, x_11, ... x_n1,
  * y_01, y_11, ... y_n1, x_02, x_12, ... x_n2, x_01, x_11, ... x_n1. And x_i1 must be less than x_i2, y_i1 must be less
  * than y_i2. The (x_i1, y_i1) and (x_i2, y_i2) represent the top left corner and bottom right corner coordinates,
@@ -3775,21 +3775,19 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  *
  * @par Performance Optimization
  * - For best practices, to have better performance, set the shape of input boxes tensor to [4, num_boxes].
- * The num_boxes represent the number of input boxes.
+ * The num_boxes represents the number of input boxes.
  * - When the dimension of input box is 2, it has better performance.
  *
  * @note
- * - When the input boxes is in Nms3D format([boxes_num, 7] or [7, boxes_num]),
- * both of confidence_desc and confidence should be provided as null pointer.
- * - In Nms3D mode, ::mluOpNms will get low precision on MLU200 platform.
- * - In Nms3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
- * it performs min-pooling operation. If the input data of pooling contains NaN:
- * - On MLU200 series:
- * - The \b output value is the NaN.
- * - On MLU300 series and CE3226:
- * - If the last value in the kernel of the pooling is NaN, the \b output value is NaN.
- * Otherwise, the \b output value is the minimum value after the last NaN.
- *
+ * - When the input boxes is in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
+ *   both of confidence_desc and confidence should be provided as null pointer.
+ *   - In Nms3D mode, ::mluOpNms will get low precision on MLU200 platform.
+ *   - In Nms3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
+ *     it performs min-pooling operation. If the input data of pooling contains NaN:
+ * - On MLU200 series, the \b output value is the NaN.
+ * - On MLU300 series, if the last value in the kernel of the pooling is NaN, the \b output value is NaN.
+ *   Otherwise, the \b output value is the minimum value after the last NaN.
+ *   
  * @par Requirements
  * - None.
  *
@@ -3821,10 +3819,10 @@ mluOpNms(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] boxes_desc
- * The descriptor of input \b boxes, which contains dimension, data type and
+ * The descriptor of the tensor \b boxes , which contains dimension, data type, and
  * data layout of input \b boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] confidence_desc
- * The descriptor of input confidence tensor, which contains dimension, data type and
+ * The descriptor of the tensor \b confidence , which contains dimension, data type, and
  * data layout of input confidence. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] size
  * A host pointer to the returned size of the extra workspace in bytes that is used
@@ -3833,7 +3831,7 @@ mluOpNms(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  * *
  * @par API Dependency
- * - The allocated extra workspace should be passed to ::mluOpNms to function to perform the Nms operation.
+ * - The allocated extra workspace should be passed to ::mluOpNms to perform the Nms operation.
  * *
  * @note
  * - When the input boxes is in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
@@ -3859,22 +3857,22 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices
  * and queues in the prior_box operation.
  * @param[in] min_sizes_desc
- * The descriptor of the min_sizes tensor. The minimum sizes of generated
+ * The descriptor of the tensor \b min_sizes. The minimum size of generated
  * prior boxes.
  * @param[in] min_sizes
  * Pointer to the MLU memory that stores the min_sizes tensor.
  * @param[in] aspect_ratios_desc
- * The descriptor of the aspect_ratios tensor. The aspect ratios of
+ * The descriptor of the tensor \b aspect_ratios. The aspect ratios of
  * generated prior boxes.
  * @param[in] aspect_ratios
  * Pointer to the MLU memory that stores the aspect_ratios tensor.
  * @param[in] variances_desc
- * The descriptor of the variances tensor. The variances to be
+ * The descriptor of the tensor \b variances. The variances to be
  * encoded in prior boxes.
  * @param[in] variances
  * Pointer to the MLU memory that stores the variances tensor.
  * @param[in] max_sizes_desc
- * The descriptor of the max_sizes tensor. The maximum sizes of generated
+ * The descriptor of the tensor \b max_sizes. The maximum size of generated
  * prior boxes.
  * @param[in] max_sizes
  * Pointer to the MLU memory that stores the max_sizes tensor.
@@ -3895,16 +3893,16 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * @param[in] clip
  * Whether to clip out-of-boundary boxes.
  * @param[in] min_max_aspect_ratios_order
- * If the value is set as true, the \b output prior box is in
+ * If the value is set as True, the \b output prior box is in
  * the order of [min, max, aspect_ratios]; otherwise the order is
  * [min, aspect_ratios, max].
  * @param[in] output_desc
- * The descriptor of the \b output tensor. The \b output prior boxes of
+ * The descriptor of the tensor \b output. The \b output prior boxes of
  * PriorBox.
  * @param[out] output
  * Pointer to the MLU memory that stores the \b output tensor.
  * @param[in] var_desc
- * The descriptor of the var tensor. The expanded variances of
+ * The descriptor of the tensor \b var. The expanded variances of
  * PriorBox.
  * @param[out] var
  * Pointer to the MLU memory that stores the var tensor.
@@ -3932,7 +3930,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  *   - var: float
  *
  * @par Data Layout
- * - The supported data layouts of \b input, \b output, are as follows:
+ * - The supported data layouts of \b input, and \b output are as follows:
  *   - input tensor:
  *     - min_sizes: \p MLUOP_LAYOUT_ARRAY
  *     - aspect_ratios: \p MLUOP_LAYOUT_ARRAY
@@ -4020,27 +4018,27 @@ mluOpPriorBox(mluOpHandle_t handle,
  * The pooled_width data.
  * @param[in] output_dim
  * The output_dim data.
- *  @param[in] input_desc
- * Descriptor of input tensor, which contains dimension and the layout of input.
+ * @param[in] input_desc
+ * The descriptor of input tensor, which contains dimension and the layout of input.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor. The shape of \b input is
  * [batch_num, H, W, C].
  * @param[in] rois_desc
- * Descriptor of rois tensor, which contains dimension and the layout of rois.
+ * The descriptor of rois tensor, which contains dimension and the layout of rois.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor. \b rois[1] consists of
  * [batch_id, roi_start_w, roi_start_h, roi_end_w, roi_end_h], where \p batch_id is the ID
  * of the batch.
  * @param[in] output_desc
- * Descriptor of output tensor, containing dimension and the layout of output.
+ * The descriptor of output tensor, containing dimension and the layout of output.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor. The shape of \b output is
  * [rois[0], pooled_height, pooled_width, output_dim].
  * @param[in] mapping_channel_desc
- * Descriptor of the mapping_channel tensor, which contains dimension and the layout of
+ * The descriptor of the mapping_channel tensor, which contains dimension and the layout of
  * mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] mapping_channel
  * Pointer to the MLU memory that stores the mapping_channel tensor. The shape of
@@ -4127,22 +4125,22 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * @param[in] output_dim
  * An integer value which is the channel of the output after pooling.
  * @param[in] top_grad_desc
- * Descriptor of the top_grad tensor, which contains the dimension and the layout
+ * The descriptor of the top_grad tensor, which contains the dimension and the layout
  * of top_grad tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] top_grad
  * Pointer to the MLU memory that stores the top_grad tensor.
  * @param[in] rois_desc
- * Descriptor of the rois tensor, which contains the dimension and the layout
+ * The descriptor of the rois tensor, which contains the dimension and the layout
  * of rois tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] rois
  * Pointer to the MLU memory that stores the rois tensor.
  * @param[in] mapping_channel_desc
- * Descriptor of the mapping_channel tensor, which contains the dimension and the
+ * The descriptor of the mapping_channel tensor, which contains the dimension and the
  * layout of mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] mapping_channel
  * Pointer to the MLU memory that stores the mapping_channel tensor.
  * @param[in] bottom_grad_desc
- * Descriptor of the bottom_grad tensor, which contains the dimension and the
+ * The descriptor of the bottom_grad tensor, which contains the dimension and the
  * layout of mapping_channel. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] bottom_grad
  * Pointer to the MLU memory that stores the bottom_grad tensor.
@@ -9441,7 +9439,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * @param[in] beta
  * Host pointer to bias factor of tensor output. The value of this parameter can be NULL.
  * @param[in] input_desc
- * Descriptor of input data. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of input data. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] input
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] indices_size_inbytes
@@ -9449,7 +9447,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * @param[out] indices
  * Pointer to the MLU memory that stores the indices tensor.
  * @param[in] output_desc
- * Descriptor of output data. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of output data. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] output
  * Pointer to the MLU memory that stores the output tensor.
  *
