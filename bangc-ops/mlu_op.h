@@ -3826,6 +3826,23 @@ mluOpNms(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  * *
+ * @par Data Type
+ * - The supported combinations of data types for input and output tensors are as follows:
+ * - input boxes tensor: half, float
+ * - input confidence tensor: half, float
+ * - output tensor: half, float, int32, uint32
+ * - output size: int32, uint32
+ * - If the output is the indices of boxes, the output data type should be int32 or uint32, otherwise
+ * the output data type should be the same as input boxes data type. The data type of output size is int32 or uint32.
+ * <b> Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num],
+ * the combinations of input boxes tensor and input confidence tensor can be float-half, otherwise the data
+ * type of input boxes and input confidence tensor must be the same.
+ *
+ * @par Data Layout
+ * - The input boxes tensor should be a 2D tensor, and the input confidence tensor should be a 1D tensor.
+ * - The output tensor is a 1D tensor if the output result is the indices of boxes, otherwise it is a 2D
+ * tensor, which containing the coordinates and confidence of output boxes.
+ *
  * @par API Dependency
  * - The allocated extra workspace should be passed to ::mluOpNms to perform the Nms operation.
  * *
@@ -7268,17 +7285,7 @@ mluOpMatMul(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - On all hardware platforms, this function supports any combinations of the following data types for
- *   input tensor \b a, \b b and output tensor \b d.
- *   - a data type: int8, int16
- *   - b data type: int8, int16
- *   - d offchip data type: half, float
- *   - d onchip data type: half, float
- * - On MLU300 series or above, this function supports the combinations of the following data types for
- *   input tensor \b a, \b b and output tensor \b d:
- *   - \b a, \b b, \b d offchip data type, \b d onchip data type: half, half, half, half
- *   - \b a, \b b, \b d offchip data type, \b d onchip data type: half, half, half, float
- *   - \b a, \b b, \b d offchip data type, \b d onchip data type: float, float, float, float
+ * - None.
  *
  * @par Data Layout
  * - None.
