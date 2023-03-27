@@ -70,7 +70,7 @@ elseif (NOT BANG_CNCC_EXECUTABLE)
 endif()
 
 # setup cncc flags
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++11 -fPIC -pthread")
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++11 -fPIC -pthread --neuware-path=${NEUWARE_HOME}")
 if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
   message(STATUS "build debug version")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g3 -O0")
@@ -133,13 +133,13 @@ file(GLOB_RECURSE archive_binary_files ${archive_binary_files} "${CMAKE_CURRENT_
 file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${MLUOP_SYMBOL_VIS_FILE})
+if(EXISTS ${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE})
   message(STATUS "${MLUOP_SYMBOL_VIS_FILE} exists.")
 else()
   message(FATAL_ERROR "${MLUOP_SYMBOL_VIS_FILE} doesn't exist.")
 endif()
 
-set(LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
+set(LINK_FLAGS "-Wl,--version-script=${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
 add_library(mluopscore STATIC ${core_src_files})
 
@@ -160,11 +160,13 @@ else()
   execute_process(COMMAND rm ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/wrapper.cpp.o)
 endif()
 
+target_link_libraries(mluopscore cnrt cndrv)
 bang_add_library(mluops SHARED ${src_files})
 target_link_libraries(mluops
   -Wl,--start-group
   ${arch_binary_files} ${wrapper_binary_files}
-  -Wl,--whole-archive ${archive_binary_files} mluopscore -Wl,--no-whole-archive
+  -Wl,--whole-archive ${archive_binary_files} -Wl,--no-whole-archive
+  mluopscore
   cnrt cndrv dl
   -Wl,--end-group
 )
