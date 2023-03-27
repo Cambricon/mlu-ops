@@ -32,7 +32,7 @@ import config
 def check_mluops_proto():
     # generate mluops_test_pb2.py
     proto_dir = os.path.abspath(
-        os.path.realpath(__file__) + "/../../../bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto")
+        os.path.realpath(__file__) + "/../../../bangc-ops/test/mlu_op_gtest/pb_gtest/mlu-ops-proto")
     cwd = os.path.abspath(os.path.realpath(__file__) + "/../")
     cmd_args = [
         "protoc", "--python_out", cwd, "--proto_path", proto_dir,

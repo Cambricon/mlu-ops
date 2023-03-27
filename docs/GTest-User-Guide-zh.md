@@ -23,7 +23,7 @@
 
 操作过程：
 
-文件路径：`mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto/mlu_op_test.proto`
+文件路径：`mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/mlu-ops-proto/mlu_op_test.proto`
 
 1. 增加内容
 

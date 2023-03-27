@@ -70,8 +70,8 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif()
 
-message("[MLUOP GTEST PROTOC]: ")
-set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu_op_test_proto")
+message(STATUS "[MLUOP GTEST PROTOC]: ")
+set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu-ops-proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
 
 # protoc code
