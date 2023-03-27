@@ -71,7 +71,7 @@ else()
 endif()
 
 message(STATUS "[MLUOP GTEST PROTOC]: ")
-set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu_op_test_proto")
+set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu-ops-proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
 
 # protoc code
