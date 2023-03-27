@@ -234,7 +234,7 @@ typedef enum {
 typedef enum {
   MLUOP_NMS_BOX_DIAGONAL = 0, /*!< The box mode is [x1, y1, x2, y2]. */
   MLUOP_NMS_BOX_CENTER   = 1,
-  /*!< The box mode is * [x_center, y_center, width, height] where width > 0 and * height > 0. */
+  /*!< The box mode is [x_center, y_center, width, height] where width > 0 and * height > 0. */
 } mluOpNmsBoxPointMode_t;
 
 /*!
@@ -3614,7 +3614,7 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * @param[in] nms_desc
  * The descriptor of the Nms operation. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] box_mode
- * The box mode strcut mode of Nms descriptor to be set. For detailed information,
+ * The box mode struct mode of Nms descriptor to be set. For detailed information,
  * see ::mluOpNmsBoxPointMode_t.
  * @param[in] output_mode
  * The output mode of Nms descriptor to be set. For detailed information,
@@ -3704,7 +3704,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * *
  * NMS function is a necessary procedure in detection networks. And this
  * function selects no more than \b max_output_size targets with high confidence, based on their
- * iou. This function needs extra MLU memory, and you can get the size of workspace
+ * IOU. This function needs extra MLU memory, and you can get the size of workspace
  * \b workspace_size with ::mluOpGetNmsWorkspaceSize.
  *
  * @param[in] handle
@@ -3753,7 +3753,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * @par Data Layout
  * - The input boxes tensor should be a 2D tensor, and the input confidence tensor should be a 1D tensor.
  * - The output tensor is a 1D tensor if the output result is the indices of boxes, otherwise it is a 2D
- * tensor, which containing the coordinates and confidence of output boxes.
+ * tensor, which contains the coordinates and confidence of output boxes.
  *
  * @par Scale Limitation
  * - For the input boxes tensor, if the shape is [boxes_num, 4], the order of coordinates is x_01, y_01, x_02, y_02,
