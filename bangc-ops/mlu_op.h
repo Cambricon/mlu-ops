@@ -3708,7 +3708,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * \b workspace_size with ::mluOpGetNmsWorkspaceSize.
  *
  * @param[in] handle
- * Handle to a MLUOP context that is used to manage MLU devices and queues in the Nms function.
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the Nms function.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] nms_desc
  * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
@@ -3783,7 +3783,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * - On MLU200 series, the \b output value is the NaN.
  * - On MLU300 series, if the last value in the kernel of the pooling is NaN, the \b output value is NaN.
  *   Otherwise, the \b output value is the minimum value after the last NaN.
- *   
+ *
  * @par Requirements
  * - None.
  *
@@ -7268,7 +7268,17 @@ mluOpMatMul(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - None.
+ * - On all hardware platforms, this function supports any combinations of the following data types for
+ *   input tensor \b a, \b b and output tensor \b d.
+ *   - a data type: int8, int16
+ *   - b data type: int8, int16
+ *   - d offchip data type: half, float
+ *   - d onchip data type: half, float
+ * - On MLU300 series or above, this function supports the combinations of the following data types for
+ *   input tensor \b a, \b b and output tensor \b d:
+ *   - \b a, \b b, \b d offchip data type, \b d onchip data type: half, half, half, half
+ *   - \b a, \b b, \b d offchip data type, \b d onchip data type: half, half, half, float
+ *   - \b a, \b b, \b d offchip data type, \b d onchip data type: float, float, float, float
  *
  * @par Data Layout
  * - None.
