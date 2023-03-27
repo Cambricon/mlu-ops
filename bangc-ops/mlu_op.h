@@ -3583,7 +3583,7 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
 // Group:Nms
 /*!
  *
- * @brief Destroys a Nms descriptor \b desc that was previously created with
+ * @brief Destroys an Nms descriptor \b desc that was previously created with
  * ::mluOpNmsCreateNmsDescriptor.
  *
  * The Nms descriptor is defined in ::mluOpNmsDescriptor_t and holds the information
