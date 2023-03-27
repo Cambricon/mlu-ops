@@ -70,7 +70,7 @@ typedef enum {
        dimensions, etc.*/
   MLUOP_STATUS_INTERNAL_ERROR = 4,
   /*!< An error occurs inside of the function, which may indicate an internal error or bug in
-       the library. This error is usually caused by failing to call cnrtMemcpyAsync. 
+       the library. This error is usually caused by failing to call cnrtMemcpyAsync.
        Check whether the memory passed to the function is deallocated before the completion
        of the routine. */
   MLUOP_STATUS_ARCH_MISMATCH = 5,
@@ -154,7 +154,7 @@ typedef enum {
 /*!
  * @brief Describes the options that can help choose the best suited algorithm used
  * for implementation of the activation and accumulation operation.
- * 
+ *
  */
 typedef enum {
   MLUOP_COMPUTATION_FAST = 0,
@@ -901,7 +901,7 @@ mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
  * this function. If ::mluOpSetTensorDescriptor is called, you do not need to specify the
  * strides of all dimensions and the strides are inferred by parameters passed to this function.
  *
- * This function does not support all the operations in this version. 
+ * This function does not support all the operations in this version.
  *
  * @param[in] desc
  * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -1334,7 +1334,7 @@ mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
  * @par Note
  * - The on-chip data type is only used on the operations that support fixed-point computing. It
  *   has no effect on other operations. If you call this function to get on-chip data type for an
- *   operation that does support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned. 
+ *   operation that does support fixed-point computing, ::MLUOP_STATUS_BAD_PARAM is returned.
  *
  * @par Example
  * - None.
@@ -2194,7 +2194,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that stores the extra workspace.
  * @param[in] workspace_size
- * The size of the extra workspace in bytes that needs to be used in ::mluOpGenerateProposalsV2. 
+ * The size of the extra workspace in bytes that needs to be used in ::mluOpGenerateProposalsV2.
  * @param[in] rpn_rois_desc
  * The descriptor of the output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
@@ -2359,7 +2359,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that stores the extra workspace.
  * @param[in] workspace_size
- * The size of the extra workspace in bytes that needs to be used in ::mluOpPolyNms. 
+ * The size of the extra workspace in bytes that needs to be used in ::mluOpPolyNms.
  * @param[in] output_desc
  * The descriptor of the output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
@@ -3376,7 +3376,7 @@ mluOpYoloBox(mluOpHandle_t handle,
 
 // Group:VoxelPooling
 /*!
- * @brief Adds the eigenvalues of all the channels on the same x and y coordinates, 
+ * @brief Adds the eigenvalues of all the channels on the same x and y coordinates,
  * and then pools them to all the channels in the bev 2D area on the corresponding coordinates.
  *
  * @param[in] handle
@@ -3396,19 +3396,23 @@ mluOpYoloBox(mluOpHandle_t handle,
  * @param[in] num_voxel_z
  * The number of voxels for dimZ.
  * @param[in] geom_xyz_desc
- * The descriptor of the tensor \b geom_xyz. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b geom_xyz. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
  * @param[in] geom_xyz
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] input_features_desc
- * The descriptor of the tensor \b input_features. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b input_features. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
  * @param[in] input_features
  * Pointer to the MLU memory that stores the input tensor.
  * @param[in] output_features_desc
- * The descriptor of the tensor \b output_features. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b output_features. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
  * @param[out] output_features
  * Pointer to the MLU memory that stores the output tensor.
  * @param[in] pos_memo_desc
- * The descriptor of the tensor \b pos_memo. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor of the tensor \b pos_memo. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
  * @param[out] pos_memo
  * Pointer to the MLU memory that stores the output tensor.
  *
