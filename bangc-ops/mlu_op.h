@@ -3470,7 +3470,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
 
 // Group:PolyNms
 /*!
- * @brief Computes the NMS NMS (Non-Maximum Suppression) of polygon.
+ * @brief Computes the NMS (Non-Maximum Suppression) of polygon.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices
