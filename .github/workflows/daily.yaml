@@ -17,10 +17,8 @@ jobs:
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
-
-      - name: update submodule
-        run: >
-          git submodule update --init --recursive
+        with: 
+          submodules: 'true'
 
       - name: bangc_lint_check
         run: >
