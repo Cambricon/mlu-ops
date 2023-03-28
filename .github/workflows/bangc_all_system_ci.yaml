@@ -25,6 +25,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: update submodule
+        run: >
+          git submodule update --init --recursive
+
       - name: pull_images
         run: |
           docker pull docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-${{matrix.os}}-${{matrix.cntoolkit_version}}

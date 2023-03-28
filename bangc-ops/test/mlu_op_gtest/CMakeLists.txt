@@ -73,6 +73,15 @@ endif()
 message("[MLUOP GTEST PROTOC]: ")
 set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/mlu_op_test_proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
+if (NOT EXISTS ${PROTO_FILES})
+  message(STATUS "mlu_op_test.proto not found, trying to git submodule init")
+  execute_process(
+    COMMAND git submodule update --init
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  )
+  file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
+endif()
+
 
 # protoc code
 set(PROTOBUF_PROTOC_EXECUTABLE protoc CACHE STRING "protoc command location")
