@@ -106,7 +106,6 @@ usage () {
 }
 
 prepare_cntoolkit () {
-  pushd ../
   pushd ../ > /dev/null
   python2 json_parser.py
   output='dependency.txt'
@@ -156,7 +155,7 @@ prepare_cntoolkit () {
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.deb; do
                 echo "filename: $filename"
-                dpkg -X ${filename} .
+                dpkg -x ${filename} .
                 dpkg -x --force-overwrite ${filename} .
                 prog_log_info "extract ${filename}"
                 if [ ${arr_modules[$i]} == "cntoolkit" ]; then
