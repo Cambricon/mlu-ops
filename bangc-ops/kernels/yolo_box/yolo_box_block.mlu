@@ -167,6 +167,9 @@ static __mlu_func__ void compute(
   }
 
   __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
+  __bang_lt_scalar(nram_conf_p, nram_conf_p, (T)conf_thresh, deal_num);
+  __bang_eq(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
+  __bang_add(nram_iou_p, nram_iou_p, nram_conf_p, deal_num);
 
   // bx0
   computeSigmoid(nram_x_p, nram_x_p, NULL, 0, deal_num);
@@ -1146,11 +1149,14 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
     __bang_mul(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
   }
 
-  __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
-
   computeSigmoid(nram_cls_p, nram_cls_p, NULL, 0, class_num * deal_num);
   __bang_cycle_mul(nram_cls_p, nram_cls_p, nram_conf_p, class_num * deal_num,
                    deal_num);
+
+  __bang_ge_scalar(nram_iou_p, nram_conf_p, (T)conf_thresh, deal_num);
+  __bang_lt_scalar(nram_conf_p, nram_conf_p, (T)conf_thresh, deal_num);
+  __bang_eq(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
+  __bang_add(nram_iou_p, nram_iou_p, nram_conf_p, deal_num);
 
   // mask, set 0
   int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
