@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roi_crop.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,8 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
+#include "kernels/fill_zero/fill_zero.h"
 
 static void policyFunc(const mluOpHandle_t handle, int bin_num,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -203,10 +204,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
   VLOG(5) << "[mluOpRoiCropForward] launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((mluOpBlockKernelRoiCropForwardFloat(
-      k_dim, k_type, handle->queue, input, grid, batch, height, width, channels,
-      grid_n, output_h, output_w, output)));
-  VLOG(5) << "Kernel mluOpBlockKernelRoiCropForwardFloat.";
+  KERNEL_CHECK((KernelRoiCropForward(k_dim, k_type, handle->queue, input, grid,
+                                     batch, height, width, channels, grid_n,
+                                     output_h, output_w, output)));
+  VLOG(5) << "Kernel KernelRoiCropForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -250,14 +251,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   // gdram set zero
   int gd_num = channels * width * height * batch * sizeof(float);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             gd_num, grad_input)));
-  VLOG(5) << "Kernel mluOpBlockKernelFillZeroByte.";
+  KERNEL_CHECK(
+      (KernelFillZero(k_dim, k_type, handle->queue, gd_num, grad_input)));
+  VLOG(5) << "Kernel KernelFillZero.";
 
-  KERNEL_CHECK((mluOpBlockKernelRoiCropBackwardFloat(
-      k_dim, k_type, handle->queue, grad_output, grid, batch, height, width,
-      channels, grid_n, output_h, output_w, grad_input)));
-  VLOG(5) << "kernel mluOpBlockKernelRoiCropBackwardFloat.";
+  KERNEL_CHECK((KernelRoiCropBackward(k_dim, k_type, handle->queue, grad_output,
+                                      grid, batch, height, width, channels,
+                                      grid_n, output_h, output_w, grad_input)));
+  VLOG(5) << "kernel KernelRoiCropBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

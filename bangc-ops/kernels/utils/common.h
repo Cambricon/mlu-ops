@@ -22,8 +22,8 @@
  *************************************************************************/
 
 // public functions are stored in this file
-#ifndef KERNELS_UTILS__COMMON_H_
-#define KERNELS_UTILS__COMMON_H_
+#ifndef KERNELS_UTILS_COMMON_H_
+#define KERNELS_UTILS_COMMON_H_
 
 #include <type_traits>
 #include "float.h"
@@ -354,4 +354,4 @@ __mlu_func__ void pvUnlock() {
 #endif
 }
 
-#endif  // KERNELS_UTILS__COMMON_H_
+#endif  // KERNELS_UTILS_COMMON_H_

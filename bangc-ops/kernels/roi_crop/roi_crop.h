@@ -20,23 +20,21 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_COPY_COPY_MLU_H_
-#define KERNELS_COPY_COPY_MLU_H_
+#ifndef KERNELS_ROI_CROP_ROI_CROP_H
+#define KERNELS_ROI_CROP_ROI_CROP_H
 
-#include "kernels/kernel.h"
 #include "mlu_op.h"
-#include "kernels/tensor_stride_process/tensor_stride_process.h"
 
-void MLUOP_WIN_API mluOpUnion1KernelCopy(cnrtDim3_t k_dim,
-                                         cnrtFunctionType_t k_type,
-                                         cnrtQueue_t queue, const void *input,
-                                         void *output, const size_t num_element,
-                                         const int dtype_size);
-
-void MLUOP_WIN_API mluOpUnion1KernelCopyWithStride(
+void MLUOP_WIN_API KernelRoiCropForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, TensorShape input_shape, void *output,
-    TensorShape output_shape, const size_t num_element, const int dtype_size,
-    const bool use_SMC);
+    const void *input, const void *grid, const int batch, const int height,
+    const int width, const int channels, const int grid_n, const int output_h,
+    const int output_w, void *output);
 
-#endif  // KERNELS_COPY_COPY_MLU_H_
+void MLUOP_WIN_API KernelRoiCropBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *grad_output, const void *grid, const int batch,
+    const int height, const int width, const int channels, const int grid_n,
+    const int output_h, const int output_w, void *grad_input);
+
+#endif  // KERNELS_ROI_CROP_ROI_CROP_H

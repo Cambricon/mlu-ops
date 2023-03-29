@@ -20,36 +20,19 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_FILL_FILL_MLU_H_
-#define KERNELS_FILL_FILL_MLU_H_
+#ifndef KERNELS_GENERATE_PROPOSALS_V2_GENERATE_PROPOSALS_V2_H
+#define KERNELS_GENERATE_PROPOSALS_V2_GENERATE_PROPOSALS_V2_H
 
-#include <stdint.h>
-
-#include "kernels/kernel.h"
 #include "mlu_op.h"
-#include "kernels/tensor_stride_process/tensor_stride_process.h"
 
-// FillDeviceValue
-void MLUOP_WIN_API mluOpUnion1KernelFillDeviceValue(
+void MLUOP_WIN_API KernelGenerateProposalsV2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t k_datatype, void *output, size_t size, const void *value);
+    const float *scores, const float *bbox_deltas, const float *im_shape,
+    const float *anchors, const float *variances, float *workspace,
+    float *rpn_rois, float *rpn_roi_probs, int *rpn_rois_num,
+    int *rpn_rois_batch_size, const int pre_nms_top_n, const int post_nms_top_n,
+    const float nms_thresh, const float min_size, const float eta,
+    const bool pixel_offset, const int batch_size, const int Anchors_num,
+    const int H, const int W);
 
-// FillHostValue
-void MLUOP_WIN_API mluOpUnion1KernelFillHostValue(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t k_datatype, void *output, size_t size, uint32_t value,
-    uint32_t value_high, uint32_t value_low);
-
-// FillDeviceValueWithStride
-void MLUOP_WIN_API mluOpUnion1KernelFillDeviceValueWithStride(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t k_datatype, void *output, TensorShape output_shape,
-    size_t size, const void *value);
-
-// FillHostValueWithStride
-void MLUOP_WIN_API mluOpUnion1KernelFillHostValueWithStride(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t k_datatype, void *output, TensorShape output_shape,
-    size_t size, uint32_t value, uint32_t value_high, uint32_t value_low);
-
-#endif  // KERNELS_FILL_FILL_MLU_H_
+#endif  // KERNELS_GENERATE_PROPOSALS_V2_GENERATE_PROPOSALS_V2_H

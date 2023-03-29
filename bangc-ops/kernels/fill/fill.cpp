@@ -20,10 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "fill.h"
+
 #include <cmath>
 #include <limits>
 
-#include "fill_mlu.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
@@ -165,7 +166,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
               << k_type / CORE_DIM << "," << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>"
               << " CORE_DIM : " << CORE_DIM;
-      KERNEL_CHECK((mluOpUnion1KernelFillDeviceValueWithStride(
+      KERNEL_CHECK((KernelFillDeviceValueWithStride(
           k_dim, k_type, handle->queue, k_datatype, output, output_shape,
           output_num, value)));
     } else {
@@ -174,9 +175,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
           << k_type / CORE_DIM << "," << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>"
           << " CORE_DIM : " << CORE_DIM;
-      KERNEL_CHECK((mluOpUnion1KernelFillDeviceValue(
-          k_dim, k_type, handle->queue, k_datatype, output, output_num,
-          value)));
+      KERNEL_CHECK(
+          (KernelFillDeviceValue(k_dim, k_type, handle->queue, k_datatype,
+                                 output, output_num, value)));
     }
   } else {
     if (if_stride_kernel) {
@@ -191,7 +192,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
               << k_type / CORE_DIM << "," << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>"
               << " CORE_DIM : " << CORE_DIM;
-      KERNEL_CHECK((mluOpUnion1KernelFillHostValueWithStride(
+      KERNEL_CHECK((KernelFillHostValueWithStride(
           k_dim, k_type, handle->queue, k_datatype, output, output_shape,
           output_num, (uint32_t)host_value, value_high, value_low)));
     } else {
@@ -199,11 +200,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle,
       uint64_t host_value = *(uint64_t *)value;
 
       mluop::getLowAndHighValueFrom64Bits(host_value, &value_high, &value_low);
-      VLOG(5) << "mluOpFill:Launch Kernel MLUUnion1KernelFillHostValue<<<Union"
+      VLOG(5) << "mluOpFill:Launch Kernel KernelFillHostValue<<<Union"
               << k_type / CORE_DIM << "," << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>"
               << " CORE_DIM : " << CORE_DIM;
-      KERNEL_CHECK((mluOpUnion1KernelFillHostValue(
+      KERNEL_CHECK((KernelFillHostValue(
           k_dim, k_type, handle->queue, k_datatype, output, output_num,
           (uint32_t)host_value, value_high, value_low)));
     }

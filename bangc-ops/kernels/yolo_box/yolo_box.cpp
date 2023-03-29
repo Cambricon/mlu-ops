@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "yolo_box.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,8 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
+#include "kernels/fill_zero/fill_zero.h"
 
 #define MAX_CLASS_NUM_ARCH_200 1534
 #define MAX_CLASS_NUM_ARCH_300 2558
@@ -202,18 +203,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
           << k_dim.y << ", " << k_dim.z << "].";
 
   int boxes_size = n_in * anchor_s * 4 * h_in * w_in * sizeof(float);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             boxes_size, boxes)));
+  KERNEL_CHECK(
+      (KernelFillZero(k_dim, k_type, handle->queue, boxes_size, boxes)));
 
   int scores_size = n_in * anchor_s * class_num * h_in * w_in * sizeof(float);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             scores_size, scores)));
+  KERNEL_CHECK(
+      (KernelFillZero(k_dim, k_type, handle->queue, scores_size, scores)));
 
-  KERNEL_CHECK((mluOpBlockKernelYoloBoxFloat(
+  KERNEL_CHECK((KernelYoloBox(
       k_dim, k_type, handle->queue, x, img_size, anchors, class_num,
       conf_thresh, downsample_ratio, clip_bbox, scale, iou_aware,
       iou_aware_factor, n_in, anchor_s, c_in, h_in, w_in, boxes, scores)));
-  VLOG(5) << "Kernel mluOpBlockKernelYoloBoxFloat.";
+  VLOG(5) << "Kernel KernelYoloBox.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

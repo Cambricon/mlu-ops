@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "psroipool.h"
+
 #include <string>
 
 #include "core/gen_case.h"
@@ -28,8 +30,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
+#include "kernels/fill_zero/fill_zero.h"
 
 // policy function
 static void policyFuncPsRoiPool(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -250,7 +251,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   policyFuncPsRoiPool(handle, &k_dim, &k_type, rois_sum);
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
-  KERNEL_CHECK((mluOpBlockKernelPsRoiPoolForwardFloat(
+  KERNEL_CHECK((KernelPsRoiPoolForward(
       k_dim, k_type, handle->queue, input, rois, output, mapping_channel,
       batch_size, height, width, channels, pooled_height, pooled_width,
       output_dim, group_size, rois_sum, rois_offset, spatial_scale)));
@@ -328,11 +329,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
 
   // gdram set zero
   int gdramset_size = channels * width * height * batch_size * sizeof(float);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             gdramset_size, bottom_grad)));
-  VLOG(5) << "Kernel mluOpBlockKernelFillZero.";
+  KERNEL_CHECK((KernelFillZero(k_dim, k_type, handle->queue, gdramset_size,
+                               bottom_grad)));
+  VLOG(5) << "Kernel KernelFillZero.";
 
-  KERNEL_CHECK((mluOpBlockKernelPsRoiPoolBackwardFloat(
+  KERNEL_CHECK((KernelPsRoiPoolBackward(
       k_dim, k_type, handle->queue, top_grad, mapping_channel, rois,
       bottom_grad, batch_size, height, width, channels, pooled_height,
       pooled_width, output_dim, rois_sum, rois_offset, spatial_scale)));

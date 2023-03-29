@@ -20,31 +20,31 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
-#define KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+#ifndef KERNELS_VOXELIZATION_VOXELIZATION_H
+#define KERNELS_VOXELIZATION_VOXELIZATION_H
 
-/**
- * A util function to get the working set of current core, every core will
- * handle boxes in range of
- * [*o_begin, *o_begin + *o_box_num)
- *
- * @param input_boxes_num[in] the total box number
- * @param o_box_num[out] the number of boxes current core should processed
- * @param o_beg [out] the beginning box id of current core
- */
-__mlu_func__ static void getCoreWorkingSet(int input_boxes_num, int *o_box_num,
-                                           int *o_beg) {
-  int core_box_num = input_boxes_num / taskDim;
-  int rem = input_boxes_num % taskDim;
-  int box_i_beg = 0;
-  if (taskId < rem) {
-    core_box_num += taskId < rem;
-    box_i_beg = core_box_num * taskId;
-  } else {
-    box_i_beg = core_box_num * taskId + rem;
-  }
-  *o_box_num = core_box_num;
-  *o_beg = box_i_beg;
-}
+#include "mlu_op.h"
 
-#endif  // KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+void MLUOP_WIN_API KernelDynamicVoxelize(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *points, const void *voxel_size, const void *coors_range,
+    void *coors, const int32_t num_points, const int32_t num_features);
+
+void MLUOP_WIN_API KernelPoint2Voxel(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *coors,
+    void *point_to_pointidx, void *point_to_voxelidx, const int32_t num_points,
+    const int32_t max_points);
+
+void MLUOP_WIN_API KernelCalcPointsPerVoxel(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *point_to_pointidx, void *point_to_voxelidx, void *coor_to_voxelidx,
+    void *num_points_per_voxel, void *voxel_num, const int32_t max_voxels,
+    const int32_t num_points);
+
+void MLUOP_WIN_API KernelAssignVoxelsCoors(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *points, void *temp_coors, void *point_to_voxelidx,
+    void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,
+    const int32_t num_points, const int32_t num_features);
+
+#endif  // KERNELS_VOXELIZATION_VOXELIZATION_H

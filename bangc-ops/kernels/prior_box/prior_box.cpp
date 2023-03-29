@@ -20,11 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "prior_box.h"
+
 #include <string>
 
 #include "core/gen_case.h"
 #include "core/runtime/device.h"
-#include "mlu_op_kernel.h"
 
 #define api "mluOpPriorBox"
 #define MLU200SERIERS_MAX_SUPPORT 2100
@@ -216,14 +217,13 @@ mluOpStatus_t mluOpPriorBox(
   cnrtDim3_t k_dim_box;
   cnrtFunctionType_t k_type;
   policyFuncPriorBox(handle, &k_dim_box, &k_type, height);
-  VLOG(5) << api << "Begin Launch mluOpBlockKernelPriorBoxFloat [" << k_type
-          << ", " << k_dim_box.x << ", " << k_dim_box.y << ", " << k_dim_box.z
-          << "].";
-  KERNEL_CHECK(mluOpBlockKernelPriorBoxFloat(
+  VLOG(5) << api << "Begin Launch KernelPriorBox [" << k_type << ", "
+          << k_dim_box.x << ", " << k_dim_box.y << ", " << k_dim_box.z << "].";
+  KERNEL_CHECK(KernelPriorBox(
       k_dim_box, k_type, handle->queue, min_sizes, min_sizes_num, aspect_ratios,
       aspect_ratios_num, variances, variances_num, max_sizes, max_sizes_num,
       height, width, im_height, im_width, step_h, step_w, offset, num_priors,
       clip, min_max_aspect_ratios_order, output, output_size, var, var_size));
-  VLOG(5) << "End mluOpBlockKernelPriorBoxFloat kernel";
+  VLOG(5) << "End KernelPriorBox kernel";
   return MLUOP_STATUS_SUCCESS;
 }

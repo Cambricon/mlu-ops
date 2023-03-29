@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "sqrt.h"
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -28,8 +30,6 @@
 #include "core/type.h"
 #include "kernels/binary_op/binary_op_host.h"
 #include "kernels/unary_op/unary_op_host.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
                                       const mluOpComputationPreference_t prefer,
@@ -65,39 +65,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
           << k_dim.y << ", " << k_dim.z << "]";
 
   int element_num = mluOpGetTensorElementNum(x_desc);
-  void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                cnrtQueue_t queue, const void *x, void *y,
-                                int element_num);
-  mluOpBlockKernelUnary = nullptr;
   if (handle->arch == MLUOP_MLU270) {
-    if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "kernel mluOpBlockKernel5StagePipelineSqrtFloatFast";
-      mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineSqrtFloatFast;
-    } else {
-      if (prefer == MLUOP_COMPUTATION_FAST) {
-        VLOG(5) << "kernel mluOpBlockKernel5StagePipelineSqrtHalfFast";
-        mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineSqrtHalfFast;
-      } else {
-        VLOG(5) << "kernel mluOpBlockKernel5StagePipelineSqrtHalfHighAcc";
-        mluOpBlockKernelUnary = mluOpBlockKernel5StagePipelineSqrtHalfHighAcc;
-      }
-    }
+    VLOG(5) << "kernel Kernel5StagePipelineSqrt.";
+    KERNEL_CHECK(
+        (Kernel5StagePipelineSqrt(k_dim, k_type, handle->queue, x_desc->dtype,
+                                  prefer, x, y, element_num)));
   } else {
-    if (x_desc->dtype == MLUOP_DTYPE_FLOAT) {
-      VLOG(5) << "kernel mluOpBlockKernel3StagePipelineSqrtFloatFast";
-      mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineSqrtFloatFast;
-    } else {
-      if (prefer == MLUOP_COMPUTATION_FAST) {
-        VLOG(5) << "kernel mluOpBlockKernel3StagePipelineSqrtHalfFast";
-        mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineSqrtHalfFast;
-      } else {
-        VLOG(5) << "kernel mluOpBlockKernel3StagePipelineSqrtHalfHighAcc";
-        mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineSqrtHalfHighAcc;
-      }
-    }
+    VLOG(5) << "kernel Kernel3StagePipelineSqrt.";
+    KERNEL_CHECK(
+        (Kernel3StagePipelineSqrt(k_dim, k_type, handle->queue, x_desc->dtype,
+                                  prefer, x, y, element_num)));
   }
-  KERNEL_CHECK(
-      (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -133,21 +112,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
   binaryOpPolicyFunc(handle, y_desc, handle->nram_size, &k_dim, &k_type);
 
   int num_elem = mluOpGetTensorElementNum(y_desc);
-  void (*mluOpBlockKernelBinary)(
-      cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-      const void *y, const void *diff_y, void *diff_x, int num_elem);
-  mluOpBlockKernelBinary = nullptr;
-  if (y_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc";
-    mluOpBlockKernelBinary =
-        mluOpBlockKernel3StagePipelineSqrtBackwardHalfHighAcc;
-  } else {
-    VLOG(5) << "Kernel mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast";
-    mluOpBlockKernelBinary =
-        mluOpBlockKernel3StagePipelineSqrtBackwardFloatFast;
-  }
-  KERNEL_CHECK((mluOpBlockKernelBinary(k_dim, k_type, handle->queue, y, diff_y,
-                                       diff_x, num_elem)));
+  VLOG(5) << "Kernel Kernel3StagePipelineSqrtBackward.";
+  KERNEL_CHECK((Kernel3StagePipelineSqrtBackward(k_dim, k_type, handle->queue,
+                                                 y_desc->dtype, y, diff_y,
+                                                 diff_x, num_elem)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

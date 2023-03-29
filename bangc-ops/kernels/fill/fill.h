@@ -20,31 +20,38 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "copy.h"
+#ifndef KERNELS_FILL_FILL_H
+#define KERNELS_FILL_FILL_H
+
+#include <stdint.h>
 
 #include "kernels/kernel.h"
+#include "mlu_op.h"
+#include "kernels/tensor_stride_process/tensor_stride_process.h"
 
-__mlu_global__ void MLUUnion1KernelCopy(void *input, void *output,
-                                        size_t num_element, int dtype_size);
-
-__mlu_global__ void MLUUnion1KernelCopyWithStride(
-    void *input, TensorShape input_shape, void *output,
-    TensorShape output_shape, size_t num_element, int dtype_size, bool use_SMC);
-
-void MLUOP_WIN_API KernelCopy(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                              cnrtQueue_t queue, const void *input,
-                              void *output, const size_t num_element,
-                              const int dtype_size) {
-  MLUUnion1KernelCopy<<<k_dim, k_type, queue>>>((void *)input, (void *)output,
-                                                num_element, dtype_size);
-}
-
-void MLUOP_WIN_API KernelCopyWithStride(
+// FillDeviceValue
+void MLUOP_WIN_API KernelFillDeviceValue(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, TensorShape input_shape, void *output,
-    TensorShape output_shape, const size_t num_element, const int dtype_size,
-    const bool use_SMC) {
-  MLUUnion1KernelCopyWithStride<<<k_dim, k_type, queue>>>(
-      (void *)input, input_shape, (void *)output, output_shape, num_element,
-      dtype_size, use_SMC);
-}
+    mluOpDataType_t k_datatype, void *output, size_t size, const void *value);
+
+// FillHostValue
+void MLUOP_WIN_API KernelFillHostValue(cnrtDim3_t k_dim,
+                                       cnrtFunctionType_t k_type,
+                                       cnrtQueue_t queue,
+                                       mluOpDataType_t k_datatype, void *output,
+                                       size_t size, uint32_t value,
+                                       uint32_t value_high, uint32_t value_low);
+
+// FillDeviceValueWithStride
+void MLUOP_WIN_API KernelFillDeviceValueWithStride(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t k_datatype, void *output, TensorShape output_shape,
+    size_t size, const void *value);
+
+// FillHostValueWithStride
+void MLUOP_WIN_API KernelFillHostValueWithStride(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t k_datatype, void *output, TensorShape output_shape,
+    size_t size, uint32_t value, uint32_t value_high, uint32_t value_low);
+
+#endif  // KERNELS_FILL_FILL_H

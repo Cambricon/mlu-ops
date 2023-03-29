@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "box_iou_rotated.h"
+
 #include <algorithm>
 #include <string>
 
@@ -28,8 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 // each box data contains 5 number: x, y, w, h, a
 #define SINGLE_BOX_DIM 5
@@ -55,7 +55,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
 
-  // if total_num < 64, use only one ipu core;
+  // if total_num < 64, use only one mlu core;
   const uint32_t single_core_small_case = 64;
 
   if (single_core_small_case >= num_box1) {  // only 1 ipu-core enough
@@ -199,14 +199,9 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
 
   VLOG(5) << "[mluOpBoxIouRotated] launch kernel policyFunc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "].";
-
-  // only support float datatype
-  if (box1_desc->dtype == MLUOP_DTYPE_FLOAT) {
-    VLOG(5) << "Launch kernel mluOpUnionKernelBoxIouRotatedFloat.";
-    KERNEL_CHECK((mluOpUnionKernelBoxIouRotatedFloat(
-        k_dim, k_type, handle->queue, box1, box2, ious, num_box1, num_box2,
-        mode, aligned)));
-  }
+  KERNEL_CHECK(
+      (KernelBoxIouRotated(k_dim, k_type, handle->queue, box1_desc->dtype, box1,
+                           box2, ious, num_box1, num_box2, mode, aligned)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

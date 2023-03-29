@@ -20,13 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "generate_proposals_v2.h"
 
 #include <float.h>
 
 #include "kernels/utils/common.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #define PROPOSAL_NRAM_SIZE MAX_NRAM_SIZE
 #define CALC_AREA_NRAM_FLT_CAP CALC_AREA_NRAM_SIZE / sizeof(float)
@@ -1109,6 +1108,7 @@ __mlu_func__ void ProposalForOneImage(
                      im_shape, anchors, variances, workspace_buffer, k_score,
                      HWA, pre_nms_top_n, min_size, pixel_offset, need_top_k,
                      &proposals_num);
+  rpn_rois_num[0] = 0;
   if (proposals_num == 0) {
     rpn_rois_num[0] = 1;
     one_image_proposals_num[0] += rpn_rois_num[0];
@@ -1162,7 +1162,7 @@ __mlu_global__ void mluOpGenerateProposalsV2Kernel(
   *rpn_rois_batch_size = all_proposals_num;
 }
 
-void MLUOP_WIN_API mluOpUBestKernelGenerateProposalsV2Float(
+void MLUOP_WIN_API KernelGenerateProposalsV2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *scores, const float *bbox_deltas, const float *im_shape,
     const float *anchors, const float *variances, float *workspace,

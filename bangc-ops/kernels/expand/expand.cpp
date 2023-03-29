@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "expand.h"
+
 #include <string>
 
 #include "core/gen_case.h"
@@ -28,8 +30,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #define INT64_LARGE_TENSOR_NUM ((uint64_t)(1 << 30))
 
@@ -196,19 +196,17 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     if (redims_input[count_index[0]] != 1) {
       low_num *= redims_input[count_index[0]];
     }
-    VLOG(5) << "Launch Kernel MLUUnion1KernelExpandOneDim<<<Union"
-            << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-            << k_dim.z << ">>>";
-    KERNEL_CHECK((mluOpUnion1KernelExpandOneDim(
+    VLOG(5) << "Launch Kernel KernelExpandOneDim<<<Union" << k_type / CORE_DIM
+            << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+    KERNEL_CHECK((KernelExpandOneDim(
         k_dim, k_type, handle->queue, (void *)input, (void *)output, high_num,
         expand_num, low_num, mluOpDataTypeBytes(data_type))));
   } else {
     INTERNAL_CHECK("mluOpExpand",
                    MLUOP_STATUS_SUCCESS == policyFunc(handle, &k_dim, &k_type));
-    VLOG(5) << "Launch Kernel MLUUnion1KernelExpandTensor<<<Union"
-            << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-            << k_dim.z << ">>>";
-    KERNEL_CHECK((mluOpUnion1KernelExpandTensor(
+    VLOG(5) << "Launch Kernel KernelExpandTensor<<<Union" << k_type / CORE_DIM
+            << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+    KERNEL_CHECK((KernelExpandTensor(
         k_dim, k_type, handle->queue, (void *)input, (void *)output,
         dims_input[0], dims_input[1], dims_input[2], dims_input[3],
         dims_input[4], dims_input[5], dims_input[6], dims_input[7],
