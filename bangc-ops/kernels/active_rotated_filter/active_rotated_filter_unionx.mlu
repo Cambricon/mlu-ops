@@ -20,8 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "active_rotated_filter.h"
 #include "kernels/kernel.h"
-#include "mlu_op_kernel.h"
+#include "kernels/debug.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define ROWS 8
@@ -405,26 +406,27 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
 #endif
 }
 
-void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardFloat(
+void MLUOP_WIN_API KernelActiveRotatedFilterForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int output_planes, const int input_planes, const int orientations,
-    const int kH, const int kW, const int rotations, const void *input_gdram,
-    const void *indices_gdram, const void *workspace_gdram,
-    void *output_gdram) {
-  MLUKernelActiveRotatedFilterForward<float><<<k_dim, k_type, queue>>>(
-      output_planes, input_planes, orientations, kH, kW, rotations,
-      (float *)input_gdram, (float *)indices_gdram, (float *)workspace_gdram,
-      (float *)output_gdram);
-}
-
-void MLUOP_WIN_API mluOpUnionXKernelActiveRotatedFilterForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int output_planes, const int input_planes, const int orientations,
-    const int kH, const int kW, const int rotations, const void *input_gdram,
-    const void *indices_gdram, const void *workspace_gdram,
-    void *output_gdram) {
-  MLUKernelActiveRotatedFilterForward<half><<<k_dim, k_type, queue>>>(
-      output_planes, input_planes, orientations, kH, kW, rotations,
-      (half *)input_gdram, (half *)indices_gdram, (half *)workspace_gdram,
-      (half *)output_gdram);
+    mluOpDataType_t d_type, const int output_planes, const int input_planes,
+    const int orientations, const int kH, const int kW, const int rotations,
+    const void *input_gdram, const void *indices_gdram,
+    const void *workspace_gdram, void *output_gdram) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelActiveRotatedFilterForward<float><<<k_dim, k_type, queue>>>(
+          output_planes, input_planes, orientations, kH, kW, rotations,
+          (float *)input_gdram, (float *)indices_gdram,
+          (float *)workspace_gdram, (float *)output_gdram);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelActiveRotatedFilterForward<half><<<k_dim, k_type, queue>>>(
+          output_planes, input_planes, orientations, kH, kW, rotations,
+          (half *)input_gdram, (half *)indices_gdram, (half *)workspace_gdram,
+          (half *)output_gdram);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+    }; break;
+  }
 }

@@ -69,9 +69,9 @@ $ cd kernels
 $ mkdir add  // 添加以算子名命名的目录
 $ cd add
 $ touch add.cpp // add.cpp  ->  mluop 接口的实现文件
+$ touch add.h   // add.h    ->  kernel 接口声明文件
 $ touch add.mlu // add.mlu  ->  以 bangc 编程的 kernel 函数的实现文件
 $ cd ../../
-$ mlu_op_kernel.h // launch 接口声明文件
 $ mlu_op.h // mluop 接口声明文件
 ```
 

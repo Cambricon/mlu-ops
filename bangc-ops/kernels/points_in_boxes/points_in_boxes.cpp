@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "kernels/points_in_boxes/points_in_boxes.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,11 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-
-#include "mlu_op.h"
 #include "kernels/kernel.h"
-
-#include "kernels/points_in_boxes/points_in_boxes.h"
 
 static mluOpStatus_t pointsInBoxesPreCheck(
     const mluOpTensorDescriptor_t points_desc,
@@ -213,8 +211,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
   }
   // generate points_in_boxes prototxt end!
   VLOG(5) << "[[mluOpPointsInBoxes]] Launch Kernel "
-             "mluOpBlockPointsInBoxesKernel.";
-  KERNEL_CHECK(mluOpBlockKernelPointsInBoxes(
+             "KernelPointsInBoxes.";
+  KERNEL_CHECK(KernelPointsInBoxes(
       k_dim, k_type, handle->queue, points_desc->dims[0], points_desc->dims[1],
       boxes_desc->dims[1], (float *)points, (float *)boxes,
       (int *)points_indices, points_in_boxes_info.points_batch_offset,

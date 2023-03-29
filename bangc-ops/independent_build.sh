@@ -161,9 +161,9 @@ prepare_cntoolkit () {
                   pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
                   for pkg in ${sub_pkg_to_extract[@]}
                   do
-                      local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
-                      prog_log_info "extract ${fname}"
-                      dpkg -x --force-overwrite ${fname} ./
+                    local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                    prog_log_info "extract ${fname}"
+                    dpkg -x --force-overwrite ${fname} ./
                   done
                 fi
               done
@@ -191,9 +191,9 @@ prepare_cntoolkit () {
                   pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
                   for pkg in ${sub_pkg_to_extract[@]}
                   do
-                      local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
-                      prog_log_info "extract ${fname}"
-                      dpkg -x --force-overwrite ${fname} ./
+                    local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                    prog_log_info "extract ${fname}"
+                    dpkg -x --force-overwrite ${fname} ./
                   done
                 fi
               done
@@ -221,9 +221,9 @@ prepare_cntoolkit () {
                   pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
                   for pkg in ${sub_pkg_to_extract[@]}
                   do
-                      local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
-                      prog_log_info "extract ${fname}"
-                      rpm2cpio ${fname} | cpio -u -di
+                    local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                    prog_log_info "extract ${fname}"
+                    rpm2cpio ${fname} | cpio -u -di
                   done
                 fi
               done

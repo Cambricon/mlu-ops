@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "moe_dispatch_forward.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,8 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
@@ -84,8 +84,7 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
                      << mluop::getNameOfDataType(locations_desc->dtype) << ".");
 
   // check tensor datatype, support float32
-  PARAM_CHECK_V2(op_name,
-                 input_desc->dtype == MLUOP_DTYPE_FLOAT,
+  PARAM_CHECK_V2(op_name, input_desc->dtype == MLUOP_DTYPE_FLOAT,
                  "Only float are supported in input tensor, but the "
                  "data type of tensor is "
                      << mluop::getNameOfDataType(input_desc->dtype) << ".");
@@ -106,8 +105,7 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
   PARAM_CHECK(op_name, (hidden == dispatch_desc->dims[1]));
 
   // check correlation of parameters
-  PARAM_CHECK_V2(op_name,
-                 samples <= (num_experts*capacity),
+  PARAM_CHECK_V2(op_name, samples <= (num_experts * capacity),
                  "The samples must be less than or equal to the "
                  "multiplication result of the capacity and num_experts");
 
@@ -147,16 +145,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchForward(
     const void *gates, const mluOpTensorDescriptor_t indices_desc,
     const void *indices, const mluOpTensorDescriptor_t locations_desc,
     const void *locations, const mluOpTensorDescriptor_t input_desc,
-    const void* input, const int samples, const int capacity,
-    const int hidden, const int num_experts,
-    const mluOpTensorDescriptor_t dispatch_desc, void *dispatch) {
+    const void *input, const int samples, const int capacity, const int hidden,
+    const int num_experts, const mluOpTensorDescriptor_t dispatch_desc,
+    void *dispatch) {
   // check params
   bool zero_element = false;
   mluOpStatus_t param_check = MoeDispatchForwardParamCheck(
-      "[mluOpMoeDispatchForward]", handle, gates_desc, gates,
-      indices_desc, indices, locations_desc, locations, input_desc, input,
-      samples, capacity, hidden, num_experts, dispatch_desc, dispatch,
-      &zero_element);
+      "[mluOpMoeDispatchForward]", handle, gates_desc, gates, indices_desc,
+      indices, locations_desc, locations, input_desc, input, samples, capacity,
+      hidden, num_experts, dispatch_desc, dispatch, &zero_element);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
@@ -186,23 +183,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchForward(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type);
-  VLOG(5) << "Launch kernel mluOpMoeDispatchForward<<<Block"
-          << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  VLOG(5) << "Launch kernel mluOpMoeDispatchForward<<<Block" << k_dim.x << ", "
+          << k_dim.y << ", " << k_dim.z << ">>>";
 
   mluOpDataType_t data_type = input_desc->dtype;
-  if (data_type == MLUOP_DTYPE_FLOAT) {
-    VLOG(5) << "[mluOpMoeDispatchForward] launch "
-               "MLUKernelMoeDispatchFwdFloat";
-    KERNEL_CHECK(mluOpBlockKernelMoeDispatchFwdFloat(
-         k_dim, k_type, handle->queue, gates, indices, locations, input,
-         samples, capacity, hidden, num_experts, dispatch));
-  } else {
-    VLOG(5) << "[mluOpMoeDispatchForward] launch "
-               "MLUKernelMoeDispatchFwdHalf";
-    KERNEL_CHECK(mluOpBlockKernelMoeDispatchFwdHalf(
-         k_dim, k_type, handle->queue, gates, indices, locations, input,
-         samples, capacity, hidden, num_experts, dispatch));
-  }
+  VLOG(5) << "[mluOpMoeDispatchForward] launch "
+             "KernelMoeDispatchForward";
+  KERNEL_CHECK(KernelMoeDispatchForward(
+      k_dim, k_type, handle->queue, data_type, gates, indices, locations, input,
+      samples, capacity, hidden, num_experts, dispatch));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

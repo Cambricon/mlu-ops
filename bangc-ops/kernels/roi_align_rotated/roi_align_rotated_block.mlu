@@ -20,14 +20,16 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roi_align_rotated.h"
+
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 #include "kernels/utils/common.h"
 #include "mlu.h"
-#include "mlu_op_kernel.h"
 
 #define ROI_OFFSET 6
 #define SAMPLING_NUM 4
@@ -450,40 +452,50 @@ __mlu_global__ void roiAlignRotatedBackward(
   }
 }
 
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardFloat(
+void MLUOP_WIN_API KernelRoiAlignRotatedForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output) {
-  roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
-      (float *)features, (float *)rois, batch, height, width, channel, rois_num,
-      rroiAlignParams, (float *)output);
-}
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *output) {
-  roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
-      (half *)features, (half *)rois, batch, height, width, channel, rois_num,
-      rroiAlignParams, (half *)output);
+    mluOpDataType_t d_type, const void *features, const void *rois,
+    const int batch, const int height, const int width, const int channel,
+    const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
+    void *output) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
+          (float *)features, (float *)rois, batch, height, width, channel,
+          rois_num, rroiAlignParams, (float *)output);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
+          (half *)features, (half *)rois, batch, height, width, channel,
+          rois_num, rroiAlignParams, (half *)output);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardFloat(
+void MLUOP_WIN_API KernelRoiAlignRotatedBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *top_grad, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad) {
-  roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
-      (float *)top_grad, (float *)rois, batch, height, width, channel, rois_num,
-      rroiAlignParams, (float *)bottom_grad);
-}
-void MLUOP_WIN_API mluOpBlockKernelRoiAlignRotatedBackwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *top_grad, const void *rois, const int batch, const int height,
-    const int width, const int channel, const int rois_num,
-    const mluOpRoiAlignRotatedParams rroiAlignParams, void *bottom_grad) {
-  roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
-      (half *)top_grad, (half *)rois, batch, height, width, channel, rois_num,
-      rroiAlignParams, (half *)bottom_grad);
+    mluOpDataType_t d_type, const void *top_grad, const void *rois,
+    const int batch, const int height, const int width, const int channel,
+    const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
+    void *bottom_grad) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
+          (float *)top_grad, (float *)rois, batch, height, width, channel,
+          rois_num, rroiAlignParams, (float *)bottom_grad);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
+          (half *)top_grad, (half *)rois, batch, height, width, channel,
+          rois_num, rroiAlignParams, (half *)bottom_grad);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

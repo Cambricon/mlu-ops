@@ -181,11 +181,11 @@ __mlu_func__ void computeMask(float *nram_output, float *nram_input,
                           deal_num, 0);
     __bang_int322float_rn((float *)temp, (int32_t *)temp, deal_num, 0);
     __bang_sub((float *)temp + offset_temp2, (float *)temp,
-              (float *)nram_input + offset, deal_num);
+               (float *)nram_input + offset, deal_num);
     __bang_le_scalar((float *)temp + offset_temp3, (float *)temp + offset_temp2,
-              (float)0.000001, deal_num);  //  < 1e-6
+                     (float)0.000001, deal_num);  //  < 1e-6
     __bang_ge_scalar((float *)temp + offset_temp2, (float *)temp + offset_temp2,
-              (float)-0.000001, deal_num);  //  > -1e-6
+                     (float)-0.000001, deal_num);  //  > -1e-6
     __bang_and((float *)temp + offset_temp2, (float *)temp + offset_temp2,
                (float *)temp + offset_temp3, deal_num);
     __bang_ge_scalar((float *)temp + offset_temp3, (float *)temp, (float)0.0,
@@ -213,8 +213,8 @@ __mlu_func__ void genIndiceOutput(int32_t *nram_output, float *batch,
   int32_t o_d = output_space.o_d, o_h = output_space.o_h,
           o_w = output_space.o_w;
   int32_t o_hw = o_h * o_w, o_dhw = o_d * o_h * o_w;
-  __bang_float2int32_tz((int32_t *)temp + deal_num, (float *)batch,
-                        deal_num, 0);  // n
+  __bang_float2int32_tz((int32_t *)temp + deal_num, (float *)batch, deal_num,
+                        0);  // n
   __bang_mul_scalar((int32_t *)temp, (int32_t *)temp + deal_num, (int32_t)o_dhw,
                     deal_num);  // n * odhw
   __bang_float2int32_tz((int32_t *)temp + 2 * deal_num, (float *)nram_input,

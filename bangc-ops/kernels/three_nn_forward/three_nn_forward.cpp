@@ -20,16 +20,15 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "three_nn_forward.h"
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/debug.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 static mluOpStatus_t MLUOP_WIN_API initTransposeDescriptor(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
@@ -270,25 +269,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(known_desc_tmp));
 
   VLOG(5) << "[mluOpThreeNNForward] mluOpTranspose_v2 feature end.";
-  VLOG(5) << "Launch Kernel MLUKernelThreeNNForward<<<Union"
-          << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y << ", "
-          << k_dims.z << ">>>.";
-  switch (input_dtype) {
-    case MLUOP_DTYPE_FLOAT: {
-      KERNEL_CHECK((mluOpUnion1KernelThreeNNForwardFloat(
-          k_dims, k_type, handle->queue, b, n, m, unknown, known_workspace,
-          dist2, idx)));
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      KERNEL_CHECK((mluOpUnion1KernelThreeNNForwardHalf(
-          k_dims, k_type, handle->queue, b, n, m, unknown, known_workspace,
-          dist2, idx)));
-    }; break;
-    default: {
-      VLOG(5) << "Not implemented.";
-      break;
-    }
-  }
+  VLOG(5) << "Launch Kernel KernelThreeNNForward<<<Union" << k_type / CORE_DIM
+          << ", " << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>.";
+  KERNEL_CHECK(
+      (KernelThreeNNForward(k_dims, k_type, handle->queue, input_dtype, b, n, m,
+                            unknown, known_workspace, dist2, idx)));
 
   // generate gen_case prototxt
   GEN_CASE_END();

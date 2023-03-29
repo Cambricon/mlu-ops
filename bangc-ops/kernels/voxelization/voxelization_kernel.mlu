@@ -20,11 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "voxelization.h"
+
 #include <cmath>
 
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "mlu_op_kernel.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -520,7 +521,7 @@ __mlu_global__ void mluAssignVoxelsCoors(
 #endif
 }
 
-void MLUOP_WIN_API mluOpUnionKernelDynamicVoxelize(
+void MLUOP_WIN_API KernelDynamicVoxelize(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *points, const void *voxel_size, const void *coors_range,
     void *coors, const int32_t num_points, const int32_t num_features) {
@@ -529,7 +530,7 @@ void MLUOP_WIN_API mluOpUnionKernelDynamicVoxelize(
       (int32_t *)coors, num_points, num_features);
 }
 
-void MLUOP_WIN_API mluOpUnionKernelPoint2Voxel(
+void MLUOP_WIN_API KernelPoint2Voxel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *coors,
     void *point_to_pointidx, void *point_to_voxelidx, const int32_t num_points,
     const int32_t max_points) {
@@ -538,7 +539,7 @@ void MLUOP_WIN_API mluOpUnionKernelPoint2Voxel(
       (int32_t *)point_to_voxelidx, num_points, max_points);
 }
 
-void MLUOP_WIN_API mluOpUnionKernelCalcPointsPerVoxel(
+void MLUOP_WIN_API KernelCalcPointsPerVoxel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *point_to_pointidx, void *point_to_voxelidx, void *coor_to_voxelidx,
     void *num_points_per_voxel, void *voxel_num, const int32_t max_voxels,
@@ -549,7 +550,7 @@ void MLUOP_WIN_API mluOpUnionKernelCalcPointsPerVoxel(
       (int32_t *)voxel_num, max_voxels, num_points);
 }
 
-void MLUOP_WIN_API mluOpUnionKernelAssignVoxelsCoors(
+void MLUOP_WIN_API KernelAssignVoxelsCoors(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *points, void *temp_coors, void *point_to_voxelidx,
     void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,

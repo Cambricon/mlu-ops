@@ -34,12 +34,12 @@ struct pointsInBoxesTSI {
   uint32_t idx_deal_num = 0;
 };
 
-void MLUOP_WIN_API mluOpBlockKernelPointsInBoxes(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    uint32_t batch_size, uint32_t points_num, uint32_t boxes_num, float *points,
-    float *boxes, int *idx, uint32_t points_batch_offset,
-    uint32_t boxes_batch_offset, uint32_t idx_batch_offset,
-    uint32_t points_deal_num, uint32_t points_deal_offset,
-    uint32_t idx_deal_num);
+void MLUOP_WIN_API
+KernelPointsInBoxes(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                    cnrtQueue_t queue, uint32_t batch_size, uint32_t points_num,
+                    uint32_t boxes_num, float *points, float *boxes, int *idx,
+                    uint32_t points_batch_offset, uint32_t boxes_batch_offset,
+                    uint32_t idx_batch_offset, uint32_t points_deal_num,
+                    uint32_t points_deal_offset, uint32_t idx_deal_num);
 
 #endif  // KERNELS_POINTS_IN_BOXES_POINTS_IN_BOXES_H_

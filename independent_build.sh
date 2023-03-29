@@ -54,13 +54,10 @@ arr_vers=(`echo $PACKAGE_MODULE_VERS`)
 
 n=${#arr_vers[@]}
 
+sub_pkg_to_extract=(cncc cnas cnperf cngdb cndrv cnrt cnbin cnpapi cndev cntoolkit-cloud)
+
 echo "number of dependency: $n"
 PACKAGE_EXTRACT_DIR="dep_libs_extract"
-
-export NEUWARE_HOME=${PWD}/${PACKAGE_EXTRACT_DIR}/usr/local/neuware
-export PATH=${PWD}/${PACKAGE_EXTRACT_DIR}/usr/local/neuware/bin:$PATH
-export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
-
 
 if [ -f "/etc/os-release" ]; then
     source /etc/os-release
@@ -79,13 +76,15 @@ if [ -f "/etc/os-release" ]; then
             pushd ${PACKAGE_EXTRACT_DIR}
             for filename in ../${REAL_PATH}*.deb; do
               echo "filename: $filename"
-              dpkg -X ${filename} .
+              dpkg -x --force-overwrite ${filename} .
               echo "test succeuss"
               if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                 pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
-                echo "pure_ver: ${pure_ver}"
-                for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
-                  dpkg -X $lib ./
+                for pkg in ${sub_pkg_to_extract[@]}
+                do
+                  fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                  echo "extract ${fname}"
+                  dpkg -x --force-overwrite ${fname} ./
                 done
               fi
             done
@@ -107,12 +106,14 @@ if [ -f "/etc/os-release" ]; then
             pushd ${PACKAGE_EXTRACT_DIR}
             for filename in ../${REAL_PATH}*.deb; do
               echo "filename: $filename"
-              dpkg -X ${filename} ./
+              dpkg -x --force-overwrite ${filename} ./
               if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                 pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
-                echo "pure_ver: ${pure_ver}"
-                for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.deb; do
-                  dpkg -X $lib ./
+                for pkg in ${sub_pkg_to_extract[@]}
+                do
+                  fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                  echo "extract ${fname}"
+                  dpkg -x --force-overwrite ${fname} ./
                 done
               fi
             done
@@ -136,9 +137,11 @@ if [ -f "/etc/os-release" ]; then
               rpm2cpio $filename | cpio -div
               if [ ${arr_modules[$i]} == "cntoolkit" ]; then
                 pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
-                echo "pure_ver: ${pure_ver}"
-                for lib in var/${arr_modules[$i]}"-"${pure_ver}/*.rpm; do
-                  rpm2cpio $lib | cpio -div
+                for pkg in ${sub_pkg_to_extract[@]}
+                do
+                  fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                  echo "extract ${fname}"
+                  rpm2cpio ${fname} | cpio -u -di
                 done
               fi
             done
@@ -172,6 +175,10 @@ if [ -f "/etc/os-release" ]; then
     fi
 fi
 
+export NEUWARE_HOME=${PWD}/${PACKAGE_EXTRACT_DIR}/usr/local/neuware
+export PATH=${PWD}/${PACKAGE_EXTRACT_DIR}/usr/local/neuware/bin:$PATH
+export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
+
 ./build.sh --sub_module=bangc
 
 if [ $? != 0 ]; then
@@ -188,7 +195,7 @@ mkdir -p ${PACKAGE_DIR}/include
 mkdir -p ${PACKAGE_DIR}/lib64
 
 cp -rf ${BUILD_DIR}/lib/libmluops.so* ${PACKAGE_DIR}/lib64
-cp bangc-ops/mlu_op.h bangc-ops/mlu_op_kernel.h ${PACKAGE_DIR}/include
+cp bangc-ops/mlu_op.h ${PACKAGE_DIR}/include
 
 TEST_DIR="test_workspace/mluops"
 mkdir -p ${TEST_DIR}/build

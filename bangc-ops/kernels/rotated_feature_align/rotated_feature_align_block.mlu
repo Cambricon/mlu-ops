@@ -20,8 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "rotated_feature_align.h"
+
+#include "kernels/debug.h"
 #include "kernels/kernel.h"
-#include "mlu_op_kernel.h"
 
 #define SEG_NUM 10
 #define BBOXES_ALIGN 64
@@ -716,44 +718,50 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
   __asm__ volatile("sync;\n\t");
 }
 
-void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardFloat(
+void MLUOP_WIN_API KernelRotatedFeatureAlignForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *bboxes, const int batches, const int height,
-    const int width, const int channels, const int offset_rois,
-    const float spatial_scale, const int points, void *output) {
-  MLUKernelRotatedFeatureAlignForward<<<k_dim, k_type, queue>>>(
-      (float *)input, (float *)bboxes, batches, height, width, channels,
-      offset_rois, spatial_scale, points, (float *)output);
+    mluOpDataType_t d_type, const void *input, const void *bboxes,
+    const int batches, const int height, const int width, const int channels,
+    const int offset_rois, const float spatial_scale, const int points,
+    void *output) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelRotatedFeatureAlignForward<<<k_dim, k_type, queue>>>(
+          (float *)input, (float *)bboxes, batches, height, width, channels,
+          offset_rois, spatial_scale, points, (float *)output);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelRotatedFeatureAlignForward<<<k_dim, k_type, queue>>>(
+          (half *)input, (half *)bboxes, batches, height, width, channels,
+          offset_rois, (half)spatial_scale, points, (half *)output);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignForwardHalf(
+void MLUOP_WIN_API KernelRotatedFeatureAlignBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *bboxes, const int batches, const int height,
-    const int width, const int channels, const int offset_rois,
-    const float spatial_scale, const int points, void *output) {
-  MLUKernelRotatedFeatureAlignForward<<<k_dim, k_type, queue>>>(
-      (half *)input, (half *)bboxes, batches, height, width, channels,
-      offset_rois, (half)spatial_scale, points, (half *)output);
-}
-
-void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *top_output, const void *bboxes, const int batches,
-    const int height, const int width, const int channels,
+    mluOpDataType_t d_type, const void *top_output, const void *bboxes,
+    const int batches, const int height, const int width, const int channels,
     const int offset_rois, const float spatial_scale, const int points,
     void *bottom_input) {
-  MLUKernelRotatedFeatureAlignBackward<<<k_dim, k_type, queue>>>(
-      (float *)top_output, (float *)bboxes, batches, height, width, channels,
-      offset_rois, spatial_scale, points, (float *)bottom_input);
-}
-
-void MLUOP_WIN_API mluOpBlockKernelRotatedFeatureAlignBackwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *top_output, const void *bboxes, const int batches,
-    const int height, const int width, const int channels,
-    const int offset_rois, const float spatial_scale, const int points,
-    void *bottom_input) {
-  MLUKernelRotatedFeatureAlignBackward<<<k_dim, k_type, queue>>>(
-      (half *)top_output, (half *)bboxes, batches, height, width, channels,
-      offset_rois, (half)spatial_scale, points, (half *)bottom_input);
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelRotatedFeatureAlignBackward<<<k_dim, k_type, queue>>>(
+          (float *)top_output, (float *)bboxes, batches, height, width,
+          channels, offset_rois, spatial_scale, points, (float *)bottom_input);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelRotatedFeatureAlignBackward<<<k_dim, k_type, queue>>>(
+          (half *)top_output, (half *)bboxes, batches, height, width, channels,
+          offset_rois, (half)spatial_scale, points, (half *)bottom_input);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

@@ -29,9 +29,8 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/kernel.h"
-#include "mlu_op.h"
 #include "core/gen_case.h"
+#include "kernels/kernel.h"
 
 static inline bool isSupportType(const mluOpDataType_t check_type,
                                  const mluOpDataType_t support_type[],
@@ -176,21 +175,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   int n = xyz_desc->dims[1];
   mluOpDataType_t d_type = new_xyz_desc->dtype;
 
-  VLOG(5) << "[mluOpBallQuery] launch kernel policyFUnc[" << k_dim.x << ", "
-          << k_dim.y << ", " << k_dim.z << "]";
-  if (d_type == MLUOP_DTYPE_FLOAT) {
-    VLOG(5) << "In mluOpBallQuery, go into MLUUnion1KernelBallQuery<float>";
-    KERNEL_CHECK(
-        (MLUUnion1KernelBallQuery<float><<<k_dim, k_type, handle->queue>>>(
-            b, n, m, min_radius, max_radius, nsample, (float *)new_xyz,
-            (float *)xyz, (int32_t *)idx)));
-  } else {
-    VLOG(5) << "In mluOpBallQuery, go into MLUUnion1KernelBallQuery<half>";
-    KERNEL_CHECK(
-        (MLUUnion1KernelBallQuery<half><<<k_dim, k_type, handle->queue>>>(
-            b, n, m, min_radius, max_radius, nsample, (half *)new_xyz,
-            (half *)xyz, (int32_t *)idx)));
-  }
+  VLOG(5) << "[mluOpBallQuery] launch kernel KernelBallQuery[" << k_dim.x
+          << ", " << k_dim.y << ", " << k_dim.z << "]";
+  KERNEL_CHECK(KernelBallQuery(k_dim, k_type, handle->queue, d_type, b, n, m,
+                               min_radius, max_radius, nsample, new_xyz, xyz,
+                               (int32_t *)idx));
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

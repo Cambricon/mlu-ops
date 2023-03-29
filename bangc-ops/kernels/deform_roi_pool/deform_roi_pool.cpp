@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*************************************************************************
  * Copyright (C) [2022] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -15,11 +15,13 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *******************************************************************************/
+ *************************************************************************/
+#include "deform_roi_pool.h"
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -27,8 +29,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 // policy function
 void policyFunc(const mluOpHandle_t handle,
@@ -348,23 +348,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
   mluOpDataType_t data_dtype = input_desc->dtype;
   VLOG(5) << "[mluOpDeformRoiPoolForward] Launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
-  switch (data_dtype) {
-    case MLUOP_DTYPE_HALF: {
-      KERNEL_CHECK((MLUUnion1DeformRoiPoolForwardHalf(
-          k_dim, k_type, handle->queue, input, rois, offset, output, batches,
-          channels, height, width, num_rois, pooled_height, pooled_width,
-          spatial_scale, sampling_ratio, gamma)));
-    }; break;
-    case MLUOP_DTYPE_FLOAT: {
-      KERNEL_CHECK((MLUUnion1DeformRoiPoolForwardFloat(
-          k_dim, k_type, handle->queue, input, rois, offset, output, batches,
-          channels, height, width, num_rois, pooled_height, pooled_width,
-          spatial_scale, sampling_ratio, gamma)));
-    }; break;
-    default: {
-      VLOG(5) << "Input Date Type Not Supported. Only support half and float !";
-    }
-  }
+  KERNEL_CHECK((KernelDeformRoiPoolForward(
+      k_dim, k_type, handle->queue, data_dtype, input, rois, offset, output,
+      batches, channels, height, width, num_rois, pooled_height, pooled_width,
+      spatial_scale, sampling_ratio, gamma)));
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -460,23 +448,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
   mluOpDataType_t data_dtype = input_desc->dtype;
   VLOG(5) << "[mluOpDeformRoiPoolBackward] Launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
-  switch (data_dtype) {
-    case MLUOP_DTYPE_HALF: {
-      KERNEL_CHECK((MLUUnion1DeformRoiPoolBackwardHalf(
-          k_dim, k_type, handle->queue, grad_output, input, rois, offset,
-          grad_input, grad_offset, batches, channels, height, width, num_rois,
-          pooled_height, pooled_width, spatial_scale, sampling_ratio, gamma)));
-    }; break;
-    case MLUOP_DTYPE_FLOAT: {
-      KERNEL_CHECK((MLUUnion1DeformRoiPoolBackwardFloat(
-          k_dim, k_type, handle->queue, grad_output, input, rois, offset,
-          grad_input, grad_offset, batches, channels, height, width, num_rois,
-          pooled_height, pooled_width, spatial_scale, sampling_ratio, gamma)));
-    }; break;
-    default: {
-      VLOG(5) << "Input Date Type Not Supported. Only support half and float !";
-    }
-  }
+  KERNEL_CHECK((KernelDeformRoiPoolBackward(
+      k_dim, k_type, handle->queue, data_dtype, grad_output, input, rois,
+      offset, grad_input, grad_offset, batches, channels, height, width,
+      num_rois, pooled_height, pooled_width, spatial_scale, sampling_ratio,
+      gamma)));
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*************************************************************************
  * Copyright (C) [2022] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -15,20 +15,15 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *******************************************************************************/
-#include "core/context.h"
-#include "core/logging.h"
-#include "core/gen_case.h"
-#include "core/runtime/device.h"
-#include "core/tensor.h"
-#include "core/type.h"
-#include "kernels/kernel.h"
+ *************************************************************************/
+#ifndef KERNELS_CARAFE_CARAFE_H
+#define KERNELS_CARAFE_CARAFE_H
+
 #include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #define CARAFE_FORWARD_API "[mluOpCarafeForward]: "
 #define CARAFE_BACKWARD_API "[mluOpCarafeBackward]: "
@@ -49,3 +44,19 @@ struct mluOpCarafeStruct {
   int group_size;
   int scale_factor;
 };
+
+void MLUOP_WIN_API KernelCarafeForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *input, const void *mask, void *output,
+    int input_dimN, int input_dimH, int input_dimW, int input_dimC,
+    int kernel_size, int group_size, int scale_factor, int block_dimH,
+    int block_dimW, int block_dimG, int block_dimC, int grid_dimH,
+    int grid_dimW, int grid_dimG, int grid_dimC);
+
+void MLUOP_WIN_API KernelCarafeBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, void *input, void *mask, void *grad_output,
+    void *grad_input, void *grad_mask, int n, int hi, int wi, int c, int k_up,
+    int group, int scale);
+
+#endif  // KERNELS_CARAFE_CARAFE_H

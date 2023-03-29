@@ -20,16 +20,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #include "kernels/poly_nms/poly_nms.h"
 
 #include <string>
 
+#include "core/context.h"
 #include "core/gen_case.h"
-#include "kernels/poly_nms/enums.h"
+#include "core/logging.h"
+#include "core/runtime/device.h"
+#include "core/tensor.h"
+#include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 namespace {
 static inline int64_t getMaskColNum(int box_num) {
@@ -131,20 +132,19 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   int *dev_sort_info = (int *)dev_area + box_num;
   uint32_t *dev_mask = (uint32_t *)dev_sort_info + box_num;
   MLUCalcAreaLaunchConfig area_launch_cfg(handle, box_num);
-  mluOpBlockKernelPolyNmsCalcAreaFloat(
-      area_launch_cfg.dim, area_launch_cfg.kernel_type, handle->queue,
-      (float *)boxes, box_num, real_width, dev_area);
+  KernelPolyNmsCalcArea(area_launch_cfg.dim, area_launch_cfg.kernel_type,
+                        handle->queue, (float *)boxes, box_num, real_width,
+                        dev_area);
 
   MLUGenNmsMaskLaunchConfig mask_launch_cfg(handle, box_num);
-  mluOpBlockKernelPolyNmsGenMaskFloat(
-      mask_launch_cfg.dim, mask_launch_cfg.kernel_type, handle->queue,
-      (float *)boxes, box_num, real_width, iou_threshold, dev_area, dev_mask,
-      dev_sort_info);
+  KernelPolyNmsGenMask(mask_launch_cfg.dim, mask_launch_cfg.kernel_type,
+                       handle->queue, (float *)boxes, box_num, real_width,
+                       iou_threshold, dev_area, dev_mask, dev_sort_info);
 
   MLUGenResultLaunchConfig dim_gen_result;
-  mluOpBlockKernelPolyNmsGenResultFloat(
-      dim_gen_result.dim, dim_gen_result.kernel_type, handle->queue, box_num,
-      dev_mask, dev_sort_info, (int *)output, (int *)output_size);
+  KernelPolyNmsGenResult(dim_gen_result.dim, dim_gen_result.kernel_type,
+                         handle->queue, box_num, dev_mask, dev_sort_info,
+                         (int *)output, (int *)output_size);
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

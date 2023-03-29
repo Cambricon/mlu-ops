@@ -20,7 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "three_interpolate.h"
+
 #include <string>
+#include <algorithm>
 
 #include "core/context.h"
 #include "core/gen_case.h"
@@ -29,8 +32,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #define WEIGHT_N_LIMIT_SIZE 6
 #define INDEX_N_LIMIT_SIZE 6
@@ -286,8 +287,9 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
                         output_desc->dtype == MLUOP_DTYPE_FLOAT));
   // check shape
   if (features_desc->dims[0] != indices_desc->dims[0]) {
-    LOG(ERROR) << op_name << "Check failed: features_desc->dims[0] should be "
-                             "equal to indices_desc->dims[0].";
+    LOG(ERROR) << op_name
+               << "Check failed: features_desc->dims[0] should be "
+                  "equal to indices_desc->dims[0].";
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int i = 0; i < indices_desc->dim; ++i) {
@@ -310,8 +312,9 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
     }
   }
   if (output_desc->dims[2] != indices_desc->dims[1]) {
-    LOG(ERROR) << op_name << " Check failed: output_desc->dims[2] should be "
-                             "equal to indices_desc->dims[1].";
+    LOG(ERROR) << op_name
+               << " Check failed: output_desc->dims[2] should be "
+                  "equal to indices_desc->dims[1].";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check large tensor
@@ -350,8 +353,8 @@ mluOpStatus_t ThreeInterpolateBackwardParamCheck(
     const mluOpTensorDescriptor_t grad_output_desc, const void *grad_output,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
     const mluOpTensorDescriptor_t weights_desc, const void *weights,
-    const mluOpTensorDescriptor_t grad_features_desc,
-    const void *grad_features, bool &zero_element) {
+    const mluOpTensorDescriptor_t grad_features_desc, const void *grad_features,
+    bool &zero_element) {
   // check handle and descriptor
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, grad_output_desc != NULL);
@@ -484,17 +487,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
                              &n_limit_size);
   VLOG(5) << "[mluOpThreeInterpolateForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "]";
-  if (features_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel mluOpUnionKernelThreeInterpolateForwardHalf";
-    KERNEL_CHECK((mluOpUnionKernelThreeInterpolateForwardHalf(
-        k_dim, k_type, handle->queue, features, indices, weights, b, c, m, n,
-        c_limit_size, m_limit_size, n_limit_size, output)));
-  } else {
-    VLOG(5) << "Kernel mluOpUnionKernelThreeInterpolateForwardFloat";
-    KERNEL_CHECK((mluOpUnionKernelThreeInterpolateForwardFloat(
-        k_dim, k_type, handle->queue, features, indices, weights, b, c, m, n,
-        c_limit_size, m_limit_size, n_limit_size, output)));
-  }
+  VLOG(5) << "Kernel KernelThreeInterpolateForward";
+  KERNEL_CHECK((KernelThreeInterpolateForward(
+      k_dim, k_type, handle->queue, features_desc->dtype, features, indices,
+      weights, b, c, m, n, c_limit_size, m_limit_size, n_limit_size, output)));
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -546,17 +543,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
                              &n_limit_size);
   VLOG(5) << "[mluOpThreeInterpolateBackward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "]";
-  if (grad_output_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel mluOpUnionKernelThreeInterpolateBackwardHalf";
-    KERNEL_CHECK((mluOpUnionKernelThreeInterpolateBackwardHalf(
-        k_dim, k_type, handle->queue, grad_output, indices, weights, b, c, m, n,
-        c_limit_size, m_limit_size, n_limit_size, grad_features)));
-  } else {
-    VLOG(5) << "Kernel mluOpUnionKernelThreeInterpolateBackwardFloat";
-    KERNEL_CHECK((mluOpUnionKernelThreeInterpolateBackwardFloat(
-        k_dim, k_type, handle->queue, grad_output, indices, weights, b, c, m, n,
-        c_limit_size, m_limit_size, n_limit_size, grad_features)));
-  }
+  VLOG(5) << "Kernel KernelThreeInterpolateBackward";
+  KERNEL_CHECK((KernelThreeInterpolateBackward(
+      k_dim, k_type, handle->queue, grad_output_desc->dtype, grad_output,
+      indices, weights, b, c, m, n, c_limit_size, m_limit_size, n_limit_size,
+      grad_features)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -20,12 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "three_nn_forward.h"
+
 #include <algorithm>
 
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "mlu_op_kernel.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -443,18 +444,23 @@ template __mlu_global__ void MLUKernelThreeNNForward<half>(
     const int b, const int n, const int m, half *unknown_gdram,
     half *known_gdram, half *dist2_gdram, int *idx_gdram);
 
-void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int b,
-    const int n, const int m, const void *unknown, const void *known,
-    void *dist2, void *idx) {
-  MLUKernelThreeNNForward<float><<<k_dim, k_type, queue>>>(
-      b, n, m, (float *)unknown, (float *)known, (float *)dist2, (int *)idx);
-}
-
-void MLUOP_WIN_API mluOpUnion1KernelThreeNNForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int b,
-    const int n, const int m, const void *unknown, const void *known,
-    void *dist2, void *idx) {
-  MLUKernelThreeNNForward<half><<<k_dim, k_type, queue>>>(
-      b, n, m, (half *)unknown, (half *)known, (half *)dist2, (int *)idx);
+void MLUOP_WIN_API KernelThreeNNForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const int b, const int n, const int m,
+    const void *unknown, const void *known, void *dist2, void *idx) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelThreeNNForward<float>
+          <<<k_dim, k_type, queue>>>(b, n, m, (float *)unknown, (float *)known,
+                                     (float *)dist2, (int *)idx);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelThreeNNForward<half><<<k_dim, k_type, queue>>>(
+          b, n, m, (half *)unknown, (half *)known, (half *)dist2, (int *)idx);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

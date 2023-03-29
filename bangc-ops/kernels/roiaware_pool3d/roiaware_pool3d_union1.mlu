@@ -20,11 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roiaware_pool3d.h"
+
 #include <type_traits>
 
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 #include "kernels/utils/common.h"
-#include "mlu_op_kernel.h"
 
 #define ROI_OFFSET 7
 #define FLOAT_NRAM_BUFFER_NUM 14
@@ -409,50 +411,54 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
 #endif
 }
 
-void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsHalf(
+void MLUOP_WIN_API KernelPtsIdxOfVoxels(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int pool_method, const int boxes_num, const int pts_num,
-    const int max_pts_each_voxel, const int out_x, const int out_y,
-    const int out_z, const void *rois, const void *pts,
+    mluOpDataType_t d_type, const int pool_method, const int boxes_num,
+    const int pts_num, const int max_pts_each_voxel, const int out_x,
+    const int out_y, const int out_z, const void *rois, const void *pts,
     void *pts_idx_of_voxels) {
-  MLUMultiKernelPtsIdxOfVoxels<<<k_dim, k_type, queue>>>(
-      pool_method, boxes_num, pts_num, max_pts_each_voxel, out_x, out_y, out_z,
-      (half *)rois, (half *)pts, (int *)pts_idx_of_voxels);
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUMultiKernelPtsIdxOfVoxels<<<k_dim, k_type, queue>>>(
+          pool_method, boxes_num, pts_num, max_pts_each_voxel, out_x, out_y,
+          out_z, (float *)rois, (float *)pts, (int *)pts_idx_of_voxels);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUMultiKernelPtsIdxOfVoxels<<<k_dim, k_type, queue>>>(
+          pool_method, boxes_num, pts_num, max_pts_each_voxel, out_x, out_y,
+          out_z, (half *)rois, (half *)pts, (int *)pts_idx_of_voxels);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpUnionKernelPtsIdxOfVoxelsFloat(
+void MLUOP_WIN_API KernelRoiawarePool3dForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int pool_method, const int boxes_num, const int pts_num,
-    const int max_pts_each_voxel, const int out_x, const int out_y,
-    const int out_z, const void *rois, const void *pts,
-    void *pts_idx_of_voxels) {
-  MLUMultiKernelPtsIdxOfVoxels<<<k_dim, k_type, queue>>>(
-      pool_method, boxes_num, pts_num, max_pts_each_voxel, out_x, out_y, out_z,
-      (float *)rois, (float *)pts, (int *)pts_idx_of_voxels);
-}
-
-void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int pool_method, const int boxes_num, const int pts_num,
-    const int channels, const int max_pts_each_voxel, const int out_x,
-    const int out_y, const int out_z, const void *pts_feature,
+    mluOpDataType_t d_type, const int pool_method, const int boxes_num,
+    const int pts_num, const int channels, const int max_pts_each_voxel,
+    const int out_x, const int out_y, const int out_z, const void *pts_feature,
     const void *pts_idx_of_voxels, void *pooled_features, void *argmax) {
-  MLUMultiKernelRoiawarePool3dForward<<<k_dim, k_type, queue>>>(
-      pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
-      out_y, out_z, (half *)pts_feature, (int *)pts_idx_of_voxels,
-      (half *)pooled_features, (int *)argmax);
-}
-
-void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dForwardFloat(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int pool_method, const int boxes_num, const int pts_num,
-    const int channels, const int max_pts_each_voxel, const int out_x,
-    const int out_y, const int out_z, const void *pts_feature,
-    const void *pts_idx_of_voxels, void *pooled_features, void *argmax) {
-  MLUMultiKernelRoiawarePool3dForward<<<k_dim, k_type, queue>>>(
-      pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
-      out_y, out_z, (float *)pts_feature, (int *)pts_idx_of_voxels,
-      (float *)pooled_features, (int *)argmax);
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUMultiKernelRoiawarePool3dForward<<<k_dim, k_type, queue>>>(
+          pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
+          out_y, out_z, (float *)pts_feature, (int *)pts_idx_of_voxels,
+          (float *)pooled_features, (int *)argmax);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUMultiKernelRoiawarePool3dForward<<<k_dim, k_type, queue>>>(
+          pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
+          out_y, out_z, (half *)pts_feature, (int *)pts_idx_of_voxels,
+          (half *)pooled_features, (int *)argmax);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
 template <typename T>
@@ -630,5 +636,41 @@ void MLUOP_WIN_API mluOpUnionKernelRoiawarePool3dBackwardFloat(
     MLUMultiKernelRoiawareAvgPool3dBackward<<<k_dim, k_type, queue>>>(
         boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
         (int *)pts_idx_of_voxels, (float *)grad_out, (float *)grad_in);
+  }
+}
+
+void MLUOP_WIN_API KernelRoiawarePool3dBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const int pool_method, const int boxes_num,
+    const int out_x, const int out_y, const int out_z, const int channels,
+    const int max_pts_each_voxel, const void *pts_idx_of_voxels,
+    const void *argmax, const void *grad_out, void *grad_in) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      if (pool_method == 0) {
+        MLUMultiKernelRoiawareMaxPool3dBackward<<<k_dim, k_type, queue>>>(
+            boxes_num, out_x, out_y, out_z, channels, (int *)argmax,
+            (float *)grad_out, (float *)grad_in);
+      } else {
+        MLUMultiKernelRoiawareAvgPool3dBackward<<<k_dim, k_type, queue>>>(
+            boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
+            (int *)pts_idx_of_voxels, (float *)grad_out, (float *)grad_in);
+      }
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      if (pool_method == 0) {
+        MLUMultiKernelRoiawareMaxPool3dBackward<<<k_dim, k_type, queue>>>(
+            boxes_num, out_x, out_y, out_z, channels, (int *)argmax,
+            (half *)grad_out, (half *)grad_in);
+      } else {
+        MLUMultiKernelRoiawareAvgPool3dBackward<<<k_dim, k_type, queue>>>(
+            boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
+            (int *)pts_idx_of_voxels, (half *)grad_out, (half *)grad_in);
+      }
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
   }
 }

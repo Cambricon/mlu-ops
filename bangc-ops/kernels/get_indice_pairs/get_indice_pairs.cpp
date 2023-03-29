@@ -28,7 +28,6 @@
 #include "core/mlu_env.h"
 #include "core/gen_case.h"
 #include "mlu_op.h"
-#include "mlu_op_kernel.h"
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 #include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
 

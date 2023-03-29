@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "moe_dispatch_backward_data.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,8 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 // policy function
 static void PolicyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -193,35 +193,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   uint32_t taskNum = k_dim.x * k_dim.y * k_dim.z;
 
   if (samples <= taskNum) {
-    if (data_type == MLUOP_DTYPE_HALF) {
-      VLOG(5) << API
-              << "Launch Kernel mluOpUnionKernelMoeDispatchBwdData1Half().";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdData1Half(
-          k_dim, k_type, handle->queue, gates, indices, locations, dispatch,
-          samples, capacity, hidden, num_experts, grad_input)));
-    } else {
-      VLOG(5) << API
-              << "Launch Kernel mluOpUnionKernelMoeDispatchBwdData1Float().";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdData1Float(
-          k_dim, k_type, handle->queue, gates, indices, locations, dispatch,
-          samples, capacity, hidden, num_experts, grad_input)));
-    }
-    VLOG(5) << API << "Finish Kernel mluOpUnionKernelMoeDispatchBwdData1.";
+    VLOG(5) << API << "Launch Kernel KernelMoeDispatchBwdData1().";
+    KERNEL_CHECK((KernelMoeDispatchBwdData1(
+        k_dim, k_type, handle->queue, data_type, gates, indices, locations,
+        dispatch, samples, capacity, hidden, num_experts, grad_input)));
+    VLOG(5) << API << "Finish Kernel KernelMoeDispatchBwdData1.";
   } else {
-    if (data_type == MLUOP_DTYPE_HALF) {
-      VLOG(5) << API
-              << "Launch Kernel mluOpUnionKernelMoeDispatchBwdData2Half().";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdData2Half(
-          k_dim, k_type, handle->queue, gates, indices, locations, dispatch,
-          samples, capacity, hidden, num_experts, grad_input)));
-    } else {
-      VLOG(5) << API
-              << "Launch Kernel mluOpUnionKernelMoeDispatchBwdData2Float().";
-      KERNEL_CHECK((mluOpUnionKernelMoeDispatchBwdData2Float(
-          k_dim, k_type, handle->queue, gates, indices, locations, dispatch,
-          samples, capacity, hidden, num_experts, grad_input)));
-    }
-    VLOG(5) << API << "Finish Kernel mluOpUnionKernelMoeDispatchBwdData2.";
+    VLOG(5) << API << "Launch Kernel KernelMoeDispatchBwdData2().";
+    KERNEL_CHECK((KernelMoeDispatchBwdData2(
+        k_dim, k_type, handle->queue, data_type, gates, indices, locations,
+        dispatch, samples, capacity, hidden, num_experts, grad_input)));
+    VLOG(5) << API << "Finish Kernel KernelMoeDispatchBwdData2.";
   }
 
   GEN_CASE_END();

@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roiaware_pool3d.h"
+
 #include <string>
 
 #include "core/context.h"
@@ -28,8 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 // policy function
 static mluOpStatus_t kernelPtsIdxOfVoxelsPolicyFunc(
@@ -387,27 +387,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
 
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
-             "MLUUnionKernelPtsIdxOfVoxels<<< Union"
+             "KernelPtsIdxOfVoxels<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
-  if (rois_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
-               "mluOpUnionKernelPtsIdxOfVoxelsHalf().";
-    KERNEL_CHECK((mluOpUnionKernelPtsIdxOfVoxelsHalf(
-        k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num,
-        max_pts_each_voxel, out_x, out_y, out_z, rois, pts_workspace,
-        pts_idx_of_voxels)));
-  } else {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
-               "mluOpUnionKernelPtsIdxOfVoxelsFloat().";
-    KERNEL_CHECK((mluOpUnionKernelPtsIdxOfVoxelsFloat(
-        k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num,
-        max_pts_each_voxel, out_x, out_y, out_z, rois, pts_workspace,
-        pts_idx_of_voxels)));
-  }
+  VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+             "KernelPtsIdxOfVoxels().";
+  KERNEL_CHECK((KernelPtsIdxOfVoxels(
+      k_dim, k_type, handle->queue, rois_desc->dtype, pool_method, boxes_num,
+      pts_num, max_pts_each_voxel, out_x, out_y, out_z, rois, pts_workspace,
+      pts_idx_of_voxels)));
   VLOG(5) << "[mluOpRoiawarePool3dForward] Finish kernel "
-             "MLUUnionKernelPtsIdxOfVoxels.";
+             "KernelPtsIdxOfVoxels.";
 
   status = kernelRoiawarePool3dForwardPolicyFunc(handle, pooled_features_desc,
                                                  &k_dim, &k_type);
@@ -417,27 +408,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
 
   VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
-             "MLUUnionKernelRoiawarePool3dForward<<< Union"
+             "KernelRoiawarePool3dForward<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
-  if (pooled_features_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
-               "mluOpUnionKernelRoiawarePool3dForwardHalf().";
-    KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dForwardHalf(
-        k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num, channels,
-        max_pts_each_voxel, out_x, out_y, out_z, pts_feature_workspace,
-        pts_idx_of_voxels, pooled_features, argmax)));
-  } else {
-    VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
-               "mluOpUnionKernelRoiawarePool3dForwardFloat().";
-    KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dForwardFloat(
-        k_dim, k_type, handle->queue, pool_method, boxes_num, pts_num, channels,
-        max_pts_each_voxel, out_x, out_y, out_z, pts_feature_workspace,
-        pts_idx_of_voxels, pooled_features, argmax)));
-  }
+  VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+             "KernelRoiawarePool3dForward().";
+  KERNEL_CHECK((KernelRoiawarePool3dForward(
+      k_dim, k_type, handle->queue, pooled_features_desc->dtype, pool_method,
+      boxes_num, pts_num, channels, max_pts_each_voxel, out_x, out_y, out_z,
+      pts_feature_workspace, pts_idx_of_voxels, pooled_features, argmax)));
   VLOG(5) << "[mluOpRoiawarePool3dForward] Finish kernel "
-             "MLUUnionKernelRoiawarePool3dForward.";
+             "KernelRoiawarePool3dForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -540,12 +522,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
-  VLOG(5) << "pool_method = " << pool_method
-          << ", boxes_num = " << boxes_num
-          << ", out_x = " << out_x
-          << ", out_y = " << out_y
-          << ", out_z = " << out_z
-          << ", channels = " << channels
+  VLOG(5) << "pool_method = " << pool_method << ", boxes_num = " << boxes_num
+          << ", out_x = " << out_x << ", out_y = " << out_y
+          << ", out_z = " << out_z << ", channels = " << channels
           << ", max_pts_each_voxel = " << max_pts_each_voxel
           << ", points num = " << grad_in_desc->dims[0];
 
@@ -593,27 +572,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
 
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
-             "MLUUnionKernelRoiawarePool3dBackward<<< Union"
+             "KernelRoiawarePool3dBackward<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
-  if (grad_out_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
-               "mluOpUnionKernelRoiawarePool3dBackwardHalf().";
-    KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dBackwardHalf(
-        k_dim, k_type, handle->queue, pool_method, boxes_num, out_x, out_y,
-        out_z, channels, max_pts_each_voxel, pts_idx_of_voxels, argmax,
-        grad_out, grad_in)));
-  } else {
-    VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
-               "mluOpUnionKernelRoiawarePool3dBackwardFloat().";
-    KERNEL_CHECK((mluOpUnionKernelRoiawarePool3dBackwardFloat(
-        k_dim, k_type, handle->queue, pool_method, boxes_num, out_x, out_y,
-        out_z, channels, max_pts_each_voxel, pts_idx_of_voxels, argmax,
-        grad_out, grad_in)));
-  }
+  VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
+             "KernelRoiawarePool3dBackward().";
+  KERNEL_CHECK((KernelRoiawarePool3dBackward(
+      k_dim, k_type, handle->queue, grad_out_desc->dtype, pool_method,
+      boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
+      pts_idx_of_voxels, argmax, grad_out, grad_in)));
   VLOG(5) << "[mluOpRoiawarePool3dBackward] Finish kernel "
-             "MLUUnionKernelRoiawarePool3dBackward.";
+             "KernelRoiawarePool3dBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
