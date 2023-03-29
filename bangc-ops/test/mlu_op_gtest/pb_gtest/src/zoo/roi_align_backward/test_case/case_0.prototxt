@@ -1,0 +1,57 @@
+op_name: "roi_align_backward"
+input {
+  id: "input1"
+  shape {
+    dims: 10
+    dims: 6
+    dims: 6
+    dims: 16
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 32
+    lower_bound: -20.0
+    upper_bound: 20.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 10
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 32
+    lower_bound: 0.0
+    upper_bound: 10.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output1"
+  shape {
+    dims: 16
+    dims: 10
+    dims: 10
+    dims: 16
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  mlu_dtype: DTYPE_FLOAT
+}
+roi_align_backward_param {
+  spatial_scale: 1.0
+  sampling_ratio: 2
+  aligned: 0
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

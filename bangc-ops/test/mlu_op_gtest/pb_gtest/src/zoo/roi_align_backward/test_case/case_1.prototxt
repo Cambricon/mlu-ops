@@ -1,0 +1,102 @@
+op_name: "roi_align_backward"
+input {
+  id: "input"
+  shape: {
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+    value_f: -0.40234
+  value_f: 0.30762
+  value_f: 1.47007
+  value_f: 1.14465
+  value_f: 1.31538
+  value_f: 0.29885
+  value_f: 0.51230
+  value_f: -0.85769
+}
+input {
+  id: "boxes"
+  shape: {
+    dims: 2
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+    value_f: 0
+  value_f: 2.00000
+  value_f: 1.00000
+  value_f: 3.00000
+  value_f: 3.00000
+  value_f: 1
+  value_f: 2.00000
+  value_f: 1.00000
+  value_f: 4.00000
+  value_f: 3.00000
+}
+input {
+  id: "argmax_x"
+  shape: {
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  value_f: 1.75
+  value_f: 2.25
+  value_f: 1.75
+  value_f: 2.25
+  value_f: 2.0
+  value_f: 3.0
+  value_f: 2.0
+  value_f: 3.0
+}
+input {
+  id: "argmax_y"
+  shape: {
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 2.0
+  value_f: 2.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 2.0
+  value_f: 2.0
+}
+output {
+  id: "output"
+  shape: {
+    dims: 5
+    dims: 7
+    dims: 7
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+roi_align_backward_param: {
+  sampling_ratio: 0
+  spatial_scale: 1.0
+  aligned: 1
+  pool_mode: 0
+  version: 1
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
