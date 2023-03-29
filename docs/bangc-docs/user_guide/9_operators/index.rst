@@ -683,7 +683,7 @@ MoE算法中对输入进行重新分配。
 
 mluOpMoeDispatchBackwardData
 ----------------------------------
-MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算 input 的梯度 `grad_input`。
+MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算 input 的梯度 `grad_input` 。
 
 
 .. _roipoint_pool3d:
@@ -723,3 +723,10 @@ mluOpPointsInBoxes
 mluOpRoiAlignBackward
 ---------------------------------
 该算子是RoiAlignForward算子的反向，根据 boxes中的坐标值，使用 spatial_scale 参数进行缩放，计算出 Roi窗口的坐标、长宽。pool_mode等于0时，为Max模式的反向，按照argmax_x 和 argmax_y 的坐标，进行双线性插值，计算映射到 grad_image 上坐标点的权重，分别对grad_output加权后，累加反传梯度；pool_mode等于1时，为Avg模式的反向，根据 sampling_ratio 参数，计算每个 grad_output 需要反传梯度的采样点数，再计算每个采样点的x, y坐标，进行双线性插值，对grad_output加权、均摊，累加反传梯度。
+
+.. _ms_deform_attn_forward:
+
+mluOpMsDeformAttnForward
+---------------------------------
+该算子是Multi-scale deformable attention的正向过程，通过 ``data_spatial_shapes`` 将  ``data_sampling_loc`` 映射到 ``data_value`` 的对应位置，从对应位置取值进行双线性插值，插值结果乘以 ``data_attn_weight`` 获得最终的输出 ``data_col`` 。
+
