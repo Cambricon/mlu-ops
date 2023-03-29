@@ -329,13 +329,16 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
   };
 
   if (sub_m) {
+    // prepareSubmGridKernel
     for (int j = 0; j < num_act_in; ++j) {
       index =
           getIndex(indice_in + j * (NDim + 1) + 1, out_spatail_shape, NDim) +
-          spatail_volume * (indice_in + j * (NDim + 1))[0];
+          spatail_volume * ((indice_in + j * (NDim + 1))[0]);
       grid_out[index] = j;
     }
-    indice_out = indice_in;
+    for (int j = 0; j < num_act_in * (NDim + 1); j++) {
+      indice_out[j] = indice_in[j];
+    }
   }
 
   for (int j = 0; j < num_act_in; ++j) {
@@ -349,11 +352,12 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
       index = getIndex(point_ptr, out_spatail_shape, NDim) +
               spatail_volume * batchIdx;
       if (sub_m) {
-        if (grid_out[index] > 1) {
-          indice_pairs[offset * 2 * num_act_in + indice_num[offset]] = j;
-          indice_pairs[offset * 2 * num_act_in + num_act_in +
-                       indice_num[offset]] = grid_out[index];
+        if (grid_out[index] > -1) {
+          int32_t  oldNum = indice_num[offset];
           indice_num[offset]++;
+          indice_pairs[offset * 2 * num_act_in + oldNum] = j;
+          indice_pairs[offset * 2 * num_act_in + num_act_in +
+                       oldNum] = grid_out[index];
         }
       } else {
         int32_t oldNum = indice_num[offset];
