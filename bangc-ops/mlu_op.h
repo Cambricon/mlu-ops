@@ -11242,6 +11242,238 @@ mluOpPointsInBoxes(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t points_indices_desc,
                    void *points_indices);
 
+// Group:RoiAlign
+/*!
+ * @brief Computes the gradients of images \b grads_image based on the gradients \b grads and
+ * bounding boxes \b boxes to perform the backpropagation of ::mluOpRoiAlign function. To use the
+ * maximum pooling mode or average pooling mode in this function, call ::mluOpRoiAlignBackward_v2.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * the roi_align_backward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] grads_desc
+ * The descriptor of the tensor \b grads in the backpropagation process. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grads
+ * Pointer to the MLU memory that stores the gradient tensor.
+ * @param[in] boxes_desc
+ * The descriptor of the tensor \b boxes. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores the bounding boxes tensor.
+ * @param[in] spatial_scale
+ * A scaling factor that specifies how to map the box coordinates in the origin image to
+ * the coordinates in the output.
+ * @param[in] sampling_ratio
+ * The number of sampling points in the grid used to compute the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the boxes by 0.5 pixel.
+ * @param[in] grads_image_desc
+ * The descriptor of the tensor \b grads_image of the original images.
+ * @param[out] grads_image
+ * Pointer to the MLU memory that stores the gradients tensor of the original images.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The data types of all tensors should be the same.
+ *   The supported data types of input and output tensors are as follows:
+ *   - gradient tensor: half, float
+ *   - boxes tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b grads, \b boxes, and \b grads_images are as follows:
+ *   - grads tensor: \p MLUOP_LAYOUT_NHWC
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, which only supports 2D tensor.
+ *   - grads_image tensor: \p MLUOP_LAYOUT_NHWC
+ *
+ * @par Scale Limitation
+ * - The gradient tensor and output tensor must have four dimensions.
+ * - The size of the fourth dimension of gradient tensor and output tensor must be the same.
+ * - The bounding boxes tensor \b boxes must have two dimensions.
+ * - The size of the first dimension of gradient tensor and bounding boxes tensor must be the same.
+ * - The shape of \b boxes should be [boxes_num, 5].
+ * - \b boxes[i] consists of [image_id, x1, y1, x2, y2]. \p image_id specifies which image this box
+ *   is in, and should be in the range of [0, batch_num - 1]. \p x1 and \p y1 specify the start
+ *   coordinate of this box in origin image. \p x2 and \p y2 specify the end coordinate of this box
+ *   in origin image. \p x1 and \p y1 should be greater than or equal to 0. \p x2 should be greater
+ *   than \p x1. \p y2 should be greater than \p y1.
+ * - \b spatial_scale should be in the range of (0, 1].
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - The example of the roi_align_backward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 1 * 1 * 1 and 1 * 5 --> grads: [[[[1.0]]]]
+
+     --> boxes: [[0.0, 0.0, 0.0, 1.0, 1.0]]
+
+     param:
+         spatial_scale: 1.0, sampling_ratio: 2, aligned: false
+
+     output array by 1 * 2 * 2 * 1 -->
+         output: [[[[0.25]], [[0.25]]], [[[0.25]], [[0.25]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/vision/stable/ops.html#torchvision.ops.roi_align
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignBackward(mluOpHandle_t handle,
+                      const float spatial_scale,
+                      const int sampling_ratio,
+                      const bool aligned,
+                      const mluOpTensorDescriptor_t grads_desc,
+                      const void *grads,
+                      const mluOpTensorDescriptor_t boxes_desc,
+                      const void *boxes,
+                      const mluOpTensorDescriptor_t grads_image_desc,
+                      void *grads_image);
+
+// Group:RoiAlign
+/*!
+ * @brief Computes the gradients of images \b grads_image based on the gradients \b grads,
+ * bounding boxes \b boxes, the coordinate of x axis \b argmax_x, and the coordinate of y axis
+ * \b argmax_y to perform this function. Compared with ::mluOpRoiAlignBackward, in addition to
+ * supporting the average pooling mode, ::mluOpRoiAlignBackward_v2 also supports the maximum pooling mode
+ * defined in \b pool_mode with two more inputs \b argmax_x and \b argmax_y.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiAlignBackward_v2 function. For detailed information, see ::mluOpHandle_t.
+ * @param[in] grads_desc
+ * The descriptor of the tensor \b grads in the backpropagation process. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grads
+ * Pointer to the MLU memory that stores the gradient tensor.
+ * @param[in] boxes_desc
+ * The descriptor of the tensor \b boxes. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores the bounding boxes tensor.
+ * @param[in] argmax_x_desc
+ * The descriptor of the \b argmax_x tensor that stores the coordinate of x axis. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] argmax_x
+ * Pointer to the MLU memory that stores the \b argmax_x tensor. \b argmax_x represents
+ * \b output coordinate of x axis returned by ::mluOpRoiAlign_v2 when \b pool_mode is maximum
+ * pooling mode. When \b pool_mode is average pooling mode, \b argmax_x is NULL.
+ * @param[in] argmax_y_desc
+ * The descriptor of the \b argmax_y tensor that stores the coordinate of y axis. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] argmax_y
+ * Pointer to the MLU memory that stores the \b argmax_y tensor. \b argmax_y represents
+ * \b output coordinate of y axis returned by ::mluOpRoiAlign_v2 when \b pool_mode is maximum
+ * pooling mode. When \b pool_mode is average pooling mode, \b argmax_y is NULL.
+ * @param[in] spatial_scale
+ * A scaling factor that specifies how to map the box coordinates in the original image to
+ * the coordinates in the output.
+ * @param[in] sampling_ratio
+ * The number of sampling points in the grid used to compute the output.
+ * @param[in] aligned
+ * A boolean value which determines whether to shift the boxes by 0.5 pixel. If the value
+ * of \b aligned is set to true, the boxes are shifted by 0.5. If the value of \b aligned is set
+ * to false, the boxes are not shifted.
+ * @param[in] pool_mode
+ * The pooling mode which determines to use maximum pooling mode or average
+ * pooling mode. If the value of \b pool_mode is set to 1, the average pooling mode is used. If
+ * the value of \b pool_mode is set to 0, the maximum pooling mode is used.
+ * @param[in] grads_image_desc
+ * The descriptor of the tensor \b grads_image of the original images. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] grads_image
+ * Pointer to the MLU memory that stores the \b grads_image tensor .
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The data types of all tensors should be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - gradient tensor: half, float
+ *   - boxes tensor: half, float
+ *   - argmax_x tensor: half, float
+ *   - argmax_y tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - The supported data layouts of gradient tensor \b grads, boxes tensor \b boxes, argmax_x tensor
+ *   \b argmax_x, argmax_y tensor \b argmax_y and output tensor \b grads_images are as follows:
+ *   - grads tensor: \p MLUOP_LAYOUT_NHWC
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY, which only supports 2D tensor.
+ *   - argmax_x tensor: \p MLUOP_LAYOUT_NHWC
+ *   - argmax_y tensor: \p MLUOP_LAYOUT_NHWC
+ *   - grads_image tensor: \p MLUOP_LAYOUT_NHWC
+ *
+ * @par Scale Limitation
+ * - The gradient tensor \b grads, argmax_x tensor \b argmax_x , argmax_y tensor \b argmax_y, and
+ *   output tensor \b grads_images must have four dimensions.
+ * - The size of the fourth dimension of gradient tensor \b grads, argmax_x tensor \b argmax_x,
+ *   argmax_y tensor \b argmax_y, and output tensor \b grads_images must be the same.
+ * - The bounding boxes tensor \b boxes must have two dimensions.
+ * - The size of the first dimension of gradient tensor \b grads, argmax_x tensor \b argmax_x, argmax_y
+ *   tensor \b argmax_y and bounding boxes tensor \b boxes must be the same.
+ * - The size of each dimension of gradient tensor \b grads, argmax_x tensor \b argmax_x and argmax_y
+ *   tensor \b argmax_y must be the same.
+ * - The shape of \b boxes should be [boxes_num, 5].
+ * - \b boxes[i] consists of [image_id, x1, y1, x2, y2]. \p image_id specifies which image this box
+ *   is in, and should be in the range of [0, batch_num - 1]. \p x1 and \p y1 specify the starting
+ *   coordinate of this box in origin image. \p x2 and \p y2 specify the ending coordinate of this box
+ *   in origin image. \p x1 and \p y1 should be greater than or equal to 0. \p x2 should be greater
+ *   than \p x1. \p y2 should be greater than \p y1.
+ *
+ * @par API Dependency
+ * - This function should be used with ::mluOpRoiAlign_v2.
+ *
+ * @par Note
+ * - Set the values of \b argmax_x and \b argmax_y according to the result returned by
+ *   ::mluOpRoiAlign_v2.
+ *
+ * @par Example
+ * - The example of the RoiAlignBackward_v2 operation is as follows:
+     @verbatim
+     input four arrays by 1 * 1 * 1 * 1, 1 * 5, 1 * 1 * 1 * 1 and 1 * 1 *1 *1--> grads: [[[[1.0]]]]
+
+     --> boxes: [[0.0, 0.0, 0.0, 1.0, 1.0]]
+
+     --> argmax_x:[[[[0.5]]]]
+
+     --> argmax_y:[[[[0.5]]]]
+
+     param:
+         spatial_scale: 1.0, sampling_ratio: 0, aligned: false
+
+     output array by 1 * 1 * 1 * 1 -->
+         output: [[[[1.0]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/roi_align_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignBackward_v2(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t grads_desc,
+                         const void *grads,
+                         const mluOpTensorDescriptor_t boxes_desc,
+                         const void *boxes,
+                         const mluOpTensorDescriptor_t argmax_x_desc,
+                         const void *argmax_x,
+                         const mluOpTensorDescriptor_t argmax_y_desc,
+                         const void *argmax_y,
+                         const float spatial_scale,
+                         const int sampling_ratio,
+                         const bool aligned,
+                         const int pool_mode,
+                         const mluOpTensorDescriptor_t grads_image_desc,
+                         void *grads_image);
+
 #if defined(__cplusplus)
 }
 #endif

@@ -713,3 +713,9 @@ mluOpPointsInBoxes
 	in\_flag = \lvert (z - cz) \rvert <= \frac{dz}{2} \ \& \\
 	\lvert (x - cx) * cos(-rz) - (y - cy) * sin(-rz)\rvert < \frac{dx}{2} \ \& \\
 	\lvert (x - cx) * sin(-rz) + (y - cy) * cos(-rz)\rvert < \frac{dy}{2}
+
+.. _roi_align_backward:
+
+mluOpRoiAlignBackward
+---------------------------------
+该算子是RoiAlignForward算子的反向，根据 boxes中的坐标值，使用 spatial_scale 参数进行缩放，计算出 Roi窗口的坐标、长宽。pool_mode等于0时，为Max模式的反向，按照argmax_x 和 argmax_y 的坐标，进行双线性插值，计算映射到 grad_image 上坐标点的权重，分别对grad_output加权后，累加反传梯度；pool_mode等于1时，为Avg模式的反向，根据 sampling_ratio 参数，计算每个 grad_output 需要反传梯度的采样点数，再计算每个采样点的x, y坐标，进行双线性插值，对grad_output加权、均摊，累加反传梯度。
