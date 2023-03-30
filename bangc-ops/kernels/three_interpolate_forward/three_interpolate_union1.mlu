@@ -20,10 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "three_interpolate.h"
 
+#include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "mlu_op_kernel.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -317,22 +318,26 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
   }    // batch_n_per_core
 }
 
-void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardFloat(
+void MLUOP_WIN_API KernelThreeInterpolateForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *indices, const void *weights, const int b,
-    const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *output) {
-  MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
-      (float *)features, (int *)indices, (float *)weights, b, c, m, n,
-      c_limit_size, m_limit_size, n_limit_size, (float *)output);
-}
-
-void MLUOP_WIN_API mluOpUnionKernelThreeInterpolateForwardHalf(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *features, const void *indices, const void *weights, const int b,
-    const int c, const int m, const int n, const int c_limit_size,
-    const int m_limit_size, const int n_limit_size, void *output) {
-  MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
-      (half *)features, (int *)indices, (half *)weights, b, c, m, n,
-      c_limit_size, m_limit_size, n_limit_size, (half *)output);
+    mluOpDataType_t d_type, const void *features, const void *indices,
+    const void *weights, const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *output) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
+          (float *)features, (int *)indices, (float *)weights, b, c, m, n,
+          c_limit_size, m_limit_size, n_limit_size, (float *)output);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
+          (half *)features, (int *)indices, (half *)weights, b, c, m, n,
+          c_limit_size, m_limit_size, n_limit_size, (half *)output);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

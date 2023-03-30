@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "voxel_pooling_forward.h"
 #include "kernels/kernel.h"
-#include "mlu_op_kernel.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -212,7 +212,8 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
   }
 #endif
 }
-void MLUOP_WIN_API mluOpUnionKernelVoxelPoolingForwardFloat(
+
+void MLUOP_WIN_API KernelVoxelPoolingForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int batch_size, const int num_points, const int num_channels,
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,

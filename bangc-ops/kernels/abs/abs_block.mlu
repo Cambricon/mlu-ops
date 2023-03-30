@@ -20,9 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "abs.h"
+
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
-#include "mlu_op_kernel.h"
+#include "kernels/debug.h"
 
 #define ABS_NRAM_USED MAX_NRAM_SIZE
 #define ABS_SRAM_USED (CORE_DIM * ABS_NRAM_USED)
@@ -69,30 +71,44 @@ UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, half, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, float, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, half, Fast);
 
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsHalfFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel3StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
+void MLUOP_WIN_API Kernel3StagePipelineAbs(cnrtDim3_t k_dim,
+                                           cnrtFunctionType_t k_type,
+                                           cnrtQueue_t queue,
+                                           mluOpDataType_t d_type,
+                                           const void *x, void *y, int num) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUBlockKernel3StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
+          (void *)x, (void *)y, num, 0.0);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUBlockKernel3StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
+          (void *)x, (void *)y, num, 0.0);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }
 
-void MLUOP_WIN_API mluOpBlockKernel3StagePipelineAbsFloatFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel3StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel5StagePipelineAbsHalfFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel5StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
-}
-
-void MLUOP_WIN_API mluOpBlockKernel5StagePipelineAbsFloatFast(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *x, void *y, int num) {
-  MLUBlockKernel5StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
-      (void *)x, (void *)y, num, 0.0);
+void MLUOP_WIN_API Kernel5StagePipelineAbs(cnrtDim3_t k_dim,
+                                           cnrtFunctionType_t k_type,
+                                           cnrtQueue_t queue,
+                                           mluOpDataType_t d_type,
+                                           const void *x, void *y, int num) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      MLUBlockKernel5StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
+          (void *)x, (void *)y, num, 0.0);
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      MLUBlockKernel5StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
+          (void *)x, (void *)y, num, 0.0);
+    }; break;
+    default: {
+      MLULOG("Not implemented.\n");
+      break;
+    }
+  }
 }

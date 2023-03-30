@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "abs.h"
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -27,8 +29,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 static void policyFunc(const mluOpHandle_t &handle,
                        const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
@@ -75,19 +75,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   policyFunc(handle, x_desc, &k_dim, &k_type);
 
   int element_num = mluOpGetTensorElementNum(x_desc);
-  void (*mluOpBlockKernelUnary)(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                cnrtQueue_t queue, const void *x, void *y,
-                                int num);
-  mluOpBlockKernelUnary = nullptr;
-  if (x_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "kernel mluOpBlockKernel3StagePipelineAbsHalfFast";
-    mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineAbsHalfFast;
-  } else {
-    VLOG(5) << "kernel mluOpBlockKernel3StagePipelineAbsFloatFast";
-    mluOpBlockKernelUnary = mluOpBlockKernel3StagePipelineAbsFloatFast;
-  }
-  KERNEL_CHECK(
-      (mluOpBlockKernelUnary(k_dim, k_type, handle->queue, x, y, element_num)));
+  VLOG(5) << "kernel Kernel3StagePipelineAbs.";
+  KERNEL_CHECK((Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
+                                        x_desc->dtype, x, y, element_num)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

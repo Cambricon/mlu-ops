@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roi_crop.h"
 #include "kernels/kernel.h"
-#include "mlu_op_kernel.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -356,7 +356,7 @@ __mlu_global__ void MLUKernelRoiCropBackward(
   }
 }
 
-void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
+void MLUOP_WIN_API KernelRoiCropForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *grid, const int batch, const int height,
     const int width, const int channels, const int grid_n, const int output_h,
@@ -366,7 +366,7 @@ void MLUOP_WIN_API mluOpBlockKernelRoiCropForwardFloat(
       (float *)output, output_h, output_w);
 }
 
-void MLUOP_WIN_API mluOpBlockKernelRoiCropBackwardFloat(
+void MLUOP_WIN_API KernelRoiCropBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *grid, const int batch,
     const int height, const int width, const int channels, const int grid_n,

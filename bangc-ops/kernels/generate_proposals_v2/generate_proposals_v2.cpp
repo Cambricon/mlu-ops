@@ -20,7 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "generate_proposals_v2.h"
+
 #include <algorithm>
+#include <string>
 
 #include "core/context.h"
 #include "core/gen_case.h"
@@ -28,8 +31,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 #include "kernels/kernel.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -270,11 +271,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   cnrtJobType_t k_type;
   policyFunc(handle, &k_dim, &k_type, HWA);
 
-  VLOG(5) << "Launch Kernel mluOpUBestKernelGenerateProposalsV2Float <<<k_dim: "
-          << k_type << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
-          << ">>>";
-
-  KERNEL_CHECK(mluOpUBestKernelGenerateProposalsV2Float(
+  VLOG(5) << "Launch Kernel KernelGenerateProposalsV2 <<<k_dim: " << k_type
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK(KernelGenerateProposalsV2(
       k_dim, k_type, handle->queue, (float *)scores, (float *)bbox_deltas,
       (float *)im_shape, (float *)anchors, (float *)variances,
       (float *)workspace, (float *)rpn_rois, (float *)rpn_roi_probs,

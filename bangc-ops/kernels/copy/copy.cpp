@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "copy.h"
+
 #include <string>
 
 #include "core/gen_case.h"
@@ -27,8 +29,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "copy_mlu.h"
-#include "kernels/tensor_stride_process/tensor_stride_process.h"
 
 // According to test, the threshold is about 4KB.
 const int POLICY_UNION1_UPLIMIT = 4 * 1024;  // 4KB
@@ -159,7 +159,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
     TensorShape output_shape;
     getTensorShape(input_desc, &input_shape);
     getTensorShape(output_desc, &output_shape);
-    VLOG(5) << "Launch Kernel mluOpUnion1KernelCopyWithStride <<<Union1"
+    VLOG(5) << "Launch Kernel KernelCopyWithStride <<<Union1"
             << ", Dim3{" << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
             << "} >>>";
 
@@ -187,15 +187,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
       }
     }
     VLOG(5) << "use_SMC: " << use_SMC;
-    KERNEL_CHECK((mluOpUnion1KernelCopyWithStride(
-        k_dim, k_type, handle->queue, input, input_shape, output, output_shape,
-        num_input, kDTypeSize, use_SMC)));
+    KERNEL_CHECK((KernelCopyWithStride(k_dim, k_type, handle->queue, input,
+                                       input_shape, output, output_shape,
+                                       num_input, kDTypeSize, use_SMC)));
   } else {
-    VLOG(5) << "Launch Kernel mluOpUnion1KernelCopy <<<Union1"
+    VLOG(5) << "Launch Kernel KernelCopy <<<Union1"
             << ", Dim3{" << k_dim.x << ", " << k_dim.y << ", " << k_dim.z
             << "} >>>";
-    KERNEL_CHECK((mluOpUnion1KernelCopy(k_dim, k_type, handle->queue, input,
-                                        output, num_input, kDTypeSize)));
+    KERNEL_CHECK((KernelCopy(k_dim, k_type, handle->queue, input, output,
+                             num_input, kDTypeSize)));
   }
 
   GEN_CASE_END();

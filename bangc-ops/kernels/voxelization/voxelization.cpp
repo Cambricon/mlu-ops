@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "voxelization.h"
+
 #include <algorithm>
 
 #include "core/context.h"
@@ -28,8 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
+#include "kernels/fill_zero/fill_zero.h"
 
 static void policyFuncDefault(const mluOpHandle_t handle,
                               const size_t num_points, cnrtDim3_t *k_dim,
@@ -250,7 +251,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
     GEN_CASE_DATA(false, "voxel_num", voxel_num, voxel_num_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "voxelization", "max_points", max_points);
     GEN_CASE_OP_PARAM_SINGLE(1, "voxelization", "max_voxels", max_voxels);
-    GEN_CASE_OP_PARAM_SINGLE(2, "voxelization", "ndim", NDim);
+    GEN_CASE_OP_PARAM_SINGLE(2, "voxelization", "NDim", NDim);
     GEN_CASE_OP_PARAM_SINGLE(3, "voxelization", "deterministic", deterministic);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
   }
@@ -276,41 +277,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
 
   const int32_t voxels_size =
       max_voxels * max_points * num_features * sizeof(float);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             voxels_size, voxels)));
+  KERNEL_CHECK(
+      (KernelFillZero(k_dim, k_type, handle->queue, voxels_size, voxels)));
 
   const int32_t coors_size = max_voxels * 3 * sizeof(int32_t);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             coors_size, coors)));
+  KERNEL_CHECK(
+      (KernelFillZero(k_dim, k_type, handle->queue, coors_size, coors)));
 
   const int32_t num_points_per_voxel_size = max_voxels * sizeof(int32_t);
-  KERNEL_CHECK((mluOpBlockKernelFillZeroByte(k_dim, k_type, handle->queue,
-                                             num_points_per_voxel_size,
-                                             num_points_per_voxel)));
+  KERNEL_CHECK(
+      (KernelFillZero(k_dim, k_type, handle->queue, num_points_per_voxel_size,
+                      num_points_per_voxel)));
 
-  VLOG(5) << "Launch Kernel mluOpUnionKernelDynamicVoxelize.";
-  KERNEL_CHECK((mluOpUnionKernelDynamicVoxelize(
-      k_dim, k_type, handle->queue, points, voxel_size, coors_range, temp_coors,
-      num_points, num_features)));
+  VLOG(5) << "Launch Kernel KernelDynamicVoxelize.";
+  KERNEL_CHECK((KernelDynamicVoxelize(k_dim, k_type, handle->queue, points,
+                                      voxel_size, coors_range, temp_coors,
+                                      num_points, num_features)));
 
-  VLOG(5) << "Launch Kernel mluOpUnionKernelPoint2Voxel.";
-  KERNEL_CHECK((mluOpUnionKernelPoint2Voxel(
-      k_dim, k_type, handle->queue, temp_coors, point_to_pointidx,
-      point_to_voxelidx, num_points, max_points)));
+  VLOG(5) << "Launch Kernel KernelPoint2Voxel.";
+  KERNEL_CHECK((KernelPoint2Voxel(k_dim, k_type, handle->queue, temp_coors,
+                                  point_to_pointidx, point_to_voxelidx,
+                                  num_points, max_points)));
 
   cnrtDim3_t k_dim_calc_points_per_voxel;
   cnrtFunctionType_t k_type_calc_points_per_voxel;
   policyFuncCalcPointsPerVoxel(handle, num_points, &k_dim_calc_points_per_voxel,
                                &k_type_calc_points_per_voxel);
 
-  VLOG(5) << "Launch Kernel mluOpUnionKernelCalcPointsPerVoxel.";
-  KERNEL_CHECK((mluOpUnionKernelCalcPointsPerVoxel(
+  VLOG(5) << "Launch Kernel KernelCalcPointsPerVoxel.";
+  KERNEL_CHECK((KernelCalcPointsPerVoxel(
       k_dim_calc_points_per_voxel, k_type_calc_points_per_voxel, handle->queue,
       point_to_pointidx, point_to_voxelidx, coor_to_voxelidx,
       num_points_per_voxel, voxel_num, max_voxels, num_points)));
 
-  VLOG(5) << "Launch Kernel mluOpUnionKernelAssignVoxelsCoors.";
-  KERNEL_CHECK((mluOpUnionKernelAssignVoxelsCoors(
+  VLOG(5) << "Launch Kernel KernelAssignVoxelsCoors.";
+  KERNEL_CHECK((KernelAssignVoxelsCoors(
       k_dim, k_type, handle->queue, points, temp_coors, point_to_voxelidx,
       coor_to_voxelidx, voxels, coors, max_points, num_points, num_features)));
 

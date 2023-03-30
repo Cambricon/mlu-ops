@@ -20,6 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "three_interpolate.h"
+
+#include <algorithm>
 #include <string>
 
 #include "core/context.h"
@@ -29,8 +32,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
 
 #define WEIGHT_N_LIMIT_SIZE 6
 #define INDEX_N_LIMIT_SIZE 6
@@ -292,17 +293,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
 
   VLOG(5) << "[mluOpThreeInterpolateForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "]";
-  if (features_desc->dtype == MLUOP_DTYPE_HALF) {
-    VLOG(5) << "Kernel mluOpUnionKernelThreeInterpolateForwardHalf";
-    KERNEL_CHECK((mluOpUnionKernelThreeInterpolateForwardHalf(
-        k_dim, k_type, handle->queue, features, indices, weights, b, c, m, n,
-        c_limit_size, m_limit_size, n_limit_size, output)));
-  } else {
-    VLOG(5) << "Kernel mluOpUnionKernelThreeInterpolateForwardFloat";
-    KERNEL_CHECK((mluOpUnionKernelThreeInterpolateForwardFloat(
-        k_dim, k_type, handle->queue, features, indices, weights, b, c, m, n,
-        c_limit_size, m_limit_size, n_limit_size, output)));
-  }
+  VLOG(5) << "Kernel KernelThreeInterpolateForward";
+  KERNEL_CHECK((KernelThreeInterpolateForward(
+      k_dim, k_type, handle->queue, features_desc->dtype, features, indices,
+      weights, b, c, m, n, c_limit_size, m_limit_size, n_limit_size, output)));
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

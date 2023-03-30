@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "psamask.h"
+
 #include <algorithm>
 #include <string>
 
@@ -29,10 +31,6 @@
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "kernels/kernel.h"
-#include "mlu_op.h"
-#include "mlu_op_kernel.h"
-
-#define COMPUTE_COUNT_ALIGN 64
 
 inline void getNHWC(const mluOpTensorDescriptor_t desc, int *n, int *h, int *w,
                     int *c) {
@@ -43,8 +41,8 @@ inline void getNHWC(const mluOpTensorDescriptor_t desc, int *n, int *h, int *w,
 }
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim_ptr,
-                cnrtFunctionType_t *f_type_ptr, PartitionSeg *partition_ptr,
-                int n, int h_feature) {
+                       cnrtFunctionType_t *f_type_ptr,
+                       PartitionSeg *partition_ptr, int n, int h_feature) {
   unsigned int core_dim = handle->core_num_per_cluster;
   unsigned int cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   unsigned int use_cluster_num = (uint32_t)cluster_num;
@@ -264,7 +262,7 @@ mluOpStatus_t mluOpPsamaskForward(mluOpHandle_t handle, const int psa_type,
     return ret;
   }
 
-  KERNEL_CHECK((mluOpUnion1KernelPsamaskForwardFloat(
+  KERNEL_CHECK((KernelPsamaskForward(
       k_dim, k_type, handle->queue, static_cast<const float *>(x),
       static_cast<float *>(y), (psamaskType_t)psa_type,
       partition_info.core_partition, partition_info.cluster_partition, n,
@@ -331,7 +329,7 @@ mluOpStatus_t mluOpPsamaskBackward(mluOpHandle_t handle, const int psa_type,
     GEN_CASE_END();
     return ret;
   }
-  KERNEL_CHECK((mluOpUnion1KernelPsamaskBackwardFloat(
+  KERNEL_CHECK((KernelPsamaskBackward(
       k_dim, k_type, handle->queue, static_cast<const float *>(dy),
       static_cast<float *>(dx), (psamaskType_t)psa_type,
       partition_info.core_partition, partition_info.cluster_partition, n,

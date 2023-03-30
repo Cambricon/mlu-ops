@@ -20,13 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
-#ifndef BANGC_OPS_KERNELS_POLY_NMS_INTERSECT_AREA_H
-#define BANGC_OPS_KERNELS_POLY_NMS_INTERSECT_AREA_H
+#ifndef KERNELS_POLY_NMS_INTERSECT_AREA_H
+#define KERNELS_POLY_NMS_INTERSECT_AREA_H
 
 #include <stdint.h>
-
-#include "kernels/poly_nms/enums.h"
 
 namespace {  // NOLINT
 constexpr uint32_t BIT_FLOAT_1 = 0x0;
@@ -232,4 +229,4 @@ __mlu_func__ float intersectArea(const float *__restrict__ box_i,
   return area;
 }
 }  // namespace
-#endif  // BANGC_OPS_KERNELS_POLY_NMS_INTERSECT_AREA_H
+#endif  // KERNELS_POLY_NMS_INTERSECT_AREA_H

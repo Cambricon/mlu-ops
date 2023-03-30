@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "expand.h"
 #include "kernels/kernel.h"
-#include "mlu_op_kernel.h"
 
 __mlu_global__ void MLUUnion1KernelExpandTensor(
     void *input, void *output, int32_t input_1, int32_t input_2,
@@ -36,7 +36,7 @@ __mlu_global__ void MLUUnion1KernelExpandOneDim(void *input, void *output,
                                                 int32_t low_num,
                                                 int dtype_size);
 
-void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
+void MLUOP_WIN_API KernelExpandTensor(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, void *output, const int32_t input_1,
     const int32_t input_2, const int32_t input_3, const int32_t input_4,
@@ -51,7 +51,7 @@ void MLUOP_WIN_API mluOpUnion1KernelExpandTensor(
       output_5, output_6, output_7, output_8, dtype_size);
 }
 
-void MLUOP_WIN_API mluOpUnion1KernelExpandOneDim(
+void MLUOP_WIN_API KernelExpandOneDim(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, void *output, const int32_t high_num,
     const int32_t expand_num, const int32_t low_num, const int dtype_size) {

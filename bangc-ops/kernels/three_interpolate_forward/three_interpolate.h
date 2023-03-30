@@ -20,31 +20,16 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
-#define KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+#ifndef KERNELS_THREE_INTERPOLATE_THREE_INTERPOLATE_H
+#define KERNELS_THREE_INTERPOLATE_THREE_INTERPOLATE_H
 
-/**
- * A util function to get the working set of current core, every core will
- * handle boxes in range of
- * [*o_begin, *o_begin + *o_box_num)
- *
- * @param input_boxes_num[in] the total box number
- * @param o_box_num[out] the number of boxes current core should processed
- * @param o_beg [out] the beginning box id of current core
- */
-__mlu_func__ static void getCoreWorkingSet(int input_boxes_num, int *o_box_num,
-                                           int *o_beg) {
-  int core_box_num = input_boxes_num / taskDim;
-  int rem = input_boxes_num % taskDim;
-  int box_i_beg = 0;
-  if (taskId < rem) {
-    core_box_num += taskId < rem;
-    box_i_beg = core_box_num * taskId;
-  } else {
-    box_i_beg = core_box_num * taskId + rem;
-  }
-  *o_box_num = core_box_num;
-  *o_beg = box_i_beg;
-}
+#include "mlu_op.h"
 
-#endif  // KERNELS_POLY_NMS_POLY_NMS_CORE_SET_H
+void MLUOP_WIN_API KernelThreeInterpolateForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *features, const void *indices,
+    const void *weights, const int b, const int c, const int m, const int n,
+    const int c_limit_size, const int m_limit_size, const int n_limit_size,
+    void *output);
+
+#endif  // KERNELS_THREE_INTERPOLATE_THREE_INTERPOLATE_H
