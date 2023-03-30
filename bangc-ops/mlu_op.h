@@ -6732,6 +6732,120 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
                              const mluOpTensorDescriptor_t grad_input_desc,
                              void *grad_input);
 
+// Group:MsDeformAttn
+/*!
+ * @brief Computes the gradient of the input tensors of ::mluOpsMsDeformAttnForward.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * in the ms_deform_attn_backward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] value_desc
+ * The descriptor of the \b value tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] value
+ * Pointer to the MLU memory that stores the input value.
+ * @param[in] spatial_shapes_desc
+ * The descriptor of the \b spatial_shapes tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] spatial_shapes
+ * Pointer to the MLU memory that stores the shapes of multi-scale feature maps.
+ * @param[in] level_start_index_desc
+ * The descriptor of the \b level_start_index tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] level_start_index
+ * Pointer to the MLU memory that stores the feature maps offset in \b value.
+ * @param[in] sampling_loc_desc
+ * The descriptor of the \b sampling_loc tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] sampling_loc
+ * Pointer to the MLU memory that stores the normalized coordinates of sample points.
+ * @param[in] attn_weight_desc
+ * The descriptor of the \b attn_weight tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] attn_weight
+ * Pointer to the MLU memory that stores the attention weight.
+ * @param[in] grad_outout_desc
+ * The descriptor of the \b grad_outout tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_outout
+ * Pointer to the MLU memory that stores the output gradient
+ * of ::mluOpMsDeformAttnForward.
+ * @param[in] im2col_step
+ * The value of im2col_step.
+ * @param[in] grad_value_desc
+ * The descriptor of the \b grad_value tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_value
+ * Pointer to the MLU memory that stores the gradient of \b value tensor.
+ * @param[in] grad_sampling_loc_desc
+ * The descriptor of the \b grad_sampling_loc tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_sampling_loc
+ * Pointer to the MLU memory that stores the gradient of \b sampling_loc tensor.
+ * @param[in] grad_attn_weight_desc
+ * The descriptor of the \b grad_attn_weight tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_attn_weight
+ * Pointer to the MLU memory that stores the gradient of \b attn_weight tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - \b value: float
+ *   - \b spatial_shapes: int32_t
+ *   - \b level_start_index: int32_t
+ *   - \b sampling_loc: float
+ *   - \b attn_weight: float
+ *   - \b grad_output: float
+ *   - \b grad_value: float
+ *   - \b grad_sampling_loc: float
+ *   - \b grad_attn_weight: float
+ *
+ * @par Data Layout
+ * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - The input \b sampling_loc that contains NaN or infinity is not supported.
+ * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
+ *   supported ON MLU500 series currently.
+ * - The function does not support MLU200 series.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/common/cuda/ms_deform_attn_cuda_kernel.cuh
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpsMsDeformAttnBackward(mluOpHandle_t handle,
+                           const mluOpTensorDescriptor_t value_desc,
+                           const void *value,
+                           const mluOpTensorDescriptor_t spatial_shapes_desc,
+                           const void *spatial_shapes,
+                           const mluOpTensorDescriptor_t level_start_index_desc,
+                           const void *level_start_index,
+                           const mluOpTensorDescriptor_t sampling_loc_desc,
+                           const void *sampling_loc,
+                           const mluOpTensorDescriptor_t attn_weight_desc,
+                           const void *attn_weight,
+                           const mluOpTensorDescriptor_t grad_output_desc,
+                           const void *grad_output,
+                           const int32_t im2col_step,
+                           const mluOpTensorDescriptor_t grad_value_desc,
+                           void *grad_value,
+                           const mluOpTensorDescriptor_t grad_sampling_loc_desc,
+                           void *grad_sampling_loc,
+                           const mluOpTensorDescriptor_t grad_attn_weight_desc,
+                           void *grad_attn_weight);
+
 // Group:RoiawarePool3d
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra

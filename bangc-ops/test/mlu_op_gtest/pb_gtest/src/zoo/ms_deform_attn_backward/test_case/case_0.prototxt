@@ -1,0 +1,189 @@
+device: CPU
+op_name: "ms_deform_attn_backward"
+input {
+  id: "value"
+  shape: {
+    dims: 1
+    dims: 14
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+
+}
+input {
+  id: "spatial_shapes"
+  shape: {
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i:1
+  value_i:2
+  value_i:3
+  value_i:4
+}
+input {
+  id: "level_start_index"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i:0
+  value_i:2
+}
+input {
+  id: "sampling_loc"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f:0
+  value_f:1
+  value_f:1
+  value_f:1
+  value_f:0
+  value_f:0
+  value_f:0
+  value_f:0
+  value_f:1
+  value_f:1
+  value_f:1
+  value_f:1
+  value_f:1
+  value_f:0
+  value_f:0
+  value_f:1
+  value_f:1
+  value_f:1
+  value_f:0
+  value_f:0
+  value_f:1
+  value_f:0
+  value_f:1
+  value_f:1
+  value_f:0
+  value_f:1
+  value_f:0
+  value_f:1
+  value_f:0
+  value_f:0
+  value_f:1
+  value_f:0
+}
+input {
+  id: "attn_weight"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "grad_output"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+   random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: -10
+    distribution: UNIFORM
+  }
+
+}
+
+output {
+  id: "grad_value"
+  shape: {
+    dims: 1
+    dims: 14
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_NCHW
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 1
+    lower_bound: -1
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "grad_sampling_loc"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 1
+    lower_bound: -1
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "grad_attn_weight"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 1
+    lower_bound: -1
+    distribution: UNIFORM
+  }
+}
+ms_deform_attn_backward_param: {
+  im2col_step: 1
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
