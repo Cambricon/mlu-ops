@@ -72,7 +72,7 @@ ms_deform_attn的反向算子，计算grad_value，grad_sampling_loc和grad_attn
 | sampling_loc_desc | 输入sampling_loce的描述信息。 | 输入              |  /  | /      | sampling_loc的维度必须为6且第一维、第三维分别和value的第一维、第三维相等，第四维和level_start_index的维度相等。最后一个维度必须为2。     |
 | sampling_loc     | 输入数据，采样点的归一化坐标。           | 输入              |  float | ARRAY |   /    |
 | attn_weight_desc | 输入attn_weight的描述信息。 | 输入              |  /  | /      | attn_weight的维度必须为5且5个维度信息和level_start_index前5个维度相同。    |
-| attn_weight     | 输入数据，attention权重值。           | 输入              | float | ARRAY |   /    |
+| attn_weight     | 输入数据，attention的值。           | 输入              | float | ARRAY |   /    |
 | grad_output_desc | 输入grad_output的描述信息，前向的输出结果。 | 输入              |  /  | /      | grad_output的维度必须为4，前三个维度信息和attn_weight的前三维相同，最后一个维度值为channels的值。      |
 | grad_output     | 输入数据，指向grad_output的mlu地址的指针。           | 输入              |  float | ARRAY |   /    |
 | im2col_step     | 输入数据，image转换成column的步长。           | 输入              |  float | ARRAY |   /    |
@@ -162,7 +162,7 @@ mluOpsMsDeformAttnBackward(mluOpHandle_t handle,
 
 ms_deform_attn_backward算子三个输出的计算方法：
 
-1、输出`grad_value`:`grad_value`的shape为[batch, num_keys, num_heads, Channels]，是输入`value`的梯度信息。在计算时通过`sampling_loc`中的坐标信息获取到`spatial_shapes`中对应的特征图尺寸`spatial_w`和`spatial_h`，在通过双线性插值得到对应点的四邻域点以及每个点对应的权重`w1`、`w2`、`w3`和`w4`，把权重乘以`grad_output`和`attn_weight`，再使用原子加将结果累加回gdram上。在mlu的实现上，可以一次处理多组`C`，若`C`大于`nram`上分配的内存，则对`C`循环处理。
+1、输出`grad_value`:`grad_value`的shape为[batch, num_keys, num_heads, Channels]，是输入`value`的梯度信息。在计算时通过`sampling_loc`中的坐标信息获取到`spatial_shapes`中对应的特征图尺寸`spatial_w`和`spatial_h`，在通过双线性插值得到对应点的四邻域点以及每个点对应的`weight`（`w1`、`w2`、`w3`和`w4`），把对应的`weight`乘以`grad_output`和`attn_weight`，再使用原子加将结果累加回gdram上。在mlu的实现上，可以一次处理多组`C`，若`C`大于`nram`上分配的内存，则对`C`循环处理。
 
 2、输出`grad_sampling_loc`:`grad_sampling_loc`的shape为[batch, num_query, num_heads, num_levels, num_point, 2]，是输入`sampling_loc`的梯度信息。在上述步骤1的计算中，通过四邻域信息、`grad_ouput`和`attn_weight`能够得到每个`C`上的梯度信息，待所有的`C`计算完成后，通过`reduce`或者原子加的方法获取`grad_sampling_loc`的结果，若采样点不在特征图内，直接丢弃，不做后续的处理。
 
@@ -191,14 +191,14 @@ top\_grad\_value = grad\_output * attn\_weight  \\
 ```
 - `w`和`h`分别为`spatial_shapes`中的宽和高，$`v1`$、$`v2`$、$`v3`$、$`v4`$是像素点对应的四邻域像素值，grad_output和attn_weight是输入。
 
-3、输出`grad_attn_weight`:`grad_attn_weight`的shape为[batch, num_query, num_heads, num_levels, num_point]，是输入`attn_weight`的梯度信息。在上述步骤1的计算中，通过四邻域对应的权重和`grad_ouput`能够得到每个`C`上的梯度信息，待所有的`C`计算完成后，通过`reduce`或者原子加的方法获取`grad_attn_weight`的结果，若采样点不在特征图内，直接丢弃，不做后续的处理。
+3、输出`grad_attn_weight`:`grad_attn_weight`的shape为[batch, num_query, num_heads, num_levels, num_point]，是输入`attn_weight`的梯度信息。在上述步骤1的计算中，通过四邻域对应的`weight`和`grad_ouput`能够得到每个`C`上的梯度信息，待所有的`C`计算完成后，通过`reduce`或者原子加的方法获取`grad_attn_weight`的结果，若采样点不在特征图内，直接丢弃，不做后续的处理。
 
 ```math
 val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4  \\ 
 
 grad\_attn\_weight = \sum_{index = 0}^{C - 1} {grad\_ouput[index] * val}  \\
 ```
-- $`w1`$、$`w2`$、$`w3`$、$`w4`$是四邻域对应的权重，index是`grad_attn_weight`输出点对应的下标。
+- $`w1`$、$`w2`$、$`w3`$、$`w4`$是四邻域对应的`weight`，index是`grad_attn_weight`输出点对应的下标。
 
 ### 3.2 伪代码实现（可选）
 
@@ -393,7 +393,7 @@ nram划分：
 1、针对BEVFormer网络的性能优化
 
 在BEVFormer网络中，输入的C通道只有32，需要处理的点数据量比较大，如果每个MLU core每次只处理一个点的数据，板卡的IO无法打满，计算量也无法打满，
-在片上会有大量的内存闲置，导致整体性能变差。对于这种场景，一次处理多个点，把方案中的标量计算部分转换成矢量计算，计算出这些点的权重以及偏移信息，
+在片上会有大量的内存闲置，导致整体性能变差。对于这种场景，一次处理多个点，把方案中的标量计算部分转换成矢量计算，计算出这些点的`weight`以及偏移信息，
 保存在片上。在load value时，一次load多个点的数据到片上（在MLU500上，可以使用dld做优化），在计算时候，就可以一次计算多个点输出，提高算子的性能。
 网络规模：data_value: [6, 30825, 8, 32]，data_spatial_shapes: [4, 2]，data_level_start_index: [4]，data_sampling_loc: [6, 9664, 8, 4, 8, 2]
 data_attn_weight: [6, 9664, 8, 4, 8]，grad_output: [6, 9664, 8, 32]。
