@@ -36,6 +36,8 @@
 
   ```bash
   git clone https://github.com/yourname/mlu-ops.git
+  cd mlu-ops
+  git submodule update --init --recursive
   ```
   
   添加原代码库为上游代码库
@@ -61,6 +63,10 @@
 
   ```{tips}
   为了保证提交历史清晰可读，我们强烈建议您先检出主分支（master），再创建新的分支。
+  ```
+  
+  ```{tips}
+  若子仓mlu-ops-proto有修改，先按照2～5步提交子仓修改为一个 PR。
   ```
 
 #### 3.提交你的修改
