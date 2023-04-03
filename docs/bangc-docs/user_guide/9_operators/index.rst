@@ -94,6 +94,10 @@ mluOpDiv
 - ``i`` 表示一个多维数组的索引，表示多维张量，例如在4维时可以表示(n,c,h,w)。
 - ``xi``、``yi``、``zi`` 表示多维数组中 ``i`` 索引处的元素。
 
+.. _ms_deform_attn_backward:
+-----------------------------
+mluOpMsDeformAttnForward算子的反向，计算输入value，sampling_loc和attn_weight的梯度。
+
 .. _poly_nms:
 
 mluOpPolyNms
