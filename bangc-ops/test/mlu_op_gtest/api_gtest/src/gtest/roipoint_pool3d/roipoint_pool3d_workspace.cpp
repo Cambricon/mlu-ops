@@ -35,14 +35,15 @@ namespace mluopapitest {
 class roipoint_pool3d_workspace : public testing::Test {
  public:
   void setParam(bool handle, bool points_desc, bool point_features_desc,
-  bool boxes3d_desc, bool pooled_features_desc, bool pooled_empty_flag_desc, bool size) {
+                bool boxes3d_desc, bool pooled_features_desc,
+                bool pooled_empty_flag_desc, bool size) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
 
     if (points_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&points_desc_));
-      std::vector<int> points_dims{1,1,3};
+      std::vector<int> points_dims{1, 1, 3};
       MLUOP_CHECK(mluOpSetTensorDescriptor(points_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 3,
                                            points_dims.data()));
@@ -50,15 +51,15 @@ class roipoint_pool3d_workspace : public testing::Test {
 
     if (point_features_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&point_features_desc_));
-      std::vector<int> point_features_dims{1,1,2};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(point_features_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_FLOAT, 3,
-                                           point_features_dims.data()));
+      std::vector<int> point_features_dims{1, 1, 2};
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          point_features_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 3,
+          point_features_dims.data()));
     }
 
     if (boxes3d_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes3d_desc_));
-      std::vector<int> boxes3d_dims{1,1,7};
+      std::vector<int> boxes3d_dims{1, 1, 7};
       MLUOP_CHECK(mluOpSetTensorDescriptor(boxes3d_desc_, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 3,
                                            boxes3d_dims.data()));
@@ -66,18 +67,18 @@ class roipoint_pool3d_workspace : public testing::Test {
 
     if (pooled_features_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&pooled_features_desc_));
-      std::vector<int> pooled_features_dims{1,1,1,5};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(pooled_features_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_FLOAT, 4,
-                                           pooled_features_dims.data()));
+      std::vector<int> pooled_features_dims{1, 1, 1, 5};
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          pooled_features_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+          pooled_features_dims.data()));
     }
 
     if (pooled_empty_flag_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&pooled_empty_flag_desc_));
-      std::vector<int> pooled_empty_flag_dims{1,1};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(pooled_empty_flag_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_INT32, 2,
-                                           pooled_empty_flag_dims.data()));
+      std::vector<int> pooled_empty_flag_dims{1, 1};
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          pooled_empty_flag_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 2,
+          pooled_empty_flag_dims.data()));
     }
 
     if (size) {
@@ -88,8 +89,9 @@ class roipoint_pool3d_workspace : public testing::Test {
 
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpGetRoiPointPool3dWorkspaceSize(
-        handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_, sampled_pts_num_, points_desc_, 
-        point_features_desc_, boxes3d_desc_, pooled_features_desc_, pooled_empty_flag_desc_, size_);
+        handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_,
+        sampled_pts_num_, points_desc_, point_features_desc_, boxes3d_desc_,
+        pooled_features_desc_, pooled_empty_flag_desc_, size_);
     destroy();
     return status;
   }

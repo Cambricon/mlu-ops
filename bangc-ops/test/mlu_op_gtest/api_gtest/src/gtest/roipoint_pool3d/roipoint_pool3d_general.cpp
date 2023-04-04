@@ -36,9 +36,9 @@
 
 namespace mluopapitest {
 typedef std::tuple<int, int, int, int, int> RoiPointPool3dDescParam;
-typedef std::tuple<RoiPointPool3dDescParam, MLUOpTensorParam,
+typedef std::tuple<RoiPointPool3dDescParam, MLUOpTensorParam, MLUOpTensorParam,
                    MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
-                   MLUOpTensorParam, mluOpDevType_t, mluOpStatus_t>
+                   mluOpDevType_t, mluOpStatus_t>
     RoiPointPool3dParam;
 class roipoint_pool3d_general
     : public testing::TestWithParam<RoiPointPool3dParam> {
@@ -55,24 +55,24 @@ class roipoint_pool3d_general
         return;
       }
       RoiPointPool3dDescParam op_param = std::get<0>(GetParam());
-      std::tie(batch_size_, pts_num_, boxes_num_, feature_in_len_, sampled_pts_num_) = op_param;
+      std::tie(batch_size_, pts_num_, boxes_num_, feature_in_len_,
+               sampled_pts_num_) = op_param;
 
       MLUOpTensorParam points_params = std::get<1>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&points_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
-          points_desc_, points_params.get_layout(),
-          points_params.get_dtype(), points_params.get_dim_nb(),
-          points_params.get_dim_size().data()));
+          points_desc_, points_params.get_layout(), points_params.get_dtype(),
+          points_params.get_dim_nb(), points_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(points_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
             cnrtMalloc(&points_,
                        mluOpDataTypeBytes(points_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&points_,
-                               mluOpDataTypeBytes(points_params.get_dtype()) *
-                                   mluOpGetTensorElementNum(points_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&points_, mluOpDataTypeBytes(points_params.get_dtype()) *
+                                     mluOpGetTensorElementNum(points_desc_)));
       }
 
       MLUOpTensorParam point_features_params = std::get<2>(GetParam());
@@ -84,8 +84,9 @@ class roipoint_pool3d_general
       if (mluOpGetTensorElementNum(point_features_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&point_features_,
-                       mluOpDataTypeBytes(point_features_params.get_dtype()) * 10));
+            cnrtMalloc(
+                &point_features_,
+                mluOpDataTypeBytes(point_features_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
@@ -97,8 +98,9 @@ class roipoint_pool3d_general
       MLUOpTensorParam boxes3d_params = std::get<3>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes3d_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
-          boxes3d_desc_, boxes3d_params.get_layout(), boxes3d_params.get_dtype(),
-          boxes3d_params.get_dim_nb(), boxes3d_params.get_dim_size().data()));
+          boxes3d_desc_, boxes3d_params.get_layout(),
+          boxes3d_params.get_dtype(), boxes3d_params.get_dim_nb(),
+          boxes3d_params.get_dim_size().data()));
 
       if (mluOpGetTensorElementNum(boxes3d_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
@@ -106,47 +108,54 @@ class roipoint_pool3d_general
             cnrtMalloc(&boxes3d_,
                        mluOpDataTypeBytes(boxes3d_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
-            cnrtMalloc(&boxes3d_, mluOpDataTypeBytes(boxes3d_params.get_dtype()) *
-                                    mluOpGetTensorElementNum(boxes3d_desc_)));
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&boxes3d_,
+                               mluOpDataTypeBytes(boxes3d_params.get_dtype()) *
+                                   mluOpGetTensorElementNum(boxes3d_desc_)));
       }
 
       MLUOpTensorParam pooled_features_params = std::get<4>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&pooled_features_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
           pooled_features_desc_, pooled_features_params.get_layout(),
-          pooled_features_params.get_dtype(), pooled_features_params.get_dim_nb(),
+          pooled_features_params.get_dtype(),
+          pooled_features_params.get_dim_nb(),
           pooled_features_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(pooled_features_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&pooled_features_,
-                       mluOpDataTypeBytes(pooled_features_params.get_dtype()) * 10));
+            cnrtMalloc(
+                &pooled_features_,
+                mluOpDataTypeBytes(pooled_features_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&pooled_features_,
-                               mluOpDataTypeBytes(pooled_features_params.get_dtype()) *
-                                   mluOpGetTensorElementNum(pooled_features_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&pooled_features_,
+                       mluOpDataTypeBytes(pooled_features_params.get_dtype()) *
+                           mluOpGetTensorElementNum(pooled_features_desc_)));
       }
 
       MLUOpTensorParam pooled_empty_flag_params = std::get<5>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&pooled_empty_flag_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
           pooled_empty_flag_desc_, pooled_empty_flag_params.get_layout(),
-          pooled_empty_flag_params.get_dtype(), pooled_empty_flag_params.get_dim_nb(),
+          pooled_empty_flag_params.get_dtype(),
+          pooled_empty_flag_params.get_dim_nb(),
           pooled_empty_flag_params.get_dim_size().data()));
-      if (mluOpGetTensorElementNum(pooled_empty_flag_desc_) >= LARGE_TENSOR_NUM) {
+      if (mluOpGetTensorElementNum(pooled_empty_flag_desc_) >=
+          LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&pooled_empty_flag_,
-                       mluOpDataTypeBytes(pooled_empty_flag_params.get_dtype()) * 10));
+            cnrtMalloc(
+                &pooled_empty_flag_,
+                mluOpDataTypeBytes(pooled_empty_flag_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&pooled_empty_flag_,
-                       mluOpDataTypeBytes(pooled_empty_flag_params.get_dtype()) *
-                           mluOpGetTensorElementNum(pooled_empty_flag_desc_)));
+            cnrtMalloc(
+                &pooled_empty_flag_,
+                mluOpDataTypeBytes(pooled_empty_flag_params.get_dtype()) *
+                    mluOpGetTensorElementNum(pooled_empty_flag_desc_)));
       }
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -162,8 +171,9 @@ class roipoint_pool3d_general
     }
     mluOpStatus_t status;
     status = mluOpGetRoiPointPool3dWorkspaceSize(
-        handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_, sampled_pts_num_, points_desc_, 
-        point_features_desc_, boxes3d_desc_, pooled_features_desc_, pooled_empty_flag_desc_, &workspace_size_);
+        handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_,
+        sampled_pts_num_, points_desc_, point_features_desc_, boxes3d_desc_,
+        pooled_features_desc_, pooled_empty_flag_desc_, &workspace_size_);
     if (status != MLUOP_STATUS_SUCCESS) {
       destroy();
       return expected_status_ == status;
@@ -171,10 +181,11 @@ class roipoint_pool3d_general
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
 
     status = mluOpRoiPointPool3d(
-        handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_, sampled_pts_num_,
-        points_desc_, points_, point_features_desc_, point_features_,
-        boxes3d_desc_, boxes3d_, workspace_, workspace_size_, pooled_features_desc_, 
-        pooled_features_, pooled_empty_flag_desc_, pooled_empty_flag_);
+        handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_,
+        sampled_pts_num_, points_desc_, points_, point_features_desc_,
+        point_features_, boxes3d_desc_, boxes3d_, workspace_, workspace_size_,
+        pooled_features_desc_, pooled_features_, pooled_empty_flag_desc_,
+        pooled_empty_flag_);
     destroy();
     return status == expected_status_;
   }
@@ -361,7 +372,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({1, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));        
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_points_dtype_dim_shape, roipoint_pool3d_general,
@@ -411,7 +422,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({1, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));       
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_boxes3d_dtype_dim_shape, roipoint_pool3d_general,
@@ -436,7 +447,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({1, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));         
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_pooled_features_dtype_dim_shape, roipoint_pool3d_general,
@@ -463,7 +474,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({1, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_BAD_PARAM)));           
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_pooled_empty_flag_dtype_dim_shape, roipoint_pool3d_general,
@@ -493,13 +504,16 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(
         testing::Values(RoiPointPool3dDescParam{14800, 48367, 1, 1, 1}),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({14800, 48367, 3}))),
+                                         3,
+                                         std::vector<int>({14800, 48367, 3}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({14800, 48367, 1}))),
+                                         3,
+                                         std::vector<int>({14800, 48367, 1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({14800, 1, 7}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({14800, 1, 1, 4}))),
+                                         4,
+                                         std::vector<int>({14800, 1, 1, 4}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({14800, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
@@ -514,13 +528,15 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({14800, 1, 1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({14800, 48367, 7}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({14800, 48367, 1, 4}))),
+                                         3,
+                                         std::vector<int>({14800, 48367, 7}))),
+        testing::Values(
+            MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+                             std::vector<int>({14800, 48367, 1, 4}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({14800, 48367}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));      
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_large_tensor_3, roipoint_pool3d_general,
@@ -528,16 +544,18 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(RoiPointPool3dDescParam{14800, 1, 1, 1451001, 1}),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({14800, 1, 3}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({14800, 1, 1451001}))),
+        testing::Values(
+            MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 3,
+                             std::vector<int>({14800, 1, 1451001}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({14800, 1, 7}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({14800, 1, 1, 1451004}))),
+        testing::Values(
+            MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+                             std::vector<int>({14800, 1, 1, 1451004}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({14800, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));            
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 INSTANTIATE_TEST_CASE_P(
     bad_large_tensor_4, roipoint_pool3d_general,
@@ -549,11 +567,12 @@ INSTANTIATE_TEST_CASE_P(
                                          3, std::vector<int>({14800, 1, 1}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({14800, 1, 7}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({14800, 1, 48367, 4}))),
+        testing::Values(
+            MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+                             std::vector<int>({14800, 1, 48367, 4}))),
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({14800, 1}))),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED))); 
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 }  // namespace mluopapitest
