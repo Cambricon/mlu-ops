@@ -36,7 +36,7 @@ __mlu_func__ void check_point_in_box(
     int points_compute_num, float *temp0_nram_buffer, float *temp1_nram_buffer,
     float *temp2_nram_buffer, float *temp3_nram_buffer,
     float *temp4_nram_buffer) {
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   __bang_sub_scalar(temp0_nram_buffer, z_nram_buffer, cz, points_compute_num);
   // fabs(local_z)
   __bang_abs(temp0_nram_buffer, temp0_nram_buffer, points_compute_num);
@@ -100,7 +100,7 @@ __mlu_func__ void noPipelineCompute(
     float *temp0_nram_buffer, float *temp1_nram_buffer,
     float *temp2_nram_buffer, float *temp3_nram_buffer,
     float *temp4_nram_buffer) {
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   __bang_transpose(x_nram_buffer, points_nram_buffer, points_compute_num, 3);
 
   float *y_nram_buffer = x_nram_buffer + points_compute_num;

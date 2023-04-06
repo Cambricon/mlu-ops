@@ -45,7 +45,7 @@ void __mlu_func__ msDeformAttnCol2imBilinear(
     T *grad_sampling_loc, T *grad_attn_weight, T *grad_output_nram_temp,
     const int32_t &deal_num, const int32_t &deal_num_real,
     const T *data_value_ptr) {
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   if (h_low >= 0 && w_low >= 0) {
     int32_t offset1 = h_low_ptr_offset + w_low_ptr_offset + base_ptr;
     __memcpy(grad_output_nram, data_value_ptr + offset1,
