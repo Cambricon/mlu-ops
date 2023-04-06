@@ -705,6 +705,8 @@ mluOpMoeDispatchBackwardGate
 ----------------------------------
 MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度`grad_gates`。
 
+.. _points_in_boxes:
+
 mluOpPointsInBoxes
 ----------------------------------
 
