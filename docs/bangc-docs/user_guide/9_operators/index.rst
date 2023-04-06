@@ -104,6 +104,16 @@ mluOpPolyNms
 -----------------------------
 计算不规则四边形的非极大值抑制，用于删除高度冗余的不规则四边形输入框。
 
+
+.. _nms:
+
+mluOpNms
+---------
+NMS的算法简述：
+- 用最大SCORE对应的BOX的面积和其他SCORE对应的面积算出N - 1个IOU；
+- 移除IOU > IOU阈值的参与的计算的较小的BOX；
+- 重复1，2直到满足特定的终止条件。
+
 .. _nms_rotated:
 
 mluOpNmsRotated
@@ -338,7 +348,7 @@ mluOpPsamaskForward
 - ``x`` 是输入的数据。
 - ``y`` 是输出的数据。
 
-.. _roi_align_forward:
+.. _roialign_forward:
 
 mluOpRoiAlignForward
 -----------------------------
