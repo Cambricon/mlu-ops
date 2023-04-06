@@ -27,7 +27,6 @@
 #include "kernels/kernel.h"
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
-#include "core/logging.h"
 
 #define ROI_OFFSET 7
 #define FLOAT_NRAM_BUFFER_NUM 14
@@ -156,7 +155,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_sub_scalar((T *)local_Z, (T *)Z, (T)cz, compute_pts_num);
       __bang_sub_scalar((T *)temp_buffer1, (T *)Z, (T)(cz + dz_2),
                         compute_pts_num);
-      __bang_active_abs((T *)temp_buffer1, (T *)temp_buffer1, compute_pts_num);
+      __bang_abs((T *)temp_buffer1, (T *)temp_buffer1, compute_pts_num);
       __bang_gt_scalar((T *)nram_pts_in_flag, (T *)temp_buffer1, (T)(dz_2),
                        compute_pts_num);
       __bang_not((T *)nram_pts_in_flag, (T *)nram_pts_in_flag, compute_pts_num);
@@ -170,11 +169,11 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_sub((T *)local_X, (T *)temp_buffer1, (T *)temp_buffer2,
                  compute_pts_num);
       // fabs(local_x)
-      __bang_active_abs((T *)temp_buffer1, (T *)local_X, compute_pts_num);
+      __bang_abs((T *)temp_buffer1, (T *)local_X, compute_pts_num);
       // fabs(local_x) < dx/2 ? 1 : 0
       __bang_lt_scalar((T *)temp_buffer1, (T *)temp_buffer1, (T)(dx_2),
                        compute_pts_num);
-      __bang_mul((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
+      __bang_and((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
                  (T *)temp_buffer1,
                  compute_pts_num);  // flush res
 
@@ -186,11 +185,11 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_add((T *)local_Y, (T *)temp_buffer1, (T *)temp_buffer2,
                  compute_pts_num);
       // fabs(local_y)
-      __bang_active_abs((T *)temp_buffer1, (T *)local_Y, compute_pts_num);
+      __bang_abs((T *)temp_buffer1, (T *)local_Y, compute_pts_num);
       // fabs(local_y) < dy/2 ? 1 : 0
       __bang_lt_scalar((T *)temp_buffer1, (T *)temp_buffer1, (T)(dy_2),
                        compute_pts_num);
-      __bang_mul((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
+      __bang_and((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
                  (T *)temp_buffer1,
                  compute_pts_num);  // flush res
       T x_res = dx / out_x;
@@ -431,7 +430,7 @@ void MLUOP_WIN_API KernelPtsIdxOfVoxels(
           out_z, (half *)rois, (half *)pts, (int *)pts_idx_of_voxels);
     }; break;
     default: {
-      LOG(ERROR) << "Not implemented.\n";
+      MLULOG("Not implemented.\n");
       break;
     }
   }
@@ -457,7 +456,7 @@ void MLUOP_WIN_API KernelRoiawarePool3dForward(
           (half *)pooled_features, (int *)argmax);
     }; break;
     default: {
-      LOG(ERROR) << "Not implemented.\n";
+      MLULOG("Not implemented.\n");
       break;
     }
   }
@@ -671,7 +670,7 @@ void MLUOP_WIN_API KernelRoiawarePool3dBackward(
       }
     }; break;
     default: {
-      LOG(ERROR) << "Not implemented.\n";
+      MLULOG("Not implemented.\n");
       break;
     }
   }
