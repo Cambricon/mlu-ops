@@ -45,6 +45,7 @@ void __mlu_func__ msDeformAttnCol2imBilinear(
     T *grad_sampling_loc, T *grad_attn_weight, T *grad_output_nram_temp,
     const int32_t &deal_num, const int32_t &deal_num_real,
     const T *data_value_ptr) {
+#if __BANG_ARCH__ >= 322
   if (h_low >= 0 && w_low >= 0) {
     int32_t offset1 = h_low_ptr_offset + w_low_ptr_offset + base_ptr;
     __memcpy(grad_output_nram, data_value_ptr + offset1,
@@ -120,38 +121,30 @@ void __mlu_func__ msDeformAttnCol2imBilinear(
                              deal_num_real);
   }
   __bang_mul(grad_output_nram, grad_output_nram, top_grad, deal_num_real);
-#if __BANG_ARCH__ >= 322
   recursiveSumPool(grad_output_nram, 1, deal_num_real, ALIGN_NUM_FOR_REDUCE);
-#else
   const int32_t align_num_on_200 = NFU_ALIGN_SIZE / LEN_FLOAT;
   recursiveSumPool(grad_output_nram, align_num_on_200,
                    deal_num / align_num_on_200, ALIGN_NUM_FOR_REDUCE);
   __bang_reduce_sum(grad_output_nram, grad_output_nram,
                     NFU_ALIGN_SIZE / LEN_FLOAT);
-#endif
   __bang_atomic_reduce_add((T *)grad_attn_weight, (T *)grad_output_nram, 1);
   __bang_mul_scalar(grad_w_weight, grad_w_weight, width, deal_num_real);
   __bang_mul_scalar(top_grad_temp, top_grad, data_attn_weight, deal_num_real);
   __bang_mul(grad_w_weight, grad_w_weight, top_grad_temp, deal_num_real);
-#if __BANG_ARCH__ >= 322
   recursiveSumPool(grad_w_weight, 1, deal_num_real, ALIGN_NUM_FOR_REDUCE);
-#else
   recursiveSumPool(grad_w_weight, align_num_on_200, deal_num / align_num_on_200,
                    ALIGN_NUM_FOR_REDUCE);
   __bang_reduce_sum(grad_w_weight, grad_w_weight, NFU_ALIGN_SIZE / LEN_FLOAT);
-#endif
   __bang_atomic_reduce_add((T *)(grad_sampling_loc), (T *)grad_w_weight, 1);
 
   __bang_mul_scalar(grad_h_weight, grad_h_weight, height, deal_num_real);
   __bang_mul(grad_h_weight, grad_h_weight, top_grad_temp, deal_num_real);
-#if __BANG_ARCH__ >= 322
   recursiveSumPool(grad_h_weight, 1, deal_num_real, ALIGN_NUM_FOR_REDUCE);
-#else
   recursiveSumPool(grad_h_weight, align_num_on_200, deal_num / align_num_on_200,
                    ALIGN_NUM_FOR_REDUCE);
   __bang_reduce_sum(grad_h_weight, grad_h_weight, NFU_ALIGN_SIZE / LEN_FLOAT);
-#endif
   __bang_atomic_reduce_add((T *)(grad_sampling_loc + 1), (T *)grad_h_weight, 1);
+#endif
 }
 
 __mlu_global__ void MLUUnion1KernelMsDeformAttnBackwardDefault(

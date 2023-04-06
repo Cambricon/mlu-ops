@@ -56,6 +56,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
   if (coreId == 0x80) {
     return;
   }
+#if __BANG_ARCH__ >= 322
   size_t block_num_per_core = 0, batch_start = 0, deal_g = 0, offset_g = 0;
   size_t block_num_rem = 0;
   const size_t grid_total =
@@ -507,6 +508,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
   }
   __asm__ volatile("sync;");
   return;
+#endif
 }
 
 
