@@ -24,6 +24,8 @@ MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开
 
   ```sh
   git clone https://github.com/Cambricon/mlu-ops.git
+  cd mlu-ops
+  git submodule update --init --recursive
   ```
 
 - 准备 CNToolkit 环境
