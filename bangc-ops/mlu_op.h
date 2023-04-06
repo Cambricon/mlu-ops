@@ -6981,7 +6981,7 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported currently.
+ * - The inputs \b rois and \b pts with NaN or infinity are not supported on MLU300 series.
  * - The inputs \b pts_feature with NaN are not supported on MLU300 series.
  * - The function does not support MLU200 series.
  *
