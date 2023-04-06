@@ -243,7 +243,7 @@ void __mlu_func__ loadValue(
 #if __BANG_ARCH__ >= 372
   int32_t value_offset_temp = 0;
 
-#if __BANG_ARCH__ >= 590
+#if __BANG_ARCH__ > 590
   for (int i = 0; i < num_deal_grid; ++i) {
     int32_t b_col =
         (grid_offset + i) / num_query / num_heads / num_levels / num_points;
