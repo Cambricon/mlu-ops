@@ -31,7 +31,7 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-char API[] = "[mluOpsMsDeformAttnBackward]";
+char API[] = "[mluOpMsDeformAttnBackward]";
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -80,7 +80,7 @@ mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
   return MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT;
 }
 
-/* check user entrance param in mluOpsMsDeformAttnBackward */
+/* check user entrance param in mluOpMsDeformAttnBackward */
 static mluOpStatus_t msDeformAttnBackwardParamCheck(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t value_desc,
     const void *value, const mluOpTensorDescriptor_t spatial_shapes_desc,
@@ -144,7 +144,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   // check all the input relationship
   for (int32_t i = 0; i < value_desc->dim; ++i) {
     if (value_desc->dims[i] != grad_value_desc->dims[i]) {
-      LOG(ERROR) << "[mluOpsMsDeformAttnBackward] The shape of value should be "
+      LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of value should be "
                     "the same as grad_value."
                  << " But now value_desc->dims[" << i << "] is "
                  << value_desc->dims[i] << ", and grad_value_desc->dims[" << i
@@ -154,7 +154,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   }
   for (int32_t i = 0; i < sampling_loc_desc->dim; ++i) {
     if (sampling_loc_desc->dims[i] != grad_sampling_loc_desc->dims[i]) {
-      LOG(ERROR) << "[mluOpsMsDeformAttnBackward] The shape of "
+      LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
                     "sampling_loc_desc should be the "
                     "same as grad_sampling_loc_desc."
                  << " But now sampling_loc_desc->dims[" << i << "] is "
@@ -166,7 +166,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   }
   for (int32_t i = 0; i < attn_weight_desc->dim; ++i) {
     if (attn_weight_desc->dims[i] != grad_attn_weight_desc->dims[i]) {
-      LOG(ERROR) << "[mluOpsMsDeformAttnBackward] The shape of "
+      LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
                     "attn_weight_desc should be the "
                     "same as grad_attn_weight_desc."
                  << " But now attn_weight_desc->dims[" << i << "] is "
@@ -203,7 +203,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
 
   // check zero
   if (batch * channels * num_key * num_heads * num_query == 0) {
-    LOG(ERROR) << "[mluOpsMsDeformAttnBackward] The batch, channels, num_key, "
+    LOG(ERROR) << "[mluOpMsDeformAttnBackward] The batch, channels, num_key, "
                   "num_heads or "
                   "num_query of the input is zero.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -225,7 +225,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpsMsDeformAttnBackward(
+mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t value_desc,
     const void *value, const mluOpTensorDescriptor_t spatial_shapes_desc,
     const void *spatial_shapes,
@@ -281,7 +281,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpsMsDeformAttnBackward(
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
   }
-  VLOG(5) << "[mluOpsMsDeformAttnBackward] mluOpFill_v3 start.";
+  VLOG(5) << "[mluOpMsDeformAttnBackward] mluOpFill_v3 start.";
   uint64_t fill_value = 0x0;
 
   PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
@@ -296,7 +296,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpsMsDeformAttnBackward(
                   mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                                grad_attn_weight_desc, grad_attn_weight));
 
-  VLOG(5) << "[mluOpsMsDeformAttnBackward] mluOpFill_v3 end.";
+  VLOG(5) << "[mluOpMsDeformAttnBackward] mluOpFill_v3 end.";
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -307,7 +307,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpsMsDeformAttnBackward(
   const int32_t num_heads = attn_weight_desc->dims[2];
   const int32_t num_levels = attn_weight_desc->dims[3];
   const int32_t num_points = attn_weight_desc->dims[4];
-  // generate mluOpsMsDeformAttnBackward prototxt start!
+  // generate mluOpMsDeformAttnBackward prototxt start!
 
   mluOpDeformAttnBackwardKernelPolicy_t kernelPolicy =
       msDeformAttnBackwardPolicyFunc(channels, num_levels, num_points,

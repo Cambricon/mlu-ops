@@ -134,7 +134,7 @@ ms_deform_attn_cuda_backward(
 ### 2.2 接口设计
 ```c++
 mluOpStatus_t MLUOP_WIN_API
-mluOpsMsDeformAttnBackward(mluOpHandle_t handle,
+mluOpMsDeformAttnBackward(mluOpHandle_t handle,
                            const mluOpTensorDescriptor_t value_desc,
                            const void *value,
                            const mluOpTensorDescriptor_t spatial_shapes_desc,
