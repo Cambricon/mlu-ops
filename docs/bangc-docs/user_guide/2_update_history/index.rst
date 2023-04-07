@@ -6,7 +6,6 @@
 
   **更新内容**：
 
-  - 不再支持Debian。
   - 新增以下算子章节内容：
 
      + :ref:`ms_deform_attn_backward`
