@@ -25,13 +25,13 @@
 
 namespace mluoptest {
 void CarafeBackwardExecutor::paramCheck() {
-  if (!parser_->getProtoNode()->has_carafe_backward_param()) {
+  if (!parser_->getProtoNode()->has_carafe_param()) {
     LOG(ERROR) << "Missing carafe param. ";
   }
 }
 
 void CarafeBackwardExecutor::compute() {
-  auto carafe_desc_node = parser_->getProtoNode()->carafe_backward_param();
+  auto carafe_desc_node = parser_->getProtoNode()->carafe_param();
   int dimnb = carafe_desc_node.dimnb();
   int kernel_size = carafe_desc_node.kernel_size();
   int group_size = carafe_desc_node.group_size();
@@ -63,7 +63,7 @@ void CarafeBackwardExecutor::compute() {
 }
 
 void CarafeBackwardExecutor::cpuCompute() {
-  auto carafe_desc_node = parser_->getProtoNode()->carafe_backward_param();
+  auto carafe_desc_node = parser_->getProtoNode()->carafe_param();
 
   int kernel_size = carafe_desc_node.kernel_size();
   int group_size = carafe_desc_node.group_size();
