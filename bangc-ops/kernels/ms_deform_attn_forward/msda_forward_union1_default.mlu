@@ -164,7 +164,7 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
                                     const int32_t num_queries,
                                     const int32_t num_points,
                                     char *data_col_gdram) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   const size_t spatial_size =

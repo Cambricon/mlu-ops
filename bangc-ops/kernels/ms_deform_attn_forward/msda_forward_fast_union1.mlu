@@ -845,7 +845,7 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
     int32_t attn_weight_base_offset =
         b * input_stride_4 + head_idx * input_stride_2;
 
-    if (sram_stay && coreId == MEMCORE_FLAG) {
+    if (sram_stay && __is_mpu()) {
       loadDataValueGdram2Sram(value_sram, (T*)data_value_gdram, b, head_idx,
                               num_keys, num_heads, channels);
     }
