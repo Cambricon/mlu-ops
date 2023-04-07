@@ -6734,7 +6734,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
 
 // Group:MsDeformAttn
 /*!
- * @brief Computes the gradient of the input tensors of ::mluOpsMsDeformAttnForward.
+ * @brief Computes the gradient of the input tensors of ::mluOpMsDeformAttnForward.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues
