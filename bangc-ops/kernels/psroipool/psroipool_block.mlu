@@ -159,7 +159,7 @@ __mlu_func__ void psRoiAvgPool(
           nram_mapping_channel[j] =
               ph * group_size + pw + j * group_size * group_size +
               current_deal * max_deal * group_size * group_size;
-          __asm__ volatile("sync;\n");
+          __sync();
         }
 
         int offset =
@@ -307,7 +307,7 @@ __mlu_func__ void psRoiAvgPoolBackwardPartOutputdim(
   int top_offset = bin_index * output_dim + repeat * max_deal_c;
   // load data
   __bang_write_value(top_grad_buffer, c_align, 0);
-  __asm__ volatile("sync;\n\t");
+  __sync();
   __memcpy(top_grad_buffer, top_grad + top_offset, deal_c * sizeof(T),
            GDRAM2NRAM);
   __memcpy(mapping_channel_buffer, mapping_channel + top_offset,
@@ -337,7 +337,7 @@ __mlu_func__ void psRoiAvgPoolBackwardWholeOutputdim(
 
   int top_offset = (bins_offset + repeat * max_deal_bin) * output_dim;
   __bang_write_value(top_grad_buffer, deal_bin * c_align, 0);
-  __asm__ volatile("sync;\n\t");
+  __sync();
   __memcpy(top_grad_buffer, top_grad + top_offset, output_dim * sizeof(T),
            GDRAM2NRAM, c_align * sizeof(T), output_dim * sizeof(T),
            deal_bin - 1);

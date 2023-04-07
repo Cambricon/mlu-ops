@@ -512,14 +512,14 @@ static __mlu_func__ void YoloBoxComputeBbox(
     __bang_write_zero(nram_img_h, deal_num);
     initImgParam(img_size, nram_img_w, nram_img_h, n_in, anchor_s,
                  align_hw_seg_num);
-    __asm__ volatile("sync;");
+    __sync();
 
     // compute bbox
     compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
             nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h, w_in,
             h_in, conf_thresh, downsample_ratio, clip_bbox, scale, iou_aware,
             iou_aware_factor, deal_num, 0, 0);
-    __asm__ volatile("sync;");
+    __sync();
 
     // store bbox
     T *addr_boxes = (T *)boxes + hw_data_offset;
@@ -549,7 +549,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
       load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
            iou_aware, deal_n_num, class_num, anchor_s, anchor_s, 0, c_in,
            hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_n > 1) {
@@ -569,7 +569,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
               nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
               w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     for (int n_iter = 0; n_iter < repeat_n - 2; n_iter++) {
@@ -597,7 +597,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
               w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
               n_iter + 1);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_n >= 2) {
@@ -629,7 +629,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
               repeat_n - 1);
     }
-    __asm__ volatile("sync;");
+    __sync();
 
     if (repeat_n > 0) {
       // S
@@ -651,14 +651,14 @@ static __mlu_func__ void YoloBoxComputeBbox(
               w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
               repeat_n);
-      __asm__ volatile("sync;");
+      __sync();
 
       // S
       T *addr_boxes = base_addr_boxes + repeat_n * deal_n_num * output_stride;
       store(addr_boxes, nram_x, nram_y, nram_w, nram_h, rem_n_num, anchor_s,
             hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
             repeat_n);
-      __asm__ volatile("sync;");
+      __sync();
     }
   } else if (deal_num >= align_hw_seg_num) {
     int deal_s_num = deal_num / align_hw_seg_num;
@@ -680,7 +680,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
       load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
            iou_aware, 1, class_num, anchor_s, deal_s_num, 0, c_in, hw_total_num,
            hw_seg_num, align_hw_seg_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_ns > 1) {
@@ -725,7 +725,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
               nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
               w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     for (int ns_iter = 0; ns_iter < repeat_ns - 2; ns_iter++) {
@@ -798,7 +798,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
               w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
               ns_iter + 1);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_ns >= 2) {
@@ -856,7 +856,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
               repeat_ns - 1);
     }
-    __asm__ volatile("sync;");
+    __sync();
 
     if (repeat_ns > 0) {
       // S
@@ -888,14 +888,14 @@ static __mlu_func__ void YoloBoxComputeBbox(
               iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
               repeat_ns);
 
-      __asm__ volatile("sync;");
+      __sync();
 
       // S
       T *addr_boxes = base_addr_boxes + repeat_ns * deal_s_num * output_stride;
       store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, rem_ns_num,
             hw_total_num, hw_seg_num, align_hw_seg_num, nram_pingpong_num,
             repeat_ns);
-      __asm__ volatile("sync;");
+      __sync();
     }
   } else {
     int repeat_hw = hw_seg_num / deal_num;
@@ -927,7 +927,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
           load(addr_x, nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou,
                iou_aware, 1, class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
                deal_num, deal_num, nram_pingpong_num, 0);
-          __asm__ volatile("sync;");
+          __sync();
         }
 
         if (repeat_hw > 1) {
@@ -948,7 +948,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
                   nram_cy, nram_anchor_w, nram_anchor_h, nram_img_w, nram_img_h,
                   w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
                   iou_aware, iou_aware_factor, deal_num, nram_pingpong_num, 0);
-          __asm__ volatile("sync;");
+          __sync();
         }
 
         for (int hw_iter = 0; hw_iter < repeat_hw - 2; hw_iter++) {
@@ -975,7 +975,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
                   w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
                   iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
                   hw_iter + 1);
-          __asm__ volatile("sync;");
+          __sync();
         }
 
         if (repeat_hw >= 2) {
@@ -1005,7 +1005,7 @@ static __mlu_func__ void YoloBoxComputeBbox(
                   iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
                   repeat_hw - 1);
         }
-        __asm__ volatile("sync;");
+        __sync();
 
         if (repeat_hw > 0) {
           // S
@@ -1026,14 +1026,14 @@ static __mlu_func__ void YoloBoxComputeBbox(
                   w_in, h_in, conf_thresh, downsample_ratio, clip_bbox, scale,
                   iou_aware, iou_aware_factor, deal_num, nram_pingpong_num,
                   repeat_hw);
-          __asm__ volatile("sync;");
+          __sync();
 
           // S
           T *addr_boxes = addr_boxes_n + repeat_hw * deal_num;
           store(addr_boxes, nram_x, nram_y, nram_w, nram_h, 1, 1, hw_total_num,
                 rem_hw_num, deal_num, nram_pingpong_num, repeat_hw);
         }
-        __asm__ volatile("sync;");
+        __sync();
       }
     }
   }
@@ -1294,12 +1294,12 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
     loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, n_in, class_num,
               anchor_s, anchor_s, 0, c_in, hw_total_num, hw_seg_num,
               align_hw_seg_num, deal_num, 0, 0);
-    __asm__ volatile("sync;");
+    __sync();
 
     // compute
     computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                  iou_aware_factor, class_num, deal_num, 0, 0);
-    __asm__ volatile("sync;");
+    __sync();
 
     // store
     T *addr_scores = (T *)scores + hw_data_offset;
@@ -1321,7 +1321,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, deal_n_num,
                 class_num, anchor_s, anchor_s, 0, c_in, hw_total_num,
                 hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_n > 1) {
@@ -1334,7 +1334,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       // C
       computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     for (int n_iter = 0; n_iter < repeat_n - 2; n_iter++) {
@@ -1356,7 +1356,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                    n_iter + 1);
 
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_n >= 2) {
@@ -1381,7 +1381,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                    repeat_n - 1);
     }
-    __asm__ volatile("sync;");
+    __sync();
 
     if (repeat_n > 0) {
       // S
@@ -1396,14 +1396,14 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                    repeat_n);
-      __asm__ volatile("sync;");
+      __sync();
 
       // S
       T *addr_scores = base_addr_scores + repeat_n * deal_n_num * output_stride;
       storeScore(addr_scores, nram_cls, rem_n_num, anchor_s, class_num,
                  hw_total_num, hw_seg_num, align_hw_seg_num, deal_num,
                  nram_pingpong_num, repeat_n);
-      __asm__ volatile("sync;");
+      __sync();
     }
   } else if (deal_num >= align_hw_seg_num) {
     int deal_s_num = deal_num / align_hw_seg_num;
@@ -1420,7 +1420,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1, class_num,
                 anchor_s, deal_s_num, 0, c_in, hw_total_num, hw_seg_num,
                 align_hw_seg_num, deal_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_ns > 1) {
@@ -1449,7 +1449,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       // C
       computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num, 0);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     for (int ns_iter = 0; ns_iter < repeat_ns - 2; ns_iter++) {
@@ -1489,7 +1489,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                    ns_iter + 1);
-      __asm__ volatile("sync;");
+      __sync();
     }
 
     if (repeat_ns >= 2) {
@@ -1517,7 +1517,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                    repeat_ns - 1);
     }
-    __asm__ volatile("sync;");
+    __sync();
 
     if (repeat_ns > 0) {
       // S
@@ -1532,7 +1532,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                    iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                    repeat_ns);
-      __asm__ volatile("sync;");
+      __sync();
 
       // S
       T *addr_scores =
@@ -1540,7 +1540,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
       storeScore(addr_scores, nram_cls, 1, rem_ns_num, class_num, hw_total_num,
                  hw_seg_num, align_hw_seg_num, deal_num, nram_pingpong_num,
                  repeat_ns);
-      __asm__ volatile("sync;");
+      __sync();
     }
   } else {
     int repeat_hw = hw_seg_num / deal_num;
@@ -1562,7 +1562,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
           loadScore(addr_x, nram_iou, nram_conf, nram_cls, iou_aware, 1,
                     class_num, anchor_s, 1, s_iter, c_in, hw_total_num,
                     deal_num, deal_num, deal_num, nram_pingpong_num, 0);
-          __asm__ volatile("sync;");
+          __sync();
         }
 
         if (repeat_hw > 1) {
@@ -1576,7 +1576,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
           computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                        iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                        0);
-          __asm__ volatile("sync;");
+          __sync();
         }
 
         for (int hw_iter = 0; hw_iter < repeat_hw - 2; hw_iter++) {
@@ -1596,7 +1596,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
           computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                        iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                        hw_iter + 1);
-          __asm__ volatile("sync;");
+          __sync();
         }
 
         if (repeat_hw >= 2) {
@@ -1620,7 +1620,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
                        iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                        repeat_hw - 1);
         }
-        __asm__ volatile("sync;");
+        __sync();
 
         if (repeat_hw > 0) {
           // S
@@ -1634,7 +1634,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
           computeScore(nram_iou, nram_conf, nram_cls, conf_thresh, iou_aware,
                        iou_aware_factor, class_num, deal_num, nram_pingpong_num,
                        repeat_hw);
-          __asm__ volatile("sync;");
+          __sync();
 
           // S
           T *addr_scores = addr_scores_n + repeat_hw * deal_num;
@@ -1642,7 +1642,7 @@ __mlu_func__ void YoloBoxComputeScore(const T *x, const int class_num,
                      rem_hw_num, deal_num, deal_num, nram_pingpong_num,
                      repeat_hw);
         }
-        __asm__ volatile("sync;");
+        __sync();
       }
     }
   }
@@ -1655,7 +1655,7 @@ __mlu_global__ void MLUKernelYoloBox(
     const float scale, const bool iou_aware, const float iou_aware_factor,
     const int n_in, const int anchor_s, const int c_in, const int h_in,
     const int w_in, T *boxes, T *scores) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
 

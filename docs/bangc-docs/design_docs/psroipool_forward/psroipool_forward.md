@@ -113,20 +113,20 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 
 ```c++
 int psroi_pooling_forward_cuda(int pooled_height,
-                               int pooled_width, 
-                               float spatial_scale, 
-                               int group_size, 
+                               int pooled_width,
+                               float spatial_scale,
+                               int group_size,
                                int output_dim,
-                               THCudaTensor *features, 
-                               THCudaTensor* rois, 
-                               THCudaTensor* output, 
+                               THCudaTensor *features,
+                               THCudaTensor* rois,
+                               THCudaTensor* output,
                                THCudaIntTensor* mappingchannel);
 ```
 
 ### 2.2 接口设计
 
 ```c++
-mluOpStatus_t MLUOP_WIN_API 
+mluOpStatus_t MLUOP_WIN_API
 mluOpPsRoiPoolForward(mluOpHandle_t handle,
                       const int pooled_height, const int pooled_width,
                       const float spatial_scale, const int group_size,
@@ -174,7 +174,7 @@ for (roi_id = roi_begin;roi_id < roi_end;roi_id++) {
                 for (w = wstart; w < wend; w++) {
                 //将每一个类对应的group_size*group_size个点分别load到片上，预计
                 //output_dim*group_size*group_size个点
-                    __memcpy_stride_io(dir = GDRAM2NRAM， data_size = 
+                    __memcpy_stride_io(dir = GDRAM2NRAM， data_size =
                                       output_dim*group_size*group_size);
                     // [outpu_dim_align, group_square_align]->
                     // [group_square_align, outpu_dim_align]
@@ -201,7 +201,7 @@ for (int h = hstart; h < hend; ++h) {
       __memcpy(src_channel_data, src, group_size * group_size * output_dim * sizeof(T),
                 GDRAM2NRAM);
       mlisa_vaa_nram_to_nram(dst, src_channel_data, offset_nram, output_dim);
-      __asm__ volatile("sync;\n\t");
+      __sync();
       // add
       __bang_add(sum_data, sum_data, dst, output_dim_align);
     }
@@ -252,7 +252,7 @@ nram划分如下：
    input:[493, 5], LAYOUT_ARRAY, DTYPE_FLOAT
    output:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_FLOAT
    mapping_channels:[493, 3, 3, 21], LAYOUT_NHWC, DTYPE_INT32
-   psroipool_forward_param{spatial_scale=0.0625, group_size=3,output_dim=21, pooled_height=3,pooled_width=3} 
+   psroipool_forward_param{spatial_scale=0.0625, group_size=3,output_dim=21, pooled_height=3,pooled_width=3}
 
 ```
 
@@ -270,11 +270,11 @@ nram划分如下：
 
 5. rois != NULL
 
-6. output_desc != NULL    
+6. output_desc != NULL
 
 7. output != NULL
 
-8. mapping_channels_desc != NULL    
+8. mapping_channels_desc != NULL
 
 9. mapping_channels != NULL
 

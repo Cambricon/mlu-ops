@@ -221,7 +221,7 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
     const int output_planes, const int input_planes, const int orientations,
     const int kH, const int kW, const int rotations, T *input, T *indices,
     T *workspace, T *output) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
 
@@ -332,7 +332,7 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
         load_input<T>(ping_input, gdram_input, op_offset, core_offset, op_seg,
                       input_planes, 0, span_num_deal, span_num_deal,
                       kernel_size);
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       if (repeat > 1) {
@@ -341,7 +341,7 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
                       span_num_deal, kernel_size);
         computeRotation<T>(ping_output, ping_input, span_num_deal,
                            span_num_deal, kH, kW, orientations, rotations);
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       for (int i = 0; i < repeat - 2; i++) {
@@ -358,7 +358,7 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
                            ping_input + ((i + 1) % 2) * ping_pong_gap,
                            span_num_deal, span_num_deal, kH, kW, orientations,
                            rotations);
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       if (repeat > 1) {
@@ -380,7 +380,7 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
                            span_num_deal, span_num_deal, kH, kW, orientations,
                            rotations);
       }
-      __asm__ volatile("sync;");
+      __sync();
 
       if (repeat > 0) {
         stride_store_output<T>(
@@ -393,14 +393,14 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
         computeRotation<T>(ping_output + (repeat % 2) * ping_pong_gap,
                            ping_input + (repeat % 2) * ping_pong_gap,
                            span_num_deal, rem, kH, kW, orientations, rotations);
-        __asm__ volatile("sync;");
+        __sync();
 
         stride_store_output<T>(
             output, ping_output + (repeat % 2) * ping_pong_gap, op_offset,
             core_offset, op_seg, input_planes, rotations, j, span_num_deal,
             repeat, rem, kernel_size);
       }
-      __asm__ volatile("sync;");
+      __sync();
     }
   }
 #endif

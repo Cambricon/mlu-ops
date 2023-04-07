@@ -68,7 +68,7 @@ static __mlu_func__ void lcs(T *base_input_addr, T *base_dispatch_addr,
     T *dispatch_addr = base_dispatch_addr;
     load(input_addr, dispatch_addr, nram_input, nram_dispatch, deal_num,
          pingpong_num, 0);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   if (repeat_num > 1) {
@@ -80,7 +80,7 @@ static __mlu_func__ void lcs(T *base_input_addr, T *base_dispatch_addr,
 
     // C
     compute(nram_input, nram_dispatch, gard_gates, deal_num, pingpong_num, 0);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   for (int n_iter = 0; n_iter < repeat_num - 2; n_iter++) {
@@ -93,7 +93,7 @@ static __mlu_func__ void lcs(T *base_input_addr, T *base_dispatch_addr,
     // C
     compute(nram_input, nram_dispatch, gard_gates, deal_num, pingpong_num,
             n_iter + 1);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   if (rem_num > 0) {
@@ -108,13 +108,13 @@ static __mlu_func__ void lcs(T *base_input_addr, T *base_dispatch_addr,
     compute(nram_input, nram_dispatch, gard_gates, deal_num, pingpong_num,
             repeat_num - 1);
   }
-  __asm__ volatile("sync;");
+  __sync();
 
   if (rem_num > 0) {
     // C
     compute(nram_input, nram_dispatch, gard_gates, rem_num, pingpong_num,
             repeat_num);
-    __asm__ volatile("sync;");
+    __sync();
   }
 }
 #endif
@@ -300,7 +300,7 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
         T *dispatch_addr = base_dispatch_addr + nram_idx[0];
         load(input_addr, dispatch_addr, nram_input, nram_dispatch, deal_h,
              pingpong_num, 0);
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       // L(si=1)
@@ -316,7 +316,7 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
         compute(nram_input, nram_dispatch, nram_grad_gates, deal_h,
                 pingpong_num, 0);
       }
-      __asm__ volatile("sync;");
+      __sync();
 
       for (int si = 0; si < deal_s_num - 2; si++) {
         // L(si+2)
@@ -332,14 +332,14 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
           compute(nram_input, nram_dispatch, nram_grad_gates + (si + 1), deal_h,
                   pingpong_num, si + 1);
         }
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       // C(si=deal_s_num - 1)
       if (nram_mask[deal_s_num - 1] == 1) {
         compute(nram_input, nram_dispatch, nram_grad_gates + (deal_s_num - 1),
                 deal_h, pingpong_num, deal_s_num - 1);
-        __asm__ volatile("sync;");
+        __sync();
       }
     } else {
       // si = sample_idx + s_iter

@@ -116,7 +116,7 @@ __mlu_global__ void roiAlignRotatedForward(
     const T *input_dram, const T *rois_dram, const int batch, const int height,
     const int width, const int channel, const int rois_num,
     const mluOpRoiAlignRotatedParams params, T *output_dram) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   const int align_base_128 = NFU_ALIGN_SIZE / sizeof(T);
@@ -291,7 +291,7 @@ __mlu_global__ void roiAlignRotatedForward(
           __bang_add(nram_out, nram_out, tmp_sum, c_slice_align);
           swap(nram_ping, nram_pong);
 
-          __asm__ volatile("sync;");
+          __sync();
           is_first_sample = false;
         }
       }
@@ -446,7 +446,7 @@ __mlu_global__ void roiAlignRotatedBackward(
       swap(nram_ping, nram_pong);
       c_rem -= c_slice;
       c_offset += c_slice;
-      __asm__ volatile("sync;");
+      __sync();
     }
     is_first_bin = false;
   }

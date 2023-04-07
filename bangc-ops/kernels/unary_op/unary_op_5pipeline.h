@@ -46,9 +46,9 @@ __mlu_func__ void moveAndCompute(T *sram_x, T *nram_x, T *nram_x_half,
                                  T *nram_aux_a, T *nram_aux_b, int deal_num,
                                  int offset, int cur_num, float coef) {
   __memcpy_async(nram_x_half, sram_x + offset, cur_num * sizeof(T), SRAM2NRAM);
-  __asm__ volatile("sync;\n\t");
+  __sync();
   OpFunc(nram_x, nram_x_half, nram_aux_a, nram_aux_b, deal_num, cur_num, coef);
-  __asm__ volatile("sync;\n\t");
+  __sync();
   __memcpy_async(sram_x + offset, nram_x, cur_num * sizeof(T), NRAM2SRAM);
 }
 

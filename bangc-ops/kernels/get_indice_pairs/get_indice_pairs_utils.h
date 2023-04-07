@@ -106,7 +106,7 @@ __mlu_func__ void stepIndex(int32_t *dst_nram, int32_t start_index,
         (int32_t *)dst_nram, count * align_num + remain * align_num,
         global_remain);
   }
-  __asm__ volatile("sync;\n\t");
+  __sync();
 #endif
 }
 

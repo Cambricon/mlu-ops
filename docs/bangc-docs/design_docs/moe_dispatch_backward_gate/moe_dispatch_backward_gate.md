@@ -101,37 +101,37 @@
    import numpy as np
    import torch
    from tutel.jit_kernels import sparse as jit_kernel
-   
+
    print(torch.__version__)
    def moe_dispatch_bwd_gate():
        samples=8192
        capacity=8192
        hidden=2048
        num_experts=2
-       
+
        indices_t = np.asarray(np.random.randint(0, num_experts, size = samples))
        locations_t = np.asarray(np.random.randint(0, capacity, size = samples))
        input_t = np.asarray(np.random.randn(samples*hidden)*10, dtype=np.float32)
        dispatch_t = np.asarray(np.random.randn(num_experts*capacity*hidden)*10, dtype=np.float32)
-       
+
        indices_gpu = torch.from_numpy(indices_t).cuda()
        locations_gpu = torch.from_numpy(locations_t).cuda()
        input_gpu = torch.from_numpy(input_t).cuda()
        dispatch_gpu = torch.from_numpy(dispatch_t).cuda()
-   
+
        print(indices_gpu)
        print(locations_gpu)
        print(input_gpu)
        print(dispatch_gpu)
-   
+
        grad_gates = torch.zeros([samples], dtype=input_gpu.dtype, device=input_gpu.device)
        dispatch_bwd_gate = jit_kernel.create_backward_gate(torch.float32, input_gpu.is_cuda)
        dispatch_bwd_gate(grad_gates, indices_gpu, locations_gpu, input_gpu, dispatch_gpu, extra=[samples, hidden, capacity])
        print(grad_gates)
-   
+
    if __name__ == '__main__':
        moe_dispatch_bwd_gate()
-       
+
    """
    tensor([1, 1, 0,  ..., 0, 1, 1], device='cuda:0')
    tensor([2326, 1359, 6146,  ..., 6383, 6670, 6245], device='cuda:0')
@@ -161,7 +161,7 @@
    """
    ```
 
-   
+
 
 ### 1.3 算子输入输出参数要求
 
@@ -218,7 +218,7 @@
 
   ```c
   // backward_gate
-  // cpu 
+  // cpu
   for (int i = 0; i < samples; ++i) {
         gates1_s[i] = 0;
         if (locations1_s[i] >= capacity || indices1_s[i] < 0)
@@ -227,15 +227,15 @@
           gates1_s[i] += dispatched_input[(indices1_s[i] * capacity + locations1_s[i]) * (hidden) + j] * reshaped_input[i * hidden + j];
         }
   }
-  
+
   // cuda
   def create_backward_gate(param_dtype, is_cuda=True):
     if not is_cuda:
       return JitCompiler.generate_cpu_kernel(kernel_type=2)
-  
+
     return JitCompiler.generate_kernel({'dtype': get_kernel_dtype(param_dtype), 'IS_FLOAT': 1 if param_dtype == torch.float32 else 0}, '''
     #define __dtype @dtype@
-  
+
     extern "C" __global__ __launch_bounds__(32) void execute(void* __restrict__ grad_gates1_s, int* __restrict__ indices1_s, int* __restrict__ locations1_s, __dtype* __restrict__ reshaped_input, __dtype* __restrict__ dispatched_input, int samples, int hidden, int capacity) {
       // [thread_extent] blockIdx.x = 512
       // [thread_extent] threadIdx.x = 32
@@ -257,7 +257,7 @@
       #endif
         for (int i = threadIdx.x; i < hidden; i += 32)
           grad_gates1_s_rf += dispatched_input[indice * (hidden) + i] * reshaped_input[index * (hidden) + i];
-  
+
     #if !defined(__HIPCC__)
         __dtype red_buf0[1];
         unsigned int mask[1];
@@ -297,7 +297,7 @@
       }
     }
     ''')
-  
+
   // 调用
   self.func_bwd_gate = jit_kernel.create_backward_gate(self.dtype, indices_[0].is_cuda)
   ctx.config.func_bwd_gate(grad_gates1_s, i, l, combined_output, ctx.expert_output, extra=[ctx.config.indices_[0].size(0), ctx.config.aligned_dim, ctx.config.capacity])
@@ -367,9 +367,9 @@ for (int i = 0; i < samples; ++i) {
 #### 3.1.2 nram空间划分
 
 - 当 samples <= taskDim 时，`nram_indices,nram_location,nram_idx` 空间大小为 1（deal_s = 1），采用三级流水实现，因此将nram空间划分为两份：每一份的大小`MAX_NRAM_SIZE/2`，其中一份的空间划分如下：
-  
+
   ![moe_dispatch_backward_gate](./res/nram_space1.png)
-  
+
 - 当 samples > taskDim 时，在进行input和dispatch的计算过程采用三级流水实现，因此对`nram_input`和`nram_dispatch`划分ping/pong空间：
 
   ![moe_dispatch_backward_gate](./res/nram_space2.png)
@@ -409,7 +409,7 @@ for (int i = 0; i < samples; ++i) {
        } else {
            sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
        }
-       
+
        // 根据tadkId，计算需要处理的hidden的大小及偏移
        int logic_tid = taskId % one_sample_task_num;
        int hidden_per_task = hidden / one_sample_task_num;
@@ -417,7 +417,7 @@ for (int i = 0; i < samples; ++i) {
        int hidden_seg_num = hidden_per_task + (int)(logic_tid < rem_hidden_num);
        int hidden_data_offset = logic_tid * hidden_per_task + ((logic_tid < rem_hidden_num) ? logic_tid : rem_hidden_num);
        ```
-       
+
      - 初始化阶段
 
        - nram空间划分：根据3.1.2 nram空间划分，计算得到`deal_h`的大小；
@@ -428,15 +428,15 @@ for (int i = 0; i < samples; ++i) {
          int repeat_h = hidden_seg_num / deal_h;
          int rem_h = hidden_seg_num % deal_h;
          ```
-  
+
        - 计算输入input 的 GDRAM地址偏移
 
          ```c
          int input_addr_offset = sample_idx * hidden + hidden_data_offset;
          T *base_input_addr = (T *)input + input_addr_offset;
          ```
-  
-       - 计算输入dispatch的GDRAM地址偏移 
+
+       - 计算输入dispatch的GDRAM地址偏移
 
          ```c
          int indice = indices[sample_idx];
@@ -456,19 +456,19 @@ for (int i = 0; i < samples; ++i) {
              T *dispatch_addr = base_dispatch_addr + i * deal_h;
              // load input数据，地址input_addr，大小deal_h
              // load dispatch数据，地址dispatch_addr，大小deal_h
-             // compute：计算 input * dispatch，规约求和 gard_gates += 
+             // compute：计算 input * dispatch，规约求和 gard_gates +=
          }
          if (samples == taskDim) {
              base_grad_gates[taskId] = gard_gates;
              return;
          } else {
-             // store ：暂存workspace空间 
+             // store ：暂存workspace空间
              workspace[taskId] = gard_gates;
          }
          ```
-       
+
        - 核间规约：task0上进行最后的核间规约求和
-       
+
          ```c
          __sync_all_ipu();
          if ((samples < taskDim) && (taskId == 0)) {
@@ -492,13 +492,13 @@ for (int i = 0; i < samples; ++i) {
              __memcpy(base_grad_gates, nram_grad_gates, samples * sizeof(T), NRAM2GDRAM);
           }
          ```
-  
+
   2. 当 samples > taskDim 时，调用`MLUKernelMoeDispatchBwdGate2`，主要实现步骤：
-  
+
      - 任务拆分：根据3.3 拆分(任务拆分，多核拆分)章节介绍，对`samples`进行拆分；
-  
+
        根据`samples` 计算每个`taskId` 要处理的数量`samples_num`，以及起始索引`sample_idx` ，伪代码如下；
-  
+
        ```c
        // 一个task需要处理多个sample
        int per_task_sample_num = samples / taskDim;
@@ -506,31 +506,31 @@ for (int i = 0; i < samples; ++i) {
        // 根据taskId，计算当前task，需要处理的sample的数量 sample_num
        int samples_num = per_task_sample_num + (int)((taskId < rem_sample_num));
        // 根据taskId，计算起始索引 sample_idx
-       int sample_idx = taskId * per_task_sample_num + ((taskId < rem_sample_num) ? taskId : rem_sample_num); 
+       int sample_idx = taskId * per_task_sample_num + ((taskId < rem_sample_num) ? taskId : rem_sample_num);
        ```
-  
+
      - 初始化阶段
-  
+
        - nram空间划分：根据3.1.2 nram空间划分，计算得到`deal_s`和`deal_h`的大小；
-  
-       - 根据`samples_num`和`deal_s` 计算repeat_s和rem_s 
-  
+
+       - 根据`samples_num`和`deal_s` 计算repeat_s和rem_s
+
          ```c
          int repeat_s = samples_num / deal_s;
          int rem_s = samples_num % deal_s;
          ```
-       
+
        - 根据`hidden` 和 `deal_h` 计算 repeat_h 和 rem_h
-       
+
          ```c
          int repeat_h = hidden / deal_h;
          int rem_h = hidden % deal_h;
          ```
-       
+
      - 处理阶段：三级流水LCS
-  
+
         - 计算各输入tensor的GDRAM地址偏移
-  
+
           ```c
           int *base_indices = (int *)indices + sample_idx;
           int *base_locations = (int *)locations + sample_idx;
@@ -538,68 +538,68 @@ for (int i = 0; i < samples; ++i) {
           T *base_input = (T *)input + input_addr_offset;
           T *base_grad_gates = (T *)grad_gates + sample_idx;
           ```
-     
+
         - 循环处理
-  
+
           ```c
           for (int i = 0; i < repeat_s + 1; i++) {
               int deal_s_num = (s_iter < repeat_s) ? deal_s : rem_s;
               if (deal_s_num == 0) {
                 break;
               }
-              
+
               T *base_input_addr = base_input + s_iter * deal_s * hidden;
               int *indices_addr = base_indices + i * deal_s;
               int *locations_addr = base_locations + i * deal_s;
-              
+
               // step1
               // load indices 和 location 的数据，长度deal_s
               __memcpy(nram_indices, base_indices, deal_s_num * sizeof(T), GDRAM2NRAM);
               __memcpy(nram_location, base_locations, deal_s_num * sizeof(T), GDRAM2NRAM);
-          
+
               // step2
               // 计算 idx = (nram_indices * capacity + nram_location) * hidden
               __bang_mul_scalar(nram_idx, nram_indices, capacity, deal_s_num);
               __bang_add(nram_idx, nram_idx, nram_location, deal_s_num);
               __bang_mul_scalar(nram_idx, nram_idx, hidden, deal_s_num);
-          
+
               // step3
               // 判断 0 <= nram_location < capacity
-              // 判断 0 <= nram_indices < num_experts  
+              // 判断 0 <= nram_indices < num_experts
               // 生成 mask: nram_mask
-          
+
               // 复用nram_location空间
               T *nram_grad_gates = (T*)nram_location;
               __bang_write_zero(nram_grad_gates, deal_s_num);
-              
+
               // 三级流水计算过程
               // step4
-              if (deal_s_num > 1) {        
+              if (deal_s_num > 1) {
                   // 三级流水：依次处理 deal_s_num 个 samples，每个samples对应的所有hidden
                   // L(si=0)
                   // L(si=1)
                   // C(si=0)
-                  __asm__ volatile("sync;");
-          
+                  __sync();
+
                   for (int si = 0; si < deal_s_num - 2; si++) {
                       // L(si+2)
                       // C(si+1)
-                      __asm__ volatile("sync;");
+                      __sync();
                   }
-          
+
                   // C(si=deal_s_num - 1)
-                  __asm__ volatile("sync;");
+                  __sync();
               } else {
                   // si = sample_idx + s_iter
                   if (nram_mask[0] == 1) {
                       T *base_dispatch_addr = (T *)dispatch + nram_idx[0];
-                      
+
                       // 三级流水：计算某一个samples的所有hidden，依次处理 repeat_h 和 rem_h
                       lcs(base_input_addr, base_dispatch_addr, nram_input, nram_dispatch,
                           nram_grad_gates, repeat_h, rem_h, deal_h, pingpong_num);
-                  } 
+                  }
               }
-              
+
               // step5：保存 nram_grad_gates 结果到 base_grad_gates
               __memcpy(base_grad_gates + i * deal_s, nram_grad_gates,
                        deal_s_num * sizeof(T), NRAM2GDRAM);
@@ -622,11 +622,11 @@ for (int i = 0; i < samples; ++i) {
     // 剩余task数，可将剩余task均分给前n个sample
     int rem_task = taskDim / samples;
     ```
-  
+
     说明：前rem_task个sample中，每个sample可以由（one_sample_task_num + 1）个task处理，最后（samples - rem_task）个sample，每个sample由one_sample_task_num个task处理。因多个task处理一个sample，因此需要进行核间规约。
-  
+
     在实际计算时，根据taskId，计算起始索引`sample_idx`，伪代码如下：
-  
+
     ```c
     // 根据taskId，计算起始索引 sample_idx
     int sample_idx = 0;
@@ -637,23 +637,23 @@ for (int i = 0; i < samples; ++i) {
         sample_idx = (int)((taskId - rem_task) / one_sample_task_num);
     }
     ```
-  
+
     举例：假设 samples = 18，taskDim = 32，则
-  
-    one_sample_task_num = taskDim / samples = 32/18 = 1 
-  
+
+    one_sample_task_num = taskDim / samples = 32/18 = 1
+
     rem_task = taskDim % sample_num = 14
-  
+
     说明：前14个sample中，每个sample由（2 = 1 + 1）个task处理，最后（4 = 18 - 14）个sample，每个sample由1个task处理。
-  
+
     当taskId = 23时，处理sample_idx = 11的数据；
-  
+
     当taskId = 29时，处理sample_idx = 15的数据；
-  
+
     当taskId = 31时，处理sample_idx = 17的数据；
-  
+
   - 当 samples > taskDim 时，则表示一个task需要处理多个sample，拆分伪代码如下：
-  
+
     ```c
     int per_task_sample_num = samples / taskDim;
     int rem_sample_num = samples % taskDim;
@@ -662,15 +662,15 @@ for (int i = 0; i < samples; ++i) {
     // 根据taskId，计算起始索引 sample_idx
     int sample_idx = taskId * per_task_sample_num + ((taskId < rem_sample_num) ? taskId : rem_sample_num);
     ```
-  
+
     举例：假设 samples = 1048， hidden=2048，taskDim=32，则
-  
+
     per_task_sample_num = samples / taskDim = 1048 / 32 = 32
-  
+
     rem_sample_num = samples % taskDim = 1048 % 32 = 24
-  
+
     samples_num = 32 + (int)((taskId < 24))
-  
+
     说明：前24个task，每个task处理33个sample，最后8个task，每个task处理32个sample。
 
 ### 3.4 性能优化设计
@@ -690,7 +690,7 @@ for (int i = 0; i < samples; ++i) {
 
   ![moe_dispatch_backward_gate](./res/pingpong.png)
 
-  
+
 
 ### 3.5 可维护性设计
 
@@ -703,7 +703,7 @@ for (int i = 0; i < samples; ++i) {
 ### 3.6 测试用例设计
 
 - 算子在网络中用到的规模：
-  
+
   ```c
   int型变量：samples: 8192 ， capacity: 8192， hidden: 2048， num_experts: 2
   tensor：grad_gates: [8192]，float；
@@ -712,7 +712,7 @@ for (int i = 0; i < samples; ++i) {
           input: [8192, 2048]，float类型
           dispatch: [16384, 2048]， float类型
   ```
-  
+
 - 边界 case：
 
   0元素测试
