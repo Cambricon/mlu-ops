@@ -1,0 +1,277 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "dynamic_point_to_voxel_backward.h"
+
+#include "kernels/kernel.h"
+#include "kernels/debug.h"
+#include "kernels/utils/common.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+// __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
+
+template <typename T>
+__mlu_func__ void loadAsync(T *feats_nram, T *voxel_feats_nram,
+                            int *index_mask_nram, int *voxel_from_nram,
+                            int *point2voxel_map_real_nram,
+                            const int *point2voxel_map_nram, const T *feats,
+                            const T *voxel_feats, const int *voxel_from, int &x,
+                            int &n_real, int n_limit, int N, int C) {
+  int size_feats = C * sizeof(T);
+  int size_feats_idx = C * sizeof(int);
+  n_real = 0;
+  for (; x < N && n_real < n_limit; x++) {
+    int point_to = point2voxel_map_nram[x];
+    int input_offset = x * C;
+    int input_real_offset = n_real * C;
+    if (taskId == point_to % taskDim) {
+      if (point_to == -1) {
+        continue;
+      }
+      int reduced_offset = point_to * C;
+      // load valid data to feats_nram
+      __memcpy_async(feats_nram + input_real_offset, feats + input_offset,
+                     size_feats, GDRAM2NRAM);
+      // boradcast voxel_feats data to voxel_feats_nram via the same "point_to"
+      __memcpy_async(voxel_feats_nram + input_real_offset,
+                     voxel_feats + reduced_offset, size_feats, GDRAM2NRAM);
+      // boradcast voxel_from data to voxel_from_nram via the same "point_to"
+      __memcpy_async(voxel_from_nram + input_real_offset,
+                     voxel_from + reduced_offset, size_feats_idx, GDRAM2NRAM);
+      // record valid index of x in index_mask_nram
+      __bang_write_value(index_mask_nram + input_real_offset, C, x);
+      // point2voxel_map removed invalid data
+      point2voxel_map_real_nram[n_real] = point_to;
+      n_real++;
+    }
+  }
+}
+
+template <typename T>
+__mlu_func__ void compute(T *feats_nram, T *voxel_feats_nram,
+                          int *index_mask_nram, int *voxel_from_nram,
+                          int n_real, int N, int C) {
+  if (n_real > 0) {
+    // view [n_real, C] as [n_real * C]
+    int deal_num = n_real * C;
+    // if (feats[i] == voxel_feats[i]) {mask[i] = 1} else {mask[i] = 0}
+    __bang_eq(feats_nram, voxel_feats_nram, feats_nram, deal_num);
+    // change mask1's dtype to int32
+    __bang_float2int32_tz((int *)feats_nram, feats_nram, deal_num, 0);
+    // mask2 = NOT mask1
+    __bang_not((int *)voxel_feats_nram, (int *)feats_nram, deal_num);
+    // choose index of "feats[i] == voxel_feats[i]"
+    __bang_mul((int *)feats_nram, (int *)feats_nram, index_mask_nram, deal_num);
+    // mask2 *= N
+    __bang_mul_scalar((int *)voxel_feats_nram, (int *)voxel_feats_nram, N,
+                      deal_num);
+    // mix choosed index and 'N'
+    __bang_add(index_mask_nram, (int *)voxel_feats_nram, (int *)feats_nram,
+               deal_num);
+    // choose the min index
+    __bang_minequal(voxel_from_nram, voxel_from_nram, index_mask_nram,
+                    deal_num);
+  }
+}
+
+__mlu_func__ void storeAsync(int *voxel_from, const int *voxel_from_nram,
+                             const int *point2voxel_map_real_nram,
+                             bool *voxel_from_flag_nram, int *index_mask_nram,
+                             int n_real, int N, int C) {
+  int size_feats_idx = C * sizeof(int);
+  for (int i = 0; i < n_real; i++) {
+    int offset_real = point2voxel_map_real_nram[i];
+    // 1) use atomicmin, too slow
+    // __bang_atomic_reduce_min(voxel_from + offset_real * C,
+    //                          voxel_from_nram + i * C, C);
+    // 2) compare one by one, use voxel_from_flag_nram as flags to record
+    // whether dst idx has appeard
+    if (voxel_from_flag_nram[offset_real] == false) {
+      // if number of grad idx on offset_real == 1, use the idx value directly
+      __memcpy_async(voxel_from + offset_real * C, voxel_from_nram + i * C,
+                     size_feats_idx, NRAM2GDRAM);
+      // set voxel_from_flag to true
+      voxel_from_flag_nram[offset_real] = true;
+    } else {
+      __sync_io();
+      // load the idx appeard
+      __memcpy(index_mask_nram, voxel_from + offset_real * C, size_feats_idx,
+               GDRAM2NRAM);
+      // if number of grad idx on offset_real > 1, pick the min idx value
+      __bang_minequal(index_mask_nram, index_mask_nram, voxel_from_nram + i * C,
+                      C);
+      // store the new idx
+      __memcpy(voxel_from + offset_real * C, index_mask_nram, size_feats_idx,
+               NRAM2GDRAM);
+    }
+  }
+}
+
+template <typename T>
+__mlu_func__ void maxReduceTracebackScatterIdxKernel(
+    const T *feats, const T *voxel_feats, T *grad_feats, int *voxel_from,
+    const int *point2voxel_map, const int N, const int M, const int C) {
+  int size_input = N * sizeof(int);
+  int size_reduced_flag = M * sizeof(bool);
+  int n_per_core = N / taskDim;
+  int rem = N % taskDim;
+  n_per_core += (int)(taskId < rem);
+  int offset_per_core = (taskId * n_per_core + ((taskId < rem) ? 0 : rem)) * C;
+  if (n_per_core > 0) {
+    // voxel_from [M,C] fill 'N' ([M:N,C] is redundent)
+    __gdramset(voxel_from + offset_per_core, n_per_core * C, N);
+    // grad_feats [N,C] fill '0'
+    __gdramset(grad_feats + offset_per_core, n_per_core * C, T(0));
+  }
+
+  int nram_size = MAX_NRAM_SIZE;
+  int n_limit = (nram_size - size_input - size_reduced_flag) /
+                ((2 * C) * sizeof(T) + (2 * C + 1) * sizeof(int));
+  int feats_limit = n_limit * C;
+
+  T *feats_nram = (T *)nram_buffer;                // [n_limit, C]
+  T *voxel_feats_nram = feats_nram + feats_limit;  // [n_limit, C]
+  int *index_mask_nram =
+      (int *)(voxel_feats_nram + feats_limit);                // [n_limit, C]
+  int *voxel_from_nram = index_mask_nram + feats_limit;       // [n_limit, C]
+  int *point2voxel_map_nram = voxel_from_nram + feats_limit;  // [N]
+  int *point2voxel_map_real_nram = point2voxel_map_nram + N;  // [n_limit]
+  bool *voxel_from_flag_nram =
+      (bool *)(point2voxel_map_real_nram + n_limit);  // [M]
+
+  __sync_cluster();
+  // broadcast point2voxel_map to nram
+  __memcpy(point2voxel_map_nram, point2voxel_map, size_input, GDRAM2NRAM);
+  // initialze voxel_from_flag to false
+  __memset_nram(voxel_from_flag_nram, M, false);
+  for (int x = 0, n_real = 0; x < N;) {
+    // load data, get x and n_real
+    loadAsync(feats_nram, voxel_feats_nram, index_mask_nram, voxel_from_nram,
+              point2voxel_map_real_nram, point2voxel_map_nram, feats,
+              voxel_feats, voxel_from, x, n_real, n_limit, N, C);
+    __asm__ volatile("sync;\n\t");
+    // compute
+    compute(feats_nram, voxel_feats_nram, index_mask_nram, voxel_from_nram,
+            n_real, N, C);
+    // store
+    storeAsync(voxel_from, voxel_from_nram, point2voxel_map_real_nram,
+               voxel_from_flag_nram, index_mask_nram, n_real, N, C);
+    __sync();
+  }
+  __sync_all();
+}
+
+template <typename T>
+__mlu_func__ void maxReduceScatterGradKernel(T *grad_feats,
+                                             const T *grad_voxel_feats,
+                                             const int *voxel_from, const int M,
+                                             const int C) {
+  int size_feats = C * sizeof(T);
+  int size_feats_idx = C * sizeof(int);
+
+  int m_per_core = M / taskDim;
+  int rem = M % taskDim;
+  m_per_core += (int)(taskId < rem);
+  int m_start = taskId * m_per_core + ((taskId < rem) ? 0 : rem);
+  int m_start_offset = m_start * C;
+  if (m_per_core <= 0) {
+    return;
+  }
+  int nram_size = MAX_NRAM_SIZE;
+  int m_limit = (nram_size - size_feats_idx) / ((4 * C) * sizeof(int));
+  int feats_limit = m_limit * C;
+
+  int stride = CEIL_ALIGN(feats_limit, 128 / sizeof(int));
+
+  T *grad_voxel_feats_nram = (T *)nram_buffer;
+  int *voxel_from_nram = (int *)(grad_voxel_feats_nram + stride);
+  int *indices_mask = voxel_from_nram + stride;
+  for (int i = 0; i < C; i++) {
+    indices_mask[i] = i;
+  }
+  int m_repeat = m_per_core / m_limit;
+  int m_rem = m_per_core % m_limit;
+
+  for (int i = 0; i <= m_repeat; i++) {
+    int m_real = (i == m_repeat) ? m_rem : m_limit;
+    if (m_real <= 0) {
+      break;
+    }
+    __memcpy_async(grad_voxel_feats_nram, grad_voxel_feats + m_start_offset,
+                   m_real * size_feats, GDRAM2NRAM);
+    __memcpy_async(voxel_from_nram, voxel_from + m_start_offset,
+                   m_real * size_feats_idx, GDRAM2NRAM);
+    __sync();
+    __bang_mul_scalar(voxel_from_nram, voxel_from_nram, C, m_real * C);
+    __bang_cycle_add(voxel_from_nram, voxel_from_nram, indices_mask, m_real * C,
+                     C);
+    __bang_mul_scalar(voxel_from_nram, voxel_from_nram, sizeof(T), m_real * C);
+
+    __asm__ volatile(
+        "scatter.clean.gdram.nram.nram.b32.u32 [%[dst]], [%[src]],\
+      [%[offset]], %[transfer_num];\n\t" ::[dst] "r"(grad_feats),
+        [ src ] "r"(grad_voxel_feats_nram), [ offset ] "r"(voxel_from_nram),
+        [ transfer_num ] "r"(m_real * C));
+
+    m_start += m_real;
+    m_start_offset = m_start * C;
+  }
+}
+
+template <typename T>
+__mlu_func__ void dynamicPointToVoxelBackwardMax(
+    const T *grad_voxel_feats, const T *feats, const T *voxel_feats,
+    const int *point2voxel_map, const int *voxel_num, int *voxel_from,
+    T *grad_feats, const int N, const int C) {
+  // #if __BANG_ARCH__ >= 372
+  int M = *voxel_num;
+  maxReduceTracebackScatterIdxKernel(feats, voxel_feats, grad_feats, voxel_from,
+                                     point2voxel_map, N, M, C);
+  maxReduceScatterGradKernel(grad_feats, grad_voxel_feats, voxel_from, M, C);
+  // #endif
+}
+
+__mlu_global__ void MLUKernelDynamicPointToVoxelBackward(
+    mluOpDataType_t d_type, mluOpReduceMode_t reduce_mode,
+    const void *grad_voxel_feats, const void *feats, const void *voxel_feats,
+    const void *point2voxel_map, const void *voxel_points_count,
+    const void *voxel_num, void *voxel_from, void *grad_feats, const int N,
+    const int C) {
+  // d_type=float, reduce_mode=max
+  dynamicPointToVoxelBackwardMax<float>(
+      (const float *)grad_voxel_feats, (const float *)feats,
+      (const float *)voxel_feats, (const int *)point2voxel_map,
+      (const int *)voxel_num, (int *)voxel_from, (float *)grad_feats, N, C);
+}
+
+void MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, mluOpReduceMode_t reduce_mode,
+    const void *grad_voxel_feats, const void *feats, const void *voxel_feats,
+    const void *point2voxel_map, const void *voxel_points_count,
+    const void *voxel_num, void *voxel_from, void *grad_feats, const int N,
+    const int C) {
+  MLUKernelDynamicPointToVoxelBackward<<<k_dim, k_type, queue>>>(
+      d_type, reduce_mode, grad_voxel_feats, feats, voxel_feats,
+      point2voxel_map, voxel_points_count, voxel_num, voxel_from, grad_feats, N,
+      C);
+}

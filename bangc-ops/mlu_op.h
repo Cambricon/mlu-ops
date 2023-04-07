@@ -3701,6 +3701,32 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
 
+mluOpStatus_t MLUOP_WIN_API
+mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
+                                 const mluOpReduceMode_t reduce_type,
+                                 const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+                                 const void *grad_voxel_feats,
+                                 const mluOpTensorDescriptor_t feats_desc,
+                                 const void *feats,
+                                 const mluOpTensorDescriptor_t voxel_feats_desc,
+                                 const void *voxel_feats,
+                                 const mluOpTensorDescriptor_t point2voxel_map_desc,
+                                 const void *point2voxel_map,
+                                 const mluOpTensorDescriptor_t voxel_points_count_desc,
+                                 const void *voxel_points_count,
+                                 const mluOpTensorDescriptor_t voxel_num_desc,
+                                 const void *voxel_num,
+                                 void *workspace,
+                                 const size_t workspace_size,
+                                 const mluOpTensorDescriptor_t gard_feats_desc,
+                                 void *gard_feats);
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
+                                                 const mluOpReduceMode_t reduce_type,
+                                                 const mluOpTensorDescriptor_t feats_desc,
+                                                 size_t *workspace_size);
+
 // Group:GenerateProposalsV2
 /*!
  * @brief Generates bounding box proposals for Faster Region-CNN.
