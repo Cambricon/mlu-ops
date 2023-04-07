@@ -37,36 +37,37 @@
 | 需求来源                  | mmcv                                                           |
 | 应用网络                  | mvxnet                                                         |
 | 输入数据类型               | float/int32                                                    |
-| 输入 Shape                | grad_reduced_feats:[M,C]; feats:[N,C]; reduced_feats:[M,C]; coors_map:[N];
-                             reduce_count:[M]; reduce_type: reduce_t              |
+| 输入 Shape                | grad_voxel_feats:[M,C]; feats:[N,C]; voxel_feats:[M,C]; point2voxel_map:[N];
+                             voxel_points_count:[M]; reduce_type: reduce_t              |
 | 输出数据类型               | float                                                          |
 | 输出 Shape                | grad_feats:[N,C];                                                |
-| 是否需要支持原位            | 是: grad_feats                                                  |
+| 是否需要支持原位            | 否                                                     |
 | 是否需要支持 stride 机制    | 否                                                              |
 | 是否需要支持广播            | 否                                                              |
 | 0 元素检查是否直接返回       | 是                                                              |
 
 ### 1.2 算子功能和应用场景描述
 
-根据grad_reduced_feats，feats以及dynamic_scatter_forkward输出的reduced_feats，coors_map，reduce_count求出输入相应的梯度
+根据grad_voxel_feats，feats以及dynamic_scatter_forkward输出的voxel_feats，point2voxel_map，voxel_points_count求出输入相应的梯度
 
 ### 1.3 算子输入输出参数要求
 
 | 参数                    | 语义                               | 类型（输入/输出） | 支持类型                 | 物理布局        | 规模限制 |
 | -----------            | ---------------------------------- | -------------- | ----------------------- | ------------- | -------- |
 | handle                 | 操作句柄                            | 输入            | mluOpHandle_t           | /             | /        |
-| grad_reduced_feats_desc| 输入数据，grad_reduced_feats的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| grad_reduced_feats     | 输入数据，grad_reduced_feats 的坐标   | 输入            | float\*                 | [M,C]| /      |          |
+| reduce_type            | 输入参数，规约mode                    | 输入            | mluOpReduceMode_t \*    | /             | /        |
+| grad_voxel_feats_desc| 输入数据，grad_voxel_feats的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
+| grad_voxel_feats     | 输入数据，grad_voxel_feats 的坐标   | 输入            | float\*                 | [M,C]| /      |          |
 | feats_desc             | 输入数据，feats 的描述符              | 输入            | mluOpTensorDescriptor_t | /             | /        |
 | feats                  | 输入数据，feats 的大小                | 输入            | float\*                 | [N,C]         | /        |
-| reduced_feats_desc     | 输入数据，reduced_feats 的描述符      | 输入            |mluOpTensorDescriptor_t  | /              | /        |
-| reduced_feats          | 输入数据，reduced_feats 的大小        | 输入            | float\*                 | [M,C]         | /        |
-| coors_map_desc         | 输入数据，coors_map 的描述符          | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| coors_map              | 输入数据，coors_map 的大小            | 输入            | int32\*                 | [N]           | /        |
-| reduce_count_desc      | 输入数据，reduce_count 的描述符       | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| reduce_count           | 输入数据，reduce_count 的大小         | 输入            | int32\*                 | [M]           | /        |
-| reduce_size            | 输入参数，reduce_size 的大小          | 输入            | int32\*                 | /             | /        |
-| reduce_mode            | 输入参数，规约mode                    | 输入            | mluOpReduceMode_t \*    | /             | /        |
+| voxel_feats_desc     | 输入数据，voxel_feats 的描述符      | 输入            |mluOpTensorDescriptor_t  | /              | /        |
+| voxel_feats          | 输入数据，voxel_feats 的大小        | 输入            | float\*                 | [M,C]         | /        |
+| point2voxel_map_desc         | 输入数据，point2voxel_map 的描述符          | 输入            | mluOpTensorDescriptor_t | /             | /        |
+| point2voxel_map              | 输入数据，point2voxel_map 的大小            | 输入            | int32\*                 | [N]           | /        |
+| voxel_points_count_desc      | 输入数据，voxel_points_count 的描述符       | 输入            | mluOpTensorDescriptor_t | /             | /        |
+| voxel_points_count           | 输入数据，voxel_points_count 的大小         | 输入            | int32\*                 | [M]           | /        |
+| voxel_num_desc      | 输入数据，voxel_num 的描述符       | 输入            | mluOpTensorDescriptor_t | /             | /   [1]     |
+| voxel_num             | 输入数据，voxel_num 的大小          | 输入            | int32\*                 | /             | /        |
 | workspace              | 输入数据，GDRAM上面的辅助空间           | 输入            | void\*                  | /             | /        |
 | workspace_size         | 输入数据，辅助空间的大小                | 输入            | size_t\*                | /             | /        |
 | grad_feats_desc        | 输出数据，输出 grad_feats 的描述符      | 输出            | mluOpTensorDescriptor_t | /             | /        |
@@ -76,12 +77,12 @@
 
 | 限制类型     | 详细说明                                                                           |
 | -----------  | -------------------------------------------------------------------------------  |
-| 输入限制     | 输入 `feats` 的shape 必须满足要求: boxes[N,C] `reduced_feats`                        |
-| 输入限制     | 输入 `fests`, `reduced_feats`不支持输入 nan 或 inf。                                 |
-| 输入限制     | 仅支持输入float, coors_map ,reduce_count int32类型 不支持nan与inf                      |
+| 输入限制     | 输入 `feats` 的shape 必须满足要求: boxes[N,C] `voxel_feats`                        |
+| 输入限制     | 输入 `fests`, `voxel_feats`不支持输入 nan 或 inf。                                 |
+| 输入限制     | 仅支持输入float, point2voxel_map ,voxel_points_count int32类型 不支持nan与inf       |
 | 输入参数限制  | 仅支持输入reduce_mode值为MLUOP_REDUCEMODE_MAX                                       |
 | 输出限制     | 输出 `output`的shape 必须满足: [N，C]                                                |
-| 数据类型限制 | 输入 `fests`，`reduced_feats` 输出 `grad_feats` 数据类型保持一致且仅支持float。`coors_map` `reduce_count`仅支持 int32 |
+| 数据类型限制 | 输入 `fests`，`voxel_feats` 输出 `grad_feats` 数据类型保持一致且仅支持float。`point2voxel_map` `voxel_points_count`仅支持 int32 |
 | 原位限制     | 不支持原位                                                                           |
 | stride 限制  | 不支持 stride 机制                                                                 |
 | 广播限制     | 不支持广播                                                                         |
@@ -105,19 +106,19 @@
 ```c++
 // 给出接口
 void DynamicPointToVoxelBackwardCUDAKernelLauncher(
-    at::Tensor &grad_feats, const at::Tensor &grad_reduced_feats,
-    const at::Tensor &feats, const at::Tensor &reduced_feats,
-    const at::Tensor &coors_map, const at::Tensor &reduce_count,
+    at::Tensor &grad_feats, const at::Tensor &grad_voxel_feats,
+    const at::Tensor &feats, const at::Tensor &voxel_feats,
+    const at::Tensor &point2voxel_map, const at::Tensor &voxel_points_count,
     const reduce_t reduce_type);
 ```
 ```c++
 // 给出cpu接口
 void dynamic_point_to_voxel_backward(torch::Tensor &grad_feats,
-                                     const torch::Tensor &grad_reduced_feats,
+                                     const torch::Tensor &grad_voxel_feats,
                                      const torch::Tensor &feats,
-                                     const torch::Tensor &reduced_feats,
+                                     const torch::Tensor &voxel_feats,
                                      const torch::Tensor &coors_idx,
-                                     const torch::Tensor &reduce_count,
+                                     const torch::Tensor &voxel_points_count,
                                      const std::string &reduce_type);
 ```
 
