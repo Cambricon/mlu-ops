@@ -256,7 +256,7 @@ MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计
 
 mluOpMoeDispatchBackwardGate
 ----------------------------------
-MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度`grad_gates`。
+MoE算法中对输入进行重新分配（dispatch）的反向算子，用于计算gates的梯度 `grad_gates`。
 
 .. _moe_dispatch_forward:
 
@@ -684,20 +684,20 @@ mluOpSqrtBackward
 .. _three_interpolate_backward:
 
 mluOpThreeInterpolateBackward
------------------------------
+-------------------------------
 three_interpolate_forward 算子的反向，算子的功能是根据 output 的梯度，计算 features 的梯度。具体是将 grad_output 乘上对应位置的 weights，并将相乘的结果和对应 indices 位置的 grad_features 做 atomic_add。该算子有三个输入 tensor，一个输出 tensor，输入 grad_output 维度 [B, C, N]，输入 indices 维度 [B, N, 3]，输入 weights 维度 [B, N, 3]，输出 grad_features 维度 [B, C, M]。
 
 .. _three_interpolate_forward:
 
 mluOpThreeInterpolateForward
------------------------------
+-------------------------------
 three_interpolate_forward 对三个输入特征做加权线性插值获得目标特征。其中三个输入特征在 features tensor 中的下标由 indices tensor 决定，将选择出来的三个输入特征乘上对应的 weights tensor 中的卷积滤波张量，并将对应的乘法结果进行累加得到目标特征，对于每个 batch，在每个 channel 上重复上述过程 N 次就得到加权插值后的输出结果。该算子有三个输入 tensor，一个输出 tensor，输入 features 维度 [B, C, M]，输入 indices 维度 [B, N, 3]，输入 weights 维度 [B, N, 3]，输出 output 维度 [B, C, N]。
 
 .. _three_nn_forward:
 
 mluOpThreeNNForward
 -----------------------------
-该算子为点云`unknown`集合中的点的寻找来自`known`集合中的前`3`个邻近点。点云数据点的坐标为`(x, y, z)`， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的`index`。
+该算子为点云 ``unknown`` 集合中的点的寻找来自 ``known``集合中的前 ``3`` 个邻近点。点云数据点的坐标为 ``(x, y, z)`` ， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的 ``index``。
 
 .. _transpose:
 
