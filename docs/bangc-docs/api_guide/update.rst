@@ -56,8 +56,8 @@ This section lists contents that were made for each product release.
     - reduce
     - roi_align_rotated_backward
     - roi_align_rotated_forward
-    - roi_aware_pool3d_backward
-    - roi_aware_pool3d_forward
+    - roiaware_pool3d_backward
+    - roiaware_pool3d_forward
     - rotated_feature_align_backward
     - rotated_feature_align_forward
     - scatter_nd

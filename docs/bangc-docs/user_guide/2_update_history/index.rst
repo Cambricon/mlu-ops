@@ -55,8 +55,8 @@
      + :ref:`reduce`
      + :ref:`roi_align_rotated_backward`
      + :ref:`roi_align_rotated_forward`
-     + :ref:`roi_aware_pool3d_backward`
-     + :ref:`roi_aware_pool3d_forward`
+     + :ref:`roiaware_pool3d_backward`
+     + :ref:`roiaware_pool3d_forward`
      + :ref:`rotated_feature_align_backward`
      + :ref:`rotated_feature_align_forward`
      + :ref:`scatter_nd`

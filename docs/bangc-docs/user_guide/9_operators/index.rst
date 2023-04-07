@@ -266,6 +266,8 @@ mluOpMoeDispatchForward
 MoE算法中对输入进行重新分配。
 
 .. _ms_deform_attn_backward:
+
+mluOpMsDeformAttnBackward
 -----------------------------
 mluOpMsDeformAttnForward算子的反向，计算输入value，sampling_loc和attn_weight的梯度。
 
@@ -586,18 +588,6 @@ rois 中 batch_id 的值在 [0, batch-1] 范围内，其中 batch 是输入 feat
 
 output 的最高维与 rois 的最高维度相等，最后一维度大小与 features 的最后一维相等。
 
-.. _roi_aware_pool3d_backward:
-
-mluOpRoiawarePool3dBackward
------------------------------
-mluOpRoiawarePool3dForward 的反向算子，输入体素中的 idx 以及前向的池化特征值，计算反向梯度值。
-
-.. _roi_aware_pool3d_forward:
-
-mluOpRoiawarePool3dForward
------------------------------
-给定一组点和点的特征值，以及一组长方体框，将框中的点的特征进行池化，输出指定数量的体素中的最大或者平均特征值以及点在对应体素中的索引。
-
 .. _roi_crop_backward:
 
 mluOpRoiCropBackward
@@ -615,6 +605,18 @@ mluOpRoiCropForward
 mluOpRoiAlignForward
 -----------------------------
 该算子是在Mask-RCNN中提出的一种区域特征聚集的方式，该算子主要应用于FasterRCNN-Resnet101+FPN和MaskRCNN-Resnet+FPN网络。
+
+.. _roiaware_pool3d_backward:
+
+mluOpRoiawarePool3dBackward
+-----------------------------
+mluOpRoiawarePool3dForward 的反向算子，输入体素中的 idx 以及前向的池化特征值，计算反向梯度值。
+
+.. _roiaware_pool3d_forward:
+
+mluOpRoiawarePool3dForward
+-----------------------------
+给定一组点和点的特征值，以及一组长方体框，将框中的点的特征进行池化，输出指定数量的体素中的最大或者平均特征值以及点在对应体素中的索引。
 
 .. _roipoint_pool3d:
 
