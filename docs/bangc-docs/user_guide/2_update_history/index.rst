@@ -1,5 +1,20 @@
 更新历史
 ========
+* **V0.6.0**
+
+  **更新时间**：2023年4月14日
+
+  **更新内容**：
+
+  - 新增以下算子章节内容：
+
+     + :ref:`ms_deform_attn_backward`
+     + :ref:`ms_deform_attn_forward`
+     + :ref:`nms`
+     + :ref:`points_in_boxes`
+     + :ref:`roi_align_backward`
+     + :ref:`roialign_forward`
+
 * **V0.5.1**
 
   **更新时间**：2023年3月20日
@@ -39,8 +54,8 @@
      + :ref:`reduce`
      + :ref:`roi_align_rotated_backward`
      + :ref:`roi_align_rotated_forward`
-     + :ref:`roi_aware_pool3d_backward`
-     + :ref:`roi_aware_pool3d_forward`
+     + :ref:`roiaware_pool3d_backward`
+     + :ref:`roiaware_pool3d_forward`
      + :ref:`rotated_feature_align_backward`
      + :ref:`rotated_feature_align_forward`
      + :ref:`scatter_nd`

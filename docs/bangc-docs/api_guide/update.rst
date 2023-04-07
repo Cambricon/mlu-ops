@@ -3,6 +3,21 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V0.6.0
+
+  **Date:** April 14, 2023
+
+  **Changes:**
+
+  - Added the following new operations:
+
+    - ms_deform_attn_backward
+    - ms_deform_attn_forward
+    - nms
+    - points_in_boxes
+    - roi_align_backward
+    - roialign_forward
+
 * V0.5.1
 
   **Date:** March 20, 2023
@@ -11,10 +26,10 @@ This section lists contents that were made for each product release.
 
   - Added the following new operations:
 
-     - nms_rotated
-     - moe_dispatch_backward_data
-     - moe_dispatch_backward_gate
-     - moe_dispatch_forward
+    - nms_rotated
+    - moe_dispatch_backward_data
+    - moe_dispatch_backward_gate
+    - moe_dispatch_forward
 
 * V0.5.0
 
@@ -24,32 +39,32 @@ This section lists contents that were made for each product release.
 
   - Added the following new operations:
 
-     - active_rotated_filter_forward
-     - add_n
-     - bbox_overlaps
-     - box_iou_rotated
-     - carafe_backward
-     - carafe_forward
-     - deform_roi_pool_backward
-     - deform_roi_pool_forward
-     - gather_nd
-     - get_indice_pairs
-     - indice_convolution_backward_data
-     - indice_convolution_backward_filter
-     - indice_convolution_forward
-     - mat_mul
-     - reduce
-     - roi_align_rotated_backward
-     - roi_align_rotated_forward
-     - roi_aware_pool3d_backward
-     - roi_aware_pool3d_forward
-     - rotated_feature_align_backward
-     - rotated_feature_align_forward
-     - scatter_nd
-     - three_interpolate_backward
-     - three_nn_forward
-     - transpose
-     - unique
+    - active_rotated_filter_forward
+    - add_n
+    - bbox_overlaps
+    - box_iou_rotated
+    - carafe_backward
+    - carafe_forward
+    - deform_roi_pool_backward
+    - deform_roi_pool_forward
+    - gather_nd
+    - get_indice_pairs
+    - indice_convolution_backward_data
+    - indice_convolution_backward_filter
+    - indice_convolution_forward
+    - mat_mul
+    - reduce
+    - roi_align_rotated_backward
+    - roi_align_rotated_forward
+    - roiaware_pool3d_backward
+    - roiaware_pool3d_forward
+    - rotated_feature_align_backward
+    - rotated_feature_align_forward
+    - scatter_nd
+    - three_interpolate_backward
+    - three_nn_forward
+    - transpose
+    - unique
 
 * V0.4.2
 
