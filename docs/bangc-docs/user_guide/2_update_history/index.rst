@@ -1,5 +1,21 @@
 更新历史
 ========
+* **V0.6.0**
+
+  **更新时间**：2023年4月14日
+
+  **更新内容**：
+
+  - 不再支持Debian。
+  - 新增以下算子章节内容：
+
+     + :ref:`ms_deform_attn_backward`
+     + :ref:`ms_deform_attn_forward`
+     + :ref:`nms`
+     + :ref:`points_in_boxes`
+     + :ref:`roi_align_backward`
+     + :ref:`roialign_forward`
+
 * **V0.5.1**
 
   **更新时间**：2023年3月20日
