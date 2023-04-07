@@ -257,7 +257,7 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
       T weight_next_point = 0;
       T x_next_point = 0;
       T y_next_point = 0;
-      __asm__ volatile("sync;");
+      __sync();
       for (int32_t level_idx = 0; level_idx < num_levels; ++level_idx) {
         for (int32_t point_idx = 0; point_idx < num_points; ++point_idx) {
           // load data
@@ -351,7 +351,7 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
           weight = weight_next_point;
           x = x_next_point;
           y = y_next_point;
-          __asm__ volatile("sync;");
+          __sync();
         }
       }
       // store
@@ -395,7 +395,7 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
       T weight_next_point = 0;
       T x_next_point = 0;
       T y_next_point = 0;
-      __asm__ volatile("sync;");
+      __sync();
       for (int32_t level_idx = 0; level_idx < num_levels; ++level_idx) {
         for (int32_t point_idx = 0; point_idx < num_points; ++point_idx) {
           // load data
@@ -488,7 +488,7 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
           weight = weight_next_point;
           x = x_next_point;
           y = y_next_point;
-          __asm__ volatile("sync;");
+          __sync();
         }
       }
       // store
@@ -500,7 +500,7 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
       data_col_ping_pong_idx = (data_col_ping_pong_idx + 1) % 2;
     }
   }
-  __asm__ volatile("sync;");
+  __sync();
   return;
 }
 
