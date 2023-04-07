@@ -333,7 +333,7 @@ __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum(
     const char *points_xyz_gdram, const char *point_features_gdram,
     const char *boxes3d_gdram, char *pooled_features_gdram,
     char *pooled_empty_flag_gdram) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   size_t boxes_per_core = (batch_size * boxes_num) / taskDim;
@@ -415,7 +415,7 @@ __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum(
                        GDRAM2NRAM);
         __memcpy_async(ping_points_z, points_z_start, span_load_input3_size,
                        GDRAM2NRAM);
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       for (int i = 0; i < repeat - 1; i++) {
@@ -436,7 +436,7 @@ __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum(
             auxiliary_b, auxiliary_c, auxiliary_d, auxiliary_e, auxiliary_f,
             box_idx, pts_num, feature_in_len, sampled_pts_num, span_num_deal,
             pooled_features_start, pooled_empty_flag_start);
-        __asm__ volatile("sync;");
+        __sync();
       }
 
       if (rem > 0) {
@@ -467,7 +467,7 @@ __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum(
                     PAD_DOWN(rem, NFU_ALIGN_SIZE) * sizeof(T)),
               NFU_ALIGN_SIZE, (T)NAN);
         }
-        __asm__ volatile("sync;");
+        __sync();
         __memcpy_async(ping_points_x + (repeat % 2) * ping_pong_gap,
                        points_x_start + repeat * span_load_input1_size,
                        rem * sizeof(T), GDRAM2NRAM);
@@ -501,7 +501,7 @@ __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum(
       }
 
       if (rem > 0) {
-        __asm__ volatile("sync;");
+        __sync();
         computeStoreLastBlockRoipointPool3d<T>(
             boxes3d, &cnt, ping_points_x + (repeat % 2) * ping_pong_gap,
             ping_points_y + (repeat % 2) * ping_pong_gap,

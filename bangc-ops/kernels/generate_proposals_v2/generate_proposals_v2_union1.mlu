@@ -43,44 +43,45 @@ __mlu_func__ void findCoreMaxBox(T *input_score_ptr, T *score, T *inter_x1,
                                  const int input_offset, const int repeat,
                                  const int remain, const int max_seg_num,
                                  int &local_max_index) {
-  if (coreId != 0x80) {
-    T local_max_score = FLOAT_MIN;
-    for (int i = 0; i <= repeat; i++) {
-      if (i == repeat && remain == 0) {
-        break;
-      }
-      const int actual_num = (i == repeat) ? remain : max_seg_num;
-      const int actual_num_align = CEIL_ALIGN(actual_num, ALIGN_NUM);
-      const int seg_offset = input_offset + i * max_seg_num;
-      /******nms load start******/
-      __bang_write_value(score, actual_num_align, FLOAT_MIN);
-      __memcpy(score, input_score_ptr + seg_offset, actual_num * sizeof(T),
-               GDRAM2NRAM);
-      /******nms load end******/
-      __bang_max(inter_x1, score, actual_num_align);
-      if (inter_x1[0] >= local_max_score) {
-        if (inter_x1[0] == FLOAT_MIN) {
-          local_max_score = inter_x1[0];
-          local_max_index = ((int *)inter_x1)[1] + seg_offset;
-          continue;
-        }
-
-        /****** deal multi equal score ******/
-        __bang_write_value(inter_y1, actual_num_align, (T)inter_x1[0]);
-        __bang_eq(inter_x2, score, inter_y1, actual_num_align);
-        const int tmp_index = __bang_findfirst1(inter_x2, actual_num_align);
-
-        local_max_score = inter_x1[0];
-        local_max_index = tmp_index + seg_offset;
-      }
-    }
-    max_box[0] = local_max_score;
-    max_box[1] = input_x1_ptr[local_max_index];
-    max_box[2] = input_y1_ptr[local_max_index];
-    max_box[3] = input_x2_ptr[local_max_index];
-    max_box[4] = input_y2_ptr[local_max_index];
-    ((uint32_t *)(max_box + 5))[0] = local_max_index;
+  if (__is_mpu()) {
+    return;
   }
+  T local_max_score = FLOAT_MIN;
+  for (int i = 0; i <= repeat; i++) {
+    if (i == repeat && remain == 0) {
+      break;
+    }
+    const int actual_num = (i == repeat) ? remain : max_seg_num;
+    const int actual_num_align = CEIL_ALIGN(actual_num, ALIGN_NUM);
+    const int seg_offset = input_offset + i * max_seg_num;
+    /******nms load start******/
+    __bang_write_value(score, actual_num_align, FLOAT_MIN);
+    __memcpy(score, input_score_ptr + seg_offset, actual_num * sizeof(T),
+              GDRAM2NRAM);
+    /******nms load end******/
+    __bang_max(inter_x1, score, actual_num_align);
+    if (inter_x1[0] >= local_max_score) {
+      if (inter_x1[0] == FLOAT_MIN) {
+        local_max_score = inter_x1[0];
+        local_max_index = ((int *)inter_x1)[1] + seg_offset;
+        continue;
+      }
+
+      /****** deal multi equal score ******/
+      __bang_write_value(inter_y1, actual_num_align, (T)inter_x1[0]);
+      __bang_eq(inter_x2, score, inter_y1, actual_num_align);
+      const int tmp_index = __bang_findfirst1(inter_x2, actual_num_align);
+
+      local_max_score = inter_x1[0];
+      local_max_index = tmp_index + seg_offset;
+    }
+  }
+  max_box[0] = local_max_score;
+  max_box[1] = input_x1_ptr[local_max_index];
+  max_box[2] = input_y1_ptr[local_max_index];
+  max_box[3] = input_x2_ptr[local_max_index];
+  max_box[4] = input_y2_ptr[local_max_index];
+  ((uint32_t *)(max_box + 5))[0] = local_max_index;
 }
 
 template <typename T>
@@ -1132,7 +1133,7 @@ __mlu_global__ void mluOpGenerateProposalsV2Kernel(
     const int post_nms_top_n, const float nms_thresh, const float min_size,
     const float eta, const bool pixel_offset, const int batch_size,
     const int Anchors_num, const int W, const int H) {
-  if (coreId == 0x80) return;
+  if (__is_mpu()) return;
 
   const int HWA = Anchors_num * W * H;
 

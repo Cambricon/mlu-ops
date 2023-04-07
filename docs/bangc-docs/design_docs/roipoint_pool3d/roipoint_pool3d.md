@@ -164,7 +164,7 @@ void RoIPointPool3dForwardCUDAKernelLauncher(
 ### 2.2 接口设计
 
 ```c++
-mluOpStatus_t MLUOP_WIN_API 
+mluOpStatus_t MLUOP_WIN_API
 mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
                                     const int batch_size,
                                     const int pts_num,
@@ -178,7 +178,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
                                     const mluOpTensorDescriptor_t pooled_empty_flag_desc,
                                     size_t *size)
 
-mluOpStatus_t MLUOP_WIN_API 
+mluOpStatus_t MLUOP_WIN_API
 mluOpRoiPointPool3d(mluOpHandle_t handle,
                     const int batch_size,
                     const int pts_num,
@@ -324,7 +324,7 @@ void roipoint_pool3d_union1(const int batch_size,
           __memcpy_async(pooled_empty_flag_gdram, ..., ..., NRAM2GDRAM);
         }
       }
-      __asm__ volatile("sync;");
+      __sync();
     }
   }
 }

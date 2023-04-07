@@ -43,7 +43,7 @@ template <typename T>
 __mlu_global__ void mluKernelPriorVar(const int height, const int width,
                                       const int num_priors, T *variances,
                                       const int variances_num, T *var) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   constexpr int align_num = NFU_ALIGN_SIZE / sizeof(T);
@@ -97,7 +97,7 @@ __mlu_global__ void mluKernelPriorBox(
     const T step_h, const T step_w, const T offset, const int num_priors,
     const bool clip, const bool min_max_aspect_ratios_order, T *output,
     const int output_size) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   /*

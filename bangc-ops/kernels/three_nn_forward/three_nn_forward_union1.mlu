@@ -288,7 +288,7 @@ __mlu_global__ void MLUKernelThreeNNForward(const int b, const int n,
                                             const int m, T *unknown_gdram,
                                             T *known_gdram, T *dist2_gdram,
                                             int *idx_gdram) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
 

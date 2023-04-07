@@ -137,27 +137,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(mluOpHandle_t handle,
 ```
 ## 3 实现方案设计
 ### 3.1 实现方案- 输入输出数据及参数释义
-data_value : [bs, num_keys, num_heads, channels]  
-各尺寸特征图内所有像素点的特征值，如图2所示  
-data_spatial_shapes : [num_levels, 2]  
-multi-scale各尺寸输入特征图的长和宽，最低维`2`表示(h, w)，即图2中$`[H_l, W_l], l=1,2,…,L`$  
-data_level_start_index : [num_levels]  
-各尺寸输入特征图对应到data_value的地址起始偏移  
-data_sampling_loc : [bs, num_queries, num_heads, num_levels, num_points, 2]  
-采样点的归一化坐标，最低维`2`表示(x, y)，表示采样点在x、y坐标轴下相对于$`[W_l, H_l]`$的归一化坐标  
-data_attn_weight : [bs, num_queries, num_heads, num_levels, num_points]  
-attention权重值，即在图1基础上将Attention Weights($`A_{mqk}`$)扩展到multi-scale下的$`A_{mlqk}`$  
-data_col : [bs, num_queries, num_heads, channels]  
-输出attention特征值bs: batch size，输入数据batch数量  
-num_keys: multi-scale所有尺度特征图的像素点数量总和  
-num_heads: multi-head attention的head数量  
-channels: 特征值数量  
-num_levels: multi-scale所有尺度特征图的数量  
-num_queries: attention的query数量  
+data_value : [bs, num_keys, num_heads, channels]
+各尺寸特征图内所有像素点的特征值，如图2所示
+data_spatial_shapes : [num_levels, 2]
+multi-scale各尺寸输入特征图的长和宽，最低维`2`表示(h, w)，即图2中$`[H_l, W_l], l=1,2,…,L`$
+data_level_start_index : [num_levels]
+各尺寸输入特征图对应到data_value的地址起始偏移
+data_sampling_loc : [bs, num_queries, num_heads, num_levels, num_points, 2]
+采样点的归一化坐标，最低维`2`表示(x, y)，表示采样点在x、y坐标轴下相对于$`[W_l, H_l]`$的归一化坐标
+data_attn_weight : [bs, num_queries, num_heads, num_levels, num_points]
+attention权重值，即在图1基础上将Attention Weights($`A_{mqk}`$)扩展到multi-scale下的$`A_{mlqk}`$
+data_col : [bs, num_queries, num_heads, channels]
+输出attention特征值bs: batch size，输入数据batch数量
+num_keys: multi-scale所有尺度特征图的像素点数量总和
+num_heads: multi-head attention的head数量
+channels: 特征值数量
+num_levels: multi-scale所有尺度特征图的数量
+num_queries: attention的query数量
 num_points: 各尺寸特征图的采样点数量
 | ![pipeline](Bilinear_interpolation.png) |
 | :--: |
-| 图2 |- 
+| 图2 |-
 该算子保留每个head的信息输出，由1-2小节得到其计算公式为
 ```math
 MSDeformAttn(z_q,\hat p_q,\{ x^l \}_{l=1}^L)=\sum_{l=1}^{L}\sum_{k=1}^{P}A_{mlqk}\cdot x^l(\phi_l(\hat p_q)+\Delta p_{mlqk})
@@ -280,7 +280,7 @@ __mlu_global__ void msdeformattnforwardUnion1(const char *data_value_gdram,
                                               const int num_queries,
                                               const int num_points,
                                               char *data_col_gdram) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   size_t spatial_size = 2 * sizeof(int32_t);
@@ -397,43 +397,43 @@ mlu每次循环处理$`L`$个不同尺度的特征图，每个特征图内有$`P
 ### 3.5 方案理论性能
 完成上述3.1，3.2，3.3，3.4几个步骤之后，基本可以给出一个理论性能，不需要每一个算子都有过于复杂的公式，但是一定要对自己的算子有一个心理的预期，最终实现之后的效率值是多少。在不同平台、数据类型下，nram划分以及所用BangC指令个数略有差异，现以MLU370X4平台输入float32数据为例。
 
-记batch_size = B, num_keys = K, num_levels = L, num_heads = M, num_queries = Q, num_points = P, channels = C输入输出数据规模：  
+记batch_size = B, num_keys = K, num_levels = L, num_heads = M, num_queries = Q, num_points = P, channels = C输入输出数据规模：
 
-data_value: [B, K, M, C]  
-data_spatial_shapes: [L, 2]  
-data_level_start_index: [L]  
-data_sampling_loc: [B, Q, M, L, P, 2]  
-data_attn_weight: [B, Q, M, L, P]  
-data_col: [B, Q, M, C]  
+data_value: [B, K, M, C]
+data_spatial_shapes: [L, 2]
+data_level_start_index: [L]
+data_sampling_loc: [B, Q, M, L, P, 2]
+data_attn_weight: [B, Q, M, L, P]
+data_col: [B, Q, M, C]
 
-由于算子算法本身在计算过程中存在基于输入数据的分支判断（取决于采样点位置是否在特征图内，以及采样点邻近点是否在特征图像素点点集内），理论计算量的上下限大致如下  
+由于算子算法本身在计算过程中存在基于输入数据的分支判断（取决于采样点位置是否在特征图内，以及采样点邻近点是否在特征图像素点点集内），理论计算量的上下限大致如下
 
-MLU TheoryIOs(max) = (4 * B * Q * M * L * P * C + B * Q * M * L * P * 2 + B * Q * M * L * P + B * Q * M * C) * sizeof(T) + (L * 2 + L) * sizeof(int) bytes  
+MLU TheoryIOs(max) = (4 * B * Q * M * L * P * C + B * Q * M * L * P * 2 + B * Q * M * L * P + B * Q * M * C) * sizeof(T) + (L * 2 + L) * sizeof(int) bytes
 
-MLU TheoryOps(max) = B * Q * M * L * P * ((C - 1) / span_num_deal + 1) * 11 ops  
+MLU TheoryOps(max) = B * Q * M * L * P * ((C - 1) / span_num_deal + 1) * 11 ops
 
-其中，span_num_deal为一个时间片内处理的channels数量。IO Efficieny = ((4 * B * Q * M * L * P * C + B * Q * M * L * P * 3 + B * Q * M * C) * sizeof(T) + 3L * sizeof(int)) / real_time / peak_bandwidth  
+其中，span_num_deal为一个时间片内处理的channels数量。IO Efficieny = ((4 * B * Q * M * L * P * C + B * Q * M * L * P * 3 + B * Q * M * C) * sizeof(T) + 3L * sizeof(int)) / real_time / peak_bandwidth
 
-Compute Efficieny = MLU TheoryOps / real_time / peak_compute_force  
+Compute Efficieny = MLU TheoryOps / real_time / peak_compute_force
 算子是IO瓶颈还是CP瓶颈具体取决于测例规模。
 
-dtype: float32  
-data_value: [2, 40000, 8, 32]  
-data_spatial_shapes: [1, 2]  
-data_level_start_index: [1]  
-data_sampling_loc: [2, 40000, 8, 1, 4, 2]  
-data_attn_weight: [2, 40000, 8, 1, 4]  
-data_col: [2, 40000, 8, 32]  
-MLU TheoryIOs(max) = 1,423,360,012 bytes  
-MLU TheoryOps(max) = 28,160,000 ops  
+dtype: float32
+data_value: [2, 40000, 8, 32]
+data_spatial_shapes: [1, 2]
+data_level_start_index: [1]
+data_sampling_loc: [2, 40000, 8, 1, 4, 2]
+data_attn_weight: [2, 40000, 8, 1, 4]
+data_col: [2, 40000, 8, 32]
+MLU TheoryIOs(max) = 1,423,360,012 bytes
+MLU TheoryOps(max) = 28,160,000 ops
 
-**说明：** 
+**说明：**
 
-以MLU370X4资源预估  
-MLU ComputeForce : 1.024e+12 (op/s)  
-MLU IoBandWidth  : 307.2 (GB/s)  
-IO_TIME = 4.3151279654e-03 s  
-CP_TIME = 2.75e-05 s  
+以MLU370X4资源预估
+MLU ComputeForce : 1.024e+12 (op/s)
+MLU IoBandWidth  : 307.2 (GB/s)
+IO_TIME = 4.3151279654e-03 s
+CP_TIME = 2.75e-05 s
 IO_TIME > CP_TIME, 因此该测例规模下是IO瓶颈。
 
 ### 3.6 可维护性设计
@@ -451,12 +451,12 @@ IO_TIME > CP_TIME, 因此该测例规模下是IO瓶颈。
   | data_value: [1, 40000, 8, 32]<br>data_spatial_shapes: [1, 2]<br>data_level_start_index: [1]<br>data_sampling_loc: [1, 900, 8, 1, 4, 2]<br>data_attn_weight: [1, 900, 8, 1, 4]<br>data_col: [1, 900, 8, 32]     | data_value: float32<br>data_spatial_shapes: int32<br>data_level_start_index: int32<br>data_sampling_loc: float32<br>data_attn_weight: float32   | data_col: float32   |
   | data_value: [6, 30825, 8, 32]<br>data_spatial_shapes: [4, 2]<br>data_level_start_index: [4]<br>data_sampling_loc: [6, 9664, 8, 4, 8, 2]<br>data_attn_weight: [6, 9664, 8, 4, 8]<br>data_col: [6, 9664, 8, 32]     | data_value: float32<br>data_spatial_shapes: int32<br>data_level_start_index: int32<br>data_sampling_loc: float32<br>data_attn_weight: float32   | data_col: float32   |其他可根据需要进行补充。算子开发完毕后，补充测试报告链接。
 
-### 3.8 算子防呆检查 
-1、指针为空防呆。 
+### 3.8 算子防呆检查
+1、指针为空防呆。
 
-2、0元素检查防呆，VLOG(5)打印信息。 
+2、0元素检查防呆，VLOG(5)打印信息。
 
-3、对输入输出支持的dtype、layout以及shape进行防呆。 
+3、对输入输出支持的dtype、layout以及shape进行防呆。
 
 4、算子存在的自身的相关参数防呆。
 

@@ -467,7 +467,7 @@ __mlu_func__ inline void __float2half(half *dst, float *src, int src_count) {
 
 __mlu_func__ void pvLock() {
 #if __BANG_ARCH__ == 270
-  if (coreId != 0x80) {
+  if (__is_ipu()) {
     __bang_lock(0, 0);
   }
 #endif
@@ -475,7 +475,7 @@ __mlu_func__ void pvLock() {
 
 __mlu_func__ void pvUnlock() {
 #if __BANG_ARCH__ == 270
-  if (coreId != 0x80) {
+  if (__is_ipu()) {
     __bang_unlock(0, 0);
   }
 #endif

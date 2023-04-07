@@ -527,7 +527,7 @@ __mlu_global__ void MLUKernelPsamaskForward(
     const int half_w_mask, const int n_per_core, const int h_per_core,
     const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
     const int limit_h_seg, const int limit_w_seg) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   Shape x_full, y_full;
@@ -560,7 +560,7 @@ __mlu_global__ void MLUKernelPsamaskBackward(
     const int half_w_mask, const int n_per_core, const int h_per_core,
     const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
     const int limit_h_seg, const int limit_w_seg) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   Shape dy_full, dx_full;

@@ -71,7 +71,7 @@ valueq = input[index] + input[tl] \* w1 + input[tr] \* w2 + input[bl] \* w3 + in
 图中, 黄色点 P：(x，y) 为锚点框中心点坐标，其它四个点坐标通过 P 点的计算方式为：
 
 P1：(x + wb / 2 \* cosf(a) - hb / 2 \* sinf(a)，y + w / 2 \* consf(a) + hb / 2 \* sinf(a))
- 
+
 P2：(x - wb / 2 \* cosf(a) - hb / 2 \* sinf(a)，y - w / 2 \* consf(a) + hb / 2 \* sinf(a))
 
 P3：(x - wb / 2 \* cosf(a) + hb / 2 \* sinf(a)，y - w / 2 \* consf(a) - hb / 2 \* sinf(a))
@@ -130,11 +130,11 @@ valuep1 = input[tl1] * w11 + input[tr1] * w21 + input[bl1] * w31 + input[br1] * 
 - 300系列的评价公式为 `diff1、diff2、diff4`，验收标准使用动态阈值[10, 10, 1]。
 - 200系列的评价公式为 `diff1、diff2`，验收标准采用动态阈值[10, 10]。
 - 算子使用到了 atomic_add, 如果测例在 200 系列上不通过，可验证 300 系列上是否可以通过。
-- 因为 fma 不对齐问题，如果测例在300系列上不通过，需要将测例更改为 cpu 模式，此时采用静态阈值：half: 1e-3，float: 1e-5。 
+- 因为 fma 不对齐问题，如果测例在300系列上不通过，需要将测例更改为 cpu 模式，此时采用静态阈值：half: 1e-3，float: 1e-5。
 
 #### 1.5.2 性能验收标准
 
-- 网络中使用到的规模性能优于或至少与竞品性能持平。 
+- 网络中使用到的规模性能优于或至少与竞品性能持平。
 - 测试报告：
 
 ## 2 算子接口设计
@@ -207,7 +207,7 @@ step6：对以上计算执行流水操作
 ```c++
 int type_align = NFU_ALIGN_SIZE / sizeof(T);
 int nram_max_deal_num = MAX_NRAM_SIZE / sizeof(T);
-int nram_split_deal_num = FLOOR_ALIGN((nram_max_deal_num - offset_rois) / SEG_NUM, type_align); 
+int nram_split_deal_num = FLOOR_ALIGN((nram_max_deal_num - offset_rois) / SEG_NUM, type_align);
 int channel_rem = channels % nram_split_deal_num;
 int channel_loops = channels / nram_split_deal_num + (channel_rem != 0 ? 1 : 0);
 int pixel_first = taskId;
@@ -216,7 +216,7 @@ int pixel_end = batches * height * width;
 int pixel_i = 0; // 记录一个core计算的pixel个数
 for (int pixel_index = pixel_first; pixel_index < pixel_end; pixel_index += taskDim) {
   pixel_i ++;
-  // 对 C 拆分     
+  // 对 C 拆分
   for (int channel_loop_index = 0; channel_loop_index < channel_loops; ++channel_loop_index) {
     // 只执行一次
     if (channel_loop_index == 0 && pixel_i == 1){
@@ -228,13 +228,13 @@ for (int pixel_index = pixel_first; pixel_index < pixel_end; pixel_index += task
       commpute(); // compute Q点映射到P点四领域中 C 数据到 ping_tl、ping_tr、ping_bl、ping_br
       if (pixel_index + taskDim < pixel_end) {
         load(); // load next bboxes 防止流水打断
-      } 
+      }
     }
     for(int i = 1; i < points; i++){
       bilinearInterpolateGradient(px,py); // 双线性插值
       compute();  // 4次乘法
-      __mluOp_atomic_add_reduce(); // 4次store	
-      __asm__ volatile("sync;");
+      __mluOp_atomic_add_reduce(); // 4次store
+      __sync();
       swap(nram_ping, nram_pong);
     }
     // S4
@@ -245,18 +245,18 @@ for (int pixel_index = pixel_first; pixel_index < pixel_end; pixel_index += task
     if (channel_loop_index + 1 <= channel_loops){
         load(); // 加载 top_output 中 rem C 数据到 nram_ping
         bilinearInterpolateGradient(px,py); // 双线性插值
-        compute(); // compute Q点映射到P点四领域中 rem C 数据到 pong_tl、pong_tr、pong_bl、pong_br 
+        compute(); // compute Q点映射到P点四领域中 rem C 数据到 pong_tl、pong_tr、pong_bl、pong_br
     } else if(pixel_index + taskDim < pixel_end){
         // load 下一个pixel中的 Lob C0
         // 计算 采样点坐标
         load(); // 加载 top_output 中 C 数据到 nram_pong
         bilinearInterpolateGradient(px,py); // 双线性插值
-        commput(); // compute Q点映射到P点四领域中 C 数据到 ping_tl、ping_tr、ping_bl、ping_br 
+        commput(); // compute Q点映射到P点四领域中 C 数据到 ping_tl、ping_tr、ping_bl、ping_br
         if (pixel_index + 2 * taskDim < pixel_end) {
           load(); // load bboxes数据到bboxes_ptr
         }
     }
-    __asm__ volatile("sync;");
+    __sync();
     swap(nram_ping, nram_pong);
     swap(nram_pong, nram_ping);
 }
@@ -275,7 +275,7 @@ int pixel_first = taskId;
 int pixel_end = batches * height * width;
 // 对 batch * height * width 拆分
 for (int pixel_index = pixel_first; pixel_index < pixel_end; pixel_index += taskDim) {
-  // 对 C 拆分     
+  // 对 C 拆分
   for (int channel_loop_index = 0; channel_loop_index < channel_loops; ++channel_loop_index) {
   }
 }
@@ -341,7 +341,7 @@ CP_TIME = 理论 OPS / 理论峰值
 
 ### 3.8 算子防呆检查
 
-参考链接：[MLUOP文档、防呆与打印](http://wiki.cambricon.com/pages/viewpage.action?pageId=72502072) 
+参考链接：[MLUOP文档、防呆与打印](http://wiki.cambricon.com/pages/viewpage.action?pageId=72502072)
 
 - 列出算子需要做的防呆
 
@@ -447,8 +447,3 @@ CP_TIME = 理论 OPS / 理论峰值
 10）10.31 算子入库
 
 ### 5.2 风险分析
-
-
-
-
-

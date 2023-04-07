@@ -186,7 +186,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
             c_slice = c_slice > c_rem ? c_rem : c_slice;
             c_slice_align = CEIL_ALIGN(c_slice, type_align);
             __bang_write_value(nram_ping, FOURSPLIT * c_slice_align, (T)0);
-            __asm__ volatile("sync;");
+            __sync();
             __memcpy(nram_ping,
                      offset_input + y_low * width * channels +
                          x_low * channels + channel_offset,
@@ -243,7 +243,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
               pongc_slice_align = CEIL_ALIGN(pongc_slice, type_align);
               __bang_write_value(nram_pong, FOURSPLIT * pongc_slice_align,
                                  (T)0);
-              __asm__ volatile("sync;");
+              __sync();
               if (!is_empty) {
                 __memcpy_async(nram_pong,
                                offset_input + y_low * width * channels +
@@ -283,7 +283,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
             nram_pong = nram_tmp;
             c_rem -= c_slice;
             c_offset += c_slice;
-            __asm__ volatile("sync;");
+            __sync();
           }
         }
       }
@@ -393,7 +393,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
       T *nram_ping_input = NULL;
       T *nram_pong_input = NULL;
       __bang_write_value((T *)nram_grad_output, channels_align, (T)0);
-      __asm__ volatile("sync;");
+      __sync();
 
       if (offset != NULL) {
         c_slice = nram_limit / FOURSPLIT / type_align * type_align;
@@ -403,7 +403,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
         __bang_write_value((T *)nram_sum_tmp, nram_sum_tmp_channel, (T)0);
         __bang_write_value((T *)nram_ping_input, FOURSPLIT * c_slice, (T)0);
         __bang_write_value((T *)nram_pong_input, FOURSPLIT * c_slice, (T)0);
-        __asm__ volatile("sync;");
+        __sync();
       }
       const T num_bins = static_cast<T>(
           __mluop_max(roi_bin_grid_height * roi_bin_grid_width, 1));
@@ -457,7 +457,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
                             channels_align);
           __bang_mul_scalar((T *)nram_tmp4, (T *)nram_grad_output, w4,
                             channels_align);
-          __asm__ volatile("sync;");
+          __sync();
           __bang_atomic_add(
               (T *)nram_tmp1,
               (T *)(offset_grad_input + (y_low * width + x_low) * channels +
@@ -486,7 +486,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
               c_slice_align = CEIL_ALIGN(c_slice, type_align);
               __bang_write_value(nram_ping_input, FOURSPLIT * c_slice_align,
                                  (T)0);
-              __asm__ volatile("sync;");
+              __sync();
               const T *src_offset1 = offset_input + y_low * width * channels +
                                      x_low * channels + channel_offset;
               const T *src_offset2 = offset_input + y_low * width * channels +
@@ -546,7 +546,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
                 pongc_slice_align = CEIL_ALIGN(pongc_slice, type_align);
                 __bang_write_value(nram_pong_input,
                                    FOURSPLIT * pongc_slice_align, (T)0);
-                __asm__ volatile("sync;");
+                __sync();
                 if (!is_empty) {
                   const T *src_offset1 = offset_input +
                                          y_low_tmp * width * channels +
@@ -633,7 +633,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
               nram_pong_input = nram_tmp;
               c_rem -= c_slice;
               c_offset += c_slice;
-              __asm__ volatile("sync;");
+              __sync();
             }
           }
         }
@@ -648,7 +648,7 @@ __mlu_entry__ void MLUUnion1DeformRoiPoolForward(
     const int batches, const int channels, const int height, const int width,
     const int num_rois, const int pooled_height, const int pooled_width,
     const float spatial_scale, const int sampling_ratio, const float gamma) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   MLUMultiKernelDeformRoiPoolForward(
@@ -664,7 +664,7 @@ __mlu_entry__ void MLUUnion1DeformRoiPoolBackward(
     const int channels, const int height, const int width, const int num_rois,
     const int pooled_height, const int pooled_width, const float spatial_scale,
     const int sampling_ratio, const float gamma) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   MLUMultiKernelDeformRoiPoolBackward(

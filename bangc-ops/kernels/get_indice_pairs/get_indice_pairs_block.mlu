@@ -162,7 +162,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
                      input_active_site * sizeof(int), deal_num * sizeof(int),
                      k_dhw - 1);
     }
-    __asm__ volatile("sync;\n\t");
+    __sync();
   }
 #endif
 }
@@ -246,7 +246,7 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
       __memcpy_async((char *)balance_output + gdram_offset,
                      (char *)nram_output_t, deal_num * sizeof(int), NRAM2GDRAM);
     }
-    __asm__ volatile("sync;\n\t");
+    __sync();
   }
 #endif
 }
@@ -337,7 +337,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
       __memcpy_async((char *)indice_out_t, (char *)nram_output_t,
                      load_num_l * 4 * sizeof(int32_t), NRAM2GDRAM);
     }
-    __asm__ volatile("sync;\n\t");
+    __sync();
   }
 #endif
 }
@@ -425,7 +425,7 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
                      (char *)(nram_output_t + 3 * deal_num * k_dhw),
                      deal_num * sizeof(int), NRAM2GDRAM);
     }
-    __asm__ volatile("sync;\n\t");
+    __sync();
   }
 #endif
 }

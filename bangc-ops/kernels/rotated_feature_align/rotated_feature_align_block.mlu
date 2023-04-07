@@ -235,7 +235,7 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignForward(
           __memcpy_async((T *)data_nram, cur_bboxes_next,
                          offset_rois * sizeof(T), GDRAM2NRAM);
         }
-        __asm__ volatile("sync;\n\t");
+        __sync();
       }
       // deal L1/C0 L2/C1 L3/C2 L4/C4
       for (int i = 1; i < points; i++) {
@@ -290,7 +290,7 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignForward(
           __bang_add(ping_out, ping_out, nram_ping + 3 * deal_num,
                      channels_align);
         }
-        __asm__ volatile("sync;\n\t");
+        __sync();
         swap_ptr(nram_ping, nram_pong);
       }
       // compute for last point
@@ -426,14 +426,14 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignForward(
                          offset_rois * sizeof(T), GDRAM2NRAM);
         }
       }
-      __asm__ volatile("sync;\n\t");
+      __sync();
       swap_ptr(nram_ping, nram_pong);
       swap_ptr(pong_out, ping_out);
       __memcpy_async(cur_output, pong_out, channels_num * sizeof(T),
                      NRAM2GDRAM);
     }
   }
-  __asm__ volatile("sync;\n\t");
+  __sync();
 }
 
 template <typename T>
@@ -541,7 +541,7 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
                          offset_rois * sizeof(T), GDRAM2NRAM);
         }
       }
-      __asm__ volatile("sync;\n\t");
+      __sync();
       // load next C
       if (channel_loop_index + 1 < channel_loops) {
         int channels_num_rem = channels_num;
@@ -608,7 +608,7 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
           __bang_atomic_add((T *)(nram_ping + 3 * deal_num), (T *)cur_br,
                             (T *)(nram_ping + 3 * deal_num), channels_num);
         }
-        __asm__ volatile("sync;\n\t");
+        __sync();
         swap_ptr(nram_ping, nram_pong);
       }
       // store for last point
@@ -710,12 +710,12 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
                          offset_rois * sizeof(T), GDRAM2NRAM);
         }
       }
-      __asm__ volatile("sync;\n\t");
+      __sync();
       swap_ptr(nram_ping, nram_pong);
       swap_ptr(pong_out, ping_out);
     }
   }
-  __asm__ volatile("sync;\n\t");
+  __sync();
 }
 
 void MLUOP_WIN_API KernelRotatedFeatureAlignForward(
