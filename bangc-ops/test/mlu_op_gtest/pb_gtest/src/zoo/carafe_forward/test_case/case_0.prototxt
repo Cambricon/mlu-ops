@@ -48,7 +48,7 @@ output {
   dtype: DTYPE_FLOAT
 }
 
-carafe_forward_param: {
+carafe_param: {
   dimnb: 4
   kernel_size: 5
   group_size: 1
