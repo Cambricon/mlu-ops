@@ -45,6 +45,7 @@ void __mlu_func__ computeGridMaskAndOffset(
     const int32_t &num_points, const int32_t &w_stride,
     const int32_t &qid_stride, float *grad_temp1) {
   // [num_levels, 2] --> [2, num_levels]
+#if __BANG_ARCH__ >= 372
   __bang_transpose(nram_grad_output_tl, nram_loc_w, num_deal_grid,
                    2);  // 2 * xhlp
   __bang_transpose(nram_loc_w, nram_grad_output_tl,
@@ -224,6 +225,7 @@ void __mlu_func__ computeGridMaskAndOffset(
   __bang_mul(nram_w2, nram_hh, nram_lw, num_deal_grid);
   __bang_mul(nram_w3, nram_lh, nram_hw, num_deal_grid);
   __bang_mul(nram_w4, nram_lh, nram_lw, num_deal_grid);
+#endif
 }
 
 void __mlu_func__ loadValue(
@@ -238,9 +240,10 @@ void __mlu_func__ loadValue(
     const int32_t &num_query, const int32_t &num_levels,
     const int32_t &num_points, const int32_t &grid_offset,
     const int32_t &spatial_size, const int32_t &qid_stride) {
+#if __BANG_ARCH__ >= 372
   int32_t value_offset_temp = 0;
 
-#if __BANG_ARCH__ > 590
+#if __BANG_ARCH__ >= 592
   for (int i = 0; i < num_deal_grid; ++i) {
     int32_t b_col =
         (grid_offset + i) / num_query / num_heads / num_levels / num_points;
@@ -367,6 +370,7 @@ void __mlu_func__ loadValue(
   __bang_band((char *)nram_grad_output_br, (char *)nram_grad_output_br,
               (char *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
+#endif
 }
 
 void __mlu_func__ computeGradValue(
@@ -383,6 +387,7 @@ void __mlu_func__ computeGradValue(
     float *nram_grid_offset2, const int32_t &batch, float *nram_grad_output_tl,
     float *nram_grad_output_tr, float *nram_grad_output_bl,
     float *nram_grad_output_br, float *nram_grad_weight) {
+#if __BANG_ARCH__ >= 372
   __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
   __bang_cycle_add(grad_temp1, grad_temp1, nram_grad_weight,
                    deal_num_real * num_deal_grid, num_deal_grid);
@@ -418,7 +423,7 @@ void __mlu_func__ computeGradValue(
   __bang_add(nram_offset3, nram_offset3, nram_grid_offset1, num_deal_grid);
   __bang_add(nram_offset4, nram_offset4, nram_grid_offset1, num_deal_grid);
 
-#if __BANG_ARCH__ >= 590
+#if __BANG_ARCH__ >= 592
   // make sure offset not great than (batch * spatial_size * num_heads *
   // channels)
   __bang_lt_scalar(grad_temp1, nram_offset1,
@@ -523,6 +528,7 @@ void __mlu_func__ computeGradValue(
     }
   }
 #endif
+#endif
 }
 
 void __mlu_func__ computeGradAttnWeight(
@@ -538,7 +544,7 @@ void __mlu_func__ computeGradAttnWeight(
     const int32_t &grid_offset, float *nram_h_high_temp) {
   __bang_write_zero(grad_w_weight, 2 * offset_nram);
   // grad_output_nram_tl
-
+#if __BANG_ARCH__ >= 372
   __bang_transpose(grad_weight, nram_grad_output_tl, num_deal_grid,
                    deal_num_real);
   __bang_cycle_mul(nram_grad_output_tl, grad_weight, nram_hw,
@@ -628,6 +634,7 @@ void __mlu_func__ computeGradAttnWeight(
               (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
   __bang_atomic_reduce_add((float *)grad_attn_weight + grid_offset,
                            (float *)nram_grad_output_tr, num_deal_grid);
+#endif
 }
 
 void __mlu_func__ computeGradSampingLoc(
@@ -639,6 +646,7 @@ void __mlu_func__ computeGradSampingLoc(
     const int32_t &num_heads, const int32_t &num_levels,
     const int32_t &num_points, const int32_t &grid_offset,
     float *nram_h_high_temp) {
+#if __BANG_ARCH__ >= 372
   __bang_transpose(nram_grad_output_tl, grad_h_weight,
                    num_per_time_real * num_heads * num_levels * deal_num_real,
                    num_points);  // pcxhl
@@ -705,6 +713,7 @@ void __mlu_func__ computeGradSampingLoc(
   __bang_transpose(nram_grad_output_tl, grad_w_weight, 2, num_deal_grid);
   __bang_atomic_reduce_add((float *)grad_sampling_loc + grid_offset * 2,
                            (float *)nram_grad_output_tl, 2 * num_deal_grid);
+#endif
 }
 
 __mlu_global__ void MLUUnion1KernelMsDeformAttnBackwardSmallChannelsKernel(

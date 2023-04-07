@@ -134,26 +134,26 @@ ms_deform_attn_cuda_backward(
 ### 2.2 接口设计
 ```c++
 mluOpStatus_t MLUOP_WIN_API
-mluOpsMsDeformAttnBackward(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t value_desc,
-                           const void *value,
-                           const mluOpTensorDescriptor_t spatial_shapes_desc,
-                           const void *spatial_shapes,
-                           const mluOpTensorDescriptor_t level_start_index_desc,
-                           const void *level_start_index,
-                           const mluOpTensorDescriptor_t sampling_loc_desc,
-                           const void *sampling_loc,
-                           const mluOpTensorDescriptor_t attn_weight_desc,
-                           const void *attn_weight,
-                           const mluOpTensorDescriptor_t grad_output_desc,
-                           const void *grad_output,
-                           const int32_t im2col_step,
-                           const mluOpTensorDescriptor_t grad_value_desc,
-                           void *grad_value,
-                           const mluOpTensorDescriptor_t grad_sampling_loc_desc,
-                           void *grad_sampling_loc,
-                           const mluOpTensorDescriptor_t grad_attn_weight_desc,
-                           void *grad_attn_weight);
+mluOpMsDeformAttnBackward(mluOpHandle_t handle,
+                          const mluOpTensorDescriptor_t value_desc,
+                          const void *value,
+                          const mluOpTensorDescriptor_t spatial_shapes_desc,
+                          const void *spatial_shapes,
+                          const mluOpTensorDescriptor_t level_start_index_desc,
+                          const void *level_start_index,
+                          const mluOpTensorDescriptor_t sampling_loc_desc,
+                          const void *sampling_loc,
+                          const mluOpTensorDescriptor_t attn_weight_desc,
+                          const void *attn_weight,
+                          const mluOpTensorDescriptor_t grad_output_desc,
+                          const void *grad_output,
+                          const int32_t im2col_step,
+                          const mluOpTensorDescriptor_t grad_value_desc,
+                          void *grad_value,
+                          const mluOpTensorDescriptor_t grad_sampling_loc_desc,
+                          void *grad_sampling_loc,
+                          const mluOpTensorDescriptor_t grad_attn_weight_desc,
+                          void *grad_attn_weight);
 ```
 
 ## 3 实现方案设计

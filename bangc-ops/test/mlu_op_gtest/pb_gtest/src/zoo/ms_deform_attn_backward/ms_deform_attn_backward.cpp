@@ -129,7 +129,7 @@ void MsDeformAttnBackwardExecutor::compute() {
   void *grad_attn_weight = data_vector_[8].device_ptr;
 
   interface_timer_.start();
-  MLUOP_CHECK(mluOpsMsDeformAttnBackward(
+  MLUOP_CHECK(mluOpMsDeformAttnBackward(
       handle_, value_desc, value, spatial_shapes_desc, spatial_shapes,
       level_start_index_desc, level_start_index, sampling_loc_desc,
       sampling_loc, attn_weight_desc, attn_weight, grad_output_desc,
