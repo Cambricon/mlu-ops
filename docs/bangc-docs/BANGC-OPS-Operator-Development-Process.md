@@ -147,5 +147,5 @@ kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为
 2. git add FileName                \\ 将所有修改的文件添加到 git 暂存区。
 3. git commit                      \\ 将添加到暂存区的修改提交。
 4. git pull origin master -r       \\ rebase master, 确保自己的分支领先于最新 master 分支。
-5. git push origin your_branch     \\ 将本地分支推到远程。
+5. git push origin your_branch     \\ 将本地分支推到远程, 若子仓mlu_op_test.proto有修改，先在子仓按照2～5步提交PR。
 ```
