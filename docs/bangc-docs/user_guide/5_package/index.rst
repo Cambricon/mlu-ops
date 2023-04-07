@@ -22,7 +22,7 @@ Cambricon BANGC OPS库为两种主流Linux发行版提供端侧软件包，包�
 
 - <build>：构建版本，一般为1。
 
-- <distro><id>：发行版以及版本号，如Ubuntu18.04、Ubuntu20.04，详见下文表格 `x86_64软件包`_ 与 `aarch64软件包`_。
+- <distro><id>：发行版以及版本号，如Ubuntu18.04、Ubuntu20.04，详见下文表格 `x86_64软件包`_ 。
 
 - <arch>：CPU架构，CentOS（RPM包管理）下为x86_64；Ubuntu （deb包管理）下为AMD64。
 
