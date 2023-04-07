@@ -127,6 +127,8 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
     T dy = cur_roi[4];
     T dz = cur_roi[5];
     T rz = cur_roi[6];
+    T cosa = std::cos(-rz);
+    T sina = std::sin(-rz);
 
     T dx_2 = dx / 2.0;
     T dy_2 = dy / 2.0;
@@ -153,11 +155,10 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_sub_scalar((T *)local_Z, (T *)Z, (T)cz, compute_pts_num);
       __bang_sub_scalar((T *)temp_buffer1, (T *)Z, (T)(cz + dz_2),
                         compute_pts_num);
-      __bang_active_abs((T *)temp_buffer1, (T *)temp_buffer1, compute_pts_num);
-      __bang_le_scalar((T *)nram_pts_in_flag, (T *)temp_buffer1, (T)(dz_2),
+      __bang_abs((T *)temp_buffer1, (T *)temp_buffer1, compute_pts_num);
+      __bang_gt_scalar((T *)nram_pts_in_flag, (T *)temp_buffer1, (T)(dz_2),
                        compute_pts_num);
-      T cosa = std::cos(-rz);
-      T sina = std::sin(-rz);
+      __bang_not((T *)nram_pts_in_flag, (T *)nram_pts_in_flag, compute_pts_num);
       __bang_sub_scalar((T *)temp_buffer3, (T *)X, (T)cx, compute_pts_num);
       __bang_sub_scalar((T *)temp_buffer4, (T *)Y, (T)cy, compute_pts_num);
       __bang_mul_scalar((T *)temp_buffer1, (T *)temp_buffer3, (T)cosa,
@@ -168,7 +169,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_sub((T *)local_X, (T *)temp_buffer1, (T *)temp_buffer2,
                  compute_pts_num);
       // fabs(local_x)
-      __bang_active_abs((T *)temp_buffer1, (T *)local_X, compute_pts_num);
+      __bang_abs((T *)temp_buffer1, (T *)local_X, compute_pts_num);
       // fabs(local_x) < dx/2 ? 1 : 0
       __bang_lt_scalar((T *)temp_buffer1, (T *)temp_buffer1, (T)(dx_2),
                        compute_pts_num);
@@ -184,7 +185,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_add((T *)local_Y, (T *)temp_buffer1, (T *)temp_buffer2,
                  compute_pts_num);
       // fabs(local_y)
-      __bang_active_abs((T *)temp_buffer1, (T *)local_Y, compute_pts_num);
+      __bang_abs((T *)temp_buffer1, (T *)local_Y, compute_pts_num);
       // fabs(local_y) < dy/2 ? 1 : 0
       __bang_lt_scalar((T *)temp_buffer1, (T *)temp_buffer1, (T)(dy_2),
                        compute_pts_num);
