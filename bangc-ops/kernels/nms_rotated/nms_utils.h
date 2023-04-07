@@ -46,47 +46,48 @@ __mlu_func__ void findCoreMaxBox(
     const mluMemcpyDirection_t load_dir, const int input_offset,
     const int repeat, const int remain, const int remain_pad,
     const int max_seg_pad, int &max_index) {
-  if (coreId != 0x80) {
-    for (int i = 0; i <= repeat; i++) {
-      if (i == repeat && remain == 0) {
-        break;
-      }
-      int seg_len = 0;  // the length every nms compute
-      int cpy_len = 0;  // the length every nms memcpy
-      i == repeat ? seg_len = remain_pad : seg_len = max_seg_pad;
-      // check seg_len exceeds the limit of fp16 or not.
-      // 65536 is the largest num that fp16 could express.
-      if (std::is_same<IN_DT, half>::value && seg_len >= 65536) {
-        MLULOG("seg length exceed the max num for fp16 datatype!");
-        return;
-      }
-      i == repeat ? cpy_len = remain : cpy_len = max_seg_pad;
-      /******NMS LOAD START******/
-      __bang_write_value(score, seg_len, IN_DT(-INFINITY));
-      __memcpy(score, input_score_ptr + input_offset + i * max_seg_pad,
-               cpy_len * sizeof(IN_DT), load_dir);
-
-      /******NMS LOAD END******/
-
-      __bang_max(temp, score, seg_len);
-      if (temp[0] > max_box[0]) {
-        max_box[0] = temp[0];
-        if (std::is_same<IN_DT, half>::value) {
-          max_index = ((uint16_t *)temp)[1] + input_offset +
-                      i * max_seg_pad;  // offset start from head of input_data
-        } else if (std::is_same<IN_DT, float>::value) {
-          max_index = ((uint32_t *)temp)[1] + input_offset +
-                      i * max_seg_pad;  // offset start from head of input_data
-        }
-      }
-    }  // for repeat
-    // the max box's x1, y1, x2, y2 on every core
-    max_box[1] = input_x1_ptr[max_index];
-    max_box[2] = input_y1_ptr[max_index];
-    max_box[3] = input_x2_ptr[max_index];
-    max_box[4] = input_y2_ptr[max_index];
-    ((uint32_t *)(max_box + 5))[0] = max_index;
+  if (__is_mpu()) {
+    return;
   }
+  for (int i = 0; i <= repeat; i++) {
+    if (i == repeat && remain == 0) {
+      break;
+    }
+    int seg_len = 0;  // the length every nms compute
+    int cpy_len = 0;  // the length every nms memcpy
+    i == repeat ? seg_len = remain_pad : seg_len = max_seg_pad;
+    // check seg_len exceeds the limit of fp16 or not.
+    // 65536 is the largest num that fp16 could express.
+    if (std::is_same<IN_DT, half>::value && seg_len >= 65536) {
+      MLULOG("seg length exceed the max num for fp16 datatype!");
+      return;
+    }
+    i == repeat ? cpy_len = remain : cpy_len = max_seg_pad;
+    /******NMS LOAD START******/
+    __bang_write_value(score, seg_len, IN_DT(-INFINITY));
+    __memcpy(score, input_score_ptr + input_offset + i * max_seg_pad,
+              cpy_len * sizeof(IN_DT), load_dir);
+
+    /******NMS LOAD END******/
+
+    __bang_max(temp, score, seg_len);
+    if (temp[0] > max_box[0]) {
+      max_box[0] = temp[0];
+      if (std::is_same<IN_DT, half>::value) {
+        max_index = ((uint16_t *)temp)[1] + input_offset +
+                    i * max_seg_pad;  // offset start from head of input_data
+      } else if (std::is_same<IN_DT, float>::value) {
+        max_index = ((uint32_t *)temp)[1] + input_offset +
+                    i * max_seg_pad;  // offset start from head of input_data
+      }
+    }
+  }  // for repeat
+  // the max box's x1, y1, x2, y2 on every core
+  max_box[1] = input_x1_ptr[max_index];
+  max_box[2] = input_y1_ptr[max_index];
+  max_box[3] = input_x2_ptr[max_index];
+  max_box[4] = input_y2_ptr[max_index];
+  ((uint32_t *)(max_box + 5))[0] = max_index;
 }
 
 template <typename IN_DT>

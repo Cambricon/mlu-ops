@@ -386,7 +386,7 @@ for (int32_t p_idx = points_start; p_idx < points_end; ++p_idx) {
     }
   }
 }
-__asm__ volatile("sync;");
+__sync();
 ```
 
 ### 3.2 伪代码实现

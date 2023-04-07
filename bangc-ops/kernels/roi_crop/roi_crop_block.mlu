@@ -52,7 +52,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
                                             const int grid_n, T *output,
                                             const int output_h,
                                             const int output_w) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   int align_base_128 = NFU_ALIGN_SIZE / sizeof(T);
@@ -109,7 +109,7 @@ __mlu_global__ void MLUKernelRoiCropForward(const T *input, const int batch,
       i_bl_offset = i_tl_offset + width * channel;
       i_br_offset = i_tl_offset + width * channel + channel;
       __bang_write_value(nram_ping, 4 * c_limit, 0);
-      __asm__ volatile("sync;\n\t");
+      __sync();
       if (topLeftIsIn) {
         __memcpy_async(nram_ping, input + i_tl_offset, c_slice * sizeof(T),
                        GDRAM2NRAM);
@@ -244,7 +244,7 @@ __mlu_global__ void MLUKernelRoiCropBackward(
     const T *grad_output, const int output_h, const int output_w, const T *grid,
     const int grid_n, T *grad_input, const int batch, const int height,
     const int width, const int channel) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   int align_base_128 = NFU_ALIGN_SIZE / sizeof(T);

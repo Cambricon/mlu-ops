@@ -52,7 +52,6 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
   if (__is_mpu()) {
     return;
   }
-#if __BANG_ARCH__ >= 372
   size_t block_num_per_core = 0, batch_start = 0, deal_g = 0, offset_g = 0;
   size_t block_num_rem = 0;
   const size_t grid_total = num_queries * num_heads * num_levels * num_points;
@@ -492,7 +491,6 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
     }
   }
   __sync();
-#endif
   return;
 #endif
 }

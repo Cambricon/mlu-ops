@@ -38,7 +38,7 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
  */
 __mlu_global__ void MLUUnfinishedExampleKernel(void *input, void *output,
                                                size_t element_num) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     __sync_cluster();  // this statement will causes synchronization bug
   }
   size_t per_core_num = element_num / taskDim;

@@ -116,7 +116,7 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
     const T *features, const int *__restrict__ indices, const T *weights,
     const int b, const int c, const int m, const int n, const int c_limit_size,
     const int m_limit_size, const int n_limit_size, T *output) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   int32_t align_base_128 = NFU_ALIGN_SIZE / sizeof(T);
@@ -333,7 +333,7 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
     const T *grad_output, const int *__restrict__ indices, const T *weights,
     const int b, const int c, const int m, const int n, const int c_limit_size,
     const int m_limit_size, const int n_limit_size, T *grad_features) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   int32_t align_base_128 = NFU_ALIGN_SIZE / sizeof(T);

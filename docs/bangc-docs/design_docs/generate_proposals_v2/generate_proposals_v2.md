@@ -541,7 +541,7 @@ int rem_num = per_core_num % seg_pad_2;
 // 每个cluster上每次循环计算一个batch，即每次循环生成一张图片的 proposals 。
 template <typename T>
 __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
-  if (coreId == 0x80){
+  if (__is_mpu()){
     return;
   }
 

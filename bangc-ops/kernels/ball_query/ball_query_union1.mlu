@@ -248,7 +248,7 @@ __mlu_global__ void MLUUnion1KernelBallQuery(
     const int b, const int n, const int m, const float min_radius,
     const float max_radius, const int nsample, const T *new_xyz, const T *xyz,
     int32_t *idx) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   /*

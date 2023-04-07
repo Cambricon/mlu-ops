@@ -145,7 +145,7 @@ __mlu_global__ void MLUUnion1KernelMsDeformAttnBackwardDefault(
     const int32_t num_points, float *grad_value, float *grad_sampling_loc,
     float *grad_attn_weight) {
 #if __BANG_ARCH__ != 520
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   const int32_t split_num = 8;

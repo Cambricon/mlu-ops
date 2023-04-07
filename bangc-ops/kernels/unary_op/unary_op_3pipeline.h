@@ -49,7 +49,7 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
                               int32_t offset_x_half, int32_t offset_aux_a,
                               int32_t offset_aux_b, int32_t num_deal,
                               int32_t num_pong, float coef) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   int32_t num_per_core = num_total / taskDim;
@@ -72,7 +72,7 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
   // 3 level pipeline.
   if (repeat > 0) {
     __memcpy_async(nram_x_half, addr_x, span_handle_size, GDRAM2NRAM);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   if (repeat > 1) {
@@ -80,7 +80,7 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
                    GDRAM2NRAM);
     OpFunc(nram_x, nram_x_half, nram_aux_a, nram_aux_b, num_deal, num_deal,
            coef);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   for (int i = 0; i < repeat - 2; i++) {
@@ -94,7 +94,7 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
     OpFunc(nram_x + ((i + 1) % 2) * num_pong,
            nram_x_half + ((i + 1) % 2) * num_pong, nram_aux_a, nram_aux_b,
            num_deal, num_deal, coef);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   if (repeat > 1) {
@@ -115,7 +115,7 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
            nram_x_half + ((repeat - 1) % 2) * num_pong, nram_aux_a, nram_aux_b,
            num_deal, num_deal, coef);
   }
-  __asm__ volatile("sync;");
+  __sync();
 
   if (repeat > 0) {
     pvLock();
@@ -129,7 +129,7 @@ __mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
     OpFunc(nram_x + (repeat % 2) * num_pong,
            nram_x_half + (repeat % 2) * num_pong, nram_aux_a, nram_aux_b,
            align_rem, rem, coef);
-    __asm__ volatile("sync;");
+    __sync();
 
     pvLock();
     __memcpy_async(addr_y + repeat * num_deal, nram_x + (repeat % 2) * num_pong,

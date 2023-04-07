@@ -399,7 +399,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes, T *input_boxes,
     scores_data = sram + REDUCE_NUM * coreDim;
     scores_load_dir = SRAM2NRAM;
     scores_store_dir = NRAM2SRAM;
-    if (coreId == 0x80) {
+    if (__is_mpu()) {
       __memcpy(scores_data, scores, cluster_score_size, GDRAM2SRAM);
     }
   } else {
@@ -412,7 +412,7 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes, T *input_boxes,
                           cluster_score_size) >= cluster_boxes_size) {
     boxes_load_dir = SRAM2NRAM;
     boxes_data = sram + REDUCE_NUM * coreDim + box_num;
-    if (coreId == 0x80) {
+    if (__is_mpu()) {
       __memcpy(boxes_data, input_boxes, cluster_boxes_size, GDRAM2SRAM);
     }
   }

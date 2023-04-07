@@ -59,7 +59,7 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
                                      const int32_t nram_limit,
                                      const int32_t pong_x, const int32_t pong_y,
                                      const int32_t data_num) {
-  if (coreId == 0x80) {
+  if (__is_mpu()) {
     return;
   }
   // split data by cores
@@ -84,7 +84,7 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
     // L
     __memcpy_async(nram_x, base_addr_x, span_handle_size, GDRAM2NRAM);
     __memcpy_async(nram_y, base_addr_y, span_handle_size, GDRAM2NRAM);
-    __asm__ volatile("sync;");
+    __sync();
   }
   if (repeat > 1) {
     // L
@@ -95,7 +95,7 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
     // C
     OpFunc(nram_x, nram_y, nram_aux1, nram_aux2, nram_aux3, nram_limit,
            nram_limit);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   for (int32_t i = 0; i < repeat - 2; i++) {
@@ -114,7 +114,7 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
     // C
     OpFunc(nram_x + ((i + 1) % 2) * pong_x, nram_y + ((i + 1) % 2) * pong_y,
            nram_aux1, nram_aux2, nram_aux3, nram_limit, nram_limit);
-    __asm__ volatile("sync;");
+    __sync();
   }
 
   if (repeat >= 2) {
@@ -138,7 +138,7 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
            nram_y + ((repeat - 1) % 2) * pong_y, nram_aux1, nram_aux2,
            nram_aux3, nram_limit, nram_limit);
   }
-  __asm__ volatile("sync;");
+  __sync();
 
   if (repeat > 0) {
     // S
@@ -152,7 +152,7 @@ __mlu_func__ void processBinaryPipe3(const Dtype *x, const Dtype *y, Dtype *z,
     // C
     OpFunc(nram_x + (repeat % 2) * pong_x, nram_y + (repeat % 2) * pong_y,
            nram_aux1, nram_aux2, nram_aux3, rem, align_rem);
-    __asm__ volatile("sync;");
+    __sync();
     // S
     pvLock();
     __memcpy_async(base_addr_z + repeat * nram_limit,
