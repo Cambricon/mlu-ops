@@ -16,7 +16,7 @@ This section lists contents that were made for each product release.
     - nms
     - points_in_boxes
     - roi_align_backward
-    - roialign_forward
+    - roi_align_forward
 
 * V0.5.1
 

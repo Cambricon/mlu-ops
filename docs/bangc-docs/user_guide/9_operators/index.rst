@@ -570,6 +570,12 @@ mluOpRoiAlignBackward
 ---------------------------------
 该算子是RoiAlignForward算子的反向，根据 boxes中的坐标值，使用 spatial_scale 参数进行缩放，计算出 Roi窗口的坐标、长宽。pool_mode等于0时，为Max模式的反向，按照argmax_x 和 argmax_y 的坐标，进行双线性插值，计算映射到 grad_image 上坐标点的权重，分别对grad_output加权后，累加反传梯度；pool_mode等于1时，为Avg模式的反向，根据 sampling_ratio 参数，计算每个 grad_output 需要反传梯度的采样点数，再计算每个采样点的x, y坐标，进行双线性插值，对grad_output加权、均摊，累加反传梯度。
 
+.. _roi_align_forward:
+
+mluOpRoiAlignForward
+-----------------------------
+该算子是在Mask-RCNN中提出的一种区域特征聚集的方式，该算子主要应用于FasterRCNN-Resnet101+FPN和MaskRCNN-Resnet+FPN网络。
+
 .. _roi_align_rotated_backward:
 
 mluOpRoiAlignRotatedBackward
@@ -599,12 +605,6 @@ mluOpRoiCropForward算子的反向。
 mluOpRoiCropForward
 -----------------------------
 根据感兴趣区域提取固定大小的输出特征。从输入的 grid 中提取一个 (y, x) 坐标映射参数，反映射到 input 中的 A 处得到坐标信息(Ax, Ay)，获取A点附近整数点位 top_left, top_right, bottom_left, bottom_right 四处像素值，根据 grid 中每个像素位 bin 的索引获得 output 中对应的偏移地址，最后通过双线性插值计算输出 output 的像素值。
-
-.. _roialign_forward:
-
-mluOpRoiAlignForward
------------------------------
-该算子是在Mask-RCNN中提出的一种区域特征聚集的方式，该算子主要应用于FasterRCNN-Resnet101+FPN和MaskRCNN-Resnet+FPN网络。
 
 .. _roiaware_pool3d_backward:
 
