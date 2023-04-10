@@ -32,13 +32,13 @@ std::set<Evaluator::Formula> CarafeForwardExecutor::getCriterionsUse() const {
 }
 
 void CarafeForwardExecutor::paramCheck() {
-  if (!parser_->getProtoNode()->has_carafe_forward_param()) {
+  if (!parser_->getProtoNode()->has_carafe_param()) {
     LOG(ERROR) << "Missing carafe param. ";
   }
 }
 
 void CarafeForwardExecutor::compute() {
-  auto carafe_desc_node = parser_->getProtoNode()->carafe_forward_param();
+  auto carafe_desc_node = parser_->getProtoNode()->carafe_param();
 
   int dim_num = carafe_desc_node.dimnb();
   int kernel_size = carafe_desc_node.kernel_size();
@@ -68,7 +68,7 @@ void CarafeForwardExecutor::cpuCompute() {
   assert(parser_->getInputNum() == 2);
   assert(parser_->getOutputNum() == 1);
 
-  auto carafe_desc_node = parser_->getProtoNode()->carafe_forward_param();
+  auto carafe_desc_node = parser_->getProtoNode()->carafe_param();
 
   int kernel_size = carafe_desc_node.kernel_size();
   int group_size = carafe_desc_node.group_size();
