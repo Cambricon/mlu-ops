@@ -74,7 +74,7 @@ v0.6.0
 
    * ``roi_align_backward``
 
-   * ``roialign_forward``
+   * ``roi_align_forward``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~
