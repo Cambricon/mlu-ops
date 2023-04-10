@@ -34,7 +34,6 @@
 
   **更新内容**：
 
-  - 不再支持MLU290。
   - 新增以下算子章节内容：
 
      + :ref:`active_rotated_filter_forward`
