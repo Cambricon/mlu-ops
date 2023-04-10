@@ -13,7 +13,7 @@
      + :ref:`nms`
      + :ref:`points_in_boxes`
      + :ref:`roi_align_backward`
-     + :ref:`roialign_forward`
+     + :ref:`roi_align_forward`
 
 * **V0.5.1**
 
