@@ -20,16 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <math.h>
-#include "kernels/kernel.h"
-#include "kernels/utils/common.h"
+#include "ms_deform_attn_utils.h"
 
 #pragma bang walign(64)
 
 #if (__BANG_ARCH__ >= 372)
 
-#define MEMCORE_FLAG (0x80)
-#define BIT_COLLECT_PAD (8)
 #define MAX_MEMCPY_SEGNUM (65536)
 #define NRAM_REMAIN_SIZE (48 * 1024)
 #define SRAM_REMAIN_SIZE (32 * 1024)
@@ -592,30 +588,6 @@ __mlu_func__ void loadNeighborPolationAttn(
   }
 }
 
-__mlu_func__ void broadcastSpatialHW(
-    float* spatial_offset_bd_nram,  // (num_levels, num_points)
-    float* spatial_h_bd_nram,       // (num_levels, num_points)
-    float* spatial_w_bd_nram,       // (num_levels, num_points)
-    int32_t* spatial_shapes_nram,   // (num_levels, 2)
-    int32_t* spatial_offset_nram,   // (num_levels)
-    const int32_t num_levels, const int32_t num_points) {
-  __bang_int322float((float*)spatial_shapes_nram, spatial_shapes_nram,
-                     num_levels * 2, 0);
-  __memcpy(spatial_h_bd_nram, spatial_shapes_nram, sizeof(float), NRAM2NRAM,
-           sizeof(float), num_points - 1, num_points * sizeof(float),
-           num_levels - 1, 0, num_points - 1, 2 * sizeof(float),
-           num_levels - 1);
-  __memcpy(spatial_w_bd_nram, (float*)spatial_shapes_nram + 1, sizeof(float),
-           NRAM2NRAM, sizeof(float), num_points - 1, num_points * sizeof(float),
-           num_levels - 1, 0, num_points - 1, 2 * sizeof(float),
-           num_levels - 1);
-  __bang_int322float((float*)spatial_offset_nram, spatial_offset_nram,
-                     num_levels, 0);
-  __memcpy(spatial_offset_bd_nram, spatial_offset_nram, sizeof(float),
-           NRAM2NRAM, sizeof(float), num_points - 1, num_points * sizeof(float),
-           num_levels - 1, 0, num_points - 1, sizeof(float), num_levels - 1);
-}
-
 template <typename T>
 __mlu_func__ void prepareLoop(
     T* ones_nram, int32_t* spatial_offset_nram, int32_t* spatial_hw_nram,
@@ -686,7 +658,7 @@ __mlu_func__ void loadDataValueGdram2Sram(T* value_sram, T* data_value_gdram,
   Note: buf_nram is reused in polation computing.
 */
 template <typename T>
-__mlu_func__ void memPolicy(
+__mlu_func__ void memPolicyCommon(
     T*& buf_compute_nram, T*& ones_nram, T*& value_output_nram,
     int32_t*& data_offset_nram, T*& weight_polation_nram,
     T*& cond_point_polation_nram, T*& cond_point_valid_nram, T*& loc_nram,
@@ -793,13 +765,14 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
   T* value_sram = nullptr;                 // (num_keys, channels)
   int32_t max_deal_n = 0;
   int32_t mask_size = 0;
-  memPolicy(buf_compute_nram, ones_nram, value_output_nram, data_offset_nram,
-            weight_polation_nram, cond_point_polation_nram,
-            cond_point_valid_nram, loc_nram, weight_attn_nram, buf_nram,
-            buf_nram_end, mask_x_nram, mask_y_nram, spatial_offset_bd_nram,
-            spatial_w_bd_nram, spatial_h_bd_nram, spatial_offset_nram,
-            spatial_hw_nram, value_sram, max_deal_n, mask_size, batch_size,
-            num_keys, num_heads, channels, num_levels, num_queries, num_points);
+  memPolicyCommon(buf_compute_nram, ones_nram, value_output_nram,
+                  data_offset_nram, weight_polation_nram,
+                  cond_point_polation_nram, cond_point_valid_nram, loc_nram,
+                  weight_attn_nram, buf_nram, buf_nram_end, mask_x_nram,
+                  mask_y_nram, spatial_offset_bd_nram, spatial_w_bd_nram,
+                  spatial_h_bd_nram, spatial_offset_nram, spatial_hw_nram,
+                  value_sram, max_deal_n, mask_size, batch_size, num_keys,
+                  num_heads, channels, num_levels, num_queries, num_points);
   if (max_deal_n <= 0) {
     return;
   }
@@ -851,7 +824,7 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
     }
     __sync_cluster();
 
-    if (coreId != MEMCORE_FLAG) {
+    if (__is_ipu()) {
       if (sram_stay) {
         int32_t buf_size =
             (int)((char*)buf_nram_end - (char*)value_output_nram);
@@ -881,7 +854,7 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
       }
     }
 
-    for (int32_t i = 0; coreId != MEMCORE_FLAG && i < core_loop_num; i++) {
+    for (int32_t i = 0; __is_ipu() && i < core_loop_num; i++) {
       int32_t deal_n =
           i < core_loop_num - 1 ? core_step_query : core_remain_query;
       int32_t load_n =
@@ -934,6 +907,334 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
     __sync_cluster();
   }
 }
+#endif
+
+#if (__BANG_ARCH__ == 592)
+
+/*
+  The shape of each tensor on nram:
+  spatial_offset_nram:       (num_levels)
+  spatial_hw_nram:           (num_levels, 2)
+  spatial_offset_bd_nram:    (num_levels, num_points)
+  spatial_w_bd_nram:         (num_levels, num_points)
+  spatial_h_bd_nram:         (num_levels, num_points)
+  mask_x_nram:               (deal_n, num_levels, num_points, 2) / 8
+  mask_y_nram:               (deal_n, num_levels, num_points, 2) / 8
+  data_offset_nram:          (4, deal_n, num_levels, num_points)
+  weight_polation_nram:      (4, deal_n, num_levels, num_points)
+  cond_point_polation_nram:  (4, deal_n, num_levels, num_points)
+  cond_point_valid_nram:     (deal_n, num_levels, num_points)
+  loc_nram:                  (deal_n, num_levels, num_points, 2)
+  buf_nram:                  (6, deal_n, num_levels, num_points)
+
+  The shape of each tensor on sram:
+  data_offset_nram:          (4, deal_n, num_levels, num_points)
+  weight_polation_nram:      (4, deal_n, num_levels, num_points)
+  cond_point_polation_nram:  (4, deal_n, num_levels, num_points) / 8
+  cond_point_valid_nram:     (deal_n, num_levels, num_points)
+*/
+template <typename T>
+__mlu_func__ void memPolicy590(
+    T*& zeros_nram, int32_t*& data_offset_nram, T*& weight_polation_nram,
+    T*& cond_point_polation_nram, T*& cond_point_valid_nram, T*& loc_nram,
+    T*& buf_nram, T*& buf_nram_end, int8_t*& mask_x_nram, int8_t*& mask_y_nram,
+    T*& spatial_offset_bd_nram, T*& spatial_w_bd_nram, T*& spatial_h_bd_nram,
+    int32_t*& spatial_offset_nram, int32_t*& spatial_hw_nram, T*& value_ping,
+    T*& value_pong, T*& compute_buffer, T*& weight_polation_nram_stg2,
+    T*& weight_attn_nram_stg2, int32_t*& offset_nram_stg2, T*& output_nram,
+    T*& cond_nram_stg2, int32_t*& data_offset_sram, T*& weight_polation_sram,
+    T*& weight_attn_sram, T*& cond_point_polation_sram, char* nram_buffer,
+    char* sram_buffer, int32_t& max_cached_n, int32_t& stage_1_max_deal_n,
+    int32_t& stage_2_max_deal_n, int32_t& mask_size,
+    const int32_t nram_avaliable_size, const int32_t sram_avaliable_size,
+    const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_queries,
+    const int32_t num_points) {
+  int32_t num_points_levels = num_levels * num_points;
+  int32_t spatial_info_size =
+      PAD_UP(3 * num_levels * sizeof(int32_t), WRAM_ALIGN_SIZE);
+  int32_t spatial_info_bd_size =
+      PAD_UP(3 * num_points_levels * sizeof(T), WRAM_ALIGN_SIZE);
+  int32_t zeros_size = PAD_UP(channels * sizeof(T), WRAM_ALIGN_SIZE);
+  int32_t fix_space_size = spatial_info_size + 2 * BIT_COLLECT_PAD * sizeof(T) +
+                           spatial_info_bd_size + zeros_size;
+  int32_t left_space_size = nram_avaliable_size - fix_space_size;
+  stage_1_max_deal_n = left_space_size / (20 * num_points_levels * sizeof(T));
+  int32_t total_points = stage_1_max_deal_n * num_points_levels;
+  int32_t total_coord_pad = PAD_UP(total_points * 2, BIT_COLLECT_PAD);
+  mask_size = PAD_UP(total_coord_pad / BIT_COLLECT_PAD, WRAM_ALIGN_SIZE);
+  stage_2_max_deal_n =
+      (left_space_size - 2 * mask_size) /
+      ((12 * num_points_levels * channels + 17 * num_points_levels) *
+       sizeof(T));
+  // fix nram space
+  zeros_nram = (T*)(nram_buffer);
+  spatial_offset_nram = (int32_t*)(zeros_nram + zeros_size / sizeof(T));
+  spatial_hw_nram = spatial_offset_nram + num_levels;
+  spatial_offset_bd_nram =
+      (T*)((int8_t*)spatial_offset_nram + spatial_info_size);
+  spatial_w_bd_nram = spatial_offset_bd_nram + num_points_levels;
+  spatial_h_bd_nram = spatial_w_bd_nram + num_points_levels;
+  mask_x_nram = (int8_t*)spatial_offset_bd_nram + spatial_info_bd_size;
+  mask_y_nram = mask_x_nram + mask_size;
+  // stage1 nram space
+  // 4 + 4 + 4 + 1 + 6
+  data_offset_nram = (int32_t*)(mask_y_nram + mask_size);
+  weight_polation_nram = (T*)(data_offset_nram + 4 * total_points);
+  cond_point_polation_nram = weight_polation_nram + 4 * total_points;
+  cond_point_valid_nram = cond_point_polation_nram + 4 * total_points;
+  buf_nram = cond_point_valid_nram + total_points;
+  loc_nram = buf_nram + 4 * total_points;
+  buf_nram_end = buf_nram + 6 * total_points + total_coord_pad;
+  // stage2 nram space
+  int32_t total_points_stg2 = stage_2_max_deal_n * num_points_levels;
+  cond_nram_stg2 = (T*)(mask_y_nram + mask_size);
+  value_ping = cond_nram_stg2 + 4 * total_points_stg2 + BIT_COLLECT_PAD;
+  value_pong = value_ping + 4 * total_points_stg2 * channels;
+  compute_buffer = value_pong + 4 * total_points_stg2 * channels;
+  weight_polation_nram_stg2 = compute_buffer + 4 * total_points_stg2 * channels;
+  weight_attn_nram_stg2 = weight_polation_nram_stg2 + 4 * total_points_stg2;
+  offset_nram_stg2 = (int32_t*)(weight_attn_nram_stg2 + total_points_stg2);
+  // sram space: 4 + 4 + 1 + 4
+  int32_t polation_info_size = 13 * num_points_levels * sizeof(T);
+  int32_t avg_sram_size = sram_avaliable_size / coreDim;
+  max_cached_n = avg_sram_size / polation_info_size;
+  int max_cached_points = max_cached_n * num_points_levels;
+  T* sram_buf_base = (T*)(sram_buffer + avg_sram_size * coreId);
+  data_offset_sram = (int32_t*)sram_buf_base;
+  weight_polation_sram = (T*)(data_offset_sram + 4 * max_cached_points);
+  weight_attn_sram = (T*)(weight_polation_sram + 4 * max_cached_points);
+  cond_point_polation_sram = (T*)(weight_attn_sram + max_cached_points);
+}
+
+template <typename T>
+__mlu_func__ void forwardStageTwoLoop(
+    T* value_ping_nram, T* value_pong_nram, T* compute_buffer_nram,
+    T* zeros_nram, T* weight_polation_nram_stg2, T* weight_attn_nram_stg2,
+    int32_t* offset_nram_stg2, T* output_nram, T* cond_nram_stg2,
+    int32_t* data_offset_sram, T* weight_polation_sram, T* weight_attn_sram,
+    T* cond_point_polation_sram, T* data_value_gdram, T* weight_attn_gdram,
+    T* output_gdram, const int32_t total_deal_n, const int32_t max_deal_n,
+    const int32_t input_stride_2, const int32_t input_stride_3,
+    const int32_t output_stride_2, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels,
+    const int32_t num_points) {
+  int32_t loop_num = (total_deal_n + max_deal_n - 1) / max_deal_n;
+  int32_t num_levels_points = num_levels * num_points;
+  int32_t sram_src_stride = total_deal_n * num_levels_points * sizeof(T);
+  T* value_nram[2] = {value_ping_nram, value_pong_nram};
+  int32_t* offset_zero_nram_stg2 =
+      offset_nram_stg2 + 4 * max_deal_n * num_levels_points;
+  for (int32_t i = 0; i < loop_num + 1; i++) {
+    int32_t compute_idx = i - 1;
+    int32_t compute_offset = compute_idx * max_deal_n;
+    int32_t load_n = std::min(total_deal_n - i * max_deal_n, max_deal_n);
+    int32_t compute_n =
+        std::min(total_deal_n - compute_idx * max_deal_n, max_deal_n);
+    int32_t load_point_num = 4 * load_n * num_levels_points;
+    int32_t nq_nlp_4 = compute_n * num_levels_points * 4;
+    int32_t nq_nlp = compute_n * num_levels_points;
+
+    int32_t total_point_pad_8 = PAD_UP(load_point_num, BIT_COLLECT_PAD);
+    int32_t gather_mask_size = total_point_pad_8 / BIT_COLLECT_PAD;
+    T* v_compute = value_nram[compute_idx % 2];
+    T* v_load = value_nram[i % 2];
+    int8_t* cond_nram_stg2_reverse = (int8_t*)cond_nram_stg2 + gather_mask_size;
+
+    if (i > 0) {
+      int32_t copy_size_1 = compute_n * num_levels_points * sizeof(T);
+      int32_t sram_src_offset = compute_idx * max_deal_n * num_levels_points;
+      __memcpy_async(weight_polation_nram_stg2,
+                     weight_polation_sram + sram_src_offset, copy_size_1,
+                     SRAM2NRAM, copy_size_1, sram_src_stride, 3);
+      __memcpy_async(weight_attn_nram_stg2, weight_attn_sram + sram_src_offset,
+                     copy_size_1, SRAM2NRAM);
+    }
+
+    if (i < loop_num) {
+      int32_t copy_size_1 = load_n * num_levels_points * sizeof(T);
+      int32_t copy_size_2 = load_n * num_levels_points * sizeof(int32_t);
+      int32_t sram_src_offset = i * max_deal_n * num_levels_points;
+      __memcpy_async(offset_nram_stg2, data_offset_sram + sram_src_offset,
+                     copy_size_2, SRAM2NRAM, copy_size_2, sram_src_stride, 3);
+      __memcpy_async(cond_nram_stg2, cond_point_polation_sram + sram_src_offset,
+                     copy_size_1, SRAM2NRAM, copy_size_1, sram_src_stride, 3);
+      __bang_write_value(compute_buffer_nram, load_point_num, (T)0);
+      __bang_write_value(offset_zero_nram_stg2, load_point_num, (int32_t)0);
+      __sync_move();
+      __bang_gt_bitindex(cond_nram_stg2, cond_nram_stg2, compute_buffer_nram,
+                         total_point_pad_8);
+      __bang_bnot((char*)cond_nram_stg2_reverse, (char*)cond_nram_stg2,
+                  gather_mask_size);
+    }
+
+    __sync_io_move_compute();
+
+    if (i < loop_num) {
+      gatherAsync(v_load, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
+                  cond_nram_stg2_reverse, channels * sizeof(T), NRAM2NRAM,
+                  channels * sizeof(T), load_point_num);
+      gatherAsync(v_load, data_value_gdram, (unsigned int*)offset_nram_stg2,
+                  cond_nram_stg2, channels * sizeof(T), GDRAM2NRAM,
+                  channels * sizeof(T), load_point_num);
+    }
+
+    if (i > 0) {
+      __bang_transpose(compute_buffer_nram, v_compute, nq_nlp_4, channels);
+      __bang_cycle_mul(compute_buffer_nram, compute_buffer_nram,
+                       weight_polation_nram_stg2, channels * nq_nlp_4,
+                       nq_nlp_4);
+      __bang_sumpool(v_compute, compute_buffer_nram, nq_nlp, channels, 4, 1, 4,
+                     1, 1);
+      __bang_cycle_mul(v_compute, v_compute, weight_attn_nram_stg2,
+                       channels * nq_nlp, nq_nlp);
+      __bang_transpose(compute_buffer_nram, v_compute, channels, nq_nlp);
+      __bang_sumpool(v_compute, compute_buffer_nram, channels, compute_n,
+                     num_levels_points, 1, num_levels_points, 1, 1);
+      __memcpy(output_gdram + compute_offset * output_stride_2, v_compute,
+               channels * sizeof(T), NRAM2GDRAM, output_stride_2 * sizeof(T),
+               channels * sizeof(T), compute_n - 1);
+    }
+    __sync_io_move_compute();
+  }
+}
+
+// only for 590
+template <typename T>
+__mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
+    const char* data_value_gdram, const char* data_spatial_shapes_gdram,
+    const char* data_level_start_index_gdram,
+    const char* data_sampling_loc_gdram, const char* data_attn_weight_gdram,
+    const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_queries,
+    const int32_t num_points, char* data_col_gdram) {
+  int32_t input_stride_4 = num_queries * num_heads * num_levels * num_points;
+  int32_t input_stride_3 = num_heads * num_levels * num_points;
+  int32_t input_stride_2 = num_levels * num_points;
+  int32_t output_stride_3 = num_queries * num_heads * channels;
+  int32_t output_stride_2 = num_heads * channels;
+  int32_t data_value_stride_3 = num_keys * num_heads * channels;
+
+  T* zeros_nram = nullptr;                // (channels)
+  int32_t* data_offset_nram = nullptr;    // (4, deal_n, num_levels, num_points)
+  T* weight_polation_nram = nullptr;      // (4, deal_n, num_levels, num_points)
+  T* cond_point_polation_nram = nullptr;  // (4, deal_n, num_levels, num_points)
+  T* cond_point_valid_nram = nullptr;     // (deal_n, num_levels, num_points)
+  T* loc_nram = nullptr;                  // (deal_n, num_levels, num_points, 2)
+  T* buf_nram = nullptr;                  // (6, deal_n, num_levels, num_points)
+  T* buf_nram_end = nullptr;
+  int8_t* mask_x_nram = nullptr;  // (deal_n, num_levels, num_points, 2) / 8
+  int8_t* mask_y_nram = nullptr;  // (deal_n, num_levels, num_points, 2) / 8
+  T* spatial_offset_bd_nram = nullptr;     // (num_levels, num_points)
+  T* spatial_w_bd_nram = nullptr;          // (num_levels, num_points)
+  T* spatial_h_bd_nram = nullptr;          // (num_levels, num_points)
+  int32_t* spatial_offset_nram = nullptr;  // (num_levels)
+  int32_t* spatial_hw_nram = nullptr;      // (num_levels, 2)
+  T* value_ping_nram = nullptr;  // (deal_n, num_levels, num_points, channels)
+  T* value_pong_nram = nullptr;  // (deal_n, num_levels, num_points, channels)
+  T* compute_buffer_nram =
+      nullptr;  // (deal_n, num_levels, num_points, channels)
+  T* weight_polation_nram_stg2 =
+      nullptr;                          // (4, deal_n, num_levels, num_points)
+  T* weight_attn_nram_stg2 = nullptr;   // (1, deal_n, num_levels, num_points)
+  int32_t* offset_nram_stg2 = nullptr;  // (4, deal_n, num_levels, num_points)
+  T* output_nram = nullptr;             // (deal_n, channels)
+  T* cond_nram_stg2 = nullptr;          // (4, deal_n, num_levels, num_points)
+  T* value_sram = nullptr;              // (num_keys, channels)
+  int32_t* data_offset_sram = nullptr;
+  T* weight_polation_sram = nullptr;
+  T* wegith_attn_sram = nullptr;
+  T* cond_point_polation_sram = nullptr;
+  int32_t stage_1_max_deal_n = 0;
+  int32_t stage_2_max_deal_n = 0;
+  int32_t max_cached_n = 0;
+  int32_t mask_size = 0;
+  memPolicy590(
+      zeros_nram, data_offset_nram, weight_polation_nram,
+      cond_point_polation_nram, cond_point_valid_nram, loc_nram, buf_nram,
+      buf_nram_end, mask_x_nram, mask_y_nram, spatial_offset_bd_nram,
+      spatial_w_bd_nram, spatial_h_bd_nram, spatial_offset_nram,
+      spatial_hw_nram, value_ping_nram, value_pong_nram, compute_buffer_nram,
+      weight_polation_nram_stg2, weight_attn_nram_stg2, offset_nram_stg2,
+      output_nram, cond_nram_stg2, data_offset_sram, weight_polation_sram,
+      wegith_attn_sram, cond_point_polation_sram, nram_buffer, sram_buffer,
+      max_cached_n, stage_1_max_deal_n, stage_2_max_deal_n, mask_size,
+      NRAM_AVALIABLE_SIZE, SRAM_AVALIABLE_SIZE, batch_size, num_keys, num_heads,
+      channels, num_levels, num_queries, num_points);
+  if (stage_1_max_deal_n <= 0 || stage_2_max_deal_n <= 0) {
+    return;
+  }
+
+  int32_t cluster_begin_batch_head = 0;
+  int32_t cluster_act_batch_head = 0;
+  int32_t cluster_end_batch_head = 0;
+  int32_t core_begin_query = 0;
+  int32_t core_act_query = 0;
+  int32_t core_loop_num = 0;
+  int32_t core_step_query = 0;
+  splitTaskV2(cluster_begin_batch_head, cluster_act_batch_head,
+              cluster_end_batch_head, core_begin_query, core_act_query,
+              core_loop_num, core_step_query, max_cached_n, batch_size,
+              num_keys, num_heads, channels, num_levels, num_queries,
+              num_points);
+
+  prepareLoopV2((int32_t*)nullptr, zeros_nram, spatial_offset_nram,
+                spatial_hw_nram, mask_x_nram, mask_y_nram,
+                spatial_offset_bd_nram, spatial_h_bd_nram, spatial_w_bd_nram,
+                value_sram, data_level_start_index_gdram,
+                data_spatial_shapes_gdram, num_keys, num_levels, num_points,
+                stage_1_max_deal_n, mask_size, channels);
+
+  for (int32_t bh_idx = cluster_begin_batch_head;
+       bh_idx < cluster_end_batch_head; bh_idx++) {
+    int32_t b = bh_idx / num_heads;
+    int32_t head_idx = bh_idx % num_heads;
+    size_t output_base_offset =
+        (size_t)b * output_stride_3 + head_idx * channels;
+    size_t attn_weight_base_offset =
+        (size_t)b * input_stride_4 + head_idx * input_stride_2;
+    size_t data_value_base_offset =
+        (size_t)b * data_value_stride_3 + head_idx * channels;
+
+    for (int32_t i = 0; __is_ipu() && i < core_loop_num; i++) {
+      int32_t deal_n =
+          std::min(core_act_query - core_step_query * i, core_step_query);
+      int32_t core_query_offset = i * core_step_query;
+      size_t attn_weight_offset =
+          attn_weight_base_offset +
+          (core_begin_query + core_query_offset) * input_stride_3;
+      size_t loc_offset = attn_weight_offset * 2;
+      size_t output_offset =
+          output_base_offset +
+          (core_begin_query + i * core_step_query) * output_stride_2;
+
+      // compute offset/cond/wp
+      stageOneLoop((T*)data_sampling_loc_gdram + loc_offset,
+                   (T*)data_attn_weight_gdram + attn_weight_offset,
+                   data_offset_nram, nullptr, weight_polation_nram,
+                   cond_point_polation_nram, cond_point_valid_nram, loc_nram,
+                   buf_nram, buf_nram_end, mask_x_nram, mask_y_nram,
+                   spatial_offset_bd_nram, spatial_w_bd_nram, spatial_h_bd_nram,
+                   spatial_offset_nram, spatial_hw_nram, data_offset_sram,
+                   nullptr, weight_polation_sram, wegith_attn_sram,
+                   cond_point_polation_sram, false, false, deal_n,
+                   stage_1_max_deal_n, num_heads, channels, num_levels,
+                   num_points, input_stride_2, input_stride_3);
+
+      // compute and store output
+      forwardStageTwoLoop(
+          value_ping_nram, value_pong_nram, compute_buffer_nram, zeros_nram,
+          weight_polation_nram_stg2, weight_attn_nram_stg2, offset_nram_stg2,
+          output_nram, cond_nram_stg2, data_offset_sram, weight_polation_sram,
+          wegith_attn_sram, cond_point_polation_sram,
+          (T*)data_value_gdram + data_value_base_offset,
+          (T*)data_attn_weight_gdram + attn_weight_offset,
+          (T*)data_col_gdram + output_offset, deal_n, stage_2_max_deal_n,
+          input_stride_2, input_stride_3, output_stride_2, num_heads, channels,
+          num_levels, num_points);
+    }
+  }
+}
 
 #endif
 
@@ -945,7 +1246,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardFast(
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
     const int32_t num_points, char* data_col_gdram) {
-#if (__BANG_ARCH__ >= 372)
+#if (__BANG_ARCH__ == 372)
   size_t single_value_size = num_keys * channels * sizeof(T);
   if (single_value_size <= SRAM_FOR_VALUE_SIZE) {
     MLUKernelMsDeformAttnForwardFastImpl<float, 0>(
@@ -960,6 +1261,13 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardFast(
         data_attn_weight_gdram, batch_size, num_keys, num_heads, channels,
         num_levels, num_queries, num_points, data_col_gdram);
   }
+#endif
+
+#if (__BANG_ARCH__ == 592)
+  MLUKernelMsDeformAttnForwardFastImpl<float>(
+      data_value_gdram, data_spatial_shapes_gdram, data_level_start_index_gdram,
+      data_sampling_loc_gdram, data_attn_weight_gdram, batch_size, num_keys,
+      num_heads, channels, num_levels, num_queries, num_points, data_col_gdram);
 #endif
 }
 

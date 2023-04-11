@@ -26,6 +26,9 @@
 
 #include "mlu_op.h"
 
+#define FAST_KERNEL_MAX_NLP   (128)
+#define FAST_KERNEL_MAX_NLPC  (16384)
+
 void MLUOP_WIN_API KernelMsDeformAttnBackwardSmallChannels(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *data_value, const int32_t *spatial_shapes,
@@ -37,6 +40,16 @@ void MLUOP_WIN_API KernelMsDeformAttnBackwardSmallChannels(
     float *grad_attn_weight);
 
 void MLUOP_WIN_API KernelMsDeformAttnBackwardDefault(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float *data_value, const int32_t *spatial_shapes,
+    const int32_t *data_level_start_index, const float *data_sampling_loc,
+    const float *data_attn_weight, const float *grad_output,
+    const int32_t batch, const int32_t spatial_size, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_query,
+    const int32_t num_points, float *grad_value, float *grad_sampling_loc,
+    float *grad_attn_weight);
+
+void MLUOP_WIN_API KernelMsDeformAttnBackwardFast(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *data_value, const int32_t *spatial_shapes,
     const int32_t *data_level_start_index, const float *data_sampling_loc,
