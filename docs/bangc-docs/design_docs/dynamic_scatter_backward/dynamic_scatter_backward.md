@@ -305,42 +305,41 @@ for (int i = 0; i < n; i ++) {
 // 根据nram_size拆解算出一次每个core能处理的c的数量记作n
 int n_start = 0;
 while (n_start < N) {
-int real_n = 0;
-int *offset_real_nram;
-
-// laod data
-for (int i = n_start; i < N; i ++) {
-  int offset = offset_nram[i];
-  if (taskId == offset in % taskDim) {
-    if (offset != -1) {
-      __memcpy_async(result_nram + real_n * c, result_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
-      __memcpy_async(feats_nram + real_n * c, feats_gdram + i * c, c *sizeof(T), GDRAM2NRAM);
-      __memcpy_async(reduce_feats_nram + real_n * c, reduce_feats_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
-      __bang_write_value(index_mask + real_n * c, c, i);
-      offset_real_nram[real_n] = offset;
-      real_n++;
+  int real_n = 0;
+  int *offset_real_nram;
+  // laod data
+  for (int i = n_start; i < N; i ++) {
+    int offset = offset_nram[i];
+    if (taskId == offset in % taskDim) {
+      if (offset != -1) {
+        __memcpy_async(result_nram + real_n * c, result_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
+        __memcpy_async(feats_nram + real_n * c, feats_gdram + i * c, c *sizeof(T), GDRAM2NRAM);
+        __memcpy_async(reduce_feats_nram + real_n * c, reduce_feats_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
+        __bang_write_value(index_mask + real_n * c, c, i);
+        offset_real_nram[real_n] = offset;
+        real_n++;
+      }
+      
     }
-    
+    if (real_n == n) break;
   }
-  if (real_n == n) break;
-}
-__sync_io();
-
-// compute
-__bang_equal(value_mask, reduce_feats_nram, feats_nram, n * c);
-__bang_not(tmp_mask, value_mask, n * c);
-__bang_mul(value_mask, value_mask, index_mask, n * c);
-__bang_mul_saclar(tmp_mask, tmp_mask, Batch, n * c);
-__bang_add(value_mask, value_mask, tmp_mask, n * c);
-__bang_minimum(result_nram, result_nram, value_mask, n * c);
-
-// store
-for (int i = 0; i < real_n; i++) {
-  int offset = offset_real_nram[i];
-  __memcpy_async(result_nram_gdram + offset * c, result_nram + i * c, c * sizeof(T), NRAM2GDRAM);
-}
-__sync_io();
-n_start += real_n;
+  __sync_io();
+  
+  // compute
+  __bang_equal(value_mask, reduce_feats_nram, feats_nram, n * c);
+  __bang_not(tmp_mask, value_mask, n * c);
+  __bang_mul(value_mask, value_mask, index_mask, n * c);
+  __bang_mul_saclar(tmp_mask, tmp_mask, Batch, n * c);
+  __bang_add(value_mask, value_mask, tmp_mask, n * c);
+  __bang_minimum(result_nram, result_nram, value_mask, n * c);
+  
+  // store
+  for (int i = 0; i < real_n; i++) {
+    int offset = offset_real_nram[i];
+    __memcpy_async(result_nram_gdram + offset * c, result_nram + i * c, c * sizeof(T), NRAM2GDRAM);
+  }
+  __sync_io();
+  n_start += real_n;
 }
 //kernel 2
 
