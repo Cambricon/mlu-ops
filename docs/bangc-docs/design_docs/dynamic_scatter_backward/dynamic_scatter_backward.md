@@ -161,6 +161,7 @@ mluOpGetDynamicScatterBackwardWorkspaceSize(const mluOpHandle_t handle,
 
 max模式有两个kernel
 kernel1：
+阶段一：计算offset  捞数
 1.生成 0 - x 的 index 向量保存至 index_nram
 2.将 index_nram 中每个index连续扩充C倍，保存至 index_mask_nram
 3.根据输入的point2voxel_map取出对应的offset向量
@@ -168,14 +169,137 @@ kernel1：
 5.生成mask2 在feats[i] != voxel_feats[i]位置标志为 1
 6.mask1，mask2做或操作生成mask3，mask3 做非操作生成mask4
 7.tmp = mask3 * input_num +  mask4 * (index_mask_nram + i)
-8.tmp与相应的 output_gdram 做atomicMin操作
+
+阶段二：做min比较，写数
+方案一：
+tmp直接与相应的 output_gdram 做atomicMin操作
+方案二：
+申请batch * sizeof(bool)的共享内存is_occupy， 初始赋值false
+根据index写值时，先判端 is_occupy[offset[index]]是否为false，是的话将值写为true将对应的gdram value load到片上，
+作bang_min,然后写会gdram，最后将is_occupy[offset[index]]写为true
+1Union1任务 is_occupy用sram申请， UnionX任务用gram申请
 
 kernel2：
-输入的grad_voxel_feats根据kernel1输出的index结果把相应的value copy到对应的位置
+输入的grad_voxel_feats根据kernel1输出的index结果把相应的value copy到对应的位置：VAA实现
 
 
 
 ### 3.2 伪代码实现（可选）
+cuda源码
+
+```c++
+//kernel1：
+template <typename T>
+__global__ void max_reduce_traceback_scatter_idx_kernel(
+    const T *feats, const T *reduced_feats, int32_t *reduce_from,
+    const int32_t *coors_map, const int num_input, const int num_feats) {
+  CUDA_1D_KERNEL_LOOP(x, num_input) {
+    int32_t reduce_to = coors_map[x];
+
+    const int input_offset = x * num_feats;
+    const T *feats_offset = feats + input_offset;
+
+    if (reduce_to == -1) {
+      continue;
+    }
+
+    const int reduced_offset = reduce_to * num_feats;
+    const T *reduced_feats_offset = reduced_feats + reduced_offset;
+    int32_t *reduce_from_offset = reduce_from + reduced_offset;
+
+    for (int i = 0; i < num_feats; i++) {
+      if (feats_offset[i] == reduced_feats_offset[i]) {
+        atomicMin(&reduce_from_offset[i], static_cast<int32_t>(x));
+      }
+    }
+  }
+}
+
+//kernel2
+template <typename T>
+__global__ void max_reduce_scatter_grad_kernel(T *grad_feats,
+                                               const T *grad_reduced_feats,
+                                               const int32_t *reduce_from,
+                                               const int num_reduced,
+                                               const int num_feats) {
+  CUDA_1D_KERNEL_LOOP(x, num_reduced) {
+    const int reduced_offset = x * num_feats;
+    const int32_t *scatter_to_offset = reduce_from + reduced_offset;
+    const T *grad_reduced_feats_offset = grad_reduced_feats + reduced_offset;
+
+    for (int i = 0; i < num_feats; i++) {
+      grad_feats[scatter_to_offset[i] * num_feats + i] =
+          grad_reduced_feats_offset[i];
+    }
+  }
+}
+```
+mlu实现
+
+```c++
+// kernel1
+// 每次loop可以处理 n 个 c
+// 生成index mask， 只需要生成一次
+for (int i = 0; i < n, n++) {
+    __bang_write_value(index_mask + i * c; c, i);
+}
+
+//loop
+__memcpy(reduce_offset, coors_map + n_start, n * sizeof(int), GDRAM2NRAM);
+//load reduce_feats
+int index_offset = reduce_offset[0];
+int ddr_offset = reduce_offset[0] * c;
+
+// get mask
+__memcpy_async(feats_nram, feats_gdram + n_start * c, n * c * sizeof(T), GDRAM2NRAM);
+for (int i = 0; i < n; i ++) {
+    if (reduce_offset[i] != -1) {
+      __memcpy_async(reduce_feats_nram + i * c, reduce_feats_gdram + reduce_offset[i] * c, c * sizeof(T), GRRAM2NRAM);
+    }
+}
+__sync_io();
+__bang_equal(value_mask, reduce_feats_nram, feats_nram, n * c);
+__bang_not(tmp_mask, value_mask, n * c);
+__bang_mul(value_mask, value_mask, index_mask, n * c);
+__bang_mul_saclar(tmp_mask, tmp_mask, Batch, n * c);
+__bang_add(value_mask, value_mask, tmp_mask, n * c);
+
+bool is_go_lcoal = false;
+for (int i = 0; i < n; i ++) {
+    if (offset > 0) {
+        if (is_occupy[index_offset] == false) {
+          pvLock();
+          is_occupy[index_offset] == true;
+          pvUnlock();
+        }
+        while(1) {
+            pvLock();
+            if (is_occupy[index_offset] == false) {
+              is_occupy[index_offset] = true;
+              is_go_lcoal = true;
+            }
+            pvUnlock();
+            if (is_go_lcoal) {
+              __memcpy(result_nram, result_gdram + ddr_offset, c * sizeof(T), GDRAM2NRAM);
+              __bang_minimum(result_nram, result_nram, value_mask + i * c, c);
+              __memcpy(result_gdram + ddr_offset, result_nram, c * sizeof(T), NRAM2GDRAM);
+              is_occupy[index_offset] == false;
+              is_go_lcoal = false;
+              break;
+            }
+          }
+        }
+    if (i < n - 1) {
+        index_offset = reduce_offset[i + 1];
+        ddr_offset = reduce_offset[i + 1] * c;
+    }
+}
+
+//kernel 2
+
+
+```
+
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
