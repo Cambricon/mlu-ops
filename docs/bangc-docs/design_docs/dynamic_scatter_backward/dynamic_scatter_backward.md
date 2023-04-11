@@ -303,12 +303,14 @@ for (int i = 0; i < n; i ++) {
 // 考虑先将所有的offset load sram上，然后广播到每个ipu core的nram上，
 // 根据网络拆解下来的数规模 offset的size为 17176 * sizeof(int), 大约68k
 // 根据nram_size拆解算出一次每个core能处理的c的数量记作n
+int n_start = 0;
+while (n_start < N) {
 int real_n = 0;
 int *offset_real_nram;
 
 // laod data
-for (int i = 0; i < N; i ++) {
-  int offset = offset_nram[i + n_start];
+for (int i = n_start; i < N; i ++) {
+  int offset = offset_nram[i];
   if (taskId == offset in % taskDim) {
     if (offset != -1) {
       __memcpy_async(result_nram + real_n * c, result_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
@@ -333,12 +335,13 @@ __bang_add(value_mask, value_mask, tmp_mask, n * c);
 __bang_minimum(result_nram, result_nram, value_mask, n * c);
 
 // store
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < real_n; i++) {
   int offset = offset_real_nram[i];
   __memcpy_async(result_nram_gdram + offset * c, result_nram + i * c, c * sizeof(T), NRAM2GDRAM);
 }
 __sync_io();
-
+n_start += real_n;
+}
 //kernel 2
 
 
