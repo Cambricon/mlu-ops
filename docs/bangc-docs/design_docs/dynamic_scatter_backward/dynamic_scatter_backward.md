@@ -178,6 +178,8 @@ tmp直接与相应的 output_gdram 做atomicMin操作
 根据index写值时，先判端 is_occupy[offset[index]]是否为false，是的话将值写为true将对应的gdram value load到片上，
 作bang_min,然后写会gdram，最后将is_occupy[offset[index]]写为true
 1Union1任务 is_occupy用sram申请， UnionX任务用gram申请
+方案三：
+根据 taskId == offset % taskDim 保证每个core分到不同的offset
 
 kernel2：
 输入的grad_voxel_feats根据kernel1输出的index结果把相应的value copy到对应的位置：VAA实现
@@ -240,6 +242,8 @@ mlu实现
 // kernel1
 // 每次loop可以处理 n 个 c
 // 生成index mask， 只需要生成一次
+
+//方案二：
 for (int i = 0; i < n, n++) {
     __bang_write_value(index_mask + i * c; c, i);
 }
@@ -294,6 +298,46 @@ for (int i = 0; i < n; i ++) {
         ddr_offset = reduce_offset[i + 1] * c;
     }
 }
+
+//方案三：
+// 考虑先将所有的offset load sram上，然后广播到每个ipu core的nram上，
+// 根据网络拆解下来的数规模 offset的size为 17176 * sizeof(int), 大约68k
+// 根据nram_size拆解算出一次每个core能处理的c的数量记作n
+int real_n = 0;
+int *offset_real_nram;
+
+// laod data
+for (int i = 0; i < N; i ++) {
+  int offset = offset_nram[i + n_start];
+  if (taskId == offset in % taskDim) {
+    if (offset != -1) {
+      __memcpy_async(result_nram + real_n * c, result_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
+      __memcpy_async(feats_nram + real_n * c, feats_gdram + i * c, c *sizeof(T), GDRAM2NRAM);
+      __memcpy_async(reduce_feats_nram + real_n * c, reduce_feats_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
+      __bang_write_value(index_mask + real_n * c, c, i);
+      offset_real_nram[real_n] = offset;
+      real_n++;
+    }
+    
+  }
+  if (real_n == n) break;
+}
+__sync_io();
+
+// compute
+__bang_equal(value_mask, reduce_feats_nram, feats_nram, n * c);
+__bang_not(tmp_mask, value_mask, n * c);
+__bang_mul(value_mask, value_mask, index_mask, n * c);
+__bang_mul_saclar(tmp_mask, tmp_mask, Batch, n * c);
+__bang_add(value_mask, value_mask, tmp_mask, n * c);
+__bang_minimum(result_nram, result_nram, value_mask, n * c);
+
+// store
+for (int i = 0; i < n; i++) {
+  int offset = offset_real_nram[i];
+  __memcpy_async(result_nram_gdram + offset * c, result_nram + i * c, c * sizeof(T), NRAM2GDRAM);
+}
+__sync_io();
 
 //kernel 2
 
