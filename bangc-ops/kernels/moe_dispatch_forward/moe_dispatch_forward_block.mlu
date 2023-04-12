@@ -26,6 +26,7 @@
 #include "kernels/kernel.h"
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
+#include "core/logging.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -157,7 +158,7 @@ void MLUOP_WIN_API KernelMoeDispatchForward(
           samples, capacity, hidden, num_experts, (half *)dispatch);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

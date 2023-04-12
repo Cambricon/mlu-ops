@@ -25,6 +25,7 @@
 #include <algorithm>
 #include "kernels/utils/common.h"
 #include "kernels/debug.h"
+#include "core/logging.h"
 
 __nram__ char nram_buf[MAX_NRAM_SIZE];
 
@@ -465,7 +466,7 @@ void MLUOP_WIN_API KernelCarafeForward(
           grid_dimG, grid_dimC);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -489,7 +490,7 @@ void MLUOP_WIN_API KernelCarafeBackward(
           (half *)grad_mask, n, hi, wi, c, k_up, group, scale);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

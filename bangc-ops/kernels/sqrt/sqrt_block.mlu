@@ -26,6 +26,7 @@
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
 #include "kernels/debug.h"
+#include "core/logging.h"
 
 #define SQRT_HIGH_BOUND 1e4
 #define SQRT_SCALE 1e-6
@@ -243,7 +244,7 @@ void MLUOP_WIN_API Kernel3StagePipelineSqrt(
       }
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -268,7 +269,7 @@ void MLUOP_WIN_API Kernel5StagePipelineSqrt(
       }
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -290,7 +291,7 @@ void MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
           (void *)y, (void *)diff_y, (void *)x, num);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

@@ -24,6 +24,7 @@
 
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
+#include "core/logging.h"
 
 #define SEG_NUM 10
 #define BBOXES_ALIGN 64
@@ -736,7 +737,7 @@ void MLUOP_WIN_API KernelRotatedFeatureAlignForward(
           offset_rois, (half)spatial_scale, points, (half *)output);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -760,7 +761,7 @@ void MLUOP_WIN_API KernelRotatedFeatureAlignBackward(
           offset_rois, (half)spatial_scale, points, (half *)bottom_input);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

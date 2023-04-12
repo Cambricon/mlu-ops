@@ -26,6 +26,7 @@
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
 #include "mlu.h"
+#include "core/logging.h"
 
 #define ALIGN_SIZE NFU_ALIGN_SIZE
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -311,7 +312,7 @@ void MLUOP_WIN_API KernelBboxOverlaps(
           mode, aligned, offset);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
