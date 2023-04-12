@@ -12518,6 +12518,17 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t data_col_desc,
                          void *data_col);
 
+mluOpStatus_t MLUOP_WIN_API
+mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
+                                       const mluOpTensorDescriptor_t vertices_desc,
+                                       const void *vertices,
+                                       const mluOpTensorDescriptor_t mask_desc,
+                                       const void *mask,
+                                       const mluOpTensorDescriptor_t num_valid_desc,
+                                       const void *num_valid,
+                                       const mluOpTensorDescriptor_t idx_desc,
+                                       void *idx);
+
 #if defined(__cplusplus)
 }
 #endif

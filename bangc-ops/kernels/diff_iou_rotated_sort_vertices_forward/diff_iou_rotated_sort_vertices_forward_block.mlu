@@ -1,0 +1,368 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subh_iterect to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "diff_iou_rotated_sort_vertices_forward.h"
+
+#include "kernels/kernel.h"
+#include "kernels/debug.h"
+#include "kernels/utils/common.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+#if __BANG_ARCH__ >= 372
+template <typename T>
+static __mlu_func__ void load(const T *addr_vertices, const bool *addr_mask,
+                              const int *addr_num_valid, char *nram_vertices,
+                              char *nram_mask, char *nram_num_valid,
+                              const int dim_m, const int deal_num,
+                              const int pingpong_offset, const int pi) {
+  int offset = (pi % 2) * pingpong_offset;
+  T *nram_vertices_p = (T *)(nram_vertices + offset);
+  bool *nram_mask_p = (bool *)(nram_mask + offset);
+  int *nram_num_valid_p = (int *)(nram_num_valid + offset);
+
+  int deal_mask_num = deal_num * dim_m;
+  int deal_vertices_num = deal_num * dim_m * 2;
+
+  __memcpy_async(nram_vertices_p, addr_vertices, deal_vertices_num * sizeof(T),
+                 GDRAM2NRAM);
+  __memcpy_async(nram_mask_p, addr_mask, deal_mask_num * sizeof(bool),
+                 GDRAM2NRAM);
+  __memcpy_async(nram_num_valid_p, addr_num_valid, deal_num * sizeof(int),
+                 GDRAM2NRAM);
+}
+
+template <typename T>
+static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
+                                    int deal_num) {
+  if (sizeof(T) == sizeof(float)) {
+#if (__BANG_ARCH__ != 372)
+    __bang_div((float *)nram_dst, (float *)nram_src0, (float *)nram_src1,
+               deal_num);
+#else
+    __bang_recip((float *)nram_dst, (float *)nram_src1, deal_num);
+    __bang_mul((float *)nram_dst, (float *)nram_src0, (float *)nram_dst,
+               deal_num);
+#endif
+  }
+}
+
+template <typename T>
+static __mlu_func__ void compute_cosine(T *nram_vertices,
+                                        const bool *nram_vertices_mask,
+                                        T *nram_mask0, T *nram_temp0,
+                                        T *nram_temp1, const int point_num) {
+  T *nram_vertices_x = nram_vertices;
+  T *nram_vertices_y = nram_vertices + point_num;
+  __bang_transpose(nram_temp0, nram_vertices, point_num, 2);
+  __bang_move(nram_vertices_x, nram_temp0, 2 * point_num * sizeof(T));
+
+  // y < 0
+  __bang_lt_scalar(nram_mask0, nram_vertices_y, (T)0.0, point_num);
+  // y >= 0
+  __bang_not(nram_temp1, nram_mask0, point_num);
+  __bang_mul_scalar(nram_mask0, nram_mask0, (T)-1.0, point_num);
+  __bang_add(nram_temp1, nram_temp1, nram_mask0, point_num);
+  __bang_mul(nram_vertices_x, nram_vertices_x, nram_temp1, point_num);
+
+  // compute x * x + y * y + EPSILON
+  __bang_square(nram_temp0, nram_vertices_x, point_num);
+  __bang_square(nram_temp1, nram_vertices_y, point_num);
+  __bang_add(nram_temp0, nram_temp0, nram_temp1, point_num);
+  __bang_add_scalar(nram_temp0, nram_temp0, (T)EPSILON, point_num);
+  // fabs(x) * x;
+  __bang_abs(nram_temp1, nram_vertices_x, point_num);
+  __bang_mul(nram_temp1, nram_temp1, nram_vertices_x, point_num);
+
+  // cosine[point_num] = fabs(x) * x / (x * x + y * y + EPSILON)
+  computeDiv(nram_temp0, nram_temp1, nram_temp0, point_num);
+
+  __bang_mul_scalar(nram_mask0, nram_mask0, (T)2.0, point_num);
+  __bang_add(nram_temp0, nram_temp0, nram_mask0, point_num);
+
+  // set y=0 and vertices_mask=0 points cos value is -4
+  __bang_ne_scalar(nram_mask0, nram_vertices_y, (T)0.0, point_num);
+  __bang_int82float(nram_temp1, (int8_t *)(nram_vertices_mask), point_num, 0);
+  __bang_and(nram_mask0, nram_mask0, nram_temp1, point_num);
+  __bang_mul(nram_temp0, nram_temp0, nram_mask0, point_num);
+  __bang_not(nram_mask0, nram_mask0, point_num);
+  __bang_mul_scalar(nram_mask0, nram_mask0, (T)UNVALID_VALUE, point_num);
+  __bang_add(nram_mask0, nram_temp0, nram_mask0, point_num);
+}
+
+template <typename T>
+static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
+                                 char *nram_num_valid, char *nram_idx,
+                                 T *nram_pub_space, const int dim_m,
+                                 const int deal_num, const int pingpong_offset,
+                                 const int pi) {
+  int offset = (pi % 2) * pingpong_offset;
+  T *nram_vertices_p = (T *)(nram_vertices + offset);
+  bool *nram_mask_p = (bool *)(nram_mask + offset);
+  int *nram_num_valid_p = (int *)(nram_num_valid + offset);
+  int *nram_idx_p = (int *)(nram_idx + offset);
+
+  // nram_pub_space size = 4 * dim_m * deal_num
+  T *nram_pad = nram_pub_space;
+  T *nram_mask0 = nram_pad + deal_num * dim_m;
+  T *nram_temp0 = nram_mask0 + deal_num * dim_m;
+  T *nram_temp1 = nram_temp0 + deal_num * dim_m;
+
+  // compute all points cosine value
+  compute_cosine(nram_vertices_p, nram_mask_p, nram_mask0, nram_temp0,
+                 nram_temp1, deal_num * dim_m);
+
+  // preprocess to get pad index
+  __bang_write_zero(nram_temp0, dim_m);
+  __bang_write_value(nram_temp0, INTERSECTION_OFFSET, (T)1.0);
+  __bang_int82float(nram_pad, (int8_t *)(nram_mask_p), deal_num * dim_m, 0);
+  __bang_cycle_maxequal(nram_pad, nram_pad, nram_temp0, deal_num * dim_m,
+                        dim_m);
+  __bang_not(nram_pad, nram_pad, deal_num * dim_m);
+
+  for (int i = 0; i < deal_num; i++) {
+    int num_valid_points = nram_num_valid_p[i];
+    int pad = (int)__bang_findfirst1(nram_pad + i * dim_m, dim_m);
+    __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX, MAX_NUM_VERT_IDX,
+                       pad);
+
+    if (num_valid_points >= 3) {
+      // sort the valid vertices
+      // note the number of valid vertices is known
+      // note: check that num_valid[i] < MAX_NUM_VERT_IDX
+      __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
+      T *nram_cos = nram_mask0 + i * dim_m * 2;
+      for (int j = 0; j < num_valid_points; ++j) {
+        __bang_argmax(nram_temp0, nram_cos, dim_m);
+        int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
+        nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
+        T cos_max = nram_temp0[0];
+        __bang_eq_scalar(nram_temp1, nram_cos, cos_max, dim_m);
+        __bang_not(nram_temp0, nram_temp1, dim_m);
+        __bang_mul(nram_cos, nram_cos, nram_temp0, dim_m);
+        __bang_mul_scalar(nram_temp1, nram_temp1, (T)UNVALID_VALUE, dim_m);
+        __bang_add(nram_cos, nram_cos, nram_temp1, dim_m);
+      }
+      // duplicate the first idx
+      nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
+          nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
+
+      // for corner case: the two boxes are exactly the same.
+      // in this case, idx would have duplicate elements, which makes the
+      // shoelace formula broken because of the definition, the duplicate
+      // elements only appear in the first 8 positions (they are "corners in
+      // box", not "intersection of edges")
+      if (nram_num_valid_p[i] == 8) {
+        __bang_eq(nram_temp0, nram_vertices_p + i * dim_m * 2,
+                  nram_vertices_p + i * dim_m * 2 + 4, 4);
+        unsigned int counter = __bang_count(nram_temp0, 4);
+        if (counter == 4) {
+          nram_idx_p[i * MAX_NUM_VERT_IDX + 4] =
+              nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
+          __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX + 5,
+                             MAX_NUM_VERT_IDX - 5, pad);
+        }
+      }
+    }
+  }
+}
+
+static __mlu_func__ void store(int *addr_idx, char *nram_idx,
+                               const int deal_idx_num,
+                               const int pingpong_offset, const int pi) {
+  int offset = (pi % 2) * pingpong_offset;
+  int *nram_idx_p = (int *)(nram_idx + offset);
+  __memcpy_async(addr_idx, nram_idx_p, deal_idx_num * sizeof(int), NRAM2GDRAM);
+}
+
+template <typename T>
+static __mlu_func__ void lcs(const T *base_vertices, const bool *base_mask,
+                             const int *base_num_valid, int *base_idx,
+                             char *nram_vertices, char *nram_mask,
+                             char *nram_num_valid, char *nram_idx,
+                             T *nram_pub_space, const int repeat_n,
+                             const int rem_num, const int dim_m,
+                             const int deal_num, const int pingpong_offset) {
+  int deal_vertices_num = deal_num * dim_m * 2;
+  int deal_mask_num = deal_num * dim_m;
+  int deal_num_valid_num = deal_num;
+  int deal_idx_num = deal_num * MAX_NUM_VERT_IDX;
+
+  if (repeat_n > 0) {
+    // L
+    const T *addr_vertices = base_vertices;
+    const bool *addr_mask = base_mask;
+    const int *addr_num_valid = base_num_valid;
+    load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+         nram_num_valid, dim_m, deal_num, pingpong_offset, 0);
+    __sync();
+  }
+
+  if (repeat_n > 1) {
+    // L
+    const T *addr_vertices = base_vertices + deal_vertices_num;
+    const bool *addr_mask = base_mask + deal_mask_num;
+    const int *addr_num_valid = base_num_valid + deal_num_valid_num;
+    load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+         nram_num_valid, dim_m, deal_num, pingpong_offset, 1);
+
+    // C
+    compute<float>(nram_vertices, nram_mask, nram_num_valid, nram_idx,
+                   nram_pub_space, dim_m, deal_num, pingpong_offset, 0);
+    __sync();
+  }
+
+  for (int n_iter = 0; n_iter < repeat_n - 2; n_iter++) {
+    // S
+    int *addr_idx = base_idx + n_iter * deal_idx_num;
+    store(addr_idx, nram_idx, deal_idx_num, pingpong_offset, n_iter);
+
+    // L
+    const T *addr_vertices = base_vertices + (n_iter + 2) * deal_vertices_num;
+    const bool *addr_mask = base_mask + (n_iter + 2) * deal_mask_num;
+    const int *addr_num_valid =
+        base_num_valid + (n_iter + 2) * deal_num_valid_num;
+    load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+         nram_num_valid, dim_m, deal_num, pingpong_offset, n_iter + 2);
+
+    // C
+    compute<float>(nram_vertices, nram_mask, nram_num_valid, nram_idx,
+                   nram_pub_space, dim_m, deal_num, pingpong_offset,
+                   n_iter + 1);
+    __sync();
+  }
+
+  if (repeat_n >= 2) {
+    // S
+    int *addr_idx = base_idx + (repeat_n - 2) * deal_idx_num;
+    store(addr_idx, nram_idx, deal_idx_num, pingpong_offset, (repeat_n - 2));
+  }
+  if (rem_num > 0) {
+    // L
+    const T *addr_vertices = base_vertices + repeat_n * deal_vertices_num;
+    const bool *addr_mask = base_mask + repeat_n * deal_mask_num;
+    const int *addr_num_valid = base_num_valid + repeat_n * deal_num_valid_num;
+    load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+         nram_num_valid, dim_m, rem_num, pingpong_offset, repeat_n);
+  }
+  if (repeat_n > 0) {
+    // C
+    compute<float>(nram_vertices, nram_mask, nram_num_valid, nram_idx,
+                   nram_pub_space, dim_m, deal_num, pingpong_offset,
+                   repeat_n - 1);
+  }
+  __sync();
+
+  if (repeat_n > 0) {
+    // S
+    int *addr_idx = base_idx + (repeat_n - 1) * deal_idx_num;
+    store(addr_idx, nram_idx, deal_idx_num, pingpong_offset, (repeat_n - 1));
+  }
+  if (rem_num > 0) {
+    // C
+    compute<float>(nram_vertices, nram_mask, nram_num_valid, nram_idx,
+                   nram_pub_space, dim_m, rem_num, pingpong_offset, repeat_n);
+    __sync();
+
+    // S
+    int *addr_idx = base_idx + repeat_n * deal_idx_num;
+    store(addr_idx, nram_idx, rem_num * MAX_NUM_VERT_IDX, pingpong_offset,
+          repeat_n);
+  }
+}
+#endif
+
+template <typename T>
+__mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
+    const T *vertices, const bool *mask, const int *num_valid, const int *idx,
+    const int dim_b, const int dim_n, const int dim_m) {
+#if __BANG_ARCH__ >= 372
+  if (__is_mpu()) {
+    return;
+  }
+
+  int total_bn_num = dim_b * dim_n;
+  int per_task_bn_num = total_bn_num / taskDim;
+  int rem_bn_num = total_bn_num % taskDim;
+  int bn_num = per_task_bn_num + (int)((taskId < rem_bn_num));
+  int bn_idx =
+      taskId * per_task_bn_num + ((taskId < rem_bn_num) ? taskId : rem_bn_num);
+
+  if (bn_num == 0) {
+    return;
+  }
+
+  // nram space
+  // nram_pub_space
+  // |--------------------------------------|
+  // |           nram_pub_space             |
+  // |--------------------------------------|
+  // |  4 * deal_num * dim_m * sizeof(T)    |
+  // |--------------------------------------|
+  // pingpong
+  // |--------------------------------------|--------------------------------|
+  // |           nram_vertices              |            nram_mask           |
+  // |--------------------------------------|--------------------------------|
+  // | deal_num * dim_m * 2 * sizeof(T)     | deal_num * dim_m * sizeof(bool)|
+  // |--------------------------------------|--------------------------------|
+  // |           nram_num_valid             |           nram_idx             |
+  // |        deal_num * sizeof(int)        |   9 * deal_num * sizeof(int)   |
+  // |--------------------------------------|--------------------------------|
+  int deal_num = MAX_NRAM_SIZE / 2 /
+                 (4 * dim_m * sizeof(T) + dim_m * sizeof(bool) +
+                  (1 + MAX_NUM_VERT_IDX) * sizeof(int));
+  int deal_vertices_num = deal_num * dim_m * 2;
+  int deal_mask_num = deal_num * dim_m;
+  int deal_num_valid_num = deal_num;
+  int max_nram_size = MAX_NRAM_SIZE - 4 * deal_num * dim_m * sizeof(T);
+  int pingpong_offset = max_nram_size / 2;
+
+  T *nram_pub_space = (T *)nram_buffer;
+
+  // ping/pong
+  char *nram_vertices = (char *)(nram_pub_space + 4 * deal_num * dim_m);
+  char *nram_mask = nram_vertices + deal_vertices_num * sizeof(T);
+  char *nram_num_valid = nram_mask + deal_mask_num * sizeof(bool);
+  char *nram_idx = nram_num_valid + deal_num_valid_num * sizeof(int);
+
+  int repeat_n = bn_num / deal_num;
+  int rem_num = bn_num % deal_num;
+
+  T *base_vertices = (T *)vertices + bn_idx * dim_m * 2;
+  bool *base_mask = (bool *)mask + bn_idx * dim_m;
+  int *base_num_valid = (int *)num_valid + bn_idx;
+  int *base_idx = (int *)idx + bn_idx * MAX_NUM_VERT_IDX;
+
+  lcs(base_vertices, base_mask, base_num_valid, base_idx, nram_vertices,
+      nram_mask, nram_num_valid, nram_idx, nram_pub_space, repeat_n, rem_num,
+      dim_m, deal_num, pingpong_offset);
+#endif
+}
+
+void MLUOP_WIN_API KernelDiffIouRotatedSortVerticesForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *vertices, const void *mask, const void *num_valid, void *idx,
+    const int dim_b, const int dim_n, const int dim_m) {
+  MLUKernelDiffIouRotatedSortVerticesForward<<<k_dim, k_type, queue>>>(
+      (float *)vertices, (bool *)mask, (int *)num_valid, (int *)idx, dim_b,
+      dim_n, dim_m);
+}
