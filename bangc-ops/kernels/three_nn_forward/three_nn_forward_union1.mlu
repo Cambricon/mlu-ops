@@ -27,6 +27,7 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "core/logging.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -459,7 +460,7 @@ void MLUOP_WIN_API KernelThreeNNForward(
           b, n, m, (half *)unknown, (half *)known, (half *)dist2, (int *)idx);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

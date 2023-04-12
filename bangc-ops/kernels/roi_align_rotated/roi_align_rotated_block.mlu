@@ -30,6 +30,7 @@
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
 #include "mlu.h"
+#include "core/logging.h"
 
 #define ROI_OFFSET 6
 #define SAMPLING_NUM 4
@@ -470,7 +471,7 @@ void MLUOP_WIN_API KernelRoiAlignRotatedForward(
           rois_num, rroiAlignParams, (half *)output);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -494,7 +495,7 @@ void MLUOP_WIN_API KernelRoiAlignRotatedBackward(
           rois_num, rroiAlignParams, (half *)bottom_grad);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

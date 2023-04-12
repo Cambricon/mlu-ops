@@ -27,6 +27,7 @@
 #include "kernels/kernel.h"
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
+#include "core/logging.h"
 
 #define ROI_OFFSET 7
 #define FLOAT_NRAM_BUFFER_NUM 14
@@ -430,7 +431,7 @@ void MLUOP_WIN_API KernelPtsIdxOfVoxels(
           out_z, (half *)rois, (half *)pts, (int *)pts_idx_of_voxels);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -456,7 +457,7 @@ void MLUOP_WIN_API KernelRoiawarePool3dForward(
           (half *)pooled_features, (int *)argmax);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -670,7 +671,7 @@ void MLUOP_WIN_API KernelRoiawarePool3dBackward(
       }
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

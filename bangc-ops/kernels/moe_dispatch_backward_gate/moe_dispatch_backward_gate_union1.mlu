@@ -25,6 +25,7 @@
 #include "kernels/kernel.h"
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
+#include "core/logging.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -376,7 +377,7 @@ void MLUOP_WIN_API KernelMoeDispatchBwdGate1(
           (half *)grad_gates);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -400,7 +401,7 @@ void MLUOP_WIN_API KernelMoeDispatchBwdGate2(
           samples, capacity, hidden, num_experts, (half *)grad_gates);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

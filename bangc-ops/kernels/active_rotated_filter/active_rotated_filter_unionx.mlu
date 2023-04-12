@@ -23,6 +23,7 @@
 #include "active_rotated_filter.h"
 #include "kernels/kernel.h"
 #include "kernels/debug.h"
+#include "core/logging.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define ROWS 8
@@ -426,7 +427,7 @@ void MLUOP_WIN_API KernelActiveRotatedFilterForward(
           (half *)output_gdram);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
     }; break;
   }
 }

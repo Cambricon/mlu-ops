@@ -25,6 +25,7 @@
 #include "kernels/binary_op/binary_op_3pipeline.h"
 #include "kernels/kernel.h"
 #include "kernels/debug.h"
+#include "core/logging.h"
 
 #define HIGH_BOUND 1e5
 #define LOW_BOUND 1e-10
@@ -212,7 +213,7 @@ void MLUOP_WIN_API Kernel3StagePipelineDiv(
       }
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

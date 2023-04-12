@@ -25,6 +25,7 @@
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
 #include "kernels/debug.h"
+#include "core/logging.h"
 
 #define LOG_LOW_BOUND 1e-8
 #define LOG_SCALE 1e12
@@ -183,7 +184,7 @@ void MLUOP_WIN_API Kernel3StagePipelineLog(
       }
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -208,7 +209,7 @@ void MLUOP_WIN_API Kernel5StagePipelineLog(
       }
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
