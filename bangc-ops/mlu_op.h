@@ -420,6 +420,18 @@ typedef enum {
   MLUOP_16BIT_INDICES = 1, /*!< The data type of indices is unsigned short. */
 } mluOpIndicesType_t;
 
+/*!
+ * @brief Describes the reduction applied to the output in the implementation of the loss function.
+ */
+typedef enum {
+  MLUOP_LOSS_REDUCTION_NONE = 0,
+  /*!< No reduction is applied in the operation.*/
+  MLUOP_LOSS_REDUCTION_SUM = 1,
+  /*!< The elements of output are summed in the operation.*/
+  MLUOP_LOSS_REDUCTION_MEAN = 2,
+  /*!< The weighted mean of the output is applied in the operation.*/
+} mluOpLossReduction_t;
+
 /******************************************************************************
  * MLUOP Runtime Management
  ******************************************************************************/
@@ -6625,6 +6637,221 @@ mluOpFill_v3(mluOpHandle_t handle,
              const void *value,
              const mluOpTensorDescriptor_t output_desc,
              void *output);
+
+// Group:FocalLossSigmoid
+/*!
+ * @brief Computes cross entropy loss with weighting factor and focusing factor
+ * to reduce the filter of samples which are easy to classify.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * in ::mluOpFocalLossSigmoidForward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] prefer
+ * The algorithm used to compute the output.
+ * For detailed information, see ::mluOpComputationPreference_t. Currently, only
+ * \p MLUOP_COMPUTATION_HIGH_PRECISION is supported.
+ * @param[in] reduction
+ * The reduction mode used to compute the operation, see ::mluOpLossReduction_t.
+ * Currently, only \p MLUOP_LOSS_REDUCTION_NONE is supported.
+ * @param[in] input_desc
+ * The descriptor of input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] target_desc
+ * The descriptor of the tensor \b target . For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] target
+ * Pointer to the MLU memory that stores the target tensor, which is the target
+ * of input.
+ * @param[in] weight_desc
+ * The descriptor of the tensor \b weight . For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] weight
+ * Pointer to the MLU memory that stores the weight tensor, which is the weight
+ * value of input.
+ * @param[in] alpha
+ * A float value which is the weighting factor of the focal loss sigmoid forward.
+ * @param[in] gamma
+ * A float value which is the focusing factor of the focal loss sigmoid forward.
+ * @param[in] output_desc
+ * The descriptor of output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - The supported data types of input tensors \b input, \b target, \b weight , and output
+ *   tensor \b output are as follows：
+ *   - input: half, float
+ *   - target: int32
+ *   - weight: half, float
+ *   - output: half, float
+ *
+ * @par Data Layout
+ * - The supported data layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The shape of \b input must be [N, C].
+ * - The shape of \b input and \b output must be equal.
+ * - The shape of \b target is [N] when the shape of \b input is [N, C].
+ * - The shape of \b weight is [C] when the shape of \b input is [N, C].
+ * - \b input value should be in the range of [-20, 20] when the data type of \b input is float.
+ * - \b input value should be in the range of [-5, 5] when the data type of \b input is half.
+ * - \b target value should be in the range of [0, C] when \b weight is NULL and the shape of
+ *   \b input is [N, C].
+ * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the
+ *   shape of \b input is [N, C].
+ * - \b gamma should be greater than or equal to 0.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - When input data or parameter contains NaN/infinity:
+ *   - If \b input is infinity, but \b weight, \b alpha and \b gamma are finite value,
+ *     then \b output is NaN or finite value.
+ *   - If \b weight is positive infinity, but \b input, \b alpha and \b gamma are finite value,
+ *     then \b output is NAN or positive infinity.
+ *   - If \b weight is negative infinity, but \b input, \b alpha and \b gamma are finite value,
+ *     then \b output is NAN or negative infinity.
+ *   - If \b alpha is infinity and data type of \b input is float,
+ *     but \b input, \b weight and \b gamma are finite value,
+ *     then \b output is NAN or infinity.
+ *   - If \b alpha is infinity and data type of \b input is half,
+ *     but \b input, \b weight and \b gamma are finite value,
+ *     then \b output is NAN or finite value.
+ *   - If \b gamma is positive infinity, but \b input, \b weight and \b alpha are finite value,
+ *     then \b output is NAN or 0.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, Piotr Dollar. Proceedings of the IEEE
+ *   International Conference on Computer Vision(ICCV), 2017, oo.2980-2988
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/focal_loss.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
+                             const mluOpComputationPreference_t prefer,
+                             const mluOpLossReduction_t reduction,
+                             const mluOpTensorDescriptor_t input_desc,
+                             const void *input,
+                             const mluOpTensorDescriptor_t target_desc,
+                             const void *target,
+                             const mluOpTensorDescriptor_t weight_desc,
+                             const void *weight,
+                             const float alpha,
+                             const float gamma,
+                             const mluOpTensorDescriptor_t output_desc,
+                             void *output);
+
+// Group:FocalLossSigmoid
+/*!
+ * @brief Computes the gradients of ::mluOpFocalLossSigmoidBackward with \b input tensor,
+ * \b target tensor, \b weight tensor, and returns the results in
+ * the \b grad_input tensor.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and
+ * queues in ::mluOpFocalLossSigmoidBackward. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] prefer
+ * The algorithm used to compute the output.
+ * For detailed information, see ::mluOpComputationPreference_t. Currently, only
+ * \p MLUOP_COMPUTATION_FAST is supported.
+ * @param[in] reduction
+ * The reduction mode used to compute the operation.
+ * For detailed information, see ::mluOpLossReduction_t. Currently, only
+ * \p MLUOP_LOSS_REDUCTION_NONE is supported.
+ * @param[in] input_desc
+ * The descriptor of input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] target_desc
+ * The descriptor of the tensor \b target . For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] target
+ * Pointer to the MLU memory that stores the target tensor, which is the target
+ * of input.
+ * @param[in] weight_desc
+ * The descriptor of the tensor \b weight . For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] weight
+ * Pointer to the MLU memory that stores the weight tensor, which is the weight
+ * value of input.
+ * @param[in] alpha
+ * A float value which is the weighting factor of the focal loss sigmoid backward.
+ * @param[in] gamma
+ * A float value which is the focusing factor of the focal loss sigmoid backward.
+ * @param[in] grad_input_desc
+ * The descriptor of \b grad_input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_input
+ * Pointer to the MLU memory that stores the \b grad_input tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - The supported data types of input tensor \b input, \b target, \b weight , and output
+ *   tensor \b output are as follows：
+ *   - input: float
+ *   - target: int32
+ *   - weight: float
+ *   - grad_input: float
+ *
+ * @par Data Layout
+ * - The supported data layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The shape of \b input must be [N, C].
+ * - The shape of \b input and \b grad_input must be consistent.
+ * - The shape of \b target is [N] when the shape of \b input is [N, C].
+ * - The shape of \b weight is [C] when the shape of \b input is [N, C].
+ * - \b target value should be in the range of [0, C] when \b weight is NULL and the shape of
+ *   \b input is [N, C].
+ * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the
+ *   shape of \b input is [N, C].
+ * - prefer only supports MLUOP_COMPUTATION_FAST currently.
+ * - reduction only supports \p MLUOP_LOSS_REDUCTION_NONE currently.
+ * - The layout of \b input, \b target, \b weight and \b grad_input must be ARRAY.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 13615] when
+ *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 12544] when
+ *   \b weight is not NULL on MLU300 series.
+ * - \b weight does not support positive infinity and negative infinity currently.
+ * - \b gamma should be in the range of [0, 10000] on MLU300 series.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/focal_loss.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
+                              const mluOpComputationPreference_t prefer,
+                              const mluOpLossReduction_t reduction,
+                              const mluOpTensorDescriptor_t input_desc,
+                              const void *input,
+                              const mluOpTensorDescriptor_t target_desc,
+                              const void *target,
+                              const mluOpTensorDescriptor_t weight_desc,
+                              const void *weight,
+                              const float alpha,
+                              const float gamma,
+                              const mluOpTensorDescriptor_t grad_input_desc,
+                              void *grad_input);
 
 // Group:MoeDispatchBackwardData
 /*!

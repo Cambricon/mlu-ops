@@ -147,6 +147,69 @@ mluOpFill
 -----------------------------
 创建一个所有元素都设置为 value 的张量，不支持广播。给定一个张量 tensor，以及值为 value 的 Scale 标量，该操作会返回一个所有元素设置为 value 的 tensor 对象，其与输入 tensor 具有相同的类型和形状。
 
+.. _focal_loss_sigmoid_forward:
+
+mluOpFocalLossSigmoidForward
+--------------------------------------
+该算子是在损失函数 BinaryCrossEntropyLoss 的基础上增加了滤波器系数 alpha 和聚焦系数 gamma，其目的是通过减少易分类样本的滤波器，从而使得模型在训练时更专注于难分类的样本。
+
+公式如下：
+
+.. math::
+
+   FL =
+   \begin{cases}
+   -\alpha (1-p)^\gamma log(p),  & target=1 \\
+   -(1-\alpha) p^\gamma log(1-p), & otherwise
+   \end{cases}
+
+此外，在上面公式基础上支持第三方 MMCV 算子，增加了参数 weight：
+
+.. math::
+
+   FL_{i,j} = FL_{i,j} * weight_t \\
+   \begin{aligned}
+   s.t \quad & i=1,2,...,N \\
+        & j=1,2,...,C \\
+        & t=target_i
+   \end{aligned}
+
+其中：
+
+- ``p`` 表示input通过 ``Sigmoid`` 函数计算所得的概率值。
+- ``alpha`` 表示平衡因子。
+- ``gamma`` 表示调节因子。
+
+.. _focal_loss_sigmoid_backward:
+
+.. _focal_loss_sigmoid_backward:
+
+mluOpFocalLossSigmoidBackward
+--------------------------------------
+给定输入数据（input）、对应标签值（target）、平衡因子（alpha）、调节因子（gamma）以及滤波器数据（weight），计算输入数据的梯度值（grad_input）。
+
+公式如下：
+
+.. math::
+
+   FL^{'} =
+   \begin{cases}
+   -\alpha*(1-p)^\gamma*(1-p-\gamma*p*log(p)) & target[n]=c \\
+   -(1-\alpha)*p^\gamma*(\gamma*(1-p)*log(1-p)-p) & otherwise
+   \end{cases}
+
+如果存在weight输入，则需乘以weight，得到算子最终的输出grad_input：
+
+.. math::
+
+   \begin{array}{lcl}
+   grad\_input = \\ FL^{'} *weight* grad\_output = \\
+   \begin{cases}
+   -\alpha*(1-p)^\gamma*(1-p-\gamma*p*log(p))*weight[target[n]]*grad\_ouput & target[n]=c \\
+   -(1-\alpha)*p^\gamma*(\gamma*(1-p)*log(1-p)-p)*weight[target[n]]*grad\_output & otherwise
+   \end{cases}
+   \end{array}
+
 .. _gather_nd:
 
 mluOpGatherNd
