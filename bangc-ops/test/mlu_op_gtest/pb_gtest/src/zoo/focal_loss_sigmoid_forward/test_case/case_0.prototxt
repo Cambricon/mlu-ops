@@ -1,0 +1,52 @@
+op_name: "focal_loss_sigmoid_forward"
+input {
+  id: "input"
+  shape: {
+    dims: 200
+    dims: 80
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 20
+    lower_bound: -20
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "target"
+  shape: {
+    dims: 200
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 23
+    upper_bound: 3
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 200
+    dims: 80
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+focal_loss_sigmoid_forward_param: {
+  prefer: 1
+  reduction: 0
+  alpha: 0.25
+  gamma: 2
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
