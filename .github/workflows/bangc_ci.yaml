@@ -50,9 +50,10 @@ jobs:
         cntoolkit_version : [cntoolkit3.4.1]
     runs-on: ${{matrix.runner}}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'true'
+      - name: update_code
+        uses: actions/checkout@v3
+          with:
+            submodules: 'true'
 
   Lint:
     name: lint-cpp
