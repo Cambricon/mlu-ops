@@ -63,7 +63,7 @@ jobs:
         mlu_ops_version : [v0.6.0]
         cntoolkit_version : [cntoolkit3.4.1]
     runs-on: ${{matrix.runner}}
-    needs: [Rysnc]
+    needs: [Rsync]
     steps:
       - name: bangc_lint_check
         run: >
@@ -78,7 +78,7 @@ jobs:
         mlu_ops_version : [v0.6.0]
         cntoolkit_version : [cntoolkit3.4.1]
     runs-on: ${{matrix.runner}}
-    needs: [Rysnc]
+    needs: [Rsync]
     steps:
       - name: build_bangc_ops
         run: >
