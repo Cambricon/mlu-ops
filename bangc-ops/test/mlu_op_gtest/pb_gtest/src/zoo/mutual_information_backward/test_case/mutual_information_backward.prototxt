@@ -1,0 +1,113 @@
+device: CPU
+op_name: "mutual_information_backward"
+input {
+  id: "px"
+  shape {
+    dims: 1
+    dims: 179
+    dims: 181
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -2.5
+    upper_bound_double: 2.5
+  }
+}
+input {
+  id: "py"
+  shape {
+    dims: 1
+    dims: 180
+    dims: 180
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -2.5
+    upper_bound_double: 2.5
+  }
+}
+input {
+  id: "opt_boundary"
+  shape {
+    dims: 1
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  value_l: 0
+  value_l: 0
+  value_l: 10
+  value_l: 10
+}
+input {
+  id: "p"
+  shape {
+    dims: 1
+    dims: 180
+    dims: 181
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -2.5
+    upper_bound_double: 2.5
+  }
+}
+input {
+  id: "ans_grad"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -2.5
+    upper_bound_double: 2.5
+  }
+}
+output {
+  id: "ans_grad"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "px_grad"
+  shape {
+    dims: 1
+    dims: 179
+    dims: 181
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "py_grad"
+  shape {
+    dims: 1
+    dims: 180
+    dims: 180
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_threshold: 0.003
+evaluation_threshold: 0.003
+supported_mlu_platform: MLU370
+supported_mlu_platform: MLU590
+handle_param {
+  round_mode: ROUND_OFF_ZERO
+}
+mutual_information_backward_param {
+  overwrite_ans_grad: true
+}

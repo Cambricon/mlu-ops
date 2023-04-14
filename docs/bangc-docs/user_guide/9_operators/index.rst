@@ -337,6 +337,23 @@ mluOpMsDeformAttnForward
 ---------------------------------
 该算子是Multi-scale deformable attention的正向过程，通过 ``data_spatial_shapes`` 将  ``data_sampling_loc`` 映射到 ``data_value`` 的对应位置，从对应位置取值进行双线性插值，插值结果乘以 ``data_attn_weight`` 获得最终的输出 ``data_col`` 。
 
+.. _mutual_information_backward:
+
+mluOpMutualInformationBackward
+--------------------------------
+该算子是 ``mluOpMutualInformationForward`` 算子的反向，计算输入 ``px`` 和 ``py`` 的梯度。
+
+公式如下：
+.. math::
+
+  \begin{array}{lcl}
+   term1(b,s,t) = e^{p(b,s,t) + px(b,s,t) - p(b,s+1,t)} \\
+   term2(b,s,t) = e^{p(b,s,t) + py(b,s,t) - p(b,s,t+1)} \\
+   p\_grad(b,s,t) = p\_grad(b,s+1,t) * term1(b,s,t) + p\_grad(b,s,t+1) * term2(b,s,t) \\
+   px\_grad(b,s,t) = p\_grad(b,s+1,t) * term1(b,s,t) \\
+   py\_grad(b,s,t) = p\_grad(b,s,t+1) * term2(b,s,t)
+  \end{array}
+
 .. _nms:
 
 mluOpNms
