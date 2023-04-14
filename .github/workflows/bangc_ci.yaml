@@ -41,7 +41,7 @@ on:
       - '.github/workflows/daily.yaml'
 
 jobs:
-  test:
+  Rsync:
     strategy:
       matrix:
         runner: [mlu370-m8]
@@ -53,16 +53,42 @@ jobs:
         with:
           submodules: 'true'
 
+  Lint:
+    strategy:
+      matrix:
+        runner: [mlu370-m8]
+        mlu_ops_version : [v0.6.0]
+        cntoolkit_version : [cntoolkit3.4.1]
+    runs-on: ${{matrix.runner}}
+    needs: [Rysnc]
+    steps:
       - name: bangc_lint_check
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
           ./tools/pre-commit origin/master
 
+  Build:
+    strategy:
+      matrix:
+        runner: [mlu370-m8]
+        mlu_ops_version : [v0.6.0]
+        cntoolkit_version : [cntoolkit3.4.1]
+    runs-on: ${{matrix.runner}}
+    needs: [Rysnc]
+    steps:
       - name: build_bangc_ops
         run: >
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-ubuntu18.04-${{matrix.cntoolkit_version}}
           ./build.sh --sub_module=bangc
 
+  Test:
+    strategy:
+      matrix:
+        runner: [mlu370-m8]
+        mlu_ops_version : [v0.6.0]
+        cntoolkit_version : [cntoolkit3.4.1]
+    runs-on: ${{matrix.runner}}
+    needs: [Build]
       - name: bangc_ops_release_temp_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
@@ -76,6 +102,14 @@ jobs:
           -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:${{matrix.mlu_ops_version}}-devel-x86_64-ubuntu18.04-${{matrix.cntoolkit_version}}
           ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
 
+  Clean:
+    strategy:
+      matrix:
+        runner: [mlu370-m8]
+        mlu_ops_version : [v0.6.0]
+        cntoolkit_version : [cntoolkit3.4.1]
+    runs-on: ${{matrix.runner}}
+    needs: [Test]
       - name: clean
         run: |
           rm -rf bangc-ops/build
