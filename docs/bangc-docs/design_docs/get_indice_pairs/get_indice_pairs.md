@@ -315,28 +315,7 @@ step3:  block任务,
 
 完成上述3.1，3.2，3.3，3.4几个步骤之后，基本可以给出一个理论性能，不需要每一个算子都有过于复杂的公式，但是一定要对自己的算子有一个心理的预期，最终实现之后的效率值是多少。
 按照cpu端/gpu端实现算法，该算法由于是关于index的计算, 对于mlu向量化实现并不友好, 性能初步评估不会比gpu好;  
-按照基本性能评估如下：590 m9  带宽 2765 GB/s    CT  14.7 * 1024 GFLOPS  int32 9.8GTOPS;  
-L = 149100   K = 27   num_act_out= 58838  
-框架给定时间：  三次kernel：
-上述方案性能评估如下
-``` c++ 
-kernel_1 :
-theory_ops =  15*k*L(4*L+L+(k-1)*5*L+5*k*L+5*L*K)+ 12*L*K+ 11*L*K+ 5*L*K= 43KL (fp32) 173105100 + 6KL (int32) 24154200    
-theory_ios =  4*L + 3*k*L = (3*k+4)*L  = 11331600 * 4 =  45326400
-theory_compute_time:  173105100 * 10^6 /  14.7 * 1024 * 10 ^ 9  (11.7)  +  24154200 / 9.8 * 10^-6 (2.46us) =  15.16us
-theory_io_time =  45326400 * 10^6 / 2765 * 0.8 * 10^9 = 1.875us
-
-unique  L * K =   149100 * 27 = 4025700     int32   0-int32_max   测试所得4614us   (unique算子开发者：该规模可优化至2739us)
-        
-kernel2 :  block 任务 无法拆分
-theory_ops: num_act_out + num_act_out  + num_act_out * 4 + num_act_out * 4 + L * K  + 2 * L * K + L * K= 10*num_act_out +4*L*K =  16691180
-theory_ios =  num_act_out + L *K + L * K + L * K  + k * 2 * L + num_act_out * 4  + k = 5 *L*K + num_act_out*5 + K = 20422717 * 4 =  81690868
-theory_compute_time: 16691180 10^6 /  14.7 * 1024 * 10 ^ 9  * 48 = 54us  涉及到gather scatter
-theory_io_time: 81690868 10^6 / 2765 * 0.8 * 10^9 * 48  =    1772us
-
-all_time = 15.16us + 1.875us  + 4614us   + 54us + 1772us = 6457.053us
-         
-```
+提交算子后，经实际测试， 性能与竞品相近；
 
 ### 3.6 可维护性设计
 
