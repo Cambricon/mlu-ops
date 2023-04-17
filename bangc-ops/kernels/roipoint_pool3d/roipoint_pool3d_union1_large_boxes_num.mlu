@@ -27,6 +27,7 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "core/logging.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -550,7 +551,7 @@ void MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
           pooled_features_gdram, pooled_empty_flag_gdram);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
