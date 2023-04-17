@@ -25,6 +25,7 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "core/logging.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -555,7 +556,7 @@ void MLUOP_WIN_API KernelThreeInterpolateForward(
           c_limit_size, m_limit_size, n_limit_size, (half *)output);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -579,7 +580,7 @@ void MLUOP_WIN_API KernelThreeInterpolateBackward(
           c_limit_size, m_limit_size, n_limit_size, (half *)grad_features);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
       break;
     }
   }

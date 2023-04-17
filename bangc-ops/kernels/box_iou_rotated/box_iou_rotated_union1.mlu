@@ -26,6 +26,7 @@
 #include "kernels/box_iou_rotated/box_iou_rotated_nonaligned.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
+#include "core/logging.h"
 
 __mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
                                            float *ious, const int32_t num_box1,
@@ -128,7 +129,7 @@ void MLUOP_WIN_API KernelBoxIouRotated(cnrtDim3_t k_dim,
           aligned);
     }; break;
     default: {
-      MLULOG("Not implemented.\n");
+      LOG(ERROR) << "Not implemented.";
     }; break;
   }
 }
