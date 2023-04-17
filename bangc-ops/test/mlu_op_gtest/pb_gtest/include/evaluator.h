@@ -40,10 +40,17 @@
 #include <map>
 #include <set>
 #include <unordered_set>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "core/logging.h"
 #include "tools.h"
 #include "internal_perf.h"
 #include "perf_test.h"
+#include "accuracy_test.h"
+#include "stats_test.h"
 #include "pb_test_tools.h"
 
 namespace mluoptest {
@@ -69,8 +76,8 @@ static bool hasNanOrInf(T *data, size_t count);
 template <>
 bool hasNanOrInf<float>(float *data, size_t count) {
   const __m256 exp_bit = _mm256_set1_ps(std::numeric_limits<float>::infinity());
-  size_t stride = 256 / (sizeof(float) * 8);  // 1 __m256 saved 8 *
-                                              // (sizeof(float) * 8 bit)
+  size_t stride =
+      256 / (sizeof(float) * 8);  // 1 __m256 saved 8 * (sizeof(float) * 8 bit)
   size_t deal_count = (count / stride) * stride;
   __m256 m_data;
   for (size_t i = 0; i < deal_count; i += stride) {
@@ -93,8 +100,8 @@ template <>
 bool hasNanOrInf<double>(double *data, size_t count) {
   const __m256d exp_bit =
       _mm256_set1_pd(std::numeric_limits<double>::infinity());
-  size_t stride = 256 / (sizeof(double) * 8);  // 1 __m256 saved 4 *
-                                               // (sizeof(double) * 8 bit)
+  size_t stride = 256 / (sizeof(double) *
+                         8);  // 1 __m256 saved 4 * (sizeof(double) * 8 bit)
   size_t deal_count = (count / stride) * stride;
   __m256d m_data;
   for (size_t i = 0; i < deal_count; i += stride) {
@@ -123,6 +130,7 @@ bool hasNanOrInf(T *data, size_t count) {
   return false;
 }
 #endif
+
 template <typename T>
 bool isNanOrInf(T data) {
   if (std::isinf(data) || std::isnan(data)) {
@@ -135,6 +143,7 @@ template <typename T>
 static void resetNanOrInfAsZero(T *a, T *b, size_t count) {
   bool has_nan = false;
   bool has_inf = false;
+
   for (size_t i = 0; i < count; ++i) {
     if (unlikely(std::isnan(a[i]) && std::isnan(b[i]))) {
       a[i] = 0;
@@ -149,12 +158,12 @@ static void resetNanOrInfAsZero(T *a, T *b, size_t count) {
     }
   }
   if (has_nan) {
-    VLOG(4) << "Found result of baseline and mlu are both NaN, set them as "
-               "0, and go on.";
+    VLOG(4) << "Found result of baseline and mlu are both NaN, set them as 0, "
+               "and go on.";
   }
   if (has_inf) {
-    VLOG(4) << "Found result of baseline and mlu are both Inf, set them as "
-               "0, and go on.";
+    VLOG(4) << "Found result of baseline and mlu are both Inf, set them as 0, "
+               "and go on.";
   }
 }
 
@@ -191,14 +200,13 @@ class Evaluator {
   virtual ~Evaluator() {}
   void copy(const Evaluator *e);
 
-  enum Formula { DIFF1, DIFF2, DIFF3, DIFF3_2, DIFF4 };
+  enum Formula { DIFF1, DIFF2, DIFF3, DIFF3_2, DIFF4, DIFF_KL };
 
   static std::string Formula2str(Formula f) {
     static std::map<Formula, std::string> f_names = {
         {Formula::DIFF1, "DIFF1"}, {Formula::DIFF2, "DIFF2"},
         {Formula::DIFF3, "DIFF3"}, {Formula::DIFF3_2, "DIFF3_2"},
-        {Formula::DIFF4, "DIFF4"},
-    };
+        {Formula::DIFF4, "DIFF4"}, {Formula::DIFF_KL, "DIFF_KL"}};
     return f_names[f];
   }
 
@@ -216,10 +224,13 @@ class Evaluator {
       return *this;
     }
     Formula formula;
-    double threshold = 0;
-    double threshold_imag = 0;
-    // if false, only compute it, but won't mark case failed.
-    bool enable = true;
+    double threshold =
+        0;  // threshold for real numbers or the real part of complex numbers
+    double threshold_imag =
+        0;  // threshold for the imaginary part of complex numbers
+    bool enable =
+        true;  // if false, only compute it, but won't mark case failed.
+
     bool operator<(const struct Criterion &c) const {
       if (formula == c.formula) {
         return false;  // for deduplication
@@ -238,12 +249,14 @@ class Evaluator {
         : name(n), criterion(c), error(e), error_imag(ei), dtype(dt) {}
     std::string name = "";  // tensor's name
     Criterion criterion;    // criterion
-    double error = 0;       // the error of this criterion
-    double error_imag = 0;
+    double error =
+        0;  // the error of this criterion, also for real part of complex number
+    double error_imag =
+        0;  // the error of the imaginary part, only used for complex number
     mluOpDataType_t dtype;
   };
 
-  // compute error between baselines and mlu results by given criterion
+  // compute error between baseline and mlu results by given criterion
   void computeError(void *baseline_result, void *mlu_result, const size_t count,
                     const std::set<Criterion> criterions,
                     const std::string &name, const mluOpDataType_t dtype,
@@ -259,6 +272,7 @@ class Evaluator {
   // get name + criterion + error
   const std::vector<ErrorWrap> &errors() { return error_vec_; }
 
+  // delete this api. but now the refactor plan is not ready,
   // and all op called this api, so just keep it.
   void setMluWorkspaceSize(size_t size) { workspace_size_ = size; }
   double getMluWorkspaceSize() { return workspace_size_; }
@@ -298,7 +312,6 @@ class Evaluator {
         }
       }
     }
-
     if (has_nan_inf) {
       nan_inf_pass_ = true;
     }
@@ -325,10 +338,13 @@ class Evaluator {
       case Evaluator::Formula::DIFF4: {
         computeDiff4<T>();
       } break;
+      case Evaluator::Formula::DIFF_KL: {
+        computeDiffKl<T>();
+      } break;
       default: {
         // LOG(ERROR) << "Evaluator: found unsupported criterion when compute
-        // result error."; throw std::invalid_argument(std::string(__FILE__) +
-        // " +" + std::to_string(__LINE__)); GTEST_CHECK(false, "!!!");
+        // result error."; throw std::invalid_argument(std::string(__FILE__) + "
+        // +" + std::to_string(__LINE__)); GTEST_CHECK(false, "!!!");
         GTEST_CHECK(false,
                     "Evaluator: found unsupported criterion when compute "
                     "result error.");
@@ -344,6 +360,9 @@ class Evaluator {
     double denominator_sum_imag = 0.0;
     T *base_array = reinterpret_cast<T *>(base_array_);
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
+#pragma omp parallel for reduction \
+  (+:numerator_sum, denominator_sum, numerator_sum_imag, denominator_sum_imag) \
+  schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       numerator_sum += std::abs(double(mlu_array[i]) - double(base_array[i]));
       denominator_sum += std::abs(double(base_array[i]));
@@ -352,7 +371,7 @@ class Evaluator {
             std::abs(double(mlu_array[i + 1]) - double(base_array[i + 1]));
         denominator_sum_imag += std::abs(double(base_array[i + 1]));
       }
-    }
+    }  // end omp parallel block
     error_ = numerator_sum / (denominator_sum + EPSILON);
     if (is_complex_) {
       error_imag_ = numerator_sum_imag / (denominator_sum_imag + EPSILON);
@@ -367,6 +386,9 @@ class Evaluator {
     double denominator_sum_imag = 0.0;
     T *base_array = reinterpret_cast<T *>(base_array_);
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
+#pragma omp parallel for reduction \
+  (+:numerator_sum, denominator_sum, numerator_sum_imag, denominator_sum_imag) \
+  schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       numerator_sum +=
           std::pow(double(mlu_array[i]) - double(base_array[i]), 2);
@@ -376,7 +398,7 @@ class Evaluator {
             std::pow(double(mlu_array[i + 1]) - double(base_array[i + 1]), 2);
         denominator_sum_imag += std::pow(double(base_array[i + 1]), 2);
       }
-    }
+    }  // end omp parallel block
     error_ = std::sqrt(numerator_sum / (denominator_sum + EPSILON));
     if (is_complex_) {
       error_imag_ =
@@ -397,6 +419,9 @@ class Evaluator {
                dtype_ == MLUOP_DTYPE_COMPLEX_FLOAT) {
       EPS = EPSILON_FLOAT;
     }
+#pragma omp parallel for reduction(max                          \
+                                   : max_ratio, max_ratio_imag) \
+    schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       double numerator = std::abs(double(mlu_array[i]) - double(base_array[i]));
       double denominator = std::abs(double(base_array[i]));
@@ -411,7 +436,7 @@ class Evaluator {
                                     : numerator / (denominator + EPSILON);
         max_ratio_imag = (ratio > max_ratio_imag) ? ratio : max_ratio_imag;
       }
-    }
+    }  // end omp parallel block
     error_ = max_ratio;
     if (is_complex_) {
       error_imag_ = max_ratio_imag;
@@ -424,6 +449,9 @@ class Evaluator {
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
     double max_ratio = 0;
     double max_ratio_imag = 0;
+#pragma omp parallel for reduction(max                          \
+                                   : max_ratio, max_ratio_imag) \
+    schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       double ratio = std::abs(double(mlu_array[i]) - double(base_array[i]));
       max_ratio = (ratio > max_ratio) ? ratio : max_ratio;
@@ -431,7 +459,7 @@ class Evaluator {
         ratio = std::abs(double(mlu_array[i + 1]) - double(base_array[i + 1]));
         max_ratio_imag = (ratio > max_ratio_imag) ? ratio : max_ratio_imag;
       }
-    }
+    }  // end omp parallel block
     error_ = max_ratio;
     if (is_complex_) {
       error_imag_ = max_ratio_imag;
@@ -467,8 +495,8 @@ class Evaluator {
               std::make_tuple(mlu_array[i + 1], base_array[i + 1]);
           if (unrepeat_res_imag.end() ==
               unrepeat_res_imag.find(unrepeat_tuple)) {
-            max_count += mlu_array[i + 1] < base_array[i + 1];
-            num_count++;
+            max_count_imag += mlu_array[i + 1] < base_array[i + 1];
+            num_count_imag++;
             unrepeat_res_imag.emplace(unrepeat_tuple);
           }
         }
@@ -486,6 +514,19 @@ class Evaluator {
     if (is_complex_) {
       error_imag_ =
           (num_count_imag < 100) ? -1 : max_count_imag / num_count_imag;
+    }
+  }
+
+  template <typename T>
+  void computeDiffKl() {
+    T *base_array = reinterpret_cast<T *>(base_array_);
+    T *mlu_array = reinterpret_cast<T *>(mlu_array_);
+    // diff_kl needs count_total_ <= INT64_MAX because of the length in python
+    // func is int64 diff_kl skips the data with too less quantity
+    if (count_total_ < (size_t)1000 || count_total_ > (size_t)INT64_MAX) {
+      error_ = -1;
+    } else {
+      error_ = diff_kl(base_array, mlu_array, count_total_);
     }
   }
 
@@ -512,8 +553,8 @@ class Evaluator {
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
     if (hasNanOrInf(base_array, count_total_) ||
         hasNanOrInf(mlu_array, count_total_)) {
-      LOG(ERROR) << "Found NaN or Inf when compute diff, return DBL_MAX "
-                    "instead.";
+      LOG(ERROR)
+          << "Found NaN or Inf when compute diff, return DBL_MAX instead.";
       skip_compute_diff_ = true;
       nan_inf_pass_ = false;
     }
@@ -547,9 +588,9 @@ class Evaluator {
   Formula func_;
   std::string name_ = "";
   std::set<Criterion> criterions_;
-  std::vector<Criterion> criterion_vec_;  // vector of (diff1+thresdhold)
-                                          // /(diff2 + threshold)
-  std::vector<ErrorWrap> error_vec_;      // vetor output's error
+  std::vector<Criterion>
+      criterion_vec_;  // vector of (diff1+thresdhold) /(diff2 + threshold)
+  std::vector<ErrorWrap> error_vec_;  // vetor output's error
 
   double workspace_size_ = -1;  // for -1
 };
@@ -565,7 +606,9 @@ struct PerfInfo {  // perf info for certain device (mlu or gpu)
   double h2d_time = -1;
   double d2h_time = -1;
   // hardware time of mlu or gpu
-  double hardware_time = -1;        // us
+  double hardware_time = -1;  // us
+  // mlu hardware time coefficient of variantion
+  double hardware_time_cv = -1;
   double hardware_time_layer = -1;  // us
   // compute efficiency of mlu or gpu
   double compute_efficiency = -1;

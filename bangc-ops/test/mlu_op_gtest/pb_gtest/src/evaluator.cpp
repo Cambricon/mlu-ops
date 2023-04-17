@@ -112,8 +112,7 @@ void Evaluator::computeError(void *baseline_result, void *mlu_result,
   if (0 == criterions.size()) {
     criterion_matching_ = false;
     LOG(ERROR) << "Error func in mluop_gtest and pb/pt may mismatch,"
-               << " now no error func is used, plese check.";
-    return;
+               << " now no error func is used, please check.";
   }
   init(baseline_result, mlu_result, count, criterions, name, dtype,
        skip_nan_n_inf);
@@ -136,9 +135,9 @@ bool Evaluator::isPassed() {
     return false;
   }
   if (error_vec_.empty()) {
-    LOG(WARNING) << "The result error is empty, it means output shape is 0 "
-                    "in pb, "
-                    "and skip compute result error.";
+    LOG(WARNING)
+        << "The result error is empty, it means output shape is 0 in pb, "
+           "and skip compute result error.";
   }
   for (size_t i = 0; i < error_vec_.size(); ++i) {
     if (error_vec_[i].criterion.enable == false) {
@@ -160,6 +159,12 @@ bool Evaluator::isPassed() {
   } else if (Formula::DIFF4 == func) {      \
     if (err >= 0 && thred >= 0) {           \
       if (err == 0.0 || (err == 1.0)) {     \
+        return false;                       \
+      }                                     \
+    }                                       \
+  } else if (Formula::DIFF_KL == func) {    \
+    if (err >= 0 && thred >= 0) {           \
+      if (err > thred) {                    \
         return false;                       \
       }                                     \
     }                                       \
@@ -253,6 +258,8 @@ std::string Evaluator::showFormula(Formula f) {
       return "DIFF3_2";
     case DIFF4:
       return "DIFF4";
+    case DIFF_KL:
+      return "DIFF_KL";
     default:
       GTEST_CHECK(false, "Evaluator: got an unsupported criterion formula.");
   }

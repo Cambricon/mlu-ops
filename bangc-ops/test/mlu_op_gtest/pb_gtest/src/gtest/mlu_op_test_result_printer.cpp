@@ -446,23 +446,6 @@ void xmlPrinter::PrintXmlTestCase(std::ostream *stream,
   *stream << TestPropertiesAsXmlAttributes(test_case.ad_hoc_test_result())
           << ">\n";
 
-  // provide bug information for AuotoJira to create Jira Issues
-  // if (test_case.failed_test_count()) {
-  *stream << "    <properties>\n";
-  *stream << "      <property name=\"project\" value=\"MLUOPCORE\" />\n";
-  *stream << "      <property name=\"component\" value=\"mluOps\" />\n";
-  *stream << "      <property name=\"bug_level\" value=\"一般\" />\n";
-  *stream << "      <property name=\"bug_label\" value=\"master\" />\n";
-  *stream << "      <property name=\"product_component\" value=\"mluOps-Core\" "
-             "/>\n";
-  *stream << "      <property name=\"bug_source\" value=\"集成测试\" />\n";
-  *stream << "      <property name=\"bug_category\" value=\"功能\" />\n";
-  *stream << "      <property name=\"bug_frequency\" value=\"必现\" />\n";
-  *stream << "      <property name=\"bug_boardform\" value=\" \" />\n";
-  *stream << "      <property name=\"bug_scenarios\" value=\"通用\" />\n";
-  *stream << "    </properties>\n";
-  //}
-
   for (int i = 0; i < test_case.total_test_count(); ++i) {
     if (test_case.GetTestInfo(i)->is_reportable())
       OutputXmlTestInfo(stream, test_case.name(), *test_case.GetTestInfo(i));

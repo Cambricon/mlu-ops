@@ -41,9 +41,10 @@
 #include "mlu_op_test.pb.h"
 
 void usage() {
-  std::cout << "Usage:" << std::endl;
-  std::cout << "[1]: src_path or src_file. (prototxt or txt)" << std::endl;
-  std::cout << "[2]: dst_path or dst_file. (pb)" << std::endl;
+  std::cout << "Convert prototxt or txt to pb. Usage:" << std::endl;
+  std::cout << "[1]: src_path dst_path" << std::endl;
+  std::cout << "[2]: src_file dst_path" << std::endl;
+  std::cout << "[3]: src_file dst_file" << std::endl;
 }
 
 void listFiles(std::string dir, std::vector<std::string> &files) {
@@ -192,6 +193,7 @@ void dumpProto(std::string src, std::string dst) {
   auto proto_node = new mluoptest::Node;
   std::cout << src << " => " << dst << std::endl;
   readIn(src, proto_node);
+  nodeHex2Int(proto_node);
   writeTo(proto_node, dst);
   delete proto_node;
 }

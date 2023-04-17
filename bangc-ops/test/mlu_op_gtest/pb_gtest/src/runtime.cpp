@@ -25,7 +25,7 @@
 #include <cstdio>
 #include <random>
 #include <algorithm>
-#include <chrono>    // NOLINT
+#include <chrono>  // NOLINT
 #include "runtime.h"
 
 #ifdef __AVX__

@@ -20,14 +20,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "cnlog.h"
+
 #include <string>
 #include <mutex>  // NOLINT
 #include <algorithm>
 #include <map>
-#include "iostream"
-#include "fstream"
-#include "sstream"
-#include "core/cnlog.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+#include "tool.h"
 
 #if defined(WINDOWS) || defined(WIN32)  // used in windows
 
@@ -62,22 +65,27 @@
 #define HOURS_DIFFERENCE 8
 
 namespace mluop {
-namespace cnlog {
+namespace logging {
 
-std::ofstream logFile;                       // which file to save log message.
-std::ostream userStream(std::cout.rdbuf());  // stream to print on screen.
-uint64_t warningCnt = 0;                     // counts of warning
-uint64_t errorCnt = 0;                       // counts of error
-int64_t fatalCnt = 0;                        // counts of fatal
-bool is_open_log = false;                    // whether log system is work.
-__attribute__((__unused__)) int logLevel = getLevelEnvVar(
+static int getLevelEnvVar(const std::string& str, int default_para = false);
+
+static std::ofstream logFile;  // which file to save log message.
+static std::ostream userStream(
+    std::cout.rdbuf());           // stream to print on screen.
+static uint64_t warningCnt = 0;   // counts of warning
+static uint64_t errorCnt = 0;     // counts of error
+static int64_t fatalCnt = 0;      // counts of fatal
+static bool is_open_log = false;  // whether log system is work.
+__attribute__((__unused__)) static int logLevel = getLevelEnvVar(
     "MLUOP_MIN_LOG_LEVEL", 0);  // only the level GE this will be print.
-__attribute__((__unused__)) bool is_only_show =
+__attribute__((__unused__)) static bool is_only_show =
     getBoolEnvVar("MLUOP_LOG_ONLY_SHOW", true);  // whether only show on screen.
-__attribute__((__unused__)) bool g_color_print =
+__attribute__((__unused__)) static bool g_color_print =
     getBoolEnvVar("MLUOP_LOG_COLOR_PRINT", true);  // whether print with color
-__attribute__((__unused__)) const std::map<std::string, bool> module_print_map =
-    {{"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)}};
+__attribute__((__unused__)) static const std::map<std::string, bool>
+    module_print_map = {
+        {"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)},
+};
 
 bool isPrintToScreen() {
   if (userStream.rdbuf() == std::cout.rdbuf()) {
@@ -130,30 +138,15 @@ LogMessage::LogMessage(std::string file, int line, int module, int severity,
 #endif
 }
 
-/*
- * @brief: set the log levels.
- *         only the message level higher than this can be print.
- *         you can use this to change the level set in initLog function.
- */
-void setLevel(int log_level) {
-  if (log_level <= 0) {
-    log_level = 0;
-  }
-  if (log_level >= 6) {
-    log_level = 6;
-  }
-  logLevel = log_level;
-}
-
 /**
  * @brief: used by interface macro, use << to get the string content.
  */
-std::stringstream &LogMessage::stream() { return contex_str_; }
+std::stringstream& LogMessage::stream() { return contex_str_; }
 
 /**
  * @brief: clear endl in param string.
  */
-void clearEnter(std::string *ss) {
+void clearEnter(std::string* ss) {
   for (std::string::iterator it = (*ss).begin(); it != (*ss).end(); it++) {
     if (*it == '\n') {
       *it = ' ';
@@ -161,7 +154,7 @@ void clearEnter(std::string *ss) {
   }
 }
 
-std::mutex log_mutex;  // to protect write to file.
+static std::mutex log_mutex;  // to protect write to file.
 
 /*
  * @brief: the destructor that output the string to the file or screen.
@@ -452,7 +445,7 @@ void LogMessage::printTail(bool is_colored) {
  * // only log message level higher than LOG_WARNING can be print.
  * initLog(LOG_WARNING, test_log.log);
  */
-int initLog(std::string file) {
+static int initLog(std::string file) {
 #ifndef ANDROID_LOG
   if (is_open_log) {
     return 0;
@@ -471,7 +464,7 @@ int initLog(std::string file) {
 #endif
 }
 
-int initLogOnlyShow() {
+static int initLogOnlyShow() {
   if (is_open_log) {
     return 0;
   }
@@ -480,39 +473,8 @@ int initLogOnlyShow() {
   return 1;
 }
 
-/*
- * @brief: close the log system, after call it, no message is to save in file
- *         or shown on screen.
- */
-void endLog() {
-#ifndef ANDROID_LOG
-  if (!is_only_show) {
-    if (logFile.is_open()) {
-      logFile.flush();
-      logFile.close();
-    } else {
-      // do nothing
-    }
-  }
-#endif
-  is_only_show = false;
-  is_open_log = false;
-}
-
-bool getBoolEnvVar(const std::string &str, bool default_para) {
-  const char *env_raw_ptr = std::getenv(str.c_str());
-  if (env_raw_ptr == nullptr) {
-    return default_para;
-  }
-  std::string env_var = std::string(env_raw_ptr);
-  /// to up case
-  std::transform(env_var.begin(), env_var.end(), env_var.begin(), ::toupper);
-  return (env_var == "1" || env_var == "ON" || env_var == "YES" ||
-          env_var == "TRUE");
-}
-
-int getLevelEnvVar(const std::string &str, int default_para) {
-  const char *env_raw_ptr = std::getenv(str.c_str());
+int getLevelEnvVar(const std::string& str, int default_para) {
+  const char* env_raw_ptr = std::getenv(str.c_str());
   if (env_raw_ptr == nullptr) {
     return default_para;
   }
@@ -531,15 +493,16 @@ int getLevelEnvVar(const std::string &str, int default_para) {
   return default_para;
 }
 
-int initCNLog() {
+static int initCNLog() {
   if (is_only_show) {
     initLogOnlyShow();
   } else {
-    initLog("mlu_op_auto_log");
+    initLog("mluop_auto_log");
   }
   return 0;
 }
 
 __attribute__((__unused__)) static int initlog = initCNLog();
-}  // namespace cnlog
+
+}  // namespace logging
 }  // namespace mluop

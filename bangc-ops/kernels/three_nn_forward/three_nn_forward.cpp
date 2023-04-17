@@ -149,7 +149,7 @@ static mluOpStatus_t threeNNParamCheck(
                      (unknown_desc->dtype == MLUOP_DTYPE_FLOAT),
                  "Only half and float are supported in input unknown tensor, "
                  "but the data type of tensor is "
-                     << mluop::getNameOfDataType(unknown_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(unknown_desc->dtype) << ".");
   PARAM_CHECK("[mluOpThreeNNForward]",
               unknown_desc->dtype == known_desc->dtype);
   PARAM_CHECK("[mluOpThreeNNForward]",
@@ -158,7 +158,7 @@ static mluOpStatus_t threeNNParamCheck(
   PARAM_CHECK_V2(
       "[mluOpThreeNNForward]", (idx_desc->dtype == MLUOP_DTYPE_INT32),
       "Only int32 are supported in output idx, but the data type of tensor is "
-          << mluop::getNameOfDataType(idx_desc->dtype) << ".");
+          << mluOpGetNameOfDataType(idx_desc->dtype) << ".");
 
   const size_t unknown_element_num = mluOpGetTensorElementNum(unknown_desc);
   const size_t known_element_num = mluOpGetTensorElementNum(known_desc);

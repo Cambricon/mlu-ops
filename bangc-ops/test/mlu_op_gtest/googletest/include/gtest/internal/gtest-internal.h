@@ -1245,8 +1245,8 @@ class NativeArray {
   GTEST_AMBIGUOUS_ELSE_BLOCKER_                                       \
   if (const ::testing::AssertionResult gtest_ar_ =                    \
           ::testing::AssertionResult(expression))                     \
-    ; /* NOLINT */                                                    \
-  else  /* NOLINT */                                                  \
+    ;  /* NOLINT */                                                   \
+  else /* NOLINT */                                                   \
     fail(::testing::internal::GetBoolAssertionFailureMessage(         \
              gtest_ar_, text, #actual, #expected)                     \
              .c_str())

@@ -92,15 +92,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   PARAM_CHECK_V2(API, (gates_desc->dtype == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in input tensor, but the "
                  "data type of tensor is "
-                     << mluop::getNameOfDataType(gates_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(gates_desc->dtype) << ".");
   PARAM_CHECK_V2(API, (indices_desc->dtype == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in indices tensor, but the data "
                  "type of tensor is "
-                     << mluop::getNameOfDataType(indices_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(indices_desc->dtype) << ".");
   PARAM_CHECK_V2(API, (locations_desc->dtype == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in locations tensor, but the data "
                  "type of tensor is "
-                     << mluop::getNameOfDataType(locations_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(locations_desc->dtype) << ".");
   PARAM_CHECK(API, dispatch_desc->dtype == gates_desc->dtype);
   PARAM_CHECK(API, grad_input_desc->dtype == gates_desc->dtype);
 

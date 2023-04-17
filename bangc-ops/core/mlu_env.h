@@ -27,11 +27,13 @@
 #include "core/tool.h"
 
 // macro function for user
-#define IS_TF32_OVERRIDE (mluop::mlu_env::getCambriconTF32Override() > 0)
+#define IS_TF32_OVERRIDE (mluop::mlu_env::getCarmbriconTF32Override() > 0)
+#define IF_CHECK_DEP_VERSION (mluop::mlu_env::getCheckDepVersion() > 0)
 
 namespace mluop {
 namespace mlu_env {
-int getCambriconTF32Override();
+int getCarmbriconTF32Override();
+int getCheckDepVersion();
 }  // namespace mlu_env
 }  // namespace mluop
 #endif  // CORE_MLU_ENV_H_

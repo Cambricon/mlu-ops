@@ -23,19 +23,21 @@
 #ifndef TEST_MLU_OP_GTEST_SRC_GTEST_TEST_ENV_H_
 #define TEST_MLU_OP_GTEST_SRC_GTEST_TEST_ENV_H_
 
+#include <libxml/xpath.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
 #include <string>
+#include <cstdio>
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <unordered_map>
 #include <tuple>
 #include <random>
-#include <libxml/xpath.h>  // NOLINT
-#include "cn_api.h"
 #include "gtest/gtest.h"
+#include "cn_api.h"
 #include "mlu_op.h"
 #include "core/logging.h"
 #include "variable.h"
@@ -59,19 +61,20 @@ class TestEnvironment : public testing::Environment {
 
  private:
   void convertBaselineXml2Txt();
+  void getAccuracyBaselineXml();
   // set environment of test, such as date, mluop_version.
   static void setTestEnv();
   // record environment info to xml.
   static void recordEnvXml();
 
   static void setDate();
-  static void setMluopVersion();
+  static void setMluOpVersion();
   static void setMluPlatform();
   static void setClusterLimit();
   static void setJobLimit();
   // CommitId, MluopBranch will be null when not a mluops envrionment.
   static void setCommitId();
-  static void setMluopBranch();
+  static void setMluOpBranch();
   // Ip will be null when "ifconfig" is not installed,
   //  such as testing in docker.
   static void setIp();

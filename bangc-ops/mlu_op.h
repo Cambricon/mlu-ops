@@ -1262,6 +1262,51 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptor(
     mluOpTensorDescriptor_t desc, mluOpTensorLayout_t layout, mluOpDataType_t dtype, int dimNb, const int dimSize[]);
 
+// Group:Common Interface:Tensor
+/*!
+ *  @brief Initializes the tensor descriptor pointed by \b desc that is previously created
+ *  with the ::mluOpCreateTensorDescriptor function, and sets the information about
+ *  the dimensions, data type, and layout of the input tensor.
+ *
+ *  If ::mluOpSetTensorDescriptor_v2 is called, you do not need to specify the strides of all
+ *  dimensions. The strides are inferred by parameters passed to this function. Also, the data
+ *  will be treated as contiguous in memory with no padding between dimensions. To specify the
+ *  strides of all dimensions, you can call ::mluOpSetTensorDescriptorEx_v2. But the data might not
+ *  be treated as contiguous in memory.
+ *
+ *  @param[in] desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] layout
+ *    Input. The layout of the input tensor. For detailed information, see ::mluOpTensorLayout_t.
+ *  @param[in] dtype
+ *    Input. The data type of the input tensor. For detailed information, see ::mluOpDataType_t.
+ *  @param[in] dimNb
+ *    Input. The number of dimensions in the input tensor of the initialized operation.
+ *  @param[in] dimSize
+ *    Input. An array that contains the size of the tensor for each dimension.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - dimSize[0] represents the highest dimension, dimSize[DIM_MAX - 1] represents
+ *    the lowest dimension, and DIM_MAX represents the number of dimensions in the input tensor.
+ *  - This function cannot be called continuously. You need to call ::mluOpResetTensorDescriptor
+ *    before calling another ::mluOpSetTensorDescriptor to avoid memory leaks.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptor_v2(mluOpTensorDescriptor_t desc,
+                            mluOpTensorLayout_t layout,
+                            mluOpDataType_t dtype,
+                            int dimNb,
+                            const int64_t dimSize[]);
+
 // Group:GetIndicePairs
 /*!
  * @brief Initializes the sparse convolution descriptor \b desc that was previously created
@@ -1567,6 +1612,54 @@ mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
                            const int dimSize[],
                            const int dimStride[]);
 
+// Group:Common Interface:Tensor
+/*!
+ *  @brief Initializes the tensor descriptor pointed by \b desc that is previously created
+ *  with the ::mluOpCreateTensorDescriptor function, and sets the information about
+ *  the dimensions, strides, data type, and layout of the input tensor.
+ *
+ *  Compare with ::mluOpSetTensorDescriptor_v2, you can specify the strides of all dimensions with
+ *  this function. If ::mluOpSetTensorDescriptor_v2 is called, you do not need to specify the
+ *  strides of all dimensions and the strides are inferred by parameters passed to this function.
+ *
+ *  This function does not support all the operations in this version. You can check
+ *  if an operation supports this function in the "note" section of the operation description.
+ *
+ *  @param[in] desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[in] layout
+ *    Input. The layout of the input tensor. For detailed information, see ::mluOpTensorLayout_t.
+ *  @param[in] dtype
+ *    Input. The data type of the input tensor. For detailed information, see ::mluOpDataType_t.
+ *  @param[in] dimNb
+ *    Input. The number of dimensions in the input tensor of the initialized operation.
+ *  @param[in] dimSize
+ *    Input. An array that contains the size of the tensor for each dimension.
+ *  @param[in] dimStride
+ *    Input. An array that contains the stride of the tensor for each dimension.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - dimSize[0] represents the highest dimension, and dimSize[DIM_MAX - 1] represents
+ *    the lowest dimension.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorEx_v2(mluOpTensorDescriptor_t desc,
+                              mluOpTensorLayout_t layout,
+                              mluOpDataType_t dtype,
+                              int dimNb,
+                              const int64_t dimSize[],
+                              const int64_t dimStride[]);
+
 // Group:Tensor
 /*!
  * @brief Sets the \b dimNb and \b dimSize factors to the input tensor descriptor.
@@ -1610,6 +1703,39 @@ mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
  */
 mluOpStatus_t
 mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc, int dimNb, const int *dimSize);
+
+// Group:Common Interface:Tensor
+/*!
+ * @brief Sets the \b dimNb and \b dimSize factors to the input tensor descriptor.
+ *
+ * If ::mluOpSetTensorDescriptorDim_v2 is called, you do not need to specify the strides of all
+ * dimensions. The strides are inferred by parameters passed to this function. Also, the data
+ * will be treated as contiguous in memory with no padding between dimensions. To specify the
+ * strides of all dimensions, you can call ::mluOpSetTensorDescriptorEx_v2. But the data might not
+ * be treated as contiguous in memory.
+ *
+ * @param[in] desc
+ *   Input. The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] dimNb
+ *   Input. The number of dimensions in the input tensor of the initialized operation.
+ * @param[in] dimSize
+ *   Input. An array that contains the size of the tensor for each dimension.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @note
+ * - dimSize[0] represents the highest dimension, dimSize[DIM_MAX - 1] represents
+ *   the lowest dimension, and DIM_MAX represents the number of dimensions in the input tensor.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t
+mluOpSetTensorDescriptorDim_v2(mluOpTensorDescriptor_t desc, int dimNb, const int64_t *dimSize);
 
 // Group:Tensor
 /*!
@@ -1818,6 +1944,45 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptor(
     const mluOpTensorDescriptor_t desc, mluOpTensorLayout_t *layout, mluOpDataType_t *dtype, int *dimNb, int dimSize[]);
 
+// Group:Common Interface:Tensor
+/*!
+ *  @brief Retrieves a tensor descriptor \b desc that is previously created with the
+ *  ::mluOpCreateTensorDescriptor function, and sets the information about the dimensions,
+ *  data type, and layout of input tensor.
+ *
+ *  @param[in] desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] layout
+ *    Output. Pointer to the host memory that holds information about the layout of the input tensor.
+ *  For detailed information, see ::mluOpTensorLayout_t.
+ *  @param[out] dtype
+ *    Output. Pointer to the host memory that holds information about the data type of the input tensor.
+ *  For detailed information, see ::mluOpDataType_t.
+ *  @param[out] dimNb
+ *    Output. Pointer to the host memory that holds information about the dimension of input tensor.
+ *  @param[out] dimSize
+ *    Output. An array that contains the size of the tensor for each dimension.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - dimSize[0] represents the highest dimension, and dimSize[DIM_MAX - 1] represents the lowest
+ *    dimension.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptor_v2(const mluOpTensorDescriptor_t desc,
+                            mluOpTensorLayout_t *layout,
+                            mluOpDataType_t *dtype,
+                            int *dimNb,
+                            int64_t dimSize[]);
+
 // Group:Tensor
 /*!
  * @brief Retrieves a tensor descriptor \b desc that was previously created with the
@@ -1871,6 +2036,48 @@ mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
                            int *dimNb,
                            int dimSize[],
                            int dimStride[]);
+
+// Group:Common Interface:Tensor
+/*!
+ *  @brief Retrieves a tensor descriptor \b desc that is previously created with the
+ *  ::mluOpCreateTensorDescriptor and sets the information about the dimensions, data type,
+ *  stride and layout of input tensor with ::mluOpSetTensorDescriptorEx_v2.
+ *
+ *  @param[in] desc
+ *    Input. The descriptor of the input tensor. For detailed information,
+ *    see ::mluOpTensorDescriptor_t.
+ *  @param[out] layout
+ *    Output. Pointer to the host memory that holds information about the layout of the input tensor.
+ *  For detailed information, see ::mluOpTensorLayout_t.
+ *  @param[out] dtype
+ *    Output. Pointer to the host memory that holds information about the data type of the input tensor.
+ *  For detailed information, see ::mluOpDataType_t.
+ *  @param[out] dimNb
+ *    Output. Pointer to the host memory that holds information about the dimension of input tensor.
+ *  @param[out] dimSize
+ *    Output. An array that contains the size of the tensor for each dimension.
+ *  @param[out] dimStride
+ *    Output. An array that contains the stride of the tensor for each dimension.
+ *  @par Return
+ *  - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ *  @note
+ *  - dimSize[0] represents the highest dimension, and dimSize[DIM_MAX - 1] represents the lowest
+ *    dimension.
+ *
+ *  @par Requirements
+ *  - None.
+ *
+ *  @par Example
+ *  - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorEx_v2(const mluOpTensorDescriptor_t desc,
+                              mluOpTensorLayout_t *layout,
+                              mluOpDataType_t *dtype,
+                              int *dimNb,
+                              int64_t dimSize[],
+                              int64_t dimStride[]);
 
 // Group:Tensor
 /*!

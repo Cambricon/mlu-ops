@@ -90,21 +90,21 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
     LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
                << "But now input_dtype is "
-               << mluop::getNameOfDataType(input_dtype) << ".";
+               << mluOpGetNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << interface_name << "Type of target should be INT32. "
                << "But now target_dtype is "
-               << mluop::getNameOfDataType(input_dtype) << ".";
+               << mluOpGetNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_dtype != input_dtype) {
     LOG(ERROR) << interface_name
                << "Both types of input and output should be equal. "
                << "But now input_dtype is "
-               << mluop::getNameOfDataType(input_dtype) << ", "
-               << "output_dtype is " << mluop::getNameOfDataType(output_dtype)
+               << mluOpGetNameOfDataType(input_dtype) << ", "
+               << "output_dtype is " << mluOpGetNameOfDataType(output_dtype)
                << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -115,9 +115,9 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
       LOG(ERROR) << interface_name
                  << "Both types of weight and output should be equal. "
                  << "But now input_dtype is "
-                 << mluop::getNameOfDataType(input_dtype) << ", "
+                 << mluOpGetNameOfDataType(input_dtype) << ", "
                  << "weight_dtype is "
-                 << mluop::getNameOfDataType(weight_desc->dtype) << ".";
+                 << mluOpGetNameOfDataType(weight_desc->dtype) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (weight_desc->dim != 1) {
@@ -342,13 +342,13 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
     LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
                << "But now input_dtype is "
-               << mluop::getNameOfDataType(input_dtype) << ".";
+               << mluOpGetNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << interface_name << "The data type of target should be int32, "
                << "but now target dtype is "
-               << mluop::getNameOfDataType(target_dtype) << ".";
+               << mluOpGetNameOfDataType(target_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -370,9 +370,9 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
       LOG(ERROR) << interface_name
                  << "Both types of weight and output should be equal. "
                  << "But now input_dtype is "
-                 << mluop::getNameOfDataType(input_dtype) << ", "
+                 << mluOpGetNameOfDataType(input_dtype) << ", "
                  << "weight_dtype is "
-                 << mluop::getNameOfDataType(weight_desc->dtype) << ".";
+                 << mluOpGetNameOfDataType(weight_desc->dtype) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {

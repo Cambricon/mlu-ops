@@ -41,7 +41,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "evaluator.h"
-#include "tools.h"
+#include "pb_test_tools.h"
 
 namespace mluoptest {
 
@@ -79,8 +79,8 @@ struct MetaTensor {
   // shape may not equal to total_count.
   // maybe total_count is 0 (for nullptr), but shape is not 0 element
   // for testing api foolproof
-  std::vector<int> shape;
-  std::vector<int> stride;
+  std::vector<int64_t> shape;
+  std::vector<int64_t> stride;
 
   int position = 0;
   float scale = 1.0;
@@ -216,17 +216,37 @@ class Parser {
   inline void getInputDims(int index, int dim_size, int *dim_array,
                            int *dim_stride = nullptr) {
     auto ts = inputs_.at(index);
-    memcpy(dim_array, ts.shape.data(), ts.shape.size() * sizeof(int));
+    std::copy(ts.shape.data(), ts.shape.data() + ts.shape.size(), dim_array);
     if (dim_stride) {
-      memcpy(dim_stride, ts.stride.data(), ts.stride.size() * sizeof(int));
+      std::copy(ts.stride.data(), ts.stride.data() + ts.stride.size(),
+                dim_stride);
+    }
+  }
+  inline void getInputDims(int index, int dim_size, int64_t *dim_array,
+                           int64_t *dim_stride = nullptr) {
+    auto ts = inputs_.at(index);
+    std::copy(ts.shape.data(), ts.shape.data() + ts.shape.size(), dim_array);
+    if (dim_stride) {
+      std::copy(ts.stride.data(), ts.stride.data() + ts.stride.size(),
+                dim_stride);
     }
   }
   inline void getOutputDims(int index, int dim_size, int *dim_array,
                             int *dim_stride = nullptr) {
     auto ts = outputs_.at(index);
-    memcpy(dim_array, ts.shape.data(), ts.shape.size() * sizeof(int));
+    std::copy(ts.shape.data(), ts.shape.data() + ts.shape.size(), dim_array);
     if (dim_stride) {
-      memcpy(dim_stride, ts.stride.data(), ts.stride.size() * sizeof(int));
+      std::copy(ts.stride.data(), ts.stride.data() + ts.stride.size(),
+                dim_stride);
+    }
+  }
+  inline void getOutputDims(int index, int dim_size, int64_t *dim_array,
+                            int64_t *dim_stride = nullptr) {
+    auto ts = outputs_.at(index);
+    std::copy(ts.shape.data(), ts.shape.data() + ts.shape.size(), dim_array);
+    if (dim_stride) {
+      std::copy(ts.stride.data(), ts.stride.data() + ts.stride.size(),
+                dim_stride);
     }
   }
   inline ValueType getInputValueType(int index) {
@@ -267,6 +287,7 @@ class Parser {
   void getTensorValueByFile(Tensor *pt, void *data, size_t count);
 
   void checkTensorValid(MetaTensor *mt, Tensor *t);
+  void checkOutputStrideOverlap();
   void checkRandomParam(Tensor *t);
 
   // if no stride return shape count

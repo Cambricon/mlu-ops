@@ -40,9 +40,10 @@
 #include "mlu_op_test.pb.h"
 
 void usage() {
-  std::cout << "Usage:" << std::endl;
-  std::cout << "[1]: src_path or src_file. (for pb)" << std::endl;
-  std::cout << "[2]: dst_path or dst_file. (for prototxt)" << std::endl;
+  std::cout << "Convert pb to prototxt. Usage:" << std::endl;
+  std::cout << "[1]: src_path dst_path" << std::endl;
+  std::cout << "[2]: src_file dst_path" << std::endl;
+  std::cout << "[3]: src_file dst_file" << std::endl;
 }
 
 void listFiles(std::string dir, std::vector<std::string> &files) {
@@ -116,7 +117,11 @@ bool isIntDtype(const mluoptest::Tensor *ts) {
   return ts->dtype() == mluoptest::DTYPE_INT8 ||
          ts->dtype() == mluoptest::DTYPE_INT16 ||
          ts->dtype() == mluoptest::DTYPE_INT32 ||
-         ts->dtype() == mluoptest::DTYPE_INT64;
+         ts->dtype() == mluoptest::DTYPE_INT64 ||
+         ts->dtype() == mluoptest::DTYPE_UINT8 ||
+         ts->dtype() == mluoptest::DTYPE_UINT16 ||
+         ts->dtype() == mluoptest::DTYPE_UINT32 ||
+         ts->dtype() == mluoptest::DTYPE_UINT64;
 }
 
 bool isBoolDtype(const mluoptest::Tensor *ts) {
@@ -153,7 +158,7 @@ void nodeInt2Hex(mluoptest::Node *node) {
 }
 
 // read in pb.
-bool readIn(const std::string &filename, google::protobuf::Message *proto) {
+bool readIn(const std::string &filename, mluoptest::Node *proto) {
   std::string ext_pattern = ".pb";
   std::string ext = filename.substr(filename.length() - ext_pattern.length(),
                                     filename.length());
@@ -215,9 +220,10 @@ void makeDir(std::string path) {
 }
 
 void dumpProto(std::string src, std::string dst) {
-  auto proto_node = new mluoptest::Node;
+  mluoptest::Node *proto_node = new mluoptest::Node;
   std::cout << src << " => " << dst << std::endl;
   readIn(src, proto_node);
+  nodeInt2Hex(proto_node);
   writeTo(proto_node, dst);
   delete proto_node;
 }

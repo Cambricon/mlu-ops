@@ -77,17 +77,17 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
   PARAM_CHECK_V2(op_name, (indices_desc->dtype == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in indices tensor, but the data "
                  "type of tensor is "
-                     << mluop::getNameOfDataType(indices_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(indices_desc->dtype) << ".");
   PARAM_CHECK_V2(op_name, (locations_desc->dtype == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in locations tensor, but the data "
                  "type of tensor is "
-                     << mluop::getNameOfDataType(locations_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(locations_desc->dtype) << ".");
 
   // check tensor datatype, support float32
   PARAM_CHECK_V2(op_name, input_desc->dtype == MLUOP_DTYPE_FLOAT,
                  "Only float are supported in input tensor, but the "
                  "data type of tensor is "
-                     << mluop::getNameOfDataType(input_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(input_desc->dtype) << ".");
   PARAM_CHECK(op_name, input_desc->dtype == dispatch_desc->dtype);
   PARAM_CHECK(op_name, input_desc->dtype == gates_desc->dtype);
 

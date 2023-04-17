@@ -20,9 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <ratio>  // NOLINT
+#include <cmath>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <set>
 #include <functional>
 #include <unordered_set>
@@ -36,6 +37,7 @@
 
 #define GTEST_DEBUG_ENABLE 0
 
+extern std::unordered_map<std::string, std::vector<double>> acc_baseline_map;
 namespace mluoptest {
 
 Executor::~Executor() {
@@ -171,9 +173,10 @@ void Executor::sync() {
 // }
 
 void Executor::launchAndGetTime(ComputeMode compute_mode, int repeat) {
-  float hw_time = 0;
-  float hw_time_layer = 0;
-  float hw_time_total = 0;
+  double hw_time = 0;
+  double hw_time_layer = 0;
+  double hw_time_total = 0;
+  double hw_time_sum_of_square = 0;
   float hw_time_layer_total = 0;
   Func compute_ptr = std::bind(&Executor::compute, this);
   Func compute_by_layer_ptr = std::bind(&Executor::computeByLayer, this);
@@ -202,6 +205,11 @@ void Executor::launchAndGetTime(ComputeMode compute_mode, int repeat) {
     eva_res_.mlu.hardware_time_layer = hw_time_layer_total / repeat;
   } else {
     eva_res_.mlu.hardware_time = hw_time_total / repeat;
+    const double hardware_time_variance =
+        hw_time_sum_of_square / repeat -
+        eva_res_.mlu.hardware_time * eva_res_.mlu.hardware_time;
+    eva_res_.mlu.hardware_time_cv =
+        sqrt(hardware_time_variance) / eva_res_.mlu.hardware_time;
   }
 }
 
@@ -249,12 +257,15 @@ EvaluateResult Executor::teardown() {
     VLOG(4) << "End MLU compute.";
   }
   auto allocated_after = mlu_runtime_.getAllocatedSize();
-  EXPECT_EQ(allocated_before, allocated_after)
-      << "Duplicated MLU Memory allocated during ::compute, which is illegal "
-         "during perf_repeat. "
-         "You should consider ::workspaceMalloc and ::workspaceFree, or setup "
-         "internal state"
-      << "(case: " << eva_res_.case_path << ")";
+  if (allocated_before != allocated_after) {
+    LOG(ERROR) << "Duplicated MLU Memory allocated during ::compute, which is "
+                  "illegal during perf_repeat. "
+                  "You should consider ::workspaceMalloc and ::workspaceFree, "
+                  "or setup internal state"
+               << "(case: " << eva_res_.case_path << ")";
+    eva_res_.is_passed = false;
+    return eva_res_;
+  }
 
   VLOG(4) << "Device free (for workspace).";
   workspaceFree();
@@ -284,7 +295,7 @@ EvaluateResult Executor::teardown() {
     cpuCompute();
     // if out dtype is half, cast cpu data from float to half to float,
     // consistent with mlu.
-    castHalfOuput();
+    castHalfOutput();
     VLOG(4) << "End cpu compute.";
   } else {
     // baseline output
@@ -301,7 +312,6 @@ EvaluateResult Executor::teardown() {
   castOut();
   recordGtestTimePoint("after_cast_out");
 
-  // diff_preprocess
   diffPreprocess();
 
   // diff
@@ -410,6 +420,10 @@ EvaluateResult Executor::evaluate() {
     checkBaseline();  // update eva_res_
   }
 
+  if (exe_config_->acc_baseline) {
+    checkAccuracyBaseline();
+  }
+
   return eva_res_;
 }
 
@@ -488,6 +502,37 @@ void Executor::getGtestInternalInfo() {
   eva_res_.gtest.parsed_file_size = parser_->getParsedFileSize();
   eva_res_.gtest.parsed_cost_seconds = parser_->getParsedCostSeconds();
   global_var.internal_info_.record_case(eva_res_.case_path, eva_res_.gtest);
+}
+
+void Executor::checkAccuracyBaseline() {
+  GTEST_CHECK(eva_res_.op_name != "",
+              "Executor: missing op name, didn't set it. We need know it when "
+              "get accuracy "
+              "baseline threshold");
+  std::string case_name = getCaseName(eva_res_.case_path);
+  bool acc_baseline_pass = true;
+  bool in_white_list = false;
+  double threshold = 0;
+  in_white_list = getAccuracyThreshold(eva_res_.op_name, &threshold);
+  if (!in_white_list) {
+    auto search = acc_baseline_map.find(case_name);
+    if (search != acc_baseline_map.end()) {
+      std::vector<double> errors;
+      for (const auto &error : eva_res_.errors) {
+        errors.push_back(error.error);
+      }
+      acc_baseline_pass = checkAccuracyBaselineStrategy(
+          case_name, search->second, errors, threshold);
+    } else {
+      LOG(INFO) << "[Accuracy Baseline:" << case_name
+                << "]:this case is new and do not have baseline data.";
+    }
+  }
+  if (!acc_baseline_pass) {
+    eva_res_.what.emplace_back(
+        "The accuracy result exceed baseline threshold.");
+  }
+  eva_res_.is_passed = eva_res_.is_passed && acc_baseline_pass;
 }
 
 // call this func after getMluHardwareTime()
@@ -856,12 +901,12 @@ void Executor::createTensors() {
     mluOpTensorDescriptor_t desc = nullptr;
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&desc));
     if (mt->stride.empty()) {  // if no stride testing this api.
-      MLUOP_CHECK(mluOpSetTensorDescriptor(desc, mt->layout, mt->dtype,
-                                           mt->shape.size(), mt->shape.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor_v2(
+          desc, mt->layout, mt->dtype, mt->shape.size(), mt->shape.data()));
     } else {  // if has stride testing this api.
-      MLUOP_CHECK(mluOpSetTensorDescriptorEx(desc, mt->layout, mt->dtype,
-                                             mt->shape.size(), mt->shape.data(),
-                                             mt->stride.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx_v2(
+          desc, mt->layout, mt->dtype, mt->shape.size(), mt->shape.data(),
+          mt->stride.data()));
     }
     MLUOP_CHECK(mluOpSetTensorDescriptorOnchipDataType(desc, mt->oc_dt));
 
@@ -1000,9 +1045,8 @@ void Executor::initHostData() {
     if (!ts->stride.empty() && flag_input_reuse_) {
       cpu_fp32_stride_input_.push_back(
           (float *)cpu_runtime_.allocate(ts->total_count * sizeof(float)));
-      void *temp_gpu =
-          cpu_runtime_.allocate(
-                ts->total_count * mluop::getSizeOfDataType(ts->dtype));
+      void *temp_gpu = cpu_runtime_.allocate(
+          ts->total_count * mluop::getSizeOfDataType(ts->dtype));
       memcpy(temp_gpu, data_vector_[i].host_ptr,
              ts->total_count * mluop::getSizeOfDataType(ts->dtype));
       castDataOut(temp_gpu, ts->dtype, cpu_fp32_stride_input_[i],
@@ -1088,6 +1132,8 @@ void Executor::getBaselineOutput() {
       continue;
     }
     void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+    VLOG(7) << "total_count: " << ts->total_count << ",\t"
+            << "shape_count: " << ts->shape_count;
     parser_->getOutputTensorValue(i, temp, ts->shape_count);
     mluOpDataType_t cpu_dtype = getCpuDtype(ts->dtype);
     castDataOut(temp, ts->dtype, cpu_fp32_output_[i], cpu_dtype,
@@ -1260,7 +1306,7 @@ void Executor::deviceFree() noexcept {
           ->Failed()) {
     return;
   }
-  EXPECT_EQ(mlu_runtime_.getMemBlockSize(), 0)
+  EXPECT_EQ(mlu_runtime_.getMemBlocksSize(), 0)
       << "MLU Memory leaked that should be deallocate by user explicitly"
       << "(case: " << eva_res_.case_path << ")";
   EXPECT_EQ(mlu_runtime_.destroy(), CNRT_RET_SUCCESS);
@@ -1293,9 +1339,8 @@ void Executor::getQuantizedParam(float *src_data, size_t count,
     if (ONLY_POSITION == quant_mode) {
       MLUOP_CHECK(mluop::getPosition(src_data, count, dst_dtype, position));
     } else if (POSITION_SCALE == quant_mode) {
-      MLUOP_CHECK(
-          mluop::getPositionAndScale(src_data, count, dst_dtype,
-                                     position, scale));
+      MLUOP_CHECK(mluop::getPositionAndScale(src_data, count, dst_dtype,
+                                             position, scale));
       // only for symmetric quantify int8/16
       if (parser_->negative_scale_) {
         *scale = -*scale;
@@ -1343,19 +1388,20 @@ void Executor::castDataIn(float *src_data, mluOpDataType_t src_dtype,
     }
     VLOG(4) << "skip castDataIn: count is zero" << *scale;
     if (dst_dtype == MLUOP_DTYPE_INT8) {
-      MLUOP_CHECK(mluop::castFloat32ToFixed(src_data, (int8_t *)dst_data,
-          count, *pos, *scale, *offset, handle_->round_mode));
+      MLUOP_CHECK(mluop::castFloat32ToFixed(src_data, (int8_t *)dst_data, count,
+                                            *pos, *scale, *offset,
+                                            handle_->round_mode));
       if (dequantify) {
         MLUOP_CHECK(mluop::castFixedToFloat32((int8_t *)dst_data, src_data,
-            count, *pos, *scale, *offset));
+                                              count, *pos, *scale, *offset));
       }
     } else if (dst_dtype == MLUOP_DTYPE_INT16) {
       MLUOP_CHECK(mluop::castFloat32ToFixed(src_data, (int16_t *)dst_data,
-          count, *pos, *scale, *offset, handle_->round_mode));
+                                            count, *pos, *scale, *offset,
+                                            handle_->round_mode));
       if (dequantify) {
-        MLUOP_CHECK(
-            mluop::castFixedToFloat32((int16_t *)dst_data, src_data, count,
-                                      *pos, *scale, *offset));
+        MLUOP_CHECK(mluop::castFixedToFloat32((int16_t *)dst_data, src_data,
+                                              count, *pos, *scale, *offset));
       }
     }
   } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
@@ -1441,10 +1487,10 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
     } else {
       if (src_dtype == MLUOP_DTYPE_INT8) {
         MLUOP_CHECK(mluop::castFixedToFloat32((int8_t *)src_data, dst_data,
-            count, pos, scale, offset));
+                                              count, pos, scale, offset));
       } else if (src_dtype == MLUOP_DTYPE_INT16) {
         MLUOP_CHECK(mluop::castFixedToFloat32((int16_t *)src_data, dst_data,
-            count, pos, scale, offset));
+                                              count, pos, scale, offset));
       }
     }
   } else if (dst_dtype == MLUOP_DTYPE_FLOAT &&
@@ -1463,39 +1509,10 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
                          nullptr);
   } else {
     LOG(WARNING) << "Executor::castDataOut(): Cast "
-                 << mluop::getNameOfDataType(src_dtype) << " to "
-                 << mluop::getNameOfDataType(dst_dtype)
-                 << " is not supported.";
+                 << mluOpGetNameOfDataType(src_dtype) << " to "
+                 << mluOpGetNameOfDataType(dst_dtype) << " is not supported.";
     GTEST_CHECK(false, "Executor: Unsupported dtype cast.");
   }
-}
-
-void Executor::quantizeTensorByChannel(float *src_data, void *dst_data,
-                                       mluOpDataType_t dst_dtype, size_t count,
-                                       int tensor_index) {
-  auto shape = parser_->node()->input(1).shape();
-  auto layout = parser_->node()->input(1).layout();
-  if (layout != mluoptest::LAYOUT_NDHWC || layout != mluoptest::LAYOUT_NHWC) {
-    LOG(ERROR) << "unsupport data layput for convolution forward";
-    return;
-  }
-  int co = shape.dims(0);
-  int *position = (int *)malloc(co * sizeof(int));
-  float *scale = (float *)malloc(co * sizeof(float));
-  int *offset = (int *)malloc(co * sizeof(int));
-  int deal_count = count / co;
-  for (int co_index = 0; co_index < co; ++co_index) {
-    castDataIn(src_data + deal_count, MLUOP_DTYPE_FLOAT,
-               (char *)dst_data +
-                   deal_count * mluop::getSizeOfDataType(dst_dtype),
-               dst_dtype, deal_count, flag_quant_mode_, position + co_index,
-               scale + co_index, offset + co_index, true);
-  }
-  // MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleOffsetByChannel(
-  //       tensor_desc_[tensor_index].tensor, co, position, scale, offset));
-  free(position);
-  free(scale);
-  free(offset);
 }
 
 // only for cpu-mode,
@@ -1552,9 +1569,8 @@ void Executor::castIn() {
                  online_quantize);  // p/s, discarded.
 
       // get oc_dt's p/s and set to tensor.
-      void *temp =
-          cpu_runtime_.allocate(
-              ts->total_count * mluop::getSizeOfDataType(ts->oc_dt));
+      void *temp = cpu_runtime_.allocate(ts->total_count *
+                                         mluop::getSizeOfDataType(ts->oc_dt));
       castDataIn(src_data, MLUOP_DTYPE_FLOAT,  // src data
                  temp, ts->oc_dt,              // dst data
                  ts->total_count,              // count
@@ -1839,7 +1855,7 @@ void Executor::tensor_stride_out(
              shape_total, stride_total);
 }
 
-void Executor::castHalfOuput() {
+void Executor::castHalfOutput() {
   for (int i = 0; i < getOutputBlocks().size(); ++i) {
     if (getOutputBlocks()[i]->size == 0) {
       continue;  // null output

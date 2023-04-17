@@ -24,9 +24,7 @@
 #define TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
 
 #include <string>
-
 #include "gtest/gtest.h"
-#include "mlu_op.h"
 
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
