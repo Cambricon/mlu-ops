@@ -43,6 +43,8 @@ typedef enum {
   /*!< Returns the default policy. */
   MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL = 1,
   /*!< Returns the small channel policy. */
+  MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST = 2,
+  /*!< Returns the fast policy. */
 } mluOpDeformAttnBackwardKernelPolicy_t;
 
 static void policyFunc(mluOpHandle_t handle, const int32_t batch,
@@ -66,15 +68,20 @@ static void policyFunc(mluOpHandle_t handle, const int32_t batch,
 }
 
 mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
-    const int channels, const int num_levels, const int num_points,
-    const int num_heads) {
+    const mluOpHandle_t handle, const int channels, const int num_levels,
+    const int num_points, const int num_heads) {
   const int num_hlp = num_heads * num_levels * num_points;
   int num_per_time_theory = (MAX_NRAM_SIZE - num_levels * sizeof(float) -
                              3 * num_levels * sizeof(int32_t)) /
                             sizeof(float) / (8 * PAD_UP(channels, 32) + 28) /
                             PAD_UP((num_hlp), 32);
+  int32_t nlp = num_levels * num_points;
+  int32_t nlpc = num_levels * num_points * channels;
 
-  if (num_per_time_theory >= 1) {
+  if (handle->arch == MLUOP_MLU590 && nlp <= FAST_KERNEL_MAX_NLP &&
+      nlpc <= FAST_KERNEL_MAX_NLPC) {
+    return MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST;
+  } else if (num_per_time_theory >= 1) {
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL;
   }
   return MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT;
@@ -309,17 +316,37 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
   const int32_t num_points = attn_weight_desc->dims[4];
   // generate mluOpMsDeformAttnBackward prototxt start!
 
+  VLOG(5) << "[mluOpMsDeformAttnBackward]        batch: " << batch;
+  VLOG(5) << "[mluOpMsDeformAttnBackward]     channels: " << channels;
+  VLOG(5) << "[mluOpMsDeformAttnBackward]    num_query: " << num_query;
+  VLOG(5) << "[mluOpMsDeformAttnBackward]    num_heads: " << num_heads;
+  VLOG(5) << "[mluOpMsDeformAttnBackward]   num_levels: " << num_levels;
+  VLOG(5) << "[mluOpMsDeformAttnBackward]   num_points: " << num_points;
+  VLOG(5) << "[mluOpMsDeformAttnBackward] spatial_size: " << spatial_size;
+
   mluOpDeformAttnBackwardKernelPolicy_t kernelPolicy =
-      msDeformAttnBackwardPolicyFunc(channels, num_levels, num_points,
+      msDeformAttnBackwardPolicyFunc(handle, channels, num_levels, num_points,
                                      num_heads);
 
   policyFunc(handle, batch, num_query, num_heads, num_levels, &k_type, &k_dim,
              kernelPolicy);
-  VLOG(5) << "Launch Kernel MLUUnion1KernelMsDeformAttnBackward<<<Union"
-          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-          << k_dim.z << ">>>";
   switch (kernelPolicy) {
+    case MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST: {
+      VLOG(5) << "Launch Kernel MsDeformAttnBackwardFast<<<Union"
+              << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+              << k_dim.z << ">>>";
+      KERNEL_CHECK((KernelMsDeformAttnBackwardFast(
+          k_dim, k_type, handle->queue, (float *)value,
+          (int32_t *)spatial_shapes, (int32_t *)level_start_index,
+          (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
+          batch, spatial_size, num_heads, channels, num_levels, num_query,
+          num_points, (float *)grad_value, (float *)grad_sampling_loc,
+          (float *)grad_attn_weight)));
+    } break;
     case MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT: {
+      VLOG(5) << "Launch Kernel MsDeformAttnBackwardDefault<<<Union"
+              << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+              << k_dim.z << ">>>";
       KERNEL_CHECK((KernelMsDeformAttnBackwardDefault(
           k_dim, k_type, handle->queue, (float *)value,
           (int32_t *)spatial_shapes, (int32_t *)level_start_index,
@@ -329,6 +356,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
           (float *)grad_attn_weight)));
     } break;
     case MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL: {
+      VLOG(5) << "Launch Kernel MsDeformAttnBackwardSmallChannels<<<Union"
+              << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+              << k_dim.z << ">>>";
       KERNEL_CHECK((KernelMsDeformAttnBackwardSmallChannels(
           k_dim, k_type, handle->queue, (float *)value,
           (int32_t *)spatial_shapes, (int32_t *)level_start_index,
@@ -337,9 +367,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
           num_points, (float *)grad_value, (float *)grad_sampling_loc,
           (float *)grad_attn_weight)));
     }
-    default: {
-      VLOG(5) << "Not Implemented.";
-    }
+    default: { VLOG(5) << "Not Implemented."; }
   }
 
   GEN_CASE_END();
