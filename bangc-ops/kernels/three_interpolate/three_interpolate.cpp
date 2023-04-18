@@ -317,14 +317,17 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
                   "equal to indices_desc->dims[1].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  // check large tensor
-  if ((mluOpGetTensorElementNum(features_desc) >= LARGE_TENSOR_NUM) ||
-      (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
-      (mluOpGetTensorElementNum(weights_desc) >= LARGE_TENSOR_NUM) ||
-      (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
+  if (handle->arch < MLUOP_MLU590) {
+    // check large tensor
+    if ((mluOpGetTensorElementNum(features_desc) >= LARGE_TENSOR_NUM) ||
+        (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
+        (mluOpGetTensorElementNum(weights_desc) >= LARGE_TENSOR_NUM) ||
+        (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM)) {
+      LOG(ERROR)
+          << op_name << " Overflow max tensor num."
+          << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+      return MLUOP_STATUS_NOT_SUPPORTED;
+    }
   }
   // check zero element
   if ((mluOpGetTensorElementNum(indices_desc) == 0) ||
@@ -410,14 +413,18 @@ mluOpStatus_t ThreeInterpolateBackwardParamCheck(
                   "equal to indices_desc->dims[1].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  // check large tensor
-  if ((mluOpGetTensorElementNum(grad_output_desc) >= LARGE_TENSOR_NUM) ||
-      (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
-      (mluOpGetTensorElementNum(weights_desc) >= LARGE_TENSOR_NUM) ||
-      (mluOpGetTensorElementNum(grad_features_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
+
+  if (handle->arch < MLUOP_MLU590) {
+    // check large tensor
+    if ((mluOpGetTensorElementNum(grad_output_desc) >= LARGE_TENSOR_NUM) ||
+        (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
+        (mluOpGetTensorElementNum(weights_desc) >= LARGE_TENSOR_NUM) ||
+        (mluOpGetTensorElementNum(grad_features_desc) >= LARGE_TENSOR_NUM)) {
+      LOG(ERROR)
+          << op_name << " Overflow max tensor num."
+          << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+      return MLUOP_STATUS_NOT_SUPPORTED;
+    }
   }
   // check zero element
   if ((mluOpGetTensorElementNum(grad_output_desc) == 0) ||
