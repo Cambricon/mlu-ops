@@ -25,15 +25,10 @@
 
 #include "mlu_op.h"
 
-typedef enum {
-  REDUCE_MEAN = 0,
-  REDUCE_MAX = 1,
-} ReduceMode;
-
 void MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    ReduceMode reduce_mode, const float *feats, int32_t num_points,
-    int32_t num_feats, int32_t num_voxel, int32_t *point2voxel_map,
-    int32_t *voxel_points_count, float *voxel_feats);
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t d_type,
+    mluOpReduceMode_t reduce_mode, int batch, int c, const void * grad_voxel_feats, const void *feats,
+    const void *voxel_feats, const void *point2voxel_map, const void *voxel_points_count,
+    const void *voxel_num, void *workspace, void *gard_feats);
 
 #endif  // KERNELS_DYNAMIC_POINT_TO_VOXEL_BACKWARD_DYNAMIC_POINT_TO_VOXEL_BACKWARD_H

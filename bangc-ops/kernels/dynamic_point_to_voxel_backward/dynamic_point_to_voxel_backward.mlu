@@ -27,21 +27,126 @@
 #include "kernels/utils/common.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
+__mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
 
+template <typename T>
+__mlu_func__ void dynamicPointToVoxelBackward(
+    mluOpReduceMode_t reduce_mode, int batch, int c, T *grad_voxel_feats, T *feats_gdram,
+    T *voxel_feats_gdram, int *point2voxel_map, int *voxel_points_count,
+    int *voxel_num, int *workspace, T *gard_feats) {
+#if __BANG_ARCH__ >= 372
+  int voxel_batch = *voxel_num;
+  __memcpy((int *)sram_buffer, point2voxel_map, batch * sizeof(int), GDRAM2SRAM);
+  int n_per_core = batch / taskDim;
+  int rem = batch % taskDim;
+  n_per_core += (int)(taskId < rem);
+  int n_start = taskId * n_per_core + ((taskId < rem) ? 0 : rem);
+  if (n_per_core > 0) {
+    __gdramset(workspace + n_start * c, n_per_core * c, batch);
+    __gdramset(gard_feats + n_start * c, n_per_core * c, T(0));
+  }
 
-__mlu_global__ void MLUKernelDynamicPointToVoxelBackward(
-    ReduceMode reduce_mode, const float *feats, int32_t num_points,
-    int32_t num_feats, int32_t num_voxel, int32_t *point2voxel_map,
-    int32_t *voxel_points_count, float *voxel_feats) {
-;
+  int nram_size = MAX_NRAM_SIZE;
+  int n_limit = (nram_size - batch * sizeof(int)) / ((6 * c + 1) * sizeof(int));
+  T *feats_nram = (T *)nram_buffer;
+  T *voxel_feats_nram = feats_nram + n_limit * c;
+  int *index_mask = (int *)(voxel_feats_nram + n_limit * c);
+  int *result_nram = index_mask + n_limit * c;
+  int *offset_nram = result_nram + n_limit * c;
+  int *offset_real_nram = offset_nram + batch;
+  
+  __sync_cluster();
+  __memcpy(offset_nram, (int *)sram_buffer, batch * sizeof(int), SRAM2NRAM);
+  n_start = 0;
+  while (n_start < batch) {
+    int real_n = 0;
+    // laod data
+    for (; n_start < batch && real_n < n_limit; n_start ++) {
+      int offset = offset_nram[n_start];
+      if (taskId == offset % taskDim) {
+        if (offset != -1) {
+          __memcpy_async(feats_nram + real_n * c, feats_gdram + n_start * c, c *sizeof(T), GDRAM2NRAM);
+          __memcpy_async(result_nram + real_n * c, workspace + offset * c, c * sizeof(int), GDRAM2NRAM);
+          __memcpy_async(voxel_feats_nram + real_n * c, voxel_feats_gdram + offset * c, c *sizeof(T), GDRAM2NRAM);
+          __bang_write_value(index_mask + real_n * c, c, n_start);
+          offset_real_nram[real_n] = offset;
+          real_n++;
+        }
+      }
+    }
+    __asm__ volatile("sync;\n\t");
+    if (real_n > 0) {
+      __bang_eq(feats_nram, voxel_feats_nram, feats_nram, real_n * c);
+      __bang_float2int32_tz((int *)feats_nram, feats_nram, real_n * c, 0);
+      __bang_not((int *)voxel_feats_nram, (int *)feats_nram, real_n * c);
+      __bang_mul((int *)feats_nram, (int *)feats_nram, index_mask, real_n * c);
+      __bang_mul_scalar((int *)voxel_feats_nram, (int *)voxel_feats_nram, batch, real_n * c);
+      __bang_add(index_mask, (int *)voxel_feats_nram, (int *)feats_nram, real_n * c);
+      __bang_minequal(result_nram, result_nram, index_mask, real_n * c);
+    }
+    // store
+    for (int i = 0; i < real_n; i++) {
+      int offset_real = offset_real_nram[i];
+      __memcpy_async(workspace + offset_real * c, result_nram + i * c, c * sizeof(int), NRAM2GDRAM);
+    }
+    __sync();
+  }
+  __sync_all();
+
+  n_per_core = voxel_batch / taskDim;
+  rem = voxel_batch % taskDim;
+  n_per_core += (int)(taskId < rem);
+  n_start = taskId * n_per_core + ((taskId < rem) ? 0 : rem);
+  if (n_per_core <= 0) return;
+  n_limit = (nram_size - c * sizeof(int)) / ((4 * c) * sizeof(int));
+
+  int stride = CEIL_ALIGN(n_limit * c, 128 / sizeof(int));
+
+  T *grad_nram = (T *)nram_buffer;
+  int *index_nram = (int *)(grad_nram + stride);
+  int *indices_mask = index_nram + stride;
+  for (int i = 0; i < c; i ++) {
+    indices_mask[i] = i;
+  }
+  int n_repeat = n_per_core / n_limit;
+  int n_rem = n_per_core % n_limit;
+
+  for (int i = 0; i <= n_repeat; i++) {
+    int n_size = (i == n_repeat) ? n_rem : n_limit;
+    if (n_size <= 0) break;
+    __memcpy_async(grad_nram, grad_voxel_feats + n_start * c, n_size * c * sizeof(T), GDRAM2NRAM);
+    __memcpy_async(index_nram, workspace + n_start * c, n_size * c * sizeof(int), GDRAM2NRAM);
+    __sync();
+    __bang_mul_scalar(index_nram, index_nram, c, n_size * c);
+    __bang_cycle_add(index_nram, index_nram, indices_mask, n_size * c, c);
+    __bang_mul_scalar(index_nram, index_nram, sizeof(T), n_size * c);
+
+    __asm__ volatile(
+      "scatter.clean.gdram.nram.nram.b32.u32 [%[dst]], [%[src]],\
+      [%[offset]], %[transfer_num];\n\t" ::[dst] "r"(gard_feats),
+      [ src ] "r"(grad_nram), [ offset ] "r"(index_nram),
+      [ transfer_num ] "r"(n_size * c));
+    
+    n_start += n_size;
+  }
+#endif
+}
+
+__mlu_global__ void MLUKernelDynamicPointToVoxelBackward(mluOpDataType_t d_type,
+    mluOpReduceMode_t reduce_mode, int batch, int c, const void *grad_voxel_feats, const void *feats,
+    const void *voxel_feats, const void *point2voxel_map, const void *voxel_points_count,
+    const void *voxel_num, void *workspace, void *gard_feats) {
+   dynamicPointToVoxelBackward<float>(reduce_mode, batch, c, (float *)grad_voxel_feats, (float *)feats,
+    (float *)voxel_feats, (int *)point2voxel_map, (int *)voxel_points_count,
+    (int *)voxel_num, (int *)workspace, (float *)gard_feats);
 }
 
 void MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    ReduceMode reduce_mode, const float *feats, int32_t num_points,
-    int32_t num_feats, int32_t num_voxel, int32_t *point2voxel_map,
-    int32_t *voxel_points_count, float *voxel_feats) {
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t d_type,
+    mluOpReduceMode_t reduce_mode, int batch, int c, const void *grad_voxel_feats, const void *feats,
+    const void *voxel_feats, const void *point2voxel_map, const void *voxel_points_count,
+    const void *voxel_num, void *workspace, void *gard_feats) {
   MLUKernelDynamicPointToVoxelBackward<<<k_dim, k_type, queue>>>(
-      reduce_mode, feats, num_points, num_feats, num_voxel, point2voxel_map,
-      voxel_points_count, voxel_feats);
+      d_type, reduce_mode, batch, c, grad_voxel_feats, feats, voxel_feats, point2voxel_map,
+      voxel_points_count, voxel_num, workspace, gard_feats);
 }
