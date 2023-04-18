@@ -134,7 +134,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   size_t eight = 8;
   size_t cluster_num_real = std::min(cluster_num, eight);
   size_t need_cluster = std::min(num_need_core / core_per_cluster, cluster_num_real);
-
+ 
   size_t k_dim_x = 0;
   if (need_cluster == 1) {
     *k_type = CNRT_FUNC_TYPE_UNION1;

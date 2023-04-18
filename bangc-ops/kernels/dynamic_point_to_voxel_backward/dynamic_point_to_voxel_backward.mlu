@@ -131,7 +131,7 @@ __mlu_func__ void dynamicPointToVoxelBackward(
   }
 #endif
 }
-
+ 
 __mlu_global__ void MLUKernelDynamicPointToVoxelBackward(mluOpDataType_t d_type,
     mluOpReduceMode_t reduce_mode, int batch, int c, const void *grad_voxel_feats, const void *feats,
     const void *voxel_feats, const void *point2voxel_map, const void *voxel_points_count,

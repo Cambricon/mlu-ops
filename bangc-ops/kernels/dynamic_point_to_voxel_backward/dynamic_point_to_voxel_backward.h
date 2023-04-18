@@ -30,5 +30,5 @@ void MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
     mluOpReduceMode_t reduce_mode, int batch, int c, const void * grad_voxel_feats, const void *feats,
     const void *voxel_feats, const void *point2voxel_map, const void *voxel_points_count,
     const void *voxel_num, void *workspace, void *gard_feats);
-
+ 
 #endif  // KERNELS_DYNAMIC_POINT_TO_VOXEL_BACKWARD_DYNAMIC_POINT_TO_VOXEL_BACKWARD_H
