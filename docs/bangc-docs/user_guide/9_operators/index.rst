@@ -730,3 +730,16 @@ mluOpMsDeformAttnForward
 ---------------------------------
 该算子是Multi-scale deformable attention的正向过程，通过 ``data_spatial_shapes`` 将  ``data_sampling_loc`` 映射到 ``data_value`` 的对应位置，从对应位置取值进行双线性插值，插值结果乘以 ``data_attn_weight`` 获得最终的输出 ``data_col`` 。
 
+.. _dynamic_point_to_voxel_forward:
+
+mluOpDynamicPointToVoxelForward
+---------------------------------
+该算子dynamic_point_to_voxel_forward算子的主要功能就是将具有相同体素坐标的所有点数据，在 ``num_feats`` 特征维度上利用 ``mean`` 或 ``max`` 方法进行去重; 
+
+该算子包含三个输入: `feats`, `coors`, `reduce_type`，五个输出: `voxel_feats`, `voxel_coors`, `point2voxel_map`, `voxel_points_count`, `voxel_num`;
+
+实现算子功能可以划分 2 个部分:
+
+1）将体素坐标 `coors` 进行排序、去重，得到新的体素坐标 `voxel_coors`; 保存去重后体素的个数 ``num_voxels`` 到 `voxel_num`; 保存 `coors` 中每个体素坐标在 `voxel_coors` 中对应的索引到 `point2voxel_map`; 保存 `voxel_coors` 中每个体素坐标在 `coors` 中出现的个数到 `voxel_points_count`;
+
+2）遍历 `feats` 中每个点，在特征维度上，对每个值根据 `reduce_type` 的方法进行计算，将结果保存到 `voxel_feats` 中; 当 `reduce_type` = ``max``, 在特征维度上对每个值取最大的值; 当 `reduce_type` = ``mean``, 将特征维度每个值都累加到 `voxel_feats` 对应位置中，再利用 `voxel_points_count` 获取该体素位置在原始体素中出现的个数，再对 `voxel_feats` 的特征维度求平均。

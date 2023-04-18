@@ -1,0 +1,83 @@
+op_name: "dynamic_point_to_voxel_forward"
+input {
+  id: "input1"
+  shape: {
+    dims: 2
+    dims: 4
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: -100.0
+    lower_bound: 100.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 2
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 20
+    upper_bound: -1.0
+    lower_bound:  10.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output1"
+  shape: {
+    dims: 2
+    dims: 4
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "output2"
+  shape: {
+    dims: 2
+    dims: 3
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output3"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output4"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output5"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+}
+dynamic_point_to_voxel_forward_param {
+  reduce_type: REDUCE_MODE_MAX
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
