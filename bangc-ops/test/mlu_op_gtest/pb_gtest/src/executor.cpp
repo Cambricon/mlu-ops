@@ -631,21 +631,21 @@ double Executor::getBandWidthByDev() {
 }
 
 // get compute force coefficient
-int Executor::getIpuFrequency() {
+int Executor::getMluCoreFrequency() {
   int ordinal = -1;
-  int ipu_frequency = -1;
+  int mlu_core_frequency = -1;
   GTEST_CHECK(CNRT_RET_SUCCESS == cnrtGetDevice(&ordinal));
   GTEST_CHECK(cndevInit(0) == CNDEV_SUCCESS);
   cndevFrequencyInfo_t freqInfo;
   freqInfo.version = CNDEV_VERSION_5;
   GTEST_CHECK(CN_SUCCESS ==
-              cnDeviceGetAttribute(&ipu_frequency,
+              cnDeviceGetAttribute(&mlu_core_frequency,
                                    CN_DEVICE_ATTRIBUTE_CLUSTER_CLOCK_RATE,
                                    ordinal));
-  VLOG(4) << "IPU Frequency = " << (double)ipu_frequency / 1000 / 1000
+  VLOG(4) << "MLU Core Frequency = " << (double)mlu_core_frequency / 1000 / 1000
           << " GHz";
 
-  return ipu_frequency;
+  return mlu_core_frequency;
 }
 
 // return op/cycle
@@ -660,7 +660,7 @@ double Executor::getCtPeakComputeForce() {
       mluop::runtime::getClusterLimitCapability(exe_context_->handle);
   auto core_num = exe_context_->handle->core_num_per_cluster;
   auto platform = exe_context_->handle->arch;
-  double rate = (double)getIpuFrequency() / 1000 / 1000;
+  double rate = (double)getMluCoreFrequency() / 1000 / 1000;
   switch (parser_->inputs()[0].dtype) {
     default:
       return CT_PEAK_FLOAT32_COMPUTE_FORCE * cluster_num * core_num * rate;
@@ -742,7 +742,7 @@ double Executor::getLtPeakComputeForce() {
       mluop::runtime::getClusterLimitCapability(exe_context_->handle);
   auto platform = exe_context_->handle->arch;
   auto core_num = exe_context_->handle->core_num_per_cluster;
-  double rate = (double)getIpuFrequency() / 1000 / 1000;
+  double rate = (double)getMluCoreFrequency() / 1000 / 1000;
   if (useTf32ComputeForce()) {
     // tf32 + tf32
     VLOG(4) << "use tf32 compute efficiency in mluop_gtest";

@@ -59,11 +59,11 @@ multi-scale deformable attention算子为Deformable DETR的核心模块，为更
 ```math
 DeformAttn(z_q,p_q,x)=\sum_{m=1}^{M}W_m[\sum_{k=1}^{K}A_{mqk}\cdot W_m^{'}x(p_q+\Delta p_{mqk})]
 ```
-其中，$`m`$为attention中head的索引，$`k`$为采样key值的索引，并且$`K`$是key的总和数$`(K\ll HW)`$。对第m个head，第k个采样点，$`\Delta p_{mqk}`$和$`A_{mqk}`$分别为采样点偏移和attention权重值。$`A_{mqk}`$取值范围为$`[0,1]`$，满足归一化条件$`\sum_{k=1}^{K}A_{mqk}=1`$。$`\Delta p_{mqk}\in \mathbb{R}^2`$是无取值范围约束的2d实数。由于$`p_q+\Delta p_{mqk}`$是小数，因此在计算$`x(p_q+\Delta p_{mqk})`$时采用了双线性插值。$`\Delta p_{mqk}`$和$`A_{mqk}`$都是通过对query特征值$`z_q`$做linear projection获得的。在实现上，将query特征值$`z_q`$的$`3MK`$个channel输入到linear projection中，首先对前$`2MK`$个channel编码得到采样偏移$`\Delta p_{mqk}`$，剩下的$`MK`$个channel输入给softmax来得到attention权重$`A_{mqk}`$。- Multi-scale Deformable Attention Module设$`\{ x^l \}_{l=1}^L`$为输入的multi-scale特征图，$`x^l\in \mathbb{R}^{C\times H_l\times W_l}`$。$`\hat p_q\in [0,1]^2`$为每个query元素$`q`$的各个采样点的归一化坐标。
+其中，$`m`$为attention中head的索引，$`k`$为采样key值的索引，并且$`K`$是key的总和数$`(K\ll HW)`$。对第m个head，第k个采样点，$`\Delta p_{mqk}`$和$`A_{mqk}`$分别为采样点偏移和attention卷积滤波张量值。$`A_{mqk}`$取值范围为$`[0,1]`$，满足归一化条件$`\sum_{k=1}^{K}A_{mqk}=1`$。$`\Delta p_{mqk}\in \mathbb{R}^2`$是无取值范围约束的2d实数。由于$`p_q+\Delta p_{mqk}`$是小数，因此在计算$`x(p_q+\Delta p_{mqk})`$时采用了双线性插值。$`\Delta p_{mqk}`$和$`A_{mqk}`$都是通过对query特征值$`z_q`$做linear projection获得的。在实现上，将query特征值$`z_q`$的$`3MK`$个channel输入到linear projection中，首先对前$`2MK`$个channel编码得到采样偏移$`\Delta p_{mqk}`$，剩下的$`MK`$个channel输入给softmax来得到attention卷积滤波张量$`A_{mqk}`$。- Multi-scale Deformable Attention Module设$`\{ x^l \}_{l=1}^L`$为输入的multi-scale特征图，$`x^l\in \mathbb{R}^{C\times H_l\times W_l}`$。$`\hat p_q\in [0,1]^2`$为每个query元素$`q`$的各个采样点的归一化坐标。
 ```math
 MSDeformAttn(z_q,\hat p_q,\{ x^l \}_{l=1}^L)=\sum_{m=1}^{M}W_m[\sum_{l=1}^{L}\sum_{k=1}^{K}A_{mlqk}\cdot W_m^{'}x^l(\phi_l(\hat p_q)+\Delta p_{mlqk})]
 ```
-其中，$`m`$为attention中head的索引，$`l`$为输入特征level的索引，$`k`$为采样点的索引。对第m个head，第l个特征level，第k个采样点，$`\Delta p_{mlqk}`$和$`A_{mlqk}`$分别为采样点偏移和attention权重值。权重$`A_{mlqk}`$满足$`\sum_{l=1}^L\sum_{k=1}^{K}A_{mlqk}=1`$归一化条件。同时，这里使用归一化坐标$`\hat p_q\in [0,1]^2`$来表示精确坐标，其中(0,0)和(1,1)分别表示左上角点和右下角点。函数$`\phi_l(\hat p_q)`$为$`\hat p_q`$在第$`l`$个输入特征图中的坐标。multi-scale deformable attention与上述的single-scale比较相似，区别是前者从multi-scale特征图中采样$`LK`$个点，后者是采样single-scale特征图中的$`K`$个点。
+其中，$`m`$为attention中head的索引，$`l`$为输入特征level的索引，$`k`$为采样点的索引。对第m个head，第l个特征level，第k个采样点，$`\Delta p_{mlqk}`$和$`A_{mlqk}`$分别为采样点偏移和attention卷积滤波张量值。卷积滤波张量$`A_{mlqk}`$满足$`\sum_{l=1}^L\sum_{k=1}^{K}A_{mlqk}=1`$归一化条件。同时，这里使用归一化坐标$`\hat p_q\in [0,1]^2`$来表示精确坐标，其中(0,0)和(1,1)分别表示左上角点和右下角点。函数$`\phi_l(\hat p_q)`$为$`\hat p_q`$在第$`l`$个输入特征图中的坐标。multi-scale deformable attention与上述的single-scale比较相似，区别是前者从multi-scale特征图中采样$`LK`$个点，后者是采样single-scale特征图中的$`K`$个点。
 此外，该算子在实现上保留每个head的特征值，体现在输出data_col的head维度上，即算子未做上式多头加权求和操作而是输出保留各head信息。备注：1、输入data_sampling_loc归一化坐标不应存在nan/inf。
 2、输入data_value、data_attn_weight中可包含nan/inf。
 ### 1.3 算子输入输出参数要求
@@ -79,7 +79,7 @@ MSDeformAttn(z_q,\hat p_q,\{ x^l \}_{l=1}^L)=\sum_{m=1}^{M}W_m[\sum_{l=1}^{L}\su
 | data_sampling_loc_desc | 对输入data_sampling_loc的描述                           | 输入              | mluOpTensorDescriptor_t | /        | 无       |
 | data_sampling_loc      | 采样点的归一化坐标                                       | 输入              | float32               | ARRAY    | [bs, num_queries, num_heads, num_levels, num_points, 2]       |
 | data_attn_weight_desc  | 对输入data_attn_weight的描述                            | 输入              | mluOpTensorDescriptor_t | /        | 无       |
-| data_attn_weight       | attention权重值                                         | 输入              | float32               | ARRAY    | [bs, num_queries, num_heads, num_levels, num_points]       |
+| data_attn_weight       | attention卷积滤波张量值                                         | 输入              | float32               | ARRAY    | [bs, num_queries, num_heads, num_levels, num_points]       |
 | im2col_step      | 用于image to column的步长                                     | 输入              | int32                  | /        | 无       |
 | data_col_desc    | 对输出data_col的描述                                          | 输入              | mluOpTensorDescriptor_t | /        | 无       |
 | data_col         | 输出attention特征值                                           | 输出              | float32                | ARRAY    | [bs, num_queries, num_heads, channels]       |
@@ -148,7 +148,7 @@ data_level_start_index : [num_levels]
 data_sampling_loc : [bs, num_queries, num_heads, num_levels, num_points, 2]
 采样点的归一化坐标，最低维`2`表示(x, y)，表示采样点在x、y坐标轴下相对于$`[W_l, H_l]`$的归一化坐标
 data_attn_weight : [bs, num_queries, num_heads, num_levels, num_points]
-attention权重值，即在图1基础上将Attention Weights($`A_{mqk}`$)扩展到multi-scale下的$`A_{mlqk}`$
+attention卷积滤波张量值，即在图1基础上将Attention Weights($`A_{mqk}`$)扩展到multi-scale下的$`A_{mlqk}`$
 data_col : [bs, num_queries, num_heads, channels]
 输出attention特征值bs: batch size，输入数据batch数量
 num_keys: multi-scale所有尺度特征图的像素点数量总和
@@ -168,7 +168,7 @@ MSDeformAttn(z_q,\hat p_q,\{ x^l \}_{l=1}^L)=\sum_{l=1}^{L}\sum_{k=1}^{P}A_{mlqk
 
 1. 我们做如下多核拆分，算子输出结果data_col规模为[bs, num_queries, num_heads, channels]，拆bs、num_queries、num_heads三个维度，每个mlu core计算输出(bs * num_queries * num_heads) / taskDim * channels个元素。
 
-2. mlu core内循环处理(bs * num_queries * num_heads) / taskDim次，每次计算得到channels个元素输出需处理multi-scale的$`L`$个特征图，其中每个特征图采样$`P`$个点，即共处理$`LP`$个采样点。对每个采样点做双线性插值得到该点的channels个特征值，每个采样点的channels个特征值都对应一个attention权重值，将$`LP`$个采样点的特征值做加权求和，就得到了channels个元素输出。
+2. mlu core内循环处理(bs * num_queries * num_heads) / taskDim次，每次计算得到channels个元素输出需处理multi-scale的$`L`$个特征图，其中每个特征图采样$`P`$个点，即共处理$`LP`$个采样点。对每个采样点做双线性插值得到该点的channels个特征值，每个采样点的channels个特征值都对应一个attention卷积滤波张量值，将$`LP`$个采样点的特征值做加权求和，就得到了channels个元素输出。
 
 3. 在处理每个采样点时，通过输入data_sampling_loc的采样点归一化坐标和data_spatial_shapes的特征图尺寸，标量计算得到该采样点的坐标(x, y)。由于特征图外像素点特征值padding为0值，在双线性插值前先做如下预处理：采样点邻近点都不在特征图内的采样点对应特征值均为0值，不需做双线性插值和累加；采样点邻近点部分在特征图内的采样点，在做双线性插值时只对特征图内像素点做插值。
 
@@ -186,7 +186,7 @@ hw = 1 - lw  \\w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw  \\
 x^l(\phi_l(\hat p_q)+\Delta p_{mlqk}) = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4)
 ```
 
-5. 每个采样点的channels个特征值都对应一个attention权重，由输入data_attn_weight得到。根据MSDeformAttn计算公式，算子输出data_col的channels个特征值由$`LP`$个采样点的特征值对attention权重做加权求和计算得到。这里将$`A_{mlqk}\cdot x^l(\phi_l(\hat p_q)+\Delta p_{mlqk})`$计算结果累加在nram空间上。
+5. 每个采样点的channels个特征值都对应一个attention卷积滤波张量，由输入data_attn_weight得到。根据MSDeformAttn计算公式，算子输出data_col的channels个特征值由$`LP`$个采样点的特征值对attention卷积滤波张量做加权求和计算得到。这里将$`A_{mlqk}\cdot x^l(\phi_l(\hat p_q)+\Delta p_{mlqk})`$计算结果累加在nram空间上。
 
 6. 重复步骤3、4、5，直至处理完multi-scale特征图的$`LP`$个采样点，将累加在nram上的channels个特征值输出结果store至算子输出data_col。若步骤3、4、5的channels个特征值在nram空间上一次处理不完，则循环处理。
 

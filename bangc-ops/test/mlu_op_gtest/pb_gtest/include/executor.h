@@ -447,7 +447,7 @@ class Executor {
   std::vector<DataBlock *> getOutputBlocks();
 
   // efficiency
-  int getIpuFrequency();
+  int getMluCoreFrequency();
 
   enum ComputeUnit { LT_COMPUTE, CT_COMPUTE };
   ComputeUnit compute_unit_;

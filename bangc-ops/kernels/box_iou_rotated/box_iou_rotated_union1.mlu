@@ -38,9 +38,9 @@ __mlu_global__ void MLUKernelBoxIouRotated(const float *box1, const float *box2,
   // - When aligned = false
   // Each mlu core does different box1 range, and all box2 with whole loop.
   // TODO(perf): Further more, when num_boxes2 >> num_boxes1, and num_boxes1
-  //             is small enough that not all ipu cores do effective works,
+  //             is small enough that not all mlu cores do effective works,
   //             should adjust job partition strategy to optimize,
-  //             different ipu cores in each cluster, also partition on box2,
+  //             different mlu cores in each cluster, also partition on box2,
   //             to improve efficiency.
   // - When aligned = true
   // Just make plane job partition on N, num of box1 is equal with num of box2,
