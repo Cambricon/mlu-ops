@@ -39,8 +39,8 @@ input {
   dtype: DTYPE_FLOAT
   random_data: {
     seed: 23
-    upper_bound: 330
-    lower_bound: 0
+    upper_bound: 20
+    lower_bound: -20
     distribution: UNIFORM
   }
 }
@@ -55,7 +55,7 @@ output {
   dtype: DTYPE_FLOAT
 }
 focal_loss_sigmoid_backward_param: {
-  prefer: 0
+  prefer: 1
   reduction: 0
   alpha: 0.25
   gamma: 2

@@ -25,6 +25,7 @@
 #include <float.h>
 
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 
 #define PING 0
 #define PONG 1
@@ -36,7 +37,7 @@ namespace backward {
 /*
  * Functions Table
  * |----------|---------------------------------------------|
- * |  Math    | sigmoid                                     |
+ * |  Math    | sigmoid, computeLogE                        |
  * |----------|---------------------------------------------|
  * |  I0      | loadInputFwd, loadWeightFwd, storeOutputFwd |
  * |----------|---------------------------------------------|
@@ -48,6 +49,19 @@ __mlu_func__ void sigmoid(T *dst_data, const T *src_data,
   __bang_active_exphp(dst_data, dst_data, elem_count);
   __bang_add_scalar(dst_data, dst_data, T(1), elem_count);
   __bang_active_reciphp(dst_data, dst_data, elem_count);
+}
+
+__mlu_func__ void computeLogE(float *nram_dst, float *nram_src,
+                              const int32_t deal_num) {
+#if __BANG_ARCH__ >= 300
+  int x2d = 0x3f317217;
+  float rlog2e = *(float *)&x2d;
+  __bang_log((float *)nram_dst, (float *)nram_src, deal_num);
+  __bang_mul_scalar((float *)nram_dst, (float *)nram_src,
+                    (float)rlog2e, deal_num);
+#else
+  __bang_active_loghp((float *)nram_dst, (float *)nram_src, deal_num);
+#endif
 }
 
 template <typename T>
@@ -145,7 +159,11 @@ __mlu_func__ void coreCompute(char *nram_input, const T *nram_weight,
   __bang_write_value((float *)nram_alpha_t, compute_num, (float)(alpha - 1.0));
 
   // 1. pt = 1 - sigmoid(x)
+#if __BANG_ARCH__ >= 300
+  computeSigmoid((float *)nram_pt, (float *)nram_input, NULL, 0, compute_num);
+#else
   sigmoid((float *)nram_pt, (float *)nram_input, compute_num);
+#endif
   __bang_mul_scalar((float *)nram_pt, (float *)nram_pt, (float)(-1),
                     compute_num);
   __bang_add_scalar((float *)nram_pt, (float *)nram_pt, (float)1, compute_num);
@@ -178,10 +196,10 @@ __mlu_func__ void coreCompute(char *nram_input, const T *nram_weight,
                     compute_num);
   __bang_cycle_maxequal((float *)nram_temp, (float *)nram_temp,
                         (float *)nram_flt_min, compute_num, nfu_align_num);
-  __bang_active_loghp((float *)nram_temp, (float *)nram_temp, compute_num);
+  computeLogE((float *)nram_temp, (float *)nram_temp, compute_num);
   __bang_cycle_mul((float *)nram_temp, (float *)nram_temp, (float *)nram_gamma,
                    compute_num, nfu_align_num);
-  __bang_active_exphp((float *)nram_temp, (float *)nram_temp, compute_num);
+  computeExp((float *)nram_temp, (float *)nram_temp, NULL, 0, compute_num);
   __bang_mul((float *)nram_temp, (float *)nram_temp, (float *)nram_alpha_t,
              compute_num);
   __bang_mul_scalar((float *)nram_temp, (float *)nram_temp, (float)(-1),
@@ -190,7 +208,7 @@ __mlu_func__ void coreCompute(char *nram_input, const T *nram_weight,
   // 4. output = 1 - pt - gamma * pt * log(max(pt, FLT_MIN))
   __bang_cycle_maxequal((float *)nram_output, (float *)nram_pt,
                         (float *)nram_flt_min, compute_num, nfu_align_num);
-  __bang_active_loghp((float *)nram_output, (float *)nram_output, compute_num);
+  computeLogE((float *)nram_output, (float *)nram_output, compute_num);
   __bang_mul((float *)nram_output, (float *)nram_output, (float *)nram_pt,
              compute_num);
   __bang_cycle_mul((float *)nram_output, (float *)nram_output,
