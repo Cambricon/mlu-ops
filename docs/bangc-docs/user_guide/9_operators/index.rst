@@ -628,7 +628,7 @@ reduce_or 公式如下：
 
 mluOpRoiAlignBackward
 ---------------------------------
-该算子是 ``mluOpRoiAlignForward`` 算子的反向，根据 boxes中的坐标值，使用 spatial_scale 参数进行缩放，计算出 Roi窗口的坐标、长宽。pool_mode等于0时，为Max模式的反向，按照argmax_x 和 argmax_y 的坐标，进行双线性插值，计算映射到 grad_image 上坐标点的卷积滤波张量，分别对grad_output加权后，累加反传梯度；pool_mode等于1时，为Avg模式的反向，根据 sampling_ratio 参数，计算每个 grad_output 需要反传梯度的采样点数，再计算每个采样点的x，y坐标，进行双线性插值，对grad_output加权、均摊，累加反传梯度。
+该算子是 ``mluOpRoiAlignForward`` 算子的反向，根据 boxes中的坐标值，使用 spatial_scale 参数进行缩放，计算出 Roi窗口的坐标、长宽。pool_mode等于0时，为Max模式的反向，按照argmax_x 和 argmax_y 的坐标，进行双线性插值，计算映射到 grad_image 上坐标点的加权系数，分别对grad_output加权后，累加反传梯度；pool_mode等于1时，为Avg模式的反向，根据 sampling_ratio 参数，计算每个 grad_output 需要反传梯度的采样点数，再计算每个采样点的x，y坐标，进行双线性插值，对grad_output加权、均摊，累加反传梯度。
 
 .. _roi_align_forward:
 
@@ -751,7 +751,7 @@ mluOpThreeInterpolateBackward
 
 mluOpThreeInterpolateForward
 -------------------------------
-该算子对三个输入特征做加权线性插值获得目标特征。其中三个输入特征在 features tensor 中的下标由 indices tensor 决定，将选择出来的三个输入特征乘上对应的 weights tensor 中的卷积滤波张量，并将对应的乘法结果进行累加得到目标特征，对于每个 batch，在每个 channel 上重复上述过程 N 次就得到加权插值后的输出结果。该算子有三个输入 tensor，一个输出 tensor，输入 features 维度 [B, C, M]，输入 indices 维度 [B, N, 3]，输入 weights 维度 [B, N, 3]，输出 output 维度 [B, C, N]。
+该算子对三个输入特征做加权线性插值获得目标特征。其中三个输入特征在 features tensor 中的下标由 indices tensor 决定，将选择出来的三个输入特征乘上对应的 weights tensor 中的加权系数，并将对应的乘法结果进行累加得到目标特征，对于每个 batch，在每个 channel 上重复上述过程 N 次就得到加权插值后的输出结果。该算子有三个输入 tensor，一个输出 tensor，输入 features 维度 [B, C, M]，输入 indices 维度 [B, N, 3]，输入 weights 维度 [B, N, 3]，输出 output 维度 [B, C, N]。
 
 .. _three_nn_forward:
 

@@ -63,7 +63,7 @@ example:
 
 ### 1.2 算子功能和应用场景描述
 
-`FocalLoss` 是在标准`CrossEntropy` 的基础上修改得到的，其目的是通过减少易分类样本的卷积滤波张量，解决难易样本数量不平衡的问题，从而使得模型在训练时更专注于难分类的样本。本算子应用于基于mmdetection的RetinaNet网络。focalLossSigmoidBackward的功能是对focalLossSigmoidForward进行求导运算，给定输入数据（input）、对应标签值（target）、平衡因子（alpha)、调节因子（gamma)，卷积滤波张量数据（weight），输出梯度数据（grad_output），通过focal loss反向公式运算，得到对输入数据的梯度值（grad_input)。
+`FocalLoss` 是在标准`CrossEntropy` 的基础上修改得到的，其目的是通过减少易分类样本的加权系数，解决难易样本数量不平衡的问题，从而使得模型在训练时更专注于难分类的样本。本算子应用于基于mmdetection的RetinaNet网络。focalLossSigmoidBackward的功能是对focalLossSigmoidForward进行求导运算，给定输入数据（input）、对应标签值（target）、平衡因子（alpha)、调节因子（gamma)，加权系数数据（weight），输出梯度数据（grad_output），通过focal loss反向公式运算，得到对输入数据的梯度值（grad_input)。
 
 相关参考链接为：https://zhuanlan.zhihu.com/p/80594704
 
@@ -134,8 +134,8 @@ gradInput = FL^{'} *weight* gradOutput =
 | input            | 输入数据               | 输入              | float                             | ARRAY    | 二维数据，形状为[N,C]                   |
 | target_desc      | 输入数据对应标签描述符 | 输入                | const mluOpTensorDescriptor_t      | /        | /                                       |
 | target           | 输入数据对应标签       | 输入               | int32                             | ARRAY    | 一维数据，形状为[N]                     |
-| weight_desc      | 卷积滤波张量张量描述符         | 输入              | const mluOpTensorDescriptor_t      | /        | /                                       |
-| weight           | 卷积滤波张量数据               | 输入              | float                             | ARRAY    | 一维数据，形状为[C]                     |
+| weight_desc      | 加权系数张量描述符         | 输入              | const mluOpTensorDescriptor_t      | /        | /                                       |
+| weight           | 加权系数数据               | 输入              | float                             | ARRAY    | 一维数据，形状为[C]                     |
 | alpha            | 平衡因子               | 输入              | float                             | 标量     | 无                                      |
 | gamma            | 调节因子               | 输入              | float                             | 标量     | 200系列板卡：[0, 8]<br>MLU370:[0, 1000] |
 | grad_output_desc | 梯度张量描述符         | 输入              | const mluOpTensorDescriptor_t      | /        | /                                       |

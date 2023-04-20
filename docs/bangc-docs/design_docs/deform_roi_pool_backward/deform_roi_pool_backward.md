@@ -47,7 +47,7 @@
 - 输出的每个梯度`grad_bin`对应一个bin中所有点的梯度和，故bin中每个点的梯度`grad_pixel` = `grad_bin` / `count`。
 - `count`为一个bin中采样像素总数量。
 - offset的梯度可通过链式法则求得，对于一个bin，offset对应有两个值[ $x_{offset}$ , $y_{offset}$ ]，以任意一点的 $x_{offset}$ 的求取为例：
-- $x_1$、 $x_2$ 、 $x_3$ 、 $x_4$ 是像素(x,y)对应的四邻域像素值， $w_1$ 、 $w_2$ 、 $w_3$ 、 $w_4$ 则是四邻域对应的卷积滤波张量。
+- $x_1$、 $x_2$ 、 $x_3$ 、 $x_4$ 是像素(x,y)对应的四邻域像素值， $w_1$ 、 $w_2$ 、 $w_3$ 、 $w_4$ 则是四邻域对应的加权系数。
 ```math
 x = x_{start} + x_{offset}
 ```
@@ -181,7 +181,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(const mluOpHandle_t handl
 
 ### 3.1 实现方案
 - 使用ping-pong流水
-- 每次计算grad_output中的一个像素的梯度传播，通过坐标关系找到该点对应的roi区域，则该区域中所使用的每一个像素pixel的梯度为该梯度对应使用像素数的均值grad_pixel，找到该pixel对应的四邻域像素，则四邻域中每个像素的梯度为双线性插值使用的卷积滤波张量乘以grad_pixel。
+- 每次计算grad_output中的一个像素的梯度传播，通过坐标关系找到该点对应的roi区域，则该区域中所使用的每一个像素pixel的梯度为该梯度对应使用像素数的均值grad_pixel，找到该pixel对应的四邻域像素，则四邻域中每个像素的梯度为双线性插值使用的加权系数乘以grad_pixel。
 - 如果offset不为空，则对grad_offset进行更新。grad_offset中的每个值受到bin中每个像素的影响，循环遍历完bin中所有的点，将所有点的梯度和保存下来，最后通过原子操作传递给grad_offset。
 对梯度更新时采用原子操作，防止不同线程同时对相同位置的梯度进行更新。
 
@@ -202,7 +202,7 @@ for (int bin_index = 0; bin_index < num_rois * pooled_height * pooled_width) {
       //获得x坐标
       bilinear_interpolate_gradient(height, width, y, x, w1, w2, w3, w4, x_low, _x_high, y_low, y_high, is_empty);
       //x_low, _x_high, y_low, y_high组合出坐标(x, y)的四邻域像素的坐标，左上角， 像素坐标为(x_low, y_low)
-      //w1, w2, w3, w4对应四邻域像素的卷积滤波张量
+      //w1, w2, w3, w4对应四邻域像素的加权系数
       //is_empty表示像素点(x, y)是否在有效区域
 
       if (is_empty) {
