@@ -81,7 +81,7 @@ static mluOpStatus_t foolProof(
       filters_desc->layout != MLUOP_LAYOUT_NCDHW &&
       filters_desc->layout != MLUOP_LAYOUT_ARRAY) {
     LOG(ERROR) << api_name << "The layout of filters is: "
-               << mluop::getNameOfTensorLayout(filters_desc->layout)
+               << mluOpGetNameOfTensorLayout(filters_desc->layout)
                << ", which is not supported now.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }

@@ -51,7 +51,8 @@
 #include "variable.h"
 #include "internal_kernel/fill_ram/fill_ram.h"
 
-using namespace std::chrono; // NOLINT
+using namespace std::chrono;  // NOLINT
+
 namespace mluoptest {
 
 typedef std::function<void()> Func;
@@ -107,12 +108,6 @@ const std::set<mluOpDevType_t> arch_skip_nan_inf = {MLUOP_MLU220, MLUOP_MLU270,
 
 // runtime config
 struct ExecuteConfig {
-  ExecuteConfig() {
-    dump_data = mluoptest::getEnv("MLUOP_GTEST_DUMP_DATA", false);
-    fixed_criterion = mluoptest::getEnv("MLUOP_GTEST_ALL_CRITERION", false);
-    perf_baseline = mluoptest::getEnv("MLUOP_GTEST_PERF_BASELINE", false);
-  }
-
   void print() {
     std::cout << "Execution config:\n";
     std::cout << std::left << std::setw(25)
@@ -127,9 +122,10 @@ struct ExecuteConfig {
 
   bool mlu_only = false;
   bool zero_input = false;
-  bool fixed_criterion = false;
-  bool dump_data = false;
-  bool perf_baseline = false;
+  bool fixed_criterion = getEnv("MLUOP_GTEST_ALL_CRITERION", false);
+  bool dump_data = getEnv("MLUOP_GTEST_DUMP_DATA", false);
+  bool perf_baseline = getEnv("MLUOP_GTEST_PERF_BASELINE", false);
+  bool acc_baseline = getEnv("MLUOP_GTEST_ACC_BASELINE", false);
   bool test_llc = false;
   size_t perf_repeat = 1;
 };
@@ -291,8 +287,8 @@ struct DataBlock {
   mluOpDataType_t dtype = MLUOP_DTYPE_INVALID;
   mluOpDataType_t oc_dt = MLUOP_DTYPE_INVALID;
 
-  std::vector<int> shape;
-  std::vector<int> stride;
+  std::vector<int64_t> shape;
+  std::vector<int64_t> stride;
   std::string name;
 };
 
@@ -392,22 +388,24 @@ class Executor {
   virtual int64_t getTheoryIoSize();
   // placeholder used to identify whether the criterion is used or not
   virtual std::set<Evaluator::Formula> getCriterionsUse() const {
-    return {Evaluator::DIFF1, Evaluator::DIFF2, Evaluator::DIFF3,
-            Evaluator::DIFF3_2, Evaluator::DIFF4};
+    return {Evaluator::DIFF1,   Evaluator::DIFF2, Evaluator::DIFF3,
+            Evaluator::DIFF3_2, Evaluator::DIFF4, Evaluator::DIFF_KL};
   }
   inline void recordGtestTimePoint(const std::string &&name) {
-    // XXX At present, this method does not have race condition cuz methods in
-    // single executor instance
+    // XXX  At present, this method does not have race condition cuz methods
+    //      in single executor instance
     //      are always invoked in-ordered even it is in multi-thread mode.
     //      But things may changed in the future, may need to add lock in the
     //      future
     time_point_records_.emplace_back(
-        std::make_tuple(name, ::steady_clock::now()));
+        std::make_tuple(name, std::chrono::steady_clock::now()));
   }
 
  private:
-  ::time_point<::steady_clock> time_point_init_ = ::steady_clock::now();
-  std::vector<std::tuple<std::string, ::time_point<::steady_clock>>>
+  std::chrono::time_point<std::chrono::steady_clock> time_point_init_ =
+      std::chrono::steady_clock::now();
+  std::vector<std::tuple<std::string,
+                         std::chrono::time_point<std::chrono::steady_clock>>>
       time_point_records_;
   void setHandle();
   void createTensors();
@@ -440,20 +438,16 @@ class Executor {
   void printPerfTestInfo();
 
   void checkBaseline();
+  void checkAccuracyBaseline();
   EvaluateResult evaluate();
 
-  void castHalfOuput();
+  void castHalfOutput();
 
   std::vector<DataBlock *> getInputBlocks();
   std::vector<DataBlock *> getOutputBlocks();
 
-  // cast mode for conv
-  void quantizeTensorByChannel(float *src_data, void *dst_data,
-                               mluOpDataType_t dst_dtype, size_t count,
-                               int tensor_index);
-
   // efficiency
-  int getIpuFrequency();
+  int getMluCoreFrequency();
 
   enum ComputeUnit { LT_COMPUTE, CT_COMPUTE };
   ComputeUnit compute_unit_;

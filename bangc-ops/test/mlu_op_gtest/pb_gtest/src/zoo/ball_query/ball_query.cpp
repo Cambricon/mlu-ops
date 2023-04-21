@@ -127,11 +127,11 @@ void BallQueryExecutor::cpuCompute() {
 }
 
 int64_t BallQueryExecutor::getTheoryOps() {
-  std::vector<int> new_xyz_shape = parser_->input(0)->shape;
-  std::vector<int> xyz_shape = parser_->input(1)->shape;
-  const int b = new_xyz_shape[0];
-  const int m = new_xyz_shape[1];
-  const int n = xyz_shape[1];
+  std::vector<int64_t> new_xyz_shape = parser_->input(0)->shape;
+  std::vector<int64_t> xyz_shape = parser_->input(1)->shape;
+  const int64_t b = new_xyz_shape[0];
+  const int64_t m = new_xyz_shape[1];
+  const int64_t n = xyz_shape[1];
   int64_t theory_ops = b * n * m * 10;
   VLOG(4) << "getTheoryops: " << theory_ops << " ops.";
   return theory_ops;

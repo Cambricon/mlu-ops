@@ -38,9 +38,30 @@
 #include "modules_test.h"
 #include "src/gtest-internal-inl.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+static void setup_parallel_execution_policy() {
+#ifndef _OPENMP
+  return;
+#else
+  if (mluoptest::global_var.thread_num_ > 1)
+    return;  // XXX At present, do not use openmp under threaded mode
+  if (getenv("OMP_NUM_THREADS") == NULL) {
+    static const auto num_thread =
+        (omp_get_max_threads() > 20 ? 20 : omp_get_max_threads());
+    omp_set_dynamic(0);
+    omp_set_num_threads(num_thread);
+  }
+  GTEST_LOG_(INFO) << "omp_get_max_threads(): " << omp_get_max_threads();
+#endif
+}
+
 using namespace mluoptest;  // NOLINT
 int main(int argc, char **argv) {
   global_var.init(argc, argv);
+  setup_parallel_execution_policy();
   testing::AddGlobalTestEnvironment(new TestEnvironment);
   testing::InitGoogleTest(&argc, argv);
   testing::TestEventListeners &listeners =

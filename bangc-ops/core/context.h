@@ -32,23 +32,23 @@
 #define CONTEXT_DEVICENAME_BUFFER_SIZE 64
 #define CONTEXT_DEVICENAME_LEAST_SIZE 6
 
-/*
-Tested version dependency:
+// Tested version dependency: See MLUOP Release Note.
+// Compatible with higher version CNRT/CNDRV by default.
+#define MLUOP_DEP_CNRT_MIN_MAJOR 6
+#define MLUOP_DEP_CNRT_MIN_MINOR 3
+#define MLUOP_DEP_CNRT_MIN_PATCH 0
 
-| MLUOP version | CNTOOLKIT version | CNRT version | DRIVER version  |
----------------------------------------------------------------------
-| MLUOP V1.2    | CNTOOLKIT V1.6    | CNRT V4.9    | DRIVER V4.8     |
-| MLUOP V1.1    | CNTOOLKIT V1.5    | CNRT V4.8    | DRIVER V4.7     |
-| MLUOP V1.0    | CNTOOLKIT V1.4    | CNRT V4.7    | DRIVER V4.6     |
-*/
-#define MLUOP_DEP_CNRT_MIN_MAJOR 5
-#define MLUOP_DEP_CNRT_MIN_MINOR 0
-#define MLUOP_DEP_CNRT_MIN_PATCHLEVEL 0
-
-// Compatible with higher version CNRT by default.
 #define MLUOP_DEP_CNRT_MAX_MAJOR 999
 #define MLUOP_DEP_CNRT_MAX_MINOR 999
-#define MLUOP_DEP_CNRT_MAX_PATCHLEVEL 999
+#define MLUOP_DEP_CNRT_MAX_PATCH 999
+
+#define MLUOP_DEP_CNDRV_MIN_MAJOR 2
+#define MLUOP_DEP_CNDRV_MIN_MINOR 3
+#define MLUOP_DEP_CNDRV_MIN_PATCH 0
+
+#define MLUOP_DEP_CNDRV_MAX_MAJOR 999
+#define MLUOP_DEP_CNDRV_MAX_MINOR 999
+#define MLUOP_DEP_CNDRV_MAX_PATCH 999
 
 typedef enum {
   MLUOP_UNKNOWN_DEVICE = 0,
@@ -75,10 +75,10 @@ struct mluOpContext {
   int32_t wram_size;
   int32_t sram_size;
   int32_t capability_cluster_num;
-  int32_t capability_job_limit;
+  int32_t capability_job_limit;  // the max job type you can launch, e.g.
+                                 // CN_KERNEL_CLASS_UNION1
   mluOpQuantizeRoundMode_t round_mode;
   mluOpAtomicsMode_t atomics_mode;
-
   int32_t getJobNum(cnrtFunctionType_t function_type) {
     switch (function_type) {
       default:
@@ -134,7 +134,7 @@ struct mluOpContext {
 typedef enum {
   WARNING = 1,
   ERROR = 2,
-} DepCheckLevel;  // related to include/cnlog.h
+} DepCheckLevel;  // related to core/cnlog.h
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,
                                    bool need_check_max = false,

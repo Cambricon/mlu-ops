@@ -30,6 +30,8 @@ def upper_camel(op_name):
         res += item.capitalize()
     return res
 
+def get_black_list_op():
+    return os.environ.get("MLUOP_BLACK_LIST_OP", "").strip().split(";")
 if __name__ == "__main__":
     # grep all ini files in zoo/
     mlu_op_gtest_src_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +41,8 @@ if __name__ == "__main__":
         inis = os.listdir(zoo_path)
         # inis = [os.path.join(mlu_op_gtest_src_dir_path, "zoo", f)
         #                      for f in inis if os.path.splitext(f)[1] == ".ini"]
-        inis = sorted(inis)
+        black_list = get_black_list_op()
+        inis = sorted(filter(lambda x: x not in black_list, inis))
     else:
         # build specific operator only
         for i in range(1, len(sys.argv)):

@@ -23,31 +23,18 @@
 #ifndef CORE_GEN_CASE_H_
 #define CORE_GEN_CASE_H_
 
-#include <sys/syscall.h>
-#include <unistd.h>
-#include <limits.h>
-#include <time.h>
-#include <stdio.h>
-#include <error.h>
-#include <iomanip>
-#include <unordered_map>
 #include <vector>
-#include <algorithm>
+#include <iomanip>
 #include <string>
-#include <iostream>
-#include <fstream>
-#include <regex>  // NOLINT
-#include <mutex>  // NOLINT
-#include <iterator>
+#include <limits>
 #include <utility>
-#include "core/type.h"
-#include "core/logging.h"
-#include "core/tool.h"
-#include "core/platform/env_time.h"
 #include "mlu_op.h"
+#include "core/tensor.h"
+#include "core/tool.h"
 
 // macro function for user
 #define MLUOP_GEN_CASE_ON (mluop::gen_case::isGenCaseOn())
+// #define MLUOP_GEN_CASE_ON_NEW (mluop::gen_case::isGenCaseOn())
 #define MLUOP_GEN_CASE_ON_NEW (mluop::gen_case::genCaseModeGet(true) > 0)
 
 #define GEN_CASE_START(op_name) \
@@ -88,15 +75,20 @@
                                upper_bound, lower_bound, have_onchip,    \
                                distribution)
 
-#define GEN_CASE_OP_PARAM_SINGLE(pos, param_node_name, param_name, value) \
-  mluop::gen_case::genCaseOpParam(                                        \
-      node, param_name, value,                                            \
-      std::string(param_node_name) + std::string("_param"))
+#define GEN_CASE_OP_PARAM_SINGLE_HALF(pos, param_node_name, param_name, value) \
+  mluop::gen_case::genCaseOpParam(                                             \
+      node, param_name, value,                                                 \
+      std::string(param_node_name) + std::string("_param"), MLUOP_DTYPE_HALF)
+#define GEN_CASE_OP_PARAM_SINGLE(pos, param_node_name, param_name, value, ...) \
+  mluop::gen_case::genCaseOpParam(                                             \
+      node, param_name, value,                                                 \
+      std::string(param_node_name) + std::string("_param"), ##__VA_ARGS__)
 #define GEN_CASE_OP_PARAM_SINGLE_NAME(pos, param_node_name, param_name, value) \
   mluop::gen_case::genCaseOpParam(node, param_name, value, param_node_name)
 #define GEN_CASE_OP_PARAM_ARRAY(pos, param_node_name, param_name, value, num) \
-  mluop::gen_case::genCaseOpParam(node, param_name, value, num, \
-                    std::string(param_node_name) + std::string("_param"))
+  mluop::gen_case::genCaseOpParam(                                            \
+      node, param_name, value, num,                                           \
+      std::string(param_node_name) + std::string("_param"))
 #define GEN_CASE_OP_PARAM_SINGLE_SUB(pos, param_node_name, param_name, value,  \
                                      new_child)                                \
   mluop::gen_case::genCaseOpParamSub(node, param_name, value, param_node_name, \
@@ -108,12 +100,15 @@
 
 #define GEN_CASE_HANDLE(handle) mluop::gen_case::genCaseHandle(node, handle)
 #define GEN_CASE_HANDLE_PARAM() mluop::gen_case::genCaseHandleParam(node)
+
 #define GEN_CASE_TEST_PARAM(is_diff1, is_diff2, is_diff3, diff1_threshold, \
                             diff2_threshold, diff3_threshold, ...)         \
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,    \
                                     diff1_threshold, diff2_threshold,      \
                                     diff3_threshold, ##__VA_ARGS__);       \
-  node->serialize(true); node->reset()
+  node->serialize(true);                                                   \
+  node->reset()
+
 #define GEN_CASE_TEST_PARAM_NEW(is_diff1, is_diff2, is_diff3, diff1_threshold, \
                                 diff2_threshold, diff3_threshold, ...)         \
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,        \
@@ -156,6 +151,45 @@ struct TensorNode {
         params(params),
         distribution(distribution),
         dump_data(dump_data) {}
+
+  TensorNode(const TensorNode &t) {
+    is_input = t.is_input;
+    id = t.id;
+    device_ptr = t.device_ptr;
+    inner_desc = t.inner_desc;
+    if (inner_desc) {
+      mluOpTensorDescriptor_t desc_;
+      mluOpCreateTensorDescriptor(&desc_);
+      int tensor_dim;
+      mluOpTensorLayout_t layout;
+      mluOpDataType_t dtype;
+      mluOpGetTensorDescriptor_v2(t.desc, &layout, &dtype, &tensor_dim,
+                                  nullptr);
+      int64_t *dims = new int64_t[tensor_dim];
+      int64_t *strides = new int64_t[tensor_dim];
+      mluOpGetTensorDescriptorEx_v2(t.desc, &layout, &dtype, &tensor_dim, dims,
+                                    strides);
+      mluOpSetTensorDescriptorEx_v2(desc_, layout, dtype, tensor_dim, dims,
+                                    strides);
+      desc = desc_;
+      delete[] dims;
+      delete[] strides;
+    } else {
+      desc = t.desc;
+    }
+    params = t.params;
+    distribution = t.distribution;
+    dump_data = t.dump_data;
+  }
+
+  ~TensorNode() {
+    if (inner_desc) {
+      if (desc != nullptr) {
+        mluOpDestroyTensorDescriptor(desc);
+      }
+      desc = nullptr;
+    }
+  }
 };
 
 enum DATASTATE { INPUT, OUTPUT };
@@ -167,8 +201,8 @@ class PbNode {
   std::vector<std::string> criterions;
   std::vector<double> thresholds;
   std::vector<double> thresholds_imag;
-  std::string file_name;
-  std::string case_file_name;
+  std::string file_name;       // pt file name
+  std::string case_file_name;  // pt file name with dir
   ParamNode op_param;
   ParamNode handle_param;
   mluOpHandle_t handle;
@@ -202,13 +236,19 @@ class PbNode {
                     mluOpTensorDescriptor_t desc, bool inner_desc,
                     std::vector<double> params, std::string distribution,
                     bool dump_data);
-  // half need cast
+  // should specialization for pointer on device
   template <typename paramType>
   inline void appendOpParam(std::string param_name, paramType param_value,
-                            std::string param_node_name, bool is_half) {
+                            std::string param_node_name,
+                            mluOpDataType_t dtype) {
     op_param.name = param_node_name;
-    if (!is_half) {
-      op_param.params.push_back({param_name, std::to_string(param_value)});
+    if (dtype != MLUOP_DTYPE_HALF) {
+      std::stringstream param_ss;
+      param_ss.setf(std::ios::fixed);
+      param_ss << std::setprecision(
+                      std::numeric_limits<paramType>::max_digits10)
+               << param_value;
+      op_param.params.push_back({param_name, param_ss.str()});
     } else {
       op_param.params.push_back(
           {param_name, std::to_string(castHalfToFloat32(param_value))});
@@ -218,9 +258,6 @@ class PbNode {
   template <typename paramType>
   inline void appendOpParamSub(std::string param_name, paramType param_value,
                                std::string param_node_name, bool new_child) {
-    if (op_param.name == "") {
-      op_param.name = op_name + "_param";
-    }
     if (new_child) {
       op_param.childs.push_back(ParamNode());
     }
@@ -231,9 +268,9 @@ class PbNode {
   template <typename paramType>
   inline void appendOpParam(std::string param_name, paramType *param_value,
                             int num, std::string param_node_name,
-                            bool is_half) {
+                            mluOpDataType_t dtype) {
     for (int i = 0; i < num; i++) {
-      appendOpParam(param_name, param_value[i], param_node_name, is_half);
+      appendOpParam(param_name, param_value[i], param_node_name, dtype);
     }
   }
   template <typename paramType>
@@ -259,16 +296,17 @@ class PbNode {
       case MLUOP_DTYPE_HALF:
       case MLUOP_DTYPE_FLOAT:
       case MLUOP_DTYPE_DOUBLE:
-      case MLUOP_DTYPE_COMPLEX_FLOAT:
       case MLUOP_DTYPE_COMPLEX_HALF:
+      case MLUOP_DTYPE_COMPLEX_FLOAT:
         return true;
-
       default:
         return false;
     }
   }
+
   inline std::string get_tensor_random_string(int index) {
     std::stringstream random_str;
+    random_str.setf(std::ios::fixed);
     random_str << "  random_data: {\n    seed: 233\n";
     random_str << "    distribution: " << tensors[index].distribution << "\n";
     if (tensors[index].distribution == "UNIFORM") {
@@ -370,12 +408,12 @@ class PbNode {
     int dim;
     mluOpTensorLayout_t layout;
     mluOpDataType_t dtype;
-    mluOpGetTensorDescriptor(tensors[index].desc, &layout, &dtype, &dim,
-                             nullptr);
-    int *dims = new int[dim];
-    int *strides = new int[dim];
-    mluOpGetTensorDescriptorEx(tensors[index].desc, &layout, &dtype, &dim, dims,
-                               strides);
+    mluOpGetTensorDescriptor_v2(tensors[index].desc, &layout, &dtype, &dim,
+                                nullptr);
+    int64_t *dims = new int64_t[dim];
+    int64_t *strides = new int64_t[dim];
+    mluOpGetTensorDescriptorEx_v2(tensors[index].desc, &layout, &dtype, &dim,
+                                  dims, strides);
     // if tensor not be set, total_element_num will be 0
     uint64_t count = 1;
     for (int i = 0; i < dim; i++) {
@@ -437,12 +475,8 @@ template <>
 inline void PbNode::appendOpParam<std::string>(std::string param_name,
                                                std::string param_value,
                                                std::string param_node_name,
-                                               bool is_half) {
-  if (param_node_name == "") {
-    op_param.name = op_name + "_param";
-  } else {
-    op_param.name = param_node_name;
-  }
+                                               mluOpDataType_t dtype) {
+  op_param.name = param_node_name;
   op_param.params.push_back({param_name, param_value});
 }
 
@@ -450,12 +484,8 @@ template <>
 inline void PbNode::appendOpParam<const char *>(std::string param_name,
                                                 const char *param_value,
                                                 std::string param_node_name,
-                                                bool is_half) {
-  if (param_node_name == "") {
-    op_param.name = op_name + "_param";
-  } else {
-    op_param.name = param_node_name;
-  }
+                                                mluOpDataType_t dtype) {
+  op_param.name = param_node_name;
   op_param.params.push_back({param_name, std::string(param_value)});
 }
 
@@ -463,13 +493,36 @@ template <>
 inline void PbNode::appendOpParam<char *>(std::string param_name,
                                           char *param_value,
                                           std::string param_node_name,
-                                          bool is_half) {
-  if (param_node_name == "") {
-    op_param.name = op_name + "_param";
-  } else {
-    op_param.name = param_node_name;
-  }
+                                          mluOpDataType_t dtype) {
+  op_param.name = param_node_name;
   op_param.params.push_back({param_name, std::string(param_value)});
+}
+
+template <>
+inline void PbNode::appendOpParam<const void *>(std::string param_name,
+                                                const void *param_value,
+                                                std::string param_node_name,
+                                                mluOpDataType_t dtype) {
+  op_param.name = param_node_name;
+  cnrtPointerAttributes_t attr;
+  cnrtPointerGetAttributes(&attr, param_value);
+  int data_width = getSizeOfDataType(dtype);
+  if (attr.type == cnrtMemTypeDevice) {
+    void *data = malloc(data_width);
+    if (CNRT_RET_SUCCESS == cnrtMemcpy(data, const_cast<void *>(param_value),
+                                       data_width,
+                                       CNRT_MEM_TRANS_DIR_DEV2HOST)) {
+      op_param.params.push_back({param_name, get_data_string(dtype, data, 0)});
+    } else {
+      LOG(ERROR) << "[gen_case] dump op param failed, param_name is "
+                 << param_name << " param_node_name is " << param_node_name;
+    }
+    free(data);
+  } else {
+    op_param.params.push_back(
+        {param_name,
+         get_data_string(dtype, const_cast<void *>(param_value), 0)});
+  }
 }
 
 template <>
@@ -523,31 +576,34 @@ void genCaseData(PbNode *node, bool is_input, std::string id,
                  const void *device_data, mluOpTensorDescriptor_t desc,
                  double param1, double param2,
                  std::string distribution = "UNIFORM", bool dump_data = false);
+
 void genCaseData(PbNode *node, bool is_input, std::string id,
-                 const void *device_data, int dim, int *dims,
+                 const void *device_data, int dim, int64_t *dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,
                  double param1, double param2,
                  std::string distribution = "UNIFORM", bool dump_data = false);
 void genCaseData(PbNode *node, bool is_input, std::string id,
-                 const void *device_data, int dim, const int *dims,
+                 const void *device_data, int dim, const int64_t *dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,
                  double param1, double param2,
                  std::string distribution = "UNIFORM", bool dump_data = false);
 void genCaseData(PbNode *node, bool is_input, std::string id,
-                 const void *device_data, int dim, std::vector<int> dims,
+                 const void *device_data, int dim, std::vector<int64_t> dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,
                  double param1, double param2,
                  std::string distribution = "UNIFORM", bool dump_data = false);
 template <typename paramType>
 void genCaseOpParam(PbNode *node, std::string param_name, paramType param_value,
-                    std::string param_node_name = "", bool is_half = false) {
-  node->appendOpParam(param_name, param_value, param_node_name, is_half);
+                    std::string param_node_name = "",
+                    mluOpDataType_t dtype = MLUOP_DTYPE_FLOAT) {
+  node->appendOpParam(param_name, param_value, param_node_name, dtype);
 }
 template <typename paramType>
 void genCaseOpParam(PbNode *node, std::string param_name,
                     paramType *param_value, int num,
-                    std::string param_node_name = "", bool is_half = false) {
-  node->appendOpParam(param_name, param_value, num, param_node_name, is_half);
+                    std::string param_node_name = "",
+                    mluOpDataType_t dtype = MLUOP_DTYPE_FLOAT) {
+  node->appendOpParam(param_name, param_value, num, param_node_name, dtype);
 }
 template <typename paramType>
 void genCaseOpParamSub(PbNode *node, std::string param_name,

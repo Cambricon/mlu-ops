@@ -108,7 +108,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   if (!isSupportType(new_xyz_desc->dtype, support_type, 2)) {
     LOG(ERROR) << "[mluOpBallQuery]:Only half and float are supported in input "
                   "new_xyz tensor, but the data type of tensor is "
-               << mluop::getNameOfDataType(new_xyz_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(new_xyz_desc->dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->dtype, xyz_desc->dtype);
@@ -116,7 +116,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   if (idx_desc->dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << "[mluOpBallQuery]:Only int32 is supportedin output idx, but "
                   "data type of tensor is "
-               << mluop::getNameOfDataType(idx_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(idx_desc->dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check LargeTensor

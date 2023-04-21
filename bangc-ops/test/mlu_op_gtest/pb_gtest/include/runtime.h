@@ -23,6 +23,7 @@
 #ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
 #define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
 
+#include <atomic>
 #include <iostream>
 #include <algorithm>
 #include <memory>
@@ -30,12 +31,11 @@
 #include <string>
 #include <cstring>
 #include "cnrt.h"
-#include "core/logging.h"
-#include "memory_pool.h"
 #include "mlu_op.h"
+#include "core/logging.h"
 #include "variable.h"
 #include "tools.h"
-#include "pb_test_tools.h"
+#include "memory_pool.h"
 
 namespace mluoptest {
 
@@ -195,7 +195,7 @@ class MLURuntime : public Runtime {
 
   inline size_t getAllocatedSize() const { return allocated_size; }
 
-  inline size_t getMemBlockSize() const { return memory_blocks_.size(); }
+  inline size_t getMemBlocksSize() const { return memory_blocks_.size(); }
 
  private:
   std::atomic<size_t> allocated_size{0};

@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_TOOLS_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_TOOLS_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_
 
 #include <algorithm>
 #include <sstream>
@@ -38,14 +38,15 @@
 #include "gtest/gtest.h"
 #include "mlu_op_test.pb.h"
 #include "mlu_op.h"
-#include "pb_test_tools.h"
+#include "tools.h"
 
 namespace mluoptest {
 
 // for debug
-void saveDataToFile(const std::string &file, float *data, size_t count);
 void saveDataToFile(const std::string &file, void *data, mluOpDataType_t dtype,
                     size_t count);
+void saveDataToFile(const std::string &file, float *data, size_t count);
+
 void readDataFromFile(const std::string &file, float *data, size_t count);
 void saveHexDataToFile(const std::string &file, void *data,
                        mluOpDataType_t dtype, size_t count);
@@ -59,6 +60,7 @@ size_t shapeElementCount(const Shape *shape);
 cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype);
 mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype);
 mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order);
+
 int16_t cvtFloatToHalf(float x);
 float cvtHalfToFloat(int16_t);
 
@@ -77,6 +79,7 @@ int getEnvInt(const std::string &env, int default_ret);
 size_t proc_usage_peak();
 std::unordered_map<std::string, std::vector<std::string>> readFileByLine(
     const std::string &file);
+
 // half mult
 int float_mult(int in_a, int in_b, int float_16or32, int round_mode,
                int ieee754);
@@ -188,7 +191,6 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
       mu = (T)random_param->mu();
       sigma = (T)random_param->sigma();
     }
-    // uniform_real_distribution is [lower, upper)
     std::normal_distribution<T> dis(mu, sigma);
     for (size_t i = 0; i < count; ++i) {
       data[i] = dis(re);
@@ -272,10 +274,11 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
   }
 }
 
+// copy from boost::hash_combine(), edge cannot use it directly
 template <typename T>
 inline void hash_combine(size_t &seed, T value) {
   seed ^= std::hash<T>()(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_TOOLS_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PB_TEST_TOOLS_H_

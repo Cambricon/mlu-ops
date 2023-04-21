@@ -44,6 +44,7 @@
 #define MLUOP_ATTRIBUTE_UNUSED __attribute__((unused))
 #define MLUOP_ATTRIBUTE_COLD __attribute__((cold))
 #define MLUOP_ATTRIBUTE_WEAK __attribute__((weak))
+#define MLUOP_ATTRIBUTE_FLATTEN __attribute__((flatten))
 #define MLUOP_PACKED __attribute__((packed))
 #define MLUOP_MUST_USE_RESULT __attribute__((warn_unused_result))
 #define MLUOP_PRINTF_ATTRIBUTE(string_index, first_to_check) \
@@ -60,6 +61,7 @@
 #define MLUOP_ATTRIBUTE_UNUSED
 #define MLUOP_ATTRIBUTE_COLD
 #define MLUOP_ATTRIBUTE_WEAK
+#define MLUOP_ATTRIBUTE_FLATTEN
 #define MLUOP_MUST_USE_RESULT
 #define MLUOP_PACKED
 #define MLUOP_PRINTF_ATTRIBUTE(string_index, first_to_check)
@@ -70,6 +72,8 @@
 // Non-GCC equivalents
 #define MLUOP_ATTRIBUTE_NORETURN
 #define MLUOP_ATTRIBUTE_ALWAYS_INLINE
+#define MLUOP_ATTRIBUTE_CONSTRUCTOR
+#define MLUOP_ATTRIBUTE_DESTRUCTOR
 #define MLUOP_ATTRIBUTE_NOINLINE
 #define MLUOP_ATTRIBUTE_UNUSED
 #define MLUOP_ATTRIBUTE_COLD

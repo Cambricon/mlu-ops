@@ -20,12 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #ifndef CORE_TYPE_H_
 #define CORE_TYPE_H_
 
 #include <string>
-
 #include "core/logging.h"
 #include "mlu_op.h"
 
@@ -57,8 +55,10 @@ static mluOpStatus_t getLowAndHighValueFrom64Bits(T value, uint32_t* high,
 
 size_t getSizeOfDataType(const mluOpDataType_t dtype);
 
-std::string getNameOfDataType(const mluOpDataType_t dtype);
-
-std::string getNameOfTensorLayout(const mluOpTensorLayout_t layout);
 }  // namespace mluop
+
+const char* MLUOP_WIN_API mluOpGetNameOfDataType(mluOpDataType_t dtype);
+const char* MLUOP_WIN_API
+mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout);
+
 #endif  // CORE_TYPE_H_

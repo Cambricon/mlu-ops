@@ -25,6 +25,44 @@
 using mluoptest::global_var;
 
 TestEnvInfo TestEnvironment::test_env_;
+std::unordered_map<std::string, std::vector<double>> acc_baseline_map;
+void TestEnvironment::getAccuracyBaselineXml() {
+  if (std::getenv("MLUOP_GTEST_ACC_BASELINE") == NULL ||
+      std::string(std::getenv("MLUOP_GTEST_ACC_BASELINE")).compare("ON") != 0) {
+    return;
+  }
+  std::string xml_file_name;
+  if (std::getenv("MLUOP_ACC_BASELINE_XML_FILE") != NULL) {
+    xml_file_name = std::getenv("MLUOP_ACC_BASELINE_XML_FILE");
+  } else {
+    LOG(WARNING)
+        << "getAccuracyBaseline: MLUOP_ACC_BASELINE_XML_FILE is not set.";
+  }
+  std::ifstream xml_file(xml_file_name, std::ifstream::in);
+  std::string line, error_diff;
+  std::string::size_type start, end;
+  while (std::getline(xml_file, line, '\n')) {
+    if (line.find("name=\"case_path\"") != std::string::npos) {
+      start = line.find_last_of("=") + 2;
+      end = line.find_last_of("/") - 2;
+      std::string case_path = line.substr(start, end - start + 1);
+      std::string case_name = case_path.substr(case_path.find_last_of("/") + 1);
+      acc_baseline_map[case_name] = std::vector<double>({});
+      while (line.find("error_diff") == std::string::npos) {
+        std::getline(xml_file, line, '\n');
+      }
+      while (line.find("properties") == std::string::npos &&
+             line.find("error_diff") != std::string::npos) {
+        start = line.find_last_of("=") + 2;
+        end = line.find_last_of("/") - 2;
+        error_diff = line.substr(start, end - start + 1);
+        acc_baseline_map[case_name].push_back(atof(error_diff.c_str()));
+        std::getline(xml_file, line, '\n');
+      }
+    }
+  }
+  xml_file.close();
+}
 void TestEnvironment::convertBaselineXml2Txt() {
   if ((std::getenv("MLUOP_GTEST_GENERATE_BASELINE_ONLY") != NULL &&
        std::string(std::getenv("MLUOP_GTEST_GENERATE_BASELINE_ONLY"))
@@ -67,9 +105,9 @@ void TestEnvironment::convertBaselineXml2Txt() {
       end = line.find("value=") - 3;
       if ((line.substr(start, end - start + 1)).compare("hardware_time_base") !=
           0) {
-        LOG(ERROR) << "convertBaselineXml2Txt: expected hardware_time_base, "
-                      "but got "
-                   << line.substr(start, end - start + 1) << ".";
+        LOG(ERROR)
+            << "convertBaselineXml2Txt: expected hardware_time_base, but got "
+            << line.substr(start, end - start + 1) << ".";
         baseline_perf_txt_file.close();
         xml_file.close();
         break;
@@ -101,9 +139,9 @@ void TestEnvironment::convertBaselineXml2Txt() {
       end = line.find("value=") - 3;
       if ((line.substr(start, end - start + 1)).compare("workspace_size_mlu") !=
           0) {
-        LOG(ERROR) << "convertBaselineXml2Txt: expected workspace_size_mlu, "
-                      "but got "
-                   << line.substr(start, end - start + 1) << ".";
+        LOG(ERROR)
+            << "convertBaselineXml2Txt: expected workspace_size_mlu, but got "
+            << line.substr(start, end - start + 1) << ".";
         baseline_perf_txt_file.close();
         xml_file.close();
         break;
@@ -154,6 +192,7 @@ void TestEnvironment::SetUp() {
   }
   // convert baseline xml to txt
   convertBaselineXml2Txt();
+  getAccuracyBaselineXml();
   recordEnvXml();
 }
 
@@ -186,7 +225,7 @@ void TestEnvironment::setDate() {
   test_env_.date = date_oss.str();
 }
 
-void TestEnvironment::setMluopVersion() {
+void TestEnvironment::setMluOpVersion() {
   std::ostringstream mluop_ver_oss;
   int mluop_ver[3];
   mluOpGetLibVersion(&mluop_ver[0], &mluop_ver[1], &mluop_ver[2]);
@@ -216,7 +255,7 @@ void TestEnvironment::setJobLimit() {
   test_env_.job_limit = job_limit.str();
 }
 
-void TestEnvironment::setMluopBranch() {
+void TestEnvironment::setMluOpBranch() {
   FILE *fp;
   char buffer[100];
   fp = popen("git rev-parse --abbrev-ref HEAD", "r");
@@ -310,8 +349,8 @@ void TestEnvironment::setIp() {
 void TestEnvironment::setTestEnv() {
   setDate();
   setCommitId();
-  setMluopBranch();
-  setMluopVersion();
+  setMluOpBranch();
+  setMluOpVersion();
   setMluPlatform();
   setClusterLimit();
   setJobLimit();

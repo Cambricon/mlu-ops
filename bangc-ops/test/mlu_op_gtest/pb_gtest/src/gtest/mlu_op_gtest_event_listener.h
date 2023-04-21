@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_EVENT_LISTENER_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_EVENT_LISTENER_H_
 
 #pragma once
 
@@ -145,3 +147,5 @@ class MLUOPGtestInternalPerfEventListener
 };
 
 }  // namespace mluoptest
+
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_EVENT_LISTENER_H_

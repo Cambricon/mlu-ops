@@ -406,7 +406,7 @@ def dump_to_excel(df, xlsx_path, n):
                                index=False,
                                startrow=summary.shape[0] + 1)
         auto_width(summary, writer, 'summary', summary.columns)
-        
+
         if 'io_cp' in df.columns:
             cand_hw_time = get_candidate_by_hardware_time(df, n)
             cand_hw_time.to_excel(writer,
@@ -1031,7 +1031,7 @@ def resolve_case(path):
     except Exception as e:
         print(e)
         print(
-            "parse file {} failed, please check cntest.proto and file!".format(
+            "parse file {} failed, please check mlu_op_test.proto and file!".format(
                 path))
 
     return get_node_info(node)

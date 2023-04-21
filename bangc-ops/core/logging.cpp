@@ -27,12 +27,13 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include "core/platform/env_time.h"
+#include <memory>
+#include <mutex>  // NOLINT
 #include "core/logging.h"
 
 namespace {
 
-int ParseInteger(const char *str, size_t size) {
+static int ParseInteger(const char* str, size_t size) {
   // Ideally we would use env_var / safe_strto64, but it is
   // hard to use here without pulling in a lot of dependencies,
   // so we use std:istringstream instead
@@ -44,21 +45,21 @@ int ParseInteger(const char *str, size_t size) {
 }
 
 // Parse log level (int64) from environment variable (char*)
-int64_t LogLevelStrToInt(const char *mlu_op_env_var_val) {
-  if (mlu_op_env_var_val == nullptr) {
+static int64_t LogLevelStrToInt(const char* mluop_env_var_val) {
+  if (mluop_env_var_val == nullptr) {
     return 0;
   }
-  return ParseInteger(mlu_op_env_var_val, strlen(mlu_op_env_var_val));
+  return ParseInteger(mluop_env_var_val, strlen(mluop_env_var_val));
 }
 
 // Using StringPiece breaks Windows build.
 struct StringData {
   struct Hasher {
-    size_t operator()(const StringData &sdata) const {
+    size_t operator()(const StringData& sdata) const {
       // For dependency reasons, we cannot use hash.h here. Use DBJHash instead.
       size_t hash = 5381;
-      const char *data = sdata.data;
-      for (const char *top = data + sdata.size; data < top; ++data) {
+      const char* data = sdata.data;
+      for (const char* top = data + sdata.size; data < top; ++data) {
         hash = ((hash << 5) + hash) + (*data);
       }
       return hash;
@@ -66,25 +67,50 @@ struct StringData {
   };
 
   StringData() = default;
-  StringData(const char *data, size_t size) : data(data), size(size) {}
+  StringData(const char* data, size_t size) : data(data), size(size) {}
 
-  bool operator==(const StringData &rhs) const {
+  bool operator==(const StringData& rhs) const {
     return size == rhs.size && memcmp(data, rhs.data, size) == 0;
   }
+  friend std::ostream& operator<<(std::ostream& out, const StringData& s);
 
-  const char *data = nullptr;
+  const char* data = nullptr;
   size_t size = 0;
 };
 
-using VmoduleMap = std::unordered_map<StringData, int, StringData::Hasher>;
+std::ostream& operator<<(std::ostream& out, const StringData& s) {
+  out << std::string(s.data, s.size);
+  return out;
+}
+
+// using VmoduleMap = std::unordered_map<StringData, int, StringData::Hasher>;
+class VmoduleMap
+    : public std::unordered_map<StringData, int, StringData::Hasher> {
+ public:
+  ~VmoduleMap() {
+    if (env_data) {
+      free(env_data);
+      env_data = nullptr;
+    }
+  }
+  const char* load_env(const char* env) {
+    if (env_data == nullptr) {
+      env_data = strdup(env);
+    }
+    return env_data;
+  }
+
+ private:
+  char* env_data = nullptr;
+};
 
 // Returns a mapping from module name to VLOG level, derived from the
 // MLUOP_CPP_VMOUDLE environment variable; ownership is transferred to the
 // caller.
-VmoduleMap *VmodulesMapFromEnv() {
+VmoduleMap* VmodulesMapFromEnv() {
   // The value of the env var is supposed to be of the form:
   //    "foo=1,bar=2,baz=3"
-  const char *env = getenv("MLUOP_CPP_VMODULE");
+  const char* env = getenv("MLUOP_CPP_VMODULE");
   if (env == nullptr) {
     // If there is no MLUOP_CPP_VMODULE configuration (most common case), return
     // nullptr so that the ShouldVlogModule() API can fast bail out of it.
@@ -93,19 +119,21 @@ VmoduleMap *VmodulesMapFromEnv() {
   // The memory returned by getenv() can be invalidated by following getenv() or
   // setenv() calls. And since we keep references to it in the VmoduleMap in
   // form of StringData objects, make a copy of it.
-  const char *env_data = strdup(env);
-  VmoduleMap *result = new VmoduleMap();
+  VmoduleMap* result = new (std::nothrow) VmoduleMap();
+  // const char* env_data = strdup(env);
+  const char* env_data =
+      result->load_env(env);  // make sure strdup-ed data could be released
   while (true) {
-    const char *eq = strchr(env_data, '=');
+    const char* eq = strchr(env_data, '=');
     if (eq == nullptr) {
       break;
     }
-    const char *after_eq = eq + 1;
+    const char* after_eq = eq + 1;
 
     // Comma either points at the next comma delimiter, or at a null terminator.
     // We check that the integer we parse ends at this delimiter.
-    const char *comma = strchr(after_eq, ',');
-    const char *new_env_data;
+    const char* comma = strchr(after_eq, ',');
+    const char* new_env_data;
     if (comma == nullptr) {
       comma = strchr(after_eq, '\0');
       new_env_data = comma;
@@ -124,14 +152,9 @@ VmoduleMap *VmodulesMapFromEnv() {
 namespace mluop {
 namespace internal {
 
-int64_t MinLogLevelFromEnv() {
-  const char *mlu_op_env_var_val = std::getenv("MLUOP_MIN_LOG_LEVEL");
-  return LogLevelStrToInt(mlu_op_env_var_val);
-}
-
-int64_t MinVLogLevelFromEnv() {
-  const char *mlu_op_env_var_val = std::getenv("MLUOP_MIN_VLOG_LEVEL");
-  return LogLevelStrToInt(mlu_op_env_var_val);
+static int64_t MinVLogLevelFromEnv() {
+  const char* mluop_env_var_val = std::getenv("MLUOP_MIN_VLOG_LEVEL");
+  return LogLevelStrToInt(mluop_env_var_val);
 }
 
 int64_t LogMessage::MinVLogLevel() {
@@ -139,56 +162,28 @@ int64_t LogMessage::MinVLogLevel() {
   return min_vlog_level;
 }
 
-void LogMessage::GenerateLogMessage() {
-  static platform::EnvTime *env_time = platform::EnvTime::Default();
-  uint64_t now_micros = env_time->NowMicros();
-  time_t now_seconds = static_cast<time_t>(now_micros / 1000000);
-  int32_t micros_remainder = static_cast<int32_t>(now_micros % 1000000);
-  const size_t time_buffer_size = 30;
-  char time_buffer[time_buffer_size];  // NOLINT
-
-  strftime(time_buffer, time_buffer_size, "%Y-%m-%d %H:%M:%S",
-           localtime(&now_seconds));
-  fprintf(stderr, "%s.%06d: %c %s:%d] %s\n", time_buffer, micros_remainder,
-          "IWEF"[severity_], fname_, line_, str().c_str());
-}
-
-LogMessage::LogMessage(const char *fname, int line, int severity)
-    : fname_(fname), line_(line), severity_(severity) {}
-
-LogMessage::~LogMessage() {
-  // Read the min log level once during the first call to logging.
-  static int64_t min_log_level = MinLogLevelFromEnv();
-  if (severity_ >= min_log_level) {
-    GenerateLogMessage();
-  }
-}
-
-bool LogMessage::VmoduleActivated(const char *fname, int level) {
+bool LogMessage::VmoduleActivated(const char* fname, int level) {
   if (level <= MinVLogLevel()) {
     return true;
   }
-  static VmoduleMap *vmodules = VmodulesMapFromEnv();
+  //  static VmoduleMap* vmodules = VmodulesMapFromEnv();
+  static std::unique_ptr<VmoduleMap> vmodules(
+      VmodulesMapFromEnv());  // friendly to dlopen/dlclose
   if (MLUOP_PREDICT_TRUE(vmodules == nullptr)) {
     return false;
   }
-  const char *last_slash = strrchr(fname, '/');
-  const char *module_start = last_slash == nullptr ? fname : last_slash + 1;
-  const char *dot_after = strchr(module_start, '.');
-  const char *module_limit =
+  const char* last_slash = strrchr(fname, '/');
+  const char* module_start = last_slash == nullptr ? fname : last_slash + 1;
+  const char* dot_after = strchr(module_start, '.');
+  const char* module_limit =
       dot_after == nullptr ? strchr(fname, '\0') : dot_after;
   StringData module(module_start, module_limit - module_start);
   auto it = vmodules->find(module);
   return it != vmodules->end() && it->second >= level;
 }
 
-void LogString(const char *fname, int line, int severity,
-               const std::string &message) {
-  LogMessage(fname, line, severity) << message;
-}
-
 template <>
-void MakeCheckOpValueString(std::ostream *os, const char &v) {
+void MakeCheckOpValueString(std::ostream* os, const char& v) {
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
@@ -197,7 +192,7 @@ void MakeCheckOpValueString(std::ostream *os, const char &v) {
 }
 
 template <>
-void MakeCheckOpValueString(std::ostream *os, const signed char &v) {  // NOLINT
+void MakeCheckOpValueString(std::ostream* os, const signed char& v) {  // NOLINT
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
@@ -206,8 +201,8 @@ void MakeCheckOpValueString(std::ostream *os, const signed char &v) {  // NOLINT
 }
 
 template <>
-void MakeCheckOpValueString(std::ostream *os,
-                            const unsigned char &v) {  // NOLINT
+void MakeCheckOpValueString(std::ostream* os,
+                            const unsigned char& v) {  // NOLINT
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
@@ -218,24 +213,24 @@ void MakeCheckOpValueString(std::ostream *os,
 
 #if LANG_CXX11
 template <>
-void MakeCheckOpValueString(std::ostream *os, const std::nullptr_t &p) {
+void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& p) {
   (*os) << "nullptr";
 }
 #endif
 
-CheckOpMessageBuilder::CheckOpMessageBuilder(const char *exprtext)
+CheckOpMessageBuilder::CheckOpMessageBuilder(const char* exprtext)
     : stream_(new std::ostringstream) {
   *stream_ << "Check failed: " << exprtext << " (";
 }
 
 CheckOpMessageBuilder::~CheckOpMessageBuilder() { delete stream_; }
 
-std::ostream *CheckOpMessageBuilder::ForVar2() {
+std::ostream* CheckOpMessageBuilder::ForVar2() {
   *stream_ << " vs. ";
   return stream_;
 }
 
-std::string *CheckOpMessageBuilder::NewString() {
+std::string* CheckOpMessageBuilder::NewString() {
   *stream_ << ")";
   return new std::string(stream_->str());
 }

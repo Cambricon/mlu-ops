@@ -43,7 +43,7 @@ class PosixEnvTime : public EnvTime {
 
 #if defined(PLATFORM_POSIX)
 EnvTime *EnvTime::Default() {
-  static EnvTime *default_env_time = new PosixEnvTime;
+  static EnvTime *default_env_time = new (std::nothrow) PosixEnvTime;
   return default_env_time;
 }
 #endif

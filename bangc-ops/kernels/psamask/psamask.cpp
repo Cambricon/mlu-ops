@@ -171,9 +171,9 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
     LOG(ERROR) << api
                << " Check failed: Only support MLUOP_LAYOUT_NHWC input and "
                   "output, but now input is "
-               << mluop::getNameOfTensorLayout(input_desc->layout)
+               << mluOpGetNameOfTensorLayout(input_desc->layout)
                << ", and output is "
-               << mluop::getNameOfTensorLayout(output_desc->layout) << ".";
+               << mluOpGetNameOfTensorLayout(output_desc->layout) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->dtype != output_desc->dtype ||
