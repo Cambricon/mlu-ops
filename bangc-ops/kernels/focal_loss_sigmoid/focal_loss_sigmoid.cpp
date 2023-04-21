@@ -190,6 +190,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   // generate case prototxt.
   const uint64_t N = input_desc->dims[0];
   const uint64_t C = input_desc->dims[1];
+
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("focal_loss_sigmoid_forward");
     GEN_CASE_HANDLE(handle);
@@ -401,8 +402,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
       MLUOP_STATUS_SUCCESS) {
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (prefer != mluOpComputationPreference_t::MLUOP_COMPUTATION_FAST) {
-    LOG(ERROR) << interface_name << "only surpport COMPUTATION_FAST currently.";
+  if (prefer !=
+      mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION) {
+    LOG(ERROR) << interface_name << "only surpport HIGH_PRECISION currently.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (reduction != mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_NONE) {
@@ -435,7 +437,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   getDealNAndThresholdC(handle, compute_data_bytes, target_data_bytes, dim_c,
                         &deal_n, &threshold_c, has_weight, is_half);
 
+#define TO_STRING(dtype) #dtype
+#define GET_DTYPE(half_flag) \
+  (half_flag ? TO_STRING(MLUOP_DTYPE_HALF) : TO_STRING(MLUOP_DTYPE_FLOAT))
+
+  VLOG(5) << interface_name << "N: " << dim_n << ", C: " << dim_c
+          << ", alpha: " << alpha <<  ", gamma: " << gamma
+          << ", dtype: " << GET_DTYPE(is_half)
+          << ", has_weight: " << has_weight;
   VLOG(5) << interface_name << "threshold_c: " << threshold_c;
+  VLOG(5) << interface_name << "deal_n: " << deal_n;
   // check C
   if (dim_c > threshold_c) {
     LOG(ERROR) << interface_name
@@ -456,18 +467,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   PARAM_CHECK(interface_name, target != NULL);
   PARAM_CHECK(interface_name, output != NULL);
 
+
+#define FOCAL_LOSS_GEN_CASE_DATA_REAL(is_input, id, data, data_desc,      \
+                                      upper_bound, lower_bound)           \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,       \
+                               upper_bound, lower_bound, "UNIFORM", true)
+
   // generate focal_loss_sigmoid_backward prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
+    const int upper_bound = is_half ? 5 : 20;
+    const int lower_bound = -1 * upper_bound;
     GEN_CASE_START("focal_loss_sigmoid_backward");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA(true, "input", input, input_desc, 20, -20);
+    FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "input", input, input_desc,
+                                  upper_bound, lower_bound);
+    FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "target", target, target_desc,
+                                  dim_c, 0);
     if (weight != NULL) {
-      GEN_CASE_DATA_REAL(true, "target", target, target_desc);
-      GEN_CASE_DATA(true, "weight", weight, weight_desc, 1, 0);
-    } else {
-      GEN_CASE_DATA(true, "target", target, target_desc, dim_c, 0);
+      FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "weight", weight, weight_desc,
+                                    upper_bound, lower_bound);
     }
-    GEN_CASE_DATA(false, "output", output, output_desc, 20, -20);
+    GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "focal_loss_sigmoid_backward", "prefer",
                              prefer);
     GEN_CASE_OP_PARAM_SINGLE(1, "focal_loss_sigmoid_backward", "reduction",
@@ -479,13 +499,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  const int dwidth = mluOpDataTypeBytes(input_desc->dtype);
   policyFunc(handle, &k_dim, &k_type);
 
   VLOG(5) << "Launch Kernel MLUBlockFocalLossSigmoidBackward<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  if (dwidth == 2) {
+  if (is_half) {
     KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidBackwardHalf(
         k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
         dim_n, deal_n, dim_c, output)));

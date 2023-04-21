@@ -7028,7 +7028,7 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * @param[in] prefer
  * The algorithm used to compute the output.
  * For detailed information, see ::mluOpComputationPreference_t. Currently, only
- * \p MLUOP_COMPUTATION_FAST is supported.
+ * \p MLUOP_COMPUTATION_HIGH_PRECISION is supported.
  * @param[in] reduction
  * The reduction mode used to compute the operation.
  * For detailed information, see ::mluOpLossReduction_t. Currently, only
@@ -7066,10 +7066,10 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * @par Data Type
  * - The supported data types of input tensor \b input, \b target, \b weight , and output
  *   tensor \b output are as follows：
- *   - input: float
+ *   - input: float, half
  *   - target: int32
- *   - weight: float
- *   - grad_input: float
+ *   - weight: float, half
+ *   - grad_input: float, half
  *
  * @par Data Layout
  * - The supported data layout of the input tensors and output tensors must be \p MLUOP_LAYOUT_ARRAY.
@@ -7079,11 +7079,12 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - The shape of \b input and \b grad_input must be consistent.
  * - The shape of \b target is [N] when the shape of \b input is [N, C].
  * - The shape of \b weight is [C] when the shape of \b input is [N, C].
+ * - \b input value should be in the range of [-5, 5] when the data type of \b input is half.
  * - \b target value should be in the range of [0, C] when \b weight is NULL and the shape of
  *   \b input is [N, C].
  * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the
  *   shape of \b input is [N, C].
- * - prefer only supports MLUOP_COMPUTATION_FAST currently.
+ * - prefer only supports MLUOP_COMPUTATION_HIGH_PRECISION currently.
  * - reduction only supports \p MLUOP_LOSS_REDUCTION_NONE currently.
  * - The layout of \b input, \b target, \b weight and \b grad_input must be ARRAY.
  *
@@ -7091,9 +7092,12 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 13615] when
- *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 12544] when
+ * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 16339] when
+ *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 14848] when
  *   \b weight is not NULL on MLU300 series.
+ * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
+ *   \b weight is NULL on MLU500 series. The length of C should be in the range of [0, 8864] when
+ *   \b weight is not NULL on MLU500 series.
  * - \b weight does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 10000] on MLU300 series.
  *
