@@ -20,20 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef CORE_MLU_ENV_H_
-#define CORE_MLU_ENV_H_
+#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_STATS_TEST_STATS_TEST_H_
+#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_STATS_TEST_STATS_TEST_H_
+#include <stdio.h>
+#include <stdlib.h>
 
-#include <sys/syscall.h>
-#include "core/tool.h"
+template <typename T>
+double diff_kl(T *data1, T *data2, size_t elem_num);
 
-// macro function for user
-#define IS_TF32_OVERRIDE (mluop::mlu_env::getCarmbriconTF32Override() > 0)
-#define IF_CHECK_DEP_VERSION (mluop::mlu_env::getCheckDepVersion() > 0)
-
-namespace mluop {
-namespace mlu_env {
-int getCarmbriconTF32Override();
-int getCheckDepVersion();
-}  // namespace mlu_env
-}  // namespace mluop
-#endif  // CORE_MLU_ENV_H_
+#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_STATS_TEST_STATS_TEST_H_

@@ -132,12 +132,12 @@ if __name__ == "__main__":
         exit(0)
     else:
         if len(malloc_error) != 0:
-            print("-- ERROR: malloc/new, pleace use smart ptr instead.")
+            print("-- ERROR: malloc/new, please use smart ptr instead.")
             for e in malloc_error:
                 print("%s +%d" %(e[0], e[1] + 1))
 
         if len(macro_error) != 0:
-            print("-- ERROR: CHECK/CNRT_CHECK, pleace use GTEST_CHECK instead.")
+            print("-- ERROR: CHECK/CNRT_CHECK, please use GTEST_CHECK instead.")
             for e in macro_error:
                 print("%s +%d" %(e[0], e[1] + 1))
         exit(1)

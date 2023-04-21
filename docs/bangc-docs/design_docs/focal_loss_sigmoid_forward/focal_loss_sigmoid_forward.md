@@ -63,7 +63,7 @@ example:
 -
 ### 1.2 算子功能和应用场景描述
 
-`FocalLoss` 是在`CrossEntropyLoss` 的基础上增加了权重系数`alpha`和聚焦系数`gamma`，其目的是通过减少易分类样本的权重，从而使得模型在训练时更专注于难分类的样本。对于二分类问题：
+`FocalLoss` 是在`CrossEntropyLoss` 的基础上增加了加权系数`alpha`和聚焦系数`gamma`，其目的是通过减少易分类样本的加权系数，从而使得模型在训练时更专注于难分类的样本。对于二分类问题：
 ```math
 p = Sigmoid(input)
 ```
@@ -118,7 +118,7 @@ s.t　& i=1,2,...,N \\
 | reduction | 规约模式        | 输入              | enum            | /          | 无                     |
 | input     | 输入数据        | 输入              | float/half          | 二维ARRAY  | shape为`[N, C]` |
 | target    | 输入数据对应标签 | 输入              | int32           | 一维ARRAY   | shape为`[N]` |
-| weight    | 权重            | 输入              | float/half          |一维ARRAY   | shape为`[C]` |
+| weight    | 加权系数            | 输入              | float/half          |一维ARRAY   | shape为`[C]` |
 | alpha     | 平衡因子        | 输入              | float32          | /         | 无       |
 | gamma     | 调节因子        | 输入              | float32          | /         | 无       |
 | output    | 输出数据(`loss`)   | 输出            | float/half         | 二维ARRAY    | `shape`与`reduction`模式有关，当`reduction`模式为`None`时，`shape`为 `[N, C]` |

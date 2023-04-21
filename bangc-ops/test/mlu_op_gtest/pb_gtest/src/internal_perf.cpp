@@ -27,7 +27,7 @@
 #include <numeric>
 #include <sstream>
 #include <utility>
-#include <thread>   // NOLINT
+#include <thread>  // NOLINT
 #include <iostream>
 
 using namespace mluoptest;  // NOLINT
@@ -76,7 +76,7 @@ std::string GtestInternalMsg::serialize_to_csv(std::string sep) const {
 
 std::string GtestInternalMsg::get_csv_header(std::string sep) const {
   std::string init =
-      sep + "case+path" + sep + "file_size_mb" + sep + "parse_time_s" + sep;
+      sep + "case_path" + sep + "file_size_mb" + sep + "parse_time_s" + sep;
   return std::accumulate(timespan_record_.begin(), timespan_record_.end(),
                          std::move(init),
                          [&sep](std::string s, const auto &item) {

@@ -380,9 +380,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
   return MLUOP_STATUS_SUCCESS;
 }
 
-static vector<int> getDefaultStride(int *dims, int dim) {
-  vector<int> default_stride(dim, 1);
-  int temp = 1;
+static vector<int64_t> getDefaultStride(int64_t *dims, int dim) {
+  vector<int64_t> default_stride(dim, 1);
+  int64_t temp = 1;
   for (int i = 0; i < dim; i++) {
     int offset = dim - 1 - i;
     default_stride[offset] = temp;
@@ -397,9 +397,9 @@ mluOpContiguous(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   auto default_stride = getDefaultStride(input_desc->dims, input_desc->dim);
   mluOpTensorDescriptor_t temp_desc = nullptr;
   mluOpCreateTensorDescriptor(&temp_desc);
-  mluOpSetTensorDescriptorEx(temp_desc, input_desc->layout, input_desc->dtype,
-                             input_desc->dim, input_desc->dims,
-                             default_stride.data());
+  mluOpSetTensorDescriptorEx_v2(temp_desc, input_desc->layout,
+                                input_desc->dtype, input_desc->dim,
+                                input_desc->dims, default_stride.data());
   auto status_copy = mluOpCopy(handle, input_desc, input, temp_desc, output);
   if (status_copy != MLUOP_STATUS_SUCCESS) {
     KERNEL_CALL_CHECK("mluOpContiguous", "mluOpCopy", status_copy, "");

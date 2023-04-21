@@ -354,15 +354,15 @@ mluOpStatus_t CarafeForwardParamCheck(
       (input_desc->dtype == MLUOP_DTYPE_HALF) ||
           (input_desc->dtype == MLUOP_DTYPE_FLOAT),
       "only half and float are supported, but the data type of input tensor is "
-          << mluop::getNameOfDataType(input_desc->dtype) << ".");
+          << mluOpGetNameOfDataType(input_desc->dtype) << ".");
   PARAM_CHECK_V2(CARAFE_FORWARD_API,
                  (input_desc->dtype == mask_desc->dtype) &&
                      (input_desc->dtype == output_desc->dtype),
                  "The input, mask and output tensors should have the same data "
                  "type, but the data types are: "
-                     << mluop::getNameOfDataType(input_desc->dtype) << ", "
-                     << mluop::getNameOfDataType(mask_desc->dtype) << ", "
-                     << mluop::getNameOfDataType(output_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(input_desc->dtype) << ", "
+                     << mluOpGetNameOfDataType(mask_desc->dtype) << ", "
+                     << mluOpGetNameOfDataType(output_desc->dtype) << ".");
   /*
    * shape param check
    *
@@ -660,15 +660,15 @@ mluOpStatus_t CarafeBackwardParamCheck(
                << "the data type of input, mask, grad_output, "
                   "grad_input, grad_mask should be the same. "
                << "The data type of input is: "
-               << mluop::getNameOfDataType(input_desc->dtype) << ", "
+               << mluOpGetNameOfDataType(input_desc->dtype) << ", "
                << "The data type of mask is: "
-               << mluop::getNameOfDataType(mask_desc->dtype) << ", "
+               << mluOpGetNameOfDataType(mask_desc->dtype) << ", "
                << "The data type of grad output is: "
-               << mluop::getNameOfDataType(grad_output_desc->dtype) << ", "
+               << mluOpGetNameOfDataType(grad_output_desc->dtype) << ", "
                << "The data type of grad input is: "
-               << mluop::getNameOfDataType(grad_input_desc->dtype) << ", "
+               << mluOpGetNameOfDataType(grad_input_desc->dtype) << ", "
                << "The data type of grad mask is: "
-               << mluop::getNameOfDataType(grad_mask_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(grad_mask_desc->dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   VLOG(5) << CARAFE_BACKWARD_API << "offchip data type check end.";

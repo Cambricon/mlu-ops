@@ -76,31 +76,31 @@ void ActiveRotatedFilterForwardExecutor::compute() {
 }
 
 void ActiveRotatedFilterForwardExecutor::cpuCompute() {
-  std::vector<int> input_shape = parser_->input(0)->shape;
-  std::vector<int> indices_shape = parser_->input(1)->shape;
+  std::vector<int64_t> input_shape = parser_->input(0)->shape;
+  std::vector<int64_t> indices_shape = parser_->input(1)->shape;
 
-  const int output_planes = input_shape[0];
-  const int input_planes = input_shape[1];
-  const int orientations = input_shape[2];
-  const int h = input_shape[3];
-  const int w = input_shape[4];
-  const int rotations = indices_shape[3];
+  const int64_t output_planes = input_shape[0];
+  const int64_t input_planes = input_shape[1];
+  const int64_t orientations = input_shape[2];
+  const int64_t h = input_shape[3];
+  const int64_t w = input_shape[4];
+  const int64_t rotations = indices_shape[3];
   auto input = cpu_fp32_input_[0];
   auto indices = cpu_fp32_input_[1];
   auto cpu_output = cpu_fp32_output_[0];
 
   float *cpu_output_float = (float *)cpu_output;
 
-  const int nEntry = orientations * h * w;
-  int i, j, l;
-  int k;
+  const int64_t nEntry = orientations * h * w;
+  int64_t i, j, l;
+  int64_t k;
   for (i = 0; i < output_planes; i++) {
     for (j = 0; j < input_planes; j++) {
       for (l = 0; l < nEntry; l++) {
-        const int weightIndex = i * input_planes * nEntry + j * nEntry + l;
+        const int64_t weightIndex = i * input_planes * nEntry + j * nEntry + l;
         float val = *(input + weightIndex);
         for (k = 0; k < rotations; k++) {
-          const int index = *(indices + l * rotations + k) - 1;
+          const int64_t index = *(indices + l * rotations + k) - 1;
           float *target = cpu_output_float +
                           i * (rotations * input_planes * nEntry) +
                           k * (input_planes * nEntry) + j * nEntry + index;
@@ -113,10 +113,10 @@ void ActiveRotatedFilterForwardExecutor::cpuCompute() {
 
 int64_t ActiveRotatedFilterForwardExecutor::getTheoryIoSize() {
   auto dtype = tensor_desc_[0].tensor->dtype;
-  std::vector<int> indices_shape = parser_->input(1)->shape;
-  const int rotations = indices_shape[3];
+  std::vector<int64_t> indices_shape = parser_->input(1)->shape;
+  const int64_t rotations = indices_shape[3];
 
-  int dsize = 0;
+  int64_t dsize = 0;
   if (dtype == MLUOP_DTYPE_FLOAT) {
     dsize = 4;
   } else if (dtype == MLUOP_DTYPE_HALF) {

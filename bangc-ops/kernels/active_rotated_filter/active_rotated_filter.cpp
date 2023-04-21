@@ -91,13 +91,13 @@ static mluOpStatus_t activeRotatedFilterForwardParamCheck(
                      (input_desc->dtype == MLUOP_DTYPE_FLOAT),
                  "Only half and float are supported in input tensor, but the "
                  "data type of tensor is "
-                     << mluop::getNameOfDataType(input_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(input_desc->dtype) << ".");
   PARAM_CHECK(api_name, input_desc->dtype == output_desc->dtype);
 
   PARAM_CHECK_V2(
       api_name, (indices_desc->dtype == MLUOP_DTYPE_INT32),
       "Only int32 are supported in indices idx, but the data type of tensor is "
-          << mluop::getNameOfDataType(indices_desc->dtype) << ".");
+          << mluOpGetNameOfDataType(indices_desc->dtype) << ".");
 
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);
   const size_t indices_element_num = mluOpGetTensorElementNum(indices_desc);

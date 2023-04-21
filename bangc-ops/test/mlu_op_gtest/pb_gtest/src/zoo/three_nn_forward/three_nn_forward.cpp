@@ -80,12 +80,12 @@ void ThreeNnForwardExecutor::compute() {
 }
 
 void ThreeNnForwardExecutor::cpuCompute() {
-  std::vector<int> unknown_shape = parser_->input(0)->shape;
-  std::vector<int> known_shape = parser_->input(1)->shape;
+  std::vector<int64_t> unknown_shape = parser_->input(0)->shape;
+  std::vector<int64_t> known_shape = parser_->input(1)->shape;
 
-  const int b = unknown_shape[0];
-  const int n = unknown_shape[1];
-  const int m = known_shape[1];
+  const int64_t b = unknown_shape[0];
+  const int64_t n = unknown_shape[1];
+  const int64_t m = known_shape[1];
   auto unknown = cpu_fp32_input_[0];
   auto known = cpu_fp32_input_[1];
   auto dist2 = cpu_fp32_output_[0];
@@ -93,8 +93,8 @@ void ThreeNnForwardExecutor::cpuCompute() {
   float *idx = (float *)cpu_fp32_output_[1];
   float *idx_start = (float *)cpu_fp32_output_[1];
 
-  for (int i = 0; i < b; ++i) {
-    for (int j = 0; j < n; ++j) {
+  for (int64_t i = 0; i < b; ++i) {
+    for (int64_t j = 0; j < n; ++j) {
       float ux = unknown[j * 3 + 0];
       float uy = unknown[j * 3 + 1];
       float uz = unknown[j * 3 + 2];
@@ -143,12 +143,12 @@ void ThreeNnForwardExecutor::cpuCompute() {
 }
 
 int64_t ThreeNnForwardExecutor::getTheoryOps() {
-  std::vector<int> unknown_shape = parser_->input(0)->shape;
-  std::vector<int> known_shape = parser_->input(1)->shape;
+  std::vector<int64_t> unknown_shape = parser_->input(0)->shape;
+  std::vector<int64_t> known_shape = parser_->input(1)->shape;
   int64_t theory_ops = 0;
-  const int b = unknown_shape[0];
-  const int n = unknown_shape[1];
-  const int m = known_shape[1];
+  const int64_t b = unknown_shape[0];
+  const int64_t n = unknown_shape[1];
+  const int64_t m = known_shape[1];
   theory_ops += b * n * m * 8;
   VLOG(4) << "getTheoryOps: " << theory_ops << "ops.";
   return theory_ops;

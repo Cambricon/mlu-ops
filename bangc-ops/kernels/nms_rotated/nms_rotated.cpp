@@ -44,7 +44,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   }
   // union1 policy func
   *k_type = CNRT_FUNC_TYPE_UNION1;
-  // dimx equals to num of ipu cores in each cluster
+  // dimx equals to num of mlu cores in each cluster
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dim->y = 1;
   k_dim->z = 1;

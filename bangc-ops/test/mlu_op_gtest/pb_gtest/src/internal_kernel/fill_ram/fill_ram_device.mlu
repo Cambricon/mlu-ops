@@ -89,7 +89,7 @@ __mlu_global__ void MLUBlockKernelFillRam(nram_value value) {
       break;
     }
     default:
-      __bang_printf("cannot find a type to write nram \n");
+      MLULOG("cannot find a type to write nram \n");
   }
 }
 

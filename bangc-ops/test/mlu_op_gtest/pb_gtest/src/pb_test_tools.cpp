@@ -22,11 +22,24 @@
  *************************************************************************/
 
 #include "pb_test_tools.h"
+#include <limits.h>
+#include <stdint.h>
+#include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 #include <unordered_map>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#include "variable.h"
+
+
 namespace mluoptest {
+
+extern GlobalVar global_var;
 
 cnrtRet_t wrapRtConvertFloatToHalf(uint16_t *f16, float d) {
   return cnrtCastDataType_V2(&d, cnrtFloat, f16, cnrtHalf, 1, NULL,
@@ -54,7 +67,6 @@ size_t shapeStrideCount(const Shape *shape) {
                  << ") is not equal to the dimensions size of it's"
                  << " strides (which is " << shape->dim_stride_size() << ").";
       GTEST_CHECK(shape->dim_stride_size() == shape->dims_size());
-      return total;
     }
     for (int i = 0; i < shape->dims_size(); ++i) {
       if (shape->dims(i) == 0) {
@@ -110,7 +122,7 @@ void saveDataToFile(const std::string &file, float *data, size_t count) {
   oss << std::this_thread::get_id();
   VLOG(4) << "Save data to file: " << file;
   std::ofstream fout(file + "_" + oss.str(), std::ios::out);
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     fout << data[i] << std::endl;
   }
   fout.close();
@@ -119,7 +131,7 @@ void saveDataToFile(const std::string &file, float *data, size_t count) {
 void readDataFromFile(const std::string &file, float *data, size_t count) {
   VLOG(4) << "Read data from file: " << file;
   std::ifstream fin(file, std::ios::in);
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     std::string line;
     getline(fin, line);
     if (line.empty()) {
@@ -138,7 +150,7 @@ void saveHexDataToFile(const std::string &file, void *data,
   std::ofstream fout(file, std::ios::out);
   switch (dtype) {
     case MLUOP_DTYPE_COMPLEX_HALF: {
-      for (int i = 0; i < 2 * count; i += 2) {
+      for (size_t i = 0; i < 2 * count; i += 2) {
         fout << "real_hex: " << std::setw(10) << std::hex
              << ((int16_t *)data)[i] << std::setw(20)
              << "real_dec: " << std::setw(10) << std::dec
@@ -150,7 +162,7 @@ void saveHexDataToFile(const std::string &file, void *data,
       }
     } break;
     case MLUOP_DTYPE_COMPLEX_FLOAT: {
-      for (int i = 0; i < 2 * count; i += 2) {
+      for (size_t i = 0; i < 2 * count; i += 2) {
         fout << "real_hex: " << std::setw(10) << std::hex
              << ((int32_t *)data)[i] << std::setw(20)
              << "real_dec: " << std::setw(10) << std::dec << ((float *)data)[i]
@@ -162,28 +174,28 @@ void saveHexDataToFile(const std::string &file, void *data,
       }
     } break;
     case MLUOP_DTYPE_HALF: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << cvtHalfToFloat(((int16_t *)data)[i]) << std::endl;
       }
     } break;
     case MLUOP_DTYPE_FLOAT: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((float *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_DOUBLE: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((int64_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((double *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_INT8: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex
              << (int32_t)((int8_t *)data)[i] << std::setw(20)
              << "dec: " << std::setw(10) << std::dec
@@ -192,7 +204,7 @@ void saveHexDataToFile(const std::string &file, void *data,
       }
     } break;
     case MLUOP_DTYPE_UINT8: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex
              << (uint32_t)((uint8_t *)data)[i] << std::setw(20)
              << "dec: " << std::setw(10) << std::dec
@@ -201,49 +213,49 @@ void saveHexDataToFile(const std::string &file, void *data,
       }
     } break;
     case MLUOP_DTYPE_INT16: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((int16_t *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_UINT16: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((uint16_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((uint16_t *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_INT32: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((int32_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((int32_t *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_UINT32: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((uint32_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((uint32_t *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_INT64: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((int64_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((int64_t *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_UINT64: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex << ((uint64_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << ((uint64_t *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_BOOL: {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         fout << "hex: " << std::setw(10) << std::hex
              << (int32_t)((bool *)data)[i] << std::setw(20)
              << "dec: " << std::setw(10) << std::dec
@@ -252,7 +264,7 @@ void saveHexDataToFile(const std::string &file, void *data,
     } break;
 
     default: {
-      VLOG(4) << "Unsupported dtype " << mluop::getNameOfDataType(dtype);
+      VLOG(4) << "Unsupported dtype " << mluOpGetNameOfDataType(dtype);
     } break;
   }
   fout.close();
@@ -355,90 +367,18 @@ mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order) {
   }
 }
 
-// ref: sopa/core/src/util/type_converter.cpp
-int16_t cvtFloatToHalf(float x) {
-  const int fs_shift = 31;
-  const int fe_shift = 23;
-  const int fe_mark = 0xff;
-  const int hs_shift = 15;
-  const int he_shift = 10;
-  int *in1 = (int *)&x;
-  int in = *in1;
-  int sign = in >> fs_shift;
-  int exp = ((in >> fe_shift) & fe_mark) - 127;
-  int denorm = 0;
-  int eff;
-  int g = 0;  // for round
-  int gr_last = 0;
-  int gr_first = 0;
-  int g_last = 0;
-  if ((exp == 128) && (in & 0x7fffff)) {  // NaN
-    exp = 0x1f - 15;
-    eff = 0x200;
-  } else if (exp >= 16) {
-    exp = 0xf;
-    eff = 0x3ff;
-  } else if (exp >= -14) {
-    gr_last = in & (0xfff);
-    gr_first = (in >> 12) & 1;
-    g_last = (in >> 13) & 1;
-    g = ((gr_first && gr_last) || (gr_first && g_last));
-    eff = (in >> 13) & 0x3ff;
-  } else if (exp >= -24) {
-    g = (((in & 0x7fffff) | 0x800000) >> (-exp - 2)) & 1;
-    eff = (((in & 0x7fffff) | 0x800000) >> (-exp - 1)) & 0x3ff;
-    denorm = 1;
-    exp = 0;
-  } else {
-    exp = 0;
-    denorm = 1;
-    eff = (in & 0x7fffffff) ? 1 : 0;
-  }
-  eff += g;  // round
-  exp = (denorm == 1) ? exp : (exp + 15);
-  int result = (sign << hs_shift) + (exp << he_shift) + eff;
-  return result;
+int16_t cvtFloatToHalf(float src) {
+  int16_t dst = 0;
+  cnrtCastDataType_V2(&src, cnrtFloat, &dst, cnrtHalf, 1, NULL,
+                      cnrtRounding_rm);
+  return dst;
 }
 
-// ref: sopa/core/src/util/type_converter.cpp
 float cvtHalfToFloat(int16_t src) {
-  if (sizeof(int16_t) == 2) {
-    int re = src;
-    float f = 0.;
-    int sign = (re >> 15) ? (-1) : 1;
-    int exp = (re >> 10) & 0x1f;
-    int eff = re & 0x3ff;
-    float half_max = 65504.;
-    float half_min = -65504.;  // or to be defined as infinity
-    if (exp == 0x1f && eff) {
-      // when half is nan, float also return nan, reserve sign bit
-      int tmp = (sign < 0) ? 0xffffffff : 0x7fffffff;
-      return *(float *)&tmp;
-    } else if (exp == 0x1f && sign == 1) {
-      // add upper bound of half. 0x7bff： 0 11110 1111111111 =  65504
-      return half_max;
-    } else if (exp == 0x1f && sign == -1) {
-      // add lower bound of half. 0xfbff： 1 11110 1111111111 = -65504
-      return half_min;
-    }
-    if (exp > 0) {
-      exp -= 15;
-      eff = eff | 0x400;
-    } else {
-      exp = -14;
-    }
-    int sft;
-    sft = exp - 10;
-    if (sft < 0) {
-      f = (float)sign * eff / (1 << (-sft));
-    } else {
-      f = ((float)sign) * (1 << sft) * eff;
-    }
-    return f;
-  } else if (sizeof(int16_t) == 4) {
-    // using float
-    return src;
-  }
+  float dst = 0;
+  cnrtCastDataType_V2(&src, cnrtHalf, &dst, cnrtFloat, 1, NULL,
+                      cnrtRounding_rm);
+  return dst;
 }
 
 bool getEnv(const std::string &env, bool default_ret) {
@@ -510,21 +450,31 @@ size_t proc_usage_peak() {
 }
 
 void arrayCastFloatToHalf(int16_t *dst, float *src, size_t num) {
-  for (int i = 0; i < num; ++i) {
-    dst[i] = cvtFloatToHalf(src[i]);
+  while (num > 0) {
+    int count = (int)std::min(num, (size_t)(INT_MAX));
+    GTEST_CHECK(cnrtCastDataType_V2(src, cnrtFloat, dst, cnrtHalf, count, NULL,
+                                    cnrtRounding_rm) == cnrtSuccess);
+    dst += count;
+    src += count;
+    num -= count;
   }
 }
 
 void arrayCastHalfToFloat(float *dst, int16_t *src, size_t num) {
-  for (int i = 0; i < num; ++i) {
-    dst[i] = cvtHalfToFloat(src[i]);
+  while (num > 0) {
+    int count = (int)std::min(num, (size_t)(INT_MAX));
+    GTEST_CHECK(cnrtCastDataType_V2(src, cnrtHalf, dst, cnrtFloat, count, NULL,
+                                    cnrtRounding_rm) == cnrtSuccess);
+    dst += count;
+    src += count;
+    num -= count;
   }
 }
 
 // support uint8, uint16, uint32, uint64, int32, int64
 template <typename T1, typename T2>
 void arrayCastFloatAndNormal(void *dst, void *src, size_t num) {
-  for (int i = 0; i < num; ++i) {
+  for (size_t i = 0; i < num; ++i) {
     ((T2 *)dst)[i] = (T2)((T1 *)src)[i];
   }
 }
@@ -636,7 +586,8 @@ uint64_t GenNumberOfFixedWidth(uint64_t a, int width) {
 
 void arrayCastHalfToInt8or16HalfUp(void *dst, int16_t *src, int pos, size_t num,
                                    int int8or16) {
-  for (int i = 0; i < num; ++i) {
+#pragma omp parallel for schedule(guided)
+  for (size_t i = 0; i < num; ++i) {
     int8_t res = 0;
     int16_t src_int16 = src[i];
 
@@ -745,7 +696,6 @@ int float_number_is_nan_inf(int data_width, int float_number) {
     LOG(ERROR) << "Don't support this data_width.";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
-    return 0;
   }
 }
 
@@ -987,7 +937,6 @@ int float_add_up_down(int in_a, int in_b, int float_16or32, int round_mode,
     LOG(ERROR) << "CPU float add only support half add now.";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
-    return -1;
   }
 }
 
@@ -1195,7 +1144,6 @@ int float_mult_up_down(int in_a, int in_b, int float_16or32, int round_mode,
     LOG(ERROR) << "CPU float mult only support half now.";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
-    return -1;
   }
 }
 

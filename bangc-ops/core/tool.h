@@ -23,15 +23,13 @@
 #ifndef CORE_TOOL_H_
 #define CORE_TOOL_H_
 
-#include <algorithm>
-#include <cmath>
-#include <cstring>
 #include <string>
-
+#include <cstring>
+#include <cmath>
+#include <algorithm>
 #include "core/logging.h"
 #include "core/type.h"
 #include "mlu_op.h"
-
 
 namespace mluop {
 // The API is used for no scling factor quantization.
@@ -54,23 +52,6 @@ float castHalfToFloat32(int16_t src);
 size_t getMemorySize(const void *ptr);
 mluOpStatus_t checkMemorySize(mluOpTensorDescriptor_t tensor, const void *ptr);
 
-inline bool isTensorDimsEqual(mluOpTensorDescriptor_t a,
-                              mluOpTensorDescriptor_t b) {
-  int a_dim;
-  int b_dim;
-  int a_dims[MLUOP_DIM_MAX];
-  int b_dims[MLUOP_DIM_MAX];
-  mluOpGetTensorDescriptor(a, nullptr, nullptr, &a_dim, a_dims);
-  mluOpGetTensorDescriptor(b, nullptr, nullptr, &b_dim, b_dims);
-
-  if (a_dim == b_dim) {
-    if (0 == memcmp(a_dims, b_dims, a_dim * sizeof(int))) {
-      return true;
-    }
-  }
-  return false;
-}
-
 template <typename T>
 inline bool isTwoArraysEqual(T *a, T *b, int num) {
   if (0 == memcmp(a, b, num * sizeof(T))) {
@@ -84,9 +65,32 @@ int mkdirRecursive(const char *pathname);
 uint64_t getUintEnvVar(const std::string &str, uint64_t default_para = 0);
 std::string getStringEnvVar(const std::string &str,
                             std::string default_para = "");
+/// get environment variable, return true or false
+/// if default_para is true, the true case: 1, on, yes, true, nullptr;
+/// if default_para is false, the true case: 1, on. yes, true;
+/// ignore up/low case
 bool getBoolEnvVar(const std::string &str, bool default_para = false);
 
-
+/**
+ * @brief Casts data from float32 to int8/int16.
+ *
+ * @param[in] src
+ *   Input. Pointer to float32 data.
+ * @param[out] dst
+ *   Output. Pointer to int8/int16 data.
+ * @param[in] num
+ *   Input. The length of float32 data.
+ * @param[in] position
+ *   Input. The position factor for quantization.
+ * @param[in] scale
+ *   Input. The scale factor for quantization.
+ * @param[in] offset
+ *   Input. The offset factor for quantization.
+ * @param[in] round_mode
+ *   Input. The round_mode factor for quantization.
+ * @return MLUOP_STATUS_SUCCESS if success,
+ *         otherwise the error code is returned.
+ */
 template <typename FixedType>
 mluOpStatus_t castFloat32ToFixed(
     const float *src, FixedType *dst, const size_t num, const int position = 0,
@@ -117,6 +121,24 @@ mluOpStatus_t castFloat32ToFixed(
   return MLUOP_STATUS_SUCCESS;
 }
 
+/**
+ * @brief Casts data from int8/int16 to float32.
+ *
+ * @param[in] src
+ *   Input. Pointer to int8/int16 data.
+ * @param[out] dst
+ *   Output. Pointer to int8/int16 data.
+ * @param[in] num
+ *   Input. The length of float32 data.
+ * @param[in] position
+ *   Input. The position factor for quantization.
+ * @param[in] scale
+ *   Input. The scale factor for quantization.
+ * @param[in] offset
+ *   Input. The offset factor for quantization.
+ * @return MLUOP_STATUS_SUCCESS if success,
+ *         otherwise the error code is returned.
+ */
 template <typename FixedType>
 mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
                                  const size_t num, const int position = 0,

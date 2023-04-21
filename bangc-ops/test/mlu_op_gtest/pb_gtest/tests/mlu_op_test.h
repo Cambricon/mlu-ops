@@ -47,7 +47,7 @@
                 << mluOpGetErrorString(ret) << ", same as expected " #expect; \
     } else {                                                                  \
       FAIL() << "Check failed: " #func " returned "                           \
-             << mluOpGetErrorString(ret) << ", but expect " #expect;          \
+             << ", but expect " #expect;                                      \
     }                                                                         \
   }
 

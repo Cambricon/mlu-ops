@@ -162,7 +162,7 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
 
 ms_deform_attn_backward算子三个输出的计算方法：
 
-1、输出`grad_value`:`grad_value`的shape为[batch, num_keys, num_heads, Channels]，是输入`value`的梯度信息。在计算时通过`sampling_loc`中的坐标信息获取到`spatial_shapes`中对应的特征图尺寸`spatial_w`和`spatial_h`，在通过双线性插值得到对应点的四邻域点以及每个点对应的卷积滤波张量（`w1`、`w2`、`w3`和`w4`），把卷积滤波张量乘以`grad_output`和`attn_weight`，再使用原子加将结果累加回gdram上。在mlu的实现上，可以一次处理多组`C`，若`C`大于`nram`上分配的内存，则对`C`循环处理。
+1、输出`grad_value`:`grad_value`的shape为[batch, num_keys, num_heads, Channels]，是输入`value`的梯度信息。在计算时通过`sampling_loc`中的坐标信息获取到`spatial_shapes`中对应的特征图尺寸`spatial_w`和`spatial_h`，在通过双线性插值得到对应点的四邻域点以及每个点对应的加权系数（`w1`、`w2`、`w3`和`w4`），把加权系数乘以`grad_output`和`attn_weight`，再使用原子加将结果累加回gdram上。在mlu的实现上，可以一次处理多组`C`，若`C`大于`nram`上分配的内存，则对`C`循环处理。
 
 2、输出`grad_sampling_loc`:`grad_sampling_loc`的shape为[batch, num_query, num_heads, num_levels, num_point, 2]，是输入`sampling_loc`的梯度信息。在上述步骤1的计算中，通过四邻域信息、`grad_ouput`和`attn_weight`能够得到每个`C`上的梯度信息，待所有的`C`计算完成后，通过`reduce`或者原子加的方法获取`grad_sampling_loc`的结果，若采样点不在特征图内，直接丢弃，不做后续的处理。
 
@@ -173,9 +173,9 @@ w\_low = floorf(w)  \\
 
 lh = h - h\_low  \\
 
-lw = w - w\_low  \\ 
+lw = w - w\_low  \\
 
-hh = 1 - lh  \\ 
+hh = 1 - lh  \\
 
 hw = 1 - lw  \\
 
@@ -185,20 +185,20 @@ grad\_w\_weight = -hh * v1 + hh * v2 - lh * v3 + lh * v4  \\
 
 top\_grad\_value = grad\_output * attn\_weight  \\
 
-*grad\_sampling\_loc = \sum_{i=0}^{C - 1} {w * grad\_w\_weight * top\_grad\_value}  \\ 
+*grad\_sampling\_loc = \sum_{i=0}^{C - 1} {w * grad\_w\_weight * top\_grad\_value}  \\
 
 *(grad\_sampling\_loc + 1) = \sum_{i=0}^{C - 1} {h * grad\_h\_weight * top\_grad\_value}  \\
 ```
 - `w`和`h`分别为`spatial_shapes`中的宽和高，$`v1`$、$`v2`$、$`v3`$、$`v4`$是像素点对应的四邻域像素值，grad_output和attn_weight是输入。
 
-3、输出`grad_attn_weight`:`grad_attn_weight`的shape为[batch, num_query, num_heads, num_levels, num_point]，是输入`attn_weight`的梯度信息。在上述步骤1的计算中，通过四邻域对应的卷积滤波张量和`grad_ouput`能够得到每个`C`上的梯度信息，待所有的`C`计算完成后，通过`reduce`或者原子加的方法获取`grad_attn_weight`的结果，若采样点不在特征图内，直接丢弃，不做后续的处理。
+3、输出`grad_attn_weight`:`grad_attn_weight`的shape为[batch, num_query, num_heads, num_levels, num_point]，是输入`attn_weight`的梯度信息。在上述步骤1的计算中，通过四邻域对应的加权系数和`grad_ouput`能够得到每个`C`上的梯度信息，待所有的`C`计算完成后，通过`reduce`或者原子加的方法获取`grad_attn_weight`的结果，若采样点不在特征图内，直接丢弃，不做后续的处理。
 
 ```math
-val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4  \\ 
+val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4  \\
 
 grad\_attn\_weight = \sum_{index = 0}^{C - 1} {grad\_ouput[index] * val}  \\
 ```
-- $`w1`$、$`w2`$、$`w3`$、$`w4`$是四邻域对应的卷积滤波张量，index是`grad_attn_weight`输出点对应的下标。
+- $`w1`$、$`w2`$、$`w3`$、$`w4`$是四邻域对应的加权系数，index是`grad_attn_weight`输出点对应的下标。
 
 ### 3.2 伪代码实现（可选）
 
@@ -263,10 +263,10 @@ for (int32_t num_loop = start_per_core; num_loop < end_per_core; ++num_loop) {
      }
    }
  }
- 
+
 }
 void msDeformAttnCol2imBilinear(){
-  
+
   __memcpy(top_grad, grad_output, deal_num * sizeof(T), GDRAM2NRAM);
   __bang_mul_scalar(top_grad_temp, top_grad, attn_weight, deal_num);
   __bang_write_zero(grad_h_weight, deal_num);
@@ -279,7 +279,7 @@ void msDeformAttnCol2imBilinear(){
     __bang_sub(grad_h_weight, grad_h_weight, grad_weight, deal_num);
     // grad_w_weight -= hh * v1;
     __bang_mul_scalar(grad_weight, grad_output_nram, hh, deal_num);
-    __bang_sub(grad_w_weight, grad_w_weight, grad_weight, deal_num); 
+    __bang_sub(grad_w_weight, grad_w_weight, grad_weight, deal_num);
     __bang_mul_scalar(top_grad_temp, top_grad_temp, w1, deal_num);
    // for calc grad_attn_weight
     __bang_mul_scalar(grad_output_nram, grad_output_nram, w1, deal_num);
@@ -298,8 +298,8 @@ void msDeformAttnCol2imBilinear(){
     __bang_add(grad_w_weight, grad_w_weight, grad_weight, deal_num);
     __bang_mul_scalar(top_grad_temp, top_grad_temp, w2, deal_num);
 
-    __bang_mul_scalar(grad_output_nram_temp, grad_output_nram_temp, w2, deal_num); 
-    __bang_add(grad_output_nram, grad_output_nram, grad_output_nram_temp, deal_num); 
+    __bang_mul_scalar(grad_output_nram_temp, grad_output_nram_temp, w2, deal_num);
+    __bang_add(grad_output_nram, grad_output_nram, grad_output_nram_temp, deal_num);
 
     __bang_atomic_reduce_add((T *)(grad_input + dst_offset),
                            (T *)top_grad_temp, deal_num);
@@ -314,7 +314,7 @@ void msDeformAttnCol2imBilinear(){
      __bang_mul_scalar(top_grad_temp, top_grad_temp, w3, deal_num);
     // for calc grad_attn_weight
      __bang_mul_scalar(grad_output_nram_temp, grad_output_nram_temp, w3, deal_num);
-     __bang_add(grad_output_nram, grad_output_nram, grad_output_nram_temp, deal_num); 
+     __bang_add(grad_output_nram, grad_output_nram, grad_output_nram_temp, deal_num);
 
     __bang_atomic_reduce_add((T *)(grad_input + dst_offset),
                            (T *)top_grad_temp, deal_num);
@@ -326,10 +326,10 @@ void msDeformAttnCol2imBilinear(){
     __bang_add(grad_h_weight, grad_h_weight, grad_weight, deal_num);
     __bang_mul_scalar(grad_weight, grad_output_nram, lh, deal_num);
     __bang_add(grad_w_weight, grad_w_weight, grad_weight, deal_num);
-    __bang_mul_scalar(top_grad_temp, top_grad_temp, w4, deal_num); 
+    __bang_mul_scalar(top_grad_temp, top_grad_temp, w4, deal_num);
     // for calc grad_attn_weight
      __bang_mul_scalar(grad_output_nram_temp, grad_output_nram_temp, w4, deal_num);
-     __bang_add(grad_output_nram, grad_output_nram, grad_output_nram_temp, deal_num); 
+     __bang_add(grad_output_nram, grad_output_nram, grad_output_nram_temp, deal_num);
 
     __bang_atomic_reduce_add((T *)(grad_input + dst_offset),
                            (T *)top_grad_temp, deal_num);
@@ -366,7 +366,7 @@ nram划分：
 算子实现较为复杂且原子加是io操作，当前版本不考虑排流水做优化。
 
 ### 3.5 方案理论性能
-完成上述 3.1，3.2，3.3，3.4 几个步骤之后, 基本可以给出一个理论性能, 不需要每个算子都有过于复杂的公式, 但一旦要对自己的算子有一个心里预期， 最终实现之后的效率值是多少。 
+完成上述 3.1，3.2，3.3，3.4 几个步骤之后, 基本可以给出一个理论性能, 不需要每个算子都有过于复杂的公式, 但一旦要对自己的算子有一个心里预期， 最终实现之后的效率值是多少。
 ### 3.5 可维护性设计
 1. bangC代码中加入必要的 log 信息，比如输入的规模，数据类型，layout这些，以及如果出错会导致程序`core dump`的变量，比如`IO`指令的`data_size`，`dim xyz`的值等， 这些信息都是有利于快速定位问题；
 2. 对每一个函数命名/变量命名都有充分的注释；
@@ -393,7 +393,7 @@ nram划分：
 1、针对BEVFormer网络的性能优化
 
 在BEVFormer网络中，输入的C通道只有32，需要处理的点数据量比较大，如果每个MLU core每次只处理一个点的数据，板卡的IO无法打满，计算量也无法打满，
-在片上会有大量的内存闲置，导致整体性能变差。对于这种场景，一次处理多个点，把方案中的标量计算部分转换成矢量计算，计算出这些点的卷积滤波张量以及偏移信息，
+在片上会有大量的内存闲置，导致整体性能变差。对于这种场景，一次处理多个点，把方案中的标量计算部分转换成矢量计算，计算出这些点的加权系数以及偏移信息，
 保存在片上。在load value时，一次load多个点的数据到片上（在MLU500上，可以使用dld做优化），在计算时候，就可以一次计算多个点输出，提高算子的性能。
 网络规模：data_value: [6, 30825, 8, 32]，data_spatial_shapes: [4, 2]，data_level_start_index: [4]，data_sampling_loc: [6, 9664, 8, 4, 8, 2]
 data_attn_weight: [6, 9664, 8, 4, 8]，grad_output: [6, 9664, 8, 32]。

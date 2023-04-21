@@ -25,11 +25,11 @@
 
 #include <pthread.h>
 #include <string>
+#include "mlu_op.h"
 #include "cn_api.h"
 #include "core/context.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "mlu_op.h"
 
 typedef void *MLUaddr;
 typedef void *HOSTaddr;
@@ -56,12 +56,14 @@ inline int32_t getSramSizeInBytes(mluOpHandle_t handle) {
 inline int32_t getClusterLimitCapability(mluOpHandle_t handle) {
   return handle->capability_cluster_num;
 }
+// It is recommend to use getJobLimitCapabilityFunctionType() instead, which
+// returns the cnrtFunctionType_t value.
 inline int32_t getJobLimitCapability(mluOpHandle_t handle) {
   return handle->capability_job_limit;
 }
 
 /******************************************************************************
- * mluOp FUNC: getCoreNumOfJobLimitCapability
+ * MLUOP FUNC: getCoreNumOfJobLimitCapability
  * get mlu core number of every single CNRT_FUNC_TYPE with maximum job capacity.
  * param 'handle' is the handle of mluOpHandle_t.
  ******************************************************************************/
@@ -85,7 +87,7 @@ inline int32_t getCoreNumOfJobLimitCapability(mluOpHandle_t handle) {
 }
 
 /******************************************************************************
- * mluOp FUNC: getClusterNumOfJobLimitCapability
+ * MLUOP FUNC: getClusterNumOfJobLimitCapability
  * get max cluster number of current job capacity.
  * param 'handle' is the handle of mluOpHandle_t.
  ******************************************************************************/
@@ -110,7 +112,7 @@ inline int32_t getClusterNumberOfJobLimitCapability(mluOpHandle_t handle) {
 }
 
 /******************************************************************************
- * mluOp FUNC: castCnKernelClassToCnrtFuncType
+ * MLUOP FUNC: castCnKernelClassToCnrtFuncType
  * cast KernelClass type into cnrtFunctionType_t
  * param 'jobType' is job type of KernelClass.
  ******************************************************************************/

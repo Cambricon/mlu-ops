@@ -430,6 +430,8 @@ std::string showFormula(mluoptest::Evaluator::Formula f) {
       return "DIFF3_2";
     case mluoptest::Evaluator::Formula::DIFF4:
       return "DIFF4";
+    case mluoptest::Evaluator::Formula::DIFF_KL:
+      return "DIFF_KL";
     default:
       GTEST_CHECK(false,
                   "MLUOPSGTEST: got an unsupported formula when print it.");
@@ -454,6 +456,10 @@ std::ostringstream print_error(
     if (error.criterion.formula == mluoptest::Evaluator::Formula::DIFF4 &&
         error.error < 0) {
       oss << "Ignored[sample# < 100]";
+    } else if (error.criterion.formula ==
+                   mluoptest::Evaluator::Formula::DIFF_KL &&
+               error.error < 0) {
+      oss << "Ignored[sample# < 1000]";
     } else {
       oss.setf(std::ios::scientific);
       oss << error.error;
@@ -464,6 +470,10 @@ std::ostringstream print_error(
       if (error.criterion.formula == mluoptest::Evaluator::Formula::DIFF4 &&
           error.error_imag < 0) {
         oss_imag << "Ignored[sample# < 100]";
+      } else if (error.criterion.formula ==
+                     mluoptest::Evaluator::Formula::DIFF_KL &&
+                 error.error < 0) {
+        oss << "Ignored[sample# < 1000]";
       } else {
         oss_imag.setf(std::ios::scientific);
         oss_imag << error.error_imag;
@@ -482,6 +492,8 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
   if (global_var.repeat_ > 1) {
     out << "[Average MLU Hardware Time     ]: " << eva.mlu.hardware_time
         << " (us)\n"
+        << "[MLU Hardware Time CV          ]: " << eva.mlu.hardware_time_cv
+        << "\n"
         << "[Average MLU Interface Time    ]: " << eva.mlu.interface_time
         << " (us)\n"
         << "[Average MLU IO Efficiency     ]: " << eva.mlu.io_efficiency << "\n"
@@ -523,8 +535,7 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
 
   out << print_error(eva.errors).str();
 
-  if (eva.is_passed &&
-      (!self->HasFailure())) {  // if passed, just print errors.
+  if (eva.is_passed) {  // if passed, just print errors.
     out << "[^      OK ] " << eva.case_path;
   } else {  // if failed.
     for (auto line : eva.what) {
@@ -540,7 +551,7 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
 // * is pass?
 // * calc average
 void TestSuite::report(mluoptest::EvaluateResult eva) {
-  bool is_passed = eva.is_passed && (!this->HasFailure());
+  bool is_passed = eva.is_passed;
   auto log = print_log(eva, this);
   try {
     recordXml(eva);
@@ -548,7 +559,7 @@ void TestSuite::report(mluoptest::EvaluateResult eva) {
       std::cout << log.str() << "\n";
     } else {
       global_var.summary_.failed_list.emplace_back(eva.case_path);
-      throw std::runtime_error("Errors found during calculations");
+      throw std::runtime_error("Errors found during test");
     }
   } catch (std::exception &e) {
     ADD_FAILURE() << "MLUOPSGTEST: " << e.what() << "\n" << log.str();
@@ -598,6 +609,10 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
   std::ostringstream mhw_oss;
   mhw_oss << std::setprecision(10) << er.mlu.hardware_time;
   this->RecordProperty("hardware_time_mlu", mhw_oss.str());
+
+  std::ostringstream mhw_cv_oss;
+  mhw_cv_oss << std::setprecision(10) << er.mlu.hardware_time_cv;
+  this->RecordProperty("hardware_time_cv_mlu", mhw_cv_oss.str());
 
   if (0 != er.mlu.hardware_time_layer) {
     std::ostringstream mhwl_oss;
@@ -667,4 +682,16 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
     error_oss << error;
     this->RecordProperty(key, error_oss.str());
   }
+#if 0
+  // At present SEPP team does not support xml larger than 800Mb
+  // record gtest internal perf
+  if (global_var.enable_gtest_internal_perf) {
+    for (auto &it : er.gtest.time_costs_ms) {
+      this->RecordProperty("gtest_time_cost_ms_" + std::get<0>(it),
+                           std::to_string(std::get<1>(it)));
+    }
+    this->RecordProperty("gtest_case_file_mb",
+                         std::to_string(er.gtest.parsed_file_size/1024./1024.));
+  }
+#endif
 }

@@ -26,6 +26,7 @@
 #include "mlu_op.h"
 #include "core/tensor.h"
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 
 enum nram_value {
   NAN_HALF = 0,

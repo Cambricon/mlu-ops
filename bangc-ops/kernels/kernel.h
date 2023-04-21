@@ -33,8 +33,6 @@
  ******************************************************************************/
 // in future, can be "__BANG_ARCH__ == 592 || __BANG_ARCH__ == xxx || ...)"
 #define ARCH_SUPPORT_LARGE_TENSOR (__BANG_ARCH__ == 592)
-// in future, can be "(__BANG_ARCH__ != 520 && __BANG_ARCH__ != xxx && ...)"
-#define ARCH_NO_SRAM (__BANG_ARCH__ != 520)
 
 
 #define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024)
@@ -113,6 +111,29 @@
 #define CEIL_ALIGN(x, align) (((x) + (align) - 1) / (align) * (align))
 #define FLOOR_ALIGN(x, align) ((x) / (align) * (align))
 
+#ifdef ROUND_HALF_UP
+#define HALF2INT8(dst, src, count, pos) \
+{ __bang_add_scalar(src, src, (half)(powf(2, pos - 1)), count);\
+  __bang_half2int8_dn(dst, src, count, pos); }
+#define HALF2INT16(dst, src, count, pos) \
+{ __bang_add_scalar(src, src, (half)(powf(2, pos - 1)), count);\
+  __bang_half2int16_dn(dst, src, count, pos); }
+#define FLOAT2INT8(dst, src, count, pos) \
+{ __bang_add_scalar(src, src, powf(2, pos - 1), count);\
+  __bang_float2int8_dn(dst, src, count, pos); }
+#define FLOAT2INT16(dst, src, count, pos) \
+{ __bang_add_scalar(src, src, powf(2, pos - 1), count);\
+  __bang_float2int16_dn(dst, src, count, pos); }
+#else
+#define HALF2INT8(dst, src, count, pos) \
+{ __bang_half2int8_rd(dst, src, count, pos); }
+#define HALF2INT16(dst, src, count, pos) \
+{ __bang_half2int16_rd(dst, src, count, pos); }
+#define FLOAT2INT8(dst, src, count, pos) \
+{ __bang_float2int8_rd(dst, src, count, pos); }
+#define FLOAT2INT16(dst, src, count, pos) \
+{ __bang_float2int16_rd(dst, src, count, pos); }
+#endif
 
 // maximum integer that can be represented by float
 #if __BANG_ARCH__ >= 322
@@ -122,5 +143,11 @@
 #define MAX_INT2FLOAT_EXACT (powf(2, 23) - 1)
 #define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 23))
 #endif
+
+#define MLU_KERNEL_ASSERT(cond, message) \
+  if (!(cond)) { \
+    __assert_fail( \
+      message, __FILE__, static_cast<unsigned int>(__LINE__), __func__); \
+  }
 
 #endif  // KERNELS_KERNEL_H_

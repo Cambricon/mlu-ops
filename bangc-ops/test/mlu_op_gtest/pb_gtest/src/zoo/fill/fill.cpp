@@ -47,9 +47,11 @@ void FillExecutor::compute() {
 
   mluOpPointerMode_t mode =
       (mluOpPointerMode_t)parser_->getProtoNode()->fill_param().mode();
+  int version = parser_->getProtoNode()->fill_param().version();
   cnrtQuantizedParam_t quant = nullptr;
   auto tensor_input = tensor_desc_[0].tensor;
   mluOpDataType_t data_type = tensor_input->dtype;
+  // void *host_value_ptr = &host_value_;
   void *host_value_ptr =
       static_cast<void *>(cpu_runtime_.allocate(sizeof(uint64_t)));
   memcpy(host_value_ptr, &host_value_, sizeof(uint64_t));
@@ -158,9 +160,8 @@ void FillExecutor::compute() {
     }
     if (data_type == MLUOP_DTYPE_HALF) {
       uint16_t fp16_value = *(uint16_t *)&host_value_;
-      // wrapRtConvertHalfToFloat(&fp32_value_, fp16_value);
-      cnrtCastDataType_V2(&fp16_value, cnrtHalf, &fp32_value_, cnrtFloat, 1,
-                          NULL, cnrtRounding_rm);
+      wrapRtConvertHalfToFloat(&fp32_value_, fp16_value);
+
     } else if (data_type == MLUOP_DTYPE_UINT16) {
       fp32_value_ = (uint16_t)host_value_;
     } else if (data_type == MLUOP_DTYPE_UINT32) {
@@ -194,25 +195,42 @@ void FillExecutor::compute() {
   VLOG(4) << "call mluOp fill()";
   interface_timer_.start();
   auto value_device = data_vector_[0].device_ptr;
-  auto dev_out = data_vector_[1].device_ptr;
-  if (mode == MLUOP_POINTER_MODE_DEVICE) {
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemcpy(value_device, host_value_ptr,
-                                               mluOpDataTypeBytes(data_type),
-                                               CNRT_MEM_TRANS_DIR_HOST2DEV));
-    MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_DEVICE, value_device,
-                          tensor_input, dev_out));
+  if (version == 3) {
+    auto dev_out = data_vector_[1].device_ptr;
+    if (mode == MLUOP_POINTER_MODE_DEVICE) {
+      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemcpy(value_device, host_value_ptr,
+                                                 mluOpDataTypeBytes(data_type),
+                                                 CNRT_MEM_TRANS_DIR_HOST2DEV));
+      MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_DEVICE, value_device,
+                               tensor_input, dev_out));
+    } else {
+      MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_HOST, host_value_ptr,
+                               tensor_input, dev_out));
+    }
   } else {
-    MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_HOST, host_value_ptr,
-                          tensor_input, dev_out));
+    if (parser_->getInputNum() == 2) {
+      auto tensor_value = tensor_desc_[1].tensor;
+      auto dev_value = data_vector_[1].device_ptr;
+      auto dev_output = data_vector_[2].device_ptr;
+      MLUOP_CHECK(mluOpFill_v2(handle_, tensor_value, dev_value, tensor_input,
+                               dev_output));
+    } else if (parser_->getInputNum() == 1) {
+      auto dev_output = data_vector_[1].device_ptr;
+      MLUOP_CHECK(mluOpFill(handle_, value, tensor_input, dev_output));
+    }
   }
   interface_timer_.stop();
 }
 
 void FillExecutor::cpuCompute() {
   float value = parser_->node()->fill_param().value();
+  int version = parser_->getProtoNode()->fill_param().version();
   auto count1 = parser_->input(0)->shape_count;
   auto dtype = parser_->input(0)->dtype;
 
+  if (parser_->getInputNum() == 2) {
+    value = cpu_fp32_input_[1][0];
+  }
   float temp = value;
   if (dtype == MLUOP_DTYPE_HALF) {
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType(&value, CNRT_FLOAT32,
@@ -243,10 +261,15 @@ void FillExecutor::cpuCompute() {
   }
 
   for (int i = 0; i < count1; ++i) {
-    if (host_value_ != 0X0)
-      cpu_fp32_output_[0][i] = fp32_value_;
-    else
+    if (version == 3) {
+      if (host_value_ != 0X0) {
+        cpu_fp32_output_[0][i] = fp32_value_;
+      } else {
+        cpu_fp32_output_[0][i] = value;
+      }
+    } else {
       cpu_fp32_output_[0][i] = value;
+    }
   }
 }
 

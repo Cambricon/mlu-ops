@@ -110,7 +110,7 @@ static mluOpStatus_t indiceConvDtypeVaild(
     LOG(ERROR) << api_name
                << " indice_pairs_desc only supports data type int32. "
                << "But now the data type is "
-               << mluop::getNameOfDataType(pairs_dtype) << ".";
+               << mluOpGetNameOfDataType(pairs_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -121,9 +121,9 @@ static mluOpStatus_t indiceConvDtypeVaild(
         << api_name << " The data type of features_desc, output_grad_desc "
         << "and filters_grad_desc should be the same and the three should "
         << "be either half or float. But now the data types are "
-        << mluop::getNameOfDataType(input_dtype) << "-"
-        << mluop::getNameOfDataType(diffy_dtype) << "-"
-        << mluop::getNameOfDataType(filters_grad_dtype) << ".";
+        << mluOpGetNameOfDataType(input_dtype) << "-"
+        << mluOpGetNameOfDataType(diffy_dtype) << "-"
+        << mluOpGetNameOfDataType(filters_grad_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -142,14 +142,14 @@ static mluOpStatus_t indiceConvDtypeVaild(
                << "there is no need to set the on-chip data type, and if so, "
                << "it needs to be the same as their off-chip data type. "
                << "But now two data types of features_desc are "
-               << mluop::getNameOfDataType(input_dtype) << "-"
-               << mluop::getNameOfDataType(input_on_dtype)
+               << mluOpGetNameOfDataType(input_dtype) << "-"
+               << mluOpGetNameOfDataType(input_on_dtype)
                << ", output_grad_desc are "
-               << mluop::getNameOfDataType(diffy_dtype) << "-"
-               << mluop::getNameOfDataType(diffy_on_dtype)
+               << mluOpGetNameOfDataType(diffy_dtype) << "-"
+               << mluOpGetNameOfDataType(diffy_on_dtype)
                << ", and indice_pairs_desc are "
-               << mluop::getNameOfDataType(pairs_dtype) << "-"
-               << mluop::getNameOfDataType(pairs_on_dtype) << ".";
+               << mluOpGetNameOfDataType(pairs_dtype) << "-"
+               << mluOpGetNameOfDataType(pairs_on_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -162,8 +162,8 @@ static mluOpStatus_t indiceConvDtypeVaild(
                << "supported, and the bit width of on-chip data type can not "
                << "be smaller than that of off-chip data type. But now two "
                << "data types of filters_grad_desc are "
-               << mluop::getNameOfDataType(filters_grad_dtype) << "-"
-               << mluop::getNameOfDataType(filters_grad_on_dtype) << ".";
+               << mluOpGetNameOfDataType(filters_grad_dtype) << "-"
+               << mluOpGetNameOfDataType(filters_grad_on_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   return MLUOP_STATUS_SUCCESS;

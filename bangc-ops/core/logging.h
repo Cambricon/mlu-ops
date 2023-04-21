@@ -34,7 +34,7 @@
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
-#define LOG(severity) mluop::cnlog::CLOG(MLUOP, severity)
+#define LOG(severity) mluop::logging::CLOG(MLUOP, severity)
 
 #define TOKENPASTE(x, y, z) x##y##z
 #define TOKENPASTE2(x, y, z) TOKENPASTE(x, y, z)
@@ -42,7 +42,7 @@
 #define LOG_FIRST_N(severity, n)                                            \
   static std::atomic<int> TOKENPASTE2(LOG_, __LINE__, _OCCURRENCES)(0);     \
   if (MLUOP_PREDICT_FALSE(TOKENPASTE2(LOG_, __LINE__, _OCCURRENCES)++ < n)) \
-  mluop::cnlog::CLOG(MLUOP, severity)
+  mluop::logging::CLOG(MLUOP, severity)
 
 // CHECK with a error if condition is not true.
 #define CHECK(condition, ...)                                    \
@@ -77,11 +77,10 @@
   }
 
 // kernel check for crop
-#define SYMBOL_CHECK(symbol...)                                     \
-  if (MLUOP_PREDICT_FALSE(!&symbol)) {                              \
-    LOG(FATAL) << "calling underfined symbol which not be linked: " \
-               << #symbol;                                          \
-  }                                                                 \
+#define SYMBOL_CHECK(symbol...)                                                \
+  if (MLUOP_PREDICT_FALSE(!&(symbol))) {                                       \
+    LOG(FATAL) << "calling undefined symbol which not be linked: " << #symbol; \
+  }                                                                            \
   symbol
 
 // return if found cnrt error.
@@ -122,7 +121,7 @@
     return MLUOP_STATUS_BAD_PARAM;                                       \
   }
 
-// this prints out values instead of names of variables inside _VA_ARGS__
+// This prints out values instead of names of variables inside __VA_ARGS__
 #define PARAM_CHECK_V2(api, condition, ...)                             \
   if (!(condition)) {                                                   \
     LOG(ERROR) << api << " Check failed: " #condition ". " __VA_ARGS__; \
@@ -167,20 +166,20 @@
     return MLUOP_STATUS_BAD_PARAM;                                       \
   }
 
-#define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                    \
-  if (!(num < max_num)) {                                                   \
-    LOG(ERROR) << "[" << api << "]: overflow max supported tensor num. "    \
-               << max_num - 1 << ", "                                       \
-               << "now tensor's total num is " << num << ". " << reason;    \
-    return MLUOP_STATUS_NOT_SUPPORTED;                                      \
+#define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                      \
+  if (!(num < max_num)) {                                                     \
+    LOG(ERROR) << api << " overflow max supported tensor num " << max_num - 1 \
+               << ", "                                                        \
+               << "now tensor's total num is " << num << ". " << reason;      \
+    return MLUOP_STATUS_NOT_SUPPORTED;                                        \
   }
 
-#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)                 \
-  if (!(size < max_size)) {                                                 \
-    LOG(ERROR) << "[" << api << "]: overflow max supported tensor size. "   \
-               << max_size - 1 << "B, "                                     \
-               << "now tensor's total size is " << size << "B. " << reason; \
-    return MLUOP_STATUS_NOT_SUPPORTED;                                      \
+#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)                \
+  if (!(size < max_size)) {                                                \
+    LOG(ERROR) << api << " overflow max supported tensor size "            \
+               << max_size - 1 << "B, "                                    \
+               << "now tensor's total size is " << size << "B." << reason; \
+    return MLUOP_STATUS_NOT_SUPPORTED;                                     \
   }
 
 void mluOpCheck(mluOpStatus_t result, char const *const func,
@@ -188,18 +187,18 @@ void mluOpCheck(mluOpStatus_t result, char const *const func,
 
 #define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
-#define KERNEL_CALL_CHECK(parent_kernel, sub_kernel, status, statement)       \
-  do {                                                                        \
-    if (status != MLUOP_STATUS_SUCCESS) {                                     \
-      std::string error = "[" + std::string(parent_kernel) + "]" + " Error" + \
-                          std::string(mluOpGetErrorString(status)) +          \
-                          " occured when this kernel "                        \
-                          "call the kernel " +                                \
-                          std::string(sub_kernel) + ". " +                    \
-                          std::string(statement);                             \
-      LOG(ERROR) << error;                                                    \
-      return status;                                                          \
-    }                                                                         \
+#define KERNEL_CALL_CHECK(parent_kernel, sub_kernel, status, statement)        \
+  do {                                                                         \
+    if (status != MLUOP_STATUS_SUCCESS) {                                      \
+      std::string error = "[" + std::string(parent_kernel) + "]" + " Error " + \
+                          std::string(mluOpGetErrorString(status)) +           \
+                          " occured when this kernel "                         \
+                          "call the kernel " +                                 \
+                          std::string(sub_kernel) + ". " +                     \
+                          std::string(statement);                              \
+      LOG(ERROR) << error;                                                     \
+      return status;                                                           \
+    }                                                                          \
   } while (0)
 
 namespace mluop {
@@ -211,26 +210,16 @@ const int FATAL = 3;    // base_logging::FATAL;
 
 namespace internal {
 
-class LogMessage : public std::basic_ostringstream<char> {
+class LogMessage {
  public:
-  LogMessage(const char *fname, int line, int severity);
-  ~LogMessage();
+  LogMessage() = delete;
+  // Returns whether VLOG level lvl is activated for the file fname.
+  static bool VmoduleActivated(const char *fname, int level);
 
   // Returns the minimum log level for VLOG statements.
   // E.g., if MinVLogLevel() is 2, then VLOG(2) statements will produce output,
   // but VLOG(3) will not. Defaults to 0.
   static int64_t MinVLogLevel();
-
-  // Returns whether VLOG level lvl is activated for the file fname.
-  static bool VmoduleActivated(const char *fname, int level);
-
- protected:
-  void GenerateLogMessage();
-
- private:
-  const char *fname_;
-  int line_;
-  int severity_;
 };
 
 // Uses the lower operator & precedence to voidify a LogMessage reference, so
@@ -238,14 +227,6 @@ class LogMessage : public std::basic_ostringstream<char> {
 struct Voidifier {
   template <typename T>
   void operator&(const T &) const {}
-};
-
-// LogMessageFatal ensures the process will exit in failure after
-// logging this message.
-class LogMessageFatal : public LogMessage {
- public:
-  LogMessageFatal(const char *file, int line) MLUOP_ATTRIBUTE_COLD;
-  MLUOP_ATTRIBUTE_NORETURN ~LogMessageFatal();
 };
 
 // Otherwise, set MLUOP_MIN_VLOG_LEVEL environment to update minimum log level
