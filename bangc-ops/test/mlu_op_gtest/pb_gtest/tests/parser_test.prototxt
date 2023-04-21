@@ -12,7 +12,7 @@ input {
   random_data: {
     seed: 23
     upper_bound: 100
-    lower_bound: 0
+    lower_bound: -100
     distribution: UNIFORM
   }
 }
