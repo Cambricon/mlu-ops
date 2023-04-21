@@ -1571,7 +1571,7 @@ mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
  * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, strides, data type, and layout of the input tensor.
  *
- * Compare with ::mluOpSetTensorDescriptor, you can specify the strides of all dimensions with
+ * Compared with ::mluOpSetTensorDescriptor, you can specify the strides of all dimensions with
  * this function. If ::mluOpSetTensorDescriptor is called, you do not need to specify the
  * strides of all dimensions and the strides are inferred by parameters passed to this function.
  *
@@ -1630,7 +1630,7 @@ mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
  * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, strides, data type, and layout of the input tensor.
  *
- * Compare with ::mluOpSetTensorDescriptor_v2, you can specify the strides of all dimensions with
+ * Compared with ::mluOpSetTensorDescriptor_v2, you can specify the strides of all dimensions with
  * this function. If ::mluOpSetTensorDescriptor_v2 is called, you do not need to specify the
  * strides of all dimensions and the strides are inferred by parameters passed to this function.
  *
