@@ -40,30 +40,30 @@
 
 example:
 
-| 算子功能简介                                  | focal_loss_sigmoid 算子反向                                  |
-| --------------------------------------------| ----------------------------------------------------------- |
-| 需求来源                                      | PyTorch                                                    |
-| 应用网络                                      | mmdet-retinanet                                            |
-| 输入数据类型                                  | `input,weight,grad_output` 数据类型需一致，为 float；`target`数据类型为int32；`reduction`为枚举类 |
-| 输入标量参数                                  | `alpha`、`gamma`的数据类型均为float                                                    |
-| 输入 Shape                                   | `input`: [N, C]<br />`target`: [N]<br />`weight`: [C]<br /> `grad_output`: [N, C]   |
-| 输入 Layout                                  | ARRAY                                                                               |
-| 输出数据类型                                  | float                                                                                |
-| 输出 Shape                                   | 输出shape 受 `reduction`模式影响，`reduction`模式为`None`时输出shape为[N, C]              |
-| 输出 Layout                                  | ARRAY                                                       |
-| 模式(可选）                                   | `reduction`：暂不支持`None`以外模式                            |
-| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理| 无 |
-| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无  |
-| 是否需要支持原位                               | 否                                                       |
-| 是否需要支持 stride 机制                       | 否                                                       |
-| 是否需要支持广播                               | 否                                                       |
-| 0 元素检查是否直接返回                         | 是                                                        |
-| 其他特殊需求(在线量化，融合，转数提前等，可选)     | 无                                                        |
-| 本次开发优先支持的规模/模式                     | 无                            |
+| 算子功能简介                                                 | focal_loss_sigmoid 算子反向                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 需求来源                                                     | PyTorch                                                      |
+| 应用网络                                                     | mmdet-retinanet                                              |
+| 输入数据类型                                                 | `input,weight,grad_output` 数据类型需一致，为 float/half；`target`数据类型为int32；`reduction`为枚举类 |
+| 输入标量参数                                                 | `alpha`、`gamma`的数据类型均为float                          |
+| 输入 Shape                                                   | `input`: [N, C]<br />`target`: [N]<br />`weight`: [C]<br /> `grad_output`: [N, C] |
+| 输入 Layout                                                  | ARRAY                                                        |
+| 输出数据类型                                                 | float/half                                                   |
+| 输出 Shape                                                   | 输出shape 受 `reduction`模式影响，`reduction`模式为`None`时输出shape为[N, C] |
+| 输出 Layout                                                  | ARRAY                                                        |
+| 模式(可选）                                                  | `reduction`：暂不支持`None`以外模式                          |
+| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 无                                                           |
+| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无                                                           |
+| 是否需要支持原位                                             | 否                                                           |
+| 是否需要支持 stride 机制                                     | 否                                                           |
+| 是否需要支持广播                                             | 否                                                           |
+| 0 元素检查是否直接返回                                       | 是                                                           |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)               | 无                                                           |
+| 本次开发优先支持的规模/模式                                  | 无                                                           |
 
 ### 1.2 算子功能和应用场景描述
 
-`FocalLoss` 是在标准`CrossEntropy` 的基础上修改得到的，其目的是通过减少易分类样本的加权系数，解决难易样本数量不平衡的问题，从而使得模型在训练时更专注于难分类的样本。本算子应用于基于mmdetection的RetinaNet网络。focalLossSigmoidBackward的功能是对focalLossSigmoidForward进行求导运算，给定输入数据（input）、对应标签值（target）、平衡因子（alpha)、调节因子（gamma)，加权系数数据（weight），输出梯度数据（grad_output），通过focal loss反向公式运算，得到对输入数据的梯度值（grad_input)。
+`FocalLoss` 是在标准`CrossEntropy` 的基础上修改得到的，其目的是通过减少易分类样本的加权系数，解决难易样本数量不平衡的问题，从而使得模型在训练时更专注于难分类的样本。本算子应用于基于mmdetection的RetinaNet网络。focalLossSigmoidBackward的功能是对focalLossSigmoidForward进行求导运算，给定输入数据（input）、对应标签值（target）、平衡因子（alpha)、调节因子（gamma)，加权系数数据（weight），通过focal loss反向公式运算，得到对输入数据的梯度值（grad_input)。
 
 相关参考链接为：https://zhuanlan.zhihu.com/p/80594704
 
@@ -113,13 +113,13 @@ FL^{'} =
 \end{cases}
 ```
 
-如果存在weight输入，则需乘以weight。最后再乘以grad_output，得到算子最终的输出grad_input
+如果存在weight输入，则需乘以weight，得到算子最终的输出grad_input
 
 ```math
 gradInput = FL^{'} *weight* gradOutput =
 \begin{cases}
 -\alpha*(1-p)^\gamma*(1-p-\gamma*p*log(p))*weight[target[n]]*gradOuput & target[n]=c \\
--(1-\alpha)*p^\gamma*(\gamma*(1-p)*log(1-p)-p)*weight[target[n]]*gradOutput & otherwise
+-(1-\alpha)*p^\gamma*(\gamma*(1-p)*log(1-p)-p)*weight[target[n]] & otherwise
 \end{cases}
 ```
 
@@ -131,15 +131,13 @@ gradInput = FL^{'} *weight* gradOutput =
 | prefer           | 运算模式               | 输入              | const mluOpComputationPreference_t | /        | /                                       |
 | reduction        | 规约模式               | 输入              | const mluOpLossReduction_t         | /        | /                                       |
 | input_desc       | 输入预测值张量描述符   | 输入                | const mluOpTensorDescriptor_t      | /        | /                                       |
-| input            | 输入数据               | 输入              | float                             | ARRAY    | 二维数据，形状为[N,C]                   |
+| input            | 输入数据               | 输入              | float/half                        | ARRAY    | 二维数据，形状为[N,C]                   |
 | target_desc      | 输入数据对应标签描述符 | 输入                | const mluOpTensorDescriptor_t      | /        | /                                       |
 | target           | 输入数据对应标签       | 输入               | int32                             | ARRAY    | 一维数据，形状为[N]                     |
 | weight_desc      | 加权系数张量描述符         | 输入              | const mluOpTensorDescriptor_t      | /        | /                                       |
 | weight           | 加权系数数据               | 输入              | float                             | ARRAY    | 一维数据，形状为[C]                     |
 | alpha            | 平衡因子               | 输入              | float                             | 标量     | 无                                      |
 | gamma            | 调节因子               | 输入              | float                             | 标量     | 200系列板卡：[0, 8]<br>MLU370:[0, 1000] |
-| grad_output_desc | 梯度张量描述符         | 输入              | const mluOpTensorDescriptor_t      | /        | /                                       |
-| grad_output      | 梯度数据               | 输入              | float                             | ARRAY    | 二维数据，形状为[N,C]                   |
 | grad_input_desc  | 输出张量描述符         | 输入              | const mluOpTensorDescriptor_t      | /        | /                                       |
 | grad_input       | 输出数据               | 输出              | float                             | ARRAY    | 二维数据，形状为[N,C]                   |
 
@@ -149,7 +147,7 @@ gradInput = FL^{'} *weight* gradOutput =
 | ------------ | ------------------------------------------------------------ |
 | 数据类型限制 | 数据类型需与1.3小节匹配                                      |
 | 布局限制     | 物理布局需与1.3小节匹配                                      |
-| 规模限制     | 1.gamma暂不支持小于等于0的规模<br>2. 当weight为NULL时，target中元素的取值为[0，C]；当weight不为NULL时，target中元素的取值为[0，C-1]<br>3. 此版本优先支持多核之间C维度不拆的case。当weight为NULL时，在MLU200系列板卡中C的范围需在[0, 8154]， MLU370板卡中C的范围需在[0，13615]；当weight不为NULL时，在MLU200系列板卡中C的范围需在[0, 7520]， MLU370板卡中C的范围需在[0，12544]；<br>4. 由于硬件激活指令精度不足，在MLU200系列板块中，gamma的取值范围需在[0, 8]，在MLU370中，gamma的取值范围需在[0, 10000]<br>5. grad_output 和 weight 暂不支持包含 inf 和 -inf 的输入 |
+| 规模限制     | 1.gamma暂不支持小于等于0的规模<br>2. 当weight为NULL时，target中元素的取值为[0，C]；当weight不为NULL时，target中元素的取值为[0，C-1]<br>3. 此版本优先支持多核之间C维度不拆的case。当weight为NULL时，在MLU200系列板卡中C的范围需在[0, 8154]， MLU370板卡中C的范围需在[0，13615]；当weight不为NULL时，在MLU200系列板卡中C的范围需在[0, 7520]， MLU370板卡中C的范围需在[0，12544]；<br>4. 由于硬件激活指令精度不足，在MLU200系列板块中，gamma的取值范围需在[0, 8]，在MLU370中，gamma的取值范围需在[0, 10000]<br>5. weight 暂不支持包含 inf 和 -inf 的输入 |
 | 功能限制     | 1. reduction为预留参数，暂不支持None以外的情况<br>2.reduction为预留参数，暂不支持HIGH_PRECISION模式<br>3.此版本暂不支持输入数据为half类型 |
 
 ### 1.5 验收标准
@@ -232,8 +230,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
                                                           const void *target,
                                                           const mluOpTensorDescriptor_t weight_desc,
                                                           const void *weight,
-                                                          const mluOpTensorDescriptor_t grad_output_desc,
-                                                          const void *grad_output,
                                                           const float alpha,
                                                           const float gamma,
                                                           const mluOpTensorDescriptor_t grad_input_desc,
@@ -282,21 +278,15 @@ p_{n,c},  & target[n]=c \\
 进行向量化后，`mluOpFocalLossSigmoidBackward`的计算公式可以表示为
 
 ```math
-FL^{'} = -\alpha t*(1-pt)^\gamma*(1-pt-\gamma*pt*log(pt))
+temp = FL^{'} = -\alpha t*(1-pt)^\gamma*(1-pt-\gamma*pt*log(pt))
        = -\alpha t* e^{\gamma*log(1-pt)} *(1-pt-\gamma*pt*log(pt))
 ```
 
 如果存在weight，则需将以上结果乘以weight:
 
 ```math
-temp = FL^{'}[n][c]*weight[target[n]]
-```
-
-然后会再乘以grad_output，得到最终的输出。
-
-```math
-gradInput = temp*gradOutput
-          = (-\alpha t* e^{\gamma*log(1-pt)} *(1-pt-\gamma*pt*log(pt)))*weight[target[n]]*gradOutput
+gradInput = temp*weight[target[n]]
+          = (-\alpha t* e^{\gamma*log(1-pt)} *(1-pt-\gamma*pt*log(pt)))*weight[target[n]]
 ```
 
 
@@ -323,8 +313,7 @@ for (int n = 0; n < N; n++) {
 temp  = -\alpha t* e^{\gamma*log(1-pt)} \\
 output = (1-pt-\gamma*pt*log(pt)) \\
 output = output * temp \\
-output = output[n][c] * weight[target[n]] \\
-output = output * gradOutput;
+output = output[n][c] * weight[target[n]]
 ```
 
 ### 3.2 伪代码实现
