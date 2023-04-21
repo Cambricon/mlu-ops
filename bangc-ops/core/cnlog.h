@@ -29,7 +29,8 @@
 #include <string>
 
 namespace mluop {
-namespace cnlog {
+namespace logging {
+
 /**
  * @brief: define save in file or not, show on screen or not.
  */
@@ -160,52 +161,7 @@ class LogMessage {
   void printTail(bool is_colored);
 };
 
-/**
- * @brief: the log class to print nothing.
- */
-
-class LogMessageVoidify {
- public:
-  LogMessageVoidify() {}
-  void operator&(std::ostream &) {}
-};
-
-/*
- * @brief: initialing log system, make sure use it before any log
- * @param index: the log level set by macro, file name to write log.
- * @example:
- * // the file to write log is "test_log.log".
- * // only log message level higher than LOG_WARNING can be print.
- * initLog(LOG_WARNING, "test_log.log");
- */
-int initLog(int log_level, std::string file = "mlu_op_auto_log");
-
-/*
- * @brief: only show on screen
- */
-int initLogOnlyShow(int log_level);
-
-/*
- * @brief: close the log system, after call it, no message is to save in file
- *         or shown on screen.
- */
-void endLog(void);
-
-/*
- * @brief: set the log levels.
- *         only the message level higher than this can be print.
- *         you can use this to change the level set in initLog function.
- */
-void setLevel(int log_level);
-
-/// get environment variable, return true or false
-/// if default_para is true, the true case: 1, on, yes, true, nullptr;
-/// if default_para is false, the true case: 1, on. yes, true;
-/// ignore up/low case
-bool getBoolEnvVar(const std::string &str, bool default_para = false);
-int getLevelEnvVar(const std::string &str, int default_para = false);
-
-}  // namespace cnlog
+}  // namespace logging
 }  // namespace mluop
 
 #endif  // CORE_CNLOG_H_

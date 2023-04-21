@@ -50,13 +50,13 @@
 | 是否需要支持原位            | 否                                        |
 | 是否需要支持 stride 机制    | 否                                        |
 | 是否需要支持广播            | 否                                        |
-| 0 元素检查是否直接返回      | 是（内部不做计算）                        | 
+| 0 元素检查是否直接返回      | 是（内部不做计算）                        |
 | 其他特殊需求(在线量化，融合，转数提前等，可选)| 无                      |
 | 本次开发优先支持的规模/模式 | 无规模限制                                |
 
 ### 1.2 算子功能和应用场景
 
-indice_convolution_backward_filter算子用于在稀疏卷积网络中。是稀疏卷积的反向，根据输出的梯度，计算权值的梯度。
+indice_convolution_backward_filter算子用于在稀疏卷积网络中。是稀疏卷积的反向，根据输出的梯度，计算卷积滤波张量的梯度。
 
 稀疏卷积常用于3D项目（如3D点云分割）中，由于点云数据是稀疏的，如果使用标准的卷积操作，会对大量无效点进行卷积，浪费算力。同理，2D任务中，如果只处理其中一部分像素，也可以使用稀疏卷积，这样有助于模型加速。
 稀疏卷积的本质就是通过建立哈希表，保存输入和输出的有点点，以及输入输出有限点和卷积核进行计算时的对应关系，最终实现只对有效点进行计算。
@@ -148,7 +148,7 @@ indice_convolution_backward_filter是通过在host端调用gather_nd和matmul算
 2. 调用gather_nd算子到输入中取出与卷积核中当前点参与加算的所有的输入点数据。记为[cur_active_num, ci]
 3. 调用gather_nd算子到输出梯度中取出与卷积核中当前点对应的输出点的数据数据。记为[cur_active_num, co]
 4. 调用matmul算子到完成[cur_active_num, ci] 和　[cur_active_num, co]的对位乘加，得到[ci, co]
-5. 循环kd * kh * kw 次，　得到完整的filters_grad[kd, kh, kw, ci, co]  
+5. 循环kd * kh * kw 次，　得到完整的filters_grad[kd, kh, kw, ci, co]
 
 ### 3.2 伪代码实现
 
@@ -183,4 +183,3 @@ indice_convolution_backward_filter的关键瓶颈在于gather_nd和matmul, 只�
 - step2: 2022/12/12 - 2022/12/16: 完成generator测试环境的搭建
 - step3: 2022/12/19 - 2022/12/23: 本地功能调试
 - step4: 2022/12/26 - 2022/12/30: 代码review和入库
-

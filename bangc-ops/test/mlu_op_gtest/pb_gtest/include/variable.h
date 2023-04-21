@@ -26,8 +26,8 @@
 #include <string>
 #include <cctype>
 
-#include "internal_perf.h"
 #include "pb_test_tools.h"
+#include "internal_perf.h"
 
 namespace mluoptest {
 
@@ -46,21 +46,28 @@ class GlobalVar {
   TestSummary summary_;
   TestInternalInfo internal_info_;
 
-  // the picked device id, make sure gtest run on the picked device.
-  int dev_id_ = 0;
+  int dev_id_ =
+      0;  // the picked device id, make sure gtest run on the picked device.
   int rand_n_ = -1;  // pick n * random case, -1 for uninitialized
   int repeat_ = 1;   // perf-repeat repeat * kernel enqueue cnrtQueue_t, and get
                      // ave hw_time
   int thread_num_ = 1;    // thread num
   bool shuffle_ = false;  // shuffle cases.
-  bool mlu_only_ = false;
-  bool zero_input_ = false;
-  bool use_default_queue_ = false;
-  bool test_llc_ = false;
+  bool mlu_only_ =
+      false;  // the mlu-only mode, skip cpu compute() and other func().
+  bool zero_input_ = false;  // the zero-input mode, set input gdram zero.
+  bool use_default_queue_ =
+      false;  // will use cnrt default queue (set nullptr in mluOpSetQueue)
+  bool test_llc_ =
+      false;  // fill 48MB llc, op cannot llc hit when first load data.
   bool unaligned_mlu_address_random_ = false;
-  int unaligned_mlu_address_set_ = 0;
-  bool enable_gtest_internal_perf = false;
+  int unaligned_mlu_address_set_ = 0;  // mlu address offset
+  bool enable_gtest_internal_perf =
+      false;  // will record gtest internal perf info
 
+  /**
+   * match 'key=val' pattern, and extract val from str
+   */
   std::string getParam(const std::string &str, std::string key);
 
   void init(int argc, char **argv);

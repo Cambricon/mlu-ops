@@ -22,6 +22,23 @@
  *************************************************************************/
 #include "core/gen_case.h"
 
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <error.h>
+#include <time.h>
+#include <limits.h>
+#include <algorithm>
+#include <iterator>
+#include <fstream>
+#include <regex>  // NOLINT
+#include <mutex>  // NOLINT
+#include <unordered_map>
+#include <utility>
+
+#include "core/type.h"
+#include "core/logging.h"
+#include "core/platform/env_time.h"
+
 namespace mluop {
 namespace gen_case {
 
@@ -29,7 +46,7 @@ namespace gen_case {
 #define IS_DUMP_DATA (genCaseModeGet(false) == 2)
 #define IS_ONLY_SHOW (genCaseModeGet(false) == 3)
 
-// mode_stacks_ is used for eliminate internal prototxt in mluOp interface
+// mode_stacks_ is used for eliminate internal prototxt in mluop interface
 __attribute__((__unused__)) std::unordered_map<std::string, std::vector<int>>
     mode_stacks_;
 // nodes_ is like mode_stacks, keep nodes_vector for each thread
@@ -47,35 +64,40 @@ __attribute__((__unused__)) std::mutex stacks_mutex_;
 // MLUOP_GEN_CASE=2: Generate gen_case file with input data
 // MLUOP_GEN_CASE=3: Print gen_case simple infomation on screen
 __attribute__((__unused__)) int gen_case_mode_ =
-    mluop::getUintEnvVar("MLUOP_GEN_CASE", 0);
+    getUintEnvVar("MLUOP_GEN_CASE", 0);
+
+// MLUOP_GEN_CASE_DIR control where the prototxt file is stored
+// default value of MLUOP_GEN_CASE_DIR is curdir + '/gen_case'
+__attribute__((__unused__)) std::string gen_case_dir_ =
+    getStringEnvVar("MLUOP_GEN_CASE_DIR");
 
 // MLUOP_GEN_CASE_DUMP_INTERNAL control whether dump internal mluOpapi call
 __attribute__((__unused__)) bool dump_internal_ =
-    mluop::getBoolEnvVar("MLUOP_GEN_CASE_DUMP_INTERNAL", false);
+    getBoolEnvVar("MLUOP_GEN_CASE_DUMP_INTERNAL", false);
 
 // MLUOP_GEN_CASE_OP_NAME control generating prototxt
 // "conv;abs" means only generate prototxt for conv and abs
 // "-conv;-abs" means only not generate prototxt for conv and abs
 __attribute__((__unused__)) std::string op_name_ =
-    mluop::getStringEnvVar("MLUOP_GEN_CASE_OP_NAME", "all");
+    getStringEnvVar("MLUOP_GEN_CASE_OP_NAME", "all");
 
 // MLUOP_GEN_CASE_DUMP_DATA control whether dump input device data in prototxt
 // or not 0 : means not dump 1 : means dump readable value, is default value 2 :
 // means dump hex value
 __attribute__((__unused__)) int dump_data_ =
-    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA", 0);
+    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA", 0);
 
 // MLUOP_GEN_CASE_DUMP_DATA_OUTPUT control whether dump output device data in
 // prototxt or not 0 : means not dump, is default value 1 : means dump readable
 // value 2 : means dump hex value
 __attribute__((__unused__)) int dump_data_output_ =
-    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_OUTPUT", 0);
+    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_OUTPUT", 0);
 
 // MLUOP_GEN_CASE_DUMP_DATA_FILE control whether dump data file separately
 // 0 : means not dump file
 // 1 : means dump file
 __attribute__((__unused__)) int dump_data_file_ =
-    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_FILE", 0);
+    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_FILE", 0);
 
 bool isGenCaseOn() { return gen_case_mode_ > 0; }
 
@@ -180,7 +202,7 @@ inline int getOpNameMask(const std::string op_name_,
     }
   }
   if (op_name_mask.find(op_name) != op_name_mask.end()) {
-    return op_name_mask[op_name] == 1;
+    return op_name_mask[op_name];
   } else {
     return specify_op;
   }
@@ -221,9 +243,9 @@ void genCaseData(PbNode *node, bool is_input, std::string id,
   if (desc == nullptr) {
     mluOpTensorDescriptor_t desc_;
     mluOpCreateTensorDescriptor(&desc_);
-    std::vector<int> dims{1};
-    mluOpSetTensorDescriptor(desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 1,
-                             dims.data());
+    std::vector<int64_t> dims{1};
+    mluOpSetTensorDescriptor_v2(desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 1,
+                                dims.data());
     node->appendTensor(is_input, id, device_data, desc_, true, params,
                        distribution, dump_data);
   } else {
@@ -233,39 +255,39 @@ void genCaseData(PbNode *node, bool is_input, std::string id,
 }
 
 void genCaseData(PbNode *node, bool is_input, std::string id,
-                 const void *device_data, int dim, int *dims,
+                 const void *device_data, int dim, int64_t *dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,
                  double param1, double param2, std::string distribution,
                  bool dump_data) {
   mluOpTensorDescriptor_t desc;
   mluOpCreateTensorDescriptor(&desc);
-  mluOpSetTensorDescriptor(desc, layout, dtype, dim, dims);
+  mluOpSetTensorDescriptor_v2(desc, layout, dtype, dim, dims);
   std::vector<double> params{param1, param2};
   node->appendTensor(is_input, id, device_data, desc, true, params,
                      distribution, dump_data);
 }
 
 void genCaseData(PbNode *node, bool is_input, std::string id,
-                 const void *device_data, int dim, const int *dims,
+                 const void *device_data, int dim, const int64_t *dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,
                  double param1, double param2, std::string distribution,
                  bool dump_data) {
   mluOpTensorDescriptor_t desc;
   mluOpCreateTensorDescriptor(&desc);
-  mluOpSetTensorDescriptor(desc, layout, dtype, dim, dims);
+  mluOpSetTensorDescriptor_v2(desc, layout, dtype, dim, dims);
   std::vector<double> params{param1, param2};
   node->appendTensor(is_input, id, device_data, desc, true, params,
                      distribution, dump_data);
 }
 
 void genCaseData(PbNode *node, bool is_input, std::string id,
-                 const void *device_data, int dim, std::vector<int> dims,
+                 const void *device_data, int dim, std::vector<int64_t> dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,
                  double param1, double param2, std::string distribution,
                  bool dump_data) {
   mluOpTensorDescriptor_t desc;
   mluOpCreateTensorDescriptor(&desc);
-  mluOpSetTensorDescriptor(desc, layout, dtype, dim, dims.data());
+  mluOpSetTensorDescriptor_v2(desc, layout, dtype, dim, dims.data());
   std::vector<double> params{param1, param2};
   node->appendTensor(is_input, id, device_data, desc, true, params,
                      distribution, dump_data);
@@ -403,13 +425,20 @@ std::string PbNode::getFileName() {
 
 std::string PbNode::getFolderName() {
   // Create folder name by op_name.
-  char current_dir[PATH_MAX];
-  if (getcwd(current_dir, sizeof(current_dir)) == NULL) {
-    LOG(ERROR) << "[gen_case]: get current directory failed! (" << errno << ": "
-               << strerror(errno) << ")";
-    return "NULL";
+  std::string folder_name = "";
+
+  if (gen_case_dir_ != "") {
+    folder_name = gen_case_dir_;
+  } else {
+    char current_dir[PATH_MAX];
+    if (getcwd(current_dir, sizeof(current_dir)) == NULL) {
+      LOG(ERROR) << "[gen_case]: get current directory failed! (" << errno
+                 << ": " << strerror(errno) << ")";
+      return "NULL";
+    }
+    folder_name = current_dir;
   }
-  std::string folder_name = current_dir;
+
   folder_name = folder_name + "/gen_case/" + op_name;
   return folder_name;
 }
@@ -658,10 +687,11 @@ bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t desc) {
   int tensor_dim;
   mluOpTensorLayout_t layout;
   mluOpDataType_t dtype;
-  mluOpGetTensorDescriptor(desc, &layout, &dtype, &tensor_dim, nullptr);
-  int *dims = new int[tensor_dim];
-  int *strides = new int[tensor_dim];
-  mluOpGetTensorDescriptorEx(desc, &layout, &dtype, &tensor_dim, dims, strides);
+  mluOpGetTensorDescriptor_v2(desc, &layout, &dtype, &tensor_dim, nullptr);
+  int64_t *dims = new int64_t[tensor_dim];
+  int64_t *strides = new int64_t[tensor_dim];
+  mluOpGetTensorDescriptorEx_v2(desc, &layout, &dtype, &tensor_dim, dims,
+                                strides);
   int stride_base = 1;
   for (int i = tensor_dim - 1; i >= 0; i--) {
     if (dims[i] != 1) {
@@ -682,10 +712,10 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
   int dim;
   mluOpTensorLayout_t layout;
   mluOpDataType_t dtype;
-  mluOpGetTensorDescriptor(desc, &layout, &dtype, &dim, nullptr);
-  int *dims = new int[dim];
-  int *strides = new int[dim];
-  mluOpGetTensorDescriptorEx(desc, &layout, &dtype, &dim, dims, strides);
+  mluOpGetTensorDescriptor_v2(desc, &layout, &dtype, &dim, nullptr);
+  int64_t *dims = new int64_t[dim];
+  int64_t *strides = new int64_t[dim];
+  mluOpGetTensorDescriptorEx_v2(desc, &layout, &dtype, &dim, dims, strides);
   mluOpDataType_t onchip_dtype;
   mluOpGetTensorDescriptorOnchipDataType(desc, &onchip_dtype);
   int position, offset;
@@ -708,10 +738,11 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
     }
   }
   tensor_info << "  }" << delimiter;
-  tensor_info << "  layout: " << getNameOfTensorLayout(layout) << delimiter;
-  tensor_info << "  dtype: " << getNameOfDataType(dtype) << delimiter;
+  tensor_info << "  layout: " << mluOpGetNameOfTensorLayout(layout)
+              << delimiter;
+  tensor_info << "  dtype: " << mluOpGetNameOfDataType(dtype) << delimiter;
   if (onchip_dtype != MLUOP_DTYPE_INVALID) {
-    tensor_info << "  onchip_dtype: " << getNameOfDataType(onchip_dtype)
+    tensor_info << "  onchip_dtype: " << mluOpGetNameOfDataType(onchip_dtype)
                 << delimiter;
   }
   tensor_info << "  position: " << position << delimiter;
@@ -724,4 +755,6 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
 
 }  // namespace gen_case
 }  // namespace mluop
-void mluOpSetGenCaseMode(int mode) { mluop::gen_case::genCaseModeSet(mode); }
+void MLUOP_WIN_API mluOpSetGenCaseMode(int mode) {
+  mluop::gen_case::genCaseModeSet(mode);
+}

@@ -21,38 +21,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "cstring"
-
 #include "core/context.h"
 #include "core/logging.h"
+#include "core/mlu_env.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-#define DEP_CHECK_LOG(level)                                                  \
-  mluop::cnlog::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, true, \
-                           true, true)                                        \
+#define DEP_CHECK_LOG(level)                                              \
+  mluop::logging::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, \
+                             true, true, true)                            \
       .stream()
 
 namespace mluop {
 // see cnrt_function.c deviceCoreVersion for more info.
-struct deviceName name_list_table[] = {
+static struct deviceName name_list_table[] = {
     {"MLU270", MLUOP_MLU270},
     {"MLU290", MLUOP_MLU290},
     {"MLU370", MLUOP_MLU370},
     {"MLU500", MLUOP_MLU590}
-    // mluOp not support mlu100 only for error case.
-    // {"MLU100", MLUOP_MLU100},
+    // {"MLU100", MLUOP_MLU100},  // mluop not support mlu100 only for error
+    // case.
 };
 
-// update this funciton.
+// once cnrtGetDeviceProperties() update and not use
+// device_ordinal, update this funciton.
 mluOpDevType_t convertDeviceName(char *name) {
   struct deviceName *pName = NULL;
   int num = sizeof(name_list_table) / sizeof(struct deviceName);
   if (CONTEXT_DEVICENAME_LEAST_SIZE > strlen(name)) {
-    LOG(ERROR) << "get device name failed. device name too short. "
-                  "device name = "
-               << name << "\n";
+    LOG(ERROR)
+        << "get device name failed. device name too short. device name = "
+        << name << "\n";
     return MLUOP_UNKNOWN_DEVICE;
   }
   for (int i = 0; i < num; i++) {
@@ -71,52 +72,89 @@ mluOpDevType_t convertDeviceName(char *name) {
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
                                    DepCheckLevel level) {
+  if (!IF_CHECK_DEP_VERSION) {
+    VLOG(5) << "Skip check version dependency.";
+    return MLUOP_STATUS_SUCCESS;
+  }
+  int mluop_major = 0, mluop_minor = 0, mluop_patch = 0;
+  mluOpGetLibVersion(&mluop_major, &mluop_minor, &mluop_patch);
   int cnrt_major = 0, cnrt_minor = 0, cnrt_patch = 0;
   cnrtGetLibVersion(&cnrt_major, &cnrt_minor, &cnrt_patch);
-  bool max_check = false;
-  bool min_check = false;
+  int cndrv_major = 0, cndrv_minor = 0, cndrv_patch = 0;
+  cnGetLibVersion(&cndrv_major, &cndrv_minor, &cndrv_patch);
+  bool cnrt_max_check = false;
+  bool cnrt_min_check = false;
+  bool cndrv_max_check = false;
+  bool cndrv_min_check = false;
   if (need_check_min) {
-    min_check = (cnrt_major > MLUOP_DEP_CNRT_MIN_MAJOR) ||
-                (cnrt_major == MLUOP_DEP_CNRT_MIN_MAJOR &&
-                 cnrt_minor >= MLUOP_DEP_CNRT_MIN_MINOR);
-    if (!min_check) {
+    cnrt_min_check = (cnrt_major > MLUOP_DEP_CNRT_MIN_MAJOR) ||
+                     (cnrt_major == MLUOP_DEP_CNRT_MIN_MAJOR &&
+                      cnrt_minor >= MLUOP_DEP_CNRT_MIN_MINOR);
+    if (!cnrt_min_check) {
       DEP_CHECK_LOG(level) << "Current CNRT version: " << cnrt_major << "."
                            << cnrt_minor << "." << cnrt_patch;
-      DEP_CHECK_LOG(level) << "CNRT version is too low, please upgrade"
-                              " CNRT to "
+      DEP_CHECK_LOG(level) << "CNRT version is too low, please upgrade CNRT to "
                            << MLUOP_DEP_CNRT_MIN_MAJOR << "."
-                           << MLUOP_DEP_CNRT_MIN_MINOR
-                           << " or higher. For more details, please check the"
-                              " dependency rules in"
-                              " Cambricon-MLUOP-Release-Notes.";
-      if (level == ERROR) {
-        return MLUOP_STATUS_NOT_INITIALIZED;
-      }
+                           << MLUOP_DEP_CNRT_MIN_MINOR << "."
+                           << MLUOP_DEP_CNRT_MIN_PATCH
+                           << " or higher. For more details, "
+                           << "please check the dependency rules in "
+                              "Cambricon-MLUOP-Release-Notes.";
+    }
+    cndrv_min_check = (cndrv_major > MLUOP_DEP_CNDRV_MIN_MAJOR) ||
+                      (cndrv_major == MLUOP_DEP_CNDRV_MIN_MAJOR &&
+                       cndrv_minor >= MLUOP_DEP_CNDRV_MIN_MINOR);
+    if (!cndrv_min_check) {
+      DEP_CHECK_LOG(level) << "Current CNDRV version: " << cndrv_major << "."
+                           << cndrv_minor << "." << cndrv_patch;
+      DEP_CHECK_LOG(level)
+          << "CNDRV version is too low, please upgrade CNDRV to "
+          << MLUOP_DEP_CNDRV_MIN_MAJOR << "." << MLUOP_DEP_CNDRV_MIN_MINOR
+          << "." << MLUOP_DEP_CNDRV_MIN_PATCH
+          << " or higher. For more details, "
+          << "please check the dependency rules in "
+             "Cambricon-MLUOP-Release-Notes.";
+    }
+    if (((!cnrt_min_check) || (!cndrv_min_check)) && level == ERROR) {
+      return MLUOP_STATUS_NOT_INITIALIZED;
     }
   }
   if (need_check_max) {
-    max_check = (cnrt_major < MLUOP_DEP_CNRT_MAX_MAJOR) ||
-                (cnrt_major == MLUOP_DEP_CNRT_MAX_MAJOR &&
-                 cnrt_minor <= MLUOP_DEP_CNRT_MAX_MINOR);
-    if (!max_check) {
+    cnrt_max_check = (cnrt_major < MLUOP_DEP_CNRT_MAX_MAJOR) ||
+                     (cnrt_major == MLUOP_DEP_CNRT_MAX_MAJOR &&
+                      cnrt_minor <= MLUOP_DEP_CNRT_MAX_MINOR);
+    if (!cnrt_max_check) {
       DEP_CHECK_LOG(level) << "Current CNRT version: " << cnrt_major << "."
                            << cnrt_minor << "." << cnrt_patch;
-      DEP_CHECK_LOG(level) << "CNRT version is too high, please downgrade "
-                              "CNRT to "
-                           << MLUOP_DEP_CNRT_MAX_MAJOR << "."
-                           << MLUOP_DEP_CNRT_MAX_MINOR
-                           << " or lower. For more details, please check the"
-                              " dependency rules in"
-                              " Cambricon-MLUOP-Release-Notes.";
-      if (level == ERROR) {
-        return MLUOP_STATUS_NOT_INITIALIZED;
-      }
+      DEP_CHECK_LOG(level)
+          << "CNRT version is too high, please downgrade CNRT to "
+          << MLUOP_DEP_CNRT_MAX_MAJOR << "." << MLUOP_DEP_CNRT_MAX_MINOR << "."
+          << MLUOP_DEP_CNRT_MAX_PATCH << " or higher. For more details, "
+          << "please check the dependency rules in "
+             "Cambricon-MLUOP-Release-Notes.";
+    }
+    cndrv_max_check = (cndrv_major < MLUOP_DEP_CNDRV_MAX_MAJOR) ||
+                      (cndrv_major == MLUOP_DEP_CNDRV_MAX_MAJOR &&
+                       cndrv_minor <= MLUOP_DEP_CNDRV_MAX_MINOR);
+    if (!cndrv_max_check) {
+      DEP_CHECK_LOG(level) << "Current CNDRV version: " << cndrv_major << "."
+                           << cndrv_minor << "." << cndrv_patch;
+      DEP_CHECK_LOG(level)
+          << "CNDRV version is too high, please downgrade CNDRV to "
+          << MLUOP_DEP_CNDRV_MAX_MAJOR << "." << MLUOP_DEP_CNDRV_MAX_MINOR
+          << "." << MLUOP_DEP_CNDRV_MAX_PATCH
+          << " or higher. For more details, "
+          << "please check the dependency rules in "
+             "Cambricon-MLUOP-Release-Notes.";
+    }
+    if (((!cnrt_max_check) || (!cndrv_max_check)) && level == ERROR) {
+      return MLUOP_STATUS_NOT_INITIALIZED;
     }
   }
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
+mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   PARAM_CHECK("[mluOpCreate]", handle != NULL);
 
   if (MLUOP_STATUS_SUCCESS != mluOpCheckDependency(true, false, ERROR)) {
@@ -131,7 +169,7 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
   int32_t wram_size = 0;
   int32_t sram_size = 0;
   char device_name[CONTEXT_DEVICENAME_BUFFER_SIZE] = "";
-  mluOpContext *ctx = new mluOpContext();
+  mluOpContext *ctx = new (std::nothrow) mluOpContext();
   CNcontext drv_ctx;
   CNctxConfigParam ctx_conf_param;
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetCurrent(&drv_ctx));
@@ -151,9 +189,9 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
                                mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
-      CN_SUCCESS == cnDeviceGetAttribute(
-                        &nram_size,
-                        CN_DEVICE_ATTRIBUTE_NEURAL_RAM_SIZE_PER_CORE, mlu_dev));
+      CN_SUCCESS == cnDeviceGetAttribute(&nram_size,
+                                         CN_DEVICE_ATTRIBUTE_NRAM_SIZE_PER_CORE,
+                                         mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
       CN_SUCCESS == cnDeviceGetAttribute(
@@ -179,14 +217,16 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
       "[mluOpCreate]",
       CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
                                         &ctx_conf_param));
-  // set parallel job num
+  // Set parallel job num
   if (MLUOP_STATUS_SUCCESS != ctx->initJobNum(drv_ctx, "[mluOpCreate]")) {
     return MLUOP_STATUS_INTERNAL_ERROR;
   }
+
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
-  ctx->arch =
-      mluop::convertDeviceName(device_name);  // warning: may return unknown.
+  ctx->arch = mluop::convertDeviceName(
+      device_name);  // warning: possible return unknown.
   ctx->sram_size = sram_size - REM_FOR_STACK;
+
   ctx->device = mlu_dev;
   ctx->cluster_num = cluster_num;
   ctx->core_num_per_cluster = core_num_per_cluster;
@@ -204,17 +244,18 @@ mluOpStatus_t mluOpCreate(mluOpHandle_t *handle) {
     ctx->round_mode = MLUOP_ROUND_HALF_OFF_ZERO;
   } else {
     // round to even is supported by hardware since arch >= 322.
-    // default usage mode is round to even when arch >= 322.
-    // which change accuracy because of using round off zero beform.
+    // default usage mode is round to even when arch >= 322,
+    // which change accuracy because of using round off zero before.
     ctx->round_mode = MLUOP_ROUND_HALF_TO_EVEN;
   }
   ctx->atomics_mode =
-      MLUOP_ATOMICS_NOT_ALLOWED;  // note : mluOp disallows atomics by defalut
+      MLUOP_ATOMICS_NOT_ALLOWED;  // note: mluop disallows atomics by defalut.
   *handle = ctx;
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpUpdateContextInformation(mluOpHandle_t handle) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpUpdateContextInformation(mluOpHandle_t handle) {
   PARAM_CHECK("[mluOpUpdateContextInformation]", handle != NULL);
   CNctxConfigParam ctx_conf_param;
   CNcontext drv_ctx;
@@ -230,12 +271,20 @@ mluOpStatus_t mluOpUpdateContextInformation(mluOpHandle_t handle) {
       "[mluOpUpdateContextInformation]",
       CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
                                         &ctx_conf_param));
+#if TARGET_MLU_ARCH == 520  // run 3225/5223 using 3226
+  handle->capability_job_limit = CN_KERNEL_CLASS_BLOCK;
+#else
   handle->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
+#endif
+  if (MLUOP_STATUS_SUCCESS !=
+      handle->initJobNum(drv_ctx, "[mluOpUpdateContextInformation]")) {
+    return MLUOP_STATUS_INTERNAL_ERROR;
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetAtomicsMode(mluOpHandle_t handle,
-                                  mluOpAtomicsMode_t atomics_mode) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t atomics_mode) {
   PARAM_CHECK("[mluOpSetAtomicsMode]", handle != NULL);
 
   handle->atomics_mode = atomics_mode;
@@ -243,8 +292,8 @@ mluOpStatus_t mluOpSetAtomicsMode(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetAtomicsMode(mluOpHandle_t handle,
-                                  mluOpAtomicsMode_t *atomics_mode) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode) {
   PARAM_CHECK("[mluOpGetAtomicsMode]", handle != NULL);
   PARAM_CHECK("[mluOpGetAtomicsMode]", atomics_mode != NULL);
 
@@ -253,7 +302,7 @@ mluOpStatus_t mluOpGetAtomicsMode(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpDestroy(mluOpHandle_t handle) {
+mluOpStatus_t MLUOP_WIN_API mluOpDestroy(mluOpHandle_t handle) {
   PARAM_CHECK("[mluOpDestroy]", handle != NULL);
 
   delete handle;
@@ -261,16 +310,18 @@ mluOpStatus_t mluOpDestroy(mluOpHandle_t handle) {
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetQueue(mluOpHandle_t handle, cnrtQueue_t queue) {
+mluOpStatus_t MLUOP_WIN_API mluOpSetQueue(mluOpHandle_t handle,
+                                          cnrtQueue_t queue) {
   PARAM_CHECK("[mluOpSetQueue]", handle != NULL);
-  PARAM_CHECK("[mluOpSetQueue]", queue != NULL);
 
+  // note, queue could be NULL
   handle->queue = queue;
 
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue) {
+mluOpStatus_t MLUOP_WIN_API mluOpGetQueue(mluOpHandle_t handle,
+                                          cnrtQueue_t *queue) {
   PARAM_CHECK("[mluOpGetQueue]", handle != NULL);
   PARAM_CHECK("[mluOpGetQueue]", queue != NULL);
 
@@ -279,7 +330,8 @@ mluOpStatus_t mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue) {
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetDevice(mluOpHandle_t handle, CNdev *device) {
+mluOpStatus_t MLUOP_WIN_API mluOpGetDevice(mluOpHandle_t handle,
+                                           CNdev *device) {
   PARAM_CHECK("[mluOpGetDevice]", handle != NULL);
   PARAM_CHECK("[mluOpGetDevice]", device != NULL);
 
@@ -290,15 +342,15 @@ mluOpStatus_t mluOpGetDevice(mluOpHandle_t handle, CNdev *device) {
 
 mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(
     mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_mode) {
-  PARAM_CHECK("[mluopSetQuantizeRoundMode]", handle != NULL);
-  PARAM_CHECK("[mluopSetQuantizeRoundMode]",
+  PARAM_CHECK("[mluOpSetQuantizeRoundMode]", handle != NULL);
+  PARAM_CHECK("[mluOpSetQuantizeRoundMode]",
               round_mode == MLUOP_ROUND_HALF_TO_EVEN ||
                   round_mode == MLUOP_ROUND_HALF_OFF_ZERO ||
                   round_mode == MLUOP_ROUND_HALF_UP);
   if (handle->arch < 322) {
     if (round_mode == MLUOP_ROUND_HALF_TO_EVEN) {
       LOG(ERROR)
-          << "[mluopSetQuantizeRoundMode] Unsupported rounding mode on MLU200";
+          << "[mluOpSetQuantizeRoundMode] Unsupported rounding mode on MLU200";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -310,31 +362,29 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeRoundMode(
     mluOpHandle_t handle, mluOpQuantizeRoundMode_t *round_mode) {
-  PARAM_CHECK("[mluopGetQuantizeRoundMode]", handle != NULL);
-  PARAM_CHECK("[mluopGetQuantizeRoundMode]", round_mode != NULL);
+  PARAM_CHECK("[mluOpGetQuantizeRoundMode]", handle != NULL);
+  PARAM_CHECK("[mluOpGetQuantizeRoundMode]", round_mode != NULL);
 
   *round_mode = handle->round_mode;
 
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetReservedMemSize(uint64_t *mem_size) {
+mluOpStatus_t MLUOP_WIN_API mluOpGetReservedMemSize(uint64_t *mem_size) {
   PARAM_CHECK("[mluOpGetReservedMemSize]", mem_size != NULL);
-
   uint64_t default_reserved_size = 2081ULL * 1024 * 1024;
   uint64_t env_size =
       mluop::getUintEnvVar("MLUOP_MEM_POOL_SIZE", default_reserved_size);
   *mem_size = static_cast<uint64_t>(env_size);
-
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpGetContextParam(mluOpHandle_t handle,
-                                   CNctxConfigParamType type,
-                                   CNctxConfigParam *param) {
-  PARAM_CHECK("[mluOpGetReservedMemSize]", handle != NULL);
-  PARAM_CHECK("[mluOpGetReservedMemSize]", param != NULL);
-  PARAM_CHECK("[mluOpGetReservedMemSize]",
+mluOpStatus_t MLUOP_WIN_API mluOpGetContextParam(mluOpHandle_t handle,
+                                                 CNctxConfigParamType type,
+                                                 CNctxConfigParam *param) {
+  PARAM_CHECK("[mluOpGetContextParam]", handle != NULL);
+  PARAM_CHECK("[mluOpGetContextParam]", param != NULL);
+  PARAM_CHECK("[mluOpGetContextParam]",
               type == CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM ||
                   type == CN_CTX_CONFIG_UNION_LIMIT);
 
@@ -349,7 +399,7 @@ mluOpStatus_t mluOpGetContextParam(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-void mluOpGetLibVersion(int *major, int *minor, int *patch) {
+void MLUOP_WIN_API mluOpGetLibVersion(int *major, int *minor, int *patch) {
   *major = MLUOP_MAJOR;
   *minor = MLUOP_MINOR;
   *patch = MLUOP_PATCHLEVEL;

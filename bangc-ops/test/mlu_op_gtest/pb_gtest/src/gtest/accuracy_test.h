@@ -20,20 +20,18 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef CORE_MLU_ENV_H_
-#define CORE_MLU_ENV_H_
+#ifndef TEST_MLUOP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
+#define TEST_MLUOP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
+#include <string>
+#include <vector>
 
-#include <sys/syscall.h>
-#include "core/tool.h"
+std::string getCaseName(std::string str);
 
-// macro function for user
-#define IS_TF32_OVERRIDE (mluop::mlu_env::getCarmbriconTF32Override() > 0)
-#define IF_CHECK_DEP_VERSION (mluop::mlu_env::getCheckDepVersion() > 0)
+bool getAccuracyThreshold(std::string op_name, double *threshold);
 
-namespace mluop {
-namespace mlu_env {
-int getCarmbriconTF32Override();
-int getCheckDepVersion();
-}  // namespace mlu_env
-}  // namespace mluop
-#endif  // CORE_MLU_ENV_H_
+bool checkAccuracyBaselineStrategy(std::string case_name,
+                                   std::vector<double> &base_errors,
+                                   std::vector<double> &errors,
+                                   double threshold);
+
+#endif  // TEST_MLUOP_GTEST_SRC_GTEST_ACCURACY_TEST_H_

@@ -87,7 +87,7 @@ Indice convolution backward data 算子执行与上一段 space convolution 相�
 | output_grad_desc | 输入tensor output_grad 的描述符                              | 输入              |                | /        | 无       |
 | output_grad      | 输入tensor output_grad，从三维点云压缩后的 output 梯度数据     | 输入              | half, float    | ARRAY    | 无       |
 | filter_desc      | 输入tensor filter 的描述符                                   | 输入              |                | /        | 无       |
-| filter           | 输入tensor filter，卷积操作的权值                             | 输入              | half, float    | NHWC/HWCN/NCHW/NDHWC/NCDHW | 无       |
+| filter           | 输入tensor filter，卷积操作的卷积滤波张量                             | 输入              | half, float    | NHWC/HWCN/NCHW/NDHWC/NCDHW | 无       |
 | indices_pairs_desc| 输入tensor indices_pairs 的描述符                             | 输入              |                | /        | 无       |
 | indices_pairs     | 输入tensor indices_pairs，input_grad 与 output_grad 的映射关系 | 输入              | int32          | ARRAY    | 无       |
 | indices_num      | 输入数组 indices_num，indices_pairs 中各行的有效数据量          | 输入              | int32          | ARRAY    | 无       |
@@ -118,7 +118,7 @@ Indice convolution backward data 算子执行与上一段 space convolution 相�
 
 - output_grad、filter 和 input_grad dtype 为 float：[diff1, diff2], rate = [1e-5, 1e-5]
 - output_grad、filter 和 input_grad dtype 为 half： [diff1, diff2], rate = [3e-3, 3e-3]
-  
+
 #### 1.5.2 性能验收标准
 
 - 当前方案算子性能受到 scatter、gather 算子性能约束，预计不差于竞品性能的 1/10。待scatter、gather 算子性能优化后重新评估性能验收标准。
@@ -146,7 +146,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
                                                    const int64_t indice_num[],
                                                    const int64_t inverse,
                                                    size_t *workspace_size);
-    
+
 mluOpStatus_t MLUOP_WIN_API
 mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
                                    const mluOpTensorDescriptor_t output_grad_desc,

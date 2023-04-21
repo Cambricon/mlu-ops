@@ -26,6 +26,6 @@
 #include <mlu_op.h>
 #include <string>
 #include <vector>
-
 std::vector<std::string> white_list = {};
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_ZERO_ELEMENT_H_
+
+#endif  // TEST_MLUOP_GTEST_SRC_ZERO_ELEMENT_H_

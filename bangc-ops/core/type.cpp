@@ -20,12 +20,66 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "core/preprocessor.h"
 #include "core/type.h"
 #define to_string(a) #a
 
+#define ENUM_CASE_HANDLE(e) \
+  case e: {                 \
+    return to_string(e);    \
+  }
+#define ENUM_CASE_NO_PREFIX_HANDLE(e) \
+  case MLUOP_##e: {                   \
+    return to_string(e);              \
+  }
+
+#define MLUOP_STATUS_ENUM_LIST                                   \
+  MLUOP_STATUS_SUCCESS, MLUOP_STATUS_NOT_INITIALIZED,            \
+      MLUOP_STATUS_ALLOC_FAILED, MLUOP_STATUS_BAD_PARAM,         \
+      MLUOP_STATUS_INTERNAL_ERROR, MLUOP_STATUS_ARCH_MISMATCH,   \
+      MLUOP_STATUS_EXECUTION_FAILED, MLUOP_STATUS_NOT_SUPPORTED, \
+      MLUOP_STATUS_NUMERICAL_OVERFLOW
+
+#define MLUOP_DATA_TYPE_ENUM_NO_PREFIX_LIST                                    \
+  DTYPE_BOOL, DTYPE_INT8, DTYPE_UINT8, DTYPE_INT16, DTYPE_UINT16, DTYPE_INT32, \
+      DTYPE_UINT32, DTYPE_INT64, DTYPE_UINT64, DTYPE_HALF, DTYPE_FLOAT,        \
+      DTYPE_DOUBLE, DTYPE_COMPLEX_HALF, DTYPE_COMPLEX_FLOAT
+
+#define MLUOP_TENSOR_LAYOUT_ENUM_NO_PREFIX_LIST                      \
+  LAYOUT_NCHW, LAYOUT_NHWC, LAYOUT_HWCN, LAYOUT_NDHWC, LAYOUT_ARRAY, \
+      LAYOUT_NCDHW, LAYOUT_TNC, LAYOUT_NTC, LAYOUT_NC, LAYOUT_NLC
+
+const char* MLUOP_WIN_API mluOpGetErrorString(mluOpStatus_t status) {
+  CHECK_GE(status, 0);
+
+  switch (status) { MLUOP_PP_MAP(ENUM_CASE_HANDLE, (MLUOP_STATUS_ENUM_LIST)); }
+  return "MLUOP_STATUS_UNKNOWN";
+}
+
+const char* MLUOP_WIN_API mluOpGetNameOfDataType(mluOpDataType_t dtype) {
+  switch (dtype) {
+    MLUOP_PP_MAP(ENUM_CASE_NO_PREFIX_HANDLE,
+                 (MLUOP_DATA_TYPE_ENUM_NO_PREFIX_LIST));
+  }
+  return "DTYPE_INVALID";
+}
+
+const char* MLUOP_WIN_API
+mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout) {
+  switch (layout) {
+    MLUOP_PP_MAP(ENUM_CASE_NO_PREFIX_HANDLE,
+                 (MLUOP_TENSOR_LAYOUT_ENUM_NO_PREFIX_LIST));
+  }
+  return "LAYOUT_ARRAY";
+}
+
 namespace mluop {
+
 size_t getSizeOfDataType(mluOpDataType_t dtype) {
   switch (dtype) {
+    default: {
+      return 0;
+    }
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_UINT8: {
@@ -42,108 +96,13 @@ size_t getSizeOfDataType(mluOpDataType_t dtype) {
     case MLUOP_DTYPE_COMPLEX_HALF: {
       return 4;
     }
-    case MLUOP_DTYPE_INT64:
     case MLUOP_DTYPE_UINT64:
+    case MLUOP_DTYPE_INT64:
     case MLUOP_DTYPE_DOUBLE:
     case MLUOP_DTYPE_COMPLEX_FLOAT: {
       return 8;
     }
-    default: {
-      return 0;
-    }
   }
 }
 
-std::string getNameOfDataType(const mluOpDataType_t dtype) {
-  std::string dtype_name;
-  switch (dtype) {
-    case MLUOP_DTYPE_BOOL: {
-      dtype_name = to_string(DTYPE_BOOL);
-    } break;
-    case MLUOP_DTYPE_INT8: {
-      dtype_name = to_string(DTYPE_INT8);
-    } break;
-    case MLUOP_DTYPE_UINT8: {
-      dtype_name = to_string(DTYPE_UINT8);
-    } break;
-    case MLUOP_DTYPE_INT16: {
-      dtype_name = to_string(DTYPE_INT16);
-    } break;
-    case MLUOP_DTYPE_UINT16: {
-      dtype_name = to_string(DTYPE_UINT16);
-    } break;
-    case MLUOP_DTYPE_INT32: {
-      dtype_name = to_string(DTYPE_INT32);
-    } break;
-    case MLUOP_DTYPE_UINT32: {
-      dtype_name = to_string(DTYPE_UINT32);
-    } break;
-    case MLUOP_DTYPE_INT64: {
-      dtype_name = to_string(DTYPE_INT64);
-    } break;
-    case MLUOP_DTYPE_UINT64: {
-      dtype_name = to_string(DTYPE_UINT64);
-    } break;
-    case MLUOP_DTYPE_HALF: {
-      dtype_name = to_string(DTYPE_HALF);
-    } break;
-    case MLUOP_DTYPE_FLOAT: {
-      dtype_name = to_string(DTYPE_FLOAT);
-    } break;
-    case MLUOP_DTYPE_DOUBLE: {
-      dtype_name = to_string(DTYPE_DOUBLE);
-    } break;
-    case MLUOP_DTYPE_COMPLEX_HALF: {
-      dtype_name = to_string(DTYPE_COMPLEX_HALF);
-    } break;
-    case MLUOP_DTYPE_COMPLEX_FLOAT: {
-      dtype_name = to_string(DTYPE_COMPLEX_FLOAT);
-    } break;
-    default: {
-      dtype_name = "DTYPE_INVALID";
-    } break;
-  }
-  return dtype_name;
-}
-
-std::string getNameOfTensorLayout(const mluOpTensorLayout_t layout) {
-  std::string layout_name;
-  switch (layout) {
-    case MLUOP_LAYOUT_NCHW: {
-      layout_name = to_string(LAYOUT_NCHW);
-    } break;
-    case MLUOP_LAYOUT_NHWC: {
-      layout_name = to_string(LAYOUT_NHWC);
-    } break;
-    case MLUOP_LAYOUT_HWCN: {
-      layout_name = to_string(LAYOUT_HWCN);
-    } break;
-    case MLUOP_LAYOUT_NDHWC: {
-      layout_name = to_string(LAYOUT_NDHWC);
-    } break;
-    case MLUOP_LAYOUT_ARRAY: {
-      layout_name = to_string(LAYOUT_ARRAY);
-    } break;
-    case MLUOP_LAYOUT_NCDHW: {
-      layout_name = to_string(LAYOUT_NCDHW);
-    } break;
-    case MLUOP_LAYOUT_TNC: {
-      layout_name = to_string(LAYOUT_TNC);
-    } break;
-    case MLUOP_LAYOUT_NTC: {
-      layout_name = to_string(LAYOUT_NTC);
-    } break;
-    case MLUOP_LAYOUT_NLC: {
-      layout_name = to_string(LAYOUT_NLC);
-    } break;
-    case MLUOP_LAYOUT_NC: {
-      layout_name = to_string(LAYOUT_NC);
-    } break;
-    default: {
-      layout_name = "LAYOUT_ARRAY";
-      break;
-    }
-  }
-  return layout_name;
-}
 }  // namespace mluop

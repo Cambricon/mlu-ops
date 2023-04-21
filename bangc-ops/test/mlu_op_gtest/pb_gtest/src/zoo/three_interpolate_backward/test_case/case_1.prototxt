@@ -4,12 +4,12 @@ input {
   shape: {
     dims: 16
     dims: 128
-    dims: 64
+    dims: 32
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_HALF
   random_data: {
-    seed: 23
+    seed: 20
     upper_bound: 1e2
     lower_bound: 1e-1
     distribution: UNIFORM
@@ -19,13 +19,13 @@ input {
   id: "idx"
   shape: {
     dims: 16
-    dims: 64
+    dims: 32
     dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT32
   random_data: {
-    seed: 23
+    seed: 21
     upper_bound: 15
     lower_bound: 0
     distribution: UNIFORM
@@ -35,13 +35,13 @@ input {
   id: "weight"
   shape: {
     dims: 16
-    dims: 64
+    dims: 32
     dims: 3
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_HALF
   random_data: {
-    seed: 23
+    seed: 22
     upper_bound: 1e2
     lower_bound: 1e-1
     distribution: UNIFORM

@@ -226,7 +226,7 @@ INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes);
       GTEST_TYPED_TEST_CASE_P_STATE_(CaseName)
 
 #define TYPED_TEST_P(CaseName, TestName)                              \
-  namespace GTEST_CASE_NAMESPACE_(CaseName) {  /* NOLINT */           \
+  namespace GTEST_CASE_NAMESPACE_(CaseName) { /* NOLINT */            \
     template <typename gtest_TypeParam_>                              \
     class TestName : public CaseName<gtest_TypeParam_> {              \
      private:                                                         \
@@ -237,14 +237,14 @@ INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes);
     static bool gtest_##TestName##_defined_ GTEST_ATTRIBUTE_UNUSED_ = \
         GTEST_TYPED_TEST_CASE_P_STATE_(CaseName).AddTestName(         \
             __FILE__, __LINE__, #CaseName, #TestName);                \
-  }  /* NOLINT */                                                     \
+  } /* NOLINT */                                                      \
   template <typename gtest_TypeParam_>                                \
   void GTEST_CASE_NAMESPACE_(CaseName)::TestName<gtest_TypeParam_>::TestBody()
 
 #define REGISTER_TYPED_TEST_CASE_P(CaseName, ...)                              \
-  namespace GTEST_CASE_NAMESPACE_(CaseName) {  /* NOLINT */                    \
+  namespace GTEST_CASE_NAMESPACE_(CaseName) { /* NOLINT */                     \
     typedef ::testing::internal::Templates<__VA_ARGS__>::type gtest_AllTests_; \
-  }  /* NOLINT */                                                              \
+  } /* NOLINT */                                                               \
   static const char *const GTEST_REGISTERED_TEST_NAMES_(CaseName)              \
       GTEST_ATTRIBUTE_UNUSED_ =                                                \
           GTEST_TYPED_TEST_CASE_P_STATE_(CaseName).VerifyRegisteredTestNames(  \

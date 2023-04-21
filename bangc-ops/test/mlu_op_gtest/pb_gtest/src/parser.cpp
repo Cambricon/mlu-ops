@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <chrono>       // NOLINT
+#include <chrono>  // NOLINT
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -258,7 +258,6 @@ void Parser::parse(const std::string &file) {
       }
     }
   }
-
   inputs_.resize(proto_node_->input_size());
   for (size_t i = 0; i < proto_node_->input_size(); ++i) {
     parse_tensor(&inputs_[i], proto_node_->mutable_input(i));
@@ -290,8 +289,23 @@ void Parser::parse(const std::string &file) {
     parse_tensor(&outputs_[i], proto_node_->mutable_output(i));
   }
 
+  checkOutputStrideOverlap();
+
   // get gtest ini like black list of zero_input mode
   getTestInfo();
+}
+
+void Parser::checkOutputStrideOverlap() {
+  for (size_t i = 0; i < proto_node_->output_size(); ++i) {
+    if (outputs_[i].shape_count > outputs_[i].total_count) {
+      LOG(WARNING) << "Output data with stride have overlap on dram,"
+                   << " the result may be unstable."
+                   << " Now data number calculated by shape is "
+                   << outputs_[i].shape_count
+                   << ", data number calculated by stride is "
+                   << outputs_[i].total_count;
+    }
+  }
 }
 
 // check if tensor value is equal to shape.
@@ -438,9 +452,13 @@ void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
                 "Parser: when read value_i, expected element num is not equal "
                 "to real element num.");
   } else {
-    GTEST_CHECK(pt->value_i_size() == count,
-                "Parser: when read value_i, expected element num is not equal "
-                "to real element num.");
+    ASSERT_EQ(pt->value_i_size(), count)
+        << "Parser: when read value_i, expected element num is not equal to "
+           "real element num.";
+    //    GTEST_CHECK(
+    //        pt->value_i_size() == count,
+    //        "Parser: when read value_i, expected element num is not equal to
+    //        real element num.");
   }
 
   switch (pt->dtype()) {
@@ -724,6 +742,15 @@ void Parser::getTensorValueByFile(Tensor *pt, void *data, size_t count) {
   std::chrono::duration<double> cost_s = stop - start;
 
   ASSERT_TRUE(fin) << "read data in file failed.";
+
+#if 0
+  if (!fin) {
+    LOG(ERROR) << "read data in file failed.";
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
+  }
+#endif
+
   VLOG(2) << __func__ << " " << cur_pb_path << ", time cost: " << cost_s.count()
           << " s"
           << ", speed: " << tensor_length / 1024. / 1024. / cost_s.count()
@@ -970,7 +997,6 @@ bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
     status = google::protobuf::TextFormat::Parse(&input, proto);
   } else {
     LOG(ERROR) << "Unsupported file extension";
-    return false;
   }
 
   close(fd);
@@ -1013,6 +1039,8 @@ Evaluator::Formula Parser::cvtProtoEvaluationCriterion(EvaluationCriterion f) {
       return Evaluator::Formula::DIFF3_2;
     case DIFF4:
       return Evaluator::Formula::DIFF4;
+    case DIFF_KL:
+      return Evaluator::Formula::DIFF_KL;
     default:
       LOG(ERROR) << "NOT support this evaluation critertion yet";
       throw std::invalid_argument(std::string(__FILE__) + " +" +

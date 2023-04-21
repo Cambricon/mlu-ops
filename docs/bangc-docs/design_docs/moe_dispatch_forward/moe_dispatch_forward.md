@@ -198,7 +198,7 @@ for (int i = 0; i < samples; ++i) {
 
 输入有两个维度`samples`, `hidden`，本可以两个维度同时进行拆分，但由于输出`dispatch` 的索引由`indices` 和 `locations` 的值决定，因此存在多个`input映射到一个输出的情况，如果拆分`samples`维度可能导致输出存在写冲突的错误，因此只能拆分`hidden`维度。nram空间需要保存如下变量：
 - input：输入输出空间, 长度为deal_h。
-- gates：不同专家的权重, 长度为deal_s。
+- gates：不同专家的系数, 长度为deal_s。
 - indices：输入重分配对应的专家索引, 长度为deal_s。
 - locations：dispatch的位置偏移, 长度为deal_s。
 - idx：输出`dispatch`对应的索引, 长度为deal_s。
