@@ -81,20 +81,29 @@ p_t =
 p,   & target[n] = c \\
 1-p, & otherwise
 \end{cases}
-\\
+```
+```math
 \alpha_t =
 \begin{cases}
 \alpha,   & target[n]=c \\
 1-\alpha, & otherwise
 \end{cases}
-\\
-FL(p_t) = -\alpha_t(1-p_t)^\gamma log(p_t) \\
+```
+```math
+FL(p_t) = -\alpha_t(1-p_t)^\gamma log(p_t)
+```
+```math
 FL =
 \begin{cases}
 -\alpha(1-p)^\gamma log(p), & target[n]=c\\
 -(1-\alpha)p^\gamma log(1-p), & otherwise
 \end{cases}
-\\n=0,1,2,3,...,N - 1 \\c=0,1,2,3,...,C-1
+```
+```math
+n = 0,1,2,3,...,N - 1
+```
+```math
+c = 0,1,2,3,...,C-1
 ```
 
 - `p` 为 `input` 通过`Sigmoid`计算所得的概率值
@@ -254,7 +263,14 @@ FL^{'} =
 -\alpha*(1-p)^\gamma*(1-p-\gamma*p*log(p)) & target[n]=c \\
 -(1-\alpha)*p^\gamma*(\gamma*(1-p)*log(1-p)-p) & otherwise
 \end{cases}
-\\n=0,1,2,3,...,N - 1 \\c=0,1,2,3,...,C-1\\
+```
+```math
+n = 0,1,2,3,...,N - 1
+```
+```math
+c = 0,1,2,3,...,C-1
+```
+```math
 gradInput = FL^{'}*gradOutput
 ```
 
@@ -263,16 +279,22 @@ gradInput = FL^{'}*gradOutput
 ```math
 pt_{n,c} =
 \begin{cases}
-p_{n,c},  & target[n]=c \\
-1-p_{n,c}, & otherwise
+p_{n,c} ,  & target[n]=c \\
+1-p_{n,c} , & otherwise
 \end{cases}
-\\
+```
+```math
 \alpha t_{n,c} =
 \begin{cases}
 \alpha,  & target[n]=c \\
 \alpha-1, & otherwise
 \end{cases}
-\\n=0,1,2,3,...,N-1 \\c=0,1,2,3,...,C-1
+```
+```math
+n = 0,1,2,3,...,N-1
+```
+```math
+c = 0,1,2,3,...,C-1
 ```
 
 进行向量化后，`mluOpFocalLossSigmoidBackward`的计算公式可以表示为
@@ -296,9 +318,13 @@ gradInput = temp*weight[target[n]]
 target[n]的取值为[0，C]，在构造$`p_t`$和$`\alpha _t`$的过程中，考虑到target[n] =c时只有N个数，其余N*(C-1)个数为otherwise时的取值。因此先将$`p_t`$和$`\alpha _t`$的元素值都初始化为otherwise的值，再遍历N维度来设置target[n] =c时的取值。
 
 ```math
-p = sigmoid(input) \\
-pt = 1-p \\
-\alpha t = nramSet(\alpha-1) \\
+p = sigmoid(input)
+```
+```math
+pt = 1-p
+```
+```math
+\alpha t = nramSet(\alpha-1)
 ```
 
 ```cpp
@@ -310,9 +336,15 @@ for (int n = 0; n < N; n++) {
 ```
 
 ```math
-temp  = -\alpha t* e^{\gamma*log(1-pt)} \\
-output = (1-pt-\gamma*pt*log(pt)) \\
-output = output * temp \\
+temp  = -\alpha t* e^{\gamma*log(1-pt)}
+```
+```math
+output = (1-pt-\gamma*pt*log(pt))
+```
+```math
+output = output * temp
+```
+```math
 output = output[n][c] * weight[target[n]]
 ```
 

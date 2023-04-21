@@ -402,7 +402,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
       MLUOP_STATUS_SUCCESS) {
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (prefer != mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION) {
+  if (prefer !=
+      mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION) {
     LOG(ERROR) << interface_name << "only surpport HIGH_PRECISION currently.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
