@@ -150,7 +150,7 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
       // note the number of valid vertices is known
       // note: check that num_valid[i] < MAX_NUM_VERT_IDX
       __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
-      T *nram_cos = nram_mask0 + i * dim_m * 2;
+      T *nram_cos = nram_mask0 + i * dim_m;
       for (int j = 0; j < num_valid_points; ++j) {
         __bang_argmax(nram_temp0, nram_cos, dim_m);
         int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
@@ -293,7 +293,7 @@ static __mlu_func__ void lcs(const T *base_vertices, const bool *base_mask,
 
 template <typename T>
 __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
-    const T *vertices, const bool *mask, const int *num_valid, const int *idx,
+    const T *vertices, const bool *mask, const int *num_valid, int *idx,
     const int dim_b, const int dim_n, const int dim_m) {
 #if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
