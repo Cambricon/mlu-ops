@@ -665,6 +665,16 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
              }
            ```
      
+        4. 额外空间 ：完成上述计算过程，需要额外的nram空间，大小`4 * deal_num * dim_m`
+     
+           ```c
+           // nram_pub_space size = 4 * deal_num * dim_m
+           T *nram_pad = nram_pub_space;
+           T *nram_mask0 = nram_pad + deal_num * dim_m;
+           T *nram_temp0 = nram_mask0 + deal_num * dim_m;
+           T *nram_temp1 = nram_temp0 + deal_num * dim_m;
+           ```
+     
            
 
 ### 3.2 伪代码实现
