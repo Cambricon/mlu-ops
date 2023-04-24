@@ -146,10 +146,23 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
                        pad);
 
     if (num_valid_points >= 3) {
+      // for corner case: the two boxes are exactly the same.
+      // in this case, idx would have duplicate elements, which makes the
+      // shoelace formula broken because of the definition, the duplicate
+      // elements only appear in the first 8 positions (they are "corners in
+      // box", not "intersection of edges")
+      if (num_valid_points == 8) {
+        __bang_eq(nram_temp0, nram_vertices_p + i * dim_m * 2,
+                  nram_vertices_p + i * dim_m * 2 + 4, 4);
+        if (__bang_count(nram_temp0, 4) == 4) {
+          num_valid_points = 4;
+        }
+      }
+      __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
+
       // sort the valid vertices
       // note the number of valid vertices is known
       // note: check that num_valid[i] < MAX_NUM_VERT_IDX
-      __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
       T *nram_cos = nram_mask0 + i * dim_m;
       for (int j = 0; j < num_valid_points; ++j) {
         __bang_argmax(nram_temp0, nram_cos, dim_m);
@@ -165,23 +178,6 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
       // duplicate the first idx
       nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
           nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
-
-      // for corner case: the two boxes are exactly the same.
-      // in this case, idx would have duplicate elements, which makes the
-      // shoelace formula broken because of the definition, the duplicate
-      // elements only appear in the first 8 positions (they are "corners in
-      // box", not "intersection of edges")
-      if (nram_num_valid_p[i] == 8) {
-        __bang_eq(nram_temp0, nram_vertices_p + i * dim_m * 2,
-                  nram_vertices_p + i * dim_m * 2 + 4, 4);
-        unsigned int counter = __bang_count(nram_temp0, 4);
-        if (counter == 4) {
-          nram_idx_p[i * MAX_NUM_VERT_IDX + 4] =
-              nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
-          __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX + 5,
-                             MAX_NUM_VERT_IDX - 5, pad);
-        }
-      }
     }
   }
 }

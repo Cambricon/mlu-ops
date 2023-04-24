@@ -76,9 +76,9 @@
    2. 计算两个 `box` 交点及其有效性：计算两个旋转 `box` 的交点（共16个交点），并判断交点是否有效（是否有效：是否为构成相交多边形的有效顶点） ，得到 `valid_mask`；
    3. 计算 `box1` 和 `box2` 的顶点关系，即判断 `box1` 的4个角点是否在 `box2` 内 或者 `box2` 的4个点是否在 `box1` 内，输出 mask：`c1_in_2` 和 `c2_in_1`；
    4. 计算所有交点个数（ box1 和 box2 的8个角点 + 第2步中两个 `box` 交点（16个）），共24个点，及其有效性 `mask`（mask =  c1_in_2 + c2_in_1 + valid_mask ）；
-   5. 对两个 box 相交构成的多边形有效顶点排序，输出排序后顶点索引；调用算子`diff_iou_rotated_sort_vertices_forward` 实现；
-   6. 计算两个 box 交集面积: 根据第5步的计算结果 `idx`，计算交集面积 intersection_area；
-   7. 计算 iou：两个 box 的面积为 area1 和 area2，则 iou = intersection_area / (area1 + area2 - intersection_area)；
+   5. 对两个 `box` 相交构成的多边形有效顶点排序，输出排序后顶点索引；调用算子`diff_iou_rotated_sort_vertices_forward` 实现；
+   6. 计算两个 `box` 交集面积: 根据第5步的计算结果 `idx`，计算交集面积 `intersection_area`；
+   7. 计算 `iou`：两个 box 的面积为 `area1` 和 `area2`，则 `iou = intersection_area / (area1 + area2 - intersection_area)`；
 
 3. nan/inf行为
 
@@ -259,7 +259,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
 
 2. 该算子有三个输入tensor，一个输出tensor，输入`vertices` 维度`[B, N, 24, 2]`，输入`mask` 维度`[B, N, 24]`，输入`num_valid` 维度`[B, N]`，输出`idx` 维度`[B, N, 9]`。
 
-3. 参考接口的计算步骤：
+3. 参考接口计算原理说明：
 
    1. 从输入`mask[B, N, 8:]` 开始获取第一个mask值为0的索引，记为 `pad`，用于给输出`idx`填充无效索引，参考接口代码实现如下：
 
@@ -275,7 +275,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
       }
       ```
 
-   2. 判断有效顶点是否可以构成三角形，即判断 `num_valid[i]` 是否大于3（`num_valid` 合法取值范围`[0, 8]`）
+   2. 判断有效顶点数是否可以构成三角形，即判断 `num_valid[i]` 是否大于3（`num_valid` 合法取值范围`[0, 8]`）
       1. 若`num_valid[i]<3` 则将输出`idx[i][9]` 全部初始化为 `pad`，参考接口代码实现如下：
 
          ```c
@@ -393,28 +393,33 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
 #### 3.1.2 nram 空间划分
 
 - 计算阶段所需额外的nram空间 `nram_pub_space`，大小 `4 * deal_num * 24`；
-- 采用三级流水实现，因此将nram空间划分为两份：每一份的大小`MAX_NRAM_SIZE/2`，其中一份的空间划分如下：
 
-![diff_iou_rotated_sort_vertices_forward](./res/nram_space.png)
+- 采用三级流水实现，因此将nram空间划分为两份：每一份的大小`max_nram_size/2`，其中一份的空间划分如下：![diff_iou_rotated_sort_vertices_forward](./res/nram_space.png)
 
-因此`deal_num` 的计算如下：
+  `max_nram_size` 等于 `MAX_NRAM_SIZE - nram_pub_space`的nram空间大小：
 
-```c
-  int deal_num = MAX_NRAM_SIZE / 2 / (4 * dim_m * sizeof(T) + dim_m * sizeof(bool) + (1 + MAX_NUM_VERT_IDX) * sizeof(int));
-  int deal_vertices_num = deal_num * dim_m * 2;
-  int deal_mask_num = deal_num * dim_m;
+  ```c
+  int max_nram_size = MAX_NRAM_SIZE -  4 * deal_num * 24 * sizeof(T);
+  ```
+
+- `deal_num` 计算如下：
+
+  ```c
+  int deal_num = MAX_NRAM_SIZE / 2 / (4 * 24 * sizeof(T) + 24 * sizeof(bool) + (1 + 9) * sizeof(int));
+  int deal_vertices_num = deal_num * 24 * 2;
+  int deal_mask_num = deal_num * 24;
   int deal_num_valid_num = deal_num;
-  int max_nram_size = MAX_NRAM_SIZE -  4 * deal_num * dim_m * sizeof(T);
+  int max_nram_size = MAX_NRAM_SIZE -  4 * deal_num * 24 * sizeof(T);
   int pingpong_offset = max_nram_size / 2;
-
+  
   T *nram_pub_space = (T *)nram_buffer;
-
+  
   // ping/pong
-  char *nram_vertices = (char *)(nram_pub_space + 4 * deal_num * dim_m);
+  char *nram_vertices = (char *)(nram_pub_space + 4 * deal_num * 24);
   char *nram_mask = nram_vertices + deal_vertices_num * sizeof(T);
   char *nram_num_valid = nram_mask + deal_mask_num * sizeof(bool);
   char *nram_idx = nram_num_valid + deal_num_valid_num * sizeof(int);
-```
+  ```
 
 #### 3.1.3 实现方案
 
@@ -521,7 +526,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
      
            因此通过加权调整cos函数在[π, 2π]区间的计算结果，使得最终的函数在 [0, 2π] 单调递减，此时函数表达式如下：
      
-           ```
+           ```c
            value(theta) = {
                if theta < pi {
                    cos(theta)
@@ -535,7 +540,9 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
      
            
      
-           compute_cosine 函数伪代码：
+           从上图可以看出，最终函数计算结果的有效区间为[1, -3]，因此对无效顶点处理时，将其计算结果置为-4，以便不影响有效顶点的排序结果。
+     
+           代码实现：compute_cosine 函数伪代码
      
            ```c
            template <typename T>
@@ -595,10 +602,11 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
      
            ```c
            // set nram_temp0[24] = [1,1,1,1,1,1,1,1,0,0,0,...]
+           int dim_m = 24;
            __bang_write_zero(nram_temp0, dim_m);
            __bang_write_value(nram_temp0, INTERSECTION_OFFSET, (T)1.0);
            __bang_int82float(nram_pad, (int8_t *)(nram_mask_p), deal_num * dim_m, 0);
-           // 调用cycle_maxequal 将 nram_mask 的前8个值set为1，其余保持不变，结果存 nram_pad 中
+           // 调用 cycle_maxequal 将 nram_mask 的前8个值set为1，其余保持不变，结果存 nram_pad 中
            __bang_cycle_maxequal(nram_pad, nram_pad, nram_temp0, deal_num * dim_m, dim_m);
            // 取反 nram_pad：以便后续调用 __bang_findfirst1 找到第一个不为0的值的索引
            __bang_not(nram_pad, nram_pad,  deal_num * dim_m);
@@ -620,21 +628,36 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
                int num_valid_points = nram_num_valid_p[i];
                // 获取 pad
                int pad = (int)__bang_findfirst1(nram_pad + i * dim_m, dim_m);
-               // 初始化输出idx：设置为pad
+               // 初始化输出idx：刷pad
                __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX, MAX_NUM_VERT_IDX, pad);
            
                // 当有效顶点数 >= 3 时
                if (num_valid_points >= 3) {
-                 // 将输出idx前num_valid_points 刷 0
+                 // for corner case: the two boxes are exactly the same.
+                 // in this case, idx would have duplicate elements, which makes the
+                 // shoelace formula broken because of the definition, the duplicate
+                 // elements only appear in the first 8 positions (they are "corners in
+                 // box", not "intersection of edges")
+                 if (num_valid_points == 8) {
+                   __bang_eq(nram_temp0, nram_vertices_p + i * dim_m * 2,
+                             nram_vertices_p + i * dim_m * 2 + 4, 4);
+                   if (__bang_count(nram_temp0, 4) == 4) {
+                     num_valid_points = 4;
+                   }
+                 }
+                 
+                 // 将输出idx前 num_valid_points 刷 0
                  __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
                  // 根据 第 1 步 计算cosine的结果，排序输出有效顶点索引，并对相同点去重
-                 T *nram_cos = nram_mask0 + i * dim_m * 2;
+                 T *nram_cos = nram_mask0 + i * dim_m;
                  for (int j = 0; j < num_valid_points; ++j) {
+                   // 获取顶点排序索引
                    __bang_argmax(nram_temp0, nram_cos, dim_m);
                    int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
+                   // 索引 i_take 保存到 nram_idx_p[i * MAX_NUM_VERT_IDX + j] 中
                    nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
+                   // 相同cosine值做去重处理
                    T cos_max = nram_temp0[0];
-                   // 相同点做去重处理
                    __bang_eq_scalar(nram_temp1, nram_cos, cos_max, dim_m);
                    __bang_not(nram_temp0, nram_temp1, dim_m);
                    __bang_mul(nram_cos, nram_cos, nram_temp0, dim_m);
@@ -644,35 +667,18 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
                  // duplicate the first idx
                  nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
                      nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
-           
-                 // for corner case: the two boxes are exactly the same.
-                 // in this case, idx would have duplicate elements, which makes the
-                 // shoelace formula broken because of the definition, the duplicate
-                 // elements only appear in the first 8 positions (they are "corners in
-                 // box", not "intersection of edges")
-                 if (nram_num_valid_p[i] == 8) {
-                   __bang_eq(nram_temp0, nram_vertices_p + i * dim_m * 2,
-                            nram_vertices_p + i * dim_m * 2 + 4, 4);
-                   unsigned int counter = __bang_count(nram_temp0, 4);
-                   if (counter == 4) {
-                     nram_idx_p[i * MAX_NUM_VERT_IDX + 4] =
-                         nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
-                     __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX + 5,
-                                        MAX_NUM_VERT_IDX - 5, pad);
-                   }
-                 }
                }
              }
            ```
      
-        4. 额外空间 ：完成上述计算过程，需要额外的nram空间，大小`4 * deal_num * dim_m`
+        4. 额外空间 ：完成上述计算过程，需要额外的nram空间，大小`4 * deal_num * 24`
      
            ```c
-           // nram_pub_space size = 4 * deal_num * dim_m
+           // nram_pub_space size = 4 * deal_num * 24
            T *nram_pad = nram_pub_space;
-           T *nram_mask0 = nram_pad + deal_num * dim_m;
-           T *nram_temp0 = nram_mask0 + deal_num * dim_m;
-           T *nram_temp1 = nram_temp0 + deal_num * dim_m;
+           T *nram_mask0 = nram_pad + deal_num * 24;
+           T *nram_temp0 = nram_mask0 + deal_num * 24;
+           T *nram_temp1 = nram_temp0 + deal_num * 24;
            ```
      
            
