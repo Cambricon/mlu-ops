@@ -43,23 +43,23 @@
 #define INPUT_NC_LIMIT_SIZE 2
 #define OUTPUT_MC_LIMIT_SIZE 2
 
-static void PolicyFuncThreeInterpolate(
+static void policyFuncThreeInterpolate(
     const mluOpHandle_t &handle, const mluOpTensorDescriptor_t &desc,
-    const int b, const int c, const int m, const int n, const bool is_forward,
-    cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type, int *c_limit_size,
-    int *m_limit_size, int *n_limit_size) {
-  size_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
-  size_t core_in_cluster = handle->core_num_per_cluster;
-  size_t cores_in_device = cluster_num * core_in_cluster;
-  int input_size = sizeof(float);
+    const int64_t b, const int64_t c, const int64_t m, const int64_t n,
+    const bool is_forward, cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type,
+    int64_t *c_limit_size, int64_t *m_limit_size, int64_t *n_limit_size) {
+  int64_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
+  int64_t core_in_cluster = handle->core_num_per_cluster;
+  int64_t cores_in_device = cluster_num * core_in_cluster;
+  int64_t input_size = sizeof(float);
   if (desc->dtype == MLUOP_DTYPE_HALF) {
     input_size /= 2;
   }
-  int align_base_128 = NFU_ALIGN_SIZE / input_size;
-  int max_nram_size = handle->nram_size;
+  int64_t align_base_128 = NFU_ALIGN_SIZE / input_size;
+  int64_t max_nram_size = handle->nram_size;
   // according to the kernel nram space usage, simply init the c_limit, m_limit
   // and n_limit
-  int m_limit =
+  int64_t m_limit =
       (max_nram_size -
        (OUTPUT_NC_LIMIT_SIZE * align_base_128 * align_base_128 +
         align_base_128 * WEIGHT_N_LIMIT_SIZE) *
@@ -67,21 +67,21 @@ static void PolicyFuncThreeInterpolate(
        align_base_128 * INDEX_N_LIMIT_SIZE * sizeof(int32_t) +
        align_base_128 * INDEX_TYPE_CONVERT_N_LIMIT_SIZE * sizeof(float)) /
       (align_base_128 * INPUT_MC_LIMIT_SIZE);
-  int c_limit = align_base_128;
-  int n_limit = align_base_128;
-  int c_aligned = CEIL_ALIGN(c, align_base_128);
-  int m_aligned = CEIL_ALIGN(m, align_base_128);
-  int n_aligned = CEIL_ALIGN(n, align_base_128);
-  int limit_size = c_limit * m_limit * n_limit;
+  int64_t c_limit = align_base_128;
+  int64_t n_limit = align_base_128;
+  int64_t c_aligned = CEIL_ALIGN(c, align_base_128);
+  int64_t m_aligned = CEIL_ALIGN(m, align_base_128);
+  int64_t n_aligned = CEIL_ALIGN(n, align_base_128);
+  int64_t limit_size = c_limit * m_limit * n_limit;
   // if nram space is big enough, the limit_size may overflow, reset limit_size
   if (limit_size <= 0) {
     limit_size = handle->nram_size;
   }
   // find the best size of c_limit, m_limit and n_limit
   while (true) {
-    int m_max_use_size = limit_size / (align_base_128 * align_base_128);
-    int c_max_use_size = m_max_use_size;
-    int n_max_use_size = m_max_use_size;
+    int64_t m_max_use_size = limit_size / (align_base_128 * align_base_128);
+    int64_t c_max_use_size = m_max_use_size;
+    int64_t n_max_use_size = m_max_use_size;
     bool c_is_second_priority = true;
     // m_limit has the first priority
     if (m_aligned <= m_max_use_size) {
@@ -117,27 +117,27 @@ static void PolicyFuncThreeInterpolate(
       n_limit = FLOOR_ALIGN(n_max_use_size, align_base_128);
     }
     // get the best n_limit to use the most clusters
-    int best_n_aligned_limit = CEIL_ALIGN(n, n_limit);
-    int best_n_limit = n_limit;
+    int64_t best_n_aligned_limit = CEIL_ALIGN(n, n_limit);
+    int64_t best_n_limit = n_limit;
     // get the best m_limit to use the most clusters
-    int best_m_aligned_limit = CEIL_ALIGN(m, m_limit);
-    int best_m_limit = m_limit;
+    int64_t best_m_aligned_limit = CEIL_ALIGN(m, m_limit);
+    int64_t best_m_limit = m_limit;
     // try to find the best n_limit or m_limit that can make full use of the
     // device's cores
     while (true) {
-      int n_aligned_limit = CEIL_ALIGN(n, n_limit);
-      int m_aligned_limit = CEIL_ALIGN(m, m_limit);
+      int64_t n_aligned_limit = CEIL_ALIGN(n, n_limit);
+      int64_t m_aligned_limit = CEIL_ALIGN(m, m_limit);
       // record the best n_limit
-      int best_repeats = b * best_n_aligned_limit / best_n_limit;
-      int current_repeats = b * n_aligned_limit / n_limit;
+      int64_t best_repeats = b * best_n_aligned_limit / best_n_limit;
+      int64_t current_repeats = b * n_aligned_limit / n_limit;
       if (!is_forward) {
         best_repeats = b * best_m_aligned_limit / best_m_limit;
         current_repeats = b * m_aligned_limit / m_limit;
       }
-      int best_repeats_mod = best_repeats % cores_in_device;
-      int best_repeats_div = best_repeats / cores_in_device;
-      int current_repeats_mod = current_repeats % cores_in_device;
-      int current_repeats_div = current_repeats / cores_in_device;
+      int64_t best_repeats_mod = best_repeats % cores_in_device;
+      int64_t best_repeats_div = best_repeats / cores_in_device;
+      int64_t current_repeats_mod = current_repeats % cores_in_device;
+      int64_t current_repeats_div = current_repeats / cores_in_device;
       bool update_best = false;
       if ((best_repeats_div - current_repeats_div) > REPEATS_TIME_GAP) {
         // minimize the repeats time
@@ -215,7 +215,7 @@ static void PolicyFuncThreeInterpolate(
       }
     }
     // the kernel's total nram space use formula
-    int total_nram_size =
+    int64_t total_nram_size =
         (std::max(c_limit * m_limit, c_limit * n_limit) + m_limit * c_limit +
          OUTPUT_NC_LIMIT_SIZE * n_limit * c_limit +
          n_limit * WEIGHT_N_LIMIT_SIZE) *
@@ -238,12 +238,12 @@ static void PolicyFuncThreeInterpolate(
   *m_limit_size = m_limit;
   *n_limit_size = n_limit;
 
-  int n_aligned_limit = CEIL_ALIGN(n, n_limit);
+  int64_t n_aligned_limit = CEIL_ALIGN(n, n_limit);
   n_limit = n_limit > n_aligned_limit ? n_aligned_limit : n_limit;
-  int m_aligned_limit = CEIL_ALIGN(m, m_limit);
+  int64_t m_aligned_limit = CEIL_ALIGN(m, m_limit);
   m_limit = m_limit > m_aligned_limit ? m_aligned_limit : m_limit;
 
-  uint32_t use_cluster =
+  int64_t use_cluster =
       (b * n_aligned_limit / n_limit + core_in_cluster - 1) / core_in_cluster;
 
   if (!is_forward) {
@@ -256,7 +256,7 @@ static void PolicyFuncThreeInterpolate(
   k_dim->z = 1;
 }
 
-mluOpStatus_t ThreeInterpolateForwardParamCheck(
+mluOpStatus_t threeInterpolateForwardParamCheck(
     const std::string &op_name, const mluOpHandle_t handle,
     const mluOpTensorDescriptor_t features_desc, const void *features,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
@@ -292,7 +292,7 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
                   "equal to indices_desc->dims[0].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int i = 0; i < indices_desc->dim; ++i) {
+  for (int64_t i = 0; i < indices_desc->dim; ++i) {
     if (indices_desc->dims[i] != weights_desc->dims[i]) {
       LOG(ERROR) << op_name << " Check failed: indices_desc->dims[" << i
                  << "] should be equal to weightss_desc->dims[" << i << "].";
@@ -304,7 +304,7 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
                << " Check failed: weights_desc->dims[2] should be equal to 3.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int i = 0; i < output_desc->dim - 1; ++i) {
+  for (int64_t i = 0; i < output_desc->dim - 1; ++i) {
     if (output_desc->dims[i] != features_desc->dims[i]) {
       LOG(ERROR) << op_name << " Check failed: output_desc->dims[" << i
                  << "] should be equal to features_desc->dims[" << i << "].";
@@ -348,7 +348,7 @@ mluOpStatus_t ThreeInterpolateForwardParamCheck(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t ThreeInterpolateBackwardParamCheck(
+mluOpStatus_t threeInterpolateBackwardParamCheck(
     const std::string &op_name, const mluOpHandle_t handle,
     const mluOpTensorDescriptor_t grad_output_desc, const void *grad_output,
     const mluOpTensorDescriptor_t indices_desc, const void *indices,
@@ -384,7 +384,7 @@ mluOpStatus_t ThreeInterpolateBackwardParamCheck(
                   "equal to indices_desc->dims[0].";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int i = 0; i < indices_desc->dim; ++i) {
+  for (int64_t i = 0; i < indices_desc->dim; ++i) {
     if (indices_desc->dims[i] != weights_desc->dims[i]) {
       LOG(ERROR) << op_name << " Check failed: indices_desc->dims[" << i
                  << "] should be equal to weightss_desc->dims[" << i << "].";
@@ -396,7 +396,7 @@ mluOpStatus_t ThreeInterpolateBackwardParamCheck(
                << " Check failed: weights_desc->dims[2] should be equal to 3.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int i = 0; i < grad_output_desc->dim - 1; ++i) {
+  for (int64_t i = 0; i < grad_output_desc->dim - 1; ++i) {
     if (grad_output_desc->dims[i] != grad_features_desc->dims[i]) {
       LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i
                  << "] should be equal to grad_features_desc->dims[" << i
@@ -448,7 +448,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
     const void *weights, const mluOpTensorDescriptor_t output_desc,
     void *output) {
   bool zero_element = false;
-  mluOpStatus_t param_check = ThreeInterpolateForwardParamCheck(
+  mluOpStatus_t param_check = threeInterpolateForwardParamCheck(
       "[mluOpThreeInterpolateForward]", handle, features_desc, features,
       indices_desc, indices, weights_desc, weights, output_desc, output,
       zero_element);
@@ -458,10 +458,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
-  int b = features_desc->dims[0];
-  int c = features_desc->dims[1];
-  int m = features_desc->dims[2];
-  int n = output_desc->dims[2];
+  int64_t b = features_desc->dims[0];
+  int64_t c = features_desc->dims[1];
+  int64_t m = features_desc->dims[2];
+  int64_t n = output_desc->dims[2];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("three_interpolate_forward");
@@ -475,14 +475,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  int input_size = sizeof(float);
+  int64_t input_size = sizeof(float);
   if (features_desc->dtype == MLUOP_DTYPE_HALF) {
     input_size /= 2;
   }
-  int c_limit_size = NFU_ALIGN_SIZE / input_size;
-  int m_limit_size = c_limit_size;
-  int n_limit_size = c_limit_size;
-  PolicyFuncThreeInterpolate(handle, features_desc, b, c, m, n, true, &k_dim,
+  int64_t c_limit_size = NFU_ALIGN_SIZE / input_size;
+  int64_t m_limit_size = c_limit_size;
+  int64_t n_limit_size = c_limit_size;
+  policyFuncThreeInterpolate(handle, features_desc, b, c, m, n, true, &k_dim,
                              &k_type, &c_limit_size, &m_limit_size,
                              &n_limit_size);
   VLOG(5) << "[mluOpThreeInterpolateForward] launch kernel policyFunc["
@@ -503,7 +503,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
     const void *weights, const mluOpTensorDescriptor_t grad_features_desc,
     void *grad_features) {
   bool zero_element = false;
-  mluOpStatus_t param_check = ThreeInterpolateBackwardParamCheck(
+  mluOpStatus_t param_check = threeInterpolateBackwardParamCheck(
       "[mluOpThreeInterpolateBackward]", handle, grad_output_desc, grad_output,
       indices_desc, indices, weights_desc, weights, grad_features_desc,
       grad_features, zero_element);
@@ -513,10 +513,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
-  int b = grad_output_desc->dims[0];
-  int c = grad_output_desc->dims[1];
-  int n = grad_output_desc->dims[2];
-  int m = grad_features_desc->dims[2];
+  int64_t b = grad_output_desc->dims[0];
+  int64_t c = grad_output_desc->dims[1];
+  int64_t n = grad_output_desc->dims[2];
+  int64_t m = grad_features_desc->dims[2];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("three_interpolate_backward");
@@ -531,14 +531,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  int input_size = sizeof(float);
+  int64_t input_size = sizeof(float);
   if (grad_output_desc->dtype == MLUOP_DTYPE_HALF) {
     input_size /= 2;
   }
-  int c_limit_size = NFU_ALIGN_SIZE / input_size;
-  int m_limit_size = c_limit_size;
-  int n_limit_size = c_limit_size;
-  PolicyFuncThreeInterpolate(handle, grad_output_desc, b, c, m, n, false,
+  int64_t c_limit_size = NFU_ALIGN_SIZE / input_size;
+  int64_t m_limit_size = c_limit_size;
+  int64_t n_limit_size = c_limit_size;
+  policyFuncThreeInterpolate(handle, grad_output_desc, b, c, m, n, false,
                              &k_dim, &k_type, &c_limit_size, &m_limit_size,
                              &n_limit_size);
   VLOG(5) << "[mluOpThreeInterpolateBackward] launch kernel policyFunc["
