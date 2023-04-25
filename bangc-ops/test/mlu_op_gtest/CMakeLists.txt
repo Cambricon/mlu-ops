@@ -61,6 +61,10 @@ include_directories(${LIBXML2_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIR})
 
 
+find_package(OpenMP)
+message(STATUS "OpenMP_CXX_FLAGS: ${OpenMP_CXX_FLAGS}")
+message(STATUS "OpenMP lib ${OpenMP_CXX_LIB_NAMES} ${OpenMP_CXX_LIBRARIES}")
+
 if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
   # set(DEFAULT_PROTOBUF_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/lib/")
@@ -152,6 +156,10 @@ add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR}
 target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} ${PROTO_PATH})
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
+if (OpenMP_CXX_FOUND)
+  target_include_directories(mluop_pb_gtest_obj PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
+  target_link_libraries(mluop_pb_gtest_obj PUBLIC OpenMP::OpenMP_CXX)
+endif()
 target_link_libraries(mluop_gtest mluops)
 set(targets_mluop_gtest mluop_gtest)
 
@@ -162,6 +170,7 @@ foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
   target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
   target_link_libraries(${target_gtest} mluop_test_proto)
+  target_link_libraries(${target_gtest} OpenMP::OpenMP_CXX)
   set_target_properties(${target_gtest}
     PROPERTIES
     INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
