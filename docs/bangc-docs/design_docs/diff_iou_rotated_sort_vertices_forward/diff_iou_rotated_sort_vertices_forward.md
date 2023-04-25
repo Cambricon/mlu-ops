@@ -429,43 +429,33 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
 
   1. 任务拆分：根据3.3 拆分(任务拆分，多核拆分)章节介绍，对`B*N`进行拆分；
 
-     计算每个task需要处理的数据量 `per_task_bn_num`
-
      ```c
-     // 一个task需要处理的数据量 
+     // total_bn_num
      int total_bn_num = B * N;
-     int per_task_bn_num = total_bn_num / taskDim;
-     int rem_bn_num = total_bn_num % taskDim;
-     // 根据taskId，计算当前task，需要处理的bn的数量 bn_num
-     int bn_num = per_task_bn_num + (int)((taskId < rem_bn_num));
-     // 根据taskId，计算起始索引 bn_idx
-     int bn_idx = taskId * per_task_bn_num + ((taskId < rem_bn_num) ? taskId : rem_bn_num);
      ```
-
+  
   2. 初始化阶段
-
+  
      1. nram空间划分：根据3.1.2 nram空间划分，计算得到`deal_num`的大小；
-
-     2. 根据 `bn_num` 和 `deal_num` 计算 repeat_n 和 rem_n
+  
+     2. 根据 `total_bn_num` 和 `deal_num` 计算 repeat_n 和 rem_num
+  
+        此处采用核间访存连续的方案，数据切分如下：
 
         ```c
-        int repeat_n = bn_num / deal_num;
-        int rem_num = bn_num % deal_num;
+          int repeat_n = total_bn_num / (deal_num * taskDim);
+          int rem_num_device = total_bn_num % (deal_num * taskDim);
+          int rem_num_per_task = rem_num_device / taskDim;
+          int rem_bn_num = rem_num_device % taskDim;
+          int rem_num = rem_num_per_task + (int)((taskId < rem_bn_num));
+          int rem_offset =
+              taskId * rem_num_per_task + ((taskId < rem_bn_num) ? taskId : rem_bn_num);
         ```
-
+  
   3. 处理阶段：三级流水LCS
-
-     1. 计算各tensor的GDRAM地址偏移
-
-        ```c
-        T *base_vertices = (T *)vertices + bn_idx * 24 * 2;
-        bool *base_mask = (bool *)mask + bn_idx * 24;
-        int32_t *base_num_valid = (int32_t *)num_valid + bn_idx;
-        int32_t *base_idx = (int32_t *)idx + bn_idx * 9;
-        ```
-
-     2. 循环处理
-
+  
+     1. 循环处理
+  
         ```c
         // 三级流水计算过程
         if (repeat_n > 0) {
@@ -504,6 +494,57 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
             // C[repeat_n]
             __sync();
             // S[repeat_n]
+        }
+        ```
+     
+     2. Load/Store 时GDRAM地址计算
+     
+        采用核间连续访存，load和store时，各个输入输出的GDRAM地址计算需加上`deal_num_device`的偏移，伪代码如下：
+     
+        ```c
+        const uint32_t deal_num_device = taskDim * deal_num;
+        const uint32_t task_data_offset = taskId * deal_num;
+        if (repeat_n > 0) {
+            // L[0]：load
+            const T *addr_vertices = base_vertices + task_data_offset * dim_m * 2;
+            const bool *addr_mask = base_mask + task_data_offset * dim_m;
+            const int *addr_num_valid = base_num_valid + task_data_offset;
+            load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+                 nram_num_valid, dim_m, deal_num, pingpong_offset, 0);
+            __sync();
+        }
+        if (repeat_n > 1) {
+            // L(1)
+            const T *addr_vertices =
+                base_vertices + (deal_num_device + task_data_offset) * dim_m * 2;
+            const bool *addr_mask =
+                base_mask + (deal_num_device + task_data_offset) * dim_m;
+            const int *addr_num_valid =
+                base_num_valid + deal_num_device + task_data_offset;
+            load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+                 nram_num_valid, dim_m, deal_num, pingpong_offset, 1);
+        
+            // Compute(0)
+            __sync();
+        }
+        // ...
+        if (repeat_n >= 2) {
+            // S
+            int *addr_idx =
+                base_idx + ((repeat_n - 2) * deal_num_device + task_data_offset) *
+                MAX_NUM_VERT_IDX;
+            store(addr_idx, nram_idx, deal_idx_num, pingpong_offset, (repeat_n - 2));
+        }
+        if (rem_num > 0) {
+            // L
+            const T *addr_vertices =
+                base_vertices + (repeat_n * deal_num_device + rem_offset) * dim_m * 2;
+            const bool *addr_mask =
+                base_mask + (repeat_n * deal_num_device + rem_offset) * dim_m;
+            const int *addr_num_valid =
+                base_num_valid + repeat_n * deal_num_device + rem_offset;
+            load(addr_vertices, addr_mask, addr_num_valid, nram_vertices, nram_mask,
+                 nram_num_valid, dim_m, rem_num, pingpong_offset, repeat_n);
         }
         ```
      
