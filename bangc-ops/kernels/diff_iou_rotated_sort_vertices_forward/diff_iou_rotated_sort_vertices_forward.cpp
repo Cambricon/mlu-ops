@@ -178,10 +178,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpDiffIouRotatedSortVerticesForward(
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
   }
 
-  const uint32_t dim_b = vertices_desc->dims[0];
-  const uint32_t dim_n = vertices_desc->dims[1];
-  const uint32_t dim_m = vertices_desc->dims[2];
-  const uint32_t bn_num = dim_b * dim_n;
+  const int dim_b = vertices_desc->dims[0];
+  const int dim_n = vertices_desc->dims[1];
+  const int dim_m = vertices_desc->dims[2];
+  const int bn_num = dim_b * dim_n;
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, bn_num, &k_dim, &k_type);
