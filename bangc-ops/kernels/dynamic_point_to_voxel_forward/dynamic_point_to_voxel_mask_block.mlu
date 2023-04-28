@@ -1,0 +1,174 @@
+/*************************************************************************
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "dynamic_point_to_voxel_forward.h"
+
+#include "kernels/kernel.h"
+#include "kernels/debug.h"
+#include "kernels/utils/common.h"
+
+#define COORS_XYZ 3
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+__mlu_func__ void load(const int32_t *input_addr, int32_t *nram_input,
+                       const int32_t pingpong, const int32_t deal_num,
+                       const int32_t pi) {
+  int32_t offset = (pi % 2) * pingpong;
+  int32_t *nram_input_ptr = nram_input + offset;
+  __memcpy_async(nram_input_ptr, input_addr, deal_num * sizeof(int),
+                 GDRAM2NRAM);
+}
+
+__mlu_func__ void compute(int32_t *coors_ping_in, int32_t *mask_x,
+                          const int32_t pingpong, int32_t deal_num,
+                          const int32_t pi) {
+  int32_t offset = (pi % 2) * pingpong;
+  int32_t *coors_ping_in_p = coors_ping_in + offset;
+  int32_t *coors_ping_out_p = coors_ping_in_p + pingpong / 2;
+  int32_t N = deal_num / COORS_XYZ;
+  int32_t *mask_y = mask_x + N;
+  int32_t *mask_z = mask_x + 2 * N;
+  __bang_transpose(coors_ping_out_p, coors_ping_in_p, N, 3);
+
+  __bang_int322float((float *)coors_ping_out_p, coors_ping_out_p, deal_num, 0);
+  __bang_int322float((float *)mask_x, mask_x, deal_num, 0);
+
+  __bang_lt_scalar((float *)mask_x, (float *)coors_ping_out_p, 0, 3 * N);
+  __bang_float2int32((int32_t *)coors_ping_out_p, (float *)coors_ping_out_p,
+                     deal_num, 0);
+  __bang_float2int32((int32_t *)mask_x, (float *)mask_x, deal_num, 0);
+  __bang_add((int *)mask_x, (int *)mask_x, (int *)mask_y, N);
+  __bang_add((int *)mask_x, (int *)mask_x, (int *)mask_z, N);
+  __bang_not((int *)mask_x, (int *)mask_x, N);
+
+  __bang_cycle_mul((int *)coors_ping_out_p, (int *)coors_ping_out_p,
+                   (int *)mask_x, deal_num, N);
+  __bang_add_scalar((int *)mask_x, (int *)mask_x, -1, N);
+  __bang_cycle_add((int *)coors_ping_out_p, (int *)coors_ping_out_p,
+                   (int *)mask_x, deal_num, N);
+  __bang_transpose(coors_ping_in_p, coors_ping_out_p, 3, N);
+}
+
+__mlu_func__ void store(int32_t *output_addr, int32_t *nram_output,
+                        const int32_t pingpong, const int32_t deal_num,
+                        const int32_t pi) {
+  int32_t offset = (pi % 2) * pingpong;
+  int32_t *nram_output_ptr = nram_output + offset;
+  __memcpy_async(output_addr, nram_output_ptr, deal_num * sizeof(int),
+                 NRAM2GDRAM);
+}
+
+__mlu_global__ void MLUKernelMaskFillCoorsForward(int32_t num_points,
+                                                  int32_t *coors) {
+#if __BANG_ARCH__ >= 372
+  if (__is_mpu()) {
+    return;
+  }
+  int32_t remainder = num_points % taskDim;
+  int32_t points_per_core =
+      num_points / taskDim + (int32_t)(taskId < remainder);
+  // offset of the point32_t that core processes
+  int32_t points_offset = taskId * (num_points / taskDim) +
+                          (taskId < remainder ? taskId : remainder);
+  // nram space
+
+  // |coors_ping_in|coors_ping_out|coors_pong_in|coors_pong_out|mask_x|mask_y|mask_z|
+  int32_t max_deal_num =
+      FLOOR_ALIGN(MAX_NRAM_SIZE / 5, COORS_XYZ * sizeof(int32_t)) /
+      sizeof(int32_t);
+  int32_t coors_num = points_per_core * COORS_XYZ;
+  int32_t deal_num = max_deal_num > coors_num ? coors_num : max_deal_num;
+  int32_t repeat_n = coors_num / max_deal_num;
+  int32_t rem_num = coors_num % max_deal_num;
+
+  int32_t *coors_ping_in = (int32_t *)nram_buffer;
+  int32_t *mask_x = (int32_t *)coors_ping_in + 4 * deal_num;
+  int32_t pingpong = 2 * deal_num;
+  int32_t *base_coors = (int32_t *)coors + points_offset * COORS_XYZ;
+
+  if (repeat_n > 0) {
+    int32_t *input_addr = base_coors;
+    load(input_addr, coors_ping_in, pingpong, deal_num, 0);
+    __sync();
+  }
+
+  if (repeat_n > 1) {
+    // L(vi=1)
+    int32_t *input_addr = base_coors + deal_num;
+    load(input_addr, coors_ping_in, pingpong, deal_num, 1);
+    // C(vi=0)
+    compute(coors_ping_in, mask_x, pingpong, deal_num, 0);
+    __sync();
+  }
+
+  for (int32_t v_iter = 0; v_iter < repeat_n - 2; v_iter++) {
+    // S(vi)
+    int32_t *output_addr = base_coors + v_iter * deal_num;
+    store(output_addr, coors_ping_in, pingpong, deal_num, v_iter);
+    // C(vi+1)
+    compute(coors_ping_in, mask_x, pingpong, deal_num, v_iter + 1);
+    // L(vi+2)
+    int32_t *input_addr = base_coors + (v_iter + 2) * deal_num;
+    load(input_addr, coors_ping_in, pingpong, deal_num, v_iter + 2);
+    __sync();
+  }
+
+  if (repeat_n > 1) {
+    // S(vi = repeat_n - 2)
+    int32_t *output_addr = base_coors + (repeat_n - 2) * deal_num;
+    store(output_addr, coors_ping_in, pingpong, deal_num, repeat_n - 2);
+  }
+  if (rem_num > 0) {
+    // L[repeat_n]
+    int32_t *input_addr = base_coors + repeat_n * deal_num;
+    load(input_addr, coors_ping_in, pingpong, rem_num, repeat_n);
+  }
+  if (repeat_n > 0) {
+    // C[repeat_n - 1]
+    compute(coors_ping_in, mask_x, pingpong, deal_num, repeat_n - 1);
+  }
+  __sync();
+  if (repeat_n > 0) {
+    // S[repeat_n - 1]
+    int32_t *output_addr = base_coors + (repeat_n - 1) * deal_num;
+    store(output_addr, coors_ping_in, pingpong, deal_num, repeat_n - 1);
+  }
+  if (rem_num > 0) {
+    // C[repeat_n]
+    compute(coors_ping_in, mask_x, pingpong, rem_num, repeat_n);
+    __sync();
+    // S[repeat_n]
+    int32_t *output_addr = base_coors + repeat_n * deal_num;
+    store(output_addr, coors_ping_in, pingpong, rem_num, repeat_n);
+  }
+
+#endif
+}
+
+void MLUOP_WIN_API KernelMaskFillCoorsForward(cnrtDim3_t k_dim,
+                                              cnrtFunctionType_t k_type,
+                                              cnrtQueue_t queue,
+                                              int32_t num_points, void *coors) {
+  MLUKernelMaskFillCoorsForward<<<k_dim, k_type, queue>>>(num_points,
+                                                          (int32_t *)coors);
+}
