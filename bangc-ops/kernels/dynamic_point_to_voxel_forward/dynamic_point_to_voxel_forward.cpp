@@ -38,26 +38,26 @@ static void policyFuncDynamicPointToVoxelForward(const mluOpHandle_t handle,
                                                  const int nums) {
   int max_core_num = mluop::runtime::getCoreNumOfJobLimitCapability(handle);
   size_t core_num = handle->core_num_per_cluster;
-  if(nums > max_core_num){
+  if (nums > max_core_num) {
     k_dim->x = max_core_num;
     *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
-  }else{
-    if(nums ==1){
+  } else {
+    if (nums == 1) {
       k_dim->x = 1;
       *k_type = CNRT_FUNC_TYPE_BLOCK;
-    }else if(nums <= 4){
+    } else if (nums <= 4) {
       k_dim->x = core_num * 1;
       *k_type = CNRT_FUNC_TYPE_UNION1;
-    }else if(nums <= 8){
+    } else if (nums <= 8) {
       k_dim->x = core_num * 2;
       *k_type = CNRT_FUNC_TYPE_UNION2;
-    }else if(nums <=16){
+    } else if (nums <= 16) {
       k_dim->x = core_num * 4;
       *k_type = CNRT_FUNC_TYPE_UNION4;
-    }else if (nums <= 32){
+    } else if (nums <= 32) {
       k_dim->x = core_num * 8;
       *k_type = CNRT_FUNC_TYPE_UNION8;
-    }else if (nums <= 64){
+    } else if (nums <= 64) {
       k_dim->x = core_num * 16;
       *k_type = CNRT_FUNC_TYPE_UNION16;
     }
