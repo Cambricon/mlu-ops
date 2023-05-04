@@ -276,7 +276,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
     inf_value = -INFINITY;
   }
   const float fill_value = inf_value;
-  printf("fill_value:%f\n", fill_value);
   MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                            voxel_feats_desc, voxel_feats));
   VLOG(5) << "mluopFill min value end.";
