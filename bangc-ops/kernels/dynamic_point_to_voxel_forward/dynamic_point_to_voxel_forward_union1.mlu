@@ -187,7 +187,7 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
     int32_t deal_map_offset = p_iter * deal_p * 1;
     int32_t *base_map_addr = base_map + deal_map_offset;
     // load map
-    __memcpy(nram_map, base_map_addr, deal_p_num * sizeof(float), GDRAM2NRAM);
+    __memcpy(nram_map, base_map_addr, deal_p_num * sizeof(int32_t), GDRAM2NRAM);
     for (int32_t h_iter = 0; h_iter <= repeat_h; h_iter++) {
       int32_t deal_h_num = (h_iter < repeat_h) ? deal_h : rem_h;
       if (deal_h_num == 0) {
@@ -205,7 +205,6 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
       // index and atomic
       for (int32_t i = 0; i < deal_p_num; i++) {
         int reduce_to = nram_map[i];
-
         if (reduce_to == -1) continue;
         float *voxel_feats_offset =
             voxel_feats + reduce_to * num_feats + h_iter * deal_h;
