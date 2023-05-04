@@ -226,7 +226,7 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
   __sync_all_ipu();
 
   int32_t num_voxel = voxel_num[0];
-  if (reduce_mode == MLUOP_REDUCE_MEAN) {
+  if (reduce_mode == MLUOP_REDUCE_DMEAN) {
     const int rem_voxel = num_voxel % taskDim;
     const int voxel_per_core = num_voxel / taskDim + (int)(taskId < rem_voxel);
     // offset of the point that core processes

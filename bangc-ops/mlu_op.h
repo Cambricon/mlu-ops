@@ -436,8 +436,8 @@ typedef enum {
  * @brief Describes the modes that are used in the Reduce function.
  */
 typedef enum {
-  MLUOP_REDUCE_SUM  = 0, /*!< Computes the sum value. */
-  MLUOP_REDUCE_MEAN = 1, /*!< Computes the mean value. */
+  MLUOP_REDUCE_DSUM  = 0, /*!< Computes the sum value. */
+  MLUOP_REDUCE_DMEAN = 1, /*!< Computes the mean value. */
   MLUOP_REDUCE_DMAX = 2, /*!< Computes the maximun value. */
 } mluOpReduceMode_t;
 
