@@ -139,9 +139,9 @@ voxel_num:[2]
 
 - #### nan/inf
 
-1）feats、voxel_feats 支持 nan/inf;
+1）feats 支持 nan/inf;
 
-2）coors、voxel_coors、point2voxel_map、voxel_points_count、voxel_num 不支持 nan/inf。
+2）coors 不支持 nan/inf。
 
 ###  1.3 算子输入输出参数要求
 

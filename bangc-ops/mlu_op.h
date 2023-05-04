@@ -3632,8 +3632,8 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300, the input \b coors with NaN or infinity is not supported.
- * - On MLU500, the input \b coors with NaN or infinity is supported.
+ * - On MLU300 and MLU500, the input \b coors with NaN or infinity is not supported.
+ * - On MLU300 and MLU500, the input \b feats with NaN or infinity is supported.
  *
  * @par Example
  * - None.
