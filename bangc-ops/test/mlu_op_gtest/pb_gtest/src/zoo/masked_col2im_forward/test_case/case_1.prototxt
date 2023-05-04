@@ -1,0 +1,68 @@
+op_name: "masked_col2im_forward"
+input {
+  id: "input"
+  shape: {
+    dims: 327681
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+  random_data: {
+    seed: 23
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "mask_h_idx"
+  shape: {
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i:0
+  value_i:0
+  value_i:1
+  value_i:1
+  value_i:2
+  value_i:2
+  value_i:4
+  value_i:5
+  value_i:6
+  value_i:7
+}
+input {
+  id: "mask_w_idx"
+  shape: {
+    dims: 10
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 0
+  value_i: 2
+  value_i: 1
+  value_i: 5
+  value_i: 7
+  value_i: 8
+  value_i: 9
+  value_i: 3
+  value_i: 4
+  value_i: 7
+}
+output {
+  id: "output"
+  shape: {
+    dims: 1
+    dims: 327681
+    dims: 11
+    dims: 10
+  }
+  layout: LAYOUT_NCHW
+  dtype: DTYPE_HALF
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0
+  baseline_device: CPU
+}
