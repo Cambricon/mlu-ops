@@ -40,7 +40,6 @@ class DynamicPointToVoxelForwardExecutor : public Executor {
   int64_t getTheoryOps() override;
   void workspaceMalloc() override;
   void workspaceFree() override;
-  void diffPreprocess() override;
 
  private:
   size_t workspace_size_ = 0;

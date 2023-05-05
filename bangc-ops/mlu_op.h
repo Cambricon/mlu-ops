@@ -438,7 +438,7 @@ typedef enum {
 typedef enum {
   MLUOP_REDUCE_DSUM  = 0, /*!< Computes the sum value. */
   MLUOP_REDUCE_DMEAN = 1, /*!< Computes the mean value. */
-  MLUOP_REDUCE_DMAX = 2, /*!< Computes the maximun value. */
+  MLUOP_REDUCE_DMAX  = 2, /*!< Computes the maximun value. */
 } mluOpReduceMode_t;
 
 /******************************************************************************
