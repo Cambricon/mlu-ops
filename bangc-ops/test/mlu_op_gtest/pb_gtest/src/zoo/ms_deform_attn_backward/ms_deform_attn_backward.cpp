@@ -162,10 +162,6 @@ void MsDeformAttnBackwardExecutor::cpuCompute() {
   const int32_t qid_stride = num_heads * channels;
   const int32_t spatial_size = value_desc->dims[1];
 
-  float *cache_grad_sampling_loc =
-      static_cast<float *>(cpu_runtime_.allocate(channels * 2 * sizeof(float)));
-  float *cache_grad_attn_weight =
-      static_cast<float *>(cpu_runtime_.allocate(channels * sizeof(float)));
   const int32_t grad_weight_stride = 1;
   const int32_t grad_loc_stride = 2;
   for (int32_t i = 0; i < batch * num_query * num_heads * channels; ++i) {
@@ -182,13 +178,12 @@ void MsDeformAttnBackwardExecutor::cpuCompute() {
     const int32_t per_attn_weight_size =
         b_col * num_query * num_heads * num_levels * num_point;
 
-    float *data_value = cpu_value + b_col * spatial_size * num_heads * channels;
-    float *grad_data_value =
-        cpu_grad_value + b_col * spatial_size * num_heads * channels;
-    float *data_sampling_loc = cpu_sampling_loc + per_sample_loc_size;
-    float *data_attn_weight = cpu_attn_weight + per_attn_weight_size;
-    float *grad_sampling_loc = cpu_grad_sampling_loc + per_sample_loc_size;
-    float *grad_attn_weight = cpu_grad_attn_weight + per_attn_weight_size;
+    float *data_value = cpu_value + 0;
+    float *grad_data_value = cpu_grad_value + 0;
+    float *data_sampling_loc = cpu_sampling_loc + 0;
+    float *data_attn_weight = cpu_attn_weight + 0;
+    float *grad_sampling_loc = cpu_grad_sampling_loc + 0;
+    float *grad_attn_weight = cpu_grad_attn_weight + 0;
     int32_t grad_output_offset = b_col * num_query * num_heads * channels +
                                  i % (num_query * num_heads * channels);
     float top_grad = cpu_grad_output[grad_output_offset];

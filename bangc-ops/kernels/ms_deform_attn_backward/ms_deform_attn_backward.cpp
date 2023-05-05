@@ -30,6 +30,7 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 
 char API[] = "[mluOpMsDeformAttnBackward]";
 
@@ -78,12 +79,15 @@ mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
   int32_t nlp = num_levels * num_points;
   int32_t nlpc = num_levels * num_points * channels;
 
-  if (handle->arch == MLUOP_MLU590 && nlp <= FAST_KERNEL_MAX_NLP &&
-      nlpc <= FAST_KERNEL_MAX_NLPC) {
+  if ((handle->arch == MLUOP_MLU590) && (nlp <= FAST_KERNEL_MAX_NLP) &&
+      (nlpc <= FAST_KERNEL_MAX_NLPC)) {
+    VLOG(5) << "===========85 MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST\n";
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST;
-  } else if (num_per_time_theory >= 1) {
+  } else if (num_per_time_theory > 1) {
+    VLOG(5) << "===========88 MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL\n";
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL;
   }
+  VLOG(5) << "===========91 MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT";
   return MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT;
 }
 
@@ -367,7 +371,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
           num_points, (float *)grad_value, (float *)grad_sampling_loc,
           (float *)grad_attn_weight)));
     }
-    default: { VLOG(5) << "Not Implemented."; }
+    default: {
+      VLOG(5) << "Not Implemented.";
+    }
   }
 
   GEN_CASE_END();
