@@ -119,13 +119,30 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
                << mluOpGetNameOfDataType(idx_desc->dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
+
   // check LargeTensor
-  const size_t max_input_num = 2147483648;  // 2^31, 2G num
-  if ((mluOpGetTensorElementNum(new_xyz_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(xyz_desc) >= max_input_num) ||
-      (mluOpGetTensorElementNum(idx_desc) >= max_input_num)) {
+  // expression: char *xyz_tmp = (char *)xyz + offset * sizeof(T), T is the data
+  // type of xyz. this expression is used to calculate the xyz offset
+  // address. for 370 series, offset * sizeof(T) must be less than 2^31,
+  // otherwise, it will cause access to gdram out of bounds. according to the
+  // above constraints, we can calculate the limit of the number of new tensor
+  // elements which is 536895361.
+  uint32_t max_input_num = 536895361;
+  if (handle->arch > 372) {
+    max_input_num = LARGE_TENSOR_NUM;
+  }
+
+  if ((mluOpGetTensorElementNum(new_xyz_desc) >= LARGE_TENSOR_NUM) ||
+      (mluOpGetTensorElementNum(idx_desc) >= LARGE_TENSOR_NUM)) {
     LOG(ERROR) << "ball_query Overflow max tensor num."
                << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+  if (mluOpGetTensorElementNum(xyz_desc) >= max_input_num) {
+    LOG(ERROR)
+        << "ball_query's xyz_tensor element number is bigger max tensor num."
+        << " Currently, xyz_tensor supports tensor num smaller than "
+        << max_input_num << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -170,11 +187,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   policyFuncBallQuery(handle, new_xyz_desc, &k_dim, &k_type);
 
   // launch kernel
-  int b = new_xyz_desc->dims[0];
-  int m = new_xyz_desc->dims[1];
-  int n = xyz_desc->dims[1];
+  uint32_t b = new_xyz_desc->dims[0];
+  uint32_t m = new_xyz_desc->dims[1];
+  uint32_t n = xyz_desc->dims[1];
   mluOpDataType_t d_type = new_xyz_desc->dtype;
-
   VLOG(5) << "[mluOpBallQuery] launch kernel KernelBallQuery[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "]";
   KERNEL_CHECK(KernelBallQuery(k_dim, k_type, handle->queue, d_type, b, n, m,

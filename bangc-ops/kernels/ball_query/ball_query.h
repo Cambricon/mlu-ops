@@ -27,8 +27,8 @@
 
 void MLUOP_WIN_API KernelBallQuery(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                                    cnrtQueue_t queue, mluOpDataType_t d_type,
-                                   const int b, const int n, const int m,
-                                   const float min_radius,
+                                   const uint32_t b, const uint32_t n,
+                                   const uint32_t m, const float min_radius,
                                    const float max_radius, const int nsample,
                                    const void *new_xyz, const void *xyz,
                                    int32_t *idx);

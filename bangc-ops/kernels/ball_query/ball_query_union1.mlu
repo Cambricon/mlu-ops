@@ -30,26 +30,29 @@
 #include "core/logging.h"
 
 #define COORD_NUM 3
+#define REM_FOR_FLOAT2INT32 128
+#define ALIGN_NUM 64
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
-__mlu_func__ void genIndexFunc(T *index, int32_t max_index, int32_t base_num) {
-  for (int32_t i = 0; i < base_num; i++) {
+__mlu_func__ void genIndexFunc(T *index, uint32_t max_index,
+                               uint32_t base_num) {
+  for (uint32_t i = 0; i < base_num; i++) {
     index[i] = (T)i;
   }
-  int32_t offset = 1;
+  uint32_t offset = 1;
   for (; offset < max_index / base_num; offset *= 2) {
     __bang_add_scalar(index + offset * base_num, index, (T)(offset * base_num),
                       offset * base_num);
   }
   offset = offset / 2;
-  int32_t remain_num = max_index - offset * base_num;
+  uint32_t remain_num = max_index - offset * base_num;
   if (remain_num != 0)
     __memcpy(index + offset * base_num, index, remain_num * sizeof(T),
              NRAM2NRAM);
 
-  int32_t offset_num = offset * base_num;
+  uint32_t offset_num = offset * base_num;
   __bang_add_scalar(index + offset_num, index + offset_num, (T)offset_num,
                     remain_num);
 }
@@ -57,8 +60,8 @@ __mlu_func__ void genIndexFunc(T *index, int32_t max_index, int32_t base_num) {
 template <typename T>
 __mlu_func__ void convertFloat2Int(int32_t *dst, float *dst_addtion,
                                    void *src_origin, float *src_addtion,
-                                   int32_t elem_count, int32_t offset,
-                                   int32_t start_index) {
+                                   uint32_t elem_count, uint32_t offset,
+                                   uint32_t start_index) {
   if (elem_count == 0) return;
 #if __BANG_ARCH__ >= 322
   int32_t *src = (int32_t *)src_origin + start_index;
@@ -66,15 +69,15 @@ __mlu_func__ void convertFloat2Int(int32_t *dst, float *dst_addtion,
 #else
   float *src = (float *)src_origin + start_index;
   __bang_add_scalar((float *)src, (float *)src, (float)(offset),
-                    CEIL_ALIGN(elem_count, 64));
+                    CEIL_ALIGN(elem_count, ALIGN_NUM));
   __float2int32((int32_t *)dst, (float *)dst_addtion, (float *)src,
-                (float *)src_addtion, CEIL_ALIGN(elem_count, 64));
+                (float *)src_addtion, CEIL_ALIGN(elem_count, ALIGN_NUM));
 #endif
 }
 
 __mlu_func__ void checkPointsValid(float *distance2, float *tmp_addr,
                                    float *output_addr, float *zeros_addr,
-                                   int32_t num_deal_xyz, float min_radius2,
+                                   uint32_t num_deal_xyz, float min_radius2,
                                    float max_radius2) {
 #if __BANG_ARCH__ >= 322
   // distance2 >= min_radius2
@@ -109,49 +112,50 @@ __mlu_func__ void ballQueryWorkflow(
     T *vec_x1, T *vec_y1, T *vec_z1, int32_t *vec_index, T *vec_sub_x1,
     T *vec_sub_y1, T *vec_sub_z1, void *tmp1, void *out1, void *out2,
     void *out3, void *tmp2, float *src_addtion, T *new_xyz, T *xyz,
-    int32_t *idx, const int32_t num_stride, const int32_t b, const int32_t n,
-    const int32_t m, const int32_t nsample, const float min_radius2,
-    const float max_radius2, const int32_t nfu_align_size) {
-  const int32_t task_stride = b * m / taskDim;
-  const int32_t rem_task = b * m % taskDim;
-  const int32_t task_start = taskId * task_stride;
-  const int32_t num_per_task = task_stride + (taskId == taskDim - 1) * rem_task;
+    int32_t *idx, const uint32_t num_stride, const uint32_t b, const uint32_t n,
+    const uint32_t m, const int32_t nsample, const float min_radius2,
+    const float max_radius2, const uint32_t nfu_align_size) {
+  const uint32_t task_stride = b * m / taskDim;
+  const uint32_t rem_task = b * m % taskDim;
+  const uint32_t task_start = taskId * task_stride;
+  const uint32_t num_per_task =
+      task_stride + (taskId == taskDim - 1) * rem_task;
 
-  int32_t num_loop_new_xyz = num_per_task / num_stride;
-  const int32_t rem_num_new_xyz = num_per_task % num_stride;
+  uint32_t num_loop_new_xyz = num_per_task / num_stride;
+  const uint32_t rem_num_new_xyz = num_per_task % num_stride;
   num_loop_new_xyz =
       rem_num_new_xyz > 0 ? num_loop_new_xyz + 1 : num_loop_new_xyz;
 
-  int32_t num_loop_xyz = n / num_stride;
-  const int32_t rem_num_xyz = n % num_stride;
+  uint32_t num_loop_xyz = n / num_stride;
+  const uint32_t rem_num_xyz = n % num_stride;
   num_loop_xyz = rem_num_xyz > 0 ? num_loop_xyz + 1 : num_loop_xyz;
-  int32_t start_index = NFU_ALIGN_SIZE / sizeof(float);
-  int32_t index_start = 0, cur_batch_id = 0;
-  int32_t same_batch_s = 0, same_batch_e = 0;
+  uint32_t start_index = NFU_ALIGN_SIZE / sizeof(float);
+  uint32_t index_start = 0, cur_batch_id = 0;
+  uint32_t same_batch_s = 0, same_batch_e = 0;
 #if __BANG_ARCH__ < 322
   __bang_write_zero((float *)tmp2, num_stride);
 #endif
-  for (int32_t i = 0; i < num_loop_new_xyz; ++i) {
-    int32_t index_new_xyz = task_start + i * num_stride;
-    int32_t num_deal_new_xyz = i * num_stride + num_stride > num_per_task
-                                   ? rem_num_new_xyz
-                                   : num_stride;
-    int32_t b1 = index_new_xyz;
-    int32_t base1 = b1 * COORD_NUM;
+  for (uint32_t i = 0; i < num_loop_new_xyz; ++i) {
+    uint32_t index_new_xyz = task_start + i * num_stride;
+    uint32_t num_deal_new_xyz = i * num_stride + num_stride > num_per_task
+                                    ? rem_num_new_xyz
+                                    : num_stride;
+    uint32_t b1 = index_new_xyz;
+    uint64_t base1 = b1 * COORD_NUM;
 
     T *new_xyz_nram = vec_new_x1;
     __memcpy(new_xyz_nram, &new_xyz[base1], num_deal_new_xyz * 3 * sizeof(T),
              GDRAM2NRAM);
     __bang_write_zero(vec_idx_num, num_stride);
 
-    for (int32_t new_index = index_new_xyz;
+    for (uint32_t new_index = index_new_xyz;
          new_index < (index_new_xyz + num_deal_new_xyz);) {
       if (i == 0 && new_index == index_new_xyz) {
         index_start = index_new_xyz;
       }
       cur_batch_id = index_start / m;
       same_batch_s = index_start - index_new_xyz;
-      int32_t tmp_num = 0;
+      uint32_t tmp_num = 0;
       for (int k = index_start; k < (index_new_xyz + num_deal_new_xyz); ++k) {
         if (k / m == cur_batch_id) {
           tmp_num += 1;
@@ -163,11 +167,10 @@ __mlu_func__ void ballQueryWorkflow(
       index_start = same_batch_e + index_new_xyz;
       new_index += tmp_num;
 
-      for (int32_t j = 0; j < num_loop_xyz; ++j) {
-        // #if 0
-        int32_t index_xyz_same_batch = j * num_stride;
-        int32_t index_xyz = cur_batch_id * n + index_xyz_same_batch;
-        int32_t num_deal_xyz =
+      for (uint32_t j = 0; j < num_loop_xyz; ++j) {
+        uint32_t index_xyz_same_batch = j * num_stride;
+        uint64_t index_xyz = cur_batch_id * n + index_xyz_same_batch;
+        uint32_t num_deal_xyz =
             index_xyz_same_batch + num_stride > n ? rem_num_xyz : num_stride;
         __bang_write_value(vec_x1, CEIL_ALIGN(num_deal_xyz, nfu_align_size),
                            (T)(INFINITY));
@@ -182,7 +185,7 @@ __mlu_func__ void ballQueryWorkflow(
         if (num_deal_xyz == rem_num_xyz) {
           num_deal_xyz = CEIL_ALIGN(num_deal_xyz, nfu_align_size);
         }
-        for (int32_t k = same_batch_s; k < same_batch_e; ++k) {
+        for (uint32_t k = same_batch_s; k < same_batch_e; ++k) {
           // (x1 - x2)
           __bang_sub_scalar(vec_sub_x1, vec_x1, new_xyz_nram[3 * k],
                             num_deal_xyz);
@@ -216,14 +219,14 @@ __mlu_func__ void ballQueryWorkflow(
 
           __bang_select((float *)out3, (float *)vec_index, (float *)vec_sub_z1,
                         num_deal_xyz);
-          int32_t selected_num = ((uint32_t *)out3)[0];
+          uint32_t selected_num = ((uint32_t *)out3)[0];
 
           if (selected_num > 0) {
             convertFloat2Int<T>((int32_t *)vec_sub_z1, (float *)out1, out3,
                                 (float *)src_addtion, selected_num,
                                 index_xyz_same_batch, start_index);
             int32_t *in_ball_idx = (int32_t *)vec_sub_z1;
-            int32_t gdram_offset = index_new_xyz * nsample + k * nsample;
+            uint32_t gdram_offset = index_new_xyz * nsample + k * nsample;
             if (vec_idx_num[k] == 0) {
               __gdramset(idx + gdram_offset, nsample, in_ball_idx[0]);
             }
@@ -246,9 +249,9 @@ __mlu_func__ void ballQueryWorkflow(
 
 template <typename T>
 __mlu_global__ void MLUUnion1KernelBallQuery(
-    const int b, const int n, const int m, const float min_radius,
-    const float max_radius, const int nsample, const T *new_xyz, const T *xyz,
-    int32_t *idx) {
+    const uint32_t b, const uint32_t n, const uint32_t m,
+    const float min_radius, const float max_radius, const int nsample,
+    const T *new_xyz, const T *xyz, int32_t *idx) {
   if (__is_mpu()) {
     return;
   }
@@ -267,11 +270,15 @@ __mlu_global__ void MLUUnion1KernelBallQuery(
    *  |------------------------------------------------------------------|
    *
    */
-  const int32_t nfu_align_size = NFU_ALIGN_SIZE / sizeof(T);
-  int32_t max_nram_size = MAX_NRAM_SIZE - 128;
-  int32_t num_stride1 = FLOOR_ALIGN(
-      max_nram_size / 4 / (3 * sizeof(T) + sizeof(int32_t)), nfu_align_size);
-  const int32_t num_stride = FLOOR_ALIGN(num_stride1, 64);
+  const uint32_t nfu_align_size = NFU_ALIGN_SIZE / sizeof(T);
+  uint32_t max_nram_size = MAX_NRAM_SIZE - REM_FOR_FLOAT2INT32;
+  // from the NRAM partion view, nram space will be divided into 4.
+  const uint32_t nram_split_num = 4;
+  uint32_t num_stride1 =
+      FLOOR_ALIGN(max_nram_size / nram_split_num /
+                      (COORD_NUM * sizeof(T) + sizeof(int32_t)),
+                  nfu_align_size);
+  const uint32_t num_stride = FLOOR_ALIGN(num_stride1, 64);
 
   char *vec_new_x1 = nram_buffer;
   char *vec_new_y1 = vec_new_x1 + num_stride * sizeof(T);
@@ -315,8 +322,8 @@ __mlu_global__ void MLUUnion1KernelBallQuery(
 
 void MLUOP_WIN_API KernelBallQuery(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                                    cnrtQueue_t queue, mluOpDataType_t d_type,
-                                   const int b, const int n, const int m,
-                                   const float min_radius,
+                                   const uint32_t b, const uint32_t n,
+                                   const uint32_t m, const float min_radius,
                                    const float max_radius, const int nsample,
                                    const void *new_xyz, const void *xyz,
                                    int32_t *idx) {
