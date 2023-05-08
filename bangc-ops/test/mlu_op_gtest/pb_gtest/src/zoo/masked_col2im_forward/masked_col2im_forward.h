@@ -41,11 +41,11 @@ class MaskedCol2imForwardExecutor : public Executor {
  private:
   void init();
   void printDataInfo();
-  int batchs = 0;
-  int height = 0;
-  int width = 0;
-  int channels = 0;
-  int mask_cnt = 0;
+  int batchs_ = 0;
+  int height_ = 0;
+  int width_ = 0;
+  int channels_ = 0;
+  int mask_cnt_ = 0;
   size_t workspace_size_ = 0;
   void *workspace_ = nullptr;
 };

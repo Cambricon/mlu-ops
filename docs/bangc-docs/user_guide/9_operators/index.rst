@@ -295,12 +295,12 @@ Llg10的计算公式为：
 - ``i`` 表示一个多元数组的索引，表示多维张量。
 - :math:`x_i`、:math:`y_i` 表示多元组中 i 索引处的元素。
 
-.. __masked_col2im_forward:
+.. _masked_col2im_forward:
 
 mluOpMaskedCol2imForward
 ---------------------------------
 
-根据mask坐标信息将按列摆放的数据还原到batch形状
+根据mask坐标信息将按列摆放的数据还原到batch形状。
 
 .. _mat_mul:
 

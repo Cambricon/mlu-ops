@@ -3,11 +3,12 @@
 
 - #### 文档基本信息
 
-| 算子名称    | masked_col2im_forward                                                      |
-| 编制人/日期 | 卜德飞/2022-06-30                                            |
-| 审批人/日期 | 马向军/2022-07-08                                               |
-| 审批人/日期 | 王远/2022-07-08                                           |
-| 审批人/日期 | 董成威/2022-07-08                                            |
+| 算子名称    | masked_col2im_forward                 |
+| --------- | -------------------------------------|
+| 编制人/日期 | 卜德飞/2022-06-30                      |
+| 审批人/日期 | 马向军/2022-07-08                       |
+| 审批人/日期 | 王远/2022-07-08                        |
+| 审批人/日期 | 董成威/2022-07-08                      |
 
 - #### 修改记录
 
@@ -57,7 +58,7 @@
 
 ### 1.2 算子功能和应用场景描述
 
-- ![masked_col2im](./maskedcol2im.png)
+![masked_col2im](./maskedcol2im.png)
 - 算子功能：该算子根据col中的索引index，计算得到对应mask_h_idx和mask_w_idx中的索引mask_index=index%mask_cnt。得到对应im中对应的坐标x=mask_w_idx[mask_index]，y=mask_h_idx[mask_index]，将对应col中元素赋值到im中(x, y, c)位置（其中c=index/mask_cnt）。
 
 - 备注：
@@ -73,11 +74,11 @@
 | col_desc      |   输入特征图col的描述信息                           | 输入              |  mluOpTensorDescriptor_t    | /        | 无       |
 | col   |         输入特征图col指针            | 输入              | half, float            | ARRAY     | 无       |
 | mask_h_idx_desc      |     掩膜mask_h_idx的描述信息                            | 输入              |    mluOpTensorDescriptor_t       | /        | 无       |
-| mask_h_idx       |   掩膜mask_h_idx指针          | 输入              | int32_t      | ARRAY    | 无    
-| mask_w_idx_desc      |     掩膜mask_w_idx的描述信息                            | 输入              |    mluOpTensorDescriptor_t       | /        | 无       |
+| mask_h_idx       |   掩膜mask_h_idx指针          | 输入         | int32_t      | ARRAY | 无 |
+| mask_w_idx_desc   |   掩膜mask_w_idx的描述信息     | 输入              |    mluOpTensorDescriptor_t       | /        | 无       |
 | mask_w_idx       |   掩膜mask_w_idx指针          | 输入              | int32_t      | ARRAY    | 无      |
 | workspace      |   workspace指针             | 输入              |    half, float        | /        | 无       |
-| workspace_size        |   workspace空间大小                    | 输入              |   size_t          | /    | 无       | 
+| workspace_size |   workspace空间大小     | 输入              |   size_t          | /    | 无       |
 | im_desc      |   输出特征图im的描述信息             | 输入              |    mluOpTensorDescriptor_t        | /        | 无       |
 | im        |   输出特征图im指针                    | 输出              |   half, float           | NCHW    | 无       |
 
@@ -162,9 +163,9 @@ mluOpMaskedCol2imForward(mluOpHandle_t handle,
 
 1、基本任务类型是U1。
 
-2、对$`mask\_cnt`$进行数据拆分，拆分为$`mask\_cnt / taskDim`$。
+2、对mask_cnt进行数据拆分，拆分为mask_cnt / taskDim。
 
-3、对不能均匀拆分的情况下，依次分配给前$`mask\_cnt \% taskDim`$个core。
+3、对不能均匀拆分的情况下，依次分配给前mask_cnt % taskDim个core。
 
 
 ### 3.4 性能优化设计

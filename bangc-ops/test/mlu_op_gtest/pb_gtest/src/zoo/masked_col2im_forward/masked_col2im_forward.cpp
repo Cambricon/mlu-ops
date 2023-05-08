@@ -26,11 +26,11 @@ namespace mluoptest {
 
 void MaskedCol2imForwardExecutor::printDataInfo() {
   VLOG(4) << "############################### printfDataInfo() Begin ##";
-  VLOG(4) << "# batchs:         " << batchs;
-  VLOG(4) << "# height:         " << height;
-  VLOG(4) << "# width:          " << width;
-  VLOG(4) << "# channels:       " << channels;
-  VLOG(4) << "# mask_cnt:       " << mask_cnt;
+  VLOG(4) << "# batchs:         " << batchs_;
+  VLOG(4) << "# height:         " << height_;
+  VLOG(4) << "# width:          " << width_;
+  VLOG(4) << "# channels:       " << channels_;
+  VLOG(4) << "# mask_cnt:       " << mask_cnt_;
   VLOG(4) << "############################### printfDataInfo() End ##";
 }
 
@@ -43,11 +43,11 @@ void MaskedCol2imForwardExecutor::paramCheck() {
 void MaskedCol2imForwardExecutor::init() {
   auto col_desc = tensor_desc_[0].tensor;
   auto im_desc = tensor_desc_[3].tensor;
-  batchs = im_desc->dims[0];
-  channels = im_desc->dims[1];
-  height = im_desc->dims[2];
-  width = im_desc->dims[3];
-  mask_cnt = col_desc->dims[1];
+  batchs_ = im_desc->dims[0];
+  channels_ = im_desc->dims[1];
+  height_ = im_desc->dims[2];
+  width_ = im_desc->dims[3];
+  mask_cnt_ = col_desc->dims[1];
 }
 
 void MaskedCol2imForwardExecutor::workspaceMalloc() {
@@ -101,13 +101,13 @@ void MaskedCol2imForwardExecutor::cpuCompute() {
   for (int index = 0; index < output_size; index++) {
     cpu_fp32_output_[0][index] = 0;
   }
-  int count = channels * mask_cnt;
+  int count = channels_ * mask_cnt_;
   for (int index = 0; index < count; ++index) {
-    const int m_index = index % mask_cnt;
+    const int m_index = index % mask_cnt_;
     const int h_im = cpu_fp32_input_[1][m_index];
     const int w_im = cpu_fp32_input_[2][m_index];
-    const int c_im = index / mask_cnt;
-    cpu_fp32_output_[0][(c_im * height + h_im) * width + w_im] =
+    const int c_im = index / mask_cnt_;
+    cpu_fp32_output_[0][(c_im * height_ + h_im) * width_ + w_im] =
         cpu_fp32_input_[0][index];
   }
 }

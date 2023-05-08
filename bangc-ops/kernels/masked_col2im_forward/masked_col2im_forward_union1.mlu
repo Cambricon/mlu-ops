@@ -24,11 +24,13 @@
 
 #include <algorithm>
 
+#include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "core/logging.h"
+
 __nram__ char data_nram[MAX_NRAM_SIZE];
+
 template <typename T>
 __mlu_func__ void MLUMultiKernelMaskedCol2imForward(
     const T *col, const int height, const int width, const int channels,
@@ -93,6 +95,7 @@ __mlu_entry__ void MLUUnion1MaskedCol2imForward(
                                     (int32_t *)mask_h_idx,
                                     (int32_t *)mask_w_idx, mask_cnt, (T *)im);
 }
+
 void MLUOP_WIN_API KernelMaskedCol2imForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const mluOpDataType_t data_dtype, const void *col, const int height,
