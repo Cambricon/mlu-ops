@@ -1,0 +1,208 @@
+device: CPU
+op_name: "dynamic_point_to_voxel_forward"
+input {
+  id: "input1"
+  shape {
+    dims: 6
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_i: -1031791637
+  value_i: 1116630726
+  value_i: 1117997965
+  value_i: 1109028346
+  value_i: -1027992158
+  value_i: -1033539138
+  value_i: 1091499637
+  value_i: -1057275473
+  value_i: 1100870000
+  value_i: -1053051890
+  value_i: -1029513600
+  value_i: 1114832395
+  value_i: -1038650177
+  value_i: -1029060793
+  value_i: -1048879691
+  value_i: -1030029057
+  value_i: 1109268465
+  value_i: -1047387376
+  value_i: -1029512428
+  value_i: -1065468174
+  value_i: 1110874108
+  value_i: -1048198828
+  value_i: -1034456822
+  value_i: -1029118061
+  value_i: -1047591362
+  value_i: -1043658432
+  value_i: 1118685668
+  value_i: -1033092382
+  value_i: -1034171087
+  value_i: 1119202807
+  value_i: 1115258302
+  value_i: 1118517583
+  value_i: 1118341695
+  value_i: 1113203434
+  value_i: -1043218503
+  value_i: 1105127253
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100
+    upper_bound_double: 100
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 6
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 12
+  value_i: 5
+  value_i: 9
+  value_i: 8
+  value_i: 6
+  value_i: 14
+  value_i: 8
+  value_i: 15
+  value_i: 3
+  value_i: -1
+  value_i: 18
+  value_i: 7
+  value_i: 5
+  value_i: 12
+  value_i: -1
+  value_i: 9
+  value_i: 14
+  value_i: 15
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -1
+    upper_bound_double: 100
+  }
+}
+output {
+  id: "output1"
+  shape {
+    dims: 4
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_i: 1091499637
+  value_i: -1057275473
+  value_i: 1100870000
+  value_i: -1053051890
+  value_i: -1029513600
+  value_i: 1114832395
+  value_i: -1038650177
+  value_i: -1029060793
+  value_i: -1048879691
+  value_i: -1030029057
+  value_i: 1109268465
+  value_i: -1047387376
+  value_i: 1115258302
+  value_i: 1118517583
+  value_i: 1118341695
+  value_i: 1113203434
+  value_i: -1043218503
+  value_i: 1105127253
+  value_i: -1031791637
+  value_i: 1116630726
+  value_i: 1117997965
+  value_i: 1109028346
+  value_i: -1027992158
+  value_i: -1033539138
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100
+    upper_bound_double: 100
+  }
+}
+output {
+  id: "output2"
+  shape {
+    dims: 4
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 8
+  value_i: 6
+  value_i: 14
+  value_i: 8
+  value_i: 15
+  value_i: 3
+  value_i: 9
+  value_i: 14
+  value_i: 15
+  value_i: 12
+  value_i: 5
+  value_i: 9
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100
+    upper_bound_double: 100
+  }
+}
+output {
+  id: "output3"
+  shape {
+    dims: 6
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 3
+  value_i: 0
+  value_i: 1
+  value_i: -1
+  value_i: -1
+  value_i: 2
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100
+    upper_bound_double: 100
+  }
+}
+output {
+  id: "output4"
+  shape {
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 1
+  value_i: 1
+  value_i: 1
+  value_i: 1
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100
+    upper_bound_double: 100
+  }
+}
+output {
+  id: "output5"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 4
+  random_data {
+    distribution: UNIFORM
+    lower_bound_double: -100
+    upper_bound_double: 100
+  }
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_threshold: 0.003
+evaluation_threshold: 0.003
+dynamic_point_to_voxel_forward_param {
+  reduce_type: REDUCE_MODE_MEAN
+}
+handle_param {
+  round_mode: ROUND_OFF_ZERO
+}

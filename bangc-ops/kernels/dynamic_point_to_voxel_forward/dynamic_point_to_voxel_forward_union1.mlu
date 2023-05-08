@@ -1,0 +1,336 @@
+/*************************************************************************
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "dynamic_point_to_voxel_forward.h"
+
+#include "kernels/kernel.h"
+#include "kernels/debug.h"
+#include "kernels/utils/common.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+#define COORS_IDX 1
+#define COORS_XYZ 3
+
+__mlu_func__ void load(const float *input_addr, float *nram_input,
+                       const int deal_num, const int pi) {
+  int offset = (pi % 2) * 2 * deal_num;
+  float *nram_input_p = nram_input + offset;
+  __memcpy_async(nram_input_p, input_addr, deal_num * sizeof(float),
+                 GDRAM2NRAM);
+}
+
+__mlu_func__ void compute(float *nram_input, int *nram_points_count,
+                          const int deal_num, const int pi) {
+  int offset = (pi % 2) * 2 * deal_num;
+  float *nram_input_p = nram_input + offset;
+  float *nram_output_p = nram_input + offset + deal_num;
+#if (__BANG_ARCH__ >= 322) && (__BANG_ARCH__ != 372)
+  __bang_div(nram_output_p, nram_input_p, (float)(nram_points_count[pi]),
+             deal_num);
+#else
+  __bang_mul_scalar(nram_output_p, nram_input_p,
+                    1.0 / (float)nram_points_count[pi], deal_num);
+#endif
+}
+
+__mlu_func__ void store(float *output_addr, float *nram_output,
+                        const int deal_num, const int pi) {
+  int offset = (pi % 2) * 2 * deal_num;
+  float *nram_output_p = nram_output + offset + deal_num;
+  __memcpy_async(output_addr, nram_output_p, deal_num * sizeof(float),
+                 NRAM2GDRAM);
+}
+
+__mlu_func__ void lcsFunc(float *base_input_addr, int *base_points_count,
+                          float *nram_input, const int repeat_num,
+                          const int rem_num, const int deal_h) {
+  float *input_addr = NULL;
+  float *output_addr = NULL;
+  if (repeat_num > 0) {
+    input_addr = base_input_addr;
+    load(input_addr, nram_input, deal_h, 0);
+    __sync();
+  }
+
+  if (repeat_num > 1) {
+    // L(vi=1)
+    input_addr = base_input_addr + deal_h;
+    load(input_addr, nram_input, deal_h, 1);
+    // C(vi=0)
+    compute(nram_input, base_points_count, deal_h, 0);
+    __sync();
+  }
+
+  for (int v_iter = 0; v_iter < repeat_num - 2; v_iter++) {
+    // S(vi)
+    output_addr = base_input_addr + v_iter * deal_h;
+    store(output_addr, nram_input, deal_h, v_iter);
+    // C(vi+1)
+    compute(nram_input, base_points_count, deal_h, v_iter + 1);
+    // L(vi+2)
+    input_addr = base_input_addr + (v_iter + 2) * deal_h;
+    load(input_addr, nram_input, deal_h, v_iter + 2);
+    __sync_io_move_compute();
+  }
+
+  if (repeat_num > 1) {
+    // S(vi = repeat_num - 2)
+    output_addr = base_input_addr + (repeat_num - 2) * deal_h;
+    store(output_addr, nram_input, deal_h, repeat_num - 2);
+  }
+  if (rem_num > 0) {
+    // L[repeat_num]
+    input_addr = base_input_addr + repeat_num * deal_h;
+    load(input_addr, nram_input, rem_num, repeat_num);
+  }
+  if (repeat_num > 0) {
+    // C[repeat_num - 1]
+    compute(nram_input, base_points_count, deal_h, repeat_num - 1);
+  }
+  __sync();
+  if (repeat_num > 0) {
+    // S[repeat_num - 1]
+    output_addr = base_input_addr + (repeat_num - 1) * deal_h;
+    store(output_addr, nram_input, deal_h, repeat_num - 1);
+  }
+  if (rem_num > 0) {
+    // C[repeat_num]
+    compute(nram_input, base_points_count, rem_num, repeat_num);
+    __sync();
+    // S[repeat_num]
+    output_addr = base_input_addr + repeat_num * deal_h;
+    store(output_addr, nram_input, deal_h, repeat_num);
+  }
+}
+
+__mlu_global__ void MLUKernelDynamicPointToVoxelForward(
+    mluOpReduceMode_t reduce_mode, const float *feats, int32_t num_points,
+    int32_t num_feats, int32_t *voxel_coors, int32_t *voxel_num,
+    int *point2voxel_map, int32_t *voxel_points_count, float *voxel_feats) {
+#if __BANG_ARCH__ >= 372
+  if (__is_mpu()) {
+    return;
+  }
+  bool reduce_map = false;
+  if (voxel_coors[0] == -1) {
+    reduce_map = true;
+  }
+  __sync_all_ipu();
+  if (voxel_coors[0] == -1) {
+    if (taskId == 0) {
+      int32_t num_voxel = voxel_num[0] - 1;
+      __gdramset(voxel_num, 1, num_voxel);
+      __memcpy_async(voxel_coors, voxel_coors + COORS_XYZ,
+                     (num_voxel + 1) * COORS_XYZ * sizeof(int32_t),
+                     GDRAM2GDRAM);
+      __memcpy_async(voxel_points_count, voxel_points_count + COORS_IDX,
+                     (num_voxel + 1) * COORS_IDX * sizeof(int32_t),
+                     GDRAM2GDRAM);
+      __sync();
+    }
+  }
+  __sync_all_ipu();
+
+  const int remainder = num_points % taskDim;
+  const int points_per_core = num_points / taskDim + (int)(taskId < remainder);
+  // offset of the point that core processes
+  const int points_offset = taskId * (num_points / taskDim) +
+                            (taskId < remainder ? taskId : remainder);
+  // nram space
+  // |feats|
+  const int max_deal_h = ((MAX_NRAM_SIZE - sizeof(int32_t)) / sizeof(float));
+  int deal_h = 0;
+  int deal_p = 0;
+  if (num_feats > max_deal_h) {
+    deal_p = 1;
+    deal_h = max_deal_h;
+  } else {
+    deal_h = num_feats;
+    deal_p = (MAX_NRAM_SIZE / (deal_h * sizeof(float) + sizeof(int)));
+  }
+
+  float *nram_feats = (float *)nram_buffer;
+  int32_t *nram_map = (int32_t *)nram_feats + deal_p * deal_h;
+  const float *base_feats = feats + points_offset * num_feats;
+  int32_t *base_map = point2voxel_map + points_offset;
+  const int repeat_p = points_per_core / deal_p;
+  const int rem_p = points_per_core % deal_p;
+  const int repeat_h = num_feats / deal_h;
+  const int rem_h = num_feats % deal_h;
+
+  for (int32_t p_iter = 0; p_iter <= repeat_p; p_iter++) {
+    int32_t deal_p_num = (p_iter < repeat_p) ? deal_p : rem_p;
+    if (deal_p_num == 0) {
+      break;
+    }
+    int32_t deal_p_num_offset = p_iter * deal_p * num_feats;
+    int32_t deal_map_offset = p_iter * deal_p * 1;
+    int32_t *base_map_addr = base_map + deal_map_offset;
+    // load map
+    __memcpy(nram_map, base_map_addr, deal_p_num * sizeof(int32_t), GDRAM2NRAM);
+    for (int32_t h_iter = 0; h_iter <= repeat_h; h_iter++) {
+      int32_t deal_h_num = (h_iter < repeat_h) ? deal_h : rem_h;
+      if (deal_h_num == 0) {
+        break;
+      }
+      int32_t deal_h_num_offset = deal_p_num_offset + h_iter * deal_h;
+      const float *base_feats_addr = base_feats + deal_h_num_offset;
+      // load
+      __memcpy_async(nram_feats, base_feats_addr,
+                     deal_p_num * deal_h_num * sizeof(float), GDRAM2NRAM);
+      if (reduce_map) {
+        __bang_add_scalar(nram_map, nram_map, -1, deal_p_num);
+      }
+      __sync();
+      // index and atomic
+      for (int32_t i = 0; i < deal_p_num; i++) {
+        int reduce_to = nram_map[i];
+        if (reduce_to == -1) continue;
+        float *voxel_feats_offset =
+            voxel_feats + reduce_to * num_feats + h_iter * deal_h;
+        if (reduce_mode == MLUOP_REDUCE_DMAX) {
+          __bang_atomic_reduce_max(voxel_feats_offset, nram_feats + i * deal_h,
+                                   deal_h_num);
+        } else {
+          __bang_atomic_reduce_add(voxel_feats_offset, nram_feats + i * deal_h,
+                                   deal_h_num);
+        }
+      }
+    }
+    // store map
+    if (reduce_map) {
+      __memcpy(base_map_addr, nram_map, deal_p_num * sizeof(int32_t),
+               NRAM2GDRAM);
+    }
+  }
+  __sync_all_ipu();
+
+  int32_t num_voxel = voxel_num[0];
+  if (reduce_mode == MLUOP_REDUCE_DMEAN) {
+    const int rem_voxel = num_voxel % taskDim;
+    const int voxel_per_core = num_voxel / taskDim + (int)(taskId < rem_voxel);
+    // offset of the point that core processes
+    const int voxel_offset = taskId * (num_voxel / taskDim) +
+                             (taskId < rem_voxel ? taskId : rem_voxel);
+    // nram space
+    // |voxel_points_count|
+    // |voxel_feats_ping|voxel_feats_pong|
+    const int max_deal_h =
+        (MAX_NRAM_SIZE - sizeof(int32_t)) / (4 * sizeof(float));
+    int deal_h = 0;
+    int deal_v = 0;
+    if (num_feats > max_deal_h) {
+      deal_v = 1;
+      deal_h = max_deal_h;
+    } else {
+      deal_h = num_feats;
+      deal_v = (MAX_NRAM_SIZE - 4 * deal_h * sizeof(float)) / (sizeof(int32_t));
+    }
+
+    int real_deal_v = deal_v > voxel_per_core ? voxel_per_core : deal_v;
+
+    int *nram_points_count = (int *)nram_buffer;
+    float *voxel_feats_ping = (float *)(nram_points_count + real_deal_v);
+    int *base_points_count = (int *)voxel_points_count + voxel_offset;
+    float *base_voxel_feats = (float *)voxel_feats + voxel_offset * num_feats;
+    const int repeat_v = voxel_per_core / deal_v;
+    const int rem_v = voxel_per_core % deal_v;
+    const int repeat_h = num_feats / deal_h;
+    const int rem_h = num_feats % deal_h;
+    for (int v_iter = 0; v_iter <= repeat_v; v_iter++) {
+      int deal_v_num = (v_iter < repeat_v) ? deal_v : rem_v;
+      if (deal_v_num == 0) {
+        break;
+      }
+      float *base_voxel_feats_addr =
+          base_voxel_feats + v_iter * deal_v * num_feats;
+      int *base_points_count_addr = base_points_count + v_iter * deal_v;
+      __memcpy(nram_points_count, base_points_count_addr,
+               deal_v_num * sizeof(int), GDRAM2NRAM);
+      if (num_feats <= max_deal_h) {
+        // L(vi=0)
+        if (deal_v_num > 0) {
+          float *input_addr = base_voxel_feats_addr;
+          load(input_addr, voxel_feats_ping, deal_h, 0);
+          __sync();
+        }
+
+        if (deal_v_num > 1) {
+          // L(vi=1)
+          float *input_addr = base_voxel_feats_addr + deal_h;
+          load(input_addr, voxel_feats_ping, deal_h, 1);
+          // C(vi=0)
+          compute(voxel_feats_ping, nram_points_count, deal_h, 0);
+          __sync();
+        }
+
+        for (int vi = 0; vi < deal_v_num - 2; vi++) {
+          // S(vi)
+          float *output_addr = base_voxel_feats_addr + vi * deal_h;
+          store(output_addr, voxel_feats_ping, deal_h, vi);
+          // C(vi+1)
+          compute(voxel_feats_ping, nram_points_count, deal_h, vi + 1);
+          // L(vi+2)
+          float *input_addr = base_voxel_feats_addr + (vi + 2) * deal_h;
+          load(input_addr, voxel_feats_ping, deal_h, vi + 2);
+          __sync();
+        }
+
+        if (deal_v_num > 1) {
+          // S(vi = deal_v_num - 2)
+          float *output_addr =
+              base_voxel_feats_addr + (deal_v_num - 2) * deal_h;
+          store(output_addr, voxel_feats_ping, deal_h, deal_v_num - 2);
+          __sync();
+        }
+        if (deal_v_num > 0) {
+          // C[deal_v_num - 1]
+          compute(voxel_feats_ping, nram_points_count, deal_h, deal_v_num - 1);
+        }
+        __sync();
+        if (deal_v_num > 0) {
+          // S[deal_v_num - 1]
+          float *output_addr =
+              base_voxel_feats_addr + (deal_v_num - 1) * deal_h;
+          store(output_addr, voxel_feats_ping, deal_h, deal_v_num - 1);
+        }
+      } else {
+        // vi = points_offset + v_iter
+        lcsFunc(base_voxel_feats_addr, nram_points_count, voxel_feats_ping,
+                repeat_h, rem_h, deal_h);
+      }
+    }
+  }
+#endif
+}
+
+void MLUOP_WIN_API KernelDynamicPointToVoxelForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpReduceMode_t reduce_mode, const void *feats, int32_t num_points,
+    int32_t num_feats, void *voxel_coors, void *voxel_num,
+    void *point2voxel_map, void *voxel_points_count, void *voxel_feats) {
+  MLUKernelDynamicPointToVoxelForward<<<k_dim, k_type, queue>>>(
+      reduce_mode, (float *)feats, num_points, num_feats,
+      (int32_t *)voxel_coors, (int32_t *)voxel_num, (int *)point2voxel_map,
+      (int32_t *)voxel_points_count, (float *)voxel_feats);
+}
