@@ -3,16 +3,6 @@ Update History
 
 This section lists contents that were made for each product release.
 
-* V0.6.1
-
-  **Date:** May 19, 2023
-
-  **Changes:**
-
-  - Added the following new operations:
-
-    - dynamic_point_to_voxel_forward
-
 * V0.6.0
 
   **Date:** April 14, 2023
