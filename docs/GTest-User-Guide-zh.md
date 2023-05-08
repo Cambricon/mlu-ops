@@ -184,35 +184,70 @@ test_param: {
 
 ### 7. 代码覆盖率
 
+当前代码覆盖率脚本只能测试 .mlu 文件，如需测试 host 端 .cpp 文件需将 .cpp 后缀改为 .mlu。
+因服务器环境缺少必要组件，在 docker 环境下测试更方便。一般在测试 cases 的环境下, 就可以进行代码覆盖率测试，只需按如下步骤进行。
+
 #### 7.1 环境配置
 
-在进行代码覆盖率检查时，可直接在 mlu-ops 编译环境下进行，只需要再安装三个依赖包
+在进行代码覆盖率检查时，需要再安装三个依赖包（若镜像环境中已安装，则无需安装）
 
 ```
 apt install lcov
 apt install genhtml
 apt install html2text
 ```
+
 #### 7.2 编译
 
-当前 mlu-ops 采用了 -c 编译选项 ，指定编译板卡和算子名
+当前 mlu-ops 采用了 -c 编译选项开启代码覆盖率检测，编译方式如下：
+
+- 情况1
+
+当 kernels 文件下算子的正反向在同一个文件中, 如 `roi_crop_forward` 和 `roi_crop_backward`
+
 ```
 cd mlu-ops
 source env.sh
 cd bangc-ops
-./build.sh -c --mlu370 --filter=*算子名称*
+./build.sh -c --filter="roi_crop_forward;roi_crop_backward"
 ```
+- 情况2
+
+当 kernels 文件下算子的正反向在不同一个文件中, 如 `dynamic_point_to_voxel_forward`
+
+```
+cd mlu-ops
+source env.sh
+cd bangc-ops
+./build.sh -c --filter="dynamic_point_to_voxel_forward"
+```
+
 #### 7.3 测试
 
-这里我们以 three_nn_forward 算子为例
+- 针对情况1
+
 ```
 cd build/test
-../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*three_nn_forward*"
+../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*roi_crop* [--cases_dir=path]"
 ```
-在当前文件下的 result 文件中可以可视化查看 html 文件 index.html；测试要求算子 kernel 各代码文本 Line Coverage 不低于 95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种条件。
+得到四个文件夹 info、output、profdata 和 result；scp -r result 文件夹中所有内容到本地中，通过浏览器查看 index.html 文件可以可视化查看代码覆盖率情况；测试要求算子 kernels 各代码文本 Line Coverage 不低于 95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种条件分支。
 测试报告只需贴上如下信息：
 ```
-Filename [Sort by name]     Line Coverage [Sort_by_line Functions [Sort_by
-                              coverage]                   function_coverage]
-  three_nn_forward_union1.mlu [100.0%] 100.0 %314 / 314  100.0 %22 / 22
+Filename [Sort by name]         Line Coverage [Sort_by_line_coverage]      Functions [Sort by_function_coverage]
+  roi_crop_block.mlu [100.0%]        100.0 %314 / 314                              100.0 %22 / 22
 ```
+
+- 针对情况2
+
+```
+cd build/test
+../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*dynamic_point_to_voxel_forward* [--cases_dir=path]"
+```
+同样可以得到上面信息，只需在测试报告上贴上如下信息：
+```
+Filename [Sort by name]                   Line Coverage [Sort by_line_coverage]  Functions [Sort by_function_coverage]
+dynamic_point_to_voxel_forward_union1.mlu [96.5%]   96.5 %218 / 225                   98.3 % 5 / 6                             
+dynamic_point_to_voxel_mask_block.mlu     [95.6%]   95.6 %99 / 111                    100.0 %5 / 5     
+```
+
+
