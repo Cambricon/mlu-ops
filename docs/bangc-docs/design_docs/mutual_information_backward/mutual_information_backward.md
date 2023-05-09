@@ -131,7 +131,7 @@
 | ------------ | ------------------------------------------------------------ |
 | 数据类型限制 | px: float<br/>py: float<br/>opt_boundary: int64<br/>p: float<br/>ans_grad: float<br/>overwrite_ans_grad: bool<br/>px_grad: float<br/>py_grad: float |
 | 布局限制     | ARRAY                                                        |
-| 规模限制     | 不支持large tensor;<br>在MLU370中，<br>T * (S + 1) + (T + 1) * S + 5 * T <= 163840<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 1 <= 163840; <br>在MLU590中，<br>T * (S + 1) + (T + 1) * S + 5 * T <= 98304<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 1 <= 98304;|
+| 规模限制     | 不支持large tensor;<br>在MLU370中，<br>T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 163840<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 163840; <br>在MLU590中，<br>T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 98304<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 98304;|
 | 功能限制     | 仅支持!modified模式，即输入参数px的shape为 [B, S, T+1]       |
 | 数据范围限制 | opt_boundary的shape为[B, 4]其中B为batch，4的含义为[begin_symbol, begin_frame, end_symbol, end_frame]<br/>要求：（**python层已有相关防呆**）<br/>0<= begin_symbol <= end_symbol <= S<br/>0<= begin_frame <= end_frame <= T |
 | 原位限制     | 仅当overwrite_ans_grad为true时，ans_grad支持原位操作         |
