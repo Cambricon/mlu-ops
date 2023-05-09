@@ -48,7 +48,7 @@ void msDeformAttnCol2imBilinear(
   const int32_t h_high_ptr_offset = h_low_ptr_offset + h_stride;
   const int32_t w_low_ptr_offset = w_low * w_stride;
   const int32_t w_high_ptr_offset = w_low_ptr_offset + w_stride;
-  const int32_t base_ptr = m * channels + c;
+  int32_t base_ptr = m * channels + c;
 
   const float w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
   const float top_grad_value = top_grad * attn_weight;
@@ -173,17 +173,12 @@ void MsDeformAttnBackwardExecutor::cpuCompute() {
     temp /= num_heads;
     temp /= num_query;
     const int32_t b_col = temp;
-    const int32_t per_sample_loc_size =
-        b_col * num_query * num_heads * num_levels * num_point * 2;
-    const int32_t per_attn_weight_size =
-        b_col * num_query * num_heads * num_levels * num_point;
-
-    float *data_value = cpu_value + 0;
-    float *grad_data_value = cpu_grad_value + 0;
-    float *data_sampling_loc = cpu_sampling_loc + 0;
-    float *data_attn_weight = cpu_attn_weight + 0;
-    float *grad_sampling_loc = cpu_grad_sampling_loc + 0;
-    float *grad_attn_weight = cpu_grad_attn_weight + 0;
+    float *data_value = cpu_value;
+    float *grad_data_value = cpu_grad_value;
+    float *data_sampling_loc = cpu_sampling_loc;
+    float *data_attn_weight = cpu_attn_weight;
+    float *grad_sampling_loc = cpu_grad_sampling_loc;
+    float *grad_attn_weight = cpu_grad_attn_weight;
     int32_t grad_output_offset = b_col * num_query * num_heads * channels +
                                  i % (num_query * num_heads * channels);
     float top_grad = cpu_grad_output[grad_output_offset];

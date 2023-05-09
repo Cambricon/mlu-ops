@@ -81,13 +81,10 @@ mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
 
   if ((handle->arch == MLUOP_MLU590) && (nlp <= FAST_KERNEL_MAX_NLP) &&
       (nlpc <= FAST_KERNEL_MAX_NLPC)) {
-    VLOG(5) << "===========85 MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST\n";
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST;
-  } else if (num_per_time_theory > 1) {
-    VLOG(5) << "===========88 MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL\n";
+  } else if (num_per_time_theory >= 1) {
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL;
   }
-  VLOG(5) << "===========91 MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT";
   return MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT;
 }
 

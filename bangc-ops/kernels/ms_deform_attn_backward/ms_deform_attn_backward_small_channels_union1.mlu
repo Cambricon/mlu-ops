@@ -53,203 +53,244 @@ void __mlu_func__ computeGridMaskAndOffset(
   __bang_transpose(nram_loc_h, nram_grad_output_tl + num_deal_grid,
                    num_per_time_real * num_heads * num_levels, num_points);
 
-  __bang_transpose((int32_t*)nram_grad_output_tr, (int32_t *)nram_spatial_shapes,
-                   num_levels, 2);
-  __bang_mul_scalar((int32_t*)nram_h_stride, (int32_t*)((int32_t*)nram_grad_output_tr + num_levels), w_stride,
-                    num_levels);
-                 
-  __memcpy_async((int32_t*)nram_spatial_shapes, (int32_t*)nram_grad_output_tr,
+  __bang_transpose((int32_t *)nram_grad_output_tr,
+                   (int32_t *)nram_spatial_shapes, num_levels, 2);
+  __bang_mul_scalar((int32_t *)nram_h_stride,
+                    (int32_t *)((int32_t *)nram_grad_output_tr + num_levels),
+                    w_stride, num_levels);
+
+  __memcpy_async((int32_t *)nram_spatial_shapes, (int32_t *)nram_grad_output_tr,
                  num_levels * 2 * sizeof(int32_t), NRAM2NRAM);
-__bang_int322float((float *)nram_spatial_shapes,
-                      (int32_t *)nram_spatial_shapes, num_levels * 2, 0);
+  __bang_int322float((float *)nram_spatial_shapes,
+                     (int32_t *)nram_spatial_shapes, num_levels * 2, 0);
   __bang_cycle_mul((float *)nram_loc_w, (float *)nram_loc_w,
                    (float *)(nram_spatial_shapes + num_levels), num_deal_grid,
                    num_levels);
-  __bang_cycle_mul((float *)nram_loc_h, (float *)nram_loc_h, (float *)(nram_spatial_shapes),
-                   num_deal_grid, num_levels);
-  __bang_sub_scalar((float *)nram_loc_w, (float *)nram_loc_w, 0.5, num_deal_grid);
-  __bang_sub_scalar((float *)nram_loc_h, (float *)nram_loc_h, 0.5, num_deal_grid);
+  __bang_cycle_mul((float *)nram_loc_h, (float *)nram_loc_h,
+                   (float *)(nram_spatial_shapes), num_deal_grid, num_levels);
+  __bang_sub_scalar((float *)nram_loc_w, (float *)nram_loc_w, 0.5,
+                    num_deal_grid);
+  __bang_sub_scalar((float *)nram_loc_h, (float *)nram_loc_h, 0.5,
+                    num_deal_grid);
 
   // get mask. (h_im > -1 && w_im > -1 && h_im < spatial_h && w_im < spatial_w)
   __bang_cycle_lt((float *)nram_w_low_temp, (float *)nram_loc_w,
                   (float *)(nram_spatial_shapes + num_levels), num_deal_grid,
                   num_levels);
-  __bang_cycle_lt((float *)nram_h_high_temp, (float *)nram_loc_h, (float *)(nram_spatial_shapes),
-                  num_deal_grid, num_levels);
+  __bang_cycle_lt((float *)nram_h_high_temp, (float *)nram_loc_h,
+                  (float *)(nram_spatial_shapes), num_deal_grid, num_levels);
 
-  __bang_and((float *)nram_w_low_temp, (float *)nram_w_low_temp, (float *)nram_h_high_temp, num_deal_grid);
-  __bang_gt_scalar((float *)nram_h_high_temp, (float *)nram_loc_h, -1, num_deal_grid);
-  __bang_and((float *)nram_h_high_temp,(float *) nram_h_high_temp, (float *)nram_w_low_temp,
-             num_deal_grid);
-  __bang_gt_scalar((float *)nram_w_low_temp, (float *)nram_loc_w, -1, num_deal_grid);
-  __bang_and((float *)nram_h_high_temp, (float *)nram_h_high_temp, (float *)nram_w_low_temp,
-             num_deal_grid);
+  __bang_and((float *)nram_w_low_temp, (float *)nram_w_low_temp,
+             (float *)nram_h_high_temp, num_deal_grid);
+  __bang_gt_scalar((float *)nram_h_high_temp, (float *)nram_loc_h, -1,
+                   num_deal_grid);
+  __bang_and((float *)nram_h_high_temp, (float *)nram_h_high_temp,
+             (float *)nram_w_low_temp, num_deal_grid);
+  __bang_gt_scalar((float *)nram_w_low_temp, (float *)nram_loc_w, -1,
+                   num_deal_grid);
+  __bang_and((float *)nram_h_high_temp, (float *)nram_h_high_temp,
+             (float *)nram_w_low_temp, num_deal_grid);
 
-  __bang_transpose((float *)nram_w_low_temp, (float *)nram_h_high_temp, num_points,
-                   num_per_time_real * num_heads * num_levels);
+  __bang_transpose((float *)nram_w_low_temp, (float *)nram_h_high_temp,
+                   num_points, num_per_time_real * num_heads * num_levels);
   __memcpy_async((float *)nram_h_high_temp, (float *)nram_w_low_temp,
                  num_deal_grid * sizeof(float), NRAM2NRAM);
 
-  __bang_transpose((float *)nram_grad_output_tl,(float *)nram_loc_w, num_points,
-                   num_per_time_real * num_heads * num_levels);
-  __memcpy_async((float *)nram_loc_w, (float *)nram_grad_output_tl, num_deal_grid * sizeof(float),
-                 NRAM2NRAM);
-  __bang_transpose((float *)nram_grad_output_tl, (float *)nram_loc_h, num_points,
-                   num_per_time_real * num_heads * num_levels);
-  __memcpy_async((float *)nram_loc_h, (float *)nram_grad_output_tl, num_deal_grid * sizeof(float),
-                 NRAM2NRAM);
-
+  __bang_transpose((float *)nram_grad_output_tl, (float *)nram_loc_w,
+                   num_points, num_per_time_real * num_heads * num_levels);
+  __memcpy_async((float *)nram_loc_w, (float *)nram_grad_output_tl,
+                 num_deal_grid * sizeof(float), NRAM2NRAM);
+  __bang_transpose((float *)nram_grad_output_tl, (float *)nram_loc_h,
+                   num_points, num_per_time_real * num_heads * num_levels);
+  __memcpy_async((float *)nram_loc_h, (float *)nram_grad_output_tl,
+                 num_deal_grid * sizeof(float), NRAM2NRAM);
 
   __bang_floor(nram_w_low, nram_loc_w, num_deal_grid);
   __bang_floor(nram_h_low, nram_loc_h, num_deal_grid);
-  __bang_float2int32((int32_t*)nram_w_low,nram_w_low, num_deal_grid, 0);
-  __bang_float2int32((int32_t*)nram_h_low,nram_h_low, num_deal_grid, 0);
+  __bang_float2int32((int32_t *)nram_w_low, nram_w_low, num_deal_grid, 0);
+  __bang_float2int32((int32_t *)nram_h_low, nram_h_low, num_deal_grid, 0);
 
-  __bang_add_scalar((int32_t*)nram_h_high, (int32_t*)nram_h_low, 1, num_deal_grid);
-  __bang_add_scalar((int32_t*)nram_w_high, (int32_t*)nram_w_low, 1, num_deal_grid);
+  __bang_add_scalar((int32_t *)nram_h_high, (int32_t *)nram_h_low, 1,
+                    num_deal_grid);
+  __bang_add_scalar((int32_t *)nram_w_high, (int32_t *)nram_w_low, 1,
+                    num_deal_grid);
 
-  __bang_transpose((int32_t*)nram_h_low_ptr_offset, (int32_t*)nram_h_low,
+  __bang_transpose((int32_t *)nram_h_low_ptr_offset, (int32_t *)nram_h_low,
                    num_per_time_real * num_heads * num_levels, num_points);
-  __bang_cycle_mul((int32_t*)nram_h_low_ptr_offset, (int32_t*)nram_h_low_ptr_offset, 
-  (int32_t*)nram_h_stride, num_deal_grid, num_levels);
-  __bang_cycle_add((int32_t*)nram_h_high_ptr_offset, (int32_t*)nram_h_low_ptr_offset, 
-  (int32_t*)nram_h_stride,
+  __bang_cycle_mul((int32_t *)nram_h_low_ptr_offset,
+                   (int32_t *)nram_h_low_ptr_offset, (int32_t *)nram_h_stride,
+                   num_deal_grid, num_levels);
+  __bang_cycle_add((int32_t *)nram_h_high_ptr_offset,
+                   (int32_t *)nram_h_low_ptr_offset, (int32_t *)nram_h_stride,
                    num_deal_grid, num_levels);
 
-  __bang_transpose((int32_t*)nram_w_low_ptr_offset, (int32_t*)nram_h_low_ptr_offset, num_points,
+  __bang_transpose((int32_t *)nram_w_low_ptr_offset,
+                   (int32_t *)nram_h_low_ptr_offset, num_points,
                    num_per_time_real * num_heads * num_levels);
 
-  __memcpy_async((int32_t*)nram_h_low_ptr_offset, (int32_t*)nram_w_low_ptr_offset,
+  __memcpy_async((int32_t *)nram_h_low_ptr_offset,
+                 (int32_t *)nram_w_low_ptr_offset,
                  num_deal_grid * sizeof(int32_t), NRAM2NRAM);
-  __bang_transpose((int32_t*)nram_w_low_ptr_offset, (int32_t*)nram_h_high_ptr_offset, num_points,
+  __bang_transpose((int32_t *)nram_w_low_ptr_offset,
+                   (int32_t *)nram_h_high_ptr_offset, num_points,
                    num_per_time_real * num_heads * num_levels);
-  __memcpy_async((int32_t*)nram_h_high_ptr_offset, (int32_t*)nram_w_low_ptr_offset,
+  __memcpy_async((int32_t *)nram_h_high_ptr_offset,
+                 (int32_t *)nram_w_low_ptr_offset,
                  num_deal_grid * sizeof(int32_t), NRAM2NRAM);
-  __bang_mul_scalar((int32_t*)nram_w_low_ptr_offset, (int32_t*)nram_w_low, qid_stride,
+  __bang_mul_scalar((int32_t *)nram_w_low_ptr_offset, (int32_t *)nram_w_low,
+                    qid_stride, num_deal_grid);
+  __bang_add_scalar((int32_t *)nram_w_high_ptr_offset,
+                    (int32_t *)nram_w_low_ptr_offset, qid_stride,
                     num_deal_grid);
-  __bang_add_scalar((int32_t*)nram_w_high_ptr_offset, (int32_t*)nram_w_low_ptr_offset, qid_stride,
-                    num_deal_grid);
-               
-  __bang_add((int32_t*)nram_offset1, (int32_t*)nram_h_low_ptr_offset, (int32_t*)nram_w_low_ptr_offset,
-             num_deal_grid);
 
-  __bang_transpose((int32_t*)nram_offset_temp,(int32_t*) nram_offset1,
-                   num_per_time_real * num_heads, num_levels * num_points);
-  __bang_cycle_add((int32_t*)nram_offset_temp, (int32_t*)nram_offset_temp, (int32_t*)nram_base_ptr,
-                   num_deal_grid, num_heads);
+  __bang_add((int32_t *)nram_offset1, (int32_t *)nram_h_low_ptr_offset,
+             (int32_t *)nram_w_low_ptr_offset, num_deal_grid);
 
-  __bang_transpose((int32_t*)nram_offset1, (int32_t*)nram_offset_temp, num_levels * num_points,
-                   num_per_time_real * num_heads);
+  __bang_transpose((int32_t *)nram_offset_temp, (int32_t *)nram_offset1,
+                   num_per_time_real * num_heads, num_levels * num_points);
+  __bang_cycle_add((int32_t *)nram_offset_temp, (int32_t *)nram_offset_temp,
+                   (int32_t *)nram_base_ptr, num_deal_grid, num_heads);
 
-  __bang_add((int32_t*)nram_offset2, (int32_t*)nram_h_low_ptr_offset,
-   (int32_t*)nram_w_high_ptr_offset,
-             num_deal_grid);
-  __bang_transpose((int32_t*)nram_offset_temp, (int32_t*)nram_offset2,
-                   num_per_time_real * num_heads, num_levels * num_points);
-  __bang_cycle_add((int32_t*)nram_offset_temp, (int32_t*)nram_offset_temp, 
-  (int32_t*)nram_base_ptr,
-                   num_deal_grid, num_heads);
-  __bang_transpose((int32_t*)nram_offset2, (int32_t*)nram_offset_temp, num_levels * num_points,
-                   num_per_time_real * num_heads);
+  __bang_transpose((int32_t *)nram_offset1, (int32_t *)nram_offset_temp,
+                   num_levels * num_points, num_per_time_real * num_heads);
 
-  __bang_add((int32_t*)nram_offset3, (int32_t*)nram_h_high_ptr_offset, 
-  (int32_t*)nram_w_low_ptr_offset,
-             num_deal_grid);
-  __bang_transpose((int32_t*)nram_offset_temp, (int32_t*)nram_offset3,
+  __bang_add((int32_t *)nram_offset2, (int32_t *)nram_h_low_ptr_offset,
+             (int32_t *)nram_w_high_ptr_offset, num_deal_grid);
+  __bang_transpose((int32_t *)nram_offset_temp, (int32_t *)nram_offset2,
                    num_per_time_real * num_heads, num_levels * num_points);
-  __bang_cycle_add((int32_t*)nram_offset_temp, (int32_t*)nram_offset_temp, (int32_t*)nram_base_ptr,
-                   num_deal_grid, num_heads);
-  __bang_transpose((int32_t*)nram_offset3, (int32_t*)nram_offset_temp, num_levels * num_points,
-                   num_per_time_real * num_heads);
-  __bang_add((int32_t*)nram_offset4, (int32_t*)nram_h_high_ptr_offset, (int32_t*)nram_w_high_ptr_offset,
-             num_deal_grid);
-  __bang_transpose((int32_t*)nram_offset_temp, (int32_t*)nram_offset4,
+  __bang_cycle_add((int32_t *)nram_offset_temp, (int32_t *)nram_offset_temp,
+                   (int32_t *)nram_base_ptr, num_deal_grid, num_heads);
+  __bang_transpose((int32_t *)nram_offset2, (int32_t *)nram_offset_temp,
+                   num_levels * num_points, num_per_time_real * num_heads);
+
+  __bang_add((int32_t *)nram_offset3, (int32_t *)nram_h_high_ptr_offset,
+             (int32_t *)nram_w_low_ptr_offset, num_deal_grid);
+  __bang_transpose((int32_t *)nram_offset_temp, (int32_t *)nram_offset3,
                    num_per_time_real * num_heads, num_levels * num_points);
-  __bang_cycle_add((int32_t*)nram_offset_temp, (int32_t*)nram_offset_temp, (int32_t*)nram_base_ptr,
-                   num_deal_grid, num_heads);
-  __bang_transpose((int32_t*)nram_offset4, (int32_t*)nram_offset_temp, num_levels * num_points,
-                   num_per_time_real * num_heads);
+  __bang_cycle_add((int32_t *)nram_offset_temp, (int32_t *)nram_offset_temp,
+                   (int32_t *)nram_base_ptr, num_deal_grid, num_heads);
+  __bang_transpose((int32_t *)nram_offset3, (int32_t *)nram_offset_temp,
+                   num_levels * num_points, num_per_time_real * num_heads);
+  __bang_add((int32_t *)nram_offset4, (int32_t *)nram_h_high_ptr_offset,
+             (int32_t *)nram_w_high_ptr_offset, num_deal_grid);
+  __bang_transpose((int32_t *)nram_offset_temp, (int32_t *)nram_offset4,
+                   num_per_time_real * num_heads, num_levels * num_points);
+  __bang_cycle_add((int32_t *)nram_offset_temp, (int32_t *)nram_offset_temp,
+                   (int32_t *)nram_base_ptr, num_deal_grid, num_heads);
+  __bang_transpose((int32_t *)nram_offset4, (int32_t *)nram_offset_temp,
+                   num_levels * num_points, num_per_time_real * num_heads);
 
   // h_low >= 0 && w_low >= 0  mask2
   float *mask1 = nram_h_low_ptr_offset;
   float *mask2 = nram_h_high_ptr_offset;
   float *mask3 = nram_w_low_ptr_offset;
   float *mask4 = nram_w_high_ptr_offset;
-  __bang_ge_scalar((int32_t*)mask1, (int32_t*)nram_h_low, 0, num_deal_grid);
-  __bang_ge_scalar((int32_t*)mask2, (int32_t*)nram_w_low, 0, num_deal_grid);
-  __bang_and((int32_t*)mask2, (int32_t*)mask1, (int32_t*)mask2, num_deal_grid);
-  __bang_float2int32((int32_t*)nram_h_high_temp,nram_h_high_temp,num_deal_grid, 0);
-  __bang_and((int32_t*)mask2, (int32_t*)nram_h_high_temp, (int32_t*)mask2, num_deal_grid);
+  __bang_ge_scalar((int32_t *)mask1, (int32_t *)nram_h_low, 0, num_deal_grid);
+  __bang_ge_scalar((int32_t *)mask2, (int32_t *)nram_w_low, 0, num_deal_grid);
+  __bang_and((int32_t *)mask2, (int32_t *)mask1, (int32_t *)mask2,
+             num_deal_grid);
+  __bang_float2int32((int32_t *)nram_h_high_temp, nram_h_high_temp,
+                     num_deal_grid, 0);
+  __bang_and((int32_t *)mask2, (int32_t *)nram_h_high_temp, (int32_t *)mask2,
+             num_deal_grid);
 
   // h_low >= 0 && w_high <= width - 1 mask1
-  __bang_transpose((int32_t*)mask3, (int32_t*)nram_w_high,
+  __bang_transpose((int32_t *)mask3, (int32_t *)nram_w_high,
                    num_per_time_real * num_heads * num_levels, num_points);
-                
+
   __bang_sub_scalar((float *)nram_spatial_shapes, (float *)nram_spatial_shapes,
                     1, num_levels * 2);
-  __bang_int322float((float *)mask3, (int32_t*)mask3, num_deal_grid, 0);            
-  __bang_cycle_le((float *)mask3, (float *)mask3, (float *)(nram_spatial_shapes + num_levels),
-                  num_deal_grid, num_levels); // 仅float
-   __bang_float2int32((int32_t*)mask3, (float *)mask3,num_deal_grid , 0);                   
-  __bang_transpose((int32_t*)mask4, (int32_t*)mask3, num_points,
+  __bang_int322float((float *)mask3, (int32_t *)mask3, num_deal_grid, 0);
+  __bang_cycle_le((float *)mask3, (float *)mask3,
+                  (float *)(nram_spatial_shapes + num_levels), num_deal_grid,
+                  num_levels);  // 仅float
+  __bang_float2int32((int32_t *)mask3, (float *)mask3, num_deal_grid, 0);
+  __bang_transpose((int32_t *)mask4, (int32_t *)mask3, num_points,
                    num_per_time_real * num_heads * num_levels);
-  __bang_and((int32_t*)mask1, (int32_t*)mask1, (int32_t*)mask4, num_deal_grid);
-  __bang_and((int32_t*)mask1, (int32_t*)nram_h_high_temp, (int32_t*)mask1, num_deal_grid);
+  __bang_and((int32_t *)mask1, (int32_t *)mask1, (int32_t *)mask4,
+             num_deal_grid);
+  __bang_and((int32_t *)mask1, (int32_t *)nram_h_high_temp, (int32_t *)mask1,
+             num_deal_grid);
 
   // h_high <= height - 1 && w_high <= width - 1 mask3
-  __bang_transpose((int32_t*)mask3, (int32_t*)nram_h_high,
+  __bang_transpose((int32_t *)mask3, (int32_t *)nram_h_high,
                    num_per_time_real * num_heads * num_levels, num_points);
-   __bang_int322float((float *)mask3, (int32_t*)mask3, num_deal_grid, 0);                
-  __bang_cycle_le((float *)mask3, (float *)mask3, (float *)(nram_spatial_shapes), num_deal_grid,
-                  num_levels);
-    __bang_float2int32((int32_t*)mask3, (float *)mask3, num_deal_grid, 0);                 
-  __bang_transpose((int32_t*)nram_h_low_temp, (int32_t*)mask3, num_points,
+  __bang_int322float((float *)mask3, (int32_t *)mask3, num_deal_grid, 0);
+  __bang_cycle_le((float *)mask3, (float *)mask3,
+                  (float *)(nram_spatial_shapes), num_deal_grid, num_levels);
+  __bang_float2int32((int32_t *)mask3, (float *)mask3, num_deal_grid, 0);
+  __bang_transpose((int32_t *)nram_h_low_temp, (int32_t *)mask3, num_points,
                    num_per_time_real * num_heads * num_levels);
-  __bang_and((int32_t*)mask4, (int32_t*)mask4, (int32_t*)nram_h_low_temp, num_deal_grid);
-  __bang_and((int32_t*)mask3, (int32_t*)mask4, (int32_t*)nram_h_high_temp, num_deal_grid);
+  __bang_and((int32_t *)mask4, (int32_t *)mask4, (int32_t *)nram_h_low_temp,
+             num_deal_grid);
+  __bang_and((int32_t *)mask3, (int32_t *)mask4, (int32_t *)nram_h_high_temp,
+             num_deal_grid);
 
   // h_high <= height - 1 && w_low >= 0 mask4
-  __bang_ge_scalar((int32_t*)nram_w_low_temp, (int32_t*)nram_w_low, 0, num_deal_grid); // 仅float
-  __bang_and((int32_t*)mask4, (int32_t*)nram_h_low_temp, (int32_t*)nram_w_low_temp, num_deal_grid);
-  __bang_and((int32_t*)mask4, (int32_t*)mask4, (int32_t*)nram_h_high_temp, num_deal_grid);
- __bang_int322float(nram_offset1,(int32_t*)nram_offset1, num_deal_grid , 0);
+  __bang_ge_scalar((int32_t *)nram_w_low_temp, (int32_t *)nram_w_low, 0,
+                   num_deal_grid);  // 仅float
+  __bang_and((int32_t *)mask4, (int32_t *)nram_h_low_temp,
+             (int32_t *)nram_w_low_temp, num_deal_grid);
+  __bang_and((int32_t *)mask4, (int32_t *)mask4, (int32_t *)nram_h_high_temp,
+             num_deal_grid);
+  __bang_int322float(nram_offset1, (int32_t *)nram_offset1, num_deal_grid, 0);
   __bang_gt_scalar(grad_temp1, nram_offset1, 0, num_deal_grid);
-  __bang_float2int32((int32_t*)grad_temp1, grad_temp1, num_deal_grid, 0);
-   __bang_float2int32((int32_t*)nram_offset1,nram_offset1, num_deal_grid , 0);    
-  __bang_mul((int32_t*)nram_offset1, (int32_t*)nram_offset1, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t*)nram_offset1, (int32_t*)nram_offset1, (int32_t*)mask2, num_deal_grid);
+  __bang_float2int32((int32_t *)grad_temp1, grad_temp1, num_deal_grid, 0);
+  __bang_float2int32((int32_t *)nram_offset1, nram_offset1, num_deal_grid, 0);
+  __bang_mul((int32_t *)nram_offset1, (int32_t *)nram_offset1,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_mul((int32_t *)nram_offset1, (int32_t *)nram_offset1, (int32_t *)mask2,
+             num_deal_grid);
 
- __bang_int322float((float *)nram_offset2,(int32_t*)nram_offset2, num_deal_grid , 0);
-  __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset2, 0, num_deal_grid);
-  __bang_float2int32((int32_t*)grad_temp1, grad_temp1, num_deal_grid, 0); 
-  __bang_float2int32((int32_t*)nram_offset2,nram_offset2, num_deal_grid , 0); 
-  __bang_mul((int32_t*)nram_offset2,(int32_t*) nram_offset2, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t*)nram_offset2, (int32_t*)nram_offset2,(int32_t*) mask1, num_deal_grid);
+  __bang_int322float((float *)nram_offset2, (int32_t *)nram_offset2,
+                     num_deal_grid, 0);
+  __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset2, 0,
+                   num_deal_grid);
+  __bang_float2int32((int32_t *)grad_temp1, grad_temp1, num_deal_grid, 0);
+  __bang_float2int32((int32_t *)nram_offset2, nram_offset2, num_deal_grid, 0);
+  __bang_mul((int32_t *)nram_offset2, (int32_t *)nram_offset2,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_mul((int32_t *)nram_offset2, (int32_t *)nram_offset2, (int32_t *)mask1,
+             num_deal_grid);
 
- __bang_int322float((float *)nram_offset3,(int32_t*)nram_offset3, num_deal_grid , 0);
-  __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset3, 0, num_deal_grid);
-    __bang_float2int32((int32_t*)grad_temp1, (float *)grad_temp1, num_deal_grid, 0); 
-    __bang_float2int32((int32_t*)nram_offset3,nram_offset3, num_deal_grid , 0); 
-  __bang_mul((int32_t*)nram_offset3, (int32_t*)nram_offset3, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t*)nram_offset3, (int32_t*)nram_offset3,(int32_t*) mask4, num_deal_grid);
+  __bang_int322float((float *)nram_offset3, (int32_t *)nram_offset3,
+                     num_deal_grid, 0);
+  __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset3, 0,
+                   num_deal_grid);
+  __bang_float2int32((int32_t *)grad_temp1, (float *)grad_temp1, num_deal_grid,
+                     0);
+  __bang_float2int32((int32_t *)nram_offset3, nram_offset3, num_deal_grid, 0);
+  __bang_mul((int32_t *)nram_offset3, (int32_t *)nram_offset3,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_mul((int32_t *)nram_offset3, (int32_t *)nram_offset3, (int32_t *)mask4,
+             num_deal_grid);
 
- __bang_int322float((float *)nram_offset4,(int32_t*)nram_offset4, num_deal_grid , 0);
-  __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset4, 0, num_deal_grid);
-  __bang_float2int32((int32_t*)grad_temp1, grad_temp1, num_deal_grid, 0); 
-  __bang_float2int32((int32_t*)nram_offset4,nram_offset4, num_deal_grid , 0); 
-  __bang_mul((int32_t*)nram_offset4, (int32_t*)nram_offset4, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t*)nram_offset4, (int32_t*)nram_offset4, (int32_t*)mask3, num_deal_grid);
+  __bang_int322float((float *)nram_offset4, (int32_t *)nram_offset4,
+                     num_deal_grid, 0);
+  __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset4, 0,
+                   num_deal_grid);
+  __bang_float2int32((int32_t *)grad_temp1, grad_temp1, num_deal_grid, 0);
+  __bang_float2int32((int32_t *)nram_offset4, nram_offset4, num_deal_grid, 0);
+  __bang_mul((int32_t *)nram_offset4, (int32_t *)nram_offset4,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_mul((int32_t *)nram_offset4, (int32_t *)nram_offset4, (int32_t *)mask3,
+             num_deal_grid);
   __sync_io_move_compute();
-  __bang_int322float((float*)nram_h_low, (int32_t*)nram_h_low,num_deal_grid ,0);
-  __bang_int322float((float*)nram_w_low, (int32_t*)nram_w_low,num_deal_grid, 0);
-  __bang_sub((float*)nram_lh, (float*)nram_loc_h, (float*)nram_h_low, num_deal_grid);
-  __bang_sub((float*)nram_lw, (float*)nram_loc_w, (float*)nram_w_low, num_deal_grid);
-  __bang_int322float(mask1, (int32_t*)mask1, num_deal_grid, 0);
-  __bang_int322float(mask2, (int32_t*)mask2, num_deal_grid, 0);
-  __bang_int322float(mask3, (int32_t*)mask3, num_deal_grid, 0);
-  __bang_int322float(mask4, (int32_t*)mask4, num_deal_grid, 0);
+  __bang_int322float((float *)nram_h_low, (int32_t *)nram_h_low, num_deal_grid,
+                     0);
+  __bang_int322float((float *)nram_w_low, (int32_t *)nram_w_low, num_deal_grid,
+                     0);
+  __bang_sub((float *)nram_lh, (float *)nram_loc_h, (float *)nram_h_low,
+             num_deal_grid);
+  __bang_sub((float *)nram_lw, (float *)nram_loc_w, (float *)nram_w_low,
+             num_deal_grid);
+  __bang_int322float(mask1, (int32_t *)mask1, num_deal_grid, 0);
+  __bang_int322float(mask2, (int32_t *)mask2, num_deal_grid, 0);
+  __bang_int322float(mask3, (int32_t *)mask3, num_deal_grid, 0);
+  __bang_int322float(mask4, (int32_t *)mask4, num_deal_grid, 0);
 
-  __bang_int322float(nram_h_high_temp, (int32_t*)nram_h_high_temp, num_deal_grid, 0);
+  __bang_int322float(nram_h_high_temp, (int32_t *)nram_h_high_temp,
+                     num_deal_grid, 0);
   __bang_fusion(FUSION_FMA, nram_hh, nram_lh, (float)(-1), 1, num_deal_grid);
   __bang_fusion(FUSION_FMA, nram_hw, nram_lw, (float)(-1), 1, num_deal_grid);
 
@@ -282,17 +323,19 @@ void __mlu_func__ loadValue(
     int32_t level_start_id = nram_level_start_index[l_col];
     value_offset_temp =
         b_col * spatial_size * qid_stride + level_start_id * qid_stride;
-    ((float *)grad_temp1)[i] = value_offset_temp;
+    ((int32_t *)grad_temp1)[i] = value_offset_temp;
   }
 
-  __bang_add(grad_temp3, grad_temp1, nram_offset1, num_deal_grid);
-  __bang_add(grad_temp3 + num_deal_grid, grad_temp1, nram_offset2,
-             num_deal_grid);
-  __bang_add(grad_temp3 + 2 * num_deal_grid, grad_temp1, nram_offset3,
-             num_deal_grid);
-  __bang_add(grad_temp3 + 3 * num_deal_grid, grad_temp1, nram_offset4,
-             num_deal_grid);
-  __bang_mul_scalar(grad_temp3, grad_temp3, sizeof(float), 4 * num_deal_grid);
+  __bang_add((int32_t *)grad_temp3, (int32_t *)grad_temp1,
+             (int32_t *)nram_offset1, num_deal_grid);
+  __bang_add((int32_t *)(grad_temp3 + num_deal_grid), (int32_t *)grad_temp1,
+             (int32_t *)nram_offset2, num_deal_grid);
+  __bang_add((int32_t *)(grad_temp3 + 2 * num_deal_grid), (int32_t *)grad_temp1,
+             (int32_t *)nram_offset3, num_deal_grid);
+  __bang_add((int32_t *)(grad_temp3 + 3 * num_deal_grid), (int32_t *)grad_temp1,
+             (int32_t *)nram_offset4, num_deal_grid);
+  __bang_mul_scalar((int32_t *)grad_temp3, (int32_t *)grad_temp3,
+                    sizeof(int32_t), 4 * num_deal_grid);
   __bang_float2int32((int32_t *)(grad_temp3), (grad_temp3), 4 * num_deal_grid,
                      0);
   __sync_io_move_compute();
@@ -325,28 +368,31 @@ void __mlu_func__ loadValue(
   value_offset_temp =
       b_col * spatial_size * qid_stride + level_start_id * qid_stride;
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-    __memcpy_async(
-        (void *)(nram_grad_output_tl + loop * deal_num_real),
-        (void *)(data_value + value_offset_temp + int32_t(((int32_t*)nram_offset1)[loop])),
-        deal_num_real * sizeof(float), GDRAM2NRAM, offset_nram * sizeof(float),
-        (int32_t(((int32_t*)nram_offset2)[loop]) - int32_t(((int32_t*)nram_offset1)[loop])) *
-            sizeof(float),
-        1);
+    __memcpy_async((void *)(nram_grad_output_tl + loop * deal_num_real),
+                   (void *)(data_value + value_offset_temp +
+                            int32_t(((int32_t *)nram_offset1)[loop])),
+                   deal_num_real * sizeof(float), GDRAM2NRAM,
+                   offset_nram * sizeof(float),
+                   (int32_t(((int32_t *)nram_offset2)[loop]) -
+                    int32_t(((int32_t *)nram_offset1)[loop])) *
+                       sizeof(float),
+                   1);
     b_col = (grid_offset + loop + 1) / num_query / num_heads / num_levels /
             num_points;
     l_col = (grid_offset + loop + 1) / num_points % num_levels;
     level_start_id = nram_level_start_index[l_col];
 
-    __memcpy_async(
-        (void *)(nram_grad_output_bl + loop * deal_num_real),
-        (void *)(data_value + value_offset_temp + int32_t(((int32_t*)nram_offset3)[loop])),
-        deal_num_real * sizeof(float), GDRAM2NRAM, offset_nram * sizeof(float),
-        (int32_t(((int32_t*)nram_offset4)[loop]) - int32_t(((int32_t*)nram_offset3)[loop])) *
-            sizeof(float),
-        1);
+    __memcpy_async((void *)(nram_grad_output_bl + loop * deal_num_real),
+                   (void *)(data_value + value_offset_temp +
+                            int32_t(((int32_t *)nram_offset3)[loop])),
+                   deal_num_real * sizeof(float), GDRAM2NRAM,
+                   offset_nram * sizeof(float),
+                   (int32_t(((int32_t *)nram_offset4)[loop]) -
+                    int32_t(((int32_t *)nram_offset3)[loop])) *
+                       sizeof(float),
+                   1);
     value_offset_temp =
         b_col * spatial_size * qid_stride + level_start_id * qid_stride;
-       
   }
 #endif
   __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
@@ -400,10 +446,9 @@ void __mlu_func__ loadValue(
                  num_deal_grid * deal_num_real, 64);
   __bang_band((char *)nram_grad_output_br, (char *)nram_grad_output_br,
               (char *)grad_temp3,
-              num_deal_grid * deal_num_real * sizeof(float));         
+              num_deal_grid * deal_num_real * sizeof(float));
 #endif
 }
-
 
 void __mlu_func__ computeGradValue(
     float *grad_temp1, float *grad_temp2, float *grad_temp3, float *grad_temp4,
@@ -436,56 +481,61 @@ void __mlu_func__ computeGradValue(
 
   int32_t temp_res = num_query * num_heads * num_levels * num_points;
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-    ((int32_t*)nram_grid_offset1)[loop] = ((loop + grid_offset) / temp_res);
+    ((int32_t *)nram_grid_offset1)[loop] = ((loop + grid_offset) / temp_res);
   }
-  //__bang_float2int32((int32_t*)nram_grid_offset1, nram_grid_offset1,num_deal_grid, 0 );
-  __bang_mul_scalar((int32_t*)nram_grid_offset1, (int32_t*)nram_grid_offset1,
+  __bang_mul_scalar((int32_t *)nram_grid_offset1, (int32_t *)nram_grid_offset1,
                     spatial_size * qid_stride, num_deal_grid);
-  __bang_transpose((int32_t*)nram_grid_offset2, (int32_t*)nram_grid_offset1,
+  __bang_transpose((int32_t *)nram_grid_offset2, (int32_t *)nram_grid_offset1,
                    num_per_time_real * num_heads * num_levels, num_points);
-  //  __bang_int322float((float *)nram_level_start_index, nram_level_start_index,
-  //                     num_levels, 0);
-  __bang_mul_scalar((int32_t*)nram_grid_offset1,(int32_t*)nram_level_start_index,
-                    qid_stride, num_levels);
-  __bang_cycle_add((int32_t*)nram_grid_offset2, (int32_t*)nram_grid_offset2, (int32_t*)nram_grid_offset1,
-                   num_deal_grid, num_levels);
-  __bang_transpose((int32_t*)nram_grid_offset1, (int32_t*)nram_grid_offset2, num_points,
-                   num_per_time_real * num_heads * num_levels);
-                          
-   __bang_add((int32_t*)nram_offset1, (int32_t*)nram_offset1, (int32_t*)nram_grid_offset1, num_deal_grid);
-  __bang_add((int32_t*)nram_offset2, (int32_t*)nram_offset2, (int32_t*)nram_grid_offset1, num_deal_grid);
-  __bang_add((int32_t*)nram_offset3, (int32_t*)nram_offset3, (int32_t*)nram_grid_offset1, num_deal_grid);
-  __bang_add((int32_t*)nram_offset4, (int32_t*)nram_offset4, (int32_t*)nram_grid_offset1, num_deal_grid);
+
+  __bang_mul_scalar((int32_t *)nram_grid_offset1,
+                    (int32_t *)nram_level_start_index, qid_stride, num_levels);
+  __bang_cycle_add((int32_t *)nram_grid_offset2, (int32_t *)nram_grid_offset2,
+                   (int32_t *)nram_grid_offset1, num_deal_grid, num_levels);
+  __bang_transpose((int32_t *)nram_grid_offset1, (int32_t *)nram_grid_offset2,
+                   num_points, num_per_time_real * num_heads * num_levels);
+
+  __bang_add((int32_t *)nram_offset1, (int32_t *)nram_offset1,
+             (int32_t *)nram_grid_offset1, num_deal_grid);
+  __bang_add((int32_t *)nram_offset2, (int32_t *)nram_offset2,
+             (int32_t *)nram_grid_offset1, num_deal_grid);
+  __bang_add((int32_t *)nram_offset3, (int32_t *)nram_offset3,
+             (int32_t *)nram_grid_offset1, num_deal_grid);
+  __bang_add((int32_t *)nram_offset4, (int32_t *)nram_offset4,
+             (int32_t *)nram_grid_offset1, num_deal_grid);
 
 #if __BANG_ARCH__ >= 592
   // make sure offset not great than (batch * spatial_size * num_heads *
   // channels)
-  __bang_lt_scalar((int32_t*)grad_temp1, (int32_t*)nram_offset1,
+  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset1,
                    batch * spatial_size * num_heads * deal_num_real,
                    num_deal_grid);
-  __bang_mul((int32_t*)nram_offset1, (int32_t*)nram_offset1, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_lt_scalar((int32_t*)grad_temp1, (int32_t*)nram_offset2,
+  __bang_mul((int32_t *)nram_offset1, (int32_t *)nram_offset1,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset2,
                    batch * spatial_size * num_heads * deal_num_real,
                    num_deal_grid);
-  __bang_mul((int32_t*)nram_offset2, (int32_t*)nram_offset2, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_lt_scalar((int32_t*)grad_temp1, (int32_t*)nram_offset3,
+  __bang_mul((int32_t *)nram_offset2, (int32_t *)nram_offset2,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset3,
                    batch * spatial_size * num_heads * deal_num_real,
                    num_deal_grid);
-  __bang_mul((int32_t*)nram_offset3, (int32_t*)nram_offset3, (int32_t*)grad_temp1, num_deal_grid);
-  __bang_lt_scalar((int32_t*)grad_temp1, (int32_t*)nram_offset4,
+  __bang_mul((int32_t *)nram_offset3, (int32_t *)nram_offset3,
+             (int32_t *)grad_temp1, num_deal_grid);
+  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset4,
                    batch * spatial_size * num_heads * deal_num_real,
                    num_deal_grid);
-  __bang_mul((int32_t*)nram_offset4, (int32_t*)nram_offset4, (int32_t*)grad_temp1, num_deal_grid);
+  __bang_mul((int32_t *)nram_offset4, (int32_t *)nram_offset4,
+             (int32_t *)grad_temp1, num_deal_grid);
   __bang_mul(grad_temp3, nram_w1, mask2, num_deal_grid);
   __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
                    num_deal_grid * deal_num_real, num_deal_grid);
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-
     __bang_atomic_reduce_add(
         (float *)(grad_value + int32_t(nram_offset1[loop])),
-        (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);    
+        (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
   }
 
   __bang_mul(grad_temp3, nram_w2, mask1, num_deal_grid);
@@ -497,7 +547,6 @@ void __mlu_func__ computeGradValue(
     __bang_atomic_reduce_add(
         (float *)(grad_value + int32_t(nram_offset2[loop])),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-   
   }
 
   __bang_mul(grad_temp3, nram_w3, mask4, num_deal_grid);
@@ -510,7 +559,6 @@ void __mlu_func__ computeGradValue(
     __bang_atomic_reduce_add(
         (float *)(grad_value + int32_t(nram_offset3[loop])),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-    
   }
   __bang_mul(grad_temp3, nram_w4, mask3, num_deal_grid);
   __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
@@ -521,7 +569,6 @@ void __mlu_func__ computeGradValue(
     __bang_atomic_reduce_add(
         (float *)(grad_value + int32_t(nram_offset4[loop])),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-              
   }
 #else
   __bang_cycle_mul(grad_temp1, grad_temp4, nram_w1,
@@ -544,29 +591,27 @@ void __mlu_func__ computeGradValue(
   __bang_transpose(nram_grad_output_bl, grad_temp1, deal_num_real,
                    num_deal_grid);
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-      
     if (mask2[loop]) {
       __bang_atomic_reduce_add(
-          (float *)(grad_value + int32_t(((int32_t*)nram_offset1)[loop])   ),
+          (float *)(grad_value + int32_t(((int32_t *)nram_offset1)[loop])),
           (float *)(nram_grad_output_br + loop * deal_num_real), deal_num_real);
     }
     if (mask1[loop]) {
       __bang_atomic_reduce_add(
-          (float *)(grad_value + ((int32_t*)nram_offset2)[loop]   ),
+          (float *)(grad_value + ((int32_t *)nram_offset2)[loop]),
           (float *)(nram_grad_output_tl + loop * deal_num_real), deal_num_real);
     }
     if (mask4[loop]) {
       __bang_atomic_reduce_add(
-          (float *)(grad_value + ((int32_t*)nram_offset3)[loop]   ),
+          (float *)(grad_value + ((int32_t *)nram_offset3)[loop]),
           (float *)(nram_grad_output_tr + loop * deal_num_real), deal_num_real);
     }
 
     if (mask3[loop]) {
       __bang_atomic_reduce_add(
-          (float *)(grad_value + ((int32_t*)nram_offset4)[loop]   ),
+          (float *)(grad_value + ((int32_t *)nram_offset4)[loop]),
           (float *)(nram_grad_output_bl + loop * deal_num_real), deal_num_real);
     }
-
   }
 #endif
 #endif
@@ -881,7 +926,7 @@ __mlu_global__ void MLUUnion1KernelMsDeformAttnBackwardSmallChannelsKernel(
   int32_t num_per_time_real = num_per_time_theory;
 
   for (int32_t loop = 0; loop < num_heads; ++loop) {
-    ((int32_t*)nram_base_ptr)[loop] = loop * channels;
+    ((int32_t *)nram_base_ptr)[loop] = loop * channels;
   }
   const int32_t w_stride = num_heads * channels;
   for (int32_t grid_loop = 0; grid_loop < repeat_times + 1; ++grid_loop) {
