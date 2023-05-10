@@ -107,6 +107,12 @@ void __mlu_func__ computeGridMaskAndOffset(
 
   __bang_floor(nram_w_low, nram_loc_w, num_deal_grid);
   __bang_floor(nram_h_low, nram_loc_h, num_deal_grid);
+  __bang_sub((float *)nram_lh, (float *)nram_loc_h, (float *)nram_h_low,
+             num_deal_grid);
+  __bang_sub((float *)nram_lw, (float *)nram_loc_w, (float *)nram_w_low,
+             num_deal_grid);
+  __bang_fusion(FUSION_FMA, nram_hh, nram_lh, (float)(-1), 1, num_deal_grid);
+  __bang_fusion(FUSION_FMA, nram_hw, nram_lw, (float)(-1), 1, num_deal_grid);
   __bang_float2int32((int32_t *)nram_w_low, nram_w_low, num_deal_grid, 0);
   __bang_float2int32((int32_t *)nram_h_low, nram_h_low, num_deal_grid, 0);
 
@@ -185,114 +191,84 @@ void __mlu_func__ computeGridMaskAndOffset(
   float *mask2 = nram_h_high_ptr_offset;
   float *mask3 = nram_w_low_ptr_offset;
   float *mask4 = nram_w_high_ptr_offset;
-  __bang_ge_scalar((int32_t *)mask1, (int32_t *)nram_h_low, 0, num_deal_grid);
-  __bang_ge_scalar((int32_t *)mask2, (int32_t *)nram_w_low, 0, num_deal_grid);
-  __bang_and((int32_t *)mask2, (int32_t *)mask1, (int32_t *)mask2,
-             num_deal_grid);
-  __bang_float2int32((int32_t *)nram_h_high_temp, nram_h_high_temp,
-                     num_deal_grid, 0);
-  __bang_and((int32_t *)mask2, (int32_t *)nram_h_high_temp, (int32_t *)mask2,
-             num_deal_grid);
+
+  __bang_int322float(nram_w_low, (int32_t *)nram_w_low, num_deal_grid, 0);
+  __bang_int322float(nram_h_low, (int32_t *)nram_h_low, num_deal_grid, 0);
+
+  __bang_ge_scalar(mask1, nram_h_low, 0, num_deal_grid);
+  __bang_ge_scalar(mask2, nram_w_low, 0, num_deal_grid);
+  __bang_and(mask2, mask1, mask2, num_deal_grid);
+
+  __bang_and(mask2, nram_h_high_temp, mask2, num_deal_grid);
 
   // h_low >= 0 && w_high <= width - 1 mask1
-  __bang_transpose((int32_t *)mask3, (int32_t *)nram_w_high,
+  __bang_int322float(nram_w_high, (int32_t *)nram_w_high, num_deal_grid, 0);
+
+  __bang_transpose(mask3, nram_w_high,
                    num_per_time_real * num_heads * num_levels, num_points);
 
   __bang_sub_scalar((float *)nram_spatial_shapes, (float *)nram_spatial_shapes,
                     1, num_levels * 2);
-  __bang_int322float((float *)mask3, (int32_t *)mask3, num_deal_grid, 0);
+
   __bang_cycle_le((float *)mask3, (float *)mask3,
                   (float *)(nram_spatial_shapes + num_levels), num_deal_grid,
-                  num_levels);  // 仅float
-  __bang_float2int32((int32_t *)mask3, (float *)mask3, num_deal_grid, 0);
-  __bang_transpose((int32_t *)mask4, (int32_t *)mask3, num_points,
+                  num_levels);
+  __bang_transpose(mask4, mask3, num_points,
                    num_per_time_real * num_heads * num_levels);
-  __bang_and((int32_t *)mask1, (int32_t *)mask1, (int32_t *)mask4,
-             num_deal_grid);
-  __bang_and((int32_t *)mask1, (int32_t *)nram_h_high_temp, (int32_t *)mask1,
-             num_deal_grid);
+  __bang_and(mask1, mask1, mask4, num_deal_grid);
+  __bang_and(mask1, nram_h_high_temp, mask1, num_deal_grid);
 
   // h_high <= height - 1 && w_high <= width - 1 mask3
-  __bang_transpose((int32_t *)mask3, (int32_t *)nram_h_high,
+  __bang_int322float(nram_h_high, (int32_t *)nram_h_high, num_deal_grid, 0);
+  __bang_transpose(mask3, nram_h_high,
                    num_per_time_real * num_heads * num_levels, num_points);
-  __bang_int322float((float *)mask3, (int32_t *)mask3, num_deal_grid, 0);
+
   __bang_cycle_le((float *)mask3, (float *)mask3,
                   (float *)(nram_spatial_shapes), num_deal_grid, num_levels);
-  __bang_float2int32((int32_t *)mask3, (float *)mask3, num_deal_grid, 0);
-  __bang_transpose((int32_t *)nram_h_low_temp, (int32_t *)mask3, num_points,
+
+  __bang_transpose(nram_h_low_temp, mask3, num_points,
                    num_per_time_real * num_heads * num_levels);
-  __bang_and((int32_t *)mask4, (int32_t *)mask4, (int32_t *)nram_h_low_temp,
-             num_deal_grid);
-  __bang_and((int32_t *)mask3, (int32_t *)mask4, (int32_t *)nram_h_high_temp,
-             num_deal_grid);
+  __bang_and(mask4, mask4, nram_h_low_temp, num_deal_grid);
+  __bang_and(mask3, mask4, nram_h_high_temp, num_deal_grid);
 
   // h_high <= height - 1 && w_low >= 0 mask4
-  __bang_ge_scalar((int32_t *)nram_w_low_temp, (int32_t *)nram_w_low, 0,
-                   num_deal_grid);  // 仅float
-  __bang_and((int32_t *)mask4, (int32_t *)nram_h_low_temp,
-             (int32_t *)nram_w_low_temp, num_deal_grid);
-  __bang_and((int32_t *)mask4, (int32_t *)mask4, (int32_t *)nram_h_high_temp,
-             num_deal_grid);
+  __bang_ge_scalar(nram_w_low_temp, nram_w_low, 0, num_deal_grid);
+  __bang_and(mask4, nram_h_low_temp, nram_w_low_temp, num_deal_grid);
+  __bang_and(mask4, mask4, nram_h_high_temp, num_deal_grid);
   __bang_int322float(nram_offset1, (int32_t *)nram_offset1, num_deal_grid, 0);
   __bang_gt_scalar(grad_temp1, nram_offset1, 0, num_deal_grid);
-  __bang_float2int32((int32_t *)grad_temp1, grad_temp1, num_deal_grid, 0);
+
+  __bang_mul(nram_offset1, nram_offset1, grad_temp1, num_deal_grid);
+  __bang_mul(nram_offset1, nram_offset1, mask2, num_deal_grid);
   __bang_float2int32((int32_t *)nram_offset1, nram_offset1, num_deal_grid, 0);
-  __bang_mul((int32_t *)nram_offset1, (int32_t *)nram_offset1,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t *)nram_offset1, (int32_t *)nram_offset1, (int32_t *)mask2,
-             num_deal_grid);
 
   __bang_int322float((float *)nram_offset2, (int32_t *)nram_offset2,
                      num_deal_grid, 0);
   __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset2, 0,
                    num_deal_grid);
-  __bang_float2int32((int32_t *)grad_temp1, grad_temp1, num_deal_grid, 0);
+
+  __bang_mul(nram_offset2, nram_offset2, grad_temp1, num_deal_grid);
+  __bang_mul(nram_offset2, nram_offset2, mask1, num_deal_grid);
   __bang_float2int32((int32_t *)nram_offset2, nram_offset2, num_deal_grid, 0);
-  __bang_mul((int32_t *)nram_offset2, (int32_t *)nram_offset2,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t *)nram_offset2, (int32_t *)nram_offset2, (int32_t *)mask1,
-             num_deal_grid);
 
   __bang_int322float((float *)nram_offset3, (int32_t *)nram_offset3,
                      num_deal_grid, 0);
   __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset3, 0,
                    num_deal_grid);
-  __bang_float2int32((int32_t *)grad_temp1, (float *)grad_temp1, num_deal_grid,
-                     0);
+
+  __bang_mul(nram_offset3, nram_offset3, grad_temp1, num_deal_grid);
+  __bang_mul(nram_offset3, nram_offset3, mask4, num_deal_grid);
   __bang_float2int32((int32_t *)nram_offset3, nram_offset3, num_deal_grid, 0);
-  __bang_mul((int32_t *)nram_offset3, (int32_t *)nram_offset3,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t *)nram_offset3, (int32_t *)nram_offset3, (int32_t *)mask4,
-             num_deal_grid);
 
   __bang_int322float((float *)nram_offset4, (int32_t *)nram_offset4,
                      num_deal_grid, 0);
   __bang_gt_scalar((float *)grad_temp1, (float *)nram_offset4, 0,
                    num_deal_grid);
-  __bang_float2int32((int32_t *)grad_temp1, grad_temp1, num_deal_grid, 0);
-  __bang_float2int32((int32_t *)nram_offset4, nram_offset4, num_deal_grid, 0);
-  __bang_mul((int32_t *)nram_offset4, (int32_t *)nram_offset4,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_mul((int32_t *)nram_offset4, (int32_t *)nram_offset4, (int32_t *)mask3,
-             num_deal_grid);
-  __sync_io_move_compute();
-  __bang_int322float((float *)nram_h_low, (int32_t *)nram_h_low, num_deal_grid,
-                     0);
-  __bang_int322float((float *)nram_w_low, (int32_t *)nram_w_low, num_deal_grid,
-                     0);
-  __bang_sub((float *)nram_lh, (float *)nram_loc_h, (float *)nram_h_low,
-             num_deal_grid);
-  __bang_sub((float *)nram_lw, (float *)nram_loc_w, (float *)nram_w_low,
-             num_deal_grid);
-  __bang_int322float(mask1, (int32_t *)mask1, num_deal_grid, 0);
-  __bang_int322float(mask2, (int32_t *)mask2, num_deal_grid, 0);
-  __bang_int322float(mask3, (int32_t *)mask3, num_deal_grid, 0);
-  __bang_int322float(mask4, (int32_t *)mask4, num_deal_grid, 0);
 
-  __bang_int322float(nram_h_high_temp, (int32_t *)nram_h_high_temp,
-                     num_deal_grid, 0);
-  __bang_fusion(FUSION_FMA, nram_hh, nram_lh, (float)(-1), 1, num_deal_grid);
-  __bang_fusion(FUSION_FMA, nram_hw, nram_lw, (float)(-1), 1, num_deal_grid);
+  __bang_mul(nram_offset4, nram_offset4, grad_temp1, num_deal_grid);
+  __bang_mul(nram_offset4, nram_offset4, mask3, num_deal_grid);
+  __bang_float2int32((int32_t *)nram_offset4, nram_offset4, num_deal_grid, 0);
+  __sync_io_move_compute();
 
   __bang_mul(nram_w1, nram_hh, nram_hw, num_deal_grid);
   __bang_mul(nram_w2, nram_hh, nram_lw, num_deal_grid);
