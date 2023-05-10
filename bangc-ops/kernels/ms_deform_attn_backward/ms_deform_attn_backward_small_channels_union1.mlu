@@ -352,7 +352,7 @@ void __mlu_func__ loadValue(
                    (int32_t(((int32_t *)nram_offset2)[loop]) -
                     int32_t(((int32_t *)nram_offset1)[loop])) *
                        sizeof(float),
-                   1);
+                   mask1[loop]);
     b_col = (grid_offset + loop + 1) / num_query / num_heads / num_levels /
             num_points;
     l_col = (grid_offset + loop + 1) / num_points % num_levels;
@@ -366,7 +366,7 @@ void __mlu_func__ loadValue(
                    (int32_t(((int32_t *)nram_offset4)[loop]) -
                     int32_t(((int32_t *)nram_offset3)[loop])) *
                        sizeof(float),
-                   1);
+                   mask3[loop]);
     value_offset_temp =
         b_col * spatial_size * qid_stride + level_start_id * qid_stride;
   }
