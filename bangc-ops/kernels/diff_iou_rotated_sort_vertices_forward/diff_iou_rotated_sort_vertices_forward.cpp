@@ -76,22 +76,22 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
   PARAM_CHECK_V2(op_name, (vertices_desc->dtype == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in vertices tensor, but the "
                  "data type of tensor is "
-                     << mluOpgetNameOfDataType(vertices_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(vertices_desc->dtype) << ".");
 
   PARAM_CHECK_V2(op_name, (mask_desc->dtype == MLUOP_DTYPE_BOOL),
                  "Only bool are supported in mask tensor, but the data "
                  "type of tensor is "
-                     << mluOpgetNameOfDataType(mask_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(mask_desc->dtype) << ".");
 
   PARAM_CHECK_V2(op_name, (num_valid_desc->dtype == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in num_valid tensor, but the data "
                  "type of tensor is "
-                     << mluOpgetNameOfDataType(num_valid_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(num_valid_desc->dtype) << ".");
 
   PARAM_CHECK_V2(op_name, (idx_desc->dtype == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in idx tensor, but the data "
                  "type of tensor is "
-                     << mluOpgetNameOfDataType(idx_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(idx_desc->dtype) << ".");
 
   // check dim
   int dim_b = vertices_desc->dims[0];
