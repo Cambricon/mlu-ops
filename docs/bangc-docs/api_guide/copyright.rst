@@ -26,5 +26,5 @@ Cambricon and the Cambricon logo are trademarks and/or registered trademarks of 
 This guide is copyrighted and is protected by worldwide copyright laws and treaty provisions. This guide may not be copied, reproduced, modified, published, uploaded, posted, transmitted, or distributed in any way, without Cambricon's prior written permission. Other than the right for customer to use the information in this guide with the product, no other right or license, either express or implied, is granted by Cambricon under this guide. For the avoidance of doubt, Cambricon does not grant any right or license (express or implied) to customer under any patents, copyrights, trademarks, trade secret or any other intellectual property or proprietary rights of Cambricon. 
 
 * Copyright
-* © 2022 Cambricon Corporation. All rights reserved.
+* © 2023 Cambricon Corporation. All rights reserved.
 
