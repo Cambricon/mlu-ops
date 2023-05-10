@@ -276,6 +276,7 @@ void __mlu_func__ computeGridMaskAndOffset(
   __bang_mul(nram_w4, nram_lh, nram_lw, num_deal_grid);
 #endif
 }
+
 void __mlu_func__ loadValue(
     float *nram_grad_output_tl, float *nram_grad_output_tr,
     float *nram_grad_output_bl, float *nram_grad_output_br,
@@ -312,8 +313,6 @@ void __mlu_func__ loadValue(
              (int32_t *)nram_offset4, num_deal_grid);
   __bang_mul_scalar((int32_t *)grad_temp3, (int32_t *)grad_temp3,
                     sizeof(int32_t), 4 * num_deal_grid);
-  __bang_float2int32((int32_t *)(grad_temp3), (grad_temp3), 4 * num_deal_grid,
-                     0);
   __sync_io_move_compute();
 
   __gather_async((void *)nram_grad_output_tl, (void *)data_value,
@@ -346,11 +345,11 @@ void __mlu_func__ loadValue(
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
     __memcpy_async((void *)(nram_grad_output_tl + loop * deal_num_real),
                    (void *)(data_value + value_offset_temp +
-                            int32_t(((int32_t *)nram_offset1)[loop])),
+                            (((int32_t *)nram_offset1)[loop])),
                    deal_num_real * sizeof(float), GDRAM2NRAM,
                    offset_nram * sizeof(float),
-                   (int32_t(((int32_t *)nram_offset2)[loop]) -
-                    int32_t(((int32_t *)nram_offset1)[loop])) *
+                   ((((int32_t *)nram_offset2)[loop]) -
+                    (((int32_t *)nram_offset1)[loop])) *
                        sizeof(float),
                    mask1[loop]);
     b_col = (grid_offset + loop + 1) / num_query / num_heads / num_levels /
@@ -360,11 +359,11 @@ void __mlu_func__ loadValue(
 
     __memcpy_async((void *)(nram_grad_output_bl + loop * deal_num_real),
                    (void *)(data_value + value_offset_temp +
-                            int32_t(((int32_t *)nram_offset3)[loop])),
+                            (((int32_t *)nram_offset3)[loop])),
                    deal_num_real * sizeof(float), GDRAM2NRAM,
                    offset_nram * sizeof(float),
-                   (int32_t(((int32_t *)nram_offset4)[loop]) -
-                    int32_t(((int32_t *)nram_offset3)[loop])) *
+                   ((((int32_t *)nram_offset4)[loop]) -
+                    (((int32_t *)nram_offset3)[loop])) *
                        sizeof(float),
                    mask3[loop]);
     value_offset_temp =
@@ -510,7 +509,7 @@ void __mlu_func__ computeGradValue(
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
     __bang_atomic_reduce_add(
-        (float *)(grad_value + int32_t(nram_offset1[loop])),
+        (float *)(grad_value + ((int32_t *)nram_offset1)[loop]),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
   }
 
@@ -521,7 +520,7 @@ void __mlu_func__ computeGradValue(
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
     __bang_atomic_reduce_add(
-        (float *)(grad_value + int32_t(nram_offset2[loop])),
+        (float *)(grad_value + + ((int32_t *)nram_offset2)[loop]),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
   }
 
@@ -533,7 +532,7 @@ void __mlu_func__ computeGradValue(
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
     __bang_atomic_reduce_add(
-        (float *)(grad_value + int32_t(nram_offset3[loop])),
+        (float *)(grad_value + ((int32_t *)nram_offset3)[loop]),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
   }
   __bang_mul(grad_temp3, nram_w4, mask3, num_deal_grid);
@@ -543,7 +542,7 @@ void __mlu_func__ computeGradValue(
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
     __bang_atomic_reduce_add(
-        (float *)(grad_value + int32_t(nram_offset4[loop])),
+        (float *)(grad_value + ((int32_t *)nram_offset4)[loop]),
         (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
   }
 #else

@@ -48,7 +48,7 @@ void msDeformAttnCol2imBilinear(
   const int32_t h_high_ptr_offset = h_low_ptr_offset + h_stride;
   const int32_t w_low_ptr_offset = w_low * w_stride;
   const int32_t w_high_ptr_offset = w_low_ptr_offset + w_stride;
-  int32_t base_ptr = m * channels + c;
+  const int32_t base_ptr = m * channels + c;
 
   const float w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
   const float top_grad_value = top_grad * attn_weight;
