@@ -37,7 +37,8 @@ namespace mluopapitest {
 typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
                    MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
                    MLUOpTensorParam, mluOpReduceMode_t, mluOpDevType_t,
-                   mluOpStatus_t> DynamicPointToVoxelForward;
+                   mluOpStatus_t>
+    DynamicPointToVoxelForward;
 class dynamic_point_to_voxel_forward_general
     : public testing::TestWithParam<DynamicPointToVoxelForward> {
  public:
@@ -48,9 +49,8 @@ class dynamic_point_to_voxel_forward_general
       MLUOpTensorParam feats_params = std::get<0>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&feats_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
-          feats_desc_, feats_params.get_layout(),
-          feats_params.get_dtype(), feats_params.get_dim_nb(),
-          feats_params.get_dim_size().data()));
+          feats_desc_, feats_params.get_layout(), feats_params.get_dtype(),
+          feats_params.get_dim_nb(), feats_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(feats_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
@@ -59,17 +59,15 @@ class dynamic_point_to_voxel_forward_general
       } else {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&feats_,
-                       mluOpDataTypeBytes(feats_params.get_dtype()) *
-                           mluOpGetTensorElementNum(feats_desc_)));
+            cnrtMalloc(&feats_, mluOpDataTypeBytes(feats_params.get_dtype()) *
+                                    mluOpGetTensorElementNum(feats_desc_)));
       }
 
       MLUOpTensorParam coors_params = std::get<1>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&coors_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
-          coors_desc_, coors_params.get_layout(),
-          coors_params.get_dtype(), coors_params.get_dim_nb(),
-          coors_params.get_dim_size().data()));
+          coors_desc_, coors_params.get_layout(), coors_params.get_dtype(),
+          coors_params.get_dim_nb(), coors_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(coors_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
@@ -78,9 +76,8 @@ class dynamic_point_to_voxel_forward_general
       } else {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&coors_,
-                       mluOpDataTypeBytes(coors_params.get_dtype()) *
-                           mluOpGetTensorElementNum(coors_desc_)));
+            cnrtMalloc(&coors_, mluOpDataTypeBytes(coors_params.get_dtype()) *
+                                    mluOpGetTensorElementNum(coors_desc_)));
       }
 
       MLUOpTensorParam voxel_feats_params = std::get<2>(GetParam());
@@ -125,13 +122,15 @@ class dynamic_point_to_voxel_forward_general
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&point2voxel_map_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
           point2voxel_map_desc_, point2voxel_map_params.get_layout(),
-          point2voxel_map_params.get_dtype(), point2voxel_map_params.get_dim_nb(),
+          point2voxel_map_params.get_dtype(),
+          point2voxel_map_params.get_dim_nb(),
           point2voxel_map_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(point2voxel_map_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&point2voxel_map_,
-                       mluOpDataTypeBytes(point2voxel_map_params.get_dtype()) * 2));
+            cnrtMalloc(
+                &point2voxel_map_,
+                mluOpDataTypeBytes(point2voxel_map_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
@@ -144,19 +143,23 @@ class dynamic_point_to_voxel_forward_general
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_points_count_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
           voxel_points_count_desc_, voxel_points_count_params.get_layout(),
-          voxel_points_count_params.get_dtype(), voxel_points_count_params.get_dim_nb(),
+          voxel_points_count_params.get_dtype(),
+          voxel_points_count_params.get_dim_nb(),
           voxel_points_count_params.get_dim_size().data()));
-      if (mluOpGetTensorElementNum(voxel_points_count_desc_) >= LARGE_TENSOR_NUM) {
+      if (mluOpGetTensorElementNum(voxel_points_count_desc_) >=
+          LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&voxel_points_count_,
-                       mluOpDataTypeBytes(voxel_points_count_params.get_dtype()) * 2));
+            cnrtMalloc(
+                &voxel_points_count_,
+                mluOpDataTypeBytes(voxel_points_count_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&voxel_points_count_,
-                       mluOpDataTypeBytes(voxel_points_count_params.get_dtype()) *
-                           mluOpGetTensorElementNum(voxel_points_count_desc_)));
+            cnrtMalloc(
+                &voxel_points_count_,
+                mluOpDataTypeBytes(voxel_points_count_params.get_dtype()) *
+                    mluOpGetTensorElementNum(voxel_points_count_desc_)));
       }
 
       MLUOpTensorParam voxel_num_params = std::get<6>(GetParam());
@@ -183,7 +186,7 @@ class dynamic_point_to_voxel_forward_general
       expected_status_ = std::get<9>(GetParam());
 
       GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
+                  cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
              << " in ms_deform_attn_forward general.";
@@ -197,11 +200,11 @@ class dynamic_point_to_voxel_forward_general
       return true;
     }
     mluOpStatus_t status = mluOpDynamicPointToVoxelForward(
-        handle_, reduce_type_, feats_desc_, feats_,
-        coors_desc_, coors_,workspace_, workspace_size_, 
-        voxel_feats_desc_,voxel_feats_, voxel_coors_desc_, 
-        voxel_coors_, point2voxel_map_desc_,point2voxel_map_, 
-        voxel_points_count_desc_, voxel_points_count_, voxel_num_desc_, voxel_num_);
+        handle_, reduce_type_, feats_desc_, feats_, coors_desc_, coors_,
+        workspace_, workspace_size_, voxel_feats_desc_, voxel_feats_,
+        voxel_coors_desc_, voxel_coors_, point2voxel_map_desc_,
+        point2voxel_map_, voxel_points_count_desc_, voxel_points_count_,
+        voxel_num_desc_, voxel_num_);
     destroy();
     return expected_status_ == status;
   }
@@ -328,7 +331,9 @@ class dynamic_point_to_voxel_forward_general
   mluOpStatus_t expected_status_;
 };
 
-TEST_P(dynamic_point_to_voxel_forward_general, negative) { EXPECT_TRUE(compute()); }
+TEST_P(dynamic_point_to_voxel_forward_general, negative) {
+  EXPECT_TRUE(compute());
+}
 
 INSTANTIATE_TEST_CASE_P(
     zero_element_1, dynamic_point_to_voxel_forward_general,
@@ -347,7 +352,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
@@ -368,7 +373,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({0})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
@@ -389,7 +394,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -410,7 +415,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -431,7 +436,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -452,7 +457,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -473,7 +478,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -494,7 +499,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -515,7 +520,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -536,7 +541,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -557,7 +562,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -578,7 +583,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -599,7 +604,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -620,7 +625,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -641,7 +646,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({5})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -662,7 +667,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({2})}),
-        testing::Values(MLUOP_REDUCE_DMEAN),                                 
+        testing::Values(MLUOP_REDUCE_DMEAN),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -683,7 +688,7 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({4})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({1})}),
-        testing::Values(MLUOP_REDUCE_DSUM),                                 
+        testing::Values(MLUOP_REDUCE_DSUM),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // namespace mluopapitest

@@ -34,9 +34,8 @@
 namespace mluopapitest {
 class dynamic_point_to_voxel_forward : public testing::Test {
  public:
-  void setParam(bool handle, bool feats_desc, bool feats,
-                bool coors_desc, bool coors, 
-                bool voxel_feats_desc, bool voxel_feats,
+  void setParam(bool handle, bool feats_desc, bool feats, bool coors_desc,
+                bool coors, bool voxel_feats_desc, bool voxel_feats,
                 bool voxel_coors_desc, bool voxel_coors,
                 bool point2voxel_map_desc, bool point2voxel_map,
                 bool voxel_points_count_desc, bool voxel_points_count,
@@ -55,10 +54,10 @@ class dynamic_point_to_voxel_forward : public testing::Test {
 
     if (feats) {
       if (feats_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&feats_,
-                               MLUOP_DTYPE_FLOAT *
-                                   mluOpGetTensorElementNum(feats_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT *
+                                    mluOpGetTensorElementNum(feats_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT * 2));
@@ -75,10 +74,10 @@ class dynamic_point_to_voxel_forward : public testing::Test {
 
     if (coors) {
       if (coors_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&coors_,
-                               MLUOP_DTYPE_INT32 *
-                                   mluOpGetTensorElementNum(coors_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&coors_, MLUOP_DTYPE_INT32 *
+                                    mluOpGetTensorElementNum(coors_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&coors_, MLUOP_DTYPE_INT32 * 2));
@@ -88,17 +87,17 @@ class dynamic_point_to_voxel_forward : public testing::Test {
     if (voxel_feats_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_feats_desc_));
       std::vector<int> voxel_feats_desc_dims{4, 3};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(voxel_feats_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_FLOAT, 2,
-                                           voxel_feats_desc_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          voxel_feats_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 2,
+          voxel_feats_desc_dims.data()));
     }
 
     if (voxel_feats) {
       if (voxel_feats_desc) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&voxel_feats_,
-                               MLUOP_DTYPE_FLOAT *
-                                   mluOpGetTensorElementNum(voxel_feats_desc_)));
+                               MLUOP_DTYPE_FLOAT * mluOpGetTensorElementNum(
+                                                       voxel_feats_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&voxel_feats_, MLUOP_DTYPE_FLOAT * 2));
@@ -108,17 +107,17 @@ class dynamic_point_to_voxel_forward : public testing::Test {
     if (voxel_coors_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_coors_desc_));
       std::vector<int> voxel_coors_desc_dims{4, 3};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(voxel_coors_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_INT32, 2,
-                                           voxel_coors_desc_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          voxel_coors_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 2,
+          voxel_coors_desc_dims.data()));
     }
 
     if (voxel_coors) {
       if (voxel_coors_desc) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&voxel_coors_,
-                               MLUOP_DTYPE_INT32 *
-                                   mluOpGetTensorElementNum(voxel_coors_desc_)));
+                               MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
+                                                       voxel_coors_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&voxel_coors_, MLUOP_DTYPE_INT32 * 2));
@@ -128,17 +127,17 @@ class dynamic_point_to_voxel_forward : public testing::Test {
     if (point2voxel_map_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&point2voxel_map_desc_));
       std::vector<int> point2voxel_map_desc_dims{4};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(point2voxel_map_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_INT32, 1,
-                                           point2voxel_map_desc_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          point2voxel_map_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 1,
+          point2voxel_map_desc_dims.data()));
     }
 
     if (point2voxel_map) {
       if (point2voxel_map_desc) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&point2voxel_map_,
-                               MLUOP_DTYPE_INT32 *
-                                   mluOpGetTensorElementNum(point2voxel_map_desc_)));
+                               MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
+                                                       point2voxel_map_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&point2voxel_map_, MLUOP_DTYPE_INT32 * 2));
@@ -148,17 +147,18 @@ class dynamic_point_to_voxel_forward : public testing::Test {
     if (voxel_points_count_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_points_count_desc_));
       std::vector<int> voxel_points_count_desc_dims{4};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(voxel_points_count_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_INT32, 1,
-                                           voxel_points_count_desc_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          voxel_points_count_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 1,
+          voxel_points_count_desc_dims.data()));
     }
 
     if (voxel_points_count) {
       if (voxel_points_count_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&voxel_points_count_,
-                               MLUOP_DTYPE_INT32 *
-                                   mluOpGetTensorElementNum(voxel_points_count_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&voxel_points_count_,
+                       MLUOP_DTYPE_INT32 *
+                           mluOpGetTensorElementNum(voxel_points_count_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&voxel_points_count_, MLUOP_DTYPE_INT32 * 2));
@@ -186,18 +186,18 @@ class dynamic_point_to_voxel_forward : public testing::Test {
     }
 
     if (workspace) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&workspace_, MLUOP_DTYPE_INT32 * workspace_size_));
+      GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtMalloc(&workspace_, MLUOP_DTYPE_INT32 * workspace_size_));
     }
   }
 
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpDynamicPointToVoxelForward(
-        handle_, reduce_type_, feats_desc_, feats_,
-        coors_desc_, coors_,workspace_, workspace_size_, 
-        voxel_feats_desc_,voxel_feats_, voxel_coors_desc_, 
-        voxel_coors_, point2voxel_map_desc_,point2voxel_map_, 
-        voxel_points_count_desc_, voxel_points_count_, voxel_num_desc_, voxel_num_);
+        handle_, reduce_type_, feats_desc_, feats_, coors_desc_, coors_,
+        workspace_, workspace_size_, voxel_feats_desc_, voxel_feats_,
+        voxel_coors_desc_, voxel_coors_, point2voxel_map_desc_,
+        point2voxel_map_, voxel_points_count_desc_, voxel_points_count_,
+        voxel_num_desc_, voxel_num_);
     destroy();
     return status;
   }
@@ -498,5 +498,4 @@ TEST_F(dynamic_point_to_voxel_forward, BAD_PARAM_workspace_null) {
            << " in dynamic_point_to_voxel_forward";
   }
 }
-
 }  // namespace mluopapitest

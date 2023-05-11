@@ -34,8 +34,8 @@
 namespace mluopapitest {
 class dynamic_point_to_voxel_forward_workspace : public testing::Test {
  public:
-  void setParam(bool handle, bool feats_desc,
-                bool coors_desc, bool workspace_size) {
+  void setParam(bool handle, bool feats_desc, bool coors_desc,
+                bool workspace_size) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
@@ -57,7 +57,7 @@ class dynamic_point_to_voxel_forward_workspace : public testing::Test {
     }
 
     if (workspace_size) {
-        workspace_size_ = &workspace_size__;
+      workspace_size_ = &workspace_size__;
     }
   }
 
@@ -98,7 +98,6 @@ class dynamic_point_to_voxel_forward_workspace : public testing::Test {
   size_t *workspace_size_ = nullptr;
 };
 
-
 TEST_F(dynamic_point_to_voxel_forward_workspace, BAD_PARAM_handle_null) {
   try {
     setParam(false, true, true, true);
@@ -129,7 +128,8 @@ TEST_F(dynamic_point_to_voxel_forward_workspace, BAD_PARAM_coors_desc_null) {
   }
 }
 
-TEST_F(dynamic_point_to_voxel_forward_workspace, BAD_PARAM_workspace_size_null) {
+TEST_F(dynamic_point_to_voxel_forward_workspace,
+       BAD_PARAM_workspace_size_null) {
   try {
     setParam(true, true, true, false);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
