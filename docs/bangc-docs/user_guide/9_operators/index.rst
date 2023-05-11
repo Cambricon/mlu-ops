@@ -132,6 +132,12 @@ mluOpDiv
 - ``i`` 表示一个多维数组的索引，表示多维张量，例如在4维时可以表示（n,c,h,w）。
 - ``xi``、``yi``、``zi`` 表示多维数组中 ``i`` 索引处的元素。
 
+.. _diff_iou_rotated_sort_vertices_forward:
+
+mluOpDiffIouRotatedSortVerticesForward
+-----------------------------
+该算子为 `diff_iou_rotated` 整个计算过程中的一步，完成对两个box相交构成的多边形有效顶点排序（参考算法按逆时针排序所有有效顶点），输出排序后顶点索引。
+
 .. _expand:
 
 mluOpExpand

@@ -664,52 +664,109 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
         3. 获取排序结果：循环 `deal_num` 次，依次找到每个多边形有效顶点排序后的索引
      
            ```c
+            bool duplicate_box_check(T *nram_temp, T *nram_cos, T *nram_vertices_p, int k,
+                                     int dim_m, int deal_num) {
+              bool result = true;
+              int counter = 4;
+              for (int i = 0; i < 4; i++) {
+                T x1 = (nram_vertices_p + dim_m * k)[i];
+                T y1 = (nram_vertices_p + dim_m * (k + deal_num))[i];
+                for (int j = 0; j < 4; j++) {
+                  T x2 = (nram_vertices_p + dim_m * k + 4)[j];
+                  T y2 = (nram_vertices_p + dim_m * (k + deal_num) + 4)[j];
+                    if (fabs(x2 - x1) < EPSILON && fabs(y2 - y1) < EPSILON) counter--;
+                }
+                if (counter + i + 1 != 4) {
+                  result = false;
+                  return result;
+                }
+              }
+              return result;
+            }
            for (int i = 0; i < deal_num; i++) {
-               // 获取多边形有效顶点个数
-               int num_valid_points = nram_num_valid_p[i];
-               // 获取 pad
-               int pad = (int)__bang_findfirst1(nram_pad + i * dim_m, dim_m);
-               // 初始化输出idx：刷pad
-               __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX, MAX_NUM_VERT_IDX, pad);
+              // 获取多边形有效顶点个数
+              int num_valid_points = nram_num_valid_p[i];
+              // 获取 pad
+              int pad = (int)__bang_findfirst1(nram_pad + i * dim_m, dim_m);
+              // 初始化输出idx：刷pad
+              __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX, MAX_NUM_VERT_IDX, pad);
            
-               // 当有效顶点数 >= 3 时
-               if (num_valid_points >= 3) {
-                 // for corner case: the two boxes are exactly the same.
-                 // in this case, idx would have duplicate elements, which makes the
-                 // shoelace formula broken because of the definition, the duplicate
-                 // elements only appear in the first 8 positions (they are "corners in
-                 // box", not "intersection of edges")
-                 if (num_valid_points == 8) {
-                   __bang_eq(nram_temp0, nram_vertices_p + i * dim_m * 2,
-                             nram_vertices_p + i * dim_m * 2 + 4, 4);
-                   if (__bang_count(nram_temp0, 4) == 4) {
-                     num_valid_points = 4;
-                   }
-                 }
-                 
-                 // 将输出idx前 num_valid_points 刷 0
-                 __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
-                 // 根据 第 1 步 计算cosine的结果，排序输出有效顶点索引，并对相同点去重
-                 T *nram_cos = nram_mask0 + i * dim_m;
-                 for (int j = 0; j < num_valid_points; ++j) {
-                   // 获取顶点排序索引
-                   __bang_argmax(nram_temp0, nram_cos, dim_m);
-                   int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
-                   // 索引 i_take 保存到 nram_idx_p[i * MAX_NUM_VERT_IDX + j] 中
-                   nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
-                   // 相同cosine值做去重处理
-                   T cos_max = nram_temp0[0];
-                   __bang_eq_scalar(nram_temp1, nram_cos, cos_max, dim_m);
-                   __bang_not(nram_temp0, nram_temp1, dim_m);
-                   __bang_mul(nram_cos, nram_cos, nram_temp0, dim_m);
-                   __bang_mul_scalar(nram_temp1, nram_temp1, (T)-4, dim_m);
-                   __bang_add(nram_cos, nram_cos, nram_temp1, dim_m);
-                 }
-                 // duplicate the first idx
-                 nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
-                     nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
-               }
-             }
+              // 当有效顶点数 >= 3 时
+              if (num_valid_points >= 3) {
+                int skip_vertices = 0;
+                // 根据 第 1 步 计算cosine的结果，排序输出有效顶点索引，并对相同点去重
+                T *nram_cos = nram_mask0 + i * dim_m;
+
+                // for corner case: the two boxes are exactly the same.
+                // in this case, idx would have duplicate elements, which makes the
+                // shoelace formula broken because of the definition, the duplicate
+                // elements only appear in the first 8 positions (they are "corners in
+                // box", not "intersection of edges")
+                if (num_valid_points == 8 && duplicate_box_check(nram_temp0, nram_cos, nram_vertices_p, i, dim_m,
+                    deal_num) {
+                  __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
+                  for (int j = 0; j < num_valid_points; ++j) {
+                    __bang_argmax(nram_temp0, nram_cos, 4);
+                    int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
+                    nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
+                    nram_cos[i_take] = (T)-4;
+                  }
+                }else{
+                  // 将输出idx前 num_valid_points 刷 0
+                  __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
+                  T pre_cos = (T)UNVALID_VALUE;
+                  int pre_idx = -1;
+                  for (int j = 0; j < num_valid_points; ++j) {
+                    // 获取顶点排序索引
+                    __bang_argmax(nram_temp0, nram_cos, dim_m);
+                    int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
+                    // 索引 i_take 保存到 nram_idx_p[i * MAX_NUM_VERT_IDX + j] 中
+                    nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
+                    nram_cos[i_take] = (T)-4; // 置为最小值
+                    // 相同cosine值做去重处理， 设置为非法索引-1
+                    if (j > 0) {
+                      if (pre_cos - cos_max < EPSILON) {
+                        T x2 = (nram_vertices_p + i * dim_m)[i_take];
+                        T y2 = (nram_vertices_p + (i + deal_num) * dim_m)[i_take];
+                        T x1 = (nram_vertices_p + i * dim_m)[pre_idx];
+                        T y1 = (nram_vertices_p + (i + deal_num) * dim_m)[pre_idx];
+                        if ((fabs(x1 - x2) < EPSILON && fabs(y2 - y1) < EPSILON) ||
+                            !(y1 < 0 && y2 < 0) || (y1 > 0 && y2 > 0)) {
+                          // if duplicated, set unvalid idx
+                          nram_idx_p[i * MAX_NUM_VERT_IDX + j] = (int)-1;
+                          skip_vertices++;
+                          continue;
+                        } else {
+                          nram_idx_p[i * MAX_NUM_VERT_IDX + j - 1] = i_take;
+                          nram_idx_p[i * MAX_NUM_VERT_IDX + j] = pre_idx;
+                          cos_max = pre_cos;
+                          i_take = pre_idx;
+                        }
+                      }
+                    }
+                    pre_cos = cos_max;
+                    pre_idx = i_take;
+                  }
+                }
+  
+                // duplicate the first idx
+                nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
+                    nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
+                if (skip_vertices) {  // 处理非法索引-1
+                  __bang_int322float((float *)nram_temp0, nram_idx_p + i * MAX_NUM_VERT_IDX, 
+                                      num_valid_points, 0);
+                  __bang_eq_scalar((float *)nram_temp1, (float *)nram_temp0,
+                                   (float)-1, num_valid_points);
+                  __bang_not((float *)nram_temp1, (float *)nram_temp1, num_valid_points);
+                  __bang_collect((float *)nram_temp0, (float *)nram_temp0,
+                                 (float *)nram_temp1, num_valid_points);
+                  __bang_float2int32_tz(nram_idx_p + i * MAX_NUM_VERT_IDX,
+                                        (float *)nram_temp0, num_valid_points - skip_vertices, 0);
+                  __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX + num_valid_points - skip_vertices,
+                                     skip_vertices, 0);
+                }
+              }
+            }
            ```
      
         4. 额外空间 ：完成上述计算过程，需要额外的nram空间，大小`4 * deal_num * 24`
