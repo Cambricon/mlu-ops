@@ -217,27 +217,26 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
                   "num_query of the input is zero.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if ((num_levels == 0 || num_points == 0) && num_key == 0) {
+  if ((num_levels == 0) || ((num_points == 0) && num_key == 0)) {
     *calc_grad_value_loc_weight_flag = true;
     return MLUOP_STATUS_SUCCESS;
   }
-  if ((num_levels == 0 || num_points == 0) && num_key != 0) {
+  if ((num_points == 0) && (num_key != 0)) {
     *calc_grad_loc_weight_flag = true;
     return MLUOP_STATUS_SUCCESS;
   }
-  if (num_key == 0 && (num_levels != 0 && num_points != 0)) {
+  if ((num_key == 0) && (num_points != 0)) {
     *calc_grad_value_flag = true;
     return MLUOP_STATUS_SUCCESS;
   }
 
+  PARAM_CHECK(API, value != NULL);
   PARAM_CHECK(API, spatial_shapes != NULL);
   PARAM_CHECK(API, level_start_index != NULL);
   PARAM_CHECK(API, sampling_loc != NULL);
   PARAM_CHECK(API, attn_weight != NULL);
   PARAM_CHECK(API, grad_output != NULL);
-  if (num_key != 0) {
-    PARAM_CHECK(API, grad_value != NULL);
-  }
+  PARAM_CHECK(API, grad_value != NULL);
   PARAM_CHECK(API, grad_sampling_loc != NULL);
   PARAM_CHECK(API, grad_attn_weight != NULL);
   return MLUOP_STATUS_SUCCESS;
@@ -269,9 +268,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
       grad_sampling_loc_desc, grad_sampling_loc, grad_attn_weight_desc,
       grad_attn_weight, &calc_grad_loc_weight_flag, &calc_grad_value_flag,
       &calc_grad_value_loc_weight_flag);
-  if (MLUOP_STATUS_SUCCESS != param_check_status) {
-    return param_check_status;
-  }
+
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("ms_deform_attn_backward");
     GEN_CASE_HANDLE(handle);
@@ -291,6 +288,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
     GEN_CASE_OP_PARAM_SINGLE(0, "ms_deform_attn_backward", "im2col_step",
                              im2col_step);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
+  }
+  if (MLUOP_STATUS_SUCCESS != param_check_status) {
+    return param_check_status;
   }
 
   if (calc_grad_loc_weight_flag) {
