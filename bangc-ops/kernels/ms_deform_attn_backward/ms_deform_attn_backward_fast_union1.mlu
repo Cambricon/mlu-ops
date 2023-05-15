@@ -37,6 +37,16 @@ __nram__ char nram_buffer[NRAM_AVALIABLE_SIZE];
 __mlu_shared__ char sram_buffer[SRAM_AVALIABLE_SIZE];
 __wram__ char wram_buffer[WRAM_AVALIABLE_SIZE];
 
+__mlu_func__ void loadNram2Gpr(int32_t& v1, int32_t& v2, int32_t& v3,
+                               int32_t& v4, const int32_t* p1,
+                               const int32_t* p2, const int32_t* p3,
+                               const int32_t* p4) {
+  v1 = __load_nram(p1);
+  v2 = __load_nram(p2);
+  v3 = __load_nram(p3);
+  v4 = __load_nram(p4);
+}
+
 template <typename T>
 __mlu_func__ void memPolicyBackward(
     int32_t*& seq_nram, T*& zeros_nram, int32_t*& data_offset_nram,
@@ -296,31 +306,77 @@ __mlu_func__ void backwardStageTwoLoop(
              deal_n - 1);
 
     // compute grad_value
+    T* grad_value_buffer = inter_grad + buffer_data_num;
+    int32_t neighbor_order[4] = {1, 3, 0, 2};
     for (int k = 0; k < 4; k++) {
-      int offset = k * nq_nl_np;
-      T* tmp_wp = weight_polation_nram + offset;
+      int neighbor_idx = neighbor_order[k];
+      T* grad_value_tmp = k < 3 ? buffer : inter_grad;
+      __bang_cycle_mul(grad_value_tmp, inter_grad,
+                       weight_polation_nram + neighbor_idx * nq_nl_np,
+                       nq_nl_np_c, nq_nl_np);
+      __bang_transpose(grad_value_buffer + k * buffer_data_num, grad_value_tmp,
+                       channels, nq_nl_np);
+    }
+
+    // store all valid point
+    T* cond_all_valid = cond_nram + nq_nl_np_4;
+    __bang_and(cond_all_valid, cond_nram, cond_nram + nq_nl_np, nq_nl_np);
+    __bang_and(cond_all_valid, cond_all_valid, cond_nram + 2 * nq_nl_np,
+               nq_nl_np);
+    __bang_and(cond_all_valid, cond_all_valid, cond_nram + 3 * nq_nl_np,
+               nq_nl_np);
+    int32_t all_valid_count = __bang_sum(cond_all_valid, nq_nl_np);
+    int32_t* dst_offset = (int32_t*)offset_zero_nram_stg2;
+    for (int i = 0; i < 4; i++) {
+      __bang_collect((T*)dst_offset + i * nq_nl_np,
+                     (T*)offset_nram + i * nq_nl_np, cond_all_valid, nq_nl_np);
+    }
+    int32_t* src_offset = (int32_t*)inter_grad;
+    int32_t* stride_4_2 = dst_offset + 3 * nq_nl_np;
+    int32_t* stride_1_2 = dst_offset;
+    __bang_collect((T*)src_offset, (T*)seq_nram, cond_all_valid, nq_nl_np);
+    __bang_mul_scalar(src_offset, src_offset, channels * sizeof(T), nq_nl_np);
+    __bang_sub(stride_4_2, stride_4_2, dst_offset + nq_nl_np, nq_nl_np);
+    __bang_sub(stride_1_2, stride_1_2, dst_offset + nq_nl_np, nq_nl_np);
+    int src_stride_1 = buffer_size_pad;
+    int src_stride_2 = src_stride_1 * 2;
+    int32_t* dst_offset_base = dst_offset + nq_nl_np;
+    int32_t dst_offset_2, src_offset_2, dst_stride_4_2, dst_stride_1_2;
+    for (int s = 0; s < all_valid_count; s++) {
+      loadNram2Gpr(dst_offset_2, src_offset_2, dst_stride_4_2, dst_stride_1_2,
+                   dst_offset_base + s, src_offset + s, stride_4_2 + s,
+                   stride_1_2 + s);
+      __bang_atomic_reduce_add((T*)((int8_t*)grad_value_gdram + dst_offset_2),
+                               (T*)((int8_t*)grad_value_buffer + src_offset_2),
+                               channels, 1, 1, dst_stride_4_2, dst_stride_1_2,
+                               src_stride_1, src_stride_2);
+    }
+
+    // store partial valid point
+    __bang_not(cond_all_valid, cond_all_valid, nq_nl_np);
+    __bang_cycle_and(cond_nram, cond_nram, cond_all_valid, nq_nl_np_4,
+                     nq_nl_np);
+    for (int k = 0; k < 4; k++) {
+      int32_t offset = neighbor_order[k] * nq_nl_np;
+      T* grad_value_tmp = grad_value_buffer + k * buffer_data_num;
       T* tmp_cond = cond_nram + offset;
       int32_t* tmp_dst_offset = offset_nram + offset;
-      int32_t* tmp_src_offset = (int32_t*)buffer;
+      int32_t* tmp_src_offset = (int32_t*)inter_grad;
       int32_t valid_count = __bang_sum(tmp_cond, nq_nl_np);
       if (valid_count > 0) {
-        // (c, n, nl, np) * (n, nl, np)
-        __bang_cycle_mul(v_ping, inter_grad, tmp_wp, nq_nl_np_c, nq_nl_np);
-        // (c, n, nl, np) => (n, nl, np, c)
-        __bang_transpose(v_pong, v_ping, channels, nq_nl_np);
-        // select offset by cond_nram
         __bang_collect((T*)tmp_dst_offset, (T*)tmp_dst_offset, tmp_cond,
                        nq_nl_np);
         __bang_collect((T*)tmp_src_offset, (T*)seq_nram, tmp_cond, nq_nl_np);
-        __bang_mul_scalar(tmp_src_offset, tmp_src_offset, channels,
+        __bang_mul_scalar(tmp_src_offset, tmp_src_offset, channels * sizeof(T),
                           valid_count);
         for (int p = 0; p < valid_count; p++) {
           __bang_atomic_reduce_add(
               (T*)((int8_t*)grad_value_gdram + tmp_dst_offset[p]),
-              v_pong + tmp_src_offset[p], channels);
+              (T*)((int8_t*)grad_value_tmp + tmp_src_offset[p]), channels);
         }
       }
     }
+    __sync_io_move_compute();
   }
 }
 
