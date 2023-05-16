@@ -1,10 +1,11 @@
 ====================================
-Cambricon BANGC OPS Developer Guide
-====================================
+Cambricon BANG C OPS Developer Guide
+======================================
 
 .. toctree::
     :maxdepth: 5
     :caption: Table of Contents 
+    :numbered:
     
     copyright
     update

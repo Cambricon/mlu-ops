@@ -3095,7 +3095,7 @@ mluOpLog(mluOpHandle_t handle,
 /*!
  * @brief Creates a descriptor pointed by \b carafe_desc for CARAFE upsampling forward and backward operations,
  * and allocates memory holding the configuration parameters.The information is defined in ::mluOpCarafeDescriptor_t.
- * For more information about descriptor, see "Cambricon BANGC OPS User Guide".
+ * For more information about descriptor, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] carafe_desc
  * A host pointer to the CARAFE descriptor that holds information about the CARAFE operation.
@@ -7608,7 +7608,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  * A boolean value indicating whether to overwrite \b ans_grad.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the mutual_information_backward operation.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] px_grad_desc
@@ -9702,7 +9702,7 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * @param[in] features_desc
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the get_indice_pairs operation.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  *
  * @par Return
@@ -9965,7 +9965,7 @@ mluOpDestroyTransposeDescriptor(mluOpTransposeDescriptor_t desc);
  *
  * The size of extra workspace is based on the given information of the transpose operation,
  * including the input tensor descriptor \b x_desc and transpose descriptor \b desc.
- * For more information about the workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in]  handle
  * Handle to an MLUOP context that is used to manage MLU devices and
@@ -10403,7 +10403,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * see ::mluOpReduceDescriptor_t.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the reduce operation.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in the reduce operation.
  * You can get the size of the workspace with ::mluOpGetReduceOpWorkspaceSize.
@@ -10633,7 +10633,7 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
  * workspace to optimize ::mluOpActiveRotatedFilterForward. The size of the extra
  * workspace is based on the given information of the ActiveRotatedFilterForward operation,
  * including the input tensor descriptor \b input_desc. For more information about the workspace,
- * see "Cambricon BANGC OPS User Guide".
+ * see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -10694,7 +10694,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the
  * ActiveRotatedFilterForward operation. For more information about workspace,
- * see "Cambricon BANGC OPS User Guide".
+ * see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that is used in
  * the ActiveRotatedFilterForward operation.
@@ -10998,7 +10998,7 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  * \b input_grad_desc, the filter descriptor \b filter_desc , the indice pairs
  * descriptor \b indice_pairs_desc , the output descriptor \b indice_pairs_desc ,
  * the array \b indice_num , and the scaler \b inverse. For more information
- * about the workspace, see "Cambricon BANGC OPS User Guide".
+ * about the workspace, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -11107,7 +11107,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for
  * ::mluOpIndiceConvolutionBackwardData. For more information about
- * workspace, see "Cambricon BANGC OPS User Guide".
+ * workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that is used in
  * ::mluOpIndiceConvolutionBackwardData.
@@ -11306,7 +11306,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * The sub_m mode of convolution if the value is not 0.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the indice_convolution_backward_filter operation.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] filters_grad_desc
@@ -11383,7 +11383,7 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  * The size of extra workspace is based on the given information of the input
  * and output tensor descriptors, including \b points_desc , \b point_features_desc ,
  * \b boxes3d_desc , \b pooled_features_desc , and \b pooled_empty_flag_desc.
- * For more information about the workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues
@@ -11490,7 +11490,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the
  * ::mluOpRoiPointPool3d operation. For more information about workspace,
- * see "Cambricon BANGC OPS User Guide".
+ * see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in
  * ::mluOpRoiPointPool3d. You can get the size of the workspace with
@@ -11560,7 +11560,7 @@ mluOpRoiPointPool3d(mluOpHandle_t handle,
  * workspace to optimize ::mluOpThreeNNForward. The size of the extra workspace is
  * based on the given information of ::mluOpThreeNNForward, including the input
  * tensor descriptor \b known_desc. For more information about the workspace, see
- * "Cambricon BANGC OPS User Guide".
+ * "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -11619,7 +11619,7 @@ mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the known tensor.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for ::mluOpThreeNNForward.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that is used in ::mluOpThreeNNForward.
  * @param[in] dist2_desc
@@ -11792,7 +11792,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * The sub_m mode of convolution if the value is not 0.
  * @param[in] workspace
  * Pointer to the MLU memory that stores temporary tensor and extra computation space.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] features_out_desc
@@ -12066,7 +12066,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  * The number of experts.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the moe_dispatch_backward_gate operation.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] grad_gates_desc

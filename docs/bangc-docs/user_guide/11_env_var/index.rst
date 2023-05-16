@@ -1,10 +1,10 @@
 .. _环境变量:
 
-Cambricon BANGC OPS库环境变量
+Cambricon BANG C OPS库环境变量
 =============================
 
 
-本章介绍 Cambricon BANGC OPS 库环境变量。
+本章介绍 Cambricon BANG C OPS 库环境变量。
 
 .. _MLUOP_MIN_VLOG_LEVEL:
  
@@ -73,7 +73,7 @@ MLUOP_GEN_CASE
 
 **使用方法**
 
-- export MLUOP_GEN_CASE=1：开启算子调试信息保存功能。在调用任意Cambricon BANGC OPS算子接口后，会在当前目录生成名为 ``gen_case`` 的文件夹，里面包含被调用到的算子的调试信息文件。调试信息文件中会记录算子本次被调用时的输入输出形状以及算子参数等信息。
+- export MLUOP_GEN_CASE=1：开启算子调试信息保存功能。在调用任意Cambricon BANG C OPS算子接口后，会在当前目录生成名为 ``gen_case`` 的文件夹，里面包含被调用到的算子的调试信息文件。调试信息文件中会记录算子本次被调用时的输入输出形状以及算子参数等信息。
 
 - export MLUOP_GEN_CASE=2：开启算子调试信息保存功能。在等级1的基础上，生成的算子调试信息文件还会记录算子输入输出数据。export MLUOP_GEN_CASE_DUMP_DATA=1后会以文本形式保存数据，MLUOP_GEN_CASE_DUMP_DATA=2会以二进制形式保存浮点数据。MLUOP_GEN_CASE_DUMP_DATA_OUTPUT用于记录算子输出，用法相同。
 
