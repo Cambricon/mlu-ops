@@ -124,9 +124,7 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
   PARAM_CHECK(api,
               voxel_points_count_desc->dtype == point2voxel_map_desc->dtype);
   PARAM_CHECK(api, voxel_num_desc->dtype == point2voxel_map_desc->dtype);
-  printf("reduce_type:%d\n", reduce_type);
-  printf("reduce_type1:%d\n", MLUOP_REDUCE_DMAX);
-  printf("reduce_type2:%d\n", MLUOP_REDUCE_DMEAN);
+
   if (reduce_type != MLUOP_REDUCE_DMAX && reduce_type != MLUOP_REDUCE_DMEAN) {
     LOG(ERROR) << api << "Only support max and mean. "
                << "Please check reduce_type!";
