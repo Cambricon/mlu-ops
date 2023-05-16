@@ -220,7 +220,7 @@ void FocalLossSigmoidForwardExecutor::cpuCompute() {
   auto output_num = parser_->getOutputDataCount(0);
 
   VLOG(5)
-      << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu....2017";
+      << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
   {
     switch (prefer) {
       case ComputationPreference::COMPUTATION_FAST: {

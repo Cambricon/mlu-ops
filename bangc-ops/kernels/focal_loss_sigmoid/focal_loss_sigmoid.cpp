@@ -135,6 +135,10 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
     VLOG(5) << interface_name << "weight is null.";
   }
 
+  // large tensor
+  TENSOR_NUM_CHECK("[mluOpFocalLossSigmoidForward]",
+                   mluOpGetTensorElementNum(input_desc), LARGE_TENSOR_NUM, "");
+
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -188,8 +192,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   PARAM_CHECK("[mluOpFocalLossSigmoidForward]", output != NULL);
 
   // generate case prototxt.
-  const uint64_t N = input_desc->dims[0];
-  const uint64_t C = input_desc->dims[1];
+  const int32_t N = static_cast<int32_t>(input_desc->dims[0]);
+  const int32_t C = static_cast<int32_t>(input_desc->dims[1]);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("focal_loss_sigmoid_forward");
@@ -442,7 +446,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   (half_flag ? TO_STRING(MLUOP_DTYPE_HALF) : TO_STRING(MLUOP_DTYPE_FLOAT))
 
   VLOG(5) << interface_name << "N: " << dim_n << ", C: " << dim_c
-          << ", alpha: " << alpha <<  ", gamma: " << gamma
+          << ", alpha: " << alpha << ", gamma: " << gamma
           << ", dtype: " << GET_DTYPE(is_half)
           << ", has_weight: " << has_weight;
   VLOG(5) << interface_name << "threshold_c: " << threshold_c;
@@ -467,10 +471,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   PARAM_CHECK(interface_name, target != NULL);
   PARAM_CHECK(interface_name, output != NULL);
 
-
-#define FOCAL_LOSS_GEN_CASE_DATA_REAL(is_input, id, data, data_desc,      \
-                                      upper_bound, lower_bound)           \
-  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,       \
+#define FOCAL_LOSS_GEN_CASE_DATA_REAL(is_input, id, data, data_desc, \
+                                      upper_bound, lower_bound)      \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,  \
                                upper_bound, lower_bound, "UNIFORM", true)
 
   // generate focal_loss_sigmoid_backward prototxt
@@ -479,10 +482,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
     const int lower_bound = -1 * upper_bound;
     GEN_CASE_START("focal_loss_sigmoid_backward");
     GEN_CASE_HANDLE(handle);
-    FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "input", input, input_desc,
-                                  upper_bound, lower_bound);
-    FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "target", target, target_desc,
-                                  dim_c, 0);
+    FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "input", input, input_desc, upper_bound,
+                                  lower_bound);
+    FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "target", target, target_desc, dim_c,
+                                  0);
     if (weight != NULL) {
       FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "weight", weight, weight_desc,
                                     upper_bound, lower_bound);
