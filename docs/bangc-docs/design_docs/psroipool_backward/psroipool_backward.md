@@ -243,7 +243,7 @@ tensor([[[[nan, 0., 0.],
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
 | 输入参数限制 | pooled_height = pooled_width, rois_offset = 5, </br>output_dim >= 1, spatial_scale > 0, </br>channels = pooled_height * pooled_width * output_dim, </br>每个 roi 只支持 [batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1
-| nan/inf限制 | top_grad 支持 nan/inf 测例，rois 由于在计算过程中参与了 ceil/floor 函数，硬件指令功能限制无法与竞品对齐。已在 mlu_ops.h 中说明。|
+| nan/inf限制 | 已支持|
 
 ### 1.5 验收标准
 

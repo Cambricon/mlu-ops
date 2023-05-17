@@ -4540,7 +4540,7 @@ mluOpPriorBox(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300 series, \b rois does not support NAN/INF.
+ * - None.
  *
  * @par Example
  * - None.
@@ -4642,7 +4642,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300 series, rois does not support NAN/INF.
+ * - None.
  *
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/psroi_pooling
