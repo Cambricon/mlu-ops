@@ -392,30 +392,30 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
 
 #### 3.1.2 nram 空间划分
 
-- 计算阶段所需额外的nram空间 `nram_pub_space`，大小 `4 * deal_num * 24`；
+- 计算阶段所需额外的nram空间 `nram_pub_space`，大小 `3 * deal_num * 24`；
 
 - 采用三级流水实现，因此将nram空间划分为两份：每一份的大小`max_nram_size/2`，其中一份的空间划分如下：![diff_iou_rotated_sort_vertices_forward](./res/nram_space.png)
 
   `max_nram_size` 等于 `MAX_NRAM_SIZE - nram_pub_space`的nram空间大小：
 
   ```c
-  int max_nram_size = MAX_NRAM_SIZE -  4 * deal_num * 24 * sizeof(T);
+  int max_nram_size = MAX_NRAM_SIZE -  3 * deal_num * 24 * sizeof(T);
   ```
 
 - `deal_num` 计算如下：
 
   ```c
-  int deal_num = MAX_NRAM_SIZE / 2 / (4 * 24 * sizeof(T) + 24 * sizeof(bool) + (1 + 9) * sizeof(int));
+  int deal_num = MAX_NRAM_SIZE /(7 * 24 * sizeof(T) + 2 * 24 * sizeof(bool) + 2 * (1 + 9) * sizeof(int));
   int deal_vertices_num = deal_num * 24 * 2;
   int deal_mask_num = deal_num * 24;
   int deal_num_valid_num = deal_num;
-  int max_nram_size = MAX_NRAM_SIZE -  4 * deal_num * 24 * sizeof(T);
+  int max_nram_size = MAX_NRAM_SIZE -  3 * deal_num * 24 * sizeof(T);
   int pingpong_offset = max_nram_size / 2;
   
   T *nram_pub_space = (T *)nram_buffer;
   
   // ping/pong
-  char *nram_vertices = (char *)(nram_pub_space + 4 * deal_num * 24);
+  char *nram_vertices = (char *)(nram_pub_space + 3 * deal_num * 24);
   char *nram_mask = nram_vertices + deal_vertices_num * sizeof(T);
   char *nram_num_valid = nram_mask + deal_mask_num * sizeof(bool);
   char *nram_idx = nram_num_valid + deal_num_valid_num * sizeof(int);
@@ -552,37 +552,9 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
      
      3. 计算过程详细说明：
      
-        1. 计算所有顶点的cos值
+        1. 提前计算所有顶点的cosθ 的平方
      
-           设点`p0(x, y)`， 计算 `f(p0) = abs(x) * x / (x * x + y * y)`，那么可以根据象限对`f(p0)`做加权，加权规则如下：
-     
-           | 象限         | 加权方法 |
-           | ------------ | -------- |
-           | 第一、二象限 | +0       |
-           | 第三、四象限 | 取反，-2 |
-     
-           因cos函数为周期性函数，在[0, π]区间（第一二象限）单调递减，在[π, 2π]区间（第三四象限）单调递增，如下图所示：
-     
-           ![diff_iou_rotated_sort_vertices](./res/cosine1.png)
-     
-           因此通过加权调整cos函数在[π, 2π]区间的计算结果，使得最终的函数在 [0, 2π] 单调递减，此时函数表达式如下：
-     
-           ```c
-           value(theta) = {
-               if theta < pi {
-                   cos(theta)
-               } else {
-                   -cos(theta) - 2
-               }
-           }
-           ```
-     
-           ![diff_iou_rotated_sort_vertices](./res/cosine2.png)
-     
-           
-     
-           从上图可以看出，最终函数计算结果的有效区间为[1, -3]，因此对无效顶点处理时，将其计算结果置为-4，以便不影响有效顶点的排序结果。
-     
+           设点`p0(x, y)`， 计算 `f(p0) = abs(x) * x / (x * x + y * y)`：
            代码实现：compute_cosine 函数伪代码
      
            ```c
@@ -597,16 +569,6 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
              __bang_transpose(nram_temp0, nram_vertices, point_num, 2);
              __bang_move(nram_vertices_x, nram_temp0, 2 * point_num * sizeof(T));
            
-             // 生成 y < 0 的 mask0，并对 mask0 乘 -1
-             __bang_lt_scalar(nram_mask0, nram_vertices_y, (T)0.0, point_num);
-             __bang_mul_scalar(nram_mask0, nram_mask0, (T)-1.0, point_num);
-             // 生成 y >= 0 的 mask1
-             __bang_ge_scalar(nram_temp1, nram_vertices_y, (T)0.0, point_num);
-             // mask1 = mask0 + mask1
-             __bang_add(nram_temp1, nram_temp1, nram_mask0, point_num);
-             // x = x * mask1，即对 y<0 的点 x 坐标乘 -1
-             __bang_mul(nram_vertices_x, nram_vertices_x, nram_temp1, point_num);
-           
              // 计算cosine 
              // 计算 x * x + y * y + EPSILON
              __bang_square(nram_temp0, nram_vertices_x, point_num);
@@ -619,27 +581,12 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
            
              // 计算cosine = fabs(x) * x / (x * x + y * y + EPSILON)
              computeDiv(nram_temp0, nram_temp1, nram_temp0, point_num);
-           
-             // mask0 乘 2，加 cosine
-             __bang_mul_scalar(nram_mask0, nram_mask0, (T)2.0, point_num);
-             __bang_add(nram_temp0, nram_temp0, nram_mask0, point_num);
-           
-             // 特殊点处理：置 y=0 以及 无效点（vertices_mask=0）的 cosine 值为 -4
-             __bang_ne_scalar(nram_mask0, nram_vertices_y, (T)0.0, point_num);
-             __bang_int82float(nram_temp1, (int8_t *)(nram_vertices_mask), point_num, 0);
-             __bang_and(nram_mask0, nram_mask0, nram_temp1, point_num);
-             __bang_mul(nram_temp0, nram_temp0, nram_mask0, point_num);
-             __bang_not(nram_mask0, nram_mask0, point_num);
-             __bang_mul_scalar(nram_mask0, nram_mask0, (T)-4, point_num);
-             __bang_add(nram_mask0, nram_temp0, nram_mask0, point_num);
            }
            ```
      
-           
-     
         2. 预处理 `mask` tensor，以便后续获取 pad
      
-           首先将`nram_mask` 的前8个值填1，然后取反，以便在遍历 `deal_num` 时，可以调用 __bang_findfirst1 快速的找到pad，伪代码如下：
+           首先将`nram_pad` 的前8个值填1，然后取反，以便在遍历 `deal_num` 时，可以调用 __bang_findfirst1 快速的找到pad，伪代码如下：
      
            ```c
            // set nram_temp0[24] = [1,1,1,1,1,1,1,1,0,0,0,...]
@@ -647,7 +594,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
            __bang_write_zero(nram_temp0, dim_m);
            __bang_write_value(nram_temp0, INTERSECTION_OFFSET, (T)1.0);
            __bang_int82float(nram_pad, (int8_t *)(nram_mask_p), deal_num * dim_m, 0);
-           // 调用 cycle_maxequal 将 nram_mask 的前8个值set为1，其余保持不变，结果存 nram_pad 中
+           // 调用 cycle_maxequal 将 nram_pad 的前8个值set为1，其余保持不变，结果存 nram_pad 中
            __bang_cycle_maxequal(nram_pad, nram_pad, nram_temp0, deal_num * dim_m, dim_m);
            // 取反 nram_pad：以便后续调用 __bang_findfirst1 找到第一个不为0的值的索引
            __bang_not(nram_pad, nram_pad,  deal_num * dim_m);
@@ -661,121 +608,57 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
      
            
      
-        3. 获取排序结果：循环 `deal_num` 次，依次找到每个多边形有效顶点排序后的索引
+        3. 获取排序结果：循环 `deal_num` 次，依次找到每个多边形有效顶点排序后的索引，排序时加入提前算好的cos值
      
            ```c
-            bool duplicate_box_check(T *nram_temp, T *nram_cos, T *nram_vertices_p, int k,
-                                     int dim_m, int deal_num) {
-              bool result = true;
-              int counter = 4;
-              for (int i = 0; i < 4; i++) {
-                T x1 = (nram_vertices_p + dim_m * k)[i];
-                T y1 = (nram_vertices_p + dim_m * (k + deal_num))[i];
-                for (int j = 0; j < 4; j++) {
-                  T x2 = (nram_vertices_p + dim_m * k + 4)[j];
-                  T y2 = (nram_vertices_p + dim_m * (k + deal_num) + 4)[j];
-                    if (fabs(x2 - x1) < EPSILON && fabs(y2 - y1) < EPSILON) counter--;
-                }
-                if (counter + i + 1 != 4) {
-                  result = false;
-                  return result;
-                }
-              }
-              return result;
+            template <typename T>
+            static __mlu_func__ bool compare_vertices(T x1, T y1, T diff_1, T x2, T y2, T diff_2) {
+              ...
+              //diff 值计算
+              T diff = diff_1 - diff_2;
+              ...
             }
-           for (int i = 0; i < deal_num; i++) {
-              // 获取多边形有效顶点个数
-              int num_valid_points = nram_num_valid_p[i];
-              // 获取 pad
-              int pad = (int)__bang_findfirst1(nram_pad + i * dim_m, dim_m);
-              // 初始化输出idx：刷pad
-              __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX, MAX_NUM_VERT_IDX, pad);
-           
-              // 当有效顶点数 >= 3 时
-              if (num_valid_points >= 3) {
-                int skip_vertices = 0;
-                // 根据 第 1 步 计算cosine的结果，排序输出有效顶点索引，并对相同点去重
-                T *nram_cos = nram_mask0 + i * dim_m;
 
-                // for corner case: the two boxes are exactly the same.
-                // in this case, idx would have duplicate elements, which makes the
-                // shoelace formula broken because of the definition, the duplicate
-                // elements only appear in the first 8 positions (they are "corners in
-                // box", not "intersection of edges")
-                if (num_valid_points == 8 && duplicate_box_check(nram_temp0, nram_cos, nram_vertices_p, i, dim_m,
-                    deal_num) {
-                  __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
-                  for (int j = 0; j < num_valid_points; ++j) {
-                    __bang_argmax(nram_temp0, nram_cos, 4);
-                    int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
-                    nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
-                    nram_cos[i_take] = (T)-4;
-                  }
-                }else{
-                  // 将输出idx前 num_valid_points 刷 0
-                  __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
-                  T pre_cos = (T)UNVALID_VALUE;
-                  int pre_idx = -1;
-                  for (int j = 0; j < num_valid_points; ++j) {
-                    // 获取顶点排序索引
-                    __bang_argmax(nram_temp0, nram_cos, dim_m);
-                    int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
-                    // 索引 i_take 保存到 nram_idx_p[i * MAX_NUM_VERT_IDX + j] 中
-                    nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
-                    nram_cos[i_take] = (T)-4; // 置为最小值
-                    // 相同cosine值做去重处理， 设置为非法索引-1
-                    if (j > 0) {
-                      if (pre_cos - cos_max < EPSILON) {
-                        T x2 = (nram_vertices_p + i * dim_m)[i_take];
-                        T y2 = (nram_vertices_p + (i + deal_num) * dim_m)[i_take];
-                        T x1 = (nram_vertices_p + i * dim_m)[pre_idx];
-                        T y1 = (nram_vertices_p + (i + deal_num) * dim_m)[pre_idx];
-                        if ((fabs(x1 - x2) < EPSILON && fabs(y2 - y1) < EPSILON) ||
-                            !(y1 < 0 && y2 < 0) || (y1 > 0 && y2 > 0)) {
-                          // if duplicated, set unvalid idx
-                          nram_idx_p[i * MAX_NUM_VERT_IDX + j] = (int)-1;
-                          skip_vertices++;
-                          continue;
-                        } else {
-                          nram_idx_p[i * MAX_NUM_VERT_IDX + j - 1] = i_take;
-                          nram_idx_p[i * MAX_NUM_VERT_IDX + j] = pre_idx;
-                          cos_max = pre_cos;
-                          i_take = pre_idx;
-                        }
-                      }
-                    }
-                    pre_cos = cos_max;
-                    pre_idx = i_take;
-                  }
-                }
-  
-                // duplicate the first idx
-                nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
-                    nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
-                if (skip_vertices) {  // 处理非法索引-1
-                  __bang_int322float((float *)nram_temp0, nram_idx_p + i * MAX_NUM_VERT_IDX, 
-                                      num_valid_points, 0);
-                  __bang_eq_scalar((float *)nram_temp1, (float *)nram_temp0,
-                                   (float)-1, num_valid_points);
-                  __bang_not((float *)nram_temp1, (float *)nram_temp1, num_valid_points);
-                  __bang_collect((float *)nram_temp0, (float *)nram_temp0,
-                                 (float *)nram_temp1, num_valid_points);
-                  __bang_float2int32_tz(nram_idx_p + i * MAX_NUM_VERT_IDX,
-                                        (float *)nram_temp0, num_valid_points - skip_vertices, 0);
-                  __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX + num_valid_points - skip_vertices,
-                                     skip_vertices, 0);
-                }
+            //排序计算
+            for (int j = 0; j < num_valid_points; ++j) {
+              T x_min = 1;
+              T y_min = -EPSILON;
+              T diff_min = x_min/(x_min + y_min * y_min + EPSILON);
+              int i_take = 0;
+              int i2;
+              T x2, y2;
+              T diff_x2;
+              if (j != 0) {
+                  i2 = idx[j - 1];
+                  x2 = vertice_x[i2];
+                  y2 = vertice_y[i2];
+                  diff_x2 = nram_cos[i2];
               }
+              for (int k = 0; k < dim_m; ++k) {
+                  T x = vertice_x[k];
+                  T y = vertice_y[k];
+                  T diff_x = nram_cos[k];
+                  if (mask_p[k] &&
+                      compare_vertices(x, y, diff_x, x_min, y_min, diff_min)) {
+                      if ((j == 0) || (j != 0 && compare_vertices(x2, y2, diff_x2,
+                                                                  x, y, diff_x))) {
+                          x_min = x;
+                          y_min = y;
+                          i_take = k;
+                          diff_min = diff_x;
+                      }
+                  }
+              }
+              idx[j] = i_take;
             }
            ```
      
         4. 额外空间 ：完成上述计算过程，需要额外的nram空间，大小`4 * deal_num * 24`
      
            ```c
-           // nram_pub_space size = 4 * deal_num * 24
+           // nram_pub_space size = 3 * deal_num * 24
            T *nram_pad = nram_pub_space;
            T *nram_mask0 = nram_pad + deal_num * 24;
-           T *nram_temp0 = nram_mask0 + deal_num * 24;
            T *nram_temp1 = nram_temp0 + deal_num * 24;
            ```
      
@@ -885,7 +768,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
 
 - 计划排期：
 
-  4.10 ~ 4.18 ： 需求调研，竞品功能分析，方案文档设计和评审
+  4.10 ~ 4.18 ：需求调研，竞品功能分析，方案文档设计和评审
 
   4.19 ~ 4.21 ：gtest、generator、host 代码实现，调试
 

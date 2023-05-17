@@ -55,30 +55,21 @@ template <typename T>
 static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
                                     int deal_num) {
 #if (__BANG_ARCH__ != 372)
-    __bang_div(nram_dst, nram_src0, nram_src1, deal_num);
+  __bang_div(nram_dst, nram_src0, nram_src1, deal_num);
 #else
-    __bang_recip(nram_dst, nram_src1, deal_num);
-    __bang_mul(nram_dst, nram_src0, nram_dst, deal_num);
+  __cn_vector_div_f32_rn(deal_num, nram_dst, nram_src0, nram_src1);
 #endif
 }
 
 template <typename T>
 static __mlu_func__ void compute_cosine(T *nram_vertices,
                                         const bool *nram_vertices_mask,
-                                        T *nram_mask0, T *nram_temp0,
-                                        T *nram_temp1, const int point_num) {
+                                        T *nram_temp0, T *nram_temp1,
+                                        const int point_num) {
   T *nram_vertices_x = nram_vertices;
   T *nram_vertices_y = nram_vertices + point_num;
   __bang_transpose(nram_temp0, nram_vertices, point_num, 2);
   __bang_move(nram_vertices_x, nram_temp0, 2 * point_num * sizeof(T));
-
-  // y < 0
-  __bang_lt_scalar(nram_mask0, nram_vertices_y, (T)0.0, point_num);
-  // y >= 0
-  __bang_not(nram_temp1, nram_mask0, point_num);
-  __bang_mul_scalar(nram_mask0, nram_mask0, (T)-1.0, point_num);
-  __bang_add(nram_temp1, nram_temp1, nram_mask0, point_num);
-  __bang_mul(nram_vertices_x, nram_vertices_x, nram_temp1, point_num);
 
   // compute x * x + y * y + EPSILON
   __bang_square(nram_temp0, nram_vertices_x, point_num);
@@ -90,41 +81,33 @@ static __mlu_func__ void compute_cosine(T *nram_vertices,
   __bang_mul(nram_temp1, nram_temp1, nram_vertices_x, point_num);
 
   // cosine[point_num] = fabs(x) * x / (x * x + y * y + EPSILON)
-  computeDiv(nram_temp0, nram_temp1, nram_temp0, point_num);
-
-  __bang_mul_scalar(nram_mask0, nram_mask0, (T)2.0, point_num);
-  __bang_add(nram_temp0, nram_temp0, nram_mask0, point_num);
-
-  // set y=0 and vertices_mask=0 points cos value is -4
-  __bang_ne_scalar(nram_mask0, nram_vertices_y, (T)0.0, point_num);
-  __bang_int82float(nram_temp1, (int8_t *)(nram_vertices_mask), point_num, 0);
-  __bang_and(nram_mask0, nram_mask0, nram_temp1, point_num);
-  __bang_mul(nram_temp0, nram_temp0, nram_mask0, point_num);
-  __bang_not(nram_mask0, nram_mask0, point_num);
-  __bang_mul_scalar(nram_mask0, nram_mask0, (T)UNVALID_VALUE, point_num);
-  __bang_add(nram_mask0, nram_temp0, nram_mask0, point_num);
+  computeDiv(nram_temp1, nram_temp1, nram_temp0, point_num);
 }
 
 template <typename T>
-static __mlu_func__ bool duplicate_box_check(T *nram_temp, T *nram_cos,
-                                             T *nram_vertices_p, int k,
-                                             int dim_m, int deal_num) {
-  bool result = true;
-  int counter = 4;
-  for (int i = 0; i < 4; i++) {
-    T x1 = (nram_vertices_p + dim_m * k)[i];
-    T y1 = (nram_vertices_p + dim_m * (k + deal_num))[i];
-    for (int j = 0; j < 4; j++) {
-      T x2 = (nram_vertices_p + dim_m * k + 4)[j];
-      T y2 = (nram_vertices_p + dim_m * (k + deal_num) + 4)[j];
-      if (fabs(x2 - x1) < EPSILON && fabs(y2 - y1) < EPSILON) counter--;
-    }
-    if (counter + i + 1 != 4) {
-      result = false;
-      return result;
-    }
+static __mlu_func__ bool compare_vertices(T x1, T y1, T diff_1, T x2, T y2,
+                                          T diff_2) {
+  if (fabs(x1 - x2) < EPSILON && fabs(y2 - y1) < EPSILON) return false;
+
+  if (y1 > 0 && y2 < 0) return true;
+  if (y1 < 0 && y2 > 0) return false;
+
+  T diff = diff_1 - diff_2;
+  if (y1 > 0 && y2 > 0) {
+    if (diff > EPSILON)
+      return true;
+    else
+      return false;
   }
-  return result;
+
+  if (y1 < 0 && y2 < 0) {
+    if (diff < EPSILON)
+      return true;
+    else
+      return false;
+  }
+
+  return false;
 }
 
 template <typename T>
@@ -141,13 +124,12 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
 
   // nram_pub_space size = 4 * dim_m * deal_num
   T *nram_pad = nram_pub_space;
-  T *nram_mask0 = nram_pad + deal_num * dim_m;
-  T *nram_temp0 = nram_mask0 + deal_num * dim_m;
+  T *nram_temp0 = nram_pad + deal_num * dim_m;
   T *nram_temp1 = nram_temp0 + deal_num * dim_m;
 
   // compute all points cosine value
-  compute_cosine(nram_vertices_p, nram_mask_p, nram_mask0, nram_temp0,
-                 nram_temp1, deal_num * dim_m);
+  compute_cosine(nram_vertices_p, nram_mask_p, nram_temp0, nram_temp1,
+                 deal_num * dim_m);
 
   // preprocess to get pad index
   __bang_write_zero(nram_temp0, dim_m);
@@ -163,82 +145,59 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
     __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX, MAX_NUM_VERT_IDX,
                        pad);
 
-    if (num_valid_points >= 3) {
-      int skip_vertices = 0;
-      T *nram_cos = nram_mask0 + i * dim_m;
-      if (num_valid_points == 8 &&
-          duplicate_box_check(nram_temp0, nram_cos, nram_vertices_p, i, dim_m,
-                              deal_num)) {
-        // for corner case: the two boxes are exactly the same.
-        // in this case, idx would have duplicate elements, which makes the
-        // shoelace formula broken because of the definition, the duplicate
-        // elements only appear in the first 8 positions (they are "corners in
-        // box", not "intersection of edges")
-        num_valid_points = 4;
-        __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
-        for (int j = 0; j < num_valid_points; ++j) {
-          __bang_argmax(nram_temp0, nram_cos, 4);
-          int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
-          nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
-          nram_cos[i_take] = (T)UNVALID_VALUE;
-        }
-      } else {
-        __bang_write_zero(nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points);
+    T *nram_cos = nram_temp1 + i * dim_m;
+    T *vertice_x = nram_vertices_p + i * dim_m;
+    T *vertice_y = nram_vertices_p + (i + deal_num) * dim_m;
+    int *idx = nram_idx_p + i * MAX_NUM_VERT_IDX;
+    bool *mask_p = nram_mask_p + i * dim_m;
 
-        // sort the valid vertices
-        // note the number of valid vertices is known
-        // note: check that num_valid[i] < MAX_NUM_VERT_IDX
-        T pre_cos = (T)UNVALID_VALUE;
-        int pre_idx = -1;
-        for (int j = 0; j < num_valid_points; ++j) {
-          __bang_argmax(nram_temp0, nram_cos, dim_m);
-          int i_take = (int)(*(uint32_t *)(nram_temp0 + 1));
-          T cos_max = nram_temp0[0];
-          nram_idx_p[i * MAX_NUM_VERT_IDX + j] = i_take;
-          nram_cos[i_take] = (T)UNVALID_VALUE;
-          if (j > 0) {
-            if (pre_cos - cos_max < EPSILON) {
-              T x2 = (nram_vertices_p + i * dim_m)[i_take];
-              T y2 = (nram_vertices_p + (i + deal_num) * dim_m)[i_take];
-              T x1 = (nram_vertices_p + i * dim_m)[pre_idx];
-              T y1 = (nram_vertices_p + (i + deal_num) * dim_m)[pre_idx];
-              if ((fabs(x1 - x2) < EPSILON && fabs(y2 - y1) < EPSILON) ||
-                  !(y1 < 0 && y2 < 0) || (y1 > 0 && y2 > 0)) {
-                // if duplicated, set unvalid idx
-                nram_idx_p[i * MAX_NUM_VERT_IDX + j] = (int)UNVALID_IDX;
-                skip_vertices++;
-                continue;
-              } else {
-                nram_idx_p[i * MAX_NUM_VERT_IDX + j - 1] = i_take;
-                nram_idx_p[i * MAX_NUM_VERT_IDX + j] = pre_idx;
-                cos_max = pre_cos;
-                i_take = pre_idx;
-              }
+    if (num_valid_points >= 3) {
+      for (int j = 0; j < num_valid_points; ++j) {
+        T x_min = 1;
+        T y_min = -EPSILON;
+        T diff_min = x_min / (x_min + y_min * y_min + EPSILON);
+        int i_take = 0;
+        int i2;
+        T x2, y2;
+        T diff_x2;
+        if (j != 0) {
+          i2 = idx[j - 1];
+          x2 = vertice_x[i2];
+          y2 = vertice_y[i2];
+          diff_x2 = nram_cos[i2];
+        }
+        for (int k = 0; k < dim_m; ++k) {
+          T x = vertice_x[k];
+          T y = vertice_y[k];
+          T diff_x = nram_cos[k];
+          if (mask_p[k] &&
+              compare_vertices(x, y, diff_x, x_min, y_min, diff_min)) {
+            if ((j == 0) ||
+                (j != 0 && compare_vertices(x2, y2, diff_x2, x, y, diff_x))) {
+              x_min = x;
+              y_min = y;
+              i_take = k;
+              diff_min = diff_x;
             }
           }
-          pre_cos = cos_max;
-          pre_idx = i_take;
         }
+        idx[j] = i_take;
       }
       // duplicate the first idx
-      nram_idx_p[i * MAX_NUM_VERT_IDX + num_valid_points] =
-          nram_idx_p[i * MAX_NUM_VERT_IDX + 0];
+      idx[num_valid_points] = idx[0];
 
-      if (skip_vertices) {  // deal with the unvalid idx
-        __bang_int322float((float *)nram_temp0,
-                           nram_idx_p + i * MAX_NUM_VERT_IDX, num_valid_points,
-                           0);
-        __bang_eq_scalar((float *)nram_temp1, (float *)nram_temp0,
-                         (float)UNVALID_IDX, num_valid_points);
-        __bang_not((float *)nram_temp1, (float *)nram_temp1, num_valid_points);
-        __bang_collect((float *)nram_temp0, (float *)nram_temp0,
-                       (float *)nram_temp1, num_valid_points);
-        __bang_float2int32_tz(nram_idx_p + i * MAX_NUM_VERT_IDX,
-                              (float *)nram_temp0,
-                              num_valid_points - skip_vertices, 0);
-        __bang_write_value(nram_idx_p + i * MAX_NUM_VERT_IDX +
-                               num_valid_points - skip_vertices,
-                           skip_vertices, 0);
+      if (num_valid_points == 8) {
+        int counter = 0;
+        for (int j = 0; j < 4; ++j) {
+          int check = idx[j];
+          for (int k = 4; k < INTERSECTION_OFFSET; ++k) {
+            if (idx[k] == check) counter++;
+          }
+        }
+        if (counter == 4) {
+          idx[4] = idx[0];
+          __bang_write_value(idx + 5, MAX_NUM_VERT_IDX - 5, pad);
+        }
       }
     }
   }
@@ -380,7 +339,7 @@ __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
   // |--------------------------------------|
   // |           nram_pub_space             |
   // |--------------------------------------|
-  // |  4 * deal_num * dim_m * sizeof(T)    |
+  // |  3 * deal_num * dim_m * sizeof(T)    |
   // |--------------------------------------|
   // pingpong
   // |--------------------------------------|--------------------------------|
@@ -391,19 +350,20 @@ __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
   // |           nram_num_valid             |           nram_idx             |
   // |        deal_num * sizeof(int)        |   9 * deal_num * sizeof(int)   |
   // |--------------------------------------|--------------------------------|
-  int deal_num = MAX_NRAM_SIZE / 2 /
-                 (4 * dim_m * sizeof(T) + dim_m * sizeof(bool) +
-                  (1 + MAX_NUM_VERT_IDX) * sizeof(int));
+  int deal_num =
+      MAX_NRAM_SIZE /
+      (7 * dim_m * sizeof(T) +
+       2 * (dim_m * sizeof(bool) + (1 + MAX_NUM_VERT_IDX) * sizeof(int)));
   int deal_vertices_num = deal_num * dim_m * 2;
   int deal_mask_num = deal_num * dim_m;
   int deal_num_valid_num = deal_num;
-  int max_nram_size = MAX_NRAM_SIZE - 4 * deal_num * dim_m * sizeof(T);
+  int max_nram_size = MAX_NRAM_SIZE - 3 * deal_num * dim_m * sizeof(T);
   int pingpong_offset = max_nram_size / 2;
 
   T *nram_pub_space = (T *)nram_buffer;
 
   // ping/pong
-  char *nram_vertices = (char *)(nram_pub_space + 4 * deal_num * dim_m);
+  char *nram_vertices = (char *)(nram_pub_space + 3 * deal_num * dim_m);
   char *nram_mask = nram_vertices + deal_vertices_num * sizeof(T);
   char *nram_num_valid = nram_mask + deal_mask_num * sizeof(bool);
   char *nram_idx = nram_num_valid + deal_num_valid_num * sizeof(int);
