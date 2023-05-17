@@ -80,10 +80,10 @@ static mluOpStatus_t maskedIm2colForwardPreCheck(
   PARAM_CHECK("[mluOpMaskedIm2colForward]", kernel_h > 0);
   PARAM_CHECK("[mluOpMaskedIm2colForward]", kernel_w > 0);
 
-  const size_t feature_element_num = mluOpGetTensorElementNum(feature_desc);
-  const size_t mask_h_idx_element_num =
+  const uint64_t feature_element_num = mluOpGetTensorElementNum(feature_desc);
+  const uint64_t mask_h_idx_element_num =
       mluOpGetTensorElementNum(mask_h_idx_desc);
-  const size_t data_col_element_num = mluOpGetTensorElementNum(data_col_desc);
+  const uint64_t data_col_element_num = mluOpGetTensorElementNum(data_col_desc);
   TENSOR_NUM_CHECK("[mluOpMaskedIm2colForward]", feature_element_num,
                    LARGE_TENSOR_NUM, "");
   TENSOR_NUM_CHECK("[mluOpMaskedIm2colForward]", mask_h_idx_element_num,
@@ -144,8 +144,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedIm2colForwardWorkspaceSize(
   int data_col_permute[3] = {2, 1, 0};
   int data_col_HWC_dims[3] = {0, 0, 0};
   int data_col_CHW_dims[3] = {0, 0, 0};
-  data_col_HWC_dims[0] = data_col_desc->dims[0];
-  data_col_HWC_dims[1] = data_col_desc->dims[0] / feature_desc->dims[1];
+  data_col_HWC_dims[0] = mask_h_idx_desc->dims[0];
+  data_col_HWC_dims[1] = kernel_h * kernel_w;
   data_col_HWC_dims[2] = feature_desc->dims[1];
   for (int i = 0; i < data_col_dim; ++i) {
     data_col_CHW_dims[i] = data_col_HWC_dims[data_col_permute[i]];
@@ -316,7 +316,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedIm2colForward(
       mask_cnt, data_col_workspace));
 
   VLOG(5) << "[mluOpMaskedIm2colForward] mluOpTranspose_v2 data_col start.";
-  int data_col_dim = 3;
+  const int data_col_dim = 3;
   int data_col_permute[3] = {2, 1, 0};
   int data_col_HWC_dims[3] = {0, 0, 0};
   int data_col_CHW_dims[3] = {0, 0, 0};
