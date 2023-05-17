@@ -3558,7 +3558,7 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
  * the DynamicPointToVoxelForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
- * Reduce op. support 'max', 'sum' and 'mean'. Default: 'max'.
+ * Reduce op. support 'max' and 'mean'. Default: 'max'.
  * @param[in] feats_desc
  * The descriptor of the tensor \b feats. For detailed information, see
  * ::mluOpTensorDescriptor_t.
