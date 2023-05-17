@@ -91,7 +91,7 @@ psroipool的操作与roipool类似，不同之处在于不同空间维度输出�
 | stride 限制  | 不支持 stride 机制                                                                                              |
 | 广播限制     |  参数不支持广播                                                                                              |
 | 输入参数限制 | group_size=pooled_height=pooled_width,rois_offset=5,</br>group_size>=1,output_dim>=1,spatial_scale>0,</br>channels = pooled_height *pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batch - 1 |
-| nan/inf限制 | input支持nan/inf测例， rois参数的nan/inf无法与竞品对齐，由于在计算过程中使用了ceil/floor函数，硬件指令功能限制无法与竞品对齐。已在mlu_ops.h中说明。|
+| nan/inf限制 | 已支持 |
 
 ### 1.5 验收标准
 
