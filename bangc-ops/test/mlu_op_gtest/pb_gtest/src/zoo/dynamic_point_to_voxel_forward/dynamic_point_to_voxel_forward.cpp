@@ -62,9 +62,12 @@ void DynamicPointToVoxelForwardExecutor::compute() {
                                .reduce_type();
   if (reduce_mode == REDUCE_MODE_MAX) {
     reduce_type = MLUOP_REDUCE_DMAX;
-  } else {
+  } else if (reduce_mode == REDUCE_MODE_MEAN) {
     reduce_type = MLUOP_REDUCE_DMEAN;
+  } else {
+    reduce_type = MLUOP_REDUCE_DSUM;
   }
+
   auto feats_desc = tensor_desc_[0].tensor;
   auto coors_desc = tensor_desc_[1].tensor;
   auto voxel_feats_desc = tensor_desc_[2].tensor;

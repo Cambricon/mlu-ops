@@ -68,8 +68,9 @@ static void policyFuncDynamicPointToVoxelForward(const mluOpHandle_t handle,
 }
 
 static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
-    const std::string &api, const mluOpHandle_t handle, const void *feats,
-    const void *coors, const void *voxel_feats, const void *voxel_coors,
+    const std::string &api, const mluOpHandle_t handle,
+    const mluOpReduceMode_t reduce_type, const void *feats, const void *coors,
+    const void *voxel_feats, const void *voxel_coors,
     const void *point2voxel_map, const void *voxel_points_count,
     const void *voxel_num, void *workspace, const size_t workspace_size,
     const mluOpTensorDescriptor_t feats_desc,
@@ -123,6 +124,12 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
   PARAM_CHECK(api,
               voxel_points_count_desc->dtype == point2voxel_map_desc->dtype);
   PARAM_CHECK(api, voxel_num_desc->dtype == point2voxel_map_desc->dtype);
+
+  if (reduce_type != MLUOP_REDUCE_DMAX && reduce_type != MLUOP_REDUCE_DMEAN) {
+    LOG(ERROR) << api << "Only support max and mean. "
+               << "Please check reduce_type!";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
 
   // check dim
   PARAM_CHECK(api, feats_desc->dims[0] == coors_desc->dims[0]);
@@ -210,10 +217,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   bool zero_element = false;
 
   mluOpStatus_t ret = DynamicPointToVoxelForwardParamCheck(
-      api, handle, feats, coors, voxel_feats, voxel_coors, point2voxel_map,
-      voxel_points_count, voxel_num, workspace, workspace_size, feats_desc,
-      coors_desc, voxel_feats_desc, voxel_coors_desc, point2voxel_map_desc,
-      voxel_points_count_desc, voxel_num_desc, &zero_element);
+      api, handle, reduce_type, feats, coors, voxel_feats, voxel_coors,
+      point2voxel_map, voxel_points_count, voxel_num, workspace, workspace_size,
+      feats_desc, coors_desc, voxel_feats_desc, voxel_coors_desc,
+      point2voxel_map_desc, voxel_points_count_desc, voxel_num_desc,
+      &zero_element);
 
   if (ret != MLUOP_STATUS_SUCCESS) {
     LOG(ERROR) << api
