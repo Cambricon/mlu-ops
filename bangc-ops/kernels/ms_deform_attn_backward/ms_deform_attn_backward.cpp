@@ -30,6 +30,7 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 
 char API[] = "[mluOpMsDeformAttnBackward]";
 
@@ -78,8 +79,8 @@ mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
   int32_t nlp = num_levels * num_points;
   int32_t nlpc = num_levels * num_points * channels;
 
-  if (handle->arch == MLUOP_MLU590 && nlp <= FAST_KERNEL_MAX_NLP &&
-      nlpc <= FAST_KERNEL_MAX_NLPC) {
+  if ((handle->arch == MLUOP_MLU590) && (nlp <= FAST_KERNEL_MAX_NLP) &&
+      (nlpc <= FAST_KERNEL_MAX_NLPC)) {
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST;
   } else if (num_per_time_theory >= 1) {
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL;
@@ -101,7 +102,8 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
     void *grad_value, const mluOpTensorDescriptor_t grad_sampling_loc_desc,
     void *grad_sampling_loc,
     const mluOpTensorDescriptor_t grad_attn_weight_desc, void *grad_attn_weight,
-    bool *calc_grad_flag) {
+    bool *calc_grad_loc_weight_flag, bool *calc_grad_value_flag,
+    bool *calc_grad_value_loc_weight_flag) {
   // check desc
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, value_desc != NULL);
@@ -209,14 +211,22 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
                    LARGE_TENSOR_NUM, "");
 
   // check zero
-  if (batch * channels * num_key * num_heads * num_query == 0) {
+  if (batch * channels * num_heads * num_query == 0) {
     LOG(ERROR) << "[mluOpMsDeformAttnBackward] The batch, channels, num_key, "
                   "num_heads or "
                   "num_query of the input is zero.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (num_levels == 0 || num_points == 0) {
-    *calc_grad_flag = true;
+  if ((num_levels == 0) || ((num_points == 0) && num_key == 0)) {
+    *calc_grad_value_loc_weight_flag = true;
+    return MLUOP_STATUS_SUCCESS;
+  }
+  if ((num_points == 0) && (num_key != 0)) {
+    *calc_grad_loc_weight_flag = true;
+    return MLUOP_STATUS_SUCCESS;
+  }
+  if ((num_key == 0) && (num_points != 0)) {
+    *calc_grad_value_flag = true;
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -247,17 +257,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
     const mluOpTensorDescriptor_t grad_attn_weight_desc,
     void *grad_attn_weight) {
   // entrance param check
-  bool calc_grad_flag = false;
+  bool calc_grad_value_flag = false;
+  bool calc_grad_loc_weight_flag = false;
+  bool calc_grad_value_loc_weight_flag = false;
   mluOpStatus_t param_check_status = msDeformAttnBackwardParamCheck(
       handle, value_desc, value, spatial_shapes_desc, spatial_shapes,
       level_start_index_desc, level_start_index, sampling_loc_desc,
       sampling_loc, attn_weight_desc, attn_weight, grad_output_desc,
       grad_output, im2col_step, grad_value_desc, grad_value,
       grad_sampling_loc_desc, grad_sampling_loc, grad_attn_weight_desc,
-      grad_attn_weight, &calc_grad_flag);
-  if (MLUOP_STATUS_SUCCESS != param_check_status) {
-    return param_check_status;
-  }
+      grad_attn_weight, &calc_grad_loc_weight_flag, &calc_grad_value_flag,
+      &calc_grad_value_loc_weight_flag);
+
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("ms_deform_attn_backward");
     GEN_CASE_HANDLE(handle);
@@ -278,13 +289,33 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
                              im2col_step);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
+  if (MLUOP_STATUS_SUCCESS != param_check_status) {
+    return param_check_status;
+  }
 
-  if (calc_grad_flag) {
+  if (calc_grad_loc_weight_flag) {
     uint64_t fill_value = 0x0;
     PARAM_CHECK(API,
                 MLUOP_STATUS_SUCCESS ==
                     mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                                  grad_value_desc, grad_value));
+    GEN_CASE_END();
+    return MLUOP_STATUS_SUCCESS;
+  }
+  if (calc_grad_value_flag) {
+    uint64_t fill_value = 0x0;
+    PARAM_CHECK(API,
+                MLUOP_STATUS_SUCCESS ==
+                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                                 grad_sampling_loc_desc, grad_sampling_loc));
+    PARAM_CHECK(API,
+                MLUOP_STATUS_SUCCESS ==
+                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                                 grad_attn_weight_desc, grad_attn_weight));
+    GEN_CASE_END();
+    return MLUOP_STATUS_SUCCESS;
+  }
+  if (calc_grad_value_loc_weight_flag) {
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
   }
@@ -294,6 +325,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
   PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
                        mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
                                     &fill_value, grad_value_desc, grad_value));
+
   PARAM_CHECK(API,
               MLUOP_STATUS_SUCCESS ==
                   mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
@@ -304,7 +336,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
                                grad_attn_weight_desc, grad_attn_weight));
 
   VLOG(5) << "[mluOpMsDeformAttnBackward] mluOpFill_v3 end.";
-
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   const int32_t spatial_size = value_desc->dims[1];
@@ -367,7 +398,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
           num_points, (float *)grad_value, (float *)grad_sampling_loc,
           (float *)grad_attn_weight)));
     }
-    default: { VLOG(5) << "Not Implemented."; }
+    default: {
+      VLOG(5) << "Not Implemented.";
+    }
   }
 
   GEN_CASE_END();
