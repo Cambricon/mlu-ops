@@ -12526,34 +12526,26 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
  * diff_iou_rotated_sort_vertices_forward operation. For detailed information, see ::mluOpHandle_t.
- *
  * @param[in] vertices_desc
  * The descriptor of input tensor \b vertices, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
- *
  * @param[in] vertices
  * Pointer to the MLU memory that stores the tensor \b vertices.
- *
  * @param[in] mask_desc
  * The descriptor of input tensor \b mask, which contains dimension, data type, and data layout.
- *
  * @param[in] mask
  * Pointer to the MLU memory that stores the tensor \b mask.
- *
  * @param[in] num_valid_desc
  * The descriptor of input tensor \b num_valid, which contains dimension, data type, and data layout.
- *
  * @param[in] num_valid
  * Pointer to the MLU memory that stores the tensor \b num_valid.
- *
  * @param[out] idx_desc
  * The descriptor of output tensor \b idx, which contains dimension, data type, and data layout.
- *
  * @param[out] idx
  * Pointer to the MLU memory that stores the tensor \b idx.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
