@@ -140,6 +140,7 @@ mluOpDiffIouRotatedSortVerticesForward
 示意图如下：
 
 .. figure:: ../images/sort_vertices.*
+
    顶点逆时针排序示意图
 
 .. _expand:
