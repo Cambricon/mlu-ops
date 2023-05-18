@@ -135,8 +135,12 @@ mluOpDiv
 .. _diff_iou_rotated_sort_vertices_forward:
 
 mluOpDiffIouRotatedSortVerticesForward
------------------------------
-该算子为 `diff_iou_rotated` 整个计算过程中的一步，完成对两个box相交构成的多边形有效顶点排序（参考算法按逆时针排序所有有效顶点），输出排序后顶点索引。
+------------------------------------------
+该算子为 ``diff_iou_rotated`` 整个计算过程中的一步，完成对两个box相交构成的多边形有效顶点排序（参考算法按逆时针排序所有有效顶点），输出排序后顶点索引。
+示意图如下：
+
+.. figure:: ../images/sort_vertices.*
+   顶点逆时针排序示意图
 
 .. _expand:
 

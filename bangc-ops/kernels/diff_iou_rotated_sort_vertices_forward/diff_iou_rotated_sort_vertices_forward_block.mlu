@@ -122,7 +122,7 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
   int *nram_num_valid_p = (int *)(nram_num_valid + offset);
   int *nram_idx_p = (int *)(nram_idx + offset);
 
-  // nram_pub_space size = 4 * dim_m * deal_num
+  // nram_pub_space size = 3 * dim_m * deal_num
   T *nram_pad = nram_pub_space;
   T *nram_temp0 = nram_pad + deal_num * dim_m;
   T *nram_temp1 = nram_temp0 + deal_num * dim_m;
