@@ -1,0 +1,74 @@
+op_name: "tin_shift_backward"
+input {
+  id: "input1"
+  shape: {
+    dims: 3
+    dims: 15
+    dims: 16
+    dims: 262144
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+  random_data: {
+    seed: 25
+    upper_bound: -10
+    lower_bound: 10
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 3
+    dims: 8
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 14
+  value_i: 9
+  value_i: 6
+  value_i: 4
+  value_i: -1
+  value_i: -14
+  value_i: 7
+  value_i: -3
+  value_i: -2
+  value_i: -3
+  value_i: 19
+  value_i: 10
+  value_i: -9
+  value_i: -2
+  value_i: -4
+  value_i: -19
+  value_i: 6
+  value_i: 0
+  value_i: 17
+  value_i: 10
+  value_i: 16
+  value_i: -18
+  value_i: -19
+  value_i: -18
+  random_data: {
+    seed: 0
+    upper_bound: -20
+    lower_bound: 20
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 3
+    dims: 15
+    dims: 16
+    dims: 262144
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+}
+
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.000
+  baseline_device: CPU
+}

@@ -806,6 +806,18 @@ mluOpThreeNNForward
 -----------------------------
 该算子为点云 ``unknown`` 集合中的点的寻找来自 ``known``集合中的前 ``3`` 个邻近点。点云数据点的坐标为 ``(x, y, z)`` ， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的 ``index``。
 
+.. _tin_shift_backward:
+
+mluOpTinShiftBackward
+-----------------------------
+该算子为 ``mluOpTinShiftForward`` 的反向功能，给定输出数据对应的梯度、偏移量，计算输入数据对应的梯度。
+
+.. _tin_shift_forward:
+
+mluOpTinShiftForward
+-----------------------------
+输入在channel维度根据shift的第二维的维度大小进行分组，每组channels中的数据依据shift值在时序上进行移动。
+
 .. _transpose:
 
 mluOpTranspose
