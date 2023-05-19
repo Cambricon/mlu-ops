@@ -190,8 +190,6 @@ mluOpFocalLossSigmoidForward
 
 .. _focal_loss_sigmoid_backward:
 
-.. _focal_loss_sigmoid_backward:
-
 mluOpFocalLossSigmoidBackward
 --------------------------------------
 给定输入数据（input）、对应标签值（target）、平衡因子（alpha）、调节因子（gamma）以及滤波器数据（weight），计算输入数据的梯度值（grad_input）。
