@@ -3503,6 +3503,166 @@ mluOpDiv(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t z_desc,
          void *z);
 
+// Group:DynamicPointToVoxelBackward
+/*!
+ * @brief Gets extra space size that is needed in the DynamicPointToVoxelBackward operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices
+ * and queues in the DynamicPointToVoxelBackward operation.
+ * @param[in] reduce_type
+ * Reduce op. support 'max'. Default: 'max'.
+ * @param[in] feats_desc
+ * The descriptor of the tensor \b feats . For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * A host pointer to the returned size of extra space in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
+                                                 const mluOpReduceMode_t reduce_type,
+                                                 const mluOpTensorDescriptor_t feats_desc,
+                                                 size_t *workspace_size);
+
+// Group:DynamicPointToVoxelBackward
+/*!
+ * @brief Performs the back-propagation of DynamicPointToVoxelForward.
+ * operation to compute the gradient with respect to input \b grad_voxel_feats
+ * based on the gradient of response \b grad_feats.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * the DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] reduce_type
+ * Reduce op. support 'max. Default: 'max'.
+ * @param[in] grad_voxel_feats_desc
+ * The descriptor of the tensor \b grad_voxel_feats. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] grad_voxel_feats
+ * Pointer to the MLU memory that stores the gradient with respect to \b voxel_feats.
+ * @param[in] feats_desc
+ * The descriptor of the tensor \b feats. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] feats
+ * Pointer to the MLU memory that stores points features to be reduced into voxels.
+ * @param[in] voxel_feats_desc
+ * The descriptor of the tensor \b voxel_feats. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] voxel_feats
+ * Pointer to the MLU memory that stores the voxel features.
+ * @param[in] point2voxel_map_desc
+ * The descriptor of the tensor \b point2voxel_map. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] point2voxel_map
+ * Pointer to the MLU memory that stores the index which is point to voxel.
+ * @param[in] voxel_points_count_desc
+ * The descriptor of the tensor \b voxel_points_count. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] voxel_points_count
+ * Pointer to the MLU memory that stores the voxel points count.
+ * @param[in] voxel_num_desc
+ * The descriptor of the tensor \b voxel_num. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] voxel_num
+ * Pointer to the MLU memory that stores the voxel coordinates num.
+ * @param[in] workspace
+ * Pointer to the MLU memory that stores the extra workspace.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in
+ * ::mluOpDynamicPointToVoxelBackward.
+ * @param[out] grad_feats_desc
+ * The descriptor of the tensor \b grad_feats. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] grad_feats
+ * Pointer to the MLU memory that stores the gradient with respect to \b feats.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - grad_voxel_feats, feats, voxel_feats: float
+ *   - point2voxel_map, voxel_points_count, voxel_num: int
+ *   - reduce_type: mluOpReduceMode_t::MLUOP_REDUCE_DMAX
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The \b grad_voxel_feats tensor, \b feats tensor, \b voxel_feats tensor and \b grad_feats tensor
+ *   must have two dimensions.
+ * - The \b point2voxel_map tensor, \b voxel_points_count tensor, and \b voxel_num tensor
+ *   must have one dimension.
+ * - The first dimension of \b feats tensor, \b point2voxel_map tensor and \b grad_feats tensor
+ *   must be equal to \b feats_desc[0].
+ * - The first dimension of \b grad_voxel_feats tensor, \b voxel_feats tensor, and \b voxel_points_count tensor
+ *   must be equal to \b grad_voxel_feats_desc[0].
+ * - The second dimension of \b grad_voxel_feats tensor, \b feats tensor, \b voxel_feats tensor and \b grad_feats
+ *   tensor must be equal to \b grad_voxel_feats[1].
+ * - The first dimension of \b voxel_num tensor is one.
+ *
+ * @par API Dependency
+ * - Before calling this function, you need to get the size of workspace by
+ *   ::mluOpGetDynamicPointToVoxelBackwardWorkspaceSize.
+ *
+ * @par Note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - On MLU300 and MLU500, the input \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or infinity
+ *   is not supported.
+ * - On MLU300 and MLU500, the input \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
+ *   is supported.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/scatter_points.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
+                                 const mluOpReduceMode_t reduce_type,
+                                 const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+                                 const void *grad_voxel_feats,
+                                 const mluOpTensorDescriptor_t feats_desc,
+                                 const void *feats,
+                                 const mluOpTensorDescriptor_t voxel_feats_desc,
+                                 const void *voxel_feats,
+                                 const mluOpTensorDescriptor_t point2voxel_map_desc,
+                                 const void *point2voxel_map,
+                                 const mluOpTensorDescriptor_t voxel_points_count_desc,
+                                 const void *voxel_points_count,
+                                 const mluOpTensorDescriptor_t voxel_num_desc,
+                                 const void *voxel_num,
+                                 void *workspace,
+                                 const size_t workspace_size,
+                                 const mluOpTensorDescriptor_t gard_feats_desc,
+                                 void *gard_feats);
+
 // Group:DynamicPointToVoxel
 /*!
  * @brief Gets extra space size that is needed in the DynamicPointToVoxelForward operation.
@@ -3700,32 +3860,6 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
-                                 const mluOpReduceMode_t reduce_type,
-                                 const mluOpTensorDescriptor_t grad_voxel_feats_desc,
-                                 const void *grad_voxel_feats,
-                                 const mluOpTensorDescriptor_t feats_desc,
-                                 const void *feats,
-                                 const mluOpTensorDescriptor_t voxel_feats_desc,
-                                 const void *voxel_feats,
-                                 const mluOpTensorDescriptor_t point2voxel_map_desc,
-                                 const void *point2voxel_map,
-                                 const mluOpTensorDescriptor_t voxel_points_count_desc,
-                                 const void *voxel_points_count,
-                                 const mluOpTensorDescriptor_t voxel_num_desc,
-                                 const void *voxel_num,
-                                 void *workspace,
-                                 const size_t workspace_size,
-                                 const mluOpTensorDescriptor_t gard_feats_desc,
-                                 void *gard_feats);
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
-                                                 const mluOpReduceMode_t reduce_type,
-                                                 const mluOpTensorDescriptor_t feats_desc,
-                                                 size_t *workspace_size);
 
 // Group:GenerateProposalsV2
 /*!

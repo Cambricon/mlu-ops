@@ -110,12 +110,15 @@ mluOpStatus_t MLUOP_WIN_API DynamicPointToVoxelBackwardParamCheck(
   }
 
   // large tensor
-  const uint64_t tensor_input_num =
+  const uint64_t grad_voxel_feats_element_num =
       mluOpGetTensorElementNum(grad_voxel_feats_desc);
-  TENSOR_NUM_CHECK(interface_name, tensor_input_num, LARGE_TENSOR_NUM, "");
+  const uint64_t feats_element_num = mluOpGetTensorElementNum(feats_desc);
+  TENSOR_NUM_CHECK(interface_name, grad_voxel_feats_element_num,
+                   LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(interface_name, feats_element_num, LARGE_TENSOR_NUM, "");
 
   // 0-element check, after dim and shape check
-  if (tensor_input_num == 0) {
+  if (grad_voxel_feats_element_num == 0 || feats_element_num == 0) {
     VLOG(5) << interface_name << " Skip zero element boxes.";
     zero_element = true;
     return MLUOP_STATUS_SUCCESS;
@@ -204,15 +207,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("dynamic_point_to_voxel_backward");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA(true, "grad_voxel_feats", grad_voxel_feats,
-                  grad_voxel_feats_desc, -100, 100);
-    GEN_CASE_DATA(true, "feats", feats, feats_desc, -100, 100);
-    GEN_CASE_DATA(true, "voxel_feats", voxel_feats, voxel_feats_desc, 0, 0);
-    GEN_CASE_DATA(true, "point2voxel_map", point2voxel_map,
-                  point2voxel_map_desc, 0, 0);
-    GEN_CASE_DATA(true, "voxel_points_count", voxel_points_count,
-                  voxel_points_count_desc, 0, 0);
-    GEN_CASE_DATA(true, "voxel_num", voxel_num, voxel_num_desc, 0, 0);
+    GEN_CASE_DATA_REAL(true, "grad_voxel_feats", grad_voxel_feats,
+                       grad_voxel_feats_desc);
+    GEN_CASE_DATA_REAL(true, "feats", feats, feats_desc);
+    GEN_CASE_DATA_REAL(true, "voxel_feats", voxel_feats, voxel_feats_desc);
+    GEN_CASE_DATA_REAL(true, "point2voxel_map", point2voxel_map,
+                       point2voxel_map_desc);
+    GEN_CASE_DATA_REAL(true, "voxel_points_count", voxel_points_count,
+                       voxel_points_count_desc);
+    GEN_CASE_DATA_REAL(true, "voxel_num", voxel_num, voxel_num_desc);
     GEN_CASE_DATA(false, "grad_feats", grad_feats, grad_feats_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "dynamic_point_to_voxel_backward",
                              "reduce_type", reduce_type);
@@ -224,10 +227,26 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, N);
+  // 1. get scatter indices
   KERNEL_CHECK((KernelDynamicPointToVoxelBackward(
       k_dim, k_type, handle->queue, feats_desc->dtype, reduce_type,
       grad_voxel_feats, feats, voxel_feats, point2voxel_map, voxel_points_count,
       voxel_num, workspace, grad_feats, N, C)));
+  // 2. scatter
+  // mluOpTensorDescriptor_t voxel_from_desc;
+  // INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+  // mluOpCreateTensorDescriptor(&voxel_from_desc));
+  //   std::vector<int> indices_dims = {N, C};
+  // INTERNAL_CHECK(interface_name,
+  // MLUOP_STATUS_SUCCESS == mluOpSetTensorDescriptor(
+  //   voxel_from_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+  //   indices_dims.size(), indices_dims.data()));
+  // MLUOP_CHECK((mluOpScatterNd(
+  //     handle, voxel_from_desc, workspace, grad_voxel_feats_desc,
+  //     grad_voxel_feats, grad_feats_desc, grad_feats)));
+  //   INTERNAL_CHECK(
+  //     interface_name,
+  //     MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(voxel_from_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 

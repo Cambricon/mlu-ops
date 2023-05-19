@@ -2,16 +2,16 @@
 
 - #### 文档基本信息
 
-| 算子名称    | `dynamic_point_to_voxel_backward`          |
-| ----------- | --------------------- |
-| 编制人/日期 | yangdian/2023          |
-| 审批人/日期 | 袁梦，张双林/2023   |
+| 算子名称 | `dynamic_point_to_voxel_backward` |
+| ------- | -------------------------------  |
+| 编制人/日期 | xuminjie/2023 |
+| 审批人/日期 | 袁梦，张双林/2023 |
 
 - #### 修改记录
 
-| 版本号 | 修订人  | 修订日期  | 修订描述 |
-| ------ | ------- | --------- | -------- |
-| V1.0   | yangdian | 2023 | 首次提交 |
+| 版本号 | 修订人 | 修订日期 | 修订描述 |
+| ----- | ----- | ------ | ------- |
+| V1.0 | xuminjie | 2023 | 首次提交 |
 
 - #### 内容描述
 
@@ -32,54 +32,56 @@
 
 ### 1.1 算子需求分析
   
-| 算子功能简介               | 简要填写算子功能，详细描述在 1.2 中进行说明                           |
-| ------------------------ | -------------------------------------------------------------  |
-| 需求来源                  | mmcv                                                           |
-| 应用网络                  | mvxnet                                                         |
-| 输入数据类型               | float/int32                                                    |
-| 输入 Shape                | grad_voxel_feats:[M,C]; feats:[N,C]; voxel_feats:[M,C]; point2voxel_map:[N];
-                             voxel_points_count:[M]; reduce_type: reduce_t              |
-| 输出数据类型               | float                                                          |
-| 输出 Shape                | grad_feats:[N,C];                                                |
-| 是否需要支持原位            | 否                                                     |
-| 是否需要支持 stride 机制    | 否                                                              |
-| 是否需要支持广播            | 否                                                              |
-| 0 元素检查是否直接返回       | 是                                                              |
+| 算子功能简介 | 找到特征维度上通过`max`方法去重后点的原始点，将体素坐标的梯度，回传给相应点 |
+| ---------- | --------------------------------------------------------------- |
+| 需求来源 | mmcv |
+| 应用网络 | mvxnet |
+| 输入数据类型 | grad_voxel_feats:float32 <br> feats:float32 <br> voxel_feats:float32 <br> point2voxel_map:int32 <br> voxel_points_count:int32 <br> voxel_num:int32 |
+| 输入标量参数 | reduce_type:枚举类型 |
+| 输入Shape | grad_voxel_feats:[M,C] <br> feats:[N,C] <br> voxel_feats:[M,C] <br> point2voxel_map:[N] <br> voxel_points_count:[M] <br> voxel_num:[1] |
+| 输入Layout | 不限 |
+| 输出数据类型 | grad_feats:float32 |
+| 输出Shape | grad_feats:[N,C] |
+| 是否需要支持原位 | 否 |
+| 是否需要支持stride机制 | 否 |
+| 是否需要支持广播 | 否 |
+| 0元素检查是否直接返回 | 输入维度M, N, C任意一个为0时，返回 MLUOP_STATUS_SUCCESS |
 
 ### 1.2 算子功能和应用场景描述
 
-根据grad_voxel_feats，feats以及dynamic_scatter_forkward输出的voxel_feats，point2voxel_map，voxel_points_count求出输入相应的梯度
+max模式：根据point2voxel_map，分组找出feats和voxel_feats中值相同的点，从而将grad_voxel_feats中记录的梯度传给grad_feats。
 
 ### 1.3 算子输入输出参数要求
 
-| 参数                    | 语义                               | 类型（输入/输出） | 支持类型                 | 物理布局        | 规模限制 |
-| -----------            | ---------------------------------- | -------------- | ----------------------- | ------------- | -------- |
-| handle                 | 操作句柄                            | 输入            | mluOpHandle_t           | /             | /        |
-| reduce_type            | 输入参数，规约mode                    | 输入            | mluOpReduceMode_t \*    | /             | /        |
-| grad_voxel_feats_desc| 输入数据，grad_voxel_feats的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| grad_voxel_feats     | 输入数据，grad_voxel_feats 的坐标   | 输入            | float\*                 | [M,C]| /      |          |
-| feats_desc             | 输入数据，feats 的描述符              | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| feats                  | 输入数据，feats 的大小                | 输入            | float\*                 | [N,C]         | /        |
-| voxel_feats_desc     | 输入数据，voxel_feats 的描述符      | 输入            |mluOpTensorDescriptor_t  | /              | /        |
-| voxel_feats          | 输入数据，voxel_feats 的大小        | 输入            | float\*                 | [M,C]         | /        |
-| point2voxel_map_desc         | 输入数据，point2voxel_map 的描述符          | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| point2voxel_map              | 输入数据，point2voxel_map 的大小            | 输入            | int32\*                 | [N]           | /        |
-| voxel_points_count_desc      | 输入数据，voxel_points_count 的描述符       | 输入            | mluOpTensorDescriptor_t | /             | /        |
-| voxel_points_count           | 输入数据，voxel_points_count 的大小         | 输入            | int32\*                 | [M]           | /        |
-| voxel_num_desc      | 输入数据，voxel_num 的描述符       | 输入            | mluOpTensorDescriptor_t | [1]             | /        |
-| voxel_num             | 输入数据，voxel_num 的大小          | 输入            | int32\*                 | /             | /        |
-| workspace              | 输入数据，GDRAM上面的辅助空间           | 输入            | void\*                  | /             | /        |
-| workspace_size         | 输入数据，辅助空间的大小                | 输入            | size_t\*                | /             | /        |
-| grad_feats_desc        | 输出数据，输出 grad_feats 的描述符      | 输出            | mluOpTensorDescriptor_t | /             | /        |
-| grad_feats             | 输出数据，输出 grad_feats 的数据       |  输出           | float \*                | [N,C]         | /        |
+| 参数 | 语义 | 类型（输入/输出） | 支持类型 | 物理布局 | 规模限制 |
+| --- | ---- | -------------- | ------ | ------- | ------- |
+| handle | 操作句柄 | 输入 | mluOpHandle_t | / | / |
+| reduce_type | 规约mode | 输入 | mluOpReduceMode_t \* | /  | / |
+| grad_voxel_feats_desc | grad_voxel_feats的描述符 | 输入 | mluOpTensorDescriptor_t | / | / |
+| grad_voxel_feats | grad_voxel_feats的坐标 | 输入 | float\* | / | [M,C] |
+| feats_desc | feats的描述符 | 输入 | mluOpTensorDescriptor_t | / | /  |
+| feats | feats的大小 | 输入 | float\* | / | [N,C] |
+| voxel_feats_desc | voxel_feats的描述符 | 输入 |mluOpTensorDescriptor_t | / | / |
+| voxel_feats | voxel_feats的大小 | 输入 | float\* | / | [M,C] |
+| point2voxel_map_desc | point2voxel_map的描述符 | 输入 | mluOpTensorDescriptor_t | / | / |
+| point2voxel_map | point2voxel_map的大小 | 输入 | int32\* | / | [N] |
+| voxel_points_count_desc | voxel_points_count的描述符 | 输入 | mluOpTensorDescriptor_t | / | / |
+| voxel_points_count | voxel_points_count的大小 | 输入 | int32\* | / | [M] |
+| voxel_num_desc | voxel_num的描述符 | 输入 | mluOpTensorDescriptor_t | / | [1] |
+| voxel_num | voxel_num的大小 | 输入 | int32\* | / | / |
+| workspace | GDRAM上面的辅助空间 | 输入 | void\* | / | / |
+| workspace_size | 辅助空间的大小 | 输入 | size_t\* | / | / |
+| grad_feats_desc | grad_feats的描述符 | 输出 | mluOpTensorDescriptor_t | / | / |
+| grad_feats | grad_feats的数据 | 输出 | float\* | / | [N,C] |
 
 ### 1.4 算子限制
 
 | 限制类型 | 详细说明 |
 | ----------- | ------------------------------------------------------------------------------- |
-| 输入限制 | 输入 `grad_voxel_feats`, `fests`, `voxel_feats`不支持输入 nan 或 inf |
+| 输入限制 | 输入 `grad_voxel_feats`, `feats`, `voxel_feats`支持输入 nan 或 inf |
 | 输入参数限制 | 仅支持输入reduce_mode值为MLUOP_REDUCEMODE_MAX |
-| 数据类型限制 | 输入 `grad_voxel_feats`, `fests`, `voxel_feats` 输出 `grad_feats` 数据类型保持一致;`point2voxel_map`, `voxel_points_count`, `voxel_num`数据类型保持一致 |
+| 数据类型限制 | 输入 `grad_voxel_feats`, `feats`, `voxel_feats` 输出 `grad_feats` 数据类型保持一致;`point2voxel_map`, `voxel_points_count`, `voxel_num`数据类型保持一致 |
+| 布局限制 | 无 |
 | 原位限制 | 不支持原位 |
 | stride 限制 | 不支持 stride 机制 |
 | 广播限制 | 不支持广播 |
@@ -88,11 +90,15 @@
 
 #### 1.5.1 精度验收标准
 
-- 该算子max模式计算梯度所在最小的index，在根据index去scatter value。因此，该算子采用静态阈值，阈值标准：diff3 = 0.
+按照[MLU-OPS 算子精度验收标准](../../../MLU-OPS-Accuracy-Acceptance-Standard.md)的要求明确本算子的精度标准。
+
+- max模式计算梯度回传的点的最小index，根据index将grad_voxel_feats赋值给grad_feats，可以做到bit级一致
+- 算子精度验收标准：diff3;
+- 算子精度阈值描述：diff3 = 0;
 
 #### 1.5.2 性能验收标准
 
-- 暂无
+见 [MLU-OPS 性能验收标准](../../../MLU-OPS-Performance-Acceptance-Standard.md)：
 
 ## 2 算子接口设计
 
@@ -122,39 +128,34 @@ void dynamic_point_to_voxel_backward(torch::Tensor &grad_feats,
 ### 2.2 接口设计
 
 ```c++
-mluOpStatus_t MLUOP_WIN_API 
-mluOpDynamicScatterBackward(const mluOpHandle_t handle,
-                            const mluOpReduceMode_t reduce_type,
-                            const mluOpTensorDescriptor_t grad_voxel_feats_desc,
-                            const void *grad_voxel_feats,
-                            const mluOpTensorDescriptor_t feats_desc,
-                            const void *feats,
-                            const mluOpTensorDescriptor_t voxel_feats_desc,
-                            const void *voxel_feats,
-                            const mluOpTensorDescriptor_t point2voxel_map_desc,
-                            const void *point2voxel_map,
-                            const mluOpTensorDescriptor_t voxel_points_count_desc,
-                            const void *voxel_points_count,
-                            const mluOpTensorDescriptor_t voxel_num_desc,
-                            void *voxel_num,
-                            void *workspace,
-                            const size_t workspace_size,
-                            const mluOpTensorDescriptor_t gard_feats_desc,
-                            void *gard_feats);
+mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
+    const mluOpHandle_t handle, const mluOpReduceMode_t reduce_type,
+    const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+    const void *grad_voxel_feats, const mluOpTensorDescriptor_t feats_desc,
+    const void *feats, const mluOpTensorDescriptor_t voxel_feats_desc,
+    const void *voxel_feats, const mluOpTensorDescriptor_t point2voxel_map_desc,
+    const void *point2voxel_map,
+    const mluOpTensorDescriptor_t voxel_points_count_desc,
+    const void *voxel_points_count,
+    const mluOpTensorDescriptor_t voxel_num_desc, const void *voxel_num,
+    void *workspace, const size_t workspace_size,
+    const mluOpTensorDescriptor_t grad_feats_desc, void *grad_feats);
 ```
 
 ```c++
-mluOpStatus_t MLUOP_WIN_API 
-mluOpGetDynamicScatterBackwardWorkspaceSize(const mluOpHandle_t handle,
-                                            const mluOpReduceMode_t reduce_type,
-                                            const mluOpTensorDescriptor_t feats_desc,
-                                            size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
+    const mluOpHandle_t handle, const mluOpReduceMode_t reduce_type,
+    const mluOpTensorDescriptor_t feats_desc, size_t *workspace_size);
 ```
 
 
 ## 3 实现方案设计
 
 ### 3.1 实现方案
+
+#### 3.1.1 计算原理说明
+
+#### 3.1.2 实现方案
 
 max模式有两个kernel
 kernel1：
@@ -367,17 +368,20 @@ while (n_start < N) {
 ### 3.7 测试用例设计
 
 - 框架在需求列表中给出的算子在网络中用到的规模
-gard_feats	        [17176,128]	fp32
-grad_voxel_feats	[13743, 128]	fp32
-feats	            [17176,128]	fp32
-voxel_feats	        [13743, 128]	fp32
-point2voxel_map	    [17176]	int32
-voxel_points_count	[13743]	int32
-reduce_type	'max'
+
+|            | dtype | torch.Size() | | | | | | | | | |
+| ---------- | ----- | ------------ |-|-|-|-|-|-|-|-|-|
+| gard_feats | fp32	| [17176,128]	| [17398,128]	| [18726,128]	|[17398,64]	| [18726,64] | [19922,128] | [19440,128] | [19922,64]	| [19440,64] | [18601,128] |
+| grad_voxel_feats | fp32	| [13743, 128] | [15130, 128]	| [14525, 128] | [15130, 64] | [14525, 64] | [16849,128] | [14676, 128]	| [16849,64] | [14676, 64] | [16768, 128] |
+| feats	| fp32 | [17176,128] | [17398,128] | [18726,128] | [17398,64] | [18726,64] | [19922,128] | [19440,128] | [19922,64] | [19440,64] | [18601,128] |
+| voxel_feats	| fp32 | [13743, 128] | [15130, 128] | [14525, 128] | [15130, 64] | [14525, 64] | [16849,128] | [14676, 128] | [16849,64] | [14676, 64] | [15737, 128] |
+| point2voxel_map	| int32	| [17176] | [17398] | [18726] | [17398] | [18726] | [19922] | [19440] | [19922] | [19440] | [18607] |
+| voxel_points_count | int32 | [13743] | [15130] | [14525] | [15130] | [14525] | [16849] | [14676] | [16849] | [14676] | [15737] |
+| reduce_type	| | max |
 
 ### 3.8 算子防呆检查
 
-- 列出算子需要做的防呆，比如
+在网络中，由于正向算子的实际输出规模无法提前预知，因此反向算子允许输入tensor中应该用M的地方用N代替, 实际的M值通过voxel_num获取。
 
 1、指针为空防呆；
 
