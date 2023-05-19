@@ -12518,6 +12518,77 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t data_col_desc,
                          void *data_col);
 
+// Group:DiffIouRotatedSortVerticesForward
+/*!
+ * @brief Sorts the effective vertices of the polygon formed by the intersection of two boxes,
+ * and outputs the sorted vertex index.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * diff_iou_rotated_sort_vertices_forward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] vertices_desc
+ * The descriptor of input tensor \b vertices, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] vertices
+ * Pointer to the MLU memory that stores the tensor \b vertices.
+ * @param[in] mask_desc
+ * The descriptor of input tensor \b mask, which contains dimension, data type, and data layout.
+ * @param[in] mask
+ * Pointer to the MLU memory that stores the tensor \b mask.
+ * @param[in] num_valid_desc
+ * The descriptor of input tensor \b num_valid, which contains dimension, data type, and data layout.
+ * @param[in] num_valid
+ * Pointer to the MLU memory that stores the tensor \b num_valid.
+ * @param[out] idx_desc
+ * The descriptor of output tensor \b idx, which contains dimension, data type, and data layout.
+ * @param[out] idx
+ * Pointer to the MLU memory that stores the tensor \b idx.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - vertices tensor: float
+ *   - mask tensor: bool
+ *   - num_valid tensor: int32
+ *   - idx tensor: int32
+ *
+ * @par Data Layout
+ * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The first dimension of \b vertices tensor, \b mask tensor, \b num_valid tensor, and \b idx
+ *   tensor must be the same size.
+ * - The second dimension of \b vertices tensor, \b mask tensor, \b num_valid tensor, and \b idx
+ *   tensor must be the same size.
+ * - The third dimension of \b vertices tensor and \b mask tensor must be the same size and equal to 24.
+ * - The third dimension of \b idx must be equal to 9.
+ * - The fourth dimension of \b vertices must be equal to 2.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/main/mmcv/ops/csrc/pytorch/cuda/diff_iou_rotated_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
+                                       const mluOpTensorDescriptor_t vertices_desc,
+                                       const void *vertices,
+                                       const mluOpTensorDescriptor_t mask_desc,
+                                       const void *mask,
+                                       const mluOpTensorDescriptor_t num_valid_desc,
+                                       const void *num_valid,
+                                       const mluOpTensorDescriptor_t idx_desc,
+                                       void *idx);
+
 #if defined(__cplusplus)
 }
 #endif
