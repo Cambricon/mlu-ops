@@ -157,11 +157,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   PARAM_CHECK("[mluOpFocalLossSigmoidForward]", output_desc != NULL);
 
   // params check
-  if (prefer !=
-      mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION) {
-    LOG(ERROR) << interface_name << "only support HIGH_PRECISION currently.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
   if (reduction != mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_NONE) {
     LOG(ERROR) << interface_name << "only support REDUCTION_NONE currently.";
     return MLUOP_STATUS_NOT_SUPPORTED;

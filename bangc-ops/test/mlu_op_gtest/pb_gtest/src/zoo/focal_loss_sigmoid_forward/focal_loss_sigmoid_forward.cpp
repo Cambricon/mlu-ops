@@ -223,12 +223,6 @@ void FocalLossSigmoidForwardExecutor::cpuCompute() {
       << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
   {
     switch (prefer) {
-      case ComputationPreference::COMPUTATION_FAST: {
-        VLOG(5) << "[focalLossSigmoidForwardCpu] call Fast.";
-        focalLossSigmoidForwardCpuFast(input, input_num, target, target_num,
-                                       weight, weight_num, alpha, gamma,
-                                       output);
-      }; break;
       case ComputationPreference::COMPUTATION_HIGH_PRECISION: {
         VLOG(5) << "[focalLossSigmoidForwardCpu] call HighPrecision.";
         focalLossSigmoidForwardCpuHighPrecisionDoub(
