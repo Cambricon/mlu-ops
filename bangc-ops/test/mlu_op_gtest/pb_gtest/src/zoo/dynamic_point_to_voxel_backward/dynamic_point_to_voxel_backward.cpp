@@ -44,10 +44,17 @@ void DynamicPointToVoxelBackwardExecutor::workspaceMalloc() {
   mluOpReduceMode_t reduce_type = (mluOpReduceMode_t)parser_->getProtoNode()
                                       ->dynamic_point_to_voxel_backward_param()
                                       .reduce_type();
+  auto grad_voxel_feats_desc = tensor_desc_[0].tensor;
   auto feats_desc = tensor_desc_[1].tensor;
+  auto voxel_feats_desc = tensor_desc_[2].tensor;
+  auto point2voxel_map_desc = tensor_desc_[3].tensor;
+  auto voxel_points_count_desc = tensor_desc_[4].tensor;
+  auto voxel_num_desc = tensor_desc_[5].tensor;
   void* workspace_ptr = nullptr;
   MLUOP_CHECK(mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
-      handle_, reduce_type, feats_desc, &workspace_size_));
+      handle_, reduce_type, grad_voxel_feats_desc, feats_desc, voxel_feats_desc,
+      point2voxel_map_desc, voxel_points_count_desc, voxel_num_desc,
+      &workspace_size_));
   if (workspace_size_) {
     workspace_ptr = mlu_runtime_.allocate(workspace_size_);
   }
@@ -162,9 +169,7 @@ void DynamicPointToVoxelBackwardExecutor::cpuCompute() {
 }
 
 int64_t DynamicPointToVoxelBackwardExecutor::getTheoryOps() {
-  if (parser_->device() != CPU) {
-    return -1;
-  }
+  theory_ops_ = parser_->getInputDataCount(0) + parser_->getOutputDataCount(0);
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;
 }

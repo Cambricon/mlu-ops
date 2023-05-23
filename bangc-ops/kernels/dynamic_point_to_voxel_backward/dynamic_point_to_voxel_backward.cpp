@@ -24,16 +24,15 @@
 
 #include <algorithm>  // std::min
 #include <string>
-#include <vector>  // std::vector
 
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/type.h"
+#include "core/type.h"  // mluop::getSizeOfDataType
 #include "kernels/kernel.h"
 
-mluOpStatus_t MLUOP_WIN_API DynamicPointToVoxelBackwardParamCheck(
+static mluOpStatus_t DynamicPointToVoxelBackwardParamCheck(
     const char *interface_name, const mluOpHandle_t handle,
     const mluOpReduceMode_t reduce_type,
     const mluOpTensorDescriptor_t grad_voxel_feats_desc,
@@ -118,9 +117,28 @@ mluOpStatus_t MLUOP_WIN_API DynamicPointToVoxelBackwardParamCheck(
                    LARGE_TENSOR_NUM, "");
   TENSOR_NUM_CHECK(interface_name, feats_element_num, LARGE_TENSOR_NUM, "");
 
+  // kernel size check
+  const int N = feats_desc->dims[0];
+  const int C = feats_desc->dims[1];
+  const size_t dtype_bytes = mluop::getSizeOfDataType(feats_desc->dtype);
+  const size_t idx_dtype_bytes =
+      mluop::getSizeOfDataType(point2voxel_map_desc->dtype);
+  if (N * (idx_dtype_bytes + 1) + C * (2 * dtype_bytes + 3 * idx_dtype_bytes) +
+          idx_dtype_bytes >
+      handle->nram_size) {
+    // float + int
+    LOG(ERROR)
+        << interface_name
+        << " The feats dtype is float, point2voxel_map dtype is int. The feats "
+           "shape is ["
+        << N << ", " << C << "]"
+        << ", should meet constraint : "
+           "5*feats_desc->dims[0]+20*feats_desc->dims[1]+sizeof(int) <= "
+        << handle->nram_size;
+  }
+
   // 0-element check, after dim and shape check
   if (grad_voxel_feats_element_num == 0 || feats_element_num == 0) {
-    VLOG(5) << interface_name << " Skip zero element boxes.";
     zero_element = true;
     return MLUOP_STATUS_SUCCESS;
   }
@@ -201,6 +219,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
     return param_check;
   }
   if (zero_element) {
+    VLOG(5) << interface_name << " Skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -223,69 +242,66 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0.003, 0.003, 0);
   }
 
-  int N = feats_desc->dims[0];
-  int C = feats_desc->dims[1];
+  const int N = feats_desc->dims[0];
+  const int C = feats_desc->dims[1];
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, N);
-  // MLU500: 1. get scatter indices and scatter
-  // MLU300: 1. get scatter indices
+  // 1. get scatter indices
   KERNEL_CHECK((KernelDynamicPointToVoxelBackward(
-      k_dim, k_type, handle->queue, feats_desc->dtype, reduce_type,
-      grad_voxel_feats, feats, voxel_feats, point2voxel_map, voxel_points_count,
-      voxel_num, workspace, grad_feats, N, C)));
-  if (handle->arch == MLUOP_MLU370) {
-    // MLU300: 2. scatter
-    mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_ADD;
-    mluOpTensorDescriptor_t indices_desc;
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&indices_desc));
-    std::vector<int> indices_dims = {N * C, 1};
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       mluOpSetTensorDescriptor(
-                           indices_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                           indices_dims.size(), indices_dims.data()));
-    mluOpTensorDescriptor_t updates_desc;
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&updates_desc));
-    std::vector<int> updates_dims = {N * C};
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       mluOpSetTensorDescriptor(
-                           updates_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                           updates_dims.size(), updates_dims.data()));
-    mluOpTensorDescriptor_t output_desc;
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&output_desc));
-    std::vector<int> output_dims = {N * C};
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       mluOpSetTensorDescriptor(
-                           output_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                           output_dims.size(), output_dims.data()));
-    MLUOP_CHECK((mluOpScatterNd_v2(handle, scatter_mode, indices_desc,
-                                   workspace, updates_desc, grad_voxel_feats,
-                                   NULL, NULL, output_desc, grad_feats)));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(indices_desc));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(updates_desc));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(output_desc));
-  }
+      k_dim, k_type, handle->queue, feats, voxel_feats, grad_feats, workspace,
+      point2voxel_map, voxel_num, N, C)));
+  // 2. scatter
+  mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_ADD;
+  mluOpTensorDescriptor_t indices_desc;
+  INTERNAL_CHECK(
+      interface_name,
+      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&indices_desc));
+  int indices_dims[2] = {N * C, 1};
+  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                                     mluOpSetTensorDescriptor(
+                                         indices_desc, MLUOP_LAYOUT_ARRAY,
+                                         MLUOP_DTYPE_INT32, 2, indices_dims));
+  mluOpTensorDescriptor_t updates_desc;
+  INTERNAL_CHECK(
+      interface_name,
+      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&updates_desc));
+  int updates_dims[1] = {N * C};
+  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                                     mluOpSetTensorDescriptor(
+                                         updates_desc, MLUOP_LAYOUT_ARRAY,
+                                         MLUOP_DTYPE_FLOAT, 1, updates_dims));
+  mluOpTensorDescriptor_t output_desc;
+  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                                     mluOpCreateTensorDescriptor(&output_desc));
+  int output_dims[1] = {N * C};
+  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                                     mluOpSetTensorDescriptor(
+                                         output_desc, MLUOP_LAYOUT_ARRAY,
+                                         MLUOP_DTYPE_FLOAT, 1, output_dims));
+  MLUOP_CHECK((mluOpScatterNd_v2(handle, scatter_mode, indices_desc, workspace,
+                                 updates_desc, grad_voxel_feats, NULL, NULL,
+                                 output_desc, grad_feats)));
+  INTERNAL_CHECK(
+      interface_name,
+      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(indices_desc));
+  INTERNAL_CHECK(
+      interface_name,
+      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(updates_desc));
+  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
+                                     mluOpDestroyTensorDescriptor(output_desc));
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
     const mluOpHandle_t handle, const mluOpReduceMode_t reduce_type,
-    const mluOpTensorDescriptor_t feats_desc, size_t *workspace_size) {
+    const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+    const mluOpTensorDescriptor_t feats_desc,
+    const mluOpTensorDescriptor_t voxel_feats_desc,
+    const mluOpTensorDescriptor_t point2voxel_map_desc,
+    const mluOpTensorDescriptor_t voxel_points_count_desc,
+    const mluOpTensorDescriptor_t voxel_num_desc, size_t *workspace_size) {
   const char *interface_name =
       "[mluOpGetDynamicPointToVoxelBackwardWorkspaceSize]";
   PARAM_CHECK(interface_name, handle != NULL);
@@ -295,10 +311,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
                << "Please check the device version!";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
+  PARAM_CHECK(interface_name, grad_voxel_feats_desc != NULL);
   PARAM_CHECK(interface_name, feats_desc != NULL);
+  PARAM_CHECK(interface_name, voxel_feats_desc != NULL);
+  PARAM_CHECK(interface_name, point2voxel_map_desc != NULL);
+  PARAM_CHECK(interface_name, voxel_points_count_desc != NULL);
+  PARAM_CHECK(interface_name, voxel_num_desc != NULL);
   PARAM_CHECK(interface_name, workspace_size != NULL);
-  int N = feats_desc->dims[0];
-  int C = feats_desc->dims[1];
+  const int N = feats_desc->dims[0];
+  const int C = feats_desc->dims[1];
   *workspace_size = N * C * sizeof(int);
   return MLUOP_STATUS_SUCCESS;
 }

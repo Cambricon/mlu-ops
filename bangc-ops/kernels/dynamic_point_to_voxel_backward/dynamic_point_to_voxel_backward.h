@@ -29,11 +29,9 @@ DYNAMIC_POINT_TO_VOXEL_BACKWARD_H
 
 void MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t d_type, mluOpReduceMode_t reduce_mode,
-    const void *grad_voxel_feats, const void *feats, const void *voxel_feats,
-    const void *point2voxel_map, const void *voxel_points_count,
-    const void *voxel_num, void *workspace, void *grad_feats, const int N,
-    const int C);
+    const void *feats, const void *voxel_feats, void *grad_feats,
+    void *voxel_from, const void *point2voxel_map, const void *voxel_num,
+    const int N, const int C);
 
 #endif  // KERNELS_DYNAMIC_POINT_TO_VOXEL_BACKWARD_
         // DYNAMIC_POINT_TO_VOXEL_FORWARD_H

@@ -3508,18 +3508,32 @@ mluOpDiv(mluOpHandle_t handle,
  * @brief Gets extra space size for the DynamicPointToVoxelBackward operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices management
- * and queues in the DynamicPointToVoxelBackward operation.
+ * Handle to an MLUOP context for MLU devices and queues management in the
+ * DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
  * Reduce op. Only the default 'max' is supported.
+ * @param[in] grad_voxel_feats
+ * Pointer to the MLU memory that stores the gradient for \b voxel_feats.
  * @param[in] feats_desc
  * The descriptor of the tensor \b feats. For detailed information,
  * see ::mluOpTensorDescriptor_t.
+ * @param[in] voxel_feats_desc
+ * The descriptor of the tensor \b voxel_feats. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] point2voxel_map_desc
+ * The descriptor of the tensor \b point2voxel_map. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] voxel_points_count_desc
+ * The descriptor of the tensor \b voxel_points_count. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] voxel_num_desc
+ * The descriptor of the tensor \b voxel_num. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * A host pointer to the returned size of extra space in bytes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - None.
@@ -3545,7 +3559,12 @@ mluOpDiv(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
                                                  const mluOpReduceMode_t reduce_type,
+                                                 const mluOpTensorDescriptor_t grad_voxel_feats_desc,
                                                  const mluOpTensorDescriptor_t feats_desc,
+                                                 const mluOpTensorDescriptor_t voxel_feats_desc,
+                                                 const mluOpTensorDescriptor_t point2voxel_map_desc,
+                                                 const mluOpTensorDescriptor_t voxel_points_count_desc,
+                                                 const mluOpTensorDescriptor_t voxel_num_desc,
                                                  size_t *workspace_size);
 
 // Group:DynamicPointToVoxelBackward
@@ -3555,10 +3574,10 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * based on the gradient of response \b grad_feats.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
- * the DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to an MLUOP context for MLU devices and queues management in the
+ * DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
- * Reduce op. support 'max. Default: 'max'.
+ * Reduce op. Only the default 'max' is supported.
  * @param[in] grad_voxel_feats_desc
  * The descriptor of the tensor \b grad_voxel_feats. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -3602,7 +3621,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *   ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -3625,6 +3644,11 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * - The second dimension of \b grad_voxel_feats tensor, \b feats tensor, \b voxel_feats tensor and \b grad_feats
  *   tensor must be equal to \b grad_voxel_feats[1].
  * - The first dimension of \b voxel_num tensor is one.
+ * - The shape of \b feats is [N, C]:
+ *   - 2C * sizeof(datatype of \b feats) + (N + 2C + 1) * sizeof(int) + N
+ *     should not be more than 640KB on MLU300 series.
+ *   - 2C * sizeof(datatype of \b feats) + (N + 2C + 1) * sizeof(int) + N
+ *     should not be more than 380KB on MLU500 series.
  *
  * @par API Dependency
  * - Before calling this function, you need to get the size of workspace by
@@ -3641,7 +3665,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/scatter_points.py
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/common/cuda/scatter_points_cuda_kernel.cuh
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,

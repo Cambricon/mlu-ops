@@ -128,6 +128,14 @@ void dynamic_point_to_voxel_backward(torch::Tensor &grad_feats,
 ### 2.2 接口设计
 
 ```c++
+typedef enum {
+  MLUOP_REDUCE_DSUM  = 0, /*!< Computes the sum value. */
+  MLUOP_REDUCE_DMEAN = 1, /*!< Computes the mean value. */
+  MLUOP_REDUCE_DMAX  = 2, /*!< Computes the maximun value. */
+} mluOpReduceMode_t;
+```
+
+```c++
 mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
     const mluOpHandle_t handle, const mluOpReduceMode_t reduce_type,
     const mluOpTensorDescriptor_t grad_voxel_feats_desc,
@@ -145,7 +153,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
     const mluOpHandle_t handle, const mluOpReduceMode_t reduce_type,
-    const mluOpTensorDescriptor_t feats_desc, size_t *workspace_size);
+    const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+    const mluOpTensorDescriptor_t feats_desc,
+    const mluOpTensorDescriptor_t voxel_feats_desc,
+    const mluOpTensorDescriptor_t point2voxel_map_desc,
+    const mluOpTensorDescriptor_t voxel_points_count_desc,
+    const mluOpTensorDescriptor_t voxel_num_desc, size_t *workspace_size);
 ```
 
 
@@ -155,37 +168,98 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
 
 #### 3.1.1 计算原理说明
 
+`dynamic_point_to_voxel_backward` 算子包含7个输入:`reduce_type`、`grad_voxel_feats`、`feats`、`voxel_feats`、`point2voxel_map`、`voxel_point2_count`、`voxel_num`，1个输出：`grad_feats`; 根据 1.2 节算子功能, 可将算子2部分分为2个kernel来实现:
+
+- #### 计算逻辑层面
+
+输入`reduce_type` = `max`时
+- kernel1
+
+先将`voxel_from`初始化成最大值N;
+
+根据`point2voxel_map`中记录的“特征与体素特征的映射关系”。对比输入的特征`feats`和体素特征 `voxel_feats`，对于第i个体素特征`voxel_feats[i]`，如果第j个特征与之相等，则认为这个体素特征是由该特征得到的。在中间结果`voxel_from`中保存两者的下标关系，使`voxel_from[i]=j`，该中间结果使用workspace保存。
+
+- kernel2
+
+在正向计算时，如果某一体素特征对应的若干特征都是nan,那么`voxel_feats`中该值等于-inf；反向比较时，由于`voxel_feats`该点对应的`feats`中的点都是nan，与-inf不相等，所以`voxel_from`该点没有被更新成有效值，依旧是初始值。
+
+构造mask, `voxel_from[i]==N`时，mask[i] = 0， `voxel_from[i]!=N`时，mask[i] = 1。
+执行scatter操作，update = `grad_voxel_feats`, indices = `voxel_from`, output = `grad_feats`
+
 #### 3.1.2 实现方案
+通过以上分析, 要实现 `dynamic_point_to_voxel_backward` 算子功能，可以通过以上2个kernel来实现，其详细实现方案如下: 
+- #### host 端
 
-max模式有两个kernel
-kernel1：
-阶段一：计算offset  捞数
-1.生成 0 - x 的 index 向量保存至 index_nram
-2.将 index_nram 中每个index连续扩充C倍，保存至 index_mask_nram
-3.根据输入的point2voxel_map取出对应的offset向量
-4.生成mask1 在point2voxel_map[i] == -1 位置标志为 1
-5.生成mask2 在feats[i] != voxel_feats[i]位置标志为 1
-6.mask1，mask2做或操作生成mask3，mask3 做非操作生成mask4
-7.tmp = mask3 * input_num +  mask4 * (index_mask_nram + i)
+在host端主要进行kernel的逻辑调用:
 
-阶段二：做min比较，写数
-方案一：
-tmp直接与相应的 output_gdram 做atomicMin操作
-方案二：
-申请num_reduced * sizeof(bool)的共享内存is_occupy， 初始赋值false
-根据index写值时，先判端 is_occupy[offset[index]]是否为false，是的话将值写为true将对应的gdram value load到片上，
-作bang_min,然后写会gdram，最后将is_occupy[offset[index]]写为true
-1Union1任务 is_occupy用sram申请， UnionX任务用gram申请
-方案三：
-根据 taskId == offset % taskDim 保证每个core分到不同的offset
+- kernel1: KernelDynamicPointToVoxelBackward
 
-kernel2：
-输入的grad_voxel_feats根据kernel1输出的index结果把相应的value copy到对应的位置：VAA实现
+该kernel用于获取梯度传播的目标坐标;
+```c++
+// 1. get scatter indices
+KERNEL_CHECK((KernelDynamicPointToVoxelBackward(
+    k_dim, k_type, handle->queue, feats, voxel_feats, grad_feats, workspace,
+    point2voxel_map, voxel_num, N, C)));
+```
+
+- kernel2: KernelMaxReduceScatterGrad
+
+该kernel用于执行离散拷贝
+```c++
+// 2. scatter
+KERNEL_CHECK((KernelMaxReduceScatterGrad(k_dim, k_type, handle->queue,
+                                             grad_feats, grad_voxel_feats,
+                                             workspace, voxel_num, N, C)))
+```
+
+在300平台上缺少__scatter指令，在500平台上scatter_nd的性能优于kernel2，因此使用scatter_nd算子代替kernel2；scatter_nd是仓库已有算子，本设计文档不对其进行过多描述，下文主要对本算子的kernel在设备端的实现方案进行详细描述。
+
+- #### device 端
+
+- kernel1
+
+  该kernel主要根据`point2voxel_map`比较`feats`和`voxel_feats`的值，从而确定`voxel_from`的值，其步骤如下：
+  
+  1. load <br>
+    每个core只处理point2voxel_map[x] == taskId的数据 <br>
+    如果point2voxel_map[x] == -1， 跳过 <br>
+    load `feats`, `voxel_feats`, `voxel_from` 的值 <br>
+    index_mask记录feats的坐标x <br>
+    point2voxel_map_real保存去掉-1之后的point2voxel_map <br>
+  2. compute <br>
+    如果feats[i] == voxel_feats[i]，{mask1[i] = 1}，否则{mask1[i] = 0} <br>
+    mask1的数据类型转换成int32，参与后续指令运算 <br>
+    令mask2 = NOT mask1 <br>
+    使用mask1筛选出"feats[i] == voxel_feats[i]"的点的下标 <br>
+    mask2乘N，表示非法坐标 <br>
+    将mask1和mask2相加，混合到同一块内存index_mask中，不同位置的值都得到了保留 <br>
+    index_mask和voxel_from取较小值，更新voxel_from <br>
+  3. store <br>
+    由于正向reduce max时，可能存在多个值同时等于最大值的情况，因此反向比较时，会有多个feats[i] == voxel_feats[i]，我们只取最小的i <br>
+    voxel_from_flag记录目标index是否已被赋值，true表示被赋值，false表示未被赋值 <br>
+    当voxel_from_flag[i] == false时，直接store index_mask到voxel_from; <br>
+    当voxel_from_flag[i] == true时，load voxel_from[i]，与index_mask比较取较小值，将较小值store回去。 <br>
+
+- kernel2
+
+  该kernel主要执行scatter操作，update = `grad_voxel_feats`, indices = `voxel_from`, output = `grad_feats`
+
+  1. 处理nan/inf
+    根据3.1.1节的描述，voxel_from中部分点可能未被更新，保持这初始值N，超过了output的index范围，需要去除 <br>
+    如果voxel_from_nram[i] < N，那么mask[i] = 1，否则mask[i] = 0 <br>
+    mask类型从int转成float，再转成bitindx，供scatter指令使用
+  2. scatter
+    执行scatter指令，update = `grad_voxel_feats`, indices = `voxel_from`, output = `grad_feats`, mask取上个步骤中构造的mask。
 
 
+  说明：scatter指令的性能较差，后期需要优化。
 
 ### 3.2 伪代码实现（可选）
 cuda源码
+
+https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/scatter_points_cuda.cu#L100
+
+https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/common/cuda/scatter_points_cuda_kernel.cuh
 
 ```c++
 //kernel1：
@@ -238,36 +312,173 @@ mlu实现
 
 ```c++
 // kernel1
-// 每次loop可以处理 n 个 num_feats
-// 生成index mask， 只需要生成一次
 
-//方案二：
-for (int i = 0; i < n, n++) {
+// 考虑先将所有的offset load sram上，然后广播到每个ipu core的nram上，
+// 根据网络拆解下来的数规模offset的size为17176 * sizeof(int), 大约68k
+// 根据nram_size拆解算出一次每个core能处理的C的数量记作n_limit
+__memset_nram(voxel_from_flag_nram, M, false);
+int n_start = 0;
+while (n_start < N) {
+  int real_n = 0;
+  int *offset_real_nram;
+  // laod data
+  for (int i = n_start; i < N; i ++) {
+    int offset = offset_nram[i];
+    if (taskId == offset % taskDim) {
+      if (offset != -1) {
+        __memcpy_async(result_nram + real_n * num_feats, result_gdram + offset * num_feats, num_feats *sizeof(T), GDRAM2NRAM);
+        __memcpy_async(feats_nram + real_n * num_feats, feats_gdram + i * num_feats, num_feats *sizeof(T), GDRAM2NRAM);
+        __memcpy_async(reduce_feats_nram + real_n * num_feats, reduce_feats_gdram + offset * num_feats, num_feats *sizeof(T), GDRAM2NRAM);
+        __bang_write_value(index_mask + real_n * num_feats, num_feats, i);
+        offset_real_nram[real_n] = offset;
+        real_n++;
+      }
+      
+    }
+    if (real_n == n_limit) break;
+  }
+  __sync_io();
+  
+  // compute
+  __bang_equal(value_mask, reduce_feats_nram, feats_nram, n_limit * num_feats);
+  __bang_not(tmp_mask, value_mask, n_limit * num_feats);
+  __bang_mul(value_mask, value_mask, index_mask, n_limit * num_feats);
+  __bang_mul_saclar(tmp_mask, tmp_mask, num_reduced, n_limit * num_feats);
+  __bang_add(value_mask, value_mask, tmp_mask, n_limit * num_feats);
+  __bang_minimum(result_nram, result_nram, value_mask, n_limit * num_feats);
+  
+  // store
+  for (int i = 0; i < real_n; i++) {
+    int offset = offset_real_nram[i];
+    if (voxel_from_flag_nram[offset] == false) {
+      __memcpy_async(result_nram_gdram + offset * num_feats, result_nram + i * num_feats, num_feats * sizeof(T), NRAM2GDRAM);
+      voxel_from_flag_nram[offset] = true;
+    else {
+      __sync_io();
+      __memcpy(index_mask_nram, voxel_from + offset_real * C, size_feats_idx,
+               GDRAM2NRAM);
+      __bang_minequal(index_mask_nram, index_mask_nram, voxel_from_nram + i * C,
+                      C);
+      __memcpy(voxel_from + offset_real * C, index_mask_nram, size_feats_idx,
+               NRAM2GDRAM);
+    }
+  }
+  __sync_io();
+  n_start += real_n;
+}
+
+// kernel 2
+
+// 每次处理m_limit个C
+// 先获得mask，再调用scatter
+template <typename T>
+__mlu_global__ void MLUKernelMaxReduceScatterGrad(T *grad_feats,
+                                                  const T *grad_voxel_feats,
+                                                  const int *voxel_from,
+                                                  const int *voxel_num,
+                                                  const int N, const int C) {
+  const int M = *voxel_num;
+  int size_feats = C * sizeof(T);
+  int size_feats_idx = C * sizeof(int);
+
+  int m_per_core = M / taskDim;
+  int rem = M % taskDim;
+  m_per_core += (int)(taskId < rem);
+  int m_start = taskId * m_per_core + ((taskId < rem) ? 0 : rem);
+  int m_start_offset = m_start * C;
+  if (m_per_core <= 0) {
+    return;
+  }
+  int nram_size = MAX_NRAM_SIZE;
+  int m_limit =
+      nram_size / (size_feats + 2 * size_feats_idx + C * sizeof(float));
+  int stride = FLOOR_ALIGN(m_limit * C, 128 / sizeof(int));
+  m_limit = stride / C;
+
+  T *grad_voxel_feats_nram = (T *)nram_buffer;  // [m_limit, C]
+  int *voxel_from_nram =
+      (int *)(grad_voxel_feats_nram + stride);                // [m_limit, C]
+  int *mask_nram = voxel_from_nram + stride;                  // [m_limit, C]
+  float *mask_bitindex_nram = (float *)(mask_nram + stride);  // [m_limit, C]
+
+  int m_repeat = m_per_core / m_limit;
+  int m_rem = m_per_core % m_limit;
+
+  // record index up bound
+  __bang_write_value(mask_bitindex_nram, m_limit * C, (float)0.0f);
+  for (int i = 0; i <= m_repeat; i++) {
+    int m_real = (i == m_repeat) ? m_rem : m_limit;
+    if (m_real <= 0) {
+      break;
+    }
+    int data_num = m_real * C;
+    __memcpy_async(grad_voxel_feats_nram, grad_voxel_feats + m_start_offset,
+                   m_real * size_feats, GDRAM2NRAM);
+    __memcpy_async(voxel_from_nram, voxel_from + m_start_offset,
+                   m_real * size_feats_idx, GDRAM2NRAM);
+    __sync();
+    // if (voxel_from_nram[i] < N * C) {mask[i] = 1} else {mask[i] = 0}
+    __bang_lt_scalar(mask_nram, voxel_from_nram, N * C, data_num);
+    // mask change to float
+    __bang_int322float((float *)mask_nram, (int *)mask_nram, data_num, 0);
+    // mask change to bit
+    __bang_gt_bitindex((float *)mask_nram, (float *)mask_nram,
+                       (float *)mask_bitindex_nram, CEIL_ALIGN(data_num, 8));
+    // indices change to bytes
+    __bang_mul_scalar(voxel_from_nram, voxel_from_nram, sizeof(int),
+    data_num);
+#if __BANG_ARCH__ >= 592
+    __scatter((void *)grad_feats, (const void *)grad_voxel_feats_nram,
+              (const unsigned int *)voxel_from_nram, mask_nram, sizeof(T),
+              NRAM2GDRAM, sizeof(T), data_num);
+#endif
+    m_start += m_real;
+    m_start_offset = m_start * C;
+  }
+}
+
+void MLUOP_WIN_API KernelMaxReduceScatterGrad(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *grad_feats, const void *grad_voxel_feats, const void *voxel_from,
+    const void *voxel_num, const int N, const int C) {
+  MLUKernelMaxReduceScatterGrad<<<k_dim, k_type, queue>>>(
+      (float *)grad_feats, (const float *)grad_voxel_feats,
+      (const int *)voxel_from, (const int *)voxel_num, N, C);
+}
+```
+
+
+其他备选方案：
+```c++
+// 每次loop可以处理 n_limit 个 C
+// 生成index mask， 只需要生成一次
+//kernel1 备选方案：
+for (int i = 0; i < n_limit, i++) {
     __bang_write_value(index_mask + i * num_feats, num_feats, i);
 }
 
 //loop
-__memcpy(reduce_offset, coors_map + n_start, n * sizeof(int), GDRAM2NRAM);
+__memcpy(reduce_offset, coors_map + n_start, n_limit * sizeof(int), GDRAM2NRAM);
 //load reduce_feats
 int index_offset = reduce_offset[0];
 int ddr_offset = reduce_offset[0] * num_feats;
 
 // get mask
-__memcpy_async(feats_nram, feats_gdram + n_start * num_feats, n * num_feats * sizeof(T), GDRAM2NRAM);
-for (int i = 0; i < n; i ++) {
+__memcpy_async(feats_nram, feats_gdram + n_start * num_feats, n_limit * num_feats * sizeof(T), GDRAM2NRAM);
+for (int i = 0; i < n_limit; i ++) {
     if (reduce_offset[i] != -1) {
       __memcpy_async(reduce_feats_nram + i * num_feats, reduce_feats_gdram + reduce_offset[i] * num_feats, num_feats * sizeof(T), GRRAM2NRAM);
     }
 }
 __sync_io();
-__bang_equal(value_mask, reduce_feats_nram, feats_nram, n * num_feats);
-__bang_not(tmp_mask, value_mask, n * num_feats);
-__bang_mul(value_mask, value_mask, index_mask, n * num_feats);
-__bang_mul_saclar(tmp_mask, tmp_mask, num_reduced, n * num_feats);
-__bang_add(value_mask, value_mask, tmp_mask, n * num_feats);
+__bang_equal(value_mask, reduce_feats_nram, feats_nram, n_limit * num_feats);
+__bang_not(tmp_mask, value_mask, n_limit * num_feats);
+__bang_mul(value_mask, value_mask, index_mask, n_limit * num_feats);
+__bang_mul_saclar(tmp_mask, tmp_mask, num_reduced, n_limit * num_feats);
+__bang_add(value_mask, value_mask, tmp_mask, n_limit * num_feats);
 
 bool is_go_lcoal = false;
-for (int i = 0; i < n; i ++) {
+for (int i = 0; i < n_limit; i ++) {
     if (offset > 0) {
         if (is_occupy[index_offset] == false) {
           pvLock();
@@ -291,67 +502,40 @@ for (int i = 0; i < n; i ++) {
             }
           }
         }
-    if (i < n - 1) {
+    if (i < n_limit - 1) {
         index_offset = reduce_offset[i + 1];
         ddr_offset = reduce_offset[i + 1] * num_feats;
     }
 }
-
-//方案三：
-// 考虑先将所有的offset load sram上，然后广播到每个ipu core的nram上，
-// 根据网络拆解下来的数规模 offset的size为 17176 * sizeof(int), 大约68k
-// 根据nram_size拆解算出一次每个core能处理的c的数量记作n
-int n_start = 0;
-while (n_start < N) {
-  int real_n = 0;
-  int *offset_real_nram;
-  // laod data
-  for (int i = n_start; i < N; i ++) {
-    int offset = offset_nram[i];
-    if (taskId == offset % taskDim) {
-      if (offset != -1) {
-        __memcpy_async(result_nram + real_n * num_feats, result_gdram + offset * num_feats, num_feats *sizeof(T), GDRAM2NRAM);
-        __memcpy_async(feats_nram + real_n * num_feats, feats_gdram + i * num_feats, num_feats *sizeof(T), GDRAM2NRAM);
-        __memcpy_async(reduce_feats_nram + real_n * num_feats, reduce_feats_gdram + offset * num_feats, num_feats *sizeof(T), GDRAM2NRAM);
-        __bang_write_value(index_mask + real_n * num_feats, num_feats, i);
-        offset_real_nram[real_n] = offset;
-        real_n++;
-      }
-      
-    }
-    if (real_n == n) break;
-  }
-  __sync_io();
-  
-  // compute
-  __bang_equal(value_mask, reduce_feats_nram, feats_nram, n * num_feats);
-  __bang_not(tmp_mask, value_mask, n * num_feats);
-  __bang_mul(value_mask, value_mask, index_mask, n * num_feats);
-  __bang_mul_saclar(tmp_mask, tmp_mask, num_reduced, n * num_feats);
-  __bang_add(value_mask, value_mask, tmp_mask, n * num_feats);
-  __bang_minimum(result_nram, result_nram, value_mask, n * num_feats);
-  
-  // store
-  for (int i = 0; i < real_n; i++) {
-    int offset = offset_real_nram[i];
-    __memcpy_async(result_nram_gdram + offset * num_feats, result_nram + i * num_feats, num_feats * sizeof(T), NRAM2GDRAM);
-  }
-  __sync_io();
-  n_start += real_n;
-}
-//kernel 2
-
-
 ```
 
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-- kernel1根据input_num_reduced均拆到每一个core， kernel2根据voxel_num均拆到每一个core
+- 执行UX任务，kernel1根据feats_desc->dims[0]均拆到每一个core， kernel2根据voxel_num[0]均拆到每一个core
 
 ### 3.4 性能优化设计
 
--首次提交暂无
+- 资源分配
+
+本设计文档主要对本算子kernel中用到的资源进行分配，scatter_nd算子的资源分配可对应参考该算子的设计文档
+
+| 表项 | 分配策略 |
+| --- | ------- |
+| NRAM | 参考3.1.2节                                                                  |
+| WRAM | 未使用                                                                        |
+| SRAM | 未使用                                                                        |
+| GDRAM(workspace) | voxel_from使用[N, C]*sizeof(int)|
+
+- 流水设计
+
+  暂无
+
+- 优化设计
+
+1）kernel1加流水;
+
+2）kernel2中调用的scatter指令性能较差，且跟真值相关，需详细测试，找出优化点。
 
 ### 3.5 方案理论性能
 
@@ -383,13 +567,13 @@ while (n_start < N) {
 
 在网络中，由于正向算子的实际输出规模无法提前预知，因此反向算子允许输入tensor中应该用M的地方用N代替, 实际的M值通过voxel_num获取。
 
-1、指针为空防呆；
-
-2、0 元素检查防呆，VLOG(5)打印信息，是否返回与框架沟通；
-
-3、对输入输出支持的 dtype 以及 shape 进行防呆；
-
-4、算子自身的`reduce_type`参数防呆。
+1. handle为空防呆；
+2. 平台检查，不支持300以下平台；
+3. 检查输入输出支持的dtype以及shape；
+4. 算子自身参数检查：reduce_type只支持max；
+5. large tensor检查；
+6. 指针为空检查；
+7. 0元素检查；
 
 ## 4 算子性能优化记录
 
@@ -400,7 +584,18 @@ while (n_start < N) {
 ## 5 方案实施
 
 ### 5.1 开发测试计划
+2023/04/27开始投入， 2023/05/25合入：
+
+- mluops开发环境熟悉： 1d
+
+- 方案、代码熟悉 ：4d
+
+- 开发调试 ：7d
+
+- 测试review入库： 3d
+
+- 预留buffer：3d
 
 ### 5.2 风险分析
 
-原子操作存在性能问题，性能可能达不到预期
+__scatter指令存在性能问题，性能可能达不到预期
