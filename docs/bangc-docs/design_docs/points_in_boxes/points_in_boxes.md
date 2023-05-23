@@ -3,6 +3,7 @@
 * #### 文档基本信息
 
 | 算子名称    | `points_in_boxes`                                            |
+| ----------- | --------------------- |
 | 编制人/日期 | 张才贤/2023-03-10                                            |
 | 审批人/日期 | 司凤洋/2023-03-24                                            |
 | 审批人/日期 | 王远/2023-03-24                                              |
@@ -118,7 +119,7 @@ in\_flag = \lvert (z - cz) \rvert <= \frac{dz}{2} \ \& \\
 
 #### 1.5.1 精度验收标准
 
-CNNL精度验收标准：
+精度验收标准：
   - Pytorch框架该算子不支持double数据类型的计算，所以无法适配动态阈值。
   - Pytorch框架中该算子GPU目前也只支持了float数据类型，与GPU算子保持一致，half数据类型不作交付。
   - 在Limitation文档中说明，设置静态阈值，验收标准为A类，diff3=0。
@@ -151,7 +152,6 @@ _global_ void points_in_boxes_kernel(int batch_size,
 ### 2.2 接口设计
 
 ```c++
-// 给出CNNL算子接口
 mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(mluOpHandle_t handle,
                                             const mluOpTensorDescriptor_t points_desc,
                                             const void *points,
@@ -316,7 +316,7 @@ void points_in_boxes_kernel(int batch_size, int boxes_num, int pts_num, const fl
         __bang_mul_scalar(tmp, tmp, t+1, num);
         __bang_add(last, last, tmp, num);
       __bang_sub_scalar(last, last, -1, num);
-      __cnnl_float2int(last, last, num);
+      __mluop_float2int(last, last, num);
       store_async(output_addr, last);
 }
 

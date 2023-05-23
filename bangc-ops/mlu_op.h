@@ -11760,7 +11760,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
 
 // Group:IndiceConvolutionForward
 /*!
- * @bried Performs convolution on input sparse tensor \b features with kernel \b filters,
+ * @brief Performs convolution on input sparse tensor \b features with kernel \b filters,
  * then returns the output sparse tensor \b features_out.
  *
  * @param[in] handle
@@ -12011,8 +12011,7 @@ mluOpMoeDispatchForward(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - Before calling this function, you need to call ::mluOpMoeDispatchBackwardGate to
- *   get the extra space size needed in the moe_dispatch_backward_gate operation.
+ * - The allocated extra workspace should be passed to ::mluOpMoeDispatchBackwardGate.
  *
  * @par Note
  * - None.
