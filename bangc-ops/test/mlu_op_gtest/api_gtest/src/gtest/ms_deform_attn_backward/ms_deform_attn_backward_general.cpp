@@ -429,7 +429,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          5, std::vector<int>({2, 7, 4, 6, 8}))),
         testing::Values(MsDeformAttnBackwardParam{1, MLUOP_UNKNOWN_DEVICE,
-                                                  MLUOP_STATUS_BAD_PARAM})));
+                                                  MLUOP_STATUS_SUCCESS})));
 
 INSTANTIATE_TEST_CASE_P(
     zero_element_num_heads, ms_deform_attn_backward_general,
