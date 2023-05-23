@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -195,8 +195,8 @@ __mlu_func__ void maxReduceTracebackScatterIdxKernel(
 template <typename T>
 __mlu_func__ void maxReduceScatterGradKernel(T *grad_feats,
                                              const T *grad_voxel_feats,
-                                             int *voxel_from, const int M,
-                                             const int C) {
+                                             int *voxel_from, const int N,
+                                             const int M, const int C) {
   int size_feats = C * sizeof(T);
   int size_feats_idx = C * sizeof(int);
 
@@ -209,45 +209,51 @@ __mlu_func__ void maxReduceScatterGradKernel(T *grad_feats,
     return;
   }
   int nram_size = MAX_NRAM_SIZE;
-  int m_limit = nram_size / (size_feats + size_feats_idx);
+  int m_limit =
+      nram_size / (size_feats + 2 * size_feats_idx + C * sizeof(float));
   int stride = FLOOR_ALIGN(m_limit * C, 128 / sizeof(int));
   m_limit = stride / C;
 
   T *grad_voxel_feats_nram = (T *)nram_buffer;  // [m_limit, C]
   int *voxel_from_nram =
-      (int *)(grad_voxel_feats_nram + stride);  // [m_limit, C]
+      (int *)(grad_voxel_feats_nram + stride);                // [m_limit, C]
+  int *mask_nram = voxel_from_nram + stride;                  // [m_limit, C]
+  float *mask_bitindex_nram = (float *)(mask_nram + stride);  // [m_limit, C]
 
   int m_repeat = m_per_core / m_limit;
   int m_rem = m_per_core % m_limit;
 
+  // record index up bound
+  __bang_write_value(mask_bitindex_nram, m_limit * C, (float)0.0f);
   for (int i = 0; i <= m_repeat; i++) {
     int m_real = (i == m_repeat) ? m_rem : m_limit;
     if (m_real <= 0) {
       break;
     }
+    int data_num = m_real * C;
     __memcpy_async(grad_voxel_feats_nram, grad_voxel_feats + m_start_offset,
                    m_real * size_feats, GDRAM2NRAM);
     __memcpy_async(voxel_from_nram, voxel_from + m_start_offset,
                    m_real * size_feats_idx, GDRAM2NRAM);
     __sync();
-    __bang_mul_scalar(voxel_from_nram, voxel_from_nram, sizeof(int),
-                      m_real * C);
-
+    // if (voxel_from_nram[i] < N * C) {mask[i] = 1} else {mask[i] = 0}
+    __bang_lt_scalar(mask_nram, voxel_from_nram, N * C, data_num);
+    // mask change to float
+    __bang_int322float((float *)mask_nram, (int *)mask_nram, data_num, 0);
+    // mask change to bit
+    __bang_gt_bitindex((float *)mask_nram, (float *)mask_nram,
+                       (float *)mask_bitindex_nram, CEIL_ALIGN(data_num, 8));
 #if __BANG_ARCH__ >= 592
+    // indices change to bytes
+    __bang_mul_scalar(voxel_from_nram, voxel_from_nram, sizeof(int), data_num);
     __scatter((void *)grad_feats, (const void *)grad_voxel_feats_nram,
-              (const unsigned int *)voxel_from_nram, sizeof(T), NRAM2GDRAM,
-              sizeof(T), m_real * C);
+              (const unsigned int *)voxel_from_nram, mask_nram, sizeof(T),
+              NRAM2GDRAM, sizeof(T), data_num);
 #else
-    __asm__ volatile(
-        "scatter.clean.gdram.nram.nram.b32.u32 [%[dst]], [%[src]],\
-      [%[offset]], %[transfer_num];\n\t" ::[dst] "r"(grad_feats),
-        [ src ] "r"(grad_voxel_feats_nram), [ offset ] "r"(voxel_from_nram),
-        [ transfer_num ] "r"(m_real * C));
+    __memcpy_async(voxel_from + m_start_offset, voxel_from_nram,
+                   m_real * size_feats_idx, NRAM2GDRAM);
+    __sync();
 #endif
-
-    // __memcpy_async(voxel_from + m_start_offset, voxel_from_nram,
-    //                m_real * size_feats_idx, NRAM2GDRAM);
-    // __sync();
 
     m_start += m_real;
     m_start_offset = m_start * C;
@@ -264,7 +270,7 @@ __mlu_func__ void dynamicPointToVoxelBackwardMax(
   maxReduceTracebackScatterIdxKernel(feats, voxel_feats, grad_feats, voxel_from,
                                      point2voxel_map, N, M, C);
 
-  maxReduceScatterGradKernel(grad_feats, grad_voxel_feats, voxel_from, M, C);
+  maxReduceScatterGradKernel(grad_feats, grad_voxel_feats, voxel_from, N, M, C);
 }
 
 __mlu_global__ void MLUKernelDynamicPointToVoxelBackward(

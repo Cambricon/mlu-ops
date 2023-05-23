@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -24,6 +24,7 @@
 
 #include <algorithm>  // std::min
 #include <string>
+#include <vector>  // std::vector
 
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -227,26 +228,58 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, N);
-  // 1. get scatter indices
+  // MLU500: 1. get scatter indices and scatter
+  // MLU300: 1. get scatter indices
   KERNEL_CHECK((KernelDynamicPointToVoxelBackward(
       k_dim, k_type, handle->queue, feats_desc->dtype, reduce_type,
       grad_voxel_feats, feats, voxel_feats, point2voxel_map, voxel_points_count,
       voxel_num, workspace, grad_feats, N, C)));
-  // 2. scatter
-  // mluOpTensorDescriptor_t voxel_from_desc;
-  // INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-  // mluOpCreateTensorDescriptor(&voxel_from_desc));
-  //   std::vector<int> indices_dims = {N, C};
-  // INTERNAL_CHECK(interface_name,
-  // MLUOP_STATUS_SUCCESS == mluOpSetTensorDescriptor(
-  //   voxel_from_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-  //   indices_dims.size(), indices_dims.data()));
-  // MLUOP_CHECK((mluOpScatterNd(
-  //     handle, voxel_from_desc, workspace, grad_voxel_feats_desc,
-  //     grad_voxel_feats, grad_feats_desc, grad_feats)));
-  //   INTERNAL_CHECK(
-  //     interface_name,
-  //     MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(voxel_from_desc));
+  if (handle->arch == MLUOP_MLU370) {
+    // MLU300: 2. scatter
+    mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_ADD;
+    mluOpTensorDescriptor_t indices_desc;
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&indices_desc));
+    std::vector<int> indices_dims = {N * C, 1};
+    INTERNAL_CHECK(interface_name,
+                   MLUOP_STATUS_SUCCESS ==
+                       mluOpSetTensorDescriptor(
+                           indices_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                           indices_dims.size(), indices_dims.data()));
+    mluOpTensorDescriptor_t updates_desc;
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&updates_desc));
+    std::vector<int> updates_dims = {N * C};
+    INTERNAL_CHECK(interface_name,
+                   MLUOP_STATUS_SUCCESS ==
+                       mluOpSetTensorDescriptor(
+                           updates_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                           updates_dims.size(), updates_dims.data()));
+    mluOpTensorDescriptor_t output_desc;
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&output_desc));
+    std::vector<int> output_dims = {N * C};
+    INTERNAL_CHECK(interface_name,
+                   MLUOP_STATUS_SUCCESS ==
+                       mluOpSetTensorDescriptor(
+                           output_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                           output_dims.size(), output_dims.data()));
+    MLUOP_CHECK((mluOpScatterNd_v2(handle, scatter_mode, indices_desc,
+                                   workspace, updates_desc, grad_voxel_feats,
+                                   NULL, NULL, output_desc, grad_feats)));
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(indices_desc));
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(updates_desc));
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(output_desc));
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
