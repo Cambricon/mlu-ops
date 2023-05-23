@@ -157,7 +157,9 @@ __mlu_func__ void nms_detection(
     // save result
     nram_save[nram_save_count++] = global_max_index;
     output_box_num++;
-    input_data_score[global_max_index] = IN_DT(-INFINITY);
+    if (!__is_mpu()) {
+      input_data_score[global_max_index] = IN_DT(-INFINITY);
+    }
 
     if (nram_save_count == nram_save_limit_count) {
       if (taskId == 0) {
@@ -183,8 +185,10 @@ __mlu_func__ void nms_detection(
     __bang_write_value((float *)box1 + 3 * max_seg_iou_pad, max_seg_iou_pad,
                        float(max_box[4]));
     // angle
-    __bang_write_value((float *)box1 + 4 * max_seg_iou_pad, max_seg_iou_pad,
-                       float(input_angle_ptr[global_max_index]));
+    if (!__is_mpu()) {
+      __bang_write_value((float *)box1 + 4 * max_seg_iou_pad, max_seg_iou_pad,
+                         float(input_angle_ptr[global_max_index]));
+    }
 
     __memcpy(box1_buffer, box1, max_seg_iou_pad * 5 * sizeof(float), NRAM2NRAM);
 
