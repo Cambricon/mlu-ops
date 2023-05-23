@@ -297,7 +297,7 @@ __mlu_func__ void computeTerm1AndTerm2() {
 
 __mlu_func__ void safeExp(float *dst, float *src, float *mask, const int num) {
     setNanInfToZero(src, mask, num);
-    computeExp(dst, src, NULL, 0, num);
+    __mluop_exp(dst, src, NULL, 0, num);
       __bang_band((char *)dst, (char *)dst, (char *)mask, num * sizeof(float));
     setNanInfToZero(dst, mask, num);
 }

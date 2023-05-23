@@ -150,8 +150,8 @@ __mlu_device__ void bbox_overlaps_workflow(
       T *base_s = b1_area;
 
       // ious = inter_s / base_s
-      computeDiv(width, inter_s, base_s, vec_b2_x2, is_high_precision,
-                 batches_stride);
+      __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+                  batches_stride);
       __memcpy((T *)ious + index, width, handle_batches * sizeof(T),
                NRAM2GDRAM);
     }
@@ -253,8 +253,8 @@ __mlu_device__ void bbox_overlaps_workflow(
         T *base_s = b1_area;
 
         // ious = inter_s / base_s
-        computeDiv(width, inter_s, base_s, vec_b2_x2, is_high_precision,
-                   batches_stride);
+        __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+                    batches_stride);
         int32_t gdram_offset = index1 * num_bbox2 + index2;
         __memcpy((T *)ious + gdram_offset, width, handle_batches * sizeof(T),
                  NRAM2GDRAM);

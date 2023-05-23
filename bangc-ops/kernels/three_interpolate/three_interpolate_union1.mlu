@@ -131,10 +131,10 @@ __mlu_func__ void selectIndicesBetweenMinAndMax(
     const uint32_t n_limit, const uint32_t c_limit,
     const uint32_t m_limit_org) {
   // convert indices from int32_t to float for 270
-  __int322float(nram_indices_transpose_float,
-                nram_indices_transpose_float_addition,
-                nram_indices_transpose + index * n_limit,
-                nram_indices_transpose_addition, n_limit);
+  __mluop_int322float(nram_indices_transpose_float,
+                      nram_indices_transpose_float_addition,
+                      nram_indices_transpose + index * n_limit,
+                      nram_indices_transpose_addition, n_limit);
   // select the offset between the m_min and m_max
   // judge if less than m_max
   __bang_ge_scalar(nram_indices_transpose_float_addition,
@@ -194,9 +194,9 @@ __mlu_func__ void selectIndicesBetweenMinAndMax(
   __bang_mul_scalar(nram_indices_transpose_float, nram_indices_transpose_float,
                     c_limit, n_limit);
   // convert the indices from float type back to int for 270
-  __float2int32(nram_indices, nram_indices_transpose_addition,
-                nram_indices_transpose_float,
-                nram_indices_transpose_float_addition, n_limit);
+  __mluop_float2int32(nram_indices, nram_indices_transpose_addition,
+                      nram_indices_transpose_float,
+                      nram_indices_transpose_float_addition, n_limit);
 }
 
 template <typename T>
@@ -245,11 +245,11 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
   /*
    * NRAM partition
    *  |-----------------------------------------------------------------------------------|
-   *  |           nram_features                  |        nram_features_transpose         |
+   *  |           nram_features                  | nram_features_transpose |
    *  |-----------------------------------------------------------------------------------|
-   *  |           nram_features_selected         |                    nram_output         |
+   *  |           nram_features_selected         | nram_output         |
    *  |-----------------------------------------------------------------------------------|
-   *  |      nram_weights         |   nram_weights_transpose  |      nram_indices         |
+   *  |      nram_weights         |   nram_weights_transpose  | nram_indices |
    *  |-----------------------------------------------------------------------------------|
    *  | nram_indices_transpose(addition/float/float_addition) |
    *  |-----------------------------------------------------------------------------------|
@@ -359,8 +359,8 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
         if (src_stride <= INT32_MAX_NUM) {
           __memcpy(nram_features,
                    base_addr_features + (j * m * c_limit + k * m_limit),
-                   m_slice * sizeof(T), GDRAM2NRAM, dst_stride,
-                   src_stride, c_slice - 1);
+                   m_slice * sizeof(T), GDRAM2NRAM, dst_stride, src_stride,
+                   c_slice - 1);
         } else {
           // src_stride in __memcpy is int type, here handles src_stride
           // overflow int32 max
@@ -492,11 +492,14 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
   /*
    * NRAM partition
    *  |-------------------------------------------------------------------------------------------|
-   *  |           nram_grad_output                  |        nram_grad_output_transpose           |
+   *  |           nram_grad_output                  | nram_grad_output_transpose
+   * |
    *  |-------------------------------------------------------------------------------------------|
-   *  |           nram_grad_features                |        nram_grad_features_transpose         |
+   *  |           nram_grad_features                |
+   * nram_grad_features_transpose         |
    *  |-------------------------------------------------------------------------------------------|
-   *  |      nram_weights            |   nram_weights_transpose     |      nram_indices           |
+   *  |      nram_weights            |   nram_weights_transpose     |
+   * nram_indices           |
    *  |-------------------------------------------------------------------------------------------|
    *  |      nram_indices_transpose(addition/float/float_addition)  |
    *  |-------------------------------------------------------------------------------------------|
@@ -587,8 +590,8 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
         if (src_stride <= INT32_MAX_NUM) {
           __memcpy(nram_grad_output,
                    base_addr_grad_output + (j * n * c_limit + k * n_limit),
-                   n_slice * sizeof(T), GDRAM2NRAM, dst_stride,
-                   src_stride, c_slice - 1);
+                   n_slice * sizeof(T), GDRAM2NRAM, dst_stride, src_stride,
+                   c_slice - 1);
         } else {
           // src_stride in __memcpy is int type, here handles src_stride
           // overflow int32 max
