@@ -257,7 +257,7 @@ for (int32_t i = 0; i < batch_per_task; i++) {
       baseS = b1_area;
     }
     // ious = interS / baseS
-    computeDiv(width, interS, baseS, vec_b2_x2, batches_stride);
+    __mluop_div(width, interS, baseS, vec_b2_x2, batches_stride);
     int32_t gdram_offset = index1 * num_bbox2 + index2;
     __memcpy((T *)ious + gdram_offset, width, handle_batches * sizeof(T), NRAM2GDRAM);
   }

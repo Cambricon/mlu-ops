@@ -146,9 +146,9 @@ static __mlu_func__ void compute(
 
 #if __BANG_ARCH__ >= 322
   // compute mask
-  computeSigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
+  __mluop_sigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
   if (iou_aware == true) {
-    computeSigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
+    __mluop_sigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
     if ((T)iou_aware_factor == (T)0.0) {
       __bang_write_value(nram_iou_p, deal_num, (T)1.0);
     } else if ((T)iou_aware_factor == (T)1.0) {
@@ -173,7 +173,7 @@ static __mlu_func__ void compute(
   __bang_add(nram_iou_p, nram_iou_p, nram_conf_p, deal_num);
 
   // bx0
-  computeSigmoid(nram_x_p, nram_x_p, NULL, 0, deal_num);
+  __mluop_sigmoid(nram_x_p, nram_x_p, NULL, 0, deal_num);
   __bang_mul_scalar(nram_x_p, nram_x_p, (T)scale, deal_num);
   __bang_add_scalar(nram_x_p, nram_x_p, bias, deal_num);
   __bang_add(nram_x_p, nram_x_p, nram_cx, deal_num);
@@ -181,7 +181,7 @@ static __mlu_func__ void compute(
   __bang_mul_scalar(nram_x_p, nram_x_p, (T)1.0 / gridw, deal_num);
 
   // by0
-  computeSigmoid(nram_y_p, nram_y_p, NULL, 0, deal_num);
+  __mluop_sigmoid(nram_y_p, nram_y_p, NULL, 0, deal_num);
   __bang_mul_scalar(nram_y_p, nram_y_p, (T)scale, deal_num);
   __bang_add_scalar(nram_y_p, nram_y_p, bias, deal_num);
   __bang_add(nram_y_p, nram_y_p, nram_cy, deal_num);
@@ -189,13 +189,13 @@ static __mlu_func__ void compute(
   __bang_mul_scalar(nram_y_p, nram_y_p, (T)1.0 / gridh, deal_num);
 
   // bw
-  computeExp(nram_w_p, nram_w_p, NULL, 0, deal_num);
+  __mluop_exp(nram_w_p, nram_w_p, NULL, 0, deal_num);
   __bang_mul(nram_w_p, nram_w_p, anchors_w, deal_num);
   __bang_mul(nram_w_p, nram_w_p, nram_imgw, deal_num);
   __bang_mul_scalar(nram_w_p, nram_w_p, (T)1.0 / inputw, deal_num);
 
   // bh
-  computeExp(nram_h_p, nram_h_p, NULL, 0, deal_num);
+  __mluop_exp(nram_h_p, nram_h_p, NULL, 0, deal_num);
   __bang_mul(nram_h_p, nram_h_p, anchors_h, deal_num);
   __bang_mul(nram_h_p, nram_h_p, nram_imgh, deal_num);
   __bang_mul_scalar(nram_h_p, nram_h_p, (T)1.0 / inputh, deal_num);
@@ -1129,9 +1129,9 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
 
 #if __BANG_ARCH__ >= 322
   // compute mask
-  computeSigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
+  __mluop_sigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
   if (iou_aware == true) {
-    computeSigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
+    __mluop_sigmoid(nram_iou_p, nram_iou_p, NULL, 0, deal_num);
     if ((T)iou_aware_factor == (T)0.0) {
       __bang_write_value(nram_iou_p, deal_num, (T)1.0);
     } else if ((T)iou_aware_factor == (T)1.0) {
@@ -1150,7 +1150,7 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
     __bang_mul(nram_conf_p, nram_conf_p, nram_iou_p, deal_num);
   }
 
-  computeSigmoid(nram_cls_p, nram_cls_p, NULL, 0, class_num * deal_num);
+  __mluop_sigmoid(nram_cls_p, nram_cls_p, NULL, 0, class_num * deal_num);
   __bang_cycle_mul(nram_cls_p, nram_cls_p, nram_conf_p, class_num * deal_num,
                    deal_num);
 

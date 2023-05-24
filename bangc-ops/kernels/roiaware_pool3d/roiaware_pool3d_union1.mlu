@@ -587,9 +587,9 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
         __bang_mul_scalar((float *)nram_grad_out_cur_loop,
                           (float *)nram_grad_out_cur_loop, (float)cur_grad,
                           align_actual_channels_num);
-        __float2half((half *)nram_grad_out_cur_loop,
-                     (float *)nram_grad_out_cur_loop,
-                     align_actual_channels_num);
+        __mluop_float2half((half *)nram_grad_out_cur_loop,
+                           (float *)nram_grad_out_cur_loop,
+                           align_actual_channels_num);
       } else {
         __bang_mul_scalar((float *)nram_grad_out_cur_loop,
                           (float *)nram_grad_in_cur_loop, (float)cur_grad,

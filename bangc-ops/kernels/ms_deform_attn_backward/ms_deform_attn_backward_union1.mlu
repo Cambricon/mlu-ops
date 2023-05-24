@@ -121,17 +121,20 @@ void __mlu_func__ msDeformAttnCol2imBilinear(
                              deal_num_real);
   }
   __bang_mul(grad_output_nram, grad_output_nram, top_grad, deal_num_real);
-  recursiveSumPool(grad_output_nram, 1, deal_num_real, ALIGN_NUM_FOR_REDUCE);
+  __mluop_recursive_sum_pool(grad_output_nram, 1, deal_num_real,
+                             ALIGN_NUM_FOR_REDUCE);
   __bang_atomic_reduce_add((T *)grad_attn_weight, (T *)grad_output_nram, 1);
   __bang_mul_scalar(grad_w_weight, grad_w_weight, width, deal_num_real);
   __bang_mul_scalar(top_grad_temp, top_grad, data_attn_weight, deal_num_real);
   __bang_mul(grad_w_weight, grad_w_weight, top_grad_temp, deal_num_real);
-  recursiveSumPool(grad_w_weight, 1, deal_num_real, ALIGN_NUM_FOR_REDUCE);
+  __mluop_recursive_sum_pool(grad_w_weight, 1, deal_num_real,
+                             ALIGN_NUM_FOR_REDUCE);
   __bang_atomic_reduce_add((T *)(grad_sampling_loc), (T *)grad_w_weight, 1);
 
   __bang_mul_scalar(grad_h_weight, grad_h_weight, height, deal_num_real);
   __bang_mul(grad_h_weight, grad_h_weight, top_grad_temp, deal_num_real);
-  recursiveSumPool(grad_h_weight, 1, deal_num_real, ALIGN_NUM_FOR_REDUCE);
+  __mluop_recursive_sum_pool(grad_h_weight, 1, deal_num_real,
+                             ALIGN_NUM_FOR_REDUCE);
   __bang_atomic_reduce_add((T *)(grad_sampling_loc + 1), (T *)grad_h_weight, 1);
 #endif
 }

@@ -144,9 +144,9 @@ __mlu_global__ void MLUKernelCarafeForward(
     int src_offset = INDEX3(isample, ho_0, wo_0, g_0 * kernel_size_sq,
                             mask_stride_n, mask_stride_h, mask_stride_w);
     T *src = mask + src_offset;
-    loadStr3D(mask_nram, src, block_G * kernel_size_sq, block_Wo, block_Ho,
-              mask_nram_stride_w, mask_nram_stride_h, mask_stride_w,
-              mask_stride_h);
+    __mluop_load_str_3D(mask_nram, src, block_G * kernel_size_sq, block_Wo,
+                        block_Ho, mask_nram_stride_w, mask_nram_stride_h,
+                        mask_stride_w, mask_stride_h);
 
     /* ===== load input block from gdram2nram
      *
@@ -211,8 +211,9 @@ __mlu_global__ void MLUKernelCarafeForward(
                         input_stride_h, input_stride_w);
     src = input + src_offset;
     for (int i = 0; i < input_seg_num_h; ++i) {
-      loadStr3D(dst, src, block_C, block_G, input_seg_num_w, block_c_stride,
-                input_nram_stride_w, block_C, input_stride_w);
+      __mluop_load_str_3D(dst, src, block_C, block_G, input_seg_num_w,
+                          block_c_stride, input_nram_stride_w, block_C,
+                          input_stride_w);
       dst += input_nram_stride_h;
       src += input_stride_h;
     }
@@ -290,8 +291,9 @@ __mlu_global__ void MLUKernelCarafeForward(
     dst = output + dst_offset;
     src = output_nram;
     for (int i = 0; i < block_Ho; ++i) {
-      storeStr3D(dst, src, block_C, block_G, block_Wo, block_C, output_stride_w,
-                 block_c_stride, output_nram_stride_w);
+      __mluop_store_str_3D(dst, src, block_C, block_G, block_Wo, block_C,
+                           output_stride_w, block_c_stride,
+                           output_nram_stride_w);
       dst += output_stride_h;
       src += output_nram_stride_h;
     }

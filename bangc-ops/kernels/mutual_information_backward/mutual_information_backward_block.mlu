@@ -37,7 +37,7 @@ __mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
 
 __mlu_func__ void safeExp(float *dst, float *src, float *mask, const int num) {
   setNanInfToZero(src, mask, num);
-  computeExp(dst, src, NULL, 0, num);
+  __mluop_exp(dst, src, NULL, 0, num);
   __bang_band((char *)dst, (char *)dst, (char *)mask, num * sizeof(float));
   setNanInfToZero(dst, mask, num);
 }
@@ -154,40 +154,40 @@ __mlu_func__ void computePGrad(const int b, const int S, const int T,
 
   int loop_time = s_len + t_len - 1;
   for (int i = 1; i < loop_time; ++i) {
-      data_num = i < max_len ? __mluop_min(i + 1, min_len) : loop_time - i;
-      s = i < s_len ? s_end - i : s_begin;
-      t = i < s_len ? t_end : t_end + s_len - i - 1;
+    data_num = i < max_len ? __mluop_min(i + 1, min_len) : loop_time - i;
+    s = i < s_len ? s_end - i : s_begin;
+    t = i < s_len ? t_end : t_end + s_len - i - 1;
 
-      term1_num = i < t_len ? data_num - 1 : data_num;
-      if (term1_num > 0) {
-        __memcpy(nram_cur_term1, nram_term1 + s * (T + 1) + t, sizeof(float),
-                 NRAM2NRAM, sizeof(float), T * sizeof(float), term1_num - 1);
-        nram_p_grad_for_compute_term1 = i >= s_len ? nram_cur_p_grad + 1 :
-                                        nram_cur_p_grad;
-        __bang_mul(nram_cur_term1, nram_cur_term1,
-                   nram_p_grad_for_compute_term1, term1_num);
-      }
+    term1_num = i < t_len ? data_num - 1 : data_num;
+    if (term1_num > 0) {
+      __memcpy(nram_cur_term1, nram_term1 + s * (T + 1) + t, sizeof(float),
+               NRAM2NRAM, sizeof(float), T * sizeof(float), term1_num - 1);
+      nram_p_grad_for_compute_term1 =
+          i >= s_len ? nram_cur_p_grad + 1 : nram_cur_p_grad;
+      __bang_mul(nram_cur_term1, nram_cur_term1, nram_p_grad_for_compute_term1,
+                 term1_num);
+    }
 
-      term2_num = data_num;
-      nram_compute_term2 = nram_cur_term2;
-      term2_s = s;
-      term2_t = t;
-      if (i < s_len) {
-        term2_num -= 1;
-        nram_compute_term2 -= 1;
-        term2_s += 1;
-        term2_t -= 1;
-      }
-      if (term2_num > 0) {
-        __memcpy(nram_cur_term2, nram_term2 + term2_s * T + term2_t,
-                 sizeof(float), NRAM2NRAM, sizeof(float),
-                 (T - 1) * sizeof(float), term2_num - 1);
-        __bang_mul(nram_cur_term2, nram_cur_term2, nram_cur_p_grad, term2_num);
-      }
+    term2_num = data_num;
+    nram_compute_term2 = nram_cur_term2;
+    term2_s = s;
+    term2_t = t;
+    if (i < s_len) {
+      term2_num -= 1;
+      nram_compute_term2 -= 1;
+      term2_s += 1;
+      term2_t -= 1;
+    }
+    if (term2_num > 0) {
+      __memcpy(nram_cur_term2, nram_term2 + term2_s * T + term2_t,
+               sizeof(float), NRAM2NRAM, sizeof(float), (T - 1) * sizeof(float),
+               term2_num - 1);
+      __bang_mul(nram_cur_term2, nram_cur_term2, nram_cur_p_grad, term2_num);
+    }
 
-      __bang_add(nram_cur_p_grad, nram_cur_term1, nram_compute_term2, data_num);
-      __memcpy(nram_p_grad + s * (T + 1) + t, nram_cur_p_grad, sizeof(float),
-               NRAM2NRAM, T * sizeof(float), sizeof(float), data_num - 1);
+    __bang_add(nram_cur_p_grad, nram_cur_term1, nram_compute_term2, data_num);
+    __memcpy(nram_p_grad + s * (T + 1) + t, nram_cur_p_grad, sizeof(float),
+             NRAM2NRAM, T * sizeof(float), sizeof(float), data_num - 1);
   }
 
   if (overwrite_ans_grad) {
@@ -217,8 +217,7 @@ __mlu_func__ void computePxGradAndPyGrad(const int b, const int S, const int T,
 
     if (t_len > 1) {
       // compute term2
-      __bang_mul(nram_term2 + i * T + t_begin,
-                 nram_term2 + i * T + t_begin,
+      __bang_mul(nram_term2 + i * T + t_begin, nram_term2 + i * T + t_begin,
                  nram_p_grad + i * (T + 1) + t_begin + 1, t_len - 1);
     }
   }
@@ -294,8 +293,8 @@ __mlu_global__ void mluBlockMutualInformationBackward(
 }
 
 void MLUOP_WIN_API kernelMutualInformationBackward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int B, const int S, const int T, const void *px, const void *py,
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
+    const int S, const int T, const void *px, const void *py,
     const bool has_boundary, const void *opt_boundary, const void *p,
     const bool overwrite_ans_grad, void *ans_grad, void *px_grad,
     void *py_grad) {
