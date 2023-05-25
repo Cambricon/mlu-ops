@@ -238,6 +238,7 @@ __mlu_func__ void coreCompute(char *nram_input, const T *nram_weight,
       }
       int32_t align_c = PAD_UP(total_c, c_align_num);
       int32_t target_value = ((int32_t *)nram_target)[n];
+      if (target_value >= total_c || target_value < 0) continue;
       T weight_value = nram_weight[target_value];
       __bang_mul_scalar((T *)nram_output + n * align_c,
                         (T *)nram_output + n * align_c, weight_value, align_c);
@@ -498,6 +499,7 @@ __mlu_global__ void MLUUnion1KernelFocalLossSigmoidBackward(
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t total_n,
     const int32_t deal_n, const int32_t total_c, void *output) {
+  if (coreId == 0x80) return;
   focalLossSigmoidBackwardBlock((T *)input, (int32_t *)target, (T *)weight,
                                 gamma, alpha, total_n, deal_n, total_c,
                                 (T *)output);
