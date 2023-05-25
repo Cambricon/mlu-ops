@@ -841,6 +841,14 @@ mluOpYoloBox
 -----------------------------
 该算子负责从检测网络的 backbone 输出部分，计算真实检测框 bbox 信息。该算子包括三个输入 tensor，输入 x 维度 [N, C, H, W]，输入 img_size 维度 [N, 2]，输入 anchors 维度 [2*S]，其中S表示每个像素点应预测的框的数量；包括两个输出 tensor，输出 boxes 维度 [N, S, 4, H*W]，输出 scores 维度 [N, S, class_num, H*W]。
 
+.. _dynamic_point_to_voxel_backward:
+
+mluOpDynamicPointToVoxelBackward
+---------------------------------
+该算子为 ``mluOpDynamicPointToVoxelForward`` 算子的反向，主要功能是找到特征维度上通过 ``max`` 方法去重后点的原始点，将体素坐标的梯度，回传给相应点。该算子有6个输入 tensor，1个输出 tensor，输入 ``grad_voxel_feats`` 维度 [N， C]，输入 ``feats`` 维度 [N, C]，输入 ``voxel_feats`` 维度 [N, C]，输入 ``point2voxel_map`` 维度 [N]，输入 ``voxel_points_count`` 维度 [N]，输入 ``voxel_num`` 维度 [1]，输出 ``grad_feats`` 维度 [N, C]。
+
+``max`` 模式下，根据 ``point2voxel_map`` ，分组找出 ``feats`` 和 ``voxel_feats`` 中值相同的点，从而将 ``grad_voxel_feats`` 中记录的梯度传给 ``grad_feats`` ， ``voxel_num`` 记录的是 ``grad_voxel_feats`` 的实际数量M。
+
 .. _dynamic_point_to_voxel_forward:
 
 mluOpDynamicPointToVoxelForward
