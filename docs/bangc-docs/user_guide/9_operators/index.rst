@@ -363,6 +363,20 @@ mluOpMutualInformationBackward
    py\_grad(b,s,t) = p\_grad(b,s,t+1) * term2(b,s,t)
   \end{array}
 
+.. _mutual_information_forward:
+
+mluOpMutualInformationforward
+--------------------------------
+该算子是计算输入 ``px`` 和 ``py`` 之间的互信息。
+
+公式如下：
+.. math::
+
+  \begin{array}{lcl}
+      p(b,s,t) = ln(e^{p(b,s-1,t) + px(b,s-1,t)} + e^{p(b,s,t-1) + py(b,s,t-1)}) \\
+      ans(b) = p(b,s\_end,t\_end)
+  \end{array}
+
 .. _nms:
 
 mluOpNms

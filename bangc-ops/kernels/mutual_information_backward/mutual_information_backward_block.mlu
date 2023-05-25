@@ -30,7 +30,7 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
 __mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
   __bang_sub(mask, src, src, num);
   __bang_eq_scalar(mask, mask, 0., num);
-  __bang_float2int32_rn((int *)mask, mask, num, 0);
+  __bang_float2int32_tz((int *)mask, mask, num, 0);
   __bang_mul_scalar((int *)mask, (int *)mask, int(-1), num);
   __bang_band((char *)src, (char *)src, (char *)mask, num * sizeof(float));
 }

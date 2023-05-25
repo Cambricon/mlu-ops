@@ -7511,26 +7511,26 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
 
 // Group:MutualInformationBackward
 /*!
- * @brief Returns the size of the MLU memory that is used as an extra workspace
+ * @brief Returns the size of the MLU memory as an extra workspace
  * to optimize ::mluOpMutualInformationBackward.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to an MLUOP context for MLU devices and queues management in
  * ::mluOpMutualInformationBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] px_desc
- * The descriptor of the tensor \b px, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b px containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] py_desc
- * The descriptor of the tensor \b py, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b py containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] opt_boundary_desc
- * The descriptor of the tensor \b opt_boundary, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b opt_boundary containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] p_desc
- * The descriptor of the tensor \b p, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b p containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] ans_grad_desc
- * The descriptor of the tensor \b ans_grad, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b ans_grad containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] overwrite_ans_grad
  * A boolean value indicating whether to overwrite \b ans_grad.
@@ -7550,7 +7550,7 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par API Dependency
- * - The allocated extra workspace should be passed to ::mluOpMutualInformationBackward.
+ * - The allocated extra workspace must be passed to ::mluOpMutualInformationBackward.
  *
  * @par Note
  * - Currently the \b workspace_size always returns 0.
@@ -7577,47 +7577,47 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  * @brief Computes the gradients of tensor \b px and tensor \b py.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to an MLUOP context for MLU devices and queues management in the
  * mutual_information_backward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] px_desc
- * The descriptor of the tensor \b px, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b px containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] px
  * Pointer to the MLU memory that stores the tensor \b px.
  * @param[in] py_desc
- * The descriptor of the tensor \b py, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b py containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] py
  * Pointer to the MLU memory that stores the tensor \b py.
  * @param[in] opt_boundary_desc
- * The descriptor of the input tensor \b opt_boundary, which contains dimension, data type, and data layout.
+ * The descriptor of the input tensor \b opt_boundary containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] opt_boundary
  * Pointer to the MLU memory that stores the \b opt_boundary tensor.
  * @param[in] p_desc
- * The descriptor of the tensor \b p, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b p containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] p
  * Pointer to the MLU memory that stores the tensor \b p.
  * @param[in] ans_grad_desc
- * The descriptor of the tensor \b ans_grad, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b ans_grad containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] ans_grad
  * Pointer to the MLU memory that stores the tensor \b ans_grad.
  * @param[in] overwrite_ans_grad
  * A boolean value indicating whether to overwrite \b ans_grad.
  * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the mutual_information_backward operation.
- * For more information about workspace, see "Cambricon BANG C OPS User Guide".
+ * Pointer to the MLU memory as an extra workspace for the mutual_information_backward operation.
+ * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] px_grad_desc
- * The descriptor of the tensor \b px_grad, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b px_grad containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] px_grad
  * Pointer to the MLU memory that stores the tensor \b px_grad.
  * @param[in] py_grad_desc
- * The descriptor of the tensor \b py_grad, which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b py_grad containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] py_grad
  * Pointer to the MLU memory that stores the tensor \b py_grad.
@@ -7630,6 +7630,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  *   - tensor ``px`` : ``float``;
  *   - tensor ``py`` : ``float``;
  *   - tensor ``opt_boundary`` : ``int64``;
+ *   - tensor ``p`` : ``float``;
  *   - tensor ``ans_grad`` : ``float``;
  *   - tensor ``px_grad`` : ``float``;
  *   - tensor ``py_grad`` : ``float``;
@@ -7639,7 +7640,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The shape of \b px is 3D([B, S, T + 1]), where B is the batch size, S is the length of symbols
- *   and T is the length of input.
+ *   and T is the length of the input sequence.
  * - The shape of \b py is 3D([B, S + 1, T]).
  * - The shape of \b opt_boundary is 2D([B, 4]), where each row contains
      [begin_symbol, begin_frame, end_symbol, end_frame] with
@@ -7654,16 +7655,16 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  *   - On MLU370, the scale needs to meet the following restrictions:
  *
  *     - T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 163840.
- *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 163840.
+ *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * min(S, T) + 4 <= 163840.
  *
  *   - On MLU590, the scale needs to meet the following restrictions:
  *
  *     - T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 98304.
- *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 98304.
+ *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * min(S, T) + 4 <= 98304.
  *
  * @par API Dependency
  * - Before calling this function to perform ::mluOpMutualInformationBackward, you need to get
- *   the size of workspace by ::mluOpGetMutualInformationBackwardWorkspaceSize.
+ *   the size of the workspace by ::mluOpGetMutualInformationBackwardWorkspaceSize.
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
@@ -7697,6 +7698,167 @@ mluOpMutualInformationBackward(mluOpHandle_t handle,
                                void *px_grad,
                                const mluOpTensorDescriptor_t py_grad_desc,
                                void *py_grad);
+
+// Group:MutualInformationForward
+/*!
+ * @brief Returns the size of the MLU memory as an extra workspace
+ * to optimize ::mluOpMutualInformationForward.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context for MLU devices and queues management in
+ * ::mluOpMutualInformationForward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] px_desc
+ * The descriptor of the tensor \b px containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] py_desc
+ * The descriptor of the tensor \b py containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] opt_boundary_desc
+ * The descriptor of the tensor \b opt_boundary containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] p_desc
+ * The descriptor of the tensor \b p containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] ans_desc
+ * The descriptor of the tensor \b ans containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitations
+ * - None.
+ *
+ * @par API Dependency
+ * - The allocated extra workspace must be passed to ::mluOpMutualInformationForward.
+ *
+ * @par Note
+ * - Currently the \b workspace_size always returns 0.
+ *   This will be changed when the scale limitation is removed in ::mluOpMutualInformationForward.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
+                                              const mluOpTensorDescriptor_t px_desc,
+                                              const mluOpTensorDescriptor_t py_desc,
+                                              const mluOpTensorDescriptor_t opt_boundary_desc,
+                                              const mluOpTensorDescriptor_t p_desc,
+                                              const mluOpTensorDescriptor_t ans_desc,
+                                              size_t *workspace_size);
+
+// Group:MutualInformationForward
+/*!
+ * @brief Computes mutual information between tensor \b px and tensor \b py.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context for MLU devices and queues management in the
+ * mutual_information_forward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] px_desc
+ * The descriptor of the tensor \b px containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] px
+ * Pointer to the MLU memory that stores the tensor \b px.
+ * @param[in] py_desc
+ * The descriptor of the tensor \b py containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] py
+ * Pointer to the MLU memory that stores the tensor \b py.
+ * @param[in] opt_boundary_desc
+ * The descriptor of the input tensor \b opt_boundary containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] opt_boundary
+ * Pointer to the MLU memory that stores the \b opt_boundary tensor.
+ * @param[in] p_desc
+ * The descriptor of the tensor \b p containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] p
+ * Pointer to the MLU memory that stores the tensor \b p.
+ * @param[in] workspace
+ * Pointer to the MLU memory as an extra workspace for the mutual_information_forward operation.
+ * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * @param[in] ans_desc
+ * The descriptor of the tensor \b ans containing dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] ans
+ * Pointer to the MLU memory that stores the tensor \b ans.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - tensor ``px`` : ``float``;
+ *   - tensor ``py`` : ``float``;
+ *   - tensor ``opt_boundary`` : ``int64``;
+ *   - tensor ``p`` : ``float``;
+ *   - tensor ``ans`` : ``float``;
+ *
+ * @par Data Layout
+ * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The shape of \b px is 3D([B, S, T + 1]), where B is the batch size, S is the length of symbols
+ *   and T is the length of the input sequence.
+ * - The shape of \b py is 3D([B, S + 1, T]).
+ * - The shape of \b opt_boundary is 2D([B, 4]), where each row contains
+     [begin_symbol, begin_frame, end_symbol, end_frame] with
+     "0 <= begin_symbol <= end_symbol <= S" and "0 <= begin_frame <= end_frame <= T".
+     If \b opt_boundary is NULL, it will be treated as [0, 0, S, T].
+ * - The shape of \b p is 3D([B, S + 1, T + 1]).
+ * - The shape of \b ans is 1D([B]).
+ * - The size of each tensor must be in the range of [0, 2^31].
+ *
+ *   - On MLU370, the scale needs to meet the following restrictions:
+ *
+ *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 9 * min(S, T) + 11 <= 163840.
+ *
+ *   - On MLU590, the scale needs to meet the following restrictions:
+ *
+ *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 9 * min(S, T) + 11 <= 98304.
+ *
+ * @par API Dependency
+ * - Before calling this function to perform ::mluOpMutualInformationForward, you need to get
+ *   the size of the workspace by ::mluOpGetMutualInformationForwardWorkspaceSize.
+ *
+ * @par Note
+ * - This function is only supported on MLU300 series or above platforms.
+ * - If B is zero, ::MLUOP_STATUS_SUCCESS is returned without any changes to tensor \b p and tensor \b ans.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/k2-fsa/k2/blob/master/k2/python/csrc/torch/mutual_information_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpMutualInformationForward(mluOpHandle_t handle,
+                              const mluOpTensorDescriptor_t px_desc,
+                              const void *px,
+                              const mluOpTensorDescriptor_t py_desc,
+                              const void *py,
+                              const mluOpTensorDescriptor_t opt_boundary_desc,
+                              const void *opt_boundary,
+                              const mluOpTensorDescriptor_t p_desc,
+                              void *p,
+                              void *workspace,
+                              const size_t workspace_size,
+                              const mluOpTensorDescriptor_t ans_desc,
+                              void *ans);
 
 // Group:RoiawarePool3d
 /*!
