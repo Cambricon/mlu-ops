@@ -219,6 +219,43 @@ __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
 }
 
 /******************************************************************************
+ * CNNL FUNC: __mluop_log
+ * param 'nram_dst' is the nram destination address, which supports half or
+ * float data type.
+ * param 'nram_src' is the nram source address, which has the same data type
+ * as nram_dst.
+ * param 'nram_addition' is the nram addition address. Pass NULL if the data
+ * type of nram_src is float, otherwise the space size is at least twice as
+ * much as nram_src.
+ * param 'is_high_precision' is the precision flag.
+ * param 'deal_num' is the num of input data.
+ * remarks:
+ *   nram_dst and nram_src can be homologous operand.
+ ******************************************************************************/
+template <typename T>
+__mlu_func__ void __mluop_log(T *nram_dst, T *nram_src, void *nram_addition,
+                              int is_high_precision, int deal_num) {
+  if (sizeof(T) == sizeof(float)) {
+    int x2d = 0x3f317217;
+    float rlog2e = *(float *)&x2d;
+    __bang_log((float *)nram_dst, (float *)nram_src, deal_num);
+    __bang_mul_scalar((float *)nram_dst, (float *)nram_dst, (float)rlog2e,
+                      deal_num);
+  } else if (sizeof(T) == sizeof(half)) {
+    int x2d = 0x3f317217;
+    float rlog2e = *(float *)&x2d;
+    __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
+    __bang_log((float *)nram_addition, (float *)nram_addition, deal_num);
+    __mluop_float2half((half *)nram_dst, (float *)nram_addition, deal_num);
+    __bang_mul_scalar((half *)nram_dst, (half *)nram_dst, (half)rlog2e,
+                      deal_num);
+
+  } else {
+    return;
+  }
+}
+
+/******************************************************************************
  * MLUOPS FUNC: __mluop_sigmoid
  * param 'nram_dst' is the nram destination address, which supports half or
  * float data type. param 'nram_src' is the nram source address, which has the
@@ -234,12 +271,12 @@ __mlu_func__ void __mluop_sigmoid(T *nram_dst, T *nram_src, void *nram_addition,
                                   const int deal_num) {
   if (sizeof(T) == sizeof(float)) {
 #if __BANG_ARCH__ >= 300
-    __bang_mul_scalar((float *)nram_src, (float *)nram_src, (float)-1.0,
+    __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)-1.0,
                       deal_num);
-    __mluop_exp((float *)nram_src, (float *)nram_src, NULL, 0, deal_num);
-    __bang_add_scalar((float *)nram_src, (float *)nram_src, (float)1.0,
+    __mluop_exp((float *)nram_dst, (float *)nram_dst, NULL, 0, deal_num);
+    __bang_add_scalar((float *)nram_dst, (float *)nram_dst, (float)1.0,
                       deal_num);
-    __mluop_recip((float *)nram_dst, (float *)nram_src, NULL, 0, deal_num);
+    __mluop_recip((float *)nram_dst, (float *)nram_dst, NULL, 0, deal_num);
 #else
     __bang_active_sigmoid((float *)nram_dst, (float *)nram_src, deal_num);
 #endif

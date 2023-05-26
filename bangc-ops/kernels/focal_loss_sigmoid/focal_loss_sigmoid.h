@@ -25,15 +25,22 @@
 
 #include "mlu_op.h"
 
+typedef enum {
+  COMPUTATION_FAST = 0,           /* fastest algorithm. */
+  COMPUTATION_HIGH_PRECISION = 1, /* high-precision algorithm. */
+} focalLossSigmoidPreference_t;
+
 void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *target, const void *weight, const int32_t N,
-    const int32_t C, const float alpha, const float gamma, void *output);
+    const focalLossSigmoidPreference_t prefer, const void *input,
+    const void *target, const void *weight, const int32_t N, const int32_t C,
+    const float alpha, const float gamma, void *output);
 
 void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *target, const void *weight, const int32_t N,
-    const int32_t C, const float alpha, const float gamma, void *output);
+    const focalLossSigmoidPreference_t prefer, const void *input,
+    const void *target, const void *weight, const int32_t N, const int32_t C,
+    const float alpha, const float gamma, void *output);
 
 void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

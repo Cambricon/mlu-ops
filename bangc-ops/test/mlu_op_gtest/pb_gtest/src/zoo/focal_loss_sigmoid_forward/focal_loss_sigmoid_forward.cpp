@@ -116,9 +116,10 @@ void FocalLossSigmoidForwardExecutor::focalLossSigmoidForwardCpuFast(
       int32_t row_num = i / C;
       int32_t col_num = i % C;
       int32_t t = target[row_num];
-      float p = 1. / (1. + exp(-input[i]));
-      float temp_p = pow(1. - p, gamma) * log(fmax(p, FLT_MIN));
-      float temp_n = pow(p, gamma) * log(fmax(1. - p, FLT_MIN));
+
+      float p = float(1.) / float(float(1.) + expf(-input[i]));
+      float temp_p = powf(float(1.) - p, gamma) * logf(fmax(p, FLT_MIN));
+      float temp_n = powf(p, gamma) * logf(fmax(float(1.) - p, FLT_MIN));
       if (t == col_num) {
         output[i] = -alpha * temp_p;
       } else {
@@ -219,8 +220,7 @@ void FocalLossSigmoidForwardExecutor::cpuCompute() {
   float *output = cpu_fp32_output_[0];
   auto output_num = parser_->getOutputDataCount(0);
 
-  VLOG(5)
-      << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
+  VLOG(5) << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
   {
     switch (prefer) {
       case ComputationPreference::COMPUTATION_FAST: {

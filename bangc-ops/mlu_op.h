@@ -170,6 +170,8 @@ typedef enum {
   /*!< Implementation with the fastest algorithm and lower precision. */
   MLUOP_COMPUTATION_HIGH_PRECISION = 1,
   /*!< Implementation with the high-precision algorithm regardless of the performance. */
+  MLUOP_COMPUTATION_ULTRAHIGH_PRECISION = 2,
+  /*!< Implementation with the ultrahigh-precision algorithm regardless of the performance. */
 } mluOpComputationPreference_t;
 
 /*!
@@ -7263,9 +7265,9 @@ mluOpFill_v3(mluOpHandle_t handle,
  * Handle to an MLUOP context that is used to manage MLU devices and queues
  * in ::mluOpFocalLossSigmoidForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] prefer
- * The algorithm used to compute the output.
- * For detailed information, see ::mluOpComputationPreference_t. Currently, only
- * \p MLUOP_COMPUTATION_HIGH_PRECISION is supported.
+ * The algorithm used to compute the output. For detailed information,
+ * see ::mluOpComputationPreference_t. Currently, only \p MLUOP_COMPUTATION_FAST and
+ * \p MLUOP_COMPUTATION_HIGH_PRECISION are supported.
  * @param[in] reduction
  * The reduction mode used to compute the operation, see ::mluOpLossReduction_t.
  * Currently, only \p MLUOP_LOSS_REDUCTION_NONE is supported.
@@ -7319,8 +7321,8 @@ mluOpFill_v3(mluOpHandle_t handle,
  * - \b input value should be in the range of [-5, 5] when the data type of \b input is half.
  * - \b target value should be in the range of [0, C] when \b weight is NULL and the shape of
  *   \b input is [N, C].
- * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the
- *   shape of \b input is [N, C].
+ * - \b target value should be in the range of [0, C-1] when \b weight is not NULL and the shape
+ *   of \b input is [N, C].
  * - \b gamma should be greater than or equal to 0.
  *
  * @par API Dependency
@@ -7334,12 +7336,10 @@ mluOpFill_v3(mluOpHandle_t handle,
  *     then \b output is NAN or positive infinity.
  *   - If \b weight is negative infinity, but \b input, \b alpha and \b gamma are finite value,
  *     then \b output is NAN or negative infinity.
- *   - If \b alpha is infinity and data type of \b input is float,
- *     but \b input, \b weight and \b gamma are finite value,
- *     then \b output is NAN or infinity.
- *   - If \b alpha is infinity and data type of \b input is half,
- *     but \b input, \b weight and \b gamma are finite value,
- *     then \b output is NAN or finite value.
+ *   - If \b alpha is infinity and data type of \b input is float, but \b input, \b weight and
+ *     \b gamma are finite value, then \b output is NAN or infinity.
+ *   - If \b alpha is infinity and data type of \b input is half, but \b input, \b weight and
+ *     \b gamma are finite value, then \b output is NAN or finite value.
  *   - If \b gamma is positive infinity, but \b input, \b weight and \b alpha are finite value,
  *     then \b output is NAN or 0.
  *

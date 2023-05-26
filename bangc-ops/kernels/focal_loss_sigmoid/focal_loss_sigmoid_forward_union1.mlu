@@ -25,6 +25,7 @@
 #include <float.h>
 
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 
 #define PING 0
 #define PONG 1
@@ -35,79 +36,12 @@ namespace forward {
 
 /*
  * Functions Table
- * |----------|---------------------------------------------|
- * |  Math    | expf, logf, powf2, sigmoidf                 |
- * |----------|---------------------------------------------|
- * |  Convert | inplaceConvert                              |
- * |----------|---------------------------------------------|
- * |  I0      | loadInputFwd, loadWeightFwd, storeOutputFwd |
- * |----------|---------------------------------------------|
+ * |----------|------------------------------------|
+ * |  Convert | inplaceConvert                     |
+ * |----------|------------------------------------|
+ * |  I0      | loadInput, loadWeight, storeOutput |
+ * |----------|------------------------------------|
  */
-template <typename T>
-__mlu_func__ void expf(T *n_dst, T *n_src, const int32_t count) {
-  if (sizeof(T) == sizeof(float)) {
-    const int32_t x2d = 0x3fb8aa3b;
-    __bang_mul_scalar((float *)n_dst, (float *)n_dst, *(float *)&x2d, count);
-#if __BANG_ARCH__ >= 372
-    __bang_pow2((float *)n_dst, (float *)n_src, count);
-#else
-    for (int32_t i = 0; i < count; ++i) {
-      *((float *)n_dst + i) = powf(2, (*((float *)n_src + i)));
-    }
-#endif
-  }
-}
-
-template <typename T>
-__mlu_func__ void logf(T *n_dst, T *n_src, const int32_t count) {
-  const int32_t x2d = 0x3f317217;
-  if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 372
-    __bang_log((float *)n_dst, (float *)n_src, count);
-    __bang_mul_scalar((float *)n_dst, (float *)n_dst, *(float *)&x2d, count);
-#else
-    for (int32_t i = 0; i < count; ++i) {
-      *((float *)n_dst + i) = log2f(*((float *)n_src + i));
-    }
-    __bang_mul_scalar((float *)n_dst, (float *)n_dst, *(float *)&x2d, count);
-#endif
-  }
-}
-
-template <typename T>
-__mlu_func__ void powf2(T *n_dst, T *n_src, const int32_t count) {
-  if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 372
-    __bang_pow2((float *)n_dst, (float *)n_src, count);
-#else
-    for (int32_t i = 0; i < count; ++i) {
-      *((float *)n_dst + i) = powf(2, (*((float *)n_src + i)));
-    }
-#endif
-  }
-}
-
-template <typename T>
-__mlu_func__ void sigmoidf(T *n_dst, const T *n_src, const int32_t count) {
-  if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 372
-    __bang_mul_scalar((float *)n_dst, (float *)n_src, (float)-1.0, count);
-    expf((float *)n_dst, (float *)n_dst, count);
-    __bang_add_scalar((float *)n_dst, (float *)n_dst, (float)1.0, count);
-    __bang_recip((float *)n_dst, (float *)n_dst, count);
-#else
-    const int32_t x2d = 0x3fb8aa3b;
-    float log2e = *(float *)&x2d;
-    __bang_mul_scalar((float *)n_dst, (float *)n_src, (float)-1.0, count);
-    __bang_mul_scalar(n_dst, n_dst, log2e, count);
-    for (int32_t i = 0; i < count; ++i) {
-      *(n_dst + i) = powf(2, *(n_dst + i));
-      *(n_dst + i) = 1.0 / (1.0 + *(n_dst + i));
-    }
-#endif
-  }
-}
-
 template <typename SrcType, typename DstType>
 __mlu_func__ void inplaceConvert(char *nram_ptr, const int32_t count) {
   // no need to convert when SrcType and DstType are the same
@@ -128,10 +62,10 @@ __mlu_func__ void inplaceConvert<half, float>(char *nram_ptr,
 }
 
 template <typename T>
-__mlu_func__ void loadInputFwd(char *nram_input, T *dram_input,
-                               const int32_t size, const int32_t dst_stride = 0,
-                               const int32_t src_stride = 0,
-                               const int32_t count = 1) {
+__mlu_func__ void loadInput(char *nram_input, T *dram_input, const int32_t size,
+                            const int32_t dst_stride = 0,
+                            const int32_t src_stride = 0,
+                            const int32_t count = 1) {
   if (dst_stride == src_stride) {
     __memcpy_async(nram_input, dram_input, size * count, GDRAM2NRAM);
   } else {
@@ -141,11 +75,10 @@ __mlu_func__ void loadInputFwd(char *nram_input, T *dram_input,
 }
 
 template <>
-__mlu_func__ void loadInputFwd<half>(char *nram_input, half *dram_input,
-                                     const int32_t size,
-                                     const int32_t dst_stride,
-                                     const int32_t src_stride,
-                                     const int32_t count) {
+__mlu_func__ void loadInput<half>(char *nram_input, half *dram_input,
+                                  const int32_t size, const int32_t dst_stride,
+                                  const int32_t src_stride,
+                                  const int32_t count) {
   // load into the second half of input space for inplace convertion half2float
   const int32_t deal_num =
       PAD_UP(dst_stride * count / sizeof(half), NFU_ALIGN_SIZE / sizeof(float));
@@ -159,21 +92,19 @@ __mlu_func__ void loadInputFwd<half>(char *nram_input, half *dram_input,
 }
 
 template <typename T>
-__mlu_func__ void loadWeightFwd(char *nram_input, T *dram_input,
-                                const int32_t t, const int32_t c,
-                                const int32_t has_weight,
-                                const int32_t partition_nc) {
+__mlu_func__ void loadWeight(char *nram_input, T *dram_input, const int32_t t,
+                             const int32_t c, const int32_t has_weight,
+                             const int32_t partition_nc) {
   if (has_weight && partition_nc && t >= 0 && t < c) {
     *((float *)nram_input) = *((T *)dram_input + t);
   }
 }
 
 template <typename T>
-__mlu_func__ void storeOutputFwd(T *dram_output, char *nram_output,
-                                 const int32_t size,
-                                 const int32_t dst_stride = 0,
-                                 const int32_t src_stride = 0,
-                                 const int32_t count = 1) {
+__mlu_func__ void storeOutput(T *dram_output, char *nram_output,
+                              const int32_t size, const int32_t dst_stride = 0,
+                              const int32_t src_stride = 0,
+                              const int32_t count = 1) {
   if (dst_stride == src_stride) {
     __memcpy_async(dram_output, nram_output, size * count, NRAM2GDRAM);
   } else {
@@ -183,109 +114,110 @@ __mlu_func__ void storeOutputFwd(T *dram_output, char *nram_output,
 }
 
 template <typename T>
-__mlu_func__ void computeFwd(T *input, const int32_t *target, const T *weight,
-                             const int32_t has_weight,
-                             const int32_t partition_nc, const int32_t deal_num,
-                             const int32_t n_seg, const int32_t c,
-                             const int32_t c_seg, const int32_t c_start_index,
-                             const float alpha, const float gamma, T *compute_a,
-                             T *compute_b, T *output) {
+__mlu_func__ void compute(const focalLossSigmoidPreference_t prefer, T *input,
+                          const int32_t *target, const T *weight,
+                          const int32_t has_weight, const int32_t partition_nc,
+                          const int32_t deal_num, const int32_t n_seg,
+                          const int32_t c, const int32_t c_seg,
+                          const int32_t c_start_index, const float alpha,
+                          const float gamma, T *compute_a, T *compute_b,
+                          T *output) {
   // set params
   const int32_t c_end_index = c_start_index + c_seg;
   const int32_t c_num =
       has_weight ? PAD_UP(c_seg, NFU_ALIGN_SIZE / sizeof(T)) : c_seg;
 
-#if __BANG_ARCH__ >= 372
   const int32_t half_epsilon = 0x0400;
   const T epsilon_f =
       sizeof(T) == sizeof(float) ? FLT_MIN : *((half *)&half_epsilon);
-  // 0. alpha_t * p_t^r = alpha * (1 - p) ^ gamma  if t == c_index
-  //                    = (1 - alpha) * p ^ gamma  if t != c_index
-  sigmoidf((T *)compute_b, (T *)input, deal_num);
+
+  // // 0. p = sigmoid(x)
+  __mluop_sigmoid((T *)compute_b, (T *)input, (T *)input, 0, deal_num);
   __bang_write_value((T *)output, deal_num, (T)(1 - alpha));
-  for (int32_t i = 0; i < n_seg; ++i) {
-    const int32_t t = *((uint32_t *)target + i);
-    if (t >= c_start_index && t < c_end_index) {
-      const uint32_t index = i * c_num + t - c_start_index;
-      *((T *)input + index) = -1.0 * (*((T *)input + index));
-      *((T *)compute_b + index) = 1.0 - (*((T *)compute_b + index)) + epsilon_f;
-      *((T *)output + index) = alpha;
+
+  if (prefer == COMPUTATION_FAST) {
+    /********* COMPUTATION_FAST *********/
+    __bang_mul_scalar((T *)input, (T *)compute_b, (T)-1, deal_num);
+    __bang_add_scalar((T *)input, (T *)input, (T)1, deal_num);
+    __bang_add_scalar((T *)input, (T *)input, (T)epsilon_f, deal_num);
+
+    for (int32_t i = 0; i < n_seg; ++i) {
+      const int32_t t = *((uint32_t *)target + i);
+      if (t >= c_start_index && t < c_end_index) {
+        const uint32_t index = i * c_num + t - c_start_index;
+
+        // pt = p      t(target)
+        //    = 1 - p  otherwise
+        *((T *)input + index) = *((T *)compute_b + index) + epsilon_f;
+
+        // 1 - pt = 1 - p  t
+        //        = p      otherwise
+        *((T *)compute_b + index) =
+            1.0 - (*((T *)compute_b + index)) + epsilon_f;
+
+        // alpha_t = alpha      t
+        //         = 1 - alpha  otherwise
+        *((T *)output + index) = alpha;
+      }
     }
-  }
-  logf((T *)compute_a, (T *)compute_b, deal_num);
-  __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
-  expf((T *)compute_a, (T *)compute_a, deal_num);
-  __bang_mul((T *)output, (T *)compute_a, (T *)output, deal_num);
 
-  // 1. max = max(0, -x)  if t == c_index
-  //        = max(0, x)   if t != c_index
-  __bang_write_value((T *)compute_b, deal_num, (T)0);
-  __bang_maxequal((T *)compute_b, (T *)compute_b, (T *)input, deal_num);
+    // 1. (1-pt) ^ gamma:
+    //        log(1-pt) -> log(1-pt)*gamma -> exp[log(1-pt)*gamma]
+    __bang_log((T *)compute_a, (T *)compute_b, deal_num);
+    __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
+    __bang_pow2((T *)compute_a, (T *)compute_a, deal_num);
 
-  // 2. -log(p_t) = ln(e^(-max)+ e^(-max-x) + max   if t == c_index
-  //              = ln(e^(-max)+ e^(-max+x) + max   if t != c_index
-  __bang_mul_scalar((T *)compute_a, (T *)compute_b, (T)-1, deal_num);
-  __bang_add((T *)input, (T *)compute_a, (T *)input, deal_num);
-  expf((T *)compute_a, (T *)compute_a, deal_num);
-  expf((T *)input, (T *)input, deal_num);
-  __bang_add((T *)compute_a, (T *)compute_a, (T *)input, deal_num);
-  logf((T *)compute_a, (T *)compute_a, deal_num);
-  __bang_add((T *)input, (T *)compute_a, (T *)compute_b, deal_num);
+    // 2. output = - alpha_t * (1 - pt) ^ gamma * log(pt)
+    __bang_mul_scalar((T *)output, (T *)output, (T)-1, deal_num);
+    __bang_mul((T *)output, (T *)compute_a, (T *)output, deal_num);
+    __mluop_log((T *)compute_b, (T *)input, (T *)input, 0, deal_num);
+    __bang_mul((T *)output, (T *)compute_b, (T *)output, deal_num);
+  } else {
+    /********* COMPUTATION_HIGH_PRECISION *********/
+    for (int32_t i = 0; i < n_seg; ++i) {
+      const int32_t t = *((uint32_t *)target + i);
+      if (t >= c_start_index && t < c_end_index) {
+        const uint32_t index = i * c_num + t - c_start_index;
 
-  // 3. output = alpha_t * p_t^r * [-log(p_t)]
-  __bang_mul((T *)output, (T *)output, (T *)input, deal_num);
+        // x = x   t
+        //   = -x  otherwise
+        *((T *)input + index) = -1.0 * (*((T *)input + index));
 
-#else
-  // addr: log2e
-  const int32_t x2d = 0x3fb8aa3b;
+        // 1 - pt = 1 - p  t
+        //        = p      otherwise
+        *((T *)compute_b + index) =
+            1.0 - (*((T *)compute_b + index)) + epsilon_f;
 
-  // 0. n_max = max(0, x)
-  __bang_write_value((T *)compute_a, deal_num, (T)0);
-  __bang_maxequal((T *)compute_a, (T *)compute_a, (T *)input, deal_num);
-
-  // 1. ln(1+e^x) = ln(e^(-max) + e^(x-max)) + max
-  __bang_mul_scalar((T *)compute_b, (T *)compute_a, (T)-1, deal_num);
-  __bang_add((T *)output, (T *)input, (T *)compute_b, deal_num);
-
-  __bang_mul_scalar((T *)output, (T *)output, *(T *)&x2d, deal_num);
-  __bang_mul_scalar((T *)compute_b, (T *)compute_b, *(T *)&x2d, deal_num);
-  powf2((T *)output, (T *)output, deal_num);
-  powf2((T *)compute_b, (T *)compute_b, deal_num);
-  __bang_add((T *)output, (T *)output, (T *)compute_b, deal_num);
-
-  logf((T *)output, (T *)output, deal_num);
-  __bang_add((T *)output, (T *)output, (T *)compute_a, deal_num);
-
-  // 2. temp = [1 + e^(-x)] ^ (-r)
-  __bang_mul_scalar((T *)compute_b, (T *)input, (T)-1, deal_num);
-  __bang_mul_scalar((T *)compute_b, (T *)compute_b, *(T *)&x2d, deal_num);
-  powf2((T *)compute_b, (T *)compute_b, deal_num);
-
-  __bang_add_scalar((T *)compute_b, (T *)compute_b, (T)1, deal_num);
-  for (int32_t i = 0; i < deal_num; ++i) {
-    *((T *)compute_b + i) = log2f(*((T *)compute_b + i));
-  }
-  __bang_mul_scalar((T *)compute_b, (T *)compute_b, (T)-gamma, deal_num);
-  powf2((T *)compute_b, (T *)compute_b, deal_num);
-
-  // 3.1 output: target != j
-  __bang_mul_scalar((T *)output, (T *)output, (T)(1 - alpha), deal_num);
-  __bang_mul((T *)output, (T *)output, (T *)compute_b, deal_num);
-
-  // 3.2 output: target == j
-  for (int32_t i = 0; i < n_seg; ++i) {
-    const int32_t t = *((uint32_t *)target + i);
-    if (t >= c_start_index && t < c_end_index) {
-      const uint32_t index = i * c_num + t - c_start_index;
-      const T x = *((T *)input + index);
-      const T p = 1. / (1. + exp(-x));
-      *((T *)output + index) =
-          -alpha * pow(1. - p, gamma) * log(fmax(p, FLT_MIN));
+        // alpha_t = alpha      t
+        //         = 1 - alpha  otherwise
+        *((T *)output + index) = alpha;
+      }
     }
-  }
-#endif
+    __bang_log((T *)compute_a, (T *)compute_b, deal_num);
+    __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
+    __bang_pow2((T *)compute_a, (T *)compute_a, deal_num);
+    __bang_mul((T *)output, (T *)compute_a, (T *)output, deal_num);
 
-  // 4. with weight
+    // 1. max = max(0, -x)  if t == c_index
+    //        = max(0, x)   if t != c_index
+    __bang_write_value((T *)compute_b, deal_num, (T)0);
+    __bang_maxequal((T *)compute_b, (T *)compute_b, (T *)input, deal_num);
+
+    // 2. -log(p_t) = ln[e^(-max)+ e^(-max-x)] + max   if t == c_index
+    //              = ln[e^(-max)+ e^(-max+x)] + max   if t != c_index
+    __bang_mul_scalar((T *)compute_a, (T *)compute_b, (T)-1, deal_num);
+    __bang_add((T *)input, (T *)compute_a, (T *)input, deal_num);
+    __mluop_exp((T *)compute_a, (T *)compute_a, (T *)compute_a, 0, deal_num);
+    __mluop_exp((T *)input, (T *)input, (T *)input, 0, deal_num);
+    __bang_add((T *)compute_a, (T *)compute_a, (T *)input, deal_num);
+    __mluop_log((T *)compute_a, (T *)compute_a, (T *)compute_a, 0, deal_num);
+    __bang_add((T *)input, (T *)compute_a, (T *)compute_b, deal_num);
+
+    // 3. output = alpha_t * p_t^r * [-log(p_t)]
+    __bang_mul((T *)output, (T *)output, (T *)input, deal_num);
+  }
+
+  // with weight
   if (has_weight) {
     for (int32_t i = 0; i < n_seg; ++i) {
       int32_t t = *((int32_t *)target + i);
@@ -299,15 +231,15 @@ __mlu_func__ void computeFwd(T *input, const int32_t *target, const T *weight,
 }
 
 template <typename T>
-__mlu_func__ void startPipelineFwd(
-    const T *input, const int32_t *target, const T *weight,
-    char *nram_compute_a, char *nram_compute_b, char *nram_input,
-    char *nram_target, char *nram_weight, char *nram_output,
-    const int32_t has_weight, const int32_t partition_nc,
-    const int32_t pingpong_offset, const int32_t pingpong_weight_offset,
-    const int32_t c_offset_num, const int32_t n, const int32_t n_seg,
-    const int32_t c, const int32_t c_seg, const float alpha, const float gamma,
-    T *output) {
+__mlu_func__ void startPipeline(
+    const focalLossSigmoidPreference_t prefer, const T *input,
+    const int32_t *target, const T *weight, char *nram_compute_a,
+    char *nram_compute_b, char *nram_input, char *nram_target,
+    char *nram_weight, char *nram_output, const int32_t has_weight,
+    const int32_t partition_nc, const int32_t pingpong_offset,
+    const int32_t pingpong_weight_offset, const int32_t c_offset_num,
+    const int32_t n, const int32_t n_seg, const int32_t c, const int32_t c_seg,
+    const float alpha, const float gamma, T *output) {
   // with offset
   input = input + c_offset_num;
   output = output + c_offset_num;
@@ -324,8 +256,8 @@ __mlu_func__ void startPipelineFwd(
   const int32_t remain = n % n_seg;
 
   if (has_weight && !partition_nc) {
-    loadInputFwd<T>(nram_weight, (T *)weight, load_size, nram_stride,
-                    dram_stride, 1);
+    loadInput<T>(nram_weight, (T *)weight, load_size, nram_stride, dram_stride,
+                 1);
     __sync();
     inplaceConvert<T, float>(nram_weight, c_seg_align_num);
   }
@@ -356,101 +288,99 @@ __mlu_func__ void startPipelineFwd(
 
   // diagram of PINGPONG: L0
   if (repeat > 0) {
-    loadInputFwd<T>(nram_input, (T *)input, load_size, nram_stride, dram_stride,
-                    n_seg);
-    loadInputFwd<int32_t>(nram_target, (int32_t *)target,
-                          n_seg * sizeof(int32_t));
-    loadWeightFwd<T>(nram_weight, (T *)weight, *((int32_t *)target), c,
-                     has_weight, partition_nc);
+    loadInput<T>(nram_input, (T *)input, load_size, nram_stride, dram_stride,
+                 n_seg);
+    loadInput<int32_t>(nram_target, (int32_t *)target, n_seg * sizeof(int32_t));
+    loadWeight<T>(nram_weight, (T *)weight, *((int32_t *)target), c, has_weight,
+                  partition_nc);
     __sync();
   }
 
   if (repeat > 1) {
     // diagram of PINGPONG: C0
     inplaceConvert<T, float>(nram_input, deal_num);
-    computeFwd((float *)nram_input, (int32_t *)nram_target,
-               (float *)nram_weight, has_weight, partition_nc, deal_num, n_seg,
-               c, c_seg, c_offset_num, alpha, gamma, (float *)nram_compute_a,
-               (float *)nram_compute_b, (float *)nram_output);
+    compute(prefer, (float *)nram_input, (int32_t *)nram_target,
+            (float *)nram_weight, has_weight, partition_nc, deal_num, n_seg, c,
+            c_seg, c_offset_num, alpha, gamma, (float *)nram_compute_a,
+            (float *)nram_compute_b, (float *)nram_output);
     inplaceConvert<float, T>(nram_output, deal_num);
 
     // diagram of PINGPONG: L1
-    loadInputFwd<T>(nram_input + pingpong_offset, (T *)input + c * n_seg,
-                    load_size, nram_stride, dram_stride, n_seg);
-    loadInputFwd<int32_t>(nram_target + pingpong_offset,
-                          (int32_t *)target + n_seg, n_seg * sizeof(int32_t));
-    loadWeightFwd<T>(nram_weight + pingpong_weight_offset, (T *)weight,
-                     *((int32_t *)target + n_seg), c, has_weight, partition_nc);
+    loadInput<T>(nram_input + pingpong_offset, (T *)input + c * n_seg,
+                 load_size, nram_stride, dram_stride, n_seg);
+    loadInput<int32_t>(nram_target + pingpong_offset, (int32_t *)target + n_seg,
+                       n_seg * sizeof(int32_t));
+    loadWeight<T>(nram_weight + pingpong_weight_offset, (T *)weight,
+                  *((int32_t *)target + n_seg), c, has_weight, partition_nc);
     __sync();
   }
 
   for (int32_t i = 0; i < repeat - 2; ++i) {
-    storeOutputFwd<T>((T *)output + i * c * n_seg,
-                      nram_output + (i % 2) * pingpong_offset, load_size,
-                      dram_stride, nram_stride, n_seg);
-    loadInputFwd<T>(nram_input + (i % 2) * pingpong_offset,
-                    (T *)(input) + (i + 2) * c * n_seg, load_size, nram_stride,
-                    dram_stride, n_seg);
-    loadInputFwd<int32_t>(nram_target + (i % 2) * pingpong_offset,
-                          (int32_t *)target + (i + 2) * n_seg,
-                          n_seg * sizeof(int32_t));
-    loadWeightFwd<T>(nram_weight + (i % 2) * pingpong_weight_offset,
-                     (T *)weight, *((int32_t *)target + (i + 2) * n_seg), c,
-                     has_weight, partition_nc);
+    storeOutput<T>((T *)output + i * c * n_seg,
+                   nram_output + (i % 2) * pingpong_offset, load_size,
+                   dram_stride, nram_stride, n_seg);
+    loadInput<T>(nram_input + (i % 2) * pingpong_offset,
+                 (T *)(input) + (i + 2) * c * n_seg, load_size, nram_stride,
+                 dram_stride, n_seg);
+    loadInput<int32_t>(nram_target + (i % 2) * pingpong_offset,
+                       (int32_t *)target + (i + 2) * n_seg,
+                       n_seg * sizeof(int32_t));
+    loadWeight<T>(nram_weight + (i % 2) * pingpong_weight_offset, (T *)weight,
+                  *((int32_t *)target + (i + 2) * n_seg), c, has_weight,
+                  partition_nc);
 
     inplaceConvert<T, float>(nram_input + ((i + 1) % 2) * pingpong_offset,
                              deal_num);
-    computeFwd((float *)(nram_input + ((i + 1) % 2) * pingpong_offset),
-               (int32_t *)(nram_target + ((i + 1) % 2) * pingpong_offset),
-               (float *)(nram_weight +
-                         partition_nc * ((i + 1) % 2) * pingpong_weight_offset),
-               has_weight, partition_nc, deal_num, n_seg, c, c_seg,
-               c_offset_num, alpha, gamma, (float *)nram_compute_a,
-               (float *)nram_compute_b,
-               (float *)(nram_output + ((i + 1) % 2) * pingpong_offset));
+    compute(prefer, (float *)(nram_input + ((i + 1) % 2) * pingpong_offset),
+            (int32_t *)(nram_target + ((i + 1) % 2) * pingpong_offset),
+            (float *)(nram_weight +
+                      partition_nc * ((i + 1) % 2) * pingpong_weight_offset),
+            has_weight, partition_nc, deal_num, n_seg, c, c_seg, c_offset_num,
+            alpha, gamma, (float *)nram_compute_a, (float *)nram_compute_b,
+            (float *)(nram_output + ((i + 1) % 2) * pingpong_offset));
     inplaceConvert<float, T>(nram_output + ((i + 1) % 2) * pingpong_offset,
                              deal_num);
     __sync();
   }
 
   if (repeat > 1) {
-    storeOutputFwd<T>((T *)output + (repeat - 2) * c * n_seg,
-                      nram_output + (repeat % 2) * pingpong_offset, load_size,
-                      dram_stride, nram_stride, n_seg);
+    storeOutput<T>((T *)output + (repeat - 2) * c * n_seg,
+                   nram_output + (repeat % 2) * pingpong_offset, load_size,
+                   dram_stride, nram_stride, n_seg);
   }
 
   if (remain > 0) {
-    loadInputFwd<T>(nram_input + (repeat % 2) * pingpong_offset,
-                    (T *)input + repeat * c * n_seg, load_size, nram_stride,
-                    dram_stride, remain);
-    loadInputFwd<int32_t>(nram_target + (repeat % 2) * pingpong_offset,
-                          (int32_t *)target + repeat * n_seg,
-                          remain * sizeof(int32_t));
-    loadWeightFwd<T>(nram_weight + (repeat % 2) * pingpong_weight_offset,
-                     (T *)weight, *((int32_t *)target + repeat * n_seg), c,
-                     has_weight, partition_nc);
+    loadInput<T>(nram_input + (repeat % 2) * pingpong_offset,
+                 (T *)input + repeat * c * n_seg, load_size, nram_stride,
+                 dram_stride, remain);
+    loadInput<int32_t>(nram_target + (repeat % 2) * pingpong_offset,
+                       (int32_t *)target + repeat * n_seg,
+                       remain * sizeof(int32_t));
+    loadWeight<T>(nram_weight + (repeat % 2) * pingpong_weight_offset,
+                  (T *)weight, *((int32_t *)target + repeat * n_seg), c,
+                  has_weight, partition_nc);
   }
 
   if (repeat > 0) {
     inplaceConvert<T, float>(nram_input + ((repeat - 1) % 2) * pingpong_offset,
                              deal_num);
-    computeFwd((float *)(nram_input + ((repeat - 1) % 2) * pingpong_offset),
-               (int32_t *)(nram_target + ((repeat - 1) % 2) * pingpong_offset),
-               (float *)(nram_weight + partition_nc * ((repeat - 1) % 2) *
-                                           pingpong_weight_offset),
-               has_weight, partition_nc, deal_num, n_seg, c, c_seg,
-               c_offset_num, alpha, gamma, (float *)nram_compute_a,
-               (float *)nram_compute_b,
-               (float *)(nram_output + ((repeat - 1) % 2) * pingpong_offset));
+    compute(prefer,
+            (float *)(nram_input + ((repeat - 1) % 2) * pingpong_offset),
+            (int32_t *)(nram_target + ((repeat - 1) % 2) * pingpong_offset),
+            (float *)(nram_weight + partition_nc * ((repeat - 1) % 2) *
+                                        pingpong_weight_offset),
+            has_weight, partition_nc, deal_num, n_seg, c, c_seg, c_offset_num,
+            alpha, gamma, (float *)nram_compute_a, (float *)nram_compute_b,
+            (float *)(nram_output + ((repeat - 1) % 2) * pingpong_offset));
     inplaceConvert<float, T>(nram_output + ((repeat - 1) % 2) * pingpong_offset,
                              deal_num);
   }
   __sync();
 
   if (repeat > 0) {
-    storeOutputFwd<T>((T *)output + (repeat - 1) * c * n_seg,
-                      nram_output + ((repeat - 1) % 2) * pingpong_offset,
-                      load_size, dram_stride, nram_stride, n_seg);
+    storeOutput<T>((T *)output + (repeat - 1) * c * n_seg,
+                   nram_output + ((repeat - 1) % 2) * pingpong_offset,
+                   load_size, dram_stride, nram_stride, n_seg);
   }
 
   if (remain > 0) {
@@ -458,58 +388,57 @@ __mlu_func__ void startPipelineFwd(
         PAD_UP(remain * c_num, NFU_ALIGN_SIZE / sizeof(float));
     inplaceConvert<T, float>(nram_input + (repeat % 2) * pingpong_offset,
                              rem_num);
-    computeFwd((float *)(nram_input + (repeat % 2) * pingpong_offset),
-               (int32_t *)(nram_target + (repeat % 2) * pingpong_offset),
-               (float *)(nram_weight +
-                         partition_nc * (repeat % 2) * pingpong_weight_offset),
-               has_weight, partition_nc, rem_num, remain, c, c_seg,
-               c_offset_num, alpha, gamma, (float *)nram_compute_a,
-               (float *)nram_compute_b,
-               (float *)(nram_output + (repeat % 2) * pingpong_offset));
+    compute(prefer, (float *)(nram_input + (repeat % 2) * pingpong_offset),
+            (int32_t *)(nram_target + (repeat % 2) * pingpong_offset),
+            (float *)(nram_weight +
+                      partition_nc * (repeat % 2) * pingpong_weight_offset),
+            has_weight, partition_nc, rem_num, remain, c, c_seg, c_offset_num,
+            alpha, gamma, (float *)nram_compute_a, (float *)nram_compute_b,
+            (float *)(nram_output + (repeat % 2) * pingpong_offset));
     inplaceConvert<float, T>(nram_output + (repeat % 2) * pingpong_offset,
                              deal_num);
     __sync();
 
-    storeOutputFwd<T>((T *)output + repeat * c * n_seg,
-                      nram_output + (repeat % 2) * pingpong_offset, load_size,
-                      dram_stride, nram_stride, remain);
+    storeOutput<T>((T *)output + repeat * c * n_seg,
+                   nram_output + (repeat % 2) * pingpong_offset, load_size,
+                   dram_stride, nram_stride, remain);
   }
   __sync();
 }
 
+/*
+ * NRAM partition
+ *  |-----------------------------------------------------------------------|
+ *  |                                 weight                                |
+ *  |-----------------------------------------------------------------------|
+ *  |              computeA             |           computeB                |
+ *  |-----------------------------------|-----------------------------------|
+ *  |              PING input           |           PING output             |
+ *  |-----------------------------------|-----------------------------------|
+ *  |              PONG input           |           PONG output             |
+ *  |-----------------------------------|-----------------------------------|
+ *  |              target               |           target                  |
+ *  |-----------------------------------------------------------------------|
+ *
+ * split_pipeline_num = 6:
+ *    compute(computeA, computeB)
+ *    PING(input, output)
+ *    PONG(input, output)
+ *
+ * split_target_num = 2:
+ *    PING(target), PONG(target).
+ *
+ * weight is not NULL:
+ *    The nram-size of weight is equal to c_align_size when partition input-N.
+ *    The nram-size of weight is equal to NFU_ALIGN_SIZE when partition
+ *    input-N.
+ */
 template <typename T>
-__mlu_func__ void focalLossSigmoidForward(const T *input, const int32_t *target,
-                                          const T *weight, const int32_t n,
-                                          const int32_t c, const float alpha,
-                                          const float gamma, T *output) {
-  /*
-   * NRAM partition
-   *  |-----------------------------------------------------------------------|
-   *  |                                weight                                 |
-   *  |------------------------------- COMPUTE -------------------------------|
-   *  |                                   |                                   |
-   *  |              computeA             |               computeB            |
-   *  |                                   |                                   |
-   *  |------------- PING ------------------------------- PONG ---------------|
-   *  |                                   |                                   |
-   *  |              input                |               input               |
-   *  |                                   |                                   |
-   *  |-----------------------------------|-----------------------------------|
-   *  |                                   |                                   |
-   *  |              output               |               output              |
-   *  |                                   |                                   |
-   *  |-----------------------------------|-----------------------------------|
-   *  |              target               |               target              |
-   *  |-----------------------------------|-----------------------------------|
-   *
-   * split_pipeline_num is 6: computeFwd(computeA,computeB), PING(input,output),
-   * PONG(input,output). split_target_num is 2: PING(target), PONG(target).
-   * weight is not NULL:
-   *   The nram-size of weight is equal to c_align_size when partition input-N.
-   *   The nram-size of weight is equal to NFU_ALIGN_SIZE when partition
-   * input-N.
-   */
-
+__mlu_func__ void partitionInput(const focalLossSigmoidPreference_t prefer,
+                                 const T *input, const int32_t *target,
+                                 const T *weight, const int32_t n,
+                                 const int32_t c, const float alpha,
+                                 const float gamma, T *output) {
   // calculate threshold of c
   const int32_t has_weight = weight != NULL;
   const int32_t split_pipeline_num = 6;
@@ -523,7 +452,7 @@ __mlu_func__ void focalLossSigmoidForward(const T *input, const int32_t *target,
   const int32_t c_align_size = c_align * sizeof(float);
 
   if (c <= threshold_c) {
-    // partition inputN
+    // partition N
     int32_t c_num = c;
     int32_t reservered_align_size =
         (split_target_num + split_pipeline_num) * NFU_ALIGN_SIZE;
@@ -550,12 +479,12 @@ __mlu_func__ void focalLossSigmoidForward(const T *input, const int32_t *target,
     char *nram_input = nram_compute_b + split_pipeline_size;
     char *nram_output = nram_input + split_pipeline_size;
     char *nram_target = nram_output + split_pipeline_size;
-    startPipelineFwd<T>(input, target, weight, nram_compute_a, nram_compute_b,
-                        nram_input, nram_target, nram_weight, nram_output,
-                        has_weight, 0, pingpong_offset, 0, 0, n, n_seg, c, c,
-                        alpha, gamma, output);
+    startPipeline<T>(prefer, input, target, weight, nram_compute_a,
+                     nram_compute_b, nram_input, nram_target, nram_weight,
+                     nram_output, has_weight, 0, pingpong_offset, 0, 0, n,
+                     n_seg, c, c, alpha, gamma, output);
   } else {
-    // partition inputNC
+    // partition NC
     const int32_t weight_size = has_weight * NFU_ALIGN_SIZE;
     const int32_t remain_size =
         MAX_NRAM_SIZE - weight_size - split_target_num * NFU_ALIGN_SIZE;
@@ -580,19 +509,20 @@ __mlu_func__ void focalLossSigmoidForward(const T *input, const int32_t *target,
     for (int32_t i = 0; i < loop_num; ++i) {
       const int32_t c_index = i * c_seg;
       const int32_t c_seg_curr = i == (loop_num - 1) ? c - c_index : c_seg;
-      startPipelineFwd<T>(input, target, weight, nram_compute_a, nram_compute_b,
-                          nram_input, nram_target, nram_weight, nram_output,
-                          has_weight, partition_nc, pingpong_offset,
-                          pingpong_weight_offset, c_index, n, n_seg, c,
-                          c_seg_curr, alpha, gamma, output);
+      startPipeline<T>(prefer, input, target, weight, nram_compute_a,
+                       nram_compute_b, nram_input, nram_target, nram_weight,
+                       nram_output, has_weight, partition_nc, pingpong_offset,
+                       pingpong_weight_offset, c_index, n, n_seg, c, c_seg_curr,
+                       alpha, gamma, output);
     }
   }
 }
 
 template <typename T>
 __mlu_global__ void MLUUnion1KernelFocalLossSigmoidForward(
-    const void *input, const void *target, const void *weight, const int32_t N,
-    const int32_t C, const float alpha, const float gamma, void *output) {
+    const focalLossSigmoidPreference_t prefer, const void *input,
+    const void *target, const void *weight, const int32_t N, const int32_t C,
+    const float alpha, const float gamma, void *output) {
   const int32_t n_seg = N / taskDim + (int32_t)((N % taskDim) > taskId);
   const int32_t n_offset = (N % taskDim) > taskId
                                ? (N / taskDim + 1) * taskId
@@ -601,26 +531,28 @@ __mlu_global__ void MLUUnion1KernelFocalLossSigmoidForward(
   const int32_t *base_target = (int32_t *)target + n_offset;
   T *base_output = (T *)output + n_offset * C;
 
-  focalLossSigmoidForward((T *)base_input, (int32_t *)base_target, (T *)weight,
-                          n_seg, C, alpha, gamma, (T *)base_output);
+  partitionInput(prefer, (T *)base_input, (int32_t *)base_target, (T *)weight,
+                 n_seg, C, alpha, gamma, (T *)base_output);
 }
 
 }  // namespace forward
 
 void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *target, const void *weight, const int32_t N,
-    const int32_t C, const float alpha, const float gamma, void *output) {
+    const focalLossSigmoidPreference_t prefer, const void *input,
+    const void *target, const void *weight, const int32_t N, const int32_t C,
+    const float alpha, const float gamma, void *output) {
   forward::MLUUnion1KernelFocalLossSigmoidForward<half>
-      <<<k_dim, k_type, queue>>>(input, target, weight, N, C, alpha, gamma,
-                                 output);
+      <<<k_dim, k_type, queue>>>(prefer, input, target, weight, N, C, alpha,
+                                 gamma, output);
 }
 
 void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, const void *target, const void *weight, const int32_t N,
-    const int32_t C, const float alpha, const float gamma, void *output) {
+    const focalLossSigmoidPreference_t prefer, const void *input,
+    const void *target, const void *weight, const int32_t N, const int32_t C,
+    const float alpha, const float gamma, void *output) {
   forward::MLUUnion1KernelFocalLossSigmoidForward<float>
-      <<<k_dim, k_type, queue>>>(input, target, weight, N, C, alpha, gamma,
-                                 output);
+      <<<k_dim, k_type, queue>>>(prefer, input, target, weight, N, C, alpha,
+                                 gamma, output);
 }
