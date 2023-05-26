@@ -31,10 +31,7 @@ FocalLossSigmoidForwardExecutor::getComputationPreference() {
   auto focal_proto_desc =
       parser_->getProtoNode()->focal_loss_sigmoid_forward_param();
   auto prefer = focal_proto_desc.prefer();
-  if (prefer == ComputationPreference::COMPUTATION_FAST) {
-    return mluOpComputationPreference_t::MLUOP_COMPUTATION_FAST;
-  }
-  return mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION;
+  return static_cast<mluOpComputationPreference_t>(prefer);
 }
 
 mluOpLossReduction_t FocalLossSigmoidForwardExecutor::getLossReduction() {
@@ -116,9 +113,10 @@ void FocalLossSigmoidForwardExecutor::focalLossSigmoidForwardCpuFast(
       int32_t row_num = i / C;
       int32_t col_num = i % C;
       int32_t t = target[row_num];
-      float p = 1. / (1. + exp(-input[i]));
-      float temp_p = pow(1. - p, gamma) * log(fmax(p, FLT_MIN));
-      float temp_n = pow(p, gamma) * log(fmax(1. - p, FLT_MIN));
+
+      float p = float(1.) / float(float(1.) + expf(-input[i]));
+      float temp_p = powf(float(1.) - p, gamma) * logf(fmax(p, FLT_MIN));
+      float temp_n = powf(p, gamma) * logf(fmax(float(1.) - p, FLT_MIN));
       if (t == col_num) {
         output[i] = -alpha * temp_p;
       } else {
@@ -219,8 +217,7 @@ void FocalLossSigmoidForwardExecutor::cpuCompute() {
   float *output = cpu_fp32_output_[0];
   auto output_num = parser_->getOutputDataCount(0);
 
-  VLOG(5)
-      << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
+  VLOG(5) << "[FOCAL_LOSS_SIGMOID_FORWARD] call focalLossSigmoidForwardCpu.";
   {
     switch (prefer) {
       case ComputationPreference::COMPUTATION_FAST: {

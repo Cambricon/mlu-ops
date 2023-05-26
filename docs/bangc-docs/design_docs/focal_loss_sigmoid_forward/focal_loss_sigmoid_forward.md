@@ -15,7 +15,7 @@
 | ----- | ----- | ---------- | --------      |
 | V1.0  | 王远   | 2021-07-06 | 首次提交       |
 | V1.1  | 王远   | 2021-11-08 | 解除`input`规模限制，支持`half`类型输入，性能优化|
-
+| V2.0  | 王远   | 2023-05-08 | 新增 `MLUOP_COMPUTATION_FAST`模式，支持 float inf&nan |
 - #### 内容描述
 
 本文档为`FocalLossSigmoidBackward`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
@@ -39,7 +39,7 @@
 
 example:
 
-| 算子功能简介                                  | 依据sigmoid计算输入数据的概率，通过概率值计算并输出focal_loss，详细描述在1.2中进行说明           |
+| 算子功能简介                                  | 依据sigmoid计算输入数据的概率，通过概率值计算并输出focal_loss       |
 | --------------------------------------------| ----------------------------------------------------------- |
 | 需求来源                                      | PyTorch                                                    |
 | 应用网络                                      | mmdet-retinanet                                            |
@@ -82,13 +82,17 @@ CE(p,target) =
 
 ```math
 FL(p_t) = -\alpha_t(1-p_t)^\gamma log(pt)
-\\
+```
+
+```math
 p_t =
 \begin{cases}
 p,  & target=1 \\
 1-p, & otherwise
 \end{cases}
-\\
+```
+
+```math
 \alpha_t =
 \begin{cases}
 \alpha,  & target=1 \\
@@ -128,7 +132,7 @@ s.t　& i=1,2,...,N \\
 | 限制类型     | 详细说明                                 |
 | ------------| -------------------------------------  |
 | 数据类型限制  | 数据类型需与1.3小节匹配                    |
-| 功能限制     | 暂不支持`MLUOP_COMPUTATION_HIGH_PRECISION`以外模式 (参数`prefer`) |
+| 功能限制     | 暂不支持`MLUOP_COMPUTATION_ULTRAHIGH_PRECISION`模式 (参数`prefer`) |
 | 功能限制     | 暂不支持`None`以外模式 (参数`reduction`)        |
 | 规模限制     | 无|
 | 数据范围限制  | weight为`NULL`时，target 取值范围为 `[0,C]`    |
@@ -187,9 +191,11 @@ class SigmoidFocalCrossEntropy(LossFunctionWrapper):
 ```c++
 typedef enum {
   MLUOP_COMPUTATION_FAST = 0,
-  /*!< Implementation with the fastest algorithm and lower precision.*/
+  /*!< Implementation with the fastest algorithm and lower precision. */
   MLUOP_COMPUTATION_HIGH_PRECISION = 1,
-  /*!< Implementation with the high-precision algorithm regardless of the performance.*/
+  /*!< Implementation with the high-precision algorithm regardless of the performance. */
+  MLUOP_COMPUTATION_ULTRAHIGH_PRECISION = 2,
+  /*!< Implementation with the ultrahigh-precision algorithm regardless of the performance. */
 } mluOpComputationPreference_t;
 ```
 
@@ -233,6 +239,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
 ```
 
 暂不考虑`weight`的情况下，`Focal Loss Sigmoid Forward` 的计算公式如下：
+
 ```math
 FL_{i,j} = -\alpha t_{i,j}(1-pt_{i,j})^\gamma log(pt_{i,j})\tag{1}
 ```
@@ -261,47 +268,24 @@ s.t　& i=1,2,...,N \\
 \end{aligned}
 ```
 
+若`weight`为`NULL`，则返回公式（1）计算结果。
 
-对于 `j==target_i`：
 ```math
-\begin{aligned}
-   FL & = -\alpha  * (1-p)^\gamma * log(p) \\
-      & = \alpha * (1-p)^\gamma * log(1+e^{-x})\\
-\end{aligned}
-```
-其中 ` log(1+e^{-x}) ` 的输入为负数的时候曲线陡峭，容易造成精度丢失，为提升精度，此处对输入做缩放：
-```math
-\begin{aligned}
-   log(1+e^{-x}) & = log(\frac{e^{-max(0,-x)} +e^{-x-max(0,-x)}}{e^{-max(0,-x)}}) \\
-      & = log({e^{-max(0,-x)} +e^{-max(0,-x)-x}}) - log(e^{-max(0,-x)}) \\
-      & = log(e^{-max(0,-x)} + e^{-max(0,-x) -x}) + max(0,-x) \\
-\end{aligned}
+FL_{i,j} = FL_{i,j}*weight_t　\tag{2}
 ```
 
-此时 `log()` 中输入数据 `e^{-max(0,-x)} + e^{-max(0,-x) -x}` 较为平缓。公式可变化为：
 ```math
-FL = -\alpha t_{i,j}(1-pt_{i,j})^\gamma log(pt_{i,j}) =
-\begin{cases}
-\alpha t_{i,j}(1-pt_{i,j})^\gamma * [log(e^{-max(0,-x_{i,j})} + e^{-max(0,-x_{i,j}) -x_{i,j}}) + max(0,-x_{i,j})],  & j==target_i \\\tag{2}
-\alpha t_{i,j}(1-pt_{i,j})^\gamma  * [log(e^{-max(0,x_{i,j})} + e^{-max(0,x_{i,j})+x_{i,j}}) + max(0,x_{i,j})], & otherwise
-\end{cases}
-
-```
-
-若`weight`为`NULL`，则返回公式(2)计算结果，否则：
-```math
-FL_{i,j} = FL_{i,j}*weight_t　\tag{3}
-\\
 \begin{aligned}
 s.t　& i=1,2,...,N \\
      & j=1,2,...,C \\
      & t=target_i
 \end{aligned}
 ```
-返回计算结果`FL`，计算结束。
+
+否则，返回公式（2）计算结果`FL`，计算结束。
 
 
-- 对于公式（3）中的指数运算，可通过`log()`、`exp()`实现：
+- 对于上述公式中的指数运算，可通过`log()`、`exp()`实现：
 ```math
 x^y=e^{y*log(x)}
 ```
@@ -314,7 +298,77 @@ x^y=e^{y*log(x)}
 5. `x<0`，`y`为整数时，`pow(x,y) = (-1)^y * exp(y*log(|x|))`
 6. `x<0`，`y`为非整数时，`pow(x,y) = NAN`
 
+#### 3.1.1 MLUOP_COMPUTATION_FAST 方案
+
+上述公式中 `log` 使用 `__mluop_log`。
+
+`nan/inf` 状态:
+- `half,float`: 数据数据包含 `nan` 时，`MLU` 计算结果对齐 `GPU`
+- `float`: 数据数据包含 `inf` 时，`MLU` 计算结果对齐 `GPU`
+- `half`: 数据数据包含 `inf` 时，`MLU` 计算结果不对齐 `GPU`，原因：`GPU` 部分计算过程使用位宽提升进行运算，`GPU half,float` 对于 inf 行为不一致
+
+
+#### 3.1.2 MLUOP_COMPUTATION_HIGH_PRECISION 方案
+
+上述公式中 `log(1 - p)`，`1 - p` 接近 `0` 时函数曲线十分陡峭，容易造成精度丢失。
+BANG C 中 log 指令精度较低，因此修改算法进行提升精度，此处对`log()`的输入进行变换：
+
+```math
+\begin{aligned} 
+   log(p) & = log(\frac{1}{1+e^{-x}}) \\
+          & = -log(1+e^{-x}) \\
+          & = -log(\frac{e^{-max(0,-x)} + e^{-x-max(0,-x)}}{e^{-max(0,-x)}}) \\
+          & = -log({e^{-max(0,-x)} +e^{-max(0,-x)-x}}) - log(e^{-max(0,-x)}) \\
+          & = -log(e^{-max(0,-x)} + e^{-max(0,-x) -x}) + max(0,-x) \\
+\end{aligned}
+```
+
+```math
+\begin{aligned} 
+   log(1 - p) & = log(\frac{e^{-x}}{1+e^{-x}}) \\
+              & = -log(\frac{1+e^{-x}}{e^{-x}}) \\
+              & = -log(1+\frac{1}{e^{-x}}) \\
+              & = -log(1+e^{x}) \\
+              & = -log(e^{-max(0,x)} + e^{-max(0,x)+x}) + max(0,x) \\
+\end{aligned}
+```
+
+其中：
+
+```math
+e^{-max(0,-x)} \tag{3}
+```
+
+```math
+e^{-max(0,-x) -x} \tag{4}
+```
+
+对应上式中所展开的两部分（公式3、4），此时较为平缓。下图中，公式3为蓝色虚线，公式4为红色虚线：
+
+![pipline](log_exp.png)
+
+最终 `FL` 公式为：
+
+```math
+FL = -\alpha t_{i,j}(1-pt_{i,j})^\gamma log(pt_{i,j}) =
+\begin{cases}
+\alpha t_{i,j}(1-pt_{i,j})^\gamma * [log(e^{-max(0,-x_{i,j})} + e^{-max(0,-x_{i,j}) -x_{i,j}}) + max(0,-x_{i,j})],  & j==target_i \\\tag{5}
+\alpha t_{i,j}(1-pt_{i,j})^\gamma  * [log(e^{-max(0,x_{i,j})} + e^{-max(0,x_{i,j})+x_{i,j}}) + max(0,x_{i,j})], & otherwise
+\end{cases}
+
+```
+
+`nan/inf` 状态:
+- `half,float`: 数据数据包含 `nan` 时，`MLU` 计算结果对齐 `GPU`
+- `half,float`: 数据数据包含 `inf` 时，`MLU` 计算结果不对齐 `GPU`，原因：`log` 展开的算法中包含一步为`-max(0,x) + x = -inf + inf = nan`，该步计算导致行为与 `GPU` 存在差异。
+
+二者方案上的差别在于：
+- `MLUOP_COMPUTATION_FAST` 方案对于 `log` 使用 `__mluop_log` 。
+- `MLUOP_COMPUTATION_HIGH_PRECISION` 方案展开计算`log`，计算过程指令均为 `BANG C` 指令；
+
 ### 3.2 伪代码实现
+
+无
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
@@ -343,7 +397,6 @@ x^y=e^{y*log(x)}
 
 ### 3.6 测试用例设计
 
-- 网络中参数`prefer`恒为 `MLUOP_COMPUTATION_HIGH_PRECISION`。
 - 网络中参数`reduction`恒为 `MLUOP_LOSS_REDUCTION_NONE`。
 - 输入数据`input` 的`shape`为 `[N, C]`，测试规模设计如下表所示。
 
@@ -365,6 +418,8 @@ x^y=e^{y*log(x)}
 4、算子存在的自身的相关参数防呆。
 
 ## 4 算子性能/精度问题 & 优化记录
+
+相较 `MLUOP_COMPUTATION_HIGH_PRECISION` ，相同规模 `case` 在 `MLUOP_COMPUTATION_FAST` 模式 下，`mlu` 硬件时间提升百分比在 `10%~20%`。
 
 ### 4.1 当前存在问题的规模说明
 

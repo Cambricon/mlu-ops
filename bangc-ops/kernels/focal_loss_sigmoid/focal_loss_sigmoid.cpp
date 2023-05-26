@@ -157,9 +157,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   PARAM_CHECK("[mluOpFocalLossSigmoidForward]", output_desc != NULL);
 
   // params check
-  if (prefer !=
-      mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION) {
-    LOG(ERROR) << interface_name << "only support HIGH_PRECISION currently.";
+  if (prefer ==
+      mluOpComputationPreference_t::MLUOP_COMPUTATION_ULTRAHIGH_PRECISION) {
+    LOG(ERROR)
+        << interface_name
+        << "does not support MLUOP_COMPUTATION_ULTRAHIGH_PRECISION currently.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (reduction != mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_NONE) {
@@ -204,7 +206,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
       GEN_CASE_DATA_REAL(true, "weight", weight, weight_desc);
     }
     GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
-    GEN_CASE_OP_PARAM_SINGLE(0, "focal_loss_sigmoid_forward", "prefer", 1);
+    GEN_CASE_OP_PARAM_SINGLE(0, "focal_loss_sigmoid_forward", "prefer", prefer);
     GEN_CASE_OP_PARAM_SINGLE(1, "focal_loss_sigmoid_forward", "reduction", 0);
     GEN_CASE_OP_PARAM_SINGLE(1, "focal_loss_sigmoid_forward", "alpha", alpha);
     GEN_CASE_OP_PARAM_SINGLE(2, "focal_loss_sigmoid_forward", "gamma", gamma);
@@ -223,12 +225,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
           << k_dim.z << ">>>";
   if (input_desc->dtype == MLUOP_DTYPE_HALF) {
     KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidForwardHalf(
-        k_dim, k_type, handle->queue, input, target, weight, N, C, alpha, gamma,
-        output)));
+        k_dim, k_type, handle->queue,
+        static_cast<focalLossSigmoidPreference_t>(prefer), input, target,
+        weight, N, C, alpha, gamma, output)));
   } else {
     KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidForwardFloat(
-        k_dim, k_type, handle->queue, input, target, weight, N, C, alpha, gamma,
-        output)));
+        k_dim, k_type, handle->queue,
+        static_cast<focalLossSigmoidPreference_t>(prefer), input, target,
+        weight, N, C, alpha, gamma, output)));
   }
 
   GEN_CASE_END();
