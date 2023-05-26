@@ -23,9 +23,9 @@
 #include "kernels/tin_shift/tin_shift.h"
 
 #include "kernels/kernel.h"
-// #include "kernels/utils/common.h"
 
 __nram__ char data_nram[MAX_NRAM_SIZE];
+
 template <typename T>
 __mlu_func__ void mluMultiKernelTinShift(
     const T *input, const int *shifts, T *output, const int batch_size,
@@ -65,6 +65,7 @@ __mlu_func__ void mluMultiKernelTinShift(
     __asm__ volatile("sync;");
   }
 }
+
 template <typename T>
 __mlu_func__ void mluHwSplit(const T *input, const int t_shift,
                              const int time_size, const int hw_size,
@@ -90,6 +91,7 @@ __mlu_func__ void mluHwSplit(const T *input, const int t_shift,
     __asm__ volatile("sync;");
   }
 }
+
 template <typename T>
 __mlu_func__ void mluMultiKernelTinShiftSplitSequence(
     const T *input, const int *shifts, T *output, const int batch_size,
@@ -227,6 +229,7 @@ __mlu_func__ void mluMultiKernelTinShiftSplitSequence(
     __asm__ volatile("sync;");
   }
 }
+
 __mlu_entry__ void mluUnion1TinShift(const void *input, const void *shifts,
                                      void *output, const int batch_size,
                                      const int time_size,
@@ -254,6 +257,7 @@ __mlu_entry__ void mluUnion1TinShift(const void *input, const void *shifts,
     }
   }
 }
+
 __mlu_entry__ void mluUnion1TinShiftSplitSequence(
     const void *input, const void *shifts, void *output, const int batch_size,
     const int time_size, const int channel_size, const int hw_size,

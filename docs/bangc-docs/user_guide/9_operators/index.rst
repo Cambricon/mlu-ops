@@ -816,7 +816,7 @@ mluOpTinShiftBackward
 
 mluOpTinShiftForward
 -----------------------------
-输入在channel维度根据shift的第二维的维度大小进行分组，每组channels中的数据依据shift值在时序上进行移动。
+输入在channel维度根据shift的第二维的维度大小进行分组，每组channel中的数据依据shift值在时序上进行移动。
 
 .. _transpose:
 
