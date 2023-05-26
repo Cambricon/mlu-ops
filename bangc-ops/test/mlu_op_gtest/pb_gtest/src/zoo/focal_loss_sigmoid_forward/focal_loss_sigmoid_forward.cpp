@@ -31,10 +31,7 @@ FocalLossSigmoidForwardExecutor::getComputationPreference() {
   auto focal_proto_desc =
       parser_->getProtoNode()->focal_loss_sigmoid_forward_param();
   auto prefer = focal_proto_desc.prefer();
-  if (prefer == ComputationPreference::COMPUTATION_FAST) {
-    return mluOpComputationPreference_t::MLUOP_COMPUTATION_FAST;
-  }
-  return mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION;
+  return static_cast<mluOpComputationPreference_t>(prefer);
 }
 
 mluOpLossReduction_t FocalLossSigmoidForwardExecutor::getLossReduction() {
