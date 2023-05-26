@@ -252,12 +252,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
       k_dim, k_type, handle->queue, feats, voxel_feats, grad_feats, workspace,
       point2voxel_map, voxel_num, N, C)));
   // 2. scatter
+  const auto grad_voxel_feats_element_num =
+      mluOpGetTensorElementNum(grad_voxel_feats_desc);
+  const auto grad_feats_element_num = mluOpGetTensorElementNum(grad_feats_desc);
   mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_ADD;
   mluOpTensorDescriptor_t indices_desc;
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&indices_desc));
-  int indices_dims[2] = {N * C, 1};
+  int indices_dims[2] = {(int)grad_voxel_feats_element_num, 1};
   INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
                                      mluOpSetTensorDescriptor(
                                          indices_desc, MLUOP_LAYOUT_ARRAY,
@@ -266,7 +269,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&updates_desc));
-  int updates_dims[1] = {N * C};
+  int updates_dims[1] = {(int)grad_voxel_feats_element_num};
   INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
                                      mluOpSetTensorDescriptor(
                                          updates_desc, MLUOP_LAYOUT_ARRAY,
@@ -274,7 +277,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
   mluOpTensorDescriptor_t output_desc;
   INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
                                      mluOpCreateTensorDescriptor(&output_desc));
-  int output_dims[1] = {N * C};
+  int output_dims[1] = {(int)grad_feats_element_num};
   INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
                                      mluOpSetTensorDescriptor(
                                          output_desc, MLUOP_LAYOUT_ARRAY,
