@@ -34,6 +34,7 @@ carafe = ["fill", "tensor_stride_process"]
 ms_deform_attn_forward = ["fill"]
 dynamic_point_to_voxel_backward = ["scatter_nd"]
 dynamic_point_to_voxel_forward = ["fill", "unique"]
+masked_col2im_forward = ["fill", "transpose"]
 
 [bangc-ops.gtest]
 

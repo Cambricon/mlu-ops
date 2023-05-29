@@ -12863,6 +12863,152 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t data_col_desc,
                          void *data_col);
 
+// Group:MaskedCol2im
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
+ * optimize the MaskedCol2imForward operation.
+ *
+ * The size of the extra workspace is based on the given information of the MaskedCol2imForward operation,
+ * including the input tensor descriptor \b col_desc and \b im_desc. For more information about the workspace,
+ * see "Cambricon BANGC OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpGetMaskedCol2imForwardWorkspaceSize operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] col_desc
+ * The descriptor of the tensor \b col. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_h_idx_desc
+ * The descriptor of the tensor \b mask_h_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_w_idx_desc
+ * Descriptor of input data \b mask_w_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] im_desc
+ * Descriptor of input data \b im. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * The size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitations
+ * - None.
+ *
+ * @par API Dependency
+ * - This function must be called before ::mluOpMaskedCol2imForward.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
+                                         const mluOpTensorDescriptor_t col_desc,
+                                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                                         const mluOpTensorDescriptor_t im_desc,
+                                         size_t *workspace_size);
+
+// Group:MaskedCol2im
+/*!
+ * @brief  Copies the data of the input tensor \b col to the special coordinates by combining \b mask_h_idx tensor
+ * and \b mask_w_idx tensor of output tensor \b im.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * :mluOpMaskedCol2imForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] col_desc
+ * The descriptor of the tensor \b col. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] col
+ * Pointer to the MLU memory that stores the tensor \b col.
+ * @param[in] mask_h_idx_desc
+ * The descriptor of the tensor \b mask_h_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_h_idx
+ * Pointer to the MLU memory that stores the mask_h_idx tensor which contains
+ * the coordinates of mask in height direction.
+ * @param[in] mask_w_idx_desc
+ * Descriptor of input data \b mask_w_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_w_idx
+ * Pointer to the MLU memory that stores the mask_w_idx tensor which contains
+ * the coordinates of mask in width direction.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the MaskedCol2imForward
+ * operation. For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * @param[in] im_desc
+ * The descriptor of the tensor \b im. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] im
+ * Pointer to the MLU memory that stores the \b im tensor that is the data copied from \b col tensor.
+ *
+ * @par Return
+ * - MLUOP_STATUS_SUCCESS, MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for \b col tensor, \b mask_h_idx tensor,
+ *   \b mask_w_idx tensor and \b im tensor.
+ *   Data types of col tensor and im tensor must be the same.
+ *   - col tensor: half, float
+ *   - mask_h_idx tensor: int32_t
+ *   - mask_w_idx tensor: int32_t
+ *   - im tensor: half, float
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b col, \b mask_h_idx, \b mask_w_idx and \b im are as follows:
+ *   - col tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - mask_h_idx tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - mask_w_idx tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - im tensor: \p MLUOP_LAYOUT_NCHW
+ *
+ * @par Scale Limitation
+ * - The \b col tensor must be 2D.
+ * - The \b mask_h_idx tensor must be 1D.
+ * - The \b mask_w_idx tensor must be 1D.
+ * - The \b im tensor must be 4D.
+ * - The highest dimension of \b im tensor must be 1.
+ * - The sizes of the lowest dimension of \b col tensor, the element number of \b mask_h_idx tensor and
+ *   the element number of \b mask_w_idx tensor must be the same.
+ * - When the element number of \b im tensor equals to zero, this function will return MLUOP_STATUS_BAD_PARAM.
+ * - When size of the highest dimension of \b col tensor equals to zero, this function will return
+ *   MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par API Dependency
+ * - Before calling this function you need to call ::mluOpGetMaskedCol2imForwardWorkspaceSize
+ *   to get the extra space size needed in ::mluOpMaskedCol2imForward operation.
+ *
+ * @par Note
+ * - The data of \b mask_h_idx must be in the range of [0, h - 1], and h is the height of \b im tensor.
+ * - The data of \b mask_w_idx must be in the range of [0, w - 1], and w is the width of \b im tensor.
+ * - The coordinates by combining \b mask_h_idx tensor and \b mask_w_idx tensor can not be repeated.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/masked_conv2d_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpMaskedCol2imForward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t col_desc,
+                         const void *col,
+                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                         const void *mask_h_idx,
+                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                         const void *mask_w_idx,
+                         const size_t workspace_size,
+                         void *workspace,
+                         const mluOpTensorDescriptor_t im_desc,
+                         void *im);
+
 // Group:DiffIouRotatedSortVerticesForward
 /*!
  * @brief Sorts the effective vertices of the polygon formed by the intersection of two boxes,
