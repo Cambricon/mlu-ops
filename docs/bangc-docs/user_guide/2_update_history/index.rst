@@ -1,5 +1,22 @@
 更新历史
 ========
+* **V0.7.0**
+
+  **更新时间**：2023年6月2日
+
+  **更新内容**：
+
+  - 新增以下算子章节内容：
+
+     + :ref:`dynamic_point_to_voxel_backward`
+     + :ref:`dynamic_point_to_voxel_forward`
+     + :ref:`focal_loss_sigmoid_backward`
+     + :ref:`focal_loss_sigmoid_forward`
+     + :ref:`masked_col2im_forward`
+     + :ref:`mutual_information_backward`
+     + :ref:`mutual_information_forwardward`
+     + :ref:`mutual_information_forward`
+
 * **V0.6.0**
 
   **更新时间**：2023年4月14日
