@@ -78,8 +78,6 @@ v0.7.0
 
    * ``focal_loss_sigmoid_forward``
 
-   * ``masked_col2im_forward``
-
    * ``mutual_information_backward``
 
    * ``mutual_information_forward``
