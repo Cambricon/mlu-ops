@@ -26,7 +26,7 @@ endif()
 
 if(${MLUOP_BUILD_COVERAGE_TEST} MATCHES "ON")
   message("-- MLU_OP_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST}")
-  set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "-u__llvm_profile_runtime ${NEUWARE_HOME}/lib/clang/11.0.0/lib/linux/libclang_rt.profile-x86_64.a")
+  set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "-u__llvm_profile_runtime ${NEUWARE_HOME}/lib/clang/11.1.0/lib/linux/libclang_rt.profile-x86_64.a")
   set(CNRT_DUMP_PGO 1)
   set(CNRT_PGO_OUTPUT_DIR=output)
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fprofile-instr-generate -fcoverage-mapping -D COVERAGE")
