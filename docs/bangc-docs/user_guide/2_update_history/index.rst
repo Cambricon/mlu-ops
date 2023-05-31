@@ -14,7 +14,6 @@
      + :ref:`focal_loss_sigmoid_forward`
      + :ref:`masked_col2im_forward`
      + :ref:`mutual_information_backward`
-     + :ref:`mutual_information_forwardward`
      + :ref:`mutual_information_forward`
 
 * **V0.6.0**
