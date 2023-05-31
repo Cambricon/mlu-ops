@@ -82,8 +82,6 @@ v0.7.0
 
    * ``mutual_information_backward``
 
-   * ``mutual_information_forwardward``
-
    * ``mutual_information_forward``
 
 v0.6.0
