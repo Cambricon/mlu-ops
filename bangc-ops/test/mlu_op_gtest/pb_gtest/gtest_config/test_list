@@ -10,7 +10,6 @@ get_indice_pairs
 indice_convolution_backward_data
 indice_convolution_backward_filter
 indice_convolution_forward
-masked_col2im_forward
 moe_dispatch_backward_data
 moe_dispatch_forward
 mutual_information_backward
