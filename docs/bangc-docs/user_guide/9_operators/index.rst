@@ -360,6 +360,7 @@ mluOpMutualInformationBackward
 该算子是 ``mluOpMutualInformationForward`` 算子的反向，计算输入 ``px`` 和 ``py`` 的梯度。
 
 公式如下：
+
 .. math::
 
   \begin{array}{lcl}
@@ -377,6 +378,7 @@ mluOpMutualInformationforward
 该算子是计算输入 ``px`` 和 ``py`` 之间的互信息。
 
 公式如下：
+
 .. math::
 
   \begin{array}{lcl}
