@@ -14,7 +14,6 @@ masked_col2im_forward
 moe_dispatch_backward_data
 moe_dispatch_forward
 mutual_information_backward
-mutual_information_forwardward
 mutual_information_forward
 nms
 nms_rotated
