@@ -17,7 +17,6 @@ This section lists contents that were made for each product release.
     - focal_loss_sigmoid_forward
     - masked_col2im_forward
     - mutual_information_backward
-    - mutual_information_forwardward
     - mutual_information_forward
 
 * V0.6.0
