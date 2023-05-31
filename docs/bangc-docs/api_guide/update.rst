@@ -15,7 +15,6 @@ This section lists contents that were made for each product release.
     - dynamic_point_to_voxel_forward
     - focal_loss_sigmoid_backward
     - focal_loss_sigmoid_forward
-    - masked_col2im_forward
     - mutual_information_backward
     - mutual_information_forward
 

@@ -12,7 +12,6 @@
      + :ref:`dynamic_point_to_voxel_forward`
      + :ref:`focal_loss_sigmoid_backward`
      + :ref:`focal_loss_sigmoid_forward`
-     + :ref:`masked_col2im_forward`
      + :ref:`mutual_information_backward`
      + :ref:`mutual_information_forward`
 
