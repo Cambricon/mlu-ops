@@ -333,7 +333,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     num_valid_error_shape, diff_iou_rotated_sort_vertices_forward_general,
@@ -383,7 +383,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     mask_error_dtype, diff_iou_rotated_sort_vertices_forward_general,
@@ -399,7 +399,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     num_valid_error_dtype, diff_iou_rotated_sort_vertices_forward_general,
@@ -415,7 +415,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     idx_error_dtype, diff_iou_rotated_sort_vertices_forward_general,
@@ -431,7 +431,7 @@ INSTANTIATE_TEST_CASE_P(
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT64,
                                          3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
     large_tensor_notsupported, diff_iou_rotated_sort_vertices_forward_general,
