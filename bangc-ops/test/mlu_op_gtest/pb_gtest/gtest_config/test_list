@@ -12,6 +12,8 @@ indice_convolution_backward_filter
 indice_convolution_forward
 moe_dispatch_backward_data
 moe_dispatch_forward
+ms_deform_attn_forward
+ms_deform_attn_backward
 mutual_information_backward
 mutual_information_forward
 nms
