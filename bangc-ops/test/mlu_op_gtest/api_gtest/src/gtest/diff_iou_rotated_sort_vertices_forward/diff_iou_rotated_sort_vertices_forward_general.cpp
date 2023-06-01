@@ -439,11 +439,11 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({65536, 65536, 24, 2})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
-                                         3, std::vector<int>({5536, 65536, 24})}),
+                                         3, std::vector<int>({65536, 65536, 24})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         2, std::vector<int>({5536, 65536})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({5536, 65536, 9})}),
+                                         2, std::vector<int>({65536, 65536})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({65536, 65536, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
