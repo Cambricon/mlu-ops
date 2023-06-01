@@ -120,7 +120,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
                     cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 *
                                         mluOpGetTensorElementNum(idx_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == 
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 * 2));
       }
     }
