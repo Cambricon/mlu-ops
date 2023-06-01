@@ -420,9 +420,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
-  if (gamma < 0) {
+  if (gamma < 0 || gamma > 10000) {
     LOG(ERROR) << interface_name
-               << "gamma should be greater than or equal to 0."
+               << "gamma should be in the range of [0, 10000]. "
                << "But now gamma is " << gamma << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
