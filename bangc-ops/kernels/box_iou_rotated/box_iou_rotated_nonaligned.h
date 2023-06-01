@@ -362,8 +362,6 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
           __bang_lut_s32((int32_t *)temp9_ram, (int32_t *)temp9_ram,
                          (int32_t *)table, actual_compute_box_num,
                          TABLE_LENGTH);
-          // __bang_mul_scalar((int32_t *)temp9_ram, (int32_t *)temp9_ram,
-          //                   (int32_t)0xffffffff, actual_compute_box_num);
         } else {
           __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
           __bang_half2int16_rd((int16_t *)temp9_ram, (half *)temp9_ram,
@@ -371,8 +369,6 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
           __bang_lut_s16((int16_t *)temp9_ram, (int16_t *)temp9_ram,
                          (int16_t *)table, actual_compute_box_num,
                          TABLE_LENGTH);
-          // __bang_mul_scalar((int16_t *)temp9_ram, (int16_t *)temp9_ram,
-          //                   (int16_t)0xffff, actual_compute_box_num);
         }
         __bang_band((char *)ious_ram, (char *)ious_ram, (char *)temp9_ram,
                     actual_compute_box_num * sizeof(T));
