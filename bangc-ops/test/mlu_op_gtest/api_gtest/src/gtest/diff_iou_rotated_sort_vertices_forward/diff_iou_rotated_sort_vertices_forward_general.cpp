@@ -370,6 +370,62 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
+    vertices_error_layout, diff_iou_rotated_sort_vertices_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NCHW, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 24, 2})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
+                                         3, std::vector<int>({4, 16, 24})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         2, std::vector<int>({4, 16})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({4, 16, 9})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    mask_error_layout, diff_iou_rotated_sort_vertices_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 24, 2})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NLC, MLUOP_DTYPE_BOOL,
+                                         3, std::vector<int>({4, 16, 24})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         2, std::vector<int>({4, 16})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({4, 16, 9})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    num_valid_error_layout, diff_iou_rotated_sort_vertices_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 24, 2})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
+                                         3, std::vector<int>({4, 16, 24})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NC, MLUOP_DTYPE_INT32,
+                                         2, std::vector<int>({4, 16})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({4, 16, 9})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    idx_error_layout, diff_iou_rotated_sort_vertices_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 24, 2})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
+                                         3, std::vector<int>({4, 16, 24})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         2, std::vector<int>({4, 16})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NLC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({4, 16, 9})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
     vertices_error_dtype, diff_iou_rotated_sort_vertices_forward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
