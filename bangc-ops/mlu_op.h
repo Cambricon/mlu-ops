@@ -7450,7 +7450,7 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  *   \b weight is NULL on MLU500 series. The length of C should be in the range of [0, 8864] when
  *   \b weight is not NULL on MLU500 series.
  * - \b weight does not support positive infinity and negative infinity currently.
- * - \b gamma should be in the range of [0, 10000] on MLU300 series.
+ * - \b gamma should be in the range of [0, 10000].
  *
  * @par Example
  * - None.
