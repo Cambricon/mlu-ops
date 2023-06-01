@@ -391,6 +391,7 @@ mluOpMutualInformationforward
 mluOpNms
 ---------
 NMS的算法简述：
+
 - 用最大SCORE对应的box的面积和其他SCORE对应的面积算出N - 1个IOU；
 - 移除IOU > IOU阈值的参与的计算的较小的box；
 - 重复1，2直到满足特定的终止条件。
@@ -806,7 +807,29 @@ mluOpThreeInterpolateForward
 
 mluOpThreeNNForward
 -----------------------------
-该算子为点云 ``unknown`` 集合中的点的寻找来自 ``known``集合中的前 ``3`` 个邻近点。点云数据点的坐标为 ``(x, y, z)`` ， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的 ``index``。
+该算子为点云 ``unknown`` 集合中的点的寻找来自 ``known`` 集合中的前 ``3`` 个邻近点。点云数据点的坐标为 ``(x, y, z)`` ， 通过计算平方差距离后排序，得到前3个邻近点及其在集合中的 ``index``。
+
+.. _tin_shift_backward:
+
+mluOpTinShiftBackward
+-----------------------------
+该算子为 ``mluOpTinShiftForward`` 的反向功能，给定输出数据对应的梯度、偏移量，计算输入数据对应的梯度。
+
+.. _tin_shift_forward:
+
+mluOpTinShiftForward
+-----------------------------
+输入在 ``channel`` 维度根据 ``shifts`` 的第二维的维度大小进行分组，每组 ``channel`` 中的数据依据 ``shifts`` 值在时序上进行移动。
+
+示例如下：
+
+.. figure:: ../images/tin_shift.png
+   :scale: 50%
+
+   ``mluOpTinShiftForward`` 算子示例
+
+示例中，输入为[1, 6, 6, 1]，偏移 ``Shifts`` 为[-1, 0, 2]。
+输入按照通道分为3组，每组含有2个通道。第一组的偏移量为-1，第一组内的数据整体往左移1个时间序列；第二组的偏移量为，第二组内的数据保持不变；第三组的偏移量为2，第三组内的数据整体往右移2个时间序列。
 
 .. _transpose:
 

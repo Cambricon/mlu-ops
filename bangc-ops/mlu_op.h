@@ -12863,6 +12863,132 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t data_col_desc,
                          void *data_col);
 
+// Group:TinShift
+/*!
+ * @brief Shifts gradients from \b grad_output according to shift information in \b shifts and stores the
+ * result into \b grad_input.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpTinShiftBackward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] grad_output_desc
+ * The descriptor for the tensor \b grad_output, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the tensor \b grad_output.
+ * @param[in] shifts_desc
+ * The descriptor for the tensor \b shifts, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] shifts
+ * Pointer to the MLU memory that stores the tensor \b shifts.
+ * @param[in] grad_input_desc
+ * The descriptor for the tensor \b grad_input, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_input
+ * Pointer to the MLU memory that stores the tensor \b grad_input.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - input tensor: half, float
+ *   - shifts tensor: int32
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The first dimension of tensor \b grad_output and tensor \b shifts must be the same size.
+ * - The second dimension of tensor \b grad_output  must be multiple of the second dimension of tensor \b shifts.
+ *   For example, if the shape of \b grad_output is [N, T, C, HW], the shape of \b shifts is [N, G],
+ *   C must be a multiple of G, and C and G cannot be zero.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - http://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/tin_shift.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpTinShiftBackward(mluOpHandle_t handle,
+                      const mluOpTensorDescriptor_t grad_output_desc,
+                      const void *grad_output,
+                      const mluOpTensorDescriptor_t shifts_desc,
+                      const void *shifts,
+                      const mluOpTensorDescriptor_t grad_input_desc,
+                      void *grad_input);
+
+// Group:TinShift
+/*!
+ * @brief Shifts datas from \b input according to shift information in \b shifts and stores the
+ * result into \b output.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpTinShiftForward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor for the tensor \b input, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the tensor \b input.
+ * @param[in] shifts_desc
+ * The descriptor for the tensor \b shifts, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] shifts
+ * Pointer to the MLU memory that stores the tensor \b shifts.
+ * @param[in] output_desc
+ * The descriptor for the tensor \b output, which contains dimension, data type, and data layout.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the tensor \b output.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - input tensor: half, float
+ *   - shifts tensor: int32
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The first dimension of tensor \b input and tensor \b shifts must be the same size.
+ * - The second dimension of tensor \b input must be multiple of the second dimension of tensor \b shifts.
+ *   For example, if the shape of \b input is [N, T, C, HW], the shape of \b shifts is [N, G],
+ *   C must be a multiple of G, and C and G cannot be zero.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - http://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/tin_shift.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpTinShiftForward(mluOpHandle_t handle,
+                     const mluOpTensorDescriptor_t input_desc,
+                     const void *input,
+                     const mluOpTensorDescriptor_t shifts_desc,
+                     const void *shifts,
+                     const mluOpTensorDescriptor_t output_desc,
+                     void *output);
+
 // Group:MaskedCol2im
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
