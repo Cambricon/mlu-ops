@@ -76,7 +76,7 @@ void DynamicPointToVoxelBackwardExecutor::compute() {
   auto point2voxel_map_desc = tensor_desc_[3].tensor;
   auto voxel_points_count_desc = tensor_desc_[4].tensor;
   auto voxel_num_desc = tensor_desc_[5].tensor;
-  auto gard_feats_desc = tensor_desc_[6].tensor;
+  auto grad_feats_desc = tensor_desc_[6].tensor;
 
   auto grad_voxel_feats = data_vector_[0].device_ptr;
   auto feats = data_vector_[1].device_ptr;
@@ -84,7 +84,7 @@ void DynamicPointToVoxelBackwardExecutor::compute() {
   auto point2voxel_map = data_vector_[3].device_ptr;
   auto voxel_points_count = data_vector_[4].device_ptr;
   auto voxel_num = data_vector_[5].device_ptr;
-  auto gard_feats = data_vector_[6].device_ptr;
+  auto grad_feats = data_vector_[6].device_ptr;
 
   interface_timer_.start();
   MLUOP_CHECK(mluOpDynamicPointToVoxelBackward(
@@ -92,7 +92,7 @@ void DynamicPointToVoxelBackwardExecutor::compute() {
       feats, voxel_feats_desc, voxel_feats, point2voxel_map_desc,
       point2voxel_map, voxel_points_count_desc, voxel_points_count,
       voxel_num_desc, voxel_num, workspace_[0], workspace_size_,
-      gard_feats_desc, gard_feats));
+      grad_feats_desc, grad_feats));
   interface_timer_.stop();
   VLOG(4) << "[DynamicPointToVoxelBackwardExecutor] call compute() End.";
 }
