@@ -47,16 +47,20 @@ class diff_iou_rotated_sort_vertices_forward_general
       MLUOpTensorParam vertices_params = std::get<0>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&vertices_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
-          vertices_desc_, vertices_params.get_layout(), vertices_params.get_dtype(),
-          vertices_params.get_dim_nb(), vertices_params.get_dim_size().data()));
+          vertices_desc_, vertices_params.get_layout(), 
+          vertices_params.get_dtype(),vertices_params.get_dim_nb(), 
+          vertices_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(vertices_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&vertices_, mluOpDataTypeBytes(vertices_params.get_dtype()) * 2));
+            cnrtMalloc(&vertices_, 
+                       mluOpDataTypeBytes(vertices_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&vertices_, mluOpDataTypeBytes(vertices_params.get_dtype()) *
-                                         mluOpGetTensorElementNum(vertices_desc_)));
+        GTEST_CHECK(
+             CNRT_RET_SUCCESS ==
+            cnrtMalloc(&vertices_, 
+                       mluOpDataTypeBytes(vertices_params.get_dtype()) *
+                       mluOpGetTensorElementNum(vertices_desc_)));
       }
 
       MLUOpTensorParam mask_params = std::get<1>(GetParam());
@@ -67,11 +71,14 @@ class diff_iou_rotated_sort_vertices_forward_general
       if (mluOpGetTensorElementNum(mask_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&mask_, mluOpDataTypeBytes(mask_params.get_dtype()) * 2));
+            cnrtMalloc(&mask_, 
+                       mluOpDataTypeBytes(mask_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&mask_, mluOpDataTypeBytes(mask_params.get_dtype()) *
-                                         mluOpGetTensorElementNum(mask_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&mask_, 
+                       mluOpDataTypeBytes(mask_params.get_dtype()) *
+                       mluOpGetTensorElementNum(mask_desc_)));
       }
 
       MLUOpTensorParam num_valid_params = std::get<2>(GetParam());
@@ -104,9 +111,10 @@ class diff_iou_rotated_sort_vertices_forward_general
             CNRT_RET_SUCCESS ==
             cnrtMalloc(&idx_, mluOpDataTypeBytes(idx_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&idx_, mluOpDataTypeBytes(idx_params.get_dtype()) *
-                                        mluOpGetTensorElementNum(idx_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&idx_, mluOpDataTypeBytes(idx_params.get_dtype()) *
+                              mluOpGetTensorElementNum(idx_desc_)));
       }
 
       target_device_ = std::get<4>(GetParam());
@@ -237,7 +245,8 @@ INSTANTIATE_TEST_CASE_P(
     vertices_error_dim, diff_iou_rotated_sort_vertices_forward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         5, std::vector<int>({4, 16, 24, 2, 1})},
+                                         5, 
+                                         std::vector<int>({4, 16, 24, 2, 1})},
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          3, std::vector<int>({4, 16, 24})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
@@ -493,13 +502,16 @@ INSTANTIATE_TEST_CASE_P(
     large_tensor_notsupported, diff_iou_rotated_sort_vertices_forward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({65536, 65536, 24, 2})}),
+                                         4, 
+                                         std::vector<int>({65536,65536,24,2})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
-                                         3, std::vector<int>({65536, 65536, 24})}),
+                                         3, 
+                                         std::vector<int>({65536, 65536, 24})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({65536, 65536})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         3, std::vector<int>({65536, 65536, 9})}),
+                                         3, 
+                                         std::vector<int>({65536, 65536, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
