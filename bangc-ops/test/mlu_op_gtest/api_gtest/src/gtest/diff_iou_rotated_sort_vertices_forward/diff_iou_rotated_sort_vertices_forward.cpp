@@ -58,7 +58,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
     if (vertices) {
       if (vertices_desc) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&vertices_,MLUOP_DTYPE_FLOAT *
+                    cnrtMalloc(&vertices_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(
                                              vertices_desc_)));
       } else {

@@ -53,7 +53,7 @@ class diff_iou_rotated_sort_vertices_forward_general
       if (mluOpGetTensorElementNum(vertices_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&vertices_, 
+            cnrtMalloc(&vertices_,
                        mluOpDataTypeBytes(vertices_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
