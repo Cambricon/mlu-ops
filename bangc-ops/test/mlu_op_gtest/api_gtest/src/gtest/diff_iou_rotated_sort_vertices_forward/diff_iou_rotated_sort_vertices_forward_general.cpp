@@ -331,7 +331,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({4, 16})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({4, 16, 9})}),
+                                         3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
@@ -347,7 +347,7 @@ INSTANTIATE_TEST_CASE_P(
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({4, 15})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({4, 16, 9})}),
+                                         3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -365,7 +365,7 @@ INSTANTIATE_TEST_CASE_P(
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          4, std::vector<int>({4, 17, 9})},
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({4, 16, 8})}),
+                                         3, std::vector<int>({4, 16, 8})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
@@ -381,7 +381,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({4, 16})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({4, 16, 9})}),
+                                         3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
@@ -397,7 +397,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({4, 16})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({4, 16, 9})}),
+                                         3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
@@ -413,7 +413,7 @@ INSTANTIATE_TEST_CASE_P(
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT64,
                                          2, std::vector<int>({4, 16})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         4, std::vector<int>({4, 16, 9})}),
+                                         3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
@@ -429,7 +429,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          4, std::vector<int>({4, 16, 9})},
                         MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT64,
-                                         4, std::vector<int>({4, 16, 9})}),
+                                         3, std::vector<int>({4, 16, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
@@ -443,7 +443,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          2, std::vector<int>({5536, 65536})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({5536, 65536, 9})}),
+                                         3, std::vector<int>({5536, 65536, 9})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
