@@ -55,7 +55,7 @@ class diff_iou_rotated_sort_vertices_forward_general
             cnrtMalloc(&vertices_, mluOpDataTypeBytes(vertices_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&px_, mluOpDataTypeBytes(vertices_params.get_dtype()) *
+                    cnrtMalloc(&vertices_, mluOpDataTypeBytes(vertices_params.get_dtype()) *
                                          mluOpGetTensorElementNum(vertices_desc_)));
       }
 

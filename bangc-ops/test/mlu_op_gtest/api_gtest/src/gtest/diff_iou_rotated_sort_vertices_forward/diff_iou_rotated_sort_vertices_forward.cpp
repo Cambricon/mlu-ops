@@ -87,7 +87,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (num_valid_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&num_valid_desc_));
-      std::vector<int> num_valid_dims{4, 16};
+      std::vector<int> num_valid_desc_dims{4, 16};
       MLUOP_CHECK(mluOpSetTensorDescriptor(
           num_valid_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 2,
           num_valid_desc_dims.data()));
@@ -290,4 +290,5 @@ TEST_F(diff_iou_rotated_sort_vertices_forward, BAD_PARAM_idx_null) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
            << " in diff_iou_rotated_sort_vertices_forward";
   }
+}
 }  // namespace mluopapitest
