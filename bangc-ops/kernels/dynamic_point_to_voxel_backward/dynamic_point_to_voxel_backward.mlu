@@ -138,21 +138,13 @@ __mlu_global__ void MLUKernelMaxReduceTracebackScatterIdx(
     const int *point2voxel_map, const int *voxel_num, const int N,
     const int C) {
   const int M = *voxel_num;
+  if (M == 0) {
+    return;
+  }
   int size_input = N * sizeof(int);
   int size_reduced_flag = M * sizeof(bool);
   int size_feats = C * sizeof(T);
   int size_feats_idx = C * sizeof(int);
-  // init workspace and output
-  int n_per_core = N / taskDim;
-  int rem = N % taskDim;
-  n_per_core += (int)(taskId < rem);
-  int offset_per_core = (taskId * n_per_core + ((taskId < rem) ? 0 : rem)) * C;
-  if (n_per_core > 0) {
-    // voxel_from [M,C] fill 'N * C' ([M:N,C] is redundent)
-    __gdramset(voxel_from + offset_per_core, n_per_core * C, N * C);
-    // grad_feats [N,C] fill '0'
-    __gdramset(grad_feats + offset_per_core, n_per_core * C, T(0));
-  }
 
   int nram_size = MAX_NRAM_SIZE;
   int n_limit = (nram_size - size_input - size_reduced_flag - size_feats_idx) /
