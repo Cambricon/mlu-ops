@@ -87,8 +87,8 @@ class mutual_information_forward_workspace : public testing::Test {
 
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpGetMutualInformationForwardWorkspaceSize(
-        handle_, px_desc_, py_desc_, opt_boundary_desc_, p_desc_,
-        ans_desc_, workspace_size_);
+        handle_, px_desc_, py_desc_, opt_boundary_desc_, p_desc_, ans_desc_,
+        workspace_size_);
     destroy();
     return status;
   }

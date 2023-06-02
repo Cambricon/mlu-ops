@@ -128,9 +128,8 @@ class mutual_information_forward : public testing::Test {
     if (ans) {
       if (ans_desc) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&ans_,
-                               MLUOP_DTYPE_FLOAT *
-                                   mluOpGetTensorElementNum(ans_desc_)));
+                    cnrtMalloc(&ans_, MLUOP_DTYPE_FLOAT *
+                                          mluOpGetTensorElementNum(ans_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&ans_, MLUOP_DTYPE_FLOAT * 2));
@@ -146,8 +145,8 @@ class mutual_information_forward : public testing::Test {
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpMutualInformationForward(
         handle_, px_desc_, px_, py_desc_, py_, opt_boundary_desc_,
-        opt_boundary_, p_desc_, p_, workspace_, workspace_size_,
-        ans_desc_, ans_);
+        opt_boundary_, p_desc_, p_, workspace_, workspace_size_, ans_desc_,
+        ans_);
     destroy();
     return status;
   }
@@ -246,8 +245,8 @@ class mutual_information_forward : public testing::Test {
 
 TEST_F(mutual_information_forward, BAD_PARAM_handle_null) {
   try {
-    setParam(false, true, true, true, true, true, true,
-             true, true, true, true, true);
+    setParam(false, true, true, true, true, true, true, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -257,8 +256,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_handle_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_px_desc_null) {
   try {
-    setParam(true, false, true, true, true, true, true,
-             true, true, true, true, true);
+    setParam(true, false, true, true, true, true, true, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -268,8 +267,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_px_desc_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_px_null) {
   try {
-    setParam(true, true, false, true, true, true, true,
-             true, true, true, true, true);
+    setParam(true, true, false, true, true, true, true, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -279,8 +278,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_px_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_py_desc_null) {
   try {
-    setParam(true, true, true, false, true, true, true,
-             true, true, true, true, true);
+    setParam(true, true, true, false, true, true, true, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -290,8 +289,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_py_desc_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_py_null) {
   try {
-    setParam(true, true, true, true, false, true, true,
-             true, true, true, true, true);
+    setParam(true, true, true, true, false, true, true, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -301,8 +300,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_py_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_opt_boundary_desc_null) {
   try {
-    setParam(true, true, true, true, true, false, true,
-             true, true, true, true, true);
+    setParam(true, true, true, true, true, false, true, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -312,8 +311,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_opt_boundary_desc_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_opt_boundary_null) {
   try {
-    setParam(true, true, true, true, true, true, false,
-             true, true, true, true, true);
+    setParam(true, true, true, true, true, true, false, true, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -323,8 +322,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_opt_boundary_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_p_desc_null) {
   try {
-    setParam(true, true, true, true, true, true, true,
-             false, true, true, true, true);
+    setParam(true, true, true, true, true, true, true, false, true, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -334,8 +333,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_p_desc_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_p_null) {
   try {
-    setParam(true, true, true, true, true, true, true,
-             true, false, true, true, true);
+    setParam(true, true, true, true, true, true, true, true, false, true, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -345,8 +344,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_p_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_ans_desc_null) {
   try {
-    setParam(true, true, true, true, true, true, true,
-             true, true, false, true, true);
+    setParam(true, true, true, true, true, true, true, true, true, false, true,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -356,8 +355,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_ans_desc_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_ans_null) {
   try {
-    setParam(true, true, true, true, true, true, true,
-             true, true, true, false, true);
+    setParam(true, true, true, true, true, true, true, true, true, true, false,
+             true);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -367,8 +366,8 @@ TEST_F(mutual_information_forward, BAD_PARAM_ans_null) {
 
 TEST_F(mutual_information_forward, BAD_PARAM_workspace_null) {
   try {
-    setParam(true, true, true, true, true, true, true,
-             true, true, true, true, false);
+    setParam(true, true, true, true, true, true, true, true, true, true, true,
+             false);
     EXPECT_EQ(compute(), MLUOP_STATUS_BAD_PARAM);
   } catch (std::exception &e) {
     FAIL() << "MLUOPAPIGTEST: catched " << e.what()

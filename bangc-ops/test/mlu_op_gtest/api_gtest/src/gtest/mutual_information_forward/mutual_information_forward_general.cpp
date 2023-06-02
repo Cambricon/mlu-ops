@@ -35,7 +35,7 @@
 namespace mluopapitest {
 
 typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
-                   MLUOpTensorParam, MLUOpTensorParam, mluOpDevType_t, 
+                   MLUOpTensorParam, MLUOpTensorParam, mluOpDevType_t,
                    mluOpStatus_t>
     MutualInformationForward;
 class mutual_information_forward_general
@@ -113,19 +113,17 @@ class mutual_information_forward_general
       MLUOpTensorParam ans_params = std::get<4>(GetParam());
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&ans_desc_));
       MLUOP_CHECK(mluOpSetTensorDescriptor(
-          ans_desc_, ans_params.get_layout(),
-          ans_params.get_dtype(), ans_params.get_dim_nb(),
-          ans_params.get_dim_size().data()));
+          ans_desc_, ans_params.get_layout(), ans_params.get_dtype(),
+          ans_params.get_dim_nb(), ans_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(ans_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&ans_,
-                       mluOpDataTypeBytes(ans_params.get_dtype()) * 2));
+            cnrtMalloc(&ans_, mluOpDataTypeBytes(ans_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMalloc(&ans_,
-                               mluOpDataTypeBytes(ans_params.get_dtype()) *
-                                   mluOpGetTensorElementNum(ans_desc_)));
+        GTEST_CHECK(
+            CNRT_RET_SUCCESS ==
+            cnrtMalloc(&ans_, mluOpDataTypeBytes(ans_params.get_dtype()) *
+                                  mluOpGetTensorElementNum(ans_desc_)));
       }
 
       target_device_ = std::get<5>(GetParam());
@@ -147,8 +145,8 @@ class mutual_information_forward_general
     }
     mluOpStatus_t status = mluOpMutualInformationForward(
         handle_, px_desc_, px_, py_desc_, py_, opt_boundary_desc_,
-        opt_boundary_, p_desc_, p_, workspace_, workspace_size_,
-        ans_desc_, ans_);
+        opt_boundary_, p_desc_, p_, workspace_, workspace_size_, ans_desc_,
+        ans_);
     destroy();
     return expected_status_ == status;
   }
@@ -246,9 +244,7 @@ class mutual_information_forward_general
   mluOpStatus_t expected_status_;
 };
 
-TEST_P(mutual_information_forward_general, negative) {
-  EXPECT_TRUE(compute());
-}
+TEST_P(mutual_information_forward_general, negative) { EXPECT_TRUE(compute()); }
 
 INSTANTIATE_TEST_CASE_P(
     zero_element_1, mutual_information_forward_general,
