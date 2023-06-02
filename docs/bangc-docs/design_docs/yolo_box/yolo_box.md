@@ -96,6 +96,8 @@
 
 `yolo_box` 计算过程包含两部分：`anchor_box` 坐标变换（从网格坐标还原至特征图坐标）、置信度处理。
 
+**计算 boxes：**
+
 `anchor box` 坐标变换分为解码、转换、裁剪三步，以图1中 `iou_aware=false` 第一组坐标数据（对应`x[n,0:5,i,j]`）为例，示意图如下所示
 
   <div align='center' >
@@ -108,8 +110,8 @@
    
       ```math
       \begin{aligned} 
-         center_{x} & = (sigmoid(t_{x_{0}} + bias + i)) * img\_size_{w} / W \\
-         center_{y} & = (sigmoid(t_{y_{0}} + bias + j)) * img\_size_{h} / H \\
+         center_{x} & = (sigmoid(x_{0})*scale + bias + i) * img\_size_{w} / W \\
+         center_{y} & = (sigmoid(y_{0})*scale + bias + j) * img\_size_{h} / H \\
          center_{w} & = anchors_{w} * e^{w_{0}}* img\_size_{w} / (downsample\_ratio * W) \\
          center_{h} & = anchors_{h} * e^{h_{0}}* img\_size_{h} / (downsample\_ratio * H) \\
       \end{aligned}
@@ -144,9 +146,11 @@
       ```
 
       一个 `anchor box` 计算得出一组左上、右下坐标数据，最终输出 `boxes.shape=[N,S*4,H,W]`。
+      
       此外，当 `anchor box` 置信度得分 score<sub>conf</sub> 小于 conf_thresh 时，对应坐标数据均为 `0`。
 
-`scores` 计算：
+
+**计算 scores ：**
    
    ```math
    score_{conf} =
@@ -173,6 +177,8 @@
    ```
 
    一个 `anchor box` 计算得出 `class_num` 个分类得分，`scores.shape=[N,S*class_num,H,W]`。
+   
+   此外，当置信度得分 score<sub>conf</sub> 小于 conf_thresh 时，对应的`class_num` 个分类得分均为 `0`。
 
 ### 1.3 算子输入输出参数要求
 
