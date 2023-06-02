@@ -22,7 +22,6 @@
  *************************************************************************/
 #include "box_iou_rotated.h"
 
-
 namespace mluoptest {
 
 void BoxIouRotatedExecutor::paramCheck() {
@@ -116,7 +115,7 @@ void BoxIouRotatedExecutor::cpuBoxIouRotated(const T *box1_raw,
       box2.a = box2_raw[5 * i + 4];
 
       ious[i] = singleBoxIouRotated<T>(box1, box2, mode);
-      VLOG(6) << "aligned ious: " << ious[i];
+      VLOG(6) << "aligned ious[" << i << "]: " << ious[i];
     }
   } else {
     for (int i = 0; i < num_box1; i++) {
@@ -134,7 +133,8 @@ void BoxIouRotatedExecutor::cpuBoxIouRotated(const T *box1_raw,
         box2.a = box2_raw[5 * j + 4];
 
         ious[i * num_box2 + j] = singleBoxIouRotated<T>(box1, box2, mode);
-        VLOG(6) << "not aligned ious: " << ious[i * num_box2 + j];
+        VLOG(6) << "not aligned ious[" << i * num_box2 + j
+                << "]: " << ious[i * num_box2 + j];
       }
     }
   }
@@ -183,7 +183,7 @@ T BoxIouRotatedExecutor::singleBoxIouRotated(const Box<T> box1_raw,
   } else {
     baseS = area1;
   }
-  const T iou = intersection * (1.0f / baseS);
+  const T iou = intersection / baseS;
   return iou;
 }
 
@@ -222,8 +222,8 @@ void BoxIouRotatedExecutor::getRotatedVertices(const Box<T> &box,
   // M_PI / 180. == 0.01745329251
   // double theta = box.a * 0.01745329251;
   double theta = box.a;
-  T cosTheta2 = (T)cosf(theta) * 0.5f;
-  T sinTheta2 = (T)sinf(theta) * 0.5f;
+  T cosTheta2 = (T)cos(theta) * 0.5f;
+  T sinTheta2 = (T)sin(theta) * 0.5f;
 
   // y: top->down; x: left->right
   pts[0].x = box.x_ctr - sinTheta2 * box.h - cosTheta2 * box.w;
@@ -268,8 +268,8 @@ T BoxIouRotatedExecutor::getIntersectionPoints(const Point<T> (&pts1)[4],
 
       auto vec12 = pts2[j] - pts1[i];
 
-      T t1 = cross2d<T>(vec2[j], vec12) * (1.0f / det);
-      T t2 = cross2d<T>(vec1[i], vec12) * (1.0f / det);
+      T t1 = cross2d<T>(vec2[j], vec12) / det;
+      T t2 = cross2d<T>(vec1[i], vec12) / det;
 
       if (t1 >= 0.0f && t1 <= 1.0f && t2 >= 0.0f && t2 <= 1.0f) {
         intersections[num++] = pts1[i] + vec1[i] * t1;
