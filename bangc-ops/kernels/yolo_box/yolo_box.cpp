@@ -48,7 +48,7 @@ static void policyFunc(const mluOpHandle_t handle, const int kw_num,
   k_dim->z = 1;
 }
 
-mluOpStatus_t YoloBoxParamCheck(
+static mluOpStatus_t yoloBoxParamCheck(
     const std::string &op_name, const mluOpHandle_t handle,
     const mluOpTensorDescriptor_t x_desc, const void *x,
     const mluOpTensorDescriptor_t img_size_desc, const void *img_size,
@@ -79,47 +79,32 @@ mluOpStatus_t YoloBoxParamCheck(
   PARAM_CHECK(op_name, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
 
   // check dim
-  const int x_dimN = x_desc->dims[0];
-  const int x_dimC = x_desc->dims[1];
-  const int x_dimH = x_desc->dims[2];
-  const int x_dimW = x_desc->dims[3];
-  const int img_size_dimN = img_size_desc->dims[0];
-  const int img_size_dim2 = img_size_desc->dims[1];
-  const int anchors_dim0 = anchors_desc->dims[0];
-  const int boxes_dimN = boxes_desc->dims[0];
-  const int boxes_dim1 = boxes_desc->dims[1];
-  const int boxes_dim2 = boxes_desc->dims[2];
-  const int boxes_dim3 = boxes_desc->dims[3];
-  const int scores_dimN = scores_desc->dims[0];
-  const int scores_dim1 = scores_desc->dims[1];
-  const int scores_dim2 = scores_desc->dims[2];
-  const int scores_dim3 = scores_desc->dims[3];
-  const int anchors_num = anchors_dim0 / 2;
+  PARAM_CHECK(op_name, (x_desc->dims[0] == img_size_desc->dims[0]));
+  PARAM_CHECK(op_name, (x_desc->dims[0] == boxes_desc->dims[0]));
+  PARAM_CHECK(op_name, (x_desc->dims[0] == scores_desc->dims[0]));
 
-  PARAM_CHECK(op_name, (anchors_dim0 % 2 == 0));
-  PARAM_CHECK(op_name, (x_dimN == img_size_dimN));
-  PARAM_CHECK(op_name, (x_dimN == boxes_dimN));
-  PARAM_CHECK(op_name, (x_dimN == scores_dimN));
+  const int anchors_num = anchors_desc->dims[0] / 2;
+  PARAM_CHECK(op_name, (anchors_desc->dims[0] % 2 == 0));
   PARAM_CHECK(op_name, anchors_num > 0);
   PARAM_CHECK(op_name, class_num > 0);
-  if (handle->arch >= MLUOP_MLU370) {
-    PARAM_CHECK(op_name, class_num <= MAX_CLASS_NUM_ARCH_300);
-  } else {
-    PARAM_CHECK(op_name, class_num <= MAX_CLASS_NUM_ARCH_200);
-  }
-  int dimc_size = anchors_num * (5 + class_num);
-  if (iou_aware) {
-    dimc_size = anchors_num * (6 + class_num);
-  }
 
-  PARAM_CHECK(op_name, (x_dimC == dimc_size));
-  PARAM_CHECK(op_name, (img_size_dim2 == 2));
-  PARAM_CHECK(op_name, (boxes_dim1 == anchors_num));
-  PARAM_CHECK(op_name, (boxes_dim2 == 4));
-  PARAM_CHECK(op_name, (boxes_dim3 == (x_dimH * x_dimW)));
-  PARAM_CHECK(op_name, (scores_dim1 == anchors_num));
-  PARAM_CHECK(op_name, (scores_dim2 == class_num));
-  PARAM_CHECK(op_name, (scores_dim3 == (x_dimH * x_dimW)));
+  const int class_num_thresh = handle->arch >= MLUOP_MLU370
+                                   ? MAX_CLASS_NUM_ARCH_300
+                                   : MAX_CLASS_NUM_ARCH_200;
+  PARAM_CHECK(op_name, class_num <= class_num_thresh);
+
+  const int dim_c =
+      iou_aware ? anchors_num * (6 + class_num) : anchors_num * (5 + class_num);
+  PARAM_CHECK(op_name, (x_desc->dims[1] == dim_c));
+  PARAM_CHECK(op_name, (img_size_desc->dims[1] == 2));
+  PARAM_CHECK(op_name, (boxes_desc->dims[1] == anchors_num));
+  PARAM_CHECK(op_name, (boxes_desc->dims[2] == 4));
+  PARAM_CHECK(op_name,
+              (boxes_desc->dims[3] == (x_desc->dims[2] * x_desc->dims[3])));
+  PARAM_CHECK(op_name, (scores_desc->dims[1] == anchors_num));
+  PARAM_CHECK(op_name, (scores_desc->dims[2] == class_num));
+  PARAM_CHECK(op_name,
+              (scores_desc->dims[3] == (x_desc->dims[2] * x_desc->dims[3])));
 
   // large tensor
   if ((mluOpGetTensorElementNum(x_desc) >= LARGE_TENSOR_NUM) ||
@@ -156,7 +141,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     void *boxes, const mluOpTensorDescriptor_t scores_desc, void *scores) {
   // check params
   bool zero_element = false;
-  mluOpStatus_t param_check = YoloBoxParamCheck(
+  mluOpStatus_t param_check = yoloBoxParamCheck(
       "[mluOpYoloBox]", handle, x_desc, x, img_size_desc, img_size,
       anchors_desc, anchors, boxes_desc, boxes, scores_desc, scores, class_num,
       iou_aware, &zero_element);
@@ -196,17 +181,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
   const int w_in = x_desc->dims[3];
   const int anchor_s = anchors_desc->dims[0] / 2;
   const int kw_num = h_in * w_in;
+
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, kw_num, &k_dim, &k_type);
   VLOG(5) << "[mluOpYoloBox] launch kernel policyFunc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "].";
 
-  int boxes_size = n_in * anchor_s * 4 * h_in * w_in * sizeof(float);
+  const int boxes_size = n_in * anchor_s * 4 * h_in * w_in * sizeof(float);
   KERNEL_CHECK(
       (KernelFillZero(k_dim, k_type, handle->queue, boxes_size, boxes)));
 
-  int scores_size = n_in * anchor_s * class_num * h_in * w_in * sizeof(float);
+  const int scores_size =
+      n_in * anchor_s * class_num * h_in * w_in * sizeof(float);
   KERNEL_CHECK(
       (KernelFillZero(k_dim, k_type, handle->queue, scores_size, scores)));
 
@@ -214,7 +201,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
       k_dim, k_type, handle->queue, x, img_size, anchors, class_num,
       conf_thresh, downsample_ratio, clip_bbox, scale, iou_aware,
       iou_aware_factor, n_in, anchor_s, c_in, h_in, w_in, boxes, scores)));
-  VLOG(5) << "Kernel KernelYoloBox.";
+
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -28,9 +28,9 @@
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
-static __mlu_func__ void memCopy(T *dst, const T *src, const int size,
-                                 mluMemcpyDirection_t dir, const int dst_stride,
-                                 const int src_stride, const int segnum) {
+__mlu_func__ void memCopy(T *dst, const T *src, const int size,
+                          mluMemcpyDirection_t dir, const int dst_stride,
+                          const int src_stride, const int segnum) {
   if (segnum > 0) {
     __memcpy_async(dst, src,
                    size,  // size
@@ -44,14 +44,14 @@ static __mlu_func__ void memCopy(T *dst, const T *src, const int size,
 }
 
 template <typename T>
-static __mlu_func__ void load(const T *addr_x, T *nram_x, T *nram_y, T *nram_w,
-                              T *nram_h, T *nram_conf, T *nram_iou,
-                              const bool iou_aware, const int batch_num,
-                              const int class_num, const int anchor_s,
-                              const int anchor_num, const int s_num_offset,
-                              const int c_in, const int hw_total_num,
-                              const int hw_seg_num, const int align_hw_seg_num,
-                              const int data_ram_num, const int i) {
+__mlu_func__ void load(const T *addr_x, T *nram_x, T *nram_y, T *nram_w,
+                       T *nram_h, T *nram_conf, T *nram_iou,
+                       const bool iou_aware, const int batch_num,
+                       const int class_num, const int anchor_s,
+                       const int anchor_num, const int s_num_offset,
+                       const int c_in, const int hw_total_num,
+                       const int hw_seg_num, const int align_hw_seg_num,
+                       const int data_ram_num, const int i) {
   int offset = (i % 2) * data_ram_num;
   int bbox_data_offset = (5 + class_num) * hw_total_num;
   T *nram_x_p = nram_x + offset;
@@ -124,13 +124,15 @@ static __mlu_func__ void load(const T *addr_x, T *nram_x, T *nram_y, T *nram_w,
 }
 
 template <typename T>
-static __mlu_func__ void compute(
-    T *nram_x, T *nram_y, T *nram_w, T *nram_h, T *nram_conf, T *nram_iou,
-    T *nram_cx, T *nram_cy, T *anchors_w, T *anchors_h, T *nram_imgw,
-    T *nram_imgh, const int w_in, const int h_in, const float conf_thresh,
-    const int downsample_ratio, const bool clip_bbox, const float scale,
-    const bool iou_aware, const float iou_aware_factor, const int deal_num,
-    const int data_ram_num, const int i) {
+__mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
+                          T *nram_conf, T *nram_iou, T *nram_cx, T *nram_cy,
+                          T *anchors_w, T *anchors_h, T *nram_imgw,
+                          T *nram_imgh, const int w_in, const int h_in,
+                          const float conf_thresh, const int downsample_ratio,
+                          const bool clip_bbox, const float scale,
+                          const bool iou_aware, const float iou_aware_factor,
+                          const int deal_num, const int data_ram_num,
+                          const int i) {
   int offset = (i % 2) * data_ram_num;
   T gridw = (T)w_in;
   T gridh = (T)h_in;
@@ -227,7 +229,7 @@ static __mlu_func__ void compute(
     __bang_minequal(nram_h_p, nram_conf_p, nram_h_p, deal_num);
   }
 
-  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+  int *nram_mask_int32 = (int *)nram_iou_p;
   __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
   __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
                     (int)0xffffffff, deal_num);
@@ -240,7 +242,7 @@ static __mlu_func__ void compute(
   __bang_band((char *)nram_h_p, (char *)nram_h_p, (char *)nram_mask_int32,
               4 * deal_num);
 #else
-  const int32_t x2d = 0x3fb8aa3b;
+  const int x2d = 0x3fb8aa3b;
   float log2e = *(float *)&x2d;
   __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
   __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
@@ -255,7 +257,7 @@ static __mlu_func__ void compute(
   __bang_mul_scalar(nram_w_p, nram_w_p, log2e, deal_num);
   __bang_mul_scalar(nram_h_p, nram_h_p, log2e, deal_num);
 
-  for (int32_t k = 0; k < deal_num; ++k) {
+  for (int k = 0; k < deal_num; ++k) {
     // sigmoid(conf)
     nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
     nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
@@ -354,11 +356,11 @@ static __mlu_func__ void compute(
 }
 
 template <typename T>
-static __mlu_func__ void store(T *addr_boxes, T *nram_x0, T *nram_y0,
-                               T *nram_x1, T *nram_y1, const int batch_num,
-                               const int anchor_s, const int hw_total_num,
-                               const int hw_seg_num, const int align_hw_seg_num,
-                               const int data_ram_num, const int i) {
+__mlu_func__ void store(T *addr_boxes, T *nram_x0, T *nram_y0, T *nram_x1,
+                        T *nram_y1, const int batch_num, const int anchor_s,
+                        const int hw_total_num, const int hw_seg_num,
+                        const int align_hw_seg_num, const int data_ram_num,
+                        const int i) {
   int offset = (i % 2) * data_ram_num;
   int bbox_data_offset = 4 * hw_total_num;
   T *nram_x0_p = nram_x0 + offset;
@@ -384,11 +386,10 @@ static __mlu_func__ void store(T *addr_boxes, T *nram_x0, T *nram_y0,
 }
 
 template <typename T>
-static __mlu_func__ void initCxyParam(T *nram_cx, T *nram_cy,
-                                      const int batch_num, const int anchor_s,
-                                      const int w_in, const int hw_seg_num,
-                                      const int align_hw_seg_num,
-                                      const int hw_data_offset) {
+__mlu_func__ void initCxyParam(T *nram_cx, T *nram_cy, const int batch_num,
+                               const int anchor_s, const int w_in,
+                               const int hw_seg_num, const int align_hw_seg_num,
+                               const int hw_data_offset) {
   // init cx/cy
   for (int i = 0; i < hw_seg_num; i++) {
     nram_cx[i] = (T)((hw_data_offset + i) % w_in);
@@ -406,12 +407,11 @@ static __mlu_func__ void initCxyParam(T *nram_cx, T *nram_cy,
 }
 
 template <typename T>
-static __mlu_func__ void initAnchorParam(const int *anchors, T *nram_anchor_w,
-                                         T *nram_anchor_h, const int batch_num,
-                                         const int anchor_s,
-                                         const int anchor_num,
-                                         const int anchor_offset,
-                                         const int align_hw_seg_num) {
+__mlu_func__ void initAnchorParam(const int *anchors, T *nram_anchor_w,
+                                  T *nram_anchor_h, const int batch_num,
+                                  const int anchor_s, const int anchor_num,
+                                  const int anchor_offset,
+                                  const int align_hw_seg_num) {
   // init anchor_w/anchor_h
   for (int i = 0; i < anchor_num; i++) {
     int idx = ((anchor_offset + i) % anchor_s) * 2;
@@ -431,10 +431,9 @@ static __mlu_func__ void initAnchorParam(const int *anchors, T *nram_anchor_w,
 }
 
 template <typename T>
-static __mlu_func__ void initImgParam(const int *img_size, T *nram_img_w,
-                                      T *nram_img_h, const int batch_num,
-                                      const int anchor_s,
-                                      const int align_hw_seg_num) {
+__mlu_func__ void initImgParam(const int *img_size, T *nram_img_w,
+                               T *nram_img_h, const int batch_num,
+                               const int anchor_s, const int align_hw_seg_num) {
   // init img_w/img_h
   for (int i = 0; i < batch_num; i++) {
     __bang_write_value(nram_img_h + i * anchor_s * align_hw_seg_num,
@@ -445,7 +444,7 @@ static __mlu_func__ void initImgParam(const int *img_size, T *nram_img_w,
 }
 
 template <typename T>
-static __mlu_func__ void YoloBoxComputeBbox(
+__mlu_func__ void YoloBoxComputeBbox(
     const T *x, const int *img_size, const int *anchors, const int class_num,
     const float conf_thresh, const int downsample_ratio, const bool clip_bbox,
     const float scale, const bool iou_aware, const float iou_aware_factor,
@@ -464,9 +463,28 @@ static __mlu_func__ void YoloBoxComputeBbox(
   int align_hw_seg_num = CEIL_ALIGN(hw_seg_num, align_num);
   int total_hw_seg_num = n_in * anchor_s * align_hw_seg_num;
 
-  // nram space
-  // ping/pong: |nram_x|nram_y|nram_w|nram_h|nram_conf|nram_iou|, 12*deal_num
-  // |nram_cx|nram_cy|nram_anchor_w|nram_anchor_w|nram_img_w|nram_img_h|
+  /*
+   * NRAM partition
+   *  pipeline, split_pipeline_num = 18
+   *  |-------------------------------------------------------|
+   *  |        PING               |        PONG               |
+   *  | nram_x | nram_cx | nram_w | nram_x | nram_cx | nram_w |
+   *  | nram_y | nram_cy | nram_h | nram_y | nram_cy | nram_h |
+   *  |-------------------------------------------------------|
+   *  | conf   | anchor_w| img_w  |
+   *  | iou    | anchor_h| img_h  |
+   *  |---------------------------|
+   *
+   *  otherwise, split_pipeline_num = 12
+   *  |---------------------------|
+   *  | nram_x | nram_cx | nram_w |
+   *  | nram_y | nram_cy | nram_h |
+   *  |---------------------------|
+   *  | conf   | anchor_w| img_w  |
+   *  | iou    | anchor_h| img_h  |
+   *  |---------------------------|
+   */
+
   int max_nram_num = MAX_NRAM_SIZE / sizeof(T);
   int deal_num = 0;
   int nram_pingpong_num = 0;
@@ -1040,15 +1058,14 @@ static __mlu_func__ void YoloBoxComputeBbox(
 }
 
 template <typename T>
-static __mlu_func__ void loadScore(const T *addr_x, T *nram_iou, T *nram_conf,
-                                   T *nram_cls, const bool iou_aware,
-                                   const int batch_num, const int class_num,
-                                   const int anchor_s, const int anchor_num,
-                                   const int s_num_offset, const int c_in,
-                                   const int hw_total_num, const int hw_seg_num,
-                                   const int align_hw_seg_num,
-                                   const int deal_num, const int data_ram_num,
-                                   const int i) {
+__mlu_func__ void loadScore(const T *addr_x, T *nram_iou, T *nram_conf,
+                            T *nram_cls, const bool iou_aware,
+                            const int batch_num, const int class_num,
+                            const int anchor_s, const int anchor_num,
+                            const int s_num_offset, const int c_in,
+                            const int hw_total_num, const int hw_seg_num,
+                            const int align_hw_seg_num, const int deal_num,
+                            const int data_ram_num, const int i) {
   int offset = (i % 2) * data_ram_num;
   int data_offset = (5 + class_num) * hw_total_num;
   T *nram_iou_p = nram_iou + offset;
@@ -1116,12 +1133,11 @@ static __mlu_func__ void loadScore(const T *addr_x, T *nram_iou, T *nram_conf,
 }
 
 template <typename T>
-static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
-                                      const float conf_thresh,
-                                      const bool iou_aware,
-                                      const float iou_aware_factor,
-                                      const int class_num, const int deal_num,
-                                      const int data_ram_num, const int i) {
+__mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
+                               const float conf_thresh, const bool iou_aware,
+                               const float iou_aware_factor,
+                               const int class_num, const int deal_num,
+                               const int data_ram_num, const int i) {
   int offset = (i % 2) * data_ram_num;
   T *nram_iou_p = nram_iou + offset;
   T *nram_conf_p = nram_conf + offset;
@@ -1160,7 +1176,7 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   __bang_add(nram_iou_p, nram_iou_p, nram_conf_p, deal_num);
 
   // mask, set 0
-  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+  int *nram_mask_int32 = (int *)nram_iou_p;
   __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
   __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
                     (int)0xffffffff, deal_num);
@@ -1168,7 +1184,7 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
                     (char *)nram_mask_int32, 4 * class_num * deal_num,
                     4 * deal_num);
 #else
-  const int32_t x2d = 0x3fb8aa3b;
+  const int x2d = 0x3fb8aa3b;
   float log2e = *(float *)&x2d;
   __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
   __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
@@ -1179,9 +1195,9 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   __bang_mul_scalar(nram_cls_p, nram_cls_p, (float)-1.0, class_num * deal_num);
   __bang_mul_scalar(nram_cls_p, nram_cls_p, log2e, class_num * deal_num);
 
-  int32_t *nram_mask_int32 = (int32_t *)nram_iou_p;
+  int *nram_mask_int32 = (int *)nram_iou_p;
 
-  for (int32_t k = 0; k < deal_num; ++k) {
+  for (int k = 0; k < deal_num; ++k) {
     // sigmoid(conf)
     nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
     nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
@@ -1204,7 +1220,7 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
       nram_mask_int32[k] = 0xffffffff;
     }
 
-    for (int32_t ci = 0; ci < class_num; ++ci) {
+    for (int ci = 0; ci < class_num; ++ci) {
       // sigmoid(cls)
       nram_cls_p[ci * deal_num + k] =
           powf((T)2.0, nram_cls_p[ci * deal_num + k]);
@@ -1224,13 +1240,11 @@ static __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
 }
 
 template <typename T>
-static __mlu_func__ void storeScore(T *addr_scores, T *nram_cls,
-                                    const int batch_num, const int anchor_s,
-                                    const int class_num, const int hw_total_num,
-                                    const int hw_seg_num,
-                                    const int align_hw_seg_num,
-                                    const int deal_num, const int data_ram_num,
-                                    const int i) {
+__mlu_func__ void storeScore(T *addr_scores, T *nram_cls, const int batch_num,
+                             const int anchor_s, const int class_num,
+                             const int hw_total_num, const int hw_seg_num,
+                             const int align_hw_seg_num, const int deal_num,
+                             const int data_ram_num, const int i) {
   int offset = (i % 2) * data_ram_num;
   int data_offset = class_num * hw_total_num;
   T *nram_cls_p = nram_cls + offset;
