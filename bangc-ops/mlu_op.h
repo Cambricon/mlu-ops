@@ -7476,14 +7476,14 @@ mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
 // Group:MaskedIm2col
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
- * optimize the ::mluOpMaskedIm2colForward.
+ * optimize ::mluOpMaskedIm2colForward.
  *
- * The size of the extra workspace is based on the given information of the ::mluOpMaskedIm2colForward,
+ * The size of the extra workspace is based on the given information of ::mluOpMaskedIm2colForward,
  * including the input tensor descriptor \b feature_desc and \b data_col_desc. For more information about the workspace,
- * see "Cambricon BANGC OPS User Guide".
+ * see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to an MLUOP context to manage MLU devices and queues in
  * ::mluOpGetMaskedIm2colForwardWorkspaceSize. For detailed information, see ::mluOpHandle_t.
  * @param[in] feature_desc
  * The descriptor of the tensor \b feature. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -7537,13 +7537,13 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
 
 // Group:MaskedIm2col
 /*!
- * @brief Copies the data of the input tensor \b feature covered by mask to the output tensor \b data_col .
+ * @brief Copies the data of the input tensor \b feature covered by mask to the output tensor \b data_col.
  * The area of mask that is out of \b feature is padded with 0. This function firstly generates mask coordinates
  * by combining \b mask_h_idx tensor and \b mask_w_idx tensor, then copies the \b feature data covered by mask.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
- * :：mluOpMaskedIm2colForward. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpMaskedIm2colForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] feature_desc
  * The descriptor of the tensor \b feature. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] feature
@@ -7568,7 +7568,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * The width of padding.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the ::mluOpMaskedIm2colForward.
- * For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] data_col_desc
@@ -7583,7 +7583,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * @par Data Type
  * - This function supports the following data types for tensor \b feature, tensor \b mask_h_idx,
  *   tensor \b mask_w_idx, and tensor \b data_col.
- *   Data types of tensor \b feature and tensor \b data_col should be the same.
+ *   Data types of tensor \b feature and tensor \b data_col must be the same.
  *   - feature tensor: half, float.
  *   - mask_h_idx tensor: int32_t.
  *   - mask_w_idx tensor: int32_t.
@@ -7597,15 +7597,15 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  *   - data_col tensor: \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - The tensor \b mask_h_idx must be 1-D.
- * - The tensor \b mask_w_idx must be 1-D.
- * - The tensor \b data_col must be 3-D.
+ * - The tensor \b mask_h_idx must be 1D.
+ * - The tensor \b mask_w_idx must be 1D.
+ * - The tensor \b data_col must be 3D.
  * - The sizes of the highest dimension of tensor \b feature must be 1.
  * - The sizes of the lowest dimension of tensor \b data_col, the element number of tensor \b mask_h_idx, and
  *   the element number of tensor \b mask_w_idx must be the same.
- * - When the element number of tensor \b feature equals to zero, this function will return MLUOP_STATUS_BAD_PARAM.
- * - When size of the highest dimension of tensor \b data_col equals to zero, this function will return
- *   MLUOP_STATUS_BAD_PARAM.
+ * - When the element number of tensor \b feature equals zero, this function will return \b MLUOP_STATUS_BAD_PARAM.
+ * - When size of the highest dimension of tensor \b data_col equals zero, this function will return
+ *   \b MLUOP_STATUS_BAD_PARAM.
  *
  * @par API Dependency
  * - Before calling this function you need to call ::mluOpGetMaskedIm2colForwardWorkspaceSize
