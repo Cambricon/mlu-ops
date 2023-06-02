@@ -3647,9 +3647,9 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  *   tensor must be equal to \b grad_voxel_feats[1].
  * - The first dimension of \b voxel_num tensor is one.
  * - The shape of \b feats is [N, C]:
- *   - 2C * sizeof(datatype of \b feats) + (N + 2C + 1) * sizeof(int) + N
+ *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
  *     must be less than or equal to 640KB on MLU300 series.
- *   - 2C * sizeof(datatype of \b feats) + (N + 2C + 1) * sizeof(int) + N
+ *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
  *     must be less than or equal to 380KB on MLU500 series.
  *
  * @par API Dependency
