@@ -34,30 +34,31 @@
 namespace mluopapitest {
 class dynamic_point_to_voxel_backward : public testing::Test {
  public:
-  void setParam(bool handle, bool grad_voxel_feats_desc, bool grad_voxel_feats, 
-		bool feats_desc, bool feats, bool voxel_feats_desc,
-                bool voxel_feats, bool point2voxel_map_desc, bool point2voxel_map,
-                bool voxel_points_count_desc, bool voxel_points_count,
-                bool voxel_num_desc, bool voxel_num, bool workspace,
-		bool grad_feats_desc, bool grad_feats) {
+  void setParam(bool handle, bool grad_voxel_feats_desc, bool grad_voxel_feats,
+                bool feats_desc, bool feats, bool voxel_feats_desc,
+                bool voxel_feats, bool point2voxel_map_desc,
+                bool point2voxel_map, bool voxel_points_count_desc,
+                bool voxel_points_count, bool voxel_num_desc, bool voxel_num,
+                bool workspace, bool grad_feats_desc, bool grad_feats) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
-    
+
     if (grad_voxel_feats_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_voxel_feats_desc_));
       std::vector<int> grad_voxel_feats_desc_dims{4, 3};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(grad_voxel_feats_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_FLOAT, 2,
-                                           grad_voxel_feats_desc_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          grad_voxel_feats_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 2,
+          grad_voxel_feats_desc_dims.data()));
     }
 
     if (grad_voxel_feats) {
       if (grad_voxel_feats_desc) {
         GTEST_CHECK(
             CNRT_RET_SUCCESS ==
-            cnrtMalloc(&grad_voxel_feats_, MLUOP_DTYPE_FLOAT *
-                                    mluOpGetTensorElementNum(grad_voxel_feats_desc_)));
+            cnrtMalloc(&grad_voxel_feats_,
+                       MLUOP_DTYPE_FLOAT *
+                           mluOpGetTensorElementNum(grad_voxel_feats_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&grad_voxel_feats_, MLUOP_DTYPE_FLOAT * 2));
@@ -180,25 +181,24 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (grad_feats) {
       if (grad_feats_desc) {
-        GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
-            cnrtMalloc(&grad_feats_, MLUOP_DTYPE_FLOAT *
-                                    mluOpGetTensorElementNum(grad_feats_desc_)));
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                    cnrtMalloc(&grad_feats_,
+                               MLUOP_DTYPE_FLOAT *
+                                   mluOpGetTensorElementNum(grad_feats_desc_)));
       } else {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
                     cnrtMalloc(&grad_feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
-    
   }
 
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpDynamicPointToVoxelBackward(
         handle_, reduce_type_, grad_voxel_feats_desc_, grad_voxel_feats_,
-	feats_desc_, feats_, voxel_feats_desc_, voxel_feats_,
-	point2voxel_map_desc_, point2voxel_map_, voxel_points_count_desc_, 
-	voxel_points_count_, voxel_num_desc_, voxel_num_,
-        workspace_, workspace_size_, grad_feats_desc_, grad_feats);_
+        feats_desc_, feats_, voxel_feats_desc_, voxel_feats_,
+        point2voxel_map_desc_, point2voxel_map_, voxel_points_count_desc_,
+        voxel_points_count_, voxel_num_desc_, voxel_num_, workspace_,
+        workspace_size_, grad_feats_desc_, grad_feats_);
     destroy();
     return status;
   }
@@ -321,7 +321,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
   void *workspace_ = nullptr;
   mluOpTensorDescriptor_t grad_feats_desc_ = nullptr;
   void *grad_feats_ = nullptr;
-  mluOpReduceMode_t reduce_type_ = MLUOP_REDUCE_DMEAN;
+  mluOpReduceMode_t reduce_type_ = MLUOP_REDUCE_DMAX;
 };
 
 TEST_F(dynamic_point_to_voxel_backward, BAD_PARAM_handle_null) {
@@ -423,7 +423,8 @@ TEST_F(dynamic_point_to_voxel_backward, BAD_PARAM_point2voxel_map_null) {
   }
 }
 
-TEST_F(dynamic_point_to_voxel_backward, BAD_PARAM_voxel_points_count_desc_null) {
+TEST_F(dynamic_point_to_voxel_backward,
+       BAD_PARAM_voxel_points_count_desc_null) {
   try {
     setParam(true, true, true, true, true, true, true, true, true, false, true,
              true, true, true, true, true);
