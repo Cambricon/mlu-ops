@@ -73,6 +73,7 @@ Operation:
 |Layout test          |Supports NCHW/NHWC                |          |          |
 |Zero element test    |Whether to support this test      |          |          |
 |Stability test       |--gtest_repeat=NUM<br>--thread=NUM|          |          |
+|mlu-only mode test   |--mlu-only,see [MLU-OPS Performance Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md)|          |          |
 |Mult-platform test   |MLU370/MLU590                     |          |          |
 |Nan/INF test         |Whether to support this test      |          |          |
 |Memory leak check    |Test result                       |          |          |
