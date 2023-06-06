@@ -7473,6 +7473,182 @@ mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
                               const mluOpTensorDescriptor_t grad_input_desc,
                               void *grad_input);
 
+// Group:MaskedIm2col
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
+ * optimize ::mluOpMaskedIm2colForward.
+ *
+ * The size of the extra workspace is based on the given information of ::mluOpMaskedIm2colForward,
+ * including the input tensor descriptor \b feature_desc and \b data_col_desc. For more information about the workspace,
+ * see "Cambricon BANG C OPS User Guide".
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context to manage MLU devices and queues in
+ * ::mluOpGetMaskedIm2colForwardWorkspaceSize. For detailed information, see ::mluOpHandle_t.
+ * @param[in] feature_desc
+ * The descriptor of the tensor \b feature. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_h_idx_desc
+ * The descriptor of the tensor \b mask_h_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_w_idx_desc
+ * The descriptor of the tensor \b mask_w_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] data_col_desc
+ * The descriptor of the tensor \b data_col. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] kernel_h
+ * The height of mask.
+ * @param[in] kernel_w
+ * The width of mask.
+ * @param[out] workspace_size
+ * A host pointer to the returned size of the extra workspace in bytes that is used in
+ * the ::mluOpMaskedIm2colForward.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitations
+ * - None.
+ *
+ * @par API Dependency
+ * - This function must be called before ::mluOpMaskedIm2colForward.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
+                                         const mluOpTensorDescriptor_t feature_desc,
+                                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                                         const int kernel_h,
+                                         const int kernel_w,
+                                         const mluOpTensorDescriptor_t data_col_desc,
+                                         size_t *workspace_size);
+
+// Group:MaskedIm2col
+/*!
+ * @brief Copies the data of the input tensor \b feature covered by mask to the output tensor \b data_col.
+ * The area of mask that is out of \b feature is padded with 0. This function firstly generates mask coordinates
+ * by combining \b mask_h_idx tensor and \b mask_w_idx tensor, then copies the \b feature data covered by mask.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpMaskedIm2colForward. For detailed information, see ::mluOpHandle_t.
+ * @param[in] feature_desc
+ * The descriptor of the tensor \b feature. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] feature
+ * Pointer to the MLU memory that stores \b feature.
+ * @param[in] mask_h_idx_desc
+ * The descriptor of the tensor \b mask_h_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_h_idx
+ * Pointer to the MLU memory that stores the tensor \b mask_h_idx which contains
+ * the coordinates of mask in height direction.
+ * @param[in] mask_w_idx_desc
+ * The descriptor of the tensor \b mask_w_idx. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask_w_idx
+ * Pointer to the MLU memory that stores the tensor \b mask_w_idx which contains
+ * the coordinates of mask in width direction.
+ * @param[in] kernel_h
+ * The height of mask.
+ * @param[in] kernel_w
+ * The width of mask.
+ * @param[in] pad_h
+ * The height of padding.
+ * @param[in] pad_w
+ * The width of padding.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the ::mluOpMaskedIm2colForward.
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * @param[in] data_col_desc
+ * The descriptor of the tensor \b data_col. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] data_col
+ * Pointer to the MLU memory that stores the tensor \b data_col that is the data copied from the tensor \b feature
+ * based on mask coordinates. The mask area out of the tensor \b feature is padded with 0.
+ *
+ * @par Return
+ * - MLUOP_STATUS_SUCCESS, MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - This function supports the following data types for tensor \b feature, tensor \b mask_h_idx,
+ *   tensor \b mask_w_idx, and tensor \b data_col.
+ *   Data types of tensor \b feature and tensor \b data_col must be the same.
+ *   - feature tensor: half, float.
+ *   - mask_h_idx tensor: int32_t.
+ *   - mask_w_idx tensor: int32_t.
+ *   - data_col tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b feature , \b mask_h_idx , \b mask_w_idx , and \b data_col are as follows:
+ *   - feature tensor: \p MLUOP_LAYOUT_NCHW.
+ *   - mask_h_idx tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - mask_w_idx tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - data_col tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The tensor \b mask_h_idx must be 1D.
+ * - The tensor \b mask_w_idx must be 1D.
+ * - The tensor \b data_col must be 3D.
+ * - The sizes of the highest dimension of tensor \b feature must be 1.
+ * - The sizes of the lowest dimension of tensor \b data_col, the element number of tensor \b mask_h_idx, and
+ *   the element number of tensor \b mask_w_idx must be the same.
+ * - When the element number of tensor \b feature equals zero, this function will return \b MLUOP_STATUS_BAD_PARAM.
+ * - When size of the highest dimension of tensor \b data_col equals zero, this function will return
+ *   \b MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par API Dependency
+ * - Before calling this function you need to call ::mluOpGetMaskedIm2colForwardWorkspaceSize
+ *   to get the extra space size needed in ::mluOpMaskedIm2colForward.
+ *
+ * @note
+ * - None.
+ *
+ * @par Example
+ * - The example of the ::mluOpMaskedIm2colForward is as follows:
+     @verbatim
+     input three arrays by 1 * 1 * 3 * 3, 2 and 2
+     --> feature: [[[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]]
+     --> mask_h_idx: [-1, 1]
+     --> mask_w_idx: [-1, 1]
+
+     param:
+            kernel_h: 2, kernel_w: 2, pad_h: 1, pad_w: 1
+
+     output array by 4 * 2 -->
+         output: [[0.0, 1.0], [0.0, 2.0], [0.0, 4.0], [0.0, 5.0]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/masked_conv2d_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpMaskedIm2colForward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t feature_desc,
+                         const void *feature,
+                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                         const void *mask_h_idx,
+                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                         const void *mask_w_idx,
+                         const int kernel_h,
+                         const int kernel_w,
+                         const int pad_h,
+                         const int pad_w,
+                         void *workspace,
+                         const size_t workspace_size,
+                         const mluOpTensorDescriptor_t data_col_desc,
+                         void *data_col);
+
 // Group:MoeDispatchBackwardData
 /*!
  * @brief Calculates the inverse gradient of \b input tensor, and returns the results in the output
