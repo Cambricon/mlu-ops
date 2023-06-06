@@ -49,3 +49,7 @@ compute_efficiency = theory_compute_ops / (latency * peak_compute_force)
 封装成公共函数，计算时得到硬件平台的版本号，根据计算数据类型通过查找表直接查找，确保支持之后的板卡和平台。
 
 算子开发者需要在 GTest 的`XXXExecutor::getTheoryOps()` 函数中给出算子理论计算量的公式，GTest 会自动根据算子规模计算理论 IO 量，并根据测试规模计算理论 IO 量和理论计算量。
+
+### 4. mlu-only 模式
+
+该模式的目的是为了加速 MLU 算子性能测试，该模式下仅调用 mluOp 接口，跳过算子的 cpu 计算以及结果的 diff 比对，根据维度信息随机生成数据。对于依赖真实值的算子，应忽略该模式，在 [bangc-ops/test/mlu_op_gtest/pb_gtest/gtest_config/test_list](https://github.com/Cambricon/mlu-ops/blob/master/bangc-ops/test/mlu_op_gtest/pb_gtest/gtest_config/test_list) 中添加算子名即可关闭该模式。
