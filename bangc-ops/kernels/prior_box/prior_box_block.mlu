@@ -260,8 +260,8 @@ __mlu_global__ void mluKernelPriorBox(
       T *clip_boxes = boxes;
       for (int cycle_index = 0; cycle_index < loop_pixel_num; cycle_index++) {
         clip_boxes = boxes + cycle_index * deal_size;
-        __bang_maxequal(clip_boxes, clip_boxes, zeros, deal_size);
-        __bang_minequal(clip_boxes, clip_boxes, ones, deal_size);
+        __bang_maxequal(tmp, zeros, clip_boxes, deal_size);
+        __bang_minequal(clip_boxes, tmp, ones, deal_size);
       }
     }
 
