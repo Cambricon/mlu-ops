@@ -25,7 +25,7 @@
 import os
 import sys
 
-def file_name(dir):
+def filename_check(dir):
   for root, dirs, _ in os.walk(dir):
     for dir in dirs:
       file_name = []
@@ -42,7 +42,7 @@ def file_name(dir):
 
 def main():
     dir_path = sys.argv[1]
-    file_name(dir_path)
+    filename_check(dir_path)
 
 
 if __name__ == "__main__":

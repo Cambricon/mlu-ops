@@ -154,12 +154,8 @@ done
 echo "-- [check_file_name] Using tools/check_file_name.py to check the file_name"
 python tools/check_file_name.py ${bangc_kernels_dir}
 
-if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-  ret=1
-fi
-
-if [[ ${ret} != 0 ]]; then
-  exit ${ret}
+if [[ $? -ne 0 ]]; then
+  exit 1
 fi
 
 if [[ $# -eq 1 ]]; then
