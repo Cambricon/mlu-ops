@@ -6,6 +6,7 @@ bangc_check_list=${bangc_ops}
 bangpy_check_list=${bangpy_ops}
 
 bangc_mlu_op_h="bangc-ops/mlu_op.h"
+bangc_kernels_dir='bangc-ops/kernels/'
 bangc_gtest_json_file="jsoncppDist/"
 
 bangc_exclude_list=${bangc_gtest_json_file}
@@ -149,6 +150,13 @@ echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error
 for i in $filenames; do
   python tools/check_log_error.py $i
 done
+
+echo "-- [check_file_name] Using tools/check_file_name.py to check the file_name"
+python tools/check_file_name.py ${bangc_kernels_dir}
+
+if [[ $? -ne 0 ]]; then
+  exit 1
+fi
 
 if [[ $# -eq 1 ]]; then
   bangpy_filenames=$(git diff --name-only ${1} \
