@@ -12,14 +12,24 @@ bangc_gtest_json_file="jsoncppDist/"
 bangc_exclude_list=${bangc_gtest_json_file}
 
 if [[ $# -eq 1 ]]; then
+  echo '****************************'
+  echo ${1}
+  echo $(git diff --name-only ${1})
   filenames=$(git diff --name-only ${1} \
     | grep -v ${bangc_exclude_list} \
     | grep -E ${bangc_check_list})
 else
-  filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
-    --diff-filter=R --diff-filter=T --cached --name-only \
+    echo '-----------------'
+    echo 'jin lai lo'
+    filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
+    --diff-filter=T --cached --name-only \ 
     | grep -v ${bangc_exclude_list} \
     | grep -E ${bangc_check_list})
+    echo $(git diff --diff-filter=A --cached --name-only)
+    echo $(git diff --diff-filter=C --cached --name-only)
+    echo $(git diff --diff-filter=M --cached --name-only)
+    echo $(git diff --diff-filter=R--cached --name-only)
+    echo $(git diff --diff-filter=T--cached --name-only)
 fi
 
 ret=0
@@ -148,6 +158,7 @@ fi
 
 echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
 for i in $filenames; do
+  echo $i
   python tools/check_log_error.py $i
 done
 
