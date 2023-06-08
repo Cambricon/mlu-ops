@@ -104,33 +104,34 @@ void DynamicPointToVoxelForwardExecutor::workspaceFree() {
 
 void DynamicPointToVoxelForwardExecutor::cpuCompute() {
   VLOG(4) << "[DynamicPointToVoxelForwardExecutor] call cpuCompute() Begin.";
-  // get params
-  ReduceMode reduce_mode = parser_->getProtoNode()
-                               ->dynamic_point_to_voxel_forward_param()
-                               .reduce_type();
-
-  auto feats = cpu_fp32_input_[0];
-  auto coors = cpu_fp32_input_[1];
-  auto voxel_feats = cpu_fp32_output_[0];
-  auto voxel_coors = cpu_fp32_output_[1];
-  auto point2voxel_map = cpu_fp32_output_[2];
-  auto voxel_points_count = cpu_fp32_output_[3];
-  auto voxel_num = cpu_fp32_output_[4];
-
-  auto coors_desc = tensor_desc_[1].tensor;
-  auto feats_desc = tensor_desc_[0].tensor;
-  int N = coors_desc->dims[0];
-  int num_features = feats_desc->dims[1];
-  auto voxel_feats_desc = tensor_desc_[2].tensor;
-  int out_n = voxel_feats_desc->dims[0];
-
   if (parser_->getInputDataCount(0) == 0 ||
       parser_->getInputDataCount(1) == 0) {
     return;
   }
 
-  // coors fill mask
-  for (int i = 0; i < N; i++) {
+  // Get input
+  ReduceMode reduce_mode = parser_->getProtoNode()
+                               ->dynamic_point_to_voxel_forward_param()
+                               .reduce_type();
+  auto feats = cpu_fp32_input_[0];
+  auto coors = cpu_fp32_input_[1];
+  auto feats_desc = tensor_desc_[0].tensor;
+  auto coors_desc = tensor_desc_[1].tensor;
+  const int32_t N = coors_desc->dims[0];
+  const int32_t num_coors = coors_desc->dims[1];
+  const int32_t num_features = feats_desc->dims[1];
+
+  // Get output
+  auto voxel_feats = cpu_fp32_output_[0];
+  auto voxel_coors = cpu_fp32_output_[1];
+  auto point2voxel_map = cpu_fp32_output_[2];
+  auto voxel_points_count = cpu_fp32_output_[3];
+  auto voxel_num = cpu_fp32_output_[4];
+  auto voxel_feats_desc = tensor_desc_[2].tensor;
+
+  // step 0
+  // If coors[i,:] contains negative numbers, coors[i,:] fill with -1
+  for (int32_t i = 0; i < N; ++i) {
     if (coors[i * 3] < 0 || coors[i * 3 + 1] < 0 || coors[i * 3 + 2] < 0) {
       coors[i * 3] = -1;
       coors[i * 3 + 1] = -1;
@@ -138,19 +139,16 @@ void DynamicPointToVoxelForwardExecutor::cpuCompute() {
     }
   }
 
-  // op unique
-  // 1) generator index
-  int32_t input_len = parser_->getInputDataCount(1);
-  int32_t flat_num = input_len / N;
+  // step 1
+  // 1.1 Get index
   std::vector<int> index(N);
-  std::vector<int> index_sorted(N);
   std::generate(index.begin(), index.end(), [n = 0]() mutable { return n++; });
 
-  // 2) sort
+  // 1.2 Sort by comparing coordinates
   auto compareInput = [=](int32_t i, int32_t j) {
-    for (int32_t idx = 0; idx < flat_num; ++idx) {
-      int32_t lhs = coors[idx + i * flat_num];
-      int32_t rhs = coors[idx + j * flat_num];
+    for (int32_t idx = 0; idx < num_coors; ++idx) {
+      const int32_t lhs = coors[idx + i * num_coors];
+      const int32_t rhs = coors[idx + j * num_coors];
       if (lhs < rhs) {
         return true;
       } else if (lhs > rhs) {
@@ -160,116 +158,95 @@ void DynamicPointToVoxelForwardExecutor::cpuCompute() {
     return false;
   };
   std::sort(index.begin(), index.end(), compareInput);
-  index_sorted = index;
-  // 3) unique
+  std::vector<int> index_sorted = index;
+
+  // 1.3 Unique
   auto diffInput = [=](int32_t i, int32_t j) {
-    for (int32_t idx = 0; idx < flat_num; ++idx) {
-      int32_t lhs = coors[idx + i * flat_num];
-      int32_t rhs = coors[idx + j * flat_num];
+    for (int32_t idx = 0; idx < num_coors; ++idx) {
+      const int32_t lhs = coors[idx + i * num_coors];
+      const int32_t rhs = coors[idx + j * num_coors];
       if (lhs != rhs) {
         return false;
       }
     }
     return true;
   };
-  std::vector<int>::iterator it;
-  it = std::unique(index.begin(), index.end(), diffInput);
+  std::vector<int>::iterator it =
+      std::unique(index.begin(), index.end(), diffInput);
   index.resize(std::distance(index.begin(), it));
 
-  // 4) get output
-  // 4.1) voxel_num
-  int32_t unique_dim = index.size();
-  voxel_num[0] = unique_dim;
-
-  // 4.2) voxel_coors
-  bool flag = false;
-  if (coors[index[0] * flat_num] == -1) {
-    flag = true;
-    voxel_num[0] -= 1;
-  }
-  for (int32_t i = 0; i < voxel_num[0]; i++) {
-    for (int32_t j = 0; j < flat_num; j++) {
+  // 2. Calculate voxel_num
+  const bool flag = coors[index[0] * num_coors] == -1;
+  voxel_num[0] = index.size() - static_cast<int32_t>(flag);
+  for (int32_t i = 0; i < voxel_num[0]; ++i) {
+    for (int32_t j = 0; j < num_coors; ++j) {
       if (flag) {
-        voxel_coors[i * flat_num + j] = coors[index[i + 1] * flat_num + j];
+        voxel_coors[i * num_coors + j] = coors[index[i + 1] * num_coors + j];
       } else {
-        voxel_coors[i * flat_num + j] = coors[index[i] * flat_num + j];
+        voxel_coors[i * num_coors + j] = coors[index[i] * num_coors + j];
       }
     }
   }
 
-  // mask
+  // 3. Calculate point2voxel_map
   std::vector<int> mask(N, 0);
-  for (int32_t i = 1; i < N; i++) {
-    if (diffInput(index_sorted[i], index_sorted[i - 1])) {
-      mask[i] = 0;
-    } else {
+  for (int32_t i = 1; i < N; ++i) {
+    if (!diffInput(index_sorted[i], index_sorted[i - 1])) {
       mask[i] = 1;
     }
-  }
-  for (int32_t i = 1; i < N; i++) {
-    mask[i] = mask[i - 1] + mask[i];
-  }
-  // 4.3) point2voxel_map and voxel_points_count
-  for (int32_t i = 1; i < N; i++) {
-    point2voxel_map[index_sorted[i]] = mask[i];
-  }
-  for (int32_t i = 0; i < unique_dim; i++) {
-    voxel_points_count[i] = 1;
-    for (int32_t j = i; j < N; j++) {
-      if (index[i] == index_sorted[j]) {
-        if (i + 1 == unique_dim) {
-          voxel_points_count[i] = N - j;
-        } else {
-          for (int32_t k = j + 1; k < N; k++) {
-            if (index[i + 1] != index_sorted[k]) {
-              voxel_points_count[i]++;
-            } else {
-              break;
-            }
-          }
-        }
-      }
-      break;
-    }
+    mask[i] += mask[i - 1];
   }
 
-  // op reduce feats
-  float fill_value = 0x0;
-  if (reduce_mode == REDUCE_MODE_MAX) {
-    fill_value = -1.17549e038;
+  for (int32_t i = 0; i < N; ++i) {
+    point2voxel_map[index_sorted[i]] = mask[i] - static_cast<int32_t>(flag);
   }
-  for (int i = 0; i < out_n * num_features; i++) {
+
+  // 4. Calculate voxel_points_count
+  int32_t voxel_points_count_idx = 0;
+  for (int32_t i = 0; i < index_sorted.size();) {
+    int32_t count = 1;
+    for (int32_t j = i + 1; j < N; ++j) {
+      if (diffInput(index_sorted[i], index_sorted[j])) {
+        count++;
+      } else {
+        break;
+      }
+    }
+    i += count;
+
+    if (flag && i == count) {
+      continue;
+    }
+
+    voxel_points_count[voxel_points_count_idx] = count;
+    voxel_points_count_idx++;
+  }
+
+  // 5. Calculate voxel_feats
+  const float fill_value = reduce_mode == REDUCE_MODE_MAX ? -1.17549e038 : 0x0;
+  for (int32_t i = 0; i < voxel_feats_desc->dims[0] * num_features; ++i) {
     voxel_feats[i] = fill_value;
   }
 
-  if (flag) {
-    for (int i = 0; i < voxel_num[0]; i++) {
-      voxel_points_count[i] = voxel_points_count[i + 1];
+  for (int32_t i = 0; i < N; ++i) {
+    const int32_t point2voxel_idx = point2voxel_map[i];
+    if (point2voxel_idx == -1) {
+      continue;
     }
-  }
-  for (int32_t i = 0; i < N; i++) {
-    if (flag) {
-      point2voxel_map[i] -= 1;
-    }
-    int32_t reduce_to = point2voxel_map[i];
-    if (reduce_to == -1) continue;
-    int32_t reduce_count = voxel_points_count[reduce_to];
+
+    const int32_t reduce_count = voxel_points_count[point2voxel_idx];
     const float *feats_offset = feats + i * num_features;
-    float *voxel_feats_offset = voxel_feats + reduce_to * num_features;
+    float *voxel_feats_offset = voxel_feats + point2voxel_idx * num_features;
     if (reduce_mode == REDUCE_MODE_MAX) {
-      for (int32_t j = 0; j < num_features; j++) {
-        float old_value = feats_offset[j];
-        float new_value = voxel_feats_offset[j];
-        if (old_value >= new_value) {
-          voxel_feats_offset[j] = old_value;
+      for (int32_t j = 0; j < num_features; ++j) {
+        if (feats_offset[j] >= voxel_feats_offset[j]) {
+          voxel_feats_offset[j] = feats_offset[j];
           theory_ops_++;
         }
       }
     } else if (reduce_mode == REDUCE_MODE_MEAN) {
-      for (int32_t j = 0; j < num_features; j++) {
-        float old_value = feats_offset[j];
-        float new_value = old_value / reduce_count;
-        voxel_feats_offset[j] += new_value;
+      for (int32_t j = 0; j < num_features; ++j) {
+        voxel_feats_offset[j] += feats_offset[j] / reduce_count;
         theory_ops_++;
       }
     }
