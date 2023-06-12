@@ -49,14 +49,13 @@ jobs:
         cntoolkit_version : [cntoolkit3.5.0]
     runs-on: ${{matrix.runner}}
     steps:
+      - uses: test_ci
+        run: |
+          git branch
+
       - uses: actions/checkout@v3
         with:
           submodules: 'true'
-
-      - name: bangc_lint_check
-        run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
-          git branch
 
       - name: bangc_lint_check
         run: >
