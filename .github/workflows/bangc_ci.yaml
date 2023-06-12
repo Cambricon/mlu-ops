@@ -51,7 +51,7 @@ jobs:
     steps:
       - name: bangc_check
         run: |
-          git branch
+          ls -l && git status && git config --list
 
       - uses: actions/checkout@v3
         with:
