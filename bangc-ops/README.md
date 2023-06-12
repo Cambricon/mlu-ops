@@ -104,6 +104,7 @@
   | `MLUOP_BUILD_ASAN_CHECK`    | OFF                                | 开启ASAN内存检查工具                                   | `MLUOP_BUILD_ASAN_CHECK`    | --asan                               |
   | `MLUOP_MLU_ARCH_LIST`       | `mtp_372`          | 目标mlu架构列表，分号分割的字符串，如"mtp_372" | `MLUOP_MLU_ARCH_LIST`       | --mlu370 |
   | `MLUOP_BUILD_SPECIFIC_OP`   | 空                                 | 编译指定的算子                                         | `MLUOP_BUILD_SPECIFIC_OP`   | --filter                             |
+  | `BUILD_JOBS`   | 16                                 | 编译指定的线程数                                         | `BUILD_JOBS`   | -j<br />--jobs                             |
 
   
 
