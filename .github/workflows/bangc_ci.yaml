@@ -49,7 +49,7 @@ jobs:
         cntoolkit_version : [cntoolkit3.5.0]
     runs-on: ${{matrix.runner}}
     steps:
-      - uses: test_ci
+      - name: bangc_check
         run: |
           git branch
 
