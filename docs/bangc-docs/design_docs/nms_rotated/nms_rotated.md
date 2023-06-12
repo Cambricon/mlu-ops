@@ -4,14 +4,15 @@
 
 | 算子名称    | `nms_rotated`          |
 | ----------- | --------------------- |
-| 编制人/日期 | liuyuan1/2022-02-06     |
-| 审批人/日期 | 袁梦，张双林/2022-02-17   |
+| 编制人/日期 | liuyuan1/2023-02-06     |
+| 审批人/日期 | 袁梦，张双林/2023-02-17   |
 
 - #### 修改记录
 
 | 版本号 | 修订人  | 修订日期  | 修订描述 |
 | ------ | ------- | --------- | -------- |
-| V1.0   | liuyuan1 | 2022-2-6 | 首次提交 |
+| V1.0   | liuyuan1 | 2023-2-6 | 首次提交 |
+| V1.1   | xuminjie | 2023-6-9 | boxes支持nan/inf |
 
 - #### 内容描述
 
@@ -37,9 +38,9 @@
 | 需求来源                  | mmcv                                                           |
 | 应用网络                  | fcos3d/pointpillar                                             |
 | 输入数据类型               | float                                                          |
-| 输入 Shape                | boxes:[N,5]; scores:[N]; iou_threshold:float;                  |
+| 输入 Shape                | boxes:[N,5]; scores:[N]; iou_threshold: scalar;                |
 | 输出数据类型               | int32                                                          |
-| 输出 Shape                | output:[N]; result_num: int32, 表示输出box的个数                 |
+| 输出 Shape                | output:[N]; result_num: scalar, 表示ouput前result_num个数有效     |
 | 是否需要支持原位            | 否                                                              |
 | 是否需要支持 stride 机制    | 否                                                              |
 | 是否需要支持广播            | 否                                                              |
@@ -74,7 +75,7 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 | iou_threshold | 输入数据，IOU 的阈值          | 输入            | float                   | scalar        | /        |
 | output_desc   | 输入数据，输出 index 的描述符  | 输入            | mluOpTensorDescriptor_t | /             | /        |
 | output        | 输出数据，输出 index 的数据    | 输出            | int32 \*                | [N]           | /        |
-| result_num    | 输出数据，输出 box 的个数      | 输出            | int32 \*                | /             | /        |
+| result_num    | 输出数据，输出 box 的个数      | 输出            | int32 \*                | scalar        | /        |
 
 ### 1.4 算子限制
 
@@ -199,8 +200,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
 2、0 元素检查防呆，VLOG(5)打印信息，是否返回与框架沟通；
 
 3、对输入输出支持的 dtype 以及 shape 进行防呆；
-
-4、算子自身的`iou_threshold`参数防呆。
 
 ## 4 算子性能优化记录
 
