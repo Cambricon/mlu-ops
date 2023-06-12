@@ -59,6 +59,16 @@ mluOpBboxOverlaps
 -----------------------------
 该算子用于计算给定两个矩形框的交并比，包括两个输入 tensor，Box1[N,4]和Box2[M,4]。参数 ``aligned`` 为 True 时，输出对位计算的交并比，为 False 时，输出两两相交的交并比；参数 ``offset`` 为 True 时，计算过程坐标有偏置，为 False 时，计算过程坐标没有偏置；参数 `mode` 为 0 时，结果为 `IOU` (intersection/(area1+area2))，为 1 时，结果为 `IOF` (intersection/area1)，其中 intersection 表示重叠面积，area1、area2 分别表示两个框的面积。
 
+.. _border_align_backward:
+
+mluOpBorderAlignBackward
+-----------------------------
+该算子为 ``mluOpBorderAlignForward`` 的反向算子，通过输入特征值、Box和最大池化值对应的索引求输入的梯度信息。
+
+mluOpBorderAlignForward
+-----------------------------
+该算子通过双线性插值和最大池化计算box四条边的最大特征值。包括两个输入 tensor，特征图信息和Box。
+
 .. _box_iou_rotated:
 
 mluOpBoxIouRotated

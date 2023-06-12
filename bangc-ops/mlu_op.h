@@ -11510,6 +11510,300 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
                            const mluOpTensorDescriptor_t grad_offset_desc,
                            void *grad_offset);
 
+// Group:BorderAlign
+/*!
+ * @brief Extracts the border features of \b input based on the bounding boxes to compute the
+ * maximum border features of \b input with the maximum pooling.
+ * The computing process of this operation is as follows:
+ *  1. For each border line of each box (commonly four lines: top, left, bottom and right lines), uniformly samples
+ *     pool_size + 1 positions on this line, involving the starting point and endpoint.
+ *  2. Compute the corresponding features on these points by bilinear interpolation.
+ *  3. Perform the max pooling over all pool_size + 1 positions to output the pooled features.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpBorderAlignForward operation. For detailed information, see ::mluOPHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor. The shape of \b input is [N, H, W, 4C].
+ * Channels ranged in [0,C), [C,2C), [2C,3C), [3C,4C) represent the top, left, bottom and right features
+ * respectively.
+ * @param[in] boxes_desc
+ * Descriptor of bounding box tensor.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores boxes tensors. The shape of \b boxes is [N, H * W, 4].
+ * @param[in] pool_size
+ * Number of positions sampled over the boxes' borders.
+ * @param[in] output_desc
+ * Descriptor of \b output, containing dimension and the layout of the output.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor. The shape of
+ * argmax_idx is [N, H * W, 4, C].
+ * @param[in] argmax_idx_desc
+ * Descriptor of \b argmax_idx, containing dimension and the layout of \b argmax_idx.
+ * @param[out] argmax_idx
+ * Pointer to the MLU memory that stores the \b argmax_idx tensor, which is the indices of
+ * maximum values after the max pooling. The shape of \b argmax_idx is [N, H * W, 4, C].
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Formula
+ * - See "BorderAlignForward Operator" section in "Cambricon BANG C OPS User Guide" for details.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input, \b boxes, \b pool_size,
+ *    \b output and \b argmax_idx. Data type of the \b input, \b boxes, and \b output tensors must be the same.
+ *   - input tensor: half, float.
+ *   - boxes tensor: half, float.
+ *   - pool_size: int32_t.
+ *   - output tensor: half, float.
+ *   - argmax_idx: int32_t.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b input, \b boxes, \b output, and \b argmax_idx are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - argmax_idx tensor: \p MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The \b input, \b output and \b argmax_idx must be 4D.
+ * - The \b boxes tensor must be 3D array, and the highest dimension of \b boxes must be 4.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @note
+ * - None.
+ *
+ * @par Example
+ * - The example of the border_align_forward operation is as follows:
+     @verbatim
+     input: a tensor with shape by 1 * 4 * 3 *4  --> [[[[ 1.,  2.,  3.,  4.],
+                                                        [ 5.,  6.,  7.,  8.],
+                                                        [ 9., 10., 11., 12.]],
+
+                                                       [[ 6.,  7.,  5.,  8.],
+                                                        [ 2.,  1.,  3.,  4.],
+                                                        [12.,  9., 11., 10.]],
+
+                                                       [[-2., -3.,  2.,  0.],
+                                                        [-4., -5.,  1., -1.],
+                                                        [-1., -1., -1., -1.]],
+
+                                                       [[ 0., -1.,  2.,  1.],
+                                                        [-4., -3., -2., -1.],
+                                                        [-1., -2., -3., -4.]]]]
+
+     boxes: a tensor with shape by 1 * 12 * 4  --> [[[0., 0., 2., 1.],
+                                                     [1., 0., 3., 1.],
+                                                     [1., 0., 2., 1.],
+                                                     [0., 0., 3., 1.],
+                                                     [0., 0., 1., 2.],
+                                                     [0., 0., 2., 2.],
+                                                     [1., 0., 2., 1.],
+                                                     [1., 0., 3., 1.],
+                                                     [0., 1., 1., 2.],
+                                                     [0., 0., 3., 2.],
+                                                     [1., 0., 3., 2.],
+                                                     [2., 0., 3., 2.]]]
+
+     param: pool_size = 1.
+     output: a tensor with shape by 1 * 1 * 12 * 4 --> [[[[ 3.,  6.,  1.,  2.],
+                                                          [ 4.,  7., -1.,  1.],
+                                                          [ 3.,  7.,  1.,  2.],
+                                                          [ 4.,  6., -1.,  1.],
+                                                          [ 2., 12., -1., -1.],
+                                                          [ 3., 12., -1.,  2.],
+                                                          [ 3.,  7.,  1.,  2.],
+                                                          [ 4.,  7., -1.,  1.],
+                                                          [ 6., 12., -1., -2.],
+                                                          [ 4., 12., -1.,  1.],
+                                                          [ 4.,  9., -1.,  1.],
+                                                          [ 4., 11., -1.,  1.]]]]
+
+     argmax_idx：a tensor with shape by 1 * 1 * 12 * 4 -->[[[[1, 0, 0, 1],
+                                                             [1, 0, 0, 1],
+                                                             [1, 0, 0, 1],
+                                                             [1, 0, 0, 1],
+                                                             [1, 1, 0, 1],
+                                                             [1, 1, 0, 1],
+                                                             [1, 0, 0, 1],
+                                                             [1, 0, 0, 1],
+                                                             [1, 1, 0, 0],
+                                                             [1, 1, 0, 1],
+                                                             [1, 1, 0, 1],
+                                                             [1, 1, 0, 1]]]]
+   @endverbatim
+ *
+ * @par Reference
+ * - http://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/border_align.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBorderAlignForward(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t input_desc,
+                        const void *input,
+                        const mluOpTensorDescriptor_t boxes_desc,
+                        const void *boxes,
+                        const int32_t pool_size,
+                        const mluOpTensorDescriptor_t output_desc,
+                        void *output,
+                        const mluOpTensorDescriptor_t argmax_idx_desc,
+                        void *argmax_idx);
+
+// Group:BorderAlign
+/*!
+ * @brief Computes the gradient of the input tensor of ::mluOpBorderAlignForward
+ * according to the output gradient \b grad_output, the maximum pooling index \b
+ * argmax_idx and bounding boxes \b boxes.
+ *
+ * @param[in] handle
+ * Handle to an MLUOPS context that is used to manage MLU devices and
+ * queues in ::mluOpBorderAlignBackward operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] grad_output_desc
+ * The descriptor of the \b grad_output tensor.
+ * @param[in] grad_output
+ * Pointer to the MLU memory that stores the output gradient of
+ * ::mluOpBorderAlignForward.
+ * The shape of \b grad_output is [N, K, 4, C], where N is the number of
+ * images, K is the product of
+ * the width of images and the height of images, and C is the number of image
+ * channels.
+ * @param[in] boxes_desc
+ * Descriptor of bounding box tensor.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes
+ * Pointer to the MLU memory that stores \b boxes tensors. The shape of
+ * \b boxes is [N, H * W, 4].
+ * @param[in] argmax_idx_desc
+ * Descriptor of \b argmax_idx, containing dimension and the layout of
+ * \b argmax_idx.
+ * @param[in] argmax_idx
+ * Pointer to the MLU memory that stores the \b argmax_idx tensor,
+ * which is the result of
+ * max pooling index. The shape of argmax_idx is [N, K, 4, C].
+ * @param[in] pool_size
+ * Number of positions sampled over the boxes borders.
+ * @param[in] grad_input_desc
+ * Descriptor of \b grad_input, containing dimension and the layout of
+ * output.
+ * @param[out] grad_input
+ * Pointer to the MLU memory that stores the gradient of the input
+ * tensor of ::mluOpBorderAlignForward.The shape of \b grad_input is [N, H, W, 4C], where
+ * N is the number of images, H is the height of images, W is the width of images,
+ * and C is the number of image channels.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Formula
+ * - See "BorderAlignBackward Operator" section in "Cambricon BANG C OPS User Guide"
+ * for details.
+ *
+ * @par Data Type
+ * - This function supports the following data types for \b grad_output, \b
+ * boxes, \b argmax_idx, \b pool_size and \b grad_input. Data types of the \b grad_output, \b boxes,
+ * and \b grad_input tensors should be the same.
+ *  - grad_output tensor: half, float.
+ *  - boxes tensor: half, float.
+ *  - argmax_idx: int32_t.
+ *  - pool_size: int32_t.
+ *  - grad_input tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b grad_output, \b boxes, \b argmax_idx and,
+ \b grad_input are as follows:
+ *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - argmax_idx tensor: \p MLUOP_LAYOUT_NHWC.
+ *   - grad_input tensor: \p MLUOP_LAYOUT_NHWC.
+ * @par Scale Limitation
+ * - The \b grad_output, \b argmax_idx and \b grad_input should be 4D.
+ * - The tensor \b boxes must be 3D array, and the highest dimension of \b
+ * boxes must be 4.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @note
+ * - The inputs \b grad_output and \b boxes with NaN or infinity are not
+ * supported.
+ *
+ * @par Example
+     @verbatim
+     input: a tensor with shape by 1 * 12 * 4 * 1  -->[[[[ 3.],[ 6.],[ 1.],[ 2.]],
+                                                        [[ 4.],[ 7.],[-1.],[ 1.]],
+                                                        [[ 3.],[ 7.],[ 1.],[ 2.]],
+                                                        [[ 4.],[ 6.],[-1.],[ 1.]],
+                                                        [[ 2.],[12.],[-1.],[-1.]],
+                                                        [[ 3.],[12.],[-1.],[ 2.]],
+                                                        [[ 3.],[ 7.],[ 1.],[ 2.]],
+                                                        [[ 4.],[ 7.],[-1.],[ 1.]],
+                                                        [[ 6.],[12.],[-1.],[-2.]],
+                                                        [[ 4.],[12.],[-1.],[ 1.]],
+                                                        [[ 4.],[ 9.],[-1.],[ 1.]],
+                                                        [[ 4.],[11.],[-1.],[ 1.]]]]
+     boxes: a tensor with shape by 1 * 12 * 4  --> [[[0., 0., 2., 1.],
+                                                     [1., 0., 3., 1.],
+                                                     [1., 0., 2., 1.],
+                                                     [0., 0., 3., 1.],
+                                                     [0., 0., 1., 2.],
+                                                     [0., 0., 2., 2.],
+                                                     [1., 0., 2., 1.],
+                                                     [1., 0., 3., 1.],
+                                                     [0., 1., 1., 2.],
+                                                     [0., 0., 3., 2.],
+                                                     [1., 0., 3., 2.],
+                                                     [2., 0., 3., 2.]]]
+     argmax_idx: a tensor with shape by 1 * 12 * 4 * 1 --> [[[[1],[0],[0],[1]],
+                                                             [[1],[0],[0],[1]],
+                                                             [[1],[0],[0],[1]],
+                                                             [[1],[0],[0],[1]],
+                                                             [[1],[1],[0],[1]],
+                                                             [[1],[1],[0],[1]],
+                                                             [[1],[0],[0],[1]],
+                                                             [[1],[0],[0],[1]],
+                                                             [[1],[1],[0],[0]],
+                                                             [[1],[1],[0],[1]],
+                                                             [[1],[1],[0],[1]],
+                                                             [[1],[1],[0],[1]]]]
+     param: pool_size = 1.
+     output: a tensor with shape by 1 * 3 * 4 * 4 --> [[[[ 0, 12,  0,  0],
+                                                         [ 2, 28,  0, -1],
+                                                         [12,  0,  0,  8],
+                                                         [24,  0,  0,  6]],
+
+                                                        [[ 0,  0,  0,  0],
+                                                         [ 6,  0,  0,  0],
+                                                         [ 0,  0,  3,  0],
+                                                         [ 0,  0, -3,  0]],
+
+                                                        [[ 0, 48,  0,  0],
+                                                         [ 0,  9, -2, -2],
+                                                         [ 0, 11, -1,  0],
+                                                         [ 0,  0, -3,  0]]]]
+
+   @endverbatim
+ *
+ * @par Reference
+ * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/border_align.py
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBorderAlignBackward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t grad_output_desc,
+                         const void *grad_output,
+                         const mluOpTensorDescriptor_t boxes_desc,
+                         const void *boxes,
+                         const mluOpTensorDescriptor_t argmax_idx_desc,
+                         const void *argmax_idx,
+                         const int32_t pool_size,
+                         const mluOpTensorDescriptor_t grad_input_desc,
+                         void *grad_input);
+
 // Group:IndiceConvolutionBackwardData
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as

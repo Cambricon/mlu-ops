@@ -1,0 +1,332 @@
+/*************************************************************************
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "border_align_backward.h"
+
+#include "core/logging.h"
+#include "kernels/kernel.h"
+#include "kernels/debug.h"
+#include "kernels/utils/common.h"
+
+#define NRAM_BBOX_SIZE 128
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ float bbox_nram[NRAM_BBOX_SIZE];
+
+template <typename T>
+__mlu_func__ void bilinearInterpolate(const int32_t input_height,
+                                      const int32_t input_width, T y, T x,
+                                      T *w1, T *w2, T *w3, T *w4,
+                                      int32_t *x_low, int32_t *x_high,
+                                      int32_t *y_low, int32_t *y_high,
+                                      bool *empty) {
+  // deal with case that the point is out of feature map boundary
+  if (y < -1.0 || y > input_height || x < -1.0 || x > input_width) {
+    *empty = true;
+    *w1 = *w2 = *w3 = *w4 = 0;
+    *x_low = *x_high = *y_low = *y_high = -1;
+    return;
+  }
+  *empty = false;
+  if (y <= 0) y = (T)0;
+  if (x <= 0) x = (T)0;
+
+  *y_low = int32_t(y);
+  *x_low = int32_t(x);
+
+  if (*y_low >= input_height - 1) {
+    *y_high = *y_low = input_height - 1;
+    y = (T)(*y_low);
+  } else {
+    *y_high = *y_low + 1;
+  }
+
+  if (*x_low >= input_width - 1) {
+    *x_high = *x_low = input_width - 1;
+    x = T(*x_low);
+  } else {
+    *x_high = *x_low + 1;
+  }
+  T ly = y - *y_low;
+  T lx = x - *x_low;
+  T hy = 1.0 - ly;
+  T hx = 1.0 - lx;
+  *w1 = hy * hx;
+  *w2 = hy * lx;
+  *w3 = ly * hx;
+  *w4 = ly * lx;
+  return;
+}
+
+template <typename T>
+__mlu_func__ void loadInput(int32_t n, int32_t C, int32_t border, int32_t c,
+                            int32_t deal_num, int32_t H, int32_t W,
+                            int32_t c_tail, int32_t h, int32_t w,
+                            T *grad_output_nram, T *argmax_idx_nram_temp,
+                            T *grad_input_nram, T *grad_output,
+                            int32_t *argmax_idx_nram,
+                            const int32_t *argmax_idx) {
+  int32_t src_offset = n * H * W * C * 4 + h * C * 4 + w * C + c * deal_num;
+  __bang_write_value(argmax_idx_nram, deal_num, (int32_t)0);
+  __sync();
+  if (c_tail == 0) {
+    __memcpy((void *)argmax_idx_nram, (void *)(argmax_idx + src_offset),
+             deal_num * sizeof(int32_t), GDRAM2NRAM);
+  } else {
+    __memcpy((void *)argmax_idx_nram, (void *)(argmax_idx + src_offset),
+             c_tail * sizeof(int32_t), GDRAM2NRAM);
+  }
+
+  __bang_int322float((float *)argmax_idx_nram_temp, (int32_t *)argmax_idx_nram,
+                     deal_num, 0);
+  if (sizeof(T) == sizeof(half)) {
+    __bang_float2half_rd((half *)argmax_idx_nram, (float *)argmax_idx_nram_temp,
+                         deal_num);
+    __bang_write_value(argmax_idx_nram_temp, deal_num, (T)0);
+    __bang_add_scalar(argmax_idx_nram_temp, (T *)argmax_idx_nram, (T)0,
+                      deal_num);
+  }
+  __bang_write_value(argmax_idx_nram, deal_num, (int32_t)0);
+  __bang_add_scalar((T *)argmax_idx_nram, argmax_idx_nram_temp, (T)0, deal_num);
+  __bang_write_value(argmax_idx_nram_temp, deal_num, (int32_t)0);
+  if (c_tail == 0) {
+    __memcpy(grad_output_nram, grad_output + src_offset, deal_num * sizeof(T),
+             GDRAM2NRAM);
+  } else {
+    __memcpy(grad_output_nram, grad_output + src_offset, c_tail * sizeof(T),
+             GDRAM2NRAM);
+  }
+}
+
+template <typename T>
+__mlu_func__ void computeGradInput(
+    T *grad_input_nram, T *grad_output_nram, T *grad_input,
+    T *argmax_idx_nram_temp, T *bbox_nram, const T w1, const T w2, const T w3,
+    const T w4, const int32_t x_low, const int32_t y_low, const int32_t x_high,
+    const int32_t y_high, const int32_t C, const int32_t c, const int32_t W,
+    const int32_t n, const int32_t H, const int32_t border, int32_t deal_num,
+    const int32_t c_tail, const int32_t pool_loop) {
+  int32_t deal_num_for_align = deal_num;
+  if (c_tail != 0) {
+    deal_num = c_tail;
+    deal_num_for_align = PAD_UP(deal_num, NFU_ALIGN_SIZE);
+  }
+
+  int32_t dst_offset = n * H * W * C * 4 + y_low * W * C * 4 + x_low * C * 4 +
+                       border * C + c * deal_num_for_align;
+  __bang_mul_scalar((T *)grad_input_nram, (T *)grad_output_nram, w1,
+                    deal_num_for_align);
+  __bang_mul((T *)grad_input_nram, (T *)(grad_input_nram), argmax_idx_nram_temp,
+             deal_num_for_align);
+  __bang_atomic_reduce_add((T *)(grad_input + dst_offset), (T *)grad_input_nram,
+                           deal_num);
+
+  dst_offset = n * H * W * C * 4 + y_low * W * C * 4 + x_high * C * 4 +
+               border * C + c * deal_num_for_align;
+  __bang_mul_scalar((T *)grad_input_nram, (T *)grad_output_nram, w2,
+                    deal_num_for_align);
+  __bang_mul((T *)grad_input_nram, (T *)(grad_input_nram), argmax_idx_nram_temp,
+             deal_num_for_align);
+  __bang_atomic_reduce_add((T *)(grad_input + dst_offset), (T *)grad_input_nram,
+                           deal_num);
+
+  dst_offset = n * H * W * C * 4 + y_high * W * C * 4 + x_low * C * 4 +
+               border * C + c * deal_num_for_align;
+  __bang_mul_scalar((T *)grad_input_nram, (T *)grad_output_nram, w3,
+                    deal_num_for_align);
+  __bang_mul((T *)grad_input_nram, (T *)(grad_input_nram), argmax_idx_nram_temp,
+             deal_num_for_align);
+  __bang_atomic_reduce_add((T *)(grad_input + dst_offset), (T *)grad_input_nram,
+                           deal_num);
+
+  dst_offset = n * H * W * C * 4 + y_high * W * C * 4 + x_high * C * 4 +
+               border * C + c * deal_num_for_align;
+  __bang_mul_scalar((T *)grad_input_nram, (T *)grad_output_nram, w4,
+                    deal_num_for_align);
+  __bang_mul((T *)grad_input_nram, (T *)(grad_input_nram), argmax_idx_nram_temp,
+             deal_num_for_align);
+  __bang_atomic_reduce_add((T *)(grad_input + dst_offset), (T *)grad_input_nram,
+                           deal_num);
+}
+
+template <typename T>
+__mlu_func__ void computeImpl(T *grad_output_nram, T *grad_output,
+                              int32_t *argmax_idx_nram,
+                              const int32_t *argmax_idx, T *grad_input,
+                              T *grad_input_nram, T *argmax_idx_nram_temp,
+                              T *bbox_nram, const int32_t n, const int32_t c,
+                              const int32_t h, const int32_t w, const int32_t K,
+                              const int32_t N, const int32_t C, const int32_t H,
+                              const int32_t W, int32_t x_high, int32_t x_low,
+                              int32_t y_high, int32_t y_low, T w1, T w2, T w3,
+                              T w4, const int32_t pool_size, int32_t deal_num,
+                              int32_t c_tail, const int32_t num_loop) {
+  int32_t border = num_loop % 4;
+  T x = *(bbox_nram + border / 2 * 2);
+  T y = *(bbox_nram + 1 + border / 2 * 2);
+  T box_width = *((T *)bbox_nram + 2) - *(T *)bbox_nram;
+  T box_height = *((T *)bbox_nram + 3) - *((T *)bbox_nram + 1);
+  T x_stride = 0;
+  T y_stride = 0;
+  switch (border) {
+    case 0: {
+      x_stride = box_width / pool_size;
+      y_stride = 0;
+    } break;
+    case 1: {
+      x_stride = 0;
+      y_stride = box_height / pool_size;
+    } break;
+    case 2: {
+      x_stride = -box_width / pool_size;
+      y_stride = 0;
+    } break;
+    case 3: {
+      x_stride = 0;
+      y_stride = -box_height / pool_size;
+    } break;
+    default: {
+      MLULOG("Invalid Border Type.");
+    }; break;
+  }
+
+  bool empty = false;
+  for (int32_t pool_loop = 0; pool_loop < pool_size + 1;) {
+    bilinearInterpolate(H, W, y, x, &w1, &w2, &w3, &w4, &x_low, &x_high, &y_low,
+                        &y_high, &empty);
+    if (empty) {
+      pool_loop = pool_loop + 1;
+      x = *(bbox_nram + border % 4 / 2 * 2) + x_stride * pool_loop;
+      y = *(bbox_nram + 1 + border % 4 / 2 * 2) + y_stride * pool_loop;
+      continue;
+    }
+
+    loadInput(n, C, border, c, deal_num, H, W, c_tail, h, w, grad_output_nram,
+              argmax_idx_nram_temp, grad_input_nram, grad_output,
+              argmax_idx_nram, argmax_idx);
+
+    __bang_write_value(argmax_idx_nram_temp, deal_num, (T)pool_loop);
+    __bang_eq(argmax_idx_nram_temp, (T *)argmax_idx_nram, argmax_idx_nram_temp,
+              deal_num);
+    computeGradInput(grad_input_nram, grad_output_nram, grad_input,
+                     argmax_idx_nram_temp, bbox_nram, w1, w2, w3, w4, x_low,
+                     y_low, x_high, y_high, C, c, W, n, H, border, deal_num,
+                     c_tail, pool_loop);
+    pool_loop = pool_loop + 1;
+    if (pool_loop == pool_size + 1) {
+      break;
+    }
+    x = *(bbox_nram + border % 4 / 2 * 2) + x_stride * pool_loop;
+    y = *(bbox_nram + 1 + border % 4 / 2 * 2) + y_stride * pool_loop;
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelBorderAlignBackward(
+    const T *grad_output, const T *boxes, const int32_t *argmax_idx,
+    const int32_t pool_size, const int32_t N, const int32_t H, const int32_t W,
+    const int32_t C, const int32_t K, T *grad_input) {
+  if (coreId == 0x80) {
+    return;
+  }
+  int32_t x_low = 0, y_low = 0, x_high = 0, y_high = 0;
+  T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+  int32_t deal_num = PAD_UP(
+      (MAX_NRAM_SIZE - NRAM_BBOX_SIZE) / (3 * sizeof(T) + sizeof(int32_t)),
+      NFU_ALIGN_SIZE);
+  T *grad_output_nram = (T *)((char *)nram_buffer);
+  __bang_write_value(grad_output_nram, deal_num, (T)0);
+  // __sync();
+  int32_t *argmax_idx_nram =
+      (int32_t *)((char *)nram_buffer + deal_num * sizeof(T));
+  T *argmax_idx_nram_temp = (T *)((char *)nram_buffer + deal_num * sizeof(T) +
+                                  deal_num * sizeof(int32_t));
+  T *bbox_nram = (T *)((char *)nram_buffer + 2 * deal_num * sizeof(T) +
+                       deal_num * sizeof(int32_t));
+  T *grad_input_nram = (T *)(((char *)nram_buffer + 2 * deal_num * sizeof(T) +
+                              deal_num * sizeof(int32_t)) +
+                             NRAM_BBOX_SIZE);
+
+  const int32_t total_num = N * K * 4;
+  int32_t num_per_core = total_num / taskDim;
+  const int32_t num_rem = total_num % taskDim;
+  num_per_core = num_per_core + int32_t(taskId < num_rem);
+  if (num_per_core == 0) {
+    return;
+  }
+  const int32_t num_start_per_core = num_rem > taskId
+                                         ? (taskId * num_per_core)
+                                         : (num_rem + taskId * num_per_core);
+  int32_t num_end_per_core = num_start_per_core + num_per_core;
+  for (int32_t num_loop = num_start_per_core; num_loop < num_end_per_core;
+       ++num_loop) {
+    int32_t n = num_loop / K / 4;
+    __memcpy((void *)bbox_nram, (void *)((T *)boxes + num_loop / 4 * 4),
+             4 * sizeof(T), GDRAM2NRAM);
+    int32_t c = 0;
+    int32_t c_num = C / deal_num;
+    int32_t w = num_loop % 4;
+    int32_t h = num_loop / 4 % K;
+
+    for (; c < c_num; ++c) {
+      computeImpl((T *)grad_output_nram, (T *)grad_output,
+                  (int32_t *)argmax_idx_nram, (int32_t *)argmax_idx,
+                  (T *)grad_input, (T *)grad_input_nram,
+                  (T *)argmax_idx_nram_temp, bbox_nram, n, c, h, w, K, N, C, H,
+                  W, x_high, x_low, y_high, y_low, w1, w2, w3, w4, pool_size,
+                  deal_num, 0, num_loop);
+    }
+    // compute c_tail
+    int32_t c_tail = C % deal_num;
+    if (c_tail != 0) {
+      int32_t deal_num_tail = PAD_UP(c_tail, NFU_ALIGN_SIZE);
+      computeImpl((T *)grad_output_nram, (T *)grad_output,
+                  (int32_t *)argmax_idx_nram, (int32_t *)argmax_idx,
+                  (T *)grad_input, (T *)grad_input_nram,
+                  (T *)argmax_idx_nram_temp, bbox_nram, n, c, h, w, K, N, C, H,
+                  W, x_high, x_low, y_high, y_low, w1, w2, w3, w4, pool_size,
+                  deal_num_tail, c_tail, num_loop);
+    }
+  }
+}
+
+void MLUOP_WIN_API KernelBorderAlignBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *grad_output, const void *boxes,
+    const int32_t *argmax_idx, const int32_t pool_size, int32_t N, int32_t H,
+    int32_t W, int32_t C, int32_t K, void *grad_input) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT:
+      MLUKernelBorderAlignBackward<<<k_dim, k_type, queue>>>(
+          (float *)grad_output, (float *)boxes, (int32_t *)argmax_idx,
+          pool_size, N, H, W, C, K, (float *)grad_input);
+      break;
+    case MLUOP_DTYPE_HALF:
+      MLUKernelBorderAlignBackward<<<k_dim, k_type, queue>>>(
+          (half *)grad_output, (half *)boxes, (int32_t *)argmax_idx, pool_size,
+          N, H, W, C, K, (half *)grad_input);
+      break;
+    default: {
+      LOG(ERROR) << "Not implemented.";
+    }; break;
+  }
+}
