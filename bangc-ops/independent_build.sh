@@ -18,6 +18,7 @@ export BUILD_MODE=${BUILD_MODE:-release} # release/debug
 export MLUOP_BUILD_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST:-OFF} # ON/OFF coverage mode
 export MLUOP_BUILD_ASAN_CHECK=${MLUOP_BUILD_ASAN_CHECK:-OFF} # ON/OFF Address Sanitizer (ASan)
 export MLUOP_BUILD_PREPARE=${MLUOP_BUILD_PREPARE:-ON}
+export BUILD_JOBS="${BUILD_JOBS:-16}" # concurrent build jobs
 
 # import common method like `download_pkg`, `get_json_val`, `common_extract`, etc
 . ./scripts/utils.bash
@@ -31,6 +32,7 @@ short_args=(
   c   # coverage
   h   # help
   d   # debug
+  j:  # jobs
 )
 # setup long options, follow alphabetical order
 long_args=(
@@ -38,6 +40,7 @@ long_args=(
   coverage
   debug
   filter:
+  jobs:
   help
   mlu270 # mlu arch
   mlu290 # mlu arch
@@ -102,6 +105,7 @@ usage () {
     echo "                                                          __MLU_SRAM_SIZE__ = 2048KB"
     echo "                                                          cncc --bang-mlu-arch=mtp_592, cnas --mlu-arch mtp_592"
     echo "      --filter=*         Build specified OP only (string with ';' separated)"
+    echo "      -j N, --jobs=N     Build for N parallel jobs."
     echo "      --no_prepare       Skip dependency download."
     echo "      --prepare          Dependency download only."
     echo
@@ -300,6 +304,11 @@ if [ $# != 0 ]; then
         prog_log_note "Build libmluop.so with OP: ${MLUOP_BUILD_SPECIFIC_OP} only."
         shift
         ;;
+      -j | --jobs)
+        shift
+        export BUILD_JOBS=$1
+        shift
+        ;;
       --no_prepare)
         shift
         export MLUOP_BUILD_PREPARE="OFF"
@@ -347,6 +356,7 @@ prog_log_info "MLUOP_BUILD_COVERAGE_TEST = ${MLUOP_BUILD_COVERAGE_TEST}"
 prog_log_info "MLUOP_BUILD_ASAN_CHECK = ${MLUOP_BUILD_ASAN_CHECK}"
 prog_log_info "MLUOP_MLU_ARCH_LIST = ${MLUOP_MLU_ARCH_LIST}"
 prog_log_info "MLUOP_TARGET_CPU_ARCH = ${MLUOP_TARGET_CPU_ARCH}"
+prog_log_info "BUILD_JOBS = ${BUILD_JOBS}"
 #check compiler version and consider activate devtoolset for CentOS 7
 if [ "$OS_RELEASE_ID" = "centos" -a "$OS_RELEASE_VERSION_ID" = "7" ]; then
   if [ ! -f "/opt/rh/devtoolset-7/enable" ]; then
@@ -408,4 +418,4 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}"
 
 popd > /dev/null
-${CMAKE} --build ${BUILD_PATH} --  -j
+${CMAKE} --build ${BUILD_PATH} --  -j${BUILD_JOBS}
