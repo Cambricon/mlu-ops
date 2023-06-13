@@ -75,7 +75,7 @@ __mlu_func__ void findCoreMaxBox(
 
     /******NMS LOAD END******/
 
-    __bang_max(temp, score, seg_len);
+    __bang_argmax(temp, score, seg_len);
     if (temp[0] > max_box[0]) {
       max_box[0] = temp[0];
       if (std::is_same<IN_DT, half>::value) {
@@ -109,7 +109,7 @@ __mlu_func__ void findClusterMaxBox(IN_DT *sram, IN_DT *max_box, IN_DT *temp,
   __bang_write_value(temp, 64, IN_DT(-INFINITY));
   __memcpy(temp, sram, sizeof(IN_DT), SRAM2NRAM, sizeof(IN_DT),
            REDUCE_NUM * sizeof(IN_DT), coreDim - 1);
-  __bang_max(max_box, temp, 64);
+  __bang_argmax(max_box, temp, 64);
   int max_core = (std::is_same<IN_DT, half>::value) ? ((uint16_t *)max_box)[1]
                                                     : ((uint32_t *)max_box)[1];
   // copy the max box to max_box
