@@ -26,20 +26,15 @@ mluOpAbs
 mluOpAddN
 -----------------------------
 
-多个张量的加法操作。公式如下：
+实现多个张量的加法运算。
 
-
-已知形状完全一致的输入张量 ``A``、``B``、``C`` 等若干，构成张量集合 ``X``。
-
-len = length(A) = length(B)= …… = length(D)
-
-AddN(A,B...)公式如下：
+公式如下：
 
 .. math::
 
-   Z[i]=\sum_{n=0}^{len-1}Tn[i],i\epsilon[0,len-1],n\epsilon[0,|X|-1]
+     Y=\sum_{n=0}^{N-1}X_n
 
-其中 ``Tn`` 指集合 ``X`` 中任意一个张量，``Z`` 表示输出数据，是所有输入张量对位相加后的结果。
+注：X表示包含N个形状相同的张量的集合。
 
 .. _active_rotated_filter_forward:
 
