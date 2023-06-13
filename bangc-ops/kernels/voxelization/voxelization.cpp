@@ -258,7 +258,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
     GEN_CASE_DATA(false, "voxel_num", voxel_num, voxel_num_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "voxelization", "max_points", max_points);
     GEN_CASE_OP_PARAM_SINGLE(1, "voxelization", "max_voxels", max_voxels);
-    GEN_CASE_OP_PARAM_SINGLE(2, "voxelization", "NDim", NDim);
+    GEN_CASE_OP_PARAM_SINGLE(2, "voxelization", "ndim", NDim);
     GEN_CASE_OP_PARAM_SINGLE(3, "voxelization", "deterministic", deterministic);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
   }

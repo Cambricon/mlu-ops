@@ -23,11 +23,20 @@
 #include "voxelization.h"
 
 #include <cmath>
-
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
+#define INT_MIN -2147483648
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+template <typename T>
+__mlu_func__ bool containNanInf(const T pos1, const T pos2) {
+  if (std::isnan(pos1) || std::isnan(pos2) || std::isinf(pos1) ||
+      std::isinf(pos2)) {
+    return true;
+  }
+  return false;
+}
 
 #if __BANG_ARCH__ >= 322
 __mlu_func__ void computeDynamicVoxelize(
@@ -172,9 +181,24 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
   const float coors_x_max = coors_range[3];
   const float coors_y_max = coors_range[4];
   const float coors_z_max = coors_range[5];
-  const int32_t grid_x = round((coors_x_max - coors_x_min) / voxel_x);
-  const int32_t grid_y = round((coors_y_max - coors_y_min) / voxel_y);
-  const int32_t grid_z = round((coors_z_max - coors_z_min) / voxel_z);
+
+  int32_t grid_x = round((coors_x_max - coors_x_min) / voxel_x);
+  int32_t grid_y = round((coors_y_max - coors_y_min) / voxel_y);
+  int32_t grid_z = round((coors_z_max - coors_z_min) / voxel_z);
+
+  bool contain_nan_inf = false;
+  contain_nan_inf = containNanInf(coors_x_max, coors_x_min);
+  if (contain_nan_inf) {
+    grid_x = INT_MIN;
+  }
+  contain_nan_inf = containNanInf(coors_y_max, coors_y_min);
+  if (contain_nan_inf) {
+    grid_y = INT_MIN;
+  }
+  contain_nan_inf = containNanInf(coors_z_max, coors_z_min);
+  if (contain_nan_inf) {
+    grid_z = INT_MIN;
+  }
 
   const int32_t split_num = 9;
   const int32_t deal_num =
