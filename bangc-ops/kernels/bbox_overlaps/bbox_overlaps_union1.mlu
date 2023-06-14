@@ -133,12 +133,8 @@ __mlu_device__ void bbox_overlaps_workflow(
       __bang_write_value(vec_bottom, batches_stride, (T)0);
 
       // width --> vec_left
-#if __BANG_ARCH__ >= 520
-      __bang_maximum(vec_left, vec_bottom, vec_left, batches_stride);
-#else
       __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
 
-#endif
       T *width = vec_left;
       // height --> vec_right
 
@@ -254,7 +250,6 @@ __mlu_device__ void bbox_overlaps_workflow(
         __bang_sub(vec_left, vec_right, vec_left, batches_stride);
         __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
 #else
-        // vec_b1_x1[0] = NAN; vec_b2_x1[0] = 10;
         __memcpy_async(vec_left, vec_b1_x1, batches_stride * sizeof(T),
                        NRAM2NRAM);
         __memcpy(vec_bottom, vec_b2_x1, batches_stride * sizeof(T), NRAM2NRAM);
@@ -287,11 +282,7 @@ __mlu_device__ void bbox_overlaps_workflow(
         __bang_write_value(vec_bottom, batches_stride, (T)0);
 
         // width --> vec_left
-#if __BANG_ARCH__ >= 520
-        __bang_maximum(vec_left, vec_bottom, vec_left, batches_stride);
-#else
         __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
-#endif
         T *width = vec_left;
         // height --> vec_right
 #if __BANG_ARCH__ >= 520
