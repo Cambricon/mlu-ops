@@ -31,3 +31,10 @@ Cambricon BANG C OPS是AOT模式，指令是提前生成并存放于动态库中
 
 可以使用 ``cnrtNotifier_t``，具体介绍可参考《Cambricon BANG C/C++ 编程指南》中“Notifier”章节内容。
 
+**问题8：部分算子在half数据类型下精度较差，是否有提高Cambricon BANG C OPS算子精度的方法？**
+
+激活类算子可以设置 ``mluOpComputationPreference_t`` 来选择高精度或高性能模式。具体参见 mlu_op.h 或《Cambricon BANG C OPS Developer Guide》中各算子接口描述。
+
+**问题9：在运行过程中遇到执行超时的现象，应如何处理？**
+
+建议减小算子规模进行使用，或联系寒武纪AE工程师提出需求。对于Pointwise类算子，建议把输入张量拆分成多个小张量，然后将各输出按照拆分的方式进行拼接。
