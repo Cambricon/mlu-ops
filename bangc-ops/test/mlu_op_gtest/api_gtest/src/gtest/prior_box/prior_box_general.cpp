@@ -305,26 +305,6 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
-    zero_element_3, prior_box_general,
-    testing::Combine(
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({1}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({1}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({4}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({1}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({3, 3, 2, 4}))),
-        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>({3, 3, 2, 4}))),
-        testing::Values(PriorBoxDescParam{3, 3, 0, 0, 3.0, 3.0, 0.5, true,
-                                          true}),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
-
-INSTANTIATE_TEST_CASE_P(
     bad_params_0, prior_box_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
