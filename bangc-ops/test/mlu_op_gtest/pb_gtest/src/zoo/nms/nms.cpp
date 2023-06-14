@@ -427,7 +427,6 @@ void NmsExecutor::nms_detection_cpu(
 void NmsExecutor::cpuCompute() {
   assert(parser_->getInputNum() == 2);
   // assert(parser_->getOutputNum() == 1);
-
   int max_output_boxes =
       parser_->getProtoNode()->nms_param().max_output_boxes();
   float iou_thresh = parser_->getProtoNode()->nms_param().iou_threshold();
