@@ -184,11 +184,14 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
 
   bool contain_nan_inf = false;
   contain_nan_inf = containNanInf(coors_x_max, coors_x_min);
-  const int32_t grid_x = contain_nan_inf ? INT_MIN : round((coors_x_max - coors_x_min) / voxel_x);
+  const int32_t grid_x =
+      contain_nan_inf ? INT_MIN : round((coors_x_max - coors_x_min) / voxel_x);
   contain_nan_inf = containNanInf(coors_y_max, coors_y_min);
-  const int32_t grid_y = contain_nan_inf ? INT_MIN : round((coors_y_max - coors_y_min) / voxel_y);
+  const int32_t grid_y =
+      contain_nan_inf ? INT_MIN : round((coors_y_max - coors_y_min) / voxel_y);
   contain_nan_inf = containNanInf(coors_z_max, coors_z_min);
-  const int32_t grid_z = contain_nan_inf ? INT_MIN : round((coors_z_max - coors_z_min) / voxel_z);
+  const int32_t grid_z =
+      contain_nan_inf ? INT_MIN : round((coors_z_max - coors_z_min) / voxel_z);
 
   const int32_t split_num = 9;
   const int32_t deal_num =
