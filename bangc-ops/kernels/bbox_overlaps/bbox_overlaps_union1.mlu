@@ -45,33 +45,6 @@ __mlu_func__ bool isFloat<float>() {
 }
 
 template <typename T>
-__mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
-                             T *nram_addition, int is_high_precision,
-                             int deal_num) {
-  if (isFloat<T>()) {
-#if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
-    __bang_div((float *)nram_dst, (float *)nram_src0, (float *)nram_src1,
-               deal_num);
-#else
-    __bang_recip((float *)nram_dst, (float *)nram_src1, deal_num);
-    __bang_mul((float *)nram_dst, (float *)nram_src0, (float *)nram_dst,
-               deal_num);
-#endif
-  } else {
-#if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
-    __bang_div((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
-               deal_num);
-#elif __BANG_ARCH__ == 372
-    __bang_half2float((float *)nram_addition, (half *)nram_src1, deal_num);
-    __bang_recip((float *)nram_addition, (float *)nram_addition, deal_num);
-    __mluop_float2half((half *)nram_src1, (float *)nram_addition, deal_num);
-    __bang_mul((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
-               deal_num);
-#endif
-  }
-}
-
-template <typename T>
 __mlu_device__ void bbox_overlaps_workflow(
     T *vec_b1_x1, T *vec_b1_y1, T *vec_b1_x2, T *vec_b1_y2, T *vec_b2_x1,
     T *vec_b2_y1, T *vec_b2_x2, T *vec_b2_y2, T *vec_left, T *vec_right,
@@ -233,7 +206,7 @@ __mlu_device__ void bbox_overlaps_workflow(
 #endif
       }
       T *base_s = b1_area;
-      computeDiv(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+      __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
                  batches_stride);
       __memcpy((T *)ious + index, width, handle_batches * sizeof(T),
                NRAM2GDRAM);
@@ -384,7 +357,7 @@ __mlu_device__ void bbox_overlaps_workflow(
         T *base_s = b1_area;
 
         // ious = inter_s / base_s
-        computeDiv(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+        __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
                    batches_stride);
         int32_t gdram_offset = index1 * num_bbox2 + index2;
         __memcpy((T *)ious + gdram_offset, width, handle_batches * sizeof(T),
