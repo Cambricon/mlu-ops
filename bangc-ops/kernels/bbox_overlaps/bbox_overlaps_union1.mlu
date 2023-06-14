@@ -35,6 +35,43 @@
 __nram__ char nmem_buf[MAX_NRAM_SIZE];
 
 template <typename T>
+__mlu_func__ bool isFloat() {
+  return false;
+}
+
+template <>
+__mlu_func__ bool isFloat<float>() {
+  return true;
+}
+
+template <typename T>
+__mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
+                             T *nram_addition, int is_high_precision,
+                             int deal_num) {
+  if (isFloat<T>()) {
+#if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
+    __bang_div((float *)nram_dst, (float *)nram_src0, (float *)nram_src1,
+               deal_num);
+#else
+    __bang_recip((float *)nram_dst, (float *)nram_src1, deal_num);
+    __bang_mul((float *)nram_dst, (float *)nram_src0, (float *)nram_dst,
+               deal_num);
+#endif
+  } else {
+#if (__BANG_ARCH__ >= 300) && (__BANG_ARCH__ != 372)
+    __bang_div((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
+               deal_num);
+#elif __BANG_ARCH__ == 372
+    __bang_half2float((float *)nram_addition, (half *)nram_src1, deal_num);
+    __bang_recip((float *)nram_addition, (float *)nram_addition, deal_num);
+    __mluop_float2half((half *)nram_src1, (float *)nram_addition, deal_num);
+    __bang_mul((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
+               deal_num);
+#endif
+  }
+}
+
+template <typename T>
 __mlu_device__ void bbox_overlaps_workflow(
     T *vec_b1_x1, T *vec_b1_y1, T *vec_b1_x2, T *vec_b1_y2, T *vec_b2_x1,
     T *vec_b2_y1, T *vec_b2_x2, T *vec_b2_y2, T *vec_left, T *vec_right,
@@ -61,34 +98,59 @@ __mlu_device__ void bbox_overlaps_workflow(
       int32_t b2 = index;
 
       int32_t base1 = b1 * COORD_NUM;
-      __memcpy(vec_b1_x1, &bbox1[base1], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b1_y1, &bbox1[base1 + 1], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b1_x2, &bbox1[base1 + 2], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b1_y2, &bbox1[base1 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b1_x1, &bbox1[base1], sizeof(T), GDRAM2NRAM, sizeof(T),
+                     COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b1_y1, &bbox1[base1 + 1], sizeof(T), GDRAM2NRAM,
+                     sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b1_x2, &bbox1[base1 + 2], sizeof(T), GDRAM2NRAM,
+                     sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b1_y2, &bbox1[base1 + 3], sizeof(T), GDRAM2NRAM,
+                     sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
 
       int32_t base2 = b2 * COORD_NUM;
-      __memcpy(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM, sizeof(T),
+                     COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM,
+                     sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+      __memcpy_async(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM,
+                     sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
       __memcpy(vec_b2_y2, &bbox2[base2 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
                COORD_NUM * sizeof(T), handle_batches - 1);
 
       // get the width and height
-      __bang_maxequal(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
-      __bang_minequal(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
-      __bang_maxequal(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
-      __bang_minequal(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
-
+#if __BANG_ARCH__ >= 520
+      __bang_maximum(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
+      __bang_minimum(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
+      __bang_maximum(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
+      __bang_minimum(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
       // right - left + offset ---> left
       __bang_sub(vec_left, vec_right, vec_left, batches_stride);
       __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
+#else
+      // vec_b1_x1[0] = NAN; vec_b2_x1[0] = 10;
+      __memcpy_async(vec_left, vec_b1_x1, batches_stride * sizeof(T),
+                     NRAM2NRAM);
+      __memcpy(vec_bottom, vec_b2_x1, batches_stride * sizeof(T), NRAM2NRAM);
+      __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
+
+      __memcpy_async(vec_right, vec_b1_x2, batches_stride * sizeof(T),
+                     NRAM2NRAM);
+      __memcpy(vec_bottom, vec_b2_x2, batches_stride * sizeof(T), NRAM2NRAM);
+      __bang_minimum(vec_right, vec_right, vec_bottom, batches_stride);
+      // right - left + offset ---> left
+      __bang_sub(vec_left, vec_right, vec_left, batches_stride);
+      __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
+
+      __memcpy_async(vec_top, vec_b1_y1, batches_stride * sizeof(T), NRAM2NRAM);
+      __memcpy(vec_bottom, vec_b2_y1, batches_stride * sizeof(T), NRAM2NRAM);
+      __bang_maximum(vec_top, vec_top, vec_bottom, batches_stride);
+
+      __memcpy_async(vec_bottom, vec_b1_y2, batches_stride * sizeof(T),
+                     NRAM2NRAM);
+      __memcpy(vec_right, vec_b2_y2, batches_stride * sizeof(T), NRAM2NRAM);
+      __bang_minimum(vec_bottom, vec_bottom, vec_right, batches_stride);
+
+#endif
 
       // bottom - top + offset ---> right
       __bang_sub(vec_right, vec_bottom, vec_top, batches_stride);
@@ -98,10 +160,21 @@ __mlu_device__ void bbox_overlaps_workflow(
       __bang_write_value(vec_bottom, batches_stride, (T)0);
 
       // width --> vec_left
-      __bang_maxequal(vec_left, vec_bottom, vec_left, batches_stride);
+#if __BANG_ARCH__ >= 520
+      __bang_maximum(vec_left, vec_bottom, vec_left, batches_stride);
+#else
+      __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
+
+#endif
       T *width = vec_left;
       // height --> vec_right
-      __bang_maxequal(vec_right, vec_bottom, vec_right, batches_stride);
+
+#if __BANG_ARCH__ >= 520
+      __bang_maximum(vec_right, vec_bottom, vec_right, batches_stride);
+#else
+      __bang_write_value(vec_bottom, batches_stride, (T)0);
+      __bang_maximum(vec_right, vec_right, vec_bottom, batches_stride);
+#endif
       T *height = vec_right;
 
       // get the b1_area
@@ -143,15 +216,25 @@ __mlu_device__ void bbox_overlaps_workflow(
       if (mode == 0) {
         __bang_add(b1_area, b1_area, b2_area, batches_stride);
         __bang_sub(b1_area, b1_area, inter_s, batches_stride);
-        __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
+#if __BANG_ARCH__ >= 520
+        __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+#else
+
+        __memcpy(vec_bottom, vec_offset, batches_stride * sizeof(T), NRAM2NRAM);
+        __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+
+#endif
       } else {
-        __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
+#if __BANG_ARCH__ >= 520
+        __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+#else
+        __memcpy(vec_bottom, vec_offset, batches_stride * sizeof(T), NRAM2NRAM);
+        __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+#endif
       }
       T *base_s = b1_area;
-
-      // ious = inter_s / base_s
-      __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
-                  batches_stride);
+      computeDiv(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+                 batches_stride);
       __memcpy((T *)ious + index, width, handle_batches * sizeof(T),
                NRAM2GDRAM);
     }
@@ -179,24 +262,50 @@ __mlu_device__ void bbox_overlaps_workflow(
         int32_t base2 = b2 * COORD_NUM;
 
         // copy bbox2 to nram
-        __memcpy(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
-        __memcpy(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
-        __memcpy(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
+        __memcpy_async(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM,
+                       sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+        __memcpy_async(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM,
+                       sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+        __memcpy_async(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM,
+                       sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
         __memcpy(vec_b2_y2, &bbox2[base2 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
                  COORD_NUM * sizeof(T), handle_batches - 1);
 
         // get the width and height
-        __bang_maxequal(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
-        __bang_minequal(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
-        __bang_maxequal(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
-        __bang_minequal(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
-
+#if __BANG_ARCH__ >= 520
+        __bang_maximum(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
+        __bang_minimum(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
+        __bang_maximum(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
+        __bang_minimum(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
         // right - left + offset ---> left
         __bang_sub(vec_left, vec_right, vec_left, batches_stride);
         __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
+#else
+        // vec_b1_x1[0] = NAN; vec_b2_x1[0] = 10;
+        __memcpy_async(vec_left, vec_b1_x1, batches_stride * sizeof(T),
+                       NRAM2NRAM);
+        __memcpy(vec_bottom, vec_b2_x1, batches_stride * sizeof(T), NRAM2NRAM);
+        __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
+
+        __memcpy_async(vec_right, vec_b1_x2, batches_stride * sizeof(T),
+                       NRAM2NRAM);
+        __memcpy(vec_bottom, vec_b2_x2, batches_stride * sizeof(T), NRAM2NRAM);
+        __bang_minimum(vec_right, vec_right, vec_bottom, batches_stride);
+        // right - left + offset ---> left
+        __bang_sub(vec_left, vec_right, vec_left, batches_stride);
+        __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
+
+        __memcpy_async(vec_top, vec_b1_y1, batches_stride * sizeof(T),
+                       NRAM2NRAM);
+        __memcpy(vec_bottom, vec_b2_y1, batches_stride * sizeof(T), NRAM2NRAM);
+        __bang_maximum(vec_top, vec_top, vec_bottom, batches_stride);
+
+        __memcpy_async(vec_bottom, vec_b1_y2, batches_stride * sizeof(T),
+                       NRAM2NRAM);
+        __memcpy(vec_right, vec_b2_y2, batches_stride * sizeof(T), NRAM2NRAM);
+        __bang_minimum(vec_bottom, vec_bottom, vec_right, batches_stride);
+
+#endif
         // bottom - top + offset ---> right
         __bang_sub(vec_right, vec_bottom, vec_top, batches_stride);
         __bang_add_scalar(vec_right, vec_right, (T)offset, batches_stride);
@@ -205,10 +314,19 @@ __mlu_device__ void bbox_overlaps_workflow(
         __bang_write_value(vec_bottom, batches_stride, (T)0);
 
         // width --> vec_left
-        __bang_maxequal(vec_left, vec_bottom, vec_left, batches_stride);
+#if __BANG_ARCH__ >= 520
+        __bang_maximum(vec_left, vec_bottom, vec_left, batches_stride);
+#else
+        __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
+#endif
         T *width = vec_left;
         // height --> vec_right
-        __bang_maxequal(vec_right, vec_bottom, vec_right, batches_stride);
+#if __BANG_ARCH__ >= 520
+        __bang_maximum(vec_right, vec_bottom, vec_right, batches_stride);
+#else
+        __bang_write_value(vec_bottom, batches_stride, (T)0);
+        __bang_maximum(vec_right, vec_right, vec_bottom, batches_stride);
+#endif
         T *height = vec_right;
 
         // get the b1_area
@@ -246,15 +364,28 @@ __mlu_device__ void bbox_overlaps_workflow(
         if (mode == 0) {
           __bang_add(b1_area, b1_area, b2_area, batches_stride);
           __bang_sub(b1_area, b1_area, inter_s, batches_stride);
-          __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
+#if __BANG_ARCH__ >= 520
+          __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+#else
+          __memcpy(vec_bottom, vec_offset, batches_stride * sizeof(T),
+                   NRAM2NRAM);
+          __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+
+#endif
         } else {
-          __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
+#if __BANG_ARCH__ >= 520
+          __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+#else
+          __memcpy(vec_bottom, vec_offset, batches_stride * sizeof(T),
+                   NRAM2NRAM);
+          __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+#endif
         }
         T *base_s = b1_area;
 
         // ious = inter_s / base_s
-        __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
-                    batches_stride);
+        computeDiv(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+                   batches_stride);
         int32_t gdram_offset = index1 * num_bbox2 + index2;
         __memcpy((T *)ious + gdram_offset, width, handle_batches * sizeof(T),
                  NRAM2GDRAM);
