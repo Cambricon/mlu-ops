@@ -35,16 +35,6 @@
 __nram__ char nmem_buf[MAX_NRAM_SIZE];
 
 template <typename T>
-__mlu_func__ bool isFloat() {
-  return false;
-}
-
-template <>
-__mlu_func__ bool isFloat<float>() {
-  return true;
-}
-
-template <typename T>
 __mlu_device__ void bbox_overlaps_workflow(
     T *vec_b1_x1, T *vec_b1_y1, T *vec_b1_x2, T *vec_b1_y2, T *vec_b2_x1,
     T *vec_b2_y1, T *vec_b2_x2, T *vec_b2_y2, T *vec_left, T *vec_right,
