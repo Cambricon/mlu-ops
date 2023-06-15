@@ -11,7 +11,8 @@ bangc_gtest_json_file="jsoncppDist/"
 bangc_exclude_list=${bangc_gtest_json_file}
 
 if [[ $# -eq 1 ]]; then
-  filenames=$(git diff --name-only ${1} \
+  filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
+    --diff-filter=R --diff-filter=T  --name-only ${1} \
     | grep -v ${bangc_exclude_list} \
     | grep -E ${bangc_check_list})
 else
@@ -148,6 +149,9 @@ fi
 echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
 for i in $filenames; do
   python tools/check_log_error.py $i
+  if [[ $? -ne 0 ]]; then
+    exit 1
+  fi
 done
 
 if [[ $# -eq 1 ]]; then
