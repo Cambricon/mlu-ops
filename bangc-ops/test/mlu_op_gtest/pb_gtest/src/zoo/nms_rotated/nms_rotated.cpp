@@ -171,14 +171,8 @@ void NmsRotatedExecutor::cpuNmsRotated(const T *boxes,
       }
       auto ovr = singleBoxIouRotated(boxes + i * box_dim,
                                     boxes + j * box_dim, 0);
-      if (iou_threshold == 0) {
-        if (ovr > iou_threshold) {
-          suppressed[j] = 1;
-        }
-      } else {
-        if (ovr >= iou_threshold) {
-          suppressed[j] = 1;
-        }
+      if (ovr > iou_threshold) {
+        suppressed[j] = 1;
       }
     }
   }
