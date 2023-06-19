@@ -169,7 +169,7 @@ def check():
 
 def main():
     if sys.argv[1].endswith(".mlu") or sys.argv[1].endswith(".cpp"):
-	getFile(sys.argv[1])
+        getFile(sys.argv[1])
         print('check filename: %s.'%(sys.argv[1]))
         check()
 
