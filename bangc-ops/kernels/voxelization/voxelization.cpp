@@ -281,18 +281,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   policyFuncDefault(handle, num_points, &k_dim, &k_type);
 
   const size_t fill_value = 0x0;
-  PARAM_CHECK("[mluOpVoxelization]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               voxels_desc, voxels));
-  PARAM_CHECK("[mluOpVoxelization]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               coors_desc, coors));
-  PARAM_CHECK("[mluOpVoxelization]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               num_points_per_voxel_desc, num_points_per_voxel));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, voxels_desc, voxels));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, coors_desc, coors));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS ==
+          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                       num_points_per_voxel_desc, num_points_per_voxel));
 
   VLOG(5) << "Launch Kernel KernelDynamicVoxelize.";
   KERNEL_CHECK((KernelDynamicVoxelize(k_dim, k_type, handle->queue, points,
