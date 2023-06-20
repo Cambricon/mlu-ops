@@ -12,7 +12,7 @@ MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开
 - 寒武纪 MLU SDK：
   - 编译和运行时依赖 CNToolkit v3.5.0 或更高版本。
 - 寒武纪 MLU 驱动：
-  - 运行时依赖驱动 v4.20.11 或更高版本。
+  - 运行时依赖驱动 v5.10.12 或更高版本。
 - 外部链接库：
   - libxml2-dev、libprotobuf-dev<=3.8.0、protobuf-compiler<=3.8.0、llvm-6.0-dev
 - Python环境：
