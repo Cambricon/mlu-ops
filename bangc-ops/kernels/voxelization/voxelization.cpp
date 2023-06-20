@@ -116,7 +116,6 @@ mluOpStatus_t voxelizationParamCheck(
     size_t points_element_num = mluOpGetTensorElementNum(points_desc);
     size_t voxel_size_element_num = mluOpGetTensorElementNum(voxel_size_desc);
     size_t coors_range_element_num = mluOpGetTensorElementNum(coors_range_desc);
-    size_t voxels_element_num = mluOpGetTensorElementNum(voxels_desc);
     size_t coors_element_num = mluOpGetTensorElementNum(coors_desc);
     size_t num_points_per_voxel_element_num =
         mluOpGetTensorElementNum(num_points_per_voxel_desc);
@@ -126,7 +125,6 @@ mluOpStatus_t voxelizationParamCheck(
     if (points_element_num >= LARGE_TENSOR_NUM ||
         voxel_size_element_num >= LARGE_TENSOR_NUM ||
         coors_range_element_num >= LARGE_TENSOR_NUM ||
-        voxels_element_num >= LARGE_TENSOR_NUM ||
         coors_element_num >= LARGE_TENSOR_NUM ||
         num_points_per_voxel_element_num >= LARGE_TENSOR_NUM ||
         voxel_num_element_num >= LARGE_TENSOR_NUM) {
@@ -282,19 +280,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   cnrtFunctionType_t k_type;
   policyFuncDefault(handle, num_points, &k_dim, &k_type);
 
-  const int32_t voxels_size =
-      max_voxels * max_points * num_features * sizeof(float);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, voxels_size, voxels)));
-
-  const int32_t coors_size = max_voxels * 3 * sizeof(int32_t);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, coors_size, coors)));
-
-  const int32_t num_points_per_voxel_size = max_voxels * sizeof(int32_t);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, num_points_per_voxel_size,
-                      num_points_per_voxel)));
+  const size_t fill_value = 0x0;
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, voxels_desc, voxels));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, coors_desc, coors));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS ==
+          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                       num_points_per_voxel_desc, num_points_per_voxel));
 
   VLOG(5) << "Launch Kernel KernelDynamicVoxelize.";
   KERNEL_CHECK((KernelDynamicVoxelize(k_dim, k_type, handle->queue, points,
