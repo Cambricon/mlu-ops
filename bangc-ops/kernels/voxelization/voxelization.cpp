@@ -61,7 +61,7 @@ mluOpStatus_t voxelizationParamCheck(
     const mluOpTensorDescriptor_t voxels_desc,
     const mluOpTensorDescriptor_t coors_desc,
     const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-    const mluOpTensorDescriptor_t voxel_num_desc, bool is_zero_element) {
+    const mluOpTensorDescriptor_t voxel_num_desc, bool *is_zero_element) {
   // check arch
   if (handle->arch < MLUOP_MLU370) {
     LOG(ERROR) << "[mluOpVoxelization] The operator only support architecture "
@@ -134,7 +134,7 @@ mluOpStatus_t voxelizationParamCheck(
     }
 
     // check element num zero
-    is_zero_element = false;
+    *is_zero_element = false;
     if (points_element_num == 0 || voxel_size_element_num == 0 ||
         coors_range_element_num == 0) {
       LOG(ERROR)
@@ -143,7 +143,7 @@ mluOpStatus_t voxelizationParamCheck(
     }
 
     if (max_points == 0 || max_voxels == 0) {
-      is_zero_element = true;
+      *is_zero_element = true;
     }
   } else {
     VLOG(5) << "[mluOpVoxelization] Currently, Non-deterministic mode not "
@@ -180,7 +180,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(
   mluOpStatus_t paramcheck_status = voxelizationParamCheck(
       handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
       max_voxels, NDim, deterministic, voxels_desc, coors_desc,
-      num_points_per_voxel_desc, voxel_num_desc, is_zero_element);
+      num_points_per_voxel_desc, voxel_num_desc, &is_zero_element);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
@@ -228,7 +228,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   mluOpStatus_t paramcheck_status = voxelizationParamCheck(
       handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
       max_voxels, NDim, deterministic, voxels_desc, coors_desc,
-      num_points_per_voxel_desc, voxel_num_desc, is_zero_element);
+      num_points_per_voxel_desc, voxel_num_desc, &is_zero_element);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
