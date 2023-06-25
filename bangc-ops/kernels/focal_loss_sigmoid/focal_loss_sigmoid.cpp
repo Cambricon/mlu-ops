@@ -57,23 +57,23 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
   // check shape
   if (input_desc->dim != 2) {
     LOG(ERROR) << interface_name << "Dimension num of input should be 2. "
-               << "But now input_desc->dim is " << input_desc->dim << ".";
+               << "But now it is " << input_desc->dim << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->dim != 1) {
     LOG(ERROR) << interface_name << "Dimension num of target should be 1. "
-               << "But now target_desc->dim is " << target_desc->dim << ".";
+               << "But now it is " << target_desc->dim << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->dims[0] != input_desc->dims[0]) {
     LOG(ERROR) << interface_name << "Element num of target should be "
-               << input_desc->dims[0] << ", But now target_desc->dims[0] is "
+               << input_desc->dims[0] << ", But now it is "
                << target_desc->dims[0] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_desc->dim != 2) {
     LOG(ERROR) << interface_name << "Dimension num of output should be 2. "
-               << "But now output_desc->dim is " << output_desc->dim << ".";
+               << "But now it is " << output_desc->dim << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_desc->dims[0] != input_desc->dims[0] ||
@@ -88,20 +88,21 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
 
   // check dtype
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
-    LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
-               << "But now input_dtype is "
-               << mluOpGetNameOfDataType(input_dtype) << ".";
+    LOG(ERROR) << interface_name
+               << "Data type of input should be HALF or FLOAT. "
+               << "But now it is " << mluOpGetNameOfDataType(input_dtype)
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_dtype != MLUOP_DTYPE_INT32) {
-    LOG(ERROR) << interface_name << "Type of target should be INT32. "
-               << "But now target_dtype is "
-               << mluOpGetNameOfDataType(input_dtype) << ".";
+    LOG(ERROR) << interface_name << "Data type of target should be INT32. "
+               << "But now it is " << mluOpGetNameOfDataType(target_dtype)
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_dtype != input_dtype) {
     LOG(ERROR) << interface_name
-               << "Both types of input and output should be equal. "
+               << "Both data types of input and output should be equal. "
                << "But now input_dtype is "
                << mluOpGetNameOfDataType(input_dtype) << ", "
                << "output_dtype is " << mluOpGetNameOfDataType(output_dtype)
@@ -113,7 +114,7 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
   if (weight_desc != NULL && mluOpGetTensorElementNum(weight_desc) != 0) {
     if (weight_desc->dtype != input_dtype) {
       LOG(ERROR) << interface_name
-                 << "Both types of weight and output should be equal. "
+                 << "Both data types of weight and input should be equal. "
                  << "But now input_dtype is "
                  << mluOpGetNameOfDataType(input_dtype) << ", "
                  << "weight_dtype is "
@@ -122,12 +123,12 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
     }
     if (weight_desc->dim != 1) {
       LOG(ERROR) << interface_name << "Dimension num of weight should be 1. "
-                 << "But now weight_desc->dim is " << weight_desc->dim << ".";
+                 << "But now it is " << weight_desc->dim << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (weight_desc->dims[0] != input_desc->dims[1]) {
       LOG(ERROR) << interface_name << "Element num of weight should be "
-                 << input_desc->dims[1] << ", But now weight_desc->dims[0] is "
+                 << input_desc->dims[1] << ", But now it is "
                  << weight_desc->dims[0] << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
