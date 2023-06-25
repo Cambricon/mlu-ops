@@ -13371,7 +13371,7 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The first dimension of tensor \b grad_output and tensor \b shifts must be the same size.
- * - The second dimension of tensor \b grad_output  must be multiple of the second dimension of tensor \b shifts.
+ * - The third dimension of tensor \b grad_output must be multiple of the second dimension of tensor \b shifts.
  *   For example, if the shape of \b grad_output is [N, T, C, HW], the shape of \b shifts is [N, G],
  *   C must be a multiple of G, and C and G cannot be zero.
  *
@@ -13434,7 +13434,7 @@ mluOpTinShiftBackward(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The first dimension of tensor \b input and tensor \b shifts must be the same size.
- * - The second dimension of tensor \b input must be multiple of the second dimension of tensor \b shifts.
+ * - The third dimension of tensor \b input must be multiple of the second dimension of tensor \b shifts.
  *   For example, if the shape of \b input is [N, T, C, HW], the shape of \b shifts is [N, G],
  *   C must be a multiple of G, and C and G cannot be zero.
  *
