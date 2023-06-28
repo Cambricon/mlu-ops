@@ -17,6 +17,7 @@ export MLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}"
 export BUILD_MODE=${BUILD_MODE:-release} # release/debug
 export MLUOP_BUILD_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST:-OFF} # ON/OFF coverage mode
 export MLUOP_BUILD_ASAN_CHECK=${MLUOP_BUILD_ASAN_CHECK:-OFF} # ON/OFF Address Sanitizer (ASan)
+export MLUOP_BUILD_BANG_MEMCHECK=${MLUOP_BUILD_BANG_MEMCHECK:-OFF} # ON/OFF bang memcheck
 export MLUOP_BUILD_PREPARE=${MLUOP_BUILD_PREPARE:-ON}
 export BUILD_JOBS="${BUILD_JOBS:-16}" # concurrent build jobs
 
@@ -39,11 +40,10 @@ long_args=(
   asan
   coverage
   debug
+  enable-bang-memcheck
   filter:
   jobs:
   help
-  mlu270 # mlu arch
-  mlu290 # mlu arch
   mlu370 # mlu arch
   mlu590
   no_prepare
@@ -54,12 +54,6 @@ add_mlu_arch_support () {
   local target_mlu=$1
   local bang_arch=
   case "$target_mlu" in
-    --mlu270)
-      bang_arch="mtp_270;"
-      ;;
-    --mlu290)
-      bang_arch="mtp_290;"
-      ;;
     --mlu370)
       bang_arch="mtp_372;"
       ;;
@@ -80,34 +74,25 @@ usage () {
     echo "USAGE: ./independent_build.sh <options>"
     echo
     echo "OPTIONS:"
-    echo "      -h, --help         Print usage."
-    echo "      -c, --coverage     Build bangc-ops with coverage test."
-    echo "      --asan             Build with asan check enabled"
-    echo "      -d, --debug        Build bangc-ops with debug mode"
-    echo "      --mlu270           Build for target product MLU270: __BANG_ARCH__ = 270"
-    echo "                                                          __MLU_NRAM_SIZE__ = 512KB"
-    echo "                                                          __MLU_WRAM_SIZE__ = 1024KB"
-    echo "                                                          __MLU_SRAM_SIZE__ = 2048KB"
-    echo "                                                          cncc --bang-mlu-arch=mtp_270, cnas --mlu-arch mtp_270"
-    echo "      --mlu290           Build for target product MLU290: __BANG_ARCH__ = 290"
-    echo "                                                          __MLU_NRAM_SIZE__ = 512KB"
-    echo "                                                          __MLU_WRAM_SIZE__ = 512KB"
-    echo "                                                          __MLU_SRAM_SIZE__ = 2048KB"
-    echo "                                                          cncc --bang-mlu-arch=mtp_290, cnas --mlu-arch mtp_290"
-    echo "      --mlu370           Build for target product MLU370: __BANG_ARCH__ = 372"
-    echo "                                                          __MLU_NRAM_SIZE__ = 768KB"
-    echo "                                                          __MLU_WRAM_SIZE__ = 1024KB"
-    echo "                                                          __MLU_SRAM_SIZE__ = 4096KB"
-    echo "                                                          cncc --bang-mlu-arch=mtp_372, cnas --mlu-arch mtp_372"
-    echo "      --mlu590           Build for target product MLU590: __BANG_ARCH__ = 592"
-    echo "                                                          __MLU_NRAM_SIZE__ = 512KB"
-    echo "                                                          __MLU_WRAM_SIZE__ = 512KB"
-    echo "                                                          __MLU_SRAM_SIZE__ = 2048KB"
-    echo "                                                          cncc --bang-mlu-arch=mtp_592, cnas --mlu-arch mtp_592"
-    echo "      --filter=*         Build specified OP only (string with ';' separated)"
-    echo "      -j N, --jobs=N     Build for N parallel jobs."
-    echo "      --no_prepare       Skip dependency download."
-    echo "      --prepare          Dependency download only."
+    echo "    -h, --help                  Print usage."
+    echo "    -c, --coverage              Build bangc-ops with coverage test."
+    echo "    --asan                      Build with asan check enabled"
+    echo "    -d, --debug                 Build bangc-ops with debug mode"
+    echo "    --enable-bang-memcheck      Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
+    echo "    --mlu370                    Build for target product MLU370: __BANG_ARCH__ = 372"
+    echo "                                                                 __MLU_NRAM_SIZE__ = 768KB"
+    echo "                                                                 __MLU_WRAM_SIZE__ = 1024KB"
+    echo "                                                                 __MLU_SRAM_SIZE__ = 4096KB"
+    echo "                                                                 cncc --bang-mlu-arch=mtp_372, cnas --mlu-arch mtp_372"
+    echo "    --mlu590                    Build for target product MLU590: __BANG_ARCH__ = 592"
+    echo "                                                                 __MLU_NRAM_SIZE__ = 512KB"
+    echo "                                                                 __MLU_WRAM_SIZE__ = 512KB"
+    echo "                                                                 __MLU_SRAM_SIZE__ = 2048KB"
+    echo "                                                                 cncc --bang-mlu-arch=mtp_592, cnas --mlu-arch mtp_592"
+    echo "    --filter=*                  Build specified OP only (string with ';' separated)"
+    echo "    -j N, --jobs=N              Build for N parallel jobs."
+    echo "    --no_prepare                Skip dependency download."
+    echo "    --prepare                   Dependency download only."
     echo
 }
 
@@ -298,6 +283,10 @@ if [ $# != 0 ]; then
           export BUILD_MODE="debug"
           prog_log_note "Using debug build mode"
           ;;
+      --enable-bang-memcheck)
+          shift
+          export MLUOP_BUILD_BANG_MEMCHECK="ON"
+          ;;
       --filter)
         shift
         export MLUOP_BUILD_SPECIFIC_OP=$1
@@ -354,6 +343,7 @@ prog_log_info "major_version = ${MAJOR_VERSION}"
 prog_log_info "BUILD_MODE = ${BUILD_MODE}"
 prog_log_info "MLUOP_BUILD_COVERAGE_TEST = ${MLUOP_BUILD_COVERAGE_TEST}"
 prog_log_info "MLUOP_BUILD_ASAN_CHECK = ${MLUOP_BUILD_ASAN_CHECK}"
+prog_log_info "MLUOP_BUILD_BANG_MEMCHECK = ${MLUOP_BUILD_BANG_MEMCHECK}"
 prog_log_info "MLUOP_MLU_ARCH_LIST = ${MLUOP_MLU_ARCH_LIST}"
 prog_log_info "MLUOP_TARGET_CPU_ARCH = ${MLUOP_TARGET_CPU_ARCH}"
 prog_log_info "BUILD_JOBS = ${BUILD_JOBS}"
@@ -412,6 +402,7 @@ pushd ${BUILD_PATH} > /dev/null
                 -DBUILD_VERSION="${BUILD_VERSION}" \
                 -DMAJOR_VERSION="${MAJOR_VERSION}" \
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
+                -DMLUOP_BUILD_BANG_MEMCHECK="${MLUOP_BUILD_BANG_MEMCHECK}" \
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
                 -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
                 -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
