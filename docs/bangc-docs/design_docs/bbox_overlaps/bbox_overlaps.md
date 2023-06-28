@@ -334,7 +334,7 @@ for (int32_t i = 0; i < num_loop_cpy; i++) {
    若aligned = False，输出ious的维度总数为2且维度0为bounding-box1的行数，维度1为bounding-bo21的行数
 
 ## 4 算子性能优化记录
-本次优化主要针对非aligned模式。
+本次（V1.1）优化主要针对非aligned模式。
 优化方案：
 1、原有方案中在aligned模式下或者非aligned模式下，在做数据拷贝时，都是通过4条带stride的memcpy指令实现的，这样会导致IO离散，
 整个IO时间占比较大（IO时间占比总时间约50%），可以通过连续的memcpy把数据拷贝到片上，在通过transpose操作将对应坐标的排列成连
