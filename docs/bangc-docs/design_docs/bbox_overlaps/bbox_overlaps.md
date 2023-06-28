@@ -15,6 +15,7 @@
 | 版本号| 修订人 | 修订日期 | 修订描述 |
 | ----- | ------ | -------  | -------  |
 | V1.0  | 郭子滨 | 2021-06-21 | 首次提交 |
+| V1.1  | 郑斌 | 2023-06-27 | 通过排流水以及合并访存的方式对非aligned模式做性能优化。|
 
 * #### 内容描述
 
@@ -282,7 +283,7 @@ void *vec_right = nmem_buf + 9 * nram_stride;
 void *vec_top = nmem_buf + 10 * nram_stride;
 void *vec_bottom = nmem_buf + 11 * nram_stride;
 
-// ....
+// .... 
 for (int32_t i = 0; i < num_loop_cpy; i++) {
     int32_t index = batch_start + i * batches_stride;
     int32_t handle_batches =
@@ -333,7 +334,14 @@ for (int32_t i = 0; i < num_loop_cpy; i++) {
    若aligned = False，输出ious的维度总数为2且维度0为bounding-box1的行数，维度1为bounding-bo21的行数
 
 ## 4 算子性能优化记录
-无
+本次（V1.1）优化主要针对非aligned模式。
+优化方案：
+1、原有方案中在aligned模式下或者非aligned模式下，在做数据拷贝时，都是通过4条带stride的memcpy指令实现的，这样会导致IO离散，
+整个IO时间占比较大（IO时间占比总时间约50%），可以通过连续的memcpy把数据拷贝到片上，在通过transpose操作将对应坐标的排列成连
+续的摆放位置。
+2、排流水，通过IO时间和计算时间的相互掩盖来提升算子性能。算子在开发之初，考虑到内存划分太碎，排流水的收益不大，但是
+对于大多数规模较小的case而言，片上的空间是无法充分利用的，会有相当大的一部分内存处于空闲状态，造成空间浪费，可以
+通过排流水的方式将这部分空间利用起来。
 
 ### 4.1 当前存在问题的规模说明
 
