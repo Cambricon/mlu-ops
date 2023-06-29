@@ -43,6 +43,14 @@ if(${MLUOP_BUILD_ASAN_CHECK} MATCHES "ON")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_ASAN_FLAGS}")
 endif()
 
+# -- BANG memcheck
+if(${MLUOP_BUILD_BANG_MEMCHECK} MATCHES "ON")
+  message("-- BANG memcheck enabled")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm -enable-mlisa-sanitizer")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Xbang-cnas -O0") # XXX to reduce cnas compilation time
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g") # to show file line number
+endif()
+
 # check `NEUWARE_HOME` env
 message("-- NEUWARE_HOME=${NEUWARE_HOME}")
 if(EXISTS ${NEUWARE_HOME})

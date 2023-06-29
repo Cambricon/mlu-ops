@@ -180,7 +180,17 @@ test_param: {
 
 ### 6. 内存泄漏检测
 
-打开环境变量 export MLUOP_BUILD_ASAN_CHECK=ON, 执行测试，./mluop_gtest --gtest_filter=\*div\* 程序没有内存泄漏可正常测试，存在内存泄漏会有提示。  
+#### 6.1 HOST 内存检测
+
+打开环境变量 export MLUOP_BUILD_ASAN_CHECK=ON, 执行测试，./mluop_gtest --gtest_filter=\*div\* 程序没有内存泄漏可正常测试，存在内存泄漏会有提示。
+
+#### 6.2 DEVICE 内存检测
+
+```bash
+./independent_build.sh --filter="div" --enable-bang-memcheck
+cd mlu-ops/bangc-ops/build/test
+./mluop_gtest --gtest_filter=\*div\*  # 存在 DEVICE 内存泄漏会输出内存溢出提示
+```
 
 ### 7. 代码覆盖率
 
