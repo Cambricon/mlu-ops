@@ -7599,7 +7599,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The tensor \b mask_h_idx must be 1D.
  * - The tensor \b mask_w_idx must be 1D.
- * - The tensor \b data_col must be 3D.
+ * - The tensor \b data_col must be 2D.
  * - The sizes of the highest dimension of tensor \b feature must be 1.
  * - The sizes of the lowest dimension of tensor \b data_col, the element number of tensor \b mask_h_idx, and
  *   the element number of tensor \b mask_w_idx must be the same.
