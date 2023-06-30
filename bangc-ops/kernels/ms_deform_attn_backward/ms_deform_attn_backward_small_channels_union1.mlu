@@ -374,7 +374,7 @@ void __mlu_func__ loadValue(
   __bang_cycle_add(grad_temp1, grad_temp1, mask2, deal_num_real * num_deal_grid,
                    num_deal_grid);
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
-  __nram__ int32_t table[2] = {0, (int32_t)0xffffffff};
+  __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
   __bang_float2int32((int32_t *)grad_temp3, grad_temp3,
                      num_deal_grid * deal_num_real, 0);
   __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
@@ -688,7 +688,7 @@ void __mlu_func__ computeGradAttnWeight(
 
   __bang_float2int32((int32_t *)nram_h_high_temp, nram_h_high_temp,
                      num_deal_grid, 0);
-  __nram__ int32_t table[2] = {0, (int32_t)0xffffffff};
+  __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
   __bang_lut_s32((int32_t *)nram_h_high_temp, (int32_t *)nram_h_high_temp,
                  (int32_t *)table, num_deal_grid, 64);
   __bang_band((char *)nram_grad_output_tr, (char *)nram_grad_output_tr,
@@ -744,7 +744,7 @@ void __mlu_func__ computeGradSampingLoc(
   __mluop_recursive_sum_pool(grad_h_weight, num_deal_grid, deal_num_real,
                              ALIGN_NUM);
 
-  __nram__ int32_t table[2] = {0, (int32_t)0xffffffff};
+  __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
   __bang_lut_s32((int32_t *)nram_h_high_temp, (int32_t *)nram_h_high_temp,
                  (int32_t *)table, num_deal_grid, 64);
   __bang_band((char *)grad_h_weight, (char *)grad_h_weight,
