@@ -229,6 +229,8 @@ static mluOpStatus_t baseParamCheck(
       kd * kh * kw != indice_pairs_desc->dims[0]) {
     shape_check = false;  // interdependent dimension check failed!
   }
+  PARAM_CHECK_LE(api_name, indice_pairs_desc->dims[2],
+                  INDICE_IN_LARGE_TENSOR_NUM);
 
   if (!shape_check) {
     LOG(ERROR) << api_name << " Shape check failed! "
