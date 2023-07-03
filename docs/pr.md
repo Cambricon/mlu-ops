@@ -121,10 +121,11 @@
      [Prefix] Short description of the pull request (Suffix)
      ```
 
-   - prefix：新增功能 [Feature] ，修 bug [Fix]，文档相关 [Docs] ，开发中 [WIP] （暂时不会被 review）
+   - prefix：新增功能 [Feature]，修 bug [Fix]，性能优化 [Perf]，文档相关 [Docs]，开发中 [WIP] （暂时不会被 review）
      ```
-     [Feature](bangc-ops): Revise code type
+     [Feature](bangc-ops): Add new op add
      [Fix](bangc-ops): Fix div bug
+     [Perf](bangc-ops): Improve kernel performance
      [Docs](bangc-ops): Add div doc
      ```
 
