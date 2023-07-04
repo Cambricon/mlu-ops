@@ -35,9 +35,9 @@
 // score, x1, y1, x2, y2, max_index (reserve 2 num for half-type input)
 #define REDUCE_NUM (7)
 
-#define FIILED_ONES (int)0xffffffff
-#define HALF_FILLED_ONES (int16_t)0xffff
 #define TABLE_LENGTH 64
+__nram__ int table_float[TABLE_LENGTH]    = {0, static_cast<int>(0xffffffff)};
+__nram__ int16_t table_half[TABLE_LENGTH] = {0, static_cast<int16_t>(0xffff)};
 
 // each box data contains 5 number: x, y, w, h, a
 #define SINGLE_BOX_DIM 5
@@ -396,17 +396,17 @@ __mlu_func__ void getIntersectionPoints(
                  (T *)temp7_ram, actual_compute_box_num);
 
       if (sizeof(T) == sizeof(float)) {
-        __nram__ int table[2] = {0, FIILED_ONES};
         __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                            actual_compute_box_num, 0);
         __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                       (int32_t *)table, actual_compute_box_num, TABLE_LENGTH);
+                       (int32_t *)table_float, actual_compute_box_num,
+                       TABLE_LENGTH);
       } else {
-        __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
         __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp2_ram,
                              actual_compute_box_num, 0);
         __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                       (int16_t *)table, actual_compute_box_num, TABLE_LENGTH);
+                       (int16_t *)table_half, actual_compute_box_num,
+                       TABLE_LENGTH);
       }
       __bang_band(
           (char *)((T *)intersect_pts_x + (4 * i + j) * actual_compute_box_num),
@@ -484,17 +484,17 @@ __mlu_func__ void getIntersectionPoints(
 
     // 16 means the 4x4 possible intersection points above
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[2] = {0, FIILED_ONES};
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
       __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                     (int32_t *)table, actual_compute_box_num, TABLE_LENGTH);
+                     (int32_t *)table_float, actual_compute_box_num,
+                     TABLE_LENGTH);
     } else {
-      __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
       __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                     (int16_t *)table, actual_compute_box_num, TABLE_LENGTH);
+                     (int16_t *)table_half, actual_compute_box_num,
+                     TABLE_LENGTH);
     }
     __bang_band(
         (char *)((T *)intersect_pts_x + (16 + i) * actual_compute_box_num),
@@ -560,17 +560,17 @@ __mlu_func__ void getIntersectionPoints(
 
     // 20 means the (4x4+4) possible intersection points above
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[2] = {0, FIILED_ONES};
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
       __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                     (int32_t *)table, actual_compute_box_num, TABLE_LENGTH);
+                     (int32_t *)table_float, actual_compute_box_num,
+                     TABLE_LENGTH);
     } else {
-      __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
       __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                     (int16_t *)table, actual_compute_box_num, TABLE_LENGTH);
+                     (int16_t *)table_half, actual_compute_box_num,
+                     TABLE_LENGTH);
     }
     __bang_band(
         (char *)((T *)intersect_pts_x + (20 + i) * actual_compute_box_num),

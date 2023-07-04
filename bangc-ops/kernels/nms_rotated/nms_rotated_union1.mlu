@@ -362,10 +362,9 @@ __mlu_func__ void nms_detection(
         // suppress boxes whose iou is 0, for 0 > -inf is always true
         __bang_not((float *)temp8_ram, (float *)temp9_ram, seg_len);
       }
-      __nram__ int table[2] = {0, FIILED_ONES};
       __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram, seg_len, 0);
       __bang_lut_s32((int32_t *)temp9_ram, (int32_t *)temp9_ram,
-                     (int32_t *)table, seg_len, TABLE_LENGTH);
+                     (int32_t *)table_float, seg_len, TABLE_LENGTH);
       // temp1: area_I
       __bang_band((char *)temp1_ram, (char *)temp1_ram, (char *)temp9_ram,
                   seg_len * sizeof(float));
