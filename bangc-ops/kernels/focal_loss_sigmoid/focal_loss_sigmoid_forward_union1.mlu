@@ -128,18 +128,20 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer, T *input,
       has_weight ? PAD_UP(c_seg, NFU_ALIGN_SIZE / sizeof(T)) : c_seg;
 
   const int32_t half_epsilon = 0x0400;
+  const int32_t half_max = 0x7bff;
   const T epsilon_f =
       sizeof(T) == sizeof(float) ? FLT_MIN : *((half *)&half_epsilon);
+  const T max_f =
+      sizeof(T) == sizeof(float) ? FLT_MAX : *((half *)&half_max);
 
-  // // 0. p = sigmoid(x)
-  __mluop_sigmoid((T *)compute_b, (T *)input, (T *)input, 0, deal_num);
-  __bang_write_value((T *)output, deal_num, (T)(1 - alpha));
+  // 0. p = sigmoid(x)
+  __mluop_sigmoid((T *)compute_b, (T *)input, NULL, 0, deal_num);
+  __bang_write_value((T *)output, deal_num, (T)(alpha - 1));
 
   if (prefer == COMPUTATION_FAST) {
     /********* COMPUTATION_FAST *********/
     __bang_mul_scalar((T *)input, (T *)compute_b, (T)-1, deal_num);
     __bang_add_scalar((T *)input, (T *)input, (T)1, deal_num);
-    __bang_add_scalar((T *)input, (T *)input, (T)epsilon_f, deal_num);
 
     for (int32_t i = 0; i < n_seg; ++i) {
       const int32_t t = *((uint32_t *)target + i);
@@ -148,30 +150,37 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer, T *input,
 
         // pt = p      t(target)
         //    = 1 - p  otherwise
-        *((T *)input + index) = *((T *)compute_b + index) + epsilon_f;
+        *((T *)input + index) = *((T *)compute_b + index);
 
         // 1 - pt = 1 - p  t
         //        = p      otherwise
-        *((T *)compute_b + index) =
-            1.0 - (*((T *)compute_b + index)) + epsilon_f;
+        *((T *)compute_b + index) = 1.0 - (*((T *)compute_b + index));
 
-        // alpha_t = alpha      t
-        //         = 1 - alpha  otherwise
-        *((T *)output + index) = alpha;
+        // -alpha_t = -alpha      t
+        //          = alpha - 1   otherwise
+        *((T *)output + index) = -alpha;
       }
     }
 
     // 1. (1-pt) ^ gamma:
     //        log(1-pt) -> log(1-pt)*gamma -> exp[log(1-pt)*gamma]
-    __bang_log((T *)compute_a, (T *)compute_b, deal_num);
-    __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
-    __bang_pow2((T *)compute_a, (T *)compute_a, deal_num);
+    if (gamma == T(0.0)) {
+      __bang_write_value((T *)compute_a, deal_num, (T)1.0);
+    } else {
+      __bang_log((T *)compute_a, (T *)compute_b, deal_num);
+      __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
+      __bang_pow2((T *)compute_a, (T *)compute_a, deal_num);
+    }
 
-    // 2. output = - alpha_t * (1 - pt) ^ gamma * log(pt)
-    __bang_mul_scalar((T *)output, (T *)output, (T)-1, deal_num);
+    // 2. output = -alpha_t * (1 - pt) ^ gamma
     __bang_mul((T *)output, (T *)compute_a, (T *)output, deal_num);
-    __mluop_log((T *)compute_b, (T *)input, (T *)input, 0, deal_num);
+
+    // 3. output *= log[max(pt, FTL_MIN)]
+    __bang_write_value((T *)compute_a, deal_num, (T)epsilon_f);
+    __bang_maxequal((T *)input, (T *)compute_a, (T *)input, deal_num);
+    __mluop_log((T *)compute_b, (T *)input, NULL, 0, deal_num);
     __bang_mul((T *)output, (T *)compute_b, (T *)output, deal_num);
+
   } else {
     /********* COMPUTATION_HIGH_PRECISION *********/
     for (int32_t i = 0; i < n_seg; ++i) {
@@ -188,33 +197,56 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer, T *input,
         *((T *)compute_b + index) =
             1.0 - (*((T *)compute_b + index)) + epsilon_f;
 
-        // alpha_t = alpha      t
-        //         = 1 - alpha  otherwise
-        *((T *)output + index) = alpha;
+        // -alpha_t = -alpha      t
+        //          = alpha - 1   otherwise
+        *((T *)output + index) = -alpha;
       }
     }
-    __bang_log((T *)compute_a, (T *)compute_b, deal_num);
-    __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
-    __bang_pow2((T *)compute_a, (T *)compute_a, deal_num);
+
+    // 1. (1-pt) ^ gamma:
+    //        log(1-pt) -> log(1-pt)*gamma -> exp[log(1-pt)*gamma]
+    if (gamma == T(0.0)) {
+      __bang_write_value((T *)compute_a, deal_num, (T)1.0);
+    } else {
+      __bang_log((T *)compute_a, (T *)compute_b, deal_num);
+      __bang_mul_scalar((T *)compute_a, (T *)compute_a, (T)gamma, deal_num);
+      __bang_pow2((T *)compute_a, (T *)compute_a, deal_num);
+    }
+
     __bang_mul((T *)output, (T *)compute_a, (T *)output, deal_num);
 
-    // 1. max = max(0, -x)  if t == c_index
-    //        = max(0, x)   if t != c_index
+    // 2. log(pt)
+    // max = max(0, -x)  t
+    //     = max(0, x)   otherwise
     __bang_write_value((T *)compute_b, deal_num, (T)0);
     __bang_maxequal((T *)compute_b, (T *)compute_b, (T *)input, deal_num);
 
-    // 2. -log(p_t) = ln[e^(-max)+ e^(-max-x)] + max   if t == c_index
-    //              = ln[e^(-max)+ e^(-max+x)] + max   if t != c_index
+    // log(p_t) = ln{1 / [e^(-max)+ e^(-max-x)]} - max   t
+    //          = ln{1 / [e^(-max)+ e^(-max+x)]} - max   otherwise
     __bang_mul_scalar((T *)compute_a, (T *)compute_b, (T)-1, deal_num);
     __bang_add((T *)input, (T *)compute_a, (T *)input, deal_num);
-    __mluop_exp((T *)compute_a, (T *)compute_a, (T *)compute_a, 0, deal_num);
-    __mluop_exp((T *)input, (T *)input, (T *)input, 0, deal_num);
+    __mluop_exp((T *)compute_a, (T *)compute_a, NULL, 0, deal_num);
+    __mluop_exp((T *)input, (T *)input, NULL, 0, deal_num);
+
     __bang_add((T *)compute_a, (T *)compute_a, (T *)input, deal_num);
-    __mluop_log((T *)compute_a, (T *)compute_a, (T *)compute_a, 0, deal_num);
-    __bang_add((T *)input, (T *)compute_a, (T *)compute_b, deal_num);
+    __bang_recip((T *)compute_a, (T *)compute_a, deal_num);
+
+    // filter NAN
+    __bang_write_value((T *)input, deal_num, (T)epsilon_f);
+    __bang_maxequal((T *)compute_a, (T *)input, (T *)compute_a, deal_num);
+    __mluop_log((T *)compute_a, (T *)compute_a, NULL, 0, deal_num);
+
+    // filter INF
+    __bang_le_scalar((T *)input, (T *)compute_b, (T)max_f, deal_num);
+    __bang_float2int32((int32_t *)input, input, deal_num, 0);
+    __bang_mul_scalar((int32_t *)input, (int *)input, (int32_t)0xffffffff,
+                      deal_num);
+    __bang_band((char *)compute_b, (char *)compute_b, (char *)input,
+                sizeof(T) * deal_num);
+    __bang_sub((T *)compute_a, (T *)compute_a, (T *)compute_b, deal_num);
 
     // 3. output = alpha_t * p_t^r * [-log(p_t)]
-    __bang_mul((T *)output, (T *)output, (T *)input, deal_num);
+    __bang_mul((T *)output, (T *)output, (T *)compute_a, deal_num);
   }
 
   // with weight

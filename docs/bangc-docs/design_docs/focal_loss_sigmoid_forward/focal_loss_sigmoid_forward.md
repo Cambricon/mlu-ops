@@ -64,6 +64,7 @@ example:
 ### 1.2 算子功能和应用场景描述
 
 `FocalLoss` 是在`CrossEntropyLoss` 的基础上增加了加权系数`alpha`和聚焦系数`gamma`，其目的是通过减少易分类样本的加权系数，从而使得模型在训练时更专注于难分类的样本。对于二分类问题：
+
 ```math
 p = Sigmoid(input)
 ```
@@ -113,6 +114,69 @@ s.t　& i=1,2,...,N \\
 
 本节公式中，`p` 表示 `input` 通过`Sigmoid`函数计算所得的概率值， `alpha` 表示平衡因子，`gamma` 表示调节因子。
 
+GPU `nan/inf` 行为:
+NAN
+```python
+# =================
+# NAN & gamma != 0
+input = [[np.nan, np.nan]]
+target  = torch.LongTensor([0]).cuda()
+weight = None
+alpha = 0.25
+gamma = 2
+
+# half、float 一致
+# output - half : tensor([[nan, nan]]) 
+# output - float: tensor([[nan, nan]])
+
+
+# =================
+# NAN & gamma != 0
+input = [[np.nan, np.nan]]
+target  = torch.LongTensor([0]).cuda()
+weight = None
+alpha = 0.25
+gamma = 0
+
+# half、float 不一致
+# output - half :tensor([[nan, nan]])
+# output - float:tensor([[21.8341, 65.5024]])
+```
+
+INF
+```python
+# =================
+# +inf, gamma 为0或不为0，output 行为一致
+input = [[np.inf, np.inf]]
+target = torch.LongTensor([0]).cuda()
+weight = None
+alpha = 0.25
+gamma = 2
+ 
+# half、float 不一致
+# output - half: tensor([[nan, inf]])
+# output - float:tensor([[ 0.0000, 65.5024]])
+ 
+
+# =================
+# -inf, gamma 为0或不为0，output 行为一致
+input = [[-np.inf, -np.inf]]
+target  = torch.LongTensor([0]).cuda()
+weight = None
+alpha = 0.25
+gamma = 2
+ 
+# half、float 不一致
+# output - half :tensor([[inf, nan]])
+# output - float:tensor([[21.8341,  0.0000]], device='cuda:0')
+```
+
+MLU `nan/inf` 状态:
+- `float`: `MLU` 计算结果对齐 `GPU`。
+- `half`: 
+  - 输入 `tensor` 仅包含`nan`、有效数，且`gamma!=0`时，`MLU` 计算结果对齐 `GPU`。
+  - 其他 `nan、inf` 情景，`MLU` 计算结果不对齐 `GPU`，原因：`GPU` 部分计算过程使用位宽提升进行运算，导致 `GPU half,float` 行为不一致。
+
 ### 1.3 算子输入输出参数要求
 
 | 参数      | 语义             | 类型（输入/输出） | 支持类型   | 物理布局  | 规模限制 |
@@ -151,7 +215,7 @@ s.t　& i=1,2,...,N \\
 
 #### 1.5.2 性能验收标准
 
-- 网络中使用到的规模性能优于或至少与竞品性能持平，框架在需求列表中给出了网络中出现的输入规模如下表所示。
+- 网络中使用到的规模如下表所示。
 
 | 输入数据     | 规模            |
 | ------------| ----------------|
@@ -302,34 +366,29 @@ x^y=e^{y*log(x)}
 
 上述公式中 `log` 使用 `__mluop_log`。
 
-`nan/inf` 状态:
-- `half,float`: 数据数据包含 `nan` 时，`MLU` 计算结果对齐 `GPU`
-- `float`: 数据数据包含 `inf` 时，`MLU` 计算结果对齐 `GPU`
-- `half`: 数据数据包含 `inf` 时，`MLU` 计算结果不对齐 `GPU`，原因：`GPU` 部分计算过程使用位宽提升进行运算，`GPU half,float` 对于 inf 行为不一致
-
-
 #### 3.1.2 MLUOP_COMPUTATION_HIGH_PRECISION 方案
 
 上述公式中 `log(1 - p)`，`1 - p` 接近 `0` 时函数曲线十分陡峭，容易造成精度丢失。
-BANG C 中 log 指令精度较低，因此修改算法进行提升精度，此处对`log()`的输入进行变换：
+
+BANG C 中 log 指令精度较低，因此修改算法进行提升精度，此处对`log()`的输入进行变换：当公式变换为 `log(1+e^{-x})` ，且`x` 接近`FLT_MAX`时，因浮点有效数位有限，`1+e^{-x}` 易造成精度损失，此处通过引入 `-max(0,-x)` 解决该问题。
 
 ```math
 \begin{aligned} 
    log(p) & = log(\frac{1}{1+e^{-x}}) \\
-          & = -log(1+e^{-x}) \\
-          & = -log(\frac{e^{-max(0,-x)} + e^{-x-max(0,-x)}}{e^{-max(0,-x)}}) \\
-          & = -log({e^{-max(0,-x)} +e^{-max(0,-x)-x}}) - log(e^{-max(0,-x)}) \\
-          & = -log(e^{-max(0,-x)} + e^{-max(0,-x) -x}) + max(0,-x) \\
+          & = log(\frac{e^{-max(0,-x)}}{e^{-max(0,-x)} + e^{-max(0,-x)-x}}) \\
+          & = log(\frac{1}{e^{-max(0,-x)} + e^{-max(0,-x)-x}}) + log(e^{-max(0,-x)})  \\
+          & = log(\frac{1}{e^{-max(0,-x)} + e^{-max(0,-x)-x}}) - max(0,-x) \\
 \end{aligned}
 ```
 
 ```math
 \begin{aligned} 
    log(1 - p) & = log(\frac{e^{-x}}{1+e^{-x}}) \\
-              & = -log(\frac{1+e^{-x}}{e^{-x}}) \\
-              & = -log(1+\frac{1}{e^{-x}}) \\
-              & = -log(1+e^{x}) \\
-              & = -log(e^{-max(0,x)} + e^{-max(0,x)+x}) + max(0,x) \\
+              & = log(\frac{1}{\frac{1}{e^{-x}}+1}) \\
+              & = log(\frac{1}{1+e^{x}}) \\
+              & = log(\frac{e^{-max(0,x)}}{e^{-max(0,x)} + e^{-max(0,x)+x}}) \\
+              & = log(\frac{1}{e^{-max(0,x)} + e^{-max(0,x)+x}}) + log(e^{-max(0,x)})  \\
+              & = log(\frac{1}{e^{-max(0,x)} + e^{-max(0,x)+x}}) - max(0,x) \\
 \end{aligned}
 ```
 
@@ -352,15 +411,11 @@ e^{-max(0,-x) -x} \tag{4}
 ```math
 FL = -\alpha t_{i,j}(1-pt_{i,j})^\gamma log(pt_{i,j}) =
 \begin{cases}
-\alpha t_{i,j}(1-pt_{i,j})^\gamma * [log(e^{-max(0,-x_{i,j})} + e^{-max(0,-x_{i,j}) -x_{i,j}}) + max(0,-x_{i,j})],  & j==target_i \\\tag{5}
-\alpha t_{i,j}(1-pt_{i,j})^\gamma  * [log(e^{-max(0,x_{i,j})} + e^{-max(0,x_{i,j})+x_{i,j}}) + max(0,x_{i,j})], & otherwise
+  - \alpha t_{i,j}(1-pt_{i,j})^\gamma * \{log(1 / [e^{-max(0,-x_{i,j})} + e^{-max(0,-x_{i,j}) - x_{i,j}}]\} - max(0,-x_{i,j})],  & j==target_i \\\tag{5}
+  - \alpha t_{i,j}(1-pt_{i,j})^\gamma * \{log(1 / [e^{-max(0,x_{i,j})}  + e^{-max(0, x_{i,j}) + x_{i,j}}]\} - max(0,x_{i,j})],   & otherwise
 \end{cases}
 
 ```
-
-`nan/inf` 状态:
-- `half,float`: 数据数据包含 `nan` 时，`MLU` 计算结果对齐 `GPU`
-- `half,float`: 数据数据包含 `inf` 时，`MLU` 计算结果不对齐 `GPU`，原因：`log` 展开的算法中包含一步为`-max(0,x) + x = -inf + inf = nan`，该步计算导致行为与 `GPU` 存在差异。
 
 二者方案上的差别在于：
 - `MLUOP_COMPUTATION_FAST` 方案对于 `log` 使用 `__mluop_log` 。
