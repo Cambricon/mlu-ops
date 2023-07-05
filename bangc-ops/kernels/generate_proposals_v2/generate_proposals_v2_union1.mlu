@@ -570,7 +570,6 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
     // dxmax * var[k + 2]
     __bang_mul(d_w, dxmax, variances + 2 * input_stride, align_count);
     __bang_mul(d_h, dymax, variances + 3 * input_stride, align_count);
-    //#endif
   } else {
     // d_cx = cx + dxmin * w * var[k];
     // d_cy = cy + dymin * h * var[k + 1];
@@ -617,7 +616,6 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
   __bang_maxequal(proposal_boxes + input_stride, tmp1, d_h, align_count);
   __bang_maxequal(proposal_boxes + 2 * input_stride, tmp1, d_cx, align_count);
   __bang_maxequal(proposal_boxes + 3 * input_stride, tmp1, d_cy, align_count);
-  //#endif
 }
 
 template <typename T>
