@@ -1,6 +1,7 @@
+
+
 # /bin/bash
 # get PR id
-set -e
 PR_string=$(echo $GITHUB_REF | grep -Eo "/[0-9]*/")
 pr_id=(${PR_string//// })
 
@@ -14,6 +15,8 @@ card_type="MLU370-S4"
 
 # default repo name
 repo_name="mlu-ops-dev"
+
+pwd
 
 # repo ci root path
 repo_root="/home/cambricon/${repo_name}_ci/"
@@ -78,8 +81,6 @@ wait
 # status=$(cat ${request_root}/status)
 
 status=$( head -n +1 ${request_root}/status )
-
-set +e
 
 if [ "$status" != "success" ];then
     return_info=$( sed -n 2p ${request_root}/status )
