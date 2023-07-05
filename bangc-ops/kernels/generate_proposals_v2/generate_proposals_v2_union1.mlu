@@ -57,7 +57,7 @@ __mlu_func__ void findCoreMaxBox(T *input_score_ptr, T *score, T *inter_x1,
     /******nms load start******/
     __bang_write_value(score, actual_num_align, FLOAT_MIN);
     __memcpy(score, input_score_ptr + seg_offset, actual_num * sizeof(T),
-              GDRAM2NRAM);
+             GDRAM2NRAM);
     /******nms load end******/
     __bang_argmax(inter_x1, score, actual_num_align);
     if (inter_x1[0] >= local_max_score) {
@@ -570,7 +570,7 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
     // dxmax * var[k + 2]
     __bang_mul(d_w, dxmax, variances + 2 * input_stride, align_count);
     __bang_mul(d_h, dymax, variances + 3 * input_stride, align_count);
-//#endif
+    //#endif
   } else {
     // d_cx = cx + dxmin * w * var[k];
     // d_cy = cy + dymin * h * var[k + 1];
@@ -592,9 +592,9 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
 
   __bang_mul(d_w, d_w, w, align_count * 2);
   T *oxmin = w;
-  //T *oymin = h;
+  // T *oymin = h;
   T *oxmax = cx;
-  //T *oymax = cy;
+  // T *oymax = cy;
 
   // T oxmin = d_cx - d_w * 0.5;
   __bang_mul_scalar(tmp1, d_w, (T)0.5, align_count * 2);
@@ -617,7 +617,7 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
   __bang_maxequal(proposal_boxes + input_stride, tmp1, d_h, align_count);
   __bang_maxequal(proposal_boxes + 2 * input_stride, tmp1, d_cx, align_count);
   __bang_maxequal(proposal_boxes + 3 * input_stride, tmp1, d_cy, align_count);
-//#endif
+  //#endif
 }
 
 template <typename T>
@@ -659,15 +659,15 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
     __bang_add_scalar(w, w, offset, align_count * 2);
   }
 
-  // cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
-  #if __BANG_ARCH__ >= 322
-  __bang_fusion(FUSION_FMA,cx,w,(T)0.5,xmin,align_count,align_count);
-  __bang_fusion(FUSION_FMA,cy,h,(T)0.5,ymin,align_count,align_count);
-  #else
+// cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
+#if __BANG_ARCH__ >= 322
+  __bang_fusion(FUSION_FMA, cx, w, (T)0.5, xmin, align_count, align_count);
+  __bang_fusion(FUSION_FMA, cy, h, (T)0.5, ymin, align_count, align_count);
+#else
   __bang_mul_scalar(cx, w, (T)0.5, align_count * 2);
   __bang_add(cx, xmin, cx, align_count);
   __bang_add(cy, ymin, cy, align_count);
-  #endif
+#endif
 
   float real_min_size = min_size > 1.0 ? min_size : 1.0;
   // mask_tmp1 = w >= min_size ? 1 : 0;
@@ -701,11 +701,11 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
   // collect and store box and scores
   __bang_filter(proposal_boxes, proposal_boxes, mask_tmp2, align_count);
   __bang_filter(proposal_boxes + 1 * input_stride,
-                 proposal_boxes + 1 * input_stride, mask_tmp2, align_count);
+                proposal_boxes + 1 * input_stride, mask_tmp2, align_count);
   __bang_filter(proposal_boxes + 2 * input_stride,
-                 proposal_boxes + 2 * input_stride, mask_tmp2, align_count);
+                proposal_boxes + 2 * input_stride, mask_tmp2, align_count);
   __bang_filter(proposal_boxes + 3 * input_stride,
-                 proposal_boxes + 3 * input_stride, mask_tmp2, align_count);
+                proposal_boxes + 3 * input_stride, mask_tmp2, align_count);
   __bang_filter(proposal_scores, proposal_scores, mask_tmp2, align_count);
 }
 
@@ -822,36 +822,36 @@ __mlu_func__ void createAndRemoveBox(
 
         __bang_filter(bbox_deltals, bbox_deltals, ge_mask, actual_num_align);
         __bang_filter(bbox_deltals + 1 * actual_num_align,
-                       bbox_deltals + 1 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      bbox_deltals + 1 * actual_num_align, ge_mask,
+                      actual_num_align);
         __bang_filter(bbox_deltals + 2 * actual_num_align,
-                       bbox_deltals + 2 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      bbox_deltals + 2 * actual_num_align, ge_mask,
+                      actual_num_align);
         __bang_filter(bbox_deltals + 3 * actual_num_align,
-                       bbox_deltals + 3 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      bbox_deltals + 3 * actual_num_align, ge_mask,
+                      actual_num_align);
 
         __bang_filter(anchors, anchors, ge_mask, actual_num_align);
         __bang_filter(anchors + 1 * actual_num_align,
-                       anchors + 1 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      anchors + 1 * actual_num_align, ge_mask,
+                      actual_num_align);
         __bang_filter(anchors + 2 * actual_num_align,
-                       anchors + 2 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      anchors + 2 * actual_num_align, ge_mask,
+                      actual_num_align);
         __bang_filter(anchors + 3 * actual_num_align,
-                       anchors + 3 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      anchors + 3 * actual_num_align, ge_mask,
+                      actual_num_align);
 
         __bang_filter(variances, variances, ge_mask, actual_num_align);
         __bang_filter(variances + 1 * actual_num_align,
-                       variances + 1 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      variances + 1 * actual_num_align, ge_mask,
+                      actual_num_align);
         __bang_filter(variances + 2 * actual_num_align,
-                       variances + 2 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      variances + 2 * actual_num_align, ge_mask,
+                      actual_num_align);
         __bang_filter(variances + 3 * actual_num_align,
-                       variances + 3 * actual_num_align, ge_mask,
-                       actual_num_align);
+                      variances + 3 * actual_num_align, ge_mask,
+                      actual_num_align);
       }
     }
 
