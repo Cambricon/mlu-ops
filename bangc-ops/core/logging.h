@@ -34,6 +34,12 @@
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
+
+// This marco is determined by specific experiment on 40g device in market.
+// Cases with indices exceeded this number may raise OOM error when generating
+// test cases.
+#define INDICE_IN_LARGE_TENSOR_NUM  1000000
+
 #define LOG(severity) mluop::logging::CLOG(MLUOP, severity)
 
 #define TOKENPASTE(x, y, z) x##y##z

@@ -310,7 +310,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
                                          1, std::vector<int>({100})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         2, std::vector<int>({1000})}),
+                                         2, std::vector<int>({100, 100})}),
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({100, 100})}),
         testing::Values(1.0), testing::Values(MLUOP_UNKNOWN_DEVICE),

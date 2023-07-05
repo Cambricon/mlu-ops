@@ -94,7 +94,7 @@ __mlu_func__ void __mluop_div(T *nram_dst, T *nram_src0, T *nram_src1,
     __bang_div((float *)nram_dst, (float *)nram_src0, (float *)nram_src1,
                deal_num);
 #else
-    __bang_active_reciphp((float *)nram_dst, (float *)nram_src1, deal_num);
+    __bang_recip((float *)nram_dst, (float *)nram_src1, deal_num);
     __bang_mul((float *)nram_dst, (float *)nram_src0, (float *)nram_dst,
                deal_num);
 #endif
@@ -112,7 +112,7 @@ __mlu_func__ void __mluop_div(T *nram_dst, T *nram_src0, T *nram_src1,
                  deal_num);
 #else
       __bang_half2float((float *)nram_addition, (half *)nram_src1, deal_num);
-      __bang_active_reciphp((float *)nram_addition, (float *)nram_addition,
+      __bang_recip((float *)nram_addition, (float *)nram_addition,
                             deal_num);
       __mluop_float2half((half *)nram_src1, (float *)nram_addition, deal_num);
       __bang_mul((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,

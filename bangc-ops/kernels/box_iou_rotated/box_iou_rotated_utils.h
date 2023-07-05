@@ -245,14 +245,14 @@ __mlu_func__ void getIntersectionPoints(
                  (T *)temp7_ram, actual_compute_box_num);
 
       if (sizeof(T) == sizeof(float)) {
-        __nram__ int table[2] = {0, FIILED_ONES};
+        __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
         __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                            actual_compute_box_num, 0);
         __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
                         (int32_t *)table, actual_compute_box_num,
                         TABLE_LENGTH);
       } else {
-        __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
+        __nram__ int16_t table[TABLE_LENGTH] = {0, HALF_FILLED_ONES};
         __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp2_ram,
                              actual_compute_box_num, 0);
         __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
@@ -334,13 +334,13 @@ __mlu_func__ void getIntersectionPoints(
 
     // 16 means the 4x4 possible intersection points above
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[2] = {0, FIILED_ONES};
+      __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
       __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
                      (int32_t *)table, actual_compute_box_num, TABLE_LENGTH);
     } else {
-      __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
+      __nram__ int16_t table[TABLE_LENGTH] = {0, HALF_FILLED_ONES};
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
       __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
@@ -410,14 +410,14 @@ __mlu_func__ void getIntersectionPoints(
 
     // 20 means the (4x4+4) possible intersection points above
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[2] = {0, FIILED_ONES};
+      __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
           __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
                          (int32_t *)table, actual_compute_box_num,
                          TABLE_LENGTH);
     } else {
-            __nram__ int16_t table[2] = {0, HALF_FILLED_ONES};
+            __nram__ int16_t table[TABLE_LENGTH] = {0, HALF_FILLED_ONES};
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
       __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,

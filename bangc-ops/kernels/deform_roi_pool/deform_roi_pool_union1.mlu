@@ -22,6 +22,9 @@
  *************************************************************************/
 #include "deform_roi_pool.h"
 
+#include <cmath>
+#include <climits>
+
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
@@ -36,6 +39,14 @@
 __nram__ char data_nram[MAX_NRAM_SIZE];
 
 template <typename T>
+__mlu_func__ bool containNanInf(const T pos1) {
+  if (std::isnan(pos1) || std::isinf(pos1)) {
+    return true;
+  }
+  return false;
+}
+
+template <typename T>
 __mlu_func__ void bilinearInterpolate(const int input_width, T y, T x, T *w1,
                                       T *w2, T *w3, T *w4, int *x_low,
                                       int *x_high, const int y_low,
@@ -46,8 +57,12 @@ __mlu_func__ void bilinearInterpolate(const int input_width, T y, T x, T *w1,
   }
 
   if (x <= 0) x = 0;
-
+#if __BANG_ARCH__ >= 592
   *x_low = int(x);
+#else
+  bool nan_flag = std::isnan(x);
+  *x_low = nan_flag ? 0 : int(x);
+#endif
 
   if (*x_low >= input_width - 1) {
     *x_high = *x_low = input_width - 1;
@@ -92,14 +107,22 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
     const T bin_width = roi_width / static_cast<T>(pooled_width);
     const T bin_height = roi_height / static_cast<T>(pooled_height);
     const T *offset_input = input + roi_batch * height * width * channels;
+
+    bool naninf_flag = containNanInf(roi_height);
     int roi_bin_grid_height =
         (sampling_ratio > 0)
             ? sampling_ratio
-            : static_cast<int>(std::ceilf(roi_height / pooled_height));
+            : (naninf_flag
+                   ? INT_MIN
+                   : static_cast<int>(std::ceilf(roi_height / pooled_height)));
+    naninf_flag = containNanInf(roi_width);
     int roi_bin_grid_width =
         (sampling_ratio > 0)
             ? sampling_ratio
-            : static_cast<int>(std::ceilf(roi_width / pooled_width));
+            : (naninf_flag
+                   ? INT_MIN
+                   : static_cast<int>(std::ceilf(roi_width / pooled_width)));
+
     if (offset != NULL) {
       const T *offset_cur = offset +
                             out_batch * pooled_width * pooled_height * 2 +
@@ -159,7 +182,12 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
           y = 0;
         }
         int y_low = 0, y_high = 0;
+#if __BANG_ARCH__ >= 592
         y_low = int(y);
+#else
+        bool nan_flag = std::isnan(y);
+        y_low = nan_flag ? 0 : int(y);
+#endif
         if (y_low >= height - 1) {
           y_high = y_low = height - 1;
           y = T(y_low);
@@ -228,7 +256,12 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolForward(
                 if (y <= 0) {
                   y = 0;
                 }
+#if __BANG_ARCH__ >= 592
                 y_low = int(y);
+#else
+                nan_flag = std::isnan(y);
+                y_low = nan_flag ? 0 : int(y);
+#endif
                 if (y_low >= height - 1) {
                   y_high = y_low = height - 1;
                   y = T(y_low);
@@ -323,14 +356,20 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
     const T bin_height = roi_height / static_cast<T>(pooled_height);
     const T *offset_input = input + roi_batch * height * width * channels;
     T *offset_grad_input = grad_input + roi_batch * height * width * channels;
+    bool naninf_flag = containNanInf(roi_height);
     int roi_bin_grid_height =
         (sampling_ratio > 0)
             ? sampling_ratio
-            : static_cast<int>(std::ceilf(roi_height / pooled_height));
+            : (naninf_flag
+                   ? INT_MIN
+                   : static_cast<int>(std::ceilf(roi_height / pooled_height)));
+    naninf_flag = containNanInf(roi_width);
     int roi_bin_grid_width =
         (sampling_ratio > 0)
             ? sampling_ratio
-            : static_cast<int>(std::ceilf(roi_width / pooled_width));
+            : (naninf_flag
+                   ? INT_MIN
+                   : static_cast<int>(std::ceilf(roi_width / pooled_width)));
     if (offset != NULL) {
       const T *offset_cur = offset +
                             out_batch * pooled_width * pooled_height * 2 +
@@ -428,7 +467,12 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
           y_tmp = 0;
         }
         int y_low = 0, y_high = 0;
+#if __BANG_ARCH__ >= 592
         y_low = int(y_tmp);
+#else
+        bool nan_flag = std::isnan(y_tmp);
+        y_low = nan_flag ? 0 : int(y_tmp);
+#endif
         if (y_low >= height - 1) {
           y_high = y_low = height - 1;
           y_tmp = T(y_low);
@@ -530,7 +574,12 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
                   if (y_tmp <= 0) {
                     y_tmp = 0;
                   }
+#if __BANG_ARCH__ >= 592
                   y_low_tmp = int(y_tmp);
+#else
+                  nan_flag = std::isnan(y_tmp);
+                  y_low_tmp = nan_flag ? 0 : int(y_tmp);
+#endif
                   if (y_low_tmp >= height - 1) {
                     y_high_tmp = y_low_tmp = height - 1;
                     y_tmp = T(y_low_tmp);

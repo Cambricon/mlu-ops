@@ -142,6 +142,8 @@ static mluOpStatus_t internalGetIndicePairs(
   PARAM_CHECK_LE(interface_name, out_indices_desc->dims[0], output_spaces);
 
   // large tensor
+  PARAM_CHECK_LE(interface_name, indices_desc->dims[0],
+                INDICE_IN_LARGE_TENSOR_NUM);
   if (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(out_indices_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||

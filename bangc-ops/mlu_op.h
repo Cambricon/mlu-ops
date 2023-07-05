@@ -29,7 +29,7 @@
 
 #define MLUOP_MAJOR 0
 #define MLUOP_MINOR 7
-#define MLUOP_PATCHLEVEL 0
+#define MLUOP_PATCHLEVEL 1
 
 #define MLUOP_DIM_MAX 8
 
@@ -7599,7 +7599,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The tensor \b mask_h_idx must be 1D.
  * - The tensor \b mask_w_idx must be 1D.
- * - The tensor \b data_col must be 3D.
+ * - The tensor \b data_col must be 2D.
  * - The sizes of the highest dimension of tensor \b feature must be 1.
  * - The sizes of the lowest dimension of tensor \b data_col, the element number of tensor \b mask_h_idx, and
  *   the element number of tensor \b mask_w_idx must be the same.
@@ -13371,7 +13371,7 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The first dimension of tensor \b grad_output and tensor \b shifts must be the same size.
- * - The second dimension of tensor \b grad_output  must be multiple of the second dimension of tensor \b shifts.
+ * - The third dimension of tensor \b grad_output must be multiple of the second dimension of tensor \b shifts.
  *   For example, if the shape of \b grad_output is [N, T, C, HW], the shape of \b shifts is [N, G],
  *   C must be a multiple of G, and C and G cannot be zero.
  *
@@ -13434,7 +13434,7 @@ mluOpTinShiftBackward(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - The first dimension of tensor \b input and tensor \b shifts must be the same size.
- * - The second dimension of tensor \b input must be multiple of the second dimension of tensor \b shifts.
+ * - The third dimension of tensor \b input must be multiple of the second dimension of tensor \b shifts.
  *   For example, if the shape of \b input is [N, T, C, HW], the shape of \b shifts is [N, G],
  *   C must be a multiple of G, and C and G cannot be zero.
  *

@@ -61,7 +61,7 @@ mluOpStatus_t voxelizationParamCheck(
     const mluOpTensorDescriptor_t voxels_desc,
     const mluOpTensorDescriptor_t coors_desc,
     const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-    const mluOpTensorDescriptor_t voxel_num_desc, bool is_zero_element) {
+    const mluOpTensorDescriptor_t voxel_num_desc, bool *is_zero_element) {
   // check arch
   if (handle->arch < MLUOP_MLU370) {
     LOG(ERROR) << "[mluOpVoxelization] The operator only support architecture "
@@ -116,7 +116,6 @@ mluOpStatus_t voxelizationParamCheck(
     size_t points_element_num = mluOpGetTensorElementNum(points_desc);
     size_t voxel_size_element_num = mluOpGetTensorElementNum(voxel_size_desc);
     size_t coors_range_element_num = mluOpGetTensorElementNum(coors_range_desc);
-    size_t voxels_element_num = mluOpGetTensorElementNum(voxels_desc);
     size_t coors_element_num = mluOpGetTensorElementNum(coors_desc);
     size_t num_points_per_voxel_element_num =
         mluOpGetTensorElementNum(num_points_per_voxel_desc);
@@ -126,7 +125,6 @@ mluOpStatus_t voxelizationParamCheck(
     if (points_element_num >= LARGE_TENSOR_NUM ||
         voxel_size_element_num >= LARGE_TENSOR_NUM ||
         coors_range_element_num >= LARGE_TENSOR_NUM ||
-        voxels_element_num >= LARGE_TENSOR_NUM ||
         coors_element_num >= LARGE_TENSOR_NUM ||
         num_points_per_voxel_element_num >= LARGE_TENSOR_NUM ||
         voxel_num_element_num >= LARGE_TENSOR_NUM) {
@@ -136,7 +134,7 @@ mluOpStatus_t voxelizationParamCheck(
     }
 
     // check element num zero
-    is_zero_element = false;
+    *is_zero_element = false;
     if (points_element_num == 0 || voxel_size_element_num == 0 ||
         coors_range_element_num == 0) {
       LOG(ERROR)
@@ -145,7 +143,7 @@ mluOpStatus_t voxelizationParamCheck(
     }
 
     if (max_points == 0 || max_voxels == 0) {
-      is_zero_element = true;
+      *is_zero_element = true;
     }
   } else {
     VLOG(5) << "[mluOpVoxelization] Currently, Non-deterministic mode not "
@@ -182,7 +180,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(
   mluOpStatus_t paramcheck_status = voxelizationParamCheck(
       handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
       max_voxels, NDim, deterministic, voxels_desc, coors_desc,
-      num_points_per_voxel_desc, voxel_num_desc, is_zero_element);
+      num_points_per_voxel_desc, voxel_num_desc, &is_zero_element);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
@@ -230,7 +228,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   mluOpStatus_t paramcheck_status = voxelizationParamCheck(
       handle, points_desc, voxel_size_desc, coors_range_desc, max_points,
       max_voxels, NDim, deterministic, voxels_desc, coors_desc,
-      num_points_per_voxel_desc, voxel_num_desc, is_zero_element);
+      num_points_per_voxel_desc, voxel_num_desc, &is_zero_element);
   if (paramcheck_status != MLUOP_STATUS_SUCCESS) {
     return paramcheck_status;
   }
@@ -258,7 +256,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
     GEN_CASE_DATA(false, "voxel_num", voxel_num, voxel_num_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "voxelization", "max_points", max_points);
     GEN_CASE_OP_PARAM_SINGLE(1, "voxelization", "max_voxels", max_voxels);
-    GEN_CASE_OP_PARAM_SINGLE(2, "voxelization", "NDim", NDim);
+    GEN_CASE_OP_PARAM_SINGLE(2, "voxelization", "ndim", NDim);
     GEN_CASE_OP_PARAM_SINGLE(3, "voxelization", "deterministic", deterministic);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
   }
@@ -282,19 +280,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   cnrtFunctionType_t k_type;
   policyFuncDefault(handle, num_points, &k_dim, &k_type);
 
-  const int32_t voxels_size =
-      max_voxels * max_points * num_features * sizeof(float);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, voxels_size, voxels)));
-
-  const int32_t coors_size = max_voxels * 3 * sizeof(int32_t);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, coors_size, coors)));
-
-  const int32_t num_points_per_voxel_size = max_voxels * sizeof(int32_t);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, num_points_per_voxel_size,
-                      num_points_per_voxel)));
+  const size_t fill_value = 0x0;
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, voxels_desc, voxels));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, coors_desc, coors));
+  PARAM_CHECK(
+      "[mluOpVoxelization]",
+      MLUOP_STATUS_SUCCESS ==
+          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                       num_points_per_voxel_desc, num_points_per_voxel));
 
   VLOG(5) << "Launch Kernel KernelDynamicVoxelize.";
   KERNEL_CHECK((KernelDynamicVoxelize(k_dim, k_type, handle->queue, points,

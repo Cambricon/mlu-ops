@@ -30,235 +30,464 @@
 
 #define ALIGN_SIZE NFU_ALIGN_SIZE
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+#define BBOX_SIZE 32
 #define COORD_NUM 4
 
 __nram__ char nmem_buf[MAX_NRAM_SIZE];
+__nram__ char bbox_nram[BBOX_SIZE];
 
 template <typename T>
-__mlu_device__ void bbox_overlaps_workflow(
+__mlu_func__ void bboxOverlapsAlignModeImpl(
     T *vec_b1_x1, T *vec_b1_y1, T *vec_b1_x2, T *vec_b1_y2, T *vec_b2_x1,
     T *vec_b2_y1, T *vec_b2_x2, T *vec_b2_y2, T *vec_left, T *vec_right,
     T *vec_top, T *vec_bottom, const T *bbox1, const T *bbox2, void *ious,
     const int32_t offset, const int32_t mode, const int32_t batches_stride,
-    const int32_t num_bbox1, const int32_t num_bbox2, const bool aligned) {
+    const int32_t num_bbox1, const int32_t num_bbox2) {
   int32_t task_batch_stride = (num_bbox1 + taskDim - 1) / taskDim;
   int32_t batch_start = taskId * task_batch_stride;
   int32_t batch_per_task = batch_start + task_batch_stride < num_bbox1
                                ? task_batch_stride
                                : num_bbox1 - batch_start;
   batch_per_task = MAX(batch_per_task, 0);
-  const int32_t is_high_precision = 1;
-  if (aligned) {
-    int32_t num_loop_cpy = batch_per_task / batches_stride;
-    int32_t num_rem_cpy_batches = batch_per_task % batches_stride;
-    num_loop_cpy = num_rem_cpy_batches > 0 ? num_loop_cpy + 1 : num_loop_cpy;
-    for (int32_t i = 0; i < num_loop_cpy; i++) {
-      int32_t index = batch_start + i * batches_stride;
-      int32_t handle_batches = index + batches_stride > num_bbox1
-                                   ? num_rem_cpy_batches
-                                   : batches_stride;
-      int32_t b1 = index;
-      int32_t b2 = index;
 
-      int32_t base1 = b1 * COORD_NUM;
-      __memcpy(vec_b1_x1, &bbox1[base1], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b1_y1, &bbox1[base1 + 1], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b1_x2, &bbox1[base1 + 2], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b1_y2, &bbox1[base1 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
+  int32_t num_loop_cpy = batch_per_task / batches_stride;
+  int32_t num_rem_cpy_batches = batch_per_task % batches_stride;
+  num_loop_cpy = num_rem_cpy_batches > 0 ? num_loop_cpy + 1 : num_loop_cpy;
+  for (int32_t i = 0; i < num_loop_cpy; i++) {
+    int32_t index = batch_start + i * batches_stride;
+    int32_t handle_batches = index + batches_stride > num_bbox1
+                                 ? num_rem_cpy_batches
+                                 : batches_stride;
+    int32_t b1 = index;
+    int32_t b2 = index;
 
-      int32_t base2 = b2 * COORD_NUM;
-      __memcpy(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
-      __memcpy(vec_b2_y2, &bbox2[base2 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
-               COORD_NUM * sizeof(T), handle_batches - 1);
+    int32_t base1 = b1 * COORD_NUM;
+    __memcpy_async(vec_b1_x1, &bbox1[base1], sizeof(T), GDRAM2NRAM, sizeof(T),
+                   COORD_NUM * sizeof(T), handle_batches - 1);
+    __memcpy_async(vec_b1_y1, &bbox1[base1 + 1], sizeof(T), GDRAM2NRAM,
+                   sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+    __memcpy_async(vec_b1_x2, &bbox1[base1 + 2], sizeof(T), GDRAM2NRAM,
+                   sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+    __memcpy_async(vec_b1_y2, &bbox1[base1 + 3], sizeof(T), GDRAM2NRAM,
+                   sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
 
-      // get the width and height
-      __bang_maxequal(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
-      __bang_minequal(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
-      __bang_maxequal(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
-      __bang_minequal(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
+    int32_t base2 = b2 * COORD_NUM;
+    __memcpy_async(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM, sizeof(T),
+                   COORD_NUM * sizeof(T), handle_batches - 1);
+    __memcpy_async(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM,
+                   sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+    __memcpy_async(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM,
+                   sizeof(T), COORD_NUM * sizeof(T), handle_batches - 1);
+    __memcpy(vec_b2_y2, &bbox2[base2 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
+             COORD_NUM * sizeof(T), handle_batches - 1);
 
-      // right - left + offset ---> left
-      __bang_sub(vec_left, vec_right, vec_left, batches_stride);
-      __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
+    // get the width and height
+#if __BANG_ARCH__ >= 592
+    __bang_maximum(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
+    __bang_minimum(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
+    __bang_maximum(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
+    __bang_minimum(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
+    // right - left + offset ---> left
+    __bang_sub(vec_left, vec_right, vec_left, batches_stride);
+    __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
+#else
+    __memcpy_async(vec_left, vec_b1_x1, batches_stride * sizeof(T), NRAM2NRAM);
+    __memcpy_async(vec_bottom, vec_b2_x1, batches_stride * sizeof(T),
+                   NRAM2NRAM);
+    __sync_compute();
+    __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
 
-      // bottom - top + offset ---> right
-      __bang_sub(vec_right, vec_bottom, vec_top, batches_stride);
-      __bang_add_scalar(vec_right, vec_right, (T)offset, batches_stride);
+    __memcpy_async(vec_right, vec_b1_x2, batches_stride * sizeof(T), NRAM2NRAM);
+    __memcpy_async(vec_bottom, vec_b2_x2, batches_stride * sizeof(T),
+                   NRAM2NRAM);
+    __sync_compute();
+    __bang_minimum(vec_right, vec_right, vec_bottom, batches_stride);
+    // right - left + offset ---> left
+    __bang_sub(vec_left, vec_right, vec_left, batches_stride);
+    __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
 
-      // zero vector ---> bottom
-      __bang_write_value(vec_bottom, batches_stride, (T)0);
+    __memcpy_async(vec_top, vec_b1_y1, batches_stride * sizeof(T), NRAM2NRAM);
+    __memcpy_async(vec_bottom, vec_b2_y1, batches_stride * sizeof(T),
+                   NRAM2NRAM);
+    __sync_compute();
+    __bang_maximum(vec_top, vec_top, vec_bottom, batches_stride);
 
-      // width --> vec_left
-      __bang_maxequal(vec_left, vec_bottom, vec_left, batches_stride);
-      T *width = vec_left;
-      // height --> vec_right
-      __bang_maxequal(vec_right, vec_bottom, vec_right, batches_stride);
-      T *height = vec_right;
+    __memcpy_async(vec_bottom, vec_b1_y2, batches_stride * sizeof(T),
+                   NRAM2NRAM);
+    __memcpy_async(vec_right, vec_b2_y2, batches_stride * sizeof(T), NRAM2NRAM);
+    __sync_compute();
+    __bang_minimum(vec_bottom, vec_bottom, vec_right, batches_stride);
 
-      // get the b1_area
-      // (b1_x2 - b1_x1 + offset)  --->  vec_top
-      __bang_sub(vec_top, vec_b1_x2, vec_b1_x1, batches_stride);
-      __bang_add_scalar(vec_top, vec_top, (T)offset, batches_stride);
+#endif
 
-      // (b1_y2 - b1_y1 + offset)  --->  vec_bottom
-      __bang_sub(vec_bottom, vec_b1_y2, vec_b1_y1, batches_stride);
-      __bang_add_scalar(vec_bottom, vec_bottom, (T)offset, batches_stride);
+    // bottom - top + offset ---> right
+    __bang_sub(vec_right, vec_bottom, vec_top, batches_stride);
+    __bang_add_scalar(vec_right, vec_right, (T)offset, batches_stride);
 
-      // b1_area = (b1_x2 - b1_x1 + offset) * (b1_y2 - b1_y1 + offset) --->
-      // vec_top;
-      __bang_mul(vec_top, vec_top, vec_bottom, batches_stride);
-      T *b1_area = vec_top;
+    // zero vector ---> bottom
+    __bang_write_value(vec_bottom, batches_stride, (T)0);
 
-      // get the b2_area
-      // (b2_x2 - b2_x1 + offset)  --->  b2_x1
-      __bang_sub(vec_b2_x1, vec_b2_x2, vec_b2_x1, batches_stride);
-      __bang_add_scalar(vec_b2_x1, vec_b2_x1, (T)offset, batches_stride);
+    // width --> vec_left
+#if __BANG_ARCH__ >= 592
+    __bang_maximum(vec_left, vec_bottom, vec_left, batches_stride);
+#else
+    __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
 
-      // (b2_y2 - b2_y1 + offset)  --->  b2_y1
-      __bang_sub(vec_b2_y1, vec_b2_y2, vec_b2_y1, batches_stride);
-      __bang_add_scalar(vec_b2_y1, vec_b2_y1, (T)offset, batches_stride);
+#endif
+    T *width = vec_left;
+    // height --> vec_right
 
-      // b2_area = (b2_x2 - b2_x1 + offset) * (b2_y2 - b2_y1 + offset) --->
-      // b2_x1;
-      __bang_mul(vec_b2_x1, vec_b2_x1, vec_b2_y1, batches_stride);
-      T *b2_area = vec_b2_x1;
+#if __BANG_ARCH__ >= 592
+    __bang_maximum(vec_right, vec_bottom, vec_right, batches_stride);
+#else
+    __bang_write_value(vec_bottom, batches_stride, (T)0);
+    __bang_maximum(vec_right, vec_right, vec_bottom, batches_stride);
+#endif
+    T *height = vec_right;
 
-      // inter_s = width * height
-      __bang_mul(height, width, height, batches_stride);
-      T *inter_s = height;
+    // get the b1_area
+    // (b1_x2 - b1_x1 + offset)  --->  vec_top
+    __bang_sub(vec_top, vec_b1_x2, vec_b1_x1, batches_stride);
+    __bang_add_scalar(vec_top, vec_top, (T)offset, batches_stride);
 
-      // offset vector ---> vec_b2_y1
-      __bang_write_value(vec_b2_y1, batches_stride, T(offset));
-      T *vec_offset = vec_b2_y1;
+    // (b1_y2 - b1_y1 + offset)  --->  vec_bottom
+    __bang_sub(vec_bottom, vec_b1_y2, vec_b1_y1, batches_stride);
+    __bang_add_scalar(vec_bottom, vec_bottom, (T)offset, batches_stride);
 
-      if (mode == 0) {
-        __bang_add(b1_area, b1_area, b2_area, batches_stride);
-        __bang_sub(b1_area, b1_area, inter_s, batches_stride);
-        __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
-      } else {
-        __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
-      }
-      T *base_s = b1_area;
+    // b1_area = (b1_x2 - b1_x1 + offset) * (b1_y2 - b1_y1 + offset) --->
+    // vec_top;
+    __bang_mul(vec_top, vec_top, vec_bottom, batches_stride);
+    T *b1_area = vec_top;
 
-      // ious = inter_s / base_s
-      __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
-                  batches_stride);
-      __memcpy((T *)ious + index, width, handle_batches * sizeof(T),
-               NRAM2GDRAM);
+    // get the b2_area
+    // (b2_x2 - b2_x1 + offset)  --->  b2_x1
+    __bang_sub(vec_b2_x1, vec_b2_x2, vec_b2_x1, batches_stride);
+    __bang_add_scalar(vec_b2_x1, vec_b2_x1, (T)offset, batches_stride);
+
+    // (b2_y2 - b2_y1 + offset)  --->  b2_y1
+    __bang_sub(vec_b2_y1, vec_b2_y2, vec_b2_y1, batches_stride);
+    __bang_add_scalar(vec_b2_y1, vec_b2_y1, (T)offset, batches_stride);
+
+    // b2_area = (b2_x2 - b2_x1 + offset) * (b2_y2 - b2_y1 + offset) --->
+    // b2_x1;
+    __bang_mul(vec_b2_x1, vec_b2_x1, vec_b2_y1, batches_stride);
+    T *b2_area = vec_b2_x1;
+
+    // inter_s = width * height
+    __bang_mul(height, width, height, batches_stride);
+    T *inter_s = height;
+
+    // offset vector ---> vec_b2_y1
+    __bang_write_value(vec_b2_y1, batches_stride, T(offset));
+    T *vec_offset = vec_b2_y1;
+
+    if (mode == 0) {
+      __bang_add(b1_area, b1_area, b2_area, batches_stride);
+      __bang_sub(b1_area, b1_area, inter_s, batches_stride);
+#if __BANG_ARCH__ >= 592
+      __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+#else
+
+      __memcpy_async(vec_bottom, vec_offset, batches_stride * sizeof(T),
+                     NRAM2NRAM);
+      __sync_compute();
+      __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+
+#endif
+    } else {
+#if __BANG_ARCH__ >= 592
+      __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+#else
+      __memcpy_async(vec_bottom, vec_offset, batches_stride * sizeof(T),
+                     NRAM2NRAM);
+      __sync_compute();
+      __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+#endif
     }
+    T *base_s = b1_area;
+    const int32_t is_high_precision = 1;
+    __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+                batches_stride);
+    __memcpy((T *)ious + index, width, handle_batches * sizeof(T), NRAM2GDRAM);
+  }
+}
+
+template <typename T>
+__mlu_func__ void load(T *vec_b2_x1, const T *bbox2,
+                       const int32_t handle_batches, const int32_t num_bbox2,
+                       const int32_t base2) {
+  __memcpy_async(vec_b2_x1, bbox2 + base2, 4 * handle_batches * sizeof(T),
+                 GDRAM2NRAM);
+}
+template <typename T>
+__mlu_func__ void compute(T *vec_b2_x1, T *vec_b2_y1, T *vec_b2_x2,
+                          T *vec_b2_y2, T *vec_left, T *vec_right, T *vec_top,
+                          T *vec_bottom, const int32_t offset,
+                          const int32_t mode, const int32_t batches_stride,
+                          const int32_t num_bbox1, const int32_t num_bbox2,
+                          int32_t handle_batches, T vec_b1_x1_value,
+                          T vec_b1_x2_value, T vec_b1_y1_value,
+                          T vec_b1_y2_value) {
+  __bang_transpose(vec_left, vec_b2_x1, handle_batches, 4);
+  __memcpy_async(vec_b2_x1, vec_left, handle_batches * sizeof(T), NRAM2NRAM);
+  __memcpy_async(vec_b2_y1, vec_left + handle_batches,
+                 handle_batches * sizeof(T), NRAM2NRAM);
+  __memcpy_async(vec_b2_x2, vec_left + 2 * handle_batches,
+                 handle_batches * sizeof(T), NRAM2NRAM);
+  __memcpy(vec_b2_y2, vec_left + 3 * handle_batches, handle_batches * sizeof(T),
+           NRAM2NRAM);
+
+  // get the width and height
+#if __BANG_ARCH__ >= 592
+  __bang_maximum_scalar(vec_left, vec_b2_x1, vec_b1_x1_value, handle_batches);
+  __bang_minimum_scalar(vec_right, vec_b2_x2, vec_b1_x2_value, handle_batches);
+  __bang_maximum_scalar(vec_top, vec_b2_y1, vec_b1_y1_value, handle_batches);
+  __bang_minimum_scalar(vec_bottom, vec_b2_y2, vec_b1_y2_value, handle_batches);
+  // right - left + offset ---> left
+  __bang_sub(vec_left, vec_right, vec_left, handle_batches);
+  __bang_add_scalar(vec_left, vec_left, (T)offset, handle_batches);
+#else
+  __bang_write_value(vec_bottom, handle_batches, vec_b1_x1_value);
+  __memcpy_async(vec_left, vec_b2_x1, handle_batches * sizeof(T), NRAM2NRAM);
+  __sync_compute();
+  __bang_maximum(vec_left, vec_left, vec_bottom, handle_batches);
+
+  __bang_write_value(vec_bottom, handle_batches, vec_b1_x2_value);
+  __memcpy_async(vec_right, vec_b2_x2, handle_batches * sizeof(T), NRAM2NRAM);
+  __sync_compute();
+  __bang_minimum(vec_right, vec_right, vec_bottom, handle_batches);
+  // right - left + offset ---> left
+  __bang_sub(vec_left, vec_right, vec_left, handle_batches);
+  __bang_add_scalar(vec_left, vec_left, (T)offset, handle_batches);
+
+  __bang_write_value(vec_bottom, handle_batches, vec_b1_y1_value);
+  __memcpy_async(vec_top, vec_b2_y1, handle_batches * sizeof(T), NRAM2NRAM);
+  __sync_compute();
+  __bang_maximum(vec_top, vec_top, vec_bottom, handle_batches);
+
+  __bang_write_value(vec_right, handle_batches, vec_b1_y2_value);
+  __memcpy_async(vec_bottom, vec_b2_y2, handle_batches * sizeof(T), NRAM2NRAM);
+  __sync_compute();
+  __bang_minimum(vec_bottom, vec_bottom, vec_right, handle_batches);
+
+#endif
+  // bottom - top + offset ---> right
+  __bang_sub(vec_right, vec_bottom, vec_top, handle_batches);
+  __bang_add_scalar(vec_right, vec_right, (T)offset, handle_batches);
+
+  // zero vector ---> bottom
+  __bang_write_value(vec_bottom, handle_batches, (T)0);
+
+  // width --> vec_left
+  __bang_maximum(vec_left, vec_left, vec_bottom, handle_batches);
+  T *width = vec_left;
+  // height --> vec_right
+#if __BANG_ARCH__ >= 592
+  __bang_maximum(vec_right, vec_bottom, vec_right, handle_batches);
+#else
+  __memcpy_async(vec_top, vec_bottom, handle_batches * sizeof(T), NRAM2NRAM);
+  __sync_compute();
+  __bang_maximum(vec_right, vec_right, vec_top, handle_batches);
+#endif
+  T *height = vec_right;
+
+  // get the b1_area
+  // (b1_x2 - b1_x1 + offset)  --->  vec_top
+  T vec_top_value = vec_b1_x2_value - vec_b1_x1_value + offset;
+  T vec_bottom_value = vec_b1_y2_value - vec_b1_y1_value + offset;
+  T b1_area_value = vec_top_value * vec_bottom_value;
+
+  // get the b2_area
+  // (b2_x2 - b2_x1 + offset)  --->  b2_x1
+  __bang_sub(vec_b2_x1, vec_b2_x2, vec_b2_x1, handle_batches);
+  __bang_add_scalar(vec_b2_x1, vec_b2_x1, (T)offset, handle_batches);
+  // (b2_y2 - b2_y1 + offset)  --->  b2_y1
+  __bang_sub(vec_b2_y1, vec_b2_y2, vec_b2_y1, handle_batches);
+  __bang_add_scalar(vec_b2_y1, vec_b2_y1, (T)offset, handle_batches);
+  // b2_area = (b2_x2 - b2_x1 + offset) * (b2_y2 - b2_y1 + offset) --->
+  // b2_x1;
+  __bang_mul(vec_b2_x1, vec_b2_x1, vec_b2_y1, handle_batches);
+  T *b2_area = vec_b2_x1;
+
+  // inter_s = width * height
+  __bang_mul(height, width, height, handle_batches);
+  T *inter_s = height;
+
+  // offset vector ---> vec_b2_y1
+  __bang_write_value(vec_b2_y1, handle_batches, T(offset));
+  T *vec_offset = vec_b2_y1;
+
+  if (mode == 0) {
+    __bang_add_scalar(b2_area, b2_area, b1_area_value, handle_batches);
+    __bang_sub(b2_area, b2_area, inter_s, handle_batches);
+#if __BANG_ARCH__ >= 592
+    __bang_maximum(b2_area, vec_offset, b2_area, handle_batches);
+#else
+    __memcpy_async(vec_bottom, vec_offset, handle_batches * sizeof(T),
+                   NRAM2NRAM);
+    __sync_compute();
+    __bang_maximum(b2_area, b2_area, vec_bottom, handle_batches);
+
+#endif
   } else {
-    int32_t num_loop_cpy = num_bbox2 / batches_stride;
-    int32_t num_rem_cpy_batches = num_bbox2 % batches_stride;
-    num_loop_cpy = num_rem_cpy_batches > 0 ? num_loop_cpy + 1 : num_loop_cpy;
-    for (int32_t i = 0; i < batch_per_task; i++) {
-      int32_t index1 = batch_start + i;
-      int32_t b1 = index1;
-      int32_t base1 = b1 * COORD_NUM;
+#if __BANG_ARCH__ >= 592
+    __bang_maximum_scalar(b2_area, vec_offset, b1_area_value, handle_batches);
+#else
+    __memcpy_async(b2_area, vec_offset, handle_batches * sizeof(T), NRAM2NRAM);
+    __sync_compute();
+    __bang_write_value(vec_bottom, handle_batches, T(b1_area_value));
+    __bang_maximum(b2_area, b2_area, vec_bottom, handle_batches);
+#endif
+  }
+  T *base_s = b2_area;
 
-      // set bbox1 and bbox2 to nram
-      __bang_write_value(vec_b1_x1, batches_stride, bbox1[base1]);
-      __bang_write_value(vec_b1_y1, batches_stride, bbox1[base1 + 1]);
-      __bang_write_value(vec_b1_x2, batches_stride, bbox1[base1 + 2]);
-      __bang_write_value(vec_b1_y2, batches_stride, bbox1[base1 + 3]);
+  // ious = inter_s / base_s
+  const int32_t is_high_precision = 1;
+  __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
+              handle_batches);
+}
 
-      for (int32_t j = 0; j < num_loop_cpy; j++) {
-        int32_t index2 = j * batches_stride;
-        int32_t handle_batches = index2 + batches_stride > num_bbox2
-                                     ? num_rem_cpy_batches
-                                     : batches_stride;
-        int32_t b2 = index2;
-        int32_t base2 = b2 * COORD_NUM;
+template <typename T>
+__mlu_func__ void store(void *ious, T *vec_left, const int32_t handle_batches,
+                        const int32_t index1, const int32_t index2,
+                        const int32_t num_bbox2) {
+  __memcpy_async((T *)ious + (index1 * num_bbox2 + index2), (T *)vec_left,
+                 handle_batches * sizeof(T), NRAM2GDRAM);
+}
 
-        // copy bbox2 to nram
-        __memcpy(vec_b2_x1, &bbox2[base2], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
-        __memcpy(vec_b2_y1, &bbox2[base2 + 1], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
-        __memcpy(vec_b2_x2, &bbox2[base2 + 2], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
-        __memcpy(vec_b2_y2, &bbox2[base2 + 3], sizeof(T), GDRAM2NRAM, sizeof(T),
-                 COORD_NUM * sizeof(T), handle_batches - 1);
+template <typename T>
+__mlu_func__ void bboxOverlapsNotAlignModeImpl(
+    T *vec_b2_x1, T *vec_b2_y1, T *vec_b2_x2, T *vec_b2_y2, T *vec_left,
+    T *vec_right, T *vec_top, T *vec_bottom, T *bbox1, T *bbox2, void *ious,
+    const int32_t offset, const int32_t mode, const int32_t batches_stride,
+    const int32_t num_bbox1, const int32_t num_bbox2,
+    const int32_t ping_pong_gap) {
+  const int32_t task_batch_stride = (num_bbox1 + taskDim - 1) / taskDim;
+  const int32_t batch_start = taskId * task_batch_stride;
+  int32_t batch_per_task = batch_start + task_batch_stride < num_bbox1
+                               ? task_batch_stride
+                               : num_bbox1 - batch_start;
+  batch_per_task = MAX(batch_per_task, 0);
+  if (batch_per_task == 0) {
+    return;
+  }
 
-        // get the width and height
-        __bang_maxequal(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
-        __bang_minequal(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
-        __bang_maxequal(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
-        __bang_minequal(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
+  const int32_t num_loop_cpy = num_bbox2 / batches_stride;
 
-        // right - left + offset ---> left
-        __bang_sub(vec_left, vec_right, vec_left, batches_stride);
-        __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
-        // bottom - top + offset ---> right
-        __bang_sub(vec_right, vec_bottom, vec_top, batches_stride);
-        __bang_add_scalar(vec_right, vec_right, (T)offset, batches_stride);
+  const int32_t num_rem_cpy_batches = num_bbox2 % batches_stride;
+  for (int32_t i = 0; i < batch_per_task; i++) {
+    const int32_t index1 = batch_start + i;
+    const int32_t b1 = index1;
+    const int32_t base1 = b1 * COORD_NUM;
 
-        // zero vector ---> bottom
-        __bang_write_value(vec_bottom, batches_stride, (T)0);
+    // set bbox1 and bbox2 to nram
+    __memcpy((T *)bbox_nram, (T *)bbox1 + base1, 4 * sizeof(T), GDRAM2NRAM);
+    T vec_b1_x1_value = ((T *)bbox_nram)[0];
+    T vec_b1_y1_value = ((T *)bbox_nram)[1];
+    T vec_b1_x2_value = ((T *)bbox_nram)[2];
+    T vec_b1_y2_value = ((T *)bbox_nram)[3];
 
-        // width --> vec_left
-        __bang_maxequal(vec_left, vec_bottom, vec_left, batches_stride);
-        T *width = vec_left;
-        // height --> vec_right
-        __bang_maxequal(vec_right, vec_bottom, vec_right, batches_stride);
-        T *height = vec_right;
+    int32_t index2 = 0;
+    int32_t handle_batches = index2 + batches_stride > num_bbox2
+                                 ? num_rem_cpy_batches
+                                 : batches_stride;
 
-        // get the b1_area
-        // (b1_x2 - b1_x1 + offset)  --->  vec_top
-        __bang_sub(vec_top, vec_b1_x2, vec_b1_x1, batches_stride);
-        __bang_add_scalar(vec_top, vec_top, (T)offset, batches_stride);
-        // (b1_y2 - b1_y1 + offset)  --->  vec_bottom
-        __bang_sub(vec_bottom, vec_b1_y2, vec_b1_y1, batches_stride);
-        __bang_add_scalar(vec_bottom, vec_bottom, (T)offset, batches_stride);
-        // b1_area = (b1_x2 - b1_x1 + offset) * (b1_y2 - b1_y1 + offset) --->
-        // vec_top;
-        __bang_mul(vec_top, vec_top, vec_bottom, batches_stride);
-        T *b1_area = vec_top;
+    int32_t index2_1 = 0;
+    int32_t handle_batches_1 = 0;
 
-        // get the b2_area
-        // (b2_x2 - b2_x1 + offset)  --->  b2_x1
-        __bang_sub(vec_b2_x1, vec_b2_x2, vec_b2_x1, batches_stride);
-        __bang_add_scalar(vec_b2_x1, vec_b2_x1, (T)offset, batches_stride);
-        // (b2_y2 - b2_y1 + offset)  --->  b2_y1
-        __bang_sub(vec_b2_y1, vec_b2_y2, vec_b2_y1, batches_stride);
-        __bang_add_scalar(vec_b2_y1, vec_b2_y1, (T)offset, batches_stride);
-        // b2_area = (b2_x2 - b2_x1 + offset) * (b2_y2 - b2_y1 + offset) --->
-        // b2_x1;
-        __bang_mul(vec_b2_x1, vec_b2_x1, vec_b2_y1, batches_stride);
-        T *b2_area = vec_b2_x1;
+    int32_t base2_1 = 0;
+    if (num_loop_cpy > 0) {
+      load(vec_b2_x1, bbox2, handle_batches, num_bbox2, 0);
+      __sync();
+    }
 
-        // inter_s = width * height
-        __bang_mul(height, width, height, batches_stride);
-        T *inter_s = height;
+    if (num_loop_cpy > 1) {
+      index2_1 = batches_stride;
+      handle_batches_1 = index2_1 + batches_stride > num_bbox2
+                             ? num_rem_cpy_batches
+                             : batches_stride;
+      base2_1 = index2_1 * COORD_NUM;
+      load(vec_b2_x1 + ping_pong_gap, bbox2, handle_batches_1, num_bbox2,
+           base2_1);
+      compute(vec_b2_x1, vec_b2_y1, vec_b2_x2, vec_b2_y2, vec_left, vec_right,
+              vec_top, vec_bottom, offset, mode, batches_stride, num_bbox1,
+              num_bbox2, handle_batches, vec_b1_x1_value, vec_b1_x2_value,
+              vec_b1_y1_value, vec_b1_y2_value);
+      __sync();
+    }
 
-        // offset vector ---> vec_b2_y1
-        __bang_write_value(vec_b2_y1, batches_stride, T(offset));
-        T *vec_offset = vec_b2_y1;
+    for (int32_t i = 0; i < num_loop_cpy - 2; i++) {
+      store(ious, vec_left + ((i + 2) % 2) * ping_pong_gap, handle_batches,
+            index1, i * batches_stride, num_bbox2);
 
-        if (mode == 0) {
-          __bang_add(b1_area, b1_area, b2_area, batches_stride);
-          __bang_sub(b1_area, b1_area, inter_s, batches_stride);
-          __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
-        } else {
-          __bang_maxequal(b1_area, vec_offset, b1_area, batches_stride);
-        }
-        T *base_s = b1_area;
+      load(vec_b2_x1 + (i % 2) * ping_pong_gap, bbox2, handle_batches,
+           num_bbox2, (i + 2) * batches_stride * COORD_NUM);
 
-        // ious = inter_s / base_s
-        __mluop_div(width, inter_s, base_s, vec_b2_x2, is_high_precision,
-                    batches_stride);
-        int32_t gdram_offset = index1 * num_bbox2 + index2;
-        __memcpy((T *)ious + gdram_offset, width, handle_batches * sizeof(T),
-                 NRAM2GDRAM);
-      }
+      compute(vec_b2_x1 + ((i + 1) % 2) * ping_pong_gap,
+              vec_b2_y1 + ((i + 1) % 2) * ping_pong_gap,
+              vec_b2_x2 + ((i + 1) % 2) * ping_pong_gap,
+              vec_b2_y2 + ((i + 1) % 2) * ping_pong_gap,
+              vec_left + ((i + 1) % 2) * ping_pong_gap,
+              vec_right + ((i + 1) % 2) * ping_pong_gap,
+              vec_top + ((i + 1) % 2) * ping_pong_gap,
+              vec_bottom + ((i + 1) % 2) * ping_pong_gap, offset, mode,
+              batches_stride, num_bbox1, num_bbox2, handle_batches,
+              vec_b1_x1_value, vec_b1_x2_value, vec_b1_y1_value,
+              vec_b1_y2_value);
+      __sync();
+    }
+
+    if (num_loop_cpy > 1) {
+      store(ious, vec_left + ((num_loop_cpy - 2) % 2) * ping_pong_gap,
+            handle_batches, index1, (num_loop_cpy - 2) * batches_stride,
+            num_bbox2);
+    }
+    if (num_rem_cpy_batches > 0) {
+      index2_1 = num_loop_cpy * batches_stride;
+      handle_batches_1 = index2_1 + batches_stride > num_bbox2
+                             ? num_rem_cpy_batches
+                             : batches_stride;
+
+      base2_1 = index2_1 * COORD_NUM;
+      load(vec_b2_x1 + (num_loop_cpy % 2) * ping_pong_gap, bbox2,
+           handle_batches_1, num_bbox2, base2_1);
+    }
+
+    if (num_loop_cpy > 0) {
+      compute(vec_b2_x1 + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_b2_y1 + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_b2_x2 + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_b2_y2 + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_left + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_right + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_top + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+              vec_bottom + ((num_loop_cpy - 1) % 2) * ping_pong_gap, offset,
+              mode, batches_stride, num_bbox1, num_bbox2, handle_batches,
+              vec_b1_x1_value, vec_b1_x2_value, vec_b1_y1_value,
+              vec_b1_y2_value);
+    }
+    __sync();
+    if (num_loop_cpy > 0) {
+      store(ious, vec_left + ((num_loop_cpy - 1) % 2) * ping_pong_gap,
+            handle_batches, index1, (num_loop_cpy - 1) * batches_stride,
+            num_bbox2);
+    }
+    if (num_rem_cpy_batches > 0) {
+      compute(vec_b2_x1 + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_b2_y1 + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_b2_x2 + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_b2_y2 + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_left + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_right + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_top + ((num_loop_cpy) % 2) * ping_pong_gap,
+              vec_bottom + ((num_loop_cpy) % 2) * ping_pong_gap, offset, mode,
+              batches_stride, num_bbox1, num_bbox2, handle_batches_1,
+              vec_b1_x1_value, vec_b1_x2_value, vec_b1_y1_value,
+              vec_b1_y2_value);
+      __sync();
+      store(ious, vec_left + ((num_loop_cpy) % 2) * ping_pong_gap,
+            handle_batches_1, index1, index2_1, num_bbox2);
     }
   }
 }
@@ -268,31 +497,55 @@ __mlu_global__ void MLUUnion1BboxOverlapsKernel(
     const T *bbox1, const T *bbox2, T *ious, const int32_t num_bboxl,
     const int32_t num_bbox2, const int32_t mode, const bool aligned,
     const int32_t offset) {
-  int32_t align_bytes = PAD_DOWN(MAX_NRAM_SIZE, ALIGN_SIZE);
-  int32_t nram_stride = align_bytes / ALIGN_SIZE / 12 * ALIGN_SIZE;
+  if (__is_mpu()) {
+    return;
+  }
+  if (aligned) {
+    int32_t align_bytes = PAD_DOWN(MAX_NRAM_SIZE, ALIGN_SIZE);
+    int32_t nram_stride = align_bytes / ALIGN_SIZE / 12 * ALIGN_SIZE;
+    void *vec_b1_x1 = nmem_buf;
+    void *vec_b1_y1 = nmem_buf + nram_stride;
+    void *vec_b1_x2 = nmem_buf + 2 * nram_stride;
+    void *vec_b1_y2 = nmem_buf + 3 * nram_stride;
 
-  void *vec_b1_x1 = nmem_buf;
-  void *vec_b1_y1 = nmem_buf + nram_stride;
-  void *vec_b1_x2 = nmem_buf + 2 * nram_stride;
-  void *vec_b1_y2 = nmem_buf + 3 * nram_stride;
+    void *vec_b2_x1 = nmem_buf + 4 * nram_stride;
+    void *vec_b2_y1 = nmem_buf + 5 * nram_stride;
+    void *vec_b2_x2 = nmem_buf + 6 * nram_stride;
+    void *vec_b2_y2 = nmem_buf + 7 * nram_stride;
 
-  void *vec_b2_x1 = nmem_buf + 4 * nram_stride;
-  void *vec_b2_y1 = nmem_buf + 5 * nram_stride;
-  void *vec_b2_x2 = nmem_buf + 6 * nram_stride;
-  void *vec_b2_y2 = nmem_buf + 7 * nram_stride;
+    void *vec_left = nmem_buf + 8 * nram_stride;
+    void *vec_right = nmem_buf + 9 * nram_stride;
+    void *vec_top = nmem_buf + 10 * nram_stride;
+    void *vec_bottom = nmem_buf + 11 * nram_stride;
+    const int32_t vec_length = nram_stride / sizeof(T);
+    bboxOverlapsAlignModeImpl((T *)vec_b1_x1, (T *)vec_b1_y1, (T *)vec_b1_x2,
+                              (T *)vec_b1_y2, (T *)vec_b2_x1, (T *)vec_b2_y1,
+                              (T *)vec_b2_x2, (T *)vec_b2_y2, (T *)vec_left,
+                              (T *)vec_right, (T *)vec_top, (T *)vec_bottom,
+                              (T *)bbox1, (T *)bbox2, (T *)ious, offset, mode,
+                              vec_length, num_bboxl, num_bbox2);
+  } else {
+    int32_t align_bytes = PAD_DOWN(MAX_NRAM_SIZE - BBOX_SIZE, ALIGN_SIZE);
+    const int32_t nram_split_num = 16;
+    const int32_t nram_stride =
+        align_bytes / ALIGN_SIZE / nram_split_num * ALIGN_SIZE / sizeof(T);
+    T *vec_left = (T *)nmem_buf;
+    T *vec_right = (T *)nmem_buf + 1 * nram_stride;
+    T *vec_top = (T *)nmem_buf + 2 * nram_stride;
+    T *vec_bottom = (T *)nmem_buf + 3 * nram_stride;
+    T *vec_b2_x1 = (T *)nmem_buf + 4 * nram_stride;
+    T *vec_b2_y1 = (T *)nmem_buf + 5 * nram_stride;
+    T *vec_b2_x2 = (T *)nmem_buf + 6 * nram_stride;
+    T *vec_b2_y2 = (T *)nmem_buf + 7 * nram_stride;
 
-  void *vec_left = nmem_buf + 8 * nram_stride;
-  void *vec_right = nmem_buf + 9 * nram_stride;
-  void *vec_top = nmem_buf + 10 * nram_stride;
-  void *vec_bottom = nmem_buf + 11 * nram_stride;
-
-  int32_t vec_length = nram_stride / sizeof(T);
-  bbox_overlaps_workflow((T *)vec_b1_x1, (T *)vec_b1_y1, (T *)vec_b1_x2,
-                         (T *)vec_b1_y2, (T *)vec_b2_x1, (T *)vec_b2_y1,
-                         (T *)vec_b2_x2, (T *)vec_b2_y2, (T *)vec_left,
-                         (T *)vec_right, (T *)vec_top, (T *)vec_bottom,
-                         (T *)bbox1, (T *)bbox2, (T *)ious, offset, mode,
-                         vec_length, num_bboxl, num_bbox2, aligned);
+    const int32_t vec_length = nram_stride;
+    const int32_t ping_pong_gap = 8 * nram_stride;
+    bboxOverlapsNotAlignModeImpl(
+        (T *)vec_b2_x1, (T *)vec_b2_y1, (T *)vec_b2_x2, (T *)vec_b2_y2,
+        (T *)vec_left, (T *)vec_right, (T *)vec_top, (T *)vec_bottom,
+        (T *)bbox1, (T *)bbox2, (T *)ious, offset, mode, vec_length, num_bboxl,
+        num_bbox2, ping_pong_gap);
+  }
 }
 
 void MLUOP_WIN_API KernelBboxOverlaps(

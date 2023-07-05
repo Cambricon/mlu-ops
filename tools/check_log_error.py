@@ -24,6 +24,7 @@
 
 import sys
 import re
+import warnings
 
 lines = ''
 sucess_regx = 'LOG\(ERROR\)[^}]+return MLUOP_STATUS_SUCCESS;'
@@ -143,10 +144,10 @@ def helper(func, reg):
                                             "MLUOP_STATUS_EXECUTION_FAILED"
                                         ) == -1 and temp[res2.span()[1]:].find(
                                             "MLUOP_STATUS_NOT_SUPPORTED") == -1:
-                    print(
+                    warnings.warn(
                         '-- the LOG(ERROR) may be not legal, please make sure have the correct return value'
                     )
-                    print(
+                    warnings.warn(
                         '-- this is just a hint, if you confirm it is correct, you can ignore it'
                     )
                     print(temp)
@@ -169,6 +170,7 @@ def check():
 def main():
     if sys.argv[1].endswith(".mlu") or sys.argv[1].endswith(".cpp"):
         getFile(sys.argv[1])
+        print('check filename: %s.'%(sys.argv[1]))
         check()
 
 
