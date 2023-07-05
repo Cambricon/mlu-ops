@@ -59,7 +59,7 @@ __mlu_func__ void findCoreMaxBox(T *input_score_ptr, T *score, T *inter_x1,
     __memcpy(score, input_score_ptr + seg_offset, actual_num * sizeof(T),
               GDRAM2NRAM);
     /******nms load end******/
-    __bang_max(inter_x1, score, actual_num_align);
+    __bang_argmax(inter_x1, score, actual_num_align);
     if (inter_x1[0] >= local_max_score) {
       if (inter_x1[0] == FLOAT_MIN) {
         local_max_score = inter_x1[0];
@@ -107,7 +107,7 @@ __mlu_func__ void findClusterMaxBox(T *sram, T *max_box, T *inter_x1,
   __bang_write_value(inter_x1, 64, FLOAT_MIN);
   __memcpy(inter_x1, sram, sizeof(T), SRAM2NRAM, sizeof(T), 6 * sizeof(T),
            coreDim - 1);
-  __bang_max(max_box, inter_x1, 64);
+  __bang_argmax(max_box, inter_x1, 64);
   int max_core = ((int *)max_box)[1];
   __memcpy(max_box, sram + max_core * 6, 6 * sizeof(T), SRAM2NRAM);
 }
@@ -348,7 +348,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
 
     __memcpy(scores, intput_scores_ptr + core_offset + seg_id * max_seg_num,
              sizeof(T) * actual_num, GDRAM2NRAM);
-    __bang_max(result, scores, actual_num_align);
+    __bang_argmax(result, scores, actual_num_align);
 
     if (local_max_value < result[0]) {
       local_max_value = result[0];
@@ -538,13 +538,11 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
 
   if (pixel_offset) {
     // axmax - axmin + offset
-    __bang_add_scalar(w, w, offset, align_count);
-    __bang_add_scalar(h, h, offset, align_count);
+    __bang_add_scalar(w, w, offset, align_count * 2);
   }
 
   // 0.5 * w; 0.5 * h
-  __bang_mul_scalar(cx, w, T(0.5), align_count);
-  __bang_mul_scalar(cy, h, T(0.5), align_count);
+  __bang_mul_scalar(cx, w, T(0.5), align_count * 2);
 
   // T cx = axmin + 0.5 * w;
   __bang_add(cx, cx, axmin, align_count);
@@ -568,104 +566,58 @@ __mlu_func__ void createBox(T *proposal_boxes, T *bbox_deltals, T *anchors,
     __bang_mul(d_cx, d_cx, variances, align_count);
     __bang_mul(d_cy, d_cy, variances + input_stride, align_count);
 
-    __bang_add(d_cx, d_cx, cx, align_count);
-    __bang_add(d_cy, d_cy, cy, align_count);
-
+    __bang_add(d_cx, d_cx, cx, align_count * 2);
     // dxmax * var[k + 2]
     __bang_mul(d_w, dxmax, variances + 2 * input_stride, align_count);
     __bang_mul(d_h, dymax, variances + 3 * input_stride, align_count);
-
-    // Min(dymax * var[k + 3], bbox_clip_default)
-    // bbox_clip_default = std::log(1000.0 / 16.0);
-    const float bbox_clip_default = 4.135166556742356f;
-#if __BANG_ARCH__ >= 322
-    __bang_mineq_scalar(dxmax, d_w, bbox_clip_default, align_count);
-    __bang_mineq_scalar(dymax, d_h, bbox_clip_default, align_count);
-#else
-    __bang_write_value(tmp1, align_count, bbox_clip_default);
-    __bang_minequal(dxmax, d_w, tmp1, align_count);
-    __bang_minequal(dymax, d_h, tmp1, align_count);
-#endif
+//#endif
   } else {
     // d_cx = cx + dxmin * w * var[k];
     // d_cy = cy + dymin * h * var[k + 1];
     __bang_mul(d_w, dxmin, w, align_count);
     __bang_mul(d_h, dymin, h, align_count);
 
-    __bang_add(d_cx, cx, d_w, align_count);
-    __bang_add(d_cy, cy, d_h, align_count);
-
-    // const float bbox_clip_default = std::log(1000.0 / 16.0);
-    const float bbox_clip_default = 4.135166556742356f;
-#if __BANG_ARCH__ >= 322
-    __bang_mineq_scalar(dxmax, d_w, bbox_clip_default, align_count);
-    __bang_mineq_scalar(dymax, d_h, bbox_clip_default, align_count);
-#else
-    __bang_write_value(tmp1, align_count, bbox_clip_default);
-    __bang_minequal(dxmax, d_w, tmp1, align_count);
-    __bang_minequal(dymax, d_h, tmp1, align_count);
-#endif
+    __bang_add(d_cx, cx, d_w, align_count * 2);
   }
 
+  // Min(dymax * var[k + 3], bbox_clip_default)
+  // bbox_clip_default = std::log(1000.0 / 16.0);
+  const float bbox_clip_default = 4.135166556742356f;
+  __bang_write_value(tmp1, align_count, bbox_clip_default);
+  __bang_minequal(dxmax, d_w, tmp1, align_count);
+  __bang_minequal(dymax, d_h, tmp1, align_count);
   // d_w = exp(Min(dxmax * var[k + 2], bbox_clip_default)) * w;
   calcExp(d_w, dxmax, align_count);
   calcExp(d_h, dymax, align_count);
 
-  __bang_mul(d_w, d_w, w, align_count);
-  __bang_mul(d_h, d_h, h, align_count);
-
+  __bang_mul(d_w, d_w, w, align_count * 2);
   T *oxmin = w;
-  T *oymin = h;
+  //T *oymin = h;
   T *oxmax = cx;
-  T *oymax = cy;
+  //T *oymax = cy;
 
   // T oxmin = d_cx - d_w * 0.5;
-  __bang_mul_scalar(tmp1, d_w, (T)0.5, align_count);
-  __bang_mul_scalar(tmp2, d_h, (T)0.5, align_count);
-
-  __bang_sub(oxmin, d_cx, tmp1, align_count);
-  __bang_sub(oymin, d_cy, tmp2, align_count);
-
+  __bang_mul_scalar(tmp1, d_w, (T)0.5, align_count * 2);
+  __bang_sub(oxmin, d_cx, tmp1, align_count * 2);
   // T oxmax = d_cx + d_w * 0.5 - offset;
-  __bang_add(oxmax, d_cx, tmp1, align_count);
-  __bang_add(oymax, d_cy, tmp2, align_count);
+  __bang_add(oxmax, d_cx, tmp1, align_count * 2);
 
   if (pixel_offset) {
-    __bang_sub_scalar(oxmax, oxmax, T(1.0), align_count);
-    __bang_sub_scalar(oymax, oymax, T(1.0), align_count);
+    __bang_sub_scalar(oxmax, oxmax, T(1.0), align_count * 2);
   }
 
-#if __BANG_ARCH__ >= 322
-  T im_w = (T)(im_shape[1] - offset);
-  T im_h = (T)(im_shape[0] - offset);
-
-  __bang_mineq_scalar(oxmin, oxmin, im_w, align_count);
-  __bang_mineq_scalar(oymin, oymin, im_h, align_count);
-  __bang_mineq_scalar(oxmax, oxmax, im_w, align_count);
-  __bang_mineq_scalar(oymax, oymax, im_h, align_count);
-
-  __bang_maxeq_scalar(proposal_boxes, oxmin, (T)(0), align_count);
-  __bang_maxeq_scalar(proposal_boxes + input_stride, oymin, (T)(0),
-                      align_count);
-  __bang_maxeq_scalar(proposal_boxes + 2 * input_stride, oxmax, (T)(0),
-                      align_count);
-  __bang_maxeq_scalar(proposal_boxes + 3 * input_stride, oymax, (T)(0),
-                      align_count);
-#else
   __bang_write_value(tmp1, align_count, (T)(im_shape[1] - offset));
   __bang_write_value(tmp2, align_count, (T)(im_shape[0] - offset));
 
-  __bang_minequal(oxmin, oxmin, tmp1, align_count);
-  __bang_minequal(oymin, oymin, tmp2, align_count);
-  __bang_minequal(oxmax, oxmax, tmp1, align_count);
-  __bang_minequal(oymax, oymax, tmp2, align_count);
+  __bang_minequal(d_w, oxmin, tmp1, align_count * 2);
+  __bang_minequal(d_cx, oxmax, tmp1, align_count * 2);
 
   __bang_write_value(tmp1, align_count, (T)(0));
-  __bang_maxequal(proposal_boxes, oxmin, tmp1, align_count);
-  __bang_maxequal(proposal_boxes + input_stride, oymin, tmp1, align_count);
-  __bang_maxequal(proposal_boxes + 2 * input_stride, oxmax, tmp1, align_count);
-  __bang_maxequal(proposal_boxes + 3 * input_stride, oymax, tmp1, align_count);
-#endif
+  __bang_maxequal(proposal_boxes, tmp1, d_w, align_count);
+  __bang_maxequal(proposal_boxes + input_stride, tmp1, d_h, align_count);
+  __bang_maxequal(proposal_boxes + 2 * input_stride, tmp1, d_cx, align_count);
+  __bang_maxequal(proposal_boxes + 3 * input_stride, tmp1, d_cy, align_count);
+//#endif
 }
 
 template <typename T>
@@ -704,22 +656,22 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
   if (pixel_offset) {
     T offset = 1.0;
     // w = w + offset, h = h + offset
-    __bang_add_scalar(w, w, offset, align_count);
-    __bang_add_scalar(h, h, offset, align_count);
+    __bang_add_scalar(w, w, offset, align_count * 2);
   }
 
   // cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
-  __bang_mul_scalar(cx, w, (T)0.5, align_count);
-  __bang_mul_scalar(cy, h, (T)0.5, align_count);
-
+  #if __BANG_ARCH__ >= 322
+  __bang_fusion(FUSION_FMA,cx,w,(T)0.5,xmin,align_count,align_count);
+  __bang_fusion(FUSION_FMA,cy,h,(T)0.5,ymin,align_count,align_count);
+  #else
+  __bang_mul_scalar(cx, w, (T)0.5, align_count * 2);
   __bang_add(cx, xmin, cx, align_count);
   __bang_add(cy, ymin, cy, align_count);
+  #endif
 
   float real_min_size = min_size > 1.0 ? min_size : 1.0;
   // mask_tmp1 = w >= min_size ? 1 : 0;
-  __bang_ge_scalar(mask_tmp1, w, real_min_size, align_count);
-  __bang_ge_scalar(mask_tmp2, h, real_min_size, align_count);
-
+  __bang_ge_scalar(mask_tmp1, w, real_min_size, align_count * 2);
   // mask_tmp2 = mask_tmp1 & mask_tmp2
   __bang_and(mask_tmp2, mask_tmp1, mask_tmp2, align_count);
 
@@ -731,7 +683,6 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
     __bang_write_value(tmp1, align_count, im_w);
     __bang_le(mask_tmp1, cx, tmp1, align_count);
     __bang_and(mask_tmp2, mask_tmp2, mask_tmp1, align_count);
-
     __bang_write_value(tmp1, align_count, im_h);
     __bang_le(mask_tmp1, cy, tmp1, align_count);
     __bang_and(mask_tmp2, mask_tmp2, mask_tmp1, align_count);
@@ -748,14 +699,14 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
     return;
   }
   // collect and store box and scores
-  __bang_collect(proposal_boxes, proposal_boxes, mask_tmp2, align_count);
-  __bang_collect(proposal_boxes + 1 * input_stride,
+  __bang_filter(proposal_boxes, proposal_boxes, mask_tmp2, align_count);
+  __bang_filter(proposal_boxes + 1 * input_stride,
                  proposal_boxes + 1 * input_stride, mask_tmp2, align_count);
-  __bang_collect(proposal_boxes + 2 * input_stride,
+  __bang_filter(proposal_boxes + 2 * input_stride,
                  proposal_boxes + 2 * input_stride, mask_tmp2, align_count);
-  __bang_collect(proposal_boxes + 3 * input_stride,
+  __bang_filter(proposal_boxes + 3 * input_stride,
                  proposal_boxes + 3 * input_stride, mask_tmp2, align_count);
-  __bang_collect(proposal_scores, proposal_scores, mask_tmp2, align_count);
+  __bang_filter(proposal_scores, proposal_scores, mask_tmp2, align_count);
 }
 
 template <typename T>
@@ -867,38 +818,38 @@ __mlu_func__ void createAndRemoveBox(
       __bang_ge_scalar(ge_mask, scores, k_score, actual_num_align);
       count = __bang_count(ge_mask, actual_num_align);
       if (count != 0 && count != actual_num && actual_num != 1) {
-        __bang_collect(scores, scores, ge_mask, actual_num_align);
+        __bang_filter(scores, scores, ge_mask, actual_num_align);
 
-        __bang_collect(bbox_deltals, bbox_deltals, ge_mask, actual_num_align);
-        __bang_collect(bbox_deltals + 1 * actual_num_align,
+        __bang_filter(bbox_deltals, bbox_deltals, ge_mask, actual_num_align);
+        __bang_filter(bbox_deltals + 1 * actual_num_align,
                        bbox_deltals + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(bbox_deltals + 2 * actual_num_align,
+        __bang_filter(bbox_deltals + 2 * actual_num_align,
                        bbox_deltals + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(bbox_deltals + 3 * actual_num_align,
+        __bang_filter(bbox_deltals + 3 * actual_num_align,
                        bbox_deltals + 3 * actual_num_align, ge_mask,
                        actual_num_align);
 
-        __bang_collect(anchors, anchors, ge_mask, actual_num_align);
-        __bang_collect(anchors + 1 * actual_num_align,
+        __bang_filter(anchors, anchors, ge_mask, actual_num_align);
+        __bang_filter(anchors + 1 * actual_num_align,
                        anchors + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(anchors + 2 * actual_num_align,
+        __bang_filter(anchors + 2 * actual_num_align,
                        anchors + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(anchors + 3 * actual_num_align,
+        __bang_filter(anchors + 3 * actual_num_align,
                        anchors + 3 * actual_num_align, ge_mask,
                        actual_num_align);
 
-        __bang_collect(variances, variances, ge_mask, actual_num_align);
-        __bang_collect(variances + 1 * actual_num_align,
+        __bang_filter(variances, variances, ge_mask, actual_num_align);
+        __bang_filter(variances + 1 * actual_num_align,
                        variances + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(variances + 2 * actual_num_align,
+        __bang_filter(variances + 2 * actual_num_align,
                        variances + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(variances + 3 * actual_num_align,
+        __bang_filter(variances + 3 * actual_num_align,
                        variances + 3 * actual_num_align, ge_mask,
                        actual_num_align);
       }
