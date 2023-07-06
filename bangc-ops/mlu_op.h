@@ -3706,7 +3706,7 @@ mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
  * A host pointer to the returned size of extra space in bytes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - None.
@@ -3788,7 +3788,7 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *   ::MLUOP_STATUS_NOT_SUPPORTED
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -4688,7 +4688,7 @@ mluOpPriorBox(mluOpHandle_t handle,
  * \b mapping_channel is [rois[0], pooled_height, pooled_width, output_dim].
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -5508,7 +5508,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the output tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The data types of input tensors and output tensor must be the same.
@@ -5585,7 +5585,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * original images.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The data types of all tensors must be the same.
@@ -7578,7 +7578,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * based on mask coordinates. The mask area out of the tensor \b feature is padded with 0.
  *
  * @par Return
- * - MLUOP_STATUS_SUCCESS, MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for tensor \b feature, tensor \b mask_h_idx,
@@ -10369,7 +10369,7 @@ mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
  * the transpose operation.
  *
  * @par Return
- *  ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED, ::MLUOP_STATUS_INTERNAL_ERROR
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
  * - None.
@@ -11167,7 +11167,7 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpActiveRotatedFilterForward.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - None.
@@ -11548,7 +11548,7 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  * maximum values after the max pooling. The shape of \b argmax_idx is [N, H * W, 4, C].
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Formula
  * - See "BorderAlignForward Operator" section in "Cambricon BANG C OPS User Guide" for details.
@@ -11698,7 +11698,7 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  * and C is the number of image channels.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Formula
  * - See "BorderAlignBackward Operator" section in "Cambricon BANG C OPS User Guide"
@@ -13358,7 +13358,7 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the tensor \b grad_input.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -13421,7 +13421,7 @@ mluOpTinShiftBackward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the tensor \b output.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -13547,7 +13547,7 @@ mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the \b im tensor that is the data copied from \b col tensor.
  *
  * @par Return
- * - MLUOP_STATUS_SUCCESS, MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - This function supports the following data types for \b col tensor, \b mask_h_idx tensor,
