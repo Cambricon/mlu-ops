@@ -367,7 +367,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_HALF,
                                          2, std::vector<int>({9, 5})),
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({9, 5})),
+                                         3, std::vector<int>({9, 5, 5})),
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({10, 5})),
                         MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
