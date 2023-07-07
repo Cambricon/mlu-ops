@@ -423,11 +423,11 @@ int rem_num = per_core_num % seg_pad_1;
 
 2. 单次循环load完数据后，使用bang_ge 获取 nram 上 scores 大于等于 k_score 的mask;
 
-3. 使用 bang_collect，根据 第2步的mask， 把 mask 等于1位置的`scores`、`anchors`、`bbox_deltas`、`variances`值collect到一起, `scores` 需要collect一次, `anchors`、`bbox_deltas`、`variances`需要对四个值分别进行collect, 每次循环 collect 数量为seg_pad_1;
+3. 使用 bang_filter，根据 第2步的mask， 把 mask 等于1位置的`scores`、`anchors`、`bbox_deltas`、`variances`值collect到一起, `scores` 需要collect一次, `anchors`、`bbox_deltas`、`variances`需要对四个值分别进行collect, 每次循环 collect 数量为seg_pad_1;
 
 4. 用 collect 后的数据，根据 createbox 计算过程创建 proposals;
 
-5. 根据 removeSmallBox 的计算方法，生成新的 mask2， 用 bang_collect 操作移除proposal中宽和高小于 min_size 的 proposal，把有效的 proposals 集中到一起，此时，单次循环内的计算过程结束；
+5. 根据 removeSmallBox 的计算方法，生成新的 mask2， 用 bang_filter 操作移除proposal中宽和高小于 min_size 的 proposal，把有效的 proposals 集中到一起，此时，单次循环内的计算过程结束；
 
 6. 把单次循环时创建好 proposal 数据，保存到 workspace 空间内， 若单 core 内数据未处理完，回到第 2 步；<br>
 
@@ -483,7 +483,7 @@ proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
 
 3. 用bang_and 计算 mask_w 和 mask_h 的与的结果 mask_res；
 
-4. 根据mask_res，用bang_collect，把proposals中对应位置的值取出集中到一起；
+4. 根据mask_res，用bang_filter，把proposals中对应位置的值取出集中到一起；
 
 5. 把 collect 后的 proposal 数据存放到 workspace 上， 先在 workspace 上开辟 coreNum 大小的空间，每个 core 在对应 taskId 位置存放自己当前的 collect 数量，sync_all 同步后，每个 core 上计算自己存放在 workspace 上的数据偏移，按照这个偏移往 workspace 上存放 collect 后的数值（由于3.1.3 nms筛选中会对乱序数据进行排序操作，本节中存放在 workspace 中的数据相对顺序与 input tensors 可能会不同，但不影响最终算子结果）。
 
@@ -764,11 +764,11 @@ __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
  *count = __bang_count(mask_result, deal_size);
 
 // collect and store box and scores
- __bang_collect(box + 0 * deal_size, box + 0 * deal_size, mask_result, deal_size);
- __bang_collect(box + 1 * deal_size, box + 1 * deal_size, mask_result, deal_size);
- __bang_collect(box + 2 * deal_size, box + 2 * deal_size, mask_result, deal_size);
- __bang_collect(box + 3 * deal_size, box + 3 * deal_size, mask_result, deal_size);
- __bang_collect(scores, scores, mask_result, deal_size);
+ __bang_filter(box + 0 * deal_size, box + 0 * deal_size, mask_result, deal_size);
+ __bang_filter(box + 1 * deal_size, box + 1 * deal_size, mask_result, deal_size);
+ __bang_filter(box + 2 * deal_size, box + 2 * deal_size, mask_result, deal_size);
+ __bang_filter(box + 3 * deal_size, box + 3 * deal_size, mask_result, deal_size);
+ __bang_filter(scores, scores, mask_result, deal_size);
 }
 ```
 

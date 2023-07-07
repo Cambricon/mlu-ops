@@ -154,7 +154,7 @@ __mlu_func__ void computeStoreRoipointPool3d(
            NRAM2GDRAM, (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
 
   // copy y to pooled_features_gdram
-  __bang_collect((T *)auxiliary_d, (T *)points_y, (T *)pts_assign,
+  __bang_filter((T *)auxiliary_d, (T *)points_y, (T *)pts_assign,
                  span_num_deal);
   __memcpy(pooled_features_gdram +
                (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
@@ -164,7 +164,7 @@ __mlu_func__ void computeStoreRoipointPool3d(
            (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
 
   // copy z to pooled_features_gdram
-  __bang_collect((T *)auxiliary_e, (T *)points_z, (T *)pts_assign,
+  __bang_filter((T *)auxiliary_e, (T *)points_z, (T *)pts_assign,
                  span_num_deal);
   __memcpy(pooled_features_gdram +
                (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
@@ -177,7 +177,7 @@ __mlu_func__ void computeStoreRoipointPool3d(
   for (int c_idx = 0; c_idx < feature_in_len; c_idx++) {
     __memcpy(auxiliary_d, point_features + c_idx * pts_num * sizeof(T),
              span_num_deal * sizeof(T), GDRAM2NRAM);
-    __bang_collect((T *)auxiliary_e, (T *)auxiliary_d, (T *)pts_assign,
+    __bang_filter((T *)auxiliary_e, (T *)auxiliary_d, (T *)pts_assign,
                    span_num_deal);
     __memcpy(pooled_features_gdram +
                  (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
@@ -264,7 +264,7 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
              NRAM2GDRAM, (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
 
     // copy y to pooled_features_gdram
-    __bang_collect((T *)auxiliary_d, (T *)points_y, (T *)pts_assign,
+    __bang_filter((T *)auxiliary_d, (T *)points_y, (T *)pts_assign,
                    span_num_deal);
     __memcpy(pooled_features_gdram +
                  (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
@@ -274,7 +274,7 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
              (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
 
     // copy z to pooled_features_gdram
-    __bang_collect((T *)auxiliary_e, (T *)points_z, (T *)pts_assign,
+    __bang_filter((T *)auxiliary_e, (T *)points_z, (T *)pts_assign,
                    span_num_deal);
     __memcpy(pooled_features_gdram +
                  (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
@@ -287,7 +287,7 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
     for (int c_idx = 0; c_idx < feature_in_len; c_idx++) {
       __memcpy(auxiliary_d, point_features + c_idx * pts_num * sizeof(T),
                span_num_deal * sizeof(T), GDRAM2NRAM);
-      __bang_collect((T *)auxiliary_e, (T *)auxiliary_d, (T *)pts_assign,
+      __bang_filter((T *)auxiliary_e, (T *)auxiliary_d, (T *)pts_assign,
                      span_num_deal);
       __memcpy(pooled_features_gdram +
                    (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *

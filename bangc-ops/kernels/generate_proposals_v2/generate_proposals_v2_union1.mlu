@@ -748,14 +748,14 @@ __mlu_func__ void removeSmallBox(T *proposal_scores, T *proposal_boxes,
     return;
   }
   // collect and store box and scores
-  __bang_collect(proposal_boxes, proposal_boxes, mask_tmp2, align_count);
-  __bang_collect(proposal_boxes + 1 * input_stride,
+  __bang_filter(proposal_boxes, proposal_boxes, mask_tmp2, align_count);
+  __bang_filter(proposal_boxes + 1 * input_stride,
                  proposal_boxes + 1 * input_stride, mask_tmp2, align_count);
-  __bang_collect(proposal_boxes + 2 * input_stride,
+  __bang_filter(proposal_boxes + 2 * input_stride,
                  proposal_boxes + 2 * input_stride, mask_tmp2, align_count);
-  __bang_collect(proposal_boxes + 3 * input_stride,
+  __bang_filter(proposal_boxes + 3 * input_stride,
                  proposal_boxes + 3 * input_stride, mask_tmp2, align_count);
-  __bang_collect(proposal_scores, proposal_scores, mask_tmp2, align_count);
+  __bang_filter(proposal_scores, proposal_scores, mask_tmp2, align_count);
 }
 
 template <typename T>
@@ -867,38 +867,38 @@ __mlu_func__ void createAndRemoveBox(
       __bang_ge_scalar(ge_mask, scores, k_score, actual_num_align);
       count = __bang_count(ge_mask, actual_num_align);
       if (count != 0 && count != actual_num && actual_num != 1) {
-        __bang_collect(scores, scores, ge_mask, actual_num_align);
+        __bang_filter(scores, scores, ge_mask, actual_num_align);
 
-        __bang_collect(bbox_deltals, bbox_deltals, ge_mask, actual_num_align);
-        __bang_collect(bbox_deltals + 1 * actual_num_align,
+        __bang_filter(bbox_deltals, bbox_deltals, ge_mask, actual_num_align);
+        __bang_filter(bbox_deltals + 1 * actual_num_align,
                        bbox_deltals + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(bbox_deltals + 2 * actual_num_align,
+        __bang_filter(bbox_deltals + 2 * actual_num_align,
                        bbox_deltals + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(bbox_deltals + 3 * actual_num_align,
+        __bang_filter(bbox_deltals + 3 * actual_num_align,
                        bbox_deltals + 3 * actual_num_align, ge_mask,
                        actual_num_align);
 
-        __bang_collect(anchors, anchors, ge_mask, actual_num_align);
-        __bang_collect(anchors + 1 * actual_num_align,
+        __bang_filter(anchors, anchors, ge_mask, actual_num_align);
+        __bang_filter(anchors + 1 * actual_num_align,
                        anchors + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(anchors + 2 * actual_num_align,
+        __bang_filter(anchors + 2 * actual_num_align,
                        anchors + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(anchors + 3 * actual_num_align,
+        __bang_filter(anchors + 3 * actual_num_align,
                        anchors + 3 * actual_num_align, ge_mask,
                        actual_num_align);
 
-        __bang_collect(variances, variances, ge_mask, actual_num_align);
-        __bang_collect(variances + 1 * actual_num_align,
+        __bang_filter(variances, variances, ge_mask, actual_num_align);
+        __bang_filter(variances + 1 * actual_num_align,
                        variances + 1 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(variances + 2 * actual_num_align,
+        __bang_filter(variances + 2 * actual_num_align,
                        variances + 2 * actual_num_align, ge_mask,
                        actual_num_align);
-        __bang_collect(variances + 3 * actual_num_align,
+        __bang_filter(variances + 3 * actual_num_align,
                        variances + 3 * actual_num_align, ge_mask,
                        actual_num_align);
       }

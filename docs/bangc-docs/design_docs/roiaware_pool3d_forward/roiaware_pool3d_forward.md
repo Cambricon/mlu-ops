@@ -360,7 +360,7 @@ __device__ roiaware_maxpool3d(int max_pts_each_voxel, int out_x, int out_y, int 
   nram pooled_feature_cur_voxels[channels];
   pooled_features_cur_voxels = pooled_features + voxels_index * channels;
   pts_idx_of_voxels_cur_voxels = pts_idx_of_voxels + voxels_index * max_pts_each_voxel;
-  __bang_collect(pooled_feature_cur_voxels, pts_idx_of_voxels_cur_voxels);
+  __bang_filter(pooled_feature_cur_voxels, pts_idx_of_voxels_cur_voxels);
 
   nram nram_pts_feature_cur_voxels[max_pts_each_voxel];
   nram nram_pooled_feature_cur_voxels[max_pts_each_voxel];
@@ -386,7 +386,7 @@ __device__ roiaware_avgpool3d(int max_pts_each_voxel, int out_x, int out_y, int 
   nram pooled_feature_cur_voxels[channels];
   pooled_features_cur_voxels = pooled_features + voxels_index * channels;
   pts_idx_of_voxels_cur_voxels = pts_idx_of_voxels + voxels_index * max_pts_each_voxel;
-  __bang_collect(pooled_feature_cur_voxels, pts_idx_of_voxels_cur_voxels);
+  __bang_filter(pooled_feature_cur_voxels, pts_idx_of_voxels_cur_voxels);
 
   nram nram_pts_feature_cur_voxels[max_pts_each_voxel];
   nram nram_pooled_feature_cur_voxels[max_pts_each_voxel];
