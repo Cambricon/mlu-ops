@@ -67,6 +67,7 @@ static mluOpStatus_t foolCheckNoPtr(
                        input_grad_desc->dtype == MLUOP_DTYPE_HALF);
   PARAM_CHECK(api, indice_pairs_desc->dtype == MLUOP_DTYPE_INT32);
 
+  // no meaning comments
   // check layout
   bool layout_check = filters_desc->layout == MLUOP_LAYOUT_NHWC ||
                       filters_desc->layout == MLUOP_LAYOUT_NCHW ||
