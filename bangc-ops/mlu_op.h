@@ -3535,7 +3535,7 @@ mluOpDiv(mluOpHandle_t handle,
  * A host pointer to the returned size of extra space in bytes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS, MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
  *
  * @par Data Type
  * - None.
@@ -3622,8 +3622,9 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the gradient with respect to \b feats.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
- *   ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS,        ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_ARCH_MISMATCH,  ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_INTERNAL_ERROR, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
@@ -4219,7 +4220,7 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
  * The Nms descriptor to be destroyed.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @note
  * - None
@@ -4366,7 +4367,9 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * Pointer to the MLU memory that stores the number of output boxes.
  *
  * @par Returns
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_ARCH_MISMATCH
+ * - ::MLUOP_STATUS_SUCCESS,   ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
+ *   ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
  * - The supported combinations of data types for input and output tensors are as follows:
@@ -5017,7 +5020,7 @@ mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_d
  * The RoiAlign descriptor to be destroyed.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
  * - None.
@@ -5078,7 +5081,8 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * Pointer to the MLU memory that stores \b output tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS,   ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
  * - The data type of all tensors should be the same.
@@ -5181,7 +5185,8 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  * average pooling mode, \b argmax_y is NULL.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS,   ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
  * - The data types of all tensors should be the same.
@@ -6509,7 +6514,8 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  * Pointer to the MLU memory that stores the number of output boxes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ * - ::MLUOP_STATUS_SUCCESS,   ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
  * - By the order of \b boxes - \b scores - \b output, the supported data types of
