@@ -302,9 +302,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
                                        mluOpSetTensorDescriptor(
                                            output_desc, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 1, output_dims));
-    MLUOP_CHECK((mluOpScatterNd_v2(handle, scatter_mode, indices_desc,
-                                   workspace, updates_desc, grad_voxel_feats,
-                                   NULL, NULL, output_desc, grad_feats)));
+    INTERNAL_CHECK(
+        interface_name,
+        MLUOP_STATUS_SUCCESS == mluOpScatterNd_v2(
+                                    handle, scatter_mode, indices_desc,
+                                    workspace, updates_desc, grad_voxel_feats,
+                                    NULL, NULL, output_desc, grad_feats));
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(updates_desc));
