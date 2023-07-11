@@ -34,12 +34,12 @@
 #include "kernels/kernel.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type, const int HWA) {
+                       cnrtFunctionType_t *k_type, const size_t HWA) {
   int job = mluop::runtime::getJobLimitCapability(handle);
 
   // Make sure at least 128 data is processed on each core
-  int per_core_num = HWA / job;
-  const int min_per_core_num = 128;
+  size_t per_core_num = HWA / (size_t)job;
+  const size_t min_per_core_num = 128;
   while (per_core_num < min_per_core_num && job >= 4) {
     per_core_num *= 2;
     job /= 2;
@@ -70,21 +70,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
   PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
 
   PARAM_CHECK_EQ(API, scores_desc->dim, 4);
-  int N = scores_desc->dims[0];
-  int H = scores_desc->dims[1];
-  int W = scores_desc->dims[2];
-  int A = scores_desc->dims[3];
+  size_t N = scores_desc->dims[0];
+  size_t H = scores_desc->dims[1];
+  size_t W = scores_desc->dims[2];
+  size_t A = scores_desc->dims[3];
 
   PARAM_CHECK_NE(API, A, 0);
   PARAM_CHECK_NE(API, H, 0);
   PARAM_CHECK_NE(API, W, 0);
-  if ((mluOpGetTensorElementNum(scores_desc) *
-           mluop::getSizeOfDataType(scores_desc->dtype) >=
-       LARGE_TENSOR_SIZE)) {
-    LOG(ERROR) << API << " Overflow max tensor size."
-               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
+  size_t scores_num = mluOpGetTensorElementNum(scores_desc);
+  TENSOR_NUM_CHECK(API, scores_num, LARGE_TENSOR_NUM, "");
   *size = 12 * A * H * W * 4 + handle->core_num_per_cluster * 4 * 3;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -220,22 +215,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  if ((mluOpGetTensorElementNum(scores_desc) *
-           mluop::getSizeOfDataType(scores_desc->dtype) >=
-       LARGE_TENSOR_SIZE) ||
-      (mluOpGetTensorElementNum(bbox_deltas_desc) *
-           mluop::getSizeOfDataType(bbox_deltas_desc->dtype) >=
-       LARGE_TENSOR_SIZE) ||
-      (mluOpGetTensorElementNum(anchors_desc) *
-           mluop::getSizeOfDataType(anchors_desc->dtype) >=
-       LARGE_TENSOR_SIZE) ||
-      (mluOpGetTensorElementNum(variances_desc) *
-           mluop::getSizeOfDataType(variances_desc->dtype) >=
-       LARGE_TENSOR_SIZE)) {
-    LOG(ERROR) << API << " Overflow max tensor size."
-               << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
+  size_t scores_num = mluOpGetTensorElementNum(scores_desc);
+  size_t bbox_deltas_num = mluOpGetTensorElementNum(bbox_deltas_desc);
+  size_t anchors_num = mluOpGetTensorElementNum(anchors_desc);
+  size_t variances_num = mluOpGetTensorElementNum(variances_desc);
+  TENSOR_NUM_CHECK(API, scores_num, LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, bbox_deltas_num, LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, anchors_num, LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, variances_num, LARGE_TENSOR_NUM, "");
 
   // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
@@ -266,7 +253,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 3e-3, 3e-3, 0);
   }
 
-  int HWA = H * W * A;
+  size_t HWA = H * W * A;
   cnrtDim3_t k_dim;
   cnrtJobType_t k_type;
   policyFunc(handle, &k_dim, &k_type, HWA);
