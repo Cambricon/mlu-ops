@@ -11191,8 +11191,7 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpActiveRotatedFilterForward.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED,
- *   ::MLUOP_STATUS_EXECUTION_FAILED
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Data Type
  * - None.
@@ -11251,7 +11250,8 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the \b output tensor.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
  * - The data types of input tensor and output tensor should be the same.
