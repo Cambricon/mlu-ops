@@ -3864,8 +3864,7 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
  * A host pointer to the returned size of extra space in bytes.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
- *   ::MLUOP_STATUS_NOT_SUPPORTED,
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - None.
