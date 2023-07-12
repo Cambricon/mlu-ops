@@ -365,8 +365,9 @@ __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum(
       points_xyz_gdram + (2 * batch_size * pts_num) * sizeof(T);
 
   size_t boxes3d_size = PAD_UP(7, NFU_ALIGN_SIZE) * sizeof(T);
-  size_t span_num_deal =
-      PAD_DOWN(MAX_NRAM_SIZE / TWELVE_SPLIT / sizeof(T), NFU_ALIGN_SIZE);
+  size_t span_num_deal = PAD_DOWN(
+      (MAX_NRAM_SIZE - boxes3d_size * sizeof(T)) / TWELVE_SPLIT / sizeof(T),
+      NFU_ALIGN_SIZE);
   size_t align_num = NFU_ALIGN_SIZE;
   int32_t repeat = pts_num / span_num_deal;
   size_t rem = pts_num % span_num_deal;
@@ -551,7 +552,7 @@ void MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
           pooled_features_gdram, pooled_empty_flag_gdram);
     }; break;
     default: {
-      LOG(ERROR) << "Not implemented.";
+      VLOG(5) << "Not implemented.";
       break;
     }
   }
