@@ -11964,7 +11964,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
- *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_INTERNAL_ERROR
+ *   ::MLUOP_STATUS_NOT_SUPPORTED
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
