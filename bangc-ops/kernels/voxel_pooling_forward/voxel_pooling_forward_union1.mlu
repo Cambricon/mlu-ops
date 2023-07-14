@@ -52,7 +52,7 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
    */
   const int nram_limit_pt_num = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(int) / 6,
                                             NFU_ALIGN_SIZE / sizeof(int));
-
+  int initial_value = -1;
   int *nram_geom_xyz = (int *)nram_buffer;
   int *nram_geom_xyz_x = (int *)nram_buffer + nram_limit_pt_num * 3;
   int *nram_geom_xyz_y = (int *)nram_buffer + nram_limit_pt_num * 4;
@@ -149,7 +149,6 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
     // process pos_memo initial value
     __bang_not(nram_buffer_temp, pt_in_voxel_mask, actual_pt_num);
     // read from gdram with pos_memo initial value
-    int initial_value = pos_memo[0];
     __bang_mul_scalar(nram_buffer_temp, nram_buffer_temp, initial_value,
                       actual_pt_num);
     __bang_add(nram_pos_memo_batch, nram_pos_memo_batch, nram_buffer_temp,
@@ -165,7 +164,9 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
     // store pos_memo to gdram
     __memcpy(pos_memo + pt_idx_cur_loop * 3, nram_pos_memo,
              actual_pt_num * 3 * sizeof(int), NRAM2GDRAM);
-
+    if (taskId == 0) {
+      initial_value = pos_memo[0];
+    }
     // process output_features
     // output_features_pt_offset_addr = (batch_idx * num_voxel_y * num_voxel_x +
     // y * num_voxel_x + x) * num_channels
