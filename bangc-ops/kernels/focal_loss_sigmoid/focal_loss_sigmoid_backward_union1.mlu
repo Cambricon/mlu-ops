@@ -257,7 +257,7 @@ __mlu_func__ void focalLossSigmoidBackwardBlock(
   int32_t compute_num = 0;
   int32_t compute_size = 0;
   int32_t compute_align_size = NFU_ALIGN_SIZE;
-  const int32_t nfu_align_num = NFU_ALIGN_SIZE / sizeof(T);
+  const int32_t nfu_align_num = NFU_ALIGN_SIZE / sizeof(float);
   if (sizeof(T) == sizeof(half)) {
     compute_align_size += NFU_ALIGN_SIZE;
   }
