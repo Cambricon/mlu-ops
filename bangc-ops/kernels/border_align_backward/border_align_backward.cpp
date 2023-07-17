@@ -33,12 +33,12 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-// policyFunc
-static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim) {
+static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                       cnrtFunctionType_t *k_type) {
+  *k_type = CNRT_FUNC_TYPE_UNION1;
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
-  return;
 }
 
 mluOpStatus_t mluOpBorderAlignBackward(
@@ -48,6 +48,7 @@ mluOpStatus_t mluOpBorderAlignBackward(
     const void *argmax_idx, const int32_t pool_size,
     const mluOpTensorDescriptor_t grad_input_desc, void *grad_input) {
   const std::string API = "[mluOpBorderAlignBackward]";
+  // params check
   PARAM_CHECK(API, handle != nullptr);
   PARAM_CHECK(API, grad_output_desc != nullptr);
   PARAM_CHECK(API, boxes_desc != nullptr);
@@ -100,17 +101,19 @@ mluOpStatus_t mluOpBorderAlignBackward(
   PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], 4);
   PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], C);
 
-  const size_t grad_output_num = mluOpGetTensorElementNum(grad_output_desc);
-  const size_t boxes_num = mluOpGetTensorElementNum(boxes_desc);
-  const size_t grad_input_num = mluOpGetTensorElementNum(grad_input_desc);
-  TENSOR_NUM_CHECK(API, grad_output_num, LARGE_TENSOR_NUM, "");
-  TENSOR_NUM_CHECK(API, boxes_num, LARGE_TENSOR_NUM, "");
-  TENSOR_NUM_CHECK(API, grad_input_num, LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(grad_output_desc),
+                   LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(boxes_desc), LARGE_TENSOR_NUM,
+                   "");
+  TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(grad_input_desc),
+                   LARGE_TENSOR_NUM, "");
 
   PARAM_CHECK(API, grad_output != nullptr);
   PARAM_CHECK(API, boxes != nullptr);
   PARAM_CHECK(API, argmax_idx != nullptr);
   PARAM_CHECK(API, grad_input != nullptr);
+
+  // generate case prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("border_align_backward");
     GEN_CASE_HANDLE(handle);
@@ -123,9 +126,9 @@ mluOpStatus_t mluOpBorderAlignBackward(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
   cnrtDim3_t k_dim;
-  policyFunc(handle, &k_dim);
+  cnrtFunctionType_t k_type;
+  policyFunc(handle, &k_dim, &k_type);
 
   VLOG(5) << "[mluOpBorderAlignBackward] mluOpFill_v3 start.";
   uint64_t fill_value = 0x0;
@@ -135,6 +138,9 @@ mluOpStatus_t mluOpBorderAlignBackward(
   VLOG(5) << "[mluOpBorderAlignBackward] mluOpFill_v3 end.";
   mluOpDataType_t input_dtype = grad_output_desc->dtype;
 
+  VLOG(5) << "Launch Kernel KernelBorderAlignBackward<<<Union"
+          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+          << k_dim.z << ">>>";
   KERNEL_CHECK((KernelBorderAlignBackward(
       k_dim, k_type, handle->queue, input_dtype, (void *)grad_output,
       (void *)boxes, (int32_t *)argmax_idx, pool_size, N, H, W, C, K,
