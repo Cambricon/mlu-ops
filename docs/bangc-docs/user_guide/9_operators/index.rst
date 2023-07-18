@@ -60,6 +60,8 @@ mluOpBorderAlignBackward
 -----------------------------
 该算子为 ``mluOpBorderAlignForward`` 的反向算子，通过输入特征值、Box和最大池化值对应的索引求输入的梯度信息。
 
+.. _border_align_forward:
+
 mluOpBorderAlignForward
 -----------------------------
 该算子通过双线性插值和最大池化计算box四条边的最大特征值。包括两个输入 tensor，特征图信息和Box。

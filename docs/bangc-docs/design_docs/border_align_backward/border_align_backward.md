@@ -3,20 +3,20 @@
 
 * #### 文档基本信息
 
-| 项目名称    | Training Solution                                            |
-| ----------- | ------------------------------------------------------------ |
-| 算子名称    | border_align_backward                                                        |
+| 算子名称    | border_align_backward                                       |
+| ----------- | ----------------------------------------------------------|
 | 编制人/日期 |    郑斌/2022-4-18                                            |
-| 审批人/日期 |    谷中豪/2022-4-18                                             |
-| 审批人/日期 |    卜德飞/2022-4-18                                              |
-| 审批人/日期 |     王远/2022-4-18                                             |
-| 审批人/日期 |     周晨阳/2022-4-18                                             |
+| 审批人/日期 |    谷中豪/2022-4-18                                          |
+| 审批人/日期 |    卜德飞/2022-4-18                                          |
+| 审批人/日期 |     王远/2022-4-18                                          |
+| 审批人/日期 |     周晨阳/2022-4-18                                        |
 
 * #### 修改记录
 
-| 版本号 | 修订人 | 修订日期 | 修订描述 |
-| ------ | ------ | -------- | -------- |
+| 版本号  | 修订人 | 修订日期 | 修订描述 |
+| ------ | ------ | -------- | ----|
 | V1.0   | 郑斌   | 2022-4-18 | 首次提交 |
+| V2.0   | 王远   | 2023-7-15 | 支持 `nan,inf`，代码重构 |
 
 * #### 内容描述
 
@@ -131,7 +131,7 @@ tensor([[[[ 0.,  4., 24., 48.],
 | handle      | MLU-OPS 句柄，保存运行的上下文信息   | 输入              | mluOpHandle_t | /        | /       |
 | grad_output_desc | 输入grad_output的描述信息 | 输入              |  /  | /      | grad_output的维度必须为4       |
 | grad_output     | 输入数据，指向grad_output的mlu地址的指针           | 输入              | half, float | NHWC |   /    |
-| boxes_desc | 输入bounding box的描述信息   | 输入              | /  | /        | boxes的维度必须为3且最后一维必须为4       |
+| boxes_desc | 输入 box 的描述信息   | 输入              | /  | /        | boxes的维度必须为3且最后一维必须为4       |
 | boxes      | 输入数据，指向boxes的mlu地址的指针          | 输入              |half, float  | ARRAY | /       |
 | argmax_idx_desc | 前向算子计算出最大值对应的idx的描述信息   | 输入              | /  | /        | /       |
 | argmax_idx      | 输入数据，指向argmax_idx的mlu地址的指针          | 输入              |int32_t  | NHWC | /       |
@@ -164,7 +164,7 @@ tensor([[[[ 0.,  4., 24., 48.],
 - 部分效率比较低的规模在4.算子性能优化记录中进行说明。
 - 附上算子测试报告链接，测试报告必须包括框架给出的网络中规模的性能数据以及对应效率值。
 
-mmcv性能测试
+竞品性能测试
 
 | 平台                 |  数据类型 | grad_ouput规模            | boxes规模            |argmax_idx规模            |计算效率(%)  | IO效率(%)    | Hardware time(us) |
 | -------------------- |  -------- | --------------- | --------------- |--------------- |---------- | ---------- | ----------------- |
@@ -196,15 +196,15 @@ void BorderAlignBackwardCUDAKernelLauncher(const Tensor &grad_output,
 // 给出mlu-ops算子接口 
 mluOpStatus_t mluOp_WIN_API 
 mluOpBorderAlignBackward(mluOpHandle_t handle,
-                        const mluOpTensorDescriptor_t grad_output_desc,
-                        const void *grad_output,
-                        const mluOpTensorDescriptor_t boxes_desc,
-                        const void *boxes,
-                        const mluOpTensorDescriptor_t argmax_idx_desc,
-                        const void *argmax_idx,
-                        const int32_t pool_size,
-                        const mluOpTensorDescriptor_t grad_input_desc,
-                        void *grad_input);
+                         const mluOpTensorDescriptor_t grad_output_desc,
+                         const void *grad_output,
+                         const mluOpTensorDescriptor_t boxes_desc,
+                         const void *boxes,
+                         const mluOpTensorDescriptor_t argmax_idx_desc,
+                         const void *argmax_idx,
+                         const int32_t pool_size,
+                         const mluOpTensorDescriptor_t grad_input_desc,
+                         void *grad_input);
 ```
 ## 3 实现方案设计
 
@@ -212,120 +212,116 @@ mluOpBorderAlignBackward(mluOpHandle_t handle,
  
 **计算原理说明：**
  
-`grad_output`的维度为[N, K, 4, C]，`boxes`的维度为[N, K, 4]，argmax_idx的维度为[N, K, 4, C]。 在计算`grad_input`时，将每组`bounding box`，坐标为[x0, y0, x1,y1]，`height`或者`width`均分为`pool_size + 1`段（`height`为`y1 - y0`的结果，`width`为`x1 - x0`的结果），得到`height`或者`width`对应的`x_stride`和`y_stride`，根据`bouding box` 的初始值`x0`和`y0`或者`x1`和`y1`、argmax_idx对应`idx`和`stride`可以得到前向在计算最大池化结果时对应的坐标 `x`和`y`（x  = x0 + x_stride * (*argmax_idx),  y  = y0 + y_stride * (*argmax_idx) ），通过双线性插值和`x`和`y`计算得到每个像素点四邻域对应的权重和`grad_input`对应的坐标，最后通过原子操作累加给 `grad_input`。
+`grad_output.shape = [N, K, 4, C]`。
+
+`boxes.shape = [N, K, 4]`。
+
+`argmax_idx = [N, K, 4, C]`。
+
+在计算 `grad_input` 时，将每组 `box`(坐标为 `[x0,y0,x1,y1]` )的 `height,width` 均分为 `pool_size + 1`份，计算得分段后的 `x_stride,y_stride`。
+
+通过 `x_stride,y_stride` 遍历 `box` 的四条边，通过双线性插值算法计算得每个坐标点所对应的四邻点信息：权重 `w`、四邻点坐标`x_low,x_high,y_low,y_high`，最终通过原子加操作将梯度更新至 `grad_input` 相应位置。
  
 **实现方案：** 
 
-1、首先根据输入`grad_output`计算出所有需要处理的`border`数量，将`border`的数量均分给所有的核，剩余部分依次分给每个`core`，对每个core需要处理的`border`数量做遍历。
+`core` 间拆 `grad_output(shape = [N, K, 4, C])` 的前三维度 `N*K*4`，每个 `core` 处理的数量为 `deal_num`。
 
-2、对每条`border`做`pool_size + 1`次遍历。由于每个`C`上的`argmax_idx`是不一样的，需要通过遍历的方法才能获取。
-
-3、对每条`border`中`C`做遍历，计算得到`C`通道像素点的值。考虑到`C`比较大的情况，无法一次处理全部的`C`，需要对`C`做一次遍历以及对余数段的处理。
+1. 第一层循环，`core` 内对 `deal_num` 做遍历，并将对应的 `box` 坐标捞到片上。
+2. 第二层循环，`C`较大时无法一次处理整个 `C`，因此对`C`做遍历，依据片上空间计算一次能处理的长度`C_seg`，直至处理完整个 `C`。
+3. 第三层循环，对 `box` 的指定边做 `pool_size + 1` 次双线性插值，遍历过程中通过 `argmax_id` 计算得 `shape=[1,C_seg]` 的 `mask`，`argmax_idx` 中数值与 `pool_size + 1` 相等的位置处`mask`数值为`1`，其他位置值为`0`。最终通过 `mask` 更新 `grad_input`。
 
 nram划分：
-- ![figure1](./figure1.png)
+
+![figure1](./figure1.png)
 
 
 ### 3.2 伪代码实现（可选）
 
 伪代码表示如下：
-
 ```c++
-// 计算一次能够处理的数据量
-deal_num = PAD_DOWN((MAX_NRAM_SIZE - NRAM_BBOX_SIZE - NFU_ALIGN_SIZE) / (4 * sizeof(T) + sizeof(int32_t)), NFU_ALIGN_NUM);
-// core间任务拆分，把bounding box拆分给所有core并计算每个core待处理的bounding box的起始位置
-int32_t N = boxes_desc->dims[0];
-int32_t K = boxes_desc->dims[1];
-const int32_t total_num = N * K * 4;
-int32_t num_per_core = total_num / taskDim;
-const int32_t num_rem = total_num % taskDim;
-num_per_core = num_per_core + int32_t(taskId < num_rem);
-int32_t start_per_core = num_rem > taskId ? (taskId * num_per_core)
-          : ((num_per_core + 1) * num_rem + (taskId - num_rem) * num_per_core);
-int32_t end_per_core = start_per_core + num_per_core;
-// 依次处理每条border
-bool empty = true;
-for (int32_t num_loop = start_per_core; num_loop < end_per_core; ++num_loop) {
-    int32_t n = num_loop / K / 4;
-    bbox_offset = num_loop;
-    __memcpy(bbox_nram, bbox_gdram + bbox_offset, 4 * sizeof(T), GDRAM2NRAM);
-    box_width = *(bbox_nram + 2) - *bbox_nram;
-    box_height = *(bbox_nram + 3) - *(bbox_nram + 1);
+/*
+ * NRAM partition
+ *  |--------------------------------------|
+ *  |    grad_output    |    grad_intput   |
+ *  |--------------------------------------|
+ *  |    argmax_idx     |    boxes         |
+ *  |--------------------------------------|
+ */
+const int32_t deal_num = PAD_DOWN(
+    (MAX_NRAM_SIZE - NFU_ALIGN_SIZE) / (2 * sizeof(T) + 1 * sizeof(int32_t)),
+    NFU_ALIGN_SIZE);
+T *nram_boxes = (T *)nram_buffer;
+T *nram_grad_output = (T *)((char *)nram_buffer + NFU_ALIGN_SIZE);
+T *nram_grad_input = (T *)nram_grad_output + deal_num;
+int32_t *nram_argmax_idx = (int32_t *)((T *)nram_grad_input + deal_num);
 
-    for (int32_t c = 0; c < C / deal_num; ++c) {      
-      computeImpl();     
-    } 
-    // compute c_tail
-    c_tail = C % deal_num;
-    if (c_tail != 0) {       
-      deal_num = PAD_UP(c_tail, NFU_ALIGN_NUM);
-      computeImpl();     
-    }   
-}
-     
-computeImpl() { 
-    int32_t border = num_loop / N / K % 4;
-    x = *(bbox_nram + border % 4 / 2 * 2);
-    y = *(bbox_nram + 1 + border % 4 / 2 * 2);
-    switch (border) {       
-     case 0:{x_stride = box_width / pool_size; y_stride = 0;} break;
-     case 1:{x_stride = 0; y_stride = box_height / pool_size;} break;
-     case 2:{x_stride = -box_width / pool_size; y_stride = 0;} break;
-     case 3:{x_stride = 0; y_stride = -box_height / pool_size;} break;
-     default:{ MLULOG("Invalid Border Type."); }; break;
-    }
-    int32_t x_tl, x_br, y_tl, y_br;
-    bool first_time_flag = true;
-    bool empty = false;
-    // 每条border处理pool_size + 1次
-    for (int32_t pool_loop = 0; pool_loop < pool_size + 1; ++pool_loop) {
-      if (empty) {       
-        bilinear_interpolate_gradient(H, W, x, y, w1, w2, w3, w4, x_tl, x_br, y_tl, y_br, empty);  
-        if (empty) {  // empty是双线性插值是否越界的标志位   
-          pool_loop = pool_loop + 1;
-          x = *(bbox_nram + border % 4 / 2 * 2) + x_stride * pool_loop;
-          y = *(bbox_nram + 1 + border % 4 / 2 * 2) + y_stride * pool_loop;
-          continue;
-          } 
-        LoadInput();   
-        __bang_eq_scalar(argmax_idx_temp, argmax_idx_nram, (T)0, deal_num); // 为避免第pool_loop + 1次的结果覆盖第pool_loop次的结果，此处保存bool结果，在计算最终结果时把不需要修改的`C`通道置0。
-      computeGradInput();
-      pool_loop = pool_loop + 1;
-      x = *(bbox_nram + border % 4 / 2 * 2) + x_stride * pool_loop;
-      y = *(bbox_nram + 1 + border % 4 / 2 * 2) + y_stride * pool_loop;           
-    }
+// partition grad_output(shape = [N, K, 4, C])
+const int32_t total_num = N * K * 4;
+const int32_t num_per_core =
+    total_num / taskDim + int32_t((total_num % taskDim) > taskId);
+
+for (int32_t i = 0; i < num_per_core; ++i) {
+  const int32_t idx = taskId + i * taskDim;
+  const int32_t n = idx / K / 4;
+  const int32_t k = idx / 4 % K;
+  const int32_t border_idx = idx % 4;
+  
+  // load boxes
+  __memcpy((void *)nram_boxes, (void *)((T *)boxes + idx / 4 * 4),
+            4 * sizeof(T), GDRAM2NRAM);
+
+  const int32_t c_repeat = C / deal_num;
+  const int32_t c_rem = C % deal_num;
+  for (int32_t c_seg_idx = 0; c_seg_idx < c_repeat; ++c_seg_idx) {
+    compute();
+  }
+  if (c_rem != 0) {
+    const int32_t c_rem_align = PAD_UP(c_rem, NFU_ALIGN_SIZE);
+    compute();
   }
 }
-void computeGradInput()  {   
-  __bang_mul_scalar((T *)grad_input, (T *)nram_ping, w1, deal_num);   
-  __bang_mul((T *)grad_output_temp, (T *)(grad_output + (y_tl * W + x_tl) * C + c * deal_num), argmax_idx_temp, deal_num);
-  __bang_atomic_add_reduce((T *)grad_input, (T *)(grad_output_temp), deal_num);
-  __bang_mul_scalar((T *)grad_input, (T *)nram_ping, w2, deal_num);
-  __bang_mul((T *)grad_output_temp, (T *)(grad_output + (y_tl * W + x_br) * C + c * deal_num), argmax_idx_temp, deal_num);
-  __bang_atomic_add_reduce((T *)grad_input, (T *)(grad_output_temp), deal_num);
-  __bang_mul_scalar((T *)grad_input, (T *)nram_ping, w3, deal_num);
-  __bang_mul((T *)grad_output_temp, (T *)(grad_output + (y_br * W + x_tl) * C + c * deal_num), argmax_idx_temp, deal_num);
-  __bang_atomic_add_reduce((T *)grad_input, (T *)(grad_output_temp),  deal_num);  
-  __bang_mul_scalar((T *)grad_input, (T *)nram_ping, w4, deal_num);   
-  __bang_mul((T *)grad_output_temp, (T *)(grad_output + (y_br * W + x_br) * C + c * deal_num), argmax_idx_temp, deal_num);   
-  __bang_atomic_add_reduce((T *)grad_input, (T *)(grad_output_temp),  deal_num);
+
+compute() {
+  for (int32_t i = 0; i < pool_size + 1; ++i) {
+    // bilinearInterpolate
+    bilinearInterpolate(...);
+
+    // load argmax, creat mask
+    __memcpy(nram_argmax_idx, argmax_idx + src_offset, deal_num * sizeof(int32_t), GDRAM2NRAM);
+    __bang_write_value(nram_grad_output, deal_num_align, (T)i);
+    if (sizeof(T) == sizeof(float)) {
+      __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
+      __bang_int322float((float *)nram_argmax_idx, (int32_t *)nram_argmax_idx, deal_num, 0);  // NOLINT
+      __bang_eq((T *)nram_argmax_idx, (T *)nram_argmax_idx, nram_grad_output, deal_num_align);  // NOLINT
+      __bang_float2int32((int32_t *)nram_argmax_idx, (float *)nram_argmax_idx, deal_num_align, 0);  // NOLINT
+      __bang_lut_s32((int32_t *)nram_argmax_idx, (int32_t *)nram_argmax_idx, table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+    } else {
+      __nram__ int16_t table[2] = {0, (int16_t)0xffff};
+      __bang_int322half((half *)nram_argmax_idx, (int32_t *)nram_argmax_idx, deal_num, 0);  // NOLINT
+      __bang_eq((T *)nram_argmax_idx, (T *)nram_argmax_idx, nram_grad_output, deal_num_align);  // NOLINT
+      __bang_half2int16_rd((int16_t *)nram_argmax_idx, (half *)nram_argmax_idx, deal_num_align, 0);  // NOLINT
+      __bang_lut_s16((int16_t *)nram_argmax_idx, (int16_t *)nram_argmax_idx, table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+    }
+
+    // CALCULATE_GRAD_INPUT
+    // w1,w2,w3,w4 分别为周围四个点的权重
+    __bang_atomic_reduce_add(w1...);
+    __bang_atomic_reduce_add(w2,...);
+    __bang_atomic_reduce_add(w3,...);
+    __bang_atomic_reduce_add(w4,...);
+    ...
+  }
 }
- 
-void loadInput() {   
-  src_offset = n * H * W * C * 4 + h * C * 4 + w * C + c * deal_num;   
-  __memcpy(argmax_idx_nram, argmax_idx + src_offset, GDRAM2NRAM); // 需要把int类型转换成float或者half。
-  __memcpy((void *)(nram_ping), (void *)(grad_output + src_offset), deal_num * sizeof(T), GDRAM2NRAM);
-}
- 
 ```
+
 ### 3.3 拆分
 ### (任务拆分，多核拆分)
 
-1、首先根据输入`grad_output`计算出所有需要处理的`border`数量，将`border`数量均分给所有的核，对于剩余的`border`依次分配给所有核。
+`core`间拆 `grad_output(shape = [N, K, 4, C])` 的前三维度 `N*K*4`，每个`core` 处理数量为 `deal_num`。
 
 ### 3.4 性能优化设计
 
-1、暂无。（`atomic_add`是io指令，无法使用流水来做优化。）
+1. `atomic_add`是io指令，无法使用流水来做优化。
 
 ### 3.5 方案理论性能
 ### 3.6 可维护性设计
@@ -340,25 +336,21 @@ void loadInput() {
 
 ### 3.7 测试用例设计
 
-- 框架在需求列表中给出的算子在网络中用到的规模：
+框架在需求列表中给出的算子在网络中用到的规模：
 
-grad_output:[2, 70, 4, 256] boxes:[2, 70, 4] argmax_idx:[2, 70, 4, 256] pool_size:10
+- grad_output:[2, 70, 4, 256] boxes:[2, 70, 4] argmax_idx:[2, 70, 4, 256] pool_size:10
+- grad_output:[2, 950, 4, 256] boxes:[2, 950, 4] argmax_idx:[2, 950, 4, 256] pool_size:10
+- grad_output:[2, 70, 4, 128] boxes:[2, 70, 4] argmax_idx:[2, 70, 4, 128] pool_size:10
 
-grad_output:[2, 950, 4, 256] boxes:[2, 950, 4] argmax_idx:[2, 950, 4, 256] pool_size:10
+随机测例：
+- grad_output:[3, 5, 4, 1] boxes:[3, 5, 4] argmax_idx:[3, 5, 4, 1] pool_size:8
+- grad_output:[10, 80, 4, 10] boxes:[3, 80, 4] argmax_idx:[10, 80, 4, 10] pool_size:2
 
-grad_output:[2, 70, 4, 128] boxes:[2, 70, 4] argmax_idx:[2, 70, 4, 128] pool_size:10
-
-- 随机测例：
-
-grad_output:[3, 5, 4, 1] boxes:[3, 5, 4] argmax_idx:[3, 5, 4, 1] pool_size:8
-
-grad_output:[10, 80, 4, 10] boxes:[3, 80, 4] argmax_idx:[10, 80, 4, 10] pool_size:2
-
-- 反向测试：生成一些随机input、boxes和argmax_idx，校验防呆能够报error（后续补充）。
+反向测试：生成一些随机input、boxes和argmax_idx，校验防呆能够报error（后续补充）。
 
 ### 3.8 算子防呆检查
 
-以下情形防呆报错并返回错误码MLUOP_STATUS_BAD_PARAM：
+以下情形防呆报错并返回错误码 `MLUOP_STATUS_BAD_PARAM`：
 
  1、输入和输出指针为空。
 
@@ -390,12 +382,12 @@ grad_output:[10, 80, 4, 10] boxes:[3, 80, 4] argmax_idx:[10, 80, 4, 10] pool_siz
 
 ### 5.1 开发测试计划
 
-- 2022.4.18 ~ 2022.6.7 调研源码，设计方案：算子功能+接口设计+方案review
-- 2022.6.8 ~  2022.6.8 generator代码开发
-- 2022.6.9 ~ 2022.6.13 gtest代码开发
-- 2022.6.14 ~ 2022.6.17 算子主体框架开发
-- 2022.6.20 ~ 2022.6.24 批量测试+测试报告+提交MR+代码review
-- 2022.6.27 ~ 2022.7.2 提交MR+代码review+算子入库
+- 2022.04.18 ~ 2022.06.07 调研源码，设计方案：算子功能+接口设计+方案review
+- 2022.06.08 ~ 2022.06.08 generator代码开发
+- 2022.06.09 ~ 2022.06.13 gtest代码开发
+- 2022.06.14 ~ 2022.06.17 算子主体框架开发
+- 2022.06.20 ~ 2022.06.24 批量测试+测试报告+提交MR+代码review
+- 2022.06.27 ~ 2022.07.02 提交MR+代码review+算子入库
 
 
 ### 5.2 风险分析
