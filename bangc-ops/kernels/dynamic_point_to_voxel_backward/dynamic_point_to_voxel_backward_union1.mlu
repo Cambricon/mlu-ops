@@ -167,7 +167,7 @@ __mlu_global__ void MLUKernelMaxReduceTracebackScatterIdx(
   // broadcast point2voxel_map to nram
   __memcpy(point2voxel_map_nram, point2voxel_map, size_input, GDRAM2NRAM);
   // initialze voxel_from_flag to false
-  __memset_nram(voxel_from_flag_nram, M, false);
+  __memset_nram(voxel_from_flag_nram, M, (char)false);
   for (int i = 0; i < C; i++) {
     index_col_nram[i] = i;
   }
