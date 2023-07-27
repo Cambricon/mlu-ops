@@ -43,7 +43,7 @@
 | ------------------------------| ------------------------------------------- |
 | 需求来源                      | k2                    |
 | 应用网络                      | RNNT                                                         |
-| 输入数据类型                  | px: float<br>py : float<br>opt_boundary(可选): int64<br>p: float |
+| 输入数据类型                  | px: float<br>py : float<br>opt_boundary(可选): int<br>p: float |
 | 输入 Shape                    | px : [B, S, T+1]<br/>py : [B, S+1, T]<br/>opt_boundary : [B, 4]<br/>p: [B, S+1, T+1] |
 | 输入 Layout                   | px : ARRAY<br/>py: ARRAY<br>opt_boundary : ARRAY |
 | 输出数据类型                  | float                              |
@@ -110,7 +110,7 @@
 |py_desc | 输入数据py的描述符号，包含py的数据类型、数据维度和布局等信息 | 输入 |          	mluOpTensorDescriptor_t   |	/ |      	无       	|
 |py| 指向py数据的mlu地址指针                                      |  输入 |  float | ARRAY   |	见1.4	|
 |opt_boundary_desc | 输入数据opt_boundary的描述符号，包含opt_boundary的数据类型、数据维度和布局等信息 |      	输入  |         	mluOpTensorDescriptor_t   |	/  |     	无      |
-| opt_boundary | 指向opt_boundary数据的mlu地址指针                            |   输入 | int64 | ARRAY   |	见1.4 |
+| opt_boundary | 指向opt_boundary数据的mlu地址指针                            |   输入 | int | ARRAY   |	见1.4 |
 | p_desc | 输入数据p的描述符号，包含p的数据类型、数据维度和布局等信息   | 输入 | mluOpTensorDescriptor_t | / |	见1.4 |
 | p | 指向p数据的mlu地址指针 | 输入 | float | ARRAY |	无 |
 |ans_desc | 输出数据ans的描述符号，包含ans的数据类型、数据维度和布局等信息 | 输入 | mluOpTensorDescriptor_t|	/     |  	无    |
@@ -121,7 +121,7 @@
 
 |限制类型     |详细说明                                                     	|
 |------------|------------------------------------------------------------|
-|数据类型限制	|px: float<br/>py: float<br/>opt_boundary: int64<br/>p: float<br/>ans: float |
+|数据类型限制	|px: float<br/>py: float<br/>opt_boundary: int<br/>p: float<br/>ans: float |
 |布局限制    | 仅支持 layout 为 ARRAY                                       |
 |	规模限制    | 不支持large tensor;<br/>在MLU370中，<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 4 * std::min(S, T) + 4 <= 163840;<br/>在MLU590中，<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 4 * std::min(S, T) + 4 <= 98304;	|
 |功能限制     | 仅支持!modified模式，即输入参数px的shape为 [B, S, T+1]       |
@@ -359,7 +359,7 @@ bang_maximum等指令在370上无法异步执行，因此暂不排流水。
 
 4、检查px的维度为[B, S,T+1]；py的维度为[B, S+1,T]；p的维度为[B, S+1,T+1]；ans的维度为[B]；如果opt_boundary不为空，opt_boundary为维度为[B，4]
 
-5、检查px/py/p/ans的数据类型为float；如果opt_boundary不为空，opt_boundary的数据类型为int64
+5、检查px/py/p/ans的数据类型为float；如果opt_boundary不为空，opt_boundary的数据类型为int
 
 6、检查输入输出是否包含large tensor，或者输入规模是否超出限制
 

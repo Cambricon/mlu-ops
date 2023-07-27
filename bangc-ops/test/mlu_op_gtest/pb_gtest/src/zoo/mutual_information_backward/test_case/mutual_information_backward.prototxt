@@ -37,7 +37,7 @@ input {
     dims: 4
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_INT64
+  dtype: DTYPE_INT32
   value_l: 0
   value_l: 0
   value_l: 10

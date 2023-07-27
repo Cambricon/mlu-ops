@@ -222,9 +222,9 @@ static mluOpStatus_t checkTensorDatatype(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (nullptr != opt_boundary_desc &&
-      MLUOP_DTYPE_INT64 != opt_boundary_desc->dtype) {
+      MLUOP_DTYPE_INT32 != opt_boundary_desc->dtype) {
     LOG(ERROR) << API_NAME
-               << "The data type of opt_boundary currently only support int64."
+               << "The data type of opt_boundary currently only support int32."
                << " But now the data type of opt_boundary is "
                << mluOpGetNameOfDataType(opt_boundary_desc->dtype) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;

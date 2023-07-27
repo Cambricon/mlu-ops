@@ -41,7 +41,7 @@
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | 需求来源                                                     | K2                                                           |
 | 应用网络                                                     | rnnt                                                         |
-| 输入数据类型                                                 | px: float<br/>py: float<br/>opt_boundary(可选): int64<br/>p: float<br/>ans_grad: float |
+| 输入数据类型                                                 | px: float<br/>py: float<br/>opt_boundary(可选): int<br/>p: float<br/>ans_grad: float |
 | 输入标量参数                                                 | overwrite_ans_grad: bool                                     |
 | 输入 Shape                                                   | px: [B, S, T+1]<br/>py: [B, S+1, T]<br/>opt_boundary: [B, 4] or None<br/>p: [B, S+1, T+1]<br/>ans_grad: [B] |
 | 输入 Layout                                                  | ARRAY                                                        |
@@ -114,7 +114,7 @@
 | py_desc            | 输入数据py的描述符号，包含py的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
 | py                 | 指向py数据的mlu地址指针                                      | 输入              | float                   | ARRAY    | 无       |
 | opt_boundary_desc  | 输入数据opt_boundary的描述符号，包含opt_boundary的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
-| opt_boundary       | 指向opt_boundary数据的mlu地址指针                            | 输入              | int64                   | ARRAY    | 无       |
+| opt_boundary       | 指向opt_boundary数据的mlu地址指针                            | 输入              | int                   | ARRAY    | 无       |
 | p_desc             | 输入数据p的描述符号，包含p的数据类型、数据维度和布局等信息   | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
 | p                  | 指向p数据的mlu地址指针                                       | 输入              | float                   | ARRAY    | 无       |
 | ans_grad_desc      | 输入数据ans_grad的描述符号，包含ans_grad的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
@@ -129,7 +129,7 @@
 
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
-| 数据类型限制 | px: float<br/>py: float<br/>opt_boundary: int64<br/>p: float<br/>ans_grad: float<br/>overwrite_ans_grad: bool<br/>px_grad: float<br/>py_grad: float |
+| 数据类型限制 | px: float<br/>py: float<br/>opt_boundary: int<br/>p: float<br/>ans_grad: float<br/>overwrite_ans_grad: bool<br/>px_grad: float<br/>py_grad: float |
 | 布局限制     | ARRAY                                                        |
 | 规模限制     | 不支持large tensor;<br>在MLU370中，<br>T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 163840<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 163840; <br>在MLU590中，<br>T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 98304<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 98304;|
 | 功能限制     | 仅支持!modified模式，即输入参数px的shape为 [B, S, T+1]       |
@@ -435,7 +435,7 @@ NRAW空间划分参考3.2 伪代码实现中的描述
 
 4、检查px的维度为[B, S,T+1]；py的维度为[B, S+1,T]；p的维度为[B, S+1,T+1]；ans_grad的维度为[B]；px_grad的维度为[B, S,T+1]；py_grad的维度为[B, S+1,T]；如果opt_boundary不为空，opt_boundary为维度为[B，4]
 
-5、检查px/py/p/ans_grad/px_grad/py_grad的数据类型为float；如果opt_boundary不为空，opt_boundary的数据类型为int64
+5、检查px/py/p/ans_grad/px_grad/py_grad的数据类型为float；如果opt_boundary不为空，opt_boundary的数据类型为int
 
 6、检查输入输出是否包含large tensor，或者输入规模是否超出限制
 
