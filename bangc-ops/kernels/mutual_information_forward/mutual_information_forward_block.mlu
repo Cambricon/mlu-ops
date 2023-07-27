@@ -229,7 +229,7 @@ __mlu_func__ void computeMutualInformation(const int b, const int S,
 
 __mlu_global__ void mluBlockMutualInformationForward(
     const int B, const int S, const int T, const float *px, const float *py,
-    const bool has_boundary, const int64_t *opt_boundary, float *p,
+    const bool has_boundary, const int *opt_boundary, float *p,
     float *ans) {
   const int num_per_core = B / taskDim;
   const int num_rem = B % taskDim;
@@ -241,9 +241,9 @@ __mlu_global__ void mluBlockMutualInformationForward(
   int s_end = S;
   int t_end = T;
   if (has_boundary) {
-    int64_t *boundary = (int64_t *)nram_buffer;
+    int *boundary = (int *)nram_buffer;
     for (int b = b_offset; b < b_offset + num_cur_core; ++b) {
-      __memcpy(boundary, opt_boundary + 4 * b, 4 * sizeof(int64_t), GDRAM2NRAM);
+      __memcpy(boundary, opt_boundary + 4 * b, 4 * sizeof(int), GDRAM2NRAM);
       s_begin = boundary[0];
       t_begin = boundary[1];
       s_end = boundary[2];
@@ -269,6 +269,6 @@ void MLUOP_WIN_API kernelMutualInformationForward(
   const int B, const int S, const int T, const void *px, const void *py,
   const bool has_boundary, const void *opt_boundary, void *p, void *ans) {
   mluBlockMutualInformationForward<<<k_dim, k_type, queue>>>(
-      B, S, T, (float *)px, (float *)py, has_boundary, (int64_t *)opt_boundary,
+      B, S, T, (float *)px, (float *)py, has_boundary, (int *)opt_boundary,
       (float *)p, (float *)ans);
 }

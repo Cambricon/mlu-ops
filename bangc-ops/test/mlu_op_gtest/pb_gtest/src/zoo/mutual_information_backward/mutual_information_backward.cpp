@@ -138,12 +138,12 @@ void MutualInformationBackwardExecutor::compute() {
 void MutualInformationBackwardExecutor::cpuCompute() {
   float *host_px = (float *)data_vector_[0].host_ptr;
   float *host_py = (float *)data_vector_[1].host_ptr;
-  int64_t *host_opt_boundary = nullptr;
+  int *host_opt_boundary = nullptr;
   float *host_p = nullptr;
 
   float *host_ans_grad_in = nullptr;
   if (tensor_desc_.size() == max_tensor_num_) {
-    host_opt_boundary = (int64_t *)data_vector_[2].host_ptr;
+    host_opt_boundary = (int *)data_vector_[2].host_ptr;
     host_p = (float *)data_vector_[3].host_ptr;
     host_ans_grad_in = (float *)data_vector_[4].host_ptr;
   } else {

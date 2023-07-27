@@ -120,10 +120,10 @@ void MutualInformationForwardExecutor::compute() {
 void MutualInformationForwardExecutor::cpuCompute() {
   float *host_px = (float *)data_vector_[0].host_ptr;
   float *host_py = (float *)data_vector_[1].host_ptr;
-  int64_t *host_opt_boundary = nullptr;
+  int *host_opt_boundary = nullptr;
 
   if (tensor_desc_.size() == max_tensor_num_) {
-    host_opt_boundary = (int64_t *)data_vector_[2].host_ptr;
+    host_opt_boundary = (int *)data_vector_[2].host_ptr;
   }
 
   float *host_p_out = cpu_fp32_output_[0];
