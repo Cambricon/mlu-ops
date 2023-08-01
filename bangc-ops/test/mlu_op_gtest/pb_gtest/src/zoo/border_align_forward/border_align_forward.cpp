@@ -164,7 +164,7 @@ void BorderAlignForwardExecutor::cpuCompute() {
           }
           x = boxes[bbox_offset + border_loop / 2 * 2];
           y = boxes[bbox_offset + border_loop / 2 * 2 + 1];
-          int32_t input_offset = n * H * W * C * 4 + c + border_loop * C;
+          int32_t input_offset = n * H * W * C * 4 + border_loop * C + c;
           max_pool_result =
               bilinear_interpolate(input + input_offset, H, W, C, y, x);
           int32_t argmax_idx = 0;

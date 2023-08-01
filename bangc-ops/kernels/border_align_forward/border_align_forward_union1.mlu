@@ -27,11 +27,9 @@
 #include "kernels/debug.h"
 #include "kernels/utils/common.h"
 
-#define FOUR_COORDINATE 4
-#define NRAM_BBOX_SIZE 16
+#define BORDER_NUM 4
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
-__nram__ float bbox_nram[NRAM_BBOX_SIZE];
 
 template <typename T>
 __mlu_func__ void bilinearInterpolate(const int32_t input_height,
@@ -41,6 +39,7 @@ __mlu_func__ void bilinearInterpolate(const int32_t input_height,
                                       int32_t *y_low, int32_t *y_high,
                                       bool *empty) {
   // deal with case that the point is out of feature map boundary
+  // https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/common/cuda/common_cuda_helper.hpp#L29
   if (y < -1.0 || y > input_height || x < -1.0 || x > input_width) {
     *empty = true;
     return;
@@ -67,21 +66,12 @@ __mlu_func__ void bilinearInterpolate(const int32_t input_height,
   }
   T ly = y - *y_low;
   T lx = x - *x_low;
-  T hy = 1.0 - ly;
-  T hx = 1.0 - lx;
+  T hy = 1. - ly;
+  T hx = 1. - lx;
   *w1 = hy * hx;
   *w2 = hy * lx;
   *w3 = ly * hx;
   *w4 = ly * lx;
-  return;
-}
-
-__mlu_func__ int32_t getDataOffset(const int32_t &n, const int32_t &h,
-                                   const int32_t &x, const int32_t &c,
-                                   const int32_t &H, const int32_t &W,
-                                   const int32_t &C, const int32_t &border_loop,
-                                   const int32_t &deal_num) {
-  return ((n * H + h) * W + x) * C + border_loop * C / 4 + c * deal_num;
 }
 
 template <typename T>
@@ -89,391 +79,330 @@ __mlu_func__ void getBilinearInterpolateResult(T *input_ping_nram, const T &w1,
                                                const T &w2, const T &w3,
                                                const T &w4,
                                                const int32_t &deal_num) {
-  __bang_mul_scalar(input_ping_nram, input_ping_nram, w1, deal_num);
-  __bang_mul_scalar(input_ping_nram + deal_num, input_ping_nram + deal_num, w2,
-                    deal_num);
-  __bang_mul_scalar(input_ping_nram + 2 * deal_num,
-                    input_ping_nram + 2 * deal_num, w3, deal_num);
-  __bang_mul_scalar(input_ping_nram + 3 * deal_num,
-                    input_ping_nram + 3 * deal_num, w4, deal_num);
-  __bang_add(input_ping_nram, input_ping_nram, input_ping_nram + deal_num,
-             deal_num);
-  __bang_add(input_ping_nram, input_ping_nram, input_ping_nram + 2 * deal_num,
-             deal_num);
-  __bang_add(input_ping_nram, input_ping_nram, input_ping_nram + 3 * deal_num,
-             deal_num);
+  /* do bilinear interpolation:
+   *  value = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
+   *     st. v1 = HW[y_low,  x_low]
+   *         v2 = HW[y_low,  x_high]
+   *         v3 = HW[y_high, x_low]
+   *         v4 = HW[y_high, x_high]
+   */
+  T *v1 = input_ping_nram;
+  T *v2 = input_ping_nram + 1 * deal_num;
+  T *v3 = input_ping_nram + 2 * deal_num;
+  T *v4 = input_ping_nram + 3 * deal_num;
+
+  __bang_mul_scalar(v1, v1, w1, deal_num);
+  __bang_fusion(FUSION_FMA, v2, v2, w2, v1, deal_num, deal_num);
+  __bang_fusion(FUSION_FMA, v3, v3, w3, v2, deal_num, deal_num);
+  __bang_fusion(FUSION_FMA, v1, v4, w4, v3, deal_num, deal_num);
 }
 
 template <typename T>
 __mlu_func__ void computeMaxPoolAndArgmaxIdx(int32_t *argmax_idx_nram,
-                                             int32_t *argmax_idx_nram_temp,
                                              T *output_nram, T *input_ping_nram,
-                                             const int32_t &pool_loop,
-                                             const int32_t &deal_num,
-                                             const int32_t &ping_pong_gap) {
-  __bang_lt((T *)argmax_idx_nram_temp, (T *)output_nram,
-            (T *)((T *)input_ping_nram + ((pool_loop) % 2) * ping_pong_gap),
-            deal_num);
-  __bang_maxequal((T *)output_nram, (T *)output_nram,
-                  (T *)(input_ping_nram + ((pool_loop) % 2) * ping_pong_gap),
-                  deal_num);
+                                             const int32_t &pool_idx,
+                                             const int32_t &deal_num) {
+  if (pool_idx == 0) {
+    __bang_move(output_nram, input_ping_nram, deal_num * sizeof(T));
+    return;
+  }
+  int32_t *temp = (int32_t *)input_ping_nram;
+  int32_t *temp1 = temp + deal_num;
+  __bang_lt((T *)temp1, output_nram, input_ping_nram, deal_num);
 
-  __bang_not((T *)argmax_idx_nram_temp, (T *)argmax_idx_nram_temp, deal_num);
-  __bang_mul((T *)argmax_idx_nram, (T *)argmax_idx_nram,
-             (T *)argmax_idx_nram_temp, deal_num);
-  __bang_not((T *)argmax_idx_nram_temp, (T *)argmax_idx_nram_temp, deal_num);
-  __bang_mul_scalar((T *)argmax_idx_nram_temp, (T *)argmax_idx_nram_temp,
-                    pool_loop, deal_num);
-  __bang_add((T *)argmax_idx_nram, (T *)argmax_idx_nram,
-             (T *)argmax_idx_nram_temp, deal_num);
+  // 1. output = max(value, output)
+  __bang_maxequal(output_nram, output_nram, input_ping_nram, deal_num);
+
+  // 2. update argmax_idx
+  //    2.1 argmax_idx *= (output >= value)
+  //    2.2 argmax_idx += pool_idx * (output < value)
+  if (__mluop_is_float<T>()) {
+    __bang_float2int32_rd(temp, (float *)temp1, deal_num, 0);
+  } else {
+    __bang_half2int32_rd(temp, (half *)temp1, deal_num, 0);
+  }
+
+  __bang_not(temp1, temp, deal_num);  // 2.1
+  __bang_mul(argmax_idx_nram, argmax_idx_nram, temp1, deal_num);
+  __bang_mul_scalar(temp, temp, pool_idx, deal_num);  // 2.2
+  __bang_add(argmax_idx_nram, argmax_idx_nram, temp, deal_num);
 }
 
 template <typename T>
-__mlu_func__ void pipelineCompute(
-    T *input_ping_nram, T *input, int32_t *argmax_idx_nram,
-    int32_t *argmax_idx_nram_temp, T *output, int32_t *argmax_idx_start,
-    T *output_nram, T *x, T *y, const int32_t &n, const int32_t &c,
-    const int32_t &K, const int32_t &H, const int32_t &W, const int32_t &C,
-    int32_t x_high, int32_t x_low, int32_t y_high, int32_t y_low, T w1, T w2,
-    T w3, T w4, const int32_t &pool_size, int32_t deal_num, const T &x_stride,
-    const T &y_stride, const int32_t &border_loop, const int32_t &ping_pong_gap,
-    const int32_t &c_tail, bool empty, float *dst_addition) {
-  T w1_1 = w1, w2_2 = w2, w3_3 = w3, w4_4 = w4;
-  int32_t x_low_1 = x_low, x_high_1 = x_high, y_low_1 = y_low,
-          y_high_1 = y_high;
-  bool empty_1 = empty;
+__mlu_func__ void pipeline(T *input_ping_nram, const T *input, T *boxes_nram,
+                           int32_t *argmax_idx_nram, T *base_output,
+                           int32_t *base_argmax_idx, T *output_nram,
+                           const int32_t n, const int32_t c_offset,
+                           const int32_t origin_k, const int32_t origin_h,
+                           const int32_t origin_w, const int32_t origin_c,
+                           const int32_t pool_size, T x, T y, const T x_stride,
+                           const T y_stride, const int32_t border,
+                           const int32_t pingpong_gap, const int32_t deal_num) {
+  // init params of bilinear-interpolate
+  int32_t x_low = 0, x_high = 0;
+  int32_t y_low = 0, y_high = 0;
+  T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+  bool empty = false;
+  bilinearInterpolate(origin_h, origin_w, x, y, &w1, &w2, &w3, &w4, &x_low,
+                      &x_high, &y_low, &y_high, &empty);
 
-  int32_t src_offset = 0;
-  int32_t dst_offset = 0;
-  __bang_write_value(input_ping_nram, 9 * deal_num, (T)0);
-  if (!empty_1) {
-    if (deal_num == C / 4) {
-      src_offset =
-          getDataOffset(n, y_low_1, x_low_1, c, H, W, C, border_loop, deal_num);
-      dst_offset = 0;
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), deal_num * sizeof(T), GDRAM2NRAM);
-      src_offset = getDataOffset(n, y_low_1, x_high_1, c, H, W, C, border_loop,
-                                 deal_num);
-      dst_offset = deal_num;
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), deal_num * sizeof(T), GDRAM2NRAM);
+  /*
+   * Pipeline:
+   *   The pipeline is processed in three stages: Load, Compute,
+   *   Store. The allocated memory space of NRAM is divided into
+   *   two parts: PING and Pong. In a single time slice, PING is
+   *   used to process IO stream and PONG is used for computation.
+   *   Both of them are processed synchronously until finished.
+   *
+   * diagram of PINGPONG:
+   * |------|-----------------------------------------------------|
+   * |      |                    space                            |
+   * |------|-----------------------------------------------------|
+   * | time |   Ping   |   Pong   |   Ping   |   ...   |   Pong   |
+   * |------|-----------------------------------------------------|
+   * |  0   |    L0    |          |          |         |          |
+   * |  1   |    C0    |    L1    |          |         |          |
+   * |  2   |          |    C1    |    L2    |         |          |
+   * |  3   |          |          |    C2    |   ...   |          |
+   * |  .   |          |          |          |   ...   |          |
+   * |  .   |          |          |          |   ...   |   L_end  |
+   * |  .   |          |          |          |         |   C_end  |
+   * |  .   |          |          |          |         |   S      |
+   * |------|-----------------------------------------------------|
+   */
 
-      src_offset = getDataOffset(n, y_high_1, x_low_1, c, H, W, C, border_loop,
-                                 deal_num);
-      dst_offset = deal_num * 2;
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), deal_num * sizeof(T), GDRAM2NRAM);
-      src_offset = getDataOffset(n, y_high_1, x_high_1, c, H, W, C, border_loop,
-                                 deal_num);
-      dst_offset = deal_num * 3;
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), deal_num * sizeof(T), GDRAM2NRAM);
-    } else {
-      src_offset =
-          getDataOffset(n, y_low_1, x_low_1, c, H, W, C, border_loop, deal_num);
-      dst_offset = 0;
+#define LOAD_INPUT(dst, src, h, w, idx)                              \
+  const int32_t src_offset_##idx =                                   \
+      ((n * origin_h + h) * origin_w + w) * BORDER_NUM * origin_c +  \
+      border * origin_c + c_offset;                                  \
+  __memcpy_async(dst + idx * deal_num_align, src + src_offset_##idx, \
+                 deal_num * sizeof(T), GDRAM2NRAM);
 
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-      src_offset = getDataOffset(n, y_low_1, x_high_1, c, H, W, C, border_loop,
-                                 deal_num);
-      dst_offset = deal_num;
-
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-      src_offset = getDataOffset(n, y_high_1, x_low_1, c, H, W, C, border_loop,
-                                 deal_num);
-      dst_offset = deal_num * 2;
-
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-      src_offset = getDataOffset(n, y_high_1, x_high_1, c, H, W, C, border_loop,
-                                 deal_num);
-      dst_offset = deal_num * 3;
-
-      __memcpy((void *)(input_ping_nram + dst_offset),
-               (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-    }
+  // L0
+  const int32_t deal_num_align = PAD_UP(deal_num, NFU_ALIGN_SIZE);
+  __bang_write_value(argmax_idx_nram, deal_num_align, (int32_t)0);
+  if (!empty) {
+    LOAD_INPUT((T *)input_ping_nram, (T *)input, y_low, x_low, 0);
+    LOAD_INPUT((T *)input_ping_nram, (T *)input, y_low, x_high, 1);
+    LOAD_INPUT((T *)input_ping_nram, (T *)input, y_high, x_low, 2);
+    LOAD_INPUT((T *)input_ping_nram, (T *)input, y_high, x_high, 3);
   } else {
-    __bang_write_value(input_ping_nram + dst_offset, deal_num, (T)0);
-    __bang_write_value(argmax_idx_nram_temp, deal_num, (int32_t)0);
+    __memset_nram(input_ping_nram, pingpong_gap, (T)0);
   }
+  __sync();
 
-  *x = *x + x_stride;
-  *y = *y + y_stride;
-  bilinearInterpolate(H, W, *x, *y, &w1, &w2, &w3, &w4, &x_low, &x_high, &y_low,
-                      &y_high, &empty);
-  int32_t pool_loop = 0;
-  for (; pool_loop < pool_size; ++pool_loop) {
+  T w1_previous = w1;
+  T w2_previous = w2;
+  T w3_previous = w3;
+  T w4_previous = w4;
+  bool empty_previous = empty;
+
+  x += x_stride;
+  y += y_stride;
+  bilinearInterpolate(origin_h, origin_w, x, y, &w1, &w2, &w3, &w4, &x_low,
+                      &x_high, &y_low, &y_high, &empty);
+
+  // layer 3: loop over range[0, pool_size)
+  for (int32_t i = 0; i < pool_size; ++i) {
+    /**** Load ****/
+    T *input_nram_load = input_ping_nram + int32_t((i + 1) % 2) * pingpong_gap;
     if (!empty) {
-      if (deal_num == C / 4) {
-        src_offset =
-            getDataOffset(n, y_low, x_low, c, H, W, C, border_loop, deal_num);
-        dst_offset = 0;
-
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), deal_num * sizeof(T),
-                 GDRAM2NRAM);
-        src_offset =
-            getDataOffset(n, y_low, x_high, c, H, W, C, border_loop, deal_num);
-        dst_offset = deal_num;
-
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), deal_num * sizeof(T),
-                 GDRAM2NRAM);
-        src_offset =
-            getDataOffset(n, y_high, x_low, c, H, W, C, border_loop, deal_num);
-        dst_offset = deal_num * 2;
-
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), deal_num * sizeof(T),
-                 GDRAM2NRAM);
-        src_offset =
-            getDataOffset(n, y_high, x_high, c, H, W, C, border_loop, deal_num);
-        dst_offset = deal_num * 3;
-
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), deal_num * sizeof(T),
-                 GDRAM2NRAM);
-      } else {
-        src_offset =
-            getDataOffset(n, y_low, x_low, c, H, W, C, border_loop, deal_num);
-        dst_offset = 0;
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-        src_offset =
-            getDataOffset(n, y_low, x_high, c, H, W, C, border_loop, deal_num);
-        dst_offset = deal_num;
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-        src_offset =
-            getDataOffset(n, y_high, x_low, c, H, W, C, border_loop, deal_num);
-        dst_offset = 2 * deal_num;
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-
-        src_offset =
-            getDataOffset(n, y_high, x_high, c, H, W, C, border_loop, deal_num);
-        dst_offset = deal_num * 3;
-
-        __memcpy((void *)(input_ping_nram + dst_offset +
-                          (pool_loop + 1) % 2 * ping_pong_gap),
-                 (void *)(input + src_offset), c_tail * sizeof(T), GDRAM2NRAM);
-      }
-    } else {
-      __bang_write_value(
-          input_ping_nram + dst_offset + (pool_loop + 1) % 2 * ping_pong_gap,
-          4 * deal_num, (T)0);
-      __bang_write_value(argmax_idx_nram_temp, deal_num, (int32_t)0);
+      LOAD_INPUT((T *)input_nram_load, (T *)input, y_low, x_low, 0);
+      LOAD_INPUT((T *)input_nram_load, (T *)input, y_low, x_high, 1);
+      LOAD_INPUT((T *)input_nram_load, (T *)input, y_high, x_low, 2);
+      LOAD_INPUT((T *)input_nram_load, (T *)input, y_high, x_high, 3);
     }
 
-    if (empty_1) {
-      __bang_write_value(
-          (T *)(input_ping_nram + (pool_loop % 2) * ping_pong_gap),
-          4 * deal_num, (T)0);
-
+    /**** Compute ****/
+    T *input_nram_compute = input_ping_nram + int32_t(i % 2) * pingpong_gap;
+    if (!empty_previous) {
+      // value = 0                             point outside of the box
+      //       = sum(w[j] * v[j]), j=1,2,3,4   otherwise
+      getBilinearInterpolateResult(input_nram_compute, w1_previous, w2_previous,
+                                   w3_previous, w4_previous, deal_num_align);
     } else {
-      getBilinearInterpolateResult(
-          (T *)(input_ping_nram + (pool_loop % 2) * ping_pong_gap), w1_1, w2_2,
-          w3_3, w4_4, deal_num);
+      __bang_write_value(input_nram_compute, deal_num_align, (T)0);
     }
-    if (pool_loop == 0) {
-      __bang_add_scalar(
-          output_nram, (T *)(input_ping_nram + (pool_loop % 2) * ping_pong_gap),
-          0, deal_num);
-      __bang_write_value(argmax_idx_nram, deal_num, (int32_t)0);
-      __bang_write_value(argmax_idx_nram_temp, deal_num, (int32_t)0);
+    computeMaxPoolAndArgmaxIdx(argmax_idx_nram, output_nram, input_nram_compute,
+                               i, deal_num_align);
+    {
+      // update x,y and store previous-value
+      w1_previous = w1;
+      w2_previous = w2;
+      w3_previous = w3;
+      w4_previous = w4;
+      empty_previous = empty;
 
-    } else {
-      computeMaxPoolAndArgmaxIdx(argmax_idx_nram, argmax_idx_nram_temp,
-                                 output_nram, (T *)(input_ping_nram), pool_loop,
-                                 deal_num, ping_pong_gap);
+      x += x_stride;
+      y += y_stride;
+      bilinearInterpolate(origin_h, origin_w, x, y, &w1, &w2, &w3, &w4, &x_low,
+                          &x_high, &y_low, &y_high, &empty);
     }
-    w1_1 = w1;
-    w2_2 = w2;
-    w3_3 = w3;
-    w4_4 = w4;
-    x_low_1 = x_low, x_high_1 = x_high, y_low_1 = y_low, y_high_1 = y_high;
-    empty_1 = empty;
-    *x = *x + x_stride;
-    *y = *y + y_stride;
-    bilinearInterpolate(H, W, *x, *y, &w1, &w2, &w3, &w4, &x_low, &x_high,
-                        &y_low, &y_high, &empty);
     __sync();
   }
-  if (empty_1) {
-    __bang_write_value((T *)(input_ping_nram + (pool_loop % 2) * ping_pong_gap),
-                       4 * deal_num, (T)0);
-  } else {
-    getBilinearInterpolateResult(
-        input_ping_nram + ((pool_loop) % 2) * ping_pong_gap, w1_1, w2_2, w3_3,
-        w4_4, deal_num);
-  }
-  if (pool_size != 0) {
-    computeMaxPoolAndArgmaxIdx(argmax_idx_nram, argmax_idx_nram_temp,
-                               output_nram, input_ping_nram, pool_loop,
-                               deal_num, ping_pong_gap);
-  } else {
-    __bang_add_scalar(output_nram, (T *)(input_ping_nram), 0, deal_num);
-    __bang_write_value(argmax_idx_nram, deal_num, T(0));
-  }
-  if (c_tail != 0) {
-    deal_num = c_tail;
-  }
-  size_t output_offset = border_loop * C / 4 + c * deal_num;
-  __memcpy((void *)(output + output_offset), (void *)(output_nram),
-           deal_num * sizeof(T), NRAM2GDRAM);
-  const int32_t deal_num_for_align = PAD_UP(deal_num, NFU_ALIGN_SIZE);
-  if (sizeof(T) == sizeof(half)) {
-    __bang_half2float((float *)dst_addition, (half *)argmax_idx_nram,
-                      deal_num_for_align);
-    __bang_add_scalar((float *)argmax_idx_nram, (float *)dst_addition, 0,
-                      deal_num_for_align);
-  }
-  __bang_float2int32_rd((int32_t *)argmax_idx_nram_temp,
-                        (float *)argmax_idx_nram, deal_num_for_align, 0);
 
-  size_t argmax_idx_offset = border_loop * C / 4 + c * deal_num;
-  __memcpy((void *)(argmax_idx_start + argmax_idx_offset),
-           (void *)(argmax_idx_nram_temp), deal_num * sizeof(int32_t),
-           NRAM2GDRAM);
+  // C_end
+  if (!empty_previous) {
+    getBilinearInterpolateResult(
+        input_ping_nram + int32_t((pool_size) % 2) * pingpong_gap, w1_previous,
+        w2_previous, w3_previous, w4_previous, deal_num_align);
+  } else {
+    __bang_write_value(input_ping_nram + int32_t(pool_size % 2) * pingpong_gap,
+                       deal_num_align, (T)0);
+  }
+  computeMaxPoolAndArgmaxIdx(
+      argmax_idx_nram, output_nram,
+      input_ping_nram + int32_t(pool_size % 2) * pingpong_gap, pool_size,
+      deal_num_align);
+
+  // S
+  __memcpy(base_output + c_offset, output_nram, deal_num * sizeof(T), NRAM2GDRAM);  // NOLINT
+  __memcpy(base_argmax_idx + c_offset, argmax_idx_nram, deal_num * sizeof(int32_t), NRAM2GDRAM);  // NOLINT
 }
 
 template <typename T>
 __mlu_global__ void MLUKernelBorderAlignForward(
-    const T *input, const T *boxes, const int32_t pool_size, const int32_t N,
-    const int32_t H, const int32_t W, const int32_t C, const int32_t K,
-    T *output, int32_t *argmax_idx) {
-  if (coreId == 0x80) {
+    const T *input, const T *boxes, const int32_t pool_size,
+    const int32_t origin_n, const int32_t origin_h, const int32_t origin_w,
+    const int32_t origin_c, const int32_t origin_k, T *output,
+    int32_t *argmax_idx) {
+  // unused MPU
+  if (__is_mpu()) {
     return;
   }
-  int32_t x_low = 0, y_low = 0, x_high = 0, y_high = 0;
-  T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
-  T x_stride = 0;
-  T y_stride = 0;
-  bool empty = false;
-  int32_t deal_num = PAD_UP(((MAX_NRAM_SIZE - NRAM_BBOX_SIZE - NFU_ALIGN_SIZE) /
-                             (2 * FOUR_COORDINATE * sizeof(T) + sizeof(T) +
-                              2 * sizeof(int32_t) + sizeof(float))),
-                            NFU_ALIGN_SIZE);
-  int32_t ping_pong_gap = 4 * deal_num;
-  T *input_ping_nram = (T *)((char *)nram_buffer);
-  __bang_write_value(input_ping_nram, 4 * deal_num, (int32_t)0);
-  T *input_pong_nram =
-      (T *)((char *)nram_buffer + FOUR_COORDINATE * deal_num * sizeof(T));
-  __bang_write_value(input_pong_nram, 4 * deal_num, (int32_t)0);
-  T *output_nram =
-      (T *)((char *)nram_buffer + 2 * FOUR_COORDINATE * deal_num * sizeof(T));
-  int32_t *argmax_idx_nram =
-      (int32_t *)((char *)output_nram + deal_num * sizeof(float));
-  int32_t *argmax_idx_nram_temp =
-      (int32_t *)((char *)argmax_idx_nram + deal_num * sizeof(int32_t));
-  float *dst_addition =
-      (float *)((char *)argmax_idx_nram_temp + deal_num * sizeof(int32_t));
 
-  const int32_t bbox_num = N * K;
-  int32_t bbox_num_per_core = bbox_num / taskDim;
-  const int32_t bbox_num_rem = bbox_num % taskDim;
-  bbox_num_per_core = bbox_num_per_core + int32_t(taskId < bbox_num_rem);
-  if (bbox_num_per_core == 0) {
-    return;
-  }
-  int32_t k_start_per_core =
-      bbox_num_rem > taskId ? (taskId * bbox_num_per_core)
-                            : ((bbox_num_per_core + 1) * bbox_num_rem +
-                               (taskId - bbox_num_rem) * bbox_num_per_core);
-  int32_t k_end_per_core = k_start_per_core + bbox_num_per_core;
-  for (int32_t k = k_start_per_core; k < k_end_per_core; ++k) {
-    int32_t n = k / K;
-    T *output_start = (T *)output + k * C;
-    int32_t *argmax_idx_start = (int32_t *)argmax_idx + k * C;
-    __memcpy((void *)bbox_nram, (void *)((T *)boxes + k * 4), 4 * sizeof(T),
-             GDRAM2NRAM);
-    T box_width = *((T *)bbox_nram + 2) - *(T *)bbox_nram;
-    T box_height = *((T *)bbox_nram + 3) - *((T *)bbox_nram + 1);
-    for (int32_t border_loop = 0; border_loop < 4; ++border_loop) {
-      if (pool_size != 0) {
-        switch (border_loop) {
-          case 0: {
-            x_stride = box_width / pool_size;
-            y_stride = 0;
-          } break;
-          case 1: {
-            x_stride = 0;
-            y_stride = box_height / pool_size;
-          } break;
-          case 2: {
-            x_stride = -box_width / pool_size;
-            y_stride = 0;
-          } break;
-          case 3: {
-            x_stride = 0;
-            y_stride = -box_height / pool_size;
-          } break;
-          default: {
-            MLULOG("Invalid Border Type.");
-          }; break;
-        }
+  /*
+   * NRAM partition
+   *  |--------------------------------------------------------|
+   *  | Semantics  | NRAM                                      |
+   *  |------------|-------------------------------------------|
+   *  | PING       | input_lt | input_lb | input_rt | input_rb |
+   *  |------------|----------|----------|----------|----------|
+   *  | PONG       | input_lt | input_lb | input_rt | input_rb |
+   *  |------------|----------|----------|----------|----------|
+   *  | Other      | output   |argmax_idx| boxes    |
+   *  |---------------------------------------------|
+   *
+   *  MAX_NRAM_SIZE =
+   *      PING {4 * deal_num * sizeof(T)} +
+   *      PONG {4 * deal_num * sizeof(T)} +
+   *      Other{    deal_num * sizeof(T) +
+   *                deal_num * sizeof(int32_t) + 128byte}
+   */
+  const int32_t pingpong_split_num = 4 + 4;
+  const int32_t deal_num =
+      PAD_DOWN(((MAX_NRAM_SIZE - NFU_ALIGN_SIZE) /
+                (pingpong_split_num * sizeof(T) + sizeof(T) + sizeof(int32_t))),
+               NFU_ALIGN_SIZE);
+  const int32_t pingpong_gap = 4 * deal_num;
+
+  T *input_ping_nram = (T *)nram_buffer;
+  T *output_nram = input_ping_nram + pingpong_split_num * deal_num;
+  T *boxes_nram = output_nram + deal_num;
+  int32_t *argmax_idx_nram = (int32_t *)((char *)boxes_nram + NFU_ALIGN_SIZE);
+
+  /*
+   * input.shape      = [origin_n, origin_h, origin_w, border_num * origin_c]
+   * boxes.shape      = [origin_n, origin_k, coord_num]
+   * output.shape     = [origin_n, origin_k, border_num, origin_c]
+   * argmax_idx.shape = [origin_n, origin_k, border_num, origin_c]
+   * coord_num  = 4;
+   * border_num = 4;
+   *
+   * Partition output:
+   *   Split the num of boxes(origin_n * origin_k) among taskDim, Mulitple
+   *   core load the different part of the output in each loop.
+   *
+   * Calculation process:
+   * |—— layer 0: 0 ~ origin_n * origin_k
+   * |————— layer 1: 0 ~ border_num
+   * |———————— layer 2: 0 ~ origin_c
+   * |——————————— layer 3: 0 ~ pool_size
+   */
+  const int32_t coord_num = 4;
+  const int32_t boxes_num = origin_n * origin_k;
+  const int32_t boxes_num_per_core =
+      boxes_num / taskDim + int32_t((boxes_num % taskDim) > taskId);
+
+  // layer 0: loop over range[0, boxes_num_per_core)
+  for (int32_t i = 0; i < boxes_num_per_core; ++i) {
+    /* load boxes:
+     *     boxes[n,k,0:4] indicates the information on the bottom left
+     *     and top right points: [lb_x, lb_y, rt_x, rt_y]
+     */
+    const int32_t nk_offset = taskId + i * taskDim;
+    __memcpy(boxes_nram, (T *)boxes + nk_offset * coord_num,
+             coord_num * sizeof(T), GDRAM2NRAM);
+    const T box_width = boxes_nram[2] - boxes_nram[0];
+    const T box_height = boxes_nram[3] - boxes_nram[1];
+    T x_stride = 0;
+    T y_stride = 0;
+
+    // layer 1: loop over [0:Top, 1:Left, 2:Bottom, 3:Right]
+    for (int32_t border = 0; border < BORDER_NUM; ++border) {
+      switch (border) {
+        case 0: {  // Top
+          x_stride = box_width / pool_size;
+          y_stride = 0;
+        } break;
+        case 1: {  // Left
+          x_stride = 0;
+          y_stride = box_height / pool_size;
+        } break;
+        case 2: {  // Bottom
+          x_stride = -box_width / pool_size;
+          y_stride = 0;
+        } break;
+        case 3: {  // Right
+          x_stride = 0;
+          y_stride = -box_height / pool_size;
+        } break;
       }
+      T x = *(boxes_nram + border / 2 * 2);
+      T y = *(boxes_nram + border / 2 * 2 + 1);
 
-      T x = *((T *)(bbox_nram) + border_loop / 2 * 2);
-      T y = *((T *)(bbox_nram) + border_loop / 2 * 2 + 1);
-      bilinearInterpolate(H, W, x, y, &w1, &w2, &w3, &w4, &x_low, &x_high,
-                          &y_low, &y_high, &empty);
-      int32_t c = 0;
-      const int32_t c_num = C / 4 / deal_num;
-      for (; c < c_num; ++c) {
-        pipelineCompute((T *)input_ping_nram, (T *)input,
-                        (int32_t *)argmax_idx_nram,
-                        (int32_t *)argmax_idx_nram_temp, (T *)output_start,
-                        (int32_t *)argmax_idx_start, (T *)output_nram, &x, &y,
-                        n, c, K, H, W, C, x_high, x_low, y_high, y_low, w1, w2,
-                        w3, w4, pool_size, deal_num, x_stride, y_stride,
-                        border_loop, ping_pong_gap, 0, empty, dst_addition);
+      // gdram_ptr of ouput,argmax_idx
+      T *base_output =
+          output + nk_offset * BORDER_NUM * origin_c + border * origin_c;
+      int32_t *base_argmax_idx =
+          argmax_idx + nk_offset * BORDER_NUM * origin_c + border * origin_c;
+
+      // layer 2: loop over range[0, origin_c)
+      const int32_t c_repeat = origin_c / deal_num;
+      const int32_t c_rem = origin_c % deal_num;
+      for (int32_t c_seg_idx = 0; c_seg_idx < c_repeat; ++c_seg_idx) {
+        pipeline<T>(input_ping_nram, input, boxes_nram, argmax_idx_nram,
+                    base_output, base_argmax_idx, output_nram,
+                    nk_offset / origin_k, c_seg_idx * deal_num, origin_k,
+                    origin_h, origin_w, origin_c, pool_size, x, y, x_stride,
+                    y_stride, border, pingpong_gap, deal_num);
       }
-      // compute c_tail
-      const int32_t c_tail = C / 4 % deal_num;
-      if (c_tail != 0) {
-        int32_t deal_num_tail = PAD_UP(c_tail, NFU_ALIGN_SIZE);
-
-        pipelineCompute(
-            (T *)input_ping_nram, (T *)input, (int32_t *)argmax_idx_nram,
-            (int32_t *)argmax_idx_nram_temp, (T *)output_start,
-            (int32_t *)argmax_idx_start, (T *)output_nram, &x, &y, n, c, K, H,
-            W, C, x_high, x_low, y_high, y_low, w1, w2, w3, w4, pool_size,
-            deal_num_tail, x_stride, y_stride, border_loop, ping_pong_gap,
-            c_tail, empty, dst_addition);
+      if (c_rem != 0) {
+        pipeline<T>(input_ping_nram, input, boxes_nram, argmax_idx_nram,
+                    base_output, base_argmax_idx, output_nram,
+                    nk_offset / origin_k, origin_c - c_rem, origin_k, origin_h,
+                    origin_w, origin_c, pool_size, x, y, x_stride, y_stride,
+                    border, pingpong_gap, c_rem);
       }
     }
   }
 }
 
-void MLUOP_WIN_API KernelBorderAlignForward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t d_type, const void *input, const void *boxes,
-    const int32_t pool_size, const int32_t N, const int32_t H, const int32_t W,
-    const int32_t C, const int32_t K, void *output, int32_t *argmax_idx_nram) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT:
-      MLUKernelBorderAlignForward<<<k_dim, k_type, queue>>>(
-          (float *)input, (float *)boxes, pool_size, N, H, W, C, K,
-          (float *)output, (int32_t *)argmax_idx_nram);
-      break;
-    case MLUOP_DTYPE_HALF:
-      MLUKernelBorderAlignForward<<<k_dim, k_type, queue>>>(
-          (half *)input, (half *)boxes, pool_size, N, H, W, C, K,
-          (half *)output, (int32_t *)argmax_idx_nram);
-      break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-    }; break;
+mluOpStatus_t MLUOP_WIN_API KernelBorderAlignForward(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, mluOpDataType_t data_type, const void *input,
+    const void *boxes, const int32_t pool_size, const int32_t origin_n,
+    const int32_t origin_h, const int32_t origin_w, const int32_t origin_c,
+    const int32_t origin_k, void *output, int32_t *argmax_idx_nram) {
+  // launch kernel
+  if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUKernelBorderAlignForward<<<k_dim, k_type, queue>>>(
+        (float *)input, (float *)boxes, pool_size, origin_n, origin_h, origin_w,
+        origin_c, origin_k, (float *)output, (int32_t *)argmax_idx_nram));
+  } else if (data_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK(MLUKernelBorderAlignForward<<<k_dim, k_type, queue>>>(
+        (half *)input, (half *)boxes, pool_size, origin_n, origin_h, origin_w,
+        origin_c, origin_k, (half *)output, (int32_t *)argmax_idx_nram));
   }
+  return MLUOP_STATUS_SUCCESS;
 }

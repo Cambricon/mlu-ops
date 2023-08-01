@@ -25,9 +25,10 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelBorderAlignBackward(
+mluOpStatus_t MLUOP_WIN_API KernelBorderAlignBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *grad_output, const void *boxes,
-    const int32_t *argmax_idx, const int32_t pool_size, int32_t N, int32_t H,
-    int32_t W, int32_t C, int32_t K, void *grad_input);
+    const int32_t *argmax_idx, const int32_t pool_size, const int32_t origin_n,
+    const int32_t origin_h, const int32_t origin_w, const int32_t origin_c,
+    const int32_t origin_k, void *grad_input);
 #endif  // KERNELS_BORDER_ALIGN_BACKWARD_BORDER_ALIGN_BACKWARD_H_

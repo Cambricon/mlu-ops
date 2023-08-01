@@ -32,11 +32,12 @@
 #include "core/type.h"
 
 // policyFunc
-static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim) {
+static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                       cnrtFunctionType_t *k_type) {
+  *k_type = CNRT_FUNC_TYPE_UNION1;
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
-  return;
 }
 
 mluOpStatus_t mluOpBorderAlignForward(
@@ -57,11 +58,13 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, output_desc->dim == 4);
   PARAM_CHECK(API, argmax_idx_desc->dim == 4);
 
-  const int32_t N = input_desc->dims[0];
-  const int32_t H = input_desc->dims[1];
-  const int32_t W = input_desc->dims[2];
-  const int32_t C = input_desc->dims[3];
-  const int32_t K = boxes_desc->dims[1];
+  const int32_t border_num = 4;
+  const int32_t coord_num = 4;
+  const int32_t origin_n = input_desc->dims[0];
+  const int32_t origin_h = input_desc->dims[1];
+  const int32_t origin_w = input_desc->dims[2];
+  const int32_t origin_c = input_desc->dims[3] / border_num;
+  const int32_t origin_k = boxes_desc->dims[1];
 
   PARAM_CHECK(API, input_desc->dtype == boxes_desc->dtype);
   PARAM_CHECK(API, input_desc->dtype == MLUOP_DTYPE_FLOAT ||
@@ -75,25 +78,25 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(API, argmax_idx_desc->layout == MLUOP_LAYOUT_NHWC);
 
-  PARAM_CHECK(API, input_desc->dims[3] % 4 == 0);
-  PARAM_CHECK_NE(API, N, 0);
-  PARAM_CHECK_NE(API, C, 0);
-  PARAM_CHECK_NE(API, H, 0);
-  PARAM_CHECK_NE(API, W, 0);
+  PARAM_CHECK(API, input_desc->dims[3] % border_num == 0);
+  PARAM_CHECK_NE(API, origin_n, 0);
+  PARAM_CHECK_NE(API, origin_c, 0);
+  PARAM_CHECK_NE(API, origin_h, 0);
+  PARAM_CHECK_NE(API, origin_w, 0);
+  PARAM_CHECK_NE(API, origin_k, 0);
   PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, boxes_desc->dims[2] == 4);
-  PARAM_CHECK_NE(API, K, 0);
+  PARAM_CHECK(API, boxes_desc->dims[2] == coord_num);
 
-  PARAM_CHECK(API, N == boxes_desc->dims[0]);
-  PARAM_CHECK(API, H * W == K);
-  PARAM_CHECK_EQ(API, output_desc->dims[0], N);
-  PARAM_CHECK_EQ(API, output_desc->dims[1], K);
-  PARAM_CHECK_EQ(API, output_desc->dims[2], 4);
-  PARAM_CHECK_EQ(API, output_desc->dims[3], C / 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], N);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], K);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], C / 4);
+  PARAM_CHECK(API, origin_n == boxes_desc->dims[0]);
+  PARAM_CHECK(API, origin_h * origin_w == origin_k);
+  PARAM_CHECK_EQ(API, output_desc->dims[0], origin_n);
+  PARAM_CHECK_EQ(API, output_desc->dims[1], origin_k);
+  PARAM_CHECK_EQ(API, output_desc->dims[2], border_num);
+  PARAM_CHECK_EQ(API, output_desc->dims[3], origin_c);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], origin_n);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], origin_k);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], border_num);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], origin_c);
 
   const size_t input_num = mluOpGetTensorElementNum(input_desc);
   const size_t boxes_num = mluOpGetTensorElementNum(boxes_desc);
@@ -117,14 +120,17 @@ mluOpStatus_t mluOpBorderAlignForward(
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0.003, 0, 0);
   }
 
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type;
   cnrtDim3_t k_dim;
-  policyFunc(handle, &k_dim);
-  mluOpDataType_t input_dtype = input_desc->dtype;
+  policyFunc(handle, &k_dim, &k_type);
 
-  KERNEL_CHECK(KernelBorderAlignForward(
-      k_dim, k_type, handle->queue, input_dtype, input, boxes, pool_size, N, H,
-      W, C, K, output, (int32_t *)argmax_idx));
+  VLOG(5) << "Launch Kernel KernelBorderAlignForward<<<Union"
+          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+          << k_dim.z << ">>>";
+  CHECK_RETURN(API, KernelBorderAlignForward(
+                        k_dim, k_type, handle->queue, input_desc->dtype, input,
+                        boxes, pool_size, origin_n, origin_h, origin_w,
+                        origin_c, origin_k, output, (int32_t *)argmax_idx));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

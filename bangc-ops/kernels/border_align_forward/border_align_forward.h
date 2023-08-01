@@ -27,10 +27,11 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 
-void MLUOP_WIN_API KernelBorderAlignForward(
+mluOpStatus_t MLUOP_WIN_API KernelBorderAlignForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *input, const void *boxes,
-    const int32_t pool_size, const int32_t N, const int32_t H, const int32_t W,
-    const int32_t C, const int32_t K, void *output, int32_t *argmax_idx_nram);
+    const int32_t pool_size, const int32_t origin_n, const int32_t origin_h,
+    const int32_t origin_w, const int32_t origin_c, const int32_t origin_k,
+    void *output, int32_t *argmax_idx_nram);
 
 #endif  // KERNELS_BORDER_ALIGN_FORWARD_BORDER_ALIGN_FORWARD_H_

@@ -60,11 +60,13 @@ mluOpStatus_t mluOpBorderAlignBackward(
   PARAM_CHECK(API, argmax_idx_desc->dim == 4);
   PARAM_CHECK(API, grad_input_desc->dim == 4);
 
-  const int32_t N = grad_input_desc->dims[0];
-  const int32_t H = grad_input_desc->dims[1];
-  const int32_t W = grad_input_desc->dims[2];
-  const int32_t C = grad_input_desc->dims[3] / 4;
-  const int32_t K = boxes_desc->dims[1];
+  const int32_t border_num = 4;
+  const int32_t coord_num = 4;
+  const int32_t origin_n = grad_input_desc->dims[0];
+  const int32_t origin_h = grad_input_desc->dims[1];
+  const int32_t origin_w = grad_input_desc->dims[2];
+  const int32_t origin_c = grad_input_desc->dims[3] / border_num;
+  const int32_t origin_k = boxes_desc->dims[1];
 
   PARAM_CHECK(API, grad_output_desc->dtype == MLUOP_DTYPE_FLOAT ||
                        grad_output_desc->dtype == MLUOP_DTYPE_HALF);
@@ -76,30 +78,30 @@ mluOpStatus_t mluOpBorderAlignBackward(
   PARAM_CHECK(API, argmax_idx_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(API, grad_input_desc->layout == MLUOP_LAYOUT_NHWC);
 
-  PARAM_CHECK(API, grad_input_desc->dims[3] % 4 == 0);
-  PARAM_CHECK_NE(API, N, 0);
-  PARAM_CHECK_NE(API, C, 0);
-  PARAM_CHECK_NE(API, H, 0);
-  PARAM_CHECK_NE(API, W, 0);
-  PARAM_CHECK(API, H * W == K);
+  PARAM_CHECK(API, grad_input_desc->dims[3] % border_num == 0);
+  PARAM_CHECK_NE(API, origin_n, 0);
+  PARAM_CHECK_NE(API, origin_c, 0);
+  PARAM_CHECK_NE(API, origin_h, 0);
+  PARAM_CHECK_NE(API, origin_w, 0);
+  PARAM_CHECK(API, origin_h * origin_w == origin_k);
   PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, boxes_desc->dims[2] == 4);
-  PARAM_CHECK_NE(API, K, 0);
+  PARAM_CHECK(API, boxes_desc->dims[2] == coord_num);
+  PARAM_CHECK_NE(API, origin_k, 0);
   PARAM_CHECK_GT(API, pool_size, 0);
 
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[0], N);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[1], K);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[2], 4);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[3], C);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[0], origin_n);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[1], origin_k);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[2], border_num);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[3], origin_c);
 
-  PARAM_CHECK_EQ(API, boxes_desc->dims[0], N);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[1], K);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[2], 4);
+  PARAM_CHECK_EQ(API, boxes_desc->dims[0], origin_n);
+  PARAM_CHECK_EQ(API, boxes_desc->dims[1], origin_k);
+  PARAM_CHECK_EQ(API, boxes_desc->dims[2], coord_num);
 
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], N);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], K);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], C);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], origin_n);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], origin_k);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], border_num);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], origin_c);
 
   TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(grad_output_desc),
                    LARGE_TENSOR_NUM, "");
@@ -141,10 +143,11 @@ mluOpStatus_t mluOpBorderAlignBackward(
   VLOG(5) << "Launch Kernel KernelBorderAlignBackward<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelBorderAlignBackward(
-      k_dim, k_type, handle->queue, input_dtype, (void *)grad_output,
-      (void *)boxes, (int32_t *)argmax_idx, pool_size, N, H, W, C, K,
-      (void *)grad_input)));
+  CHECK_RETURN(
+      API, KernelBorderAlignBackward(
+               k_dim, k_type, handle->queue, input_dtype, (void *)grad_output,
+               (void *)boxes, (int32_t *)argmax_idx, pool_size, origin_n,
+               origin_h, origin_w, origin_c, origin_k, (void *)grad_input));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
