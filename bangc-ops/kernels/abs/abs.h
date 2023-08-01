@@ -25,16 +25,14 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API Kernel3StagePipelineAbs(cnrtDim3_t k_dim,
-                                           cnrtFunctionType_t k_type,
-                                           cnrtQueue_t queue,
-                                           mluOpDataType_t d_type,
-                                           const void *x, void *y, int num);
+mluOpStatus_t MLUOP_WIN_API
+Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
+                        const void *x, void *y, const int num);
 
-void MLUOP_WIN_API Kernel5StagePipelineAbs(cnrtDim3_t k_dim,
-                                           cnrtFunctionType_t k_type,
-                                           cnrtQueue_t queue,
-                                           mluOpDataType_t d_type,
-                                           const void *x, void *y, int num);
+mluOpStatus_t MLUOP_WIN_API
+Kernel5StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
+                        const void *x, void *y, const int num);
 
 #endif  // KERNELS_ABS_ABS_H

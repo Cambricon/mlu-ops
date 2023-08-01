@@ -22,10 +22,10 @@
  *************************************************************************/
 #include "abs.h"
 
+#include "core/logging.h"
+#include "kernels/debug.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
-#include "kernels/debug.h"
-#include "core/logging.h"
 
 #define ABS_NRAM_USED MAX_NRAM_SIZE
 #define ABS_SRAM_USED (CORE_DIM * ABS_NRAM_USED)
@@ -49,8 +49,8 @@ __mlu_func__ void get3OffsetAbsFast(int32_t &offset_x_half,
 
 template <typename T>
 __mlu_func__ void computeAbsFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
-                                 T *nram_aux_b, int deal_num, int actual_num,
-                                 float coef) {
+                                 T *nram_aux_b, const int32_t deal_num,
+                                 const int32_t actual_num, const float coef) {
   __bang_active_abs(nram_x, nram_x_half, deal_num);
 }
 
@@ -72,44 +72,34 @@ UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, half, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, float, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, half, Fast);
 
-void MLUOP_WIN_API Kernel3StagePipelineAbs(cnrtDim3_t k_dim,
-                                           cnrtFunctionType_t k_type,
-                                           cnrtQueue_t queue,
-                                           mluOpDataType_t d_type,
-                                           const void *x, void *y, int num) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT: {
-      MLUBlockKernel3StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
-          (void *)x, (void *)y, num, 0.0);
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      MLUBlockKernel3StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
-          (void *)x, (void *)y, num, 0.0);
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
-    }
+mluOpStatus_t MLUOP_WIN_API
+Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
+                        const void *x, void *y, const int32_t num) {
+  if (d_type == MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0));
+  } else if (d_type == MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0));
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API Kernel5StagePipelineAbs(cnrtDim3_t k_dim,
-                                           cnrtFunctionType_t k_type,
-                                           cnrtQueue_t queue,
-                                           mluOpDataType_t d_type,
-                                           const void *x, void *y, int num) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT: {
-      MLUBlockKernel5StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
-          (void *)x, (void *)y, num, 0.0);
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      MLUBlockKernel5StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
-          (void *)x, (void *)y, num, 0.0);
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
-    }
+mluOpStatus_t MLUOP_WIN_API
+Kernel5StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
+                        const void *x, void *y, const int32_t num) {
+  if (d_type == MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(
+        MLUBlockKernel5StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0));
+  } else if (d_type == MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK(
+        MLUBlockKernel5StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, 0.0));
   }
+  return MLUOP_STATUS_SUCCESS;
 }

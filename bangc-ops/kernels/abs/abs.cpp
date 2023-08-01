@@ -74,10 +74,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   cnrtFunctionType_t k_type;
   policyFunc(handle, x_desc, &k_dim, &k_type);
 
-  int element_num = mluOpGetTensorElementNum(x_desc);
+  const int element_num = mluOpGetTensorElementNum(x_desc);
   VLOG(5) << "kernel Kernel3StagePipelineAbs.";
-  KERNEL_CHECK((Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
-                                        x_desc->dtype, x, y, element_num)));
+  CHECK_RETURN("[mluOpAbs] ",
+               Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
+                                       x_desc->dtype, x, y, element_num));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
