@@ -743,7 +743,7 @@ __mlu_func__ void createAndRemoveBox(
   // nram  n = max_seg_num, transpose: 200 32N, 300 4N
   // | scores | anchors | var | deltals | proposals | ge_mask | nram |
   // MLU300
-  // |  N     |  4N     | 4N  |   4N    |   4N      |  N      | 9N   |
+  // |  N     |  4N     | 4N  |   4N    |   4N      |  N      | 10N   |
   // MLU200
   // |  N     |  4N     |  4N |  4N     |   trans_buffer  32N        |
 
@@ -752,7 +752,7 @@ __mlu_func__ void createAndRemoveBox(
   // |    HWA        |   4*HWA      |    HWA     |   4*HWA   | taskDim     |
 
 #if __BANG_ARCH__ >= 300
-  const int memory_block = 27;
+  const int memory_block = 28;
 #else
   const int memory_block = 45;
 #endif
