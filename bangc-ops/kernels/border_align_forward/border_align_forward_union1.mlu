@@ -150,9 +150,11 @@ __mlu_func__ void pipeline(T *input_ping_nram, const T *input, T *boxes_nram,
    * Pipeline:
    *   The pipeline is processed in three stages: Load, Compute,
    *   Store. The allocated memory space of NRAM is divided into
-   *   two parts: PING and Pong. In a single time slice, PING is
-   *   used to process IO stream and PONG is used for computation.
-   *   Both of them are processed synchronously until finished.
+   *   two parts: PING and Pong. In one time step, PING and PONG
+   *   works on different stream built in chip. For example, while
+   *   PING is loading data from GDRAM, PONG is computing data
+   *   from last time step, or in turn. Both of them are processed
+   *   synchronously until finished.
    *
    * diagram of PINGPONG:
    * |------|-----------------------------------------------------|

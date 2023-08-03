@@ -14,6 +14,7 @@
 | 版本号  | 修订人 | 修订日期 | 修订描述 |
 | ------ | ----- | -------- | -------- |
 | V1.0   | 郑斌   | 2022-1-5 | 首次提交 |
+| V2.0   | 王远   | 2023-8-3 | 方案无调整，重构代码 |
 
 * #### 内容描述
 
@@ -59,10 +60,12 @@
 
 ### 1.2 算子功能和应用场景描述
 
-​    `border_align_forward`用于边界检测，它通过提取物体边界的极值点来优化网络特征。根据输入`boxes`提取输入`input`的边界特征，通过最大池化输出边界的最大特征。
+![figure3](./figure.png)
 
-​    该算子的应用场景：`BorderDet`网络。 
-例：
+`border_align_forward`用于边界检测，它通过提取物体边界的极值点来优化网络特征。根据输入`boxes`提取输入`input`的边界特征，通过最大池化输出边界的最大特征。
+
+该算子的应用场景：`BorderDet`网络。 例：
+
 ```python
 input_arr=torch.tensor([[[[ 1.,  2.,  3.,  4.],
                        [ 5.,  6.,  7.,  8.],
@@ -176,35 +179,31 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
 ## 3 实现方案设计
 
 ### 3.1 实现方案
- 
+
+`tensor.shape`：
+- `input` 维度为 `[N, H, W, 4C]`（竞品为`[N, 4C, H, W]`）。
+  - `4C` 表示 `C` 组 `top, left, bottom, right`。
+  - `H,W` 为 `feature-map` 的高和宽，可通过 `box` 坐标（`x,y`对应`H,W`）获取特征值。
+- `boxes` 维度为 `[N, K, 4]`，最后一维数据表示 `box` 左下、右上两处坐标信息 `x1, y1, x2, y2`。
+- `output` 维度为 `[N, K, 4, C]`。
+- `argmax_idx` 维度为 `[N, K, 4, C]`。
+
+
 **计算原理说明：**
- 
-![figure3](./figure.png)
- 
-`input`的维度为 `[N, H, W, 4C]`（竞品为`[N, 4C, H, W]`），`4C` 中的 `4`分别表示 `top, left, bottom, right`；
 
-`boxes`的维度为 `[N, K, 4]`，最后一维数据表示`box`左下、右上两处坐标信息 `x1, y1, x2, y2`。
-
-在计算`output`时，分别将每个`box`的`height`、`width`均分为`pool_size`段，`box` 的四条边对应 `top, left, bottom, right`
-- `top` ，`x_stride = box_height / pool_size; y_stride = 0;`
-- `left` ，`x_stride = 0; y_stride = box_height / pool_size;`
-- `bottom` ，`x_stride = box_height / pool_size; y_stride = 0;`
-- `right` ，`x_stride = box_height / pool_size; y_stride = 0;`
-
-通过上述`stride` ，对`box`四条边分别进行 `pool_size + 1` 次双线性插值，取结果的最大值、及最大值对应的 `idx` 作为输出。
-
-计算`top/bottom`的输出时：
-- 将`width`均分为`p`份，将均分后依次递增的值、`height`和`input_top/input_bottom`分别做双线性插值（循环`p` + 1次）。
-- 对计算`p` + 1次得到的结果做最大池化，得到的最大像素点`max_val`和最大像素点的池化次数idx作为一组输出，`boxes`中`K`组`box`依次和`top/bottom`做计算，最终得到`top/bottom`的`C * K`个输出。
-
-在计算`left/right`的输出时：
-- 将`height`均分为`p`份，将均分后依次递增的值、`width`和`input_left/input_right`分别做双线性插值（循环`p` + 1次）。
-- 对计算`p` + 1次得到的结果做最大池化，得到的最大像素点`max_val`和最大像素点的池化次数`idx`作为一组输出，`boxes`中`K`组`box`依次和`left/right`做计算，最终得到`left/right`的`C * K`个输出。
-
+以 `input.shape=[1, H, W, 4]`、`boxes.shape=[1, 1, 4]` 为例:
+- 通过坐标信息计算得 `box` 的 `height`、`width`。
+- 分别在 `box` 4 条边上滑动取点，每次滑动的 `stride` 计算如下：
+  - `top` ：起始点为`x1,y1`，`x_stride = width / pool_size; y_stride = 0`。
+  - `left` ：起始点为`x1,y1`，`x_stride = 0; y_stride = height / pool_size`。
+  - `bottom` ：起始点为`x2,y2`，`x_stride = -width / pool_size; y_stride = 0`。
+  - `right` ：起始点为`x2,y2`，`x_stride = 0; y_stride = -height / pool_size`。
+- 浮点数 `top_x,top_y` 是 `top` 边上的滑动点坐标，使用其附近四个点坐标信息在 `input` 获取特征值，并进行双线性差值计算。遍历整条边可得 `pool_size+1` 个双线性差值结果，选择其中最大值、最大值对应坐标作为输出存储至`output`、`argmax_idx`中。
+- 依次完成四条边计算，最终输出 `shape` 为 `[1,1,4,1]`的`output`、`argmax_idx`。
 
 **实现方案：** 
 
-`core`间拆`N*K`：
+`core` 间拆 `N*K`：
 1. 第一层循环，对每个 `core` 需要处理的 `box` 做遍历，每次处理一个 `box`。
 2. 第二层循环，对4条 `border` 做遍历。
 3. 第三层循环，`C`较大时无法一次处理整个 `C`，因此对`C`做遍历，依据片上空间计算一次能处理的长度`C_seg`，直至处理完整个 `C`。
