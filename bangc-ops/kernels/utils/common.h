@@ -32,6 +32,26 @@
 #define HALFMAX 65504
 
 template <typename T>
+__mlu_func__ bool __mluop_is_float() {
+  return false;
+}
+
+template <>
+__mlu_func__ bool __mluop_is_float<float>() {
+  return true;
+}
+
+template <typename T>
+__mlu_func__ bool __mluop_is_half() {
+  return false;
+}
+
+template <>
+__mlu_func__ bool __mluop_is_half<half>() {
+  return true;
+}
+
+template <typename T>
 __mlu_func__ inline T __mluop_min(T a, T b) {
   return a < b ? a : b;
 }
