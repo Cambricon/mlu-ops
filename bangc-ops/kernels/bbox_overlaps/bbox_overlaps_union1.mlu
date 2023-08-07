@@ -38,6 +38,24 @@ __nram__ char nmem_buf[MAX_NRAM_SIZE];
 __nram__ char bbox_nram[BBOX_SIZE];
 
 template <typename T>
+__mlu_func__ inline void __mluop_max(T *dst, T *src0, T *src1, size_t num) {
+  if (__mluop_is_float<T>()) {
+    __bang_maximum(dst, src0, src1, num);
+  } else {
+    __bang_maxequal(dst, src1, src0, num);
+  }
+}
+
+template <typename T>
+__mlu_func__ inline void __mluop_min(T *dst, T *src0, T *src1, size_t num) {
+  if (__mluop_is_float<T>()) {
+    __bang_minimum(dst, src0, src1, num);
+  } else {
+    __bang_minequal(dst, src1, src0, num);
+  }
+}
+
+template <typename T>
 __mlu_func__ void bboxOverlapsAlignModeImpl(
     T *vec_b1_x1, T *vec_b1_y1, T *vec_b1_x2, T *vec_b1_y2, T *vec_b2_x1,
     T *vec_b2_y1, T *vec_b2_x2, T *vec_b2_y2, T *vec_left, T *vec_right,
@@ -84,10 +102,10 @@ __mlu_func__ void bboxOverlapsAlignModeImpl(
 
     // get the width and height
 #if __BANG_ARCH__ >= 592
-    __bang_maximum(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
-    __bang_minimum(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
-    __bang_maximum(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
-    __bang_minimum(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
+    __mluop_max(vec_left, vec_b1_x1, vec_b2_x1, batches_stride);
+    __mluop_min(vec_right, vec_b1_x2, vec_b2_x2, batches_stride);
+    __mluop_max(vec_top, vec_b1_y1, vec_b2_y1, batches_stride);
+    __mluop_min(vec_bottom, vec_b1_y2, vec_b2_y2, batches_stride);
     // right - left + offset ---> left
     __bang_sub(vec_left, vec_right, vec_left, batches_stride);
     __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
@@ -96,13 +114,13 @@ __mlu_func__ void bboxOverlapsAlignModeImpl(
     __memcpy_async(vec_bottom, vec_b2_x1, batches_stride * sizeof(T),
                    NRAM2NRAM);
     __sync_compute();
-    __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
+    __mluop_max(vec_left, vec_left, vec_bottom, batches_stride);
 
     __memcpy_async(vec_right, vec_b1_x2, batches_stride * sizeof(T), NRAM2NRAM);
     __memcpy_async(vec_bottom, vec_b2_x2, batches_stride * sizeof(T),
                    NRAM2NRAM);
     __sync_compute();
-    __bang_minimum(vec_right, vec_right, vec_bottom, batches_stride);
+    __mluop_min(vec_right, vec_right, vec_bottom, batches_stride);
     // right - left + offset ---> left
     __bang_sub(vec_left, vec_right, vec_left, batches_stride);
     __bang_add_scalar(vec_left, vec_left, (T)offset, batches_stride);
@@ -111,13 +129,13 @@ __mlu_func__ void bboxOverlapsAlignModeImpl(
     __memcpy_async(vec_bottom, vec_b2_y1, batches_stride * sizeof(T),
                    NRAM2NRAM);
     __sync_compute();
-    __bang_maximum(vec_top, vec_top, vec_bottom, batches_stride);
+    __mluop_max(vec_top, vec_top, vec_bottom, batches_stride);
 
     __memcpy_async(vec_bottom, vec_b1_y2, batches_stride * sizeof(T),
                    NRAM2NRAM);
     __memcpy_async(vec_right, vec_b2_y2, batches_stride * sizeof(T), NRAM2NRAM);
     __sync_compute();
-    __bang_minimum(vec_bottom, vec_bottom, vec_right, batches_stride);
+    __mluop_min(vec_bottom, vec_bottom, vec_right, batches_stride);
 
 #endif
 
@@ -130,19 +148,19 @@ __mlu_func__ void bboxOverlapsAlignModeImpl(
 
     // width --> vec_left
 #if __BANG_ARCH__ >= 592
-    __bang_maximum(vec_left, vec_bottom, vec_left, batches_stride);
+    __mluop_max(vec_left, vec_left, vec_bottom, batches_stride);
 #else
-    __bang_maximum(vec_left, vec_left, vec_bottom, batches_stride);
+    __mluop_max(vec_left, vec_left, vec_bottom, batches_stride);
 
 #endif
     T *width = vec_left;
     // height --> vec_right
 
 #if __BANG_ARCH__ >= 592
-    __bang_maximum(vec_right, vec_bottom, vec_right, batches_stride);
+    __mluop_max(vec_right, vec_right, vec_bottom, batches_stride);
 #else
     __bang_write_value(vec_bottom, batches_stride, (T)0);
-    __bang_maximum(vec_right, vec_right, vec_bottom, batches_stride);
+    __mluop_max(vec_right, vec_right, vec_bottom, batches_stride);
 #endif
     T *height = vec_right;
 
@@ -186,23 +204,23 @@ __mlu_func__ void bboxOverlapsAlignModeImpl(
       __bang_add(b1_area, b1_area, b2_area, batches_stride);
       __bang_sub(b1_area, b1_area, inter_s, batches_stride);
 #if __BANG_ARCH__ >= 592
-      __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+      __mluop_max(b1_area, b1_area, vec_offset, batches_stride);
 #else
 
       __memcpy_async(vec_bottom, vec_offset, batches_stride * sizeof(T),
                      NRAM2NRAM);
       __sync_compute();
-      __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+      __mluop_max(b1_area, b1_area, vec_bottom, batches_stride);
 
 #endif
     } else {
 #if __BANG_ARCH__ >= 592
-      __bang_maximum(b1_area, vec_offset, b1_area, batches_stride);
+      __mluop_max(b1_area, b1_area, vec_offset, batches_stride);
 #else
       __memcpy_async(vec_bottom, vec_offset, batches_stride * sizeof(T),
                      NRAM2NRAM);
       __sync_compute();
-      __bang_maximum(b1_area, b1_area, vec_bottom, batches_stride);
+      __mluop_max(b1_area, b1_area, vec_bottom, batches_stride);
 #endif
     }
     T *base_s = b1_area;
@@ -239,39 +257,29 @@ __mlu_func__ void compute(T *vec_b2_x1, T *vec_b2_y1, T *vec_b2_x2,
            NRAM2NRAM);
 
   // get the width and height
-#if __BANG_ARCH__ >= 592
-  __bang_maximum_scalar(vec_left, vec_b2_x1, vec_b1_x1_value, handle_batches);
-  __bang_minimum_scalar(vec_right, vec_b2_x2, vec_b1_x2_value, handle_batches);
-  __bang_maximum_scalar(vec_top, vec_b2_y1, vec_b1_y1_value, handle_batches);
-  __bang_minimum_scalar(vec_bottom, vec_b2_y2, vec_b1_y2_value, handle_batches);
-  // right - left + offset ---> left
-  __bang_sub(vec_left, vec_right, vec_left, handle_batches);
-  __bang_add_scalar(vec_left, vec_left, (T)offset, handle_batches);
-#else
   __bang_write_value(vec_bottom, handle_batches, vec_b1_x1_value);
-  __memcpy_async(vec_left, vec_b2_x1, handle_batches * sizeof(T), NRAM2NRAM);
+  __memcpy_async(vec_right, vec_b2_x1, handle_batches * sizeof(T), NRAM2NRAM);
   __sync_compute();
-  __bang_maximum(vec_left, vec_left, vec_bottom, handle_batches);
+  __mluop_max(vec_left, vec_bottom, vec_right, handle_batches);
 
   __bang_write_value(vec_bottom, handle_batches, vec_b1_x2_value);
-  __memcpy_async(vec_right, vec_b2_x2, handle_batches * sizeof(T), NRAM2NRAM);
+  __memcpy_async(vec_top, vec_b2_x2, handle_batches * sizeof(T), NRAM2NRAM);
   __sync_compute();
-  __bang_minimum(vec_right, vec_right, vec_bottom, handle_batches);
+  __mluop_min(vec_right, vec_bottom, vec_top, handle_batches);
   // right - left + offset ---> left
   __bang_sub(vec_left, vec_right, vec_left, handle_batches);
   __bang_add_scalar(vec_left, vec_left, (T)offset, handle_batches);
 
   __bang_write_value(vec_bottom, handle_batches, vec_b1_y1_value);
-  __memcpy_async(vec_top, vec_b2_y1, handle_batches * sizeof(T), NRAM2NRAM);
+  __memcpy_async(vec_right, vec_b2_y1, handle_batches * sizeof(T), NRAM2NRAM);
   __sync_compute();
-  __bang_maximum(vec_top, vec_top, vec_bottom, handle_batches);
+  __mluop_max(vec_top, vec_bottom, vec_right, handle_batches);
 
-  __bang_write_value(vec_right, handle_batches, vec_b1_y2_value);
-  __memcpy_async(vec_bottom, vec_b2_y2, handle_batches * sizeof(T), NRAM2NRAM);
+  __bang_write_value(vec_bottom, handle_batches, vec_b1_y2_value);
+  __memcpy_async(vec_right, vec_b2_y2, handle_batches * sizeof(T), NRAM2NRAM);
   __sync_compute();
-  __bang_minimum(vec_bottom, vec_bottom, vec_right, handle_batches);
+  __mluop_min(vec_bottom, vec_bottom, vec_right, handle_batches);
 
-#endif
   // bottom - top + offset ---> right
   __bang_sub(vec_right, vec_bottom, vec_top, handle_batches);
   __bang_add_scalar(vec_right, vec_right, (T)offset, handle_batches);
@@ -280,16 +288,12 @@ __mlu_func__ void compute(T *vec_b2_x1, T *vec_b2_y1, T *vec_b2_x2,
   __bang_write_value(vec_bottom, handle_batches, (T)0);
 
   // width --> vec_left
-  __bang_maximum(vec_left, vec_left, vec_bottom, handle_batches);
+  __mluop_max(vec_left, vec_left, vec_bottom, handle_batches);
   T *width = vec_left;
   // height --> vec_right
-#if __BANG_ARCH__ >= 592
-  __bang_maximum(vec_right, vec_bottom, vec_right, handle_batches);
-#else
   __memcpy_async(vec_top, vec_bottom, handle_batches * sizeof(T), NRAM2NRAM);
   __sync_compute();
-  __bang_maximum(vec_right, vec_right, vec_top, handle_batches);
-#endif
+  __mluop_max(vec_right, vec_right, vec_top, handle_batches);
   T *height = vec_right;
 
   // get the b1_area
@@ -319,26 +323,14 @@ __mlu_func__ void compute(T *vec_b2_x1, T *vec_b2_y1, T *vec_b2_x2,
   T *vec_offset = vec_b2_y1;
 
   if (mode == 0) {
+    // max(b1_area + b2_area - inter_s, offset)
     __bang_add_scalar(b2_area, b2_area, b1_area_value, handle_batches);
     __bang_sub(b2_area, b2_area, inter_s, handle_batches);
-#if __BANG_ARCH__ >= 592
-    __bang_maximum(b2_area, vec_offset, b2_area, handle_batches);
-#else
-    __memcpy_async(vec_bottom, vec_offset, handle_batches * sizeof(T),
-                   NRAM2NRAM);
-    __sync_compute();
-    __bang_maximum(b2_area, b2_area, vec_bottom, handle_batches);
-
-#endif
+    __mluop_max(b2_area, b2_area, vec_offset, handle_batches);
   } else {
-#if __BANG_ARCH__ >= 592
-    __bang_maximum_scalar(b2_area, vec_offset, b1_area_value, handle_batches);
-#else
-    __memcpy_async(b2_area, vec_offset, handle_batches * sizeof(T), NRAM2NRAM);
-    __sync_compute();
+    // max(b1_area, offset)
     __bang_write_value(vec_bottom, handle_batches, T(b1_area_value));
-    __bang_maximum(b2_area, b2_area, vec_bottom, handle_batches);
-#endif
+    __mluop_max(b2_area, vec_bottom, vec_offset, handle_batches);
   }
   T *base_s = b2_area;
 
@@ -548,25 +540,19 @@ __mlu_global__ void MLUUnion1BboxOverlapsKernel(
   }
 }
 
-void MLUOP_WIN_API KernelBboxOverlaps(
+mluOpStatus_t MLUOP_WIN_API KernelBboxOverlaps(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *bbox1, const void *bbox2, void *ious,
     const int32_t num_bboxl, const int32_t num_bbox2, const int32_t mode,
     const bool aligned, const int32_t offset) {
-  switch (d_type) {
-    case MLUOP_DTYPE_HALF: {
-      MLUUnion1BboxOverlapsKernel<<<k_dim, k_type, queue>>>(
-          (half *)bbox1, (half *)bbox2, (half *)ious, num_bboxl, num_bbox2,
-          mode, aligned, offset);
-    }; break;
-    case MLUOP_DTYPE_FLOAT: {
-      MLUUnion1BboxOverlapsKernel<<<k_dim, k_type, queue>>>(
-          (float *)bbox1, (float *)bbox2, (float *)ious, num_bboxl, num_bbox2,
-          mode, aligned, offset);
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
-    }
+  if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK(MLUUnion1BboxOverlapsKernel<<<k_dim, k_type, queue>>>(
+        (half *)bbox1, (half *)bbox2, (half *)ious, num_bboxl, num_bbox2, mode,
+        aligned, offset));
+  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUUnion1BboxOverlapsKernel<<<k_dim, k_type, queue>>>(
+        (float *)bbox1, (float *)bbox2, (float *)ious, num_bboxl, num_bbox2,
+        mode, aligned, offset));
   }
+  return MLUOP_STATUS_SUCCESS;
 }

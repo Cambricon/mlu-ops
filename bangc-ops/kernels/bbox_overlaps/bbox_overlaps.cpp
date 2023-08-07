@@ -22,6 +22,8 @@
  *************************************************************************/
 #include "bbox_overlaps.h"
 
+#include <string>
+
 #include "core/logging.h"
 #include "core/gen_case.h"
 #include "core/runtime/device.h"
@@ -54,17 +56,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
     const mluOpTensorDescriptor_t bbox1_desc, const void *bbox1,
     const mluOpTensorDescriptor_t bbox2_desc, const void *bbox2,
     const mluOpTensorDescriptor_t ious_desc, void *ious) {
-  PARAM_CHECK("[mluOpBboxOverlaps]", handle != NULL);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox1_desc != NULL);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox2_desc != NULL);
-  PARAM_CHECK("[mluOpBboxOverlaps]", ious_desc != NULL);
+  const std::string API = "[mluOpBorderAlignBackward]";
 
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox1_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                                         bbox1_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox1_desc->dtype == bbox2_desc->dtype);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox1_desc->dtype == ious_desc->dtype);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox1_desc->dim == 2);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox2_desc->dim == 2);
+  PARAM_CHECK(API, handle != NULL);
+  PARAM_CHECK(API, bbox1_desc != NULL);
+  PARAM_CHECK(API, bbox2_desc != NULL);
+  PARAM_CHECK(API, ious_desc != NULL);
+
+  PARAM_CHECK(API, bbox1_desc->dtype == MLUOP_DTYPE_FLOAT ||
+                       bbox1_desc->dtype == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(API, bbox1_desc->dtype == bbox2_desc->dtype);
+  PARAM_CHECK(API, bbox1_desc->dtype == ious_desc->dtype);
+  PARAM_CHECK(API, bbox1_desc->dim == 2);
+  PARAM_CHECK(API, bbox2_desc->dim == 2);
 
   // param check
   if (mode != 1 && mode != 0) {
@@ -170,9 +174,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
     }
   }
 
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox1 != NULL);
-  PARAM_CHECK("[mluOpBboxOverlaps]", bbox2 != NULL);
-  PARAM_CHECK("[mluOpBboxOverlaps]", ious != NULL);
+  PARAM_CHECK(API, bbox1 != NULL);
+  PARAM_CHECK(API, bbox2 != NULL);
+  PARAM_CHECK(API, ious != NULL);
 
   // generate mluOpBboxOverlaps prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
@@ -197,9 +201,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
           << " ]";
 
   VLOG(5) << "Launch Kernel KernelBboxOverlaps";
-  KERNEL_CHECK(
-      (KernelBboxOverlaps(k_dim, k_type, handle->queue, k_datatype, bbox1,
-                          bbox2, ious, rows, cols, mode, aligned, offset)));
+  CHECK_RETURN(
+      API, KernelBboxOverlaps(k_dim, k_type, handle->queue, k_datatype, bbox1,
+                              bbox2, ious, rows, cols, mode, aligned, offset));
   VLOG(5) << "Kernel KernelBboxOverlaps.";
 
   GEN_CASE_END();

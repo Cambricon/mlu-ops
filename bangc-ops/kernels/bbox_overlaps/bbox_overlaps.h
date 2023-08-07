@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelBboxOverlaps(
+mluOpStatus_t MLUOP_WIN_API KernelBboxOverlaps(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *bbox1, const void *bbox2, void *ious,
     const int32_t num_bboxl, const int32_t num_bbox2, const int32_t mode,
