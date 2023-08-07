@@ -482,7 +482,6 @@ void MLUOP_WIN_API KernelRoiAlignRotatedForward(
           rois_num, rroiAlignParams, (half *)output);
     }; break;
     default: {
-      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
@@ -506,7 +505,6 @@ void MLUOP_WIN_API KernelRoiAlignRotatedBackward(
           rois_num, rroiAlignParams, (half *)bottom_grad);
     }; break;
     default: {
-      LOG(ERROR) << "Not implemented.";
       break;
     }
   }
