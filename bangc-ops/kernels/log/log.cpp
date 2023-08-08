@@ -76,14 +76,14 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   int element_num = mluOpGetTensorElementNum(x_desc);
   if (handle->arch == MLUOP_MLU270) {
     VLOG(5) << "kernel Kernel5StagePipelineLog.";
-    KERNEL_CHECK(
-        (Kernel5StagePipelineLog(k_dim, k_type, handle->queue, x_desc->dtype,
-                                 prefer, x, y, element_num, coef)));
+    CHECK_RETURN("[mluOpLog] ", (Kernel5StagePipelineLog(
+                                    k_dim, k_type, handle->queue, x_desc->dtype,
+                                    prefer, x, y, element_num, coef)));
   } else {
     VLOG(5) << "kernel Kernel3StagePipelineLog.";
-    KERNEL_CHECK(
-        (Kernel3StagePipelineLog(k_dim, k_type, handle->queue, x_desc->dtype,
-                                 prefer, x, y, element_num, coef)));
+    CHECK_RETURN("[mluOpLog] ", (Kernel3StagePipelineLog(
+                                    k_dim, k_type, handle->queue, x_desc->dtype,
+                                    prefer, x, y, element_num, coef)));
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

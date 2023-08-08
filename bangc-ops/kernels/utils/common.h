@@ -239,7 +239,7 @@ __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
 }
 
 /******************************************************************************
- * CNNL FUNC: __mluop_log
+ * MLUOPS FUNC: __mluop_log
  * param 'nram_dst' is the nram destination address, which supports half or
  * float data type.
  * param 'nram_src' is the nram source address, which has the same data type

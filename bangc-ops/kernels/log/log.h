@@ -25,12 +25,12 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API Kernel3StagePipelineLog(
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num, float coef);
 
-void MLUOP_WIN_API Kernel5StagePipelineLog(
+mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num, float coef);
