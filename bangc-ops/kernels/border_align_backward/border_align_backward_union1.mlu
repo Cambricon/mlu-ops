@@ -256,7 +256,7 @@ __mlu_global__ void MLUKernelBorderAlignBackward(
 
     /* load boxes:
      *     boxes[n,k,0:4] indicates the information on the bottom left
-     *     and top right points: [lb_x, lb_y, rt_x, rt_y]  
+     *     and top right points: [lb_x, lb_y, rt_x, rt_y]
      */
     __memcpy(nram_boxes, (T *)boxes + n * origin_k * coord_num + k * coord_num,
              coord_num * sizeof(T), GDRAM2NRAM);
@@ -294,7 +294,8 @@ mluOpStatus_t MLUOP_WIN_API KernelBorderAlignBackward(
         (float *)grad_output, (float *)boxes, (int32_t *)argmax_idx, pool_size,
         origin_n, origin_h, origin_w, origin_c, origin_k, (float *)grad_input));
 
-  } else if (data_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     KERNEL_CHECK(MLUKernelBorderAlignBackward<<<k_dim, k_type, queue>>>(
         (half *)grad_output, (half *)boxes, (int32_t *)argmax_idx, pool_size,
         origin_n, origin_h, origin_w, origin_c, origin_k, (half *)grad_input));

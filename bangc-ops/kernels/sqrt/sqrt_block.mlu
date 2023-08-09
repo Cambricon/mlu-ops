@@ -234,7 +234,8 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrt(
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, 0.0));
-  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     if (prefer == MLUOP_COMPUTATION_FAST) {
       KERNEL_CHECK(
           MLUBlockKernel3StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
@@ -257,7 +258,8 @@ mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineSqrt(
     KERNEL_CHECK(
         MLUBlockKernel5StagePipelineSqrtfloatFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, 0.0));
-  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     if (prefer == MLUOP_COMPUTATION_FAST) {
       KERNEL_CHECK(
           MLUBlockKernel5StagePipelineSqrthalfFast<<<k_dim, k_type, queue>>>(
@@ -281,7 +283,8 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
         MLUBlockKernel3StagePipelineSqrtBackwardfloatFast<<<k_dim, k_type,
                                                             queue>>>(
             (void *)y, (void *)diff_y, (void *)x, num));
-  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineSqrtBackwardhalfHighAcc<<<k_dim, k_type,
                                                               queue>>>(

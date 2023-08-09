@@ -81,7 +81,8 @@ Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, 0.0));
-  } else if (d_type == MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, 0.0));
@@ -97,7 +98,8 @@ Kernel5StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
     KERNEL_CHECK(
         MLUBlockKernel5StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, 0.0));
-  } else if (d_type == MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     KERNEL_CHECK(
         MLUBlockKernel5StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, 0.0));

@@ -175,7 +175,8 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLog(
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineLogfloatFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, coef));
-  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     if (prefer == MLUOP_COMPUTATION_FAST) {
       KERNEL_CHECK(
           MLUBlockKernel3StagePipelineLoghalfFast<<<k_dim, k_type, queue>>>(
@@ -198,7 +199,8 @@ mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineLog(
     KERNEL_CHECK(
         MLUBlockKernel5StagePipelineLogfloatFast<<<k_dim, k_type, queue>>>(
             (void *)x, (void *)y, num, coef));
-  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     if (prefer == MLUOP_COMPUTATION_FAST) {
       KERNEL_CHECK(
           MLUBlockKernel5StagePipelineLoghalfFast<<<k_dim, k_type, queue>>>(
