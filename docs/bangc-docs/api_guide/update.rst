@@ -3,6 +3,21 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V0.8.0
+
+  **Date:** August 9, 2023
+
+  **Changes:**
+
+  - Added the following new operations:
+
+    - border_align_backward
+    - border_align_forward
+    - masked_col2im_forward
+    - masked_im2col_forward
+    - tin_shift_backward
+    - tin_shift_forward
+
 * V0.7.1
 
   **Date:** June 16, 2023

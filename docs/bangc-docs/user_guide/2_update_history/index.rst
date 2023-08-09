@@ -1,6 +1,30 @@
 更新历史
 ========
 
+* **V0.8.0**
+
+  **更新时间**：2023年8月9日
+
+  **更新内容**：
+
+  - 新增以下算子章节内容：
+
+     + :ref:`border_align_backward`
+     + :ref:`border_align_forward`
+     + :ref:`masked_col2im_forward`
+     + :ref:`masked_im2col_forward`
+     + :ref:`tin_shift_backward`
+     + :ref:`tin_shift_forward`
+
+  - 修改以下算子章节内容：
+
+     + :ref:`bbox_overlaps`
+     + :ref:`box_iou_rotated`
+     + :ref:`dynamic_point_to_voxel_backward`
+     + :ref:`focal_loss_sigmoid_forward`
+     + :ref:`nms_rotated`
+     + :ref:`yolo_box`
+
 * **V0.7.1**
 
   **更新时间**：2023年6月16日
