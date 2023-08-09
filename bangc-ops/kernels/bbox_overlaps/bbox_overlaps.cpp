@@ -56,7 +56,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
     const mluOpTensorDescriptor_t bbox1_desc, const void *bbox1,
     const mluOpTensorDescriptor_t bbox2_desc, const void *bbox2,
     const mluOpTensorDescriptor_t ious_desc, void *ious) {
-  const std::string API = "[mluOpBorderAlignBackward]";
+  const std::string API = "[mluOpBboxOverlaps]";
 
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, bbox1_desc != NULL);
@@ -106,9 +106,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
   }
 
   // param check
-  int32_t rows = bbox1_desc->dims[0];
-  int32_t cols = bbox2_desc->dims[0];
-  int32_t batch_num_all = rows;
+  size_t rows = bbox1_desc->dims[0];
+  size_t cols = bbox2_desc->dims[0];
+  size_t batch_num_all = rows;
 
   if (ious_desc->dims[0] != rows) {
     LOG(ERROR) << "[mluOpBboxOverlaps] Check failed: Whether it is aligned "
@@ -173,6 +173,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
       return MLUOP_STATUS_SUCCESS;
     }
   }
+
+  const size_t box1_element_num = mluOpGetTensorElementNum(bbox1_desc);
+  const size_t box2_element_num = mluOpGetTensorElementNum(bbox2_desc);
+  const size_t ious_element_num = mluOpGetTensorElementNum(ious_desc);
+
+  // check large tensor
+  TENSOR_NUM_CHECK(API, box1_element_num, LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, box2_element_num, LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK(API, ious_element_num, LARGE_TENSOR_NUM, "");
 
   PARAM_CHECK(API, bbox1 != NULL);
   PARAM_CHECK(API, bbox2 != NULL);
