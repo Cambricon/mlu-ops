@@ -88,6 +88,11 @@
 #endif  // __BANG_ARCH__
 
 
+#if __BANG_ARCH__ == 372
+#define sizeof(T) (uint32_t(sizeof(T)))
+#endif  // __BANG_ARCH__ == 372
+
+
 #ifndef PAD_UP
 #define PAD_UP(x, y) (((x) / (y) + (int)((x) % (y) > 0)) * (y))
 #endif

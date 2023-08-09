@@ -25,17 +25,17 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API Kernel3StagePipelineSqrt(
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrt(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num);
 
-void MLUOP_WIN_API Kernel5StagePipelineSqrt(
+mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineSqrt(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num);
 
-void MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *y, const void *diff_y, void *x,
     int num);

@@ -22,10 +22,11 @@
  *************************************************************************/
 #include "log.h"
 
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
-#include "kernels/debug.h"
-#include "core/logging.h"
 
 #define LOG_LOW_BOUND 1e-8
 #define LOG_SCALE 1e12
@@ -165,52 +166,50 @@ UNARY_OP_KERNEL_5PIPELINE_IMPLE(Log, float, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Log, half, Fast);
 UNARY_OP_KERNEL_5PIPELINE_IMPLE(Log, half, HighAcc);
 
-void MLUOP_WIN_API Kernel3StagePipelineLog(
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num, float coef) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT: {
-      MLUBlockKernel3StagePipelineLogfloatFast<<<k_dim, k_type, queue>>>(
-          (void *)x, (void *)y, num, coef);
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      if (prefer == MLUOP_COMPUTATION_FAST) {
-        MLUBlockKernel3StagePipelineLoghalfFast<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, coef);
-      } else {
-        MLUBlockKernel3StagePipelineLoghalfHighAcc<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, coef);
-      }
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
+  // launch kernel
+  if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineLogfloatFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, coef));
+  } else {
+    // half
+    if (prefer == MLUOP_COMPUTATION_FAST) {
+      KERNEL_CHECK(
+          MLUBlockKernel3StagePipelineLoghalfFast<<<k_dim, k_type, queue>>>(
+              (void *)x, (void *)y, num, coef));
+    } else {
+      KERNEL_CHECK(
+          MLUBlockKernel3StagePipelineLoghalfHighAcc<<<k_dim, k_type, queue>>>(
+              (void *)x, (void *)y, num, coef));
     }
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API Kernel5StagePipelineLog(
+mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, void *y, int num, float coef) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT: {
-      MLUBlockKernel5StagePipelineLogfloatFast<<<k_dim, k_type, queue>>>(
-          (void *)x, (void *)y, num, coef);
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      if (prefer == MLUOP_COMPUTATION_FAST) {
-        MLUBlockKernel5StagePipelineLoghalfFast<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, coef);
-      } else {
-        MLUBlockKernel5StagePipelineLoghalfHighAcc<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, coef);
-      }
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
+  // launch kernel
+  if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(
+        MLUBlockKernel5StagePipelineLogfloatFast<<<k_dim, k_type, queue>>>(
+            (void *)x, (void *)y, num, coef));
+  } else {
+    // half
+    if (prefer == MLUOP_COMPUTATION_FAST) {
+      KERNEL_CHECK(
+          MLUBlockKernel5StagePipelineLoghalfFast<<<k_dim, k_type, queue>>>(
+              (void *)x, (void *)y, num, coef));
+    } else {
+      KERNEL_CHECK(
+          MLUBlockKernel5StagePipelineLoghalfHighAcc<<<k_dim, k_type, queue>>>(
+              (void *)x, (void *)y, num, coef));
     }
   }
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -67,14 +67,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   int element_num = mluOpGetTensorElementNum(x_desc);
   if (handle->arch == MLUOP_MLU270) {
     VLOG(5) << "kernel Kernel5StagePipelineSqrt.";
-    KERNEL_CHECK(
-        (Kernel5StagePipelineSqrt(k_dim, k_type, handle->queue, x_desc->dtype,
-                                  prefer, x, y, element_num)));
+    CHECK_RETURN("[mluOpSqrt] ", Kernel5StagePipelineSqrt(
+                                     k_dim, k_type, handle->queue,
+                                     x_desc->dtype, prefer, x, y, element_num));
   } else {
     VLOG(5) << "kernel Kernel3StagePipelineSqrt.";
-    KERNEL_CHECK(
-        (Kernel3StagePipelineSqrt(k_dim, k_type, handle->queue, x_desc->dtype,
-                                  prefer, x, y, element_num)));
+    CHECK_RETURN("[mluOpSqrt] ", Kernel3StagePipelineSqrt(
+                                     k_dim, k_type, handle->queue,
+                                     x_desc->dtype, prefer, x, y, element_num));
   }
 
   GEN_CASE_END();
@@ -113,9 +113,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
 
   int num_elem = mluOpGetTensorElementNum(y_desc);
   VLOG(5) << "Kernel Kernel3StagePipelineSqrtBackward.";
-  KERNEL_CHECK((Kernel3StagePipelineSqrtBackward(k_dim, k_type, handle->queue,
-                                                 y_desc->dtype, y, diff_y,
-                                                 diff_x, num_elem)));
+  CHECK_RETURN("[mluOpSqrtBackward] ",
+               Kernel3StagePipelineSqrtBackward(k_dim, k_type, handle->queue,
+                                                y_desc->dtype, y, diff_y,
+                                                diff_x, num_elem));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

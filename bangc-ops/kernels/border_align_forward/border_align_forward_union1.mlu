@@ -401,7 +401,8 @@ mluOpStatus_t MLUOP_WIN_API KernelBorderAlignForward(
     KERNEL_CHECK(MLUKernelBorderAlignForward<<<k_dim, k_type, queue>>>(
         (float *)input, (float *)boxes, pool_size, origin_n, origin_h, origin_w,
         origin_c, origin_k, (float *)output, (int32_t *)argmax_idx_nram));
-  } else if (data_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+  } else {
+    // half
     KERNEL_CHECK(MLUKernelBorderAlignForward<<<k_dim, k_type, queue>>>(
         (half *)input, (half *)boxes, pool_size, origin_n, origin_h, origin_w,
         origin_c, origin_k, (half *)output, (int32_t *)argmax_idx_nram));

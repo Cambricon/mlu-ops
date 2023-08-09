@@ -549,7 +549,7 @@ mluOpStatus_t MLUOP_WIN_API KernelBboxOverlaps(
     KERNEL_CHECK(MLUUnion1BboxOverlapsKernel<<<k_dim, k_type, queue>>>(
         (half *)bbox1, (half *)bbox2, (half *)ious, num_bboxl, num_bbox2, mode,
         aligned, offset));
-  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+  } else {
     KERNEL_CHECK(MLUUnion1BboxOverlapsKernel<<<k_dim, k_type, queue>>>(
         (float *)bbox1, (float *)bbox2, (float *)ious, num_bboxl, num_bbox2,
         mode, aligned, offset));
