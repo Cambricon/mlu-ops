@@ -177,7 +177,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
   const size_t box1_element_num = mluOpGetTensorElementNum(bbox1_desc);
   const size_t box2_element_num = mluOpGetTensorElementNum(bbox2_desc);
   const size_t ious_element_num = mluOpGetTensorElementNum(ious_desc);
-  printf("test----------\n");
 
   // check large tensor
   TENSOR_NUM_CHECK(API, box1_element_num, LARGE_TENSOR_NUM, "");
