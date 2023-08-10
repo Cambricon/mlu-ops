@@ -17,9 +17,11 @@ fi
 
 SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
-if [ ! -d "$BUILD_PATH" ]; then
-  mkdir "$BUILD_PATH"
+if [ -d "$BUILD_PATH" ]; then
+  rm -r ${BUILD_PATH}
 fi
+
+mkdir $BUILD_PATH
 
 cd ./build/
 
