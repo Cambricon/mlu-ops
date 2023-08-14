@@ -46,7 +46,7 @@ jobs:
       matrix:
         runner: [mlu370-m8]
         mlu_ops_version : [0.8.0]
-        cntoolkit_version : [3.6.0]
+        cntoolkit_version : [3.6.1]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
