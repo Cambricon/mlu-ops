@@ -395,11 +395,10 @@ prog_log_info "python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VI
 python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}
 
 pushd ${BUILD_PATH} > /dev/null
-  if [[ -z "${FLAG_KEEP_CACHE}" ]]; then
-    echo "Rmove cmake cache ${PWD}"
-    find . -maxdepth 1 -type f -exec rm -f {} \;
-    rm -rf CMakeFiles || :
-  fi
+  prog_log_info "Rmove cmake cache ${PWD}"
+  find . -maxdepth 1 -type f -not -name ${MLUOP_SYMBOL_VIS_FILE} -exec rm -f {} \;
+  rm -rf CMakeFiles || :
+
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
                 -DNEUWARE_HOME="${NEUWARE_HOME}" \
                 -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}" \
