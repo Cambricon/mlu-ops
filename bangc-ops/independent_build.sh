@@ -390,12 +390,15 @@ fi
 export PATH=${NEUWARE_HOME}/bin:$PATH
 export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
 
-rm -rf ${BUILD_PATH}/*
 prog_log_info "generate ${MLUOP_SYMBOL_VIS_FILE} file."
 prog_log_info "python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}"
 python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}
 
 pushd ${BUILD_PATH} > /dev/null
+  prog_log_info "Rmove cmake cache ${PWD}"
+  find . -maxdepth 1 -type f -not -name ${MLUOP_SYMBOL_VIS_FILE} -exec rm -f {} \;
+  rm -rf CMakeFiles || :
+
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
                 -DNEUWARE_HOME="${NEUWARE_HOME}" \
                 -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}" \
