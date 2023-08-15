@@ -38,22 +38,22 @@ MLU-OPS 库中算子的开发过程，需明确一个理念，文档与算子的
 
 ```bash
 $ cd docs/bangc-docs/design_docs/
-$ mkdir add
-$ cd add
-$ vim add.md
+$ mkdir abs
+$ cd abs
+$ vim abs.md
 ```
 
-在 add 目录下添加的 add.md 文件，为算子的设计文档，设计文档模板可参考[BANGC-OPS 算子设计文档模板](./BANGC-OPS-Operator-Design-Doc-Template.md)。
+在 abs 目录下添加的 abs.md 文件，为算子的设计文档，设计文档模板可参考[BANGC-OPS 算子设计文档模板](./BANGC-OPS-Operator-Design-Doc-Template.md)。
 
 如果一个算子存在正向和反向，那么正反向算子当做两个不同的算子来处理。如卷积算子存在卷积前向与卷积反向，目录结构应为
 
 ```bash
 |-- docs
    |-- design_docs
-      |-- psroipool_forward
-         |-- psroipool_forward.md
-      |-- psroipool_backward
-         |-- psroipool_backward.md
+      |-- border_align_forward
+         |-- border_align_forward.md
+      |-- border_align_backward
+         |-- border_align_backward.md
 ```
 
 文档中如有涉及公式的地方， 使用 md 的公式格式，不能使用图片的形式插入。
@@ -66,20 +66,20 @@ $ vim add.md
 
 ```bash
 $ cd kernels
-$ mkdir add  // 添加以算子名命名的目录
-$ cd add
-$ touch add.cpp // add.cpp  ->  mluop 接口的实现文件
-$ touch add.h   // add.h    ->  kernel 接口声明文件
-$ touch add.mlu // add.mlu  ->  以 bangc 编程的 kernel 函数的实现文件
+$ mkdir abs  // 添加以算子名命名的目录
+$ cd abs
+$ touch abs.cpp // abs.cpp  ->  mluop 接口的实现文件
+$ touch abs.h   // abs.h    ->  kernel 接口声明文件
+$ touch abs.mlu // abs.mlu  ->  以 bangc 编程的 kernel 函数的实现文件
 $ cd ../../
 $ mlu_op.h // mluop 接口声明文件
 ```
 
 文件命名及组织规则为：
 
-1. cpp 及 h 文件的文件名为算子名，如 add.cpp / add.h.
+1. cpp 及 h 文件的文件名为算子名，如 abs.cpp / abs.h.
 
-2. mlu 文件根据算子的实现以 "算子名 + 实现方式" 的规则进行命名。如算子的实现方式为以 Union1 为最小单位，需命名为 add_union1.mlu，如以 Union2 为最小单位，需命名为 add_union2.mlu.
+2. mlu 文件根据算子的实现以 "算子名 + 实现方式" 的规则进行命名。如算子的实现方式为以 Union1 为最小单位，需命名为 abs_union1.mlu，如以 Union2 为最小单位，需命名为 abs_union2.mlu.
 
 此外，算子开发者还需要在 mlu_op.h 中添加该算子的对外接口的详细注释；对于可用模板实现的算子，可调用 binary_op 和 unary_op 文件中函数进行实现；对于通用函数可以在 kernel.h 中查找调用。
 
@@ -144,7 +144,7 @@ kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为
 
 ```bash
 1. source env.sh                   \\ 使能 pre-commit ，在 commit 阶段触发代码格式检查。
-2. git add FileName                \\ 将所有修改的文件添加到 git 暂存区。
+2. git abs FileName                \\ 将所有修改的文件添加到 git 暂存区。
 3. git commit                      \\ 将添加到暂存区的修改提交。
 4. git pull origin master -r       \\ rebase master, 确保自己的分支领先于最新 master 分支。
 5. git push origin your_branch     \\ 将本地分支推到远程, 若子仓mlu_op_test.proto有修改，先在子仓按照2～5步提交PR。
