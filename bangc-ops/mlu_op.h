@@ -11539,28 +11539,32 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
 
 // Group:BorderAlign
 /*!
- * @brief Extracts the border features of \b input based on the bounding boxes to compute the
- * maximum border features of \b input with the maximum pooling.
+ * @brief Extracts the border features of \b input based on the bounding boxes
+ * to compute the maximum border features of \b input with the maximum pooling.
  * The computing process of this operation is as follows:
- *  1. For each border line of each box (commonly four lines: top, left, bottom and right lines), uniformly samples
- *     pool_size + 1 positions on this line, involving the starting point and endpoint.
+ *  1. For each border line of each box (commonly four lines: top, left, bottom
+ *     and right lines), uniformly samples pool_size + 1 positions on this line,
+ *     involving the starting point and endpoint.
  *  2. Compute the corresponding features on these points by bilinear interpolation.
- *  3. Perform the max pooling over all pool_size + 1 positions to output the pooled features.
+ *  3. Perform the max pooling over all pool_size + 1 positions to output the
+ *     pooled features.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
- * ::mluOpBorderAlignForward operation. For detailed information, see ::mluOPHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * queues in ::mluOpBorderAlignForward operation. For detailed information,
+ * see ::mluOPHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor.
  * @param[in] input
- * Pointer to the MLU memory that stores the input tensor. The shape of \b input is [N, H, W, 4C].
- * Channels ranged in [0,C), [C,2C), [2C,3C), [3C,4C) represent the top, left, bottom and right features
- * respectively.
+ * Pointer to the MLU memory that stores the input tensor. The shape of \b input
+ * is [N, H, W, 4C]. Channels ranged in [0,C), [C,2C), [2C,3C), [3C,4C) represent
+ * the top, left, bottom and right features respectively.
  * @param[in] boxes_desc
  * Descriptor of bounding box tensor.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
- * Pointer to the MLU memory that stores boxes tensors. The shape of \b boxes is [N, H * W, 4].
+ * Pointer to the MLU memory that stores boxes tensors. The shape of \b boxes is
+ * [N, H * W, 4].
  * @param[in] pool_size
  * Number of positions sampled over the boxes' borders.
  * @param[in] output_desc
@@ -11569,42 +11573,42 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the output tensor. The shape of
  * argmax_idx is [N, H * W, 4, C].
  * @param[in] argmax_idx_desc
- * Descriptor of \b argmax_idx, containing dimension and the layout of \b argmax_idx.
+ * Descriptor of \b argmax_idx, containing dimension and the layout of \b argmax_idx .
  * @param[out] argmax_idx
- * Pointer to the MLU memory that stores the \b argmax_idx tensor, which is the indices of
- * maximum values after the max pooling. The shape of \b argmax_idx is [N, H * W, 4, C].
+ * Pointer to the MLU memory that stores the \b argmax_idx tensor, which is the
+ * indices of maximum values after the max pooling. The shape of \b argmax_idx
+ * is [N, H * W, 4, C].
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED,
  *   ::MLUOP_STATUS_EXECUTION_FAILED
  *
- * @par Formula
- * - See "BorderAlignForward Operator" section in "Cambricon BANG C OPS User Guide" for details.
- *
  * @par Data Type
- * - This function supports the following data types for input tensor \b input, \b boxes, \b pool_size,
- *    \b output and \b argmax_idx. Data type of the \b input, \b boxes, and \b output tensors must be the same.
- *   - input tensor: half, float.
- *   - boxes tensor: half, float.
- *   - pool_size: int32_t.
- *   - output tensor: half, float.
- *   - argmax_idx: int32_t.
+ * - The supported data types of input and output tensors are as follows:
+ *   <b>Note that the data type of \b input , \b boxes , and \b output
+ *   must be the same.
+ *   - input tensor: half, float
+ *   - boxes tensor: half, float
+ *   - output tensor: half, float
+ *   - argmax_idx tensor: int32_t
  *
  * @par Data Layout
- * - The supported data layout of \b input, \b boxes, \b output, and \b argmax_idx are as follows:
- *   - input tensor: \p MLUOP_LAYOUT_NHWC.
- *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - output tensor: \p MLUOP_LAYOUT_NHWC.
- *   - argmax_idx tensor: \p MLUOP_LAYOUT_NHWC.
+ * - The supported data layout of \b input , \b boxes , \b output , and
+ *   \b argmax_idx are as follows:
+ *   - input tensor: \p MLUOP_LAYOUT_NHWC
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - output tensor: \p MLUOP_LAYOUT_NHWC
+ *   - argmax_idx tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
- * - The \b input, \b output and \b argmax_idx must be 4D.
- * - The \b boxes tensor must be 3D array, and the highest dimension of \b boxes must be 4.
+ * - The \b input, \b output and \b argmax_idx are 4D tensor.
+ * - The \b boxes tensor is 3D tensor.
+ * - The dims[3] of \b boxes should be equal to 4.
  *
  * @par API Dependency
  * - None.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Example
@@ -11685,82 +11689,74 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
 // Group:BorderAlign
 /*!
  * @brief Computes the gradient of the input tensor of ::mluOpBorderAlignForward
- * according to the output gradient \b grad_output, the maximum pooling index \b
- * argmax_idx and bounding boxes \b boxes.
+ * according to the output gradient \b grad_output , the maximum pooling index \b
+ * argmax_idx and bounding boxes \b boxes .
  *
  * @param[in] handle
- * Handle to an MLUOPS context that is used to manage MLU devices and
- * queues in ::mluOpBorderAlignBackward operation. For detailed information, see
+ * Handle to an MLUOPS context that is used to manage MLU devices and queues
+ * in ::mluOpBorderAlignBackward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] grad_output_desc
  * The descriptor of the \b grad_output tensor.
  * @param[in] grad_output
- * Pointer to the MLU memory that stores the output gradient of
- * ::mluOpBorderAlignForward.
- * The shape of \b grad_output is [N, K, 4, C], where N is the number of
- * images, K is the product of
- * the width of images and the height of images, and C is the number of image
- * channels.
+ * Pointer to the MLU memory that stores the output gradient of ::mluOpBorderAlignForward.
+ * The shape of \b grad_output is [N, K, 4, C], where N is the number of images,
+ * K is the product of the width of images and the height of images, and C is the
+ * number of image channels.
  * @param[in] boxes_desc
- * Descriptor of bounding box tensor.
- * For detailed information, see ::mluOpTensorDescriptor_t.
+ * Descriptor of bounding box tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
- * Pointer to the MLU memory that stores \b boxes tensors. The shape of
- * \b boxes is [N, H * W, 4].
+ * Pointer to the MLU memory that stores \b boxes tensors. The shape of \b boxes is
+ * [N, H * W, 4].
  * @param[in] argmax_idx_desc
- * Descriptor of \b argmax_idx, containing dimension and the layout of
- * \b argmax_idx.
+ * Descriptor of \b argmax_idx , containing dimension and the layout of \b argmax_idx .
  * @param[in] argmax_idx
- * Pointer to the MLU memory that stores the \b argmax_idx tensor,
- * which is the result of
- * max pooling index. The shape of argmax_idx is [N, K, 4, C].
+ * Pointer to the MLU memory that stores the \b argmax_idx tensor, which is the result
+ * of max pooling index. The shape of argmax_idx is [N, K, 4, C].
  * @param[in] pool_size
  * Number of positions sampled over the boxes borders.
  * @param[in] grad_input_desc
- * Descriptor of \b grad_input, containing dimension and the layout of
- * output.
+ * Descriptor of \b grad_input , containing dimension and the layout of output.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the gradient of the input
- * tensor of ::mluOpBorderAlignForward.The shape of \b grad_input is [N, H, W, 4C], where
- * N is the number of images, H is the height of images, W is the width of images,
- * and C is the number of image channels.
+ * tensor of ::mluOpBorderAlignForward.The shape of \b grad_input is [N, H, W, 4C],
+ * where N is the number of images, H is the height of images, W is the width of
+ * images, and C is the number of image channels.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED,
  *   ::MLUOP_STATUS_EXECUTION_FAILED
  *
- * @par Formula
- * - See "BorderAlignBackward Operator" section in "Cambricon BANG C OPS User Guide"
- * for details.
- *
  * @par Data Type
- * - This function supports the following data types for \b grad_output, \b
- * boxes, \b argmax_idx, \b pool_size and \b grad_input. Data types of the \b grad_output, \b boxes,
- * and \b grad_input tensors should be the same.
- *  - grad_output tensor: half, float.
- *  - boxes tensor: half, float.
- *  - argmax_idx: int32_t.
- *  - pool_size: int32_t.
- *  - grad_input tensor: half, float.
+ * - The supported data types of input and output tensors are as follows:
+ *   <b>Note that the data type of \b grad_output , \b boxes , and \b grad_input
+ *   must be the same.
+ *   - grad_output tensor: half, float
+ *   - boxes tensor: half, float
+ *   - argmax_idx tensor: int32_t
+ *   - grad_input tensor: half, float
  *
  * @par Data Layout
- * - The supported data layout of \b grad_output, \b boxes, \b argmax_idx and,
- \b grad_input are as follows:
- *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC.
- *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY.
- *   - argmax_idx tensor: \p MLUOP_LAYOUT_NHWC.
- *   - grad_input tensor: \p MLUOP_LAYOUT_NHWC.
+ * - The supported data layout of \b grad_output , \b boxes , \b argmax_idx and,
+ *   \b grad_input are as follows:
+ *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC
+ *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - argmax_idx tensor: \p MLUOP_LAYOUT_NHWC
+ *   - grad_input tensor: \p MLUOP_LAYOUT_NHWC
+ *
  * @par Scale Limitation
- * - The \b grad_output, \b argmax_idx and \b grad_input should be 4D.
- * - The tensor \b boxes must be 3D array, and the highest dimension of \b
- * boxes must be 4.
+ * - The \b grad_output , \b argmax_idx and \b grad_input are 4D tensor.
+ * - The \b boxes is 3D tensor.
+ * - The dims[3] of \b boxes should be equal to 4.
+ * - The shape of \b grad_output and \b argmax_idx must be the same.
+ * - The value of \b argmax_idx should be in the range of [0, pool_size].
  *
  * @par API Dependency
  * - None.
  *
- * @note
- * - The inputs \b grad_output and \b boxes with NaN or infinity are not
- * supported.
+ * @par Note
+ * - None.
  *
  * @par Example
      @verbatim
