@@ -1,0 +1,2 @@
+# Parse .mlu files as cpp to support frontend syntax highlight.
+*.mlu linguist-language=C++
