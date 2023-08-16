@@ -11585,12 +11585,12 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
- *   <b>Note that the data type of \b input , \b boxes , and \b output
- *   must be the same.
  *   - input tensor: half, float
  *   - boxes tensor: half, float
  *   - output tensor: half, float
  *   - argmax_idx tensor: int32_t
+ *   <b>Note that the data type of \b input , \b boxes , and \b output
+ *   must be the same.
  *
  * @par Data Layout
  * - The supported data layout of \b input , \b boxes , \b output , and
@@ -11730,12 +11730,12 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  *
  * @par Data Type
  * - The supported data types of input and output tensors are as follows:
- *   <b>Note that the data type of \b grad_output , \b boxes , and \b grad_input
- *   must be the same.
  *   - grad_output tensor: half, float
  *   - boxes tensor: half, float
  *   - argmax_idx tensor: int32_t
  *   - grad_input tensor: half, float
+ *   <b>Note that the data type of \b grad_output , \b boxes , and \b grad_input
+ *   must be the same.
  *
  * @par Data Layout
  * - The supported data layout of \b grad_output , \b boxes , \b argmax_idx and,
