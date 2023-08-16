@@ -5,8 +5,6 @@
 | 算子名称    | indice_convolution_backward_filter       |
 | ----------- | ---------------------------------------- |
 | 编制人/日期 | 徐文明/2022-12-15                        |
-| 审批人/日期 | 王远/2022-12-15                          |
-| 审批人/日期 | 董成威/2022-12-15                        |
 
 - #### 修改记录
 
@@ -174,12 +172,3 @@ indiceConvBackwardFilter(filter_grad, output_grad, input, index_pair) {
 ## 4 性能问题/精度问题 ＆ 优化记录
 
 indice_convolution_backward_filter的关键瓶颈在于gather_nd和matmul, 只能靠子算子gather_nd和matmul的性能优化来提升性能。当前测试，性能瓶颈主要在gather_nd算子。
-
-## 5 方案实施
-
-初步实施计划如下
-
-- step1: 2022/12/05 - 2022/12/09: 完成host端的拼接逻辑
-- step2: 2022/12/12 - 2022/12/16: 完成generator测试环境的搭建
-- step3: 2022/12/19 - 2022/12/23: 本地功能调试
-- step4: 2022/12/26 - 2022/12/30: 代码review和入库

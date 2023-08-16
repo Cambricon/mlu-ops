@@ -14,7 +14,7 @@ MLU-OPS 算子精度验收标准
 
 各评价指标计算公式如下：
 
-<img src="./accuracy_standard_formula.png" alt="img" style="zoom:60%;" />
+<img src="./Accuracy-Standard-Formula.png" alt="img" style="zoom:60%;" />
 
 其中：
 

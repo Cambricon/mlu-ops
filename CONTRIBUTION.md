@@ -15,7 +15,7 @@
     - 算子接口设计
     - 算子实现方案设计
 
-2. 算子代码开发，参考[BANGC-OPS算子开发流程](docs/bangc-docs/BANGC-OPS-Operator-Development-Process.md)或[BANGPy-OPS算子开发流程](docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md)、[PULL REQUEST流程](./docs/pr.md)，主要包括：
+2. 算子代码开发，参考[BANGC-OPS算子开发流程](docs/bangc-docs/BANGC-OPS-Operator-Development-Process.md)或[BANGPy-OPS算子开发流程](docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md)、[PULL REQUEST流程](./docs/Pull-Request.md)，主要包括：
     - 算子设计文档提交 `PR`（Pull Requset），其中 BANGC 算子设计文档目录为`docs/bangc-docs/design_docs` ，BANGPy 算子设计文档目录为`docs/bangpy-docs/design_docs`
     - GTest 代码开发
     - 算子伪代码开发
