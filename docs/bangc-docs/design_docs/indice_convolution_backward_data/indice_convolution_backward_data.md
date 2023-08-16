@@ -4,8 +4,6 @@
 | 算子名称    | IndiceConvolutionBackwardData                             |
 | ----------- | ------------------------------------------------------------|
 | 编制人/日期 | 杜泽坤/2022-11-28                                            |
-| 审批人/日期 | 董成威/2023-2-6                                              |
-| 审批人/日期 | 王远/2023-2-6                                               |
 
 * #### 修改记录
 
@@ -15,7 +13,7 @@
 
 * #### 内容描述
 
-本文档为`IndiceConvolutionBackwardData`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。该算子为`IndiceConvolutionForward`算子的反向算子
+本文档为`IndiceConvolutionBackwardData`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。该算子为`IndiceConvolutionForward`算子的反向算子
 
 ## 1 需求分析
 
