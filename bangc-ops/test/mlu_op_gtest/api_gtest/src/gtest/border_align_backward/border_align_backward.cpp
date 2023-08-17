@@ -19,69 +19,73 @@
 #include "gtest/gtest.h"
 #include "mlu_op.h"
 #include "core/context.h"
-//#include "test/mluOp_gtest/src/zoo/border_align_backward/border_align_backward.h"
+//#include
+//"test/mluOp_gtest/src/zoo/border_align_backward/border_align_backward.h"
 
 namespace mluopapitest {
 
 class border_align_backward : public testing::Test {
  public:
-  void set_params(bool handle,
-                  bool grad_output_desc,
-                  bool grad_output,
-                  bool boxes_desc,
-                  bool boxes,
-                  bool argmax_idx_desc,
-                  bool argmax_idx,
-                  bool grad_input_desc,
-                  bool grad_input) {
+  void set_params(bool handle, bool grad_output_desc, bool grad_output,
+                  bool boxes_desc, bool boxes, bool argmax_idx_desc,
+                  bool argmax_idx, bool grad_input_desc, bool grad_input) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
     if (grad_output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_output_desc_));
       std::vector<int> grad_output_dims{1, 4, 4, 1};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(grad_output_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         grad_output_dims.size(), grad_output_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          grad_output_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+          grad_output_dims.size(), grad_output_dims.data()));
     }
     if (grad_output) {
       GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&grad_output_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+                  cnrtMalloc(&grad_output_,
+                             16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (boxes_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes_desc_));
       std::vector<int> boxes_dims{1, 4, 4};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         boxes_dims.size(), boxes_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, MLUOP_LAYOUT_ARRAY,
+                                           MLUOP_DTYPE_FLOAT, boxes_dims.size(),
+                                           boxes_dims.data()));
     }
     if (boxes) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&boxes_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+      GTEST_CHECK(
+          CNRT_RET_SUCCESS ==
+          cnrtMalloc(&boxes_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (argmax_idx_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&argmax_idx_desc_));
       std::vector<int> argmax_idx_dims{1, 4, 4, 1};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(argmax_idx_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
-                                         argmax_idx_dims.size(), argmax_idx_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          argmax_idx_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+          argmax_idx_dims.size(), argmax_idx_dims.data()));
     }
     if (argmax_idx) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&argmax_idx_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+      GTEST_CHECK(
+          CNRT_RET_SUCCESS ==
+          cnrtMalloc(&argmax_idx_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (grad_input_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_input_desc_));
       std::vector<int> grad_input_dims{1, 2, 2, 4};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(grad_input_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
-                                         grad_input_dims.size(), grad_input_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          grad_input_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+          grad_input_dims.size(), grad_input_dims.data()));
     }
     if (grad_input) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&grad_input_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+      GTEST_CHECK(
+          CNRT_RET_SUCCESS ==
+          cnrtMalloc(&grad_input_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
   }
   mluOpStatus_t compute() {
     mluOpStatus_t status = mluOpBorderAlignBackward(
-        handle_, grad_output_desc_, grad_output_, boxes_desc_, boxes_, argmax_idx_desc_,
-        argmax_idx_, pool_size_, grad_input_desc_, grad_input_);
+        handle_, grad_output_desc_, grad_output_, boxes_desc_, boxes_,
+        argmax_idx_desc_, argmax_idx_, pool_size_, grad_input_desc_,
+        grad_input_);
     destroy();
     return status;
   }
@@ -149,7 +153,8 @@ class border_align_backward : public testing::Test {
         grad_input_ = nullptr;
       }
     } catch (const std::exception &e) {
-      FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+      FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+             << " in border_align_backward";
     }
   }
 
@@ -172,7 +177,8 @@ TEST_F(border_align_backward, BAD_PARAM_handle_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -182,7 +188,8 @@ TEST_F(border_align_backward, BAD_PARAM_grad_output_desc_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -192,7 +199,8 @@ TEST_F(border_align_backward, BAD_PARAM_grad_output_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -202,7 +210,8 @@ TEST_F(border_align_backward, BAD_PARAM_boxes_desc_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -212,7 +221,8 @@ TEST_F(border_align_backward, BAD_PARAM_boxes_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -222,7 +232,8 @@ TEST_F(border_align_backward, BAD_PARAM_argmax_idx_desc_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -232,7 +243,8 @@ TEST_F(border_align_backward, BAD_PARAM_argmax_idx_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -242,7 +254,8 @@ TEST_F(border_align_backward, BAD_PARAM_grad_input_desc_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 
@@ -252,7 +265,8 @@ TEST_F(border_align_backward, BAD_PARAM_grad_input_null) {
     mluOpStatus_t status = compute();
     EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_backward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_backward";
   }
 }
 

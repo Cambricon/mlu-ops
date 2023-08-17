@@ -23,63 +23,65 @@
 namespace mluopapitest {
 class border_align_forward_test : public testing::Test {
  public:
-  void set_params(bool handle,
-                  bool input_desc,
-                  bool input,
-                  bool boxes_desc,
-                  bool boxes,
-                  bool output_desc,
-                  bool output,
-                  bool argmax_idx_desc,
-                  bool argmax_idx) {
+  void set_params(bool handle, bool input_desc, bool input, bool boxes_desc,
+                  bool boxes, bool output_desc, bool output,
+                  bool argmax_idx_desc, bool argmax_idx) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
     if (input_desc) {
       std::vector<int> input_dims{2, 10, 10, 20};
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 4,
-                                         input_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, MLUOP_LAYOUT_NHWC,
+                                           MLUOP_DTYPE_FLOAT, 4,
+                                           input_dims.data()));
     }
     if (input) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&input_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+      GTEST_CHECK(
+          CNRT_RET_SUCCESS ==
+          cnrtMalloc(&input_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (boxes_desc) {
       std::vector<int> boxes_dims{2, 100, 4};
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 3,
-                                         boxes_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, MLUOP_LAYOUT_ARRAY,
+                                           MLUOP_DTYPE_FLOAT, 3,
+                                           boxes_dims.data()));
     }
     if (boxes) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&boxes_, 800 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+      GTEST_CHECK(
+          CNRT_RET_SUCCESS ==
+          cnrtMalloc(&boxes_, 800 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (output_desc) {
       std::vector<int> output_dims{2, 100, 4, 5};
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 4,
-                                         output_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, MLUOP_LAYOUT_NHWC,
+                                           MLUOP_DTYPE_FLOAT, 4,
+                                           output_dims.data()));
     }
     if (output) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&output_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+      GTEST_CHECK(
+          CNRT_RET_SUCCESS ==
+          cnrtMalloc(&output_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (argmax_idx_desc) {
       std::vector<int> argmax_idx_dims{2, 100, 4, 5};
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&argmax_idx_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(argmax_idx_desc_, MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 4,
-                                         argmax_idx_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(argmax_idx_desc_, MLUOP_LAYOUT_NHWC,
+                                           MLUOP_DTYPE_FLOAT, 4,
+                                           argmax_idx_dims.data()));
     }
     if (argmax_idx) {
       GTEST_CHECK(CNRT_RET_SUCCESS ==
-      cnrtMalloc(&argmax_idx_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
+                  cnrtMalloc(&argmax_idx_,
+                             4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
   }
   mluOpStatus_t compute() {
-    mluOpStatus_t status =
-        mluOpBorderAlignForward(handle_, input_desc_, input_, boxes_desc_, boxes_, pool_size_,
-                               output_desc_, output_, argmax_idx_desc_, argmax_idx_);
+    mluOpStatus_t status = mluOpBorderAlignForward(
+        handle_, input_desc_, input_, boxes_desc_, boxes_, pool_size_,
+        output_desc_, output_, argmax_idx_desc_, argmax_idx_);
     destroy();
     return status;
   }
@@ -137,7 +139,8 @@ class border_align_forward_test : public testing::Test {
         GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_idx_));
       }
     } catch (const std::exception &e) {
-      FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+      FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+             << " in border_align_forward";
     }
   }
 
@@ -159,7 +162,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_handle_null) {
     set_params(false, true, true, true, true, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -168,7 +172,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_input_desc_null) {
     set_params(true, false, true, true, true, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -177,7 +182,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_input_null) {
     set_params(true, true, false, true, true, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -186,7 +192,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_boxes_desc_null) {
     set_params(true, true, true, false, true, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -195,7 +202,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_boxes_null) {
     set_params(true, true, true, true, false, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -204,7 +212,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_output_desc_null) {
     set_params(true, true, true, true, true, false, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -213,7 +222,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_output_null) {
     set_params(true, true, true, true, true, true, false, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -222,7 +232,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_argmax_idx_desc_null) {
     set_params(true, true, true, true, true, true, true, false, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
@@ -231,7 +242,8 @@ TEST_F(border_align_forward_test, BAD_PARAM_argmax_idx_null) {
     set_params(true, true, true, true, true, true, true, true, false);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in border_align_forward";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in border_align_forward";
   }
 }
 
