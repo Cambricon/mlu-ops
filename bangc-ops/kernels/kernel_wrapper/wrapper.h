@@ -92,7 +92,8 @@
     const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t,     \
     void *, const mluOpTensorDescriptor_t, void *
 
-#define NMS_PARAM_TYPE                                                        \
+
+#define NMS_PARAM_TYPE                                                     \
     mluOpHandle_t, const mluOpNmsDescriptor_t,                                \
     const mluOpTensorDescriptor_t, const void *,                              \
     const mluOpTensorDescriptor_t, const void *,                              \
