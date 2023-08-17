@@ -19,8 +19,6 @@
 #include "gtest/gtest.h"
 #include "mlu_op.h"
 #include "core/context.h"
-//#include
-//"test/mluOp_gtest/src/zoo/border_align_backward/border_align_backward.h"
 
 namespace mluopapitest {
 
