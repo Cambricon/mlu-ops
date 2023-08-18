@@ -755,6 +755,12 @@ mluOpRoiPointPool3d
    local\_y = (x - cx) * sin(-rz) + (y - cy) * cos(-rz) \\
    in\_flag = |local\_x| < \frac{dx}{2} \& |local\_y| < \frac{dy}{2} \& |z - cz| <= \frac{dz}{2}
 
+.. _roi_pooling_forward:
+
+mluOpRoiPoolingForward
+----------------------------------
+该算子用于目标检测模型，在经过卷积层计算后的feature map上，针对检测重点关注的区域，即不同ROI对应的feature map区域进行池化，以得到相同规模的输出，进行全连接计算，满足整个网络训练任务。
+
 .. _rotated_feature_align_backward:
 
 mluOpRotatedFeatureAlignBackward

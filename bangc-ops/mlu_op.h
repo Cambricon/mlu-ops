@@ -443,6 +443,22 @@ typedef enum {
   MLUOP_REDUCE_DMAX  = 2, /*!< Computes the maximun value. */
 } mluOpReduceMode_t;
 
+/*!
+ * @brief Enumeration variables describing the pooling modes that can be used to
+ * implement the pooling operation.
+ */
+typedef enum {
+  MLUOP_POOLING_MAX                           = 0, /*!< The max pooling mode is implemented.*/
+  MLUOP_POOLING_AVERAGE_COUNT_INCLUDE_PADDING = 1,
+  /*!< The average pooling with padding mode is implemented.*/
+  MLUOP_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING = 2,
+  /*!< The average pooling without padding mode is implemented.*/
+  MLUOP_POOLING_FIXED = 3,
+  /*!< The fixed mode is implemented. This mode is used in the unpool operation.
+   * In this mode, each input pixel will be put to the center of the pooling kernel
+   * regardless of the index.*/
+} mluOpPoolingMode_t;
+
 /******************************************************************************
  * MLUOP Runtime Management
  ******************************************************************************/
@@ -13711,6 +13727,152 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
                                        const mluOpTensorDescriptor_t idx_desc,
                                        void *idx);
 
+// Group:RoiPoolingForward
+/*!
+ * @brief Generates a fixed size feature map and input feature index
+ * of argmax for each ROI (Regions of Interest) to perform ::mluOpRoiPoolingForward operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiPoolingForward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] pooling_mode
+ * The pooling mode of ROI Pooling Forward defined in ::mluOpPoolingMode_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor in the roipoolingforward process. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] rois_desc
+ * The descriptor of the ROIs tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores the ROIS tensor.
+ * @param[in] spatial_scale
+ * The spatial scale of each ROI in the input feature map.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ * @param[out] argmax
+ * Pointer to the MLU memory that stores the argmax tensor. This pointer may be NULL. The tensor
+ * \b argmax means input feature index of maximum for each ROI.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b input, rois tensor \b rois,
+ *   output tensor \b output, and argmax tensor \b argmax. The data type of \b input, \b rois, and \b output
+ *   must be the same.
+ *   - input tensor: half, float.
+ *   - rois tensor: half, float.
+ *   - output tensor: half, float.
+ *   - argmax tensor: int32.
+ *
+ * @par Data Layout
+ * - The supported data layouts for \b input, \b rois, \b output, and \b argmax are as follows:
+ *   - input tensor: \b MLUOP_LAYOUT_NHWC.
+ *   - ROIs tensor: \b MLUOP_LAYOUT_ARRAY, only supports 2D tensor.
+ *   - output tensor: \b MLUOP_LAYOUT_NHWC.
+ *   - argmax tensor: \b MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The value of \b pooling_mode only supports \p MLUOP_POOLING_MAX.
+ * - The input tensor, output tensor, and argmax tensor must have four dimensions.
+ * - The size of the lowest dimension of input tensors, output tensor, and argmax tensor must be the same.
+ * - The total number of dimensions of ROIs tensor must be 2.
+ * - The size of the highest dimension of output tensor and rois tensor must be the same.
+ * - The shape of \b rois must be [rois_num, 5]. \b rois_num means the total number of \b rois.
+ * - \b Rois[i] consists of [batch_id, x1, y1, x2, y2]. \b batch_id should be in the range of
+ *   [0, batch_num - 1]. \b x1 and \b y1 should be greater than or equal to 0. \b x2 should be
+ *   greater than \b x1. \b y2 must be greater than \b y1. \b batch_id represents ID of the batch of \b rois. \b x1, \b
+ *   y1, \b x2 and \b y2 mean the coordinate values of rois in the input feature map. \b batch_num means the
+ *   total number of the batch.
+ * - \b Spatial_scale should be in the range of (0, 1].
+ * - \b Output consists of [rois_num, pooled_h, pooled_w, channels]. In the dimensions of the h and w of the input
+ *   and the output, (\b x2 - \b x1) * (\b y2 - \b y1) * \b spatial_scale * \b spatial_scale / (\b pooled_h * \b
+ *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram. When the supported MLU
+ *   platform is 200, the nram_limitation is (98304 - 4 * \b channels) / 2. When the supported MLU platform is 300,
+ *   the nram_limitation is (163804 - 4 * \b channels) / 2. \b pooled_h means height of output. \b pooled_w means width
+ *   of output.
+ *
+ * @par API Dependency
+ * - None
+ *
+ * @par Note
+ * - It is not recommended to set the data type of input tensor, ROIS tensor and output tensors
+ *   that may cause the low accuracy on MLU200 series.
+ * - When the input data or parameter contains NaN or infinity:
+ *   - On MLU200 series, the \b output is the positive saturation value.
+ *     The \b argmax is the index of the last NaN in the kernel of the pooling.
+ *   - On MLU300 series, if the last value in the kernel of the pooling is NaN, \b argmax is
+ *     the index of the last value, \b output is the last value, as shown in example 2 below.
+ *     Otherwise, \b argmax is the index of the maximum value after the last NaN,
+ *     \b output is the maximum value after the last NaN, as shown in example 3 below.
+ *
+ * @par Example
+ * - The example 1 of the roipoolingforward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 4 * 4 * 1 and 1 * 5 -->input: [[[1.0],[2.0],[3.0],[4.0]],
+                                                            [[5.0],[6.0],[7.0],[8.0]],
+                                                            [[9.0],[10.0],[11.0],[12.0]],
+                                                            [[13.0],[14.0],[15.0],[16.0]]]
+
+     --> rois: [[1.0, 0.0, 0.0, 3.0, 3.0]]
+
+     params:
+         pooling_modek: 0, spatial_scale: 1.0
+
+     output array by 1 * 2 * 2 * 1 --> output: [[[6.0],[8.0]],
+                                                [[14.0],[16.0]]]
+
+     argmax array by 1 * 2 * 2 * 1 --> argmax: [[[5],[7]],
+                                                [[13],[15]]]
+     @endverbatim
+
+   - The example 2 of the roipoolingforward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 2 * 2 * 1 and 1 * 5 --> input: [[[1.0],[2.0]],
+                                                             [[3.0],[NaN]]]
+
+     --> rois: [[1.0, 0.0, 0.0, 1.0, 1.0]]
+
+     params:
+         pooling_mode: 0, spatial_scale: 1.0
+
+     output array by 1 * 1 * 1 * 1 --> output: [[[NaN]]]
+
+     argmax array by 1 * 1 * 1 * 1 --> argmax: [[[3]]]
+     @endverbatim
+
+   - The example 3 of the roipoolingforward operation is as follows:
+     @verbatim
+     input two arrays by 1 * 2 * 2 * 1 and 1 * 5 --> input: [[[1.0],[NaN]],
+                                                             [[3.0],[4.0]]]
+
+     --> rois: [[1.0, 0.0, 0.0, 1.0, 1.0]]
+
+     params:
+         pooling_mode: 0, spatial_scale: 1.0
+
+     output array by 1 * 1 * 1 * 1 --> output: [[[4.0]]]
+
+     argmax array by 1 * 1 * 1 * 1 --> argmax: [[[3]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/pytorch/pytorch/caffe2/operators/roi_pool_op.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiPoolingForward(mluOpHandle_t handle,
+                       mluOpPoolingMode_t pooling_mode,
+                       const mluOpTensorDescriptor_t input_desc,
+                       const void *input,
+                       const mluOpTensorDescriptor_t rois_desc,
+                       const void *rois,
+                       float spatial_scale,
+                       const mluOpTensorDescriptor_t output_desc,
+                       void *output,
+                       int *argmax);
 #if defined(__cplusplus)
 }
 #endif

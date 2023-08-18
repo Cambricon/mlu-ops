@@ -1,0 +1,68 @@
+op_name: "roi_pooling_forward"
+input {
+  id: "input1"
+  shape {
+    dims: 16
+    dims: 64
+    dims: 64
+    dims: 68
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 23
+    lower_bound: -5.0
+    upper_bound: 5.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape {
+    dims: 10
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 32
+    lower_bound: 0.0
+    upper_bound: 10.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output1"
+  shape {
+    dims: 10
+    dims: 1
+    dims: 1
+    dims: 68
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  mlu_dtype: DTYPE_FLOAT
+}
+output {
+  id: "output2"
+  shape {
+    dims: 10
+    dims: 1
+    dims: 1
+    dims: 68
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+  mlu_dtype: DTYPE_INT32
+}
+roi_pooling_forward_param {
+  spatial_scale: 1.0
+  mode: POOLING_MAX
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
