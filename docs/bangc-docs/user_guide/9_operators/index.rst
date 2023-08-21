@@ -309,7 +309,7 @@ mluOpMaskedCol2imForward
 
 根据mask坐标信息将按列摆放的数据还原到batch形状。
 
-.. __masked_im2col_forward:
+.. _masked_im2col_forward:
 
 mluOpMaskedIm2colForward
 ---------------------------------
