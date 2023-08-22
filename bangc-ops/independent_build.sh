@@ -397,7 +397,7 @@ python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGE
 pushd ${BUILD_PATH} > /dev/null
   prog_log_info "Rmove cmake cache ${PWD}"
   find . -maxdepth 1 -type f -not -name ${MLUOP_SYMBOL_VIS_FILE} -exec rm -f {} \;
-  rm -rf CMakeFiles || :
+  rm -rf CMakeFiles mlu_op_gtest || :
 
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
                 -DNEUWARE_HOME="${NEUWARE_HOME}" \
