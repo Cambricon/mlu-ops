@@ -10,23 +10,6 @@
 
 相比 `generator`，`gen_case` 是在运行算子时保存测试用例，`generator` 是运行算子前创建测试用例供算子使用。在 MLUOPS 工程中，`GEN_CASE` 主要以`gen_case.h` 和 `gen_case.cpp` 两个文件添加到工程中，文件中涉及到的数据结构或是类型，主要存在于 `mlu_op_core.h`、`core` 文件夹和 `mlu_op_test.proto` 中。
 
-使用示例，gencase 生成带真实数据的prototxt(拷贝到终端执行)：
-```bash
-  export MLUOP_GEN_CASE=2
-  export MLUOP_GEN_CASE_OP_NAME=#op name
-  export MLUOP_GEN_CASE_DUMP_DATA=1
-  #二进制算子
-  export CNNL_GEN_CASE=2
-  export CNNL_GEN_CASE_OP_NAME=#op name
-  export CNNL_GEN_CASE_DUMP_DATA=1
-```
-对上述命令得到的prototxt执行测试:
-```bash
-  ./mluop_gtest --gtest_filter=*op_name* --cases_dir=./gen_case/ 
-  #单个prototxt 测试
-  ./mluop_gtest --gtest_filter=*op_name* --case_path=./gen_case/op_name.prototxt 
-```
-
 ### 1. 算子中调用 GEN_CASE
 
 #### 1.1 生成算子测例 `prototxt` 文件

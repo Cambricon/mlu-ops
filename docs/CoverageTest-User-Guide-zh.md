@@ -1,6 +1,6 @@
 ## MLU-OPS Coverage Test 使用指南
 ### 0. 环境要求
-需要安装cntoolkit、libxml2-dev、libprotobuf-dev<=3.8.0、protobuf-compiler<=3.8.0、llvm-6.0-dev、lcov 、html2text
+需要安装好cntoolkit、libxml2-dev、libprotobuf-dev<=3.8.0、protobuf-compiler<=3.8.0、llvm-6.0-dev、lcov 、html2text
 
 ### 1. 编译
 
