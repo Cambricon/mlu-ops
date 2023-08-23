@@ -203,6 +203,15 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
                   "same as the h_feature * w_feature.";
     return MLUOP_STATUS_BAD_PARAM;
   }
+
+  // check large tensor
+  if ((mluOpGetTensorElementNum(input_desc) >= LARGE_TENSOR_NUM) ||
+      (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM)) {
+    LOG(ERROR) << api << " Overflow max tensor num."
+               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
   return MLUOP_STATUS_SUCCESS;
 }
 
