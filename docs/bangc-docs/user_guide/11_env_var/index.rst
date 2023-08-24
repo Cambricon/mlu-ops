@@ -6,6 +6,54 @@ Cambricon BANG C OPS库环境变量
 
 本章介绍 Cambricon BANG C OPS 库环境变量。
 
+.. _MLUOP_BUILD_GTEST:
+ 
+MLUOP_BUILD_GTEST
+######################
+
+**功能描述**
+
+编译MLU-OPS的GTEST。
+
+**使用方法**
+
+- export MLUOP_BUILD_GTEST=ON。
+
+在build脚本中默认设为ON。
+
+.. _MLUOP_GTEST_DUMP_DATA:
+ 
+MLUOP_GTEST_DUMP_DATA
+######################
+
+**功能描述**
+
+将MLU-OPS的GTEST的输入输出数据打印至文件中。
+
+**使用方法**
+
+- export MLUOP_GTEST_DUMP_DATA=ON： 保存 GTEST 测试过程中用到的输入输出数据。
+
+不使用此环境变量时需要unset环境变量。
+
+.. _MLUOP_GEN_CASE:
+ 
+MLUOP_GEN_CASE 
+######################
+
+**功能描述**
+
+运行前设置，设置gen_case工具功能等级。
+
+**使用方法**
+
+- export MLUOP_GEN_CASE=0：关闭 gen_case 模块功能。
+- export MLUOP_GEN_CASE=1：生成 prototxt，输入输出只保留 shape 等信息。
+- export MLUOP_GEN_CASE=2：生成 prototxt，并保留输入真实真。
+- export MLUOP_GEN_CASE=3：不生成 prototxt，只在屏幕上打印输入输出的 shape 等信息。
+
+更详细请参见 `MLU-OPS GEN_CASE 使用指南<https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
+
 .. _MLUOP_MIN_VLOG_LEVEL:
  
 MLUOP_MIN_VLOG_LEVEL
@@ -30,7 +78,7 @@ MLUOP_MIN_VLOG_LEVEL
 .. _MLUOP_LOG_ONLY_SHOW:
 
 MLUOP_LOG_ONLY_SHOW
-###################
+####################
 
 **功能描述**
 
@@ -60,26 +108,102 @@ MLUOP_LOG_COLOR_PRINT
 
 默认值为ON。
 
-.. _MLUOP_GEN_CASE:
 
-MLUOP_GEN_CASE
-######################
+.. _MLUOP_BUILD_ASAN_CHECK:
+ 
+MLUOP_BUILD_ASAN_CHECK
+#######################
 
 **功能描述**
 
-开启算子调试信息保存功能。开启本功能后，调用算子时，将自动保存算子调试信息。
-
-开启本功能将降低算子性能，只支持整数值，输入不为整数值时取默认值0。
+在编译的时候设置是否打开ASAN内存检查。
 
 **使用方法**
 
-- export MLUOP_GEN_CASE=1：开启算子调试信息保存功能。在调用任意Cambricon BANG C OPS算子接口后，会在当前目录生成名为 ``gen_case`` 的文件夹，里面包含被调用到的算子的调试信息文件。调试信息文件中会记录算子本次被调用时的输入输出形状以及算子参数等信息。
+- export MLUOP_BUILD_ASAN_CHECK=ON： 表示编译ASAN内存检查。
 
-- export MLUOP_GEN_CASE=2：开启算子调试信息保存功能。在等级1的基础上，生成的算子调试信息文件还会记录算子输入输出数据。export MLUOP_GEN_CASE_DUMP_DATA=1后会以文本形式保存数据，MLUOP_GEN_CASE_DUMP_DATA=2会以二进制形式保存浮点数据。MLUOP_GEN_CASE_DUMP_DATA_OUTPUT用于记录算子输出，用法相同。
+默认不开启。该工具仅在Ubuntu上与Debian上有效。无论环境变量如何设置，Centos上都不会编译该工具。如果没有检测到内存问题，运行算子case时将不会输出任何内容; 若检测到内存问题，运行算子case时将输出错误内容。
 
-- export MLUOP_GEN_CASE=3：开启算子调试信息保存功能。在调用算子时，将算子的调试信息打印在屏幕上，不会保存成文件。
+.. _MLUOP_SET_JOB_LIMIT_CAPABILITY:
 
-- export MLUOP_GEN_CASE=0 或 unset MLUOP_GEN_CASE：关闭算子调试信息保存功能。
+MLUOP_SET_JOB_LIMIT_CAPABILITY
+################################
 
-默认值为0。
+**功能描述**
+
+设置最大JOB限制数量，默认不设置。
+
+**使用方法**
+
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=1：CN_KERNEL_CLASS_UNION。
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=2：CN_KERNEL_CLASS_UNION2。
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=3：CN_KERNEL_CLASS_UNION4。
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=4：CN_KERNEL_CLASS_UNION8。
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=5：CN_KERNEL_CLASS_UNION16。
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=6：CN_KERNEL_CLASS_BLOCK不使用。
+- export MLUOP_SET_JOB_LIMIT_CAPABILITY=7：CN_KERNEL_CLASS_NONE不使用。
+
+JOB_LIMIT和CLUSTER_LIMIT需要同时设置来保证合法性。
+
+.. _MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY:
+
+MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY
+######################################
+
+**功能描述**
+
+设置最大JOB限制数量，默认不设置。
+
+**使用方法**
+
+- export MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY=1：1cluster。
+- export MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY=3：2cluster。
+- export MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY=7：3cluster。
+- export MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY=15：4cluster。
+- export MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY=...：从右往左，每多一个连续的1表示1个cluster。
+
+JOB_LIMIT 和CLUSTER_LIMIT 需要同时设置来保证合法性。原理是：1的二进制是0000,0001: 1号cluster可用; 3的二进制是0000,0011: 1号和2好cluster可用; 如果有特殊需求，如只想用2号cluster:设置为2: 0000,0010。
+
+.. _MLUOP_GTEST_SET_GDRAM:
+
+MLUOP_GTEST_SET_GDRAM
+#######################
+
+**功能描述**
+
+作用是在GDRAM前后刷NAN/INF。
+
+**使用方法**
+
+- export MLUOP_GTEST_SET_GDRAM=NAN：在GDRAM前后刷NAN。
+- export MLUOP_GTEST_SET_GDRAM=INF：在GDRAM前后刷INF。
+
+若不设置则根据日期，偶数天刷NAN，奇数天刷INF。
+
+.. _MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM:
+
+MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM
+#####################################
+
+**功能描述**
+
+设置在gdram上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值。
+
+**使用方法**
+
+- export MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM=ON。
+- export MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM=OFF。
+
+.. _MLUOP_GTEST_UNALIGNED_ADDRESS_SET:
+
+MLUOP_GTEST_UNALIGNED_ADDRESS_SET
+#####################################
+
+**功能描述**
+
+设置在gdram上申请的空间地址是64 bytes对齐的。
+
+**使用方法**
+
+- export MLUOP_GTEST_UNALIGNED_ADDRESS_SET=NUM。
 

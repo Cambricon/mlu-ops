@@ -9,16 +9,16 @@
 ```
 $cd mlu-ops
 mlu-ops$cd bangc-ops
-#若NEUWARE_HOME不是默认路径则一定要指定NEUWARE_HOME，否则出现llvm-protobuf: command not found
-./build.sh -c --mlu370 --filter=*abs*
+# 若NEUWARE_HOME不是默认路径则一定要指定NEUWARE_HOME，否则出现llvm-protobuf: command not found
+bangc-ops$./build.sh -c --mlu370 --filter=*abs*
 ```
 
 ### 2. 测试
 
 ```
-cd build/test
-../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*abs*"
-#若正反向算子在一个文件时，例如roi_crop_forward, roi_crop_backward, 应设置 --gtest_filter=*roi_crop*
+bangc-ops$cd build/test
+test$ ../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*abs*"
+# 若正反向算子在一个文件时，例如roi_crop_forward, roi_crop_backward, 应设置 --gtest_filter=*roi_crop*
 ```
 
 ### 3. 结果
@@ -31,7 +31,7 @@ Current view: top_level - kernels/abs             Hit Total Coverage
 Test:         unnamed                  Lines:     18  40    45.0 %
 Date:         2023-08-21 19:55:05      Functions: 3   8     37.5 %
 
-#下面部分写进测试报告即可(正式算子kernel 各代码文本 Line Coverage不低于95%)
+# 下面部分写进测试报告即可(正式算子kernel 各代码文本 Line Coverage不低于95%)
   Filename [Sort by Line Coverage [Sort_by_line_coverage] Functions [Sort_by
   name]                                                   function_coverage]
   abs_block.mlu     [45.0%][45.0%] 45.0 %18 / 40         37.5 %3 / 8
