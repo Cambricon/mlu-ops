@@ -187,7 +187,7 @@ MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM
 
 **功能描述**
 
-设置在gdram上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值。
+设置在GDRAM上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值。
 
 **使用方法**
 
@@ -201,7 +201,7 @@ MLUOP_GTEST_UNALIGNED_ADDRESS_SET
 
 **功能描述**
 
-设置在gdram上申请的空间地址是64 bytes对齐的。
+设置在GDRAM上申请的空间地址是64 bytes对齐的。
 
 **使用方法**
 

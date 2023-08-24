@@ -163,6 +163,6 @@ bangc-ops$ source env_gencase_set.sh off
 | 8 | MLUOP_BUILD_ASAN_CHECK | 在编译的时候设置是否打开ASAN内存检查  |=ON时，表示编译ASAN内存检查;<br>！=ON时，表示不编译ASAN内存检查 | 1.默认不开启 <br>2.该工具仅在Ubuntu上与Debian上有效。无论环境变量如何设置，Centos上都不会编译该工具。<br>3.如果没有检测到内存问题，运行算子case时将不会输出任何内容; 若检测到内存问题，运行算子case时将输出错误内容。|
 |9|MLUOP_SET_JOB_LIMIT_CAPABILITY|设置最大JOB限制数量，默认不设置。|=1 CN_KERNEL_CLASS_UNION<br>=2 CN_KERNEL_CLASS_UNION2<br>=3 CN_KERNEL_CLASS_UNION4<br>=4 CN_KERNEL_CLASS_UNION8<br>=5 CN_KERNEL_CLASS_UNION16<br>=6 CN_KERNEL_CLASS_BLOCK不使用<br>=7 CN_KERNEL_CLASS_NONE不使用<br>|JOB_LIMIT和CLUSTER_LIMIT需要同时设置来保证合法性|
 |10|MLUOP_GTEST_CLUSTER_LIMIT_CAPABILITY|设置最大cluster限制数量，默认不设置|=1 1cluster<br>=3 2cluster<br>=7 3cluster<br>=15 4cluster<br>...<br>从右往左，每多一个连续的1表示1个cluster |JOB_LIMIT 和CLUSTER_LIMIT 需要同时设置来保证合法性<br>原理是：<br>1的二进制是0000,0001: 1号cluster可用<br>3的二进制是0000,0011: 1号和2好cluster可用<br>...<br>如果有特殊需求，如只想用2号cluster:设置为2: 0000,0010|
-|11|MLUOP_GTEST_SET_GDRAM|作用是在gdram前后刷NAN/INF| NAN/INF  在gdram前后刷NAN/INF|若不设置则根据日期，偶数天刷NAN，奇数天刷INF|
-|12|MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM|设置在gdram上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值| ON/OFF  ||
-|13|MLUOP_GTEST_UNALIGNED_ADDRESS_SET|设置在gdram上申请的空间地址是64 bytes对齐的| = NUM ||
+|11|MLUOP_GTEST_SET_GDRAM|作用是在GDRAM前后刷NAN/INF| NAN/INF  在GDRAM前后刷NAN/INF|若不设置则根据日期，偶数天刷NAN，奇数天刷INF|
+|12|MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM|设置在GDRAM上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值| ON/OFF  ||
+|13|MLUOP_GTEST_UNALIGNED_ADDRESS_SET|设置在GDRAM上申请的空间地址是64 bytes对齐的| = NUM ||
