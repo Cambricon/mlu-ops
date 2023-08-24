@@ -155,7 +155,7 @@ bangc-ops$ source env_gencase_set.sh off
 |---|------------------------|---------------------------------------------------------|----|-----------------------------------------|
 | 1 | MLUOP_BUILD_GTEST  | 编译MLU-OPS的GTEST| ON时使能，其他情况不使能           | 在build脚本中默认设为ON     |
 | 2 | MLUOP_GTEST_DUMP_DATA  | 将MLU-OPS的GTEST的输入输出数据打印至文件中| ON: 保存 GTEST 测试过程中用到的输入输出数据             | 不使用此环境变量时需要unset环境变量     |
-| 3 | MLUOP_GEN_CASE         |运行前设置，设置gen_case工具功能等级 |0: 关闭 gen_case 模块功能;<br>1: 生成 prototxt，输入输出只保留 shape 等信息（GEN_CASE_DATA_REAL 将无效）;<br>2: 生成 prototxt,并保留输入真实真;<br>3: 不生成 prototxt,只在屏幕上打印输入输出的 shape 等信息;<br> 详情见: [Gencase-User-Guide-zh.md](docs/Gencase-User-Guide-zh.md)|   |
+| 3 | MLUOP_GEN_CASE         |运行前设置，设置gen_case工具功能等级 |0: 关闭 gen_case 模块功能;<br>1: 生成 prototxt，输入输出只保留 shape 等信息（GEN_CASE_DATA_REAL 将无效）;<br>2: 生成 prototxt,并保留输入真实值;<br>3: 不生成 prototxt,只在屏幕上打印输入输出的 shape 等信息;<br> 详情见: [Gencase-User-Guide-zh.md](docs/Gencase-User-Guide-zh.md)|   |
 | 4 | MLUOP_MIN_LOG_LEVEL    | 设置外部LOG()宏的最小打印级别，用来让外部用户屏蔽不需要的LOG|0: enable INFO/WARNING/ERROR/FATAL;<br>1: enable WARNING/ERROR/FATAL;<br>2: enable ERROR/FATAL;<br>3: enable FATAL |默认为0  |
 | 5 | MLUOP_MIN_VLOG_LEVEL   |设置内部VLOG()宏的最小打印级别，用来控制软件内部不同层级调试需要的LOG |0: enable VLOG(0);<br>1: enable VLOG(0)-VLOG(1);<br>2: enable VLOG(0)-VLOG(2);<br>3: enable VLOG(0)-VLOG(3);<br>4: enable VLOG(0)-VLOG(4);<br>5: enable VLOG(0)-VLOG(5);<br>6: enable VLOG(0)-VLOG(6);<br>7: enable VLOG(0)-VLOG(7); | 默认为0| 
 | 6 | MLUOP_LOG_ONLY_SHOW  | 是否之展示LOG 而不生成mluop_auto_log 文件  |=ON时，表示不会生产mluop_auto_log文件;<br>=OFF时，表示会生成mluop_auto_log文件 | 默认为ON|

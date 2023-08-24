@@ -49,7 +49,7 @@ MLUOP_GEN_CASE
 
 - export MLUOP_GEN_CASE=0：关闭 gen_case 模块功能。
 - export MLUOP_GEN_CASE=1：生成 prototxt，输入输出只保留 shape 等信息。
-- export MLUOP_GEN_CASE=2：生成 prototxt，并保留输入真实真。
+- export MLUOP_GEN_CASE=2：生成 prototxt，并保留输入真实值。
 - export MLUOP_GEN_CASE=3：不生成 prototxt，只在屏幕上打印输入输出的 shape 等信息。
 
 更详细请参见 `MLU-OPS GEN_CASE 使用指南<https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
