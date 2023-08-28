@@ -13873,6 +13873,108 @@ mluOpRoiPoolingForward(mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t output_desc,
                        void *output,
                        int *argmax);
+
+// Group:RoiPoolingBackward
+/*!
+ * @brief Computes the gradients of image \b grads_image based on the gradients \b grads and
+ * region proposals \b rois to perform the backpropagation of ::mluOpRoiPoolingForward operation.
+ *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpRoiPoolingBackward operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] pooling_mode
+ * The pooling mode of ROI Pooling Forward defined in ::mluOpPoolingMode_t.
+ * @param[in] grads_desc
+ * The descriptor of the gradient tensor in the backpropagation process. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grads
+ * Pointer to the MLU memory that stores the gradient tensor.
+ * @param[in] rois_desc
+ * The descriptor of the region proposals tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] rois
+ * Pointer to the MLU memory that stores the region proposals tensor.
+ * @param[in] argmax_desc
+ * The descriptor of the argmax tensor that stores the index returned by
+ * ::mluOpRoiPoolingForward. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] argmax
+ * Pointer to the MLU memory that stores the argmax tensor.
+ * @param[in] spatial_scale
+ * A scaling factor that specifies how to map the ROIs coordinates in the original image to
+ * the coordinates in the output.
+ * @param[in] grads_image_desc
+ * The descriptor of the gradients tensor of the original images. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] grads_image
+ * Pointer to the MLU memory that stores the gradients tensor of the original images.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_INTERNAL_ERROR.
+ *
+ * @par Data Type
+ * - This function supports the following data types for gradient tensor \b grads, region proposals tensor \b rois,
+ *   argmax_tensor \b argmax and output tensor \b grads_image. The data types of \b grads, \b rois, and \b grads_image
+ *   must be the same.
+ *   - grads tensor: half, float.
+ *   - rois tensor: half, float.
+ *   - argmax tensor: int32.
+ *   - grads_image tensor: half, float.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b grads, \b rois, \b argmax, \b grads_image are as follows:
+ *   - input tensor: \b MLUOP_LAYOUT_NHWC.
+ *   - ROIs tensor: \b MLUOP_LAYOUT_ARRAY, only supports 2D tensor.
+ *   - argmax tensor: \b MLUOP_LAYOUT_NHWC.
+ *   - grads_image tensor: \b MLUOP_LAYOUT_NHWC.
+ *
+ * @par Scale Limitation
+ * - The value of \b pooling_mode only supports \p MLUOP_POOLING_MAX.
+ * - The \b grads tensor, \b argmax tensor and \b grads_image tensor must be 4-D tensor.
+ * - The size of the lowest dimension of \b grads tensors, \b argmax tensor and \b grads_image tensor must be the same.
+ * - The size of each dimension of \b grads tensor and \b argmax tensor must be the same.
+ * - The \b rois tensor must be 2-D tensor.
+ * - The size of the highest dimension of \b grads tensor, \b rois tensor and \b argmax tensor must be the same.
+ * - The shape of \b rois must be [rois_num, 5].
+ * - \b rois[i] consists of [rois_num, x1, y1, x2, y2]. \b rois_num specifies which image this ROI is in,
+ *   and should be in the range of [0, batch_num - 1]. \b x1 and \b y1 specify the starting coordinate of the ROI
+ *   in the original image. \b x2 and \b y2 specify the ending coordinate of this ROI in the original image. \b x1 and
+ *   \b y1 should be greater than or equal to 0. \b x2 should be greater than \b x1. \b y2 should be greater than \b y1.
+ * - \b Spatial_scale should be in the range of (0, 1].
+ * - The value of argmax tensors with the data type is int32_t and should be in the range of [0, \f$2^(31)-1\f$].
+ *
+ * @par Note
+ * - In general, set the values of \b argmax according to the result returned by ::mluOpRoiPoolingForward.
+ *   Otherwise, these values may be regarded as invalid and will not be used in this operation.
+ * - When \b rois contains NaN or infinity, it may cause undefined behavior.
+ *
+ * @par Example
+ *   @verbatim
+     input two arrays by 1 * 2 * 2 * 1 and 1 * 5 --> grads: [[[[1.0], [2.0]], [[3.0], [4.0]]]]
+
+     --> rois: [[0.0, 0.0, 0.0, 2.0, 2.0]]
+     --> argmax: [[[[0], [2]], [[8], [10]]]]
+
+     param:
+         spatial_scale: 1.0
+
+     grads_image: [[[[1.0], [0.0], [2.0], [0.0]], [[0.0], [0.0], [0.0], [0.0]],
+                    [[3.0], [0.0], [4.0], [0.0]], [[0.0], [0.0], [0.0], [0.0]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/vision/stable/ops.html#torchvision.ops.roi_pool
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiPoolingBackward(mluOpHandle_t handle,
+                        mluOpPoolingMode_t pooling_mode,
+                        const mluOpTensorDescriptor_t grads_desc,
+                        const void *grads,
+                        const mluOpTensorDescriptor_t rois_desc,
+                        const void *rois,
+                        const mluOpTensorDescriptor_t argmax_desc,
+                        const int *argmax,
+                        const float spatial_scale,
+                        const mluOpTensorDescriptor_t grads_image_desc,
+                        void *grads_image);
 #if defined(__cplusplus)
 }
 #endif

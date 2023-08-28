@@ -761,6 +761,12 @@ mluOpRoiPoolingForward
 ----------------------------------
 该算子用于目标检测模型，在经过卷积层计算后的feature map上，针对检测重点关注的区域，即不同ROI对应的feature map区域进行池化，以得到相同规模的输出，进行全连接计算，满足整个网络训练任务。
 
+.. _roi_pooling_backward:
+
+mluOpRoiPoolingBackward
+----------------------------------
+该算子为 :ref:`roi_pooling_forward` 的反向算子，反向传播中损失函数对输入层节点的梯度，为各个有可能的候选区域中输出梯度的累加。
+
 .. _rotated_feature_align_backward:
 
 mluOpRotatedFeatureAlignBackward
