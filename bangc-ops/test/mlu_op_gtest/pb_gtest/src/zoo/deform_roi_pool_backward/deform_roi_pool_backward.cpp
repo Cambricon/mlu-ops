@@ -270,7 +270,7 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
               float ogy = gamma * roi_height * grad_output_this_bin *
                           (input_11 * (x - x_low) + input_01 * (x_high - x) +
                            input_10 * (x_low - x) + input_00 * (x - x_high));
-              cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 + 
+              cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
                                   ph * pooled_width + pw] += ogx;
               cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
                                   pooled_width * pooled_height +
@@ -288,7 +288,7 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
 }
 
 int64_t DeformRoiPoolBackwardExecutor::getTheoryOps() {
-  // TODO
+  // TODO(yuan.wang): update getTheoryOps
   int64_t theory_ops = 0;
   return theory_ops;
 }
