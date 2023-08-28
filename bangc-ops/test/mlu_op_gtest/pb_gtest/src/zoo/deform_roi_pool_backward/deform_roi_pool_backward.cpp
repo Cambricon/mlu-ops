@@ -76,7 +76,7 @@ void DeformRoiPoolBackwardExecutor::initData() {
 void DeformRoiPoolBackwardExecutor::paramCheck() {
   if (!(parser_->getInputNum() == 4 && parser_->getOutputNum() == 2) &&
       !(parser_->getInputNum() == 3 && parser_->getOutputNum() == 1)) {
-    LOG(ERROR) << "DeformRoiPoolBackward param number is wrong. ";
+    LOG(ERROR) << "[DeformRoiPoolBackwardExecutor] param number is wrong. ";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -151,6 +151,33 @@ void bilinear_interpolate_gradient(const int height, const int width,
 }
 
 void DeformRoiPoolBackwardExecutor::cpuCompute() {
+  const Device device = parser_->device();
+
+  // set rois,offset
+  float *rois = nullptr;
+  float *offset = nullptr;
+  if (device == Device::GPU) {
+    int rois_count_num = rois_desc->total_element_num;
+    float *rois_host =
+        (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
+    castDataOut(data_vector_[2].host_ptr, rois_desc->dtype, (float *)rois_host,
+                MLUOP_DTYPE_FLOAT, rois_count_num, NO_QUANT, 0, 1, 0);
+    rois = rois_host;
+
+    if (offset_desc != NULL && data_vector_[3].host_ptr != NULL) {
+      int offset_count_num = offset_desc->total_element_num;
+      float *offset_host =
+          (float *)cpu_runtime_.allocate(offset_count_num * sizeof(float));
+      castDataOut(data_vector_[3].host_ptr, offset_desc->dtype,
+                  (float *)offset_host, MLUOP_DTYPE_FLOAT, offset_count_num,
+                  NO_QUANT, 0, 1, 0);
+      offset = offset_host;
+    }
+  } else {
+    rois = cpu_fp32_input_[2];
+    offset = cpu_fp32_input_[3];
+  }
+
   int grad_output_size = parser_->getInputDataCount(0);
   for (int index = 0; index < grad_output_size; index++) {
     // (n, ph, pw, c) is an element in the pooled output
@@ -158,12 +185,9 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
     const int pw = (index / channels) % pooled_width;
     const int ph = (index / channels / pooled_width) % pooled_height;
     const int n = index / channels / pooled_width / pooled_height;
-    const float *offset_rois = cpu_fp32_input_[2] + n * 5;
+    const float *offset_rois = rois + n * 5;
     const int roi_batch_ind = offset_rois[0];
-    const float *offset_input =
-        cpu_fp32_input_[1] + roi_batch_ind * height * width * channels;
-    float *offset_grad_input =
-        cpu_fp32_output_[0] + roi_batch_ind * height * width * channels;
+
     // Do not using rounding; this implementation detail is critical
     float roi_start_w = offset_rois[1] * spatial_scale - 0.5;
     float roi_start_h = offset_rois[2] * spatial_scale - 0.5;
@@ -187,8 +211,8 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
             : static_cast<int>(ceilf(roi_width / pooled_width));
 
     // Compute roi offset
-    if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
-      const float *offset_cur_w = cpu_fp32_input_[3] +
+    if (offset_desc != NULL && offset != NULL) {
+      const float *offset_cur_w = offset +
                                   n * pooled_width * pooled_height * 2 +
                                   ph * pooled_width + pw;
       float offset_roi_w = gamma * roi_width * offset_cur_w[0];
@@ -199,7 +223,6 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
     }
     // We do average pooling inside a bin
     const float count = std::max(roi_bin_grid_h * roi_bin_grid_w, 1);
-    float grad_output_this_bin = cpu_fp32_input_[0][index] / count;
     for (int iy = 0; iy < roi_bin_grid_h; iy++) {
       const float y = roi_start_h + ph * bin_size_h +
                       static_cast<float>(iy + .5f) * bin_size_h /
@@ -208,45 +231,82 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
         const float x = roi_start_w + pw * bin_size_w +
                         static_cast<float>(ix + .5f) * bin_size_w /
                             static_cast<float>(roi_bin_grid_w);
+
+        // theory_io_size + 2: load offset_h, offset_w
+        theory_io_size_ += 2;
+
         float w1, w2, w3, w4;
         int x_low, x_high, y_low, y_high;
         bilinear_interpolate_gradient(height, width, channels, y, x, c, w1, w2,
                                       w3, w4, x_low, x_high, y_low, y_high,
                                       index);
         if (x_low >= 0 && x_high >= 0 && y_low >= 0 && y_high >= 0) {
-          offset_grad_input[y_low * width * channels + x_low * channels + c] +=
-              grad_output_this_bin * w1;
-          offset_grad_input[y_low * width * channels + x_high * channels + c] +=
-              grad_output_this_bin * w2;
-          offset_grad_input[y_high * width * channels + x_low * channels + c] +=
-              grad_output_this_bin * w3;
-          offset_grad_input[y_high * width * channels + x_high * channels +
-                            c] += grad_output_this_bin * w4;
+          // theory_io_size + 4:
+          //   load bilinear_interpolate_gradient, x_low,y_low,x_high,y_high
+          theory_io_size_ += 4;
+
+          if (device == Device::CPU) {
+            float *offset_grad_input = cpu_fp32_output_[0] + roi_batch_ind * height * width * channels;  // NOLINT
+            float grad_output_this_bin = cpu_fp32_input_[0][index] / count;
+            offset_grad_input[y_low * width * channels + x_low * channels + c] += grad_output_this_bin * w1;  // NOLINT
+            offset_grad_input[y_low * width * channels + x_high * channels + c] += grad_output_this_bin * w2;  // NOLINT
+            offset_grad_input[y_high * width * channels + x_low * channels + c] += grad_output_this_bin * w3;  // NOLINT
+            offset_grad_input[y_high * width * channels + x_high * channels + c] += grad_output_this_bin * w4;  // NOLINT
+          }
+
           if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
-            float input_00 =
-                offset_input[y_low * width * channels + x_low * channels + c];
-            float input_10 =
-                offset_input[y_low * width * channels + x_high * channels + c];
-            float input_01 =
-                offset_input[y_high * width * channels + x_low * channels + c];
-            float input_11 =
-                offset_input[y_high * width * channels + x_high * channels + c];
-            float ogx = gamma * roi_width * grad_output_this_bin *
-                        (input_11 * (y - y_low) + input_10 * (y_high - y) +
-                         input_01 * (y_low - y) + input_00 * (y - y_high));
-            float ogy = gamma * roi_height * grad_output_this_bin *
-                        (input_11 * (x - x_low) + input_01 * (x_high - x) +
-                         input_10 * (x_low - x) + input_00 * (x - x_high));
-            cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
-                                ph * pooled_width + pw] += ogx;
-            cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
-                                pooled_width * pooled_height +
-                                ph * pooled_width + pw] += ogy;
+            // theory_io_size + 6: load input(4), store ouput using atomic(2)
+            theory_io_size_ += 6;
+            if (device == Device::CPU) {
+              float grad_output_this_bin = cpu_fp32_input_[0][index] / count;
+              const float *offset_input = cpu_fp32_input_[1] + roi_batch_ind * height * width * channels;  // NOLINT
+              float input_00 = offset_input[y_low * width * channels + x_low * channels + c];  // NOLINT
+              float input_10 = offset_input[y_low * width * channels + x_high * channels + c];  // NOLINT
+              float input_01 = offset_input[y_high * width * channels + x_low * channels + c];  // NOLINT
+              float input_11 = offset_input[y_high * width * channels + x_high * channels + c];  // NOLINT
+              float ogx = gamma * roi_width * grad_output_this_bin *
+                          (input_11 * (y - y_low) + input_10 * (y_high - y) +
+                           input_01 * (y_low - y) + input_00 * (y - y_high));
+              float ogy = gamma * roi_height * grad_output_this_bin *
+                          (input_11 * (x - x_low) + input_01 * (x_high - x) +
+                           input_10 * (x_low - x) + input_00 * (x - x_high));
+              cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 + 
+                                  ph * pooled_width + pw] += ogx;
+              cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
+                                  pooled_width * pooled_height +
+                                  ph * pooled_width + pw] += ogy;
+            }
           }
         }
       }
     }
   }
+
+  // 5: idx, x1, y1, x2, y2
+  theory_io_size_ += rois_num * 5;
+  theory_io_size_ *= sizeof(float);
+}
+
+int64_t DeformRoiPoolBackwardExecutor::getTheoryOps() {
+  // TODO
+  int64_t theory_ops = 0;
+  return theory_ops;
+}
+
+int64_t DeformRoiPoolBackwardExecutor::getTheoryIoSize() {
+  Device device = parser_->device();
+  GTEST_CHECK(device == Device::CPU || device == Device::GPU,
+              "[DeformRoiPoolBackwardExecutor] unknow device.")
+  if (device == Device::CPU) {
+    // cpuCompute()
+  } else {
+    GTEST_CHECK(theory_io_size_ == 0,
+                "[DeformRoiPoolBackwardExecutor] theory_io_size_ is wrong.");
+    cpuCompute();
+  }
+
+  VLOG(4) << "theory_io_size: " << theory_io_size_ << "ops";
+  return theory_io_size_;
 }
 
 }  // namespace mluoptest

@@ -1,11 +1,11 @@
 op_name: "deform_roi_pool_backward"
 input {
-  id: "input1"
+  id: "grad_output"
   shape {
-    dims: 1
-    dims: 4
-    dims: 1
-    dims: 1
+    dims: 7
+    dims: 87
+    dims: 93
+    dims: 62
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
@@ -17,12 +17,12 @@ input {
   }
 }
 input {
-  id: "input2"
+  id: "input"
   shape {
-    dims: 1
-    dims: 9
-    dims: 9
-    dims: 1
+    dims: 151
+    dims: 63
+    dims: 74
+    dims: 62
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
@@ -34,26 +34,27 @@ input {
   }
 }
 input {
-  id: "input3"
+  id: "rois"
   shape {
-    dims: 1
+    dims: 7
     dims: 5
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
-  value_h: "00000000"
-  value_h: "00000000"
-  value_h: "00000000"
-  value_h: "40000000"
-  value_h: "40000000"
+  random_data {
+    seed: 233
+    lower_bound: 0
+    upper_bound: 150.0
+    distribution: UNIFORM
+  }
 }
 input {
-  id: "input4"
+  id: "offset"
   shape {
-    dims: 1
+    dims: 7
     dims: 2
-    dims: 4
-    dims: 1
+    dims: 87
+    dims: 93
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -66,12 +67,12 @@ input {
 }
 
 output {
-  id: "output1"
+  id: "grad_input"
   shape {
-    dims: 1
-    dims: 9
-    dims: 9
-    dims: 1
+    dims: 151
+    dims: 63
+    dims: 74
+    dims: 62
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
@@ -85,12 +86,12 @@ output {
   threshold_use: 1
 }
 output {
-  id: "output2"
+  id: "grad_offset"
   shape {
-    dims: 1
+    dims: 7
     dims: 2
-    dims: 4
-    dims: 1
+    dims: 87
+    dims: 93
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -111,9 +112,9 @@ test_param: {
 }
 
 deform_roi_pool_backward_param {
-  sampling_ratio: 5
-  spatial_scale: 0.7941938638687134
-  gamma: 0.6350110173225403
-  pooled_height: 4
-  pooled_width: 1
+  sampling_ratio: 10
+  spatial_scale: -23.5666
+  gamma: 12.5574
+  pooled_height: 87
+  pooled_width: 93
 }
