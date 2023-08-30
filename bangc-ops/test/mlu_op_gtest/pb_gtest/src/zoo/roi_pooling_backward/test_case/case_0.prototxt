@@ -1,0 +1,77 @@
+op_name: "roi_pooling_backward"
+input {
+  id: "grads"
+  shape {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  value_f: 0
+  value_f: 1
+  value_f: 2
+  value_f: 3
+  value_f: 4
+  value_f: 5
+  value_f: 6
+  value_f: 7
+}
+input {
+  id: "rois"
+  shape {
+    dims: 1
+    dims: 5
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 0
+  value_f: 0
+  value_f: 0
+  value_f: 3
+  value_f: 3
+}
+input {
+  id: "argmax"
+  shape {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_INT32
+  mlu_dtype: DTYPE_INT32
+  value_i: 0
+  value_i: 0
+  value_i: 2
+  value_i: 2
+  value_i: 12
+  value_i: 12
+  value_i: 14
+  value_i: 14
+}
+output {
+  id: "grads_image"
+  shape {
+    dims: 1
+    dims: 6
+    dims: 6
+    dims: 2
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  mlu_dtype: DTYPE_FLOAT
+}
+roi_pooling_backward_param {
+  spatial_scale: 1.0
+  mode: POOLING_MAX
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

@@ -188,6 +188,19 @@
     void *,                                                                   \
     int *
 
+#define ROIPOOLINGBACKWARD_PARAM_TYPE                                         \
+    mluOpHandle_t,                                                            \
+    mluOpPoolingMode_t,                                                       \
+    const mluOpTensorDescriptor_t,                                            \
+    const void *,                                                             \
+    const mluOpTensorDescriptor_t,                                            \
+    const void *,                                                             \
+    const mluOpTensorDescriptor_t,                                            \
+    const int *,                                                              \
+    const float,                                                              \
+    const mluOpTensorDescriptor_t,                                            \
+    void *
+
 /* Kernel register */
 KERNEL_REGISTER(addN, ADDN_PARAM_TYPE);
 KERNEL_REGISTER(addNV2, ADDNV2_PARAM_TYPE);
@@ -212,4 +225,5 @@ KERNEL_REGISTER(reduce, REDUCE_PARAM_TYPE);
 KERNEL_REGISTER(RoiAlignBackward, ROIALIGNBACKWARD_PARAM_TYPE);
 KERNEL_REGISTER(RoiAlignBackwardV2, ROIALIGNBACKWARD_V2_PARAM_TYPE);
 KERNEL_REGISTER(RoiPoolingForward, ROIPOOLINGFORWARD_PARAM_TYPE);
+KERNEL_REGISTER(RoiPoolingBackward, ROIPOOLINGBACKWARD_PARAM_TYPE);
 #endif  // KERNELS_KERNEL_WRAPPER_WRAPPER_H
