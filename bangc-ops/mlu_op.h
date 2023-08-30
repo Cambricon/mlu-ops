@@ -6538,7 +6538,7 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  * - The lowest dimension of \b boxes tensors must be 5 or 6.
  *
  * @par note
- * - The input \b boxes and \b scores with NAN/INF are not supported currently.
+ * - The input \b scores with NAN/INF are not supported currently.
  *
  * @par API Dependency
  * - You need to call::mluOpGetNmsRotatedWorkspaceSize to allocate extra
