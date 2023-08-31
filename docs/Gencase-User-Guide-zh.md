@@ -27,7 +27,6 @@
    会在当前目录下生成 gen_case/abs 文件夹，在文件夹里的 *.prototxt 文件保存了算子测试过程中测例规模
 
 #### 1.2 GEN_CASE 环境变量说明
-
 |          环境变量             |                  功能                                                 |    默认状态         |
 |-------------------------------|-----------------------------------------------------------------------|---------------------|
 |MLUOP_GEN_CASE                 |export MLUOP_GEN_CASE = 0: 关闭gen_case模块功能;<br>export MLUOP_GEN_CASE = 1: 生成 prototxt, 输入输出只保留 shape 等信息(GEN_CASE_DATA_REAL将无效);<br>export MLUOP_GEN_CASE = 2: 生成 proto, 并保留输入真实值;<br>export MLUOP_GEN_CASE = 3: 不生成 prototxt, 只在屏幕上打印输入输出的shape等信息。                                                          |     默认 0          |
