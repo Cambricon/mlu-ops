@@ -633,4 +633,54 @@ __mlu_func__ void __mluop_store_str_3D(T *dst, T *src, int size, int seg_num_in,
   }
 }
 
+/*************************************************************************************************
+ * get [0, length-1] stage indices in nram on mlu300 ce3226 griffin and other platform which
+ * support tfuse instruction.
+ * Attention: length not need to be aligned any number.
+ * Attention: dst_nram only support nram.
+ * **********************************************************************************************/
+__mlu_func__ void __mluop_getStageIndicesTfuse(int32_t* dst_nram, int32_t length) {
+#if(__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
+  int32_t align_num = 128;
+  int32_t repeat = (int32_t)(logf(length / align_num) / logf(2));
+  int32_t remain = length / align_num - powf(2, repeat);
+  int32_t global_remain = length % align_num;
+  int32_t count = 1;
+  for (int32_t i = 0; i < align_num; i++) {
+    dst_nram[i] = i;
+    if (i == length - 1) {
+      return;
+    }
+  }
+  for (int i = 0; i < repeat; i++) {
+    __asm__ volatile(
+    "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
+    "[%[src_nram]], .add(%[region_length]); \n\t" ::
+    [dst_nram] "r"(dst_nram + count * align_num),
+    [src_nram] "r"(dst_nram),
+    [once_process_num] "r"(count * align_num),
+    [region_length] "r"(count * align_num));
+    count *= 2;
+  }
+  if (remain > 0) {
+    __asm__ volatile(
+    "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
+    "[%[src_nram]], .add(%[region_length]); \n\t" ::
+    [dst_nram] "r"(dst_nram + count * align_num),
+    [src_nram] "r"(dst_nram),
+    [once_process_num] "r"(remain * align_num),
+    [region_length] "r"(count * align_num));
+  }
+  if (global_remain > 0) {
+    __asm__ volatile(
+    "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
+    "[%[src_nram]], .add(%[region_length]); \n\t" ::
+    [dst_nram] "r"(dst_nram + count * align_num + remain * align_num),
+    [src_nram] "r"(dst_nram),
+    [once_process_num] "r"(global_remain),
+    [region_length] "r"(count * align_num + remain * align_num));
+  }
+#endif
+}
+
 #endif  // KERNELS_UTILS_COMMON_H_
