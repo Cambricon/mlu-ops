@@ -287,7 +287,7 @@ __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
   const int nram_limit_channels = max_deal_num * 4;
   const int points_once_load = nram_limit_channels / num_channels;
 
-  __mluop_getStageIndicesTfuse(nram_point_idx_indices, max_deal_num);
+  __mluop_get_stage_indices_tfuse(nram_point_idx_indices, max_deal_num);
 
   for (int repeat_id = 0; repeat_id <= per_core_repeat; ++repeat_id) {
     int deal_num = (repeat_id == per_core_repeat) ? per_core_rem : max_deal_num;
