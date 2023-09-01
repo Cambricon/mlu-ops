@@ -8,6 +8,8 @@ MLU-OPS 提供了检测、分割等任务中常用的算子，支持自定义算
 
 - MLU Bin: 二进制算子，device端在仓库无源码实现，但可通过头文件调用算子功能
 
+算子功能见：[MLU-OPS 算子功能说明](./user_guide/9_operators/index.rst)
+
 | Device                                 | MLU Gtest | MLU Common | MLU Bin |
 | -------------------------------------- | --------- | ---------- | ------- |
 | abs                                    | √         | √          |         |
