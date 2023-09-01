@@ -260,7 +260,7 @@ __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
    *|  nram_geom_z             |   (4*max_deal_num)   | max_deal_num |
    *|  nram_point_boundary_mask|                      | max_deal_num |
    *|--------------------------|----------------------|--------------|
-   *|  nram_point_idx_indices  |                      |  max_deal_num|
+   *|  nram_point_idx_indices  |                      | max_deal_num |
    *|--------------------------|----------------------|--------------|
    */
   const int max_deal_num = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(int) / split_num,
