@@ -30,10 +30,10 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define BITINDEX_BYTED_ALIGNED 32
 #define MAXNUM_PERF_SUPPORT (2147483648 / 4)
 
-__mlu_func__ void GetPointBatchIdx(int32_t *nram_batch_idx,
-                                   const int32_t pt_idx_cur_loop,
-                                   const int32_t num_points,
-                                   const int32_t deal_num) {
+__mlu_func__ void GetPointBatchIdx(int *nram_batch_idx,
+                                   const int pt_idx_cur_loop,
+                                   const int num_points,
+                                   const int deal_num) {
   int cur_loop_batch_idx_pt_num = 0;
   int cur_loop_batch_pt_idx_begin = pt_idx_cur_loop;
   int cur_loop_batch_pt_idx_end = pt_idx_cur_loop + deal_num - 1;
@@ -334,9 +334,9 @@ __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
     /*
      * pos_memo store order: batch,y,x,batch,y,x,batch,y,x...
      */
-    int32_t *nram_batch_idx = nram_geom;
-    int32_t *nram_y = nram_batch_idx + max_deal_num;
-    int32_t *nram_x = nram_y + max_deal_num;
+    int *nram_batch_idx = nram_geom;
+    int *nram_y = nram_batch_idx + max_deal_num;
+    int *nram_x = nram_y + max_deal_num;
 
     // step3: get pos_memo batch_idx
     GetPointBatchIdx(nram_batch_idx, pt_idx_cur_loop, num_points, deal_num);
@@ -371,24 +371,24 @@ __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
     __bang_add(nram_geom_x, nram_geom_x, nram_x, deal_num);
     __bang_mul_scalar(nram_geom, nram_geom_x, num_channels, deal_num);
 
-    int32_t *gather_mask = nram_geom + max_deal_num;
-    int32_t *gather_offset = nram_geom + 2 * max_deal_num;
-    int32_t *gather_src = nram_geom + 3 * max_deal_num;
+    int *gather_mask = nram_geom + max_deal_num;
+    int *gather_offset = nram_geom + 2 * max_deal_num;
+    int *gather_src = nram_geom + 3 * max_deal_num;
     // step2: compute gather input offset
     __bang_add_scalar(gather_offset, nram_point_idx_indices, pt_idx_cur_loop,
                       deal_num);
     __bang_mul_scalar(gather_offset, gather_offset, num_channels * 4, deal_num);
 
-    const int32_t input_load_repeat = deal_num / points_once_load;
-    const int32_t input_load_remin = deal_num % points_once_load;
+    const int input_load_repeat = deal_num / points_once_load;
+    const int input_load_remin = deal_num % points_once_load;
     for (int l_id = 0; l_id <= input_load_repeat; l_id++) {
       if (l_id == input_load_repeat && input_load_remin == 0) {
         break;
       }
-      const int32_t actual_load_num =
+      const int actual_load_num =
           l_id == input_load_repeat ? input_load_remin : points_once_load;
-      const int32_t point_idx_offset = l_id * points_once_load;
-      const int32_t align_8_deal_num =
+      const int point_idx_offset = l_id * points_once_load;
+      const int align_8_deal_num =
           PAD_UP(actual_load_num, BITINDEX_BYTED_ALIGNED);
       __bang_write_value((float *)nram_geom_x, align_8_deal_num, (float)0.0);
       __bang_ge_bitindex((float *)gather_mask,
@@ -399,7 +399,7 @@ __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
                (void *)gather_mask, num_channels * sizeof(float), GDRAM2NRAM,
                num_channels * sizeof(float), actual_load_num);
       for (int index = 0; index < actual_load_num; index++) {
-        int32_t output_features_pt_offset = nram_geom[point_idx_offset + index];
+        int output_features_pt_offset = nram_geom[point_idx_offset + index];
         if (output_features_pt_offset >= 0) {
           __bang_atomic_reduce_add(
               (float *)output_features + output_features_pt_offset,

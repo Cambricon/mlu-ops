@@ -642,15 +642,15 @@ __mlu_func__ void __mluop_store_str_3D(T *dst, T *src, int size, int seg_num_in,
  *      length not need to be aligned any number.
  *      dst_nram only support nram.
  * **********************************************************************************************/
-__mlu_func__ void __mluop_get_stage_indices_tfuse(int32_t *dst_nram,
-                                                  int32_t length) {
+__mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram,
+                                                  int length) {
 #if (__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
-  int32_t align_num = 128;
-  int32_t repeat = (int32_t)(logf(length / align_num) / logf(2));
-  int32_t remain = length / align_num - powf(2, repeat);
-  int32_t global_remain = length % align_num;
-  int32_t count = 1;
-  for (int32_t i = 0; i < align_num; i++) {
+  int align_num = 128;
+  int repeat = (int)(logf(length / align_num) / logf(2));
+  int remain = length / align_num - powf(2, repeat);
+  int global_remain = length % align_num;
+  int count = 1;
+  for (int i = 0; i < align_num; i++) {
     dst_nram[i] = i;
     if (i == length - 1) {
       return;
