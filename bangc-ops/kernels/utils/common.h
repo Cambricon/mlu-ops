@@ -132,8 +132,7 @@ __mlu_func__ void __mluop_div(T *nram_dst, T *nram_src0, T *nram_src1,
                  deal_num);
 #else
       __bang_half2float((float *)nram_addition, (half *)nram_src1, deal_num);
-      __bang_recip((float *)nram_addition, (float *)nram_addition,
-                            deal_num);
+      __bang_recip((float *)nram_addition, (float *)nram_addition, deal_num);
       __mluop_float2half((half *)nram_src1, (float *)nram_addition, deal_num);
       __bang_mul((half *)nram_dst, (half *)nram_src0, (half *)nram_src1,
                  deal_num);
@@ -634,13 +633,13 @@ __mlu_func__ void __mluop_store_str_3D(T *dst, T *src, int size, int seg_num_in,
 }
 
 /*************************************************************************************************
- * get [0, length-1] stage indices in nram on mlu300 ce3226 griffin and other platform which
- * support tfuse instruction.
- * Attention: length not need to be aligned any number.
- * Attention: dst_nram only support nram.
+ * get [0, length-1] stage indices in nram on mlu300 ce3226 griffin and other
+ * platform which support tfuse instruction. Attention: length not need to be
+ * aligned any number. Attention: dst_nram only support nram.
  * **********************************************************************************************/
-__mlu_func__ void __mluop_getStageIndicesTfuse(int32_t* dst_nram, int32_t length) {
-#if(__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
+__mlu_func__ void __mluop_getStageIndicesTfuse(int32_t *dst_nram,
+                                               int32_t length) {
+#if (__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
   int32_t align_num = 128;
   int32_t repeat = (int32_t)(logf(length / align_num) / logf(2));
   int32_t remain = length / align_num - powf(2, repeat);
@@ -654,31 +653,29 @@ __mlu_func__ void __mluop_getStageIndicesTfuse(int32_t* dst_nram, int32_t length
   }
   for (int i = 0; i < repeat; i++) {
     __asm__ volatile(
-    "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
-    "[%[src_nram]], .add(%[region_length]); \n\t" ::
-    [dst_nram] "r"(dst_nram + count * align_num),
-    [src_nram] "r"(dst_nram),
-    [once_process_num] "r"(count * align_num),
-    [region_length] "r"(count * align_num));
+        "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
+        "[%[src_nram]], .add(%[region_length]); \n\t" ::[dst_nram] "r"(
+            dst_nram + count * align_num),
+        [ src_nram ] "r"(dst_nram), [ once_process_num ] "r"(count * align_num),
+        [ region_length ] "r"(count * align_num));
     count *= 2;
   }
   if (remain > 0) {
     __asm__ volatile(
-    "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
-    "[%[src_nram]], .add(%[region_length]); \n\t" ::
-    [dst_nram] "r"(dst_nram + count * align_num),
-    [src_nram] "r"(dst_nram),
-    [once_process_num] "r"(remain * align_num),
-    [region_length] "r"(count * align_num));
+        "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
+        "[%[src_nram]], .add(%[region_length]); \n\t" ::[dst_nram] "r"(
+            dst_nram + count * align_num),
+        [ src_nram ] "r"(dst_nram),
+        [ once_process_num ] "r"(remain * align_num),
+        [ region_length ] "r"(count * align_num));
   }
   if (global_remain > 0) {
     __asm__ volatile(
-    "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
-    "[%[src_nram]], .add(%[region_length]); \n\t" ::
-    [dst_nram] "r"(dst_nram + count * align_num + remain * align_num),
-    [src_nram] "r"(dst_nram),
-    [once_process_num] "r"(global_remain),
-    [region_length] "r"(count * align_num + remain * align_num));
+        "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
+        "[%[src_nram]], .add(%[region_length]); \n\t" ::[dst_nram] "r"(
+            dst_nram + count * align_num + remain * align_num),
+        [ src_nram ] "r"(dst_nram), [ once_process_num ] "r"(global_remain),
+        [ region_length ] "r"(count * align_num + remain * align_num));
   }
 #endif
 }
