@@ -52,7 +52,7 @@ MLUOP_GEN_CASE
 - export MLUOP_GEN_CASE=2：生成 prototxt，并保留输入真实值。
 - export MLUOP_GEN_CASE=3：不生成 prototxt，只在屏幕上打印输入输出的 shape 等信息。
 
-更详细请参见 `MLU-OPS GEN_CASE 使用指南<https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
+更详细请参见 `MLU-OPS GEN_CASE 使用指南 <https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
 
 .. _MLUOP_MIN_VLOG_LEVEL:
  
