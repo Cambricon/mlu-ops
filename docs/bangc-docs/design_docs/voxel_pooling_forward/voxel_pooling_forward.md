@@ -385,7 +385,7 @@ for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 
 1、资源分配
 
-`points_once_load` < 1：
+`points_once_load` <= 1：
 
 | 表项 | 分配策略                                               |
 | ---- | ------------------------------------------------------ |
@@ -394,7 +394,7 @@ for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 |      | pos_memo [nram_limit_pt_num,3]                         |
 |      | buffer_temp[nram_limit_pt_num] \* 3                    |
 
-若`points_once_load` >= 1：
+若`points_once_load` > 1：
 ![](./nram_divide.png)
 
 - 具体 nram 空间划分见 device 端代码注释。
