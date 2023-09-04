@@ -10,10 +10,19 @@ MLU-OPS 提供了检测、分割等任务中常用的算子，支持自定义算
 
 **算子相关结构**
 
+MLU Source Op算子结构：　
 - 设计文档：`docs/bangc-ops/design_docs/xxx/xxx.md`
-- 实现:　
-  - `device`实现: `bangc-ops/kernels/xxx/`
-  - `cpu`实现: `bangc-ops/test/mlu_op_gtest/pb_gtest/src/zoo/xxx`
+- 实现：　
+  - `device`实现：`bangc-ops/kernels/xxx/`
+  - `cpu`实现：`bangc-ops/test/mlu_op_gtest/pb_gtest/src/zoo/xxx`
+- 接口：`bangc-ops/mlu_op.h`
+- 算子间依赖：`bangc-ops/kernel_depends.toml`
+
+MLU Binary Op算子结构：　
+- 设计文档：无
+- 实现：
+  - host调用CNNL算子库实现：`bangc-ops/kernels/xxx/`
+  - `cpu`实现：`bangc-ops/test/mlu_op_gtest/pb_gtest/src/zoo/xxx`
 - 接口：`bangc-ops/mlu_op.h`
 - 算子间依赖：`bangc-ops/kernel_depends.toml`
 
