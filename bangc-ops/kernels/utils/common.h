@@ -632,16 +632,16 @@ __mlu_func__ void __mluop_store_str_3D(T *dst, T *src, int size, int seg_num_in,
   }
 }
 
-/*************************************************************************************************
+/*******************************************************************************
  * MLUOPS FUNC: __mluop_get_stage_indices_tfuse
  * param 'dst_nram' is nram space for store result
  * param 'length' is the continuous indices length
  * Note:
- *      Get [0, length-1] stage indices in nram on mlu590 mlu300 ce3226
- *      griffin and other platform which support tfuse instruction.
+ *      Get [0, length-1] stage indices in nram on mlu590 mlu300
+ *      and other platform which support tfuse instruction.
  *      length not need to be aligned any number.
  *      dst_nram only support nram.
- * **********************************************************************************************/
+ * ****************************************************************************/
 __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram,
                                                   int length) {
 #if (__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
