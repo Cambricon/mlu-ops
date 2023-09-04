@@ -22,13 +22,13 @@ MLU-OPS 提供了检测、分割等任务中常用的算子，支持自定义算
 | Device                                 | MLU Source Op | MLU Binary Op |
 | -------------------------------------- | ------------- | ------------- |
 | abs                                    | √             |               |
-| active_rotated_filter                  |               | √             |
+| active_rotated_filter                  | √             |               |
 | add_n                                  |               | √             |
 | ball_query                             | √             |               |
 | bbox_overlaps                          | √             |               |
 | border_align_backward                  | √             |               |
 | border_align_forward                   | √             |               |
-| box_iou_rotated                        |               | √             |
+| box_iou_rotated                        | √             |               |
 | carafe_backward                        | √             |               |
 | carafe_forward                         | √             |               |
 | copy                                   |               | √             |
