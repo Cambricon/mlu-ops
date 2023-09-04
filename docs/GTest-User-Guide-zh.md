@@ -23,7 +23,7 @@
 
 操作过程：
 
-文件路径：`mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto/mlu_op_test.proto`
+文件路径：[mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto/mlu_op_test.proto](https://github.com/Cambricon/mlu-ops-proto/tree/master)
 
 1. 增加内容
 
@@ -54,7 +54,7 @@
     }
     
     ```
-     _注意, 这里说的 proto 仅仅是数据格式的定义, 不同的测例是这个定义的实例化; 同时, 如上述代码, `prefer= 1` 后面的数字是域的 id, 不是值，`default = COMPUTATION_HIGH_PRECISION` 才是域的默认值。_
+     _注意，这里说的 proto 仅仅是数据格式的定义，不同的测例是这个定义的实例化; 同时，如上述代码，`prefer= 1` 后面的数字是域的 id，不是值，`default = COMPUTATION_HIGH_PRECISION` 才是域的默认值。_
 
 3. 使用 `protoc` 命令编译 `mlu_op_test.proto`文件，目的是检查语法是否正确，并生成 `.cc/.h` 文件
 
@@ -214,7 +214,7 @@ apt install html2text
 
 - 情况1
 
-当 kernels 文件下算子的正反向在同一个文件中, 如 `roi_crop_forward` 和 `roi_crop_backward`
+当 kernels 文件下算子的正反向在同一个文件中，如 `roi_crop_forward` 和 `roi_crop_backward`
 
 ```
 cd mlu-ops
@@ -226,7 +226,7 @@ bangc-ops$ ./build.sh -c --filter="roi_crop_forward;roi_crop_backward"
 ```
 - 情况2
 
-当 kernels 文件下算子的正反向在不同一个文件中, 如 `dynamic_point_to_voxel_forward`
+当 kernels 文件下算子的正反向在不同一个文件中，如 `dynamic_point_to_voxel_forward`
 
 ```
 cd mlu-ops
