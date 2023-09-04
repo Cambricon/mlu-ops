@@ -11,6 +11,7 @@
 | 版本号 | 修订人 | 修订日期   | 修订描述 |
 | ------ | ------ | ---------- | -------- |
 | V1.0   | 张皓喆 | 2022-11-18 | 首次提交 |
+| V1.1   | 马向军 | 2023-09-01 | 性能优化 |
 
 - #### 内容描述
 
@@ -31,26 +32,26 @@
 
 ### 1.1 算子需求分析
 
-| 算子功能简介                                                                 | 用于 BEVDepth 网络，将相同 x,y 坐标上的特征值相加，再投射到对应坐标上的 bev 2D 区域内           |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 需求来源                                                                     | PyTorch                                                                                         |
-| 应用网络                                                                     | BEVDepth                                                                                        |
-| 输入数据类型                                                                 | geom_xyz:int<br />input_features:float<br />output_features:float<br />pos_memo:int             |
-| 输入标量参数                                                                 | batch_size<br />num_points<br />num_channels<br />num_voxel_x<br />num_voxel_y<br />num_voxel_z |
-| 输入 Shape                                                                   | geom_xyz:[B,N,3]<br />input_features:[B,N,C]                                                    |
-| 输入 Layout                                                                  | geom_xyz:ARRAY<br />input_features:ARRAY                                                        |
-| 输出数据类型                                                                 | output_features:float<br />pos_memo:int                                                         |
-| 输出 Shape                                                                   | output_features:[B,H,W,C]<br />pos_memo:[B,N,3]                                                 |
-| 输出 Layout                                                                  | output_features:ARRAY<br />pos_memo:ARRAY                                                       |
-| 模式(可选）                                                                  | 无                                                                                              |
-| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理              | 不含带 dim/axis 语义的参数等                                                                    |
-| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 不含带 labels/index 语义的参数等                                                                |
-| 是否需要支持原位                                                             | 否                                                                                              |
-| 是否需要支持 stride 机制                                                     | 否                                                                                              |
-| 是否需要支持广播                                                             | 否                                                                                              |
-| 0 元素检查是否直接返回                                                       | 是 (返回 MLUOP_STATUS_BAD_PARAM)                                                                |
-| 其他特殊需求(在线量化，融合，转数提前等，可选)                               | 无                                                                                              |
-| 本次开发优先支持的规模/模式                                                  | 无                                                                                              |
+| 算子功能简介                                                 | 用于 BEVDepth 网络，将相同 x,y 坐标上的特征值相加，再投射到对应坐标上的 bev 2D 区域内 |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 需求来源                                                     | PyTorch                                                      |
+| 应用网络                                                     | BEVDepth                                                     |
+| 输入数据类型                                                 | geom_xyz:int<br />input_features:float<br />output_features:float<br />pos_memo:int |
+| 输入标量参数                                                 | batch_size<br />num_points<br />num_channels<br />num_voxel_x<br />num_voxel_y<br />num_voxel_z |
+| 输入 Shape                                                   | geom_xyz:[B,N,3]<br />input_features:[B,N,C]                 |
+| 输入 Layout                                                  | geom_xyz:ARRAY<br />input_features:ARRAY                     |
+| 输出数据类型                                                 | output_features:float<br />pos_memo:int                      |
+| 输出 Shape                                                   | output_features:[B,H,W,C]<br />pos_memo:[B,N,3]              |
+| 输出 Layout                                                  | output_features:ARRAY<br />pos_memo:ARRAY                    |
+| 模式(可选）                                                  | 无                                                           |
+| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 不含带 dim/axis 语义的参数等                                 |
+| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 不含带 labels/index 语义的参数等                             |
+| 是否需要支持原位                                             | 否                                                           |
+| 是否需要支持 stride 机制                                     | 否                                                           |
+| 是否需要支持广播                                             | 否                                                           |
+| 0 元素检查是否直接返回                                       | 是 (返回 MLUOP_STATUS_BAD_PARAM)                             |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)               | 无                                                           |
+| 本次开发优先支持的规模/模式                                  | 无                                                           |
 
 ### 1.2 算子功能和应用场景描述
 
@@ -82,19 +83,19 @@
 
 ### 1.4 算子限制
 
-| 限制类型     | 详细说明                                                                                                   |
-| ------------ | ---------------------------------------------------------------------------------------------------------- |
-| 输入限制     | 输入 `geom_xyz` 必须满足 dims=3，并且 dim[0]=batch_size, dim[1]=num_points, dim[2]=3                       |
-| 输入限制     | 输入 `input_features` 必须满足 dims=3，并且 dim[0]=batch_size, dim[1]=num_points, dim[2]=num_channels      |
+| 限制类型     | 详细说明                                                     |
+| ------------ | ------------------------------------------------------------ |
+| 输入限制     | 输入 `geom_xyz` 必须满足 dims=3，并且 dim[0]=batch_size, dim[1]=num_points, dim[2]=3 |
+| 输入限制     | 输入 `input_features` 必须满足 dims=3，并且 dim[0]=batch_size, dim[1]=num_points, dim[2]=num_channels |
 | 输入限制     | 输入 `batch_size`,`num_points`,`num_channels`,`num_voxel_x`,`num_voxel_y` 对应输入 tensor 的维度必须大于 0 |
-| 输入限制     | 输入 `geom_xyz` 属于 int 类型坐标值，不涉及 nan 或 inf，`input_features` 支持 nan 或 inf                   |
-| 输入限制     | 输出 `pos_memo` 需要调用算子之前对输出空间置初始值，且初始化为负数                                         |
-| 数据类型限制 | `geom_xyz` 只支持 int 输入，`input_features` 只支持 float 输入                                             |
-| 精度限制     | 由于采用 atomicAdd，存在乱序计算，可能存在精度问题                                                         |
-| 原位限制     | 不支持原位                                                                                                 |
-| stride 限制  | 不支持 stride                                                                                              |
-| 广播限制     | 不支持广播                                                                                                 |
-| 架构限制     | 不支持 mlu 200 系列                                                                                        |
+| 输入限制     | 输入 `geom_xyz` 属于 int 类型坐标值，不涉及 nan 或 inf，`input_features` 支持 nan 或 inf |
+| 输入限制     | 输出 `pos_memo` 需要调用算子之前对输出空间置初始值，且初始化为负数 |
+| 数据类型限制 | `geom_xyz` 只支持 int 输入，`input_features` 只支持 float 输入 |
+| 精度限制     | 由于采用 atomicAdd，存在乱序计算，可能存在精度问题           |
+| 原位限制     | 不支持原位                                                   |
+| stride 限制  | 不支持 stride                                                |
+| 广播限制     | 不支持广播                                                   |
+| 架构限制     | 不支持 mlu 200 系列                                          |
 
 ### 1.5 验收标准
 
@@ -148,7 +149,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(mluOpHandle_t handle,
 
 0. 首先明确几个变量含义：
 
-​​nram_limit_pt_num 表示一次最多可以 load 到 nram 上的点的数量；
+nram_limit_pt_num 表示一次最多可以 load 到 nram 上的点的数量；
 
 nram_limit_channels 表示一次 load nram_limit_pt_num 个点的通道数量；
 
@@ -281,6 +282,63 @@ for(int pt_idx = 0; pt_idx < actual_pt_num; ++pt_idx){
   }
 ```
 
+对上述步骤中5，６优化方案如下：
+
+step1：计算nram内一次最多能load的input_features，记作`points_once_load`
+
+step2：
+
+1. 若`points_once_load` > 1，通过gather将离散的points_once_load个input_features一次load到nram，具体为：
+
+   1. 计算当前points_once_load个input_features的offset，记作`gather_offset`
+
+   2. 根据output_features_pt_offset计算core上当前处理的点是否在边界内，生成mask，记作`gather_mask`
+
+   3. 通过gather指令一次性将参与计算的点load到nram空间缓存．
+
+   4. for循环points_once_load次，atomic_add计算output_features
+
+      ```c++
+      int *gather_mask = nram_geom + max_deal_num;
+      int *gather_offset = nram_geom + 2 * max_deal_num;
+      int *gather_src = nram_geom + 3 * max_deal_num;
+      
+      // compute gather input offset
+      __bang_add_scalar(gather_offset, nram_point_idx_indices, pt_idx_cur_loop,
+                        deal_num);
+      __bang_mul_scalar(gather_offset, gather_offset, num_channels * 4, deal_num);
+      const int input_load_repeat = deal_num / points_once_load;
+      const int input_load_remin = deal_num % points_once_load;
+      for (int l_id = 0; l_id <= input_load_repeat; l_id++) {
+        if (l_id == input_load_repeat && input_load_remin == 0) {
+          break;
+        }
+        const int actual_load_num =
+            l_id == input_load_repeat ? input_load_remin : points_once_load;
+        const int point_idx_offset = l_id * points_once_load;
+        const int align_8_deal_num =
+            PAD_UP(actual_load_num, BITINDEX_BYTED_ALIGNED);
+        // compute gather mask
+        __bang_write_value((float *)nram_geom_x, align_8_deal_num, (float)0.0);
+        __bang_ge_bitindex((float *)gather_mask,
+                           (float *)nram_geom + point_idx_offset,
+                           (float *)nram_geom_x, align_8_deal_num);
+        __gather((float *)gather_src, (float *)input_features,
+                 (unsigned int *)gather_offset + point_idx_offset,
+                 (void *)gather_mask, num_channels * sizeof(float), GDRAM2NRAM,
+                 num_channels * sizeof(float), actual_load_num);
+        for (int index = 0; index < actual_load_num; index++) {
+          int output_features_pt_offset = nram_geom[point_idx_offset + index];
+          if (output_features_pt_offset >= 0) {
+            __bang_atomic_reduce_add(
+                (float *)output_features + output_features_pt_offset,
+                (float *)gather_src + index * num_channels, num_channels);
+          }
+        }
+      ```
+
+2. 若`points_once_load` <= 1，继续按5，6步骤计算
+
 ### 3.2 伪代码实现
 
 见 3.1 实现方案小节。
@@ -327,12 +385,17 @@ for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 
 1、资源分配
 
+`points_once_load` <= 1：
+
 | 表项 | 分配策略                                               |
 | ---- | ------------------------------------------------------ |
 | NRAM | geom_xyz[nram_limit_pt_num,3]                          |
 |      | output_features[nram_limit_pt_num,nram_limit_channels] |
 |      | pos_memo [nram_limit_pt_num,3]                         |
 |      | buffer_temp[nram_limit_pt_num] \* 3                    |
+
+若`points_once_load` > 1：
+![](./nram_divide.png)
 
 - 具体 nram 空间划分见 device 端代码注释。
 

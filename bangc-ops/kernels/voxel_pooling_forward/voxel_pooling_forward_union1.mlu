@@ -20,20 +20,65 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "voxel_pooling_forward.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+#include "voxel_pooling_forward.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
-__mlu_global__ void MLUKernelVoxelPoolingForward(
+#define BITINDEX_BYTED_ALIGNED 32
+#define MAXNUM_PERF_SUPPORT (2147483648 / 4)
+
+__mlu_func__ void GetPointBatchIdx(int *nram_batch_idx,
+                                   const int pt_idx_cur_loop,
+                                   const int num_points,
+                                   const int deal_num) {
+  int cur_loop_batch_idx_pt_num = 0;
+  int cur_loop_batch_pt_idx_begin = pt_idx_cur_loop;
+  int cur_loop_batch_pt_idx_end = pt_idx_cur_loop + deal_num - 1;
+  int batch_idx_begin = cur_loop_batch_pt_idx_begin / num_points;
+  int batch_idx_end = cur_loop_batch_pt_idx_end / num_points;
+  for (int batch_idx = batch_idx_begin; batch_idx <= batch_idx_end;
+       ++batch_idx) {
+    if (batch_idx == batch_idx_end) {
+      cur_loop_batch_idx_pt_num =
+          cur_loop_batch_pt_idx_end - cur_loop_batch_pt_idx_begin + 1;
+      __bang_write_value(nram_batch_idx, cur_loop_batch_idx_pt_num, batch_idx);
+    } else {
+      cur_loop_batch_idx_pt_num =
+          (batch_idx + 1) * num_points - cur_loop_batch_pt_idx_begin;
+      __bang_write_value(nram_batch_idx, cur_loop_batch_idx_pt_num, batch_idx);
+      nram_batch_idx += cur_loop_batch_idx_pt_num;
+      cur_loop_batch_pt_idx_begin += cur_loop_batch_idx_pt_num;
+    }
+  }
+}
+
+__mlu_func__ void PolicyChooseKernel(const int batch_size, const int num_points,
+                                     const int num_channels,
+                                     bool *is_default_kernel, int *split_num) {
+#if __BANG_ARCH__ > 520
+  const int max_deal_num = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(int) / 6,
+                                       NFU_ALIGN_SIZE / sizeof(int));
+  const int nram_limit_channels = max_deal_num * 4;
+  const int points_once_load = nram_limit_channels / num_channels;
+  const int input_num = batch_size * num_points * num_channels;
+  if (points_once_load <= 1 || input_num >= MAXNUM_PERF_SUPPORT) {
+    *is_default_kernel = true;
+    *split_num = 6;
+  } else {
+    *is_default_kernel = false;
+    *split_num = 8;
+  }
+#endif
+}
+
+__mlu_func__ void MLUKernelVoxelPoolingDefaultKernel(
     const int batch_size, const int num_points, const int num_channels,
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
-    const int *geom_xyz, const float *input_features, float *output_features,
-    int *pos_memo) {
-  // params (int)geom_xyz: (batch_size, num_points, 3)
-  // params (float)input_features: (batch_size, num_points, channels)
-  // params (float)output_features: (batch_size, num_voxel_y, num_voxel_x,
-  // channels) params (int)geom_xyz: (batch_size, num_points, 3)
+    const int split_num, const int *geom_xyz, const float *input_features,
+    float *output_features, int *pos_memo) {
 #if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
@@ -50,9 +95,8 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
    *  |  nram_pos_memo_batch  |  nram_pos_memo_y  |  nram_pos_memo_x  |
    *  |---------------------------------------------------------------|
    */
-  const int nram_limit_pt_num = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(int) / 6,
-                                            NFU_ALIGN_SIZE / sizeof(int));
-  int initial_value = -1;
+  const int nram_limit_pt_num = FLOOR_ALIGN(
+      MAX_NRAM_SIZE / sizeof(int) / split_num, NFU_ALIGN_SIZE / sizeof(int));
   int *nram_geom_xyz = (int *)nram_buffer;
   int *nram_geom_xyz_x = (int *)nram_buffer + nram_limit_pt_num * 3;
   int *nram_geom_xyz_y = (int *)nram_buffer + nram_limit_pt_num * 4;
@@ -122,35 +166,15 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
     __bang_mul(nram_pos_memo_y, nram_geom_xyz_y, pt_in_voxel_mask,
                actual_pt_num);
     // get pos_memo batch_idx
-    int cur_loop_batch_idx_pt_num = 0;
-    int *nram_pos_memo_batch_offset = nram_pos_memo_batch;
-    int cur_loop_batch_pt_idx_begin = pt_idx_cur_loop;
-    int cur_loop_batch_pt_idx_end = pt_idx_cur_loop + actual_pt_num - 1;
-    int batch_idx_begin = cur_loop_batch_pt_idx_begin / num_points;
-    int batch_idx_end = cur_loop_batch_pt_idx_end / num_points;
-    for (int batch_idx = batch_idx_begin; batch_idx <= batch_idx_end;
-         ++batch_idx) {
-      if (batch_idx == batch_idx_end) {
-        cur_loop_batch_idx_pt_num =
-            cur_loop_batch_pt_idx_end - cur_loop_batch_pt_idx_begin + 1;
-        __bang_write_value(nram_pos_memo_batch_offset,
-                           cur_loop_batch_idx_pt_num, batch_idx);
-      } else {
-        cur_loop_batch_idx_pt_num =
-            (batch_idx + 1) * num_points - cur_loop_batch_pt_idx_begin;
-        __bang_write_value(nram_pos_memo_batch_offset,
-                           cur_loop_batch_idx_pt_num, batch_idx);
-        nram_pos_memo_batch_offset += cur_loop_batch_idx_pt_num;
-        cur_loop_batch_pt_idx_begin += cur_loop_batch_idx_pt_num;
-      }
-    }
+    GetPointBatchIdx(nram_pos_memo_batch, pt_idx_cur_loop, num_points,
+                     actual_pt_num);
+
     __bang_mul(nram_pos_memo_batch, nram_pos_memo_batch, pt_in_voxel_mask,
                actual_pt_num);
     // process pos_memo initial value
     __bang_not(nram_buffer_temp, pt_in_voxel_mask, actual_pt_num);
     // read from gdram with pos_memo initial value
-    __bang_mul_scalar(nram_buffer_temp, nram_buffer_temp, initial_value,
-                      actual_pt_num);
+    __bang_mul_scalar(nram_buffer_temp, nram_buffer_temp, -1, actual_pt_num);
     __bang_add(nram_pos_memo_batch, nram_pos_memo_batch, nram_buffer_temp,
                actual_pt_num);
     __bang_add(nram_pos_memo_y, nram_pos_memo_y, nram_buffer_temp,
@@ -164,9 +188,6 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
     // store pos_memo to gdram
     __memcpy(pos_memo + pt_idx_cur_loop * 3, nram_pos_memo,
              actual_pt_num * 3 * sizeof(int), NRAM2GDRAM);
-    if (taskId == 0) {
-      initial_value = pos_memo[0];
-    }
     // process output_features
     // output_features_pt_offset_addr = (batch_idx * num_voxel_y * num_voxel_x +
     // y * num_voxel_x + x) * num_channels
@@ -210,6 +231,209 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
                                  nram_input_features, actual_channels_num);
       }
     }
+  }
+#endif
+}
+
+__mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
+    const int batch_size, const int num_points, const int num_channels,
+    const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
+    const int split_num, const int *geom_xyz, const float *input_features,
+    float *output_features, int *pos_memo) {
+#if __BANG_ARCH__ >= 520
+  if (__is_mpu()) {
+    return;
+  }
+  /* _________________________________________________________________
+   *|                     NRAM_BUFFER DIVIDE                         |
+   *|________________________________________________________________|
+   *|                  name                           |       size   |
+   *|--------------------------|----------------------|--------------|
+   *|                          |  nram_batch_idx      | max_deal_num |
+   *|                          |----------------------|--------------|
+   *| nram_geom                |  nram_y/gather_mask  | max_deal_num |
+   *|  (3*max_deal_num)        |----------------------|--------------|
+   *|                          |  nram_x/gather_offset| max_deal_num |
+   *|--------------------------|----------------------|--------------|
+   *|  nram_geom_x             |                      | max_deal_num |
+   *|  nram_geom_y             |     gather_src       | max_deal_num |
+   *|  nram_geom_z             |   (4*max_deal_num)   | max_deal_num |
+   *|  nram_point_boundary_mask|                      | max_deal_num |
+   *|--------------------------|----------------------|--------------|
+   *|  nram_point_idx_indices  |                      | max_deal_num |
+   *|--------------------------|----------------------|--------------|
+   */
+  const int max_deal_num = FLOOR_ALIGN(MAX_NRAM_SIZE / sizeof(int) / split_num,
+                                       NFU_ALIGN_SIZE / sizeof(int));
+  int *nram_geom = (int *)nram_buffer;
+  int *nram_geom_x = nram_geom + 3 * max_deal_num;
+  int *nram_geom_y = nram_geom_x + max_deal_num;
+  int *nram_geom_z = nram_geom_y + max_deal_num;
+  int *nram_point_boundary_mask = nram_geom_z + max_deal_num;
+  int *nram_point_idx_indices = nram_point_boundary_mask + max_deal_num;
+
+  const int num_points_total = batch_size * num_points;
+  const int pt_num_per_core_least = num_points_total / taskDim;
+  const int pt_num_rem = num_points_total % taskDim;
+  const int pt_num_per_core_actual =
+      pt_num_per_core_least + (int)(taskId < pt_num_rem);
+  const int pt_idx_cur_task = pt_num_per_core_least * taskId +
+                              (taskId < pt_num_rem ? taskId : pt_num_rem);
+
+  const int *geom_xyz_task_offset = geom_xyz + pt_idx_cur_task * 3;
+  const int per_core_repeat = pt_num_per_core_actual / max_deal_num;
+  const int per_core_rem = pt_num_per_core_actual % max_deal_num;
+
+  const int nram_limit_channels = max_deal_num * 4;
+  const int points_once_load = nram_limit_channels / num_channels;
+
+  __mluop_get_stage_indices_tfuse(nram_point_idx_indices, max_deal_num);
+
+  for (int repeat_id = 0; repeat_id <= per_core_repeat; ++repeat_id) {
+    int deal_num = (repeat_id == per_core_repeat) ? per_core_rem : max_deal_num;
+    if (deal_num == 0) {
+      break;
+    }
+    int pt_idx_cur_loop = pt_idx_cur_task + repeat_id * max_deal_num;
+
+    // step1: Load data. geom_xyz: G2N
+    __memcpy(nram_geom, geom_xyz_task_offset + repeat_id * max_deal_num * 3,
+             deal_num * 3 * sizeof(int), GDRAM2NRAM);
+    // transpose [max_deal_num,3] -> [3,max_deal_num]
+    __bang_transpose(nram_geom_x, nram_geom, max_deal_num, 3);
+
+    /*
+     * step2: get boundary point，store 0/1 mask in nram_point_boundary_mask.
+     * 0: out boundray point
+     * 1: in boundray point
+     */
+    // a. get vaild x mask: 0 <= x < num_voxel_x
+    __bang_ge_scalar(nram_point_boundary_mask, nram_geom_x, 0, deal_num);
+    __bang_lt_scalar(nram_geom, nram_geom_x, num_voxel_x, deal_num);
+    __bang_and(nram_point_boundary_mask, nram_point_boundary_mask, nram_geom,
+               deal_num);
+
+    // b. get vaild y mask: 0 <= y < num_voxel_y
+    __bang_ge_scalar(nram_geom, nram_geom_y, 0, deal_num);
+    __bang_lt_scalar(nram_geom + deal_num, nram_geom_y, num_voxel_y, deal_num);
+    __bang_and(nram_geom, nram_geom, nram_geom + deal_num, deal_num);
+
+    // c. get vaild z mask: 0 <= z < num_voxel_z
+    __bang_ge_scalar(nram_geom + deal_num, nram_geom_z, 0, deal_num);
+    __bang_lt_scalar(nram_geom + 2 * deal_num, nram_geom_z, num_voxel_z,
+                     deal_num);
+    __bang_and(nram_geom + deal_num, nram_geom + deal_num,
+               nram_geom + 2 * deal_num, deal_num);
+
+    // d. a && b && c
+    __bang_cycle_and(nram_geom, nram_geom, nram_point_boundary_mask,
+                     2 * deal_num, deal_num);
+    __bang_and(nram_point_boundary_mask, nram_geom, nram_geom + deal_num,
+               deal_num);
+
+    /*
+     * pos_memo store order: batch,y,x,batch,y,x,batch,y,x...
+     */
+    int *nram_batch_idx = nram_geom;
+    int *nram_y = nram_batch_idx + max_deal_num;
+    int *nram_x = nram_y + max_deal_num;
+
+    // step3: get pos_memo batch_idx
+    GetPointBatchIdx(nram_batch_idx, pt_idx_cur_loop, num_points, deal_num);
+
+    // step4: get boundary point: batch,y,x
+    __bang_mul(nram_batch_idx, nram_batch_idx, nram_point_boundary_mask,
+               deal_num);
+    __bang_mul(nram_y, nram_geom_y, nram_point_boundary_mask, deal_num);
+    __bang_mul(nram_x, nram_geom_x, nram_point_boundary_mask, deal_num);
+    __bang_not(nram_point_boundary_mask, nram_point_boundary_mask, deal_num);
+    __bang_mul_scalar(nram_point_boundary_mask, nram_point_boundary_mask, -1,
+                      deal_num);
+
+    __bang_add(nram_batch_idx, nram_batch_idx, nram_point_boundary_mask,
+               deal_num);
+    __bang_add(nram_y, nram_y, nram_point_boundary_mask, deal_num);
+    __bang_add(nram_x, nram_x, nram_point_boundary_mask, deal_num);
+
+    // step5: store pos_memo to gdram
+    __bang_transpose(nram_geom_x, nram_batch_idx, 3, max_deal_num);
+    __memcpy(pos_memo + pt_idx_cur_loop * 3, nram_geom_x,
+             deal_num * 3 * sizeof(int), NRAM2GDRAM);
+
+    // process output_features
+    // step1: compute output offset.
+    // output_features_pt_offset_addr = (batch_idx * num_voxel_y * num_voxel_x +
+    // y * num_voxel_x + x) * num_channels
+    __bang_mul_scalar(nram_geom_x, nram_batch_idx, num_voxel_y * num_voxel_x,
+                      deal_num);
+    __bang_mul_scalar(nram_geom_y, nram_y, num_voxel_x, deal_num);
+    __bang_add(nram_geom_x, nram_geom_x, nram_geom_y, deal_num);
+    __bang_add(nram_geom_x, nram_geom_x, nram_x, deal_num);
+    __bang_mul_scalar(nram_geom, nram_geom_x, num_channels, deal_num);
+
+    int *gather_mask = nram_geom + max_deal_num;
+    int *gather_offset = nram_geom + 2 * max_deal_num;
+    int *gather_src = nram_geom + 3 * max_deal_num;
+    // step2: compute gather input offset
+    __bang_add_scalar(gather_offset, nram_point_idx_indices, pt_idx_cur_loop,
+                      deal_num);
+    __bang_mul_scalar(gather_offset, gather_offset, num_channels * 4, deal_num);
+
+    const int input_load_repeat = deal_num / points_once_load;
+    const int input_load_remin = deal_num % points_once_load;
+    for (int l_id = 0; l_id <= input_load_repeat; l_id++) {
+      if (l_id == input_load_repeat && input_load_remin == 0) {
+        break;
+      }
+      const int actual_load_num =
+          l_id == input_load_repeat ? input_load_remin : points_once_load;
+      const int point_idx_offset = l_id * points_once_load;
+      const int align_8_deal_num =
+          PAD_UP(actual_load_num, BITINDEX_BYTED_ALIGNED);
+      __bang_write_value((float *)nram_geom_x, align_8_deal_num, (float)0.0);
+      __bang_ge_bitindex((float *)gather_mask,
+                         (float *)nram_geom + point_idx_offset,
+                         (float *)nram_geom_x, align_8_deal_num);
+      __gather((float *)gather_src, (float *)input_features,
+               (unsigned int *)gather_offset + point_idx_offset,
+               (void *)gather_mask, num_channels * sizeof(float), GDRAM2NRAM,
+               num_channels * sizeof(float), actual_load_num);
+      for (int index = 0; index < actual_load_num; index++) {
+        int output_features_pt_offset = nram_geom[point_idx_offset + index];
+        if (output_features_pt_offset >= 0) {
+          __bang_atomic_reduce_add(
+              (float *)output_features + output_features_pt_offset,
+              (float *)gather_src + index * num_channels, num_channels);
+        }
+      }
+    }
+  }
+#endif
+}
+
+__mlu_global__ void MLUKernelVoxelPoolingForward(
+    const int batch_size, const int num_points, const int num_channels,
+    const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
+    const int *geom_xyz, const float *input_features, float *output_features,
+    int *pos_memo) {
+#if __BANG_ARCH__ >= 370
+  if (__is_mpu()) {
+    return;
+  }
+  bool is_default_kernel = true;
+  int split_num = 6;
+  PolicyChooseKernel(batch_size, num_points, num_channels, &is_default_kernel,
+                     &split_num);
+  if (is_default_kernel) {
+    MLUKernelVoxelPoolingDefaultKernel(batch_size, num_points, num_channels,
+                                       num_voxel_x, num_voxel_y, num_voxel_z,
+                                       split_num, geom_xyz, input_features,
+                                       output_features, pos_memo);
+  } else {
+    MLUKernelVoxelPoolingStageTwoPerfKernel(
+        batch_size, num_points, num_channels, num_voxel_x, num_voxel_y,
+        num_voxel_z, split_num, geom_xyz, input_features, output_features,
+        pos_memo);
   }
 #endif
 }
