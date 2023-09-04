@@ -268,9 +268,7 @@ __mlu_func__ void nms_detection(
       // Initialize valid_box, set actual_box_num boxes to 1, else set to 0
       __bang_write_value(((float *)valid_box), seg_len, 1.0f);
       if (cpy_len < seg_len) {
-        for (uint32_t i = cpy_len; i < seg_len; i++) {
-          ((float *)valid_box)[i] = 0;
-        }
+        __bang_write_zero((float *)valid_box + cpy_len, seg_len - cpy_len);
       }
 
       // Each box data: x, y, w, h, a
@@ -279,18 +277,16 @@ __mlu_func__ void nms_detection(
       __bang_mul((float *)temp10_ram, (float *)box2 + seg_len * 2,
                  (float *)box2 + seg_len * 3, seg_len);
 
-      // Where area < 1e-14(@float), valid_box set to 0
-      if (max_area < (float)1e-14) {
+      //  if (area1 < 1e-14 || area2 < 1e-14) { iou is 0.f; }
+      const float area_thres = (float)1e-14;
+      if (max_area < area_thres) {
         __bang_write_value((float *)valid_box, seg_len, 0.0f);
       }
-
-      __bang_lt_scalar((float *)temp2_ram, (float *)temp10_ram, (float)1e-14,
+      __bang_lt_scalar((float *)temp2_ram, (float *)temp10_ram, area_thres,
                        seg_len);
       __bang_not((float *)temp2_ram, (float *)temp2_ram, seg_len);
-
       __bang_and((float *)valid_box, (float *)valid_box, (float *)temp2_ram,
                  seg_len);
-
       __bang_move((void *)temp9_ram, (void *)valid_box,
                   seg_len * sizeof(float));
       // 1. Calculate new points
@@ -366,48 +362,48 @@ __mlu_func__ void nms_detection(
                   (float *)temp4_ram, (float *)temp5_ram, (float *)temp6_ram,
                   (float *)temp7_ram, (float *)temp8_ram, seg_len);
 
-      if (iou_threshold == IN_DT(-INFINITY)) {
-        // suppress boxes whose iou is 0, for 0 > -inf is always true
-        __bang_not((float *)temp8_ram, (float *)temp9_ram, seg_len);
-      }
+#if __BANG_ARCH__ == 372
+      // calculate finally ious according to mode
+      __bang_write_value((float *)temp4_ram, seg_len, float(max_area));
+      calIntersectIou((float *)temp2_ram, (float *)temp4_ram,
+                      (float *)temp10_ram, (float *)temp1_ram,
+                      (float *)temp2_ram,  /*mode=*/0, seg_len);
       __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram, seg_len, 0);
       __bang_lut_s32((int32_t *)temp9_ram, (int32_t *)temp9_ram,
                      (int32_t *)table_float, seg_len, TABLE_LENGTH);
-      // temp1: area_I
-      __bang_band((char *)temp1_ram, (char *)temp1_ram, (char *)temp9_ram,
+      __bang_band((char *)temp2_ram, (char *)temp2_ram, (char *)temp9_ram,
                   seg_len * sizeof(float));
-
+      // temp1: 1 = area_I / area_U > iou_threshold, 0 = else
+      __bang_gt_scalar((float *)temp1_ram, (float *)temp2_ram, iou_threshold,
+                       seg_len);
+#else
       // get the area_U(temp2): area2(temp10) + area1(max_area) - area_I(temp1)
       __bang_add_scalar((float *)temp2_ram, (float *)temp10_ram,
                         float(max_area), seg_len);
       __bang_sub((float *)temp2_ram, (float *)temp2_ram, (float *)temp1_ram,
-                 seg_len);  // area_U
-
-      // temp2: area_U
-      __bang_band((char *)temp2_ram, (char *)temp2_ram, (char *)temp9_ram,
-                  seg_len * sizeof(float));
-
+                 seg_len);
       // temp2: iou_threshold * area_U
       __bang_mul_scalar((float *)temp2_ram, (float *)temp2_ram, iou_threshold,
                         seg_len);
       // temp1: 1 = area_I > iou_threshold * area_U, 0 = else
       __bang_gt((float *)temp1_ram, (float *)temp1_ram, (float *)temp2_ram,
                 seg_len);
-      if (iou_threshold == IN_DT(-INFINITY)) {
+      if (iou_threshold < 0) {
+        __bang_not((float *)temp8_ram, (float *)temp9_ram, seg_len);
         __bang_or((float *)temp1_ram, (float *)temp1_ram, (float *)temp8_ram,
                   seg_len);
+      } else {
+        __bang_and((float *)temp1_ram, (float *)temp1_ram, (float *)temp9_ram,
+                   seg_len);
       }
+#endif
       if (std::is_same<IN_DT, half>::value) {
         __bang_float2half_dn((half *)temp1_ram, (float *)temp1_ram, seg_len);
       }
 
-      // temp1: 1->1, 0->-1
-      __bang_mul_scalar((IN_DT *)temp1_ram, (IN_DT *)temp1_ram, IN_DT(2),
-                        seg_len);
-      __bang_sub_scalar((IN_DT *)temp1_ram, (IN_DT *)temp1_ram, IN_DT(1),
-                        seg_len);
-      __bang_mul_scalar((IN_DT *)temp1_ram, (IN_DT *)temp1_ram,
-                        IN_DT(-INFINITY), seg_len);
+      // temp1: 1->-inf, 0->inf
+      __bang_fusion(FUSION_FSM, (IN_DT *)temp1_ram, (IN_DT *)temp1_ram,
+                    IN_DT(0.5), IN_DT(-INFINITY), seg_len);
       // score: keep value if inf, suppressed if -inf
       __bang_minequal((IN_DT *)score, (IN_DT *)score, (IN_DT *)temp1_ram,
                       seg_len);
