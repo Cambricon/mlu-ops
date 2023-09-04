@@ -4,9 +4,9 @@ MLU-OPS 提供了检测、分割等任务中常用的算子，支持自定义算
 
 根据算子在仓库中是否有源码实现分为 MLU Source Op 和 MLU Binary Op．
 
-- MLU Source Op: 源码算子，Device侧代码在仓库有源码实现．
+- MLU Source Op: 源码算子，Host及Device侧代码在仓库有源码实现．
 
-- MLU Binary Op: 二进制算子，Device侧代码在仓库无源码实现，通过调用底层算子库实现.
+- MLU Binary Op: 非源码算子，Host及Device侧代码在仓库无源码实现，通过调用底层CNNL算子库实现.
 
 **算子相关结构**
 
