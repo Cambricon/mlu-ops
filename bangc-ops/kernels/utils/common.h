@@ -644,7 +644,7 @@ __mlu_func__ void __mluop_store_str_3D(T *dst, T *src, int size, int seg_num_in,
  * ****************************************************************************/
 __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram,
                                                   int length) {
-#if (__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
+#if (__BANG_ARCH__ == 372 || __BANG_ARCH__ == 592)
   int align_num = 128;
   int repeat = (int)(logf(length / align_num) / logf(2));
   int remain = length / align_num - powf(2, repeat);
