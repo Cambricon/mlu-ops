@@ -3,9 +3,9 @@
 
 * #### 文档基本信息
 
-| 算子名称    | DeformRoiPoolForward                       |
-| ----------- | -------------- |
-| 编制人/日期 |    卜德飞 / 2022-3-28                    |
+| 算子名称    | DeformRoiPoolForward    |
+| ---------- | ----------------------- |
+| 编制人/日期 |    卜德飞 / 2022-3-28     |
 
 * #### 修改记录
 
@@ -42,21 +42,28 @@
 
 1、Roi Pooling
 - 能够将任意尺寸的候选区域转换为固定尺寸的特征图。
-- ![roi_pooling](./roi_pooling.png)
+
+![roi_pooling](./roi_pooling.png)
+
 - 设输入特征图为 `x`，roi为`w * h`大小且左上角点为`p0`的区域，Roi pooling将把roi区域分为`k * k`个bins，输出`y`为`k * k`大小的特征图。
 - 对于第`(i, j)`个格子`(0 <= i,j < k)`，有下面的计算公式:
+
 ```math
 y(i,j) = \frac{1}{n_{ij}} * \sum_{p\in bin(i,j)} x(p0 + p)
 ```
+
 - $n_{ij}$ 表示`bin`中采样像素的个数， $bin(i,j)$ 可以解释为 $\lfloor i\frac{w}{k}\rfloor\leq p_x < \lceil (i+1)\frac{w}{k} \rceil$ , $\lfloor j\frac{h}{k}\rfloor\leq p_y < \lceil (j+1)\frac{h}{k} \rceil$
 
 2、Deform Roi Pooling
-- 在Roi Pooling的基础之上对`k * k`个bins中的每一个bin都对应添加一个偏移量 $\{\triangle p_{i,j}|0\leq i,j<k \}$ ，使得每个bin产生位置修正。
-- ![deform_roi_pool](./deform_roi_pool.png)
+- 在Roi Pooling的基础之上对`k * k`个bins中的每一个bin都对应添加一个偏移量 $\{trianglep_{i,j}|0\leq i,j\leq k \}$ ，使得每个bin产生位置修正。
+  
+![deform_roi_pool](./deform_roi_pool.png)
+
 ```math
 y(i,j) = \frac{1}{n_{ij}}*\sum_{p\in bin(i,j)} x(p0 + p + \triangle p_{i,j})\\
 \triangle p_{i,j} = \gamma * \triangle \hat p_{i,j} \circ(w,h)
 ```
+
 - $\triangle \hat p_{i,j}$ 是通过全连接层获得的归一化偏移量
 - $\triangle p_{i,j}$ 是一个分数
 - $\gamma$ 是预先设定的标量
@@ -161,7 +168,9 @@ mluOpStatus_t mluOp_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
 ### 3.1 实现方案
 - 使用ping-pong流水
 - 每次处理output中的一个点，通过坐标关系找到该点对应的roi区域，如果存在偏移值，则对该roi区域进行偏移操作，对偏移后bin内的所有像素点求均值，对于非整数坐标的像素点使用双线性插值获得该点对应的像素值。循环遍历完img dst中所有的点，即循环`num_rois * pooled_height * pooled_width`次（下面中为9个点，即遍历9次）。
-- ![scheme](./scheme.png)
+
+![scheme](./scheme.png)
+
 - 在处理bin中的点时，每次处理一个点(x,y平面上)对应的所有通道数据，可能由于通道数过大，导致无法一次拷贝整个通道数据到NRAM上，分为一次能够拷贝和不能处理两种情况。`nram_limit`表示NRAM能够处理的最大元素数。
 - (1) roi选中的所有通道数据可以一次处理完：`8 * channels <= nram_limit - channels_align`
 - 将通道内所有数据一次性拷贝至nram上，执行多次__bang_mul_scalar和__bang_add，最终获得每个channel上的平均值。
@@ -195,7 +204,8 @@ mluOpStatus_t mluOp_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle
 - `L:GDRAM2NRAM`
 - `S:NRAM2GDRAM`
 - `C:Compute`
-- ![ping-pong](./ping-pong.png)
+
+![ping-pong](./ping-pong.png)
 
 ### 3.5 可维护性设计
 
