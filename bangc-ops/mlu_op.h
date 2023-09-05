@@ -13067,11 +13067,11 @@ mluOpPointsInBoxes(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t points_indices_desc,
                    void *points_indices);
 
-// Group:RoiAlign
+// Group:RoiAlignBackward
 /*!
- * @brief Computes the gradients of images \b grads_image based on the gradients \b grads and
- * bounding boxes \b boxes to perform the backpropagation of ::mluOpRoiAlign function. To use the
- * maximum pooling mode or average pooling mode in this function, call ::mluOpRoiAlignBackward_v2.
+ * @brief Computes the gradients of images \b grads_image using the gradients \b grads and
+ * bounding boxes \b boxes to perform the backpropagation of ::mluOpRoiAlignForward function. IF you need to use
+ * maximum pooling mode or average pooling mode, call ::mluOpRoiAlignBackward_v2.
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in
@@ -13163,7 +13163,7 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
                       const mluOpTensorDescriptor_t grads_image_desc,
                       void *grads_image);
 
-// Group:RoiAlign
+// Group:RoiAlignBackward
 /*!
  * @brief Computes the gradients of images \b grads_image based on the gradients \b grads,
  * bounding boxes \b boxes, the coordinate of x axis \b argmax_x, and the coordinate of y axis
@@ -13282,7 +13282,7 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
      @endverbatim
  *
  * @par Reference
- * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/roi_align_cuda.cu
+ * - http://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/roi_align_cuda.cu
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpRoiAlignBackward_v2(mluOpHandle_t handle,
