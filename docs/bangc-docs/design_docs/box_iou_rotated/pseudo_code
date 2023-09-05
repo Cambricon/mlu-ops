@@ -29,11 +29,11 @@ NOTE: 1. TODO: when one mlu core each loop M >= num_boxes2, means can modify a
          (when aligned == false)
          Each Union1 deal (num_boxes1/jobLimit), set taskDimX and Y,
          only launch kernel once. And each U1 set loop to deal an
-         ipuCoreNumsEachCluster*N of num_boxes1 (BUT NOT USE SM).
-         In cluster, ipu-cores load DIFFERENT boxes1 from DDR to CT,
+         mluCoreNumsEachCluster*N of num_boxes1 (BUT NOT USE SM).
+         In cluster, mlu cores load DIFFERENT boxes1 from DDR to CT,
          and each mlu core computes WHOLE LOOP at num_boxes2.
          TODO(perf): Further more, when num_boxes2 >> num_boxes1, and num_boxes1
-                     is small enough that not all ipu cores do effective works,
+                     is small enough that not all mlu core do effective works,
                      can do optimization, use each cluster's different mlu core,
                      partition on boxes2, in the future.
          (when aligned == true)

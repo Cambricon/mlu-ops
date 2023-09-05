@@ -39,8 +39,10 @@
 
 ### 1.2 算子功能和应用场景描述
 
-  该反向算子中给出输出的梯度、输入特征图、roi框的位置、offset，即可得到输入特征图和offset的梯度。
-- ![grad_backward](./grad_backward.png)
+该反向算子中给出输出的梯度、输入特征图、roi框的位置、offset，即可得到输入特征图和offset的梯度。
+
+![grad_backward](./grad_backward.png)
+
 - 输出的每个梯度`grad_bin`对应一个bin中所有点的梯度和，故bin中每个点的梯度`grad_pixel` = `grad_bin` / `count`。
 - `count`为一个bin中采样像素总数量。
 - offset的梯度可通过链式法则求得，对于一个bin，offset对应有两个值[ $x_{offset}$ , $y_{offset}$ ]，以任意一点的 $x_{offset}$ 的求取为例：
@@ -312,7 +314,8 @@ for (int bin_index = 0; bin_index < num_rois * pooled_height * pooled_width) {
 - L:GDRAM2NRAM
 - S:NRAM2GDRAM
 - C:Compute
-- ![ping-pong](./ping-pong.png)
+
+![ping-pong](./ping-pong.png)
 
 ### 3.5 可维护性设计
 

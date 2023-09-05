@@ -1,4 +1,4 @@
-# FocalLossSigmoidBackward 算子开发设计方案
+# FocalLossSigmoidForward 算子开发设计方案
 
 - #### 文档基本信息
 
@@ -15,7 +15,7 @@
 | V2.0  | 王远   | 2023-05-08 | 新增 `MLUOP_COMPUTATION_FAST`模式，支持 float inf&nan |
 - #### 内容描述
 
-本文档为`FocalLossSigmoidBackward`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。
+本文档为`FocalLossSigmoidForward`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。
 
 - #### 算子需求 checklist
 

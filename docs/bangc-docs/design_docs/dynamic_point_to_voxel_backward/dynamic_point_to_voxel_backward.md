@@ -312,7 +312,7 @@ mlu实现
 ```c++
 // kernel1
 
-// 考虑先将所有的offset load sram上，然后广播到每个ipu core的nram上，
+// 考虑先将所有的 offset load sram 上，然后广播到每个 mlu core 的 nram 上，
 // 根据网络拆解下来的数规模offset的size为17176 * sizeof(int), 大约68k
 // 根据nram_size拆解算出一次每个core能处理的C的数量记作n_limit
 __memset_nram(voxel_from_flag_nram, M, false);
