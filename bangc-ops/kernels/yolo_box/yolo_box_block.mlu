@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "yolo_box.h"
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -1680,15 +1681,16 @@ __mlu_global__ void MLUKernelYoloBox(
                       n_in, anchor_s, c_in, h_in, w_in, scores);
 }
 
-void MLUOP_WIN_API KernelYoloBox(
+mluOpStatus_t MLUOP_WIN_API KernelYoloBox(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *img_size, const void *anchors,
     const int class_num, const float conf_thresh, const int downsample_ratio,
     const bool clip_bbox, const float scale, const bool iou_aware,
     const float iou_aware_factor, const int n_in, const int anchor_s,
     const int c_in, const int h_in, const int w_in, void *boxes, void *scores) {
-  MLUKernelYoloBox<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUKernelYoloBox<<<k_dim, k_type, queue>>>(
       (float *)x, (int *)img_size, (int *)anchors, class_num, conf_thresh,
       downsample_ratio, clip_bbox, scale, iou_aware, iou_aware_factor, n_in,
-      anchor_s, c_in, h_in, w_in, (float *)boxes, (float *)scores);
+      anchor_s, c_in, h_in, w_in, (float *)boxes, (float *)scores));
+  return MLUOP_STATUS_SUCCESS;
 }

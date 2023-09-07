@@ -22,12 +22,11 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpCopy(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t input_desc,
+                                      const void *input,
+                                      const mluOpTensorDescriptor_t output_desc,
+                                      void *output) {
   copyWrapper wrapper;
   mluOpStatus_t ret =
       wrapper.invoke(handle, input_desc, input, output_desc, output);

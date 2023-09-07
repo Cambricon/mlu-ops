@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "core/logging.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
 
@@ -584,7 +585,7 @@ __mlu_global__ void MLUKernelPsamaskBackward(
               h_per_cluster);
 }
 
-void MLUOP_WIN_API KernelPsamaskForward(
+mluOpStatus_t MLUOP_WIN_API KernelPsamaskForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *x, float *y, const psamaskType_t psa_type,
     const dimPartitionType_t core_partition,
@@ -594,14 +595,15 @@ void MLUOP_WIN_API KernelPsamaskForward(
     const int half_w_mask, const int n_per_core, const int h_per_core,
     const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
     const int limit_h_seg, const int limit_w_seg) {
-  MLUKernelPsamaskForward<float><<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUKernelPsamaskForward<float><<<k_dim, k_type, queue>>>(
       x, y, psa_type, core_partition, cluster_partition, batch, h_feature,
       w_feature, h_mask, w_mask, x_c, y_c, half_h_mask, half_w_mask, n_per_core,
       h_per_core, n_per_cluster, h_per_cluster, limit_n_seg, limit_h_seg,
-      limit_w_seg);
+      limit_w_seg));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelPsamaskBackward(
+mluOpStatus_t MLUOP_WIN_API KernelPsamaskBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *y, float *x, const psamaskType_t psa_type,
     const dimPartitionType_t core_partition,
@@ -611,9 +613,10 @@ void MLUOP_WIN_API KernelPsamaskBackward(
     const int half_w_mask, const int n_per_core, const int h_per_core,
     const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
     const int limit_h_seg, const int limit_w_seg) {
-  MLUKernelPsamaskBackward<float><<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUKernelPsamaskBackward<float><<<k_dim, k_type, queue>>>(
       y, x, psa_type, core_partition, cluster_partition, batch, h_feature,
       w_feature, h_mask, w_mask, x_c, y_c, half_h_mask, half_w_mask, n_per_core,
       h_per_core, n_per_cluster, h_per_cluster, limit_n_seg, limit_h_seg,
-      limit_w_seg);
+      limit_w_seg));
+  return MLUOP_STATUS_SUCCESS;
 }

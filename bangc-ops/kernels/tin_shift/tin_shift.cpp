@@ -230,10 +230,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpTinShiftForward(
           << " channel_per_core: " << channel_per_core
           << " max_number_hw_per_core: " << max_number_hw_per_core;
 
-  KERNEL_CHECK(KernelTinShift(
-      k_dim, k_type, handle->queue, data_dtype, input, shifts, batch_size,
-      time_size, channel_size, hw_size, group_size, group_channel,
-      channel_per_core, max_number_hw_per_core, max_length_per_core, output));
+  CHECK_RETURN(
+      "[mluOpTinShift forward]",
+      KernelTinShift(k_dim, k_type, handle->queue, data_dtype, input, shifts,
+                     batch_size, time_size, channel_size, hw_size, group_size,
+                     group_channel, channel_per_core, max_number_hw_per_core,
+                     max_length_per_core, output));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -292,11 +294,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpTinShiftBackward(
           << " group_channel: " << group_channel
           << " channel_per_core: " << channel_per_core
           << " max_number_hw_per_core: " << max_number_hw_per_core;
-  KERNEL_CHECK(KernelTinShift(k_dim, k_type, handle->queue, data_dtype,
-                              grad_output, shifts, batch_size, time_size,
-                              channel_size, hw_size, group_size, group_channel,
-                              channel_per_core, max_number_hw_per_core,
-                              max_length_per_core, grad_input));
+  CHECK_RETURN(
+      "[mluOpTinShift backward]",
+      KernelTinShift(k_dim, k_type, handle->queue, data_dtype, grad_output,
+                     shifts, batch_size, time_size, channel_size, hw_size,
+                     group_size, group_channel, channel_per_core,
+                     max_number_hw_per_core, max_length_per_core, grad_input));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

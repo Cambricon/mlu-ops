@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <string>
 
-#include "mlu_op.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -31,6 +30,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "mlu_op.h"
 
 static mluOpStatus_t foolProof(
     const std::string api_name, mluOpHandle_t handle,

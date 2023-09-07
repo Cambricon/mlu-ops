@@ -25,8 +25,9 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelFillZero(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                  cnrtQueue_t queue, const int num_byte,
-                                  void *x);
+mluOpStatus_t MLUOP_WIN_API KernelFillZero(cnrtDim3_t k_dim,
+                                           cnrtFunctionType_t k_type,
+                                           cnrtQueue_t queue,
+                                           const int num_byte, void *x);
 
 #endif  // KERNELS_FILL_ZERO_FILL_ZERO_H

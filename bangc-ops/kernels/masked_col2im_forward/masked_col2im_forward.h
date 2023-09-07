@@ -26,7 +26,7 @@
 #include "mlu_op.h"
 
 // decare func
-void MLUOP_WIN_API KernelMaskedCol2imForward(
+mluOpStatus_t MLUOP_WIN_API KernelMaskedCol2imForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const mluOpDataType_t data_dtype, const void *col, const int height,
     const int width, const int channels, const void *mask_h_idx,

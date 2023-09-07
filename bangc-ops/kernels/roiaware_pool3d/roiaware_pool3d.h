@@ -25,21 +25,21 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelPtsIdxOfVoxels(
+mluOpStatus_t MLUOP_WIN_API KernelPtsIdxOfVoxels(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int pool_method, const int boxes_num,
     const int pts_num, const int max_pts_each_voxel, const int out_x,
     const int out_y, const int out_z, const void *rois, const void *pts,
     void *pts_idx_of_voxels);
 
-void MLUOP_WIN_API KernelRoiawarePool3dForward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiawarePool3dForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int pool_method, const int boxes_num,
     const int pts_num, const int channels, const int max_pts_each_voxel,
     const int out_x, const int out_y, const int out_z, const void *pts_feature,
     const void *pts_idx_of_voxels, void *pooled_features, void *argmax);
 
-void MLUOP_WIN_API KernelRoiawarePool3dBackward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiawarePool3dBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int pool_method, const int boxes_num,
     const int out_x, const int out_y, const int out_z, const int channels,

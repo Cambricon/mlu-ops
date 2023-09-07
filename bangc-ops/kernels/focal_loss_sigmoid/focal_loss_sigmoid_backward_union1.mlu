@@ -24,6 +24,7 @@
 
 #include <float.h>
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -506,22 +507,24 @@ __mlu_global__ void MLUUnion1KernelFocalLossSigmoidBackward(
 }
 }  // namespace backward
 
-void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardHalf(
+mluOpStatus_t MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t dim_n,
     const int32_t deal_n, const int32_t dim_c, void *output) {
-  backward::MLUUnion1KernelFocalLossSigmoidBackward<half>
-      <<<k_dim, k_type, queue>>>(input, target, weight, gamma, alpha, dim_n,
-                                 deal_n, dim_c, output);
+  KERNEL_CHECK(backward::MLUUnion1KernelFocalLossSigmoidBackward<half>
+               <<<k_dim, k_type, queue>>>(input, target, weight, gamma, alpha,
+                                          dim_n, deal_n, dim_c, output));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardFloat(
+mluOpStatus_t MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidBackwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *target, const void *weight,
     const float gamma, const float alpha, const int32_t dim_n,
     const int32_t deal_n, const int32_t dim_c, void *output) {
-  backward::MLUUnion1KernelFocalLossSigmoidBackward<float>
-      <<<k_dim, k_type, queue>>>(input, target, weight, gamma, alpha, dim_n,
-                                 deal_n, dim_c, output);
+  KERNEL_CHECK(backward::MLUUnion1KernelFocalLossSigmoidBackward<float>
+               <<<k_dim, k_type, queue>>>(input, target, weight, gamma, alpha,
+                                          dim_n, deal_n, dim_c, output));
+  return MLUOP_STATUS_SUCCESS;
 }

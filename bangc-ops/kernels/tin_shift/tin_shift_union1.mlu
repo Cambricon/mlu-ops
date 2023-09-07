@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "kernels/tin_shift/tin_shift.h"
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 
 __nram__ char data_nram[MAX_NRAM_SIZE];
@@ -287,7 +288,7 @@ __mlu_entry__ void mluUnion1TinShiftSplitSequence(
   }
 }
 
-void MLUOP_WIN_API KernelTinShift(
+mluOpStatus_t MLUOP_WIN_API KernelTinShift(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const mluOpDataType_t data_dtype, const void *input, const void *shifts,
     const int batch_size, const int time_size, const int channel_size,
@@ -295,13 +296,14 @@ void MLUOP_WIN_API KernelTinShift(
     int channel_per_core, const int max_number_hw_per_core,
     const int max_length_per_core, void *output) {
   if (channel_per_core >= 1) {
-    mluUnion1TinShift<<<k_dim, k_type, queue>>>(
+    KERNEL_CHECK(mluUnion1TinShift<<<k_dim, k_type, queue>>>(
         input, shifts, output, batch_size, time_size, channel_size, hw_size,
-        group_size, group_channel, data_dtype);
+        group_size, group_channel, data_dtype));
   } else {
-    mluUnion1TinShiftSplitSequence<<<k_dim, k_type, queue>>>(
+    KERNEL_CHECK(mluUnion1TinShiftSplitSequence<<<k_dim, k_type, queue>>>(
         input, shifts, output, batch_size, time_size, channel_size, hw_size,
         group_size, group_channel, max_number_hw_per_core, max_length_per_core,
-        data_dtype);
+        data_dtype));
   }
+  return MLUOP_STATUS_SUCCESS;
 }

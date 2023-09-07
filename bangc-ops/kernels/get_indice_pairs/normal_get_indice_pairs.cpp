@@ -20,20 +20,19 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #include <algorithm>
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "mlu_op.h"
-#include "core/logging.h"
-#include "core/tensor.h"
-#include "core/runtime/device.h"
 #include "core/context.h"
+#include "core/logging.h"
 #include "core/mlu_env.h"
-#include "kernels/kernel.h"
-#include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
+#include "core/runtime/device.h"
+#include "core/tensor.h"
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
+#include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
+#include "kernels/kernel.h"
+#include "mlu_op.h"
 
 static mluOpStatus_t getIndiceMaskAll(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
@@ -326,11 +325,13 @@ mluOpStatus_t launchDefaultKernel1(
              "KernelDefaultGetIndicePairKl1<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelDefaultGetIndicePairKl1(
-      kDim3, func_type, handle->queue, (void *)mask_all_ws,
-      (void *)indice_index_in_ws, (void *)out_indices_expand_ws,
-      (void *)indices, filter_space, input_space, output_space, stride,
-      dilation, padding, core_num_l, input_active_site, batch)));
+  CHECK_RETURN(
+      "[getIndicePairsDefault]",
+      KernelDefaultGetIndicePairKl1(
+          kDim3, func_type, handle->queue, (void *)mask_all_ws,
+          (void *)indice_index_in_ws, (void *)out_indices_expand_ws,
+          (void *)indices, filter_space, input_space, output_space, stride,
+          dilation, padding, core_num_l, input_active_site, batch));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -389,12 +390,13 @@ mluOpStatus_t launchSubmKernel1(
              "KernelSubmGetIndicePairKl1<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelSubmGetIndicePairKl1(
-      kDim3, func_type, handle->queue, (void *)mask_all_ptr,
-      (void *)indice_index_in_ptr, (void *)indice_in_expand_ptr,
-      (void *)out_indices_expand_ptr, (void *)indices, filter_space,
-      input_space, output_space, stride, dilation, padding, core_num_l,
-      input_active_site, batch)));
+  CHECK_RETURN("[getIndicePairsDefault]",
+               KernelSubmGetIndicePairKl1(
+                   kDim3, func_type, handle->queue, (void *)mask_all_ptr,
+                   (void *)indice_index_in_ptr, (void *)indice_in_expand_ptr,
+                   (void *)out_indices_expand_ptr, (void *)indices,
+                   filter_space, input_space, output_space, stride, dilation,
+                   padding, core_num_l, input_active_site, batch));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -436,10 +438,12 @@ mluOpStatus_t launchSubmKernel2(mluOpHandle_t handle, const void *indices,
              "KernelSubmGetIndicePairKl2<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelSubmGetIndicePairKl2(
-      kDim3, func_type, handle->queue, (void *)out_indices,
-      (void *)mask_all_ptr, (void *)out_indices_index_ptr, (void *)indices,
-      len_1_one, len_l_two, core_num_l_one, core_num_l_two)));
+  CHECK_RETURN(
+      "[getIndicePairsDefault]",
+      KernelSubmGetIndicePairKl2(
+          kDim3, func_type, handle->queue, (void *)out_indices,
+          (void *)mask_all_ptr, (void *)out_indices_index_ptr, (void *)indices,
+          len_1_one, len_l_two, core_num_l_one, core_num_l_two));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -581,9 +585,10 @@ mluOpStatus_t launchDefaultKernel2(mluOpHandle_t handle,
              "KernelDefaultGetIndicePairKl2<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelDefaultGetIndicePairKl2(kDim3, func_type, handle->queue,
-                                              step_index_output_ptr,
-                                              num_act_out, core_num_l)));
+  CHECK_RETURN("[getIndicePairsDefault]",
+               KernelDefaultGetIndicePairKl2(kDim3, func_type, handle->queue,
+                                             step_index_output_ptr, num_act_out,
+                                             core_num_l));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -618,10 +623,11 @@ mluOpStatus_t launchBalanceKernel(mluOpHandle_t handle,
              "KernelBalanceGetIndicePair<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelBalanceGetIndicePair(
-      kDim3, func_type, handle->queue, balance_input_addr, balance_mask_addr,
-      balance_output_addr, input_active_site, kernel_volume, core_num_l,
-      output_size)));
+  CHECK_RETURN("[getIndicePairsDefault]",
+               KernelBalanceGetIndicePair(
+                   kDim3, func_type, handle->queue, balance_input_addr,
+                   balance_mask_addr, balance_output_addr, input_active_site,
+                   kernel_volume, core_num_l, output_size));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -793,9 +799,10 @@ mluOpStatus_t launchDefaultKernel3(mluOpHandle_t handle, void *output_addr,
              "KernelDefaultGetIndicePairKl3<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelDefaultGetIndicePairKl3(
-      kDim3, func_type, handle->queue, output_addr, input_addr, mask_addr,
-      input_active_site, kernel_volume, core_num_l)));
+  CHECK_RETURN("[getIndicePairsDefault]",
+               KernelDefaultGetIndicePairKl3(
+                   kDim3, func_type, handle->queue, output_addr, input_addr,
+                   mask_addr, input_active_site, kernel_volume, core_num_l));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -836,9 +843,10 @@ mluOpStatus_t launchDefaultKernel4(
              "KernelDefaultGetIndicePairKl4<<<U"
           << func_type / core_dim << ", " << kDim3.x << ", " << kDim3.y << ", "
           << kDim3.z << ">>>";
-  KERNEL_CHECK((KernelDefaultGetIndicePairKl4(
-      kDim3, func_type, handle->queue, output_addr, input_addr, output_space,
-      num_act_out, core_num_l)));
+  CHECK_RETURN("[getIndicePairsDefault]",
+               KernelDefaultGetIndicePairKl4(
+                   kDim3, func_type, handle->queue, output_addr, input_addr,
+                   output_space, num_act_out, core_num_l));
   return MLUOP_STATUS_SUCCESS;
 }
 

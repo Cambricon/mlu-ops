@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelRoipointPool3d(
+mluOpStatus_t MLUOP_WIN_API KernelRoipointPool3d(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int batch_size, const int pts_num,
     const int boxes_num, const int feature_in_len, const int sampled_pts_num,
@@ -33,7 +33,7 @@ void MLUOP_WIN_API KernelRoipointPool3d(
     const char *boxes3d_gdram, char *pooled_features_gdram,
     char *pooled_empty_flag_gdram);
 
-void MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
+mluOpStatus_t MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int batch_size, const int pts_num,
     const int boxes_num, const int feature_in_len, const int sampled_pts_num,

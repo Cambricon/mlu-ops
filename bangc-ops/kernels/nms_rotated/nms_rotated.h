@@ -25,12 +25,10 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelNmsRotated(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                    cnrtQueue_t queue, const void *boxes,
-                                    void *box_workspace, const void *scores,
-                                    void *scores_workspace, void *output,
-                                    int32_t *result_num, const int32_t box_num,
-                                    const int32_t box_dim,
-                                    const float iou_threshold);
+mluOpStatus_t MLUOP_WIN_API KernelNmsRotated(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *boxes, void *box_workspace, const void *scores,
+    void *scores_workspace, void *output, int32_t *result_num,
+    const int32_t box_num, const int32_t box_dim, const float iou_threshold);
 
 #endif  // KERNELS_NMS_ROTATED_NMS_ROTATED_H

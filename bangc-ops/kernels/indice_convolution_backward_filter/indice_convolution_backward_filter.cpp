@@ -22,12 +22,13 @@
  *************************************************************************/
 #include <algorithm>
 #include <string>
-#include "mlu_op.h"
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/mlu_env.h"
 #include "core/tensor.h"
+#include "mlu_op.h"
 
 inline bool isFloatDtype(const mluOpDataType_t &dtype) {
   return (dtype == MLUOP_DTYPE_HALF || dtype == MLUOP_DTYPE_FLOAT);
@@ -174,8 +175,8 @@ static mluOpStatus_t baseParamCheck(
     const mluOpTensorDescriptor_t features_desc,
     const mluOpTensorDescriptor_t output_grad_desc,
     const mluOpTensorDescriptor_t indice_pairs_desc,
-    const mluOpTensorDescriptor_t filters_grad_desc,
-    const int64_t indice_num[], const int64_t inverse) {
+    const mluOpTensorDescriptor_t filters_grad_desc, const int64_t indice_num[],
+    const int64_t inverse) {
   PARAM_CHECK(api_name, handle != nullptr);
   PARAM_CHECK(api_name, features_desc != nullptr);
   PARAM_CHECK(api_name, output_grad_desc != nullptr);
@@ -230,7 +231,7 @@ static mluOpStatus_t baseParamCheck(
     shape_check = false;  // interdependent dimension check failed!
   }
   PARAM_CHECK_LE(api_name, indice_pairs_desc->dims[2],
-                  INDICE_IN_LARGE_TENSOR_NUM);
+                 INDICE_IN_LARGE_TENSOR_NUM);
 
   if (!shape_check) {
     LOG(ERROR) << api_name << " Shape check failed! "

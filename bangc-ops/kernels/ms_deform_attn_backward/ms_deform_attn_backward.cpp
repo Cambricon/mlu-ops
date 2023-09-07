@@ -27,10 +27,10 @@
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/type.h"
 #include "core/tool.h"
-#include "kernels/kernel.h"
+#include "core/type.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 
 char API[] = "[mluOpMsDeformAttnBackward]";
 
@@ -366,37 +366,43 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
       VLOG(5) << "Launch Kernel MsDeformAttnBackwardFast<<<Union"
               << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>";
-      KERNEL_CHECK((KernelMsDeformAttnBackwardFast(
-          k_dim, k_type, handle->queue, (float *)value,
-          (int32_t *)spatial_shapes, (int32_t *)level_start_index,
-          (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
-          batch, spatial_size, num_heads, channels, num_levels, num_query,
-          num_points, (float *)grad_value, (float *)grad_sampling_loc,
-          (float *)grad_attn_weight)));
+      CHECK_RETURN(
+          "[MsDeformAttnBackwardFast]",
+          KernelMsDeformAttnBackwardFast(
+              k_dim, k_type, handle->queue, (float *)value,
+              (int32_t *)spatial_shapes, (int32_t *)level_start_index,
+              (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
+              batch, spatial_size, num_heads, channels, num_levels, num_query,
+              num_points, (float *)grad_value, (float *)grad_sampling_loc,
+              (float *)grad_attn_weight));
     } break;
     case MLUOP_MS_DEFORM_ATTN_BACKWARD_DEFAULT: {
       VLOG(5) << "Launch Kernel MsDeformAttnBackwardDefault<<<Union"
               << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>";
-      KERNEL_CHECK((KernelMsDeformAttnBackwardDefault(
-          k_dim, k_type, handle->queue, (float *)value,
-          (int32_t *)spatial_shapes, (int32_t *)level_start_index,
-          (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
-          batch, spatial_size, num_heads, channels, num_levels, num_query,
-          num_points, (float *)grad_value, (float *)grad_sampling_loc,
-          (float *)grad_attn_weight)));
+      CHECK_RETURN(
+          "[MsDeformAttnBackwardDefault]",
+          KernelMsDeformAttnBackwardDefault(
+              k_dim, k_type, handle->queue, (float *)value,
+              (int32_t *)spatial_shapes, (int32_t *)level_start_index,
+              (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
+              batch, spatial_size, num_heads, channels, num_levels, num_query,
+              num_points, (float *)grad_value, (float *)grad_sampling_loc,
+              (float *)grad_attn_weight));
     } break;
     case MLUOP_MS_DEFORM_ATTN_BACKWARD_SMALL_CHANNEL: {
       VLOG(5) << "Launch Kernel MsDeformAttnBackwardSmallChannels<<<Union"
               << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>";
-      KERNEL_CHECK((KernelMsDeformAttnBackwardSmallChannels(
-          k_dim, k_type, handle->queue, (float *)value,
-          (int32_t *)spatial_shapes, (int32_t *)level_start_index,
-          (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
-          batch, spatial_size, num_heads, channels, num_levels, num_query,
-          num_points, (float *)grad_value, (float *)grad_sampling_loc,
-          (float *)grad_attn_weight)));
+      CHECK_RETURN(
+          "[MsDeformAttnBackwardSmallChannels]",
+          KernelMsDeformAttnBackwardSmallChannels(
+              k_dim, k_type, handle->queue, (float *)value,
+              (int32_t *)spatial_shapes, (int32_t *)level_start_index,
+              (float *)sampling_loc, (float *)attn_weight, (float *)grad_output,
+              batch, spatial_size, num_heads, channels, num_levels, num_query,
+              num_points, (float *)grad_value, (float *)grad_sampling_loc,
+              (float *)grad_attn_weight));
     }
     default: {
       VLOG(5) << "Not Implemented.";

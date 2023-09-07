@@ -234,16 +234,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardGate(
   if (samples <= taskNum) {
     VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
                "KernelMoeDispatchBwdGate1";
-    KERNEL_CHECK((KernelMoeDispatchBwdGate1(
-        k_dim, k_type, handle->queue, data_type, indices, locations, input,
-        dispatch, samples, capacity, hidden, num_experts, workspace,
-        grad_gates)));
+    CHECK_RETURN("[mluOpMoeDispatchBackwardGate1]",
+                 KernelMoeDispatchBwdGate1(k_dim, k_type, handle->queue,
+                                           data_type, indices, locations, input,
+                                           dispatch, samples, capacity, hidden,
+                                           num_experts, workspace, grad_gates));
   } else {
     VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "
                "KernelMoeDispatchBwdGate2";
-    KERNEL_CHECK((KernelMoeDispatchBwdGate2(
-        k_dim, k_type, handle->queue, data_type, indices, locations, input,
-        dispatch, samples, capacity, hidden, num_experts, grad_gates)));
+    CHECK_RETURN(
+        "[mluOpMoeDispatchBackwardGate2]",
+        KernelMoeDispatchBwdGate2(k_dim, k_type, handle->queue, data_type,
+                                  indices, locations, input, dispatch, samples,
+                                  capacity, hidden, num_experts, grad_gates));
   }
 
   GEN_CASE_END();

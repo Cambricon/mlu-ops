@@ -22,35 +22,27 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpScatterNd(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t indices_desc,
-    const void *indices,
-    const mluOpTensorDescriptor_t updates_desc,
-    const void *updates,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpScatterNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t indices_desc,
+               const void *indices, const mluOpTensorDescriptor_t updates_desc,
+               const void *updates, const mluOpTensorDescriptor_t output_desc,
+               void *output) {
   scatterNdWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, indices_desc, indices,
-                                     updates_desc, updates, output_desc,
-                                     output);
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, indices_desc, indices, updates_desc, updates,
+                     output_desc, output);
   return ret;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpScatterNd_v2(
-    mluOpHandle_t handle,
-    mluOpScatterNdMode_t mode,
-    const mluOpTensorDescriptor_t indices_desc,
-    const void *indices,
-    const mluOpTensorDescriptor_t updates_desc,
-    const void *updates,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+    mluOpHandle_t handle, mluOpScatterNdMode_t mode,
+    const mluOpTensorDescriptor_t indices_desc, const void *indices,
+    const mluOpTensorDescriptor_t updates_desc, const void *updates,
+    const mluOpTensorDescriptor_t input_desc, const void *input,
+    const mluOpTensorDescriptor_t output_desc, void *output) {
   scatterNdV2Wrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, mode, indices_desc, indices,
-                                     updates_desc, updates, input_desc, input,
-                                     output_desc, output);
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, mode, indices_desc, indices, updates_desc, updates,
+                     input_desc, input, output_desc, output);
   return ret;
 }

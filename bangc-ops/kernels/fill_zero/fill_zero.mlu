@@ -22,6 +22,8 @@
  *************************************************************************/
 #include "fill_zero.h"
 
+#include "core/logging.h"
+
 __mlu_global__ void MLUBlockKernelGdramFillZero(void *x, const int num) {
   uint32_t seg_n = num / taskDim;
   uint32_t rem_n = num % taskDim;
@@ -36,8 +38,11 @@ __mlu_global__ void MLUBlockKernelGdramFillZero(void *x, const int num) {
   }
 }
 
-void MLUOP_WIN_API KernelFillZero(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                  cnrtQueue_t queue, const int num_byte,
-                                  void *x) {
-  MLUBlockKernelGdramFillZero<<<k_dim, k_type, queue>>>(x, num_byte);
+mluOpStatus_t MLUOP_WIN_API KernelFillZero(cnrtDim3_t k_dim,
+                                           cnrtFunctionType_t k_type,
+                                           cnrtQueue_t queue,
+                                           const int num_byte, void *x) {
+  KERNEL_CHECK(
+      MLUBlockKernelGdramFillZero<<<k_dim, k_type, queue>>>(x, num_byte));
+  return MLUOP_STATUS_SUCCESS;
 }

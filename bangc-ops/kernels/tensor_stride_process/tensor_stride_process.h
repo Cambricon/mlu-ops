@@ -27,8 +27,8 @@
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/type.h"
 #include "core/tool.h"
+#include "core/type.h"
 
 struct TensorShape {
   int tensor_dims[MLUOP_DIM_MAX];

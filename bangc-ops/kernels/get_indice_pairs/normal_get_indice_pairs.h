@@ -20,43 +20,42 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #ifndef KERNELS_GET_INDICE_PAIRS_NORMAL_GET_INDICE_PAIRS_H_
 #define KERNELS_GET_INDICE_PAIRS_NORMAL_GET_INDICE_PAIRS_H_
 
 #include <string>
 
-#include "mlu_op.h"
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
+#include "mlu_op.h"
 
-void MLUOP_WIN_API KernelDefaultGetIndicePairKl1(
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl1(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *mask_all_ws, void *indice_index_in_ws, void *indice_out_expand_ws,
     void *indices, FilterSpace filter_space, InputSpace input_space,
     OutputSpace output_space, Stride stride, Dilation dilation, Padding padding,
     int32_t core_num_l, int32_t input_active_site, int32_t batch_size);
 
-void MLUOP_WIN_API KernelDefaultGetIndicePairKl2(
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *step_index_ptr, int32_t num_act_out, int32_t core_num_l);
 
-void MLUOP_WIN_API KernelDefaultGetIndicePairKl3(
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl3(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *indice_pairs, void *input_addr, void *mask_addr,
     int32_t input_active_site, int32_t kernel_volume, int32_t core_num_l);
 
-void MLUOP_WIN_API KernelDefaultGetIndicePairKl4(
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl4(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *out_indices, void *input_addr, OutputSpace host_output_space,
     int32_t len_l, int32_t core_num_l);
 
-void MLUOP_WIN_API KernelBalanceGetIndicePair(
+mluOpStatus_t MLUOP_WIN_API KernelBalanceGetIndicePair(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *balance_input, void *balance_mask, void *balance_output,
     int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
     int32_t output_size);
 
-void MLUOP_WIN_API KernelSubmGetIndicePairKl1(
+mluOpStatus_t MLUOP_WIN_API KernelSubmGetIndicePairKl1(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *mask_all_ptr, void *indice_index_in_ptr, void *indice_in_expand_ptr,
     void *out_indices_expand_ptr, void *indices, FilterSpace host_filter_space,
@@ -64,7 +63,7 @@ void MLUOP_WIN_API KernelSubmGetIndicePairKl1(
     Stride host_stride, Dilation host_dilation, Padding host_padding,
     int32_t core_num_l, int32_t input_active_site, int32_t batch_size);
 
-void MLUOP_WIN_API KernelSubmGetIndicePairKl2(
+mluOpStatus_t MLUOP_WIN_API KernelSubmGetIndicePairKl2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *out_indices, void *mask_all_ptr, void *out_indices_expand_ptr,
     void *indices, int32_t len_1_one, int32_t len_l_two, int32_t core_num_l_one,

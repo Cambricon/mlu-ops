@@ -194,15 +194,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
 
   if (samples <= taskNum) {
     VLOG(5) << API << "Launch Kernel KernelMoeDispatchBwdData1().";
-    KERNEL_CHECK((KernelMoeDispatchBwdData1(
-        k_dim, k_type, handle->queue, data_type, gates, indices, locations,
-        dispatch, samples, capacity, hidden, num_experts, grad_input)));
+    CHECK_RETURN(
+        "[mluOpMoeDispatchBackwardData1]",
+        KernelMoeDispatchBwdData1(k_dim, k_type, handle->queue, data_type,
+                                  gates, indices, locations, dispatch, samples,
+                                  capacity, hidden, num_experts, grad_input));
     VLOG(5) << API << "Finish Kernel KernelMoeDispatchBwdData1.";
   } else {
     VLOG(5) << API << "Launch Kernel KernelMoeDispatchBwdData2().";
-    KERNEL_CHECK((KernelMoeDispatchBwdData2(
-        k_dim, k_type, handle->queue, data_type, gates, indices, locations,
-        dispatch, samples, capacity, hidden, num_experts, grad_input)));
+    CHECK_RETURN(
+        "[mluOpMoeDispatchBackwardData2]",
+        KernelMoeDispatchBwdData2(k_dim, k_type, handle->queue, data_type,
+                                  gates, indices, locations, dispatch, samples,
+                                  capacity, hidden, num_experts, grad_input));
     VLOG(5) << API << "Finish Kernel KernelMoeDispatchBwdData2.";
   }
 

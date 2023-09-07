@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelThreeNNForward(
+mluOpStatus_t MLUOP_WIN_API KernelThreeNNForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int b, const int n, const int m,
     const void *unknown, const void *known, void *dist2, void *idx);

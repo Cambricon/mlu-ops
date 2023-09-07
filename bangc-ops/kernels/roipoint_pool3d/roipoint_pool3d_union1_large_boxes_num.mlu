@@ -24,10 +24,10 @@
 
 #include <cmath>
 
+#include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "core/logging.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -531,7 +531,7 @@ template __mlu_global__ void MLUKernelRoipointPool3dLargeBoxesNum<half>(
     const char *boxes3d_gdram, char *pooled_features_gdram,
     char *pooled_empty_flag_gdram);
 
-void MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
+mluOpStatus_t MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int batch_size, const int pts_num,
     const int boxes_num, const int feature_in_len, const int sampled_pts_num,
@@ -539,21 +539,24 @@ void MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
     const char *boxes3d_gdram, char *pooled_features_gdram,
     char *pooled_empty_flag_gdram) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUKernelRoipointPool3dLargeBoxesNum<float><<<k_dim, k_type, queue>>>(
-          batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
-          points_xyz_gdram, point_features_gdram, boxes3d_gdram,
-          pooled_features_gdram, pooled_empty_flag_gdram);
+      KERNEL_CHECK(
+          MLUKernelRoipointPool3dLargeBoxesNum<float><<<k_dim, k_type, queue>>>(
+              batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
+              points_xyz_gdram, point_features_gdram, boxes3d_gdram,
+              pooled_features_gdram, pooled_empty_flag_gdram));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUKernelRoipointPool3dLargeBoxesNum<half><<<k_dim, k_type, queue>>>(
-          batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
-          points_xyz_gdram, point_features_gdram, boxes3d_gdram,
-          pooled_features_gdram, pooled_empty_flag_gdram);
+      KERNEL_CHECK(
+          MLUKernelRoipointPool3dLargeBoxesNum<half><<<k_dim, k_type, queue>>>(
+              batch_size, pts_num, boxes_num, feature_in_len, sampled_pts_num,
+              points_xyz_gdram, point_features_gdram, boxes3d_gdram,
+              pooled_features_gdram, pooled_empty_flag_gdram));
     }; break;
-    default: {
-      VLOG(5) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }

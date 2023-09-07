@@ -188,9 +188,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpDiffIouRotatedSortVerticesForward(
   VLOG(5) << "Launch Kernel mluOpDiffIouRotatedSortVerticesForward<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelDiffIouRotatedSortVerticesForward(
-      k_dim, k_type, handle->queue, vertices, mask, num_valid, idx, dim_b,
-      dim_n, dim_m)));
+  CHECK_RETURN("[mluOpDiffIouRotatedSortVerticesForward]",
+               KernelDiffIouRotatedSortVerticesForward(
+                   k_dim, k_type, handle->queue, vertices, mask, num_valid, idx,
+                   dim_b, dim_n, dim_m));
   VLOG(5) << "Kernel KernelDiffIouRotatedSortVerticesForward.";
 
   GEN_CASE_END();

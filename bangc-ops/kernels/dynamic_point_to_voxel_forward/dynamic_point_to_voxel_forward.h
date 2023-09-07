@@ -25,12 +25,11 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelMaskFillCoorsForward(cnrtDim3_t k_dim,
-                                              cnrtFunctionType_t k_type,
-                                              cnrtQueue_t queue,
-                                              int32_t num_points, void *coors);
+mluOpStatus_t MLUOP_WIN_API
+KernelMaskFillCoorsForward(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                           cnrtQueue_t queue, int32_t num_points, void *coors);
 
-void MLUOP_WIN_API KernelDynamicPointToVoxelForward(
+mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpReduceMode_t reduce_mode, const void *feats, int32_t num_points,
     int32_t num_voxel, void *voxel_coors, void *voxel_num,

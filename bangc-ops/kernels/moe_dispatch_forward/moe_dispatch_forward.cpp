@@ -189,9 +189,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchForward(
   mluOpDataType_t data_type = input_desc->dtype;
   VLOG(5) << "[mluOpMoeDispatchForward] launch "
              "KernelMoeDispatchForward";
-  KERNEL_CHECK(KernelMoeDispatchForward(
-      k_dim, k_type, handle->queue, data_type, gates, indices, locations, input,
-      samples, capacity, hidden, num_experts, dispatch));
+  CHECK_RETURN(
+      "[mluOpMoeDispatchForward]",
+      KernelMoeDispatchForward(k_dim, k_type, handle->queue, data_type, gates,
+                               indices, locations, input, samples, capacity,
+                               hidden, num_experts, dispatch));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

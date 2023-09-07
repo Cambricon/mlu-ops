@@ -45,7 +45,7 @@ struct mluOpCarafeStruct {
   int scale_factor;
 };
 
-void MLUOP_WIN_API KernelCarafeForward(
+mluOpStatus_t MLUOP_WIN_API KernelCarafeForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *input, const void *mask, void *output,
     int input_dimN, int input_dimH, int input_dimW, int input_dimC,
@@ -53,7 +53,7 @@ void MLUOP_WIN_API KernelCarafeForward(
     int block_dimW, int block_dimG, int block_dimC, int grid_dimH,
     int grid_dimW, int grid_dimG, int grid_dimC);
 
-void MLUOP_WIN_API KernelCarafeBackward(
+mluOpStatus_t MLUOP_WIN_API KernelCarafeBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, void *input, void *mask, void *grad_output,
     void *grad_input, void *grad_mask, int n, int hi, int wi, int c, int k_up,

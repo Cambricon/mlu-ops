@@ -260,8 +260,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
           << ", " << k_dim.z << "].";
   // 1. mask_fill coors
   VLOG(5) << api << " launch KernelMaskFillCoorsForward start.";
-  KERNEL_CHECK((KernelMaskFillCoorsForward(k_dim, k_type, handle->queue,
-                                           num_points, coors)));
+  CHECK_RETURN("[MaskFillCoorsForward]",
+               KernelMaskFillCoorsForward(k_dim, k_type, handle->queue,
+                                          num_points, coors));
   VLOG(5) << api << " launch KernelMaskFillCoorsForward end.";
 
   // 2. unique op
@@ -289,10 +290,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   VLOG(5) << "mluopFill min value end.";
 
   VLOG(5) << api << " launch KernelDynamicPointToVoxelForward start.";
-  KERNEL_CHECK((KernelDynamicPointToVoxelForward(
-      k_dim, k_type, handle->queue, reduce_type, feats, num_points, num_feats,
-      voxel_coors, voxel_num, point2voxel_map, voxel_points_count,
-      voxel_feats)));
+  CHECK_RETURN("[mluOpDynamicPointToVoxelForward]",
+               KernelDynamicPointToVoxelForward(
+                   k_dim, k_type, handle->queue, reduce_type, feats, num_points,
+                   num_feats, voxel_coors, voxel_num, point2voxel_map,
+                   voxel_points_count, voxel_feats));
   VLOG(5) << api << " launch KernelDynamicPointToVoxelForward end.";
 
   GEN_CASE_END();

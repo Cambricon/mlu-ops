@@ -22,8 +22,9 @@
  *************************************************************************/
 #include "dynamic_point_to_voxel_forward.h"
 
-#include "kernels/kernel.h"
+#include "core/logging.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
@@ -324,13 +325,14 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
 #endif
 }
 
-void MLUOP_WIN_API KernelDynamicPointToVoxelForward(
+mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpReduceMode_t reduce_mode, const void *feats, int32_t num_points,
     int32_t num_feats, void *voxel_coors, void *voxel_num,
     void *point2voxel_map, void *voxel_points_count, void *voxel_feats) {
-  MLUKernelDynamicPointToVoxelForward<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUKernelDynamicPointToVoxelForward<<<k_dim, k_type, queue>>>(
       reduce_mode, (float *)feats, num_points, num_feats,
       (int32_t *)voxel_coors, (int32_t *)voxel_num, (int *)point2voxel_map,
-      (int32_t *)voxel_points_count, (float *)voxel_feats);
+      (int32_t *)voxel_points_count, (float *)voxel_feats));
+  return MLUOP_STATUS_SUCCESS;
 }

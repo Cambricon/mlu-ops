@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelPriorBox(
+mluOpStatus_t MLUOP_WIN_API KernelPriorBox(
     cnrtDim3_t k_dim_box, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *min_sizes, const int min_sizes_num, const void *aspect_ratios,
     const int aspect_ratios_num, const void *variances, const int variances_num,

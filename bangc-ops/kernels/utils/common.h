@@ -26,6 +26,7 @@
 #define KERNELS_UTILS_COMMON_H_
 
 #include <type_traits>
+
 #include "float.h"
 #include "kernels/kernel.h"
 

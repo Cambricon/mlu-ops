@@ -22,10 +22,10 @@
  *************************************************************************/
 #include "moe_dispatch_backward_gate.h"
 
-#include "kernels/kernel.h"
-#include "kernels/debug.h"
-#include "kernels/utils/common.h"
 #include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -357,52 +357,31 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
 #endif
 }
 
-void MLUOP_WIN_API KernelMoeDispatchBwdGate1(
+mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchBwdGate1(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *indices, const void *locations,
     const void *input, const void *dispatch, const int samples,
     const int capacity, const int hidden, const int num_experts,
     void *workspace, void *grad_gates) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT: {
-      MLUKernelMoeDispatchBwdGate1<<<k_dim, k_type, queue>>>(
-          (int *)indices, (int *)locations, (float *)input, (float *)dispatch,
-          samples, capacity, hidden, num_experts, (float *)workspace,
-          (float *)grad_gates);
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      MLUKernelMoeDispatchBwdGate1<<<k_dim, k_type, queue>>>(
-          (int *)indices, (int *)locations, (half *)input, (half *)dispatch,
-          samples, capacity, hidden, num_experts, (half *)workspace,
-          (half *)grad_gates);
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
-    }
-  }
+  /* Only float data type is supported in host-side CPP file
+     fool-proof processing.*/
+  KERNEL_CHECK(MLUKernelMoeDispatchBwdGate1<<<k_dim, k_type, queue>>>(
+      (int *)indices, (int *)locations, (float *)input, (float *)dispatch,
+      samples, capacity, hidden, num_experts, (float *)workspace,
+      (float *)grad_gates));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelMoeDispatchBwdGate2(
+mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchBwdGate2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *indices, const void *locations,
     const void *input, const void *dispatch, const int samples,
     const int capacity, const int hidden, const int num_experts,
     void *grad_gates) {
-  switch (d_type) {
-    case MLUOP_DTYPE_FLOAT: {
-      MLUKernelMoeDispatchBwdGate2<<<k_dim, k_type, queue>>>(
-          (int *)indices, (int *)locations, (float *)input, (float *)dispatch,
-          samples, capacity, hidden, num_experts, (float *)grad_gates);
-    }; break;
-    case MLUOP_DTYPE_HALF: {
-      MLUKernelMoeDispatchBwdGate2<<<k_dim, k_type, queue>>>(
-          (int *)indices, (int *)locations, (half *)input, (half *)dispatch,
-          samples, capacity, hidden, num_experts, (half *)grad_gates);
-    }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
-      break;
-    }
-  }
+  /* Only float data type is supported in host-side CPP file
+     fool-proof processing.*/
+  KERNEL_CHECK(MLUKernelMoeDispatchBwdGate2<<<k_dim, k_type, queue>>>(
+      (int *)indices, (int *)locations, (float *)input, (float *)dispatch,
+      samples, capacity, hidden, num_experts, (float *)grad_gates));
+  return MLUOP_STATUS_SUCCESS;
 }

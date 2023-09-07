@@ -260,12 +260,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
 
   VLOG(5) << "Launch Kernel KernelGenerateProposalsV2 <<<k_dim: " << k_type
           << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-  KERNEL_CHECK(KernelGenerateProposalsV2(
-      k_dim, k_type, handle->queue, (float *)scores, (float *)bbox_deltas,
-      (float *)im_shape, (float *)anchors, (float *)variances,
-      (float *)workspace, (float *)rpn_rois, (float *)rpn_roi_probs,
-      (int *)rpn_rois_num, (int *)rpn_rois_batch_size, pre_nms_top_n,
-      post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, N, A, H, W));
+  CHECK_RETURN(
+      "[mluOpGenerateProposalsV2]",
+      KernelGenerateProposalsV2(
+          k_dim, k_type, handle->queue, (float *)scores, (float *)bbox_deltas,
+          (float *)im_shape, (float *)anchors, (float *)variances,
+          (float *)workspace, (float *)rpn_rois, (float *)rpn_roi_probs,
+          (int *)rpn_rois_num, (int *)rpn_rois_batch_size, pre_nms_top_n,
+          post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, N, A, H, W));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

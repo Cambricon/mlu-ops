@@ -22,14 +22,14 @@
  *************************************************************************/
 #include <string>
 
-#include "core/logging.h"
-#include "core/tensor.h"
 #include "core/context.h"
-#include "core/mlu_env.h"
 #include "core/gen_case.h"
-#include "mlu_op.h"
+#include "core/logging.h"
+#include "core/mlu_env.h"
+#include "core/tensor.h"
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 #include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
+#include "mlu_op.h"
 
 static void getIndicePairsGencase(
     mluOpHandle_t handle,
@@ -143,7 +143,7 @@ static mluOpStatus_t internalGetIndicePairs(
 
   // large tensor
   PARAM_CHECK_LE(interface_name, indices_desc->dims[0],
-                INDICE_IN_LARGE_TENSOR_NUM);
+                 INDICE_IN_LARGE_TENSOR_NUM);
   if (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(out_indices_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||

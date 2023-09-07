@@ -25,23 +25,23 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelDynamicVoxelize(
+mluOpStatus_t MLUOP_WIN_API KernelDynamicVoxelize(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *points, const void *voxel_size, const void *coors_range,
     void *coors, const int32_t num_points, const int32_t num_features);
 
-void MLUOP_WIN_API KernelPoint2Voxel(
+mluOpStatus_t MLUOP_WIN_API KernelPoint2Voxel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *coors,
     void *point_to_pointidx, void *point_to_voxelidx, const int32_t num_points,
     const int32_t max_points);
 
-void MLUOP_WIN_API KernelCalcPointsPerVoxel(
+mluOpStatus_t MLUOP_WIN_API KernelCalcPointsPerVoxel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *point_to_pointidx, void *point_to_voxelidx, void *coor_to_voxelidx,
     void *num_points_per_voxel, void *voxel_num, const int32_t max_voxels,
     const int32_t num_points);
 
-void MLUOP_WIN_API KernelAssignVoxelsCoors(
+mluOpStatus_t MLUOP_WIN_API KernelAssignVoxelsCoors(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *points, void *temp_coors, void *point_to_voxelidx,
     void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,

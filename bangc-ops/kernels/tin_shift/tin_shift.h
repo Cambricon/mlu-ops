@@ -26,7 +26,7 @@
 #include "mlu_op.h"
 
 // decare func
-void MLUOP_WIN_API KernelTinShift(
+mluOpStatus_t MLUOP_WIN_API KernelTinShift(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const mluOpDataType_t data_dtype, const void *input, const void *shifts,
     const int batch_size, const int time_size, const int channel_size,

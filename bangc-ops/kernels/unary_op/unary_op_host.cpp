@@ -22,12 +22,12 @@
  *************************************************************************/
 #include <string>
 
-#include "kernels/kernel.h"
+#include "core/context.h"
 #include "core/logging.h"
+#include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "core/context.h"
-#include "core/runtime/device.h"
+#include "kernels/kernel.h"
 #include "unary_op_host.h"
 #include "mlu_op.h"
 

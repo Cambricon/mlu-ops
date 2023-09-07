@@ -348,10 +348,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
   mluOpDataType_t data_dtype = input_desc->dtype;
   VLOG(5) << "[mluOpDeformRoiPoolForward] Launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
-  KERNEL_CHECK((KernelDeformRoiPoolForward(
-      k_dim, k_type, handle->queue, data_dtype, input, rois, offset, output,
-      batches, channels, height, width, num_rois, pooled_height, pooled_width,
-      spatial_scale, sampling_ratio, gamma)));
+  CHECK_RETURN(
+      "[mluOpDeformRoiPoolForward]",
+      KernelDeformRoiPoolForward(
+          k_dim, k_type, handle->queue, data_dtype, input, rois, offset, output,
+          batches, channels, height, width, num_rois, pooled_height,
+          pooled_width, spatial_scale, sampling_ratio, gamma));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -448,11 +450,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
   mluOpDataType_t data_dtype = input_desc->dtype;
   VLOG(5) << "[mluOpDeformRoiPoolBackward] Launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
-  KERNEL_CHECK((KernelDeformRoiPoolBackward(
-      k_dim, k_type, handle->queue, data_dtype, grad_output, input, rois,
-      offset, grad_input, grad_offset, batches, channels, height, width,
-      num_rois, pooled_height, pooled_width, spatial_scale, sampling_ratio,
-      gamma)));
+  CHECK_RETURN("[mluOpDeformRoiPoolBackward]",
+               KernelDeformRoiPoolBackward(
+                   k_dim, k_type, handle->queue, data_dtype, grad_output, input,
+                   rois, offset, grad_input, grad_offset, batches, channels,
+                   height, width, num_rois, pooled_height, pooled_width,
+                   spatial_scale, sampling_ratio, gamma));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

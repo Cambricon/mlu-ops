@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "mutual_information_forward.h"
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -73,8 +74,8 @@ __mlu_func__ void logAddVector(float *dst, float *src1, float *src2,
   __bang_add(dst, dst, max_value, data_num);
 }
 
-__mlu_func__ void pipelineLoad(float *nram_px, float *nram_py,
-                               const int T, const int s_len, const int t_len,
+__mlu_func__ void pipelineLoad(float *nram_px, float *nram_py, const int T,
+                               const int s_len, const int t_len,
                                const int max_len, const int min_len,
                                const int s_begin, const int t_begin,
                                const int t_end, const int diagonal_num,
@@ -131,11 +132,10 @@ __mlu_func__ void pipelineCompute(const int s_len, const int t_len,
 }
 
 __mlu_func__ void pipelineStore(float *nram_p, const int T, const int t_len,
-                                const int max_len,
-                                const int min_len, const int s_begin,
-                                const int t_begin, const int t_end,
-                                const int diagonal_num, const int i,
-                                float *ping_p) {
+                                const int max_len, const int min_len,
+                                const int s_begin, const int t_begin,
+                                const int t_end, const int diagonal_num,
+                                const int i, float *ping_p) {
   int data_num = i < max_len ? __mluop_min(i + 1, min_len) : diagonal_num - i;
   int s = i < t_len ? s_begin : i - t_len + 1 + s_begin;
   int t = i < t_len ? i + t_begin : t_end;
@@ -264,11 +264,12 @@ __mlu_global__ void mluBlockMutualInformationForward(
   }
 }
 
-void MLUOP_WIN_API kernelMutualInformationForward(
-  cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-  const int B, const int S, const int T, const void *px, const void *py,
-  const bool has_boundary, const void *opt_boundary, void *p, void *ans) {
-  mluBlockMutualInformationForward<<<k_dim, k_type, queue>>>(
+mluOpStatus_t MLUOP_WIN_API kernelMutualInformationForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
+    const int S, const int T, const void *px, const void *py,
+    const bool has_boundary, const void *opt_boundary, void *p, void *ans) {
+  KERNEL_CHECK(mluBlockMutualInformationForward<<<k_dim, k_type, queue>>>(
       B, S, T, (float *)px, (float *)py, has_boundary, (int64_t *)opt_boundary,
-      (float *)p, (float *)ans);
+      (float *)p, (float *)ans));
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -27,8 +27,8 @@
 #include "core/gen_case.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/type.h"
 #include "core/tool.h"
+#include "core/type.h"
 #include "kernels/kernel.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -346,20 +346,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
     VLOG(5) << "Launch Kernel KernelRoipointPool3d<<<Union" << k_type / CORE_DIM
             << ", " << k_dims.x << ", " << k_dims.y << ", " << k_dims.z
             << ">>>";
-    KERNEL_CHECK((KernelRoipointPool3d(
-        k_dims, k_type, handle->queue, points_desc->dtype, batch_size, pts_num,
-        boxes_num, feature_in_len, sampled_pts_num, (char *)points_xyz,
-        (char *)point_features_transpose, (char *)boxes3d,
-        (char *)pooled_features, (char *)pooled_empty_flag)));
+    CHECK_RETURN("[RoipointPool3d]",
+                 KernelRoipointPool3d(
+                     k_dims, k_type, handle->queue, points_desc->dtype,
+                     batch_size, pts_num, boxes_num, feature_in_len,
+                     sampled_pts_num, (char *)points_xyz,
+                     (char *)point_features_transpose, (char *)boxes3d,
+                     (char *)pooled_features, (char *)pooled_empty_flag));
   } else {
     VLOG(5) << "Launch Kernel KernelRoipointPool3dLargeBoxesNum<<<Union"
             << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y << ", "
             << k_dims.z << ">>>";
-    KERNEL_CHECK((KernelRoipointPool3dLargeBoxesNum(
-        k_dims, k_type, handle->queue, points_desc->dtype, batch_size, pts_num,
-        boxes_num, feature_in_len, sampled_pts_num, (char *)points_xyz,
-        (char *)point_features_transpose, (char *)boxes3d,
-        (char *)pooled_features, (char *)pooled_empty_flag)));
+    CHECK_RETURN("[RoipointPool3dLargeBoxesNum]",
+                 KernelRoipointPool3dLargeBoxesNum(
+                     k_dims, k_type, handle->queue, points_desc->dtype,
+                     batch_size, pts_num, boxes_num, feature_in_len,
+                     sampled_pts_num, (char *)points_xyz,
+                     (char *)point_features_transpose, (char *)boxes3d,
+                     (char *)pooled_features, (char *)pooled_empty_flag));
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

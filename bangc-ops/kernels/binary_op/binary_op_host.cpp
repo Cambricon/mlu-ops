@@ -22,13 +22,13 @@
  *************************************************************************/
 #include <string>
 
-#include "kernels/kernel.h"
-#include "core/tensor.h"
-#include "core/type.h"
+#include "binary_op_host.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
-#include "binary_op_host.h"
+#include "core/tensor.h"
+#include "core/type.h"
+#include "kernels/kernel.h"
 #include "mlu_op.h"
 
 void binaryOpPolicyFunc(const mluOpHandle_t &handle,
@@ -40,9 +40,8 @@ void binaryOpPolicyFunc(const mluOpHandle_t &handle,
   int core_number = union_number * core_dim;
 
   int element_num = mluOpGetTensorElementNum(desc);
-  int size =
-      CEIL_ALIGN(element_num * mluop::getSizeOfDataType(desc->dtype),
-                 align_param);
+  int size = CEIL_ALIGN(element_num * mluop::getSizeOfDataType(desc->dtype),
+                        align_param);
   int core_used = CEIL_ALIGN(size / align_param, core_dim);
   core_used = core_used > core_number ? core_number : core_used;
 

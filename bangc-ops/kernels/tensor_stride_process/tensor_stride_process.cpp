@@ -20,6 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "tensor_stride_process_mlu.h"
+#include "tensor_stride_process.h"
+
 #include <stdarg.h>
 #include <algorithm>
 #include <vector>
@@ -30,8 +33,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "tensor_stride_process_mlu.h"
-#include "tensor_stride_process.h"
 
 using std::vector;
 
@@ -350,8 +351,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
 
   VLOG(5) << "Launch Kernel KernelTensorStrideIn<<<Union" << k_type / CORE_DIM
           << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelTensorStrideIn(k_dim, k_type, handle->queue, input,
-                                     input_shape, output, data_type)));
+  CHECK_RETURN("[mluOpTensorStrideIn]",
+               KernelTensorStrideIn(k_dim, k_type, handle->queue, input,
+                                    input_shape, output, data_type));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -375,8 +377,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideOut(
 
   VLOG(5) << "Launch Kernel KernelTensorStrideOut<<<Union" << k_type / CORE_DIM
           << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelTensorStrideOut(k_dim, k_type, handle->queue, input,
-                                      output, output_shape, data_type)));
+  CHECK_RETURN("[mluOpTensorStrideOut]",
+               KernelTensorStrideOut(k_dim, k_type, handle->queue, input,
+                                     output, output_shape, data_type));
   return MLUOP_STATUS_SUCCESS;
 }
 

@@ -25,10 +25,9 @@
 
 #include "mlu_op.h"
 
-
-void MLUOP_WIN_API kernelMutualInformationForward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int B, const int S, const int T, const void *px, const void *py,
+mluOpStatus_t MLUOP_WIN_API kernelMutualInformationForward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
+    const int S, const int T, const void *px, const void *py,
     const bool has_boundary, const void *opt_boundary, void *p, void *ans);
 
 #endif  // KERNELS_MUTUAL_INFORMATION_FORWARD_H_

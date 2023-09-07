@@ -25,12 +25,10 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelBallQuery(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                   cnrtQueue_t queue, mluOpDataType_t d_type,
-                                   const uint32_t b, const uint32_t n,
-                                   const uint32_t m, const float min_radius,
-                                   const float max_radius, const int nsample,
-                                   const void *new_xyz, const void *xyz,
-                                   int32_t *idx);
+mluOpStatus_t MLUOP_WIN_API KernelBallQuery(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const uint32_t b, const uint32_t n,
+    const uint32_t m, const float min_radius, const float max_radius,
+    const int nsample, const void *new_xyz, const void *xyz, int32_t *idx);
 
 #endif  // KERNELS_BALL_QUERY_BALL_QUERY_H

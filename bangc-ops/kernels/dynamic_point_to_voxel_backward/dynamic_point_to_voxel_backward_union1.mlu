@@ -22,8 +22,9 @@
  *************************************************************************/
 #include "dynamic_point_to_voxel_backward.h"
 
-#include "kernels/kernel.h"
+#include "core/logging.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
@@ -187,13 +188,14 @@ __mlu_global__ void MLUKernelMaxReduceTracebackScatterIdx(
   }
 }
 
-void MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
+mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *feats, const void *voxel_feats, void *grad_feats,
     void *voxel_from, const void *point2voxel_map, const void *voxel_num,
     const int N, const int C) {
-  MLUKernelMaxReduceTracebackScatterIdx<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUKernelMaxReduceTracebackScatterIdx<<<k_dim, k_type, queue>>>(
       (const float *)feats, (const float *)voxel_feats, (float *)grad_feats,
       (int *)voxel_from, (const int *)point2voxel_map, (const int *)voxel_num,
-      N, C);
+      N, C));
+  return MLUOP_STATUS_SUCCESS;
 }

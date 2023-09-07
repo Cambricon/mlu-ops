@@ -231,9 +231,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignForward(
   mluOpDataType_t data_dtype = input_desc->dtype;
   VLOG(5) << "[mluOpRotatedFeatureAlignForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
-  KERNEL_CHECK((KernelRotatedFeatureAlignForward(
-      k_dim, k_type, handle->queue, data_dtype, input, bboxes, batches, height,
-      width, channels, offset_rois, spatial_scale, points, output)));
+  CHECK_RETURN(
+      "[mluOpRotatedFeatureAlignForward]",
+      KernelRotatedFeatureAlignForward(
+          k_dim, k_type, handle->queue, data_dtype, input, bboxes, batches,
+          height, width, channels, offset_rois, spatial_scale, points, output));
   VLOG(5) << "Kernel KernelRotatedFeatureAlignForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -289,10 +291,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
   mluOpDataType_t data_dtype = top_output_desc->dtype;
   VLOG(5) << "[mluOpRotatedFeatureAlignBackward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
-  KERNEL_CHECK((KernelRotatedFeatureAlignBackward(
-      k_dim, k_type, handle->queue, data_dtype, top_output, bboxes, batches,
-      height, width, channels, offset_rois, spatial_scale, points,
-      bottom_input)));
+  CHECK_RETURN("[mluOpRotatedFeatureAlignBackward]",
+               KernelRotatedFeatureAlignBackward(
+                   k_dim, k_type, handle->queue, data_dtype, top_output, bboxes,
+                   batches, height, width, channels, offset_rois, spatial_scale,
+                   points, bottom_input));
   VLOG(5) << "Kernel KernelRotatedFeatureAlignBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

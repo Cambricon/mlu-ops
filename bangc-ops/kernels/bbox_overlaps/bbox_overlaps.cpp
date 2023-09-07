@@ -24,8 +24,8 @@
 
 #include <string>
 
-#include "core/logging.h"
 #include "core/gen_case.h"
+#include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"

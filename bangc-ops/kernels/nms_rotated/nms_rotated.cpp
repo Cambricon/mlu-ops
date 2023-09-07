@@ -148,9 +148,10 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   VLOG(5) << "[mluOpNmsRotated] launch kernel [" << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((KernelNmsRotated(k_dim, k_type, handle->queue, boxes,
-                                 box_workspace, scores, scores_workspace,
-                                 output, result_num, box_num, box_dim, p)));
+  CHECK_RETURN("[mluOpNmsRotated]",
+               KernelNmsRotated(k_dim, k_type, handle->queue, boxes,
+                                box_workspace, scores, scores_workspace, output,
+                                result_num, box_num, box_dim, p));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

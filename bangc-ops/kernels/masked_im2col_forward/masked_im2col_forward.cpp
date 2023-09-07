@@ -310,10 +310,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedIm2colForward(
   const int width = feature_desc->dims[3];
   VLOG(5) << "Launch kernel MLUUnion1MaskedIm2colForward<<<" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << ">>>.";
-  KERNEL_CHECK(KernelMaskedIm2colForward(
-      k_dim, k_type, handle->queue, input_dtype, feature_workspace, height,
-      width, channels, kernel_h, kernel_w, pad_h, pad_w, mask_h_idx, mask_w_idx,
-      mask_cnt, data_col_workspace));
+  CHECK_RETURN("[mluOpMaskedIm2colForward]",
+               KernelMaskedIm2colForward(
+                   k_dim, k_type, handle->queue, input_dtype, feature_workspace,
+                   height, width, channels, kernel_h, kernel_w, pad_h, pad_w,
+                   mask_h_idx, mask_w_idx, mask_cnt, data_col_workspace));
 
   VLOG(5) << "[mluOpMaskedIm2colForward] mluOpTranspose_v2 data_col start.";
   const int data_col_dim = 3;

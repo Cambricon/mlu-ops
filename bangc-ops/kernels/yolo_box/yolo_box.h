@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelYoloBox(
+mluOpStatus_t MLUOP_WIN_API KernelYoloBox(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *x, const void *img_size, const void *anchors,
     const int class_num, const float conf_thresh, const int downsample_ratio,

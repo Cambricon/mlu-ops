@@ -88,6 +88,7 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
   PARAM_CHECK(op_name, num_channels > 0);
   PARAM_CHECK(op_name, num_voxel_x > 0);
   PARAM_CHECK(op_name, num_voxel_y > 0);
+  PARAM_CHECK(op_name, num_voxel_z > 0);
   // check large tensor
   if ((mluOpGetTensorElementNum(geom_xyz_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(input_features_desc) >= LARGE_TENSOR_NUM) ||
@@ -163,10 +164,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(
   VLOG(5) << "[mluOpVoxelPoolingForward] launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((KernelVoxelPoolingForward(
-      k_dim, k_type, handle->queue, batch_size, num_points, num_channels,
-      num_voxel_x, num_voxel_y, num_voxel_z, geom_xyz, input_features,
-      output_features, pos_memo)));
+  CHECK_RETURN("[mluOpVoxelPoolingForward]",
+               KernelVoxelPoolingForward(
+                   k_dim, k_type, handle->queue, batch_size, num_points,
+                   num_channels, num_voxel_x, num_voxel_y, num_voxel_z,
+                   geom_xyz, input_features, output_features, pos_memo));
   VLOG(5) << "Launch Kernel KernelVoxelPoolingForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
