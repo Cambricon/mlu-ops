@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <math.h>
+
 #include "kernels/ms_deform_attn_forward/ms_deform_attn_forward.h"
 
 #define TWELVE_SPLIT 12
@@ -29,19 +30,11 @@
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
-__mlu_func__ void loadNeighborPointsData(const T *data_value_gdram,
-                                         T *data_value_p1_nram,
-                                         T *data_value_p2_nram,
-                                         T *data_value_p3_nram,
-                                         T *data_value_p4_nram,
-                                         const size_t &deal_num,
-                                         const int32_t &width,
-                                         const int32_t &height,
-                                         const int32_t &num_heads,
-                                         const int32_t &channels,
-                                         const T &x,
-                                         const T &y,
-                                         const int32_t &head_idx) {
+__mlu_func__ void loadNeighborPointsData(
+    const T *data_value_gdram, T *data_value_p1_nram, T *data_value_p2_nram,
+    T *data_value_p3_nram, T *data_value_p4_nram, const size_t &deal_num,
+    const int32_t &width, const int32_t &height, const int32_t &num_heads,
+    const int32_t &channels, const T &x, const T &y, const int32_t &head_idx) {
   const int32_t w_low = floorf(x);
   const int32_t h_low = floorf(y);
   const int32_t w_high = w_low + 1;
@@ -84,19 +77,11 @@ __mlu_func__ void loadNeighborPointsData(const T *data_value_gdram,
 }
 
 template <typename T>
-__mlu_func__ void computeMsDeformAttn(T *data_value_p1_nram,
-                                      T *data_value_p2_nram,
-                                      T *data_value_p3_nram,
-                                      T *data_value_p4_nram,
-                                      T *sample_point_value,
-                                      T *auxiliary_b,
-                                      T *data_col_nram,
-                                      const T &weight,
-                                      const size_t &deal_num,
-                                      const int32_t &width,
-                                      const int32_t &height,
-                                      const T &x,
-                                      const T &y) {
+__mlu_func__ void computeMsDeformAttn(
+    T *data_value_p1_nram, T *data_value_p2_nram, T *data_value_p3_nram,
+    T *data_value_p4_nram, T *sample_point_value, T *auxiliary_b,
+    T *data_col_nram, const T &weight, const size_t &deal_num,
+    const int32_t &width, const int32_t &height, const T &x, const T &y) {
   const int32_t w_low = floorf(x);
   const int32_t h_low = floorf(y);
   const int32_t w_high = w_low + 1;
@@ -104,7 +89,8 @@ __mlu_func__ void computeMsDeformAttn(T *data_value_p1_nram,
   const T lw = x - w_low;
   const T lh = y - h_low;
   const T hw = 1 - lw;
-  const T hh = 1 - lh;  const T w1 = hh * hw;
+  const T hh = 1 - lh;
+  const T w1 = hh * hw;
   const T w2 = hh * lw;
   const T w3 = lh * hw;
   const T w4 = lh * lw;
@@ -114,61 +100,53 @@ __mlu_func__ void computeMsDeformAttn(T *data_value_p1_nram,
   // top-left point
   if (h_low >= 0 && w_low >= 0) {
     // sample_point_value += v1 * w1
-    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p1_nram,
-                      (T)w1, deal_num);
+    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p1_nram, (T)w1,
+                      deal_num);
     __bang_add((T *)sample_point_value, (T *)sample_point_value,
                (T *)auxiliary_b, deal_num);
   }
   // top-right point
   if (h_low >= 0 && w_high <= width - 1) {
     // sample_point_value += v2 * w2
-    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p2_nram,
-                      (T)w2, deal_num);
+    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p2_nram, (T)w2,
+                      deal_num);
     __bang_add((T *)sample_point_value, (T *)sample_point_value,
                (T *)auxiliary_b, deal_num);
   }
   // bottom-left point
   if (h_high <= height - 1 && w_low >= 0) {
     // sample_point_value += v3 * w3
-    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p3_nram,
-                      (T)w3, deal_num);
+    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p3_nram, (T)w3,
+                      deal_num);
     __bang_add((T *)sample_point_value, (T *)sample_point_value,
                (T *)auxiliary_b, deal_num);
   }
   // bottom-right point
   if (h_high <= height - 1 && w_high <= width - 1) {
     // sample_point_value += v4 * w4
-    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p4_nram,
-                      (T)w4, deal_num);
+    __bang_mul_scalar((T *)auxiliary_b, (T *)data_value_p4_nram, (T)w4,
+                      deal_num);
     __bang_add((T *)sample_point_value, (T *)sample_point_value,
                (T *)auxiliary_b, deal_num);
   }
-  __bang_mul_scalar((T *)sample_point_value, (T *)sample_point_value,
-                    (T)weight, deal_num);
-  __bang_add((T *)data_col_nram, (T *)data_col_nram,
-             (T *)sample_point_value, deal_num);
+  __bang_mul_scalar((T *)sample_point_value, (T *)sample_point_value, (T)weight,
+                    deal_num);
+  __bang_add((T *)data_col_nram, (T *)data_col_nram, (T *)sample_point_value,
+             deal_num);
 }
 
 template <typename T>
-__mlu_global__ void
-MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
-                                    const char *data_spatial_shapes_gdram,
-                                    const char *data_level_start_index_gdram,
-                                    const char *data_sampling_loc_gdram,
-                                    const char *data_attn_weight_gdram,
-                                    const int32_t batch_size,
-                                    const int32_t num_keys,
-                                    const int32_t num_heads,
-                                    const int32_t channels,
-                                    const int32_t num_levels,
-                                    const int32_t num_queries,
-                                    const int32_t num_points,
-                                    char *data_col_gdram) {
+__mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
+    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
+    const char *data_level_start_index_gdram,
+    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_queries,
+    const int32_t num_points, char *data_col_gdram) {
   if (__is_mpu()) {
     return;
   }
-  const size_t spatial_size =
-      PAD_UP(2 * sizeof(int32_t), NFU_ALIGN_SIZE);
+  const size_t spatial_size = PAD_UP(2 * sizeof(int32_t), NFU_ALIGN_SIZE);
   const size_t span_num_deal =
       PAD_DOWN((MAX_NRAM_SIZE - spatial_size) / TWELVE_SPLIT / sizeof(T),
                NFU_ALIGN_SIZE);
@@ -200,18 +178,18 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
   char *auxiliary_b = auxiliary_a + span_num_deal * sizeof(T);
   const size_t ping_pong_gap = 5 * span_num_deal * sizeof(T);
   size_t data_col_ping_pong_idx = 0;
-  int32_t block_num_per_core =
-      (batch_size * num_queries * num_heads) / taskDim;
+  int32_t block_num_per_core = (batch_size * num_queries * num_heads) / taskDim;
   const int32_t block_num_rem =
       (batch_size * num_queries * num_heads) % taskDim;
-  const int32_t idx_start =
-      taskId < (block_num_rem + 1) ?
-          taskId * (block_num_per_core + 1) :
-          taskId * block_num_per_core + block_num_rem;
-  block_num_per_core = taskId < block_num_rem ?
-      (batch_size * num_queries * num_heads) / taskDim + 1 :
-      (batch_size * num_queries * num_heads) / taskDim;
-  for (int32_t cur_idx = idx_start; cur_idx < idx_start + block_num_per_core; ++cur_idx) {  // NOLINT
+  const int32_t idx_start = taskId < (block_num_rem + 1)
+                                ? taskId * (block_num_per_core + 1)
+                                : taskId * block_num_per_core + block_num_rem;
+  block_num_per_core =
+      taskId < block_num_rem
+          ? (batch_size * num_queries * num_heads) / taskDim + 1
+          : (batch_size * num_queries * num_heads) / taskDim;
+  for (int32_t cur_idx = idx_start; cur_idx < idx_start + block_num_per_core;
+       ++cur_idx) {  // NOLINT
     /*
       cur_idx = batch_idx * num_queries * num_heads +
                 query_idx * num_heads + head_idx
@@ -267,23 +245,24 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
             const int32_t level_start_id =
                 ((int32_t *)data_level_start_index_gdram)[level_idx + 1];
             const int32_t spatial_h_ptr = (level_idx + 1) << 1;
-            __memcpy(data_spatial_shapes_nram,
-                     data_spatial_shapes_gdram +
-                         spatial_h_ptr * sizeof(int32_t),
-                     2 * sizeof(int32_t), GDRAM2NRAM);
+            __memcpy(
+                data_spatial_shapes_nram,
+                data_spatial_shapes_gdram + spatial_h_ptr * sizeof(int32_t),
+                2 * sizeof(int32_t), GDRAM2NRAM);
             spatial_h_next_point = ((int32_t *)data_spatial_shapes_nram)[0];
             spatial_w_next_point = ((int32_t *)data_spatial_shapes_nram)[1];
             data_value_ptr = data_value_gdram_start +
-                (level_start_id * num_heads * channels +
-                    c_seg_idx * span_num_deal)
-                * sizeof(T);
-            loc_w =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
-            loc_h =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
-                                                     1];
+                             (level_start_id * num_heads * channels +
+                              c_seg_idx * span_num_deal) *
+                                 sizeof(T);
+            loc_w = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
+            loc_h = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
+                 1];
             weight_next_point =
-                ((T *)data_attn_weight_gdram_start)[level_idx * num_points + point_idx + 1];         // NOLINT
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];  // NOLINT
             x_next_point = loc_w * spatial_w_next_point - 0.5;
             y_next_point = loc_h * spatial_h_next_point - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&
@@ -292,59 +271,73 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),      // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),      // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),      // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),      // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   span_num_deal, spatial_w_next_point, spatial_h_next_point,
-                  num_heads, channels,
-                  x_next_point, y_next_point, head_idx);
+                  num_heads, channels, x_next_point, y_next_point, head_idx);
             }
           } else {
             spatial_h_next_point = spatial_h;
             spatial_w_next_point = spatial_w;
-            loc_w =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2];    // NOLINT
-            loc_h =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2 +    // NOLINT
-                                                     1];
+            loc_w = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
+            loc_h = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
+                 1];
             weight_next_point =
-                ((T *)data_attn_weight_gdram_start)[level_idx * num_points + point_idx + 1];           // NOLINT
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];  // NOLINT
             x_next_point = loc_w * spatial_w - 0.5;
             y_next_point = loc_h * spatial_h - 0.5;
-            if (y_next_point > -1 && x_next_point > -1 && y_next_point < spatial_h &&                  // NOLINT
+            if (y_next_point > -1 && x_next_point > -1 &&
+                y_next_point < spatial_h &&  // NOLINT
                 x_next_point < spatial_w) {
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),               // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),               // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),               // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),               // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   span_num_deal, spatial_w, spatial_h, num_heads, channels,
                   x_next_point, y_next_point, head_idx);
             }
           }
           // compute
           if (y > -1 && x > -1 && y < spatial_h && x < spatial_w) {
-            computeMsDeformAttn((T *)(ping_data_value_p1_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),     // NOLINT
-                                (T *)(ping_data_value_p2_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),     // NOLINT
-                                (T *)(ping_data_value_p3_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),     // NOLINT
-                                (T *)(ping_data_value_p4_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),     // NOLINT
-                                (T *)auxiliary_a, (T *)auxiliary_b,
-                                (T *)(ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap),    // NOLINT
-                                weight, span_num_deal, spatial_w,
-                                spatial_h, x, y);
+            computeMsDeformAttn(
+                (T *)(ping_data_value_p1_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)(ping_data_value_p2_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)(ping_data_value_p3_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)(ping_data_value_p4_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)auxiliary_a, (T *)auxiliary_b,
+                (T *)(ping_data_col_nram +
+                      data_col_ping_pong_idx * ping_pong_gap),  // NOLINT
+                weight, span_num_deal, spatial_w, spatial_h, x, y);
           }
           spatial_w = spatial_w_next_point;
           spatial_h = spatial_h_next_point;
@@ -355,40 +348,35 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
         }
       }
       // store
-      __memcpy_async(data_col_gdram_start +
-                         c_seg_idx * span_num_deal * sizeof(T),
-                     ping_data_col_nram +
-                         data_col_ping_pong_idx * ping_pong_gap,
-                     span_num_deal * sizeof(T), NRAM2GDRAM);
+      __memcpy_async(
+          data_col_gdram_start + c_seg_idx * span_num_deal * sizeof(T),
+          ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap,
+          span_num_deal * sizeof(T), NRAM2GDRAM);
       data_col_ping_pong_idx = (data_col_ping_pong_idx + 1) % 2;
     }
     if (channels_rem > 0) {
-      __bang_write_value((T *)(ping_data_col_nram +
-                             data_col_ping_pong_idx * ping_pong_gap),
-                         channels_align_rem, (T)0);
+      __bang_write_value(
+          (T *)(ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap),
+          channels_align_rem, (T)0);
       // load data
       // level_idx = 0, point_idx = 0
-      __memcpy(data_spatial_shapes_nram,
-               data_spatial_shapes_gdram, 2 * sizeof(int32_t),
-               GDRAM2NRAM);
+      __memcpy(data_spatial_shapes_nram, data_spatial_shapes_gdram,
+               2 * sizeof(int32_t), GDRAM2NRAM);
       int32_t spatial_h = ((int32_t *)data_spatial_shapes_nram)[0];
       int32_t spatial_w = ((int32_t *)data_spatial_shapes_nram)[1];
       const char *data_value_ptr =
-          data_value_gdram_start +
-          channels_seg_num * span_num_deal * sizeof(T);
+          data_value_gdram_start + channels_seg_num * span_num_deal * sizeof(T);
       T loc_w = ((T *)data_sampling_loc_gdram_start)[0];
       T loc_h = ((T *)data_sampling_loc_gdram_start)[1];
       T weight = ((T *)data_attn_weight_gdram_start)[0];
       T x = loc_w * spatial_w - 0.5;
       T y = loc_h * spatial_h - 0.5;
       if (y > -1 && x > -1 && y < spatial_h && x < spatial_w) {
-        loadNeighborPointsData((T *)data_value_ptr,
-                               (T *)ping_data_value_p1_nram,
-                               (T *)ping_data_value_p2_nram,
-                               (T *)ping_data_value_p3_nram,
-                               (T *)ping_data_value_p4_nram,
-                               channels_rem, spatial_w, spatial_h,
-                               num_heads, channels, x, y, head_idx);
+        loadNeighborPointsData(
+            (T *)data_value_ptr, (T *)ping_data_value_p1_nram,
+            (T *)ping_data_value_p2_nram, (T *)ping_data_value_p3_nram,
+            (T *)ping_data_value_p4_nram, channels_rem, spatial_w, spatial_h,
+            num_heads, channels, x, y, head_idx);
       }
       T spatial_h_next_point = 0;
       T spatial_w_next_point = 0;
@@ -405,22 +393,24 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
             const int32_t level_start_id =
                 ((int32_t *)data_level_start_index_gdram)[level_idx + 1];
             const int32_t spatial_h_ptr = (level_idx + 1) << 1;
-            __memcpy(data_spatial_shapes_nram,
-                     data_spatial_shapes_gdram +
-                         spatial_h_ptr * sizeof(int32_t),
-                     2 * sizeof(int32_t), GDRAM2NRAM);
+            __memcpy(
+                data_spatial_shapes_nram,
+                data_spatial_shapes_gdram + spatial_h_ptr * sizeof(int32_t),
+                2 * sizeof(int32_t), GDRAM2NRAM);
             spatial_h_next_point = ((int32_t *)data_spatial_shapes_nram)[0];
             spatial_w_next_point = ((int32_t *)data_spatial_shapes_nram)[1];
             data_value_ptr = data_value_gdram_start +
-                (level_start_id * num_heads * channels +
-                     channels_seg_num * span_num_deal) * sizeof(T);
-            loc_w =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
-            loc_h =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
-                                                     1];
+                             (level_start_id * num_heads * channels +
+                              channels_seg_num * span_num_deal) *
+                                 sizeof(T);
+            loc_w = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
+            loc_h = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
+                 1];
             weight_next_point =
-                ((T *)data_attn_weight_gdram_start)[level_idx * num_points + point_idx + 1];         // NOLINT
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];  // NOLINT
             x_next_point = loc_w * spatial_w_next_point - 0.5;
             y_next_point = loc_h * spatial_h_next_point - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&
@@ -429,59 +419,72 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   channels_rem, spatial_w_next_point, spatial_h_next_point,
                   num_heads, channels, x_next_point, y_next_point, head_idx);
             }
           } else {
             spatial_w_next_point = spatial_w;
             spatial_h_next_point = spatial_h;
-            loc_w =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
-            loc_h =
-                ((T *)data_sampling_loc_gdram_start)[(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
-                                                     1];
+            loc_w = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2];  // NOLINT
+            loc_h = ((T *)data_sampling_loc_gdram_start)
+                [(level_idx * num_points + point_idx + 1) * 2 +  // NOLINT
+                 1];
             weight_next_point =
-                ((T *)data_attn_weight_gdram_start)[level_idx * num_points + point_idx + 1];         // NOLINT
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];  // NOLINT
             x_next_point = loc_w * spatial_w - 0.5;
             y_next_point = loc_h * spatial_h - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&
-                y_next_point < spatial_h &&
-                x_next_point < spatial_w) {
+                y_next_point < spatial_h && x_next_point < spatial_w) {
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),             // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   channels_rem, spatial_w, spatial_h, num_heads, channels,
                   x_next_point, y_next_point, head_idx);
             }
           }
           // compute
           if (y > -1 && x > -1 && y < spatial_h && x < spatial_w) {
-            computeMsDeformAttn((T *)(ping_data_value_p1_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
-                                (T *)(ping_data_value_p2_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
-                                (T *)(ping_data_value_p3_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
-                                (T *)(ping_data_value_p4_nram +
-                                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
-                                (T *)auxiliary_a, (T *)auxiliary_b,
-                                (T *)(ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap), // NOLINT
-                                weight, channels_align_rem, spatial_w,
-                                spatial_h, x, y);
+            computeMsDeformAttn(
+                (T *)(ping_data_value_p1_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)(ping_data_value_p2_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)(ping_data_value_p3_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)(ping_data_value_p4_nram +
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
+                (T *)auxiliary_a, (T *)auxiliary_b,
+                (T *)(ping_data_col_nram +
+                      data_col_ping_pong_idx * ping_pong_gap),  // NOLINT
+                weight, channels_align_rem, spatial_w, spatial_h, x, y);
           }
           spatial_w = spatial_w_next_point;
           spatial_h = spatial_h_next_point;
@@ -492,11 +495,10 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
         }
       }
       // store
-      __memcpy_async(data_col_gdram_start +
-                         channels_seg_num * span_num_deal * sizeof(T),
-                     ping_data_col_nram +
-                         data_col_ping_pong_idx * ping_pong_gap,
-                     channels_rem * sizeof(T), NRAM2GDRAM);
+      __memcpy_async(
+          data_col_gdram_start + channels_seg_num * span_num_deal * sizeof(T),
+          ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap,
+          channels_rem * sizeof(T), NRAM2GDRAM);
       data_col_ping_pong_idx = (data_col_ping_pong_idx + 1) % 2;
     }
   }
@@ -505,16 +507,9 @@ MLUKernelMsDeformAttnForwardDefault(const char *data_value_gdram,
 }
 
 template __mlu_global__ void MLUKernelMsDeformAttnForwardDefault<float>(
-    const char *data_value_gdram,
-    const char *data_spatial_shapes_gdram,
+    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
     const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram,
-    const char *data_attn_weight_gdram,
-    const int32_t batch_size,
-    const int32_t num_keys,
-    const int32_t num_heads,
-    const int32_t channels,
-    const int32_t num_levels,
-    const int32_t num_queries,
-    const int32_t num_points,
-    char *data_col_gdram);
+    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_queries,
+    const int32_t num_points, char *data_col_gdram);

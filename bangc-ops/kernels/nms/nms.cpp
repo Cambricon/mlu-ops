@@ -24,11 +24,11 @@
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpNms(mluOpHandle_t handle, const mluOpNmsDescriptor_t nms_desc,
-            const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
-            const mluOpTensorDescriptor_t confidence_desc,
-            const void *confidence, void *workspace, size_t workspace_size,
-            const mluOpTensorDescriptor_t output_desc, void *output,
-            void *output_size) {
+         const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
+         const mluOpTensorDescriptor_t confidence_desc, const void *confidence,
+         void *workspace, size_t workspace_size,
+         const mluOpTensorDescriptor_t output_desc, void *output,
+         void *output_size) {
   nmsWrapper wrapper;
   mluOpStatus_t ret = wrapper.invoke(
       handle, nms_desc, boxes_desc, boxes, confidence_desc, confidence,

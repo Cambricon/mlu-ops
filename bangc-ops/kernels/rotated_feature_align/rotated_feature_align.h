@@ -25,14 +25,14 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelRotatedFeatureAlignForward(
+mluOpStatus_t MLUOP_WIN_API KernelRotatedFeatureAlignForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *input, const void *bboxes,
     const int batches, const int height, const int width, const int channels,
     const int offset_rois, const float spatial_scale, const int points,
     void *output);
 
-void MLUOP_WIN_API KernelRotatedFeatureAlignBackward(
+mluOpStatus_t MLUOP_WIN_API KernelRotatedFeatureAlignBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *top_output, const void *bboxes,
     const int batches, const int height, const int width, const int channels,

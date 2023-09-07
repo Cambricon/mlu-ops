@@ -22,8 +22,9 @@
  *************************************************************************/
 #ifndef KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_COMMON_H_
 #define KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_COMMON_H_
-#include "mlu.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
+
+#include "mlu.h"
 // b is always pow(2, n), no need to worry about int2float precision loss
 #define OFFSET_SHIFT(a, b) (((int)a) << ((int)log2f(b)))
 

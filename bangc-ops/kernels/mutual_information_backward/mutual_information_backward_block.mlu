@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "mutual_information_backward.h"
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -292,14 +293,15 @@ __mlu_global__ void mluBlockMutualInformationBackward(
   }
 }
 
-void MLUOP_WIN_API kernelMutualInformationBackward(
+mluOpStatus_t MLUOP_WIN_API kernelMutualInformationBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
     const int S, const int T, const void *px, const void *py,
     const bool has_boundary, const void *opt_boundary, const void *p,
     const bool overwrite_ans_grad, void *ans_grad, void *px_grad,
     void *py_grad) {
-  mluBlockMutualInformationBackward<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(mluBlockMutualInformationBackward<<<k_dim, k_type, queue>>>(
       B, S, T, (float *)px, (float *)py, has_boundary, (int64_t *)opt_boundary,
       (float *)p, overwrite_ans_grad, (float *)ans_grad, (float *)px_grad,
-      (float *)py_grad);
+      (float *)py_grad));
+  return MLUOP_STATUS_SUCCESS;
 }

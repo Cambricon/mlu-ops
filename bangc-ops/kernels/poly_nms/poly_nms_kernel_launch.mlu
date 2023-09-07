@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "kernels/poly_nms/poly_nms.h"
 #include "kernels/poly_nms/enums.h"
+
 #include "core/runtime/device.h"
 #include "kernels/kernel.h"
 

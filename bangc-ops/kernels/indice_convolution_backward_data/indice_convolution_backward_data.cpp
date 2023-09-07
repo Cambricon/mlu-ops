@@ -25,9 +25,9 @@
 #include <algorithm>
 #include <string>
 
-#include "mlu_op.h"
 #include "core/context.h"
 #include "core/gen_case.h"
+#include "mlu_op.h"
 
 static mluOpStatus_t foolCheckNoPtr(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t output_grad_desc,

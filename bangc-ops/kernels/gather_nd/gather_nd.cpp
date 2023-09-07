@@ -22,14 +22,11 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpGatherNd(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t desc_params,
-    const void *params,
-    const mluOpTensorDescriptor_t desc_indices,
-    const void *indices,
-    const mluOpTensorDescriptor_t desc_output,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpGatherNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_params,
+              const void *params, const mluOpTensorDescriptor_t desc_indices,
+              const void *indices, const mluOpTensorDescriptor_t desc_output,
+              void *output) {
   gatherNdWrapper wrapper;
   mluOpStatus_t ret = wrapper.invoke(handle, desc_params, params, desc_indices,
                                      indices, desc_output, output);

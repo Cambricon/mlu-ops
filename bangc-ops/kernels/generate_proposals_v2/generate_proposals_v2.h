@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelGenerateProposalsV2(
+mluOpStatus_t MLUOP_WIN_API KernelGenerateProposalsV2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *scores, const float *bbox_deltas, const float *im_shape,
     const float *anchors, const float *variances, float *workspace,

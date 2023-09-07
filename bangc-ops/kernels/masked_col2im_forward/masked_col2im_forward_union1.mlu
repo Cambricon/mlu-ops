@@ -96,23 +96,26 @@ __mlu_entry__ void MLUUnion1MaskedCol2imForward(
                                     (int32_t *)mask_w_idx, mask_cnt, (T *)im);
 }
 
-void MLUOP_WIN_API KernelMaskedCol2imForward(
+mluOpStatus_t MLUOP_WIN_API KernelMaskedCol2imForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const mluOpDataType_t data_dtype, const void *col, const int height,
     const int width, const int channels, const void *mask_h_idx,
     const void *mask_w_idx, const int mask_cnt, void *im) {
   switch (data_dtype) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUUnion1MaskedCol2imForward<float><<<k_dim, k_type, queue>>>(
-          col, height, width, channels, mask_h_idx, mask_w_idx, mask_cnt, im);
+      KERNEL_CHECK(
+          MLUUnion1MaskedCol2imForward<float>
+          <<<k_dim, k_type, queue>>>(col, height, width, channels, mask_h_idx,
+                                     mask_w_idx, mask_cnt, im));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUUnion1MaskedCol2imForward<half><<<k_dim, k_type, queue>>>(
-          col, height, width, channels, mask_h_idx, mask_w_idx, mask_cnt, im);
+      KERNEL_CHECK(MLUUnion1MaskedCol2imForward<half><<<k_dim, k_type, queue>>>(
+          col, height, width, channels, mask_h_idx, mask_w_idx, mask_cnt, im));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }

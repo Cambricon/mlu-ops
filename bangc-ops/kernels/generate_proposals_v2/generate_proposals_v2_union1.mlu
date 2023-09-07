@@ -24,8 +24,9 @@
 
 #include <float.h>
 
-#include "kernels/utils/common.h"
+#include "core/logging.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 
 #define PROPOSAL_NRAM_SIZE MAX_NRAM_SIZE
 #define CALC_AREA_NRAM_FLT_CAP CALC_AREA_NRAM_SIZE / sizeof(float)
@@ -1112,7 +1113,7 @@ __mlu_global__ void mluOpGenerateProposalsV2Kernel(
   *rpn_rois_batch_size = all_proposals_num;
 }
 
-void MLUOP_WIN_API KernelGenerateProposalsV2(
+mluOpStatus_t MLUOP_WIN_API KernelGenerateProposalsV2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *scores, const float *bbox_deltas, const float *im_shape,
     const float *anchors, const float *variances, float *workspace,
@@ -1121,10 +1122,10 @@ void MLUOP_WIN_API KernelGenerateProposalsV2(
     const float nms_thresh, const float min_size, const float eta,
     const bool pixel_offset, const int batch_size, const int Anchors_num,
     const int H, const int W) {
-  mluOpGenerateProposalsV2Kernel<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(mluOpGenerateProposalsV2Kernel<<<k_dim, k_type, queue>>>(
       scores, bbox_deltas, im_shape, anchors, variances, workspace, rpn_rois,
       rpn_roi_probs, rpn_rois_num, rpn_rois_batch_size, pre_nms_top_n,
       post_nms_top_n, nms_thresh, min_size, eta, pixel_offset, batch_size,
-      Anchors_num, W, H);
-  return;
+      Anchors_num, W, H));
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -70,7 +70,7 @@ struct PositionInCore {
   int w_end;
 };
 
-void MLUOP_WIN_API KernelPsamaskForward(
+mluOpStatus_t MLUOP_WIN_API KernelPsamaskForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *x, float *y, const psamaskType_t psa_type,
     const dimPartitionType_t core_partition,
@@ -81,7 +81,7 @@ void MLUOP_WIN_API KernelPsamaskForward(
     const int n_per_cluster, const int h_per_cluster, const int limit_n_seg,
     const int limit_h_seg, const int limit_w_seg);
 
-void MLUOP_WIN_API KernelPsamaskBackward(
+mluOpStatus_t MLUOP_WIN_API KernelPsamaskBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *y, float *x, const psamaskType_t psa_type,
     const dimPartitionType_t core_partition,

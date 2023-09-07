@@ -24,6 +24,7 @@
 
 #include <type_traits>
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 
 #define MARGIN 1e-5
@@ -219,15 +220,16 @@ __mlu_global__ void MLUBlockKernelPointsInBoxes(
   }
 }
 
-void MLUOP_WIN_API
+mluOpStatus_t MLUOP_WIN_API
 KernelPointsInBoxes(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                     cnrtQueue_t queue, uint32_t batch_size, uint32_t points_num,
                     uint32_t boxes_num, float *points, float *boxes, int *idx,
                     uint32_t points_batch_offset, uint32_t boxes_batch_offset,
                     uint32_t idx_batch_offset, uint32_t points_deal_num,
                     uint32_t points_deal_offset, uint32_t idx_deal_num) {
-  MLUBlockKernelPointsInBoxes<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUBlockKernelPointsInBoxes<<<k_dim, k_type, queue>>>(
       batch_size, points_num, boxes_num, points, boxes, idx,
       points_batch_offset, boxes_batch_offset, idx_batch_offset,
-      points_deal_num, points_deal_offset, idx_deal_num);
+      points_deal_num, points_deal_offset, idx_deal_num));
+  return MLUOP_STATUS_SUCCESS;
 }

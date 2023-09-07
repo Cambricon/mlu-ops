@@ -22,41 +22,29 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpUnique(
-    mluOpHandle_t handle,
-    const mluOpUniqueDescriptor_t unique_desc,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const int output_len,
-    void *unique_data,
-    void *output_data,
-    int *output_index,
-    int *output_counts) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpUnique(mluOpHandle_t handle, const mluOpUniqueDescriptor_t unique_desc,
+            const mluOpTensorDescriptor_t input_desc, const void *input,
+            const int output_len, void *unique_data, void *output_data,
+            int *output_index, int *output_counts) {
   uniqueWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, unique_desc, input_desc, input, output_len, unique_data,
-      output_data, output_index, output_counts);
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, unique_desc, input_desc, input, output_len,
+                     unique_data, output_data, output_index, output_counts);
   return ret;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpUnique_v2(
-    mluOpHandle_t handle,
-    const mluOpUniqueDescriptor_t unique_desc,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    void *workspace,
-    const size_t workspace_size,
-    int *output_num,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output,
-    const mluOpTensorDescriptor_t indices_desc,
-    void *inverse_indices,
-    const mluOpTensorDescriptor_t counts_desc,
-    void *counts) {
+    mluOpHandle_t handle, const mluOpUniqueDescriptor_t unique_desc,
+    const mluOpTensorDescriptor_t input_desc, const void *input,
+    void *workspace, const size_t workspace_size, int *output_num,
+    const mluOpTensorDescriptor_t output_desc, void *output,
+    const mluOpTensorDescriptor_t indices_desc, void *inverse_indices,
+    const mluOpTensorDescriptor_t counts_desc, void *counts) {
   uniqueV2Wrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, unique_desc, input_desc, input, workspace, workspace_size,
-      output_num, output_desc, output, indices_desc, inverse_indices,
-      counts_desc, counts);
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, unique_desc, input_desc, input, workspace,
+                     workspace_size, output_num, output_desc, output,
+                     indices_desc, inverse_indices, counts_desc, counts);
   return ret;
 }

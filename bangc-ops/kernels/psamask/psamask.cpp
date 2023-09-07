@@ -271,14 +271,16 @@ mluOpStatus_t mluOpPsamaskForward(mluOpHandle_t handle, const int psa_type,
     return ret;
   }
 
-  KERNEL_CHECK((KernelPsamaskForward(
-      k_dim, k_type, handle->queue, static_cast<const float *>(x),
-      static_cast<float *>(y), (psamaskType_t)psa_type,
-      partition_info.core_partition, partition_info.cluster_partition, n,
-      h_feature, w_feature, h_mask, w_mask, x_c, y_c, half_h_mask, half_w_mask,
-      partition_info.n_per_core, partition_info.h_per_core,
-      partition_info.n_per_cluster, partition_info.h_per_cluster, n_limit_seg,
-      h_limit_seg, w_limit_seg)));
+  CHECK_RETURN(
+      "[mluOpPsamaskForward]",
+      KernelPsamaskForward(
+          k_dim, k_type, handle->queue, static_cast<const float *>(x),
+          static_cast<float *>(y), (psamaskType_t)psa_type,
+          partition_info.core_partition, partition_info.cluster_partition, n,
+          h_feature, w_feature, h_mask, w_mask, x_c, y_c, half_h_mask,
+          half_w_mask, partition_info.n_per_core, partition_info.h_per_core,
+          partition_info.n_per_cluster, partition_info.h_per_cluster,
+          n_limit_seg, h_limit_seg, w_limit_seg));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -338,14 +340,16 @@ mluOpStatus_t mluOpPsamaskBackward(mluOpHandle_t handle, const int psa_type,
     GEN_CASE_END();
     return ret;
   }
-  KERNEL_CHECK((KernelPsamaskBackward(
-      k_dim, k_type, handle->queue, static_cast<const float *>(dy),
-      static_cast<float *>(dx), (psamaskType_t)psa_type,
-      partition_info.core_partition, partition_info.cluster_partition, n,
-      h_feature, w_feature, h_mask, w_mask, dx_c, dy_c, half_h_mask,
-      half_w_mask, partition_info.n_per_core, partition_info.h_per_core,
-      partition_info.n_per_cluster, partition_info.h_per_cluster, n_limit_seg,
-      h_limit_seg, w_limit_seg)));
+  CHECK_RETURN(
+      "[mluOpPsamaskBackward]",
+      KernelPsamaskBackward(
+          k_dim, k_type, handle->queue, static_cast<const float *>(dy),
+          static_cast<float *>(dx), (psamaskType_t)psa_type,
+          partition_info.core_partition, partition_info.cluster_partition, n,
+          h_feature, w_feature, h_mask, w_mask, dx_c, dy_c, half_h_mask,
+          half_w_mask, partition_info.n_per_core, partition_info.h_per_core,
+          partition_info.n_per_cluster, partition_info.h_per_cluster,
+          n_limit_seg, h_limit_seg, w_limit_seg));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

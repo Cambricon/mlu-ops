@@ -39,8 +39,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMutualInformationBackwardWorkspaceSize(
     const mluOpTensorDescriptor_t py_desc,
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc,
-    const mluOpTensorDescriptor_t ans_grad_desc,
-    const bool overwrite_ans_grad, size_t *workspace_size) {
+    const mluOpTensorDescriptor_t ans_grad_desc, const bool overwrite_ans_grad,
+    size_t *workspace_size) {
   // Workspace is not required in the current implementation.
   // This interface will be used when the scale limitation is removed.
   PARAM_CHECK(API_NAME, handle != nullptr);
@@ -85,8 +85,8 @@ static mluOpStatus_t checkTensorDim(
   }
   if (1 != ans_grad_desc->dim) {
     LOG(ERROR) << API_NAME << " The dim of ans_grad must be 1. "
-               << "But now the dim of ans_grad is "
-               << ans_grad_desc->dim << ".";
+               << "But now the dim of ans_grad is " << ans_grad_desc->dim
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (3 != px_grad_desc->dim) {
@@ -120,9 +120,8 @@ static mluOpStatus_t checkTensorShape(
     LOG(ERROR) << API_NAME
                << " px.shape[0], py.shape[0], p.shape[0], ans_grad.shape[0], "
                << "px_grad.shape[0] and py_grad.shape[0] must be same. But now "
-               << "px.shape[0] is " << px_desc->dims[0]
-               << ", py.shape[0] is " << py_desc->dims[0]
-               << ", p.shape[0] is " << p_desc->dims[0]
+               << "px.shape[0] is " << px_desc->dims[0] << ", py.shape[0] is "
+               << py_desc->dims[0] << ", p.shape[0] is " << p_desc->dims[0]
                << ", ans_grad.shape[0] is " << ans_grad_desc->dims[0]
                << ", px_grad.shape[0] is " << px_grad_desc->dims[0]
                << ", py_grad.shape[0] is " << py_grad_desc->dims[0] << ".";
@@ -133,23 +132,22 @@ static mluOpStatus_t checkTensorShape(
   if (T + 1 != px_desc->dims[2]) {
     LOG(ERROR) << API_NAME << " Currently only supports the case that "
                << "px.shape[2] must be equal to py.shape[2] + 1. But now "
-               << "px.shape[2] is " << px_desc->dims[2]
-               << ", py.shape[2] is " << py_desc->dims[2] << ".";
+               << "px.shape[2] is " << px_desc->dims[2] << ", py.shape[2] is "
+               << py_desc->dims[2] << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // the shape of py must be [B, S+1, T]
   if (S + 1 != py_desc->dims[1]) {
-    LOG(ERROR) << API_NAME
-               << " py.shape[1] must be equal to px.shape[1] + 1. "
+    LOG(ERROR) << API_NAME << " py.shape[1] must be equal to px.shape[1] + 1. "
                << "But now px.shape[1] is " << px_desc->dims[1]
                << ", py.shape[1] is " << py_desc->dims[1] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // the shape of opt_boundary must be [B, 4]
-  if (nullptr != opt_boundary_desc && (B != opt_boundary_desc->dims[0]
-      || 4 != opt_boundary_desc->dims[1])) {
+  if (nullptr != opt_boundary_desc &&
+      (B != opt_boundary_desc->dims[0] || 4 != opt_boundary_desc->dims[1])) {
     LOG(ERROR) << API_NAME << " When opt_boundary is not NULL, "
                << "opt_boundary.shape[0] and px.shape[0] must be same, and "
                << "opt_boundary.shape[1] must be 4. But now "
@@ -162,13 +160,12 @@ static mluOpStatus_t checkTensorShape(
 
   // the shape of p must be [B, S+1, T+1]
   if (S + 1 != p_desc->dims[1] || T + 1 != p_desc->dims[2]) {
-    LOG(ERROR) << API_NAME
-               << " p.shape[1] and py.shape[1] must be same, and "
+    LOG(ERROR) << API_NAME << " p.shape[1] and py.shape[1] must be same, and "
                << "p.shape[2] must be equal to py.shape[2] + 1. "
                << "But now p.shape[1] is " << p_desc->dims[1]
-               << ", py.shape[1] is " << py_desc->dims[1]
-               << ", p.shape[2] is " << p_desc->dims[2]
-               << ", py.shape[2] is " << py_desc->dims[2] << ".";
+               << ", py.shape[1] is " << py_desc->dims[1] << ", p.shape[2] is "
+               << p_desc->dims[2] << ", py.shape[2] is " << py_desc->dims[2]
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -262,8 +259,7 @@ static mluOpStatus_t checkTensorDatatype(
 }
 
 static mluOpStatus_t checkTensorScaleLimit(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t px_desc,
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc,
     const mluOpTensorDescriptor_t py_desc,
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc) {
@@ -274,7 +270,7 @@ static mluOpStatus_t checkTensorScaleLimit(
   if (mluOpGetTensorElementNum(px_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(py_desc) >= LARGE_TENSOR_NUM ||
       (nullptr != opt_boundary_desc &&
-      mluOpGetTensorElementNum(opt_boundary_desc) >= LARGE_TENSOR_NUM) ||
+       mluOpGetTensorElementNum(opt_boundary_desc) >= LARGE_TENSOR_NUM) ||
       mluOpGetTensorElementNum(p_desc) >= LARGE_TENSOR_NUM) {
     LOG(ERROR) << API_NAME << " Overflow max tensor num."
                << " Current operator supports tensor num smaller than 2^31.";
@@ -295,14 +291,14 @@ static mluOpStatus_t checkTensorScaleLimit(
   }
 
   // check scale limit for compute p_grad
-  currnet_size = T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) +
-                 3 * std::min(S, T) + 4;
+  currnet_size =
+      T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4;
   if (currnet_size > handle->nram_size / sizeof(float)) {
     LOG(ERROR) << API_NAME << " The num of px.shape[1] * px.shape[2] + "
                << "py.shape[1] * py.shape[2] + p.shape[1] * p.shape[2] "
                << "+ 3 * min(px.shape[1], py.shape[2]) + 4 shoule be less than "
-               << handle->nram_size / sizeof(float)
-               << ". But now it is " << currnet_size << ".";
+               << handle->nram_size / sizeof(float) << ". But now it is "
+               << currnet_size << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -335,7 +331,7 @@ static mluOpStatus_t checkTensorPtr(
     has_boundary = true;
     VLOG(5) << API_NAME << " opt_boundary is not NULL.";
 
-  } else  if (nullptr == opt_boundary_desc && nullptr == opt_boundary) {
+  } else if (nullptr == opt_boundary_desc && nullptr == opt_boundary) {
     has_boundary = false;
     VLOG(5) << API_NAME << " opt_boundary is NULL.";
   } else {
@@ -377,26 +373,24 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
   }
 
   // 3. check tensor dim
-  mluOpStatus_t check_status = checkTensorDim(px_desc, py_desc,
-                                              opt_boundary_desc,
-                                              p_desc, ans_grad_desc,
-                                              px_grad_desc, py_grad_desc);
+  mluOpStatus_t check_status =
+      checkTensorDim(px_desc, py_desc, opt_boundary_desc, p_desc, ans_grad_desc,
+                     px_grad_desc, py_grad_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
 
   // 4. check tensor shape
-  check_status = checkTensorShape(px_desc, py_desc, opt_boundary_desc,
-                                  p_desc, ans_grad_desc, px_grad_desc,
-                                  py_grad_desc);
+  check_status = checkTensorShape(px_desc, py_desc, opt_boundary_desc, p_desc,
+                                  ans_grad_desc, px_grad_desc, py_grad_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
 
   // 5. check tensor dtype
-  check_status = checkTensorDatatype(px_desc, py_desc, opt_boundary_desc,
-                                     p_desc, ans_grad_desc, px_grad_desc,
-                                     py_grad_desc);
+  check_status =
+      checkTensorDatatype(px_desc, py_desc, opt_boundary_desc, p_desc,
+                          ans_grad_desc, px_grad_desc, py_grad_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
@@ -416,7 +410,7 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
   if (0 == B || (0 == S && 0 == T)) {
     zero_element = true;
     VLOG(5) << API_NAME << " Skip zero element tensor when px.shape[0] is zero "
-                        << "or px.shape[1] and py.shape[2] are both zero.";
+            << "or px.shape[1] and py.shape[2] are both zero.";
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -426,9 +420,9 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
   }
 
   // 9. check tensor ptr
-  check_status = checkTensorPtr(px, py, p, ans_grad, opt_boundary_desc,
-                                opt_boundary, px_grad, py_grad, S, T,
-                                has_boundary);
+  check_status =
+      checkTensorPtr(px, py, p, ans_grad, opt_boundary_desc, opt_boundary,
+                     px_grad, py_grad, S, T, has_boundary);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
@@ -442,9 +436,8 @@ static void mutualInformationBackwardGencase(
     const mluOpTensorDescriptor_t opt_boundary_desc, const void *opt_boundary,
     const mluOpTensorDescriptor_t p_desc, const void *p,
     const mluOpTensorDescriptor_t ans_grad_desc, void *ans_grad,
-    const bool overwrite_ans_grad,
-    const mluOpTensorDescriptor_t px_grad_desc, void *px_grad,
-    const mluOpTensorDescriptor_t py_grad_desc, void *py_grad) {
+    const bool overwrite_ans_grad, const mluOpTensorDescriptor_t px_grad_desc,
+    void *px_grad, const mluOpTensorDescriptor_t py_grad_desc, void *py_grad) {
   GEN_CASE_START("mutual_information_backward");
   GEN_CASE_HANDLE(handle);
 
@@ -466,8 +459,8 @@ static void mutualInformationBackwardGencase(
 
 static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type, int batch_size) {
-  int core_num =  mluop::runtime::getClusterLimitCapability(handle) *
-                  mluop::runtime::getCoreNumOfEachUnionCapability(handle);
+  int core_num = mluop::runtime::getClusterLimitCapability(handle) *
+                 mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   *k_type = CNRT_FUNC_TYPE_BLOCK;
   k_dim->x = 1;
   k_dim->y = batch_size < core_num ? batch_size : core_num;
@@ -487,11 +480,13 @@ static mluOpStatus_t launchMutualInformationBackwardKernel(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, B);
-  VLOG(5) << "Launch Kernel MutualInformationBackward<<<Block "
-          << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-  KERNEL_CHECK(kernelMutualInformationBackward(
-      k_dim, k_type, handle->queue, B, S, T, px, py, has_boundary, opt_boundary,
-      p, overwrite_ans_grad, ans_grad, px_grad, py_grad));
+  VLOG(5) << "Launch Kernel MutualInformationBackward<<<Block " << k_dim.x
+          << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  CHECK_RETURN(
+      "[MutualInformationBackward]",
+      kernelMutualInformationBackward(
+          k_dim, k_type, handle->queue, B, S, T, px, py, has_boundary,
+          opt_boundary, p, overwrite_ans_grad, ans_grad, px_grad, py_grad));
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -509,9 +504,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationBackward(
   bool has_boundary = false;
   bool zero_element = false;
   mluOpStatus_t check_status = mutualInformationBackwardParamCheck(
-      handle, px_desc, px, py_desc, py, opt_boundary_desc, opt_boundary,
-      p_desc, p, ans_grad_desc, ans_grad, workspace, workspace_size,
-      px_grad_desc, px_grad, py_grad_desc, py_grad, has_boundary, zero_element);
+      handle, px_desc, px, py_desc, py, opt_boundary_desc, opt_boundary, p_desc,
+      p, ans_grad_desc, ans_grad, workspace, workspace_size, px_grad_desc,
+      px_grad, py_grad_desc, py_grad, has_boundary, zero_element);
 
   if (MLUOP_STATUS_SUCCESS != check_status || zero_element) {
     return check_status;
@@ -519,11 +514,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationBackward(
 
   // 2. generate case
   if (MLUOP_GEN_CASE_ON_NEW) {
-    mutualInformationBackwardGencase(handle, px_desc, px, py_desc, py,
-                                     opt_boundary_desc, opt_boundary,
-                                     p_desc, p, ans_grad_desc, ans_grad,
-                                     overwrite_ans_grad, px_grad_desc, px_grad,
-                                     py_grad_desc, py_grad);
+    mutualInformationBackwardGencase(
+        handle, px_desc, px, py_desc, py, opt_boundary_desc, opt_boundary,
+        p_desc, p, ans_grad_desc, ans_grad, overwrite_ans_grad, px_grad_desc,
+        px_grad, py_grad_desc, py_grad);
   }
 
   // 3. launch kernel

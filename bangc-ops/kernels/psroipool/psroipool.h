@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelPsRoiPoolForward(
+mluOpStatus_t MLUOP_WIN_API KernelPsRoiPoolForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *bottom_data, const void *bottom_rois, void *top_data,
     void *mapping_channel, const int batch_size, const int height,
@@ -33,7 +33,7 @@ void MLUOP_WIN_API KernelPsRoiPoolForward(
     const int pooled_width, const int output_dim, const int group_size,
     const int rois_num, const int rois_offset, const float spatial_scale);
 
-void MLUOP_WIN_API KernelPsRoiPoolBackward(
+mluOpStatus_t MLUOP_WIN_API KernelPsRoiPoolBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *top_grad, const void *mapping_channel, const void *rois,
     void *bottom_grad, const int batch_size, const int height, const int width,

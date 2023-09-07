@@ -25,6 +25,7 @@
 
 #include <math.h>
 #include <algorithm>
+
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 

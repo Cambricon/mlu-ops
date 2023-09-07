@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "ms_deform_attn_backward.h"
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -276,7 +277,7 @@ __mlu_global__ void MLUUnion1KernelMsDeformAttnBackwardDefault(
 #endif
 }
 
-void MLUOP_WIN_API KernelMsDeformAttnBackwardDefault(
+mluOpStatus_t MLUOP_WIN_API KernelMsDeformAttnBackwardDefault(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const float *data_value, const int32_t *spatial_shapes,
     const int32_t *data_level_start_index, const float *data_sampling_loc,
@@ -285,9 +286,11 @@ void MLUOP_WIN_API KernelMsDeformAttnBackwardDefault(
     const int32_t channels, const int32_t num_levels, const int32_t num_query,
     const int32_t num_points, float *grad_value, float *grad_sampling_loc,
     float *grad_attn_weight) {
-  MLUUnion1KernelMsDeformAttnBackwardDefault<<<k_dim, k_type, queue>>>(
-      data_value, spatial_shapes, data_level_start_index, data_sampling_loc,
-      data_attn_weight, grad_output, batch, spatial_size, num_heads, channels,
-      num_levels, num_query, num_points, grad_value, grad_sampling_loc,
-      grad_attn_weight);
+  KERNEL_CHECK(
+      MLUUnion1KernelMsDeformAttnBackwardDefault<<<k_dim, k_type, queue>>>(
+          data_value, spatial_shapes, data_level_start_index, data_sampling_loc,
+          data_attn_weight, grad_output, batch, spatial_size, num_heads,
+          channels, num_levels, num_query, num_points, grad_value,
+          grad_sampling_loc, grad_attn_weight));
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -23,6 +23,8 @@
 #include "tensor_stride_process_mlu.h"
 #include "tensor_stride_process.h"
 
+#include "core/logging.h"
+
 template <typename T>
 __mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
                                                  TensorShape input_shape,
@@ -33,62 +35,62 @@ __mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
                                                   void *output,
                                                   TensorShape output_shape);
 
-void MLUOP_WIN_API KernelTensorStrideIn(cnrtDim3_t k_dim,
-                                        cnrtFunctionType_t k_type,
-                                        cnrtQueue_t queue, const void *input,
-                                        TensorShape input_shape, void *output,
-                                        mluOpDataType_t dtype) {
+mluOpStatus_t MLUOP_WIN_API KernelTensorStrideIn(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, TensorShape input_shape, void *output,
+    mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_UINT8: {
-      MLUUnionKernelTensorStrideIn<int8>
-          <<<k_dim, k_type, queue>>>(input, input_shape, output);
+      KERNEL_CHECK(MLUUnionKernelTensorStrideIn<int8>
+                   <<<k_dim, k_type, queue>>>(input, input_shape, output));
     } break;
 
     case MLUOP_DTYPE_INT16:
     case MLUOP_DTYPE_HALF: {
-      MLUUnionKernelTensorStrideIn<half>
-          <<<k_dim, k_type, queue>>>(input, input_shape, output);
+      KERNEL_CHECK(MLUUnionKernelTensorStrideIn<half>
+                   <<<k_dim, k_type, queue>>>(input, input_shape, output));
     } break;
 
     case MLUOP_DTYPE_INT32:
     case MLUOP_DTYPE_FLOAT: {
-      MLUUnionKernelTensorStrideIn<float>
-          <<<k_dim, k_type, queue>>>(input, input_shape, output);
+      KERNEL_CHECK(MLUUnionKernelTensorStrideIn<float>
+                   <<<k_dim, k_type, queue>>>(input, input_shape, output));
     } break;
 
     default:
       break;
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelTensorStrideOut(cnrtDim3_t k_dim,
-                                         cnrtFunctionType_t k_type,
-                                         cnrtQueue_t queue, const void *input,
-                                         void *output, TensorShape output_shape,
-                                         mluOpDataType_t dtype) {
+mluOpStatus_t MLUOP_WIN_API
+KernelTensorStrideOut(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                      cnrtQueue_t queue, const void *input, void *output,
+                      TensorShape output_shape, mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_UINT8: {
-      MLUUnionKernelTensorStrideOut<int8>
-          <<<k_dim, k_type, queue>>>(input, output, output_shape);
+      KERNEL_CHECK(MLUUnionKernelTensorStrideOut<int8>
+                   <<<k_dim, k_type, queue>>>(input, output, output_shape));
     } break;
 
     case MLUOP_DTYPE_INT16:
     case MLUOP_DTYPE_HALF: {
-      MLUUnionKernelTensorStrideOut<half>
-          <<<k_dim, k_type, queue>>>(input, output, output_shape);
+      KERNEL_CHECK(MLUUnionKernelTensorStrideOut<half>
+                   <<<k_dim, k_type, queue>>>(input, output, output_shape));
     } break;
 
     case MLUOP_DTYPE_INT32:
     case MLUOP_DTYPE_FLOAT: {
-      MLUUnionKernelTensorStrideOut<float>
-          <<<k_dim, k_type, queue>>>(input, output, output_shape);
+      KERNEL_CHECK(MLUUnionKernelTensorStrideOut<float>
+                   <<<k_dim, k_type, queue>>>(input, output, output_shape));
     } break;
 
     default:
       break;
   }
+  return MLUOP_STATUS_SUCCESS;
 }

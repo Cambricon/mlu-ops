@@ -23,9 +23,9 @@
 #ifndef KERNELS_NMS_ROTATED_NMS_UTILS_H_
 #define KERNELS_NMS_ROTATED_NMS_UTILS_H_
 
-#include "kernels/utils/common.h"
-#include "kernels/kernel.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
 
 #define NMS_SIZE 64
 #define NMS_UP(x, y) (x / y + (int)(x % y > 0)) * y
@@ -36,7 +36,7 @@
 #define REDUCE_NUM (7)
 
 #define TABLE_LENGTH 64
-__nram__ int table_float[TABLE_LENGTH]    = {0, static_cast<int>(0xffffffff)};
+__nram__ int table_float[TABLE_LENGTH] = {0, static_cast<int>(0xffffffff)};
 __nram__ int16_t table_half[TABLE_LENGTH] = {0, static_cast<int16_t>(0xffff)};
 
 // each box data contains 5 number: x, y, w, h, a

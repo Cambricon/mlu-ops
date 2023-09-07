@@ -22,30 +22,22 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpTranspose(
-    mluOpHandle_t handle,
-    const mluOpTransposeDescriptor_t desc,
-    const mluOpTensorDescriptor_t x_desc,
-    const void *x,
-    const mluOpTensorDescriptor_t y_desc,
-    void *y) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpTranspose(mluOpHandle_t handle, const mluOpTransposeDescriptor_t desc,
+               const mluOpTensorDescriptor_t x_desc, const void *x,
+               const mluOpTensorDescriptor_t y_desc, void *y) {
   transposeWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, desc, x_desc, x, y_desc, y);
+  mluOpStatus_t ret = wrapper.invoke(handle, desc, x_desc, x, y_desc, y);
   return ret;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpTranspose_v2(
-    mluOpHandle_t handle,
-    const mluOpTransposeDescriptor_t desc,
-    const mluOpTensorDescriptor_t x_desc,
-    const void *x,
-    const mluOpTensorDescriptor_t y_desc,
-    void *y,
-    void *workspace,
-    size_t workspace_size) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpTranspose_v2(mluOpHandle_t handle, const mluOpTransposeDescriptor_t desc,
+                  const mluOpTensorDescriptor_t x_desc, const void *x,
+                  const mluOpTensorDescriptor_t y_desc, void *y,
+                  void *workspace, size_t workspace_size) {
   transposeV2Wrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, desc, x_desc, x, y_desc, y, workspace, workspace_size);
+  mluOpStatus_t ret = wrapper.invoke(handle, desc, x_desc, x, y_desc, y,
+                                     workspace, workspace_size);
   return ret;
 }

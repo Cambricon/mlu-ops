@@ -393,10 +393,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
           << " core_dim : " << core_dim;
   VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
              "KernelPtsIdxOfVoxels().";
-  KERNEL_CHECK((KernelPtsIdxOfVoxels(
-      k_dim, k_type, handle->queue, rois_desc->dtype, pool_method, boxes_num,
-      pts_num, max_pts_each_voxel, out_x, out_y, out_z, rois, pts_workspace,
-      pts_idx_of_voxels)));
+  CHECK_RETURN("[mluOpRoiawarePool3dForward]",
+               KernelPtsIdxOfVoxels(
+                   k_dim, k_type, handle->queue, rois_desc->dtype, pool_method,
+                   boxes_num, pts_num, max_pts_each_voxel, out_x, out_y, out_z,
+                   rois, pts_workspace, pts_idx_of_voxels));
   VLOG(5) << "[mluOpRoiawarePool3dForward] Finish kernel "
              "KernelPtsIdxOfVoxels.";
 
@@ -414,10 +415,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
           << " core_dim : " << core_dim;
   VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
              "KernelRoiawarePool3dForward().";
-  KERNEL_CHECK((KernelRoiawarePool3dForward(
-      k_dim, k_type, handle->queue, pooled_features_desc->dtype, pool_method,
-      boxes_num, pts_num, channels, max_pts_each_voxel, out_x, out_y, out_z,
-      pts_feature_workspace, pts_idx_of_voxels, pooled_features, argmax)));
+  CHECK_RETURN(
+      "[mluOpRoiawarePool3dForward]",
+      KernelRoiawarePool3dForward(
+          k_dim, k_type, handle->queue, pooled_features_desc->dtype,
+          pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
+          out_y, out_z, pts_feature_workspace, pts_idx_of_voxels,
+          pooled_features, argmax));
   VLOG(5) << "[mluOpRoiawarePool3dForward] Finish kernel "
              "KernelRoiawarePool3dForward.";
   GEN_CASE_END();
@@ -578,10 +582,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
           << " core_dim : " << core_dim;
   VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
              "KernelRoiawarePool3dBackward().";
-  KERNEL_CHECK((KernelRoiawarePool3dBackward(
-      k_dim, k_type, handle->queue, grad_out_desc->dtype, pool_method,
-      boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
-      pts_idx_of_voxels, argmax, grad_out, grad_in)));
+  CHECK_RETURN(
+      "[mluOpRoiawarePool3dBackward]",
+      KernelRoiawarePool3dBackward(
+          k_dim, k_type, handle->queue, grad_out_desc->dtype, pool_method,
+          boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
+          pts_idx_of_voxels, argmax, grad_out, grad_in));
   VLOG(5) << "[mluOpRoiawarePool3dBackward] Finish kernel "
              "KernelRoiawarePool3dBackward.";
   GEN_CASE_END();

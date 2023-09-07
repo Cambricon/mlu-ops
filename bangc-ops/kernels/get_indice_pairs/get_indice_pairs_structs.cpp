@@ -20,13 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
 #include <new>
 #include <string>
 
 #include "core/logging.h"
 #include "core/type.h"
-
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 #include "mlu_op.h"
 

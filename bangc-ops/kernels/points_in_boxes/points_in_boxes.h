@@ -24,7 +24,6 @@
 #define KERNELS_POINTS_IN_BOXES_POINTS_IN_BOXES_H_
 
 #include "mlu_op.h"
-
 struct pointsInBoxesTSI {
   uint32_t points_batch_offset = 0;
   uint32_t boxes_batch_offset = 0;
@@ -34,7 +33,7 @@ struct pointsInBoxesTSI {
   uint32_t idx_deal_num = 0;
 };
 
-void MLUOP_WIN_API
+mluOpStatus_t MLUOP_WIN_API
 KernelPointsInBoxes(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                     cnrtQueue_t queue, uint32_t batch_size, uint32_t points_num,
                     uint32_t boxes_num, float *points, float *boxes, int *idx,

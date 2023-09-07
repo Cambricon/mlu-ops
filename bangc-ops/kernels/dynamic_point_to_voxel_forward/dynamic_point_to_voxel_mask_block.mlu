@@ -22,8 +22,9 @@
  *************************************************************************/
 #include "dynamic_point_to_voxel_forward.h"
 
-#include "kernels/kernel.h"
+#include "core/logging.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
 #define COORS_XYZ 3
@@ -165,10 +166,10 @@ __mlu_global__ void MLUKernelMaskFillCoorsForward(int32_t num_points,
 #endif
 }
 
-void MLUOP_WIN_API KernelMaskFillCoorsForward(cnrtDim3_t k_dim,
-                                              cnrtFunctionType_t k_type,
-                                              cnrtQueue_t queue,
-                                              int32_t num_points, void *coors) {
-  MLUKernelMaskFillCoorsForward<<<k_dim, k_type, queue>>>(num_points,
-                                                          (int32_t *)coors);
+mluOpStatus_t MLUOP_WIN_API
+KernelMaskFillCoorsForward(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                           cnrtQueue_t queue, int32_t num_points, void *coors) {
+  KERNEL_CHECK(MLUKernelMaskFillCoorsForward<<<k_dim, k_type, queue>>>(
+      num_points, (int32_t *)coors));
+  return MLUOP_STATUS_SUCCESS;
 }

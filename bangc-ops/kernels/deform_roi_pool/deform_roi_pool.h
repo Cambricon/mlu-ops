@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelDeformRoiPoolForward(
+mluOpStatus_t MLUOP_WIN_API KernelDeformRoiPoolForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *input, const void *rois,
     const void *offset, void *output, const int batches, const int channels,
@@ -33,7 +33,7 @@ void MLUOP_WIN_API KernelDeformRoiPoolForward(
     const int pooled_height, const int pooled_width, const float spatial_scale,
     const int sampling_ratio, const float gamma);
 
-void MLUOP_WIN_API KernelDeformRoiPoolBackward(
+mluOpStatus_t MLUOP_WIN_API KernelDeformRoiPoolBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *grad_output, const void *input,
     const void *rois, const void *offset, void *grad_input, void *grad_offset,

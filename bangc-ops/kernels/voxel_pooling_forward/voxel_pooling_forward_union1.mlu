@@ -20,10 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "voxel_pooling_forward.h"
+
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-
-#include "voxel_pooling_forward.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
@@ -438,17 +439,15 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
 #endif
 }
 
-void MLUOP_WIN_API KernelVoxelPoolingForward(
+mluOpStatus_t MLUOP_WIN_API KernelVoxelPoolingForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int batch_size, const int num_points, const int num_channels,
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
     const void *geom_xyz, const void *input_features, void *output_features,
     void *pos_memo) {
-  if (num_voxel_z <= 0) {
-    return;
-  }
-  MLUKernelVoxelPoolingForward<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUKernelVoxelPoolingForward<<<k_dim, k_type, queue>>>(
       batch_size, num_points, num_channels, num_voxel_x, num_voxel_y,
       num_voxel_z, (int *)geom_xyz, (float *)input_features,
-      (float *)output_features, (int *)pos_memo);
+      (float *)output_features, (int *)pos_memo));
+  return MLUOP_STATUS_SUCCESS;
 }

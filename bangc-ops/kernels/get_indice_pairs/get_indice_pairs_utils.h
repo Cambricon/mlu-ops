@@ -26,8 +26,8 @@
 
 #include <algorithm>
 
-#include "kernels/kernel.h"
 #include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
+#include "kernels/kernel.h"
 
 #if __BANG_ARCH__ >= 370
 __mlu_func__ void assignTask(const int32_t num_total_task,

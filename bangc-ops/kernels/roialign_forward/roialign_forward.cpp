@@ -23,38 +23,26 @@
 #include "kernels/kernel_wrapper/wrapper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward(
-    mluOpHandle_t handle,
-    const mluOpRoiAlignForwardDescriptor_t roialign_desc,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const mluOpTensorDescriptor_t boxes_desc,
-    const void *boxes,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+    mluOpHandle_t handle, const mluOpRoiAlignForwardDescriptor_t roialign_desc,
+    const mluOpTensorDescriptor_t input_desc, const void *input,
+    const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
+    const mluOpTensorDescriptor_t output_desc, void *output) {
   roiAlignForwardWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, roialign_desc, input_desc, input,
-      boxes_desc, boxes, output_desc, output);
+  mluOpStatus_t ret = wrapper.invoke(handle, roialign_desc, input_desc, input,
+                                     boxes_desc, boxes, output_desc, output);
   return ret;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
-    mluOpHandle_t handle,
-    const mluOpRoiAlignForwardDescriptor_t roialign_desc,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const mluOpTensorDescriptor_t boxes_desc,
-    const void *boxes,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output,
-    const mluOpTensorDescriptor_t argmax_x_desc,
-    void *argmax_x,
-    const mluOpTensorDescriptor_t argmax_y_desc,
-    void *argmax_y) {
+    mluOpHandle_t handle, const mluOpRoiAlignForwardDescriptor_t roialign_desc,
+    const mluOpTensorDescriptor_t input_desc, const void *input,
+    const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
+    const mluOpTensorDescriptor_t output_desc, void *output,
+    const mluOpTensorDescriptor_t argmax_x_desc, void *argmax_x,
+    const mluOpTensorDescriptor_t argmax_y_desc, void *argmax_y) {
   roiAlignForwardV2Wrapper wrapper;
   mluOpStatus_t ret = wrapper.invoke(
-      handle, roialign_desc, input_desc, input,
-      boxes_desc, boxes, output_desc, output,
-      argmax_x_desc, argmax_x, argmax_y_desc, argmax_y);
+      handle, roialign_desc, input_desc, input, boxes_desc, boxes, output_desc,
+      output, argmax_x_desc, argmax_x, argmax_y_desc, argmax_y);
   return ret;
 }

@@ -279,9 +279,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
                                              &grad_feats_element_num,
                                              indices_desc, workspace));
     // 3. get scatter indices
-    KERNEL_CHECK((KernelDynamicPointToVoxelBackward(
-        k_dim, k_type, handle->queue, feats, voxel_feats, grad_feats, workspace,
-        point2voxel_map, voxel_num, N, C)));
+    CHECK_RETURN("[mluOpDynamicPointToVoxelBackward]",
+                 KernelDynamicPointToVoxelBackward(
+                     k_dim, k_type, handle->queue, feats, voxel_feats,
+                     grad_feats, workspace, point2voxel_map, voxel_num, N, C));
     // 4. scatter
     mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_ADD;
     mluOpTensorDescriptor_t updates_desc;
@@ -304,10 +305,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
                                            MLUOP_DTYPE_FLOAT, 1, output_dims));
     INTERNAL_CHECK(
         interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpScatterNd_v2(
-                                    handle, scatter_mode, indices_desc,
-                                    workspace, updates_desc, grad_voxel_feats,
-                                    NULL, NULL, output_desc, grad_feats));
+        MLUOP_STATUS_SUCCESS ==
+            mluOpScatterNd_v2(handle, scatter_mode, indices_desc, workspace,
+                              updates_desc, grad_voxel_feats, NULL, NULL,
+                              output_desc, grad_feats));
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(updates_desc));

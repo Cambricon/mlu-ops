@@ -27,8 +27,9 @@
 #include "core/gen_case.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/type.h"
 #include "core/tool.h"
+#include "core/type.h"
+#include "kernels/debug.h"
 #include "kernels/kernel.h"
 
 typedef enum {
@@ -251,26 +252,28 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
           VLOG(5)
               << "Launch Kernel MLUKernelMsDeformAttnForwardDefault<<<Block, "
               << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>";
-          KERNEL_CHECK((MLUKernelMsDeformAttnForwardDefault<
-                        float><<<k_dims, k_type, handle->queue>>>(
-              (char *)data_value, (char *)data_spatial_shapes,
-              (char *)data_level_start_index, (char *)data_sampling_loc,
-              (char *)data_attn_weight, batch_size, num_keys, num_heads,
-              channels, num_levels, num_queries, num_points,
-              (char *)data_col)));
+          KERNEL_CHECK(
+              (MLUKernelMsDeformAttnForwardDefault<float>
+               <<<k_dims, k_type, handle->queue>>>(
+                   (char *)data_value, (char *)data_spatial_shapes,
+                   (char *)data_level_start_index, (char *)data_sampling_loc,
+                   (char *)data_attn_weight, batch_size, num_keys, num_heads,
+                   channels, num_levels, num_queries, num_points,
+                   (char *)data_col)));
           break;
         }
         case CNRT_FUNC_TYPE_UNION1: {
           VLOG(5) << "Launch Kernel MLUKernelMsDeformAttnForwardDefault<<<Union"
                   << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
                   << ", " << k_dims.z << ">>>";
-          KERNEL_CHECK((MLUKernelMsDeformAttnForwardDefault<
-                        float><<<k_dims, k_type, handle->queue>>>(
-              (char *)data_value, (char *)data_spatial_shapes,
-              (char *)data_level_start_index, (char *)data_sampling_loc,
-              (char *)data_attn_weight, batch_size, num_keys, num_heads,
-              channels, num_levels, num_queries, num_points,
-              (char *)data_col)));
+          KERNEL_CHECK(
+              (MLUKernelMsDeformAttnForwardDefault<float>
+               <<<k_dims, k_type, handle->queue>>>(
+                   (char *)data_value, (char *)data_spatial_shapes,
+                   (char *)data_level_start_index, (char *)data_sampling_loc,
+                   (char *)data_attn_weight, batch_size, num_keys, num_heads,
+                   channels, num_levels, num_queries, num_points,
+                   (char *)data_col)));
           break;
         }
       }
@@ -286,13 +289,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
           VLOG(5) << "Launch Kernel "
                      "MLUKernelMsDeformAttnForwardSmallChannel<<<Block, "
                   << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>";
-          KERNEL_CHECK((MLUKernelMsDeformAttnForwardSmallChannel<
-                        float><<<k_dims, k_type, handle->queue>>>(
-              (char *)data_value, (char *)data_spatial_shapes,
-              (char *)data_level_start_index, (char *)data_sampling_loc,
-              (char *)data_attn_weight, batch_size, num_keys, num_heads,
-              channels, num_levels, num_queries, num_points,
-              (char *)data_col)));
+          KERNEL_CHECK(
+              (MLUKernelMsDeformAttnForwardSmallChannel<float>
+               <<<k_dims, k_type, handle->queue>>>(
+                   (char *)data_value, (char *)data_spatial_shapes,
+                   (char *)data_level_start_index, (char *)data_sampling_loc,
+                   (char *)data_attn_weight, batch_size, num_keys, num_heads,
+                   channels, num_levels, num_queries, num_points,
+                   (char *)data_col)));
           break;
         }
         case CNRT_FUNC_TYPE_UNION1: {
@@ -300,13 +304,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
                      "MLUKernelMsDeformAttnForwardSmallChannel<<<Union"
                   << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
                   << ", " << k_dims.z << ">>>";
-          KERNEL_CHECK((MLUKernelMsDeformAttnForwardSmallChannel<
-                        float><<<k_dims, k_type, handle->queue>>>(
-              (char *)data_value, (char *)data_spatial_shapes,
-              (char *)data_level_start_index, (char *)data_sampling_loc,
-              (char *)data_attn_weight, batch_size, num_keys, num_heads,
-              channels, num_levels, num_queries, num_points,
-              (char *)data_col)));
+          KERNEL_CHECK(
+              (MLUKernelMsDeformAttnForwardSmallChannel<float>
+               <<<k_dims, k_type, handle->queue>>>(
+                   (char *)data_value, (char *)data_spatial_shapes,
+                   (char *)data_level_start_index, (char *)data_sampling_loc,
+                   (char *)data_attn_weight, batch_size, num_keys, num_heads,
+                   channels, num_levels, num_queries, num_points,
+                   (char *)data_col)));
           break;
         }
       }
@@ -316,12 +321,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
       VLOG(5) << "Launch Kernel MLUKernelMsDeformAttnForwardFast<<<Union"
               << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
               << ", " << k_dims.z << ">>>";
-      KERNEL_CHECK((MLUKernelMsDeformAttnForwardFast<
-                    float><<<k_dims, k_type, handle->queue>>>(
-          (char *)data_value, (char *)data_spatial_shapes,
-          (char *)data_level_start_index, (char *)data_sampling_loc,
-          (char *)data_attn_weight, batch_size, num_keys, num_heads, channels,
-          num_levels, num_queries, num_points, (char *)data_col)));
+      KERNEL_CHECK((MLUKernelMsDeformAttnForwardFast<float>
+                    <<<k_dims, k_type, handle->queue>>>(
+                        (char *)data_value, (char *)data_spatial_shapes,
+                        (char *)data_level_start_index,
+                        (char *)data_sampling_loc, (char *)data_attn_weight,
+                        batch_size, num_keys, num_heads, channels, num_levels,
+                        num_queries, num_points, (char *)data_col)));
       break;
     }
   }

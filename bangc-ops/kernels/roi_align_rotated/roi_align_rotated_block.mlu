@@ -26,11 +26,11 @@
 #include <cmath>
 #include <utility>
 
-#include "kernels/kernel.h"
+#include "core/logging.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 #include "mlu.h"
-#include "core/logging.h"
 
 #define ROI_OFFSET 6
 #define SAMPLING_NUM 4
@@ -453,50 +453,52 @@ __mlu_global__ void roiAlignRotatedBackward(
   }
 }
 
-void MLUOP_WIN_API KernelRoiAlignRotatedForward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiAlignRotatedForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *features, const void *rois,
     const int batch, const int height, const int width, const int channel,
     const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
     void *output) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
           (float *)features, (float *)rois, batch, height, width, channel,
-          rois_num, rroiAlignParams, (float *)output);
+          rois_num, rroiAlignParams, (float *)output));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(roiAlignRotatedForward<<<k_dim, k_type, queue>>>(
           (half *)features, (half *)rois, batch, height, width, channel,
-          rois_num, rroiAlignParams, (half *)output);
+          rois_num, rroiAlignParams, (half *)output));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelRoiAlignRotatedBackward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiAlignRotatedBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *top_grad, const void *rois,
     const int batch, const int height, const int width, const int channel,
     const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
     void *bottom_grad) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
           (float *)top_grad, (float *)rois, batch, height, width, channel,
-          rois_num, rroiAlignParams, (float *)bottom_grad);
+          rois_num, rroiAlignParams, (float *)bottom_grad));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(roiAlignRotatedBackward<<<k_dim, k_type, queue>>>(
           (half *)top_grad, (half *)rois, batch, height, width, channel,
-          rois_num, rroiAlignParams, (half *)bottom_grad);
+          rois_num, rroiAlignParams, (half *)bottom_grad));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }

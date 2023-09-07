@@ -23,10 +23,8 @@
 #include "kernels/kernel_wrapper/wrapper.h"
 
 mluOpStatus_t MLUOP_WIN_API
-mluOpExpand(mluOpHandle_t handle,
-            const mluOpTensorDescriptor_t input_desc,
-            const void *input,
-            const mluOpTensorDescriptor_t output_desc,
+mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
+            const void *input, const mluOpTensorDescriptor_t output_desc,
             void *output) {
   expandWrapper wrapper;
   mluOpStatus_t ret =

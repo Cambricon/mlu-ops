@@ -25,14 +25,14 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelMoeDispatchBwdData1(
+mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchBwdData1(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *gates, const void *indices,
     const void *locations, const void *dispatch, const int samples,
     const int capacity, const int hidden, const int num_experts,
     void *grad_input);
 
-void MLUOP_WIN_API KernelMoeDispatchBwdData2(
+mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchBwdData2(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *gates, const void *indices,
     const void *locations, const void *dispatch, const int samples,

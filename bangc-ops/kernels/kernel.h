@@ -27,36 +27,30 @@
 #include <mlu.h>
 #endif  // defined(__BANG__)
 
-
 /******************************************************************************
  * Macros for mluop kernels
  ******************************************************************************/
 // in future, can be "__BANG_ARCH__ == 592 || __BANG_ARCH__ == xxx || ...)"
 #define ARCH_SUPPORT_LARGE_TENSOR (__BANG_ARCH__ == 592)
 
-
 #define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024)
 #define WRAM_LT_STRIDE (__MLU_WRAM_SIZE__ * 1024 / 64)
-
 
 #if (__BANG_ARCH__ == 290) && defined(CONV_WARM_UP)
 #undef MAX_WRAM_SIZE
 #define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024 - 8 * 1024)
 #endif
 
-
 // only support when __BANG_ARCH__ > 300
-#if(__BANG_ARCH__ > 300)
+#if (__BANG_ARCH__ > 300)
 #define WRAM_LT_MAP16_STRIDE (__MLU_WRAM_SIZE__ * 1024 / 16)
 #endif
-
 
 #define DDR_ALIGN_MAP3 (1024 * 16)  // 16KB
 #define NFU_ALIGN_SIZE 128          // Byte
 #define WRAM_ALIGN_SIZE 64
 #define LT_NUM 64
-#define COMPUTE_COUNT_ALIGN 64   // elem_count must be divisible by 64
-
+#define COMPUTE_COUNT_ALIGN 64  // elem_count must be divisible by 64
 
 #if __BANG_ARCH__ == 322 || __BANG_ARCH__ == 520
 #define CORE_DIM 1
@@ -70,10 +64,8 @@
 #define CLUSTER_DIM_OF_UNION8 8
 #define CLUSTER_DIM_OF_UNION16 16
 
-
 #define REM_FOR_STACK (128 * 1024)           // 128KB reserved for cncc
 #define THRESHOLD_SIZE_OF_UNION (64 * 1024)  // Split NRAM to 6 * 64KB
-
 
 #ifdef __BANG_ARCH__
 #define MAX_NRAM_SIZE (__MLU_NRAM_SIZE__ * 1024 - REM_FOR_STACK)
@@ -82,62 +74,64 @@
 #else
 #define MAX_SRAM_SIZE (__MLU_SRAM_SIZE__ * 1024 - REM_FOR_STACK)
 #endif
-#else  // __BANG_ARCH__
-#define MAX_NRAM_SIZE (384 * 1024)           // 384KB, initialization value
-#define MAX_SRAM_SIZE (1920 * 1024)          // 1920KB,initialization value
-#endif  // __BANG_ARCH__
-
+#else                                // __BANG_ARCH__
+#define MAX_NRAM_SIZE (384 * 1024)   // 384KB, initialization value
+#define MAX_SRAM_SIZE (1920 * 1024)  // 1920KB,initialization value
+#endif                               // __BANG_ARCH__
 
 #if __BANG_ARCH__ == 372
 #define sizeof(T) (uint32_t(sizeof(T)))
 #endif  // __BANG_ARCH__ == 372
 
-
 #ifndef PAD_UP
 #define PAD_UP(x, y) (((x) / (y) + (int)((x) % (y) > 0)) * (y))
 #endif
-
 
 #ifndef PAD_DOWN
 #define PAD_DOWN(x, y) (((x) / (y)) * (y))
 #endif
 
-
 #ifndef DIV_UP
 #define DIV_UP(x, y) ((x) % (y) > 0 ? ((x) / (y) + 1) : ((x) / (y)))
 #endif
-
 
 #ifndef DIV_DN
 #define DIV_DN(x, y) ((x) / (y))
 #endif
 
-
-#define CEIL_ALIGN(x, align) (((x) + (align) - 1) / (align) * (align))
+#define CEIL_ALIGN(x, align) (((x) + (align)-1) / (align) * (align))
 #define FLOOR_ALIGN(x, align) ((x) / (align) * (align))
 
 #ifdef ROUND_HALF_UP
-#define HALF2INT8(dst, src, count, pos) \
-{ __bang_add_scalar(src, src, (half)(powf(2, pos - 1)), count);\
-  __bang_half2int8_dn(dst, src, count, pos); }
-#define HALF2INT16(dst, src, count, pos) \
-{ __bang_add_scalar(src, src, (half)(powf(2, pos - 1)), count);\
-  __bang_half2int16_dn(dst, src, count, pos); }
-#define FLOAT2INT8(dst, src, count, pos) \
-{ __bang_add_scalar(src, src, powf(2, pos - 1), count);\
-  __bang_float2int8_dn(dst, src, count, pos); }
-#define FLOAT2INT16(dst, src, count, pos) \
-{ __bang_add_scalar(src, src, powf(2, pos - 1), count);\
-  __bang_float2int16_dn(dst, src, count, pos); }
+#define HALF2INT8(dst, src, count, pos)                           \
+  {                                                               \
+    __bang_add_scalar(src, src, (half)(powf(2, pos - 1)), count); \
+    __bang_half2int8_dn(dst, src, count, pos);                    \
+  }
+#define HALF2INT16(dst, src, count, pos)                          \
+  {                                                               \
+    __bang_add_scalar(src, src, (half)(powf(2, pos - 1)), count); \
+    __bang_half2int16_dn(dst, src, count, pos);                   \
+  }
+#define FLOAT2INT8(dst, src, count, pos)                  \
+  {                                                       \
+    __bang_add_scalar(src, src, powf(2, pos - 1), count); \
+    __bang_float2int8_dn(dst, src, count, pos);           \
+  }
+#define FLOAT2INT16(dst, src, count, pos)                 \
+  {                                                       \
+    __bang_add_scalar(src, src, powf(2, pos - 1), count); \
+    __bang_float2int16_dn(dst, src, count, pos);          \
+  }
 #else
 #define HALF2INT8(dst, src, count, pos) \
-{ __bang_half2int8_rd(dst, src, count, pos); }
+  { __bang_half2int8_rd(dst, src, count, pos); }
 #define HALF2INT16(dst, src, count, pos) \
-{ __bang_half2int16_rd(dst, src, count, pos); }
+  { __bang_half2int16_rd(dst, src, count, pos); }
 #define FLOAT2INT8(dst, src, count, pos) \
-{ __bang_float2int8_rd(dst, src, count, pos); }
+  { __bang_float2int8_rd(dst, src, count, pos); }
 #define FLOAT2INT16(dst, src, count, pos) \
-{ __bang_float2int16_rd(dst, src, count, pos); }
+  { __bang_float2int16_rd(dst, src, count, pos); }
 #endif
 
 // maximum integer that can be represented by float
@@ -149,10 +143,10 @@
 #define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 23))
 #endif
 
-#define MLU_KERNEL_ASSERT(cond, message) \
-  if (!(cond)) { \
-    __assert_fail( \
-      message, __FILE__, static_cast<unsigned int>(__LINE__), __func__); \
+#define MLU_KERNEL_ASSERT(cond, message)                                  \
+  if (!(cond)) {                                                          \
+    __assert_fail(message, __FILE__, static_cast<unsigned int>(__LINE__), \
+                  __func__);                                              \
   }
 
 #endif  // KERNELS_KERNEL_H_

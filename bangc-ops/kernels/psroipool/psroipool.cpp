@@ -29,8 +29,8 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/kernel.h"
 #include "kernels/fill_zero/fill_zero.h"
+#include "kernels/kernel.h"
 
 // policy function
 static void policyFuncPsRoiPool(const mluOpHandle_t handle, cnrtDim3_t *k_dim,

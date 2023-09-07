@@ -225,15 +225,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   if (input_desc->dtype == MLUOP_DTYPE_HALF) {
-    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidForwardHalf(
-        k_dim, k_type, handle->queue,
-        static_cast<focalLossSigmoidPreference_t>(prefer), input, target,
-        weight, N, C, alpha, gamma, output)));
+    CHECK_RETURN("[mluOpBlockKernelFocalLossSigmoidForwardHalf]",
+                 mluOpBlockKernelFocalLossSigmoidForwardHalf(
+                     k_dim, k_type, handle->queue,
+                     static_cast<focalLossSigmoidPreference_t>(prefer), input,
+                     target, weight, N, C, alpha, gamma, output));
   } else {
-    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidForwardFloat(
-        k_dim, k_type, handle->queue,
-        static_cast<focalLossSigmoidPreference_t>(prefer), input, target,
-        weight, N, C, alpha, gamma, output)));
+    CHECK_RETURN("[mluOpBlockKernelFocalLossSigmoidForwardFloat]",
+                 mluOpBlockKernelFocalLossSigmoidForwardFloat(
+                     k_dim, k_type, handle->queue,
+                     static_cast<focalLossSigmoidPreference_t>(prefer), input,
+                     target, weight, N, C, alpha, gamma, output));
   }
 
   GEN_CASE_END();
@@ -513,13 +515,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   if (is_half) {
-    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidBackwardHalf(
-        k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
-        dim_n, deal_n, dim_c, output)));
+    CHECK_RETURN("[mluOpBlockKernelFocalLossSigmoidBackwardHalf]",
+                 mluOpBlockKernelFocalLossSigmoidBackwardHalf(
+                     k_dim, k_type, handle->queue, input, target, weight, gamma,
+                     alpha, dim_n, deal_n, dim_c, output));
   } else {
-    KERNEL_CHECK((mluOpBlockKernelFocalLossSigmoidBackwardFloat(
-        k_dim, k_type, handle->queue, input, target, weight, gamma, alpha,
-        dim_n, deal_n, dim_c, output)));
+    CHECK_RETURN("[mluOpBlockKernelFocalLossSigmoidBackwardFloat]",
+                 mluOpBlockKernelFocalLossSigmoidBackwardFloat(
+                     k_dim, k_type, handle->queue, input, target, weight, gamma,
+                     alpha, dim_n, deal_n, dim_c, output));
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

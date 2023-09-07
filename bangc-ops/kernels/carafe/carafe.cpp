@@ -26,11 +26,11 @@
 #include <vector>
 
 #include "core/context.h"
+#include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "core/gen_case.h"
 #include "kernels/kernel.h"
 #include "kernels/tensor_stride_process/tensor_stride_process.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
@@ -810,11 +810,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
 
   VLOG(5) << "Launch Kernel KernelCarafeForward<<<k_type=" << k_type
           << ", k_dim=" << k_dim.x << "," << k_dim.y << "," << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelCarafeForward(
-      k_dim, k_type, handle->queue, input_desc->dtype, input, mask, output,
-      input_dimN, input_dimH, input_dimW, input_dimC, kernel_size, group_size,
-      scale_factor, block_dimH, block_dimW, block_dimG, block_dimC, grid_dimH,
-      grid_dimW, grid_dimG, grid_dimC)));
+  CHECK_RETURN(
+      "[mluOpCarafeForward]",
+      KernelCarafeForward(
+          k_dim, k_type, handle->queue, input_desc->dtype, input, mask, output,
+          input_dimN, input_dimH, input_dimW, input_dimC, kernel_size,
+          group_size, scale_factor, block_dimH, block_dimW, block_dimG,
+          block_dimC, grid_dimH, grid_dimW, grid_dimG, grid_dimC));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -878,10 +880,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
 
   VLOG(5) << "Launch KernelCarafeBackward<<<k_type=" << k_type << ", "
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-  KERNEL_CHECK((KernelCarafeBackward(
-      k_dim, k_type, handle->queue, input_desc->dtype, (void *)input,
-      (void *)mask, (void *)grad_output, grad_input, grad_mask, n, hi, wi, c,
-      k_up, group, scale)));
+  CHECK_RETURN("[mluOpCarafeBackward]",
+               (KernelCarafeBackward(
+                   k_dim, k_type, handle->queue, input_desc->dtype,
+                   (void *)input, (void *)mask, (void *)grad_output, grad_input,
+                   grad_mask, n, hi, wi, c, k_up, group, scale)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

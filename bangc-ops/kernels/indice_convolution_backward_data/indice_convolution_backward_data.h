@@ -25,8 +25,8 @@
 
 #include <vector>
 
-#include "mlu_op.h"
 #include "core/tensor.h"
+#include "mlu_op.h"
 
 inline int getMaxNumInArray(const int64_t arr[], const int num) {
   int max_num = (int)(arr[0]);
@@ -36,4 +36,6 @@ inline int getMaxNumInArray(const int64_t arr[], const int num) {
   return max_num;
 }
 
-#endif  // KERNELS_INDICE_CONVOLUTION_BACKWARD_DATA_INDICE_CONVOLUTION_BACKWARD_DATA_H_ // NOLINT
+#endif
+// KERNELS_INDICE_CONVOLUTION_BACKWARD_DATA_INDICE_CONVOLUTION_BACKWARD_DATA_H_
+// NOLINT

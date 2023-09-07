@@ -45,7 +45,7 @@ DIFF_IOU_ROTATED_SORT_VERTICES_FORWARD_H
 #define KLOG(fmt, ...)
 #endif
 
-void MLUOP_WIN_API KernelDiffIouRotatedSortVerticesForward(
+mluOpStatus_t MLUOP_WIN_API KernelDiffIouRotatedSortVerticesForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *vertices, const void *mask, const void *num_valid, void *idx,
     const int32_t dim_b, const int32_t dim_n, const int32_t dim_m);

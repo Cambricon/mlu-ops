@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelMoeDispatchForward(
+mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *gates, const void *indices,
     const void *locations, const void *input, const int samples,

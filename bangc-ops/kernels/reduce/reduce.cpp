@@ -22,19 +22,12 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpReduce(
-    mluOpHandle_t handle,
-    const mluOpReduceDescriptor_t reduce_desc,
-    void *workspace,
-    size_t workspace_size,
-    const void *alpha,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const size_t indices_size_inbytes,
-    void *indices,
-    const void *beta,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpReduce(mluOpHandle_t handle, const mluOpReduceDescriptor_t reduce_desc,
+            void *workspace, size_t workspace_size, const void *alpha,
+            const mluOpTensorDescriptor_t input_desc, const void *input,
+            const size_t indices_size_inbytes, void *indices, const void *beta,
+            const mluOpTensorDescriptor_t output_desc, void *output) {
   reduceWrapper wrapper;
   mluOpStatus_t ret = wrapper.invoke(
       handle, reduce_desc, workspace, workspace_size, alpha, input_desc, input,

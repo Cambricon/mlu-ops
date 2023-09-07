@@ -25,10 +25,10 @@
 #include <cmath>
 #include <climits>
 
+#include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "core/logging.h"
 
 #define ROI_OFFSET 5
 #define FOURSPLIT 4
@@ -724,7 +724,7 @@ __mlu_entry__ void MLUUnion1DeformRoiPoolBackward(
       sampling_ratio, static_cast<T>(gamma));
 }
 
-void MLUOP_WIN_API KernelDeformRoiPoolForward(
+mluOpStatus_t MLUOP_WIN_API KernelDeformRoiPoolForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *input, const void *rois,
     const void *offset, void *output, const int batches, const int channels,
@@ -732,26 +732,29 @@ void MLUOP_WIN_API KernelDeformRoiPoolForward(
     const int pooled_height, const int pooled_width, const float spatial_scale,
     const int sampling_ratio, const float gamma) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUUnion1DeformRoiPoolForward<float><<<k_dim, k_type, queue>>>(
-          input, rois, offset, output, batches, channels, height, width,
-          num_rois, pooled_height, pooled_width, spatial_scale, sampling_ratio,
-          gamma);
+      KERNEL_CHECK(MLUUnion1DeformRoiPoolForward<float>
+                   <<<k_dim, k_type, queue>>>(
+                       input, rois, offset, output, batches, channels, height,
+                       width, num_rois, pooled_height, pooled_width,
+                       spatial_scale, sampling_ratio, gamma));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUUnion1DeformRoiPoolForward<half><<<k_dim, k_type, queue>>>(
-          input, rois, offset, output, batches, channels, height, width,
-          num_rois, pooled_height, pooled_width, spatial_scale, sampling_ratio,
-          gamma);
+      KERNEL_CHECK(MLUUnion1DeformRoiPoolForward<half>
+                   <<<k_dim, k_type, queue>>>(
+                       input, rois, offset, output, batches, channels, height,
+                       width, num_rois, pooled_height, pooled_width,
+                       spatial_scale, sampling_ratio, gamma));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelDeformRoiPoolBackward(
+mluOpStatus_t MLUOP_WIN_API KernelDeformRoiPoolBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *grad_output, const void *input,
     const void *rois, const void *offset, void *grad_input, void *grad_offset,
@@ -759,21 +762,24 @@ void MLUOP_WIN_API KernelDeformRoiPoolBackward(
     const int num_rois, const int pooled_height, const int pooled_width,
     const float spatial_scale, const int sampling_ratio, const float gamma) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUUnion1DeformRoiPoolBackward<float><<<k_dim, k_type, queue>>>(
-          grad_output, input, rois, offset, grad_input, grad_offset, batches,
-          channels, height, width, num_rois, pooled_height, pooled_width,
-          spatial_scale, sampling_ratio, gamma);
+      KERNEL_CHECK(
+          MLUUnion1DeformRoiPoolBackward<float><<<k_dim, k_type, queue>>>(
+              grad_output, input, rois, offset, grad_input, grad_offset,
+              batches, channels, height, width, num_rois, pooled_height,
+              pooled_width, spatial_scale, sampling_ratio, gamma));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUUnion1DeformRoiPoolBackward<half><<<k_dim, k_type, queue>>>(
-          grad_output, input, rois, offset, grad_input, grad_offset, batches,
-          channels, height, width, num_rois, pooled_height, pooled_width,
-          spatial_scale, sampling_ratio, gamma);
+      KERNEL_CHECK(
+          MLUUnion1DeformRoiPoolBackward<half><<<k_dim, k_type, queue>>>(
+              grad_output, input, rois, offset, grad_input, grad_offset,
+              batches, channels, height, width, num_rois, pooled_height,
+              pooled_width, spatial_scale, sampling_ratio, gamma));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }

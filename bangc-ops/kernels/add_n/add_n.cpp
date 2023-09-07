@@ -22,29 +22,21 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpAddN(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t input_descs[],
-    const void *inputs[],
-    uint32_t input_num,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpAddN(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
+          const void *inputs[], uint32_t input_num,
+          const mluOpTensorDescriptor_t output_desc, void *output) {
   addNWrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, input_descs, inputs, input_num, output_desc,
-                     output);
+  mluOpStatus_t ret = wrapper.invoke(handle, input_descs, inputs, input_num,
+                                     output_desc, output);
   return ret;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpAddN_v2(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t input_descs[],
-    const void *const inputs[],
-    const uint32_t input_num,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output,
-    void * workspace,
-    size_t workspace_size) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpAddN_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
+             const void *const inputs[], const uint32_t input_num,
+             const mluOpTensorDescriptor_t output_desc, void *output,
+             void *workspace, size_t workspace_size) {
   addNV2Wrapper wrapper;
   mluOpStatus_t ret =
       wrapper.invoke(handle, input_descs, inputs, input_num, output_desc,

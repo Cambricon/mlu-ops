@@ -24,6 +24,8 @@
 
 #include <cmath>
 #include <climits>
+
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -538,42 +540,46 @@ __mlu_global__ void mluAssignVoxelsCoors(
 #endif
 }
 
-void MLUOP_WIN_API KernelDynamicVoxelize(
+mluOpStatus_t MLUOP_WIN_API KernelDynamicVoxelize(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *points, const void *voxel_size, const void *coors_range,
     void *coors, const int32_t num_points, const int32_t num_features) {
-  mluDynamicVoxelize<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(mluDynamicVoxelize<<<k_dim, k_type, queue>>>(
       (float *)points, (float *)voxel_size, (float *)coors_range,
-      (int32_t *)coors, num_points, num_features);
+      (int32_t *)coors, num_points, num_features));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelPoint2Voxel(
+mluOpStatus_t MLUOP_WIN_API KernelPoint2Voxel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, void *coors,
     void *point_to_pointidx, void *point_to_voxelidx, const int32_t num_points,
     const int32_t max_points) {
-  mluPoint2Voxel<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(mluPoint2Voxel<<<k_dim, k_type, queue>>>(
       (int32_t *)coors, (int32_t *)point_to_pointidx,
-      (int32_t *)point_to_voxelidx, num_points, max_points);
+      (int32_t *)point_to_voxelidx, num_points, max_points));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelCalcPointsPerVoxel(
+mluOpStatus_t MLUOP_WIN_API KernelCalcPointsPerVoxel(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     void *point_to_pointidx, void *point_to_voxelidx, void *coor_to_voxelidx,
     void *num_points_per_voxel, void *voxel_num, const int32_t max_voxels,
     const int32_t num_points) {
-  mluCalcPointsPerVoxel<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(mluCalcPointsPerVoxel<<<k_dim, k_type, queue>>>(
       (int32_t *)point_to_pointidx, (int32_t *)point_to_voxelidx,
       (int32_t *)coor_to_voxelidx, (int32_t *)num_points_per_voxel,
-      (int32_t *)voxel_num, max_voxels, num_points);
+      (int32_t *)voxel_num, max_voxels, num_points));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelAssignVoxelsCoors(
+mluOpStatus_t MLUOP_WIN_API KernelAssignVoxelsCoors(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *points, void *temp_coors, void *point_to_voxelidx,
     void *coor_to_voxelidx, void *voxels, void *coors, const int32_t max_points,
     const int32_t num_points, const int32_t num_features) {
-  mluAssignVoxelsCoors<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(mluAssignVoxelsCoors<<<k_dim, k_type, queue>>>(
       (float *)points, (int32_t *)temp_coors, (int32_t *)point_to_voxelidx,
       (int32_t *)coor_to_voxelidx, (float *)voxels, (int32_t *)coors,
-      max_points, num_points, num_features);
+      max_points, num_points, num_features));
+  return MLUOP_STATUS_SUCCESS;
 }

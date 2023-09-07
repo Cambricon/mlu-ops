@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "kernels/poly_nms/poly_nms.h"
 #include "kernels/poly_nms/enums.h"
+
 #include "kernels/kernel.h"
 
 #define GEN_RESLUT_NRAM_SIZE MAX_NRAM_SIZE

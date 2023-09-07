@@ -296,14 +296,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
                        num_points_per_voxel_desc, num_points_per_voxel));
 
   VLOG(5) << "Launch Kernel KernelDynamicVoxelize.";
-  KERNEL_CHECK((KernelDynamicVoxelize(k_dim, k_type, handle->queue, points,
-                                      voxel_size, coors_range, temp_coors,
-                                      num_points, num_features)));
+  CHECK_RETURN(
+      "[DynamicVoxelize]",
+      KernelDynamicVoxelize(k_dim, k_type, handle->queue, points, voxel_size,
+                            coors_range, temp_coors, num_points, num_features));
 
   VLOG(5) << "Launch Kernel KernelPoint2Voxel.";
-  KERNEL_CHECK((KernelPoint2Voxel(k_dim, k_type, handle->queue, temp_coors,
-                                  point_to_pointidx, point_to_voxelidx,
-                                  num_points, max_points)));
+  CHECK_RETURN("[Point2Voxel]",
+               KernelPoint2Voxel(k_dim, k_type, handle->queue, temp_coors,
+                                 point_to_pointidx, point_to_voxelidx,
+                                 num_points, max_points));
 
   cnrtDim3_t k_dim_calc_points_per_voxel;
   cnrtFunctionType_t k_type_calc_points_per_voxel;
@@ -311,15 +313,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
                                &k_type_calc_points_per_voxel);
 
   VLOG(5) << "Launch Kernel KernelCalcPointsPerVoxel.";
-  KERNEL_CHECK((KernelCalcPointsPerVoxel(
-      k_dim_calc_points_per_voxel, k_type_calc_points_per_voxel, handle->queue,
-      point_to_pointidx, point_to_voxelidx, coor_to_voxelidx,
-      num_points_per_voxel, voxel_num, max_voxels, num_points)));
+  CHECK_RETURN(
+      "[CalcPointsPerVoxel]",
+      KernelCalcPointsPerVoxel(
+          k_dim_calc_points_per_voxel, k_type_calc_points_per_voxel,
+          handle->queue, point_to_pointidx, point_to_voxelidx, coor_to_voxelidx,
+          num_points_per_voxel, voxel_num, max_voxels, num_points));
 
   VLOG(5) << "Launch Kernel KernelAssignVoxelsCoors.";
-  KERNEL_CHECK((KernelAssignVoxelsCoors(
-      k_dim, k_type, handle->queue, points, temp_coors, point_to_voxelidx,
-      coor_to_voxelidx, voxels, coors, max_points, num_points, num_features)));
+  CHECK_RETURN(
+      "[AssignVoxelsCoors]",
+      KernelAssignVoxelsCoors(k_dim, k_type, handle->queue, points, temp_coors,
+                              point_to_voxelidx, coor_to_voxelidx, voxels,
+                              coors, max_points, num_points, num_features));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

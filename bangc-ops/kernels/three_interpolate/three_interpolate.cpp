@@ -488,9 +488,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   VLOG(5) << "[mluOpThreeInterpolateForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "]";
   VLOG(5) << "Kernel KernelThreeInterpolateForward";
-  KERNEL_CHECK((KernelThreeInterpolateForward(
-      k_dim, k_type, handle->queue, features_desc->dtype, features, indices,
-      weights, b, c, m, n, c_limit_size, m_limit_size, n_limit_size, output)));
+  CHECK_RETURN("[mluOpThreeInterpolateForward]",
+               KernelThreeInterpolateForward(
+                   k_dim, k_type, handle->queue, features_desc->dtype, features,
+                   indices, weights, b, c, m, n, c_limit_size, m_limit_size,
+                   n_limit_size, output));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -544,10 +546,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
   VLOG(5) << "[mluOpThreeInterpolateBackward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "]";
   VLOG(5) << "Kernel KernelThreeInterpolateBackward";
-  KERNEL_CHECK((KernelThreeInterpolateBackward(
-      k_dim, k_type, handle->queue, grad_output_desc->dtype, grad_output,
-      indices, weights, b, c, m, n, c_limit_size, m_limit_size, n_limit_size,
-      grad_features)));
+  CHECK_RETURN("[mluOpThreeInterpolateBackward]",
+               KernelThreeInterpolateBackward(
+                   k_dim, k_type, handle->queue, grad_output_desc->dtype,
+                   grad_output, indices, weights, b, c, m, n, c_limit_size,
+                   m_limit_size, n_limit_size, grad_features));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

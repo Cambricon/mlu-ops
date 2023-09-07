@@ -175,9 +175,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpActiveRotatedFilterForward(
   VLOG(5) << "Launch Kernel KernelActiveRotatedFilterForward<<<Union"
           << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y << ", "
           << k_dims.z << ">>>.";
-  KERNEL_CHECK(KernelActiveRotatedFilterForward(
-      k_dims, k_type, handle->queue, input_dtype, output_planes, input_planes,
-      orientations, kH, kW, rotations, input, indices, workspace, output));
+  CHECK_RETURN("[mluOpActiveRotatedFilterForward]",
+               KernelActiveRotatedFilterForward(
+                   k_dims, k_type, handle->queue, input_dtype, output_planes,
+                   input_planes, orientations, kH, kW, rotations, input,
+                   indices, workspace, output));
 
   // generate gen_case prototxt
   GEN_CASE_END();

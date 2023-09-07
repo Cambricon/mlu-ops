@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelVoxelPoolingForward(
+mluOpStatus_t MLUOP_WIN_API KernelVoxelPoolingForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const int batch_size, const int num_points, const int num_channels,
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,

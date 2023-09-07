@@ -22,34 +22,28 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpFill(
-    mluOpHandle_t handle,
-    float value,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle, float value,
+                                      const mluOpTensorDescriptor_t output_desc,
+                                      void *output) {
   fillWrapper wrapper;
   mluOpStatus_t ret = wrapper.invoke(handle, value, output_desc, output);
   return ret;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpFill_v2(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t value_desc,
-    const void *value,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpFill_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t value_desc,
+             const void *value, const mluOpTensorDescriptor_t output_desc,
+             void *output) {
   fillV2Wrapper wrapper;
   mluOpStatus_t ret =
       wrapper.invoke(handle, value_desc, value, output_desc, output);
   return ret;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpFill_v3(
-    mluOpHandle_t handle,
-    const mluOpPointerMode_t pointer_mode,
-    const void *value,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpFill_v3(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
+             const void *value, const mluOpTensorDescriptor_t output_desc,
+             void *output) {
   fillV3Wrapper wrapper;
   mluOpStatus_t ret =
       wrapper.invoke(handle, pointer_mode, value, output_desc, output);

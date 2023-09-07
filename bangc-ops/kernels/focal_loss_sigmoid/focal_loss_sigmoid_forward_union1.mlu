@@ -24,6 +24,7 @@
 
 #include <float.h>
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
@@ -231,8 +232,10 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer,
     __bang_le_scalar(input, compute_b, (float)FLT_MAX, deal_num);
     __bang_float2int32((int32_t *)input, input, deal_num, 0);
     __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
-    __bang_lut_s32((int32_t *)input, (int32_t *)input, table, deal_num, COMPUTE_COUNT_ALIGN);   // NOLINT
-    __bang_band((char *)compute_b, (char *)compute_b, (char *)input, sizeof(float) * deal_num); // NOLINT
+    __bang_lut_s32((int32_t *)input, (int32_t *)input, table, deal_num,
+                   COMPUTE_COUNT_ALIGN);  // NOLINT
+    __bang_band((char *)compute_b, (char *)compute_b, (char *)input,
+                sizeof(float) * deal_num);  // NOLINT
     __bang_sub(compute_a, compute_a, compute_b, deal_num);
 
     // 3. output = alpha_t * p_t^r * [-log(p_t)]
@@ -559,22 +562,24 @@ __mlu_global__ void MLUUnion1KernelFocalLossSigmoidForward(
 
 }  // namespace forward
 
-void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardHalf(
+mluOpStatus_t MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardHalf(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const focalLossSigmoidPreference_t prefer, const void *input,
     const void *target, const void *weight, const int32_t N, const int32_t C,
     const float alpha, const float gamma, void *output) {
-  forward::MLUUnion1KernelFocalLossSigmoidForward<half>
-      <<<k_dim, k_type, queue>>>(prefer, input, target, weight, N, C, alpha,
-                                 gamma, output);
+  KERNEL_CHECK(forward::MLUUnion1KernelFocalLossSigmoidForward<half>
+               <<<k_dim, k_type, queue>>>(prefer, input, target, weight, N, C,
+                                          alpha, gamma, output));
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardFloat(
+mluOpStatus_t MLUOP_WIN_API mluOpBlockKernelFocalLossSigmoidForwardFloat(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const focalLossSigmoidPreference_t prefer, const void *input,
     const void *target, const void *weight, const int32_t N, const int32_t C,
     const float alpha, const float gamma, void *output) {
-  forward::MLUUnion1KernelFocalLossSigmoidForward<float>
-      <<<k_dim, k_type, queue>>>(prefer, input, target, weight, N, C, alpha,
-                                 gamma, output);
+  KERNEL_CHECK(forward::MLUUnion1KernelFocalLossSigmoidForward<float>
+               <<<k_dim, k_type, queue>>>(prefer, input, target, weight, N, C,
+                                          alpha, gamma, output));
+  return MLUOP_STATUS_SUCCESS;
 }

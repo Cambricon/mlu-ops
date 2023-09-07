@@ -22,8 +22,9 @@
  *************************************************************************/
 #include "diff_iou_rotated_sort_vertices_forward.h"
 
-#include "kernels/kernel.h"
+#include "core/logging.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
@@ -386,11 +387,15 @@ __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
 #endif
 }
 
-void MLUOP_WIN_API KernelDiffIouRotatedSortVerticesForward(
+mluOpStatus_t MLUOP_WIN_API KernelDiffIouRotatedSortVerticesForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *vertices, const void *mask, const void *num_valid, void *idx,
     const int dim_b, const int dim_n, const int dim_m) {
-  MLUKernelDiffIouRotatedSortVerticesForward<<<k_dim, k_type, queue>>>(
-      (float *)vertices, (bool *)mask, (int *)num_valid, (int *)idx, dim_b,
-      dim_n, dim_m);
+  /* Only float data type is supported in host-side CPP file
+       fool-proof processing.*/
+  KERNEL_CHECK(
+      MLUKernelDiffIouRotatedSortVerticesForward<<<k_dim, k_type, queue>>>(
+          (float *)vertices, (bool *)mask, (int *)num_valid, (int *)idx, dim_b,
+          dim_n, dim_m));
+  return MLUOP_STATUS_SUCCESS;
 }

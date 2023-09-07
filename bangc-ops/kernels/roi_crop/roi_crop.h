@@ -25,13 +25,13 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API KernelRoiCropForward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiCropForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *input, const void *grid, const int batch, const int height,
     const int width, const int channels, const int grid_n, const int output_h,
     const int output_w, void *output);
 
-void MLUOP_WIN_API KernelRoiCropBackward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiCropBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *grad_output, const void *grid, const int batch,
     const int height, const int width, const int channels, const int grid_n,

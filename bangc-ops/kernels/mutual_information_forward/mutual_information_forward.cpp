@@ -82,8 +82,7 @@ static mluOpStatus_t checkTensorDim(
   }
   if (1 != ans_desc->dim) {
     LOG(ERROR) << API_NAME << " The dim of ans must be 1. "
-               << "But now the dim of ans is "
-               << ans_desc->dim << ".";
+               << "But now the dim of ans is " << ans_desc->dim << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -103,9 +102,8 @@ static mluOpStatus_t checkTensorShape(
     LOG(ERROR) << API_NAME
                << " px.shape[0], py.shape[0], p.shape[0], ans.shape[0], "
                << "must be same. But now "
-               << "px.shape[0] is " << px_desc->dims[0]
-               << ", py.shape[0] is " << py_desc->dims[0]
-               << ", p.shape[0] is " << p_desc->dims[0]
+               << "px.shape[0] is " << px_desc->dims[0] << ", py.shape[0] is "
+               << py_desc->dims[0] << ", p.shape[0] is " << p_desc->dims[0]
                << ", ans.shape[0] is " << ans_desc->dims[0] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -114,23 +112,22 @@ static mluOpStatus_t checkTensorShape(
   if (T + 1 != px_desc->dims[2]) {
     LOG(ERROR) << API_NAME << " Currently only supports the case that "
                << "px.shape[2] must be equal to py.shape[2] + 1. But now "
-               << "px.shape[2] is " << px_desc->dims[2]
-               << ", py.shape[2] is " << py_desc->dims[2] << ".";
+               << "px.shape[2] is " << px_desc->dims[2] << ", py.shape[2] is "
+               << py_desc->dims[2] << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // the shape of py must be [B, S+1, T]
   if (S + 1 != py_desc->dims[1]) {
-    LOG(ERROR) << API_NAME
-               << " py.shape[1] must be equal to px.shape[1] + 1. "
+    LOG(ERROR) << API_NAME << " py.shape[1] must be equal to px.shape[1] + 1. "
                << "But now px.shape[1] is " << px_desc->dims[1]
                << ", py.shape[1] is " << py_desc->dims[1] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // the shape of opt_boundary must be [B, 4]
-  if (nullptr != opt_boundary_desc && (B != opt_boundary_desc->dims[0]
-      || 4 != opt_boundary_desc->dims[1])) {
+  if (nullptr != opt_boundary_desc &&
+      (B != opt_boundary_desc->dims[0] || 4 != opt_boundary_desc->dims[1])) {
     LOG(ERROR) << API_NAME << " When opt_boundary is not NULL, "
                << "opt_boundary.shape[0] and px.shape[0] must be same, and "
                << "opt_boundary.shape[1] must be 4. But now "
@@ -143,13 +140,12 @@ static mluOpStatus_t checkTensorShape(
 
   // the shape of p must be [B, S+1, T+1]
   if (S + 1 != p_desc->dims[1] || T + 1 != p_desc->dims[2]) {
-    LOG(ERROR) << API_NAME
-               << " p.shape[1] and py.shape[1] must be same, and "
+    LOG(ERROR) << API_NAME << " p.shape[1] and py.shape[1] must be same, and "
                << "p.shape[2] must be equal to py.shape[2] + 1. "
                << "But now p.shape[1] is " << p_desc->dims[1]
-               << ", py.shape[1] is " << py_desc->dims[1]
-               << ", p.shape[2] is " << p_desc->dims[2]
-               << ", py.shape[2] is " << py_desc->dims[2] << ".";
+               << ", py.shape[1] is " << py_desc->dims[1] << ", p.shape[2] is "
+               << p_desc->dims[2] << ", py.shape[2] is " << py_desc->dims[2]
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -203,8 +199,7 @@ static mluOpStatus_t checkTensorDatatype(
 }
 
 static mluOpStatus_t checkTensorScaleLimit(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t px_desc,
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc,
     const mluOpTensorDescriptor_t py_desc,
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc) {
@@ -225,14 +220,14 @@ static mluOpStatus_t checkTensorScaleLimit(
   // check scale limit for compute p
   // 9: max_val, mask, temp, ping(py, px, p) and pong(py, px, p)
   // 11: max_val, mask, temp, ping(py, px, p), pong(py, px, p) and 2*(-inf)
-  int currnet_size = T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) +
-                     9 * std::min(S, T) + 11;
+  int currnet_size =
+      T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 9 * std::min(S, T) + 11;
   if (currnet_size > handle->nram_size / sizeof(float)) {
     LOG(ERROR) << API_NAME << " The num of px.shape[1] * px.shape[2] + "
                << "py.shape[1] * py.shape[2] + p.shape[1] * p.shape[2] + "
                << "9 * min(px.shape[1], py.shape[2]) + 11 shoule be less than "
-               << handle->nram_size / sizeof(float)
-               << ". But now it is " << currnet_size << ".";
+               << handle->nram_size / sizeof(float) << ". But now it is "
+               << currnet_size << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -278,10 +273,9 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc, const void *px,
     const mluOpTensorDescriptor_t py_desc, const void *py,
     const mluOpTensorDescriptor_t opt_boundary_desc, const void *opt_boundary,
-    const mluOpTensorDescriptor_t p_desc, const void *p,
-    void *workspace, const size_t workspace_size,
-    const mluOpTensorDescriptor_t ans_desc, void *ans,
-    bool &has_boundary, bool &zero_element) {
+    const mluOpTensorDescriptor_t p_desc, const void *p, void *workspace,
+    const size_t workspace_size, const mluOpTensorDescriptor_t ans_desc,
+    void *ans, bool &has_boundary, bool &zero_element) {
   // 1. check handle and tensor_desc
   PARAM_CHECK(API_NAME, handle != nullptr);
   PARAM_CHECK(API_NAME, px_desc != nullptr);
@@ -299,16 +293,15 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
   }
 
   // 3. check tensor dim
-  mluOpStatus_t check_status = checkTensorDim(px_desc, py_desc,
-                                              opt_boundary_desc,
-                                              p_desc, ans_desc);
+  mluOpStatus_t check_status =
+      checkTensorDim(px_desc, py_desc, opt_boundary_desc, p_desc, ans_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
 
   // 4. check tensor shape
-  check_status = checkTensorShape(px_desc, py_desc, opt_boundary_desc,
-                                  p_desc, ans_desc);
+  check_status =
+      checkTensorShape(px_desc, py_desc, opt_boundary_desc, p_desc, ans_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
@@ -345,8 +338,8 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
   }
 
   // 9. check tensor ptr
-  check_status = checkTensorPtr(px, py, p, ans, opt_boundary_desc,
-                                opt_boundary, S, T, has_boundary);
+  check_status = checkTensorPtr(px, py, p, ans, opt_boundary_desc, opt_boundary,
+                                S, T, has_boundary);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
@@ -395,11 +388,12 @@ static mluOpStatus_t launchMutualInformationForwardKernel(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, B);
-  VLOG(5) << "Launch Kernel MutualInformationForward<<<Block "
-          << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-  KERNEL_CHECK(kernelMutualInformationForward(k_dim, k_type, handle->queue,
-                                              B, S, T, px, py, has_boundary,
-                                              opt_boundary, p, ans));
+  VLOG(5) << "Launch Kernel MutualInformationForward<<<Block " << k_dim.x
+          << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  CHECK_RETURN(
+      "[MutualInformationForward]",
+      kernelMutualInformationForward(k_dim, k_type, handle->queue, B, S, T, px,
+                                     py, has_boundary, opt_boundary, p, ans));
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -408,16 +402,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationForward(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc, const void *px,
     const mluOpTensorDescriptor_t py_desc, const void *py,
     const mluOpTensorDescriptor_t opt_boundary_desc, const void *opt_boundary,
-    const mluOpTensorDescriptor_t p_desc, void *p,
-    void *workspace, const size_t workspace_size,
-    const mluOpTensorDescriptor_t ans_desc, void *ans) {
+    const mluOpTensorDescriptor_t p_desc, void *p, void *workspace,
+    const size_t workspace_size, const mluOpTensorDescriptor_t ans_desc,
+    void *ans) {
   // 1. paramcheck
   bool has_boundary = false;
   bool zero_element = false;
   mluOpStatus_t check_status = mutualInformationForwardParamCheck(
-      handle, px_desc, px, py_desc, py, opt_boundary_desc, opt_boundary,
-      p_desc, p, workspace, workspace_size, ans_desc, ans, has_boundary,
-      zero_element);
+      handle, px_desc, px, py_desc, py, opt_boundary_desc, opt_boundary, p_desc,
+      p, workspace, workspace_size, ans_desc, ans, has_boundary, zero_element);
 
   if (MLUOP_STATUS_SUCCESS != check_status || zero_element) {
     return check_status;
@@ -426,8 +419,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationForward(
   // 2. generate case
   if (MLUOP_GEN_CASE_ON_NEW) {
     mutualInformationForwardGencase(handle, px_desc, px, py_desc, py,
-                                    opt_boundary_desc, opt_boundary,
-                                    p_desc, p, ans_desc, ans);
+                                    opt_boundary_desc, opt_boundary, p_desc, p,
+                                    ans_desc, ans);
   }
 
   // 3. launch kernel

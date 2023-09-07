@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-void MLUOP_WIN_API Kernel3StagePipelineDiv(
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineDiv(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
     const void *x, const void *y, void *z, int num);

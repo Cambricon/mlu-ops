@@ -271,9 +271,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
   VLOG(5) << "[mluOpThreeNNForward] mluOpTranspose_v2 feature end.";
   VLOG(5) << "Launch Kernel KernelThreeNNForward<<<Union" << k_type / CORE_DIM
           << ", " << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>.";
-  KERNEL_CHECK(
-      (KernelThreeNNForward(k_dims, k_type, handle->queue, input_dtype, b, n, m,
-                            unknown, known_workspace, dist2, idx)));
+  CHECK_RETURN(
+      "[mluOpThreeNNForward]",
+      KernelThreeNNForward(k_dims, k_type, handle->queue, input_dtype, b, n, m,
+                           unknown, known_workspace, dist2, idx));
 
   // generate gen_case prototxt
   GEN_CASE_END();

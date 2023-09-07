@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "kernels/masked_im2col_forward/masked_im2col_forward.h"
 
+#include "core/logging.h"
 #include "kernels/utils/common.h"
 
 template <typename T>
@@ -86,13 +87,14 @@ __mlu_entry__ void MLUUnion1MaskedIm2colForward(
   }
 }
 
-void MLUOP_WIN_API KernelMaskedIm2colForward(
+mluOpStatus_t MLUOP_WIN_API KernelMaskedIm2colForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const mluOpDataType_t data_dtype, const void *feature, const int height,
     const int width, const int channels, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const void *mask_h_idx,
     const void *mask_w_idx, const int mask_cnt, void *data_col) {
-  MLUUnion1MaskedIm2colForward<<<k_dim, k_type, queue>>>(
+  KERNEL_CHECK(MLUUnion1MaskedIm2colForward<<<k_dim, k_type, queue>>>(
       data_dtype, feature, height, width, channels, kernel_h, kernel_w, pad_h,
-      pad_w, mask_h_idx, mask_w_idx, mask_cnt, data_col);
+      pad_w, mask_h_idx, mask_w_idx, mask_cnt, data_col));
+  return MLUOP_STATUS_SUCCESS;
 }

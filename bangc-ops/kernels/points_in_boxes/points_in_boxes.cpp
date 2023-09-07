@@ -212,15 +212,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
   // generate points_in_boxes prototxt end!
   VLOG(5) << "[[mluOpPointsInBoxes]] Launch Kernel "
              "KernelPointsInBoxes.";
-  KERNEL_CHECK(KernelPointsInBoxes(
-      k_dim, k_type, handle->queue, points_desc->dims[0], points_desc->dims[1],
-      boxes_desc->dims[1], (float *)points, (float *)boxes,
-      (int *)points_indices, points_in_boxes_info.points_batch_offset,
-      points_in_boxes_info.boxes_batch_offset,
-      points_in_boxes_info.idx_batch_offset,
-      points_in_boxes_info.points_deal_num,
-      points_in_boxes_info.points_deal_offset,
-      points_in_boxes_info.idx_deal_num));
+  CHECK_RETURN("[mluOpPointsInBoxes]",
+               KernelPointsInBoxes(k_dim, k_type, handle->queue,
+                                   points_desc->dims[0], points_desc->dims[1],
+                                   boxes_desc->dims[1], (float *)points,
+                                   (float *)boxes, (int *)points_indices,
+                                   points_in_boxes_info.points_batch_offset,
+                                   points_in_boxes_info.boxes_batch_offset,
+                                   points_in_boxes_info.idx_batch_offset,
+                                   points_in_boxes_info.points_deal_num,
+                                   points_in_boxes_info.points_deal_offset,
+                                   points_in_boxes_info.idx_deal_num));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

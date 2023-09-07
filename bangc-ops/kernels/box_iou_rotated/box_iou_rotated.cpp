@@ -198,7 +198,8 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
 
   VLOG(5) << "[mluOpBoxIouRotated] launch kernel policyFunc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "].";
-  KERNEL_CHECK(
+  CHECK_RETURN(
+      "[mluOpBoxIouRotated]",
       (KernelBoxIouRotated(k_dim, k_type, handle->queue, box1_desc->dtype, box1,
                            box2, ious, num_box1, num_box2, mode, aligned)));
   GEN_CASE_END();

@@ -34,14 +34,14 @@ struct mluOpRoiAlignRotatedParams {
   bool clockwise;
 };
 
-void MLUOP_WIN_API KernelRoiAlignRotatedForward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiAlignRotatedForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *features, const void *rois,
     const int batch, const int height, const int width, const int channel,
     const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
     void *output);
 
-void MLUOP_WIN_API KernelRoiAlignRotatedBackward(
+mluOpStatus_t MLUOP_WIN_API KernelRoiAlignRotatedBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *top_grad, const void *rois,
     const int batch, const int height, const int width, const int channel,

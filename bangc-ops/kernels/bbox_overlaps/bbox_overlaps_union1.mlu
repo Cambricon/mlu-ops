@@ -22,11 +22,11 @@
  *************************************************************************/
 #include "bbox_overlaps.h"
 
-#include "kernels/kernel.h"
+#include "core/logging.h"
 #include "kernels/debug.h"
+#include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 #include "mlu.h"
-#include "core/logging.h"
 
 #define ALIGN_SIZE NFU_ALIGN_SIZE
 #define MAX(a, b) ((a) > (b) ? (a) : (b))

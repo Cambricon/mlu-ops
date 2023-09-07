@@ -67,9 +67,9 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
 
   int element_num = mluOpGetTensorElementNum(x_desc);
   VLOG(5) << "kernel Kernel3StagePipelineDiv.";
-  KERNEL_CHECK(
-      (Kernel3StagePipelineDiv(k_dim, k_type, handle->queue, x_desc->dtype,
-                               prefer, x, y, z, element_num)));
+  CHECK_RETURN("mluOpDiv", Kernel3StagePipelineDiv(k_dim, k_type, handle->queue,
+                                                   x_desc->dtype, prefer, x, y,
+                                                   z, element_num));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

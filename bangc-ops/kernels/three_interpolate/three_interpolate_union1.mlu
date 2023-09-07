@@ -22,10 +22,10 @@
  *************************************************************************/
 #include "three_interpolate.h"
 
+#include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
-#include "core/logging.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -245,11 +245,11 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
   /*
    * NRAM partition
    *  |-----------------------------------------------------------------------------------|
-   *  |           nram_features                  |        nram_features_transpose         |
+   *  |           nram_features                  | nram_features_transpose |
    *  |-----------------------------------------------------------------------------------|
-   *  |           nram_features_selected         |                    nram_output         |
+   *  |           nram_features_selected         | nram_output         |
    *  |-----------------------------------------------------------------------------------|
-   *  |      nram_weights         |   nram_weights_transpose  |      nram_indices         |
+   *  |      nram_weights         |   nram_weights_transpose  | nram_indices |
    *  |-----------------------------------------------------------------------------------|
    *  | nram_indices_transpose(addition/float/float_addition) |
    *  |-----------------------------------------------------------------------------------|
@@ -492,11 +492,14 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
   /*
    * NRAM partition
    *  |-------------------------------------------------------------------------------------------|
-   *  |           nram_grad_output                  |        nram_grad_output_transpose           |
+   *  |           nram_grad_output                  | nram_grad_output_transpose
+   * |
    *  |-------------------------------------------------------------------------------------------|
-   *  |           nram_grad_features                |        nram_grad_features_transpose         |
+   *  |           nram_grad_features                |
+   * nram_grad_features_transpose         |
    *  |-------------------------------------------------------------------------------------------|
-   *  |      nram_weights            |   nram_weights_transpose     |      nram_indices           |
+   *  |      nram_weights            |   nram_weights_transpose     |
+   * nram_indices           |
    *  |-------------------------------------------------------------------------------------------|
    *  |      nram_indices_transpose(addition/float/float_addition)  |
    *  |-------------------------------------------------------------------------------------------|
@@ -685,50 +688,52 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
   }    // batch_m_per_core
 }
 
-void MLUOP_WIN_API KernelThreeInterpolateForward(
+mluOpStatus_t MLUOP_WIN_API KernelThreeInterpolateForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *features, const void *indices,
     const void *weights, const uint32_t b, const uint32_t c, const uint32_t m,
     const uint32_t n, const uint32_t c_limit_size, const uint32_t m_limit_size,
     const uint32_t n_limit_size, void *output) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
           (float *)features, (int *)indices, (float *)weights, b, c, m, n,
-          c_limit_size, m_limit_size, n_limit_size, (float *)output);
+          c_limit_size, m_limit_size, n_limit_size, (float *)output));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelThreeInterpolateForward<<<k_dim, k_type, queue>>>(
           (half *)features, (int *)indices, (half *)weights, b, c, m, n,
-          c_limit_size, m_limit_size, n_limit_size, (half *)output);
+          c_limit_size, m_limit_size, n_limit_size, (half *)output));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelThreeInterpolateBackward(
+mluOpStatus_t MLUOP_WIN_API KernelThreeInterpolateBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *grad_output, const void *indices,
     const void *weights, const uint32_t b, const uint32_t c, const uint32_t m,
     const uint32_t n, const uint32_t c_limit_size, const uint32_t m_limit_size,
     const uint32_t n_limit_size, void *grad_features) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
           (float *)grad_output, (int *)indices, (float *)weights, b, c, m, n,
-          c_limit_size, m_limit_size, n_limit_size, (float *)grad_features);
+          c_limit_size, m_limit_size, n_limit_size, (float *)grad_features));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelThreeInterpolateBackward<<<k_dim, k_type, queue>>>(
           (half *)grad_output, (int *)indices, (half *)weights, b, c, m, n,
-          c_limit_size, m_limit_size, n_limit_size, (half *)grad_features);
+          c_limit_size, m_limit_size, n_limit_size, (half *)grad_features));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }

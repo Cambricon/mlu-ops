@@ -204,9 +204,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
   VLOG(5) << "[mluOpRoiCropForward] launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
 
-  KERNEL_CHECK((KernelRoiCropForward(k_dim, k_type, handle->queue, input, grid,
-                                     batch, height, width, channels, grid_n,
-                                     output_h, output_w, output)));
+  CHECK_RETURN("[mluOpRoiCropForward]",
+               KernelRoiCropForward(k_dim, k_type, handle->queue, input, grid,
+                                    batch, height, width, channels, grid_n,
+                                    output_h, output_w, output));
   VLOG(5) << "Kernel KernelRoiCropForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -251,13 +252,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   // gdram set zero
   int gd_num = channels * width * height * batch * sizeof(float);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, gd_num, grad_input)));
+  CHECK_RETURN("[FillZero]", (KernelFillZero(k_dim, k_type, handle->queue,
+                                             gd_num, grad_input)));
   VLOG(5) << "Kernel KernelFillZero.";
 
-  KERNEL_CHECK((KernelRoiCropBackward(k_dim, k_type, handle->queue, grad_output,
-                                      grid, batch, height, width, channels,
-                                      grid_n, output_h, output_w, grad_input)));
+  CHECK_RETURN("[mluOpRoiCropBackward]",
+               KernelRoiCropBackward(k_dim, k_type, handle->queue, grad_output,
+                                     grid, batch, height, width, channels,
+                                     grid_n, output_h, output_w, grad_input));
   VLOG(5) << "kernel KernelRoiCropBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

@@ -25,10 +25,9 @@
 
 #include "mlu_op.h"
 
-
-void MLUOP_WIN_API kernelMutualInformationBackward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const int B, const int S, const int T, const void *px, const void *py,
+mluOpStatus_t MLUOP_WIN_API kernelMutualInformationBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
+    const int S, const int T, const void *px, const void *py,
     const bool has_boundary, const void *opt_boundary, const void *p,
     const bool overwrite_ans_grad, void *ans_grad, void *px_grad,
     void *py_grad);

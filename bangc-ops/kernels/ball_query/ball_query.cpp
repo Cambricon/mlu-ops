@@ -25,11 +25,11 @@
 #include <string>
 
 #include "core/context.h"
+#include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "core/gen_case.h"
 #include "kernels/kernel.h"
 
 static inline bool isSupportType(const mluOpDataType_t check_type,
@@ -193,9 +193,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   mluOpDataType_t d_type = new_xyz_desc->dtype;
   VLOG(5) << "[mluOpBallQuery] launch kernel KernelBallQuery[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "]";
-  KERNEL_CHECK(KernelBallQuery(k_dim, k_type, handle->queue, d_type, b, n, m,
-                               min_radius, max_radius, nsample, new_xyz, xyz,
-                               (int32_t *)idx));
+  CHECK_RETURN(
+      "[mluOpBallQuery]",
+      KernelBallQuery(k_dim, k_type, handle->queue, d_type, b, n, m, min_radius,
+                      max_radius, nsample, new_xyz, xyz, (int32_t *)idx));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

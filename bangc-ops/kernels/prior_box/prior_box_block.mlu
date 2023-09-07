@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "prior_box.h"
 
+#include "core/logging.h"
 #include "kernels/kernel.h"
 
 #define ALIGN_BYTE 1024
@@ -273,7 +274,7 @@ __mlu_global__ void mluKernelPriorBox(
   }
 }
 
-void MLUOP_WIN_API KernelPriorBox(
+mluOpStatus_t MLUOP_WIN_API KernelPriorBox(
     cnrtDim3_t k_dim_box, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     const void *min_sizes, const int min_sizes_num, const void *aspect_ratios,
     const int aspect_ratios_num, const void *variances, const int variances_num,
@@ -283,13 +284,14 @@ void MLUOP_WIN_API KernelPriorBox(
     const int num_priors, const bool clip,
     const bool min_max_aspect_ratios_order, void *output, const int output_size,
     void *var, const int var_size) {
-  mluKernelPriorBox<<<k_dim_box, k_type, queue>>>(
+  KERNEL_CHECK(mluKernelPriorBox<<<k_dim_box, k_type, queue>>>(
       (float *)min_sizes, min_sizes_num, (float *)aspect_ratios,
       aspect_ratios_num, (float *)max_sizes, max_sizes_num, height, width,
       im_height, im_width, (float)step_h, (float)step_w, (float)offset,
       num_priors, clip, min_max_aspect_ratios_order, (float *)output,
-      output_size);
-  mluKernelPriorVar<<<k_dim_box, k_type, queue>>>(height, width, num_priors,
-                                                  (float *)variances,
-                                                  variances_num, (float *)var);
+      output_size));
+  KERNEL_CHECK(mluKernelPriorVar<<<k_dim_box, k_type, queue>>>(
+      height, width, num_priors, (float *)variances, variances_num,
+      (float *)var));
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -22,42 +22,27 @@
  *************************************************************************/
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpMatMul(mluOpHandle_t handle,
-                                        const bool is_trans_a,
-                                        const bool is_trans_b,
-                                        const void *alpha,
-                                        const mluOpTensorDescriptor_t a_desc,
-                                        const void *a,
-                                        const mluOpTensorDescriptor_t b_desc,
-                                        const void *b,
-                                        const void *beta,
-                                        const mluOpTensorDescriptor_t c_desc,
-                                        void *c) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpMatMul(mluOpHandle_t handle, const bool is_trans_a, const bool is_trans_b,
+            const void *alpha, const mluOpTensorDescriptor_t a_desc,
+            const void *a, const mluOpTensorDescriptor_t b_desc, const void *b,
+            const void *beta, const mluOpTensorDescriptor_t c_desc, void *c) {
   matmulWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, is_trans_a, is_trans_b,
-                                     alpha, a_desc, a, b_desc, b, beta,
-                                     c_desc, c);
+  mluOpStatus_t ret = wrapper.invoke(handle, is_trans_a, is_trans_b, alpha,
+                                     a_desc, a, b_desc, b, beta, c_desc, c);
   return ret;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpMatMul_v2(mluOpHandle_t handle,
-                                           mluOpMatMulDescriptor_t matmul_desc,
-                                           mluOpMatMulAlgo_t algo,
-                                           const void *alpha,
-                                           const mluOpTensorDescriptor_t a_desc,
-                                           const void *a,
-                                           const mluOpTensorDescriptor_t b_desc,
-                                           const void *b,
-                                           const void *beta,
-                                           const mluOpTensorDescriptor_t c_desc,
-                                           void *c,
-                                           void *workspace,
-                                           size_t workspace_size,
-                                           const mluOpTensorDescriptor_t d_desc,
-                                           void *d) {
+mluOpStatus_t MLUOP_WIN_API mluOpMatMul_v2(
+    mluOpHandle_t handle, mluOpMatMulDescriptor_t matmul_desc,
+    mluOpMatMulAlgo_t algo, const void *alpha,
+    const mluOpTensorDescriptor_t a_desc, const void *a,
+    const mluOpTensorDescriptor_t b_desc, const void *b, const void *beta,
+    const mluOpTensorDescriptor_t c_desc, void *c, void *workspace,
+    size_t workspace_size, const mluOpTensorDescriptor_t d_desc, void *d) {
   matmulV2Wrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, matmul_desc, algo, alpha,
-                                     a_desc, a, b_desc, b, beta, c_desc, c,
-                                     workspace, workspace_size, d_desc, d);
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, matmul_desc, algo, alpha, a_desc, a, b_desc, b,
+                     beta, c_desc, c, workspace, workspace_size, d_desc, d);
   return ret;
 }

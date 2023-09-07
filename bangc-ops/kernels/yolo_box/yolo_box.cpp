@@ -189,18 +189,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
           << k_dim.y << ", " << k_dim.z << "].";
 
   const int boxes_size = n_in * anchor_s * 4 * h_in * w_in * sizeof(float);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, boxes_size, boxes)));
+  CHECK_RETURN("[FillZero]", (KernelFillZero(k_dim, k_type, handle->queue,
+                                             boxes_size, boxes)));
 
   const int scores_size =
       n_in * anchor_s * class_num * h_in * w_in * sizeof(float);
-  KERNEL_CHECK(
-      (KernelFillZero(k_dim, k_type, handle->queue, scores_size, scores)));
+  CHECK_RETURN("[FillZero]", (KernelFillZero(k_dim, k_type, handle->queue,
+                                             scores_size, scores)));
 
-  KERNEL_CHECK((KernelYoloBox(
-      k_dim, k_type, handle->queue, x, img_size, anchors, class_num,
-      conf_thresh, downsample_ratio, clip_bbox, scale, iou_aware,
-      iou_aware_factor, n_in, anchor_s, c_in, h_in, w_in, boxes, scores)));
+  CHECK_RETURN("[mluOpYoloBox]",
+               KernelYoloBox(k_dim, k_type, handle->queue, x, img_size, anchors,
+                             class_num, conf_thresh, downsample_ratio,
+                             clip_bbox, scale, iou_aware, iou_aware_factor,
+                             n_in, anchor_s, c_in, h_in, w_in, boxes, scores));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

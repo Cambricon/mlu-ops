@@ -23,9 +23,9 @@
 #include "carafe.h"
 
 #include <algorithm>
-#include "kernels/utils/common.h"
-#include "kernels/debug.h"
 #include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/utils/common.h"
 
 __nram__ char nram_buf[MAX_NRAM_SIZE];
 
@@ -434,7 +434,7 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
   }
 }
 
-void MLUOP_WIN_API KernelCarafeForward(
+mluOpStatus_t MLUOP_WIN_API KernelCarafeForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *input, const void *mask, void *output,
     int input_dimN,    // number of input samples
@@ -453,47 +453,49 @@ void MLUOP_WIN_API KernelCarafeForward(
     int grid_dimG,     // nb. of group blocks
     int grid_dimC) {   // nb. of channel blocks
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUKernelCarafeForward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelCarafeForward<<<k_dim, k_type, queue>>>(
           (float *)input, (float *)mask, (float *)output, input_dimN,
           input_dimH, input_dimW, input_dimC, kernel_size, group_size,
           scale_factor, block_dimH, block_dimW, block_dimG, block_dimC,
-          grid_dimH, grid_dimW, grid_dimG, grid_dimC);
+          grid_dimH, grid_dimW, grid_dimG, grid_dimC));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUKernelCarafeForward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelCarafeForward<<<k_dim, k_type, queue>>>(
           (half *)input, (half *)mask, (half *)output, input_dimN, input_dimH,
           input_dimW, input_dimC, kernel_size, group_size, scale_factor,
           block_dimH, block_dimW, block_dimG, block_dimC, grid_dimH, grid_dimW,
-          grid_dimG, grid_dimC);
+          grid_dimG, grid_dimC));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }
 
-void MLUOP_WIN_API KernelCarafeBackward(
+mluOpStatus_t MLUOP_WIN_API KernelCarafeBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, void *input, void *mask, void *grad_output,
     void *grad_input, void *grad_mask, int n, int hi, int wi, int c, int k_up,
     int group, int scale) {
   switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      MLUKernelCarafeBackward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelCarafeBackward<<<k_dim, k_type, queue>>>(
           (float *)input, (float *)mask, (float *)grad_output,
           (float *)grad_input, (float *)grad_mask, n, hi, wi, c, k_up, group,
-          scale);
+          scale));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      MLUKernelCarafeBackward<<<k_dim, k_type, queue>>>(
+      KERNEL_CHECK(MLUKernelCarafeBackward<<<k_dim, k_type, queue>>>(
           (half *)input, (half *)mask, (half *)grad_output, (half *)grad_input,
-          (half *)grad_mask, n, hi, wi, c, k_up, group, scale);
+          (half *)grad_mask, n, hi, wi, c, k_up, group, scale));
     }; break;
-    default: {
-      LOG(ERROR) << "Not implemented.";
+    default:
       break;
-    }
   }
+  return MLUOP_STATUS_SUCCESS;
 }
