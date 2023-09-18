@@ -428,7 +428,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
   - 计算上述mask中当前1是第几个1，若1的个数大于max_voxels，后续的不再处理，voxel_idx置为-1.
 
-    具体实现流程如下图：![](./gather.png)
+    具体实现流程如下图：![](./gather.jpg)
 
 - step2：处理体素中重复的点．
 
@@ -436,7 +436,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
   根据point_idx查找对应的voxel_idx，将此voxel_idx赋给重复的点．
 
-  流程如下：![](./gather_scatter.png)
+  流程如下：![](./gather_scatter.jpg)
 
 
 
