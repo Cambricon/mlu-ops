@@ -394,9 +394,9 @@ determin_voxel_num kernel性能优化方案如下：
 
 先明确point_to_voxelidx_kernel的输出：
 
-point_to_pointidx: 当前point在所有points中的pointid，若后续points和当前points坐标相同，后续points的pointid为第一个相同points的pointid.
+point_to_pointidx: 当前point在所有points中的pointid，所有相同点的位置下标，都记录成第一个出现点的位置下标．
 
-point_to_voxelidx: 当前points为voxel中的第几个point，其中0的数量代表num_voxel的数量．
+point_to_voxelidx: 当前point为voxel中的第几个point，其中0的数量也代表voxel的数量．
 
 假设这里第一个kernel输出的point的体素坐标为：[1, 2, 3, 3, 2, 5, 6, 6, 2, 2, 10, 11, 12, 13]
 
@@ -432,7 +432,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
 - step2：处理体素中重复的点．
 
-  具体的为：先得到重复点的mask，即p2v_idx > 0的位置．然后从point2_idx中找到重复第一个点的point_idx.（已在上一步得到）
+  具体的为：先得到重复点的mask，即p2v_idx > 0的位置．然后从point_to_pointidx中找到重复第一个点的point_idx.（已在上一步得到）
 
   根据point_idx查找对应的voxel_idx，将此voxel_idx赋给重复的点．
 
