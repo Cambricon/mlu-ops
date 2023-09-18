@@ -30,7 +30,6 @@
 #include "kernels/utils/common.h"
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
-__wram__ char wram_buffer[MAX_WRAM_SIZE];
 
 template <typename T>
 __mlu_func__ bool containNanInf(const T pos1, const T pos2) {
