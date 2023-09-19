@@ -443,12 +443,11 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
 优化方案主要分为两部分
 
-第一，先计算每个voxel中的第一个点所属voxel_idx．
+第一，先计算每个voxel中的第一个point所属的voxel_idx．
 
-第二，计算每个voxel中重复的点所属的voxel_idx（重复的点的voxel_idx取第一个point所属的voxel_idx）.
+第二，计算每个voxel中重复的point所属的voxel_idx，重复的point的voxel_idx取该point第一次出现的位置point_idx对应的voxel_idx.
 
-具体为：计算core上一次能处理的最大points数量max_points_count和循环次数repeat．
-
+具体为：
 - step1：先计算每个voxel中的第一个点所属voxel_idx
 
   - 统计当前循环中p2v_idx中0的数量，即体素中第一个元素的数量，也代表体素的数量．
@@ -465,7 +464,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
 - step2：处理体素中重复的点．
 
-  具体的为：先得到重复点的mask，即p2v_idx > 0的位置．然后从point_to_pointidx中找到重复第一个点的point_idx.（已在上一步得到）
+  具体的为：先得到重复点的mask，即p2v_idx > 0的位置．然后从point_to_pointidx中找到重复的第一个点的point_idx.（已在上一步得到）
 
   根据point_idx查找对应的voxel_idx，将此voxel_idx赋给重复的点．
 
