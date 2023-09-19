@@ -335,63 +335,97 @@ for (int32_t p_idx = 0; p_idx < num_points; ++p_idx) {
 
 3. determin_voxel_num
 
-根据point_to_pointidx、point_to_voxelidx统计每个点在去重后的第几个体素内，中间结果存放到coor_to_voxelidx。统计总共有多少个体素，存放在输出结果voxel_num，统计各体素内有多少个点，存放在输出结果num_points_per_voxel。该kernel不做拆分，单核执行。伪代码如下：
-
+300系列方案和伪代码如下：
+根据point_to_pointidx、point_to_voxelidx统计每个点在去重后的第几个体素内，中间结果存放到coor_to_voxelidx。统计总共有多少个体素，存放在输出结果voxel_num，统计各体素内有多少个点，存放在输出结果num_points_per_voxel。该kernel不做拆分，单核执行
+若point_to_pointidx在nram能全部放下，nram空间划分3份，分别用来load point_to_pointidx和point_to_voxelidx，和store计算结果coor_to_voxelidx，最后将coor_to_voxelidx store到gdram
+若若point_to_pointidx在nram不能全部放下，nram空间划分2份，分别用来load point_to_pointidx和point_to_voxelidx,coor_to_voxelidx直接store到gdram，不在nram做缓存．
 ```cpp
-int32_t voxel_num_temp = 0;
-for (int32_t point_idx = 0; point_idx < num_points; ++point_idx) {
-  int32_t point_pos_in_voxel = point_to_voxelidx[point_idx];
-  if (point_pos_in_voxel == -1) {
-    continue;
-  } else if (point_pos_in_voxel == 0) {
-    int32_t voxel_idx = voxel_num_temp;
-    if (voxel_num_temp >= max_voxels) {
-      continue;
+int32_t split_num = 2;
+    bool nram_can_contain_all_c2v_points = false;
+    if (num_points <
+        FLOOR_ALIGN(MAX_NRAM_SIZE / 3 / sizeof(int32_t), NFU_ALIGN_SIZE)) {
+      nram_can_contain_all_c2v_points = true;
+      split_num = 3;
     }
-    voxel_num_temp += 1;
-    coor_to_voxelidx[point_idx] = voxel_idx;
-    num_points_per_voxel[voxel_idx] = 1;
-  } else {
-    int32_t point_idx_temp = point_to_pointidx[point_idx];
-    int32_t voxel_idx = coor_to_voxelidx[point_idx_temp];
-    if (voxel_idx != -1) {
-      coor_to_voxelidx[point_idx] = voxel_idx;
-      num_points_per_voxel[voxel_idx] += 1;
+    int32_t voxel_num_temp = 0;
+    const int32_t max_nram_count = FLOOR_ALIGN(
+        MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
+    int32_t repeat = num_points / max_nram_count;
+    int32_t rem = num_points % max_nram_count;
+    int32_t *p2p_idx = (int32_t *)nram_buffer;
+    int32_t *p2v_idx = (int32_t *)p2p_idx + max_nram_count;
+    int32_t *c2v_idx = p2v_idx;
+    if (nram_can_contain_all_c2v_points) {
+      c2v_idx = p2v_idx + max_nram_count;
+      int32_t deal_num = rem;
+      __memcpy_async(p2p_idx, point_to_pointidx, deal_num * sizeof(int32_t),
+                     GDRAM2NRAM);
+      __memcpy_async(p2v_idx, point_to_voxelidx, deal_num * sizeof(int32_t),
+                     GDRAM2NRAM);
+      __memcpy(c2v_idx, coor_to_voxelidx, deal_num * sizeof(int32_t),
+               GDRAM2NRAM);
+      __bang_write_value(c2v_idx, deal_num, -1);
+      for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+        int32_t point_pos_in_voxel = p2v_idx[point_idx];
+        if (point_pos_in_voxel == -1) {
+          continue;
+        } else if (point_pos_in_voxel == 0) {
+          int32_t voxel_idx = voxel_num_temp;
+          if (voxel_num_temp >= max_voxels) {
+            continue;
+          }
+          voxel_num_temp += 1;
+          c2v_idx[point_idx] = voxel_idx;
+          num_points_per_voxel[voxel_idx] = 1;
+        } else {
+          int32_t point_idx_temp = p2p_idx[point_idx];
+          int32_t voxel_idx = c2v_idx[point_idx_temp];
+          if (voxel_idx != -1) {
+            c2v_idx[point_idx] = voxel_idx;
+            num_points_per_voxel[voxel_idx] += 1;
+          }
+        }
+      }
+      __memcpy(coor_to_voxelidx, c2v_idx, deal_num * sizeof(int32_t),
+               NRAM2GDRAM);
+    } else {
+      for (int32_t i = 0; i <= repeat; i++) {
+        if (i == repeat && rem == 0) {
+          break;
+        }
+        int32_t points_offset = i * max_nram_count;
+        int32_t deal_num = i == repeat ? rem : max_nram_count;
+        __memcpy_async(p2p_idx, point_to_pointidx + points_offset,
+                       deal_num * sizeof(int32_t), GDRAM2NRAM);
+        __memcpy(p2v_idx, point_to_voxelidx + points_offset,
+                 deal_num * sizeof(int32_t), GDRAM2NRAM);
+        for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+          int32_t point_pos_in_voxel = p2v_idx[point_idx];
+          coor_to_voxelidx[point_idx + points_offset] = -1;
+          if (point_pos_in_voxel == -1) {
+            continue;
+          } else if (point_pos_in_voxel == 0) {
+            int32_t voxel_idx = voxel_num_temp;
+            if (voxel_num_temp >= max_voxels) {
+              continue;
+            }
+            voxel_num_temp += 1;
+            coor_to_voxelidx[point_idx + points_offset] = voxel_idx;
+            num_points_per_voxel[voxel_idx] = 1;
+          } else {
+            int32_t point_idx_temp = p2p_idx[point_idx];
+            int32_t voxel_idx = coor_to_voxelidx[point_idx_temp];
+            if (voxel_idx != -1) {
+              coor_to_voxelidx[point_idx + points_offset] = voxel_idx;
+              num_points_per_voxel[voxel_idx] += 1;
+            }
+          }
+        }
+      }
     }
-  }
-}
-*voxel_num = voxel_num_temp;
+    *voxel_num = voxel_num_temp;
 ```
-
-4. assign_point_coors_to_voxel
-
-此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x, c_y, c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
-
-```cpp
-for (int32_t p_idx = points_start; p_idx < points_end; ++p_idx) {
-  int32_t num = point_to_voxelidx[p_idx];
-  int32_t voxel_idx = coor_to_voxelidx[p_idx];
-  if (num > -1 && voxel_idx > -1) {
-    float *voxels_offset = voxels + voxel_idx * max_points * num_features + num * num_features;
-    float *points_offset = points + p_idx * num_features;
-    __memcpy_async(voxels_offset, points_offset, num_features * sizeof(float), GDRAM2GDRAM);
-
-    if (num == 0) {
-      temp_coors_nram[0] = (int32_t)temp_coors[p_idx * 3];
-      temp_coors_nram[1] = (int32_t)temp_coors[p_idx * 3 + num_points];
-      temp_coors_nram[2] = (int32_t)temp_coors[p_idx * 3 + num_points * 2];
-      int32_t *coors_offset = coors + voxel_idx * 3;
-      __memcpy_async(coors_offset, temp_coors_nram, 3 * sizeof(int32_t), GDRAM2GDRAM);
-    }
-  }
-}
-__sync();
-```
-
-#### 3.1.1 性能优化方案：
-
-determin_voxel_num kernel性能优化方案如下：
-
+500系列方案如下：
 先明确point_to_voxelidx_kernel的输出：
 
 point_to_pointidx: 当前point在所有points中的pointid，所有相同点的位置下标，都记录成第一个出现点的位置下标．
@@ -405,7 +439,6 @@ point_to_voxelidx: 当前point为voxel中的第几个point，其中0的数量也
 point_to_pointidx为：[0, 1, 2, 2, 1, 5, 6, 6, 1, 1, 10, 11, 12, 13]
 
 point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
-
 
 
 优化方案主要分为两部分
@@ -437,6 +470,52 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
   根据point_idx查找对应的voxel_idx，将此voxel_idx赋给重复的点．
 
   流程如下：![](./gather_scatter.jpg)
+
+4. assign_point_coors_to_voxel
+
+此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x, c_y, c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
+
+```cpp
+for (int32_t c_index = 0; c_index <= repeat; c_index++) {
+    if (c_index == repeat && rem == 0) {
+      break;
+    }
+    const int32_t deal_num = c_index == repeat ? rem : max_nram_count;
+    const int32_t point_nram_start =
+        points_core_offset + c_index * max_nram_count;
+
+    __memcpy_async(p2v_nram, point_to_voxelidx + point_nram_start,
+                   deal_num * sizeof(int32_t), GDRAM2NRAM);
+    __memcpy(c2v_nram, coor_to_voxelidx + point_nram_start,
+             deal_num * sizeof(int32_t), GDRAM2NRAM);
+
+    for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+      int32_t num = p2v_nram[point_idx];
+      int32_t voxel_idx = c2v_nram[point_idx];
+      if (num > -1 && voxel_idx > -1) {
+        float *voxels_offset =
+            voxels + voxel_idx * max_points * num_features + num * num_features;
+        const float *points_offset =
+            points + (point_idx + point_nram_start) * num_features;
+        __memcpy_async(voxels_offset, points_offset,
+                       num_features * sizeof(float), GDRAM2GDRAM);
+        if (num == 0) {
+          int32_t *coors_offset = coors + voxel_idx * 3;
+          __memcpy_async(coors_offset,
+                         temp_coors + (point_idx + point_nram_start),
+                         sizeof(int32_t), GDRAM2GDRAM, sizeof(int32_t),
+                         num_points * sizeof(int32_t), 2);
+        }
+      }
+    }
+  }
+```
+
+#### 3.1.1 性能优化方案：
+
+determin_voxel_num kernel性能优化方案如下：
+
+
 
 
 
