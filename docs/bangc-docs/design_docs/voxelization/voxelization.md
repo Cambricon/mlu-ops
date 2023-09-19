@@ -337,8 +337,8 @@ for (int32_t p_idx = 0; p_idx < num_points; ++p_idx) {
 
 300系列方案和伪代码如下：
 根据point_to_pointidx、point_to_voxelidx统计每个点在去重后的第几个体素内，中间结果存放到coor_to_voxelidx。统计总共有多少个体素，存放在输出结果voxel_num，统计各体素内有多少个点，存放在输出结果num_points_per_voxel。该kernel不做拆分，单核执行
-若point_to_pointidx在nram能全部放下，nram空间划分3份，分别用来load point_to_pointidx和point_to_voxelidx，和store计算结果coor_to_voxelidx，最后将coor_to_voxelidx store到gdram
-若若point_to_pointidx在nram不能全部放下，nram空间划分2份，分别用来load point_to_pointidx和point_to_voxelidx,coor_to_voxelidx直接store到gdram，不在nram做缓存．
+若point_to_pointidx在nram能全部放下，nram空间划分3份，分别用来load point_to_pointidx和point_to_voxelidx，和缓存计算结果coor_to_voxelidx，最后将coor_to_voxelidx store到gdram
+若point_to_pointidx在nram不能全部放下，nram空间划分2份，分别用来load point_to_pointidx和point_to_voxelidx,coor_to_voxelidx直接store到gdram，不在nram做缓存．
 ```cpp
 int32_t split_num = 2;
     bool nram_can_contain_all_c2v_points = false;
@@ -428,9 +428,9 @@ int32_t split_num = 2;
 500系列方案如下：
 先明确point_to_voxelidx_kernel的输出：
 
-point_to_pointidx: 当前point在所有points中的pointid，所有相同点的位置下标，都记录成第一个出现点的位置下标．
+point_to_pointidx: 表示当前 point 在集合 points 中的下标。 若 points 中包含多个相同的 point，那么这些 point 的下标也相同，为该 point 在 points 中第一次出现的位置．
 
-point_to_voxelidx: 当前point为voxel中的第几个point，其中0的数量也代表voxel的数量．
+point_to_voxelidx: 表示当前 point 在对应 voxel 中的下标．
 
 假设这里第一个kernel输出的point的体素坐标为：[1, 2, 3, 3, 2, 5, 6, 6, 2, 2, 10, 11, 12, 13]
 
