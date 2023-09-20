@@ -31,6 +31,8 @@
 #include "core/tensor.h"
 #include "core/type.h"
 
+#define threshold_of_boxes_num_and_channels 65536
+
 // policy function
 static mluOpStatus_t kernelPtsIdxOfVoxelsPolicyFunc(
     const mluOpHandle_t handle,
@@ -216,6 +218,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   PARAM_CHECK(API, out_y > 0);
   PARAM_CHECK(API, out_z > 0);
 
+  /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
+     Maximum y- or z-dimension of a grid of thread blocks
+     should be less than 65536 in cuda. */
+  PARAM_CHECK(API, boxes_num < threshold_of_boxes_num_and_channels);
+  PARAM_CHECK(API, channels < threshold_of_boxes_num_and_channels);
+
   const uint64_t tensor_rois_num = mluOpGetTensorElementNum(rois_desc);
   const uint64_t tensor_pts_num = mluOpGetTensorElementNum(pts_desc);
   const uint64_t tensor_pts_feature_num =
@@ -232,12 +240,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   TENSOR_NUM_CHECK(API, tensor_pts_idx_of_voxels_num, LARGE_TENSOR_NUM, "");
   TENSOR_NUM_CHECK(API, tensor_pooled_features_num, LARGE_TENSOR_NUM, "");
 
-  // check zero element
-  PARAM_CHECK(API, tensor_rois_num > 0);
-  PARAM_CHECK(API, tensor_pts_num > 0);
-  PARAM_CHECK(API, tensor_pts_feature_num > 0);
-  PARAM_CHECK(API, tensor_pts_idx_of_voxels_num > 0);
-  PARAM_CHECK(API, tensor_pooled_features_num > 0);
+  // product of boxes_num and pts_num < 2^31
+  size_t product_boxesNum_ptsNum = (size_t)boxes_num * (size_t)pts_num;
+  if (product_boxesNum_ptsNum > (size_t)INT32_MAX) {
+    LOG(ERROR)
+        << API
+        << ": product of boxes_num and pts_num should be less than 2^31.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
 
   // check workspace
   if (workspace_size > 0 && workspace == NULL) {
@@ -482,6 +492,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   PARAM_CHECK(API, pool_method == 0 || pool_method == 1);
 
   const int pts_num = grad_in_desc->dims[0];
+
   // check tensor dim
   PARAM_CHECK(API, boxes_num > 0);
   PARAM_CHECK(API, pts_num > 0);
@@ -490,6 +501,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   PARAM_CHECK(API, out_x > 0);
   PARAM_CHECK(API, out_y > 0);
   PARAM_CHECK(API, out_z > 0);
+
+  /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
+    Maximum y- or z-dimension of a grid of thread blocks
+    should be less than 65536 in cuda. */
+  PARAM_CHECK(API, boxes_num < threshold_of_boxes_num_and_channels);
+  PARAM_CHECK(API, channels < threshold_of_boxes_num_and_channels);
 
   const uint64_t tensor_pts_idx_of_voxels_num =
       mluOpGetTensorElementNum(pts_idx_of_voxels_desc);
@@ -504,9 +521,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   TENSOR_NUM_CHECK(API, tensor_grad_in_num, LARGE_TENSOR_NUM, "");
 
   // check zero element
-  PARAM_CHECK_GT(API, tensor_pts_idx_of_voxels_num, 0);
-  PARAM_CHECK_GT(API, tensor_argmax_num, 0);
-  PARAM_CHECK_GT(API, tensor_grad_out_num, 0);
   PARAM_CHECK_GT(API, tensor_grad_in_num, 0);
 
   // check ptr

@@ -46,7 +46,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
     return;
   }
   int nram_pts_num = 0;
-  if (std::is_same<T, float>::value) {
+  if (__mluop_is_float<T>()) {
     nram_pts_num = PAD_DOWN(
         (MAX_NRAM_SIZE / sizeof(float) / FLOAT_NRAM_BUFFER_NUM), ALIGN_NUM);
   } else {
@@ -72,7 +72,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
   float *fp_local_Y = NULL;
   float *fp_local_Z = NULL;
   float *fp_nram_pts_in_flag = NULL;
-  if (std::is_same<T, float>::value) {
+  if (__mluop_is_float<T>()) {
     X = (char *)((float *)data_nram);
     Y = (char *)((float *)data_nram + nram_pts_num);
     Z = (char *)((float *)data_nram + nram_pts_num * 2);
@@ -128,8 +128,15 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
     T dy = cur_roi[4];
     T dz = cur_roi[5];
     T rz = cur_roi[6];
-    T cosa = std::cos(-rz);
-    T sina = std::sin(-rz);
+    T cosa = 1;
+    T sina = 0;
+    if (__mluop_is_float<T>()) {
+      cosa = __cn_scalar_cos_f32(-rz);
+      sina = __cn_scalar_sin_f32(-rz);
+    } else {
+      cosa = __cn_scalar_cos_f16(-rz);
+      sina = __cn_scalar_sin_f16(-rz);
+    }
 
     T dx_2 = dx / 2.0;
     T dy_2 = dy / 2.0;
@@ -166,7 +173,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
                         compute_pts_num);
       __bang_mul_scalar((T *)temp_buffer2, (T *)temp_buffer4, (T)sina,
                         compute_pts_num);
-      // local_x
+      // local_x = (X - cx) * cosa - (Y - cy) * sina
       __bang_sub((T *)local_X, (T *)temp_buffer1, (T *)temp_buffer2,
                  compute_pts_num);
       // fabs(local_x)
@@ -182,7 +189,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
                         compute_pts_num);
       __bang_mul_scalar((T *)temp_buffer2, (T *)temp_buffer4, (T)cosa,
                         compute_pts_num);
-      // local_y
+      // local_y = (X - cx) * sina + (Y - cy) * cosa
       __bang_add((T *)local_Y, (T *)temp_buffer1, (T *)temp_buffer2,
                  compute_pts_num);
       // fabs(local_y)
@@ -193,6 +200,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_and((T *)nram_pts_in_flag, (T *)nram_pts_in_flag,
                  (T *)temp_buffer1,
                  compute_pts_num);  // flush res
+      // judge point in which poolbox
       T x_res = dx / out_x;
       T y_res = dy / out_y;
       T z_res = dz / out_z;
@@ -213,7 +221,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
                         compute_pts_num);
 #endif
       // float = float2int + int2float, half = half2int + int2float
-      if (std::is_same<T, float>::value) {
+      if (__mluop_is_float<T>()) {
         __bang_float2int32_tz((int *)temp_buffer1, (float *)local_X,
                               compute_pts_num, 0);
         __bang_float2int32_tz((int *)temp_buffer2, (float *)local_Y,
@@ -320,17 +328,13 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
   int align_num = NFU_ALIGN_SIZE / sizeof(T);
   int align_max_pts_each_voxel = PAD_UP(max_pts_each_voxel, align_num);
   int nram_channels_limit =
-      PAD_DOWN((MAX_NRAM_SIZE - 128 -
-                align_max_pts_each_voxel * (sizeof(int) + sizeof(T))) /
+      PAD_DOWN((MAX_NRAM_SIZE - 128 - align_max_pts_each_voxel * sizeof(int)) /
                    ((align_max_pts_each_voxel + 1) * sizeof(T) + sizeof(int)),
                align_num);
   int *nram_pts_idx_cur_voxel = (int *)data_nram;
   // nram_pts_idx_cur_voxel [align_max_pts_each_voxel]
-  T *nram_max_pts_feature_tmp =
-      (T *)((int *)nram_pts_idx_cur_voxel + align_max_pts_each_voxel);
-  // nram_max_pts_feature_tmp [align_max_pts_each_voxel]
   T *nram_pts_feature_in_voxel =
-      ((T *)nram_max_pts_feature_tmp + align_max_pts_each_voxel);
+      (T *)((int *)nram_pts_idx_cur_voxel + align_max_pts_each_voxel);
   // nram_pts_feature_in_voxel [nram_channels_limit, align_max_pts_each_voxel]
   T *nram_pooled_features_cur_voxel =
       ((T *)nram_pts_feature_in_voxel +
@@ -580,7 +584,7 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
 
       int align_actual_channels_num = PAD_UP(actual_channels_num, align_num);
 
-      if (std::is_same<T, half>::value) {
+      if (__mluop_is_half<T>()) {
         __bang_half2float((float *)nram_grad_out_cur_loop,
                           (half *)nram_grad_in_cur_loop,
                           align_actual_channels_num);
