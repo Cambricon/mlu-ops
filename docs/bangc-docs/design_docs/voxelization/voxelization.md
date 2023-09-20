@@ -445,7 +445,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
 第一，先计算每个voxel中的第一个point所属的voxel_idx．
 
-第二，计算每个voxel中重复的point所属的voxel_idx，重复的point的voxel_idx取该point第一次出现的位置point_idx对应的voxel_idx.
+第二，计算每个voxel中重复的point所属的voxel_idx，重复的point的voxel_idx取该point第一次出现的位置point_idx对应的voxel_idx．
 
 具体为：
 - step1：先计算每个voxel中的第一个点所属voxel_idx
@@ -458,13 +458,13 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
     得到mask，![](./mask.png)
 
-  - 计算上述mask中当前1是第几个1，若1的个数大于max_voxels，后续的不再处理，voxel_idx置为-1.
+  - 计算上述mask中当前1是第几个1，若1的个数大于max_voxels，后续的不再处理，voxel_idx置为-1．
 
     具体实现流程如下图：![](./gather.jpg)
 
 - step2：处理体素中重复的点．
 
-  具体的为：先得到重复点的mask，即p2v_idx > 0的位置．然后从point_to_pointidx中找到重复的第一个点的point_idx.（已在上一步得到）
+  具体的为：先得到重复点的mask，即p2v_idx > 0的位置．然后从point_to_pointidx中找到重复的第一个点的point_idx．（已在上一步得到）
 
   根据point_idx查找对应的voxel_idx，将此voxel_idx赋给重复的点．
 
@@ -472,7 +472,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
 4. assign_point_coors_to_voxel
 
-此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x, c_y, c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
+此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x，c_y，c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
 
 ```cpp
 for (int32_t c_index = 0; c_index <= repeat; c_index++) {
