@@ -510,14 +510,6 @@ for (int32_t c_index = 0; c_index <= repeat; c_index++) {
   }
 ```
 
-#### 3.1.1 性能优化方案：
-
-determin_voxel_num kernel性能优化方案如下：
-
-
-
-
-
 ### 3.2 伪代码实现
 
 见3.1小节。
