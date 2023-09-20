@@ -132,6 +132,10 @@ __mlu_func__ void computePoint2Voxel(char *coors_x, char *coors_y,
                                      int32_t *first_point,
                                      const int32_t deal_idx,
                                      const int32_t deal_num) {
+  // Time complexity: o(n^2)
+  // Find points with the same coordinates as the current point.
+  // duplicate points indexs set as the index of points
+  // that appear for the first time
   __bang_eq_scalar((int32_t *)coors_x, (int32_t *)coors_x, c_x, deal_num);
   __bang_eq_scalar((int32_t *)coors_y, (int32_t *)coors_y, c_y, deal_num);
   __bang_eq_scalar((int32_t *)coors_z, (int32_t *)coors_z, c_z, deal_num);
@@ -528,6 +532,8 @@ __mlu_global__ void mluCalcPointsPerVoxel(
       __bang_write_value(nram_scatter_output, deal_num, -1);
       __bang_mul(nram_scatter_offset, nram_temp_mask, nram_base_offset,
                  deal_num);
+
+      // compute current loop voxel_num and voxel_id
       int32_t cur_loop_num_voxels =
           __bang_filter((float *)nram_scatter_offset, (float *)nram_base_offset,
                         (float *)nram_temp_mask, deal_num);
@@ -540,11 +546,15 @@ __mlu_global__ void mluCalcPointsPerVoxel(
       }
 
       if (voxel_num_temp <= max_voxels && reserve_voxels > 0) {
+        // compute scatter bitmask
         __bang_gt_bitindex((float *)nram_mask_bitindex,
                            (float *)nram_scatter_mask, (float *)nram_temp_zeros,
                            deal_num_align8);
+        // compute scatter offset
         __bang_mul_scalar(nram_scatter_offset, nram_scatter_offset,
                           sizeof(int32_t), deal_num);
+
+        // compute scatter src: voxel_idx
         __bang_add_scalar(nram_temp_mask, nram_base_offset, voxel_num_temp,
                           deal_num);
         __scatter(nram_scatter_output, nram_temp_mask,
@@ -558,7 +568,7 @@ __mlu_global__ void mluCalcPointsPerVoxel(
       __memcpy(coor_to_voxelidx + points_offset, nram_scatter_output,
                deal_num * sizeof(int32_t), NRAM2GDRAM);
 
-      // step2: process other points in voxels.
+      // step3: process other points in voxels.
       float *gather_mask = (float *)nram_p2v_idx;
       int32_t *gather_output = (int32_t *)nram_scatter_output;
       __bang_gt(gather_mask, (float *)nram_p2v_idx, (float *)nram_temp_zeros,
@@ -567,6 +577,7 @@ __mlu_global__ void mluCalcPointsPerVoxel(
           (float *)nram_p2p_idx, (float *)nram_p2p_idx, gather_mask, deal_num);
       if (count > 0) {
         __bang_mul_scalar(nram_p2p_idx, nram_p2p_idx, sizeof(int32_t), count);
+        // get repeated point real point_id
         __gather(gather_output, coor_to_voxelidx, (unsigned int *)nram_p2p_idx,
                  sizeof(int32_t), GDRAM2NRAM, sizeof(int32_t), count);
         __bang_eq_scalar(nram_scatter_mask, gather_output, -1, count);
@@ -576,6 +587,7 @@ __mlu_global__ void mluCalcPointsPerVoxel(
                            PAD_UP(count, 8));
         __bang_add_scalar(nram_temp_mask, nram_base_offset, points_offset,
                           deal_num);
+        // get repeated point real voxel_id
         __bang_filter((float *)nram_temp_mask, (float *)nram_temp_mask,
                       gather_mask, deal_num);
         __bang_mul_scalar(nram_temp_mask, nram_temp_mask, sizeof(int32_t),
@@ -583,6 +595,8 @@ __mlu_global__ void mluCalcPointsPerVoxel(
         __scatter(coor_to_voxelidx, gather_output,
                   (unsigned int *)nram_temp_mask, nram_mask_bitindex,
                   sizeof(int32_t), NRAM2GDRAM, sizeof(int32_t), count);
+
+        // step4: compute num_points_per_voxel
         for (int32_t i = 0; i < count; i++) {
           int32_t voxel_idx = gather_output[i];
           if (voxel_idx != -1) {
