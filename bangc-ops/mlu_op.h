@@ -8382,6 +8382,9 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Scale Limitation
+ * - \b boxes_num should be less than 65536.
+ * - \b channels should be less than 65536.
+ * - The Product of \b boxes_num and \b pts_num should be less than 2G.
  * - The shape of \b rois should be [boxes_num, 7].
  * - The shape of \b pts should be [pts_num, 3].
  * - The shape of \b pts_feature should be [pts_num, channels].
