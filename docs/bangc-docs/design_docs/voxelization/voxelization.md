@@ -192,9 +192,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t hand
 
 ### 3.1 实现方案
 
-mlu实现将1.2小节竞品实现的5个kernel合并为4个kernel，多核拆分均在num_points维度上拆分，各个kernel具体实现方案为：
+mlu实现将1.2小节竞品实现的5个kernel合并为4个kernel，分别为：
+KernelDynamicVoxelize，KernelPoint2Voxel，KernelCalcPointsPerVoxel和KernelAssignVoxelsCoors。
 
-1. dynamic_voxelize_kernel
+多核拆分均在num_points维度上拆分，各个kernel具体实现方案为：
+
+1. KernelDynamicVoxelize
 
 输入voxel_size中，voxel_size[0] ~ voxel_size[2]分别为voxel_x, voxel_y, voxel_z，表示体素在x、y、z方向上的长宽高。
 
@@ -295,7 +298,7 @@ __bang_mul((int32_t *)c_z, (int32_t *)c_z, (int32_t *)auxiliary_a, deal_num);
 __bang_add((int32_t *)temp_coors_z, (int32_t *)c_z, (int32_t *)nram_auxb, deal_num);
 ```
 
-2. point_to_voxelidx_kernel
+2. KernelPoint2Voxel
 
 体素内可能存在若干个点，若点数量大于max_points则只取前max_points个点放到输出voxels中。points点所在体素的数量（去重后）若大于max_voxels则只取前max_voxels个体素放到输出voxels、coors、num_points_per_voxel中，体素排列顺序在输出voxels、coors、num_points_per_voxel中保持一致。temp_coors中统计的体素可能存在重复体素，因此这里要进行去重操作。
 
@@ -333,7 +336,7 @@ for (int32_t p_idx = 0; p_idx < num_points; ++p_idx) {
 }
 ```
 
-3. determin_voxel_num
+3. KernelCalcPointsPerVoxel
 
 300系列方案和伪代码如下：
 根据point_to_pointidx、point_to_voxelidx统计每个点在去重后的第几个体素内，中间结果存放到coor_to_voxelidx。统计总共有多少个体素，存放在输出结果voxel_num，统计各体素内有多少个点，存放在输出结果num_points_per_voxel。该kernel不做拆分，单核执行
@@ -426,7 +429,7 @@ int32_t split_num = 2;
     *voxel_num = voxel_num_temp;
 ```
 500系列方案如下：
-先明确point_to_voxelidx_kernel的输出：
+先明确KernelPoint2Voxel的输出：
 
 point_to_pointidx: 表示当前 point 在集合 points 中的下标。 若 points 中包含多个相同的 point，那么这些 point 的下标也相同，为该 point 在 points 中第一次出现的位置。
 
@@ -470,7 +473,7 @@ point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
 
   流程如下：![](./gather_scatter.jpg)
 
-4. assign_point_coors_to_voxel
+4. KernelAssignVoxelsCoors
 
 此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x，c_y，c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
 
@@ -509,25 +512,22 @@ for (int32_t c_index = 0; c_index <= repeat; c_index++) {
     }
   }
 ```
-
 ### 3.2 伪代码实现
 
 见3.1小节。
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-**任务类型U1: **
-
-多核拆分在中间结果temp_coors、point_to_pointidx、point_to_voxelidx，以及算子输出voxels、coors、num_points_per_voxel，均以num_points维度进行拆分，将num_points均分到每个core中。
+**任务类型:**
+KernelDynamicVoxelize：u1任务，多核拆分num_points。
+KernelPoint2Voxel：u1任务，多核拆分num_points。
+KernelCalcPointsPerVoxel：block任务，单核循环处理num_points。
+KernelAssignVoxelsCoors：u1任务，多核拆分num_points。
 
 ### 3.4 性能优化设计
 
 1、资源分配
-
-| 表项            | 分配策略                                                     |
-| --------------- | ------------------------------------------------------------ |
-| NRAM            | 保存临时数据                                                 |
-| DRAM(workspace) | 存储points转置结果points_xyz，存储中间计算结果temp_coors、point_to_pointidx、point_to_voxelidx、coor_to_voxelidx |
+![](./nram_divide.png)
 
 - workspace空间划分
 
@@ -535,7 +535,7 @@ points_xyz按转置前points规模[num_points, num_features]申请workspace空�
 
 2、流水设计
 
-实现方案的前两个步骤dynamicVoxelize和point2Voxel，在num_points值较大，不能一次性load到片上的场景排流水有一定收益。calcPointsPerVoxel和assignVoxelsCoors不排流水。
+实现方案的前两个步骤KernelDynamicVoxelize和KernelPoint2Voxel，在num_points值较大，不能一次性load到片上的场景排流水有一定收益。KernelCalcPointsPerVoxel和KernelAssignVoxelsCoors不排流水。
 
 ### 3.5 可维护性设计
 
@@ -581,5 +581,5 @@ points_xyz按转置前points规模[num_points, num_features]申请workspace空�
 
 ### 4.2 已经过优化的规模说明
 
-已对determin_voxel_num，assign_point_coors_to_voxel性能优化，优化后两个kernel性能分别提升1400%~4000%及200%~600%。
+已对KernelCalcPointsPerVoxel，KernelAssignVoxelsCoors性能优化，优化后两个kernel性能分别提升1400%~4000%及200%~600%。
 benchmark case整体性能提升取决于网络规模，其中一个小case提升50%，其它case性能提升在1000%~3000%不等。
