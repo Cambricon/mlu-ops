@@ -3,14 +3,15 @@
 - #### 文档基本信息
 
 | 算子名称    | mluopVoxelization |
-| ----------- | -------------- |
+| ----------- | ----------------- |
 | 编制人/日期 | 张少鹏/2022-11-29 |
 
 - #### 修改记录
 
 | 修订版本 | 修订人 | 修订日期   | 修订描述 |
-| ------ | ------ | ---------- | -------- |
-| v1.0   | 张少鹏  | 2022-11-29 | 首次提交 |
+| -------- | ------ | ---------- | -------- |
+| v1.0     | 张少鹏 | 2022-11-29 | 首次提交 |
+| v1.1     | 马向军 | 2023-09-15 | 性能优化 |
 
 - #### 内容描述
 
@@ -35,26 +36,26 @@
 
 example:
 
-| 算子功能简介                    | 将输入点集转换为体素                           |
-| ------------------------------| ------------------------------------------- |
-| 需求来源                       | mmcv                                        |
-| 应用网络                       | centerpoint                                 |
-| 输入数据类型                    | points: float32<br>voxel_size: float32<br>coors_range: float32  |
-| 输入标量参数                   | max_points: int32<br>max_voxels: int32<br>NDim: int32<br>deterministic: bool  |
-| 输入 Shape                    | points: [num_points, num_features]<br>voxel_size: [3]<br>coors_range: [6]  |
-| 输入 Layout                   | ARRAY                                       |
-| 输出数据类型                   | voxels: float32<br>coors: int32<br>num_points_per_voxel: int32<br>voxel_num: int32 |
-| 输出 Shape                    | voxels: [max_voxels, max_points, num_features]<br>coors: [max_voxels, 3]<br>num_points_per_voxel: [max_voxels]<br>voxel_num: [1] |
-| 输出 Layout                   | ARRAY                                       |
-| 模式(可选）                    | 否                                           |
-| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 否                 |
-| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否     |
-| 是否需要支持原位                | 否                                          |
-| 是否需要支持 stride 机制        | 否                                          |
-| 是否需要支持广播                | 否                                          |
-| 0 元素检查是否直接返回          | 输出tensor的维度max_points或max_voxels为0时，返回MLUOP_STATUS_SUCCESS；输入tensor points、voxel_size和coors_range若存在0元素，返回MLUOP_STATUS_BAD_PARAM |
-| 其他特殊需求(在线量化，融合，转数提前等，可选)| 无                                 |
-| 本次开发优先支持的规模/模式     | 优先支持 deterministic=True 模式                |
+| 算子功能简介                                                 | 将输入点集转换为体素                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 需求来源                                                     | mmcv                                                         |
+| 应用网络                                                     | centerpoint                                                  |
+| 输入数据类型                                                 | points: float32<br>voxel_size: float32<br>coors_range: float32 |
+| 输入标量参数                                                 | max_points: int32<br>max_voxels: int32<br>NDim: int32<br>deterministic: bool |
+| 输入 Shape                                                   | points: [num_points, num_features]<br>voxel_size: [3]<br>coors_range: [6] |
+| 输入 Layout                                                  | ARRAY                                                        |
+| 输出数据类型                                                 | voxels: float32<br>coors: int32<br>num_points_per_voxel: int32<br>voxel_num: int32 |
+| 输出 Shape                                                   | voxels: [max_voxels, max_points, num_features]<br>coors: [max_voxels, 3]<br>num_points_per_voxel: [max_voxels]<br>voxel_num: [1] |
+| 输出 Layout                                                  | ARRAY                                                        |
+| 模式(可选）                                                  | 否                                                           |
+| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 否                                                           |
+| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否                                                           |
+| 是否需要支持原位                                             | 否                                                           |
+| 是否需要支持 stride 机制                                     | 否                                                           |
+| 是否需要支持广播                                             | 否                                                           |
+| 0 元素检查是否直接返回                                       | 输出tensor的维度max_points或max_voxels为0时，返回MLUOP_STATUS_SUCCESS；输入tensor points、voxel_size和coors_range若存在0元素，返回MLUOP_STATUS_BAD_PARAM |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)               | 无                                                           |
+| 本次开发优先支持的规模/模式                                  | 优先支持 deterministic=True 模式                             |
 
 ### 1.2 算子功能和应用场景描述
 
@@ -62,7 +63,7 @@ example:
 
 算子竞品实现拆分成5个kernel，分别为dynamic_voxelize_kernel、point_to_voxelidx_kernel、determin_voxel_num、assign_point_to_voxel、assign_voxel_coors，其中前三个kernel顺序执行，后两个kernel并行执行。各个kernel实现功能及拆分逻辑分别为：
 
-1. dynamic_voxelize_kernel统计points各点所在体素位置，中间结果存放在temp_coors，规模为[num_points, 3]，多核拆分在num_points维度上拆分。
+1. dynamic_voxelize_kernel统计points各点所在体素位置，中间结果存放在temp_coors，规模为[num_points, 3]，多核拆分在num_points维度上拆分。
 
 2. point_to_voxelidx_kernel对体素去重并计算各点和体素的映射关系。依次统计points中所有点，记当前点为p_idx，计算p_idx点前所有点，与p_idx在同一体素的第一个点的序号，中间结果存放在point_to_pointidx。计算p_idx点前所有点，与p_idx在同一体素的点的数量，中间结果存放在point_to_voxelidx。point_to_pointidx和point_to_voxelidx规模均为[num_points]，多核拆分在num_points维度上拆分。
 
@@ -76,37 +77,37 @@ example:
 
 ### 1.3 算子输入输出参数要求
 
-| 参数             | 语义                                         | 类型（输入/输出）    | 支持类型                | 物理布局   | 规模限制  |
-| ---------------- | ------------------------------------------- | ----------------- | ---------------------- | -------- | -------- |
-| handle           | handle                                      | 输入              | mluOpHandle_t           | /        | 无       |
-| points_desc      | 对输入points的描述                            | 输入              | mluOpTensorDescriptor_t | /        | 无       |
-| points           | 输入点的坐标及特征值                           | 输入              | float32                 | ARRAY    | [num_points, num_features] |
-| voxel_size_desc  | 对输入voxel_size的描述                        | 输入              | mluOpTensorDescriptor_t | /        | 无       |
-| voxel_size       | 体素的尺寸                                    | 输入              | float32                 | ARRAY   | [3]      |
-| coors_range_desc | 对输入coors_range的描述                       | 输入              | mluOpTensorDescriptor_t | /        | 无       |
-| coors_range      | 体素空间的边界                                | 输入              | float32                 | ARRAY    | [6]      |
-| max_points       | 一个体素中最多容纳的点数                        | 输入              | int32                   | /        | 无       |
-| max_voxels       | 生成体素的最大数量                             | 输入              | int32                   | /        | 无       |
-| NDim             | 输出coors的最低维度，固定值为3                  | 输入              | int32                   | /        | 无       |
-| deterministic    | 模式选择，deterministic/non-deterministic模式 | 输入              | bool                    | /        | 无       |
-| voxels_desc      | 对输出voxels的描述                            | 输入              | mluOpTensorDescriptor_t | /        | 无       |
-| voxels           | 输出体素内各点的坐标及特征值                     | 输出              | float32                 | ARRAY    | [max_voxels, max_points, num_features] |
-| coors_desc       | 对输出coors的描述                             | 输入              | mluOpTensorDescriptor_t  | /        | 无      |
-| coors            | 输出体素的位置                                | 输出              | int32                    | ARRAY    | [max_voxels, 3]  |
-| num_points_per_voxel_desc | 对输出num_points_per_voxel的描述     | 输入              | mluOpTensorDescriptor_t  | /        | 无      |
-| num_points_per_voxel      | 输出体素内点的数量                    | 输出              | int32                    | ARRAY    | [max_voxels]     |
-| voxel_num_desc   | 对输出voxel_num的描述                         | 输入              | mluOpTensorDescriptor_t  | /        | 无       |
-| voxel_num        | 输出体素的数量                                | 输出              | int32                    | ARRAY    | [1]      |
+| 参数                      | 语义                                          | 类型（输入/输出） | 支持类型                | 物理布局 | 规模限制                               |
+| ------------------------- | --------------------------------------------- | ----------------- | ----------------------- | -------- | -------------------------------------- |
+| handle                    | handle                                        | 输入              | mluOpHandle_t           | /        | 无                                     |
+| points_desc               | 对输入points的描述                            | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| points                    | 输入点的坐标及特征值                          | 输入              | float32                 | ARRAY    | [num_points, num_features]             |
+| voxel_size_desc           | 对输入voxel_size的描述                        | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| voxel_size                | 体素的尺寸                                    | 输入              | float32                 | ARRAY    | [3]                                    |
+| coors_range_desc          | 对输入coors_range的描述                       | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| coors_range               | 体素空间的边界                                | 输入              | float32                 | ARRAY    | [6]                                    |
+| max_points                | 一个体素中最多容纳的点数                      | 输入              | int32                   | /        | 无                                     |
+| max_voxels                | 生成体素的最大数量                            | 输入              | int32                   | /        | 无                                     |
+| NDim                      | 输出coors的最低维度，固定值为3                | 输入              | int32                   | /        | 无                                     |
+| deterministic             | 模式选择，deterministic/non-deterministic模式 | 输入              | bool                    | /        | 无                                     |
+| voxels_desc               | 对输出voxels的描述                            | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| voxels                    | 输出体素内各点的坐标及特征值                  | 输出              | float32                 | ARRAY    | [max_voxels, max_points, num_features] |
+| coors_desc                | 对输出coors的描述                             | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| coors                     | 输出体素的位置                                | 输出              | int32                   | ARRAY    | [max_voxels, 3]                        |
+| num_points_per_voxel_desc | 对输出num_points_per_voxel的描述              | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| num_points_per_voxel      | 输出体素内点的数量                            | 输出              | int32                   | ARRAY    | [max_voxels]                           |
+| voxel_num_desc            | 对输出voxel_num的描述                         | 输入              | mluOpTensorDescriptor_t | /        | 无                                     |
+| voxel_num                 | 输出体素的数量                                | 输出              | int32                   | ARRAY    | [1]                                    |
 
 ### 1.4 算子限制
 
-| 限制类型     | 详细说明                                                                                                        |
-| ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 功能限制     | 不支持non-deterministic模式，不支持dynamic模式                                                                     |
-| 数据范围限制 | max_points >= 0; max_voxels >= 0                                                                                |
-| 原位限制     | 不支持原位                                                                                                      |
-| stride 限制  | 不支持 stride 机制                                                                                              |
-| 广播限制     | 不支持广播                                                                                                       |
+| 限制类型     | 详细说明                                       |
+| ------------ | ---------------------------------------------- |
+| 功能限制     | 不支持non-deterministic模式，不支持dynamic模式 |
+| 数据范围限制 | max_points >= 0; max_voxels >= 0               |
+| 原位限制     | 不支持原位                                     |
+| stride 限制  | 不支持 stride 机制                             |
+| 广播限制     | 不支持广播                                     |
 
 ### 1.5 验收标准
 
@@ -122,8 +123,8 @@ example:
 
 - 竞品性能测试：
 
-| 平台                 | 框架版本        | 数据类型  | 数据规模    | 计算效率   | IO效率     | Hardware time     |
-| -------------------- | ------------- | -------- | --------  | --------- | --------- | ----------------- |
+| 平台                 | 框架版本      | 数据类型 | 数据规模                                                     | 计算效率                                                     | IO效率                                                       | Hardware time                                                |
+| -------------------- | ------------- | -------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Tesla V100-SXM2-16GB | Pytorch 1.9.0 | float32  | points: [253999, 5]<br>voxel_size: [3]<br>coors_range: [6]<br>voxels: [30000, 20, 5]<br>coors: [30000, 3]<br>num_points_per_voxel: [30000]<br>max_points = 20<br>max_voxels = 30000<br>NDim = 3<br>deterministic=True | dynamic_voxelize_kernel: 14.021749%<br>point_to_voxelidx_kernel: 90.053915%<br>determin_voxel_num: 0.015771%<br>assign_point_to_voxel: 25.195309%<br>assign_voxel_coors: 37.441100% | dynamic_voxelize_kernel: 47.321993%<br>point_to_voxelidx_kernel: 37.777134%<br>determin_voxel_num: 0.017807%<br>assign_point_to_voxel: 54.476897%<br>assign_voxel_coors: 33.271951% | dynamic_voxelize_kernel: 19.588800us<br>point_to_voxelidx_kernel: 64.612053ms<br>determin_voxel_num: 78.915080ms<br>assign_point_to_voxel: 34.353600us<br>assign_voxel_coors: 10.230400us |
 
 ## 2 算子接口设计
@@ -193,7 +194,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t hand
 
 mlu实现将1.2小节竞品实现的5个kernel合并为4个kernel，多核拆分均在num_points维度上拆分，各个kernel具体实现方案为：
 
-1. dynamic_voxelize_kernel
+1. dynamic_voxelize_kernel
 
 输入voxel_size中，voxel_size[0] ~ voxel_size[2]分别为voxel_x, voxel_y, voxel_z，表示体素在x、y、z方向上的长宽高。
 
@@ -334,57 +335,179 @@ for (int32_t p_idx = 0; p_idx < num_points; ++p_idx) {
 
 3. determin_voxel_num
 
-根据point_to_pointidx、point_to_voxelidx统计每个点在去重后的第几个体素内，中间结果存放到coor_to_voxelidx。统计总共有多少个体素，存放在输出结果voxel_num，统计各体素内有多少个点，存放在输出结果num_points_per_voxel。该kernel不做拆分，单核执行。伪代码如下：
-
+300系列方案和伪代码如下：
+根据point_to_pointidx、point_to_voxelidx统计每个点在去重后的第几个体素内，中间结果存放到coor_to_voxelidx。统计总共有多少个体素，存放在输出结果voxel_num，统计各体素内有多少个点，存放在输出结果num_points_per_voxel。该kernel不做拆分，单核执行
+若point_to_pointidx在nram能全部放下，nram空间划分3份，分别用来load point_to_pointidx和point_to_voxelidx，和缓存计算结果coor_to_voxelidx，最后将coor_to_voxelidx store到gdram
+若point_to_pointidx在nram不能全部放下，nram空间划分2份，分别用来load point_to_pointidx和point_to_voxelidx，coor_to_voxelidx直接store到gdram，不在nram做缓存。
 ```cpp
-int32_t voxel_num_temp = 0;
-for (int32_t point_idx = 0; point_idx < num_points; ++point_idx) {
-  int32_t point_pos_in_voxel = point_to_voxelidx[point_idx];
-  if (point_pos_in_voxel == -1) {
-    continue;
-  } else if (point_pos_in_voxel == 0) {
-    int32_t voxel_idx = voxel_num_temp;
-    if (voxel_num_temp >= max_voxels) {
-      continue;
+int32_t split_num = 2;
+    bool nram_can_contain_all_c2v_points = false;
+    if (num_points <
+        FLOOR_ALIGN(MAX_NRAM_SIZE / 3 / sizeof(int32_t), NFU_ALIGN_SIZE)) {
+      nram_can_contain_all_c2v_points = true;
+      split_num = 3;
     }
-    voxel_num_temp += 1;
-    coor_to_voxelidx[point_idx] = voxel_idx;
-    num_points_per_voxel[voxel_idx] = 1;
-  } else {
-    int32_t point_idx_temp = point_to_pointidx[point_idx];
-    int32_t voxel_idx = coor_to_voxelidx[point_idx_temp];
-    if (voxel_idx != -1) {
-      coor_to_voxelidx[point_idx] = voxel_idx;
-      num_points_per_voxel[voxel_idx] += 1;
+    int32_t voxel_num_temp = 0;
+    const int32_t max_nram_count = FLOOR_ALIGN(
+        MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
+    int32_t repeat = num_points / max_nram_count;
+    int32_t rem = num_points % max_nram_count;
+    int32_t *p2p_idx = (int32_t *)nram_buffer;
+    int32_t *p2v_idx = (int32_t *)p2p_idx + max_nram_count;
+    int32_t *c2v_idx = p2v_idx;
+    if (nram_can_contain_all_c2v_points) {
+      c2v_idx = p2v_idx + max_nram_count;
+      int32_t deal_num = rem;
+      __memcpy_async(p2p_idx, point_to_pointidx, deal_num * sizeof(int32_t),
+                     GDRAM2NRAM);
+      __memcpy_async(p2v_idx, point_to_voxelidx, deal_num * sizeof(int32_t),
+                     GDRAM2NRAM);
+      __memcpy(c2v_idx, coor_to_voxelidx, deal_num * sizeof(int32_t),
+               GDRAM2NRAM);
+      __bang_write_value(c2v_idx, deal_num, -1);
+      for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+        int32_t point_pos_in_voxel = p2v_idx[point_idx];
+        if (point_pos_in_voxel == -1) {
+          continue;
+        } else if (point_pos_in_voxel == 0) {
+          int32_t voxel_idx = voxel_num_temp;
+          if (voxel_num_temp >= max_voxels) {
+            continue;
+          }
+          voxel_num_temp += 1;
+          c2v_idx[point_idx] = voxel_idx;
+          num_points_per_voxel[voxel_idx] = 1;
+        } else {
+          int32_t point_idx_temp = p2p_idx[point_idx];
+          int32_t voxel_idx = c2v_idx[point_idx_temp];
+          if (voxel_idx != -1) {
+            c2v_idx[point_idx] = voxel_idx;
+            num_points_per_voxel[voxel_idx] += 1;
+          }
+        }
+      }
+      __memcpy(coor_to_voxelidx, c2v_idx, deal_num * sizeof(int32_t),
+               NRAM2GDRAM);
+    } else {
+      for (int32_t i = 0; i <= repeat; i++) {
+        if (i == repeat && rem == 0) {
+          break;
+        }
+        int32_t points_offset = i * max_nram_count;
+        int32_t deal_num = i == repeat ? rem : max_nram_count;
+        __memcpy_async(p2p_idx, point_to_pointidx + points_offset,
+                       deal_num * sizeof(int32_t), GDRAM2NRAM);
+        __memcpy(p2v_idx, point_to_voxelidx + points_offset,
+                 deal_num * sizeof(int32_t), GDRAM2NRAM);
+        for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+          int32_t point_pos_in_voxel = p2v_idx[point_idx];
+          coor_to_voxelidx[point_idx + points_offset] = -1;
+          if (point_pos_in_voxel == -1) {
+            continue;
+          } else if (point_pos_in_voxel == 0) {
+            int32_t voxel_idx = voxel_num_temp;
+            if (voxel_num_temp >= max_voxels) {
+              continue;
+            }
+            voxel_num_temp += 1;
+            coor_to_voxelidx[point_idx + points_offset] = voxel_idx;
+            num_points_per_voxel[voxel_idx] = 1;
+          } else {
+            int32_t point_idx_temp = p2p_idx[point_idx];
+            int32_t voxel_idx = coor_to_voxelidx[point_idx_temp];
+            if (voxel_idx != -1) {
+              coor_to_voxelidx[point_idx + points_offset] = voxel_idx;
+              num_points_per_voxel[voxel_idx] += 1;
+            }
+          }
+        }
+      }
     }
-  }
-}
-*voxel_num = voxel_num_temp;
+    *voxel_num = voxel_num_temp;
 ```
+500系列方案如下：
+先明确point_to_voxelidx_kernel的输出：
+
+point_to_pointidx: 表示当前 point 在集合 points 中的下标。 若 points 中包含多个相同的 point，那么这些 point 的下标也相同，为该 point 在 points 中第一次出现的位置。
+
+point_to_voxelidx: 表示当前 point 在对应 voxel 中的下标。
+
+假设这里第一个kernel输出的point的体素坐标为：[1, 2, 3, 3, 2, 5, 6, 6, 2, 2, 10, 11, 12, 13]
+
+则第二个kernel输出的
+
+point_to_pointidx为：[0, 1, 2, 2, 1, 5, 6, 6, 1, 1, 10, 11, 12, 13]
+
+point_to_voxelidx为：[0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0, 0, 0]
+
+
+优化方案主要分为两部分
+
+第一，先计算每个voxel中的第一个point所属的voxel_idx。
+
+第二，计算每个voxel中重复的point所属的voxel_idx，重复的point的voxel_idx取该point第一次出现的位置point_idx对应的voxel_idx。
+
+具体为：
+- step1：先计算每个voxel中的第一个点所属voxel_idx
+
+  - 统计当前循环中p2v_idx中0的数量，即体素中第一个元素的数量，也代表体素的数量。
+
+    ```c++
+    __bang_eq_scalar(p2v_idx, p2v_idx, 0, deal_num); 
+    ```
+
+    得到mask，![](./mask.png)
+
+  - 计算上述mask中当前1是第几个1，若1的个数大于max_voxels，后续的不再处理，voxel_idx置为-1。
+
+    具体实现流程如下图：![](./gather.jpg)
+
+- step2：处理体素中重复的点
+
+  具体的为：先得到重复点的mask，即p2v_idx > 0的位置，然后从point_to_pointidx中找到重复的第一个点的point_idx。（已在上一步得到）
+
+  根据point_idx查找对应的voxel_idx，将此voxel_idx赋给重复的点。
+
+  流程如下：![](./gather_scatter.jpg)
 
 4. assign_point_coors_to_voxel
 
-此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x, c_y, c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
+此时已知各点和体素的映射关系，根据各点所在体素序号coor_to_voxelidx，以及各点是所在体素内的第几个点point_to_voxelidx，将points点坐标及特征值映射到输出结果体素voxels中。将temp_coors体素位置映射到输出结果coors中，temp_coors中体素位置(c_x，c_y，c_z)未经去重，还需判断当前点是否是所在体素的第一个点，若是其体素内第一个点则输出至coors，这样coors中存放的就是去重后的体素。伪代码如下：
 
 ```cpp
-for (int32_t p_idx = points_start; p_idx < points_end; ++p_idx) {
-  int32_t num = point_to_voxelidx[p_idx];
-  int32_t voxel_idx = coor_to_voxelidx[p_idx];
-  if (num > -1 && voxel_idx > -1) {
-    float *voxels_offset = voxels + voxel_idx * max_points * num_features + num * num_features;
-    float *points_offset = points + p_idx * num_features;
-    __memcpy_async(voxels_offset, points_offset, num_features * sizeof(float), GDRAM2GDRAM);
+for (int32_t c_index = 0; c_index <= repeat; c_index++) {
+    if (c_index == repeat && rem == 0) {
+      break;
+    }
+    const int32_t deal_num = c_index == repeat ? rem : max_nram_count;
+    const int32_t point_nram_start =
+        points_core_offset + c_index * max_nram_count;
 
-    if (num == 0) {
-      temp_coors_nram[0] = (int32_t)temp_coors[p_idx * 3];
-      temp_coors_nram[1] = (int32_t)temp_coors[p_idx * 3 + num_points];
-      temp_coors_nram[2] = (int32_t)temp_coors[p_idx * 3 + num_points * 2];
-      int32_t *coors_offset = coors + voxel_idx * 3;
-      __memcpy_async(coors_offset, temp_coors_nram, 3 * sizeof(int32_t), GDRAM2GDRAM);
+    __memcpy_async(p2v_nram, point_to_voxelidx + point_nram_start,
+                   deal_num * sizeof(int32_t), GDRAM2NRAM);
+    __memcpy(c2v_nram, coor_to_voxelidx + point_nram_start,
+             deal_num * sizeof(int32_t), GDRAM2NRAM);
+
+    for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+      int32_t num = p2v_nram[point_idx];
+      int32_t voxel_idx = c2v_nram[point_idx];
+      if (num > -1 && voxel_idx > -1) {
+        float *voxels_offset =
+            voxels + voxel_idx * max_points * num_features + num * num_features;
+        const float *points_offset =
+            points + (point_idx + point_nram_start) * num_features;
+        __memcpy_async(voxels_offset, points_offset,
+                       num_features * sizeof(float), GDRAM2GDRAM);
+        if (num == 0) {
+          int32_t *coors_offset = coors + voxel_idx * 3;
+          __memcpy_async(coors_offset,
+                         temp_coors + (point_idx + point_nram_start),
+                         sizeof(int32_t), GDRAM2GDRAM, sizeof(int32_t),
+                         num_points * sizeof(int32_t), 2);
+        }
+      }
     }
   }
-}
-__sync();
 ```
 
 ### 3.2 伪代码实现
@@ -401,9 +524,9 @@ __sync();
 
 1、资源分配
 
-| 表项            | 分配策略                                                          |
-| --------------- | --------------------------------------------------------------- |
-| NRAM            | 保存临时数据                                                      |
+| 表项            | 分配策略                                                     |
+| --------------- | ------------------------------------------------------------ |
+| NRAM            | 保存临时数据                                                 |
 | DRAM(workspace) | 存储points转置结果points_xyz，存储中间计算结果temp_coors、point_to_pointidx、point_to_voxelidx、coor_to_voxelidx |
 
 - workspace空间划分
@@ -458,4 +581,5 @@ points_xyz按转置前points规模[num_points, num_features]申请workspace空�
 
 ### 4.2 已经过优化的规模说明
 
-无
+已对determin_voxel_num，assign_point_coors_to_voxel性能优化，优化后两个kernel性能分别提升1400%~4000%及200%~600%。
+benchmark case整体性能提升取决于网络规模，其中一个小case提升50%，其它case性能提升在1000%~3000%不等。

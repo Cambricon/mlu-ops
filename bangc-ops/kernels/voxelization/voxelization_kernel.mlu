@@ -132,6 +132,10 @@ __mlu_func__ void computePoint2Voxel(char *coors_x, char *coors_y,
                                      int32_t *first_point,
                                      const int32_t deal_idx,
                                      const int32_t deal_num) {
+  // Time complexity: o(n^2)
+  // Find points with the same coordinates as the current point.
+  // duplicate points indexs set as the index of points
+  // that appear for the first time
   __bang_eq_scalar((int32_t *)coors_x, (int32_t *)coors_x, c_x, deal_num);
   __bang_eq_scalar((int32_t *)coors_y, (int32_t *)coors_y, c_y, deal_num);
   __bang_eq_scalar((int32_t *)coors_z, (int32_t *)coors_z, c_z, deal_num);
@@ -470,28 +474,221 @@ __mlu_global__ void mluCalcPointsPerVoxel(
     int32_t *point_to_pointidx, int32_t *point_to_voxelidx,
     int32_t *coor_to_voxelidx, int32_t *num_points_per_voxel,
     int32_t *voxel_num, const int32_t max_voxels, const int32_t num_points) {
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 592
   if (coreId == 0) {
+    /**|********************************************************|
+     * |                    NRAM SPACE DIVIDE                   |
+     * |----------------------|---------------|-----------------|
+     * |       space          |     reuse     |      size       |
+     * |----------------------|---------------|-----------------|
+     * | nram_p2p_idx         |               | max_nram_count  |
+     * | nram_p2v_idx         |  gather_mask  | max_nram_count  |
+     * | nram_scatter_output  | gather_output | max_nram_count  |
+     * | nram_scatter_mask    |               | max_nram_count  |
+     * | nram_scatter_offset  |               | max_nram_count  |
+     * | nram_mask_bitindex   |               | max_nram_count  |
+     * | nram_base_offset     |               | max_nram_count  |
+     * | nram_temp_zeros      |               | max_nram_count  |
+     * | nram_temp_mask       |               | max_nram_count  |
+     * |--------------------------------------------------------|
+     */
     int32_t voxel_num_temp = 0;
-    for (int32_t point_idx = 0; point_idx < num_points; ++point_idx) {
-      int32_t point_pos_in_voxel = point_to_voxelidx[point_idx];
-      coor_to_voxelidx[point_idx] = -1;
-      if (point_pos_in_voxel == -1) {
-        continue;
-      } else if (point_pos_in_voxel == 0) {
-        int32_t voxel_idx = voxel_num_temp;
-        if (voxel_num_temp >= max_voxels) {
-          continue;
+    const int32_t split_num = 9;
+    const int32_t max_nram_count = FLOOR_ALIGN(
+        MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
+    int32_t repeat = num_points / max_nram_count;
+    int32_t rem = num_points % max_nram_count;
+    int32_t *nram_p2p_idx = (int32_t *)nram_buffer;
+    int32_t *nram_p2v_idx = (int32_t *)nram_p2p_idx + max_nram_count;
+    int32_t *nram_scatter_output = (int32_t *)nram_p2v_idx + max_nram_count;
+    int32_t *nram_scatter_mask =
+        (int32_t *)nram_scatter_output + max_nram_count;
+    int32_t *nram_mask_bitindex = (int32_t *)nram_scatter_mask + max_nram_count;
+    int32_t *nram_scatter_offset =
+        (int32_t *)nram_mask_bitindex + max_nram_count;
+    int32_t *nram_base_offset = (int32_t *)nram_scatter_offset + max_nram_count;
+    int32_t *nram_temp_zeros = (int32_t *)nram_base_offset + max_nram_count;
+    int32_t *nram_temp_mask = (int32_t *)nram_temp_zeros + max_nram_count;
+
+    // generate 0~deal_num indices.
+    __mluop_get_stage_indices_tfuse(nram_base_offset, max_nram_count);
+    __bang_write_zero(nram_temp_zeros, max_nram_count);
+    for (int32_t i = 0; i <= repeat; i++) {
+      if (i == repeat && rem == 0) {
+        break;
+      }
+      int32_t points_offset = i * max_nram_count;
+      int32_t deal_num = i == repeat ? rem : max_nram_count;
+      int32_t deal_num_align8 = PAD_UP(deal_num, 8);
+
+      // step1: load p2p/p2v data.
+      __memcpy_async(nram_p2p_idx, point_to_pointidx + points_offset,
+                     deal_num * sizeof(int32_t), GDRAM2NRAM);
+      __memcpy(nram_p2v_idx, point_to_voxelidx + points_offset,
+               deal_num * sizeof(int32_t), GDRAM2NRAM);
+
+      // step2:　process the first point in voxel
+      __bang_eq_scalar(nram_temp_mask, nram_p2v_idx, 0, deal_num);
+      __bang_write_value(nram_scatter_output, deal_num, -1);
+      __bang_mul(nram_scatter_offset, nram_temp_mask, nram_base_offset,
+                 deal_num);
+
+      // compute current loop voxel_num and voxel_id
+      int32_t cur_loop_num_voxels =
+          __bang_filter((float *)nram_scatter_offset, (float *)nram_base_offset,
+                        (float *)nram_temp_mask, deal_num);
+      __bang_write_value(nram_scatter_mask, deal_num, 1);
+      int32_t reserve_voxels = cur_loop_num_voxels;
+      int32_t vir_total_num_voxels = voxel_num_temp + cur_loop_num_voxels;
+      if (vir_total_num_voxels >= max_voxels) {
+        reserve_voxels = max_voxels - voxel_num_temp;
+        __bang_write_value(nram_scatter_mask + reserve_voxels, deal_num, 0);
+      }
+
+      if (voxel_num_temp <= max_voxels && reserve_voxels > 0) {
+        // compute scatter bitmask
+        __bang_gt_bitindex((float *)nram_mask_bitindex,
+                           (float *)nram_scatter_mask, (float *)nram_temp_zeros,
+                           deal_num_align8);
+        // compute scatter offset
+        __bang_mul_scalar(nram_scatter_offset, nram_scatter_offset,
+                          sizeof(int32_t), deal_num);
+
+        // compute scatter src: voxel_idx
+        __bang_add_scalar(nram_temp_mask, nram_base_offset, voxel_num_temp,
+                          deal_num);
+        __scatter(nram_scatter_output, nram_temp_mask,
+                  (unsigned int *)nram_scatter_offset, nram_mask_bitindex,
+                  sizeof(int32_t), NRAM2NRAM, sizeof(int32_t), reserve_voxels);
+        __memcpy(num_points_per_voxel + voxel_num_temp, nram_scatter_mask,
+                 reserve_voxels * sizeof(int32_t), NRAM2GDRAM);
+        voxel_num_temp += reserve_voxels;
+      }
+      // store voxel first points.
+      __memcpy(coor_to_voxelidx + points_offset, nram_scatter_output,
+               deal_num * sizeof(int32_t), NRAM2GDRAM);
+
+      // step3: process other points in voxels.
+      float *gather_mask = (float *)nram_p2v_idx;
+      int32_t *gather_output = (int32_t *)nram_scatter_output;
+      __bang_gt(gather_mask, (float *)nram_p2v_idx, (float *)nram_temp_zeros,
+                deal_num);
+      const int32_t count = __bang_filter(
+          (float *)nram_p2p_idx, (float *)nram_p2p_idx, gather_mask, deal_num);
+      if (count > 0) {
+        __bang_mul_scalar(nram_p2p_idx, nram_p2p_idx, sizeof(int32_t), count);
+        // get repeated point real point_id
+        __gather(gather_output, coor_to_voxelidx, (unsigned int *)nram_p2p_idx,
+                 sizeof(int32_t), GDRAM2NRAM, sizeof(int32_t), count);
+        __bang_eq_scalar(nram_scatter_mask, gather_output, -1, count);
+        __bang_not(nram_scatter_mask, nram_scatter_mask, count);
+        __bang_gt_bitindex((float *)nram_mask_bitindex,
+                           (float *)nram_scatter_mask, (float *)nram_temp_zeros,
+                           PAD_UP(count, 8));
+        __bang_add_scalar(nram_temp_mask, nram_base_offset, points_offset,
+                          deal_num);
+        // get repeated point real voxel_id
+        __bang_filter((float *)nram_temp_mask, (float *)nram_temp_mask,
+                      gather_mask, deal_num);
+        __bang_mul_scalar(nram_temp_mask, nram_temp_mask, sizeof(int32_t),
+                          deal_num);
+        __scatter(coor_to_voxelidx, gather_output,
+                  (unsigned int *)nram_temp_mask, nram_mask_bitindex,
+                  sizeof(int32_t), NRAM2GDRAM, sizeof(int32_t), count);
+
+        // step4: compute num_points_per_voxel
+        for (int32_t i = 0; i < count; i++) {
+          int32_t voxel_idx = gather_output[i];
+          if (voxel_idx != -1) {
+            num_points_per_voxel[voxel_idx] += 1;
+          }
         }
-        voxel_num_temp += 1;
-        coor_to_voxelidx[point_idx] = voxel_idx;
-        num_points_per_voxel[voxel_idx] = 1;
-      } else {
-        int32_t point_idx_temp = point_to_pointidx[point_idx];
-        int32_t voxel_idx = coor_to_voxelidx[point_idx_temp];
-        if (voxel_idx != -1) {
-          coor_to_voxelidx[point_idx] = voxel_idx;
-          num_points_per_voxel[voxel_idx] += 1;
+      }
+    }
+    *voxel_num = voxel_num_temp;
+  }
+#else
+  if (coreId == 0) {
+    int32_t split_num = 2;
+    bool nram_can_contain_all_c2v_points = false;
+    if (num_points <
+        FLOOR_ALIGN(MAX_NRAM_SIZE / 3 / sizeof(int32_t), NFU_ALIGN_SIZE)) {
+      nram_can_contain_all_c2v_points = true;
+      split_num = 3;
+    }
+    int32_t voxel_num_temp = 0;
+    const int32_t max_nram_count = FLOOR_ALIGN(
+        MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
+    int32_t repeat = num_points / max_nram_count;
+    int32_t rem = num_points % max_nram_count;
+    int32_t *p2p_idx = (int32_t *)nram_buffer;
+    int32_t *p2v_idx = (int32_t *)p2p_idx + max_nram_count;
+    int32_t *c2v_idx = p2v_idx;
+    if (nram_can_contain_all_c2v_points) {
+      c2v_idx = p2v_idx + max_nram_count;
+      int32_t deal_num = rem;
+      __memcpy_async(p2p_idx, point_to_pointidx, deal_num * sizeof(int32_t),
+                     GDRAM2NRAM);
+      __memcpy_async(p2v_idx, point_to_voxelidx, deal_num * sizeof(int32_t),
+                     GDRAM2NRAM);
+      __memcpy(c2v_idx, coor_to_voxelidx, deal_num * sizeof(int32_t),
+               GDRAM2NRAM);
+      __bang_write_value(c2v_idx, deal_num, -1);
+      for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+        int32_t point_pos_in_voxel = p2v_idx[point_idx];
+        if (point_pos_in_voxel == -1) {
+          continue;
+        } else if (point_pos_in_voxel == 0) {
+          int32_t voxel_idx = voxel_num_temp;
+          if (voxel_num_temp >= max_voxels) {
+            continue;
+          }
+          voxel_num_temp += 1;
+          c2v_idx[point_idx] = voxel_idx;
+          num_points_per_voxel[voxel_idx] = 1;
+        } else {
+          int32_t point_idx_temp = p2p_idx[point_idx];
+          int32_t voxel_idx = c2v_idx[point_idx_temp];
+          if (voxel_idx != -1) {
+            c2v_idx[point_idx] = voxel_idx;
+            num_points_per_voxel[voxel_idx] += 1;
+          }
+        }
+      }
+      __memcpy(coor_to_voxelidx, c2v_idx, deal_num * sizeof(int32_t),
+               NRAM2GDRAM);
+    } else {
+      for (int32_t i = 0; i <= repeat; i++) {
+        if (i == repeat && rem == 0) {
+          break;
+        }
+        int32_t points_offset = i * max_nram_count;
+        int32_t deal_num = i == repeat ? rem : max_nram_count;
+        __memcpy_async(p2p_idx, point_to_pointidx + points_offset,
+                       deal_num * sizeof(int32_t), GDRAM2NRAM);
+        __memcpy(p2v_idx, point_to_voxelidx + points_offset,
+                 deal_num * sizeof(int32_t), GDRAM2NRAM);
+        for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+          int32_t point_pos_in_voxel = p2v_idx[point_idx];
+          coor_to_voxelidx[point_idx + points_offset] = -1;
+          if (point_pos_in_voxel == -1) {
+            continue;
+          } else if (point_pos_in_voxel == 0) {
+            int32_t voxel_idx = voxel_num_temp;
+            if (voxel_num_temp >= max_voxels) {
+              continue;
+            }
+            voxel_num_temp += 1;
+            coor_to_voxelidx[point_idx + points_offset] = voxel_idx;
+            num_points_per_voxel[voxel_idx] = 1;
+          } else {
+            int32_t point_idx_temp = p2p_idx[point_idx];
+            int32_t voxel_idx = coor_to_voxelidx[point_idx_temp];
+            if (voxel_idx != -1) {
+              coor_to_voxelidx[point_idx + points_offset] = voxel_idx;
+              num_points_per_voxel[voxel_idx] += 1;
+            }
+          }
         }
       }
     }
@@ -509,30 +706,50 @@ __mlu_global__ void mluAssignVoxelsCoors(
   if (__is_mpu()) {
     return;
   }
-
   int32_t points_per_core = num_points / taskDim;
   int32_t points_rem = num_points % taskDim;
-  int32_t points_start = taskId < points_rem
-                             ? taskId * (points_per_core + 1)
-                             : taskId * points_per_core + points_rem;
-  int32_t points_end = taskId < points_rem ? points_start + points_per_core + 1
-                                           : points_start + points_per_core;
+  points_per_core += int32_t(points_rem > taskId);
+  const int points_core_offset =
+      taskId * points_per_core + (points_rem > taskId ? 0 : points_rem);
 
-  for (int32_t point_idx = points_start; point_idx < points_end; ++point_idx) {
-    int32_t num = point_to_voxelidx[point_idx];
-    int32_t voxel_idx = coor_to_voxelidx[point_idx];
-    if (num > -1 && voxel_idx > -1) {
-      float *voxels_offset =
-          voxels + voxel_idx * max_points * num_features + num * num_features;
-      const float *points_offset = points + point_idx * num_features;
-      __memcpy_async(voxels_offset, points_offset, num_features * sizeof(float),
-                     GDRAM2GDRAM);
+  const int32_t split_num = 2;
+  const int32_t max_nram_count =
+      FLOOR_ALIGN(MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
+  int32_t *p2v_nram = (int32_t *)nram_buffer;
+  int32_t *c2v_nram = p2v_nram + max_nram_count;
+  const int32_t repeat = points_per_core / max_nram_count;
+  const int32_t rem = points_per_core % max_nram_count;
 
-      if (num == 0) {
-        int32_t *coors_offset = coors + voxel_idx * 3;
-        __memcpy_async(coors_offset, temp_coors + point_idx, sizeof(int32_t),
-                       GDRAM2GDRAM, sizeof(int32_t),
-                       num_points * sizeof(int32_t), 2);
+  for (int32_t c_index = 0; c_index <= repeat; c_index++) {
+    if (c_index == repeat && rem == 0) {
+      break;
+    }
+    const int32_t deal_num = c_index == repeat ? rem : max_nram_count;
+    const int32_t point_nram_start =
+        points_core_offset + c_index * max_nram_count;
+
+    __memcpy_async(p2v_nram, point_to_voxelidx + point_nram_start,
+                   deal_num * sizeof(int32_t), GDRAM2NRAM);
+    __memcpy(c2v_nram, coor_to_voxelidx + point_nram_start,
+             deal_num * sizeof(int32_t), GDRAM2NRAM);
+
+    for (int32_t point_idx = 0; point_idx < deal_num; ++point_idx) {
+      int32_t num = p2v_nram[point_idx];
+      int32_t voxel_idx = c2v_nram[point_idx];
+      if (num > -1 && voxel_idx > -1) {
+        float *voxels_offset =
+            voxels + voxel_idx * max_points * num_features + num * num_features;
+        const float *points_offset =
+            points + (point_idx + point_nram_start) * num_features;
+        __memcpy_async(voxels_offset, points_offset,
+                       num_features * sizeof(float), GDRAM2GDRAM);
+        if (num == 0) {
+          int32_t *coors_offset = coors + voxel_idx * 3;
+          __memcpy_async(coors_offset,
+                         temp_coors + (point_idx + point_nram_start),
+                         sizeof(int32_t), GDRAM2GDRAM, sizeof(int32_t),
+                         num_points * sizeof(int32_t), 2);
+        }
       }
     }
   }
