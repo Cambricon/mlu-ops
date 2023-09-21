@@ -215,17 +215,17 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
     \lvert (x - cx) * sin(-rz) + (y - cy) * cos(-rz)\rvert < \frac{dy}{2}
     ```
 
-    3. 在每个 core 内循环处理所有的点 `pts_num`，共循环 (`pts_num`/nram*limit_max_pts + 1) 次，每次处理 nram_limit_max_pts 个点，依次 load 点的坐标到 nram 上，将当前 roi 根据 `out_x`、`out_y`、`out_z` 的大小划分成 each_voxel_nums 个 voxels，其值为 `out_x` * `out_y` \_ `out_z` ，根据所有的点的坐标值，计算得到归属在哪一个 voxels ，得到该 voxels 在三个维度的 idx，store `pts_idx_of_voxels`，直到循环完毕所有 `pts_num` 或者达到最大保存数量 `max_pts_each_voxel` 后 break，执行 step4；
+    3. 在每个 core 内循环处理所有的点 `pts_num`，共循环 (`pts_num`/nram*limit_max_pts + 1) 次，每次处理 nram_limit_max_pts 个点，依次 load 点的坐标到 nram 上，将当前 roi 根据 `out_x`、`out_y`、`out_z` 的大小划分成 each_voxel_nums 个 voxels，其值为 `out_x` * `out_y` * `out_z` ，根据所有的点的坐标值，计算得到归属在哪一个 voxels ，得到该 voxels 在三个维度的 idx，store `pts_idx_of_voxels`，直到循环完毕所有 `pts_num` 或者达到最大保存数量 `max_pts_each_voxel` 后 break，执行 step4；
 
     4. 该 roi 计算完毕，返回 step1 处理下一次 roi，直至当前 core 处理完 boxes_num_seg 个 roi。
 
   - 第二阶段 launch roiaware_pool3d_forward_kernel：
 
-    1. 将 voxels*nums 均分为 taskDim 份，每个 core 将循环处理 voxels_nums_seg 个 voxels，总共有 voxels_nums 个 voxels，其值为 `boxes_num` * `out_x` \_ `out_y` \* `out_z`，将 roi 中按照 `out_x`、`out_y`、`out_z` 划分之后的每一个体素的索引称为 voxels_idx ；
+    1. 将 voxels*nums 均分为 taskDim 份，每个 core 将循环处理 voxels_nums_seg 个 voxels，总共有 voxels_nums 个 voxels，其值为 `boxes_num` * `out_x` * `out_y` * `out_z`，将 roi 中按照 `out_x`、`out_y`、`out_z` 划分之后的每一个体素的索引称为 voxels_idx ；
 
     2. 加载当前 voxel 对应的 `pts_idx_of_voxels` 到片上，获取当前 voxel 中的点数量 `pts_num_in_voxels` 和 点的`idx`，每个 core 每次处理一个 voxels_idx；
 
-    3. 循环处理 pts_num_in_voxels 次，根据 `pts_idx_of_voxels` 依次 load 对应点的 `pts_feature` 到片上，得到当前 voxel 中的点在所有通道的特征值 pts_feature_cur_voxels，总共 pts_num_in_voxels \* channels 个特征值，若 `channels` 过大，无法一次性放入所有数据，则在 `channels` 通道上拆分，循环放入 C_seg 个数据；
+    3. 循环处理 pts_num_in_voxels 次，根据 `pts_idx_of_voxels` 依次 load 对应点的 `pts_feature` 到片上，得到当前 voxel 中的点在所有通道的特征值 pts_feature_cur_voxels，总共 pts_num_in_voxels * channels 个特征值，若 `channels` 过大，无法一次性放入所有数据，则在 `channels` 通道上拆分，循环放入 C_seg 个数据；
 
     4. 计算这些点在所有通道上的最大或者平均的特征值 `pooled_features`，并得到 `argmax`, 若没有点在当前 voxel 中时，argmax 的值置为-1；
 

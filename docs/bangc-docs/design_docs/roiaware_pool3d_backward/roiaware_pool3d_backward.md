@@ -162,7 +162,7 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
 
   0. 根据 `pool_method` 数值确定池化方式，选择不同的 kernel 并 launch，即最大池化选择 KernelRoiawareMaxPool3dBackward(以下称为 KernelMax )，平均池化选择 KernelRoiawareAvgPool3dBackward(以下称为 KernelAvg )，KernelMax 与 KernelAvg 的多核拆分方案是同样的
 
-  1. 将所有 `boxes_num` 个 box 分别划分为`out_x` _ `out_y` _ `out_z`个体素，体素总数共有 voxels*nums = `boxes_num` * `out_x` \_ `out_y` \* `out_z` ，将所有的体素划分以 taskDim 为间隔的若干份，每个 core 将依次跳跃间隔 taskDim 个体素循环处理，根据体素索引 voxels_idx 计算 gdram 上的数据偏移，每一个 core 负责处理其所分到的 voxels；
+  1. 将所有 `boxes_num` 个 box 分别划分为`out_x` _ `out_y` _ `out_z`个体素，体素总数共有 voxels*nums = `boxes_num` * `out_x` * `out_y` * `out_z` ，将所有的体素划分以 taskDim 为间隔的若干份，每个 core 将依次跳跃间隔 taskDim 个体素循环处理，根据体素索引 voxels_idx 计算 gdram 上的数据偏移，每一个 core 负责处理其所分到的 voxels；
 
   2. 当池化方式为最大池化时，执行 3 步骤，当池化方式为平均池化时，执行第 5 步；
 
