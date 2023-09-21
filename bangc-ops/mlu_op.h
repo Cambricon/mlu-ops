@@ -8483,6 +8483,8 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Scale Limitation
+ * - \b boxes_num should be less than 65536.
+ * - \b channels should be less than 65536.
  * - The shape of \b pts_idx_of_voxels should be [boxes_num, out_x, out_y, out_z, max_pts_each_voxel].
  * - The shape of \b argmax should be [boxes_num, out_x, out_y, out_z, channels].
  * - The shape of \b grad_out should be [boxes_num, out_x, out_y, out_z, channels].
