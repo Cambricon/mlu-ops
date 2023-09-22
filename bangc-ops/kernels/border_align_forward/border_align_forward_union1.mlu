@@ -258,10 +258,8 @@ __mlu_func__ void pipeline(T *input_ping_nram, const T *input, T *boxes_nram,
       deal_num_align);
 
   // S
-  __memcpy(base_output + c_offset, output_nram, deal_num * sizeof(T),
-           NRAM2GDRAM);  // NOLINT
-  __memcpy(base_argmax_idx + c_offset, argmax_idx_nram,
-           deal_num * sizeof(int32_t), NRAM2GDRAM);  // NOLINT
+  __memcpy(base_output + c_offset, output_nram, deal_num * sizeof(T), NRAM2GDRAM);  // NOLINT
+  __memcpy(base_argmax_idx + c_offset, argmax_idx_nram, deal_num * sizeof(int32_t), NRAM2GDRAM);  // NOLINT
 }
 
 template <typename T>
