@@ -1,0 +1,93 @@
+op_name: "sync_batchnorm_elemt"
+op_type: "SYNC_BATCHNORM_ELEMT"
+input {
+  id: "x"
+  shape: {
+    dims: 4
+    dims: 14
+    dims: 14
+    dims: 1025
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 32
+    upper_bound: 2.0
+    lower_bound: 1.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "mean"
+  shape: {
+    dims: 1025
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 35
+    upper_bound: 1.5
+    lower_bound: 0.5
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "invstd"
+  shape: {
+    dims: 1025
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 36
+    upper_bound: 1.25
+    lower_bound: 0.25
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "weight"
+  shape: {
+    dims: 1025
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 33
+    upper_bound: 2.0
+    lower_bound: -2.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "bias"
+  shape: {
+    dims: 1025
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 34
+    upper_bound: 1.0
+    lower_bound: -1.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "y"
+  shape: {
+    dims: 4
+    dims: 14
+    dims: 14
+    dims: 1025
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
