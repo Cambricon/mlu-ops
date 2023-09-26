@@ -13992,7 +13992,7 @@ mluOpRoiPoolingBackward(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
  * sync_batchnorm_stats operation. For detailed information, see ::mluOpHandle_t.
- * @param[in] input_desc
+ * @param[in] x_desc
  * The descriptor of the input tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
@@ -14016,7 +14016,7 @@ mluOpRoiPoolingBackward(mluOpHandle_t handle,
  *
  * @par Note
  * - This API is only used along with ::mluOpSyncBatchNormStats_v2.
- * - The ::mluOpSyncBatchNormStats does not require this API.
+ * - ::mluOpSyncBatchNormStats does not require this API.
  *
  * @par Example
  * - None.
@@ -14034,8 +14034,8 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * @brief Computes the local mean and the local inverse standard deviation for each channel
  * across a batch of data in the training scenario.
  *
- * mluOpSyncBatchNormStats_v2 is used in convolution network, including but not limited to
- * ResNet (Deep Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ * ::mluOpSyncBatchNormStats_v2 is used in convolution network, including but not limited to
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * Compared with ::mluOpSyncBatchNormStats, this function allows you to allocate some extra
  * workspace as an input parameter. If you just set \b workspace to NULL and \b workspace_size
@@ -14050,8 +14050,7 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor \b x.
  * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the
- * ::mluOpSyncBatchNormStats_v2.
+ * Pointer to the MLU memory that is used as an extra workspace for ::mluOpSyncBatchNormStats_v2.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in
  * the ::mluOpSyncBatchNormStats_v2. You can get the size of the workspace with
@@ -14082,7 +14081,7 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * @par Data Layout
  * - The supported data layout of the input tensor is shown as follows:
  *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
- * - The layout of the output tensors are shown as follows:
+ * - The layout of the output tensors is shown as follows:
  *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
  *
@@ -14131,7 +14130,7 @@ mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
  * across a batch of data in the training scenario.
  *
  * SyncBatchnormStats is used in CNN, including but not limited to
- * ResNet (Deep Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
@@ -14167,9 +14166,9 @@ mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
  *     - half - float - float - float.
  *
  * @par Data Layout
- * - The supported data layout of the input tensor is shown as following:
+ * - The supported data layout of the input tensor is shown as follows:
  *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
- * - The layout of the output tensors are shown as following:
+ * - The layout of the output tensors is shown as follows:
  *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
  *
@@ -14211,7 +14210,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
 
 // Group:SyncBatchNormGatherStatsWithCounts
 /*!
- * @brief Computes the global mean and the global inverse standard deviation across aggragation
+ * @brief Computes the global mean and the global inverse standard deviation across aggregation
  * of the local mean and local inverse standard deviation of multiple MLU devices.
  *
  * @param[in] handle
@@ -14222,13 +14221,13 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  * The descriptor of the input tensor \b mean_all. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] mean_all
- * Pointer to the MLU memory that stores the input tensor tensor \b mean_all, which is
+ * Pointer to the MLU memory that stores the input tensor \b mean_all, which is
  * the local mean of multiple MLU devices.
  * @param[in] invstd_all_desc
  * The descriptor of the input tensor \b invstd_all. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[in] invstd_all
- * Pointer to the MLU memory that stores the input tensor tensor \n invstd_all, which
+ * Pointer to the MLU memory that stores the input tensor \n invstd_all, which
  * is the local inverse standard deviation of multiple MLU devices.
  * @param[in] moving_mean_desc
  * The descriptor of the input tensor \b moving_mean. For detailed information, see
@@ -14277,7 +14276,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  *   -  float   -   float    -    half     -    half    -   float  - float -   half    - float -  float.
  *
  * @par Data Layout
- * - The supported data layout of the input tensors are shown as the following:
+ * - The supported data layout of the input tensors is shown as follows:
  *   - mean_all tensor: \p MLUOP_LAYOUT_NC.
  *   - invstd_all tensor: \p MLUOP_LAYOUT_NC.
  *   - moving_mean tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -14285,7 +14284,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  *   - momentum: Scalar.
  *   - eps: Scalar.
  *   - count_all tensor: \p MLUOP_LAYOUT_ARRAY.
- * - The layout of the output tensors are shown as the following:
+ * - The layout of the output tensors is shown as follows:
  *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
  *
@@ -14344,7 +14343,7 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
  *        inverse variance and scaling factors.
  *
  * Batch Normalization is used in artificial intelligence, including but not limited to
- * ResNet (Deep Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the sync batchnorm
@@ -14392,7 +14391,7 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
  *   - half - float - float - float - float - half.
  *
  * @par Data Layout
- * - The supported data layout of \b x, \b mean, \b invstd, \b filter, \b bias and \b y are as follows:
+ * - The supported data layout of \b x, \b mean, \b invstd, \b filter, \b bias and \b y is as follows:
  *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
  *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -14409,7 +14408,7 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
  *
  * @par note
  * - The \b mean, \b invstd, \b filter and \b \b bias must be 1D tensors and the length of their dimensions
- *   should be the same as the the length of the lowest dimension of \b x.
+ *   should be the same as the length of the lowest dimension of \b x.
  * - The length of each dimension of \b x and \b y must be the same.
  *
  * @par Example
@@ -14463,7 +14462,7 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the mse_loss
  * operation. For detailed information, see ::mluOpHandle_t.
- * @param[in] desc_x
+ * @param[in] x_desc
  * The descriptor of the input tensor. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
@@ -14487,7 +14486,7 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
  *
  * @par note
  * - This API is only used along with ::mluOpSyncBatchnormBackwardReduce_v2.
- * - The ::mluOpSyncBatchnormBackwardReduce does not require this API.
+ * - ::mluOpSyncBatchnormBackwardReduce does not require this API.
  *
  * @par Example
  * - None.
@@ -14497,16 +14496,16 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
-                                                 const mluOpTensorDescriptor_t desc_x,
+                                                 const mluOpTensorDescriptor_t x_desc,
                                                  size_t *workspace_size);
 
 // Group:SyncBatchnormBackwardReduce
 /*!
- * @brief Applies Syncronized Batch Normalization Reduce operator to backwardly compute grad
+ * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad
  * filters, grad bias, sum_dy and sum_dy_xmu on each MLU device.
  *
  * Batch Normalization is used in convolution network, including but not limited to
- * ResNet (Deep Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * Compared with ::mluOpSyncBatchnormBackwardReduce, this function allows you to allocate some extra
  * workspace as an input parameter. If you just set \b workspace to NULL and \b workspace_size to 0,
@@ -14537,7 +14536,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the tensor \b invstd, which denotes the inversed
  * standard deviation of input \b x.
  * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the
+ * Pointer to the MLU memory that is used as an extra workspace for
  * ::mluOpSyncBatchnormBackwardReduce_v2.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in
@@ -14596,7 +14595,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - The supported data layout of \b dz, \b x, \b mean, \b invstd, \b dfilter, \b dbias, \b sum_dy
- *   and \b sum_dy_xmu are as follows:
+ *   and \b sum_dy_xmu is as follows:
  *   - dz tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
  *   - x tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
  *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -14615,7 +14614,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  *
  * @par note
  * - The \b mean, \b invstd, \b dfilter, \b bias, \b sum_dy and \b sum_dy_xmu must be 1D tensors
- *   and the length of the dimensions of these tensors should be the same as the the length of
+ *   and the length of the dimensions of these tensors should be the same as the length of
  *   the lowest dimension of \b x.
  * - The length of each dimension of \b x and \b dz must be the same.
  *
@@ -14674,11 +14673,11 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
 
 // Group:SyncBatchnormBackwardReduce
 /*!
- * @brief Applies Syncronized Batch Normalization Reduce operator to backwardly compute grad filters,
+ * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad filters,
  * grad bias, sum_dy and sum_dy_xmu on each MLU device.
  *
  * Batch Normalization is used in CNN, including but not limited to
- * ResNet (Deep Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
@@ -14755,7 +14754,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - The supported data layout of \b dz, \b x, \b mean, \b invstd, \b dfilter, \b dbias, \b sum_dy and
- *   \b sum_dy_xmu are as follows:
+ *   \b sum_dy_xmu is as follows:
  *   - dz tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
  *   - x tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
  *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -14773,7 +14772,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  *
  * @par note
  * - The \b mean, \b invstd, \b dfilter, \b bias, \b sum_dy and \b sum_dy_xmu must be 1D tensors and the
- *   length of the dimensions of these tensors should be the same as the the length of the lowest dimension of \b x.
+ *   length of the dimensions of these tensors should be the same as the length of the lowest dimension of \b x.
  * - The length of each dimension of \b x and \b dz must be the same.
  *
  * @par Example
@@ -14832,7 +14831,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
  * @brief Computes the gradients of input in the training scenario.
  *
  * This function is used in artificial intelligence, including but not limited
- * to ResNet (Deep Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ * to ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
@@ -14891,7 +14890,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - The supported data layout of \b diff_y, \b x, \b mean, \b invstd, \b filter, \b mean_dy,
- *   \b mean_dy_xmu and \b diff_x are as follows:
+ *   \b mean_dy_xmu and \b diff_x is as follows:
  *   - diff_y tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and
  *     \p MLUOP_LAYOUT_NLC.
  *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
@@ -14912,7 +14911,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
  *
  * @par note
  * - The \b mean, \b invstd, \b filter, \b mean_dy and \b mean_dy_xmu must be 1D tensors and the
- *   length of the dimension of these tensors should be the same as the the length of the lowest
+ *   length of the dimension of these tensors should be the same as the length of the lowest
  *   dimension of \b x.
  * - The length of each dimension of \b diff_y, \b x and \b diff_x must be the same.
  *
@@ -14959,7 +14958,7 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
 /*!
  * @brief Computes the gradients of input in the training scenario.
  *
- * This function is used in ResNet (Deep Residual Network), Yolo (You Only Look Once) and
+ * This function is used in ResNet (Residual Network), Yolo (You Only Look Once) and
  * R-CNN (Regions with CNN features).
  *
  * Compared with ::mluOpSyncBatchNormBackwardElemt, this function first computes the intermediate
@@ -15028,7 +15027,7 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
  *
  * @par Data Layout
  * - The supported data layouts of \b diff_y, \b x, \b mean, \b invstd, \b filter, \b sum_dy,
- *   \b sum_dy_xmu and \b diff_x are as follows:
+ *   \b sum_dy_xmu and \b diff_x is as follows:
  *   - diff_y tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and
  *     \p MLUOP_LAYOUT_NLC.
  *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
@@ -15049,7 +15048,7 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
  *
  * @par note
  * - The \b mean, \b invstd, \b filter, \b sum_dy and \b sum_dy_xmu must be 1D tensors and the
- *   length of the dimension of these tensors should be the same as the the length of the lowest
+ *   length of the dimension of these tensors should be the same as the length of the lowest
  *   dimension of \b x.
  * - The length of each dimension of \b diff_y, \b x and \b diff_x must be the same.
  *
