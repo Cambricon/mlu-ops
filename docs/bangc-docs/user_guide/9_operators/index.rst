@@ -924,29 +924,29 @@ mluOpDynamicPointToVoxelForward
 .. _sync_batchnorm_stats:
 
 mluOpSyncBatchNormStats
----------------------------------
+-------------------------
 该算子用来计算单卡上SyncBatchNorm的均值和标准差的倒数。
 
 .. _sync_batchnorm_gather_stats_with_counts:
 
 mluOpSyncBatchNormGatherStatsWithCounts
----------------------------------
+-----------------------------------------
 该算子用来计算SyncBatchNorm的全局均值和标准差的倒数。
 
 .. _sync_batchnorm_elemt:
 
 mluOpSyncBatchNormElemt
----------------------------------
+-------------------------
 该算子用来计算SyncBatchNorm的前向输出。
 
 .. _sync_batchnorm_backward_reduce:
 
 mluOpSyncBatchnormBackwardReduce
----------------------------------
-该算子用来计算损失函数想对于weight和bias的梯度，以及根据开关情况决定是否输出下级element函数的中间变量`sum_dy`和`sum_dy_xmu`。本算子通过多卡通信的方式，解决sync_batchnorm_backward在单卡上batch size数据过大导致训练时间较长的问题。
+----------------------------------
+该算子用来计算损失函数想对于weight和bias的梯度，以及根据开关情况决定是否输出下级element函数的中间变量 ``sum_dy`` 和 ``sum_dy_xmu``。本算子通过多卡通信的方式，解决sync_batchnorm_backward在单卡上batch size数据过大导致训练时间较长的问题。
 
 .. _sync_batch_norm_backward_elemt:
 
 mluOpSyncBatchNormBackwardElemt
 ---------------------------------
-该算子用来计算输入的梯度，与mluOpSyncBatchnormBackwardReduce共同实现了sync_batchnorm_backward。
+该算子用来计算输入的梯度，与 :ref:`sync_batchnorm_backward_reduce` 共同实现了sync_batchnorm_backward。

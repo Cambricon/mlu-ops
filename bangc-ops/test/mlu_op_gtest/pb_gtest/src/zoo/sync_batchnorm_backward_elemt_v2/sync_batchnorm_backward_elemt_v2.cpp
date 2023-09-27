@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2023] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -40,14 +51,10 @@ void cpuSyncBatchnormBackwardElemt(const float *diff_y, const float *x,
 }
 
 void SyncBatchnormBackwardElemtV2Executor::paramCheck() {
-  if (parser_->getInputNum() != 7 && parser_->getInputNum() != 8) {
-    LOG(ERROR)
-        << "SyncBatchnormBackwardElemtV2Executor: input number is wrong. ";
-  }
-  if (parser_->getOutputNum() != 1) {
-    LOG(ERROR)
-        << "SyncBatchnormBackwardElemtV2Executor: output number is wrong. ";
-  }
+  GTEST_CHECK(parser_->getInputNum() == 7 || parser_->getInputNum() == 8,
+              "SyncBatchnormBackwardElemtV2Executor: input number is wrong.");
+  GTEST_CHECK(parser_->getOutputNum() == 1,
+              "SyncBatchnormBackwardElemtV2Executor: output number is wrong.");
 }
 
 void SyncBatchnormBackwardElemtV2Executor::compute() {

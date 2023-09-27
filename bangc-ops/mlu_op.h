@@ -13984,20 +13984,20 @@ mluOpRoiPoolingBackward(mluOpHandle_t handle,
 // Group:SyncBatchNormStats
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
- * workspace to optimize the sync_batchnorm_stats operation.
+ * workspace to optimize ::mluOpSyncBatchNormStats_v2 operation.
  *
- * The size of extra workspace is based on the given information of the sync_batchnorm_stats
+ * The size of extra workspace is based on the given information of ::mluOpSyncBatchNormStats_v2
  * operation, including the input tensor descriptor \b x_desc.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * sync_batchnorm_stats operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormStats_v2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  * Pointer to the returned size of the extra workspace in bytes that is used in the
- * sync_batchnorm_stats operation.
+ * ::mluOpSyncBatchNormStats_v2 operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -14042,8 +14042,8 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * to 0, this function will perform as same as ::mluOpSyncBatchNormStats.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * sync_batchnorm_stats operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormStats_v2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -14053,8 +14053,8 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * Pointer to the MLU memory that is used as an extra workspace for ::mluOpSyncBatchNormStats_v2.
  * @param[in] workspace_size
  * The size of the extra workspace in bytes that needs to be used in
- * the ::mluOpSyncBatchNormStats_v2. You can get the size of the workspace with
- * the ::mluOpGetSyncBatchNormStatsWorkspaceSize function.
+ * ::mluOpSyncBatchNormStats_v2. You can get the size of the workspace with
+ * ::mluOpGetSyncBatchNormStatsWorkspaceSize function.
  * @param[in] eps
  * A floating-point value added to the denominator for numerical stability.
  * @param[in] mean_desc
@@ -14096,7 +14096,7 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Example
- * - The example of the sync_batch_norm_stats operation is as follows:
+ * - The example of ::mluOpSyncBatchNormStats_v2 operation is as follows:
      @verbatim
       input five arrays by 1 * 2 * 3 * 2
       --> x: [[[[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]],
@@ -14129,12 +14129,12 @@ mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
  * @brief Computes the local mean and the local inverse standard deviation for each channel
  * across a batch of data in the training scenario.
  *
- * SyncBatchnormStats is used in CNN, including but not limited to
+ * ::mluOpSyncBatchNormStats is used in CNN, including but not limited to
  * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * SyncBatchnormStats operation. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpSyncBatchNormStats operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -14182,7 +14182,7 @@ mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
  * - None.
  *
  * @par Example
- * - The example of the sync_batch_norm_stats operation is as follows:
+ * - The example of ::mluOpSyncBatchNormStats operation is as follows:
      @verbatim
       input five arrays by 1 * 2 * 3 * 2
       --> x: [[[[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]],
@@ -14214,8 +14214,8 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  * of the local mean and local inverse standard deviation of multiple MLU devices.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * sync_batch_norm_gather_stats_with_counts operation. For detailed information,
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormGatherStatsWithCounts. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] mean_all_desc
  * The descriptor of the input tensor \b mean_all. For detailed information, see
@@ -14299,7 +14299,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  *   at the same time on MLU300 series or above.
  *
  * @par Example
- * - The example of the sync_batch_norm_gather_stats_with_counts operation is as follows:
+ * - The example of ::mluOpSyncBatchNormGatherStatsWithCounts operation is as follows:
      @verbatim
       --> mean_all: an array [8, 1024];
       --> invstd_all: an array [8, 1024];
@@ -14346,8 +14346,8 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
  * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the sync batchnorm
- * element operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormElemt. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor \b x. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -14412,7 +14412,7 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
  * - The length of each dimension of \b x and \b y must be the same.
  *
  * @par Example
- * - The example of the sync batchnorm element operation is as follows:
+ * - The example of ::mluOpSyncBatchNormElemt operation is as follows:
      @verbatim
       input five arrays by 1 * 2 * 3 * 2, 2, 2, 2 and 2
       --> x: [[[[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]],
@@ -14456,8 +14456,8 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the sync_batchnorm_backward_reduce operation.
  *
- * The size of extra workspace is based on the given information of the
- * sync_batchnorm_backward_reduce operation, including the input tensor descriptor \b desc_x.
+ * The size of extra workspace is based on the given information of
+ * ::mluOpSyncBatchnormBackwardReduce_v2 operation, including the input tensor descriptor \b x_desc.
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the mse_loss
@@ -14466,8 +14466,8 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
  * The descriptor of the input tensor. For detailed information, see
  * ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
- * Pointer to the returned size of the extra workspace in bytes that is used in the
- * sync_batchnorm_backward_reduce operation.
+ * Pointer to the returned size of the extra workspace in bytes that is used in
+ * ::mluOpSyncBatchnormBackwardReduce_v2 operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -14512,8 +14512,8 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  * this function will perform as same as ::mluOpSyncBatchnormBackwardReduce.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * sync_batchnorm_backward_reduce operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchnormBackwardReduce_v2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_dz
  * The descriptor of the input tensor \b dz. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -14619,7 +14619,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  * - The length of each dimension of \b x and \b dz must be the same.
  *
  * @par Example
- * - The example of the sync batchnorm element operation is as follows:
+ * - The example of ::mluOpSyncBatchnormBackwardReduce_v2 operation is as follows:
      @verbatim
       input four arrays by 1 * 2 * 3 * 2, 2, 2, 2 and 2
       --> dz: [[[[6.0, 6.0],[6.0, 6.0],[6.0, 6.0]],
@@ -14681,7 +14681,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * sync_batchnorm_backward_reduce operation. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpSyncBatchnormBackwardReduce operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_dz
  * The descriptor of the input tensor \b dz. For detailed information, see
  * ::mluOpTensorDescriptor_t.
@@ -14776,7 +14776,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  * - The length of each dimension of \b x and \b dz must be the same.
  *
  * @par Example
- * - The example of the sync batchnorm element operation is as follows:
+ * - The example of ::mluOpSyncBatchnormBackwardReduce operation is as follows:
      @verbatim
       input four arrays by 1 * 2 * 3 * 2, 2, 2, 2 and 2
       --> dz: [[[[6.0, 6.0],[6.0, 6.0],[6.0, 6.0]],
@@ -14835,7 +14835,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * syncBatchNormBackwardElemt operation. For detailed information, see ::mluOpHandle_t.
+ * ::mluOpSyncBatchNormBackwardElemt operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] diff_y_desc
  * The descriptor of the backpropagated differential tensor \b diff_y. For
  * detailed information, see ::mluOpTensorDescriptor_t.
@@ -14916,7 +14916,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
  * - The length of each dimension of \b diff_y, \b x and \b diff_x must be the same.
  *
  * @par Example
- * - The example of the sync_batch_norm_backward_elemt operation is as follows:
+ * - The example of ::mluOpSyncBatchNormBackwardElemt operation is as follows:
      @verbatim
       input seven arrays by 1, 1, 1, 1, 1, 1, 1 and 1
       --> diff_y: [[[[1.0]]]]
@@ -14966,8 +14966,8 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
  * computes the gradient of \b x with the intermediate results.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
- * syncBatchNormBackwardElemt operation. For detailed information, see ::mluOpHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormBackwardElemtV2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] diff_y_desc
  * The descriptor of the backpropagated differential tensor \b diff_y. For
  * detailed information, see ::mluOpTensorDescriptor_t.
@@ -15053,7 +15053,7 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
  * - The length of each dimension of \b diff_y, \b x and \b diff_x must be the same.
  *
  * @par Example
- * - The example of the sync_batchnorm_backward_elemt_v2 operation is as follows:
+ * - The example of ::mluOpSyncBatchNormBackwardElemtV2 operation is as follows:
      @verbatim
       input seven arrays by 1, 1, 1, 1, 1, 1, 1 and 1
       --> diff_y: [[[[1.0]]]]
