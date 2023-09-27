@@ -1,0 +1,122 @@
+op_name: "sync_batchnorm_backward_reduce"
+op_type: "SYNC_BATCHNORM_BACKWARD_REDUCE"
+input{
+    id:"dz"
+    shape:{
+        dims: 55
+        dims: 14
+        dims: 14
+        dims: 2000
+    }
+    layout:LAYOUT_NHWC
+    dtype: DTYPE_FLOAT
+    random_data:{
+        seed:4
+        upper_bound:5.5
+        lower_bound:0.1
+        distribution:UNIFORM
+    }
+}
+input{
+    id:"x"
+    shape:{
+        dims: 55
+        dims: 14
+        dims: 14
+        dims: 2000
+    }
+    layout:LAYOUT_NHWC
+    dtype:DTYPE_FLOAT
+    random_data:{
+        seed:233
+        upper_bound:5
+        lower_bound:0.5
+        distribution: UNIFORM
+    }
+}
+input{
+    id:"mean"
+    shape:{
+        dims: 2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+    random_data:{
+        seed:233
+        upper_bound:5
+        lower_bound:1
+        distribution: UNIFORM
+    }
+}
+input{
+    id:"invstd"
+    shape:{
+        dims: 2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+    random_data:{
+        seed:233
+        upper_bound:8
+        lower_bound:0.8
+        distribution: UNIFORM
+    }
+}
+input{
+    id:"weight"
+    shape:{
+        dims: 2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+    random_data:{
+        seed:233
+        upper_bound:8
+        lower_bound:0.8
+        distribution: UNIFORM
+    }
+}
+output{
+    id:"sum_dy"
+    shape:{
+        dims:2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+}
+output{
+    id: "sum_dy_xmu"
+    shape:{
+        dims:2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+}
+output{
+    id: "dweight"
+    shape:{
+        dims:2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+}
+output{
+    id: "dbias"
+    shape:{
+        dims:2000
+    }
+    layout:LAYOUT_ARRAY
+    dtype:DTYPE_FLOAT
+}
+sync_batchnorm_backward_reduce_param: {
+    needs_input_grad0: true
+    needs_input_grad1: true
+    needs_input_grad2: true
+}
+test_param:{
+    error_func: DIFF1
+    error_func: DIFF2
+    error_threshold: 0.003
+    error_threshold: 0.003
+    baseline_device: CPU
+}

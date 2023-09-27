@@ -13980,6 +13980,1119 @@ mluOpRoiPoolingBackward(mluOpHandle_t handle,
                         const float spatial_scale,
                         const mluOpTensorDescriptor_t grads_image_desc,
                         void *grads_image);
+
+// Group:SyncBatchNormStats
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize ::mluOpSyncBatchNormStats_v2 operation.
+ *
+ * The size of extra workspace is based on the given information of ::mluOpSyncBatchNormStats_v2
+ * operation, including the input tensor descriptor \b x_desc.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormStats_v2 operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * Pointer to the returned size of the extra workspace in bytes that is used in the
+ * ::mluOpSyncBatchNormStats_v2 operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - This API is only used along with ::mluOpSyncBatchNormStats_v2.
+ * - ::mluOpSyncBatchNormStats does not require this API.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
+                                        const mluOpTensorDescriptor_t x_desc,
+                                        size_t *workspace_size);
+
+// Group:SyncBatchNormStats
+/*!
+ * @brief Computes the local mean and the local inverse standard deviation for each channel
+ * across a batch of data in the training scenario.
+ *
+ * ::mluOpSyncBatchNormStats_v2 is used in convolution network, including but not limited to
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ *
+ * Compared with ::mluOpSyncBatchNormStats, this function allows you to allocate some extra
+ * workspace as an input parameter. If you just set \b workspace to NULL and \b workspace_size
+ * to 0, this function will perform as same as ::mluOpSyncBatchNormStats.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormStats_v2 operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor \b x.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for ::mluOpSyncBatchNormStats_v2.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in
+ * ::mluOpSyncBatchNormStats_v2. You can get the size of the workspace with
+ * ::mluOpGetSyncBatchNormStatsWorkspaceSize function.
+ * @param[in] eps
+ * A floating-point value added to the denominator for numerical stability.
+ * @param[in] mean_desc
+ * The descriptor of the output tensor \b mean. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] mean
+ * Pointer to the MLU memory that stores the output tensor \b mean, which is the
+ * local mean.
+ * @param[in] invstd_desc
+ * The descriptor of the output tensor \b invstd. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] invstd
+ * Pointer to the MLU memory that stores the output tensor \b invstd, which is the
+ * local inverse standard deviation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below with the following order:
+ *   - float(x) - float(eps) - float(mean) - float(invstd).
+ *   - half(x) - float(eps) - float(mean) - float(invstd).
+ *
+ * @par Data Layout
+ * - The supported data layout of the input tensor is shown as follows:
+ *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
+ * - The layout of the output tensors is shown as follows:
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - Before calling this function to perform ::mluOpSyncBatchNormStats_v2, you need to get
+ *   the size of workspace by ::mluOpGetSyncBatchNormStatsWorkspaceSize.
+ *
+ * @par note
+ * - None.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchNormStats_v2 operation is as follows:
+     @verbatim
+      input five arrays by 1 * 2 * 3 * 2
+      --> x: [[[[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]],
+               [[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]]]]
+      param:
+        eps: 0.00001
+      output an array by 2
+      --> mean: [1.0, 1.0]
+      --> invstd: [316.221, 316.221]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_stats
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
+                           const mluOpTensorDescriptor_t x_desc,
+                           const void *x,
+                           void *workspace,
+                           size_t workspace_size,
+                           const float eps,
+                           const mluOpTensorDescriptor_t mean_desc,
+                           void *mean,
+                           const mluOpTensorDescriptor_t invstd_desc,
+                           void *invstd);
+
+// Group:SyncBatchNormStats
+/*!
+ * @brief Computes the local mean and the local inverse standard deviation for each channel
+ * across a batch of data in the training scenario.
+ *
+ * ::mluOpSyncBatchNormStats is used in CNN, including but not limited to
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpSyncBatchNormStats operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor \b x.
+ * @param[in] eps
+ * A floating-point value added to the denominator for numerical stability.
+ * @param[in] mean_desc
+ * The descriptor of the output tensor \b mean. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] mean
+ * Pointer to the MLU memory that stores the output tensor \b mean, which is the
+ * local mean.
+ * @param[in] invstd_desc
+ * The descriptor of the output tensor \b invstd. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] invstd
+ * Pointer to the MLU memory that stores the output tensor \b invstd, which is the
+ * local inverse standard deviation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below with the following order:
+ *   - \b x - \b eps - \b mean - \b invstd
+ *   - The supported data type combinations are:
+ *     - float - float - float - float.
+ *     - half - float - float - float.
+ *
+ * @par Data Layout
+ * - The supported data layout of the input tensor is shown as follows:
+ *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
+ * - The layout of the output tensors is shown as follows:
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - None.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchNormStats operation is as follows:
+     @verbatim
+      input five arrays by 1 * 2 * 3 * 2
+      --> x: [[[[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]],
+               [[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]]]]
+      param:
+        eps: 0.00001
+      output an array by 2
+      --> mean: [1.0, 1.0]
+      --> invstd: [316.221, 316.221]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_stats
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormStats(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t x_desc,
+                        const void *x,
+                        const float eps,
+                        const mluOpTensorDescriptor_t mean_desc,
+                        void *mean,
+                        const mluOpTensorDescriptor_t invstd_desc,
+                        void *invstd);
+
+// Group:SyncBatchNormGatherStatsWithCounts
+/*!
+ * @brief Computes the global mean and the global inverse standard deviation across aggregation
+ * of the local mean and local inverse standard deviation of multiple MLU devices.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormGatherStatsWithCounts. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] mean_all_desc
+ * The descriptor of the input tensor \b mean_all. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] mean_all
+ * Pointer to the MLU memory that stores the input tensor \b mean_all, which is
+ * the local mean of multiple MLU devices.
+ * @param[in] invstd_all_desc
+ * The descriptor of the input tensor \b invstd_all. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] invstd_all
+ * Pointer to the MLU memory that stores the input tensor \n invstd_all, which
+ * is the local inverse standard deviation of multiple MLU devices.
+ * @param[in] moving_mean_desc
+ * The descriptor of the input tensor \b moving_mean. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in,out] moving_mean
+ * Pointer to the MLU memory that stores the input tensor \b moving_mean,
+ * which is the moving average of mean computed over the dimensions of the input tensor
+ * \b mean_all. The value of this pointer can be NULL.
+ * @param[in] moving_var_desc
+ * The descriptor of the input tensor \b moving_var. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in,out] moving_var
+ * Pointer to the MLU memory that stores the tensor \b moving_var, which is
+ * the moving average of inverse standard deviation computed over the dimensions of the input
+ * tensor \b invstd_all. The value of this pointer can be NULL.
+ * @param[in] momentum
+ * A floating-point value used to do moving average of \b moving_mean and \b moving_var.
+ * @param[in] eps
+ * A floating-point value added to the denominator for numerical stability.
+ * @param[in] count_all_desc
+ * The descriptor of the input tensor \b count_all. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] count_all
+ * Pointer to the MLU memory that stores an array, which stores the total size of
+ * dimensions (except C dimension) of input for each MLU device.
+ * @param[in] mean_desc
+ * The descriptor of the output tensor \b mean. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] mean
+ * Pointer to the MLU memory that stores the output tensor \b mean, which is the
+ * global mean.
+ * @param[in] invstd_desc
+ * The descriptor of the output tensor \b invstd. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] invstd
+ * Pointer to the MLU memory that stores the output tensor \b invstd, which is the
+ * global inverse standard deviation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown as the following order:
+ *   - mean_all - invstd_all - moving_mean - moving_var - momentum -  eps  - count_all - mean  - invstd
+ *   -  float   -   float    -    float    -    float   -   float  - float -   float   - float -  float.
+ *   -  float   -   float    -    half     -    half    -   float  - float -   half    - float -  float.
+ *
+ * @par Data Layout
+ * - The supported data layout of the input tensors is shown as follows:
+ *   - mean_all tensor: \p MLUOP_LAYOUT_NC.
+ *   - invstd_all tensor: \p MLUOP_LAYOUT_NC.
+ *   - moving_mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - moving_var tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - momentum: Scalar.
+ *   - eps: Scalar.
+ *   - count_all tensor: \p MLUOP_LAYOUT_ARRAY.
+ * - The layout of the output tensors is shown as follows:
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - The input \b mean_all and the input \b invstd_all cannot be positive infinity or negative infinity
+ *   at the same time on MLU300 series or above.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchNormGatherStatsWithCounts operation is as follows:
+     @verbatim
+      --> mean_all: an array [8, 1024];
+      --> invstd_all: an array [8, 1024];
+      --> moving_mean: an array [1024];
+      --> moving_var: an array [1024];
+      --> count_all: an array [8];
+      param:
+      --> momentum: 0.1
+      --> eps: 0.00001
+      output:
+      --> mean: an array [1024];
+      --> invstd: [1024];
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_stats
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
+                                        const mluOpTensorDescriptor_t mean_all_desc,
+                                        const void *mean_all,
+                                        const mluOpTensorDescriptor_t invstd_all_desc,
+                                        const void *invstd_all,
+                                        const mluOpTensorDescriptor_t moving_mean_desc,
+                                        void *moving_mean,
+                                        const mluOpTensorDescriptor_t moving_var_desc,
+                                        void *moving_var,
+                                        float momentum,
+                                        float eps,
+                                        const mluOpTensorDescriptor_t count_all_desc,
+                                        const void *count_all,
+                                        const mluOpTensorDescriptor_t mean_desc,
+                                        void *mean,
+                                        const mluOpTensorDescriptor_t invstd_desc,
+                                        void *invstd);
+
+// Group:SyncBatchNormElemt
+/*!
+ * @brief Applies Batch Normalization for each channel across a batch of data with the given mean,
+ *        inverse variance and scaling factors.
+ *
+ * Batch Normalization is used in artificial intelligence, including but not limited to
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormElemt. For detailed information, see ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor \b x.
+ * @param[in] mean_desc
+ * The descriptor of \b mean tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mean
+ * Pointer to the MLU memory that stores the tensor \b mean, which is computed over the
+ * batch and spatial dimensions by ::mluOpSyncBatchNormGatherStatsWithCounts.
+ * @param[in] invstd_desc
+ * The descriptor of \b invstd tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] invstd
+ * Pointer to the MLU memory that stores the tensor \b invstd, which is the inverse variance
+ * computed over the batch and spatial dimensions by ::mluOpSyncBatchNormGatherStatsWithCounts.
+ * @param[in] filter_desc
+ * The descriptor of \b filter tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor can be NULL when \b filter pointer is NULL.
+ * @param[in] filter
+ * Pointer to the MLU memory that stores the input tensor \b filter for affine transformation
+ * after batch normilization. The value of this pointer can be NULL.
+ * @param[in] bias_desc
+ * The descriptor of \b bias tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * The descriptor can be NULL when \b bias pointer is NULL.
+ * @param[in] bias
+ * Pointer to the MLU memory that stores the input tensor \b bias for affine transformation
+ * after batch normalization. The value of this pointer can be NULL.
+ * @param[in] y_desc
+ * The descriptor of the sync batch normalization output tensor \b y. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] y
+ * Pointer to the MLU memory that stores the output tensor \b y.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below with the following order:
+ *   - x_tensor - mean_tensor - invstd_tensor - filter_tensor - bias_tensor - y_tensor
+ *   - float - float - float - float - float - float.
+ *   - half - float - float - float - float - half.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b x, \b mean, \b invstd, \b filter, \b bias and \b y is as follows:
+ *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - filter tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - bias tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - y tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
+ *     The layout of the \b y should be the same as \b x tensor.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - The \b mean, \b invstd, \b filter and \b \b bias must be 1D tensors and the length of their dimensions
+ *   should be the same as the length of the lowest dimension of \b x.
+ * - The length of each dimension of \b x and \b y must be the same.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchNormElemt operation is as follows:
+     @verbatim
+      input five arrays by 1 * 2 * 3 * 2, 2, 2, 2 and 2
+      --> x: [[[[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]],
+               [[1.0, 1.0],[1.0, 1.0],[1.0, 1.0]]]]
+
+      --> mean: [0.5, 0.5]
+
+      --> invstd: [2.0, 2.0]
+
+      --> filter: [0.5, 0.5]
+
+      --> bias: [1.0, 1.0]
+
+      output array by 1 * 2 * 3 * 2
+      --> y: [[[[1.5, 1.5],[1.5, 1.5],[1.5, 1.5]],
+               [[1.5, 1.5],[1.5, 1.5],[1.5, 1.5]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift,
+ *   Sergey Ioffe, 2015.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormElemt(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t x_desc,
+                        const void *x,
+                        const mluOpTensorDescriptor_t mean_desc,
+                        const void *mean,
+                        const mluOpTensorDescriptor_t invstd_desc,
+                        const void *invstd,
+                        const mluOpTensorDescriptor_t filter_desc,
+                        const void *filter,
+                        const mluOpTensorDescriptor_t bias_desc,
+                        const void *bias,
+                        const mluOpTensorDescriptor_t y_desc,
+                        void *y);
+
+// Group:SyncBatchnormBackwardReduce
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
+ * workspace to optimize the sync_batchnorm_backward_reduce operation.
+ *
+ * The size of extra workspace is based on the given information of
+ * ::mluOpSyncBatchnormBackwardReduce_v2 operation, including the input tensor descriptor \b x_desc.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the mse_loss
+ * operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the input tensor. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ * Pointer to the returned size of the extra workspace in bytes that is used in
+ * ::mluOpSyncBatchnormBackwardReduce_v2 operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - This API is only used along with ::mluOpSyncBatchnormBackwardReduce_v2.
+ * - ::mluOpSyncBatchnormBackwardReduce does not require this API.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
+                                                 const mluOpTensorDescriptor_t x_desc,
+                                                 size_t *workspace_size);
+
+// Group:SyncBatchnormBackwardReduce
+/*!
+ * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad
+ * filters, grad bias, sum_dy and sum_dy_xmu on each MLU device.
+ *
+ * Batch Normalization is used in convolution network, including but not limited to
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ *
+ * Compared with ::mluOpSyncBatchnormBackwardReduce, this function allows you to allocate some extra
+ * workspace as an input parameter. If you just set \b workspace to NULL and \b workspace_size to 0,
+ * this function will perform as same as ::mluOpSyncBatchnormBackwardReduce.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchnormBackwardReduce_v2 operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] desc_dz
+ * The descriptor of the input tensor \b dz. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] dz
+ * Pointer to the MLU memory that stores the tensor \b dz, which denotes the partial
+ * derivative of batch normalization forward output.
+ * @param[in] desc_x
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor \b x.
+ * @param[in] mean_desc
+ * The descriptor of \b mean tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mean
+ * Pointer to the MLU memory that stores the tensor \b mean, which denotes the average
+ * result of input \b x.
+ * @param[in] desc_invstd
+ * The descriptor of \b invstd tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] invstd
+ * Pointer to the MLU memory that stores the tensor \b invstd, which denotes the inversed
+ * standard deviation of input \b x.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for
+ * ::mluOpSyncBatchnormBackwardReduce_v2.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in
+ * the ::mluOpSyncBatchnormBackwardReduce_v2. You can get the size of the workspace with
+ * the ::mluOpGetSyncBatchnormBackwardReduceWorkspaceSize function.
+ * @param[out] desc_dfilters
+ * The descriptor of \b dfilters tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] dfilters
+ * Pointer to the MLU memory that stores the input tensor \b dfilters, which denotes
+ * partial derivative of filter in sync batch normalization forward training. It will be computed
+ * only if booleanvariable \b needs_input_grad1 is true.
+ * @param[out] desc_dbias
+ * The descriptor of the sync batch normalization output tensor \b dbias. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[out] dbias
+ * Pointer to the MLU memory that stores the output tensor \b dbias, which denotes partial
+ * derivative of bias in sync batch normalization forward training. It will be computed
+ * only if \b needs_input_grad2 is true.
+ * @param[out] desc_sum_dy
+ * The descriptor of the sync batch normalization output tensor \b sum_dy. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[out] sum_dy
+ * Pointer to the MLU memory that stores the output tensor \b sum_dy, which denotes the
+ * summation of dz and is also an intermediate variable to compute the partial derivative of
+ * input x. Moreover, it will be computed only if boolean variable \b needs_input_grad0 is true.
+ * @param[out] desc_sum_dy_xmu
+ * The descriptor of the sync batch normalization output tensor \b sum_dy_xmu. For detailed
+ * information, see ::mluOpTensorDescriptor_t.
+ * @param[out] sum_dy_xmu
+ * Pointer to the MLU memory that stores the output tensor \b sum_dy_xmu, which denotes
+ * sum{dz(x-mean)}. It is also an intermediate variable to compute the partial derivative of
+ * input \b x. Moreover, it will be computed only if boolean variable \b needs_input_grad0 is
+ * true.
+ * @param[in] needs_input_grad0
+ * A boolean variable that determines whether to compute \b sum_dy and \b sum_dy_xmu.
+ * When \b needs_input_grad0 is true, \b sum_dy and \b sum_dy_xmu will be computed.
+ * When \b needs_input_grad0 is false, \b sum_dy and \b sum_dy_xmu will be NULL.
+ * @param[in] needs_input_grad1
+ * A boolean variable that determines whether to compute \b dfilters.
+ * When \b needs_input_grad1 is true, \b dfilters will be computed.
+ * When \b needs_input_grad1 is false, \b dfilter will be NULL.
+ * @param[in] needs_input_grad2
+ * A boolean variable that determines whether to compute \b dbias.
+ * When \b needs_input_grad2 is true, \b dbias will be computed.
+ * When \b needs_input_grad2 is false, \b dbias will be NULL.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below with the following order:
+ *   - dz_tensor - x_tensor - mean_tensor - invstd_tensor - dfilter_tensor - dbias_tensor -
+ *   sum_dy_tensor - sum_dy_xmu_tensor
+ *   - float - float - float - float - float - float - float - float.
+ *   - half - half - float - float - float - float - float - float.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b dz, \b x, \b mean, \b invstd, \b dfilter, \b dbias, \b sum_dy
+ *   and \b sum_dy_xmu is as follows:
+ *   - dz tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
+ *   - x tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - dfilter tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - dbias tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - sum_dy tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - sum_dy_xmu tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - Before calling this function to perform ::mluOpSyncBatchnormBackwardReduce_v2, you need to get
+ *   the size of workspace by ::mluOpGetSyncBatchnormBackwardReduceWorkspaceSize.
+ *
+ * @par note
+ * - The \b mean, \b invstd, \b dfilter, \b bias, \b sum_dy and \b sum_dy_xmu must be 1D tensors
+ *   and the length of the dimensions of these tensors should be the same as the length of
+ *   the lowest dimension of \b x.
+ * - The length of each dimension of \b x and \b dz must be the same.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchnormBackwardReduce_v2 operation is as follows:
+     @verbatim
+      input four arrays by 1 * 2 * 3 * 2, 2, 2, 2 and 2
+      --> dz: [[[[6.0, 6.0],[6.0, 6.0],[6.0, 6.0]],
+               [[6.0, 6.0],[6.0, 6.0],[6.0, 6.0]]]]
+
+      --> x: [[[[3.0, 3.0],[3.0, 3.0],[3.0, 3.0]],
+               [[3.0, 3.0],[3.0, 3.0],[3.0, 3.0]]]]
+
+      --> mean: [1, 1]
+
+      --> invstd: [0.8, 0.8]
+
+      output array by 2
+      --> dfilter: [57.6, 57.6]
+
+      --> dbias: [36.0, 36.0]
+
+      --> sum_dy: [36.0, 36.0]
+
+      --> sum_dy_xmu: [72.0, 72.0]
+     @endverbatim
+ *
+ * @par Reference
+ * - Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift,
+ *   Sergey Ioffe, 2015.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
+                                    const mluOpTensorDescriptor_t desc_dz,
+                                    const void *dz,
+                                    const mluOpTensorDescriptor_t desc_x,
+                                    const void *x,
+                                    const mluOpTensorDescriptor_t desc_mean,
+                                    const void *mean,
+                                    const mluOpTensorDescriptor_t desc_invstd,
+                                    const void *invstd,
+                                    void *workspace,
+                                    size_t workspace_size,
+                                    const mluOpTensorDescriptor_t desc_dfilter,
+                                    void *dfilter,
+                                    const mluOpTensorDescriptor_t desc_dbias,
+                                    void *dbias,
+                                    const mluOpTensorDescriptor_t desc_sum_dy,
+                                    void *sum_dy,
+                                    const mluOpTensorDescriptor_t desc_sum_dy_xmu,
+                                    void *sum_dy_xmu,
+                                    const bool needs_input_grad0,
+                                    const bool needs_input_grad1,
+                                    const bool needs_input_grad2);
+
+// Group:SyncBatchnormBackwardReduce
+/*!
+ * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad filters,
+ * grad bias, sum_dy and sum_dy_xmu on each MLU device.
+ *
+ * Batch Normalization is used in CNN, including but not limited to
+ * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpSyncBatchnormBackwardReduce operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] desc_dz
+ * The descriptor of the input tensor \b dz. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] dz
+ * Pointer to the MLU memory that stores the tensor \b dz, which denotes the partial derivative of
+ * batch normalization forward output.
+ * @param[in] desc_x
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor \b x.
+ * @param[in] mean_desc
+ * The descriptor of \b mean tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mean
+ * Pointer to the MLU memory that stores the tensor \b mean, which denotes the average result of
+ * input \b x.
+ * @param[in] desc_invstd
+ * The descriptor of \b invstd tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] invstd
+ * Pointer to the MLU memory that stores the tensor \b invstd, which denotes the inversed standard deviation
+ * of input \b x.
+ * @param[out] desc_dfilter
+ * The descriptor of \b dfilter tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] dfilter
+ * Pointer to the MLU memory that stores the input tensor \b dfilter, which denotes partial derivative
+ * of filter in sync batch normalization forward training. It will be computed only if boolean variable
+ * \b needs_input_grad1 is true.
+ * @param[out] desc_dbias
+ * The descriptor of the sync batch normalization output tensor \b dbias. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] dbias
+ * Pointer to the MLU memory that stores the output tensor \b dbias, which denotes partial derivative of
+ * bias in sync batch normalization forward training. It will be computed only if \b needs_input_grad2 is true.
+ * @param[out] desc_sum_dy
+ * The descriptor of the sync batch normalization output tensor \b sum_dy. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] sum_dy
+ * Pointer to the MLU memory that stores the output tensor \b sum_dy, which denotes the summation of dz
+ * and is also an intermediate variable to compute the partial derivative of input x. Moreover, it will be
+ * computed only if boolean variable \b needs_input_grad0 is true.
+ * @param[out] desc_sum_dy_xmu
+ * The descriptor of the sync batch normalization output tensor \b sum_dy_xmu. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] sum_dy_xmu
+ * Pointer to the MLU memory that stores the output tensor \b sum_dy_xmu, which denotes sum{dz(x-mean)}.
+ * It is also an intermediate variable to compute the partial derivative of
+ * input \b x. Moreover, it will be computed only if boolean variable \b needs_input_grad0 is true.
+ * @param[in] needs_input_grad0
+ * A boolean variable that determines whether to compute \b sum_dy and \b sum_dy_xmu.
+ * When \b needs_input_grad0 is true, \b sum_dy and \b sum_dy_xmu will be computed.
+ * When \b needs_input_grad0 is false, \b sum_dy and \b sum_dy_xmu will be NULL.
+ * @param[in] needs_input_grad1
+ * A boolean variable that determines whether to compute \b dfilters.
+ * When \b needs_input_grad1 is true, \b dfilters will be computed.
+ * When \b needs_input_grad1 is false, \b dfilter will be NULL.
+ * @param[in] needs_input_grad2
+ * A boolean variable that determines whether to compute \b dbias.
+ * When \b needs_input_grad2 is true, \b dbias will be computed.
+ * When \b needs_input_grad2 is false, \b dbias will be NULL.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below with the following order:
+ *   - dz_tensor - x_tensor - mean_tensor - invstd_tensor - dfilter_tensor - dbias_tensor - sum_dy_tensor
+ *   - sum_dy_xmu_tensor
+ *   - float - float - float - float - float - float - float - float.
+ *   - half - half - float - float - float - float - float - float.
+ *
+ * @par Data Layout
+ * - The supported data layout of \b dz, \b x, \b mean, \b invstd, \b dfilter, \b dbias, \b sum_dy and
+ *   \b sum_dy_xmu is as follows:
+ *   - dz tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
+ *   - x tensor: \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NLC, \p MLUOP_LAYOUT_NC.
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - dfilter tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - dbias tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - sum_dy tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - sum_dy_xmu tensor: \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - The \b mean, \b invstd, \b dfilter, \b bias, \b sum_dy and \b sum_dy_xmu must be 1D tensors and the
+ *   length of the dimensions of these tensors should be the same as the length of the lowest dimension of \b x.
+ * - The length of each dimension of \b x and \b dz must be the same.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchnormBackwardReduce operation is as follows:
+     @verbatim
+      input four arrays by 1 * 2 * 3 * 2, 2, 2, 2 and 2
+      --> dz: [[[[6.0, 6.0],[6.0, 6.0],[6.0, 6.0]],
+               [[6.0, 6.0],[6.0, 6.0],[6.0, 6.0]]]]
+
+      --> x: [[[[3.0, 3.0],[3.0, 3.0],[3.0, 3.0]],
+               [[3.0, 3.0],[3.0, 3.0],[3.0, 3.0]]]]
+
+      --> mean: [1, 1]
+
+      --> invstd: [0.8, 0.8]
+
+      output array by 2
+      --> dfilter: [57.6, 57.6]
+
+      --> dbias: [36.0, 36.0]
+
+      --> sum_dy: [36.0, 36.0]
+
+      --> sum_dy_xmu: [72.0, 72.0]
+     @endverbatim
+ *
+ * @par Reference
+ * - Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift,
+ *   Sergey Ioffe, 2015.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
+                                 const mluOpTensorDescriptor_t desc_dz,
+                                 const void *dz,
+                                 const mluOpTensorDescriptor_t desc_x,
+                                 const void *x,
+                                 const mluOpTensorDescriptor_t desc_mean,
+                                 const void *mean,
+                                 const mluOpTensorDescriptor_t desc_invstd,
+                                 const void *invstd,
+                                 const mluOpTensorDescriptor_t desc_dfilter,
+                                 void *dfilter,
+                                 const mluOpTensorDescriptor_t desc_dbias,
+                                 void *dbias,
+                                 const mluOpTensorDescriptor_t desc_sum_dy,
+                                 void *sum_dy,
+                                 const mluOpTensorDescriptor_t desc_sum_dy_xmu,
+                                 void *sum_dy_xmu,
+                                 const bool needs_input_grad0,
+                                 const bool needs_input_grad1,
+                                 const bool needs_input_grad2);
+
+// Group:SyncBatchNormBackwardElemt
+/*!
+ * @brief Computes the gradients of input in the training scenario.
+ *
+ * This function is used in artificial intelligence, including but not limited
+ * to ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * ::mluOpSyncBatchNormBackwardElemt operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] diff_y_desc
+ * The descriptor of the backpropagated differential tensor \b diff_y. For
+ * detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] diff_y
+ * Pointer to the MLU memory that stores the backpropagated differential tensor.
+ * @param[in] x_desc
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] mean_desc
+ * The descriptor of the input tensor \b mean. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] mean
+ * Pointer to the MLU memory that stores the global mean.
+ * @param[in] invstd_desc
+ * The descriptor of the input tensor \b invstd. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] invstd
+ * Pointer to the MLU memory that stores the global inverse standard deviation.
+ * @param[in] filter_desc
+ * The descriptor of the input tensor \b filter. For detailed information, see
+ * ::mluOpTensorDescriptor_t. The descriptor can be NULL when \b filter pointer is NULL.
+ * @param[in] filter
+ * Pointer to the MLU memory that stores the input tensor \b filter for affine
+ * transformation after batch normilization. The value of this pointer can be NULL.
+ * @param[in] mean_dy_desc
+ * The descriptor of the input tensor \b mean_dy. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] mean_dy
+ * Pointer to the MLU memory that stores the mean of diff_y.
+ * @param[in] mean_dy_xmu_desc
+ * The descriptor of the input tensor \b mean_dy_xmu. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] mean_dy_xmu
+ * Pointer to the MLU memory that stores the mean of the result of diff_y * (x - mean).
+ * @param[in] diff_x_desc
+ * The descriptor of the output tensor \b diff_x. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] diff_x
+ * Pointer to the MLU memory that stores the derivative of input.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below:
+ *   - float(\b diff_y) - float(\b x) - float(\b mean) - float(\b invstd) - float(\b filter) -
+ *     float(\b mean_dy) - float(\b mean_dy_xmu) - float(\b diff_x).
+ *   - half(\b diff_y) - half(\b x) - float(\b mean) - float(\b invstd) - float(\b filter) -
+ *     float(\b mean_dy) - float(\b mean_dy_xmu) - half(\b diff_x).
+ *
+ * @par Data Layout
+ * - The supported data layout of \b diff_y, \b x, \b mean, \b invstd, \b filter, \b mean_dy,
+ *   \b mean_dy_xmu and \b diff_x is as follows:
+ *   - diff_y tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and
+ *     \p MLUOP_LAYOUT_NLC.
+ *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - filter tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - mean_dy tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - mean_dy_xmu tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - diff_x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and
+ *     \p MLUOP_LAYOUT_NLC.
+ * - The layouts of the \b diff_x \b x and \b diff_y should be the same.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - The \b mean, \b invstd, \b filter, \b mean_dy and \b mean_dy_xmu must be 1D tensors and the
+ *   length of the dimension of these tensors should be the same as the length of the lowest
+ *   dimension of \b x.
+ * - The length of each dimension of \b diff_y, \b x and \b diff_x must be the same.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchNormBackwardElemt operation is as follows:
+     @verbatim
+      input seven arrays by 1, 1, 1, 1, 1, 1, 1 and 1
+      --> diff_y: [[[[1.0]]]]
+      --> x: [[[[2.0]]]]
+      --> mean: [3.0]
+      --> invstd: [4.0]
+      --> filter: [5.0]
+      --> mean_dy: [6.0]
+      --> mean_dy_xmu: [7.0]
+
+      output an array by 1
+      --> mean: [[[[-8960.0]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_backward_elemt
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t diff_y_desc,
+                                const void *diff_y,
+                                const mluOpTensorDescriptor_t x_desc,
+                                const void *x,
+                                const mluOpTensorDescriptor_t mean_desc,
+                                const void *mean,
+                                const mluOpTensorDescriptor_t invstd_desc,
+                                const void *invstd,
+                                const mluOpTensorDescriptor_t filter_desc,
+                                const void *filter,
+                                const mluOpTensorDescriptor_t mean_dy_desc,
+                                const void *mean_dy,
+                                const mluOpTensorDescriptor_t mean_dy_xmu_desc,
+                                const void *mean_dy_xmu,
+                                const mluOpTensorDescriptor_t diff_x_desc,
+                                void *diff_x);
+
+// Group:SyncBatchNormBackwardElemt
+/*!
+ * @brief Computes the gradients of input in the training scenario.
+ *
+ * This function is used in ResNet (Residual Network), Yolo (You Only Look Once) and
+ * R-CNN (Regions with CNN features).
+ *
+ * Compared with ::mluOpSyncBatchNormBackwardElemt, this function first computes the intermediate
+ * results mean_dy and mean_dy_xmu based on \b sum_dy, \b sum_dy_xmu and \b count, and then
+ * computes the gradient of \b x with the intermediate results.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * ::mluOpSyncBatchNormBackwardElemtV2 operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] diff_y_desc
+ * The descriptor of the backpropagated differential tensor \b diff_y. For
+ * detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] diff_y
+ * Pointer to the MLU memory that stores the backpropagated differential tensor.
+ * @param[in] x_desc
+ * The descriptor of the input tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] mean_desc
+ * The descriptor of the input tensor \b mean. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] mean
+ * Pointer to the MLU memory that stores the global mean.
+ * @param[in] invstd_desc
+ * The descriptor of the input tensor \b invstd. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] invstd
+ * Pointer to the MLU memory that stores the global inverse standard deviation.
+ * @param[in] filter_desc
+ * The descriptor of the input tensor \b filter. For detailed information, see
+ * ::mluOpTensorDescriptor_t. The descriptor can be NULL when \b filter pointer is NULL.
+ * @param[in] filter
+ * Pointer to the MLU memory that stores the input tensor \b filter for affine
+ * transformation after batch normalization. The value of this pointer can be NULL.
+ * @param[in] sum_dy_desc
+ * The descriptor of the input tensor \b sum_dy. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] sum_dy
+ * Pointer to the MLU memory that stores the sum of diff_y.
+ * @param[in] sum_dy_xmu_desc
+ * The descriptor of the input tensor \b sum_dy_xmu. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] sum_dy_xmu
+ * Pointer to the MLU memory that stores the sum of the result of diff_y * (x - mean).
+ * @param[in] count_desc
+ * The descriptor of the input tensor \b count. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] count
+ * Pointer to the MLU memory that stores the number of the high dimensions (the dimensions
+ * except the lowest dimension) of the input tensor \b x on all MLU devices.
+ * @param[in] diff_x_desc
+ * The descriptor of the output tensor \b diff_x.
+ * @param[out] diff_x
+ * Pointer to the MLU memory that stores the derivative of input.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_BAD_PARAM.
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below:
+ *   - float(\b diff_y) - float(\b x) - float(\b mean) - float(\b invstd) - float(\b filter) -
+ *     float(\b sum_dy) - float(\b sum_dy_xmu) - int32_t(\b count) - float(\b diff_x).
+ *   - half(\b diff_y) - half(\b x) - float(\b mean) - float(\b invstd) - float(\b filter) -
+ *     float(\b sum_dy) - float(\b sum_dy_xmu) - int32_t(\b count) - half(\b diff_x).
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b diff_y, \b x, \b mean, \b invstd, \b filter, \b sum_dy,
+ *   \b sum_dy_xmu and \b diff_x is as follows:
+ *   - diff_y tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and
+ *     \p MLUOP_LAYOUT_NLC.
+ *   - x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and \p MLUOP_LAYOUT_NLC.
+ *   - mean tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - invstd tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - filter tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - sum_dy tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - sum_dy_xmu tensor: \p MLUOP_LAYOUT_ARRAY.
+ *   - diff_x tensor: \p MLUOP_LAYOUT_NHWC, \p MLUOP_LAYOUT_NDHWC, \p MLUOP_LAYOUT_NC and
+ *     \p MLUOP_LAYOUT_NLC.
+ * - The layouts of the \b diff_x \b x and \b diff_y should be the same.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par note
+ * - The \b mean, \b invstd, \b filter, \b sum_dy and \b sum_dy_xmu must be 1D tensors and the
+ *   length of the dimension of these tensors should be the same as the length of the lowest
+ *   dimension of \b x.
+ * - The length of each dimension of \b diff_y, \b x and \b diff_x must be the same.
+ *
+ * @par Example
+ * - The example of ::mluOpSyncBatchNormBackwardElemtV2 operation is as follows:
+     @verbatim
+      input seven arrays by 1, 1, 1, 1, 1, 1, 1 and 1
+      --> diff_y: [[[[1.0]]]]
+      --> x: [[[[2.0]]]]
+      --> mean: [3.0]
+      --> invstd: [4.0]
+      --> filter: [5.0]
+      --> sum_dy: [6.0]
+      --> sum_dy_xmu: [7.0]
+      --> count: [1]
+
+      output an array by 1
+      --> mean: [[[[-8960.0]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/1.11.0/jit_builtin_functions.html?highlight=batch_norm_backward_elemt
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
+                                  const mluOpTensorDescriptor_t diff_y_desc,
+                                  const void *diff_y,
+                                  const mluOpTensorDescriptor_t x_desc,
+                                  const void *x,
+                                  const mluOpTensorDescriptor_t mean_desc,
+                                  const void *mean,
+                                  const mluOpTensorDescriptor_t invstd_desc,
+                                  const void *invstd,
+                                  const mluOpTensorDescriptor_t filter_desc,
+                                  const void *filter,
+                                  const mluOpTensorDescriptor_t sum_dy_desc,
+                                  const void *sum_dy,
+                                  const mluOpTensorDescriptor_t sum_dy_xmu_desc,
+                                  const void *sum_dy_xmu,
+                                  const mluOpTensorDescriptor_t count_desc,
+                                  const void *count,
+                                  const mluOpTensorDescriptor_t diff_x_desc,
+                                  void *diff_x);
 #if defined(__cplusplus)
 }
 #endif

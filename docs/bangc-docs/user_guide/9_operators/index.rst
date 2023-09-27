@@ -920,3 +920,33 @@ mluOpDynamicPointToVoxelForward
 1）将体素坐标 `coors` 进行排序、去重，得到新的体素坐标 `voxel_coors`; 保存去重后体素的个数 ``num_voxels`` 到 `voxel_num`; 保存 `coors` 中每个体素坐标在 `voxel_coors` 中对应的索引到 `point2voxel_map`; 保存 `voxel_coors` 中每个体素坐标在 `coors` 中出现的个数到 `voxel_points_count`;
 
 2）遍历 `feats` 中每个点，在特征维度上，对每个值根据 `reduce_type` 的方法进行计算，将结果保存到 `voxel_feats` 中; 当 `reduce_type` = ``max``, 在特征维度上对每个值取最大的值; 当 `reduce_type` = ``mean``, 将特征维度每个值都累加到 `voxel_feats` 对应位置中，再利用 `voxel_points_count` 获取该体素位置在原始体素中出现的个数，再对 `voxel_feats` 的特征维度求平均。
+
+.. _sync_batchnorm_stats:
+
+mluOpSyncBatchNormStats
+-------------------------
+该算子用来计算单卡上SyncBatchNorm的均值和标准差的倒数。
+
+.. _sync_batchnorm_gather_stats_with_counts:
+
+mluOpSyncBatchNormGatherStatsWithCounts
+-----------------------------------------
+该算子用来计算SyncBatchNorm的全局均值和标准差的倒数。
+
+.. _sync_batchnorm_elemt:
+
+mluOpSyncBatchNormElemt
+-------------------------
+该算子用来计算SyncBatchNorm的前向输出。
+
+.. _sync_batchnorm_backward_reduce:
+
+mluOpSyncBatchnormBackwardReduce
+----------------------------------
+该算子用来计算损失函数想对于weight和bias的梯度，以及根据开关情况决定是否输出下级element函数的中间变量 ``sum_dy`` 和 ``sum_dy_xmu``。本算子通过多卡通信的方式，解决sync_batchnorm_backward在单卡上batch size数据过大导致训练时间较长的问题。
+
+.. _sync_batch_norm_backward_elemt:
+
+mluOpSyncBatchNormBackwardElemt
+---------------------------------
+该算子用来计算输入的梯度，与 :ref:`sync_batchnorm_backward_reduce` 共同实现了sync_batchnorm_backward。

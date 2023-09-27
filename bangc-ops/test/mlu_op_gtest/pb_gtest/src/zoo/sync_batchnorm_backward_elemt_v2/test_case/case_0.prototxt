@@ -1,0 +1,138 @@
+op_name: "sync_batchnorm_backward_elemt_v2"
+op_type: "SYNC_BATCHNORM_BACKWARD_ELEMT_V2"
+input {
+  id: "diff_y"
+  shape: {
+    dims: 1
+    dims: 10
+    dims: 128
+    dims: 128
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 233
+    upper_bound: -2.0
+    lower_bound: 2.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "x"
+  shape: {
+    dims: 1
+    dims: 10
+    dims: 128
+    dims: 128
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 243
+    upper_bound: 2.0
+    lower_bound: -2.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "mean"
+  shape: {
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 233
+    upper_bound: 0.5
+    lower_bound: -0.25
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "invstd"
+  shape: {
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 233
+    upper_bound: 0.5
+    lower_bound: -0.5
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "weight"
+  shape: {
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 233
+    upper_bound: 1.0
+    lower_bound: 0.5
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "sum_dy"
+  shape: {
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 233
+    upper_bound: 1.0
+    lower_bound: 0.5
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "sum_dy_xmu"
+  shape: {
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 233 
+    upper_bound: 1.0
+    lower_bound: 0.5
+    distribution: UNIFORM 
+  }
+}
+input {
+  id: "count"
+  shape: {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 233 
+    upper_bound: 22
+    lower_bound: 2
+    distribution: UNIFORM 
+  }
+}
+output {
+  id: "diff_x"
+  shape: {
+    dims: 1
+    dims: 10
+    dims: 128
+    dims: 128
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

@@ -178,6 +178,73 @@
     const mluOpTensorDescriptor_t,                                            \
     void *
 
+#define SYNCBATCHNORMSTATS_PARAM_TYPE                                       \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, const float,  \
+      const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t, \
+      void *
+
+#define SYNCBATCHNORMSTATS_V2_PARAM_TYPE                                      \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, void *, size_t, \
+      const float, const mluOpTensorDescriptor_t, void *,                     \
+      const mluOpTensorDescriptor_t, void *
+
+#define SYNCBATCHNORMGATHERSTATSWITHCOUNTS_PARAM_TYPE                       \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,                          \
+      const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t, \
+      void *, float, float, const mluOpTensorDescriptor_t, const void *,    \
+      const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t, \
+      void *
+
+#define SYNCBATCHNORMELEMT_PARAM_TYPE                         \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, void *
+
+#define SYNCBATCHNORMBACKWADREDUCE_PARAM_TYPE                               \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,                          \
+      const mluOpTensorDescriptor_t, const void *,                          \
+      const mluOpTensorDescriptor_t, const void *,                          \
+      const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t, \
+      void *, const mluOpTensorDescriptor_t, void *,                        \
+      const mluOpTensorDescriptor_t, void *, const bool, const bool,        \
+      const bool
+
+#define SYNCBATCHNORMBACKWADREDUCE_V2_PARAM_TYPE                            \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,                          \
+      const mluOpTensorDescriptor_t, const void *,                          \
+      const mluOpTensorDescriptor_t, const void *, void *, size_t,          \
+      const mluOpTensorDescriptor_t, void *, const mluOpTensorDescriptor_t, \
+      void *, const mluOpTensorDescriptor_t, void *,                        \
+      const mluOpTensorDescriptor_t, void *, const bool, const bool,        \
+      const bool
+
+#define SYNCBATCHNORMBACKWARDELEMT_PARAM_TYPE                 \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, void *
+
+#define SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE                 \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,    \
+    const mluOpTensorDescriptor_t,                               \
+      const void *, const mluOpTensorDescriptor_t, const void *, \
+      const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, void *diff_x
+
 /* Kernel register */
 KERNEL_REGISTER(addN, ADDN_PARAM_TYPE);
 KERNEL_REGISTER(addNV2, ADDNV2_PARAM_TYPE);
@@ -203,4 +270,17 @@ KERNEL_REGISTER(RoiAlignBackward, ROIALIGNBACKWARD_PARAM_TYPE);
 KERNEL_REGISTER(RoiAlignBackwardV2, ROIALIGNBACKWARD_V2_PARAM_TYPE);
 KERNEL_REGISTER(RoiPoolingForward, ROIPOOLINGFORWARD_PARAM_TYPE);
 KERNEL_REGISTER(RoiPoolingBackward, ROIPOOLINGBACKWARD_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchNormStats, SYNCBATCHNORMSTATS_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchNormStatsV2, SYNCBATCHNORMSTATS_V2_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchNormGatherStatsWithCounts,
+                SYNCBATCHNORMGATHERSTATSWITHCOUNTS_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchNormElemt, SYNCBATCHNORMELEMT_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchnormBackwardReduce,
+        SYNCBATCHNORMBACKWADREDUCE_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchnormBackwardReduceV2,
+        SYNCBATCHNORMBACKWADREDUCE_V2_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchNormBackwardElemt,
+        SYNCBATCHNORMBACKWARDELEMT_PARAM_TYPE);
+KERNEL_REGISTER(SyncBatchNormBackwardElemtV2,
+        SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE);
 #endif  // KERNELS_KERNEL_WRAPPER_WRAPPER_H
