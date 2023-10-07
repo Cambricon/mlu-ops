@@ -8385,6 +8385,8 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - The value of \b boxes_num should be less than 65536.
  * - The value of \b channels should be less than 65536.
  * - The Product of \b boxes_num and \b pts_num should be less than 2G.
+ * - When the data type is floating point, the value of \b max_pts_each_voxel cannot be
+ * greater than 2976, and when the data type is half, it cannot be greater than 2944.
  * - The shape of \b rois should be [boxes_num, 7].
  * - The shape of \b pts should be [pts_num, 3].
  * - The shape of \b pts_feature should be [pts_num, channels].
@@ -8485,6 +8487,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The value of \b boxes_num should be less than 65536.
  * - The value of \b channels should be less than 65536.
+ * - The value of \b max_pts_each_voxel cannot be greater than 98240.
  * - The shape of \b pts_idx_of_voxels should be [boxes_num, out_x, out_y, out_z, max_pts_each_voxel].
  * - The shape of \b argmax should be [boxes_num, out_x, out_y, out_z, channels].
  * - The shape of \b grad_out should be [boxes_num, out_x, out_y, out_z, channels].
