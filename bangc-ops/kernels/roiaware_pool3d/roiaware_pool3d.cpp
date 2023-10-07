@@ -32,6 +32,9 @@
 #include "core/type.h"
 
 #define THRESHOLD_OF_BOXES_NUM_AND_CHANNELS 65536
+#define THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD 2976
+#define THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD 2944
+#define THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD 98240
 
 // policy function
 static mluOpStatus_t kernelPtsIdxOfVoxelsPolicyFunc(
@@ -223,6 +226,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
      should be less than 65536 in cuda. */
   PARAM_CHECK(API, boxes_num < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
   PARAM_CHECK(API, channels < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
+
+  /* max_pts_each_voxel affects the allocation of NRAM memory space,
+     so it's limited by the size of NRAM memory space. */
+  if (rois_desc->dtype == MLUOP_DTYPE_FLOAT) {
+    PARAM_CHECK(API, max_pts_each_voxel <=
+      THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD);
+  } else {
+    PARAM_CHECK(API, max_pts_each_voxel <=
+      THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD);
+  }
 
   const uint64_t tensor_rois_num = mluOpGetTensorElementNum(rois_desc);
   const uint64_t tensor_pts_num = mluOpGetTensorElementNum(pts_desc);
@@ -507,10 +520,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   PARAM_CHECK(API, out_z > 0);
 
   /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
-    Maximum y- or z-dimension of a grid of thread blocks
-    should be less than 65536 in cuda. */
+     Maximum y- or z-dimension of a grid of thread blocks
+     should be less than 65536 in cuda. */
   PARAM_CHECK(API, boxes_num < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
   PARAM_CHECK(API, channels < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
+
+  /* max_pts_each_voxel affects the allocation of NRAM memory space,
+     so it's limited by the size of NRAM memory space. */
+  PARAM_CHECK(API, max_pts_each_voxel <=
+    THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD);
 
   const uint64_t tensor_pts_idx_of_voxels_num =
       mluOpGetTensorElementNum(pts_idx_of_voxels_desc);
