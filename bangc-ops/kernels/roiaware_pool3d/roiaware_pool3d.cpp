@@ -248,16 +248,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     }
   }
 
-  /* max_pts_each_voxel affects the allocation of NRAM memory space,
-     so it's limited by the size of NRAM memory space. */
-  if (rois_desc->dtype == MLUOP_DTYPE_FLOAT) {
-    PARAM_CHECK(API, max_pts_each_voxel <=
-      THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD);
-  } else {
-    PARAM_CHECK(API, max_pts_each_voxel <=
-      THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD);
-  }
-
   const uint64_t tensor_rois_num = mluOpGetTensorElementNum(rois_desc);
   const uint64_t tensor_pts_num = mluOpGetTensorElementNum(pts_desc);
   const uint64_t tensor_pts_feature_num =
@@ -558,11 +548,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
                << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-
-  /* max_pts_each_voxel affects the allocation of NRAM memory space,
-     so it's limited by the size of NRAM memory space. */
-  PARAM_CHECK(API, max_pts_each_voxel <=
-    THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD);
 
   const uint64_t tensor_pts_idx_of_voxels_num =
       mluOpGetTensorElementNum(pts_idx_of_voxels_desc);
