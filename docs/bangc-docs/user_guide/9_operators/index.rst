@@ -943,10 +943,29 @@ mluOpSyncBatchNormElemt
 
 mluOpSyncBatchnormBackwardReduce
 ----------------------------------
-该算子用来计算损失函数想对于weight和bias的梯度，以及根据开关情况决定是否输出下级element函数的中间变量 ``sum_dy`` 和 ``sum_dy_xmu``。本算子通过多卡通信的方式，解决sync_batchnorm_backward在单卡上batch size数据过大导致训练时间较长的问题。
+该算子用来计算损失函数想对于weight和bias的梯度，以及根据开关情况决定是否输出下级element函数的中间变量 ``sum_dy`` 和 ``sum_dy_xmu`` 。本算子通过多卡通信的方式，解决sync_batchnorm_backward在单卡上batch size数据过大导致训练时间较长的问题。
 
 .. _sync_batch_norm_backward_elemt:
 
 mluOpSyncBatchNormBackwardElemt
 ---------------------------------
 该算子用来计算输入的梯度，与 :ref:`sync_batchnorm_backward_reduce` 共同实现了sync_batchnorm_backward。
+
+.. _strided_slice:
+
+mluOpStridedSlice
+-----------------------
+该算子从给定input张量中提取一个 ``(end - begin) / stride`` 的片段。从指定的位置开始 ``begin`` ，每隔 ``stride`` 个索引，直到所有维度都不小于 ``end`` 结束。当 ``stride`` 为负数时，会导致反向切片。公式如下：
+
+.. math::
+
+   output = input[begin[0]:end[0]:stride[0],
+                 ...,
+                 begin[N-1]:end[N-1]:stride[N-1]]
+
+其中：
+
+- input为 ``N`` 个维度的张量。
+- output为 ``N`` 个维度的张量。
+- ``begin`` ， ``end`` 和 ``stride`` 均为长度为 ``N`` 的数组，分别表示每个维度切片的起始索引，结束索引和步幅。
+
