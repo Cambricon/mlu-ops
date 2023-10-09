@@ -232,17 +232,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
      so it's limited by the size of NRAM memory space. */
   if (rois_desc->dtype == MLUOP_DTYPE_FLOAT) {
     if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD) {
-      LOG(ERROR) << API
-                 << ": When the data type is float, max_pts_each_voxel cannot "
-                    "be greater than "
+      LOG(ERROR) << API << ": When the data type is float, "
+                    "max_pts_each_voxel cannot be greater than "
                  << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
     if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD) {
-      LOG(ERROR) << API
-                 << ": When the data type is half, max_pts_each_voxel cannot "
-                    "be greater than "
+      LOG(ERROR) << API << ": When the data type is half, "
+                    "max_pts_each_voxel cannot be greater than "
                  << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
