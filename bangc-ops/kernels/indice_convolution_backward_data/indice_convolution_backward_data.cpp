@@ -57,6 +57,12 @@ static mluOpStatus_t foolCheckNoPtr(
 
   // check shape
   PARAM_CHECK(api, indice_pairs_desc->dims[1] == 2);
+  if (indice_pairs_desc->dim[2] > INDICE_IN_LARGE_TENSOR_NUM) {
+    LOG(ERROR) << api << " Check failed: " 
+               << "indice_pairs_desc->dim[2] cannot be greater than "
+               << INDICE_IN_LARGE_TENSOR_NUM << ".";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
 
   // check dtype
   PARAM_CHECK(api, output_grad_desc->dtype == MLUOP_DTYPE_FLOAT ||
@@ -616,7 +622,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
 
   // filters DHW dim loop
   int kk_count = 0;
-  for (int kk = 0; kk < K; ++kk) {
+  for (size_t kk = 0; kk < K; ++kk) {
     VLOG(5) << "indice_num " << indice_num[kk];
     if (indice_num[kk] == 0) {
       continue;

@@ -23,10 +23,7 @@
 #ifndef KERNELS_INDICE_CONVOLUTION_BACKWARD_DATA_INDICE_CONVOLUTION_BACKWARD_DATA_H_  // NOLINT
 #define KERNELS_INDICE_CONVOLUTION_BACKWARD_DATA_INDICE_CONVOLUTION_BACKWARD_DATA_H_  // NOLINT
 
-#include <vector>
-
 #include "core/tensor.h"
-#include "mlu_op.h"
 
 inline int getMaxNumInArray(const int64_t arr[], const int num) {
   int max_num = (int)(arr[0]);
