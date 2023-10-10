@@ -221,13 +221,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     LOG(ERROR) << API << " Check failed: "
                << "boxes_num should be less than "
                << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (channels >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
     LOG(ERROR) << API << " Check failed: "
                << "pts_num should be less than "
                << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   /* max_pts_each_voxel affects the allocation of NRAM memory space,
@@ -238,7 +238,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
                  << "When the data type is float, "
                     "max_pts_each_voxel cannot be greater than "
                  << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD << ".";
-      return MLUOP_STATUS_BAD_PARAM;
+      return MLUOP_STATUS_NOT_SUPPORTED;
     }
   } else {
     if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD) {
@@ -246,7 +246,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
                  << "When the data type is half, "
                     "max_pts_each_voxel cannot be greater than "
                  << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD << ".";
-      return MLUOP_STATUS_BAD_PARAM;
+      return MLUOP_STATUS_NOT_SUPPORTED;
     }
   }
 
@@ -271,7 +271,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   if (product_boxesNum_ptsNum > (size_t)INT32_MAX) {
     LOG(ERROR) << API << " Check failed: "
                << "product of boxes_num and pts_num should be less than 2^31.";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // check workspace
@@ -535,13 +535,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
     LOG(ERROR) << API << " Check failed: "
                << "boxes_num should be less than "
                << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (channels >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
     LOG(ERROR) << API << " Check failed: "
                << "pts_num should be less than "
                << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   /* max_pts_each_voxel affects the allocation of NRAM memory space,
@@ -550,7 +550,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
     LOG(ERROR) << API << " Check failed: "
                << "max_pts_each_voxel cannot be greater than "
                << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD << ".";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   const uint64_t tensor_pts_idx_of_voxels_num =
