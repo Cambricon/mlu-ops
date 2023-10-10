@@ -61,7 +61,7 @@ static mluOpStatus_t foolCheckNoPtr(
     LOG(ERROR) << api << " Check failed: "
                << "indice_pairs_desc->dims[2] cannot be greater than "
                << INDICE_IN_LARGE_TENSOR_NUM << ".";
-    return MLUOP_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // check dtype
