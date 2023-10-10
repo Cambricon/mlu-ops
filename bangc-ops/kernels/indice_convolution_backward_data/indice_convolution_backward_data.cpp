@@ -58,7 +58,7 @@ static mluOpStatus_t foolCheckNoPtr(
   // check shape
   PARAM_CHECK(api, indice_pairs_desc->dims[1] == 2);
   if (indice_pairs_desc->dim[2] > INDICE_IN_LARGE_TENSOR_NUM) {
-    LOG(ERROR) << api << " Check failed: " 
+    LOG(ERROR) << api << " Check failed: "
                << "indice_pairs_desc->dim[2] cannot be greater than "
                << INDICE_IN_LARGE_TENSOR_NUM << ".";
     return MLUOP_STATUS_BAD_PARAM;
