@@ -32,6 +32,7 @@
 
 // each box data contains 5 number: x, y, w, h, a
 #define SINGLE_BOX_DIM 5
+#define MAX_BOX_NUM 10000000
 
 static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type, const bool aligned,
@@ -146,6 +147,12 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
           << "box1_desc->dims[0] should equal to box2_desc->dims[0]. But now "
           << "box1_desc->dims[0] is " << box1_desc->dims[0]
           << ", box2_desc->dims[0] is " << box2_desc->dims[0] << ".";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+    if (box1_desc->dims[0] > MAX_BOX_NUM) {
+      LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
+                 << "box1_desc->dims[0] should less than or equal to "
+                 << "10,000,000. But now is " << box1_desc->dims[0] << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
