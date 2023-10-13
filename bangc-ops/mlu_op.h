@@ -15096,6 +15096,109 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
                                   const void *count,
                                   const mluOpTensorDescriptor_t diff_x_desc,
                                   void *diff_x);
+
+// Group:StridedSlice
+/*!
+ * @brief Extracts a slice of size ``(end - begin) / stride`` from the given \p input tensor.
+ * Strating at the location specified by \p begin, the slice continuously adds \p stride to
+ * the index until all dimensions are greater than or equal to \p end. Note that a \p stride
+ * can be negative, which causes a reverse slice.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues.
+ * For detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] begin
+ * An array that stores the starting position of each dimension of input to be sliced.
+ * @param[in] end
+ * An array that stores the ending position of each dimension of input to be sliced.
+ * @param[in] stride
+ * An array that stores the stride of each dimension of input to be sliced.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED,
+ *   ::MLUOP_STATUS_INTERNAL_ERROR
+ *
+ * @par Formula
+ * - See "StridedSlice Operation" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - The (I/O)function supports the following byte-width data types for \p input and \p output tensors.
+ *   The byte width of a data type can be obtained by ::mluOpGetSizeOfDataType function.
+ *   Note that the data type of input tensor \p input and output tensor \p output must be the same.
+ * - The supported byte-width data types are as follows:
+ *   - input tensor: 1-byte, 2-byte, 4-byte, 8-byte.
+ *   - output tensor: 1-byte, 2-byte, 4-byte, 8-byte.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The meaning of the abbreviations as follows:
+ *   - dim0 means the first dimension of input.
+ *   - dim0_stride means stride of dim0.
+ *   - dim0_input means the value of dim0 dimension of input.
+ *   - dim0_begin is means beginning index of dim0.
+ *   - dim0_end means ending index of dim0.
+ * - The input parameters should meet the following requirements:
+ *   - dim0_stride * dim1_stride * dim2_stride * dim3_stride != 0.
+ *   - When dim0_stride > 0, (dim0_begin >= 0 && dim0_end > dim0_begin
+ *   && dim0_input >= dim0_end) must be true.
+ *   - When dim0_stride < 0, (dim0_end + 1 >= (-1) * dim0_input &&
+ *   dim0_begin > dim0_end && dim0_begin <= -1) must be true.
+ *   - The requirement of dim1~dim7 is same with dim0.
+ *   - dim0_stride must be greater than -48.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - The example of strided_slice operation is as follows:
+    @verbatim
+    input: an array by 4*7 -->   [[1,2,3,4,5,6,7],
+                                 [8,9,10,11,12,13,14],
+                                 [15,16,17,18,19,20,21],
+                                 [22,23,24,25,26,27,28]]
+
+    begin:  an array by 1*2  --> [0,0]
+
+    end:    an array by 1*2  --> [4,7]
+
+    stride: an array by 1*2  --> [2,3]
+
+    Then we will get the output:
+
+    output: an array by 2*3 --> [[1,4,7],
+                                 [15,18,21]]
+    @endverbatim
+ *
+ * @par Reference
+ * - https://www.tensorflow.org/api_docs/python/tf/strided_slice
+ * - https://github.com/tensorflow/tfjs/blob/master/tfjs-core/src/ops/strided_slice.ts
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpStridedSlice(mluOpHandle_t handle,
+                  const mluOpTensorDescriptor_t input_desc,
+                  const void *input,
+                  const int32_t begin[],
+                  const int32_t end[],
+                  const int32_t stride[],
+                  const mluOpTensorDescriptor_t output_desc,
+                  void *output);
+
 #if defined(__cplusplus)
 }
 #endif

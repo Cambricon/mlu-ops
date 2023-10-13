@@ -1,0 +1,35 @@
+op_name: "strided_slice"
+input {
+  id: "input"
+  shape: {
+    dims: 500000
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 200011
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+}
+strided_slice_param: {
+  begin: 0
+  end: 400021
+  stride: 2
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
