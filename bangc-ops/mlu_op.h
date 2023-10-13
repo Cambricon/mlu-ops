@@ -4176,8 +4176,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  *   calculation result of the competitor operation.
  * - If there are cases with the same score in the input boxes, the output
  *   results may be inconsistent with the results of competing products.
- * - The number of input boxes on MLU270, MLU290, and MLU370 does not exceed
- *   9770.
+ * - The number of input boxes should be less than 9770.
  *
  * @par Example
  * - None.
