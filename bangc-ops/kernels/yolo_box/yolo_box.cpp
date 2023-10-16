@@ -190,10 +190,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
   float fill_value = 0;
   MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                            boxes_desc, boxes));
-  
+
   MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
                            scores_desc, scores));
-  
+
   CHECK_RETURN("[mluOpYoloBox]",
                KernelYoloBox(k_dim, k_type, handle->queue, x, img_size, anchors,
                              class_num, conf_thresh, downsample_ratio,
