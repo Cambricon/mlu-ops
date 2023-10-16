@@ -951,6 +951,19 @@ mluOpSyncBatchNormBackwardElemt
 ---------------------------------
 该算子用来计算输入的梯度，与 :ref:`sync_batchnorm_backward_reduce` 共同实现了sync_batchnorm_backward。
 
+.. _transform:
+
+mluOpTransform
+---------------------------------
+该算子Transform算子用于对数据做转换；
+
+.. math::
+ 
+  y_i = alpha \times x_i + beta
+
+其中 ``i`` 表示一个多元组索引，表示多维张量，例如在4维时可以表示(n,c,h,w)。
+``x_i`` 和 ``y_i`` 表示多元组中 ``i`` 索引处的元素。
+
 .. _strided_slice:
 
 mluOpStridedSlice
@@ -968,4 +981,5 @@ mluOpStridedSlice
 - input为 ``N`` 个维度的张量。
 - output为 ``N`` 个维度的张量。
 - ``begin`` ， ``end`` 和 ``stride`` 均为长度为 ``N`` 的数组，分别表示每个维度切片的起始索引，结束索引和步幅。
+
 

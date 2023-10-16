@@ -276,6 +276,16 @@
       const mluOpTensorDescriptor_t, const void *,               \
       const mluOpTensorDescriptor_t, void *diff_x
 
+#define TRANSFORM_PARAM_TYPE                                                  \
+    mluOpHandle_t,                                                            \
+    const mluOpPointerMode_t,                                                 \
+    const void *,                                                             \
+    const mluOpTensorDescriptor_t,                                            \
+    const void *,                                                             \
+    const void *,                                                             \
+    const mluOpTensorDescriptor_t,                                            \
+    void *
+
 #define STRIDEDSLICE_PARAM_TYPE                               \
   mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, \
       const int *, const int *, const int *,      \
@@ -306,7 +316,6 @@ KERNEL_REGISTER(RoiAlignBackward, ROIALIGNBACKWARD_PARAM_TYPE);
 KERNEL_REGISTER(RoiAlignBackwardV2, ROIALIGNBACKWARD_V2_PARAM_TYPE);
 KERNEL_REGISTER(RoiPoolingForward, ROIPOOLINGFORWARD_PARAM_TYPE);
 KERNEL_REGISTER(RoiPoolingBackward, ROIPOOLINGBACKWARD_PARAM_TYPE);
-KERNEL_REGISTER(transform, TRANSFORM_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormStats, SYNCBATCHNORMSTATS_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormStatsV2, SYNCBATCHNORMSTATS_V2_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormGatherStatsWithCounts,
@@ -320,5 +329,6 @@ KERNEL_REGISTER(SyncBatchNormBackwardElemt,
         SYNCBATCHNORMBACKWARDELEMT_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormBackwardElemtV2,
         SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE);
+KERNEL_REGISTER(transform, TRANSFORM_PARAM_TYPE);
 KERNEL_REGISTER(StridedSlice, STRIDEDSLICE_PARAM_TYPE);
 #endif  // KERNELS_KERNEL_WRAPPER_WRAPPER_H
