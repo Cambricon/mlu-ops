@@ -24,12 +24,12 @@
 
 #include <string>
 
+#include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/fill_zero/fill_zero.h"
 #include "kernels/kernel.h"
 
 // policy function
@@ -328,10 +328,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
           << ", " << k_dim.z << "].";
 
   // gdram set zero
-  int gdramset_size = channels * width * height * batch_size * sizeof(float);
-  KERNEL_CHECK((KernelFillZero(k_dim, k_type, handle->queue, gdramset_size,
-                               bottom_grad)));
-  VLOG(5) << "Kernel KernelFillZero.";
+  float fill_value = 0;
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                           bottom_grad_desc, bottom_grad));
 
   KERNEL_CHECK((KernelPsRoiPoolBackward(
       k_dim, k_type, handle->queue, top_grad, mapping_channel, rois,
