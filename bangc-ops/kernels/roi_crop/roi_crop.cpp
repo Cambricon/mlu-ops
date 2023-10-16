@@ -30,7 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/fill_zero/fill_zero.h"
 
 static void policyFunc(const mluOpHandle_t handle, int bin_num,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -251,10 +250,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
   VLOG(5) << "[mluOpRoiCropBackward] launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   // gdram set zero
-  int gd_num = channels * width * height * batch * sizeof(float);
-  CHECK_RETURN("[FillZero]", (KernelFillZero(k_dim, k_type, handle->queue,
-                                             gd_num, grad_input)));
-  VLOG(5) << "Kernel KernelFillZero.";
+  float fill_value = 0;
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                           grad_input_desc, grad_input));
 
   CHECK_RETURN("[mluOpRoiCropBackward]",
                KernelRoiCropBackward(k_dim, k_type, handle->queue, grad_output,

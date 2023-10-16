@@ -49,7 +49,6 @@ MLU Binary Op算子结构：　
 | dynamic_point_to_voxel_forward         | √             |               |
 | expand                                 |               | √             |
 | fill                                   |               | √             |
-| fill_zero                              | √             |               |
 | focal_loss_sigmoid_backward            | √             |               |
 | focal_loss_sigmoid_forward             | √             |               |
 | gather_nd                              |               | √             |

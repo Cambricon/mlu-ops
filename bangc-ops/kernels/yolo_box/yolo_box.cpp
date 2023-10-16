@@ -30,7 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/fill_zero/fill_zero.h"
 
 #define MAX_CLASS_NUM_ARCH_200 1534
 #define MAX_CLASS_NUM_ARCH_300 2558
@@ -188,15 +187,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
   VLOG(5) << "[mluOpYoloBox] launch kernel policyFunc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "].";
 
-  const int boxes_size = n_in * anchor_s * 4 * h_in * w_in * sizeof(float);
-  CHECK_RETURN("[FillZero]", (KernelFillZero(k_dim, k_type, handle->queue,
-                                             boxes_size, boxes)));
-
-  const int scores_size =
-      n_in * anchor_s * class_num * h_in * w_in * sizeof(float);
-  CHECK_RETURN("[FillZero]", (KernelFillZero(k_dim, k_type, handle->queue,
-                                             scores_size, scores)));
-
+  float fill_value = 0;
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                           boxes_desc, boxes));
+  
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
+                           scores_desc, scores));
+  
   CHECK_RETURN("[mluOpYoloBox]",
                KernelYoloBox(k_dim, k_type, handle->queue, x, img_size, anchors,
                              class_num, conf_thresh, downsample_ratio,
