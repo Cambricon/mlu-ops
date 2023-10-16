@@ -15376,6 +15376,152 @@ mluOpStridedSlice(mluOpHandle_t handle,
                   const mluOpTensorDescriptor_t output_desc,
                   void *output);
 
+// Group:Concat
+/*!
+ * @brief Concatenates the list of input tensors \b inputs along the given dimension \b axis.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues.
+ * For detailed information, see ::mluOpHandle_t.
+ * @param[in] concat_num
+ * Number of tensors needed to be concatenated.
+ * @param[in] axis
+ * Dimension along which to be concatenated. The value must be in the range of [-rank, rank),
+ * where rank is the number of dimensions in the input tensors,
+ * and negative \b axis refers to ``axis + rank``.
+ * @param[in] inputs_desc
+ * The list of descriptors of input tensors. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] inputs
+ * A host pointer to a list of MLU pointers, which point to the MLU memory that store the
+ * input tensors.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace.
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide". Because ::mluOpConcat
+ * does not need extra workspace, \b workspace can be set to NULL.
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes.
+ * You can get the size of the workspace with the ::mluOpGetConcatWorkspaceSize function.
+ * Because ::mluOpConcat does not need extra workspace, the \b workspace_size can be set to 0.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * -  ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par Formula
+ * - See "Concat Operator" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - The I/O function supports the following byte-width data types for \b input and \b output tensors.
+ *   The byte width of a data type can be obtained by ::mluOpGetSizeOfDataType function.
+ *   <b>Note that all the tensors must have the same data type. If the tensors are in
+ *      fixed-point data type, the quantization parameters of all the tensors should be the same.
+ *   </b>
+ * - The supported byte-width data types are as follows:
+ *   - input tensor: 1-byte, 2-byte, 4-byte, 8-byte.
+ *   - output tensor: 1-byte, 2-byte, 4-byte, 8-byte.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The parameters must meet the following requirements:
+ *   - The parameter \b concat_num should be greater than 0.
+ *   - The number of dimensions of all tensors must match, including inputs and output.
+ *   - All dimensions except \b axis must be equal, and the dimension of output on \b axis must be
+ *     equal to the sum of input dimensions on \b axis.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement concatenation, you need to call
+ *   ::mluOpGetConcatWorkspaceSize to get the required extra space size.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of concat operation is as follows:
+ *   @verbatim
+     input: 3 tensors with the shapes of 2 * 3, 2 * 3 and 1 * 3, respectively
+             --> [[1,2,3],[4,5,6]]
+             --> [[7,8,9],[10,11,12]]
+             --> [[13,14,15]]
+
+     concat_num: 3
+
+     axis: 0
+
+     Then we will get the output:
+
+     output: a tensor of 5 * 3 --> [[1,2,3],[4,5,6],[7,8,9],[10,11,12],[13,14,15]]
+     @endverbatim
+ *
+ * @par Reference
+ * - http://www.tensorflow.org/api_docs/python/tf/concat
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpConcat(mluOpHandle_t handle,
+            const int concat_num,
+            const int axis,
+            const mluOpTensorDescriptor_t inputs_desc[],
+            const void *const inputs[],
+            void *workspace,
+            size_t workspace_size,
+            const mluOpTensorDescriptor_t output_desc,
+            void *output);
+
+// Group:Concat
+/*!
+ * @brief Returns the size of the MLU memory used as an extra workspace to
+ * optimize ::mluOpConcat.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues.
+ *  For detailed information, see ::mluOpHandle_t.
+ * @param[in] concat_num
+ * Number of tensors needed to be concatenated.
+ * @param[out] size
+ * A host pointer to the size of the extra workspace in bytes.
+ * At present, because ::mluOpConcat does not require extra workspace,
+ * \b size will be returned as 0.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Formula
+ * - None.
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The parameter \b concat_num must be greater than 0.
+ *
+ * @par API Dependency
+ * - The allocated extra workspace should be passed to ::mluOpConcat function to perform
+ *   ::mluOpConcat operation.
+ *
+ * @Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetConcatWorkspaceSize(mluOpHandle_t handle, const int concat_num, size_t *size);
+
 // Group:Debugging
 /*!
  * @brief Sets the mode of a Cambricon BANG C OPS debugging tool that can generate operator

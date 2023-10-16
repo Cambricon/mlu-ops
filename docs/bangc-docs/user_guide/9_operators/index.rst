@@ -982,10 +982,29 @@ mluOpStridedSlice
                  ...,
                  begin[N-1]:end[N-1]:stride[N-1]]
 
-其中：
+.. note::
 
-- input为 ``N`` 个维度的张量。
-- output为 ``N`` 个维度的张量。
-- ``begin`` ， ``end`` 和 ``stride`` 均为长度为 ``N`` 的数组，分别表示每个维度切片的起始索引，结束索引和步幅。
+ - input为 ``N`` 个维度的张量。
+ - output为 ``N`` 个维度的张量。
+ - ``begin`` ， ``end`` 和 ``stride`` 均为长度为 ``N`` 的数组，分别表示每个维度切片的起始索引，结束索引和步幅。
 
+.. _concat:
 
+mluOpConcat
+----------------------
+该算子将多个张量在某一维度上进行拼接，输出一个张量。公式如下：
+
+.. math::
+
+   input_1 = [DIM_0, ..., axis_1, ..., DIM_(N-1)],
+   ... ,
+   input_M = [DIM_0, ..., axis_m, ..., DIM_(N-1)]
+
+   output = [DIM_0, ... , sum(axis_1, ..., axis_m), ..., DIM_(N-1)]
+
+.. note::
+
+ - ``M`` 为input的个数。
+ - ``N`` 为每个input和output的维度数。
+ - ``sum(axis_1, ..., axis_m)`` 表示对待拼接维度求和，output的拼接维度大小为所有input拼接维度的总和。
+ - 除拼接维度外，其余维度的大小需要相等。
