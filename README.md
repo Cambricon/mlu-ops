@@ -47,7 +47,7 @@ MLU-OPS 提供了以下功能：
 - 操作系统：
   - 支持 x86_64 下 Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5、Kylin10
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.6.1 或更高版本
+  - 编译和运行时依赖 CNToolkit v3.7.0 或更高版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v5.10.15 或更高版本
 - 外部链接库：
