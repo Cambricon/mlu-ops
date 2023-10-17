@@ -1,6 +1,23 @@
 更新历史
 ========
 
+* **V0.9.0**
+
+  **更新时间**：2023年10月16日
+
+  **更新内容**：
+
+  - 新增以下算子章节内容
+
+     + :ref:`transform`
+     + :ref:`strided_slice`
+     + :ref:`tin_shift_backward`
+     + :ref:`sync_batchnorm_stats`
+     + :ref:`sync_batchnorm_gather_stats_with_counts`
+     + :ref:`sync_batchnorm_elemt`
+     + :ref:`sync_batchnorm_backward_reduce`
+     + :ref:`sync_batch_norm_backward_elemt`
+
 * **V0.8.1**
 
   **更新时间**：2023年8月31日

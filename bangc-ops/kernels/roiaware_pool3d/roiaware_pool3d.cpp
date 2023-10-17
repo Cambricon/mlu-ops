@@ -102,24 +102,17 @@ static mluOpStatus_t transposeTensor(
     const void *input, const int *permute,
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
     void *transpose_workspace) {
-  const std::string API = "[mluOpRoiawarePool3dForward]";
   int input_dim = input_desc->dim;
   mluOpTransposeDescriptor_t trans_desc = NULL;
   size_t transpose_workspace_size = 0;
-  PARAM_CHECK(
-      API, MLUOP_STATUS_SUCCESS == mluOpCreateTransposeDescriptor(&trans_desc));
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS == mluOpSetTransposeDescriptor(
-                                               trans_desc, input_dim, permute));
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS == mluOpGetTransposeWorkspaceSize(
-                                               handle, input_desc, trans_desc,
-                                               &transpose_workspace_size));
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpTranspose_v2(handle, trans_desc, input_desc, input,
-                                         workspace_dst_desc, workspace_dst,
-                                         transpose_workspace,
-                                         transpose_workspace_size));
-  PARAM_CHECK(
-      API, MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  MLUOP_CHECK(mluOpCreateTransposeDescriptor(&trans_desc));
+  MLUOP_CHECK(mluOpSetTransposeDescriptor(trans_desc, input_dim, permute));
+  MLUOP_CHECK(mluOpGetTransposeWorkspaceSize(handle, input_desc, trans_desc,
+                                             &transpose_workspace_size));
+  MLUOP_CHECK(mluOpTranspose_v2(handle, trans_desc, input_desc, input,
+                                workspace_dst_desc, workspace_dst,
+                                transpose_workspace, transpose_workspace_size));
+  MLUOP_CHECK(mluOpDestroyTransposeDescriptor(trans_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -224,17 +217,37 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
      Maximum y- or z-dimension of a grid of thread blocks
      should be less than 65536 in cuda. */
-  PARAM_CHECK(API, boxes_num < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
-  PARAM_CHECK(API, channels < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
+  if (boxes_num >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
+    LOG(ERROR) << API << " Check failed: "
+               << "boxes_num should be less than "
+               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+  if (channels >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
+    LOG(ERROR) << API << " Check failed: "
+               << "pts_num should be less than "
+               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
 
   /* max_pts_each_voxel affects the allocation of NRAM memory space,
      so it's limited by the size of NRAM memory space. */
   if (rois_desc->dtype == MLUOP_DTYPE_FLOAT) {
-    PARAM_CHECK(API, max_pts_each_voxel <=
-      THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD);
+    if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD) {
+      LOG(ERROR) << API << " Check failed: "
+                 << "When the data type is float, "
+                    "max_pts_each_voxel cannot be greater than "
+                 << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD << ".";
+      return MLUOP_STATUS_NOT_SUPPORTED;
+    }
   } else {
-    PARAM_CHECK(API, max_pts_each_voxel <=
-      THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD);
+    if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD) {
+      LOG(ERROR) << API << " Check failed: "
+                 << "When the data type is half, "
+                    "max_pts_each_voxel cannot be greater than "
+                 << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD << ".";
+      return MLUOP_STATUS_NOT_SUPPORTED;
+    }
   }
 
   const uint64_t tensor_rois_num = mluOpGetTensorElementNum(rois_desc);
@@ -256,16 +269,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   // product of boxes_num and pts_num < 2^31
   size_t product_boxesNum_ptsNum = (size_t)boxes_num * (size_t)pts_num;
   if (product_boxesNum_ptsNum > (size_t)INT32_MAX) {
-    LOG(ERROR)
-        << API
-        << ": product of boxes_num and pts_num should be less than 2^31.";
-    return MLUOP_STATUS_BAD_PARAM;
+    LOG(ERROR) << API << " Check failed: "
+               << "product of boxes_num and pts_num should be less than 2^31.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // check workspace
   if (workspace_size > 0 && workspace == NULL) {
-    LOG(ERROR) << API
-               << ": workspace shouldn't be null when workspace_size > 0.";
+    LOG(ERROR) << API << " Check failed: "
+               << "workspace shouldn't be null when workspace_size > 0.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -346,16 +358,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
   mluOpTensorDescriptor_t pts_desc_tmp = NULL;
   MLUOP_CHECK(mluOpCreateTensorDescriptor(&pts_desc_tmp));
-  PARAM_CHECK(API,
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpSetTensorDescriptor(pts_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                                           data_dtype, pts_dim, pts_tmp_dims));
-  PARAM_CHECK(
-      API, MLUOP_STATUS_SUCCESS ==
-               transposeTensor(handle, pts_desc, pts, pts_permute, pts_desc_tmp,
-                               pts_workspace, transpose_workspace));
-  PARAM_CHECK(
-      API, MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(pts_desc_tmp));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(pts_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                                       data_dtype, pts_dim, pts_tmp_dims));
+
+  auto ret = transposeTensor(handle, pts_desc, pts, pts_permute, pts_desc_tmp,
+                             pts_workspace, transpose_workspace);
+  if (ret != MLUOP_STATUS_SUCCESS) {
+    return ret;
+  }
+
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_desc_tmp));
   VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts end.";
 
   VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts_feature start.";
@@ -367,35 +379,32 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
   mluOpTensorDescriptor_t pts_feature_desc_tmp = NULL;
   MLUOP_CHECK(mluOpCreateTensorDescriptor(&pts_feature_desc_tmp));
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpSetTensorDescriptor(
-                           pts_feature_desc_tmp, MLUOP_LAYOUT_ARRAY, data_dtype,
-                           pts_feature_dim, pts_feature_tmp_dims));
-  PARAM_CHECK(API,
-              MLUOP_STATUS_SUCCESS ==
-                  transposeTensor(handle, pts_feature_desc, pts_feature,
-                                  pts_feature_permute, pts_feature_desc_tmp,
-                                  pts_feature_workspace, transpose_workspace));
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpDestroyTensorDescriptor(pts_feature_desc_tmp));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(pts_feature_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                                       data_dtype, pts_feature_dim,
+                                       pts_feature_tmp_dims));
+
+  ret = transposeTensor(handle, pts_feature_desc, pts_feature,
+                        pts_feature_permute, pts_feature_desc_tmp,
+                        pts_feature_workspace, transpose_workspace);
+  if (ret != MLUOP_STATUS_SUCCESS) {
+    return ret;
+  }
+
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_feature_desc_tmp));
   VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts_feature end.";
 
   VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpFill_v3 host pointer start.";
   int argmax_initial_value = (pool_method == 0) ? -1 : 0;
-  PARAM_CHECK(
-      API, MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                                &argmax_initial_value,
-                                                argmax_desc, argmax));
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                           &argmax_initial_value, argmax_desc, argmax));
   int pts_idx_initial_value = 0;
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                    &pts_idx_initial_value,
-                                    pts_idx_of_voxels_desc, pts_idx_of_voxels));
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                           &pts_idx_initial_value, pts_idx_of_voxels_desc,
+                           pts_idx_of_voxels));
   int pooled_features_initial_value = 0;
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                    &pooled_features_initial_value,
-                                    pooled_features_desc, pooled_features));
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                           &pooled_features_initial_value, pooled_features_desc,
+                           pooled_features));
   VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpFill host pointer end.";
 
   cnrtDim3_t k_dim;
@@ -522,13 +531,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
      Maximum y- or z-dimension of a grid of thread blocks
      should be less than 65536 in cuda. */
-  PARAM_CHECK(API, boxes_num < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
-  PARAM_CHECK(API, channels < THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
+  if (boxes_num >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
+    LOG(ERROR) << API << " Check failed: "
+               << "boxes_num should be less than "
+               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+  if (channels >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
+    LOG(ERROR) << API << " Check failed: "
+               << "pts_num should be less than "
+               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
 
   /* max_pts_each_voxel affects the allocation of NRAM memory space,
      so it's limited by the size of NRAM memory space. */
-  PARAM_CHECK(API, max_pts_each_voxel <=
-    THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD);
+  if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD) {
+    LOG(ERROR) << API << " Check failed: "
+               << "max_pts_each_voxel cannot be greater than "
+               << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
 
   const uint64_t tensor_pts_idx_of_voxels_num =
       mluOpGetTensorElementNum(pts_idx_of_voxels_desc);
@@ -553,7 +576,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
 
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << API
+    LOG(ERROR) << API << " Check failed: "
                << " The operator does not match the current architecture.";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
@@ -589,10 +612,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   // generate mluOpRoiawarePool3dBackward prototxt end!
 
   int grad_in_initial_value = 0;
-  PARAM_CHECK(
-      API, MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                                &grad_in_initial_value,
-                                                grad_in_desc, grad_in));
+  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                           &grad_in_initial_value, grad_in_desc, grad_in));
   VLOG(5)
       << "[mluOpRoiawarePool3dBackward] Initialize output space successfully.";
 

@@ -30,7 +30,6 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/fill_zero/fill_zero.h"
 
 static void policyFuncDefault(const mluOpHandle_t handle,
                               const size_t num_points, cnrtDim3_t *k_dim,
