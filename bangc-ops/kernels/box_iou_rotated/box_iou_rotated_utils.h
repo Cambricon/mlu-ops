@@ -445,10 +445,27 @@ __mlu_func__ void convexHullGraham(
     T *dist_ram, T *valid_box, T *valid_pts, T *nums_in_ram, T *temp1_ram,
     T *temp2_ram, T *temp3_ram, T *temp_long_1, T *temp_long_2, T *temp_long_3,
     const uint32_t &actual_box_num, const uint32_t &actual_compute_box_num) {
-  // Step1. Find the point with minimum y, if more than 1 points have the same
-  // minimum y, pick the one with the minimum x. set p[i].y to max_y_value if
-  // not valid_pts, to avoid invalid result 24 means all possible intersection
-  // points
+#if __BANG_ARCH__ >= 592
+  int real_compute_box_num = actual_box_num < actual_compute_box_num
+                                 ? actual_box_num
+                                 : actual_compute_box_num;
+  const int total_points = actual_compute_box_num * 24;
+
+  // If all of boxes are invalid, just return.
+  int valid_box_count = __bang_count((T *)valid_box, real_compute_box_num);
+  if (!valid_box_count) {
+    __bang_write_value((T *)ordered_pts_x, total_points, 0);
+    __bang_write_value((T *)ordered_pts_y, total_points, 0);
+    __bang_write_value((T *)valid_pts, actual_compute_box_num, (T)1);
+    __bang_write_value((T *)valid_pts + actual_compute_box_num,
+                       total_points - actual_compute_box_num, (T)0);
+    return;
+  }
+#endif
+  // Step1. Find the point with minimum y, if more than 1 points have the
+  // same minimum y, pick the one with the minimum x. set p[i].y to
+  // max_y_value if not valid_pts, to avoid invalid result 24 means all
+  // possible intersection points
   __bang_argmax((T *)temp2_ram, (T *)intersect_pts_y,
                 24 * actual_compute_box_num);
   __bang_not((T *)temp_long_1, (T *)valid_pts, 24 * actual_compute_box_num);
@@ -458,10 +475,10 @@ __mlu_func__ void convexHullGraham(
              24 * actual_compute_box_num);
   __bang_add((T *)temp_long_2, (T *)temp_long_2, (T *)temp_long_1,
              24 * actual_compute_box_num);
-  // temp2 = min_y_value(temp_long_2), use min_pool, channel=box_num, h=1, w=24
+  // temp2 = min_y_value(temp_long_2), use min_pool, channel=box_num, h=1,
+  // w=24
   __bang_minpool((T *)temp2_ram, (T *)temp_long_2, actual_compute_box_num, 1,
                  24, 1, 24, 1, 24);
-
   __bang_mul((T *)temp2_ram, (T *)temp2_ram, (T *)valid_box,
              actual_compute_box_num);
 
@@ -479,13 +496,121 @@ __mlu_func__ void convexHullGraham(
              24 * actual_compute_box_num);
   __bang_add((T *)temp_long_1, (T *)temp_long_1, (T *)temp_long_3,
              24 * actual_compute_box_num);
-  // temp3 = min_x_value(temp_long_1), use min_pool, channel=box_num, h=1, w=24
+  // temp3 = min_x_value(temp_long_1), use min_pool, channel=box_num, h=1,
+  // w=24
   __bang_minpool((T *)temp3_ram, (T *)temp_long_1, actual_compute_box_num, 1,
                  24, 1, 24, 1, 24);
-
   __bang_mul((T *)temp3_ram, (T *)temp3_ram, (T *)valid_box,
              actual_compute_box_num);
 
+#if __BANG_ARCH__ >= 592
+  // Step2. All points subtract starting-point (for sorting in the next step)
+  __bang_cycle_sub((T *)intersect_pts_x, (T *)intersect_pts_x, (T *)temp3_ram,
+                   24 * actual_compute_box_num, actual_compute_box_num);
+  __bang_cycle_sub((T *)intersect_pts_y, (T *)intersect_pts_y, (T *)temp2_ram,
+                   24 * actual_compute_box_num, actual_compute_box_num);
+  __bang_mul((T *)intersect_pts_x, (T *)intersect_pts_x, (T *)valid_pts,
+             24 * actual_compute_box_num);
+  __bang_mul((T *)intersect_pts_y, (T *)intersect_pts_y, (T *)valid_pts,
+             24 * actual_compute_box_num);
+
+  // Step3. Sorting according to angles. The angle become larger from 0 to 180
+  // degree in anti-clockwise direction. The cos value of the value change from
+  // 1 to -1. Cos(theta) = fabs(x)*x / x*x + y*y
+  dot2d<T>((T *)dist_ram, (T *)intersect_pts_x, (T *)intersect_pts_y,
+           (T *)intersect_pts_x, (T *)intersect_pts_y,
+           24 * actual_compute_box_num, (T *)temp_long_3);
+
+  // Make sure points don't overlap with each other
+  __bang_mul((T *)temp_long_1, (T *)dist_ram, (T *)valid_pts, total_points);
+  __bang_gt_scalar((T *)temp_long_1, (T *)temp_long_1, (T)1e-8, total_points);
+  __bang_and((T *)valid_pts, (T *)valid_pts, (T *)temp_long_1, total_points);
+
+  // fabs(x)*x
+  __bang_abs((T *)temp_long_1, (T *)intersect_pts_x, total_points);
+  __bang_mul((T *)temp_long_1, (T *)temp_long_1, intersect_pts_x, total_points);
+
+  // cos(theta) = fabs(x)*x/ x*x + y * y = fabs(x)*x/ dist
+  __bang_div((T *)temp_long_2, (T *)temp_long_1, (T *)dist_ram, total_points);
+  __bang_mul((T *)temp_long_2, (T *)temp_long_2, (T *)valid_pts, total_points);
+  __bang_not((T *)temp_long_1, (T *)valid_pts, total_points);
+
+  // invalid points assign angle value -1
+  __bang_mul_scalar((T *)temp_long_1, (T *)temp_long_1, (T)-1, total_points);
+  __bang_add((T *)temp_long_2, (T *)temp_long_2, (T *)temp_long_1,
+             total_points);
+  __bang_argmax((T *)temp_long_1, (T *)nums_in_ram, real_compute_box_num);
+
+  // get the maximum number of intersect points among all pair of boxes.
+  int nums_in_max = 0;
+  if (valid_box_count > 0) {
+    __bang_argmax((T *)temp_long_1, (T *)nums_in_ram, real_compute_box_num);
+    nums_in_max = (int)temp_long_1[0];
+  } else {
+    nums_in_max = 1;
+  }
+
+  // the origin is assigned with 1 and other is assigned with 0 first
+  __bang_write_value((T *)temp_long_1, actual_compute_box_num, (T)1);
+  __bang_write_value((T *)temp_long_1 + actual_compute_box_num,
+                     total_points - actual_compute_box_num, (T)0);
+
+  // assign invalid value to temp1_ram(-2 < -1) and temp2_ram for sorting.
+  __bang_write_value((T *)temp1_ram, actual_compute_box_num, (T)-2);
+  __bang_write_value((T *)temp2_ram, actual_compute_box_num, (T)0);
+  __bang_write_value((T *)ordered_pts_x, total_points, 0);
+  __bang_write_value((T *)ordered_pts_y, total_points, 0);
+
+  // get the offset of each max value according to the channel
+  __mluop_get_stage_indices_tfuse((int *)temp3_ram, actual_compute_box_num);
+  for (int i = 0; i < nums_in_max - 1; i++) {
+    // temp_long_3 = max_angle_value_index(temp_long_2), use
+    // __bang_maxpool_value_index, channel=box_num, h=1, w=24
+    __bang_maxpool_value_index((T *)temp_long_3, (T *)temp_long_2,
+                               actual_compute_box_num, 1, 24, 1, 24, 1, 24,
+                               actual_compute_box_num * sizeof(T));
+    // If intersection of two polygon can generate non-convex polygon,then need
+    // deal with the points with same angle value and point that not in final
+    // convex polygon. But two boxes can generate convex polygon only here.
+
+    // assign the channel of invalid box with maximum index of each channel, 23.
+    __bang_write_value(
+        (uint *)(temp_long_3 + real_compute_box_num + actual_compute_box_num),
+        actual_compute_box_num, (uint)23);
+    // get the offset of each max value of pooled
+    __bang_mul_scalar(
+        (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+        (unsigned int *)(temp_long_3 + actual_compute_box_num),
+        actual_compute_box_num, actual_compute_box_num);
+    __bang_add((unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+               (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+               (unsigned int *)temp3_ram, actual_compute_box_num);
+    __bang_mul_scalar(
+        (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+        (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num), sizeof(T),
+        actual_compute_box_num);
+
+    // get the ordered points according to the angle value
+    __gather(ordered_pts_x + (i + 1) * actual_compute_box_num, intersect_pts_x,
+             (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+             sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __gather(ordered_pts_y + (i + 1) * actual_compute_box_num, intersect_pts_y,
+             (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+             sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __gather(temp_long_1 + (i + 1) * actual_compute_box_num, valid_pts,
+             (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+             sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+
+    // assign a invalid value to the point which has been get ordered
+    __scatter(temp_long_2, temp1_ram,
+              (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+              sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __scatter(valid_pts, temp2_ram,
+              (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+              sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+  }
+  __bang_move(valid_pts, temp_long_1, total_points * sizeof(T));
+#else
   // Step2. All points subtract starting-point (for sorting in the next step)
   __bang_cycle_sub((T *)ordered_pts_x, (T *)intersect_pts_x, (T *)temp3_ram,
                    24 * actual_compute_box_num, actual_compute_box_num);
@@ -641,6 +766,7 @@ __mlu_func__ void convexHullGraham(
       ((T *)nums_in_ram)[i] = m;
     }
   }
+#endif
 }
 
 template <typename T>
@@ -663,6 +789,8 @@ __mlu_func__ void polygonArea(T *ordered_pts_x, T *ordered_pts_y, T *valid_box,
 
   // temp_nums_in = max(nums_in)
   T temp_nums_in = ((T *)temp6_ram)[0];
+  // T temp_nums_in = (T)5.0;
+  // __bang_printf("area temp_nums_in: %f \n", temp_nums_in);
   for (int i = 1; i < temp_nums_in - 1; i++) {
     // q[i] - q[0]: (temp5, temp6)
     __bang_sub((T *)temp5_ram, (T *)ordered_pts_x + i * actual_compute_box_num,

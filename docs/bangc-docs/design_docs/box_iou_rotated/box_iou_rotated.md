@@ -11,6 +11,7 @@
 | 版本号 | 修订人  | 修订日期  | 修订描述 |
 | ------ | ------- | --------- | -------- |
 | V1.0   | songjin | 2021-11-8 | 首次提交 |
+| V1.1   | liuduanhui | 2023-10-17 | 性能优化|
 
 - #### 内容描述
 
@@ -90,12 +91,10 @@ BoxIouRotated 算子有 2 个输入 Tensor，分别为 Box1[N,5], Box2[M,5]，�
 
 #### 1.5.1 精度验收标准
 
-该算子使用了 sin/cos 三角函数，计算旋转后的顶点坐标，还涉及 div 除法操作， MLU200 系列上使用 reciphp 激活计算，MLU300 上使用超越函数指令。
+该算子使用了 sin/cos 三角函数，计算旋转后的顶点坐标，还涉及 div 除法操作。
 mmcv 框架中使用了 numpy.allclose 函数，参数 atol=1e-4, 绝对误差小于 1e-4 的精度阈值标准。
 
 综上，该算子采用静态阈值，采用阈值标准：diff1<=3e-3 && diff2 <= 3e-3.
-
-- 注意：MLU200 系列精度需要限定数值范围和规模大小，避免出现大规模随机错误导致 Diff2 挂掉。
 
 #### 1.5.2 性能验收标准
 
@@ -145,7 +144,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 3. 计算`new_box_pts`，向量化地计算新的`x_ctr`, `y_ctr`，但是 width/height/theta 都可以来源于输入，无需复制
 4. 通过`new_pts`的数据，计算旋转后的顶点`rotated_vertices`，通过旋转后的顶点，计算每条边的`vector`的表示，通过 3 个过程，计算 24 种可能的交点。由于向量化计算，每组 box-pair 的有效交点个数和类型都不同，需要设置`valid_pts`对应位置是否为 true，标记该位置是否为有效交点。
 5. 通过上述过程得到的有效交点，如果`nums_in`对应大于 2，代表有 2 个以上的交点，可以计算交叠面积，否则设置对应位置的`valid_box`为 false，设置 ious=0.
-6. 用 Convex-hull-graham 顶点扫描法，标量计算每一组 24 个交点，进行排序、筛选得出凸包形状的顶点集合，最后使用`polygon_area`函数计算有效 box 的 iou 面积。然后再根据`mode`的不同，做不同分母的除法（区分 arch）。
+6. 用 Convex-hull-graham 顶点扫描法，标量计算每一组 24 个交点，进行排序、筛选得出凸包形状的顶点集合。（区分 arch）
+ - 1. 300 系列顶点间的顺序有cross_product值比较来进行排序。
+ - 2. 500 系列
+  - 1. 两个box相交得出的多边形只能是凸包，排序正确情况下，没有凹点需要筛选，可以省略筛选点的步骤。
+  - 2. 按照各点与x正半轴形成的角度，逆时针排序。    
+      ![box_iou_rotated](./res/sort_vertices1.png)
+  - 3. 设点p0(x, y)， 计算 f(p0) = abs(x) * x / (x * x + y * y), cos函数在[0, π]区间（第一二象限）单调递减，如下图所示。通过比较两个顶点 `cosθ`平方的大小（保留正负号），来判断两个点的大小关系。
+      ![box_iou_rotated](./res/cosine1.png)
+7. 最后使用`polygon_area`函数计算有效 box 的 iou 面积。然后再根据`mode`的不同，做不同分母的除法。
 
 ### 3.2 伪代码实现（可选）
 
@@ -176,13 +183,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 
 完成上述 3.1，3.2，3.3，3.4 几个步骤之后，基本可以给出一个理论性能，不需要每一个算子都有过于复杂的公式，但是一定要对自己的算子有一个心理的预期，最终实现之后的效率值是多少。
 
-由于 伪代码 part 8. Convex-Hull-Graham 的算法目前设计为标量循环实现，所以性能暂无估计，片上时间复杂度 O(24x24xM)，其他部分已做了向量化的部分优化，时间复杂度为 O(M).
-在 aligned=false 的情况，片外循环的时间复杂度是 O(NxM)，否则则为 O(M).
+由于 伪代码 part 8. Convex-Hull-Graham 的算法目前设计为标量循环实现，所以性能暂无估计，片上时间复杂度 O(24x24xM)，其他部分已做了向量化的部分优化，时间复杂度为 O(M). 在 aligned=false 的情况，片外循环的时间复杂度是 O(NxM)，否则则为 O(M).
 
 - aligned = true 的情况： O(60000xN)
 - aligned = false 的情况： O(66000xNxM)
-
-实际由于标量计算占比时间很大，会有额外的寄存器换入换出操作，以及额外的间接寻址时间，造成理论预估时间不准确。
 
 ### 3.6 可维护性设计
 
@@ -203,7 +207,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
   3. area1/2 has/are all 1e-14.
   4. intersection points, all 24 conditions, rect1 in 2, 2 in 1, `nums_in` is 1/2/more points.
   5. `convex_hull_graham` func, 24 points exist same `min_y_value`, but different `min_x_value`...
-  6. 排序、扫描部分的代码行覆盖率。
+  6. 排序部分的代码行覆盖率。
 
 - NOTE: 可以考虑在每组生成 box 坐标之后，遍历旋转角度 theta 生成 N 组 boxes 输入。
 
@@ -224,3 +228,4 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 ### 4.1 当前存在问题的规模说明
 
 ### 4.2 已经过优化的规模说明
+在500系列上已对convex_hull_graham进行性能优化，优化后kernel性能提升4.6% ~ 98%.
