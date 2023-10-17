@@ -11,7 +11,6 @@
 
      + :ref:`transform`
      + :ref:`strided_slice`
-     + :ref:`tin_shift_backward`
      + :ref:`sync_batchnorm_stats`
      + :ref:`sync_batchnorm_gather_stats_with_counts`
      + :ref:`sync_batchnorm_elemt`
