@@ -451,7 +451,7 @@ __mlu_func__ void convexHullGraham(
                                  : actual_compute_box_num;
   const int total_points = actual_compute_box_num * 24;
 
-  // If all of boxes are invalid, just return.
+  // if all of boxes are invalid, just return.
   int valid_box_count = __bang_count((T *)valid_box, real_compute_box_num);
   if (!valid_box_count) {
     __bang_write_value((T *)ordered_pts_x, total_points, 0);
@@ -521,7 +521,7 @@ __mlu_func__ void convexHullGraham(
            (T *)intersect_pts_x, (T *)intersect_pts_y,
            24 * actual_compute_box_num, (T *)temp_long_3);
 
-  // Make sure points don't overlap with each other
+  // make sure points don't overlap with each other
   __bang_mul((T *)temp_long_1, (T *)dist_ram, (T *)valid_pts, total_points);
   __bang_gt_scalar((T *)temp_long_1, (T *)temp_long_1, (T)1e-8, total_points);
   __bang_and((T *)valid_pts, (T *)valid_pts, (T *)temp_long_1, total_points);

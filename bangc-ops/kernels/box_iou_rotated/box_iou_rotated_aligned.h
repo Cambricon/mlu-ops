@@ -123,6 +123,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
   uint32_t repeat = num_box / max_box_pair;
   uint32_t remainder = num_box % max_box_pair;
   repeat += uint32_t(remainder > 0);
+
   // Only consider loop offset in one mlu core
   size_t current_box_offset = 0;
   size_t current_ious_offset = 0;
@@ -157,10 +158,6 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
         ((T *)valid_box)[i] = 0;
       }
     }
-    // if (actual_box_num < actual_compute_box_num) {
-    //   __bang_write_value((T *)valid_box + actual_box_num,
-    //                      actual_compute_box_num - actual_box_num, (T)0);
-    // }
 
     // Each box data: x, y, w, h, a
     // area1 = box1.h * box1.w;
@@ -286,7 +283,6 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
     __memcpy(ious + current_ious_offset, (T *)ious_ram,
              actual_box_num * sizeof(T), NRAM2GDRAM);
     current_ious_offset += actual_box_num;
-    // __asm__ volatile("readperf.end;\n\t");
   }
 }
 
