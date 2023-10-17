@@ -154,9 +154,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
     // Initialize valid_box, set actual_box_num boxes to 1, else set to 0
     __bang_write_value((T *)valid_box, actual_compute_box_num, (T)1);
     if (actual_box_num < actual_compute_box_num) {
-      for (uint32_t i = actual_box_num; i < actual_compute_box_num; i++) {
-        ((T *)valid_box)[i] = 0;
-      }
+      __bang_write_value((T *)valid_box + actual_box_num,
+                          actual_compute_box_num - actual_box_num, (T)0);
     }
 
     // Each box data: x, y, w, h, a
