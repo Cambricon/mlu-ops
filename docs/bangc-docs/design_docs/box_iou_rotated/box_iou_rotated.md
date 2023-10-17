@@ -183,7 +183,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 
 完成上述 3.1，3.2，3.3，3.4 几个步骤之后，基本可以给出一个理论性能，不需要每一个算子都有过于复杂的公式，但是一定要对自己的算子有一个心理的预期，最终实现之后的效率值是多少。
 
-由于 伪代码 part 8. Convex-Hull-Graham 的算法目前设计为标量循环实现，所以性能暂无估计，片上时间复杂度 O(24x24xM)，其他部分已做了向量化的部分优化，时间复杂度为 O(M). 在 aligned=false 的情况，片外循环的时间复杂度是 O(NxM)，否则则为 O(M).
+由于 伪代码 part 8. Convex-Hull-Graham 的算法目前设计为标量循环实现，所以性能暂无估计，片上时间复杂度 O(24x24xM)，其他部分已做了向量化的部分优化，时间复杂度为 O(M).
+在 aligned=false 的情况，片外循环的时间复杂度是 O(NxM)，否则则为 O(M).
 
 - aligned = true 的情况： O(60000xN)
 - aligned = false 的情况： O(66000xNxM)
@@ -228,4 +229,4 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 ### 4.1 当前存在问题的规模说明
 
 ### 4.2 已经过优化的规模说明
-在500系列上已对convex_hull_graham进行性能优化，优化后kernel性能提升4.6% ~ 98%.
+在500系列上已对convex_hull_graham进行性能优化，优化后kernel性能提升6.8% ~ 98%.
