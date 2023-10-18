@@ -416,6 +416,12 @@ mluOpNmsRotated
 -----------------------------
 计算旋转box的非极大值抑制。
 
+.. _pad:
+
+mluOpPad
+----------------------------------
+该算子功能是按照CONSTANT的方式根据填充大小和填充值对tensor的外围进行扩展或者裁切，主要用在反向传播中的形状补齐。
+
 .. _points_in_boxes:
 
 mluOpPointsInBoxes

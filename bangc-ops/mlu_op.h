@@ -3047,6 +3047,90 @@ mluOpAddN(mluOpHandle_t handle,
           const mluOpTensorDescriptor_t output_desc,
           void *output);
 
+// Group:Pad
+/*!
+ * @brief Uses constant mode to pad or crop the input tensor by \b padding_value. This operation is usually used in
+ * ResNet and Transformer networks.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the padding operation. For
+ * detailed information, see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] paddings
+ * A host pointer that holds the padding size to be added for each dimension
+ * of \b input. Positive and negative padding values represent the padding size and the cropping size, respectively.
+ * @param[in] padding_value
+ * A host pointer that holds the constant value to be added.
+ * @param[in] output_desc
+ * The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] output
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - Data types of input tensor \b input, \b padding_value and output tensor \b output must be the same. The
+ *  supported data types are as follows:
+ *   - input tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float.
+ *   - paddings: int32.
+ *   - padding_value: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float.
+ *   - output tensor: uint8, int8, uint16, int16, uint32, int32, uint64, int64, bool, half, float.
+ *
+ * @par Scale Limitation
+ * - Only supports padding with a constant value in \b padding_value.
+ * - The input tensor and output tensor must meet the following requirements:
+ *   - The number of dimensions of \b input must be less than or equal to 8.
+ *   - The shape of the integer array of \b paddings is \p [n, 2]. Length of the first dimension of \b paddings is
+ *   \p n, which equals to the number of dimensions of \b input. Length of the second dimension of \b paddings is 2,
+ *   which means the two padding directions of before and after directions for each dimension of \b input. For each
+ *   dimension \p k, \p paddings[k, 0] and \p paddings[k, 1] specify the padding size before and after the input data
+ *   respectively.
+ *   - ``output[k] = paddings[k, 0] + input[k] + paddings[k, 1]``. \p k represents each dimension of \b input.
+ *   \p output[k] represents the length of the dimension \p k in the output tensor. \p input[k] represents the length
+ *   of the dimension \p k in the input tensor. \p paddings[k, 0] and \p paddings[k, 1] represent the length to be
+ *   padded before and after the dimension \p k in the input tensor respectively.
+ *   - ``paddings[k, 0] and \p paddings[k, 1] >= \p -input[k]``. \p k represents each dimension of \b input.
+ *   \p input[k] represents the length of the dimension \p k in the input tensor.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - The example of pad is as follows:
+   @verbatim
+    For example below, if dimensions of input == 2, then the shape of paddings should be [n, 2] == [2, 2], where n holds
+    the length of the first dimension of paddings. If paddings == [[len1, len2], [len3, len4]], then for the first
+    dimension k, paddings[k, 0] == len1 == 1, paddings[k, 1] == len2 == 1. For the second dimension k + 1, paddings[k +
+    1, 0] == len3 == -1. paddings[k + 1, 1] == len4 == 2. So the paddings is [[1, 1], [-1, 2]].
+    - len1 is the padding size to be padded before the first dimension k of the input data.
+    - len2 is the padding size to be padded after the first dimension k of the input data.
+    - len3 is the padding size to be padded before the second dimension k + 1 of the input data.
+    - len4 is the padding size to be padded after the second dimension k + 1 of the input data.
+
+    input: [[2, 4], [1, 3]]
+    paddings: [[1, 1], [-1, 2]]
+    padding_value: 0
+    output: [[0, 0, 0], [4, 0, 0], [3, 0, 0], [0, 0, 0]]
+   @endverbatim
+ *
+ * @par Reference
+ * - https://www.tensorflow.org/api_docs/python/tf/pad
+ * - https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/ops/array_ops.py
+ * - https://pytorch.org/docs/stable/nn.functional.html?highlight=pad#torch.nn.functional.pad
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpPad(mluOpHandle_t handle,
+         const mluOpTensorDescriptor_t input_desc,
+         const void *input,
+         const void *paddings,
+         const void *padding_value,
+         const mluOpTensorDescriptor_t output_desc,
+         void *output);
+
 // Group:Log
 /*!
  * @brief Computes logarithm of input tensor \b x, and returns the results in

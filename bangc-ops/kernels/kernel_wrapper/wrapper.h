@@ -129,6 +129,14 @@
     const mluOpTensorDescriptor_t, const void *,                              \
     const mluOpTensorDescriptor_t, void *
 
+#define PAD_PARAM_TYPE                                                        \
+    mluOpHandle_t, const mluOpTensorDescriptor_t,                             \
+    const void *,                                                             \
+    const void *,                                                             \
+    const void *,                                                             \
+    const mluOpTensorDescriptor_t,                                            \
+    void *
+
 #define TRANSPOSE_PARAM_TYPE                                                  \
     mluOpHandle_t, const mluOpTransposeDescriptor_t,                          \
     const mluOpTensorDescriptor_t, const void *,                              \
@@ -308,6 +316,7 @@ KERNEL_REGISTER(roiAlignForwardV2, ROIALIGN_FORWARD_V2_PARAM_TYPE);
 KERNEL_REGISTER(scatterNd, SCATTER_ND_PARAM_TYPE);
 KERNEL_REGISTER(scatterNdV2, SCATTER_ND_V2_PARAM_TYPE);
 KERNEL_REGISTER(gatherNd, GATHER_ND_PARAM_TYPE);
+KERNEL_REGISTER(pad, PAD_PARAM_TYPE);
 KERNEL_REGISTER(transpose, TRANSPOSE_PARAM_TYPE);
 KERNEL_REGISTER(transposeV2, TRANSPOSE_V2_PARAM_TYPE);
 KERNEL_REGISTER(nms, NMS_PARAM_TYPE);
