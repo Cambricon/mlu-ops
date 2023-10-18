@@ -789,8 +789,6 @@ __mlu_func__ void polygonArea(T *ordered_pts_x, T *ordered_pts_y, T *valid_box,
 
   // temp_nums_in = max(nums_in)
   T temp_nums_in = ((T *)temp6_ram)[0];
-  // T temp_nums_in = (T)5.0;
-  // __bang_printf("area temp_nums_in: %f \n", temp_nums_in);
   for (int i = 1; i < temp_nums_in - 1; i++) {
     // q[i] - q[0]: (temp5, temp6)
     __bang_sub((T *)temp5_ram, (T *)ordered_pts_x + i * actual_compute_box_num,
