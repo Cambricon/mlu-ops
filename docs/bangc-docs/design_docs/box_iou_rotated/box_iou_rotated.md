@@ -145,13 +145,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 4. 通过`new_pts`的数据，计算旋转后的顶点`rotated_vertices`，通过旋转后的顶点，计算每条边的`vector`的表示，通过 3 个过程，计算 24 种可能的交点。由于向量化计算，每组 box-pair 的有效交点个数和类型都不同，需要设置`valid_pts`对应位置是否为 true，标记该位置是否为有效交点。
 5. 通过上述过程得到的有效交点，如果`nums_in`对应大于 2，代表有 2 个以上的交点，可以计算交叠面积，否则设置对应位置的`valid_box`为 false，设置 ious=0.
 6. 用 Convex-hull-graham 顶点扫描法，标量计算每一组 24 个交点，进行排序、筛选得出凸包形状的顶点集合。（区分 arch）
- - 1. 300 系列顶点间的顺序有cross_product值比较来进行排序。
- - 2. 500 系列
-  - 1. 两个box相交得出的多边形只能是凸包，排序正确情况下，没有凹点需要筛选，可以省略筛选点的步骤。
-  - 2. 按照各点与x正半轴形成的角度，逆时针排序。    
-      ![box_iou_rotated](./res/sort_vertices1.png)
-  - 3. 设点p0(x, y)， 计算 f(p0) = abs(x) * x / (x * x + y * y), cos函数在[0, π]区间（第一二象限）单调递减，如下图所示。通过比较两个顶点 `cosθ`平方的大小（保留正负号），来判断两个点的大小关系。
-      ![box_iou_rotated](./res/cosine1.png)
+    - 300 系列顶点间的顺序有cross_product值比较来进行排序。
+    - 500 系列
+        1. 两个box相交得出的多边形只能是凸包，排序正确情况下，没有凹点需要筛选，可以省略筛选点的步骤。
+        2. 按照各点与x正半轴形成的角度，逆时针排序。    
+            ![box_iou_rotated](./res/sort_vertices1.png)
+        3. 设点p0(x, y)， 计算 f(p0) = abs(x) * x / (x * x + y * y), cos函数在[0, π]区间（第一二象限）单调递减，如下图所示。通过比较两个顶点 `cosθ`平方的大小（保留正负号），来判断两个点的大小关系。
+            
+            ![box_iou_rotated](./res/cosine1.png)
 7. 最后使用`polygon_area`函数计算有效 box 的 iou 面积。然后再根据`mode`的不同，做不同分母的除法。
 
 ### 3.2 伪代码实现（可选）

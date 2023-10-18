@@ -563,6 +563,9 @@ __mlu_func__ void convexHullGraham(
 
   // get the offset of each max value according to the channel
   __mluop_get_stage_indices_tfuse((int *)temp3_ram, actual_compute_box_num);
+
+  T *temp_offset = (T *)temp_long_3 + 3 * actual_compute_box_num;
+
   for (int i = 0; i < nums_in_max - 1; i++) {
     // temp_long_3 = max_angle_value_index(temp_long_2), use
     // __bang_maxpool_value_index, channel=box_num, h=1, w=24
@@ -578,36 +581,30 @@ __mlu_func__ void convexHullGraham(
         (uint *)(temp_long_3 + real_compute_box_num + actual_compute_box_num),
         actual_compute_box_num, (uint)23);
     // get the offset of each max value of pooled
-    __bang_mul_scalar(
-        (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-        (unsigned int *)(temp_long_3 + actual_compute_box_num),
-        actual_compute_box_num, actual_compute_box_num);
-    __bang_add((unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-               (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
+    __bang_mul_scalar((unsigned int *)temp_offset,
+                      (unsigned int *)(temp_long_3 + actual_compute_box_num),
+                      actual_compute_box_num, actual_compute_box_num);
+    __bang_add((unsigned int *)temp_offset, (unsigned int *)temp_offset,
                (unsigned int *)temp3_ram, actual_compute_box_num);
-    __bang_mul_scalar(
-        (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-        (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num), sizeof(T),
-        actual_compute_box_num);
+    __bang_mul_scalar((unsigned int *)temp_offset, (unsigned int *)temp_offset,
+                      sizeof(T), actual_compute_box_num);
 
     // get the ordered points according to the angle value
     __gather(ordered_pts_x + (i + 1) * actual_compute_box_num, intersect_pts_x,
-             (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-             sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+             (unsigned int *)temp_offset, sizeof(T), NRAM2NRAM, sizeof(T),
+             actual_compute_box_num);
     __gather(ordered_pts_y + (i + 1) * actual_compute_box_num, intersect_pts_y,
-             (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-             sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+             (unsigned int *)temp_offset, sizeof(T), NRAM2NRAM, sizeof(T),
+             actual_compute_box_num);
     __gather(temp_long_1 + (i + 1) * actual_compute_box_num, valid_pts,
-             (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-             sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+             (unsigned int *)temp_offset, sizeof(T), NRAM2NRAM, sizeof(T),
+             actual_compute_box_num);
 
     // assign a invalid value to the point which has been get ordered
-    __scatter(temp_long_2, temp1_ram,
-              (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-              sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
-    __scatter(valid_pts, temp2_ram,
-              (unsigned int *)(temp_long_3 + 3 * actual_compute_box_num),
-              sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __scatter(temp_long_2, temp1_ram, (unsigned int *)temp_offset, sizeof(T),
+              NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __scatter(valid_pts, temp2_ram, (unsigned int *)temp_offset, sizeof(T),
+              NRAM2NRAM, sizeof(T), actual_compute_box_num);
   }
   __bang_move(valid_pts, temp_long_1, total_points * sizeof(T));
 #else
