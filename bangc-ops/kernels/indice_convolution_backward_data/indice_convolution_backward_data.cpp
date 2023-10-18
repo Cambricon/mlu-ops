@@ -27,6 +27,7 @@
 
 #include "core/context.h"
 #include "core/gen_case.h"
+#include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 #include "mlu_op.h"
 
 static mluOpStatus_t foolCheckNoPtr(
