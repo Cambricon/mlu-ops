@@ -1,0 +1,47 @@
+op_name: "pad"
+op_type: "PAD"
+input {
+  id: "input1"
+  shape: {
+    dims: 64
+    dims: 64
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+  random_data: {
+    seed: 23
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 3
+  value_i: 3
+  value_i: 3
+  value_i: 3
+}
+output {
+  id: "output"
+  shape: {
+    dims: 70
+    dims: 70
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_HALF
+}
+pad_param: {
+  padding_value_hex: "0x4c03"
+}
+test_param: {
+  error_func: DIFF3
+  error_threshold: 0.0
+  baseline_device: CPU
+}
