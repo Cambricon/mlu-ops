@@ -38,7 +38,6 @@
 // This marco is determined by specific experiment on 40g device in market.
 // Cases with indices exceeded this number may raise OOM error when generating
 // test cases.
-#define INDICE_IN_LARGE_TENSOR_NUM  1000000
 
 #define LOG(severity) mluop::logging::CLOG(MLUOP, severity)
 

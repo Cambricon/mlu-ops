@@ -28,6 +28,7 @@
 #include "core/logging.h"
 #include "core/mlu_env.h"
 #include "core/tensor.h"
+#include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 #include "mlu_op.h"
 
 inline bool isFloatDtype(const mluOpDataType_t &dtype) {
