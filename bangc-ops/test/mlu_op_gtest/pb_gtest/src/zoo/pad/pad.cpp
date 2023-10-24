@@ -54,19 +54,18 @@ cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype) {
       return cnrtUlonglong;
     default:
       LOG(ERROR) << "NOT support this dtype yet";
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
   }
 }
 
 void PadExecutor::paramCheck() {
-  if (!parser_->getProtoNode()->has_pad_param()) {
-    LOG(ERROR) << "Lose pad param. ";
-  }
-  if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "pad input number is wrong. ";
-  }
-  if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "pad output number is wrong. ";
-  }
+  GTEST_CHECK(parser_->getProtoNode()->has_pad_param(),
+              "Lose pad param. ");
+  GTEST_CHECK(parser_->getInputNum() == 2,
+              "pad input number is wrong. ");
+  GTEST_CHECK(parser_->getOutputNum() == 1,
+              "pad output number is wrong. ");
 }
 
 void PadExecutor::compute() {
