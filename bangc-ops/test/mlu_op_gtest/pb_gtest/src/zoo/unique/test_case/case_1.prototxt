@@ -1,5 +1,4 @@
 op_name: "unique"
-op_type: "UNIQUE"
 input {
   id: "input"
   shape: {

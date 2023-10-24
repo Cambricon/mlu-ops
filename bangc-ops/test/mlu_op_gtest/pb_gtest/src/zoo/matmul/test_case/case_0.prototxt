@@ -1,5 +1,4 @@
 op_name: "matmul"
-op_type: "MATMUL"
 input {
   id: "input1"
   shape: {

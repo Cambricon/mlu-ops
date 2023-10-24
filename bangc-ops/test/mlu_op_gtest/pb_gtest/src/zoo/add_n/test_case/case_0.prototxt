@@ -1,5 +1,4 @@
 op_name: "add_n"
-op_type: "ADDN"
 input {
   id: "input1"
   shape: {
