@@ -54,6 +54,8 @@ cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype) {
       return cnrtUlonglong;
     default:
       LOG(ERROR) << "NOT support this dtype yet";
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                            std::to_string(__LINE__));
   }
 }
 
