@@ -13522,7 +13522,7 @@ mluOpTinShiftForward(mluOpHandle_t handle,
  *
  * The size of the extra workspace is based on the given information of the MaskedCol2imForward operation,
  * including the input tensor descriptor \b col_desc and \b im_desc. For more information about the workspace,
- * see "Cambricon BANGC OPS User Guide".
+ * see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
  * Handle to an MLUOP context that is used to manage MLU devices and queues in the
@@ -13594,7 +13594,7 @@ mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
  * the coordinates of mask in width direction.
  * @param[in] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the MaskedCol2imForward
- * operation. For more information about workspace, see "Cambricon BANGC OPS User Guide".
+ * operation. For more information about workspace, see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] im_desc
@@ -14682,7 +14682,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a   context that is used to manage MLU devices and queues in the
  * ::mluOpSyncBatchnormBackwardReduce operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_dz
  * The descriptor of the input tensor \b dz. For detailed information, see
@@ -15142,7 +15142,7 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par Formula
- * - See "Transform Operator" section in "Cambricon MLUOP User Guide" for
+ * - See "Transform Operator" section in "Cambricon BANG C OPS User Guide" for
  * details.
  *
  * @par Data Type
@@ -15180,7 +15180,6 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
      @endverbatim
  *
  */
-
 mluOpStatus_t MLUOP_WIN_API
 mluOpTransform(mluOpHandle_t handle,
                const mluOpPointerMode_t pointer_mode,
@@ -15223,7 +15222,7 @@ mluOpTransform(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Formula
- * - See "StridedSlice Operation" section in "Cambricon MLUOP User Guide" for details.
+ * - See "StridedSlice Operation" section in "Cambricon BANG C OPS User Guide" for details.
  *
  * @par Data Type
  * - The (I/O)function supports the following byte-width data types for \p input and \p output tensors.
@@ -15293,6 +15292,47 @@ mluOpStridedSlice(mluOpHandle_t handle,
                   const mluOpTensorDescriptor_t output_desc,
                   void *output);
 
+// Group:Debugging
+/*!
+ * @brief Sets the mode of a Cambricon BANG C OPS debugging tool that can generate operator
+ * information files for all the operators that are called. The generated file
+ * contains the operator information including inputs shapes, outputs shapes,
+ * parameters and inputs real data based on the setting of \b mode. For more
+ * information, see "Cambricon BANG C OPS User Guide".
+ *
+ * @param[in] mode
+ * Input. The parameter determines what mode the Cambricon BANG C OPS debugging tool will turn on.
+ *
+ * @par Note
+ * - When \b mode is set to 0, the Cambricon BANG C OPS debugging tool will turn off, and do not
+ *   generate operator information files.
+ *
+ * - When \b mode is set to 1, the Cambricon BANG C OPS debugging tool will generate operator
+ *   information files for all the operators that are called. And the inputs real
+ *   data of the operators is not included in the files.
+ *
+ * - When \b mode is set to 2, the Cambricon BANG C OPS debugging tool will generate operator
+ *   information files for all the operators that are called. Only part of the inputs real
+ *   data of the operators is included in the files. If the environment variable
+ *   MLUOP_GEN_CASE_DUMP_DATA is set to 1, all of the inputs real data of the operators will be
+ *   included in the files. For more information about setting environment variable,
+ *   see "Cambricon BANG C OPS User Guide".
+ *
+ * - When \b mode is set to 3, the Cambricon BANG C OPS debugging tool will print operator
+ *   information on the screen without the inputs real data for all the operators
+ *   that are called instead generating information files.
+ *
+ * - When \b mode is out of range [0, 3], the Cambricon BANG C OPS debugging tool will turn off,
+ *   and do not generate operator information files.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+void MLUOP_WIN_API
+mluOpSetGenCaseMode(int mode);
 #if defined(__cplusplus)
 }
 #endif
