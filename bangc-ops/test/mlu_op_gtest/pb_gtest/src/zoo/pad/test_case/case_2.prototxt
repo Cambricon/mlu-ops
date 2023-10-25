@@ -1,5 +1,4 @@
 op_name: "pad"
-op_type: "PAD"
 input {
   id: "input1"
   shape: {
