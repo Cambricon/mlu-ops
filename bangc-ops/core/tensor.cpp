@@ -732,8 +732,8 @@ mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc) {
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpCreateTensorSetDescriptor(
-    mluOpTensorSetDescriptor_t *tensorSet, const int tensorSetDimNb,
-    const int *tensorSetDimSize) {
+    mluOpTensorSetDescriptor_t *tensorSetDesc, const int tensorSetDimNb,
+    const int tensorSetDimSize[]) {
   mluOpTensorSetStruct *tss = new (std::nothrow) mluOpTensorSetStruct();
   tss->dim_num = tensorSetDimNb;
   int set_size = 1;
@@ -755,35 +755,36 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateTensorSetDescriptor(
   tss->tensor_num = set_size;
   tss->dataOffsetInit(set_size);
   tss->user_indices.resize(set_size);
-  *tensorSet = tss;
+  *tensorSetDesc = tss;
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetTensorSetDescriptor(
-    mluOpTensorSetDescriptor_t tensorSet, int *tensorSetDimNb, int *dimSize) {
-  *tensorSetDimNb = tensorSet->dim_num;
-  for (int i = 0; i < tensorSet->dim_num; i++) {
-    dimSize[i] = tensorSet->dim_set[i];
+    mluOpTensorSetDescriptor_t tensorSetDesc, int *tensorSetDimNb,
+    int *dimSize) {
+  *tensorSetDimNb = tensorSetDesc->dim_num;
+  for (int i = 0; i < tensorSetDesc->dim_num; i++) {
+    dimSize[i] = tensorSetDesc->dim_set[i];
   }
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
-mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSet) {
-  PARAM_CHECK("[mluOpDestroyTensorSetDescriptor]", tensorSet != NULL);
-  tensorSet->tensor_set.clear();
-  delete tensorSet;
-  tensorSet = NULL;
+mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc) {
+  PARAM_CHECK("[mluOpDestroyTensorSetDescriptor]", tensorSetDesc != NULL);
+  tensorSetDesc->tensor_set.clear();
+  delete tensorSetDesc;
+  tensorSetDesc = NULL;
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpInitTensorSetMemberDescriptor(
-    mluOpTensorSetDescriptor_t tensorSet, const int tensorSetDimNb,
+    mluOpTensorSetDescriptor_t tensorSetDesc, const int tensorSetDimNb,
     const int *tensorIndex, mluOpTensorLayout_t layout, mluOpDataType_t dtype,
     const int dimNb, const int *dimSize) {
   PARAM_CHECK("[mluOpInitTensorSetMemberDescriptor]",
-              tensorSet->dim_num == tensorSetDimNb);
-  auto ts = tensorSet->getTensor(tensorIndex);
+              tensorSetDesc->dim_num == tensorSetDimNb);
+  auto ts = tensorSetDesc->getTensor(tensorIndex);
   PARAM_CHECK("[mluOpInitTensorSetMemberDescriptor]",
               MLUOP_STATUS_SUCCESS ==
                   mluOpSetTensorDescriptor(ts, layout, dtype, dimNb, dimSize));
@@ -791,12 +792,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpInitTensorSetMemberDescriptor(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpInitTensorSetMemberDescriptor_v2(
-    mluOpTensorSetDescriptor_t tensorSet, const int tensorSetDimNb,
+    mluOpTensorSetDescriptor_t tensorSetDesc, const int tensorSetDimNb,
     const int *tensorIndex, mluOpTensorLayout_t layout, mluOpDataType_t dtype,
     const int dimNb, const int64_t *dimSize) {
   PARAM_CHECK("[mluOpInitTensorSetMemberDescriptor_v2]",
-              tensorSet->dim_num == tensorSetDimNb);
-  auto ts = tensorSet->getTensor(tensorIndex);
+              tensorSetDesc->dim_num == tensorSetDimNb);
+  auto ts = tensorSetDesc->getTensor(tensorIndex);
   PARAM_CHECK("[mluOpInitTensorSetMemberDescriptor_v2]",
               MLUOP_STATUS_SUCCESS == mluOpSetTensorDescriptor_v2(
                                           ts, layout, dtype, dimNb, dimSize));
@@ -804,11 +805,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpInitTensorSetMemberDescriptor_v2(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpInitTensorSetMemberDescriptorPositionAndScale(
-    mluOpTensorSetDescriptor_t tensorSet, const int tensorSetDimNb,
+    mluOpTensorSetDescriptor_t tensorSetDesc, const int tensorSetDimNb,
     const int *tensorIndex, const int position, const float scale) {
   PARAM_CHECK("[mluOpInitTensorSetMemberDescriptorPositionAndScale]",
-              tensorSet->dim_num == tensorSetDimNb);
-  auto ts = tensorSet->getTensor(tensorIndex);
+              tensorSetDesc->dim_num == tensorSetDimNb);
+  auto ts = tensorSetDesc->getTensor(tensorIndex);
   PARAM_CHECK("[mluOpInitTensorSetMemberDescriptorPositionAndScale]",
               MLUOP_STATUS_SUCCESS == mluOpSetTensorDescriptorPositionAndScale(
                                           ts, position, scale));
@@ -816,22 +817,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpInitTensorSetMemberDescriptorPositionAndScale(
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetTensorSetDescriptorSize(
-    mluOpTensorSetDescriptor_t tensorSet, int *sizeInBytes) {
-  PARAM_CHECK("[mluOpGetTensorSetDescriptorSize]", tensorSet != NULL);
-  int tensor_set_size = tensorSet->getSize();
+    mluOpTensorSetDescriptor_t tensorSetDesc, int *sizeInBytes) {
+  PARAM_CHECK("[mluOpGetTensorSetDescriptorSize]", tensorSetDesc != NULL);
+  int tensor_set_size = tensorSetDesc->getSize();
   *sizeInBytes = tensor_set_size;
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetTensorAndDataFromTensorSet(
-    mluOpTensorSetDescriptor_t tensorSet, const int tensorSetDimNb,
+    mluOpTensorSetDescriptor_t tensorSetDesc, const int tensorSetDimNb,
     const int *tensorIndex, void *data, mluOpTensorDescriptor_t *tensorDesc,
     void **dataAddrInDevice) {
-  PARAM_CHECK("[mluOpGetTensorAndDataFromTensorSet]", tensorSet != NULL);
+  PARAM_CHECK("[mluOpGetTensorAndDataFromTensorSet]", tensorSetDesc != NULL);
   PARAM_CHECK("[mluOpGetTensorAndDataFromTensorSet]",
-              tensorSet->dim_num == tensorSetDimNb);
-  *tensorDesc = tensorSet->getTensor(tensorIndex);
-  auto offset = tensorSet->getOffset(tensorIndex);
+              tensorSetDesc->dim_num == tensorSetDimNb);
+  *tensorDesc = tensorSetDesc->getTensor(tensorIndex);
+  auto offset = tensorSetDesc->getOffset(tensorIndex);
   *dataAddrInDevice = (void *)((char *)data + offset);
   return MLUOP_STATUS_SUCCESS;
 }
