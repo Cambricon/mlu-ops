@@ -1,5 +1,4 @@
 op_name: "nms"
-op_type: "NMS"
 input {
   id: "input1"
   shape: {

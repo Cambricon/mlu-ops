@@ -1,5 +1,4 @@
 op_name: "scatter_nd"
-op_type: "SCATTER_ND"
 input {
   id: "indices"
   shape: {

@@ -1,5 +1,4 @@
 op_name: "roialign_forward"
-op_type: "ROIALIGN_FORWARD"
 input {
   id: "input0"
   shape: {

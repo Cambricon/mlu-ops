@@ -1,5 +1,4 @@
 op_name: "transpose"
-op_type: "TRANSPOSE"
 input {
   id: "input"
   shape: {

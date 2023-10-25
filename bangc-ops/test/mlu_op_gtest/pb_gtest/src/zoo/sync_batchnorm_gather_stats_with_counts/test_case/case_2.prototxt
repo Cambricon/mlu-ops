@@ -1,5 +1,4 @@
 op_name: "sync_batchnorm_gather_stats_with_counts"
-op_type: "SYNC_BATCHNORM_GATHER_STATS_WITH_COUNTS"
 input {
   id: "input"
   shape: {

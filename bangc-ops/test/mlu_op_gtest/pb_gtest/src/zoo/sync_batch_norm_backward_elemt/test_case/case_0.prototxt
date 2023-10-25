@@ -1,5 +1,4 @@
 op_name: "sync_batch_norm_backward_elemt"
-op_type: "SYNC_BATCHNORM_BACKWARD_ELEMT"
 input {
   id: "diff_y"
   shape: {

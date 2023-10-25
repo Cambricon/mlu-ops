@@ -1,5 +1,4 @@
 op_name: "sync_batchnorm_backward_reduce"
-op_type: "SYNC_BATCHNORM_BACKWARD_REDUCE"
 input{
     id:"dz"
     shape:{

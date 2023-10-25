@@ -1,5 +1,4 @@
 op_name: "reduce"
-op_type: "REDUCE"
 input {
 id: "input1"
   shape: {

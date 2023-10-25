@@ -1,5 +1,4 @@
 op_name: "gather_nd"
-op_type: "GATHER_ND"
 input {
   id: "params"
   shape: {

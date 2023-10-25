@@ -1,5 +1,4 @@
 op_name: "sync_batchnorm_stats"
-op_type: "SYNC_BATCHNORM_STATS"
 input {
   id: "x"
   shape: {
