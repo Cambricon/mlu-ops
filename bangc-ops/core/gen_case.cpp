@@ -38,6 +38,7 @@
 #include "core/type.h"
 #include "core/logging.h"
 #include "core/platform/env_time.h"
+#include "mlu_op.h"
 
 namespace mluop {
 namespace gen_case {
