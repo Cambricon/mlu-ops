@@ -1445,7 +1445,7 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
                                     const int input_space[],
                                     const int filter_space[],
                                     const int output_space[],
-                                    const int subm,
+                                    const int sub_m,
                                     const int transpose,
                                     const int inverse);
 
@@ -2483,7 +2483,7 @@ mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const 
  * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
-mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet, const int setDimNb, const int setDimSize[]);
+mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSetDesc, const int setDimNb, const int setDimSize[]);
 
 // Group:TensorSet
 /*!
@@ -2491,7 +2491,7 @@ mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet, const int 
  * with ::mluOpCreateTensorSetDescriptor.
  *
  * @param[in] tensorSetDesc
- * The descriptor of the tensor \b tensorSet.
+ * The descriptor of the tensor \b tensorSetDesc.
  * @param[out] setDimNb
  * The number of dimensions of the tensor set.
  * @param[out] setDimSize
@@ -2523,14 +2523,14 @@ mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSet, const int 
  * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
-mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setdimNb, int setDimSize[]);
+mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setDimNb, int setDimSize[]);
 
 // Group:TensorSet
 /*!
  * @brief Destroys a tensor set descriptor \b tensorSetDesc that was previously created by
  * ::mluOpCreateTensorSetDescriptor.
  *
- * @param[in] desc
+ * @param[in] tensorSetDesc
  * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  *
  * @par Return
@@ -2569,7 +2569,7 @@ mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
  * layout.
  *
  * @param[in] tensorSetDesc
- * The descriptor of the tensor \b tensorSet. For detailed information,
+ * The descriptor of the tensor \b tensorSetDesc. For detailed information,
  * see ::mluOpTensorSetDescriptor_t.
  * @param[in] setDimNb
  * The number of dimensions of the tensor set.
@@ -2632,7 +2632,7 @@ mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
  * fixed-point quantization with scale factor quantization method.
  *
  * @param[in] tensorSetDesc
- * The descriptor of the tensor \b tensorSet. For detailed information,
+ * The descriptor of the tensor \b tensorSetDesc. For detailed information,
  * see ::mluOpTensorSetDescriptor_t.
  * @param[in] setDimNb
  * The number of dimensions of the tensor set.
@@ -2690,7 +2690,7 @@ mluOpInitTensorSetMemberDescriptorPositionAndScale(mluOpTensorSetDescriptor_t te
  * first to create a tensor set descriptor before calling this
  * function.
  *
- * @param[in] desc
+ * @param[in] tensorSetDesc
  * The descriptor of the tensor desc. For detailed information,
  * see ::mluOpTensorSetDescriptor_t.
  * @param[out] sizeInBytes
@@ -2730,7 +2730,9 @@ mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, int *s
  * address based on the entire block of MLU memory through the index \b tensorIndex.
  *
  * @param[in] tensorSetDesc
- * The descriptor of the tensor \b tensorSet. For detailed information, see ::mluOpTensorSetDescriptor_t.
+ * The descriptor of the tensor \b tensorSetDesc. For detailed information, see ::mluOpTensorSetDescriptor_t.
+ * @param[in] setDimNb
+ * The number of dimensions of the tensor set.
  * @param[in] tensorIndex
  * An array that contains the position information of the member tensor in the tensor set.
  * @param[in] data
@@ -3616,7 +3618,7 @@ mluOpDiv(mluOpHandle_t handle,
  * DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
  * Reduce op. Only the default 'max' is supported.
- * @param[in] grad_voxel_feats
+ * @param[in] grad_voxel_feats_desc
  * Pointer to the MLU memory that stores the gradient for \b voxel_feats.
  * @param[in] feats_desc
  * The descriptor of the tensor \b feats. For detailed information,
@@ -3805,7 +3807,7 @@ mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
  * @param[in] coors_desc
  * The descriptor of the tensor \b coors . For detailed information,
  * see ::mluOpTensorDescriptor_t.
- * @param[out] size
+ * @param[out] workspace_size
  * A host pointer to the returned size of extra space in bytes.
  *
  * @par Return
@@ -4283,7 +4285,7 @@ mluOpPolyNms(mluOpHandle_t handle,
 /*!
  * @brief Creates a descriptor pointed to \b desc for ::mluOpNms, and allocates
  * memory for holding the information about the Nms function. The information
- * is defined in ::mluOpNmsNmsDescriptor_t.
+ * is defined in ::mluOpNmsDescriptor_t.
  *
  * @param[out] desc
  * A host pointer to the Nms descriptor that holds information about ::mluOpNms.
@@ -4292,9 +4294,9 @@ mluOpPolyNms(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
  *
  * @par API Dependency
- * - After calling this function, you can call ::mluOpNmsSetNmsDescriptor_v5 to
- * initialize and set the information to Nms descriptor.
- * - You need to call ::mluOpNmsDestroyNmsDescriptor to destroy the descriptor.
+ * - After calling this function, you can call ::mluOpSetNmsDescriptor to
+ *   initialize and set the information to Nms descriptor.
+ * - You need to call ::mluOpDestroyNmsDescriptor to destroy the descriptor.
  *
  * @note
  * - None.
@@ -4312,7 +4314,7 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
 /*!
  *
  * @brief Destroys an Nms descriptor \b desc that was previously created with
- * ::mluOpNmsCreateNmsDescriptor.
+ * ::mluOpCreateNmsDescriptor.
  *
  * The Nms descriptor is defined in ::mluOpNmsDescriptor_t and holds the information
  * about ::mluOpNms.
@@ -4364,7 +4366,7 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * Boxes would be filtered out if the IOU is greater than or equal to \b iou_threshold.
  * @param[in] soft_nms_sigma
  * The parameter used in soft Nms with Gaussian method.
- * This value would be used when method_mode is ::mluOpNms_SOFT_NMS_GAUSSIAN.
+ * This value would be used when method_mode is ::MLUOP_NMS_SOFT_NMS_GAUSSIAN.
  * @param[in] max_output_size
  * The maximum number of output boxes. If the dimension of input box is 3, for example
  * [batches_num, boxes_num, 4] or [batches_num, 4, boxes_num], this parameter indicates
@@ -4529,7 +4531,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpNms(mluOpHandle_t handle,
-         const mluOpNmsDescriptor_t desc,
+         const mluOpNmsDescriptor_t nms_desc,
          const mluOpTensorDescriptor_t boxes_desc,
          const void *boxes,
          const mluOpTensorDescriptor_t confidence_desc,
@@ -5828,15 +5830,15 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
  */
 mluOpStatus_t MLUOP_WIN_API
-mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
+mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle,
                                 const mluOpTensorDescriptor_t input_desc,
-                                const void *input_ptr,
+                                const void *input,
                                 const mluOpTensorDescriptor_t bboxes_desc,
-                                const void *bboxes_ptr,
+                                const void *bboxes,
                                 const float spatial_scale,
                                 const int points,
                                 const mluOpTensorDescriptor_t output_desc,
-                                void *output_ptr);
+                                void *output);
 
 // Group:RotatedFeatureAlign
 /*!
@@ -5908,15 +5910,15 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle_,
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
  */
 mluOpStatus_t MLUOP_WIN_API
-mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle_,
+mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle,
                                  const mluOpTensorDescriptor_t top_output_desc,
-                                 const void *top_output_ptr,
+                                 const void *top_output,
                                  const mluOpTensorDescriptor_t bboxes_desc,
-                                 const void *bboxes_ptr,
+                                 const void *bboxes,
                                  const float spatial_scale,
                                  const int points,
                                  const mluOpTensorDescriptor_t bottom_input_desc,
-                                 void *bottom_input_ptr);
+                                 void *bottom_input);
 
 // Group:Sqrt
 /*!
@@ -7905,10 +7907,10 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] attn_weight
  * Pointer to the MLU memory that stores the attention weight.
- * @param[in] grad_outout_desc
- * The descriptor of the \b grad_outout tensor. For detailed information,
+ * @param[in] grad_output_desc
+ * The descriptor of the \b grad_output tensor. For detailed information,
  * see ::mluOpTensorDescriptor_t.
- * @param[in] grad_outout
+ * @param[in] grad_output
  * Pointer to the MLU memory that stores the output gradient
  * of ::mluOpMsDeformAttnForward.
  * @param[in] im2col_step
@@ -9179,6 +9181,9 @@ mluOpGetMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMatMulAl
  * @brief Retrieves the possible algorithms can be used in the matrix multiplication.
  * The output is placed in result_array[] in the order of increasing estimated compute time.
  *
+ * @param[in] handle
+ * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * matrix multiplication operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] matmul_desc
  * The descriptor of the matrix multiplication operations. For detail information,
  * see ::mluOpMatMulDescriptor_t.
@@ -10336,27 +10341,29 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indices
  * Pointer to the MLU memory that stores the indices tensor.
- * @param[in] out_indices_desc
- * The descriptor of the tensor \b out_indices including output locations. For detailed information,
- * see ::mluOpTensorDescriptor_t.
- * @param[out] out_indices
- * Pointer to the MLU memory that stores the out_indices tensor.
+ * @param[in] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the get_indice_pairs operation.
+ * For more information about workspace, see "Cambricon BANG C OPS User Guide".
+ * @param[in] workspace_size
+ * The size of the extra workspace in bytes that needs to be used in this
+ * operation. You can get the size of the workspace with
+ * ::mluOpGetIndicePairsWorkspaceSize.
  * @param[in] indice_pairs_desc
  * The descriptor of the tensor \b indice_pairs between input locations and output locations.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] indice_pairs
  * Pointer to the MLU memory that stores the indice_pairs tensor.
  * @param[in] indice_num_desc
- * The descriptor of the tensor \b indice_num including the number of input points while calculating with every kernel
- points.
+ * The descriptor of the tensor \b indice_num including the number of input points while
+ * calculating with every kernel points.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] indice_num
  * Pointer to the MLU memory that stores the indice_num tensor.
- * @param[in] features_desc
- * @param[in] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the get_indice_pairs operation.
- * For more information about workspace, see "Cambricon BANG C OPS User Guide".
- * @param[in] workspace_size
+ * @param[in] out_indices_desc
+ * The descriptor of the tensor \b out_indices including output locations. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[out] out_indices
+ * Pointer to the MLU memory that stores the out_indices tensor.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH,
@@ -11659,7 +11666,7 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
  * queues in ::mluOpBorderAlignForward operation. For detailed information,
- * see ::mluOPHandle_t.
+ * see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor.
  * @param[in] input
@@ -11827,7 +11834,7 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  * Descriptor of \b grad_input , containing dimension and the layout of output.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the gradient of the input
- * tensor of ::mluOpBorderAlignForward.The shape of \b grad_input is [N, H, W, 4C],
+ * tensor of ::mluOpBorderAlignForward. The shape of \b grad_input is [N, H, W, 4C],
  * where N is the number of images, H is the height of images, W is the width of
  * images, and C is the number of image channels.
  *
@@ -12649,9 +12656,6 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  * @param[in] filters_desc
  * The descriptor of the tensor \b filters. For detailed information,
  * see ::mluOpTensorDescriptor_t.
- * @param[in] features_out_desc
- * The descriptor of the tensor \b features_out. For detailed information,
- * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_pairs_desc
  * The descriptor of the tensor \b indice_pair of features_in and filters.
  * For detailed information, see ::mluOpTensorDescriptor_t.
@@ -12660,6 +12664,8 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] indice_num
  * Pointer to the host memory that stores the indice pairs number.
+ * @param[in] num_act_out
+ * The number of non-zero element in output sparse tensor.
  * @param[in] inverse
  * Currently, it is not supported and should be set to 0.
  * @param[in] sub_m
@@ -13280,14 +13286,14 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
  * information, see ::mluOpTensorDescriptor_t.
  * @param[in] argmax_x
  * Pointer to the MLU memory that stores the \b argmax_x tensor. \b argmax_x represents
- * \b output coordinate of x axis returned by ::mluOpRoiAlign_v2 when \b pool_mode is maximum
+ * \b output coordinate of x axis returned by ::mluOpRoiAlignForward_v2 when \b pool_mode is maximum
  * pooling mode. When \b pool_mode is average pooling mode, \b argmax_x is NULL.
  * @param[in] argmax_y_desc
  * The descriptor of the \b argmax_y tensor that stores the coordinate of y axis. For detailed
  * information, see ::mluOpTensorDescriptor_t.
  * @param[in] argmax_y
  * Pointer to the MLU memory that stores the \b argmax_y tensor. \b argmax_y represents
- * \b output coordinate of y axis returned by ::mluOpRoiAlign_v2 when \b pool_mode is maximum
+ * \b output coordinate of y axis returned by ::mluOpRoiAlignForward_v2 when \b pool_mode is maximum
  * pooling mode. When \b pool_mode is average pooling mode, \b argmax_y is NULL.
  * @param[in] spatial_scale
  * A scaling factor that specifies how to map the box coordinates in the original image to
@@ -13348,11 +13354,11 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
  *   than \p x1. \p y2 should be greater than \p y1.
  *
  * @par API Dependency
- * - This function should be used with ::mluOpRoiAlign_v2.
+ * - This function should be used with ::mluOpRoiAlignForward_v2.
  *
  * @par Note
  * - Set the values of \b argmax_x and \b argmax_y according to the result returned by
- *   ::mluOpRoiAlign_v2.
+ *   ::mluOpRoiAlignForward_v2.
  *
  * @par Example
  * - The example of the RoiAlignBackward_v2 operation is as follows:
@@ -13999,7 +14005,7 @@ mluOpRoiPoolingForward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores the gradients tensor of the original images.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_INTERNAL_ERROR.
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH, ::MLUOP_STATUS_INTERNAL_ERROR.
  *
  * @par Data Type
  * - This function supports the following data types for gradient tensor \b grads, region proposals tensor \b rois,
