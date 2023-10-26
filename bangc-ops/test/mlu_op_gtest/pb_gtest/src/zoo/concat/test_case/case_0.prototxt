@@ -1,0 +1,68 @@
+op_name: "concat"
+input {
+  id: "input1"
+  shape: {
+    dims: 16
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 16
+    dims: 16
+    dims: 16
+    dims: 16
+  }
+  layout: LAYOUT_NDHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 32
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 16
+    dims: 16
+    dims: 16
+    dims: 16
+  }
+  layout: LAYOUT_NDHWC
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 27
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 48
+    dims: 1
+    dims: 1
+    dims: 1
+    dims: 16
+    dims: 16
+    dims: 16
+    dims: 16
+  }
+  layout: LAYOUT_NDHWC
+  dtype: DTYPE_FLOAT
+}
+concat_param: {
+  axis: 0
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}

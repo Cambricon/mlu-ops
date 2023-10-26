@@ -29,14 +29,14 @@
 #include "mlu_op.h"
 #include "export_statement.h"
 
-#define KERNEL_REGISTER(OP_NAME, PARAMS, ...)                                 \
-    class OP_NAME##Wrapper {                                                  \
-     public:                                                                  \
-      OP_NAME##Wrapper() {}                                                   \
-      ~OP_NAME##Wrapper() {}                                                  \
-      mluOpStatus_t invoke(PARAMS);                                           \
-      std::string op_name = #OP_NAME;                                         \
-    };
+#define KERNEL_REGISTER(OP_NAME, PARAMS, ...) \
+  class OP_NAME##Wrapper {                    \
+   public:                                    \
+    OP_NAME##Wrapper() {}                     \
+    ~OP_NAME##Wrapper() {}                    \
+    mluOpStatus_t invoke(PARAMS);             \
+    std::string op_name = #OP_NAME;           \
+  };
 
 /* Kernel param types macro defination */
 
@@ -148,74 +148,38 @@
     const mluOpTensorDescriptor_t, void *, void *, size_t
 
 #define REDUCE_PARAM_TYPE                                                     \
-    mluOpHandle_t, const mluOpReduceDescriptor_t, void *, size_t,             \
-    const void *, const mluOpTensorDescriptor_t, const void *,                \
-    const size_t, void *, const void *, const mluOpTensorDescriptor_t,        \
-    void *
+  mluOpHandle_t, const mluOpReduceDescriptor_t, void *, size_t, const void *, \
+      const mluOpTensorDescriptor_t, const void *, const size_t, void *,      \
+      const void *, const mluOpTensorDescriptor_t, void *
 
-#define ROIALIGNBACKWARD_PARAM_TYPE                                           \
-    mluOpHandle_t,                                                            \
-    const float,                                                              \
-    const int,                                                                \
-    const bool,                                                               \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    void *
+#define ROIALIGNBACKWARD_PARAM_TYPE                  \
+  mluOpHandle_t, const float, const int, const bool, \
+      const mluOpTensorDescriptor_t, const void *,   \
+      const mluOpTensorDescriptor_t, const void *,   \
+      const mluOpTensorDescriptor_t, void *
 
-#define ROIALIGNBACKWARD_V2_PARAM_TYPE                                        \
-    mluOpHandle_t,                                                            \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const float,                                                              \
-    const int,                                                                \
-    const bool,                                                               \
-    const int,                                                                \
-    const mluOpTensorDescriptor_t,                                            \
-    void *
+#define ROIALIGNBACKWARD_V2_PARAM_TYPE                                     \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,              \
+      const mluOpTensorDescriptor_t, const void *,                         \
+      const mluOpTensorDescriptor_t, const void *,                         \
+      const mluOpTensorDescriptor_t, const void *, const float, const int, \
+      const bool, const int, const mluOpTensorDescriptor_t, void *
 
-#define ROIPOOLINGFORWARD_PARAM_TYPE                                          \
-    mluOpHandle_t,                                                            \
-    mluOpPoolingMode_t,                                                       \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    float,                                                                    \
-    const mluOpTensorDescriptor_t,                                            \
-    void *,                                                                   \
-    int *
+#define ROIPOOLINGFORWARD_PARAM_TYPE                                    \
+  mluOpHandle_t, mluOpPoolingMode_t, const mluOpTensorDescriptor_t,     \
+      const void *, const mluOpTensorDescriptor_t, const void *, float, \
+      const mluOpTensorDescriptor_t, void *, int *
 
-#define ROIPOOLINGBACKWARD_PARAM_TYPE                                         \
-    mluOpHandle_t,                                                            \
-    mluOpPoolingMode_t,                                                       \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const int *,                                                              \
-    const float,                                                              \
-    const mluOpTensorDescriptor_t,                                            \
-    void *
+#define ROIPOOLINGBACKWARD_PARAM_TYPE                               \
+  mluOpHandle_t, mluOpPoolingMode_t, const mluOpTensorDescriptor_t, \
+      const void *, const mluOpTensorDescriptor_t, const void *,    \
+      const mluOpTensorDescriptor_t, const int *, const float,      \
+      const mluOpTensorDescriptor_t, void *
 
-#define TRANSFORM_PARAM_TYPE                                                  \
-    mluOpHandle_t,                                                            \
-    const mluOpPointerMode_t,                                                 \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    void *
+#define TRANSFORM_PARAM_TYPE                                     \
+  mluOpHandle_t, const mluOpPointerMode_t, const void *,         \
+      const mluOpTensorDescriptor_t, const void *, const void *, \
+      const mluOpTensorDescriptor_t, void *
 
 #define SYNCBATCHNORMSTATS_PARAM_TYPE                                       \
   mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, const float,  \
@@ -273,31 +237,25 @@
       const mluOpTensorDescriptor_t, const void *,            \
       const mluOpTensorDescriptor_t, void *
 
-#define SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE                 \
-  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *,    \
-    const mluOpTensorDescriptor_t,                               \
-      const void *, const mluOpTensorDescriptor_t, const void *, \
-      const mluOpTensorDescriptor_t, const void *,               \
-      const mluOpTensorDescriptor_t, const void *,               \
-      const mluOpTensorDescriptor_t, const void *,               \
-      const mluOpTensorDescriptor_t, const void *,               \
-      const mluOpTensorDescriptor_t, const void *,               \
+#define SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE              \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
+      const mluOpTensorDescriptor_t, const void *,            \
       const mluOpTensorDescriptor_t, void *diff_x
 
-#define TRANSFORM_PARAM_TYPE                                                  \
-    mluOpHandle_t,                                                            \
-    const mluOpPointerMode_t,                                                 \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    const void *,                                                             \
-    const void *,                                                             \
-    const mluOpTensorDescriptor_t,                                            \
-    void *
+#define STRIDEDSLICE_PARAM_TYPE                                            \
+  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, const int *, \
+      const int *, const int *, const mluOpTensorDescriptor_t, void *
 
-#define STRIDEDSLICE_PARAM_TYPE                               \
-  mluOpHandle_t, const mluOpTensorDescriptor_t, const void *, \
-      const int *, const int *, const int *,      \
-      const mluOpTensorDescriptor_t, void *
+#define CONCAT_PARAM_TYPE                                                 \
+  mluOpHandle_t, const int, const int, const mluOpTensorDescriptor_t[],   \
+      const void *const *, void *, size_t, const mluOpTensorDescriptor_t, \
+      void *
 
 /* Kernel register */
 KERNEL_REGISTER(addN, ADDN_PARAM_TYPE);
@@ -331,13 +289,14 @@ KERNEL_REGISTER(SyncBatchNormGatherStatsWithCounts,
                 SYNCBATCHNORMGATHERSTATSWITHCOUNTS_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormElemt, SYNCBATCHNORMELEMT_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchnormBackwardReduce,
-        SYNCBATCHNORMBACKWADREDUCE_PARAM_TYPE);
+                SYNCBATCHNORMBACKWADREDUCE_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchnormBackwardReduceV2,
-        SYNCBATCHNORMBACKWADREDUCE_V2_PARAM_TYPE);
+                SYNCBATCHNORMBACKWADREDUCE_V2_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormBackwardElemt,
-        SYNCBATCHNORMBACKWARDELEMT_PARAM_TYPE);
+                SYNCBATCHNORMBACKWARDELEMT_PARAM_TYPE);
 KERNEL_REGISTER(SyncBatchNormBackwardElemtV2,
-        SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE);
+                SYNCBATCHNORMBACKWARDELEMT_V2_PARAM_TYPE);
 KERNEL_REGISTER(transform, TRANSFORM_PARAM_TYPE);
 KERNEL_REGISTER(StridedSlice, STRIDEDSLICE_PARAM_TYPE);
+KERNEL_REGISTER(Concat, CONCAT_PARAM_TYPE);
 #endif  // KERNELS_KERNEL_WRAPPER_WRAPPER_H
