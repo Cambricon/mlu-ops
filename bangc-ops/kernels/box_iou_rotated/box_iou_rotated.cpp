@@ -153,7 +153,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
       LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
                  << "on MLU300 box1_desc->dims[0] should less than or equal to "
                  << "10,000,000 . But now is " << box1_desc->dims[0] << ".";
-      return MLUOP_STATUS_BAD_PARAM;
+      return MLUOP_STATUS_NOT_SUPPORTED;
     }
   } else {
     if (ious_desc->dim != 2) {

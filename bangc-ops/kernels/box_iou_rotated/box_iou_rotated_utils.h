@@ -516,7 +516,7 @@ __mlu_func__ void convexHullGraham(
 
   // Step3. Sorting according to angles. The angle become larger from 0 to 180
   // degree in anti-clockwise direction. The cos value of the value change from
-  // 1 to -1. Cos(theta) = fabs(x)*x / x*x + y*y
+  // 1 to -1. Cos(theta) = fabs(x)*x /(x*x + y*y)
   dot2d<T>((T *)dist_ram, (T *)intersect_pts_x, (T *)intersect_pts_y,
            (T *)intersect_pts_x, (T *)intersect_pts_y,
            24 * actual_compute_box_num, (T *)temp_long_3);
@@ -530,7 +530,7 @@ __mlu_func__ void convexHullGraham(
   __bang_abs((T *)temp_long_1, (T *)intersect_pts_x, total_points);
   __bang_mul((T *)temp_long_1, (T *)temp_long_1, intersect_pts_x, total_points);
 
-  // cos(theta) = fabs(x)*x/ x*x + y * y = fabs(x)*x/ dist
+  // cos(theta) = fabs(x)*x/(x*x + y * y) = fabs(x)*x/ dist
   __bang_div((T *)temp_long_2, (T *)temp_long_1, (T *)dist_ram, total_points);
   __bang_mul((T *)temp_long_2, (T *)temp_long_2, (T *)valid_pts, total_points);
   __bang_not((T *)temp_long_1, (T *)valid_pts, total_points);
