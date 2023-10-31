@@ -175,7 +175,7 @@ typedef enum {
 } mluOpComputationPreference_t;
 
 /*!
- * @brief Describes the atomics modes in MLUOP.
+ * @brief Describes the atomics modes in MLU-OPS.
  */
 typedef enum {
   MLUOP_ATOMICS_NOT_ALLOWED = 1,
@@ -762,7 +762,7 @@ mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size);
 
 // Group:Version Management
 /*!
- * @brief Retrieves the version of MLU-OPS library. The version of MLUOP
+ * @brief Retrieves the version of MLU-OPS library. The version of MLU-OPS
  * is composed of \b major, \b minor, and \b patch. For instance, major = 1,
  * minor = 2, patch = 3, the version of MLU-OPS library is 1.2.3.
  *
