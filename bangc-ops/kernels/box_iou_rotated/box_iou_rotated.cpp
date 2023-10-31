@@ -149,11 +149,11 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
           << ", box2_desc->dims[0] is " << box2_desc->dims[0] << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (box1_desc->dims[0] > MAX_BOX_NUM) {
+    if (handle->arch < 592 && box1_desc->dims[0] > MAX_BOX_NUM) {
       LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-                 << "box1_desc->dims[0] should less than or equal to "
-                 << "10,000,000. But now is " << box1_desc->dims[0] << ".";
-      return MLUOP_STATUS_BAD_PARAM;
+                 << "on MLU300 box1_desc->dims[0] should less than or equal to "
+                 << "10,000,000 . But now is " << box1_desc->dims[0] << ".";
+      return MLUOP_STATUS_NOT_SUPPORTED;
     }
   } else {
     if (ious_desc->dim != 2) {
@@ -178,6 +178,18 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
     return MLUOP_STATUS_SUCCESS;
   }
 
+  const size_t box1_element_num = mluOpGetTensorElementNum(box1_desc);
+  const size_t box2_element_num = mluOpGetTensorElementNum(box2_desc);
+  const size_t ious_element_num = mluOpGetTensorElementNum(ious_desc);
+
+  // check large tensor
+  TENSOR_NUM_CHECK("[mluOpBoxIouRotated]", box1_element_num, LARGE_TENSOR_NUM,
+                   "");
+  TENSOR_NUM_CHECK("[mluOpBoxIouRotated]", box2_element_num, LARGE_TENSOR_NUM,
+                   "");
+  TENSOR_NUM_CHECK("[mluOpBoxIouRotated]", ious_element_num, LARGE_TENSOR_NUM,
+                   "");
+
   // data nullptr should check after 0-element check
   PARAM_CHECK("[mluOpBoxIouRotated]", box1 != NULL);
   PARAM_CHECK("[mluOpBoxIouRotated]", box2 != NULL);
@@ -195,8 +207,8 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 3e-3, 3e-3, 0);
   }
 
-  int32_t num_box1 = mluOpGetTensorElementNum(box1_desc) / SINGLE_BOX_DIM;
-  int32_t num_box2 = mluOpGetTensorElementNum(box2_desc) / SINGLE_BOX_DIM;
+  int32_t num_box1 = box1_element_num / SINGLE_BOX_DIM;
+  int32_t num_box2 = box2_element_num / SINGLE_BOX_DIM;
 
   // Choose the best task dimension.
   cnrtDim3_t k_dim;

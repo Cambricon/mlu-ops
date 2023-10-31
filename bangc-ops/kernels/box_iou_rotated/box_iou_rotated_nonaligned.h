@@ -211,9 +211,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
         // Initialize valid_box, set actual_box2_num boxes2 to 1, else set to 0
         __bang_write_value((T *)valid_box, actual_compute_box_num, (T)1);
         if (actual_box2_num < actual_compute_box_num) {
-          for (uint32_t i = actual_box2_num; i < actual_compute_box_num; i++) {
-            ((T *)valid_box)[i] = 0;
-          }
+          __bang_write_value((T *)valid_box + actual_box2_num,
+                             actual_compute_box_num - actual_box2_num, (T)0);
         }
         // Where area < 1e-14(float), valid_box set to 0
         __bang_lt_scalar((T *)temp2_ram, (T *)area2_ram, (T)area_thres,
