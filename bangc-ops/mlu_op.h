@@ -91,7 +91,7 @@ typedef enum {
  * MLU-OPS Tensor Layout
  ******************************************************************************/
 /*!
- * @brief Describes the data layouts in MLUOP.
+ * @brief Describes the data layouts in MLU-OPS.
  *
  * The data can be defined in three, four, or five dimensions.
  *
@@ -134,7 +134,7 @@ typedef enum {
 /******************************************************************************
  * MLU-OPS Data Type
  ******************************************************************************/
-/*! @brief Describes the data types in MLUOP. */
+/*! @brief Describes the data types in MLU-OPS. */
 typedef enum {
   MLUOP_DTYPE_INVALID       = 0,  /*!< An invalid data type. */
   MLUOP_DTYPE_HALF          = 1,  /*!< A 16-bit floating-point data type. */
