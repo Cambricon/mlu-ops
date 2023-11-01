@@ -50,17 +50,17 @@ extern "C" {
 #endif
 
 /******************************************************************************
- * MLUOP Return Status
+ * MLU-OPS Return Status
  ******************************************************************************/
 /*! @brief Describes function return status.
  */
 typedef enum {
   MLUOP_STATUS_SUCCESS         = 0, /*!< The operation is successfully completed. */
   MLUOP_STATUS_NOT_INITIALIZED = 1,
-  /*!< MLUOP library is not initialized properly, which is usually caused by failing
+  /*!< MLU-OPS library is not initialized properly, which is usually caused by failing
        to call ::mluOpCreate, ::mluOpCreateTensorDescriptor or ::mluOpSetTensorDescriptor.
        Such error is usually due to incompatible MLU device or invalid driver environment.
-       Notice that ::mluOpCreate should be called prior to any other MLUOP function. */
+       Notice that ::mluOpCreate should be called prior to any other MLU-OPS function. */
   MLUOP_STATUS_ALLOC_FAILED = 2,
   /*!< This error occurs when the resource allocation fails, which is usually caused by
        failing to call cnMallocHost due to exceeded memory usage. Make sure that
@@ -88,10 +88,10 @@ typedef enum {
 } mluOpStatus_t;
 
 /******************************************************************************
- * MLUOP Tensor Layout
+ * MLU-OPS Tensor Layout
  ******************************************************************************/
 /*!
- * @brief Describes the data layouts in MLUOP.
+ * @brief Describes the data layouts in MLU-OPS.
  *
  * The data can be defined in three, four, or five dimensions.
  *
@@ -132,9 +132,9 @@ typedef enum {
 } mluOpTensorLayout_t;
 
 /******************************************************************************
- * MLUOP Data Type
+ * MLU-OPS Data Type
  ******************************************************************************/
-/*! @brief Describes the data types in MLUOP. */
+/*! @brief Describes the data types in MLU-OPS. */
 typedef enum {
   MLUOP_DTYPE_INVALID       = 0,  /*!< An invalid data type. */
   MLUOP_DTYPE_HALF          = 1,  /*!< A 16-bit floating-point data type. */
@@ -175,7 +175,7 @@ typedef enum {
 } mluOpComputationPreference_t;
 
 /*!
- * @brief Describes the atomics modes in MLUOP.
+ * @brief Describes the atomics modes in MLU-OPS.
  */
 typedef enum {
   MLUOP_ATOMICS_NOT_ALLOWED = 1,
@@ -297,7 +297,7 @@ typedef enum {
 } mluOpNmsAlgo_t;
 
 /******************************************************************************
- * MLUOP Data Structure: Customized Operation
+ * MLU-OPS Data Structure: Customized Operation
  ******************************************************************************/
 /*!
  * @brief Describes the attributes of the matrix multiplication computation.
@@ -460,25 +460,25 @@ typedef enum {
 } mluOpPoolingMode_t;
 
 /******************************************************************************
- * MLUOP Runtime Management
+ * MLU-OPS Runtime Management
  ******************************************************************************/
 
 /*!
  * @struct mluOpContext
- * @brief Describes the MLUOP context.
+ * @brief Describes the Cambricon MLU-OPS context.
  */
 struct mluOpContext;
 
 /*!
- * Pointer to ::mluOpContext struct that holds the MLUOP context.
+ * Pointer to ::mluOpContext struct that holds the Cambricon MLU-OPS context.
  *
- * MLU device resources cannot be accessed directly, so MLUOP uses
- * handle to manage MLUOP context including MLU device information
+ * MLU device resources cannot be accessed directly, so MLU-OPS uses
+ * handle to manage MLU-OPS context including MLU device information
  * and queues.
  *
- * The MLUOP context is created with ::mluOpCreate and the returned
+ * The MLU-OPS context is created with ::mluOpCreate and the returned
  * handle should be passed to all the subsequent function calls.
- * You need to destroy the MLUOP context at the end with ::mluOpDestroy.
+ * You need to destroy the MLU-OPS context at the end with ::mluOpDestroy.
  */
 typedef struct mluOpContext *mluOpHandle_t;
 
@@ -497,14 +497,14 @@ typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
 
 // Group:Runtime Management
 /*!
- * @brief Initializes the MLUOP library and creates a handle \b handle to a struct
- * that holds the MLUOP library context. It allocates hardware resources on the host
- * and device. You need to call this function before any other MLUOP function.
+ * @brief Initializes the MLU-OPS library and creates a handle \b handle to a struct
+ * that holds the MLU-OPS library context. It allocates hardware resources on the host
+ * and device. You need to call this function before any other MLU-OPS function.
  *
  * You need to call ::mluOpDestroy to release the resources later.
  *
  * @param[out] handle
- * Pointer to an MLUOP context that is used to manage MLU devices and queues.
+ * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
  * For detailed information, see ::mluOpHandle_t.
  *
  * @par Return
@@ -536,13 +536,13 @@ mluOpCreate(mluOpHandle_t *handle);
 
 // Group:Runtime Management
 /*!
- * @brief Updates the MLUOP context information that is held by \b handle. This function
+ * @brief Updates the MLU-OPS context information that is held by \b handle. This function
  * should be called if you call CNDrv API cnSetCtxConfigParam to set the context information.
- * The related context information will be synchronized to MLUOP with this function. For
+ * The related context information will be synchronized to MLU-OPS with this function. For
  * detailed information, see "Cambricon CNDrv Developer Guide".
  *
  * @param[in] handle
- * Pointer to an MLUOP context that is used to manage MLU devices. For detailed information,
+ * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices. For detailed information,
  * see ::mluOpHandle_t.
  *
  * @par Return
@@ -574,9 +574,9 @@ mluOpUpdateContextInformation(mluOpHandle_t handle);
 
 // Group:Runtime Management
 /*!
- * @brief Releases the resources of the specified MLUOP handle \b handle that was
+ * @brief Releases the resources of the specified MLU-OPS handle \b handle that was
  * created by ::mluOpCreate. It is usually the last call to destroy
- * the handle to the MLUOP handle.
+ * the handle to the MLU-OPS handle.
  *
  * @param[in] handle
  * Pointer to the MLU devices that holds information to be destroyed.
@@ -614,13 +614,13 @@ mluOpDestroy(mluOpHandle_t handle);
  * launch kernels or to synchronize to this queue.
  *
  * Before setting a queue \b queue, you need to call ::mluOpCreate to initialize
- * MLUOP library, and call cnrtCreateQueue to create a queue \b queue.
+ * MLU-OPS library, and call cnrtCreateQueue to create a queue \b queue.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues. For detailed information, see ::mluOpHandle_t.
  * @param[in] queue
- * The runtime queue to be set to the MLUOP handle.
+ * The runtime queue to be set to the MLU-OPS handle.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -654,7 +654,7 @@ mluOpSetQueue(mluOpHandle_t handle, cnrtQueue_t queue);
  * @brief Retrieves the queue \b queue that was previously set to the handle \b handle.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues. For
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues. For
  * detailed information, see ::mluOpHandle_t.
  * @param[out] queue
  * Pointer to the queue that was previously set to the specified handle.
@@ -688,14 +688,14 @@ mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue);
 
 // Group:Runtime Management
 /*!
- * @brief Converts the MLUOP enumerated status code to ASCIIZ static string and returns
+ * @brief Converts the MLU-OPS enumerated status code to ASCIIZ static string and returns
  * a pointer to the MLU memory that holds information about ASCIIZ static string with
  * the status name. For example, when the input argument is ::MLUOP_STATUS_SUCCESS, the
  * returned string is ::MLUOP_STATUS_SUCCESS. When an invalid status value is passed to
  * the function, the returned string is ::MLUOP_STATUS_BAD_PARAM.
  *
  * @param[in] status
- * The MLUOP enumerated status code.
+ * The MLU-OPS enumerated status code.
  *
  * @par return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -762,16 +762,16 @@ mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size);
 
 // Group:Version Management
 /*!
- * @brief Retrieves the version of MLUOP library. The version of MLUOP
+ * @brief Retrieves the version of MLU-OPS library. The version of MLU-OPS
  * is composed of \b major, \b minor, and \b patch. For instance, major = 1,
- * minor = 2, patch = 3, the version of MLUOP library is 1.2.3.
+ * minor = 2, patch = 3, the version of MLU-OPS library is 1.2.3.
  *
  * @param[in] major
- * Pointer to scale factor that gets the major version of MLUOP library.
+ * Pointer to scale factor that gets the major version of MLU-OPS library.
  * @param[in] minor
- * Pointer to scale factor that gets the minor version of MLUOP library.
+ * Pointer to scale factor that gets the minor version of MLU-OPS library.
  * @param[in] patch
- * Pointer to scale factor that gets the patch version of MLUOP library.
+ * Pointer to scale factor that gets the patch version of MLU-OPS library.
  *
  * @par return
  * - None.
@@ -802,16 +802,16 @@ mluOpGetLibVersion(int *major, int *minor, int *patch);
 
 // Group:QuantizeRoundMode
 /*!
- * @brief Updates the specific rounding mode of MLUOP context information that is held by the \b
- * handle. This function should be called if you want to change the MLUOP rounding mode that
+ * @brief Updates the specific rounding mode of MLU-OPS context information that is held by the \b
+ * handle. This function should be called if you want to change the MLU-OPS rounding mode that
  * is used to cumulate the results. For detailed information, see "Cambricon CNDrv Developer
  * Guide".
  *
  * @param[in] handle
- * Pointer to an MLUOP context that is used to manage MLU devices and queues. For detailed
+ * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices and queues. For detailed
  * information, see ::mluOpHandle_t.
  * @param[in] round_mode
- * The rounding mode of quantization conversion to be set to the MLUOP handle.
+ * The rounding mode of quantization conversion to be set to the MLU-OPS handle.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
@@ -843,10 +843,10 @@ mluOpSetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_m
 
 // Group:QuantizeRoundMode
 /*!
- * @brief Retrieves the rounding mode of a specific MLUOP context.
+ * @brief Retrieves the rounding mode of a specific MLU-OPS context.
  *
  * @param[in] handle
- * Pointer to an MLUOP context that is used to manage MLU devices and queues. For detailed
+ * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices and queues. For detailed
  * information, see ::mluOpHandle_t.
  * @param[out] round_mode
  * The rounding mode of quantization conversion that was previously set to the specified handle.
@@ -880,12 +880,12 @@ mluOpGetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t *round_
 
 // Group:Runtime Management
 /*!
- * @brief Updates the specific atomics mode of MLUOP context information that is held by the
+ * @brief Updates the specific atomics mode of MLU-OPS context information that is held by the
  * \b handle. This function should be called if you want to change the atomics mode that is
  * used to cumulate the results.For detailed information, see "Cambricon CNDrv Developer Guide".
  *
  * @param[in] handle
- * Pointer to an MLUOP context that is used to manage MLU devices and queues. For detailed
+ * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices and queues. For detailed
  * information, see ::mluOpHandle_t.
  * @param[in] atomics_mode
  * The atomics mode.
@@ -919,10 +919,10 @@ mluOpSetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t atomics_mode);
 
 // Group:Runtime Management
 /*!
- * @brief Retrieves the atomics mode of a specific MLUOP context.
+ * @brief Retrieves the atomics mode of a specific MLU-OPS context.
  *
  * @param[in] handle
- * Pointer to an MLUOP context that is used to manage MLU devices and queues. For
+ * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices and queues. For
  * detailed information, see ::mluOpHandle_t.
  * @param[out] atomics_mode
  * The atomics mode.
@@ -955,7 +955,7 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode);
 
 /******************************************************************************
- * MLUOP Data Structure: Descriptor
+ * MLU-OPS Data Structure: Descriptor
  * The struct represent node, weight and the AI network layer
  ******************************************************************************/
 /*!
@@ -965,7 +965,7 @@ mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode);
  * You need to call ::mluOpCreateTensorDescriptor to create a descriptor,
  * and call ::mluOpSetTensorDescriptor or ::mluOpSetTensorDescriptorEx
  * to set the tensor information to the descriptor. Also, you need to destroy
- * the MLUOP context at the end with ::mluOpDestroyTensorDescriptor.
+ * the MLU-OPS context at the end with ::mluOpDestroyTensorDescriptor.
  */
 typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 
@@ -975,7 +975,7 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  *
  * You need to call ::mluOpMatMulDescCreate to create a descriptor, and call
  * ::mluOpSetMatMulDescAttr to set the information of the matrix multiplication
- * to the descriptor. Also, you need to destroy the MLUOP context at the end with
+ * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpMatMulDescDestroy.
  */
 typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
@@ -986,7 +986,7 @@ typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
  *
  * You need to call ::mluOpCreateNmsDescriptor to create a descriptor, and call
  * ::mluOpSetNmsDescriptor to set the information of the Nms
- * to the descriptor. Also, you need to destroy the MLUOP context at the end with
+ * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyNmsDescriptor.
  */
 typedef struct mluOpNmsStruct *mluOpNmsDescriptor_t;
@@ -997,7 +997,7 @@ typedef struct mluOpNmsStruct *mluOpNmsDescriptor_t;
  *
  * You need to call ::mluOpCreateSparseConvolutionDescriptor to create a descriptor,
  * and call ::mluOpSetSparseConvolutionDescriptor to set the tensor information to
- * the descriptor. Also, you need to destroy the MLUOP context at the end with
+ * the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroySparseConvolutionDescriptor.
  */
 typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
@@ -1007,7 +1007,7 @@ typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
  * algorithm descriptor and its runtime properties.
  *
  * You need to call ::mluOpCreateMatMulHeuristicResult to create a descriptor.
- * Also, you need to destroy the MLUOP context at the end with
+ * Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyMatMulHeuristicResult.
  */
 typedef struct mluOpMatMulHeuristicResult *mluOpMatMulHeuristicResult_t;
@@ -1022,7 +1022,7 @@ typedef struct mluOpMatMulPrefer *mluOpMatMulPrefer_t;
  * The descriptor of the matrix multiplication computation algorithm.
  *
  * You need to call ::mluOpMatMulAlgoCreate to create a descriptor.
- * Also, you need to destroy the MLUOP context at the end with
+ * Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpMatMulAlgoDestroy.
  */
 typedef struct mluOpMatMulAlgoStruct *mluOpMatMulAlgo_t;
@@ -1039,7 +1039,7 @@ typedef struct mluOpReduceStruct *mluOpReduceDescriptor_t;
  *
  * You need to call ::mluOpCreateTransposeDescriptor to create a descriptor,
  * and call ::mluOpSetTransposeDescriptor to set the information of
- * transpose operation to the descriptor. Also, you need to destroy the MLUOP context
+ * transpose operation to the descriptor. Also, you need to destroy the MLU-OPS context
  * at the end with ::mluOpDestroyTransposeDescriptor.
  */
 typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
@@ -1048,7 +1048,7 @@ typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
  *
  *  You need to call ::mluOpCreateRoiAlignForwardDescriptor to create a descriptor,
  *  and call ::mluOpSetRoiAlignForwardDescriptor to set the information of
- *  ::mluOpRoiAlignForward operation to the descriptor. Also, you need to destroy the MLUOP context
+ *  ::mluOpRoiAlignForward operation to the descriptor. Also, you need to destroy the MLU-OPS context
  *  at the end with ::mluOpDestroyRoiAlignForwardDescriptor.
  */
 typedef struct mluOpRoiAlignForwardStruct *mluOpRoiAlignForwardDescriptor_t;
@@ -1070,7 +1070,7 @@ typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
  *
  * You need to call ::mluOpCreateCarafeDescriptor to create a descriptor,
  * and call ::mluOpSetCarafeDescriptor to set the information of the CARAFE operation
- * to the descriptor. Also, you need to destroy the MLUOP context at the end with
+ * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyCarafeDescriptor.
  */
 typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
@@ -2783,7 +2783,7 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * and returns results in \b y.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * abs operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the tensor \b x. For detailed information,
@@ -2846,7 +2846,7 @@ mluOpAbs(mluOpHandle_t handle,
  * workspace to optimize ::mluOpAddN_v2.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in ::mluOpAddN
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in ::mluOpAddN
  * . For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
  * Array of descriptors for all input tensors. For detailed information,
@@ -2902,7 +2902,7 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
  * with ::mluOpGetAddNWorkspaceSize.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in ::mluOpAddN
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in ::mluOpAddN
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
  * Array of descriptors for all input tensors. For detailed information,
@@ -2981,7 +2981,7 @@ mluOpAddN_v2(mluOpHandle_t handle,
  *   recommended to use ::mluOpAddN_v2 instead.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in this
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in this
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_descs[]
  * Array of descriptor for all the input tensors. For detailed information,
@@ -3055,7 +3055,7 @@ mluOpAddN(mluOpHandle_t handle,
  * ResNet and Transformer networks.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the padding operation. For
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the padding operation. For
  * detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -3139,7 +3139,7 @@ mluOpPad(mluOpHandle_t handle,
  * the output tensor \b y.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the log operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] prefer
  * The \b prefer modes defined in ::mluOpComputationPreference_t.
@@ -3340,7 +3340,7 @@ mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
  * for each output location, which offers the ability of content-aware handling.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the carafe
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the carafe
  * forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] carafe_desc
  * The descriptor of the tensor \b carafe. For detailed information,
@@ -3444,7 +3444,7 @@ mluOpCarafeForward(mluOpHandle_t handle,
  * mask \b grad_mask based on the gradient of response \b grad_output.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the CARAFE backward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] carafe_desc
@@ -3548,7 +3548,7 @@ mluOpCarafeBackward(mluOpHandle_t handle,
  * results in the output tensor \b output.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the division operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] prefer
@@ -3614,7 +3614,7 @@ mluOpDiv(mluOpHandle_t handle,
  * @brief Gets extra space size for the DynamicPointToVoxelBackward operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices and queues management in the
+ * Handle to a Cambricon MLU-OPS context for MLU devices and queues management in the
  * DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
  * Reduce op. Only the default 'max' is supported.
@@ -3680,7 +3680,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * based on the gradient of response \b grad_feats.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices and queues management in the
+ * Handle to a Cambricon MLU-OPS context for MLU devices and queues management in the
  * DynamicPointToVoxelBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
  * Reduce op. Only the default 'max' is supported.
@@ -3799,7 +3799,7 @@ mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
  * @brief Gets extra space size that is needed in the DynamicPointToVoxelForward operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the DynamicPointToVoxelForward operation.
  * @param[in] feats_desc
  * The descriptor of the tensor \b feats . For detailed information,
@@ -3846,7 +3846,7 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  * dynamic voxelization.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * the DynamicPointToVoxelForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_type
  * Reduce op. support 'max' and 'mean'. Default: 'max'.
@@ -3957,7 +3957,7 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
  * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the GenerateProposalsV2 operation.
  * @param[in] scores_desc
  * The descriptor of the tensor \b scores. For detailed information,
@@ -4002,7 +4002,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * suppression is applied to generate the final bounding boxes.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the GenerateProposalsV2 operation.
  * @param[in] pre_nms_top_n
  * The number of top scoring RPN proposals to keep before applying
@@ -4164,7 +4164,7 @@ mluOpGenerateProposalsV2(mluOpHandle_t handle,
  * @brief Gets extra space size that is needed in the poly_nms operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the poly_nms operation.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes. For detailed information,
@@ -4204,7 +4204,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * @brief Computes the NMS (Non-Maximum Suppression) of polygon.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the poly_nms operation.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes. For detailed information,
@@ -4442,7 +4442,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * \b workspace_size with ::mluOpGetNmsWorkspaceSize.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the Nms function.
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the Nms function.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] nms_desc
  * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
@@ -4548,7 +4548,7 @@ mluOpNms(mluOpHandle_t handle,
  * needed in Nms operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes , which contains dimension, data type, and
@@ -4603,7 +4603,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * @brief Generates prior boxes for SSD (Single Shot MultiBox Detector) algorithm.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the prior_box operation.
  * @param[in] min_sizes_desc
  * The descriptor of the tensor \b min_sizes. The minimum size of generated
@@ -4754,7 +4754,7 @@ mluOpPriorBox(mluOpHandle_t handle,
  * @brief Generates fixed size feature map for each ROI (Regions of Interest).
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the psroipool_forward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] spatial_scale
@@ -4864,7 +4864,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
  * of ::mluOpPsRoiPoolForward.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * psroipool_forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pooled_height
  * An integer value which is the height of the output after pooling.
@@ -5165,7 +5165,7 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  *   maximum and average modes.
  *
  * @param[in] handle
- * Handle to a an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] roialign_desc
  * The descriptor of the RoiAlign operation. For detailed information,
@@ -5255,7 +5255,7 @@ mluOpRoiAlignForward(mluOpHandle_t handle,
  * \b argmax_x and \b argmax_y.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignForward_v2. For detailed information, see ::mluOpHandle_t.
  * @param[in] roialign_desc
  * The descriptor of the RoiAlign operation. For detailed information,
@@ -5378,7 +5378,7 @@ mluOpRoiAlignForward_v2(mluOpHandle_t handle,
  * according to the \b rois with rotation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignRotatedForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
  * The descriptor of the tensor \b features.
@@ -5488,7 +5488,7 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * \b rois to perform the backpropagation of ::mluOpRoiAlignRotatedForward.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignRotatedBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] top_grad_desc
  * The descriptor of the tensor \b top_grad in the backpropagation process.
@@ -5597,7 +5597,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * feature map is interpolated by bilinear sampling.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpRoiCropForward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] input_desc
@@ -5673,7 +5673,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * backpropagation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpRoiCropBackward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] grad_output_desc
@@ -5755,7 +5755,7 @@ mluOpRoiCropBackward(mluOpHandle_t handle,
  * manner to achieve feature alignment.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRotatedFeatureAlignForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -5846,7 +5846,7 @@ mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle,
  * and \b bboxes to perform the backpropagation of ::mluOpRotatedFeatureAlignForward.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRotatedFeatureAlignBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] top_output_desc
  * The descriptor of the tensor \b top_output. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -5926,7 +5926,7 @@ mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle,
  * output tensor \b y.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the sqrt operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] prefer
@@ -5987,7 +5987,7 @@ mluOpSqrt(mluOpHandle_t handle,
  *  returns the results in the output tensor \b diff_x.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the sqrt backward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] y_desc
@@ -6050,7 +6050,7 @@ mluOpSqrtBackward(mluOpHandle_t handle,
  * @brief Gets extra space size that is needed in voxelization operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the voxelization operation.
  * @param[in] points_desc
  * The descriptor of the tensor \b points. For detailed information, see
@@ -6137,7 +6137,7 @@ mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
  * is the number of voxels.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the voxelization operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] points_desc
@@ -6252,7 +6252,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * detected network.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the yolo_box operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] x_desc
@@ -6365,7 +6365,7 @@ mluOpYoloBox(mluOpHandle_t handle,
  * and then pools them to all the channels in the bev 2D area on the corresponding coordinates.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the voxel_pooling_forward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] batch_size
@@ -6467,7 +6467,7 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  * and \b bbox2.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the box_iou_rotated operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] mode
@@ -6565,7 +6565,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle,
  * including the input tensor descriptors \b boxes_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpNmsRotated. For detailed information, see ::mluOpHandle_t.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes, which contains the dimension and layout of the boxes tensor.
@@ -6592,7 +6592,7 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  * @brief Computes the index of nms with IOU of rotated bounding boxes.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpNmsRotated. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] iou_threshold
@@ -6673,7 +6673,7 @@ mluOpNmsRotated(mluOpHandle_t handle,
  * respectively represents the top-left and bottom-right corner coordinates of bounding-box.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * bounding-box overlaps operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] mode
  * An integer value which decides to return a result IOU or IOF.
@@ -6786,7 +6786,7 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  * and returns the results in the output tensor \b output.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the three_interpolate_forward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] features_desc
@@ -6879,7 +6879,7 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
  * of ::mluOpThreeInterpolateForward.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the three_interpolate_forward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] grad_output_desc
@@ -6968,7 +6968,7 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
  * the first \n nsample points in the \b xyz set in the spherical domain.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the Ballquery operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] new_xyz_desc
@@ -7059,7 +7059,7 @@ mluOpBallQuery(mluOpHandle_t handle,
  * on MLU device.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the copy operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information,
@@ -7128,7 +7128,7 @@ mluOpCopy(mluOpHandle_t handle,
  * tensor \b output.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information,
@@ -7196,7 +7196,7 @@ mluOpExpand(mluOpHandle_t handle,
  *   to host pointer or device pointer.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the fill
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the fill
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] value
  * A scale value to fill the output tensor.
@@ -7251,7 +7251,7 @@ mluOpFill(mluOpHandle_t handle, float value, const mluOpTensorDescriptor_t outpu
  *   to host pointer or device pointer.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the fill
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the fill
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] value_desc
  * The descriptor of the \b value tensor. For detailed information,
@@ -7311,7 +7311,7 @@ mluOpFill_v2(mluOpHandle_t handle,
  * @brief Fills the output tensor \b output with \b value.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in the fill operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pointer_mode
  * The scalar value \b value is passed
@@ -7378,7 +7378,7 @@ mluOpFill_v3(mluOpHandle_t handle,
  * to reduce the filter of samples which are easy to classify.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in ::mluOpFocalLossSigmoidForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] prefer
  * The algorithm used to compute the output. For detailed information,
@@ -7490,7 +7490,7 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * the \b grad_input tensor.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpFocalLossSigmoidBackward. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] prefer
@@ -7601,7 +7601,7 @@ mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
  * see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context to manage MLU devices and queues in
  * ::mluOpGetMaskedIm2colForwardWorkspaceSize. For detailed information, see ::mluOpHandle_t.
  * @param[in] feature_desc
  * The descriptor of the tensor \b feature. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -7660,7 +7660,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * by combining \b mask_h_idx tensor and \b mask_w_idx tensor, then copies the \b feature data covered by mask.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpMaskedIm2colForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] feature_desc
  * The descriptor of the tensor \b feature. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -7774,7 +7774,7 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
  * tensor \b grad_input.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpMoeDispatchBackwardData. For detailed information, see ::mluOpHandle_t.
  * @param[in] gates_desc
  * The descriptor of the tensor \b gates, which contains dimension, data type, and data layout.
@@ -7880,7 +7880,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @brief Computes the gradient of the input tensors of ::mluOpMsDeformAttnForward.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in the ms_deform_attn_backward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] value_desc
  * The descriptor of the \b value tensor. For detailed information,
@@ -7996,7 +7996,7 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
  * to optimize ::mluOpMutualInformationBackward.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices and queues management in
+ * Handle to a Cambricon MLU-OPS context for MLU devices and queues management in
  * ::mluOpMutualInformationBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] px_desc
  * The descriptor of the tensor \b px containing dimension, data type, and data layout.
@@ -8058,7 +8058,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  * @brief Computes the gradients of tensor \b px and tensor \b py.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices and queues management in the
+ * Handle to a Cambricon MLU-OPS context for MLU devices and queues management in the
  * mutual_information_backward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] px_desc
  * The descriptor of the tensor \b px containing dimension, data type, and data layout.
@@ -8187,7 +8187,7 @@ mluOpMutualInformationBackward(mluOpHandle_t handle,
  * to optimize ::mluOpMutualInformationForward.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices and queues management in
+ * Handle to a Cambricon MLU-OPS context for MLU devices and queues management in
  * ::mluOpMutualInformationForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] px_desc
  * The descriptor of the tensor \b px containing dimension, data type, and data layout.
@@ -8246,7 +8246,7 @@ mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
  * @brief Computes mutual information between tensor \b px and tensor \b py.
  *
  * @param[in] handle
- * Handle to an MLUOP context for MLU devices and queues management in the
+ * Handle to a Cambricon MLU-OPS context for MLU devices and queues management in the
  * mutual_information_forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] px_desc
  * The descriptor of the tensor \b px containing dimension, data type, and data layout.
@@ -8352,7 +8352,7 @@ mluOpMutualInformationForward(mluOpHandle_t handle,
  * including the input tensor descriptors \b pts_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiawarePool3dForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] rois_desc
  * The descriptor of the tensor \b rois, which contains the dimension and layout of the rois tensor.
@@ -8398,7 +8398,7 @@ mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
 // Group:RoiawarePool3d
 /*!
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiawarePool3dForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pool_method
  * Pooling method of Roiaware, 0 is 'maxpool', 1 is 'avgpool'. The default value is 0.
@@ -8521,7 +8521,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
 // Group:RoiawarePool3d
 /*!
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiawarePool3dBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pool_method
  * Pooling method of Roiaware. 0 is maxpool and 1 is avgpool. The default value is 0.
@@ -8614,7 +8614,7 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
  *
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpPsamaskForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] psa_type
  * The types of the psamask computation, including COLLECT and DISTRIBUTE.
@@ -8693,7 +8693,7 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * according to \b h_mask , \b w_mask , and \b psa_type.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpPsamaskBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] psa_type
  * The types of the psamask computation, including COLLECT and DISTRIBUTE.
@@ -8776,7 +8776,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *   Use ::mluOpMatMul_v2 instead.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * matrix multiplication operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] is_trans_a
  * Boolean value indicating whether \b a matrix is transposed.
@@ -8879,7 +8879,7 @@ mluOpMatMul(mluOpHandle_t handle,
 
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * matrix multiplication operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] matmul_desc
  * The descriptor of the matrix multiplication operations. For detail information,
@@ -8955,7 +8955,7 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpGetMatMulAlgoHeuristic and ::mluOpGetMatMulHeuristicResult in turn.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * matrix multiplication operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] matmul_desc
  * The descriptor of the matrix multiplication operations. For detail information,
@@ -9182,7 +9182,7 @@ mluOpGetMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMatMulAl
  * The output is placed in result_array[] in the order of increasing estimated compute time.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * matrix multiplication operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] matmul_desc
  * The descriptor of the matrix multiplication operations. For detail information,
@@ -9642,7 +9642,7 @@ mluOpSetUniqueDescriptor(
  *   to use ::mluOpGetUniqueWorkspaceSize instead, which supports better performance to unique.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the unique
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the unique
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] unique_desc
  * The descriptor of the unique operation. For detailed information, see ::mluOpUniqueDescriptor_t.
@@ -9696,7 +9696,7 @@ mluOpGetUniqueWorkSpace(mluOpHandle_t handle,
  *   to use ::mluOpUnique_v2 instead, which supports better performance to unique.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the unique
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the unique
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] unique_desc
  * The descriptor of the unique operation. For detailed information, see ::mluOpUniqueDescriptor_t.
@@ -9754,7 +9754,7 @@ mluOpUniqueGetOutLen(mluOpHandle_t handle,
  *  to use ::mluOpUnique_v2 instead, which supports better performance to unique.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * the unique operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] unique_desc
  * The descriptor of the unique operation. For detailed information,
@@ -9873,7 +9873,7 @@ mluOpUnique(mluOpHandle_t handle,
  * descriptor \b unique_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the unique
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the unique
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] unique_desc
  * The descriptor of the unique operation. For detailed information,
@@ -9931,7 +9931,7 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpGetUniqueWorkspaceSize.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * the unique operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] unique_desc
  * The descriptor of the unique operation. For detailed information,
@@ -10063,7 +10063,7 @@ mluOpUnique_v2(mluOpHandle_t handle,
  * @brief Gathers slices from \b params with shape specified by \b indices.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the gather_nd
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the gather_nd
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_params
  * The descriptor of the tensor desc_params. For detailed information, see
@@ -10137,7 +10137,7 @@ mluOpGatherNd(mluOpHandle_t handle,
  *   to use ::mluOpScatterNd_v2 instead.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the scatter_nd operation.
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the scatter_nd operation.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] indices_desc
  * The descriptor of the tensor \b indices. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -10222,7 +10222,7 @@ mluOpScatterNd(mluOpHandle_t handle,
  * which extracts values or slices from a given tensor.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the scatter_nd operation.
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the scatter_nd operation.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] mode
  * The scatter_nd mode used when \b indices contains duplicates. For detailed information,
@@ -10331,7 +10331,7 @@ mluOpScatterNd_v2(mluOpHandle_t handle,
  * tensor \b out_indices , \b indice_pairs and \b ind, ice_num.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * get_indice_pairs operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] sparse_conv_desc
  * The descriptor of the tensor \b sparse_conv that needs convolution. For detailed information,
@@ -10434,7 +10434,7 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  * tensor descriptor \b out_indices_desc , \b indice_pairs_desc , and \b indice_num_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * get_indice_pairs operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] sparse_conv_desc
  * The descriptor of the tensor \b sparse_conv that needs convolution. For detailed information,
@@ -10628,7 +10628,7 @@ mluOpDestroyTransposeDescriptor(mluOpTransposeDescriptor_t desc);
  * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in]  handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the transpose operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in]  x_desc
@@ -10684,7 +10684,7 @@ mluOpGetTransposeWorkspaceSize(mluOpHandle_t handle,
  *   to use ::mluOpTranspose_v2 instead.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in the transpose operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc
  * The descriptor of the transpose operation. For detailed information,
@@ -10765,7 +10765,7 @@ mluOpTranspose(mluOpHandle_t handle,
  * ::mluOpGetTransposeWorkspaceSize.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the transpose operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] desc
@@ -11056,7 +11056,7 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
  * maximum index, minimum value, and minimum index of tensor in the given dimension.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the reduce operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] reduce_desc
  * The descriptor of reduce operation. For detailed information,
@@ -11240,7 +11240,7 @@ mluOpReduce(mluOpHandle_t handle,
  * extra space size in reduce operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the reduce peration.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
@@ -11296,7 +11296,7 @@ mluOpGetReduceOpWorkspaceSize(mluOpHandle_t handle,
  * see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpActiveRotatedFilterForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input data, which contains dimension, data type, and data layout.
@@ -11339,7 +11339,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
  * the orientation information and generates orientation-sensitive features.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * the ActiveRotatedFilterForward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] input_desc
@@ -11429,7 +11429,7 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
  * then adds offsets to rois, and finally calculates the mean value of the sampling points in each bin as output.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpDeformRoiPoolForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of input tensor. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -11539,7 +11539,7 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
  * based on the gradient of output \b grad_output , input \b input , ROI \b rois , and offset \b offset.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpDeformRoiPoolBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] grad_output_desc
  * The descriptor of the tensor \b grad_output. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -11664,7 +11664,7 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  *     pooled features.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in ::mluOpBorderAlignForward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] input_desc
@@ -11807,7 +11807,7 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  * argmax_idx and bounding boxes \b boxes .
  *
  * @param[in] handle
- * Handle to an MLUOPS context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in ::mluOpBorderAlignBackward operation. For detailed information, see
  * ::mluOpHandle_t.
  * @param[in] grad_output_desc
@@ -11956,7 +11956,7 @@ mluOpBorderAlignBackward(mluOpHandle_t handle,
  * about the workspace, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpIndiceConvolutionBackwardData. For detailed
  * information, see ::mluOpHandle_t.
  * @param[in] output_grad_desc
@@ -12031,7 +12031,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
  * is calculated from matmul calculation logic with data mentioned above.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpIndiceConvolutionBackwardData. For detailed
  * information, see ::mluOpHandle_t.
  * @param[in] output_grad_desc
@@ -12166,7 +12166,7 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  * output tensor descriptor \b filters_grad_desc , and the array \b indice_num[].
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * indice_convolution_backward_filter operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
  * The descriptor of the tensor \b features that need convolution. For detailed information,
@@ -12235,7 +12235,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  * tensor \b filters_grad.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * indice_convolution_backward_filter operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
  * The descriptor of the tensor \b features that need convolution. For detailed information,
@@ -12341,7 +12341,7 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in ::mluOpRoiPointPool3d. For detailed information, see ::mluOpHandle_t.
  * @param[in] batch_size
  * The number of batches of the input.
@@ -12415,7 +12415,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  * a scalar or tensor \b w and returns the results in \b d tensor.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in ::mluOpRoiPointPool3d. For detailed information, see ::mluOpHandle_t.
  * @param[in] batch_size
  * The number of batches of the input.
@@ -12519,7 +12519,7 @@ mluOpRoiPointPool3d(mluOpHandle_t handle,
  * "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpThreeNNForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] known_desc
  * The descriptor of input data \b known, which contains dimension, data type, and data layout.
@@ -12563,7 +12563,7 @@ mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
  * finds the closest 3 points, and outputs the dist and index of the known point in known dataset.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpThreeNNForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] unknown_desc
  * The descriptor of input data \b unknown, which contains dimension, data type, and data layout.
@@ -12648,7 +12648,7 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
  * \b features_out_desc , and array indice_num[].
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * indice_convolution_forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] features_desc
  * The descriptor of the tensor \b features. For detailed information,
@@ -12720,7 +12720,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  * then returns the output sparse tensor \b features_out.
  *
  * @param[in] handle
- * Handle to an MLU context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * indice_convolution_forward operation. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] features_desc
@@ -12837,7 +12837,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * results in the output tensor \b dispatch in the MoE algorithm.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpMoeDispatchForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] gates_desc
  * The descriptor of the tensor \b gates, which contains dimension, data type, and data layout.
@@ -12946,7 +12946,7 @@ mluOpMoeDispatchForward(mluOpHandle_t handle,
  * operation, including the input tensor descriptor \b input_desc.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * moe_dispatch_backward_gate operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the tensor \b input, which contains dimension, data type, and data layout.
@@ -12990,7 +12990,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  * tensor \b grad_gates.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * moe_dispatch_backward_gate operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] indices_desc
  * The descriptor of the tensor \b indices, which contains dimension, data type, and data layout.
@@ -13104,7 +13104,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  * @brief Detects the first 3D box that each point belongs to in given points cloud data.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * points_in_boxes operation. For detailed information, see ::mluOpHandle_t.
  *
  * @param[in] points_desc
@@ -13171,7 +13171,7 @@ mluOpPointsInBoxes(mluOpHandle_t handle,
  * maximum pooling mode or average pooling mode, call ::mluOpRoiAlignBackward_v2.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * the roi_align_backward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] grads_desc
  * The descriptor of the tensor \b grads in the backpropagation process. For detailed
@@ -13269,7 +13269,7 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
  * defined in \b pool_mode with two more inputs \b argmax_x and \b argmax_y.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiAlignBackward_v2 function. For detailed information, see ::mluOpHandle_t.
  * @param[in] grads_desc
  * The descriptor of the tensor \b grads in the backpropagation process. For detailed
@@ -13405,7 +13405,7 @@ mluOpRoiAlignBackward_v2(mluOpHandle_t handle,
  * Transformers for End-to-End Object Detection".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
  * in ::mluOpMsDeformAttnForward function. For detailed information, see ::mluOpHandle_t.
  * @param[in] data_value_desc
  * The descriptor of the tensor \b data_value. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -13483,7 +13483,7 @@ mluOpMsDeformAttnForward(mluOpHandle_t handle,
  * result into \b grad_input.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpTinShiftBackward. For detailed information, see ::mluOpHandle_t.
  * @param[in] grad_output_desc
  * The descriptor for the tensor \b grad_output, which contains dimension, data type, and data layout.
@@ -13547,7 +13547,7 @@ mluOpTinShiftBackward(mluOpHandle_t handle,
  * result into \b output.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpTinShiftForward. For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor for the tensor \b input, which contains dimension, data type, and data layout.
@@ -13615,7 +13615,7 @@ mluOpTinShiftForward(mluOpHandle_t handle,
  * see "Cambricon BANG C OPS User Guide".
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpGetMaskedCol2imForwardWorkspaceSize operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] col_desc
  * The descriptor of the tensor \b col. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -13666,7 +13666,7 @@ mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
  * and \b mask_w_idx tensor of output tensor \b im.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * :mluOpMaskedCol2imForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] col_desc
  * The descriptor of the tensor \b col. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -13758,7 +13758,7 @@ mluOpMaskedCol2imForward(mluOpHandle_t handle,
  * and outputs the sorted vertex index.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * diff_iou_rotated_sort_vertices_forward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] vertices_desc
  * The descriptor of input tensor \b vertices, which contains dimension, data type, and data layout.
@@ -13830,7 +13830,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
  * of argmax for each ROI (Regions of Interest) to perform ::mluOpRoiPoolingForward operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiPoolingForward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pooling_mode
  * The pooling mode of ROI Pooling Forward defined in ::mluOpPoolingMode_t.
@@ -13977,7 +13977,7 @@ mluOpRoiPoolingForward(mluOpHandle_t handle,
  * region proposals \b rois to perform the backpropagation of ::mluOpRoiPoolingForward operation.
  *
  * @param[in] handle
- * Handle to an MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpRoiPoolingBackward operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] pooling_mode
  * The pooling mode of ROI Pooling Forward defined in ::mluOpPoolingMode_t.
@@ -14082,7 +14082,7 @@ mluOpRoiPoolingBackward(mluOpHandle_t handle,
  * operation, including the input tensor descriptor \b x_desc.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpSyncBatchNormStats_v2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor. For detailed information,
@@ -14134,7 +14134,7 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
  * to 0, this function will perform as same as ::mluOpSyncBatchNormStats.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpSyncBatchNormStats_v2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor \b x. For detailed information, see
@@ -14225,7 +14225,7 @@ mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
  * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpSyncBatchNormStats operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor \b x. For detailed information, see
@@ -14306,7 +14306,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  * of the local mean and local inverse standard deviation of multiple MLU devices.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpSyncBatchNormGatherStatsWithCounts. For detailed information,
  * see ::mluOpHandle_t.
  * @param[in] mean_all_desc
@@ -14438,7 +14438,7 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
  * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpSyncBatchNormElemt. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor \b x. For detailed information, see
@@ -14552,7 +14552,7 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
  * ::mluOpSyncBatchnormBackwardReduce_v2 operation, including the input tensor descriptor \b x_desc.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the mse_loss
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the mse_loss
  * operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] x_desc
  * The descriptor of the input tensor. For detailed information, see
@@ -14604,7 +14604,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  * this function will perform as same as ::mluOpSyncBatchnormBackwardReduce.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpSyncBatchnormBackwardReduce_v2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_dz
  * The descriptor of the input tensor \b dz. For detailed information, see
@@ -14772,7 +14772,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  * ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
- * Handle to a   context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpSyncBatchnormBackwardReduce operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] desc_dz
  * The descriptor of the input tensor \b dz. For detailed information, see
@@ -14926,7 +14926,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
  * to ResNet (Residual Network), Yolo (You Only Look Once) and R-CNN (Regions with CNN features).
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * ::mluOpSyncBatchNormBackwardElemt operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] diff_y_desc
  * The descriptor of the backpropagated differential tensor \b diff_y. For
@@ -15058,7 +15058,7 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
  * computes the gradient of \b x with the intermediate results.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
  * ::mluOpSyncBatchNormBackwardElemtV2 operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] diff_y_desc
  * The descriptor of the backpropagated differential tensor \b diff_y. For
@@ -15197,7 +15197,7 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
  *  \b mluOpTransform supports scale pointer
  *  from both host and device for \b alpha and \b beta parameter.
  * @param[in] handle
- *   Handle to a Cambricon MLUOP context used to manage MLU
+ *   Handle to a Cambricon MLU-OPS context used to manage MLU
  *  devices and queues.
  *  For detailed information, please refer to ::mluOpHandle_t.
  * @param[in] input_desc
@@ -15288,7 +15288,7 @@ mluOpTransform(mluOpHandle_t handle,
  * can be negative, which causes a reverse slice.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues.
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] input_desc
  * The descriptor of the input tensor. For detailed information,
@@ -15387,7 +15387,7 @@ mluOpStridedSlice(mluOpHandle_t handle,
  * @brief Concatenates the list of input tensors \b inputs along the given dimension \b axis.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues.
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
  * For detailed information, see ::mluOpHandle_t.
  * @param[in] concat_num
  * Number of tensors needed to be concatenated.
@@ -15419,7 +15419,7 @@ mluOpStridedSlice(mluOpHandle_t handle,
  * -  ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ALLOC_FAILED
  *
  * @par Formula
- * - See "Concat Operator" section in "Cambricon MLUOP User Guide" for details.
+ * - See "Concat Operator" section in "Cambricon BANG C OPS User Guide" for details.
  *
  * @par Data Type
  * - The I/O function supports the following byte-width data types for \b input and \b output tensors.
@@ -15488,7 +15488,7 @@ mluOpConcat(mluOpHandle_t handle,
  * optimize ::mluOpConcat.
  *
  * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues.
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
  *  For detailed information, see ::mluOpHandle_t.
  * @param[in] concat_num
  * Number of tensors needed to be concatenated.
