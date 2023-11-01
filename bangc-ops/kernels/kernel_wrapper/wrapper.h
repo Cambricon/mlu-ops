@@ -257,6 +257,21 @@
       const void *const *, void *, size_t, const mluOpTensorDescriptor_t, \
       void *
 
+#define BATCHMATMULBCAST_V2_PARAM_TYPE                           \
+  mluOpHandle_t, mluOpMatMulDescriptor_t,                        \
+      mluOpMatMulAlgo_t, const void *,                           \
+      const mluOpTensorDescriptor_t, const void *,               \
+      const mluOpTensorDescriptor_t, const void *, const void *, \
+      const mluOpTensorDescriptor_t,                             \
+      void *, void *, size_t
+
+#define BATCHMATMULBCAST_PARAM_TYPE                   \
+  mluOpHandle_t, const bool, const bool,              \
+      const mluOpTensorDescriptor_t, const void *,    \
+      const mluOpTensorDescriptor_t, const void *,    \
+      void *, size_t,                                 \
+      const mluOpTensorDescriptor_t, void *
+
 /* Kernel register */
 KERNEL_REGISTER(addN, ADDN_PARAM_TYPE);
 KERNEL_REGISTER(addNV2, ADDNV2_PARAM_TYPE);
@@ -299,4 +314,6 @@ KERNEL_REGISTER(SyncBatchNormBackwardElemtV2,
 KERNEL_REGISTER(transform, TRANSFORM_PARAM_TYPE);
 KERNEL_REGISTER(StridedSlice, STRIDEDSLICE_PARAM_TYPE);
 KERNEL_REGISTER(Concat, CONCAT_PARAM_TYPE);
+KERNEL_REGISTER(BatchMatMulBCast, BATCHMATMULBCAST_PARAM_TYPE);
+KERNEL_REGISTER(BatchMatMulBCastV2, BATCHMATMULBCAST_V2_PARAM_TYPE);
 #endif  // KERNELS_KERNEL_WRAPPER_WRAPPER_H
