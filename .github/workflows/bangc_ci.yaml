@@ -45,37 +45,14 @@ jobs:
     strategy:
       matrix:
         runner: [mlu370-m8]
-        mlu_ops_version : [0.9.0]
-        cntoolkit_version : [3.7.0]
-    runs-on: ${{matrix.runner}}
+        mlu_ops_version : [v0.8.1]
+        cntoolkit_version : [cntoolkit3.6.1]
+    runs-on: [self-hosted]
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: 'true'
 
-      - name: bangc_lint_check
+      - name: run_bangc_ops_ci
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
-          ./tools/pre-commit origin/master
-
-      - name: build_bangc_ops
-        run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}
-          ./build.sh --sub_module=bangc
-
-      - name: bangc_ops_release_temp_cases
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}
-          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/default_platform
-
-      - name: test_bangc_ops_release_temp_370_cases
-        if: matrix.runner == 'mlu370-m8'
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}
-          ./test.sh --sub_module=bangc --cases_dir=/testdata/release_temp/370
-
-      - name: clean
-        run: |
-          rm -rf bangc-ops/build
+          bash .github/ci_script/mlu-ops-ci_script.sh
