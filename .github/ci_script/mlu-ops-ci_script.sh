@@ -15,11 +15,10 @@ card_type="MLU370-S4"
 repo_name="mlu-ops"
 
 # repo ci root path
-repo_root="~/${repo_name}_ci/"
+repo_root="../../../../../../${repo_name}_ci/"
 if [ ! -d $repo_root ];then
     mkdir $repo_root
 fi
-
 # repo ci requests path
 requests_path="$repo_root/requests"
 if [ ! -d $requests_path ];then

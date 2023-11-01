@@ -1,11 +1,13 @@
 import time
 import sys
 import os
-# Get info.
-# output_path: the target file that you want to combine sub log with.
-# list_path: the list of sub log name. When it is updated, the correspondding file will be add to output tail.
-# list_dir_path: the dir path where sub logs stored.
-# status_path: the path of status file. When status file is written to "success" or "fail", exit script.
+'''
+  Get info.
+    output_path: the target file that you want to combine sub log with.
+    list_path: the list of sub log name. When it is updated, the correspondding file will be add to output tail.
+    list_dir_path: the dir path where sub logs stored.
+    status_path: the path of status file. When status file is written to "success" or "fail", exit script.
+'''
 
 output_path = sys.argv[1]
 list_path = sys.argv[2]
@@ -27,7 +29,7 @@ if __name__ == '__main__':
             items.sort()
             for item in items:
                 sub_path = item.strip()
-                if sub_path is not "":
+                if sub_path != "":
                     file_name = list_dir_path + '/' + sub_path
                     # while True:
                     if os.path.exists(file_name):
