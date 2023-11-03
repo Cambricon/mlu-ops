@@ -23,41 +23,29 @@
 
 #include "kernels/kernel_wrapper/wrapper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(mluOpHandle_t handle,
-                                                  const bool is_transa,
-                                                  const bool is_transb,
-                                                  const mluOpTensorDescriptor_t a_desc,
-                                                  const void *a,
-                                                  const mluOpTensorDescriptor_t b_desc,
-                                                  const void *b,
-                                                  void *workspace,
-                                                  size_t workspace_size,
-                                                  const mluOpTensorDescriptor_t c_desc,
-                                                  void *c) {
-    BatchMatMulBCastWrapper wrapper;
-    mluOpStatus_t ret = wrapper.invoke(handle, is_transa, is_transb,
-                                       a_desc, a, b_desc, b, workspace,
-                                       workspace_size, c_desc, c);
-    return ret;
+mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(
+    mluOpHandle_t handle, const bool is_transa, const bool is_transb,
+    const mluOpTensorDescriptor_t a_desc, const void *a,
+    const mluOpTensorDescriptor_t b_desc, const void *b, void *workspace,
+    size_t workspace_size, const mluOpTensorDescriptor_t c_desc, void *c) {
+  BatchMatMulBCastWrapper wrapper;
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, is_transa, is_transb, a_desc, a, b_desc, b,
+                     workspace, workspace_size, c_desc, c);
+  return ret;
 }
 
-
-mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast_v2(mluOpHandle_t handle,
-                                                     mluOpMatMulDescriptor_t bmm_bcast_desc,
-                                                     mluOpMatMulAlgo_t  algo,
-                                                     const void *alpha,
-                                                     const mluOpTensorDescriptor_t a_desc,
-                                                     const void *a,
-                                                     const mluOpTensorDescriptor_t b_desc,
-                                                     const void *b,
-                                                     const void *beta,
-                                                     const mluOpTensorDescriptor_t c_desc,
-                                                     void *c,
-                                                     void *workspace,
-                                                     size_t workspace_size) {
-    BatchMatMulBCastV2Wrapper wrapper;
-    mluOpStatus_t ret = wrapper.invoke(handle, bmm_bcast_desc, algo, alpha,
-                                       a_desc, a, b_desc, b, beta, c_desc, c,
-                                       workspace, workspace_size);
-    return ret;
+mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast_v2(
+    mluOpHandle_t handle, mluOpMatMulDescriptor_t bmm_bcast_desc,
+    mluOpMatMulAlgo_t algo, const void *alpha,
+    const mluOpTensorDescriptor_t a_desc, const void *a,
+    const mluOpTensorDescriptor_t b_desc, const void *b, const void *beta,
+    const mluOpTensorDescriptor_t c_desc, void *c, void *workspace,
+    size_t workspace_size) {
+  BatchMatMulBCastV2Wrapper wrapper;
+  mluOpStatus_t ret =
+      wrapper.invoke(handle, bmm_bcast_desc, algo, alpha, a_desc, a, b_desc, b,
+                     beta, c_desc, c, workspace, workspace_size);
+  return ret;
 }
+

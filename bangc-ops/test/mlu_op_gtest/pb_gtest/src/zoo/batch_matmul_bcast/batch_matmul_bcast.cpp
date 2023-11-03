@@ -17,27 +17,26 @@
 
 namespace mluoptest {
 
-bool BatchMatmulBcastExecutor::canBroadCast(std::vector<int> shape0, std::vector<int> shape1) {
+bool BatchMatmulBcastExecutor::canBroadCast(std::vector<int> shape0,
+                                            std::vector<int> shape1) {
   int64_t ndim = shape1.size();
   int64_t tensor_dim = shape0.size();
-  if (tensor_dim == 0)
-    return false;
+  if (tensor_dim == 0) return false;
   for (int64_t i = ndim - 1; i >= 0; i--) {
     int64_t offset = ndim - 1 - i;
     int64_t dim = tensor_dim - 1 - offset;
     int64_t size = (dim >= 0) ? shape0[dim] : 1;
-    if (shape1[i] == -1)
-      shape1[i] = size;
+    if (shape1[i] == -1) shape1[i] = size;
     if (shape1[i] != size)
-      if (size != 1)
-        return false;
+      if (size != 1) return false;
   }
   return true;
 }
 
 void BatchMatmulBcastExecutor::paramCheck() {
   // set flag_quant_mode_ according to quant_mode param
-  QuantizeMode quant_mode = parser_->getProtoNode()->batch_matmul_bcast_param().quant_mode();
+  QuantizeMode quant_mode =
+      parser_->getProtoNode()->batch_matmul_bcast_param().quant_mode();
   float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
 
   cast_mode_ = parser_->getProtoNode()->batch_matmul_bcast_param().cast_mode();
@@ -53,7 +52,8 @@ void BatchMatmulBcastExecutor::paramCheck() {
         flag_quant_mode_ = NO_QUANT;
         break;
       default:
-        LOG(ERROR) << "BatchMatmulBcastExecutor: batch_matmul_bcast cast_mode not set. ";
+        LOG(ERROR) << "BatchMatmulBcastExecutor: batch_matmul_bcast cast_mode "
+                      "not set. ";
     }
   } else {
     switch (quant_mode) {
@@ -67,7 +67,8 @@ void BatchMatmulBcastExecutor::paramCheck() {
         flag_quant_mode_ = POS_SCALE_OFFSET;
         break;
       default:
-        LOG(ERROR) << "BatchMatmulBcastExecutor: batch_matmul_bcast param quant_mode not set.";
+        LOG(ERROR) << "BatchMatmulBcastExecutor: batch_matmul_bcast param "
+                      "quant_mode not set.";
     }
   }
 
@@ -77,46 +78,58 @@ void BatchMatmulBcastExecutor::paramCheck() {
 
   if (beta == 0.0f && parser_->getInputNum() != 2) {
     LOG(ERROR) << "batch_matmul_bcast tensor input number is wrong. "
-               << "when value of beta is " << beta << ", two inputs are required";
+               << "when value of beta is " << beta
+               << ", two inputs are required";
   }
 
   if (beta != 0.0f && parser_->getInputNum() != 3) {
     LOG(ERROR) << "batch_matmul_bcast tensor input number is wrong. "
-               << "when value of beta is " << beta << ", three inputs are required";
+               << "when value of beta is " << beta
+               << ", three inputs are required";
   }
 
   if (parser_->getInputDimSize(0) < 2) {
-    LOG(ERROR) << "batch_matmul_bcast tensor input1 size at lest two dimensions. ";
+    LOG(ERROR)
+        << "batch_matmul_bcast tensor input1 size at lest two dimensions. ";
   }
 
   if (parser_->getInputDimSize(1) < 2) {
-    LOG(ERROR) << "batch_matmul_bcast tensor input2 size at lest two dimensions. ";
+    LOG(ERROR)
+        << "batch_matmul_bcast tensor input2 size at lest two dimensions. ";
   }
 
-  bool is_transa = parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
-  bool is_transb = parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
-  bool use_stride = parser_->getProtoNode()->batch_matmul_bcast_param().use_stride();
+  bool is_transa =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
+  bool is_transb =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
+  bool use_stride =
+      parser_->getProtoNode()->batch_matmul_bcast_param().use_stride();
 
   int dim_max_a = parser_->getInputDimSize(0);
   int dim_max_b = parser_->getInputDimSize(1);
-  int input1_col = (is_transa && !use_stride)
-                       ? parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 2)
-                       : parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 1);
-  int input2_row = (is_transb && !use_stride)
-                       ? parser_->getProtoNode()->input(1).shape().dims(dim_max_b - 1)
-                       : parser_->getProtoNode()->input(1).shape().dims(dim_max_b - 2);
+  int input1_col =
+      (is_transa && !use_stride)
+          ? parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 2)
+          : parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 1);
+  int input2_row =
+      (is_transb && !use_stride)
+          ? parser_->getProtoNode()->input(1).shape().dims(dim_max_b - 1)
+          : parser_->getProtoNode()->input(1).shape().dims(dim_max_b - 2);
 
   if (input1_col != input2_row) {
-    LOG(ERROR) << "batch_matmul_bcast input1 cols is not equal to input2 rows. ";
+    LOG(ERROR)
+        << "batch_matmul_bcast input1 cols is not equal to input2 rows. ";
   }
 
-  flag_input_reuse_ = (beta != 0.0f) ? true : false;  // reuse void *c if need bias
+  flag_input_reuse_ =
+      (beta != 0.0f) ? true : false;  // reuse void *c if need bias
   VLOG(4) << "flag_input_reuse_: " << flag_input_reuse_;
 }
 
 void BatchMatmulBcastExecutor::setQuantizedParam() {
   float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
-  auto input_num = (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
+  auto input_num =
+      (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
   auto output_num = parser_->getOutputNum();
   auto total_num = input_num + output_num;
   for (int i = 0; i < total_num; ++i) {
@@ -124,8 +137,8 @@ void BatchMatmulBcastExecutor::setQuantizedParam() {
       auto pos = parser_->getMetaTensor(i).position;
       auto scale = parser_->getMetaTensor(i).scale;
       auto offset = parser_->getMetaTensor(i).offset;
-      MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(tensor_desc_[i].tensor, pos, scale,
-                                                               offset));
+      MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(
+          tensor_desc_[i].tensor, pos, scale, offset));
     }
   }
 }
@@ -155,45 +168,49 @@ void BatchMatmulBcastExecutor::castIn() {
       // then memcpy this to mlu
       // weight(matrix B) do not need asymmetric quant
       if (i == 1) {
-        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype, ts->total_count, POSITION_SCALE, &p,
-                   &s, &o, true);
+        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype,
+                   ts->total_count, POSITION_SCALE, &p, &s, &o, true);
       } else {
-        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype, ts->total_count, flag_quant_mode_,
-                   &p, &s, &o, true);
+        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype,
+                   ts->total_count, flag_quant_mode_, &p, &s, &o, true);
       }
-      MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(tensor_desc_[i].tensor, p, s, o));
+      MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(
+          tensor_desc_[i].tensor, p, s, o));
     } else {
       if (i == 1) {
         // if has onchip_dtype
-        // cast fp32 to onchip dtype to get p/s/o and dequantify fp32 data (let cpu input == mlu
-        // input)
-        // and cast fp32 to offchip dtype then memcpy this to mlu
-        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype, ts->total_count, POSITION_SCALE, &p,
-                   &s, &o, true);
+        // cast fp32 to onchip dtype to get p/s/o and dequantify fp32 data (let
+        // cpu input == mlu input) and cast fp32 to offchip dtype then memcpy
+        // this to mlu
+        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype,
+                   ts->total_count, POSITION_SCALE, &p, &s, &o, true);
       } else {
-        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype, ts->total_count, flag_quant_mode_,
-                   &p, &s, &o, true);
+        castDataIn(src_data, MLUOP_DTYPE_FLOAT, dst_data, dtype,
+                   ts->total_count, flag_quant_mode_, &p, &s, &o, true);
       }
 
       // get oc_dt's p/s and set to tensor.
-      void *temp = cpu_runtime_.allocate(ts->total_count * mluop::getSizeOfDataType(oc_dt));
+      void *temp = cpu_runtime_.allocate(ts->total_count *
+                                         mluop::getSizeOfDataType(oc_dt));
       if (i == 1) {
-        castDataIn(src_data, MLUOP_DTYPE_FLOAT, temp, oc_dt, ts->total_count, POSITION_SCALE, &p, &s,
-                   &o, true);
+        castDataIn(src_data, MLUOP_DTYPE_FLOAT, temp, oc_dt, ts->total_count,
+                   POSITION_SCALE, &p, &s, &o, true);
       } else {
-        castDataIn(src_data, MLUOP_DTYPE_FLOAT, temp, oc_dt, ts->total_count, flag_quant_mode_, &p,
-                   &s, &o, true);
+        castDataIn(src_data, MLUOP_DTYPE_FLOAT, temp, oc_dt, ts->total_count,
+                   flag_quant_mode_, &p, &s, &o, true);
       }
-      MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(tensor_desc_[i].tensor, p, s, o));
+      MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(
+          tensor_desc_[i].tensor, p, s, o));
       cpu_runtime_.deallocate(temp);
     }
 
     if (!ts->stride.empty()) {
-      VLOG(4) << "[WARNING] Executor: " << ts->name << " host ptr been strided_out.";
+      VLOG(4) << "[WARNING] Executor: " << ts->name
+              << " host ptr been strided_out.";
       void *temp = cpu_runtime_.allocate(ts->shape_count * sizeof(float));
       memset(temp, 0x0, ts->shape_count * sizeof(float));
-      tensor_stride_in(temp, cpu_fp32_input_[i], getTensorShapeSizeT(ts), getTensorStrideSizeT(ts),
-                       sizeof(float));
+      tensor_stride_in(temp, cpu_fp32_input_[i], getTensorShapeSizeT(ts),
+                       getTensorStrideSizeT(ts), sizeof(float));
       cpu_runtime_.deallocate(cpu_fp32_input_[i]);
       cpu_fp32_input_[i] = (float *)temp;
       ts->cpu_ptr = (float *)temp;
@@ -201,7 +218,8 @@ void BatchMatmulBcastExecutor::castIn() {
 
 #if GTEST_DEBUG_ENABLE
     if (exe_config_->dump_data) {
-      saveDataToFile("baseline_strided_" + ts->name, cpu_fp32_input_[i], ts->shape_count);
+      saveDataToFile("baseline_strided_" + ts->name, cpu_fp32_input_[i],
+                     ts->shape_count);
     }
 #endif
   }
@@ -209,7 +227,8 @@ void BatchMatmulBcastExecutor::castIn() {
 
 void BatchMatmulBcastExecutor::castOut() {
   float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
-  auto input_num = (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
+  auto input_num =
+      (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
   auto output_num = parser_->getOutputNum();
   auto total_num = input_num + output_num;
   auto dtype = parser_->getOutputDataType(0);
@@ -219,30 +238,36 @@ void BatchMatmulBcastExecutor::castOut() {
     auto count = parser_->getMetaTensor(i).total_count;
     auto src_data = parser_->getMetaTensor(i).host_ptr;
     auto dst_data = mlu_fp32_output_[i - input_num];
-    if ((parser_->device() != CPU) && (dtype == MLUOP_DTYPE_INT8 || dtype == MLUOP_DTYPE_INT16))
+    if ((parser_->device() != CPU) &&
+        (dtype == MLUOP_DTYPE_INT8 || dtype == MLUOP_DTYPE_INT16))
       return;
-    castDataOut(src_data, dtype, dst_data, MLUOP_DTYPE_FLOAT, count, flag_quant_mode_, pos_, scale_,
-                offset_);
+    castDataOut(src_data, dtype, dst_data, MLUOP_DTYPE_FLOAT, count,
+                flag_quant_mode_, pos_, scale_, offset_);
   }
 }
 
 void BatchMatmulBcastExecutor::workspaceMalloc() {
-  int32_t is_transa = parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
-  int32_t is_transb = parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
-  int32_t use_tf32 = parser_->getProtoNode()->batch_matmul_bcast_param().allow_tf32();
-  int32_t use_stride = parser_->getProtoNode()->batch_matmul_bcast_param().use_stride();
+  int32_t is_transa =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
+  int32_t is_transb =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
+  int32_t use_tf32 =
+      parser_->getProtoNode()->batch_matmul_bcast_param().allow_tf32();
+  int32_t use_stride =
+      parser_->getProtoNode()->batch_matmul_bcast_param().use_stride();
 
-  bmm_bcast_desc_ = cpu_runtime_.allocate(mluOpMatMulDescCreate, mluOpMatMulDescDestroy);
-  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_DESC_TRANSA, &(is_transa),
-                                   sizeof(int32_t)));
-  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_DESC_TRANSB, &(is_transb),
-                                   sizeof(int32_t)));
-  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_CAST_MODE, &(cast_mode_),
-                                   sizeof(cast_mode_)));
-  MLUOP_CHECK(
-      mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_ALLOW_TF32, &(use_tf32), sizeof(int32_t)));
-  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_USE_STRIDE, &(use_stride),
-                                   sizeof(int32_t)));
+  bmm_bcast_desc_ =
+      cpu_runtime_.allocate(mluOpMatMulDescCreate, mluOpMatMulDescDestroy);
+  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_DESC_TRANSA,
+                                     &(is_transa), sizeof(int32_t)));
+  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_DESC_TRANSB,
+                                     &(is_transb), sizeof(int32_t)));
+  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_CAST_MODE,
+                                     &(cast_mode_), sizeof(cast_mode_)));
+  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_ALLOW_TF32,
+                                     &(use_tf32), sizeof(int32_t)));
+  MLUOP_CHECK(mluOpSetMatMulDescAttr(bmm_bcast_desc_, MLUOP_MATMUL_USE_STRIDE,
+                                     &(use_stride), sizeof(int32_t)));
 
   auto desc_a = tensor_desc_[0].tensor;
   auto desc_b = tensor_desc_[1].tensor;
@@ -260,7 +285,8 @@ void BatchMatmulBcastExecutor::workspaceMalloc() {
         flag_quant_mode_ = NO_QUANT;
         break;
       default:
-        LOG(ERROR) << "BatchMatmulBcastExecutor: batch_matmul_bcast param cast_mode not set.";
+        LOG(ERROR) << "BatchMatmulBcastExecutor: batch_matmul_bcast param "
+                      "cast_mode not set.";
     }
     cpuComputeForCastOutput();
   } else {
@@ -278,16 +304,18 @@ void BatchMatmulBcastExecutor::workspaceMalloc() {
 
 #if 0
   MLUOP_CHECK(
-      mluOpGetBatchMatMulBCastWorkspaceSize(handle_, desc_a, desc_b, desc_c, &workspace_size_));
+      mluOpGetBatchMatMulBCastWorkspaceSize(
+           handle_, desc_a, desc_b, desc_c, &workspace_size_));
 #else
-  heuristic_result_ =
-      cpu_runtime_.allocate(mluOpCreateMatMulHeuristicResult, mluOpDestroyMatMulHeuristicResult);
+  heuristic_result_ = cpu_runtime_.allocate(mluOpCreateMatMulHeuristicResult,
+                                            mluOpDestroyMatMulHeuristicResult);
   // mluOpMatMulPrefer_t prefer; // not supported now
   int requested_algo_count = 1, return_algo_count = 0;
-  mluOpGetBatchMatMulAlgoHeuristic(handle_, bmm_bcast_desc_, desc_a, desc_b, desc_c,
-                                  nullptr /* prefer */, requested_algo_count, &heuristic_result_,
-                                  &return_algo_count);
-  mluOpGetBatchMatMulHeuristicResult(heuristic_result_, algo_, &workspace_size_);
+  mluOpGetBatchMatMulAlgoHeuristic(
+      handle_, bmm_bcast_desc_, desc_a, desc_b, desc_c, nullptr /* prefer */,
+      requested_algo_count, &heuristic_result_, &return_algo_count);
+  mluOpGetBatchMatMulHeuristicResult(heuristic_result_, algo_,
+                                     &workspace_size_);
 /////////// end batch_matmul algo and heuristic result ///////////
 #endif
 
@@ -311,7 +339,8 @@ void BatchMatmulBcastExecutor::cpuComputeForCastOutput() {
   }
   // ----------------------- baselineOutputMalloc begin ------------------------
   float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
-  auto input_num = (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
+  auto input_num =
+      (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
   auto output_num = parser_->getOutputNum();
   auto total_num = input_num + output_num;
   // for outputs
@@ -330,7 +359,8 @@ void BatchMatmulBcastExecutor::cpuComputeForCastOutput() {
   if (parser_->device() != CPU) {
     // set pos and scale for output
     float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
-    auto input_num = (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
+    auto input_num =
+        (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
     auto output_num = parser_->getOutputNum();
     auto total_num = input_num + output_num;
     for (int i = input_num; i < total_num; ++i) {
@@ -338,8 +368,8 @@ void BatchMatmulBcastExecutor::cpuComputeForCastOutput() {
         auto pos = parser_->getMetaTensor(i).position;
         auto scale = parser_->getMetaTensor(i).scale;
         auto offset = parser_->getMetaTensor(i).offset;
-        MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(tensor_desc_[i].tensor, pos, scale,
-                                                                 offset));
+        MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(
+            tensor_desc_[i].tensor, pos, scale, offset));
       }
     }
     setOutputQuantParam();
@@ -350,11 +380,12 @@ void BatchMatmulBcastExecutor::cpuComputeForCastOutput() {
 void BatchMatmulBcastExecutor::setOutputQuantParam() {
   auto dtype = parser_->getOutputDataType(0);
   auto count = parser_->getOutputDataCount(0);
-  if (dtype == MLUOP_DTYPE_INT8 || dtype == MLUOP_DTYPE_INT16 || dtype == MLUOP_DTYPE_INT31) {
-    getQuantizedParam(cpu_fp32_output_[0], count, dtype, flag_quant_mode_, &pos_, &scale_,
-                      &offset_);
-    MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(tensor_desc_.back().tensor, pos_,
-                                                             scale_, offset_));
+  if (dtype == MLUOP_DTYPE_INT8 || dtype == MLUOP_DTYPE_INT16 ||
+      dtype == MLUOP_DTYPE_INT31) {
+    getQuantizedParam(cpu_fp32_output_[0], count, dtype, flag_quant_mode_,
+                      &pos_, &scale_, &offset_);
+    MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleAndOffset(
+        tensor_desc_.back().tensor, pos_, scale_, offset_));
   }
 }
 
@@ -363,8 +394,10 @@ void BatchMatmulBcastExecutor::compute() {
   if (!parser_->getProtoNode()->has_batch_matmul_bcast_param()) {
     LOG(ERROR) << "Lose batch_matmul_bcast param. ";
   }
-  int32_t is_transa = parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
-  int32_t is_transb = parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
+  int32_t is_transa =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
+  int32_t is_transb =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
 
   float alpha = parser_->getProtoNode()->batch_matmul_bcast_param().alpha();
   float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
@@ -378,12 +411,13 @@ void BatchMatmulBcastExecutor::compute() {
   VLOG(4) << "call mluOp BatchMatMulBCast()";
   interface_timer_.start();
 #if 0
-  MLUOP_CHECK(mluOpBatchMatMulBCast(handle_, is_transa, is_transb, tensor_a, dev_a, tensor_b, dev_b,
-                                  workspace_[0], workspace_size_, tensor_c, dev_c));
+  MLUOP_CHECK(mluOpBatchMatMulBCast(handle_, is_transa, is_transb, tensor_a,
+                                    dev_a, tensor_b, dev_b, workspace_[0],
+                                    workspace_size_, tensor_c, dev_c));
 #else
-  MLUOP_CHECK(mluOpBatchMatMulBCast_v2(handle_, bmm_bcast_desc_, algo_, &alpha, tensor_a, dev_a,
-                                     tensor_b, dev_b, &beta, tensor_c, dev_c, workspace_[0],
-                                     workspace_size_));
+  MLUOP_CHECK(mluOpBatchMatMulBCast_v2(
+      handle_, bmm_bcast_desc_, algo_, &alpha, tensor_a, dev_a, tensor_b, dev_b,
+      &beta, tensor_c, dev_c, workspace_[0], workspace_size_));
 #endif
   interface_timer_.stop();
 }
@@ -392,21 +426,21 @@ void BatchMatmulBcastExecutor::setMiscellaneousParam() {
   data_vector_[2].setDramTensorType(DramTensorType::BOTH_INPUT_OUTPUT);
 }
 
-
-void BatchMatmulBcastExecutor::float2double(double *dst, float *src, int64_t num) {
+void BatchMatmulBcastExecutor::float2double(double *dst, float *src,
+                                            int64_t num) {
   for (int64_t i = 0; i < num; ++i) {
     dst[i] = (double)src[i];
   }
 }
 
-void BatchMatmulBcastExecutor::qdouble2float(float *dst, double *src, double scale, int64_t num) {
+void BatchMatmulBcastExecutor::qdouble2float(float *dst, double *src,
+                                             double scale, int64_t num) {
   for (int64_t i = 0; i < num; ++i) {
     dst[i] = static_cast<float>(scale * src[i]);
   }
 }
 
-void BatchMatmulBcastExecutor::int2double(double *dst,
-                                          void *src,
+void BatchMatmulBcastExecutor::int2double(double *dst, void *src,
                                           mluOpDataType_t src_type,
                                           int64_t num) {
   if (src_type == MLUOP_DTYPE_INT8) {
@@ -415,11 +449,14 @@ void BatchMatmulBcastExecutor::int2double(double *dst,
       dst[i] = static_cast<double>(csrc[i]);
     }
   } else if (src_type == MLUOP_DTYPE_INT16) {
-    float *sdst = static_cast<float *>(cpu_runtime_.allocate(num * sizeof(float)));
+    float *sdst =
+        static_cast<float *>(cpu_runtime_.allocate(num * sizeof(float)));
     cnrtQuantizedParam_t param;
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCreateQuantizedParam(&param, 0, 1.0f, 0.0f));
     GTEST_CHECK(CNRT_RET_SUCCESS ==
-                cnrtCastDataType_V2(src, cnrtShort, sdst, cnrtFloat, num, param, cnrtRounding_rm));
+                cnrtCreateQuantizedParam(&param, 0, 1.0f, 0.0f));
+    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType_V2(src, cnrtShort, sdst,
+                                                        cnrtFloat, num, param,
+                                                        cnrtRounding_rm));
     for (int64_t i = 0; i < num; ++i) {
       dst[i] = static_cast<double>(sdst[i]);
     }
@@ -437,9 +474,12 @@ void BatchMatmulBcastExecutor::cpuCompute() {
     assert(parser_->getInputNum() == 3);
   }
   assert(parser_->getOutputNum() == 1);
-  bool is_transa = parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
-  bool is_transb = parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
-  bool use_stride = parser_->getProtoNode()->batch_matmul_bcast_param().use_stride();
+  bool is_transa =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
+  bool is_transb =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
+  bool use_stride =
+      parser_->getProtoNode()->batch_matmul_bcast_param().use_stride();
   is_transa = use_stride ? false : is_transa;
   is_transb = use_stride ? false : is_transb;
 
@@ -461,8 +501,10 @@ void BatchMatmulBcastExecutor::cpuCompute() {
 
   int dim_max_a = parser_->getInputDimSize(0);
   int dim_max_c = parser_->getOutputDimSize(0);
-  int k = is_transa ? (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 2)
-                    : (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 1);
+  int k =
+      is_transa
+          ? (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 2)
+          : (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 1);
 
   int m = (int)parser_->getProtoNode()->output(0).shape().dims(dim_max_c - 2);
   int n = (int)parser_->getProtoNode()->output(0).shape().dims(dim_max_c - 1);
@@ -482,8 +524,10 @@ void BatchMatmulBcastExecutor::cpuCompute() {
     shape_expand_b.push_back((int)desc_b->dims[i]);
   }
 
-  float *a_expand = (float *)cpu_runtime_.allocate((int64_t)batch_size * m * k * sizeof(float));
-  float *b_expand = (float *)cpu_runtime_.allocate((int64_t)batch_size * n * k * sizeof(float));
+  float *a_expand = (float *)cpu_runtime_.allocate((int64_t)batch_size * m * k *
+                                                   sizeof(float));
+  float *b_expand = (float *)cpu_runtime_.allocate((int64_t)batch_size * n * k *
+                                                   sizeof(float));
 
   int a_position = desc_a->position;
   int b_position = desc_b->position;
@@ -502,60 +546,72 @@ void BatchMatmulBcastExecutor::cpuCompute() {
 
   double c_scale = 1.0;
 
-  if (desc_a->onchip_dtype != desc_a->dtype && desc_a->onchip_dtype != MLUOP_DTYPE_INVALID) {
+  if (desc_a->onchip_dtype != desc_a->dtype &&
+      desc_a->onchip_dtype != MLUOP_DTYPE_INVALID) {
     c_scale = pow(2.0, a_position) / (a_scale);
   }
 
-  if (desc_b->onchip_dtype != desc_b->dtype && desc_b->onchip_dtype != MLUOP_DTYPE_INVALID) {
+  if (desc_b->onchip_dtype != desc_b->dtype &&
+      desc_b->onchip_dtype != MLUOP_DTYPE_INVALID) {
     c_scale = pow(2.0, b_position) / (b_scale);
   }
 
-  if ((desc_a->onchip_dtype != desc_a->dtype && desc_a->onchip_dtype != MLUOP_DTYPE_INVALID) &&
-      (desc_b->onchip_dtype != desc_b->dtype && desc_b->onchip_dtype != MLUOP_DTYPE_INVALID)) {
+  if ((desc_a->onchip_dtype != desc_a->dtype &&
+       desc_a->onchip_dtype != MLUOP_DTYPE_INVALID) &&
+      (desc_b->onchip_dtype != desc_b->dtype &&
+       desc_b->onchip_dtype != MLUOP_DTYPE_INVALID)) {
     c_scale = pow(2.0, a_position + b_position) / (a_scale * b_scale);
   }
 
   cnrtQuantizedParam_t a_f2i_param;
   cnrtQuantizedParam_t b_f2i_param;
-  GTEST_CHECK(CNRT_RET_SUCCESS ==
-              cnrtCreateQuantizedParam(&a_f2i_param, a_position, a_scale, 0.0f));
-  GTEST_CHECK(CNRT_RET_SUCCESS ==
-              cnrtCreateQuantizedParam(&b_f2i_param, b_position, b_scale, 0.0f));
+  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCreateQuantizedParam(
+                                      &a_f2i_param, a_position, a_scale, 0.0f));
+  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCreateQuantizedParam(
+                                      &b_f2i_param, b_position, b_scale, 0.0f));
 
   // bool a_broadcast = canBroadCast(shape_a, shape_expand_a);
-  expandComputeCpu(std::vector<int>(desc_a->dims, desc_a->dims + desc_a->dim), shape_expand_a,
-                   cpu_fp32_input_[0], a_expand);
+  expandComputeCpu(std::vector<int>(desc_a->dims, desc_a->dims + desc_a->dim),
+                   shape_expand_a, cpu_fp32_input_[0], a_expand);
 
   // bool can_broadcast = canBroadCast(shape_a, shape_b);
-  expandComputeCpu(std::vector<int>(desc_b->dims, desc_b->dims + desc_b->dim), shape_expand_b,
-                   cpu_fp32_input_[1], b_expand);
+  expandComputeCpu(std::vector<int>(desc_b->dims, desc_b->dims + desc_b->dim),
+                   shape_expand_b, cpu_fp32_input_[1], b_expand);
 
-  void *a_int = cpu_runtime_.allocate((int64_t)batch_size * m * k * 2 * sizeof(char));
-  void *b_int = cpu_runtime_.allocate((int64_t)batch_size * k * n * 2 * sizeof(char));
+  void *a_int =
+      cpu_runtime_.allocate((int64_t)batch_size * m * k * 2 * sizeof(char));
+  void *b_int =
+      cpu_runtime_.allocate((int64_t)batch_size * k * n * 2 * sizeof(char));
 
-  double *a_double =
-      static_cast<double *>(cpu_runtime_.allocate((int64_t)batch_size * m * k * sizeof(double)));
-  double *b_double =
-      static_cast<double *>(cpu_runtime_.allocate((int64_t)batch_size * k * n * sizeof(double)));
+  double *a_double = static_cast<double *>(
+      cpu_runtime_.allocate((int64_t)batch_size * m * k * sizeof(double)));
+  double *b_double = static_cast<double *>(
+      cpu_runtime_.allocate((int64_t)batch_size * k * n * sizeof(double)));
   double *c_tmp_double;
   if (beta != 0.0f) {
-    c_tmp_double =
-        static_cast<double *>(cpu_runtime_.allocate((int64_t)batch_size * m * n * sizeof(double)));
+    c_tmp_double = static_cast<double *>(
+        cpu_runtime_.allocate((int64_t)batch_size * m * n * sizeof(double)));
   }
-  double *c_double = static_cast<double *>(cpu_runtime_.allocate((int64_t)m * n * sizeof(double)));
+  double *c_double = static_cast<double *>(
+      cpu_runtime_.allocate((int64_t)m * n * sizeof(double)));
 
   // cast A 2 double
-  if (desc_a->onchip_dtype != desc_a->dtype && desc_a->onchip_dtype != MLUOP_DTYPE_INVALID) {
+  if (desc_a->onchip_dtype != desc_a->dtype &&
+      desc_a->onchip_dtype != MLUOP_DTYPE_INVALID) {
     if (desc_a->onchip_dtype == MLUOP_DTYPE_INT8) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType_V2(a_expand, cnrtFloat, a_int, cnrtChar,
-                                                          (int64_t)batch_size * m * (int64_t)k, a_f2i_param,
-                                                          cnrtRounding_rm));
-      int2double(a_double, a_int, MLUOP_DTYPE_INT8, (int64_t)batch_size * m * (int64_t)k);
+      GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtCastDataType_V2(a_expand, cnrtFloat, a_int, cnrtChar,
+                                      (int64_t)batch_size * m * (int64_t)k,
+                                      a_f2i_param, cnrtRounding_rm));
+      int2double(a_double, a_int, MLUOP_DTYPE_INT8,
+                 (int64_t)batch_size * m * (int64_t)k);
     } else if (desc_a->onchip_dtype == MLUOP_DTYPE_INT16) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType_V2(a_expand, cnrtFloat, a_int, cnrtShort,
-                                                          (int64_t)batch_size * m * (int64_t)k, a_f2i_param,
-                                                          cnrtRounding_rm));
-      int2double(a_double, a_int, MLUOP_DTYPE_INT16, (int64_t)batch_size * m * (int64_t)k);
+      GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtCastDataType_V2(a_expand, cnrtFloat, a_int, cnrtShort,
+                                      (int64_t)batch_size * m * (int64_t)k,
+                                      a_f2i_param, cnrtRounding_rm));
+      int2double(a_double, a_int, MLUOP_DTYPE_INT16,
+                 (int64_t)batch_size * m * (int64_t)k);
     } else if (desc_a->onchip_dtype == MLUOP_DTYPE_INT31) {
       for (int64_t i = 0; i < (int64_t)batch_size * m * (int64_t)k; ++i) {
         a_double[i] = static_cast<double>(a_expand[i]);
@@ -566,17 +622,22 @@ void BatchMatmulBcastExecutor::cpuCompute() {
   }
 
   // cast B 2 double
-  if (desc_b->onchip_dtype != desc_b->dtype && desc_b->onchip_dtype != MLUOP_DTYPE_INVALID) {
+  if (desc_b->onchip_dtype != desc_b->dtype &&
+      desc_b->onchip_dtype != MLUOP_DTYPE_INVALID) {
     if (desc_b->onchip_dtype == MLUOP_DTYPE_INT8) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType_V2(b_expand, cnrtFloat, b_int, cnrtChar,
-                                                          (int64_t)batch_size * n * (int64_t)k, b_f2i_param,
-                                                          cnrtRounding_rm));
-      int2double(b_double, b_int, MLUOP_DTYPE_INT8, (int64_t)batch_size * n * (int64_t)k);
+      GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtCastDataType_V2(b_expand, cnrtFloat, b_int, cnrtChar,
+                                      (int64_t)batch_size * n * (int64_t)k,
+                                      b_f2i_param, cnrtRounding_rm));
+      int2double(b_double, b_int, MLUOP_DTYPE_INT8,
+                 (int64_t)batch_size * n * (int64_t)k);
     } else if (desc_b->onchip_dtype == MLUOP_DTYPE_INT16) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtCastDataType_V2(b_expand, cnrtFloat, b_int, cnrtShort,
-                                                          (int64_t)batch_size * n * (int64_t)k, b_f2i_param,
-                                                          cnrtRounding_rm));
-      int2double(b_double, b_int, MLUOP_DTYPE_INT16, (int64_t)batch_size * n * (int64_t)k);
+      GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtCastDataType_V2(b_expand, cnrtFloat, b_int, cnrtShort,
+                                      (int64_t)batch_size * n * (int64_t)k,
+                                      b_f2i_param, cnrtRounding_rm));
+      int2double(b_double, b_int, MLUOP_DTYPE_INT16,
+                 (int64_t)batch_size * n * (int64_t)k);
     } else if (desc_b->onchip_dtype == MLUOP_DTYPE_INT31) {
       for (int64_t i = 0; i < (int64_t)batch_size * n * (int64_t)k; ++i) {
         b_double[i] = static_cast<double>(b_expand[i]);
@@ -588,7 +649,8 @@ void BatchMatmulBcastExecutor::cpuCompute() {
 
   // C to double
   if (beta != 0.0f) {
-    float2double(c_tmp_double, cpu_fp32_input_[2], (int64_t)batch_size * m * (int64_t)n);
+    float2double(c_tmp_double, cpu_fp32_input_[2],
+                 (int64_t)batch_size * m * (int64_t)n);
   }
 
 #if USE_OPENBLAS
@@ -601,19 +663,19 @@ void BatchMatmulBcastExecutor::cpuCompute() {
   int ldc = n;
 #else
 
-  auto matmul = [](double *lhs, double *rhs, double *bias, double *output, bool is_trans_a,
-                   bool is_trans_b, int M, int N, int K, double alpha, double beta, bool use_beta) {
+  auto matmul = [](double *lhs, double *rhs, double *bias, double *output,
+                   bool is_trans_a, bool is_trans_b, int M, int N, int K,
+                   double alpha, double beta, bool use_beta) {
     for (int64_t m = 0; m < M; m++) {
       for (int64_t n = 0; n < N; n++) {
         output[(int64_t)m * N + n] = 0.0f;
         for (int64_t k = 0; k < K; k++) {
           int64_t lhs_idx = (int64_t)m * K + k;
-          if (is_trans_a)
-            lhs_idx = (int64_t)k * M + m;
+          if (is_trans_a) lhs_idx = (int64_t)k * M + m;
           int64_t rhs_idx = (int64_t)k * N + n;
-          if (is_trans_b)
-            rhs_idx = (int64_t)n * K + k;
-          output[(int64_t)m * N + n] += (alpha == 0.0f ? 0.0 : alpha * lhs[lhs_idx] * rhs[rhs_idx]);
+          if (is_trans_b) rhs_idx = (int64_t)n * K + k;
+          output[(int64_t)m * N + n] +=
+              (alpha == 0.0f ? 0.0 : alpha * lhs[lhs_idx] * rhs[rhs_idx]);
         }
         if (use_beta == true)
           output[(int64_t)m * N + n] += beta * bias[(int64_t)m * N + n];
@@ -630,21 +692,29 @@ void BatchMatmulBcastExecutor::cpuCompute() {
   for (int i = 0; i < batch_size; ++i) {
 #if USE_OPENBLAS
 
-    float *c_tmp_float = (float *)cpu_runtime_.allocate((int64_t)m * n * sizeof(float));
+    float *c_tmp_float =
+        (float *)cpu_runtime_.allocate((int64_t)m * n * sizeof(float));
     if (beta != 0.0f) {
-      memcpy(c_tmp_float, cpu_fp32_input_[2] + (int64_t)i * m * (int64_t)n, (int64_t)m * n * sizeof(float));
+      memcpy(c_tmp_float, cpu_fp32_input_[2] + (int64_t)i * m * (int64_t)n,
+             (int64_t)m * n * sizeof(float));
     }
-    cblas_sgemm(Order, TransA, TransB, m, n, k, alpha, cpu_fp32_input_[0] + (int64_t)i * m * (int64_t)k, lda,
-                cpu_fp32_input_[1] + (int64_t)i * k * (int64_t)n, ldb, beta, c_tmp_float, ldc);
-    memcpy(cpu_fp32_output_[0] + (int64_t)i * m * (int64_t)n, c_tmp_float, (int64_t)m * n * sizeof(float));
+    cblas_sgemm(Order, TransA, TransB, m, n, k, alpha,
+                cpu_fp32_input_[0] + (int64_t)i * m * (int64_t)k, lda,
+                cpu_fp32_input_[1] + (int64_t)i * k * (int64_t)n, ldb, beta,
+                c_tmp_float, ldc);
+    memcpy(cpu_fp32_output_[0] + (int64_t)i * m * (int64_t)n, c_tmp_float,
+           (int64_t)m * n * sizeof(float));
     cpu_runtime_.deallocate(c_tmp_float);
     c_tmp_float = NULL;
 
 #else
 
-    matmul(a_double + (int64_t)i * m * (int64_t)k, b_double + (int64_t)i * k * (int64_t)n, c_tmp_double + (int64_t)i * m * (int64_t)n, c_double,
-           is_transa, is_transb, m, n, k, (double)alpha, (double)beta, use_beta);
-    qdouble2float(cpu_fp32_output_[0] + (int64_t)i * m * (int64_t)n, c_double, c_scale, (int64_t)m * n);
+    matmul(a_double + (int64_t)i * m * (int64_t)k,
+           b_double + (int64_t)i * k * (int64_t)n,
+           c_tmp_double + (int64_t)i * m * (int64_t)n, c_double, is_transa,
+           is_transb, m, n, k, (double)alpha, (double)beta, use_beta);
+    qdouble2float(cpu_fp32_output_[0] + (int64_t)i * m * (int64_t)n, c_double,
+                  c_scale, (int64_t)m * n);
 
 #endif
   }
@@ -683,8 +753,7 @@ int BatchMatmulBcastExecutor::expandNumAfterFirst(int num) {
 
 void BatchMatmulBcastExecutor::expandComputeCpu(std::vector<int> shape_a,
                                                 std::vector<int> shape_b,
-                                                float *input,
-                                                float *output) {
+                                                float *input, float *output) {
   if (shape_a.size() < MLUOP_DIM_MAX) {
     shape_a.insert(shape_a.begin(), MLUOP_DIM_MAX - shape_a.size(), 1);
   }
@@ -734,15 +803,17 @@ void BatchMatmulBcastExecutor::expandComputeCpu(std::vector<int> shape_a,
       shape_a[i] = shape_b[i];
       for (int64_t j = 0; j < leftSizeA; j++) {
         int64_t numAfter = expandNumAfterFirst(E);
-        memcpy(output + j * rightSizeB, tmp + j * (rightSizeB / E), rightSizeB / E * sizeof(float));
+        memcpy(output + j * rightSizeB, tmp + j * (rightSizeB / E),
+               rightSizeB / E * sizeof(float));
         for (int64_t k = 1; k <= numAfter; k++) {
           memcpy(output + j * rightSizeB + (1 << (k - 1)) * (rightSizeB / E),
-                 output + j * rightSizeB, (1 << (k - 1)) * (rightSizeB / E) * sizeof(float));
+                 output + j * rightSizeB,
+                 (1 << (k - 1)) * (rightSizeB / E) * sizeof(float));
         }
         int64_t done = 1 << numAfter;
         int64_t rem = E - (1 << numAfter);
-        memcpy(output + j * rightSizeB + done * (rightSizeB / E), output + j * rightSizeB,
-               rem * (rightSizeB / E) * sizeof(float));
+        memcpy(output + j * rightSizeB + done * (rightSizeB / E),
+               output + j * rightSizeB, rem * (rightSizeB / E) * sizeof(float));
       }
       memcpy(tmp, output, sizeB * sizeof(float));
     }
@@ -751,9 +822,7 @@ void BatchMatmulBcastExecutor::expandComputeCpu(std::vector<int> shape_a,
   cpu_runtime_.deallocate(tmp);
 }
 
-void BatchMatmulBcastExecutor::baselineOutputMalloc() {
-  return;
-}
+void BatchMatmulBcastExecutor::baselineOutputMalloc() { return; }
 
 void BatchMatmulBcastExecutor::getBaselineOutput() {
   if (parser_->device() == CPU) {
@@ -761,7 +830,8 @@ void BatchMatmulBcastExecutor::getBaselineOutput() {
   }
 
   float beta = parser_->getProtoNode()->batch_matmul_bcast_param().beta();
-  auto input_num = (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
+  auto input_num =
+      (beta == 0.0f) ? parser_->getInputNum() : parser_->getInputNum() - 1;
   auto output_num = parser_->getOutputNum();
   auto total_num = input_num + output_num;
   for (int i = input_num; i < total_num; ++i) {
@@ -774,10 +844,11 @@ void BatchMatmulBcastExecutor::getBaselineOutput() {
       auto data_size = count * mluop::getSizeOfDataType(dtype);
       void *temp = cpu_runtime_.allocate(data_size);
       // MetaTensor is input + output;
-      // cpu_fp32_output is ouptut only, so cpu_fp32_output_id = metatensor_id - input_num
+      // cpu_fp32_output is ouptut only, so cpu_fp32_output_id = metatensor_id -
+      // input_num
       parser_->getOutputData(i - input_num, temp);
-      castDataOut(temp, dtype, cpu_fp32_output_[i - input_num], MLUOP_DTYPE_FLOAT, count, NO_QUANT,
-                  pos_, scale_, 0);
+      castDataOut(temp, dtype, cpu_fp32_output_[i - input_num],
+                  MLUOP_DTYPE_FLOAT, count, NO_QUANT, pos_, scale_, 0);
       cpu_runtime_.deallocate(temp);
     }
   }
@@ -794,7 +865,8 @@ int64_t BatchMatmulBcastExecutor::getTheoryIoSize() {
   MetaTensor *ts = parser_->output(0);
   total_size += (beta == 0.0f ? 1 : 2) * ts->shape_count * ts->sizeof_dtype;
 
-  VLOG(4) << "BatchMatmulBcastExecutor: getTheoryIOs: " << total_size << " bytes";
+  VLOG(4) << "BatchMatmulBcastExecutor: getTheoryIOs: " << total_size
+          << " bytes";
   return total_size;
 }
 
@@ -807,8 +879,10 @@ int64_t BatchMatmulBcastExecutor::getTheoryOps() {
     assert(parser_->getInputNum() == 3);
   }
   assert(parser_->getOutputNum() == 1);
-  bool is_transa = parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
-  bool is_transb = parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
+  bool is_transa =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transa();
+  bool is_transb =
+      parser_->getProtoNode()->batch_matmul_bcast_param().is_transb();
 
   auto desc_c = tensor_desc_[2].tensor;
 
@@ -820,8 +894,10 @@ int64_t BatchMatmulBcastExecutor::getTheoryOps() {
 
   int dim_max_a = parser_->getInputDimSize(0);
   int dim_max_c = parser_->getOutputDimSize(0);
-  int k = is_transa ? (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 2)
-                    : (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 1);
+  int k =
+      is_transa
+          ? (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 2)
+          : (int)parser_->getProtoNode()->input(0).shape().dims(dim_max_a - 1);
   int m = (int)parser_->getProtoNode()->output(0).shape().dims(dim_max_c - 2);
   int n = (int)parser_->getProtoNode()->output(0).shape().dims(dim_max_c - 1);
 

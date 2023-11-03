@@ -256,7 +256,12 @@ enum QuantMode {
 };
 enum ComputeMode { NORMAL = 0, BY_LAYER = 1 };
 
-enum class DramTensorType { ONLY_INPUT, ONLY_OUTPUT, BOTH_INPUT_OUTPUT, BOTH_INPUT_VOLATILE };
+enum class DramTensorType {
+  ONLY_INPUT,
+  ONLY_OUTPUT,
+  BOTH_INPUT_OUTPUT,
+  BOTH_INPUT_VOLATILE
+};
 
 struct DataBlock {
   DataBlock(MetaTensor *ts, bool o) {
@@ -293,11 +298,10 @@ struct DataBlock {
   std::vector<int64_t> stride;
   std::string name;
 
-  DramTensorType dram_tensor_type; 
+  DramTensorType dram_tensor_type;
   void setDramTensorType(DramTensorType dram_tensor_type_) {
     dram_tensor_type = dram_tensor_type_;
   }
-
 };
 
 struct TensorPair {
@@ -408,7 +412,8 @@ class Executor {
     time_point_records_.emplace_back(
         std::make_tuple(name, std::chrono::steady_clock::now()));
   }
-  virtual void setMiscellaneousParam() {}  // set dram_tensor_type, etc if needed
+  virtual void setMiscellaneousParam() {
+  }  // set dram_tensor_type, etc if needed
 
  private:
   std::chrono::time_point<std::chrono::steady_clock> time_point_init_ =

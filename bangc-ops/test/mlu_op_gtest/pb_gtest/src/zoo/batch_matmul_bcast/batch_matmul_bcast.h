@@ -38,22 +38,22 @@ class BatchMatmulBcastExecutor : public Executor {
   void workspaceMalloc();
   void workspaceFree();
   void float2double(double *dst, float *src, int64_t num);
-  void int2double(double *dst, void *src, mluOpDataType_t src_type, int64_t num);
+  void int2double(double *dst, void *src, mluOpDataType_t src_type,
+                  int64_t num);
   void qdouble2float(float *dst, double *src, double scale, int64_t num);
   int expandNumAfterFirst(int num);
   bool canBroadCast(std::vector<int> shape0, std::vector<int> shape1);
-  void expandComputeCpu(std::vector<int> shape_a,
-                        std::vector<int> shape_b,
-                        float *input,
-                        float *output);
+  void expandComputeCpu(std::vector<int> shape_a, std::vector<int> shape_b,
+                        float *input, float *output);
   int64_t getTheoryOps() override;
   int64_t getTheoryIoSize() override;
 
   void setMiscellaneousParam() override;
+
  private:
-  int pos_               = 0;
-  float scale_           = 1.;
-  int offset_            = 0;
+  int pos_ = 0;
+  float scale_ = 1.;
+  int offset_ = 0;
   mluOpQuantizeMode_t quant_mode_;
   MatMulCastMode cast_mode_;
   mluOpMatMulDescriptor_t bmm_bcast_desc_ = nullptr;
