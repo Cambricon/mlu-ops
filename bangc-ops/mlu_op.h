@@ -142,7 +142,7 @@ typedef enum {
   MLUOP_DTYPE_DOUBLE        = 14, /*!< A 64-bit floating-point data type. */
   MLUOP_DTYPE_INT8          = 3,  /*!< An 8-bit signed integer data type. */
   MLUOP_DTYPE_INT16         = 4,  /*!< A 16-bit signed integer data type. */
-  MLUOP_DTYPE_INT31         = 5,   /*!< The data is a 31-bit signed integer data type. */
+  MLUOP_DTYPE_INT31         = 5,  /*!< The data is a 31-bit signed integer data type. */
   MLUOP_DTYPE_INT32         = 6,  /*!< A 32-bit signed integer data type. */
   MLUOP_DTYPE_INT64         = 9,  /*!< A 64-bit signed integer data type. */
   MLUOP_DTYPE_UINT8         = 7,  /*!< An 8-bit unsigned integer data type. */
@@ -15575,7 +15575,8 @@ mluOpSetGenCaseMode(int mode);
  * Cambricon MLUOP Data Structure: BatchMatMulBCast
  ******************************************************************************/
 /**
- * @brief Enumeration variables describing the attribute names of the batch matrix multiplication computation with broadcasting.
+ * @brief Enumeration variables describing the attribute names of the batch matrix multiplication computation with
+ * broadcasting.
  *
  */
 typedef enum {
@@ -15615,7 +15616,8 @@ typedef enum {
  *
  *  You need to call the ::mluOpBatchMatMulBCastDescCreate function to create a descriptor, and call the
  *  ::mluOpSetBatchMatMulBCastDescAttr function to set the information of the matrix multiplication to the descriptor.
- *  Also, you need to destroy the Cambricon MLUOP context at the end with the ::mluOpBatchMatMulBCastDescDestroy function.
+ *  Also, you need to destroy the Cambricon MLUOP context at the end with the ::mluOpBatchMatMulBCastDescDestroy
+ * function.
  */
 typedef struct mluOpBatchMatMulBCastStruct *mluOpBatchMatMulBCastDescriptor_t;
 
@@ -15669,11 +15671,12 @@ typedef struct mluOpBatchMatMulBCastAlgoStruct *mluOpBatchMatMulBCastAlgo_t;
  * @par Example
  * - None.
  */
-mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
-                                                               const mluOpTensorDescriptor_t a_desc,
-                                                               const mluOpTensorDescriptor_t b_desc,
-                                                               const mluOpTensorDescriptor_t c_desc,
-                                                               size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t a_desc,
+                                      const mluOpTensorDescriptor_t b_desc,
+                                      const mluOpTensorDescriptor_t c_desc,
+                                      size_t *workspace_size);
 
 // Group:BatchMatMulBCast
 /*!
@@ -15702,9 +15705,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulBCastWorkspaceSize(mluOpHandle_t 
  * @par Example
  * - None.
  */
-mluOpStatus_t mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result,
-                                               mluOpMatMulAlgo_t algo,
-                                               size_t *workspace_size);
+mluOpStatus_t
+mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMatMulAlgo_t algo, size_t *workspace_size);
 
 // Group:BatchMatMulBCast
 /*!
@@ -15732,8 +15734,8 @@ mluOpStatus_t mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t re
  *   Input. The number of requested algorithms. The maximum number of algorithms to be returned.
  *   Currently this value only supports 1.
  * @param[out] result_array
- *   Output. Array containing the algorithm heuristics and associated runtime characteristics, returned by this function,
- *   in the order of increasing estimated compute time.
+ *   Output. Array containing the algorithm heuristics and associated runtime characteristics, returned by this
+ * function, in the order of increasing estimated compute time.
  * @param[out] return_algo_count
  *   Output. A host pointer to the number of algorithms returned by this function.
  *
@@ -15750,15 +15752,15 @@ mluOpStatus_t mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t re
  * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
-             mluOpGetBatchMatMulAlgoHeuristic(mluOpHandle_t handle,
-                                             mluOpMatMulDescriptor_t bmm_bcast_desc,
-                                             mluOpTensorDescriptor_t a_desc,
-                                             mluOpTensorDescriptor_t b_desc,
-                                             mluOpTensorDescriptor_t c_desc,
-                                             mluOpMatMulPrefer_t preference,
-                                             int requested_algo_count,
-                                             mluOpMatMulHeuristicResult_t *result_array,
-                                             int *return_algo_count);
+mluOpGetBatchMatMulAlgoHeuristic(mluOpHandle_t handle,
+                                 mluOpMatMulDescriptor_t bmm_bcast_desc,
+                                 mluOpTensorDescriptor_t a_desc,
+                                 mluOpTensorDescriptor_t b_desc,
+                                 mluOpTensorDescriptor_t c_desc,
+                                 mluOpMatMulPrefer_t preference,
+                                 int requested_algo_count,
+                                 mluOpMatMulHeuristicResult_t *result_array,
+                                 int *return_algo_count);
 
 // Group:BatchMatMulBCast
 /*!
@@ -15858,17 +15860,18 @@ mluOpStatus_t MLUOP_WIN_API
  * @par Reference
  * - https://pytorch.org/docs/stable/torch.html?highlight=bmm#torch.bmm
  */
-mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(mluOpHandle_t handle,
-                                               const bool is_transa,
-                                               const bool is_transb,
-                                               const mluOpTensorDescriptor_t a_desc,
-                                               const void *a,
-                                               const mluOpTensorDescriptor_t b_desc,
-                                               const void *b,
-                                               void *workspace,
-                                               size_t workspace_size,
-                                               const mluOpTensorDescriptor_t c_desc,
-                                               void *c);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCast(mluOpHandle_t handle,
+                      const bool is_transa,
+                      const bool is_transb,
+                      const mluOpTensorDescriptor_t a_desc,
+                      const void *a,
+                      const mluOpTensorDescriptor_t b_desc,
+                      const void *b,
+                      void *workspace,
+                      size_t workspace_size,
+                      const mluOpTensorDescriptor_t c_desc,
+                      void *c);
 
 // Group:BatchMatMulBCast
 /*!
@@ -15971,7 +15974,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(mluOpHandle_t handle,
  *   Once the strides of all tensors are set, the lowest 3 dims of \b a_desc are [batch_size, m, k],
  *   the lowest 3 dims of \b b_desc are [batch_size, k, n], and the lowest 3 dims of \b c_desc are [batch_size, m, n].
  *   The last value of \b c_desc->stride should be equal to \b 1 because transpose operation of \b c is not supported.
- * - If you want to use stride feature, MLUOP_MATMUL_USE_STRIDE attribute of \b bmm_bcast_desc should be specified as \b true
+ * - If you want to use stride feature, MLUOP_MATMUL_USE_STRIDE attribute of \b bmm_bcast_desc should be specified as \b
+ true
  *   with ::mluOpSetMatMulDescAttr. When stride is enabled, transpose information of \b a and \b b will be neglected,
  *   because they may be in conflict with tensors' stride values.
  *
@@ -16016,19 +16020,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(mluOpHandle_t handle,
  * @par Reference
  * - https://pytorch.org/docs/stable/torch.html?highlight=bmm#torch.bmm
  */
-mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast_v2(mluOpHandle_t handle,
-                                                  mluOpMatMulDescriptor_t bmm_bcast_desc,
-                                                  mluOpMatMulAlgo_t  algo,
-                                                  const void *alpha,
-                                                  const mluOpTensorDescriptor_t a_desc,
-                                                  const void *a,
-                                                  const mluOpTensorDescriptor_t b_desc,
-                                                  const void *b,
-                                                  const void *beta,
-                                                  const mluOpTensorDescriptor_t c_desc,
-                                                  void *c,
-                                                  void *workspace,
-                                                  size_t workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCast_v2(mluOpHandle_t handle,
+                         mluOpMatMulDescriptor_t bmm_bcast_desc,
+                         mluOpMatMulAlgo_t algo,
+                         const void *alpha,
+                         const mluOpTensorDescriptor_t a_desc,
+                         const void *a,
+                         const mluOpTensorDescriptor_t b_desc,
+                         const void *b,
+                         const void *beta,
+                         const mluOpTensorDescriptor_t c_desc,
+                         void *c,
+                         void *workspace,
+                         size_t workspace_size);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16121,9 +16126,9 @@ mluOpBatchMatMulBCastDescDestroy(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_des
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetBatchMatMulBCastDescAttr(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
-                                mluOpBatchMatMulBCastDescAttribute_t attr,
-                                const void *buf,
-                                size_t size_in_bytes);
+                                 mluOpBatchMatMulBCastDescAttribute_t attr,
+                                 const void *buf,
+                                 size_t size_in_bytes);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16160,10 +16165,10 @@ mluOpSetBatchMatMulBCastDescAttr(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_des
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetBatchMatMulBCastDescAttr(const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
-                                mluOpBatchMatMulBCastDescAttribute_t attr,
-                                void *buf,
-                                size_t size_in_bytes,
-                                size_t *size_written);
+                                 mluOpBatchMatMulBCastDescAttribute_t attr,
+                                 void *buf,
+                                 size_t size_in_bytes,
+                                 size_t *size_written);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16193,7 +16198,8 @@ mluOpGetBatchMatMulBCastDescAttr(const mluOpBatchMatMulBCastDescriptor_t bmm_bca
  * @par Example
  * - None.
  */
-mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16218,7 +16224,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCas
  * @par Example
  * - None.
  */
-mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCastAlgo_t algo);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCastAlgo_t algo);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16270,12 +16277,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCa
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetQuantizeBatchMatMulBCastAlgorithm(mluOpHandle_t handle,
-                                         const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
-                                         const mluOpTensorDescriptor_t a_desc,
-                                         const mluOpTensorDescriptor_t b_desc,
-                                         const mluOpTensorDescriptor_t c_desc,
-                                         mluOpBatchMatMulBCastPreference_t preference,
-                                         mluOpBatchMatMulBCastAlgo_t *algo);
+                                          const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                                          const mluOpTensorDescriptor_t a_desc,
+                                          const mluOpTensorDescriptor_t b_desc,
+                                          const mluOpTensorDescriptor_t c_desc,
+                                          mluOpBatchMatMulBCastPreference_t preference,
+                                          mluOpBatchMatMulBCastAlgo_t *algo);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16329,14 +16336,14 @@ mluOpGetQuantizeBatchMatMulBCastAlgorithm(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(
-                          mluOpHandle_t handle,
-                          mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
-                          const mluOpTensorDescriptor_t a_desc,
-                          const mluOpTensorDescriptor_t b_desc,
-                          const mluOpTensorDescriptor_t c_desc,
-                          mluOpBatchMatMulBCastAlgo_t algo,
-                          size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
+                                              mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                                              const mluOpTensorDescriptor_t a_desc,
+                                              const mluOpTensorDescriptor_t b_desc,
+                                              const mluOpTensorDescriptor_t c_desc,
+                                              mluOpBatchMatMulBCastAlgo_t algo,
+                                              size_t *workspace_size);
 
 // Group:BatchMatMulBCast
 /*!
@@ -16440,7 +16447,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(
  * @par Performance Optimization
  * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
  *   needs to transpose.
- * - If \b a and \b b do not need broadcasting, for best practices, it is recommended to call ::mluOpQuantizeBatchMatMul.
+ * - If \b a and \b b do not need broadcasting, for best practices, it is recommended to call
+ ::mluOpQuantizeBatchMatMul.
  *
  * @par Example
  * - The example of the operation is as follows:
@@ -16457,24 +16465,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
-                             const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
-                             const void *alpha,
-                             const mluOpTensorDescriptor_t a_desc,
-                             const void *a,
-                             const void *a_position,
-                             const void *a_scale,
-                             const void *a_offset,
-                             const mluOpTensorDescriptor_t b_desc,
-                             const void *b,
-                             const void *b_position,
-                             const void *b_scale,
-                             const void *b_offset,
-                             const void *beta,
-                             const mluOpTensorDescriptor_t c_desc,
-                             void *c,
-                             mluOpBatchMatMulBCastAlgo_t algo,
-                             void *workspace,
-                             size_t workspace_size);
+                              const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                              const void *alpha,
+                              const mluOpTensorDescriptor_t a_desc,
+                              const void *a,
+                              const void *a_position,
+                              const void *a_scale,
+                              const void *a_offset,
+                              const mluOpTensorDescriptor_t b_desc,
+                              const void *b,
+                              const void *b_position,
+                              const void *b_scale,
+                              const void *b_offset,
+                              const void *beta,
+                              const mluOpTensorDescriptor_t c_desc,
+                              void *c,
+                              mluOpBatchMatMulBCastAlgo_t algo,
+                              void *workspace,
+                              size_t workspace_size);
 
 #if defined(__cplusplus)
 }
