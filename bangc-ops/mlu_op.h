@@ -142,6 +142,7 @@ typedef enum {
   MLUOP_DTYPE_DOUBLE        = 14, /*!< A 64-bit floating-point data type. */
   MLUOP_DTYPE_INT8          = 3,  /*!< An 8-bit signed integer data type. */
   MLUOP_DTYPE_INT16         = 4,  /*!< A 16-bit signed integer data type. */
+  MLUOP_DTYPE_INT31         = 5,  /*!< The data is a 31-bit signed integer data type. */
   MLUOP_DTYPE_INT32         = 6,  /*!< A 32-bit signed integer data type. */
   MLUOP_DTYPE_INT64         = 9,  /*!< A 64-bit signed integer data type. */
   MLUOP_DTYPE_UINT8         = 7,  /*!< An 8-bit unsigned integer data type. */
@@ -15569,6 +15570,920 @@ mluOpGetConcatWorkspaceSize(mluOpHandle_t handle, const int concat_num, size_t *
  */
 void MLUOP_WIN_API
 mluOpSetGenCaseMode(int mode);
+
+/******************************************************************************
+ * Cambricon MLUOP Data Structure: BatchMatMulBCast
+ ******************************************************************************/
+/**
+ * @brief Enumeration variables describing the attribute names of the batch matrix multiplication computation with
+ * broadcasting.
+ *
+ */
+typedef enum {
+  MLUOP_BMM_BCAST_DESC_COMPUTE_TYPE = 0,
+  /*!< Specifies the data type used for multiplication and accumulation operations, and the accumulator
+       for implementing batch matrix multiplication with broadcasting. It must be set before doing
+       batch matrix multiplication with broadcasting. */
+  MLUOP_BMM_BCAST_DESC_SCALE_TYPE = 1,
+  /*!< Specifies the data type of the scaling factors \b alpha and \b beta. Default value is the same
+       as ::MLUOP_BMM_BCAST_DESC_COMPUTE_TYPE. It is not supported now. */
+  MLUOP_BMM_BCAST_DESC_POINTER_MODE = 2,
+  /*!< Specifies whether \b alpha and \b beta are stored on the host or on the device.
+       It is not supported now. */
+  MLUOP_BMM_BCAST_DESC_TRANSA = 3,
+  /*!< Specifies whether transpose should be performed on matrix A.
+       Default value is 0 (false). */
+  MLUOP_BMM_BCAST_DESC_TRANSB = 4,
+  /*!< Specifies whether transpose should be performed on matrix B.
+       Default value is 0 (false). */
+  MLUOP_BMM_BCAST_DESC_TRANSC = 5,
+  /*!< Specifies whether transpose should be performed on matrix C.
+       Default value is 0 (false). It is not supported now. */
+} mluOpBatchMatMulBCastDescAttribute_t;
+
+/*!
+ * @brief Enumeration variables describing the preference of batch matrix multiplication with broadcasting algorithm.
+ */
+typedef enum {
+  MLUOP_BMM_BCAST_FASTEST = 0,
+  /*!< The high-speed preference is used. */
+  MLUOP_BMM_BCAST_LOW_MEMORY_OCCUPY = 1,
+  /*!< The low-memory preference is used. It is not supported now. */
+} mluOpBatchMatMulBCastPreference_t;
+
+/*! The descriptor of the batch matrix multiplication with broadcasting function that holds compute type, bias type,
+ *  transpose flag, and other attributes defined in ::mluOpBatchMatMulBCastDescAttribute_t.
+ *
+ *  You need to call the ::mluOpBatchMatMulBCastDescCreate function to create a descriptor, and call the
+ *  ::mluOpSetBatchMatMulBCastDescAttr function to set the information of the matrix multiplication to the descriptor.
+ *  Also, you need to destroy the Cambricon MLUOP context at the end with the ::mluOpBatchMatMulBCastDescDestroy
+ * function.
+ */
+typedef struct mluOpBatchMatMulBCastStruct *mluOpBatchMatMulBCastDescriptor_t;
+
+/*! The descriptor of the batch matrix multiplication with broadcasting computation algorithm.
+ *
+ *  You need to call the ::mluOpBatchMatMulBCastAlgoCreate function to create a descriptor, and call the
+ *  ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function to set the information to the descriptor. Also, you need to
+ *  destroy the Cambricon MLUOP context at the end with the ::mluOpBatchMatMulBCastAlgoDestroy function.
+ */
+typedef struct mluOpBatchMatMulBCastAlgoStruct *mluOpBatchMatMulBCastAlgo_t;
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
+ * to optimize the batch matrix multiplication with broadcasting operation.
+ *
+ * @par Deprecated
+ * - ::mluOpGetBatchMatMulBCastWorkspaceSize is deprecated and will be removed in the future release.
+ * Please use ::mluOpGetBatchMatMulHeuristicResult instead.
+ *
+ * The size of extra workspace is based on the given information of the batch matrix multiplication
+ * with broadcasting operation, including input tensor descriptor of left matrix \b a_desc, input tensor descriptor of
+ * right matrix \b b_desc and output tensor descriptor \b c_desc.
+ * For more information about the workspace, see "Cambricon MLUOP User Guide".
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] c_desc
+ *   Input. The descriptor of the input tensor of output matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ *   Output. Pointer to the returned size of the extra workspace in bytes that is used in
+ *   the matrix multiplication operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t a_desc,
+                                      const mluOpTensorDescriptor_t b_desc,
+                                      const mluOpTensorDescriptor_t c_desc,
+                                      size_t *workspace_size);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Gets the matrix multiplication algorithm and workspace size from heuristic result,
+ *        that is previously selected with ::mluOpGetBatchMatMulAlgoHeuristic.
+ *
+ * @param[in] result
+ *   Input. The matrix multiplication heuristic result obtained by ::mluOpGetBatchMatMulAlgoHeuristic.
+ *
+ * @param[out] algo
+ *   Output. The matrix multiplication algorithm.
+ *
+ * @param[out] workspace_size
+ *   Output. Pointer to the returned size of the extra workspace in bytes that is used in
+ *   the matrix multiplication operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t
+mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMatMulAlgo_t algo, size_t *workspace_size);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Retrieves the possible algorithms can be used in the matrix multiplication.
+ *        The output is placed in result_array[] in the order of increasing estimated compute time.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] bmm_bcast_desc
+ *   Input. The descriptor of the matrix multiplication operations. For detail information,
+ *   see ::mluOpMatMulDescriptor_t.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] c_desc
+ *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] preference
+ *   Input. The descriptor of the matrix multiplication that holds the preferences for mluOpMatMulHeuristicResult_t
+ *   configuration. Currently not supported and should be set to NULL.
+ * @param[in] requested_algo_count
+ *   Input. The number of requested algorithms. The maximum number of algorithms to be returned.
+ *   Currently this value only supports 1.
+ * @param[out] result_array
+ *   Output. Array containing the algorithm heuristics and associated runtime characteristics, returned by this
+ * function, in the order of increasing estimated compute time.
+ * @param[out] return_algo_count
+ *   Output. A host pointer to the number of algorithms returned by this function.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - Currently the maximum number of algorithms \b requested_algo_count only supports 1.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetBatchMatMulAlgoHeuristic(mluOpHandle_t handle,
+                                 mluOpMatMulDescriptor_t bmm_bcast_desc,
+                                 mluOpTensorDescriptor_t a_desc,
+                                 mluOpTensorDescriptor_t b_desc,
+                                 mluOpTensorDescriptor_t c_desc,
+                                 mluOpMatMulPrefer_t preference,
+                                 int requested_algo_count,
+                                 mluOpMatMulHeuristicResult_t *result_array,
+                                 int *return_algo_count);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Computes the batch matrix multiplication with broadcasting operation,
+ * then returns the results in the output tensor \b c. For more information about quantization,
+ * see "Cambricon MLUOP User Guide".
+ *
+ * This function may need extra MLU memory as the workspace to improve the batch matrix multiplication
+ * with broadcasting performance. You can get the size of the workspace \b workspace_size with the
+ * ::mluOpGetBatchMatMulAlgoHeuristic function.
+ *
+ * @par Deprecated
+ * - ::mluOpBatchMatMulBCast is deprecated and will be removed in the future release.
+ * Please use ::mluOpBatchMatMulBCast_v2 instead.
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] is_transa
+ *   Input. Boolean value indicating whether \b a matrix is transposed.
+ * @param[in] is_transb
+ *   Input. Boolean value indicating whether \b b matrix is transposed.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] a
+ *   Input. Pointer to the MLU memory that stores the left matrix.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b
+ *   Input. Pointer to the MLU memory that stores the right matrix.
+ * @param[in] c_desc
+ *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] c
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @param[in] workspace
+ *   Input. Pointer to the MLU memory that is used as an extra workspace for the batch matrix multiplication
+ *   with broadcasting operation. For more information about workspace, see "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ *   Input. The size of the extra workspace in bytes that needs to be used in the batch matrix multiplication
+ *   with broadcasting operation. You can get the size of the workspace with the
+ *   ::mluOpGetBatchMatMulBCastWorkspaceSize function.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Formula
+ * - See "BatchMatMulBCast Operation" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - This function supports any combinations of the following data types for input tensor \b a, \b b and
+ *   output tensor \b c.
+ *   - \b a: int8, int16, int31.
+ *   - \b b: onchip data type: int8, int16, int31.
+ *   - \b c: half, float.
+ * - This function supports the combinations of the following data types for input tensor \b a, \b b and
+ *   output tensor \b c on MLU300 series or above.
+ *   - \b a, \b b, \b c: half, half, half.
+ *   - \b a, \b b, \b c: float, float, float.
+ *
+ * @note
+ * - The combinations of the data types should satisfy the following rules:
+ *   - The data type of \b c must be float when \b a data type is int31 or \b b data type is int31.
+ *   - The number of dimensions is no more than \p MLUOP_DIM_MAX.
+ *   - \b c offchip data type must be the same as \b c onchip data type.
+ *
+ * @par Scale Limitation
+ * - The input tensors and output tensor must meet the following requirements:
+ *   - The \b a and \b b must have no less than two dimensions, and the last two dimensions of \b a and \b b
+ *     are matrix multiplication compatible.
+ *   - The number of columns of \b a matrix must be equal to the number of rows of \b b matrix after both
+ *     inputs have performed the transpose operations according to parameters. With the exception of the
+ *     last two dimensions, the other dimensions need to satisfy the broadcasting rules.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement batch matrix multiplication with broadcasting, you need to prepare
+ *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Performance Optimization
+ * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
+ *   needs to transpose.
+ * - If \b a and \b b do not need broadcasting, for best practices, it is recommended to call ::mluOpBatchMatMul.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the operation is as follows:
+     @verbatim
+      transa:                    false
+      transb:                    false
+      Dimension of input tensor a:  [99, 128]
+      Dimension of input tensor b:  [64, 128, 256]
+      Dimension of output tensor c: [64, 99, 256]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/torch.html?highlight=bmm#torch.bmm
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCast(mluOpHandle_t handle,
+                      const bool is_transa,
+                      const bool is_transb,
+                      const mluOpTensorDescriptor_t a_desc,
+                      const void *a,
+                      const mluOpTensorDescriptor_t b_desc,
+                      const void *b,
+                      void *workspace,
+                      size_t workspace_size,
+                      const mluOpTensorDescriptor_t c_desc,
+                      void *c);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Computes the batch matrix multiplication with broadcasting operation,
+ * then returns the results in the output tensor \b c. For more information about quantization,
+ * see "Cambricon MLUOP User Guide".
+ *
+ * Compared with ::mluOpBatchMatMulBCast, it supports the use of \b bmm_bcast_desc
+ * to pass parameters like ::MLUOP_MATMUL_DESC_TRANSA.
+ *
+ * This function needs extra MLU memory as the workspace to improve the batch matrix multiplication
+ * with broadcasting performance. You can get the size of the workspace \b workspace_size with the
+ * ::mluOpGetBatchMatMulAlgoHeuristic and ::mluOpGetBatchMatMulHeuristicResult functions in turn.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] bmm_bcast_desc
+ *   Input. The descriptor of the batch matrix multiplication with broadcasting operation.
+ *   For detail information, see ::mluOpMatMulDescriptor_t.
+ * @param[in] algo
+ *   Input. A host pointer to the most suitable algorithm to compute the batch matrix multiplication
+ *   with broadcasting.
+ * @param[in] alpha
+ *   Input. A host pointer to scaling factor of tensor \b a.
+ *   In MLU200, CE3226 and SD5223 series, \p alpha and \p beta setting are not supported currently,
+ *   and the value of alpha in the host pointer should be 1 in this case.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] a
+ *   Input. Pointer to the MLU memory that stores the left matrix.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b
+ *   Input. Pointer to the MLU memory that stores the right matrix.
+ * @param[in] beta
+ *   Input. A host pointer to scaling factor of tensor \b c.
+ *   In MLU200, CE3226 and SD5223 series, \p alpha and \p beta setting are not supported currently,
+ *   and the value of beta in the host pointer should be 0 in this case.
+ * @param[in] c_desc
+ *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in,out] c
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @param[in] workspace
+ *   Input. Pointer to the MLU memory that is used as an extra workspace for the batch matrix multiplication
+ *   with broadcasting operation. For more information about workspace, see "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ *   Input. The size of the extra workspace in bytes that needs to be used in the batch matrix
+ *   multiplication with broadcasting operation. You can get the size of the workspace with
+ *   the ::mluOpGetBatchMatMulAlgoHeuristic and ::mluOpGetBatchMatMulHeuristicResult functions in turn.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Formula
+ * - See "BatchMatMulBCast Operation" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - This function supports the following data types for input tensor \b a, \b b and output tensor \b c.
+ *   - The offchip data type of \b a: half, float, int8, int16, int31.
+ *   - The onchip data type of \b a: half, float, int8, int16, int31.
+ *   - The offchip data type of \b b: half, float, int8, int16, int31.
+ *   - The onchip data type of \b b: half, float, int8, int16, int31.
+ *   - The offchip data type of \b c: half, float, int8, int16.
+ *   - The onchip data type of \b c: half, float.
+ * - This function also supports the combinations of the following data types for input tensor \b a, \b b and
+ *   output tensor \b c on MLU300 series or above.
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, half.
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: half, half, half, float.
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: bfloat16, bfloat16, bfloat16, bfloat16.
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: bfloat16, bfloat16, bfloat16, float.
+ *   - \b a, \b b, \b c offchip data type, \b c onchip data type: float, float, float, float.
+ *
+ * @note
+ * - The data type of \b c must be float when \b a data type is int31 or \b b data type is int31.
+ * - The data type bitwidth of \b c onchip data type for operation computing is not shorter than
+ *   \b c offchip data type.
+ * - The onchip data type of \b a must be MLUOP_DTYPE_INT31 or MLUOP_DTYPE_INVALID if the offchip
+ *   data type of \b a is MLUOP_DTYPE_INT31.
+ * - The onchip data type of \b b must be MLUOP_DTYPE_INT31 or MLUOP_DTYPE_INVALID if the offchip
+ *   data type of \b b is MLUOP_DTYPE_INT31.
+ * - The offchip data types of \b a and \b b must be fixed point if the offchip data type
+ *   of \b a or \b b is MLUOP_DTYPE_INT31.
+ * - The onchip data types of \b a and \b b must be equal to the offchip data type of \b c
+ *   when the offchip data type of \b c is int8 or int16.
+ * - The offchip data types of \b a and \b b must be equal to the offchip data type of \b c
+ *   when the offchip data type of \b a is floating point and the onchip data type of \b a is
+ *   MLUOP_DTYPE_INVALID or the onchip data type of \b a is the same as the offchip data type
+ *   of \b a.
+ * - The offchip data types of \b a and \b b must be then same when they are both floating
+ *   point.
+ * - The onchip data types of \b a and \b b must be both fixed point on MLU200, CE3226 series.
+ * - If \b a offchip data type is integer, it should be the same as \b a onchip data type.
+ * - The floating point of \b a, \b b and \b c under the same combination need to be consistent.
+ * - The number of dimensions is no more than \p MLUOP_DIM_MAX.
+ * - Strides are supported when data types of tensors \b a, \b b and \b c are half or float or bfloat16.
+ *   You can specify the stride of all dimensions for \b a_desc, \b b_desc, \b c_desc with ::mluOpSetTensorDescriptorEx.
+ *   Once the strides of all tensors are set, the lowest 3 dims of \b a_desc are [batch_size, m, k],
+ *   the lowest 3 dims of \b b_desc are [batch_size, k, n], and the lowest 3 dims of \b c_desc are [batch_size, m, n].
+ *   The last value of \b c_desc->stride should be equal to \b 1 because transpose operation of \b c is not supported.
+ * - If you want to use stride feature, MLUOP_MATMUL_USE_STRIDE attribute of \b bmm_bcast_desc should be specified as \b
+ true
+ *   with ::mluOpSetMatMulDescAttr. When stride is enabled, transpose information of \b a and \b b will be neglected,
+ *   because they may be in conflict with tensors' stride values.
+ *
+ * @par Scale Limitation
+ * - The input tensors and output tensor must meet the following requirements:
+ *   - The \b a and \b b must have no less than two dimensions, and the last two dimensions of \b a and \b b
+ *     are matrix multiplication compatible.
+ *   - The number of columns of \b a matrix must be equal to the number of rows of \b b matrix after both
+ *     inputs have performed the transpose operations according to parameters. With the exception of the
+ *     last two dimensions, the other dimensions need to satisfy the broadcasting rules.
+ *   - the maximum dimension of \b a should be less than or equal to INT_MAX.
+ *   - the maximum dimension of \b b should be less than or equal to INT_MAX.
+ *   - the maximum dimension of \b c should be less than or equal to INT_MAX.
+ *   - the batch size of \b a should be less than or equal to INT_MAX.
+ *   - the batch size of \b b should be less than or equal to INT_MAX.
+ *   - the batch size of \b c should be less than or equal to INT_MAX.
+ *   - the lda of \b a should be less than or equal to INT_MAX.
+ *   - the lda of \b b should be less than or equal to INT_MAX.
+ *   - the lda of \b c should be less than or equal to INT_MAX.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement batch matrix multiplication with broadcasting, you need to prepare
+ *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Performance Optimization
+ * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
+ *   needs to transpose.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the operation is as follows:
+     @verbatim
+      MLUOP_MATMUL_DESC_TRANSA:      false
+      MLUOP_MATMUL_DESC_TRANSB:      false
+      Dimension of input tensor a:  [99, 128]
+      Dimension of input tensor b:  [64, 128, 256]
+      Dimension of output tensor c: [64, 99, 256]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/torch.html?highlight=bmm#torch.bmm
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCast_v2(mluOpHandle_t handle,
+                         mluOpMatMulDescriptor_t bmm_bcast_desc,
+                         mluOpMatMulAlgo_t algo,
+                         const void *alpha,
+                         const mluOpTensorDescriptor_t a_desc,
+                         const void *a,
+                         const mluOpTensorDescriptor_t b_desc,
+                         const void *b,
+                         const void *beta,
+                         const mluOpTensorDescriptor_t c_desc,
+                         void *c,
+                         void *workspace,
+                         size_t workspace_size);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Creates a descriptor pointed by \b bmm_bcast_desc for a batch matrix multiplication with
+ *        broadcasting operation, and allocates memory for holding the information about the batch
+ *        matrix multiplication with broadcasting operation. The information is defined in
+ *        ::mluOpBatchMatMulBCastDescriptor_t.
+ *
+ * @param[out] bmm_bcast_desc
+ *   Output. A host pointer to the batch matrix multiplication with broadcasting descriptor that holds
+ *   information about the batch matrix multiplication with broadcasting operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpSetBatchMatMulBCastDescAttr function to initialize
+ *   and set the information to the batch matrix multiplication with broadcasting descriptor.
+ * - You need to call the ::mluOpBatchMatMulBCastDescDestroy function to destroy the descriptor.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCastDescCreate(mluOpBatchMatMulBCastDescriptor_t *bmm_bcast_desc);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Destroys a batch matrix multiplication with broadcasting descriptor \b bmm_bcast_desc
+ *        that is previously created with the ::mluOpBatchMatMulBCastDescCreate.
+ *
+ * The batch matrix multiplication with broadcasting descriptor is defined in ::mluOpBatchMatMulBCastDescriptor_t
+ * and holds the information about the batch matrix multiplication with broadcasting operation.
+ *
+ * @param[in] bmm_bcast_desc
+ *   Input. The batch matrix multiplication with broadcasting descriptor to be destroyed.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCastDescDestroy(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Initializes the batch matrix multiplication with broadcasting descriptor \b bmm_bcast_desc
+ * that is previously created with the ::mluOpBatchMatMulBCastDescCreate function, and sets
+ * the information about the batch matrix multiplication with broadcasting operation to the batch matrix
+ * multiplication with broadcasting descriptor \b bmm_bcast_desc. The information includes the attribute
+ * defined in ::mluOpBatchMatMulBCastDescAttribute_t \b attr, the host pointer to the attribute value
+ * \b buf, and the size of buffer for verification.
+ *
+ * @param[in,out] bmm_bcast_desc
+ *   Input/output. The descriptor of the batch matrix multiplication with broadcasting operation. For detailed
+ *   information, see ::mluOpBatchMatMulBCastDescriptor_t.
+ * @param[in] attr
+ *   Input. Attribute of batch matrix multiplication with broadcasting descriptor to be set. For detailed
+ *   information, see ::mluOpBatchMatMulBCastDescAttribute_t.
+ * @param[in] buf
+ *   Input. A host pointer to the attribute value set by this function.
+ * @param[in] size_in_bytes
+ *   Input. Buffer in bytes for verification.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetBatchMatMulBCastDescAttr(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                                 mluOpBatchMatMulBCastDescAttribute_t attr,
+                                 const void *buf,
+                                 size_t size_in_bytes);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Returns the pointer to the \b buf and size of the buffer \b size_written of the attribute
+ * retrieved with the given batch matmul multiplication with broadcasting descriptor \b bmm_bcast_desc,
+ * attribute \b attr. And \b size_in_bytes is used to check whether the memory size is same with \b size_written.
+ *
+ * You can set the attribute in the batch matrix multiplication with broadcasting descriptor based on
+ * the return value of this function.
+ *
+ * @param[in] bmm_bcast_desc
+ *   Input. The descriptor of the batch matrix multiplication with broadcasting operation. For detailed
+ *   information, see ::mluOpBatchMatMulBCastDescriptor_t.
+ * @param[in] attr
+ *   Input. Attribute of batch matrix multiplication with broadcasting descriptor to be retrieved.
+ * @param[out] buf
+ *   Output. A host pointer to the attribute value to be retrieved by this function.
+ * @param[in] size_in_bytes
+ *   Input. Buffer in bytes for verification.
+ * @param[out] size_written
+ *   Output. A host pointer to the number of bytes actually written to the buffer.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetBatchMatMulBCastDescAttr(const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                                 mluOpBatchMatMulBCastDescAttribute_t attr,
+                                 void *buf,
+                                 size_t size_in_bytes,
+                                 size_t *size_written);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Creates a descriptor pointed by \b algo for a batch matrix multiplication with broadcasting algorithm,
+ *        and allocates memory for holding the information about the algorithm.
+ *        The information is defined in ::mluOpBatchMatMulBCastAlgo_t. For more information about descriptor,
+ *        see "Cambricon MLUOP User Guide".
+ *
+ * @param[out] algo
+ *   Output. A host pointer to the batch matrix multiplication with broadcasting algorithm that holds information about
+ *   the batch matrix multiplication with broadcasting algorithm.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function to initialize
+ *   and set the information to the batch matrix multiplication with broadcasting algorithm.
+ * - You need to call the ::mluOpBatchMatMulBCastAlgoDestroy function to destroy the descriptor.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Destroys a batch matrix multiplication with broadcasting algorithm descriptor \b algo
+ *        that is previously created with the ::mluOpBatchMatMulBCastAlgoCreate.
+ *
+ * The batch matrix multiplication with broadcasting descriptor is defined in ::mluOpBatchMatMulBCastAlgo_t
+ * and holds the information about the batch matrix multiplication with broadcasting algorithm.
+ *
+ * @param[in] algo
+ *   Input. The batch matrix multiplication with broadcasting algorithm descriptor to be destroyed.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCastAlgo_t algo);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Returns the most suited batch matrix multiplication with broadcasting algorithm that can be used
+ * in the operation.
+ *
+ * The returned batch matrix multiplication is chosen from all the supported batch matrix with
+ * broadcasting algorithms defined in ::mluOpBatchMatMulBCastAlgo_t and is based on the given batch matrix
+ * multiplication with broadcasting descriptor \b bmm_bcast_desc, tensor descriptor of left matrix \b a_desc,
+ * tensor descriptor of right matrix \b b_desc, tensor descriptor of output matrix \b c_desc, and batch
+ * matrix multiplication with broadcasting algorithm \b preference.
+ *
+ * The computing performance options \b preference defined in the ::mluOpBatchMatMulBCastPreference_t
+ * enum, only supports the high speed mode.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] bmm_bcast_desc
+ *  Input. The descriptor of the batch matrix multiplication with broadcasting operation. For detailed
+ *  information, see ::mluOpBatchMatMulBCastDescriptor_t.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor descriptor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor descriptor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] c_desc
+ *   Input. The descriptor of the input tensor descriptor of output matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] preference
+ *   Input. The options for implementing the batch matrix multiplication with broadcasting operation to
+ * get better performance. This parameter only supports MLUOP_BMM_BCAST_FASTEST now.
+ * @param[out] algo
+ *   Output. A host pointer to the returned algorithm that is best suited for computing the batch matrix multiplication
+ *   with broadcasting. The algorithms are defined in the ::mluOpBatchMatMulBCastAlgo_t enum.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetQuantizeBatchMatMulBCastAlgorithm(mluOpHandle_t handle,
+                                          const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                                          const mluOpTensorDescriptor_t a_desc,
+                                          const mluOpTensorDescriptor_t b_desc,
+                                          const mluOpTensorDescriptor_t c_desc,
+                                          mluOpBatchMatMulBCastPreference_t preference,
+                                          mluOpBatchMatMulBCastAlgo_t *algo);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
+ * to optimize the batch matrix multiplication with broadcasting operation.
+ *
+ * The size of extra workspace is based on the given information of the batch matrix multiplication
+ * with broadcasting operation, including the batch matrix multiplication with broadcasting descriptor
+ * \b bmm_bcast_desc, input tensor descriptor of left matrix \b a_desc, input tensor descriptor of
+ * right matrix \b b_desc, output tensor descriptor \b c_desc, and the batch matrix multiplication
+ * with broadcasting algorithm \b algo. For more information about the workspace, see "Cambricon MLUOP User Guide".
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] bmm_bcast_desc
+ *   Input. The descriptor of the batch matrix multiplication with broadcasting operations. For detail information,
+ *   see ::mluOpBatchMatMulBCastDescriptor_t.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] c_desc
+ *   Input. The descriptor of the input tensor of output matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] algo
+ *   Input. The algorithm used to compute the batch matrix multiplication with broadcasting. The algorithms are defined
+ *   in the ::mluOpBatchMatMulBCastAlgo_t enum. You can get the best suited algorithm with the
+ *   ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function.
+ * @param[out] workspace_size
+ *   Output. Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - This function must be called after ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function. You also need to
+ *   call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
+ *   tensor descriptors \b a_desc, \b b_desc, \b c_desc before calling this function.
+ * - The allocated extra workspace should be passed to the ::mluOpQuantizeBatchMatMulBCast function to
+ *   performs the batch matrix multiplication with broadcasting operation.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
+                                              mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                                              const mluOpTensorDescriptor_t a_desc,
+                                              const mluOpTensorDescriptor_t b_desc,
+                                              const mluOpTensorDescriptor_t c_desc,
+                                              mluOpBatchMatMulBCastAlgo_t algo,
+                                              size_t *workspace_size);
+
+// Group:BatchMatMulBCast
+/*!
+ * @brief Quantizes data type of input tensor \b a and \b b, and computes the batch matrix
+ * multiplication with broadcasting operation, then returns the results in the output tensor \b c.
+ * For more information about quantization, see "Cambricon MLUOP User Guide".
+ *
+ * This function needs extra MLU memory as the workspace to improve the batch matrix multiplication
+ * with broadcasting performance. You can get the size of the workspace \b workspace_size with the
+ * ::mluOpGetQuantizeBatchMatMulBCastWorkspaceSize function. The batch matrix multiplication with broadcasting
+ * is computed based on the algorithm set in \b algo. You can call the
+ * ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function to get the most suited algorithm.
+ *
+ * The scaling factors \b alpha and \b beta are not supported currently.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
+ *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] bmm_bcast_desc
+ *   Input. The descriptor of the batch matrix multiplication with broadcasting operations.
+ *   For detail information, see ::mluOpBatchMatMulBCastDescriptor_t.
+ * @param[in] alpha, beta
+ *   Input. Reserved for future use. Set the value of these parameters to NULL.
+ * @param[in] a_desc
+ *   Input. The descriptor of the input tensor of left matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] a
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] a_position
+ *   Input. Pointer to the MLU memory associated tensor \b a quantization param \b position.
+ * @param[in] a_scale
+ *   Input. Pointer to the MLU memory associated tensor \b a quantization param \b scale.
+ *   The value of this parameter can be NULL.
+ * @param[in] a_offset
+ *   Input. Pointer to the MLU memory associated tensor \b a quantization param \b offset.
+ *   The value of this parameter can be NULL.
+ * @param[in] b_desc
+ *   Input. The descriptor of the input tensor of right matrix. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] b
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] b_position
+ *   Input. Pointer to the MLU memory associated tensor \b b quantization param \b position.
+ * @param[in] b_scale
+ *   Input. Pointer to the MLU memory associated tensor \b b quantization param \b scale.
+ *   The value of this parameter can be NULL.
+ * @param[in] b_offset
+ *   Input. Pointer to the MLU memory associated tensor \b b quantization param \b offset.
+ *   The value of this parameter can be NULL.
+ * @param[in] c_desc
+ *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] c
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @param[in] algo
+ *   Input. The algorithm used to compute the batch matrix multiplication with broadcasting.
+ *   The algorithms are defined in the ::mluOpBatchMatMulBCastAlgo_t enum. You can get the best
+ *   suited algorithm with the ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function.
+ * @param[in] workspace
+ *   Input. Pointer to the MLU memory that is used as an extra workspace for the batch matrix multiplication
+ *   with broadcasting operation. For more information about workspace, see "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ *   Input. The size of the extra workspace in bytes that needs to be used in the batch matrix multiplication
+ *   with broadcasting operation. You can get the size of the workspace with the
+ *   ::mluOpGetQuantizeBatchMatMulBCastWorkspaceSize function.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - This function supports any combinations of the following data types for input tensor \b a, \b b and
+ *   output tensor \b c.
+ *   - \b a ddr data type: half, float.
+ *   - \b a onchip data type: int8, int16, int31.
+ *   - \b b ddr data type: half, float.
+ *   - \b b onchip data type: int8, int16, int31.
+ *   - \b c ddr offchip data type: half, float.
+ *   - The data type for operation computing: half, float.
+ * - \b a ddr data type should be the same as \b b ddr data type.
+ * - \b a ddr data type can be combined with any onchip data type.
+ * - \b b ddr data type can be combined with any onchip data type.
+ *
+ * @note
+ * - The combinations of the data types should satisfy the following rules:
+ *   - The data type bitwidth for operation computing is not shorter than \b c ddr data type.
+ *   - The data type for operation computing must be float when onchip data type is int31.
+ *   - The number of dimensions is no more than \p MLUOP_DIM_MAX.
+ * - This function does not support offline asymmetric quantization currently.
+ *
+ * @par Scale Limitation
+ * - The input tensors and output tensor must meet the following requirements:
+ *   - The \b a and \b b must have no less than two dimensions, and the last two dimensions of \b a and \b b
+ *     are matrix multiplication compatible.
+ *   - The number of columns of \b a matrix must be equal to the number of rows of \b b matrix after both
+ *     inputs have performed the transpose operations according to parameters. With the exception of the last
+ *     two dimensions, the other dimensions need to satisfy the broadcasting rules.
+ *
+ * @par API Dependency
+ * - Before calling this function to implement batch matrix multiplication with broadcasting, you need to prepare
+ *   all the parameters passed to this function. See each parameter description for details.
+ *
+ * @par Performance Optimization
+ * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
+ *   needs to transpose.
+ * - If \b a and \b b do not need broadcasting, for best practices, it is recommended to call
+ ::mluOpQuantizeBatchMatMul.
+ *
+ * @par Example
+ * - The example of the operation is as follows:
+     @verbatim
+      transa:                    false
+      transb:                    false
+      Dimension of input tensor a:  [99, 128]
+      Dimension of input tensor b:  [64, 128, 256]
+      Dimension of output tensor c: [64, 99, 256]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/torch.html?highlight=bmm#torch.bmm
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
+                              const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
+                              const void *alpha,
+                              const mluOpTensorDescriptor_t a_desc,
+                              const void *a,
+                              const void *a_position,
+                              const void *a_scale,
+                              const void *a_offset,
+                              const mluOpTensorDescriptor_t b_desc,
+                              const void *b,
+                              const void *b_position,
+                              const void *b_scale,
+                              const void *b_offset,
+                              const void *beta,
+                              const mluOpTensorDescriptor_t c_desc,
+                              void *c,
+                              mluOpBatchMatMulBCastAlgo_t algo,
+                              void *workspace,
+                              size_t workspace_size);
+
 #if defined(__cplusplus)
 }
 #endif
