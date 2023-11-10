@@ -11,6 +11,7 @@
 | 版本号 | 修订人 | 修订日期  | 修订描述 |
 | ------ | ------ | --------- | -------- |
 | V1.0   | 唐成达 | 2023-4-14 | 首次提交 |
+| V1.1  | 宋琎 | 2023-10-26 | 取消因为nram大小导致的对于S, T的规模限制 |
 
 - #### 内容描述
 
@@ -76,7 +77,7 @@
 
    `py_grad`: 表示py对应的梯度，shape和py相同
 
-   
+
 
 2. !modified模式的计算公式如下：
 
@@ -90,13 +91,13 @@
    \end{array}
    ```
 
-   
+
 
 3. nan/inf行为
 
-   通过分析，参考接口代码实现中有对中间结果为nan/inf时进行特殊处理。当p(b,s,t)、term1(b,s,t)和term2(b,s,t)为nan或inf时，需将其置为0。（当输入包含nan/inf时，参考接口cpu和cuda输出结果不一致，mlu实现与参考接口cuda对齐）
+   通过分析，参考接口代码实现中有对中间结果为nan/inf时进行特殊处理。当p(b,s,t)、term1(b,s,t)和term2(b,s,t)为nan或inf时，需将其置为0，即safeExp函数中包括的功能。（当输入包含nan/inf时，参考接口cpu和cuda输出结果不一致，mlu实现与参考接口cuda对齐）
 
-   
+
 
 ### 1.3 算子输入输出参数要求
 
@@ -125,7 +126,7 @@
 | ------------ | ------------------------------------------------------------ |
 | 数据类型限制 | px: float<br/>py: float<br/>opt_boundary: int64<br/>p: float<br/>ans_grad: float<br/>overwrite_ans_grad: bool<br/>px_grad: float<br/>py_grad: float |
 | 布局限制     | ARRAY                                                        |
-| 规模限制     | 不支持large tensor;<br>在MLU370中，<br>T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 163840<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 163840; <br>在MLU590中，<br>T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 98304<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4 <= 98304;|
+| 规模限制     | 不支持large tensor; |
 | 功能限制     | 仅支持!modified模式，即输入参数px的shape为 [B, S, T+1]       |
 | 数据范围限制 | opt_boundary的shape为[B, 4]其中B为batch，4的含义为[begin_symbol, begin_frame, end_symbol, end_frame]<br/>要求：（**python层已有相关防呆**）<br/>0<= begin_symbol <= end_symbol <= S<br/>0<= begin_frame <= end_frame <= T |
 | 原位限制     | 仅当overwrite_ans_grad为true时，ans_grad支持原位操作         |
@@ -197,23 +198,29 @@ mluOpMutualInformationBackward(mluOpHandle_t handle,
 
 ## 3 实现方案设计
 
-当前方案存在规模限制，即nram空间一次可处理一个batch的数据
+原方案存在规模限制，即nram空间一次可处理一个batch的数据。本次1.1版本提交后，将原方案kernel重命名为3PipelineKernel，新的取消S T规模限制的kernel作为DefaultKernel.
 
 ### 3.1 实现方案
 
-由于p_grad计算为动态规划算法，并且当opt_boundary不为空时，每个batch的boundary不一样。因此下面两个方案都是在core间拆分batch，core内对一个batch的数据循环计算。
+#### 3Pipeline Kernel方案
+
+由于p_grad计算为动态规划算法，并且当opt_boundary不为空时，每个batch的boundary不一样。因此下面3Pipeline方案是在core间拆分batch，core内对一个batch的数据循环计算。
 
 * step1:  计算term1和term2
 
   将p,px,py加载到nram上，逐行计算term1和term2，结果存储在nram(term1和term2分别复用px和py的空间)
 
+  ```math
+  term1(b,s,t) = e^{p(b,s,t) + px(b,s,t) - p(b,s+1,t)}
+  term2(b,s,t) = e^{p(b,s,t) + py(b,s,t) - p(b,s,t+1)}
+  ```
 
 * step2：计算p_grad
 
   p_grad计算公式：
 
   ```math
-  p_{grad}(b,s,t) = p_{grad}(b,s+1,t) * term1(b,s,t) + p_{grad}(b,s,t+1) * term2(b,s,t) 
+  p_{grad}(b,s,t) = p_{grad}(b,s+1,t) * term1(b,s,t) + p_{grad}(b,s,t+1) * term2(b,s,t)
   ```
 
   从p_grad计算公式可分析出，p_grad(b,s,t) 依赖 p_grad(b,s+1,t) 和p_grad(b,s,t+1) ，因此p_grad计算可在对角线方向进行并行计算。
@@ -234,13 +241,96 @@ mluOpMutualInformationBackward(mluOpHandle_t handle,
   | s1   | p_grad(0, 1, 0) | p_grad(0, 1, 1) | p_grad(0, 1, 2) |
   | s2   | p_grad(0, 2, 0) | p_grad(0, 2, 1) | p_grad(0, 2, 2) |
 
-  
 
   在nram从对角线方向读取term1和term2，逐行计算p_grad，结果也存储到NRAM上
 
 * step3：计算px_grad和py_grad
 
   在nram从读取term1、term2和p_grad，逐行计算px_grad和py_grad，结果存回GDRAM
+
+#### Default Kernel方案
+
+当一次性无法将一个batch的px和py全部加载到片上，无法在片上完成全部的数据运算的时候，需要在S和T维度进行切分（核间同时也拆batch维度），多次load到片上进行计算，再将中间结果`p_grad`存回片外，由有数据依赖的block完成后续的计算。
+
+由于数据依赖是基于对角线方向的，所以可以将划分的任务Block在对角线方向进行并行化Launch，一次性Launch的job之间没有数据依赖，可以并行。
+
+所以在一次job step中，除了在Batch上划分的不同block，还可能会Launch多个不同S T位置的Block。
+
+由于每个batch的boundary有可能不同，所以每个单独的job Kernel只处理1个batch的Block计算。
+
+沿着对角线分步骤（job step）进行Launch Kernel，每一步Launch的Kernel数量也不同，第一步Launch Batch个job计算第(0,0)的Block，第二步Launch 2×Batch个job分别计算第(0,1)和(1,0)的Block：
+```
+ |-----------------|
+ | 0 | 1 | 2 | ... |
+ | 1 | 2 | 3 | ... |
+ | 2 | 3 | 4 | ... |
+ | 3 | 4 | ...     |
+ | ...             |
+ |-----------------|
+```
+
+在每一个block中，先初始化Load`px`,`py`,`p`,`p_grad`的数据。注意`px``py`两者的shape不同，导致在GDRAM上的src_stride也不同。
+当超出边界时，对`px`,`py`的数据块写-inf,因为后续需要对其进行exp操作，使得计算之后的结果是0，与公式相符；
+而对`p`的数据块需要补的是-1.0e+30的大负数，根据竞品GPU代码，对p中 < -1.0e+30 的数，都赋值为了该值，避免 -inf -(-inf) 导致出现nan的问题。
+对`p_grad`则需要补0,因为计算公式中后续参与计算的为乘法，而term1,term2的结果不会出现inf和nan的值，因为已经被刷0了，所以补0.
+
+在计算时，也按照对角线方向并行化计算：
+
+* step1:
+先计算`term1`和`term2`：
+
+```
+term1(s, t) = exp(p(s, t) + px(s, t) - p(s + 1, t));
+
+term2(s, t) = exp(p(s, t) + py(s, t) - p(s, t + 1));
+```
+
+先 memcpy 对应坐标的 px 和 py，到cur_px和cur_py上；
+
+将本次计算对应坐标的p(s,t)，memcpy到cur_p上，以及在term1和term2计算中，所需依赖的p(s+1,t), p(s,t+1)memcpy到next_p上；
+在空间分配上，每次并行化计算中的`cur_p` 和 `next_p` 使用了2块空间，且next_p占用多1个float空间。
+
+为了避免出现 -inf - (-inf) = nan 的问题，将 `cur_p` 和 `next_p` 中 < -1e+30 的数，设置为 -1e+30; 通过 `__bang_nan_maximum(p, large_neg_value)` 指令完成；
+
+再使用 SafeExp 函数计算，在前序步骤中分别 add、sub 后的数值（需要额外分配一块 mask 空间）；
+
+原方案中，(px_buf)term1 复用 px，(py_buf)term2 复用 py，而从反向算子的整体角度来看，其实并不需要term1和term2数据，只是中间计算过程中需要，所以仅仅在每次对角线计算的过程中，暂存在cur_px, cur_py，而无需memcpy拷回；
+
+至此，cur_term1, cur_term2的结果，暂存在cur_px, cur_py的NRAM空间上，无需拷回；
+
+* step2:
+在当前支持的!modified模式下，发现计算`p_grad`的加法的两个操作数就是在分别计算`px_grad`和`py_grad`的公式；
+所以先计算`px_grad`和`py_grad`，并将结果写回。
+空间分配上，(px_buf)px_grad 复用 cur_term1，(py_buf)py_grad 复用 cur_term2；而计算所需的`next_p_grad`则复用next_p的空间。
+
+```
+px_grad(s, t) = p_grad(s + 1, t) * term1(s, t);
+
+py_grad(s, t) = p_grad(s, t + 1) * term2(s, t);
+```
+
+该步骤的计算结果，通过 memcpy NRAM2NRAM 存储到原`px`和`py`的位置上，因为后续计算不再使用，可以复用。
+并在对角线计算结束后，整体Store至算子输出`px_grad`和`py_grad`；
+
+* step3:
+
+最后再继续计算p_grad，(p_buf)cur_p_grad复用cur_p的空间。
+
+```
+p_grad(s, t) = p_grad(s + 1, t) * term1(s, t) + p_grad(s, t + 1) * term2(s, t);
+```
+
+因为前序步骤中，已经计算了`px_grad`和`py_grad`，本计算步骤中，只做加法即可。
+其中，当本次计算的s_end和t_end均为该batch的s_end和t_end时，对`p_grad`的初始化 (p_buf) `p_grad[s_end][t_end] = ans_grad[b]`
+
+不同Block之间的数据依赖，可以通过device端计算当前job的S和T的begin和end，与边界进行对比，超出边界的部分，由于前面已经通过将px和py的数值设置为-INF，公式中的`p(s+1,t)`和`p(s,t+1)`超出范围的部分，填充为-1e+30，所以前面步骤的中间结果是0，在计算`p_grad`时，可以直接使用；否则则从其他已经计算过的Block的结果处Load所需的`p_grad`数据。
+
+最终，该步骤的计算结果，通过 memcpy 存储到output 的 `p_grad` 也就是Workspace申请的空间上，以便在不同的计算block中，有数据依赖的地方进行load；
+
+`overwrite_ans_grad`：如果设置为true，则在反向计算`p_grad` 之后，同时也更新`ans_grad`，复写该输入 `ans_grad[b] = p_grad[s_begin][t_begin];`
+
+
+对于如何进行S和T的划分，本算子的优化目标是：所有job的计算对角线数量总和越少，在算子内的计算并行度越高。根据划分后所有Block的计算对角线之和，选择`S_block_size`和`T_block_size`。
 
 
 ### 3.2 伪代码实现
@@ -274,14 +364,14 @@ __mlu_func__ void computeTerm1AndTerm2() {
         __memcpy(term1 + i * (T+1), px + i * (T+1), (T+1) * sizeof(float), GDRAM2NRAM);
         __memcpy(term2 + i * T, py + i * T, T * sizeof(float), GDRAM2NRAM);
         __memcpy(cur_p, p + i * (T+1), 2 * (T+1) * sizeof(float), GDRAM2NRAM);
-        
+
         __bang_nan_maximum(cur_p, cur_p, large_neg, 2*(T+1));
 
         // term1(b,s,t) = exp(p(b,s,t) + px(b,s,t) - p(b,s+1,t))
         __bang_add(term1 + i * (T+1), term1 + i * (T+1), cur_p, T + 1);
         __bang_sub(term1 + i * (T+1), term1 + i * (T+1), next_p, T + 1);
         safeExp(term1 + i * (T+1), term1 + i * (T+1), mask, T + 1);
-        
+
         // term2(b,s,t) = exp(p(b,s,t) + py(b,s,t) - p(b,s,t+1))
         __bang_add(term2 + i * T, term2 + i * T, cur_p, T);
         __bang_sub(term2 + i * T, term2 + i * T, cur_p + 1, T);
@@ -377,23 +467,45 @@ __mlu_global__ void MLUKernelMutualInformationBackward(void *px,
 }
 ```
 
-
-
 ### 3.3 拆分(任务拆分，多核拆分)
 
-基本任务类型为Block任务，core间按照对batch维度进行拆分，core内对S维度进行循环，在T维度并行计算
+3Pipeline Kernel：基本任务类型为Block任务，core间按照对batch维度进行拆分，core内在S-T矩阵的对角线方向进行循环计算
 
-
+Default Kernel：基本任务类型为Block任务，core间按照对角线对S和T维度进行划分，每一次Launch Batch乘以并行数量的job，在对角线并行计算。core内计算一个batch内的Block
 
 ### 3.4 性能优化设计
 
 1、资源分配
 
-NRAW空间划分参考3.2 伪代码实现中的描述
+3Pipeline kernel NRAM空间划分参考3.2 伪代码实现中的描述；
+
+Default kernel NRAM空间划分：
+
+```
+  /******************************** NRAM SPACE ******************************/
+  /* Load Init */
+  /*|---------------------------------------------------------------------|*/
+  /*| px,py |  p, p_grad  |large_neg    |         |         |             |*/
+  /*| 2*S*T |2*(S+1)*(T+1)| 2*min_len+1 | min_len | min_len | 2*min_len+1 |*/
+  /*|---------------------------------------------------------------------|*/
+  /* Compute term1 and term2 */
+  /*|------------------------------------------------------------------|*/
+  /*| px,py |  p          |large_neg,mask|cur_term1,2| cur_p | next_p  |*/
+  /*| 2*S*T |2*(S+1)*(T+1)| 2*min_len+1  | 2*min_len |min_len|min_len+1|*/
+  /*|------------------------------------------------------------------|*/
+  /* Compute px_grad, py_grad, p_grad */
+  /*|------------------------------------------------------------------------|*/
+  /*|px/y_grad|     p_grad  |           | cur_term1,2 |cur_p_grad|next_p_grad|*/
+  /*|         |             |           |cur_px/y_grad|          |           |*/
+  /*|  2*S*T  |2*(S+1)*(T+1)|2*min_len+1|  2*min_len  | min_len  | min_len+1 |*/
+  /*|------------------------------------------------------------------------|*/
+```
 
 2、流水设计
 
 在B=4, T=104, S=15的规模下，排流水的收益不大，因此暂不排流水。待后续明确支持规模后，视情况进行优化
+
+在default kernel中，由于为了将每个job中的计算并行度提升至最大，所以并未切乒乓进行计算。而在代码中，可以考虑前后没有数据依赖的memcpy NRAM2NRAM与计算进行指令级的并行，进行细粒度流水。
 
 ### 3.5 可维护性设计
 

@@ -2,7 +2,7 @@
 
 [bangc-ops.kernels]
 
-# # bangc-ops API dependencies: only bangc-ops/kernels/<> compile depedencies
+# # bangc-ops API dependencies: only bangc-ops/kernels/<> compile dependencies
 # ##  format:
 # ##  <kernel_name> = ["op_1", "op_2"]
 
@@ -36,6 +36,7 @@ dynamic_point_to_voxel_backward = ["scatter_nd", "fill"]
 dynamic_point_to_voxel_forward = ["fill", "unique"]
 masked_col2im_forward = ["fill", "transpose"]
 masked_im2col_forward = ["fill", "transpose"]
+mutual_information_backward = ["fill"]
 
 [bangc-ops.gtest]
 

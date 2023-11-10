@@ -8035,8 +8035,7 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
  * - The allocated extra workspace must be passed to ::mluOpMutualInformationBackward.
  *
  * @par Note
- * - Currently the \b workspace_size always returns 0.
- *   This will be changed when the scale limitation is removed in ::mluOpMutualInformationBackward.
+ * - None.
  *
  * @par Example
  * - None.
@@ -8135,16 +8134,6 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  * - The shape of \b py and \b py_grad must be the same.
  * - The size of each tensor must be in the range of [0, 2^31].
  *
- *   - On MLU370, the scale needs to meet the following restrictions:
- *
- *     - T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 163840.
- *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * min(S, T) + 4 <= 163840.
- *
- *   - On MLU590, the scale needs to meet the following restrictions:
- *
- *     - T * (S + 1) + (T + 1) * S + 5 * (T + 1) <= 98304.
- *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * min(S, T) + 4 <= 98304.
- *
  * @par API Dependency
  * - Before calling this function to perform ::mluOpMutualInformationBackward, you need to get
  *   the size of the workspace by ::mluOpGetMutualInformationBackwardWorkspaceSize.
@@ -8225,7 +8214,6 @@ mluOpMutualInformationBackward(mluOpHandle_t handle,
  *
  * @par Note
  * - Currently the \b workspace_size always returns 0.
- *   This will be changed when the scale limitation is removed in ::mluOpMutualInformationForward.
  *
  * @par Example
  * - None.
@@ -8306,14 +8294,6 @@ mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
  * - The shape of \b p is 3D([B, S + 1, T + 1]).
  * - The shape of \b ans is 1D([B]).
  * - The size of each tensor must be in the range of [0, 2^31].
- *
- *   - On MLU370, the scale needs to meet the following restrictions:
- *
- *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 9 * min(S, T) + 11 <= 163840.
- *
- *   - On MLU590, the scale needs to meet the following restrictions:
- *
- *     - T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 9 * min(S, T) + 11 <= 98304.
  *
  * @par API Dependency
  * - Before calling this function to perform ::mluOpMutualInformationForward, you need to get

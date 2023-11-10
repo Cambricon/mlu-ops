@@ -3,65 +3,69 @@ op_name: "mutual_information_backward"
 input {
   id: "px"
   shape {
-    dims: 1
-    dims: 179
-    dims: 181
+    dims: 2
+    dims: 380
+    dims: 381
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
   random_data {
     distribution: UNIFORM
-    lower_bound_double: -2.5
-    upper_bound_double: 2.5
+    lower_bound_double: -1.5
+    upper_bound_double: 1.5
   }
 }
 input {
   id: "py"
   shape {
-    dims: 1
-    dims: 180
-    dims: 180
+    dims: 2
+    dims: 381
+    dims: 380
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
   random_data {
     distribution: UNIFORM
-    lower_bound_double: -2.5
-    upper_bound_double: 2.5
+    lower_bound_double: -1.5
+    upper_bound_double: 1.5
   }
 }
 input {
   id: "opt_boundary"
   shape {
-    dims: 1
+    dims: 2
     dims: 4
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_INT64
+  value_l: 5
+  value_l: 2
+  value_l: 380
+  value_l: 380
+  value_l: 5
   value_l: 2
   value_l: 3
-  value_l: 179
-  value_l: 180
+  value_l: 1
 }
 input {
   id: "p"
   shape {
-    dims: 1
-    dims: 180
-    dims: 181
+    dims: 2
+    dims: 381
+    dims: 381
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
   random_data {
     distribution: UNIFORM
-    lower_bound_double: -2.5
-    upper_bound_double: 2.5
+    lower_bound_double: -1.5
+    upper_bound_double: 1.5
   }
 }
 input {
   id: "ans_grad"
   shape {
-    dims: 1
+    dims: 2
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -74,7 +78,7 @@ input {
 output {
   id: "ans_grad"
   shape {
-    dims: 1
+    dims: 2
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -82,9 +86,9 @@ output {
 output {
   id: "px_grad"
   shape {
-    dims: 1
-    dims: 179
-    dims: 181
+    dims: 2
+    dims: 380
+    dims: 381
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -92,9 +96,9 @@ output {
 output {
   id: "py_grad"
   shape {
-    dims: 1
-    dims: 180
-    dims: 180
+    dims: 2
+    dims: 381
+    dims: 380
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT

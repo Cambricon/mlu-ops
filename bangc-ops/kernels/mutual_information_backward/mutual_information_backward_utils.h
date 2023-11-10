@@ -20,22 +20,33 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_MUTUAL_INFORMATION_FORWARD_MUTUAL_INFORMATION_FORWARD_H_
-#define KERNELS_MUTUAL_INFORMATION_FORWARD_MUTUAL_INFORMATION_FORWARD_H_
+#ifndef KERNELS_MUTUAL_INFORMATION_BACKWARD_MUTUAL_INFORMATION_BACKWARD_UTILS_H_
+#define KERNELS_MUTUAL_INFORMATION_BACKWARD_MUTUAL_INFORMATION_BACKWARD_UTILS_H_
 
 #include "mlu_op.h"
-#include "kernels/kernel.h"
 
-mluOpStatus_t MLUOP_WIN_API kernel3PipelineMutualInformationForward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
-    const int S, const int T, const void *px, const void *py,
-    const bool has_boundary, const void *opt_boundary, void *p, void *ans);
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
 
-mluOpStatus_t MLUOP_WIN_API kernelDefaultMutualInformationForward(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
-    const int S, const int T, const int step_i, const int job_num_on_step,
-    const int s_block_num, const int t_block_num, const int s_block_size,
-    const int t_block_size, const void *px, const void *py,
-    const bool has_boundary, const void *opt_boundary, void *p, void *ans);
+__mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
+  // band with 0x7F800000, exp bits are not all 1, mask -> 0xffffffff
+  __asm__ volatile(
+      "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
+      ".and(%[src1]), .ne(%[src2]), .mul(%[src3]);\n"
+      ::[dst] "r"((int32_t *)mask),
+      [ size ] "r"(num),
+      [ src0 ] "r"((int32_t *)src),
+      [ src1 ] "r"(0x7f800000),
+      [ src2 ] "r"(0x7f800000),
+      [ src3 ] "r"(-1));
+  __bang_band((char *)src, (char *)src, (char *)mask, num * sizeof(float));
+}
 
-#endif  // KERNELS_MUTUAL_INFORMATION_FORWARD_MUTUAL_INFORMATION_FORWARD_H_
+__mlu_func__ void safeExp(float *dst, float *src, float *mask, const int num) {
+  setNanInfToZero(src, mask, num);
+  __mluop_exp(dst, src, NULL, 0, num);
+  // erase exp(0) to 0 with mask
+  __bang_band((char *)dst, (char *)dst, (char *)mask, num * sizeof(float));
+  setNanInfToZero(dst, mask, num);
+}
+
+#endif  // KERNELS_MUTUAL_INFORMATION_BACKWARD_MUTUAL_INFORMATION_BACKWARD_UTILS_H_  // NOLINT
