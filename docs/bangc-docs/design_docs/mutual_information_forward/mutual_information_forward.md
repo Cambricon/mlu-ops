@@ -11,6 +11,7 @@
 | 版本号 | 修订人 | 修订日期   | 修订描述 |
 | ------| ------| --------- | --------|
 | V1.0  | 唐成达 | 2023-5-9 | 首次提交 |
+| V1.1  | 宋琎 | 2023-10-16 | 取消因为nram大小导致的对于S, T维度的规模限制 |
 
 - #### 内容描述
 
@@ -80,18 +81,18 @@
       ans(b) = p(b,s\_end,t\_end)
    \end{array}
    ```
-   
+
    * 当opt_boundary为空时，s_end=S，t_end=T
    * 当opt_boundary不为空时，s_end=opt_boundary[:, 2]，t_end=opt_boundary[:, 3]
 
 3. nan/inf行为
 
    mlu实现需与参考接口对齐。参考接口代码的LogAdd函数对nan有特殊处理，如下所示：
-   
+
    * 当输入x=nan, y=1时，返回nan
    * 当输入x=nan, y=nan时，返回nan
    * 当输入x=1, y=nan时，返回1
-   
+
    当输入包含nan/inf时，参考接口cpu输出和cuda输出结果不一致，mlu实现与参考接口cuda输出对齐
 
 
@@ -118,7 +119,7 @@
 |------------|------------------------------------------------------------|
 |数据类型限制	|px: float<br/>py: float<br/>opt_boundary: int64<br/>p: float<br/>ans: float |
 |布局限制    | 仅支持 layout 为 ARRAY                                       |
-|	规模限制    | 不支持large tensor;<br/>在MLU370中，<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 4 * std::min(S, T) + 4 <= 163840;<br/>在MLU590中，<br/>T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 4 * std::min(S, T) + 4 <= 98304;	|
+|	规模限制    | 不支持large tensor;	|
 |功能限制     | 仅支持!modified模式，即输入参数px的shape为 [B, S, T+1]       |
 | 数据范围限制 |opt_boundary的shape为[B, 4]，其中B为batch，4的含义为[begin_symbol, begin_frame, end_symbol, end_frame]<br/>要求： （**python层已有相关防呆**）<br/>0<= begin_symbol <= end_symbol <= S<br/>0<= begin_frame <= end_frame <= T|
 |功能限制     |	不支持stride机制|
@@ -169,7 +170,7 @@ mluOpMutualInformationForward(mluOpHandle_t handle,
                               void *p,
                               void *workspace,
                               const size_t workspace_size,
-                              const mluOpTensorDescriptor_t ans_desc, 
+                              const mluOpTensorDescriptor_t ans_desc,
                               void *ans)
 ```
 
@@ -177,11 +178,13 @@ mluOpMutualInformationForward(mluOpHandle_t handle,
 
 ## 3 实现方案设计
 
-当前方案存在规模限制，即nram空间一次可处理一个batch的数据
+原方案存在规模限制，即nram空间一次可处理一个batch的数据。本次1.1版本提交后，将原方案kernel重命名为3PipelineKernel，新的取消S T规模限制的kernel作为DefaultKernel.
 
 ### 3.1 实现方案
 
-由于p计算为动态规划算法，并且当opt_boundary不为空时，每个batch的boundary不一样。因此下在core间拆分batch，core内对一个batch的数据循环计算。
+#### 3Pipeline Kernel方案
+
+由于p计算为动态规划算法，并且当opt_boundary不为空时，每个batch的boundary不一样。因此在core间拆分batch，core内对一个batch的数据循环计算。
 
 * step1：将当前batch的px和py全都加载到NRAM上
 
@@ -215,6 +218,35 @@ mluOpMutualInformationForward(mluOpHandle_t handle,
 
 * step3: 将p的结果存回gdram，并将p(b,s_end,t_end)存回到ans中
 
+#### Default Kernel方案
+
+当一次性无法将一个batch的px和py全部加载到片上的时候，需要在S和T维度进行切分，多次load到片上进行计算，再将结果存回片外。起Block任务，core间拆分B，T，U维度，core内计算一个小块。
+
+由于数据依赖是基于对角线方向的，所以可以将划分的任务Block在对角线方向进行并行化Launch。
+
+在一个job step中，可能会Launch多个不同划分位置的Block。
+
+由于每个batch的boundary有可能不同，所以每个单独的job Kernel只处理1个batch的Block计算。
+
+所以，也会存在有超出边界的block空转的情况。不过由于是Block任务类型，可以调度到下一个job执行。
+
+沿着对角线分步骤（job step）进行Launch Kernel，每一步Launch的Kernel数量也不同，第一步Launch Batch个job计算第(0,0)的Block，第二步Launch 2×Batch个job分别计算第(0,1)和(1,0)的Block：
+
+
+```
+ |-----------------|
+ | 0 | 1 | 2 | ... |
+ | 1 | 2 | 3 | ... |
+ | 2 | 3 | 4 | ... |
+ | 3 | 4 | ...     |
+ | ...             |
+ |-----------------|
+```
+
+不同Block之间的数据依赖，可以通过device端计算当前job的S和T的start和end，与两端的边界进行对比，超出边界的部分，设置为-INF，否则则从其他已经计算过的Block的结果处Load所需的数据。
+（即：px的第一行，py的第一列，p的第一行和第一列）
+
+对于如何进行S和T的划分，本算子的优化目标是：所有job的计算对角线数量总和越少，在算子内的计算并行度越高。根据划分后所有Block的计算对角线之和，选择`S_block_size`和`T_block_size`。
 
 
 ### 3.2 伪代码实现
@@ -222,7 +254,7 @@ mluOpMutualInformationForward(mluOpHandle_t handle,
 以下伪代码，以opt_boundary=nullptr举例
 
 ```c++
-#define MIN_LOG_DIFF_FLOAT -15.9423847198486328125f 
+#define MIN_LOG_DIFF_FLOAT -15.9423847198486328125f
 __mlu_func__ void logAddVector(float *dst, float *src1, float *src2, float *max_value, float *mask, float *temp, int data_num) {
     __bang_nan_minimum(dst, src1, src2, data_num);
     __bang_maximum(max_value, src1, src2, data_num);
@@ -305,17 +337,34 @@ __mlu_global__ void MLUKernelMutualInformationForward(void *px,
 
 ### 3.3 拆分（任务拆分，多核拆分）
 
-基本任务类型为Block任务，core间按照对batch维度进行拆分，core内在S-T矩阵的对角线方向进行循环计算
+3Pipeline Kernel：基本任务类型为Block任务，core间按照对batch维度进行拆分，core内在S-T矩阵的对角线方向进行循环计算
+
+Default Kernel：基本任务类型为Block任务，core间按照对角线对S和T维度进行划分，每一次Launch Batch乘以并行数量的job，在对角线并行计算。core内计算一个batch内的Block
 
 ### 3.4 性能优化设计
 
 1、资源分配
 
-NRAM空间划分参考3.2 伪代码实现中的描述
+3Pipeline kernel NRAM空间划分参考3.2 伪代码实现中的描述；
+
+Default kernel NRAM空间划分：
+
+```
+  /************************* NRAM SPACE *******************************/
+  /*|----------------------------------------------------------------|*/
+  /*| px, py |     p     |max_val,mask,temp|cur_px |cur_py |  cur_p  |*/
+  /*| 2*S*T  |(S+1)*(T+1)|   3 * min_len   |min_len|min_len|min_len+1|*/
+  /*|----------------------------------------------------------------|*/
+
+```
+
+其中`cur_p`和`next_p`共用同一块空间，分配了minlen+1的大小。
 
 2、流水设计
 
 bang_maximum等指令在370上无法异步执行，因此暂不排流水。
+
+default kernel 为了尽可能增加计算的并行度，即block的对角线大小，所以增加在NRAM上每次执行的block大小，不区分乒乓空间。
 
 ### 3.5 可维护性设计
 

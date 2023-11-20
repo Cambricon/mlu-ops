@@ -41,15 +41,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMutualInformationBackwardWorkspaceSize(
     const mluOpTensorDescriptor_t p_desc,
     const mluOpTensorDescriptor_t ans_grad_desc, const bool overwrite_ans_grad,
     size_t *workspace_size) {
-  // Workspace is not required in the current implementation.
-  // This interface will be used when the scale limitation is removed.
   PARAM_CHECK(API_NAME, handle != nullptr);
   PARAM_CHECK(API_NAME, px_desc != nullptr);
   PARAM_CHECK(API_NAME, py_desc != nullptr);
   PARAM_CHECK(API_NAME, p_desc != nullptr);
   PARAM_CHECK(API_NAME, ans_grad_desc != nullptr);
   PARAM_CHECK(API_NAME, workspace_size != nullptr);
-  *workspace_size = 0;
+  // Use for p_grad size, only support float data type now
+  *workspace_size = mluOpGetTensorElementNum(p_desc) * sizeof(float);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -137,7 +136,7 @@ static mluOpStatus_t checkTensorShape(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
-  // the shape of py must be [B, S+1, T]
+  // The shape of py must be [B, S+1, T]
   if (S + 1 != py_desc->dims[1]) {
     LOG(ERROR) << API_NAME << " py.shape[1] must be equal to px.shape[1] + 1. "
                << "But now px.shape[1] is " << px_desc->dims[1]
@@ -145,7 +144,7 @@ static mluOpStatus_t checkTensorShape(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  // the shape of opt_boundary must be [B, 4]
+  // The shape of opt_boundary must be [B, 4]
   if (nullptr != opt_boundary_desc &&
       (B != opt_boundary_desc->dims[0] || 4 != opt_boundary_desc->dims[1])) {
     LOG(ERROR) << API_NAME << " When opt_boundary is not NULL, "
@@ -158,7 +157,7 @@ static mluOpStatus_t checkTensorShape(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  // the shape of p must be [B, S+1, T+1]
+  // The shape of p must be [B, S+1, T+1]
   if (S + 1 != p_desc->dims[1] || T + 1 != p_desc->dims[2]) {
     LOG(ERROR) << API_NAME << " p.shape[1] and py.shape[1] must be same, and "
                << "p.shape[2] must be equal to py.shape[2] + 1. "
@@ -169,7 +168,7 @@ static mluOpStatus_t checkTensorShape(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  // the shape of px and px_grad must be same: [B, S, T+1]
+  // The shape of px and px_grad must be same: [B, S, T+1]
   for (int i = 1; i < px_grad_desc->dim; ++i) {
     if (px_grad_desc->dims[i] != px_desc->dims[i]) {
       LOG(ERROR) << API_NAME
@@ -181,7 +180,7 @@ static mluOpStatus_t checkTensorShape(
     }
   }
 
-  // the shape of py and py_grad must be same: [B, S+1, T]
+  // The shape of py and py_grad must be same: [B, S+1, T]
   for (int i = 1; i < py_grad_desc->dim; ++i) {
     if (py_grad_desc->dims[i] != py_desc->dims[i]) {
       LOG(ERROR) << API_NAME
@@ -263,10 +262,10 @@ static mluOpStatus_t checkTensorScaleLimit(
     const mluOpTensorDescriptor_t py_desc,
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc) {
-  // check large tensor
-  // the shape of px and px_grad are the same,
-  // the shape of py and py_grad are the same,
-  // so there is no need to check the tensor num of px_grad and py_grad
+  // Check large tensor
+  // The shape of px and px_grad are the same,
+  // The shape of py and py_grad are the same,
+  // So there is no need to check the tensor num of px_grad and py_grad
   if (mluOpGetTensorElementNum(px_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(py_desc) >= LARGE_TENSOR_NUM ||
       (nullptr != opt_boundary_desc &&
@@ -274,31 +273,6 @@ static mluOpStatus_t checkTensorScaleLimit(
       mluOpGetTensorElementNum(p_desc) >= LARGE_TENSOR_NUM) {
     LOG(ERROR) << API_NAME << " Overflow max tensor num."
                << " Current operator supports tensor num smaller than 2^31.";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
-
-  const int B = px_desc->dims[0];
-  const int S = px_desc->dims[1];
-  const int T = py_desc->dims[2];
-  // check scale limit for compute term1 and term2
-  int currnet_size = T * (S + 1) + (T + 1) * S + 5 * (T + 1);
-  if (currnet_size > handle->nram_size / sizeof(float)) {
-    LOG(ERROR) << API_NAME << " The num of px.shape[1] * px.shape[2] + "
-               << "py.shape[1] * py.shape[2] + 5 * (py.shape[2] + 1) shoule be "
-               << "less than " << handle->nram_size / sizeof(float)
-               << ". But now it is " << currnet_size << ".";
-    return MLUOP_STATUS_NOT_SUPPORTED;
-  }
-
-  // check scale limit for compute p_grad
-  currnet_size =
-      T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4;
-  if (currnet_size > handle->nram_size / sizeof(float)) {
-    LOG(ERROR) << API_NAME << " The num of px.shape[1] * px.shape[2] + "
-               << "py.shape[1] * py.shape[2] + p.shape[1] * p.shape[2] "
-               << "+ 3 * min(px.shape[1], py.shape[2]) + 4 shoule be less than "
-               << handle->nram_size / sizeof(float) << ". But now it is "
-               << currnet_size << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -363,7 +337,7 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
   PARAM_CHECK(API_NAME, px_grad_desc != nullptr);
   PARAM_CHECK(API_NAME, py_grad_desc != nullptr);
 
-  // since the layout of all tensor is ARRAY, so skip check tensor layout
+  // Since the layout of all tensors are ARRAY, so skip check tensor layout
 
   // 2. check mlu platform
   if (handle->arch < 372) {
@@ -395,7 +369,7 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
     return check_status;
   }
 
-  // 6. check scale limit
+  // 6. check scale limit, for large tensor
   check_status = checkTensorScaleLimit(handle, px_desc, py_desc,
                                        opt_boundary_desc, p_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
@@ -457,8 +431,8 @@ static void mutualInformationBackwardGencase(
   GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
 }
 
-static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type, int batch_size) {
+static void policyFunc3Pipeline(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                                cnrtFunctionType_t *k_type, int batch_size) {
   int core_num = mluop::runtime::getClusterLimitCapability(handle) *
                  mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   *k_type = CNRT_FUNC_TYPE_BLOCK;
@@ -467,7 +441,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
 }
 
-static mluOpStatus_t launchMutualInformationBackwardKernel(
+static mluOpStatus_t launchMutualInformationBackward3PipelineKernel(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc, const void *px,
     const mluOpTensorDescriptor_t py_desc, const void *py,
     const bool has_boundary, const void *opt_boundary, const void *p,
@@ -479,15 +453,339 @@ static mluOpStatus_t launchMutualInformationBackwardKernel(
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  policyFunc(handle, &k_dim, &k_type, B);
-  VLOG(5) << "Launch Kernel MutualInformationBackward<<<Block " << k_dim.x
-          << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  policyFunc3Pipeline(handle, &k_dim, &k_type, B);
+  VLOG(5) << "Launch Kernel 3PipelineMutualInformationBackward<<<Block "
+          << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
   CHECK_RETURN(
       "[MutualInformationBackward]",
-      kernelMutualInformationBackward(
+      kernel3PipelineMutualInformationBackward(
           k_dim, k_type, handle->queue, B, S, T, px, py, has_boundary,
           opt_boundary, p, overwrite_ans_grad, ans_grad, px_grad, py_grad));
 
+  return MLUOP_STATUS_SUCCESS;
+}
+
+// Calculate computing diagonal number of partition mode for default kernel
+static void calComputingDiags(const int S, const int T,
+                              int64_t *computing_diag_num, int *s_block_size,
+                              int *t_block_size, int *s_repeat, int *t_repeat,
+                              int *s_remainder, int *t_remainder,
+                              const int mode) {
+  // If has remainder part, rearrange block size to balance work load
+  s_repeat[mode] = S / s_block_size[mode];
+  s_remainder[mode] = S % s_block_size[mode];
+  if (s_remainder[mode] > 0) {
+    s_block_size[mode] = S / (s_repeat[mode] + 1);
+    s_repeat[mode] = S / s_block_size[mode];
+    s_remainder[mode] = S % s_block_size[mode];
+  }
+
+  t_repeat[mode] = T / t_block_size[mode];
+  t_remainder[mode] = T % t_block_size[mode];
+  if (t_remainder[mode] > 0) {
+    t_block_size[mode] = T / (t_repeat[mode] + 1);
+    t_repeat[mode] = T / t_block_size[mode];
+    t_remainder[mode] = T % t_block_size[mode];
+  }
+
+  // Accumulate all block's computing diagonal numbers
+  computing_diag_num[mode] = s_repeat[mode] * t_repeat[mode] *
+                             (s_block_size[mode] + t_block_size[mode] - 1);
+  if (s_remainder[mode] > 0) {
+    computing_diag_num[mode] +=
+        t_repeat[mode] * (t_block_size[mode] + s_remainder[mode] - 1);
+  }
+
+  if (t_remainder[mode] > 0) {
+    computing_diag_num[mode] +=
+        s_repeat[mode] * (s_block_size[mode] + t_remainder[mode] - 1);
+  }
+
+  if (s_remainder[mode] > 0 && t_remainder[mode] > 0) {
+    computing_diag_num[mode] += s_remainder[mode] + t_remainder[mode] - 1;
+  }
+}
+
+static void assignPartitionParams(const int *s_block_size,
+                                  const int *t_block_size, const int *s_repeat,
+                                  const int *t_repeat, const int *s_remainder,
+                                  const int *t_remainder,
+                                  int &final_s_block_size,
+                                  int &final_t_block_size, int &final_s_repeat,
+                                  int &final_t_repeat, int &final_s_remainder,
+                                  int &final_t_remainder, const int mode) {
+  final_s_block_size = s_block_size[mode];
+  final_t_block_size = t_block_size[mode];
+  final_s_repeat = s_repeat[mode];
+  final_t_repeat = t_repeat[mode];
+  final_s_remainder = s_remainder[mode];
+  final_t_remainder = t_remainder[mode];
+}
+
+static void calDefaultPartition(const int S, const int T, const int N_size,
+                                const int nram_size, int &job_diag_num,
+                                int &final_s_block_size,
+                                int &final_t_block_size, int &final_s_repeat,
+                                int &final_t_repeat, int &final_s_remainder,
+                                int &final_t_remainder) {
+  // Compute each partition's job diagonal number,
+  // and choose the partition method with the least job diagonal number:
+  // 1) all S and T, no partition, launch once in one batch;
+  // 2) S < max_N_size, compare with (S, t) and (S/2, t);
+  // 3) T < max_N_size, compare with (s, T) and (s, T/2);
+  // 4) both S and T > max_N_size, compare with (N, N), (S, t), (s, T), if
+  // exist;
+  if (S <= N_size && T <= N_size) {
+    // once can compute all SxT onchip
+    job_diag_num = 1;
+    final_s_block_size = S;
+    final_t_block_size = T;
+    final_s_repeat = 1;
+    final_t_repeat = 1;
+    final_s_remainder = 0;
+    final_t_remainder = 0;
+    return;
+  } else {
+    // Sum of each partition's number of computing diagonals
+    // at most 3 arrays of candidate partition mode
+    int mode;
+    int64_t computing_diag_num[3] = {0};
+    int s_block_size[3] = {0};
+    int t_block_size[3] = {0};
+    int s_repeat[3] = {0};
+    int t_repeat[3] = {0};
+    int s_remainder[3] = {0};
+    int t_remainder[3] = {0};
+
+    if (S <= N_size && T > N_size) {
+      // compare with (S, t) and (S/2, t)
+      // 1) deal_s = S; min(s, t) = s;
+      mode = 0;
+      s_block_size[0] = S;
+      t_block_size[0] = (nram_size / sizeof(float) - 8 * s_block_size[0]) /
+                        (4 * s_block_size[0] + 2);
+      calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                        s_repeat, t_repeat, s_remainder, t_remainder, mode);
+      // 2) deal_s = S/2; min(s, t) = s;
+      mode = 1;
+      s_block_size[1] = std::max(S / 2, 1);  // at least 1 number in s_block
+      t_block_size[1] = (nram_size / sizeof(float) - 8 * s_block_size[1]) /
+                        (4 * s_block_size[1] + 2);
+      calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                        s_repeat, t_repeat, s_remainder, t_remainder, mode);
+
+      if (computing_diag_num[0] <= computing_diag_num[1]) {
+        assignPartitionParams(
+            s_block_size, t_block_size, s_repeat, t_repeat, s_remainder,
+            t_remainder, final_s_block_size, final_t_block_size, final_s_repeat,
+            final_t_repeat, final_s_remainder, final_t_remainder, 0);
+      } else {
+        assignPartitionParams(
+            s_block_size, t_block_size, s_repeat, t_repeat, s_remainder,
+            t_remainder, final_s_block_size, final_t_block_size, final_s_repeat,
+            final_t_repeat, final_s_remainder, final_t_remainder, 1);
+      }
+    } else if (S > N_size && T <= N_size) {
+      // compare with (s, T) and (s, T/2)
+      // 1) deal_t = T; min(s, t) = t;
+      mode = 0;
+      t_block_size[0] = T;
+      s_block_size[0] = (nram_size / sizeof(float) - 8 * t_block_size[0]) /
+                        (4 * t_block_size[0] + 2);
+      calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                        s_repeat, t_repeat, s_remainder, t_remainder, mode);
+      // 2) deal_t = T/2; min(s, t) = t;
+      mode = 1;
+      t_block_size[1] = std::max(T / 2, 1);  // at least 1 number in t_block
+      s_block_size[1] = (nram_size / sizeof(float) - 8 * t_block_size[1]) /
+                        (4 * t_block_size[1] + 2);
+      calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                        s_repeat, t_repeat, s_remainder, t_remainder, mode);
+
+      if (computing_diag_num[0] <= computing_diag_num[1]) {
+        assignPartitionParams(
+            s_block_size, t_block_size, s_repeat, t_repeat, s_remainder,
+            t_remainder, final_s_block_size, final_t_block_size, final_s_repeat,
+            final_t_repeat, final_s_remainder, final_t_remainder, 0);
+      } else {
+        assignPartitionParams(
+            s_block_size, t_block_size, s_repeat, t_repeat, s_remainder,
+            t_remainder, final_s_block_size, final_t_block_size, final_s_repeat,
+            final_t_repeat, final_s_remainder, final_t_remainder, 1);
+      }
+    } else {  // S > N_size, T > N_size, choose between (N,N), (S,t), (s,T)
+      // 1) deal_s = deal_t = N_size; min(s,t) = s = t;
+      mode = 0;
+      s_block_size[0] = N_size;
+      t_block_size[0] = N_size;
+      calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                        s_repeat, t_repeat, s_remainder, t_remainder, mode);
+      // 2) deal_s = S, deal_t = t; min(s,t) = t;
+      mode = 1;
+      s_block_size[1] = N_size;
+      t_block_size[1] = (nram_size / sizeof(float) - 2 * s_block_size[1]) /
+                        (4 * s_block_size[1] + 8);
+      if (t_block_size[1] > 0) {
+        calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                          s_repeat, t_repeat, s_remainder, t_remainder, mode);
+      } else {
+        computing_diag_num[1] = -1;  // not support on this partition
+      }
+      // 3) deal_t = T, deal_s = s; min(s,t) = s;
+      mode = 2;
+      t_block_size[2] = T;
+      s_block_size[2] = (nram_size / sizeof(float) - 2 * t_block_size[2]) /
+                        (4 * t_block_size[2] + 8);
+      if (s_block_size[2] > 0) {
+        calComputingDiags(S, T, computing_diag_num, s_block_size, t_block_size,
+                          s_repeat, t_repeat, s_remainder, t_remainder, mode);
+      } else {
+        computing_diag_num[2] = -1;  // not support on this partition
+      }
+
+      if (computing_diag_num[0] > 0 &&      // mode 0 is valid
+          ((computing_diag_num[1] <= 0) ||  // mode 1 is invalid or
+           computing_diag_num[0] <=
+               computing_diag_num[1])) {  // mode 0 is better than mode 1
+        if (computing_diag_num[2] > 0 &&  // mode 2 is valid and
+            computing_diag_num[2] <
+                computing_diag_num[0]) {  // mode 2 is better than mode 0
+          // choose mode 2
+          assignPartitionParams(s_block_size, t_block_size, s_repeat, t_repeat,
+                                s_remainder, t_remainder, final_s_block_size,
+                                final_t_block_size, final_s_repeat,
+                                final_t_repeat, final_s_remainder,
+                                final_t_remainder, 2);
+        } else {
+          // choose mode 0
+          assignPartitionParams(s_block_size, t_block_size, s_repeat, t_repeat,
+                                s_remainder, t_remainder, final_s_block_size,
+                                final_t_block_size, final_s_repeat,
+                                final_t_repeat, final_s_remainder,
+                                final_t_remainder, 0);
+        }
+      } else {  // mode 1 is valid and mode 1 is better than mode 0
+        if (computing_diag_num[2] > 0 &&  // mode 2 is valid
+            computing_diag_num[2] <
+                computing_diag_num[1]) {  // mode 2 is better than mode 1
+          // choose mode 2
+          assignPartitionParams(s_block_size, t_block_size, s_repeat, t_repeat,
+                                s_remainder, t_remainder, final_s_block_size,
+                                final_t_block_size, final_s_repeat,
+                                final_t_repeat, final_s_remainder,
+                                final_t_remainder, 2);
+        } else {
+          // choose mode 1
+          assignPartitionParams(s_block_size, t_block_size, s_repeat, t_repeat,
+                                s_remainder, t_remainder, final_s_block_size,
+                                final_t_block_size, final_s_repeat,
+                                final_t_repeat, final_s_remainder,
+                                final_t_remainder, 1);
+        }
+      }
+    }
+    // total job diagonal number in parallel
+    job_diag_num = final_s_repeat + (int)(final_s_remainder > 0) +
+                   final_t_repeat + (int)(final_t_remainder > 0) - 1;
+  }
+}
+
+static mluOpStatus_t launchMutualInformationBackwardDefaultKernel(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc, const void *px,
+    const mluOpTensorDescriptor_t py_desc, const void *py,
+    const bool has_boundary, const void *opt_boundary, const void *p,
+    const bool overwrite_ans_grad, void *ans_grad, void *px_grad, void *py_grad,
+    void *p_grad) {
+  // At first, use Fill Op to set px_grad, py_grad to all 0
+  VLOG(5) << API_NAME << " mluOpFill_v3 start.";
+  uint64_t fill_value = 0x0;
+  if (mluOpGetTensorElementNum(px_desc) > 0) {
+    PARAM_CHECK(API_NAME, MLUOP_STATUS_SUCCESS ==
+                              mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, px_desc, px_grad));
+  }
+  if (mluOpGetTensorElementNum(py_desc) > 0) {
+    PARAM_CHECK(API_NAME, MLUOP_STATUS_SUCCESS ==
+                              mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
+                                           &fill_value, py_desc, py_grad));
+  }
+  VLOG(5) << API_NAME << " mluOpFill_v3 end.";
+
+  // When S and T is too large, launch default kernel with partition of S and T
+  // 1. Compute current arch max N size, according to NRAM size and device RAM
+  // 2. Use max_N_size to calculate different partition mode computing diagonal
+  //    numbers and choose the partition mode, which has the least computing
+  //    diagonal number
+  // 3. Launch default kernels by diagonal in parallel, with check of MaxDimX
+
+  const int B = px_desc->dims[0];
+  const int S = px_desc->dims[1];
+  const int T = py_desc->dims[2];
+
+  cnrtDim3_t k_dim;
+  cnrtFunctionType_t k_type;
+  // 1. According to on-chip RAM size, calculate current arch partition block
+  // size by square, Use max_N_size to partition on S and T dimension RAM space:
+  //   2*S*T + 2*(S+1)*(T+1) + 2*min(S,T) + 4*min(S,T)+1
+  int max_N_size = (int)(std::sqrt(handle->nram_size / sizeof(float) / 4)) - 2;
+  // Use max square size N, partition on T and S dimension, launch by diagonal:
+  // -|------T--------|
+  // :| N1| N2| N3| N4|
+  // :|---|---|---|---|
+  // S| N2| N3| N4| N5|
+  // :|---|---|---|---|
+  // :| N3| N4| N5| N6|
+  // -|---------------|
+
+  VLOG(5) << "Current arch Max square N size is " << max_N_size;
+
+  int job_diag_num;  // number of default kernel launch steps by diagonal
+  int s_block_size, t_block_size, s_repeat, t_repeat, s_remainder, t_remainder;
+
+  // 2. Choose the partition mode, which has the least computing diagonal number
+  // NOTE: p_grad has dimension (S+1, T+1), in function directly use (S, T)
+  // instead
+  calDefaultPartition(S + 1, T + 1, max_N_size, handle->nram_size, job_diag_num,
+                      s_block_size, t_block_size, s_repeat, t_repeat,
+                      s_remainder, t_remainder);
+  int s_block_num = s_repeat + (int)(s_remainder > 0);
+  int t_block_num = t_repeat + (int)(t_remainder > 0);
+  int max_s_t_block_num = std::max(s_block_num, t_block_num);
+  int min_s_t_block_num = std::min(s_block_num, t_block_num);
+
+  k_type = CNRT_FUNC_TYPE_BLOCK;
+  k_dim.y = 1;
+  k_dim.z = 1;
+  // Get current arch support max dim_x value
+  int task_dim_x_limit;
+  cnDeviceGetAttribute(&task_dim_x_limit,
+                       CN_DEVICE_ATTRIBUTE_MAX_BLOCK_TASK_DIM_X,
+                       handle->device);
+  VLOG(5) << "Current arch MAX_BLOCK_TASK_DIM_X is " << task_dim_x_limit;
+
+  // 3. Traverse step_i from 0 to (job_diag_num - 1)
+  for (int step_i = 0; step_i < job_diag_num; step_i++) {
+    int job_num_on_step = B * (step_i < max_s_t_block_num
+                                   ? std::min(step_i + 1, min_s_t_block_num)
+                                   : s_block_num + t_block_num - step_i - 1);
+    k_dim.x = job_num_on_step;
+    // Make sure not exceed max dim x limit
+    if (k_dim.x > task_dim_x_limit) {
+      int task_dim_change = (k_dim.x + task_dim_x_limit - 1) / task_dim_x_limit;
+      k_dim.x = (k_dim.x + task_dim_x_limit - 1) / task_dim_change;
+      k_dim.y = k_dim.y * task_dim_change;
+    }
+
+    VLOG(5) << "Launch Kernel DefaultMutualInformationBackward<<< step "
+            << step_i << " of Batch Block: " << k_dim.x << ", " << k_dim.y
+            << ", " << k_dim.z << ">>>";
+    CHECK_RETURN("[MutualInformationBackward]",
+                 kernelDefaultMutualInformationBackward(
+                     k_dim, k_type, handle->queue, B, S, T, step_i,
+                     job_num_on_step, s_block_num, t_block_num, s_block_size,
+                     t_block_size, px, py, has_boundary, opt_boundary, p,
+                     overwrite_ans_grad, ans_grad, px_grad, py_grad, p_grad));
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -500,7 +798,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationBackward(
     const bool overwrite_ans_grad, void *workspace, const size_t workspace_size,
     const mluOpTensorDescriptor_t px_grad_desc, void *px_grad,
     const mluOpTensorDescriptor_t py_grad_desc, void *py_grad) {
-  // 1. paramcheck
+  // 1. Paramcheck
   bool has_boundary = false;
   bool zero_element = false;
   mluOpStatus_t check_status = mutualInformationBackwardParamCheck(
@@ -512,7 +810,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationBackward(
     return check_status;
   }
 
-  // 2. generate case
+  // 2. Generate case
   if (MLUOP_GEN_CASE_ON_NEW) {
     mutualInformationBackwardGencase(
         handle, px_desc, px, py_desc, py, opt_boundary_desc, opt_boundary,
@@ -520,10 +818,38 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationBackward(
         px_grad, py_grad_desc, py_grad);
   }
 
+  // Choose to launch 3pipeline or default kernel
+  const int B = px_desc->dims[0];
+  const int S = px_desc->dims[1];
+  const int T = py_desc->dims[2];
+
+  bool is_launch_3pipeline = true;
+  // check 3pipeline scale limit for computing term1 and term2
+  int current_size = T * (S + 1) + (T + 1) * S + 5 * (T + 1);
+  if (current_size > handle->nram_size / sizeof(float)) {
+    is_launch_3pipeline = false;
+  }
+
+  // check 3pipeline scale limit for computing p_grad
+  current_size =
+      T * (S + 1) + (T + 1) * S + (T + 1) * (S + 1) + 3 * std::min(S, T) + 4;
+  if (current_size > handle->nram_size / sizeof(float)) {
+    is_launch_3pipeline = false;
+  }
+
   // 3. launch kernel
-  mluOpStatus_t return_status = launchMutualInformationBackwardKernel(
-      handle, px_desc, px, py_desc, py, has_boundary, opt_boundary, p,
-      overwrite_ans_grad, ans_grad, px_grad, py_grad);
+  mluOpStatus_t return_status;
+  if (is_launch_3pipeline) {
+    // launch 3pipeline kernel when satisfy scale limit
+    return_status = launchMutualInformationBackward3PipelineKernel(
+        handle, px_desc, px, py_desc, py, has_boundary, opt_boundary, p,
+        overwrite_ans_grad, ans_grad, px_grad, py_grad);
+  } else {
+    // launch default kernel, workspace is for p_grad
+    return_status = launchMutualInformationBackwardDefaultKernel(
+        handle, px_desc, px, py_desc, py, has_boundary, opt_boundary, p,
+        overwrite_ans_grad, ans_grad, px_grad, py_grad, workspace);
+  }
 
   GEN_CASE_END();
   return return_status;
