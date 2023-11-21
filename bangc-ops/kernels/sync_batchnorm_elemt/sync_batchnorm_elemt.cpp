@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormElemt(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,
@@ -29,10 +29,45 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormElemt(
     const mluOpTensorDescriptor_t filter_desc, const void *filter,
     const mluOpTensorDescriptor_t bias_desc, const void *bias,
     const mluOpTensorDescriptor_t y_desc, void *y) {
-  SyncBatchNormElemtWrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, x_desc, x, mean_desc, mean, invstd_desc, invstd,
-                     filter_desc, filter, bias_desc, bias, y_desc, y);
-  return ret;
-}
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", handle != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", x_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", mean_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", invstd_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]",
+              (filter_desc != NULL && bias_desc != NULL) ||
+                  (filter_desc == NULL && bias_desc == NULL));
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", y_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", x != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", mean != NULL);
+  PARAM_CHECK(
+      "[mluOpSyncBatchNormElemt]",
+      (filter != NULL && bias != NULL) || (filter == NULL && bias == NULL));
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", invstd != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormElemt]", y != NULL);
 
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, _filter_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bias_desc, _bias_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, _y_desc);
+
+  CHECK_FUNC_RETURN(
+      cnnlSyncBatchNormElemt(_handle, _x_desc, x, _mean_desc, mean,
+                             _invstd_desc, invstd, _filter_desc, filter,
+                             _bias_desc, bias, _y_desc, y),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpSyncBatchNormElemt] Internal error"
+      " accured in mluOpSyncBatchNormElemt.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_x_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_mean_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_invstd_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_filter_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_bias_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_y_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
+}

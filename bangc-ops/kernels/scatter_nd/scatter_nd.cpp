@@ -20,18 +20,36 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpScatterNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t indices_desc,
                const void *indices, const mluOpTensorDescriptor_t updates_desc,
                const void *updates, const mluOpTensorDescriptor_t output_desc,
                void *output) {
-  scatterNdWrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, indices_desc, indices, updates_desc, updates,
-                     output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpScatterNd", handle != NULL);
+  PARAM_CHECK("mluOpScatterNd", indices_desc != NULL);
+  PARAM_CHECK("mluOpScatterNd", indices != NULL);
+  PARAM_CHECK("mluOpScatterNd", updates_desc != NULL);
+  PARAM_CHECK("mluOpScatterNd", updates != NULL);
+  PARAM_CHECK("mluOpScatterNd", output_desc != NULL);
+  PARAM_CHECK("mluOpScatterNd", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+
+  CHECK_FUNC_RETURN(
+      cnnlScatterNd(_handle, _indices_desc, indices, _updates_desc, updates,
+                    _output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpScatterNd] Internal error accured in mluOpScatterNd.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_indices_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_updates_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpScatterNd_v2(
@@ -40,9 +58,30 @@ mluOpStatus_t MLUOP_WIN_API mluOpScatterNd_v2(
     const mluOpTensorDescriptor_t updates_desc, const void *updates,
     const mluOpTensorDescriptor_t input_desc, const void *input,
     const mluOpTensorDescriptor_t output_desc, void *output) {
-  scatterNdV2Wrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, mode, indices_desc, indices, updates_desc, updates,
-                     input_desc, input, output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpScatterNd_v2", handle != NULL);
+  PARAM_CHECK_GE("mluOpScatterNd_v2", mode, 0);
+  PARAM_CHECK("mluOpScatterNd_v2", indices_desc != NULL);
+  PARAM_CHECK("mluOpScatterNd_v2", indices != NULL);
+  PARAM_CHECK("mluOpScatterNd_v2", updates_desc != NULL);
+  PARAM_CHECK("mluOpScatterNd_v2", updates != NULL);
+  PARAM_CHECK("mluOpScatterNd_v2", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+
+  CHECK_FUNC_RETURN(
+      cnnlScatterNd_v2(_handle, cnnlScatterNdMode_t(mode), _indices_desc,
+                       indices, _updates_desc, updates, _input_desc, input,
+                       _output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpScatterNd] Internal error accured in mluOpScatterNd_v2.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_indices_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_updates_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }

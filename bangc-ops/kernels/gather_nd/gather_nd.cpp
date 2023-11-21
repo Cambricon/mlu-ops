@@ -20,15 +20,33 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpGatherNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_params,
               const void *params, const mluOpTensorDescriptor_t desc_indices,
               const void *indices, const mluOpTensorDescriptor_t desc_output,
               void *output) {
-  gatherNdWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, desc_params, params, desc_indices,
-                                     indices, desc_output, output);
-  return ret;
+  PARAM_CHECK("mluOpGatherNd", handle != NULL);
+  PARAM_CHECK("mluOpGatherNd", desc_params != NULL);
+  PARAM_CHECK("mluOpGatherNd", params != NULL);
+  PARAM_CHECK("mluOpGatherNd", desc_indices != NULL);
+  PARAM_CHECK("mluOpGatherNd", indices != NULL);
+  PARAM_CHECK("mluOpGatherNd", desc_output != NULL);
+  PARAM_CHECK("mluOpGatherNd", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_params, _desc_params);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_indices, _desc_indices);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_output, _desc_output);
+  CHECK_FUNC_RETURN(
+      cnnlGatherNd(_handle, _desc_params, params, _desc_indices, indices,
+                   _desc_output, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpGatherNd] Internal error accured in mluOpGatherNd.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_desc_params);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_desc_indices);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_desc_output);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }

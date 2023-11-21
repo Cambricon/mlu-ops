@@ -28,6 +28,7 @@
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
+#include "kernels/utils/cnnl_helper.h"
 #include "mlu_op.h"
 
 static mluOpStatus_t foolCheckNoPtr(
@@ -416,26 +417,28 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
   // matmul workspace
   {
     mluOpTensorDescriptor_t sub_filters_desc;
-    mluOpMatMulDescriptor_t matmul_desc;
     mluOpTensorDescriptor_t output_grad_condence_desc;
     mluOpTensorDescriptor_t input_grad_condence_desc;
-    mluOpMatMulHeuristicResult_t heuristic_result;
-    mluOpMatMulAlgo_t matmul_algo;
+
+    cnnlMatMulDescriptor_t cnnl_matmul_desc;
+    cnnlMatMulHeuristicResult_t cnnl_heuristic_result;
+    cnnlMatMulAlgo_t cnnl_matmul_algo;
+
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&sub_filters_desc));
+    // MLUOP_CHECK(mluOpCreateTensorDescriptor(&sub_filters_desc));
     int sub_filter_dims[2] = {(int)(dxc), (int)(dyc)};
     MLUOP_CHECK(mluOpSetTensorDescriptor(sub_filters_desc, MLUOP_LAYOUT_ARRAY,
                                          filters_desc->dtype, 2,
                                          sub_filter_dims));
     int is_trans_a = 0, is_trans_b = 1;
     int tf32_flag_int = 0;
-    MLUOP_CHECK(mluOpMatMulDescCreate(&matmul_desc));
-    MLUOP_CHECK(mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSA,
-                                       &(is_trans_a), sizeof(is_trans_a)));
-    MLUOP_CHECK(mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSB,
-                                       &(is_trans_b), sizeof(is_trans_b)));
-    MLUOP_CHECK(mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_ALLOW_TF32,
-                                       &(tf32_flag_int),
-                                       sizeof(tf32_flag_int)));
+    CALL_CNNL(cnnlMatMulDescCreate(&cnnl_matmul_desc));
+    CALL_CNNL(cnnlSetMatMulDescAttr(cnnl_matmul_desc, CNNL_MATMUL_DESC_TRANSA,
+                                    &(is_trans_a), sizeof(is_trans_a)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(cnnl_matmul_desc, CNNL_MATMUL_DESC_TRANSB,
+                                    &(is_trans_b), sizeof(is_trans_b)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(cnnl_matmul_desc, CNNL_MATMUL_ALLOW_TF32,
+                                    &(tf32_flag_int), sizeof(tf32_flag_int)));
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_grad_condence_desc));
     int output_grad_condence_dims[2] = {(int)(max_indice_num), (int)(dyc)};
     MLUOP_CHECK(mluOpSetTensorDescriptor(
@@ -446,26 +449,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     MLUOP_CHECK(mluOpSetTensorDescriptor(
         input_grad_condence_desc, MLUOP_LAYOUT_ARRAY, input_grad_desc->dtype, 2,
         input_grad_condence_dims));
-    MLUOP_CHECK(mluOpCreateMatMulHeuristicResult(&heuristic_result));
-    MLUOP_CHECK(mluOpMatMulAlgoCreate(&matmul_algo));
+
+    CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sub_filters_desc,
+                                          cnnl_sub_filters_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_grad_condence_desc,
+                                          cnnl_output_grad_condence_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_condence_desc,
+                                          cnnl_input_grad_condence_desc);
+
+    CALL_CNNL(cnnlCreateMatMulHeuristicResult(&cnnl_heuristic_result));
+    CALL_CNNL(cnnlMatMulAlgoCreate(&cnnl_matmul_algo));
 
     // set matmul heuristic_result & algorithm
     int requested_algo_count = 1, return_algo_count = 0;
-    MLUOP_CHECK(mluOpGetMatMulAlgoHeuristic(
-        handle, matmul_desc, output_grad_condence_desc, sub_filters_desc,
-        input_grad_condence_desc, input_grad_condence_desc, NULL,
-        requested_algo_count, &heuristic_result, &return_algo_count));
+    CALL_CNNL(cnnlGetMatMulAlgoHeuristic(
+        cnnl_handle, cnnl_matmul_desc, cnnl_output_grad_condence_desc,
+        cnnl_sub_filters_desc, cnnl_input_grad_condence_desc,
+        cnnl_input_grad_condence_desc, NULL, requested_algo_count,
+        &cnnl_heuristic_result, &return_algo_count));
 
     // launch matmul
     size_t workspace_size_matmul = 0;
     float alpha_gemm = 1.0f, beta_gemm = 0.0f;
-    MLUOP_CHECK(mluOpGetMatMulHeuristicResult(heuristic_result, matmul_algo,
-                                              &workspace_size_matmul));
+    CALL_CNNL(cnnlGetMatMulHeuristicResult(
+        cnnl_heuristic_result, cnnl_matmul_algo, &workspace_size_matmul));
 
     // destroy descriptors
-    MLUOP_CHECK(mluOpDestroyMatMulHeuristicResult(heuristic_result));
-    MLUOP_CHECK(mluOpMatMulDescDestroy(matmul_desc));
-    MLUOP_CHECK(mluOpMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulHeuristicResult(cnnl_heuristic_result));
+    CALL_CNNL(cnnlMatMulDescDestroy(cnnl_matmul_desc));
+    CALL_CNNL(cnnlMatMulAlgoDestroy(cnnl_matmul_algo));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_grad_condence_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_sub_filters_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_grad_condence_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+
     MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_grad_condence_desc));
     MLUOP_CHECK(mluOpDestroyTensorDescriptor(sub_filters_desc));
     MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_grad_condence_desc));

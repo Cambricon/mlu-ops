@@ -20,16 +20,65 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
+    const uint32_t input_num, const mluOpTensorDescriptor_t output_desc,
+    size_t *workspace_size) {
+  PARAM_CHECK("mluOpAddN_v2", handle != NULL);
+  PARAM_CHECK("mluOpAddN_v2", input_descs != NULL);
+  PARAM_CHECK("mluOpAddN_v2", output_desc != NULL);
+  PARAM_CHECK("mluOpAddN_v2", input_num >= 2);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
+      sizeof(cnnlTensorDescriptor_t) * input_num);
+  for (int i = 0; i < input_num; i++) {
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(input_descs[i], _input_descs[i]);
+  }
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlGetAddNWorkspaceSize(_handle, _input_descs, input_num,
+                               _output_desc, workspace_size),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpAddN_v2] Internal error accured in mluOpGetAddNWorkspaceSize.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  for (int i = 0; i < input_num; i++) {
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_descs[i]);
+  }
+  free(_input_descs);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
+}
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpAddN(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
           const void *inputs[], uint32_t input_num,
           const mluOpTensorDescriptor_t output_desc, void *output) {
-  addNWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, input_descs, inputs, input_num,
-                                     output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpAddN", handle != NULL);
+  PARAM_CHECK("mluOpAddN", input_descs != NULL);
+  PARAM_CHECK("mluOpAddN", output_desc != NULL);
+  PARAM_CHECK("mluOpAddN", input_num >= 2);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
+      sizeof(cnnlTensorDescriptor_t) * input_num);
+  for (int i = 0; i < input_num; i++) {
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(input_descs[i], _input_descs[i]);
+  }
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlAddN(_handle, _input_descs, inputs, input_num, _output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpAddN] Internal error accured in mluOpAddN.",  // NOLINT
+      MLUOP_STATUS_INTERNAL_ERROR);
+  for (int i = 0; i < input_num; i++) {
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_descs[i]);
+  }
+  free(_input_descs);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
@@ -37,9 +86,28 @@ mluOpAddN_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
              const void *const inputs[], const uint32_t input_num,
              const mluOpTensorDescriptor_t output_desc, void *output,
              void *workspace, size_t workspace_size) {
-  addNV2Wrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, input_descs, inputs, input_num, output_desc,
-                     output, workspace, workspace_size);
-  return ret;
+  PARAM_CHECK("mluOpAddN_v2", handle != NULL);
+  PARAM_CHECK("mluOpAddN_v2", input_descs != NULL);
+  PARAM_CHECK("mluOpAddN_v2", output_desc != NULL);
+  PARAM_CHECK("mluOpAddN_v2", input_num >= 2);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
+      sizeof(cnnlTensorDescriptor_t) * input_num);
+  for (int i = 0; i < input_num; i++) {
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(input_descs[i], _input_descs[i]);
+  }
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlAddN_v2(_handle, _input_descs, inputs, input_num, _output_desc,
+                  output, workspace, workspace_size),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpAddN_v2] Internal error accured in mluOpAddN_v2.",  // NOLINT
+      MLUOP_STATUS_INTERNAL_ERROR);
+  for (int i = 0; i < input_num; i++) {
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_descs[i]);
+  }
+  free(_input_descs);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -20,17 +20,89 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc) {
+  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  CHECK_FUNC_RETURN(cnnlCreateRoiAlignDescriptor(desc), CNNL_STATUS_SUCCESS,
+                    "[mluOpRoiAlignForward] Internal error accured in "
+                    "mluOpCreateRoiAlignForwardDescriptor.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc) {
+  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  CHECK_FUNC_RETURN(cnnlDestroyRoiAlignDescriptor(desc), CNNL_STATUS_SUCCESS,
+                    "[mluOpRoiAlignForward] Internal error accured in "
+                    "mluOpDestroyRoiAlignForwardDescriptor.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpSetRoiAlignForwardDescriptor(
+    mluOpRoiAlignForwardDescriptor_t desc, const int pooled_height,
+    const int pooled_width, const int sampling_ratio, const float spatial_scale,
+    const bool aligned) {
+  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  CHECK_FUNC_RETURN(
+      cnnlSetRoiAlignDescriptor(desc, pooled_height, pooled_width,
+                                sampling_ratio, spatial_scale, aligned),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpRoiAlignForward] Internal error accured in "
+      "mluOpSetRoiAlignForwardDescriptor.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpSetRoiAlignForwardDescriptor_v2(
+    mluOpRoiAlignForwardDescriptor_t desc, const int pooled_height,
+    const int pooled_width, const int sampling_ratio, const float spatial_scale,
+    const int pool_mode, const bool aligned) {
+  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  CHECK_FUNC_RETURN(cnnlSetRoiAlignDescriptor_v2(
+                        desc, pooled_height, pooled_width, sampling_ratio,
+                        spatial_scale, pool_mode, aligned),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpRoiAlignForward] Internal error accured in "
+                    "mluOpSetRoiAlignForwardDescriptor_v2.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+  return MLUOP_STATUS_SUCCESS;
+}
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward(
     mluOpHandle_t handle, const mluOpRoiAlignForwardDescriptor_t roialign_desc,
     const mluOpTensorDescriptor_t input_desc, const void *input,
     const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
     const mluOpTensorDescriptor_t output_desc, void *output) {
-  roiAlignForwardWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, roialign_desc, input_desc, input,
-                                     boxes_desc, boxes, output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpRoiAlignForward", handle != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", roialign_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", input_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", boxes_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", output_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", input != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
+
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+
+  CHECK_FUNC_RETURN(cnnlRoiAlign(_handle, roialign_desc, _input_desc, input,
+                                 _boxes_desc, boxes, _output_desc, output),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpRoiAlignForward] Internal error"
+                    " accured in mluOpRoiAlignForward.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
@@ -40,9 +112,38 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
     const mluOpTensorDescriptor_t output_desc, void *output,
     const mluOpTensorDescriptor_t argmax_x_desc, void *argmax_x,
     const mluOpTensorDescriptor_t argmax_y_desc, void *argmax_y) {
-  roiAlignForwardV2Wrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, roialign_desc, input_desc, input, boxes_desc, boxes, output_desc,
-      output, argmax_x_desc, argmax_x, argmax_y_desc, argmax_y);
-  return ret;
+  PARAM_CHECK("mluOpRoiAlignForward", handle != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", roialign_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", input_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", boxes_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", output_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", input != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
+
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+
+  cnnlTensorDescriptor_t _argmax_x_desc = NULL;
+  cnnlTensorDescriptor_t _argmax_y_desc = NULL;
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(argmax_x_desc, _argmax_x_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(argmax_y_desc, _argmax_y_desc);
+  CHECK_FUNC_RETURN(
+      cnnlRoiAlign_v2(_handle, roialign_desc, _input_desc, input, _boxes_desc,
+                      boxes, _output_desc, output, _argmax_x_desc, argmax_x,
+                      _argmax_y_desc, argmax_y),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpRoiAlignForward_v2] Internal error"
+      " accured in mluOpRoiAlignForward_v2.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_x_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_y_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }

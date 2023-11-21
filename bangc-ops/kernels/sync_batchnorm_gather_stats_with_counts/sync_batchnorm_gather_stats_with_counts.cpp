@@ -20,31 +20,65 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormGatherStatsWithCounts(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t mean_all_desc,
-    const void *mean_all,
-    const mluOpTensorDescriptor_t invstd_all_desc,
-    const void *invstd_all,
-    const mluOpTensorDescriptor_t moving_mean_desc,
-    void *moving_mean,
-    const mluOpTensorDescriptor_t moving_var_desc,
-    void *moving_var,
-    float momentum,
-    float eps,
-    const mluOpTensorDescriptor_t count_all_desc,
-    const void *count_all,
-    const mluOpTensorDescriptor_t mean_desc,
-    void *mean,
-    const mluOpTensorDescriptor_t invstd_desc,
-    void *invstd) {
-  SyncBatchNormGatherStatsWithCountsWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, mean_all_desc, mean_all,
-        invstd_all_desc, invstd_all, moving_mean_desc, moving_mean,
-        moving_var_desc, moving_var, momentum, eps, count_all_desc,
-        count_all, mean_desc, mean, invstd_desc, invstd);
-  return ret;
-}
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t mean_all_desc,
+    const void *mean_all, const mluOpTensorDescriptor_t invstd_all_desc,
+    const void *invstd_all, const mluOpTensorDescriptor_t moving_mean_desc,
+    void *moving_mean, const mluOpTensorDescriptor_t moving_var_desc,
+    void *moving_var, float momentum, float eps,
+    const mluOpTensorDescriptor_t count_all_desc, const void *count_all,
+    const mluOpTensorDescriptor_t mean_desc, void *mean,
+    const mluOpTensorDescriptor_t invstd_desc, void *invstd) {
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", handle != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]",
+              mean_all_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]",
+              invstd_all_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]",
+              count_all_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", mean_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", invstd_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]",
+              (moving_mean_desc != NULL && moving_var_desc != NULL) ||
+                  (moving_mean_desc == NULL && moving_var_desc == NULL));
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", mean_all != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", invstd_all != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]",
+              (moving_mean != NULL && moving_var != NULL) ||
+                  (moving_mean == NULL && moving_var == NULL));
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", count_all != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", mean != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", invstd != NULL);
 
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_all_desc, _mean_all_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_all_desc, _invstd_all_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(moving_mean_desc, _moving_mean_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(moving_var_desc, _moving_var_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_all_desc, _count_all_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
+
+  CHECK_FUNC_RETURN(
+      cnnlSyncBatchNormGatherStatsWithCounts(
+          _handle, _mean_all_desc, mean_all, _invstd_all_desc, invstd_all,
+          _moving_mean_desc, moving_mean, _moving_var_desc, moving_var,
+          momentum, eps, _count_all_desc, count_all, _mean_desc, mean,
+          _invstd_desc, invstd),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpSyncBatchNormStats_v2] Internal error"
+      " accured in mluOpSyncBatchNormGatherStatsWithCounts.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_mean_all_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_invstd_all_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_moving_mean_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_moving_var_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_count_all_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_mean_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_invstd_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
+}

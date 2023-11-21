@@ -979,7 +979,7 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpMatMulDescDestroy.
  */
-typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
+typedef struct cnnlMatMulStruct *mluOpMatMulDescriptor_t;
 
 /*!
  * The descriptor of the Nms function that holds compute type, bias type,
@@ -990,7 +990,7 @@ typedef struct mluOpMatMulStruct *mluOpMatMulDescriptor_t;
  * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyNmsDescriptor.
  */
-typedef struct mluOpNmsStruct *mluOpNmsDescriptor_t;
+typedef struct cnnlNmsStruct *mluOpNmsDescriptor_t;
 
 /*!
  * The descriptor of a tensor that holds the information including tensor
@@ -1011,13 +1011,13 @@ typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
  * Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyMatMulHeuristicResult.
  */
-typedef struct mluOpMatMulHeuristicResult *mluOpMatMulHeuristicResult_t;
+typedef struct cnnlMatMulHeuristicResult *mluOpMatMulHeuristicResult_t;
 
 /*!
  * The descriptor of the matrix multiplication that holds the preferences for
  * mluOpMatMulHeuristicResult_t configuration.
  */
-typedef struct mluOpMatMulPrefer *mluOpMatMulPrefer_t;
+typedef struct cnnlMatMulPrefer *mluOpMatMulPrefer_t;
 
 /*!
  * The descriptor of the matrix multiplication computation algorithm.
@@ -1026,13 +1026,13 @@ typedef struct mluOpMatMulPrefer *mluOpMatMulPrefer_t;
  * Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpMatMulAlgoDestroy.
  */
-typedef struct mluOpMatMulAlgoStruct *mluOpMatMulAlgo_t;
+typedef struct cnnlMatMulAlgoStruct *mluOpMatMulAlgo_t;
 
 /*!
  * The descriptor of Reduce function that holds ::mluOpReduceOp_t,
  * ::mluOpDataType_t, ::mluOpNanPropagation_t, ::mluOpReduceIndices_t, and ::mluOpIndicesType_t.
  */
-typedef struct mluOpReduceStruct *mluOpReduceDescriptor_t;
+typedef struct cnnlReduceStruct *mluOpReduceDescriptor_t;
 
 /*!
  * The descriptor of the transpose operation that holds transpose information
@@ -1043,7 +1043,7 @@ typedef struct mluOpReduceStruct *mluOpReduceDescriptor_t;
  * transpose operation to the descriptor. Also, you need to destroy the MLU-OPS context
  * at the end with ::mluOpDestroyTransposeDescriptor.
  */
-typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
+typedef struct cnnlTransposeStruct *mluOpTransposeDescriptor_t;
 
 /*! The descriptor of ::mluOpRoiAlignForward that holds parameter information.
  *
@@ -1052,7 +1052,7 @@ typedef struct mluOpTransposeStruct *mluOpTransposeDescriptor_t;
  *  ::mluOpRoiAlignForward operation to the descriptor. Also, you need to destroy the MLU-OPS context
  *  at the end with ::mluOpDestroyRoiAlignForwardDescriptor.
  */
-typedef struct mluOpRoiAlignForwardStruct *mluOpRoiAlignForwardDescriptor_t;
+typedef struct cnnlRoiAlignStruct *mluOpRoiAlignForwardDescriptor_t;
 
 /*!
  * The descriptor of Unique function that holds mluOpUniqueSort_t, dim, return_inverse,
@@ -1062,7 +1062,7 @@ typedef struct mluOpRoiAlignForwardStruct *mluOpRoiAlignForwardDescriptor_t;
  * and call ::mluOpSetUniqueDescriptor to set the information of the unique operation to
  * the descriptor. At last, you need to destroy the descriptor at the end with the
  * ::mluOpDestroyUniqueDescriptor function.*/
-typedef struct mluOpUniqueStruct *mluOpUniqueDescriptor_t;
+typedef struct cnnlUniqueStruct *mluOpUniqueDescriptor_t;
 
 /*!
  * The descriptor of CARAFE (Content-Aware ReAssembly of FEatures) operation that holds
@@ -15599,7 +15599,7 @@ typedef enum {
  *  Also, you need to destroy the Cambricon MLUOP context at the end with the ::mluOpBatchMatMulBCastDescDestroy
  * function.
  */
-typedef struct mluOpBatchMatMulBCastStruct *mluOpBatchMatMulBCastDescriptor_t;
+typedef struct cnnlBatchMatMulBCastStruct *mluOpBatchMatMulBCastDescriptor_t;
 
 /*! The descriptor of the batch matrix multiplication with broadcasting computation algorithm.
  *
@@ -15607,7 +15607,7 @@ typedef struct mluOpBatchMatMulBCastStruct *mluOpBatchMatMulBCastDescriptor_t;
  *  ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function to set the information to the descriptor. Also, you need to
  *  destroy the Cambricon MLUOP context at the end with the ::mluOpBatchMatMulBCastAlgoDestroy function.
  */
-typedef struct mluOpBatchMatMulBCastAlgoStruct *mluOpBatchMatMulBCastAlgo_t;
+typedef struct cnnlBatchMatMulBCastAlgoStruct *mluOpBatchMatMulBCastAlgo_t;
 
 // Group:BatchMatMulBCast
 /*!

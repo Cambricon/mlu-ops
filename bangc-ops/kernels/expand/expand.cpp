@@ -20,14 +20,27 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
             const void *input, const mluOpTensorDescriptor_t output_desc,
             void *output) {
-  expandWrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, input_desc, input, output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpExpand", handle != NULL);
+  PARAM_CHECK("mluOpExpand", input_desc != NULL);
+  PARAM_CHECK("mluOpExpand", input != NULL);
+  PARAM_CHECK("mluOpExpand", output_desc != NULL);
+  PARAM_CHECK("mluOpExpand", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlExpand(_handle, _input_desc, input, _output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpExpand] Internal error accured in mluOpExpand.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }

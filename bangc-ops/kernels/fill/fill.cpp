@@ -20,32 +20,66 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle, float value,
                                       const mluOpTensorDescriptor_t output_desc,
                                       void *output) {
-  fillWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, value, output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpFill", handle != NULL);
+  PARAM_CHECK("mluOpFill", output_desc != NULL);
+  PARAM_CHECK("mluOpFill", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlFill(_handle, value, _output_desc, output), CNNL_STATUS_SUCCESS,
+      "[mluOpFill] Internal error accured in mluOpFill.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpFill_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t value_desc,
              const void *value, const mluOpTensorDescriptor_t output_desc,
              void *output) {
-  fillV2Wrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, value_desc, value, output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpFill_v2", handle != NULL);
+  PARAM_CHECK("mluOpFill_v2", value_desc != NULL);
+  PARAM_CHECK("mluOpFill_v2", value != NULL);
+  PARAM_CHECK("mluOpFill_v2", output_desc != NULL);
+  PARAM_CHECK("mluOpFill_v2", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(value_desc, _value_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlFill_v2(_handle, _value_desc, value, _output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpFill_v2] Internal error accured in mluOpFill_v2.",  // NOLINT
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_value_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpFill_v3(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
              const void *value, const mluOpTensorDescriptor_t output_desc,
              void *output) {
-  fillV3Wrapper wrapper;
-  mluOpStatus_t ret =
-      wrapper.invoke(handle, pointer_mode, value, output_desc, output);
-  return ret;
+  PARAM_CHECK("mluOpFill_v3", handle != NULL);
+  PARAM_CHECK_GE("mluOpFill_v3", pointer_mode, 0);
+  PARAM_CHECK("mluOpFill_v3", value != NULL);
+  PARAM_CHECK("mluOpFill_v3", output_desc != NULL);
+  PARAM_CHECK("mluOpFill_v3", output != NULL);
+  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(
+      cnnlFill_v3(_handle, cnnlPointerMode_t(int(pointer_mode)), value,
+                  _output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpExpand] Internal error accured in mluOpExpand.",  // NOLINT
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
+  DESTROY_CNNL_HANDLE(_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
