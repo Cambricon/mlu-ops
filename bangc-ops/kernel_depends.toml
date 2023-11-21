@@ -36,6 +36,7 @@ dynamic_point_to_voxel_forward = ["fill", "unique"]
 masked_col2im_forward = ["fill", "transpose"]
 masked_im2col_forward = ["fill", "transpose"]
 mutual_information_backward = ["fill"]
+batch_matmul_bcast = ["matmul"]
 
 [bangc-ops.gtest]
 
