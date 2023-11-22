@@ -29,17 +29,24 @@
 #include "mlu_op.h"
 #include "cnnl.h"
 
-#define LOGERROR(ops, message) \
-  std::cout << "\033[31m[" << ops << "]: " << message << "\033[0m" << std::endl;
-
 // Checks returned status(with propose_status)
 // and if not equal returns status(ret_status)
-#define CHECK_FUNC_RETURN(ret, propose_status, message, ret_status) \
-  {                                                                 \
-    if (ret != propose_status) {                                    \
-      LOGERROR("MLUOPS STATUS CHECK", message);                     \
-      return ret_status;                                            \
-    }                                                               \
+#define CHECK_FUNC_RETURN(ret, propose_status, message, ret_status)  \
+  {                                                                  \
+    if (ret != propose_status) {                                     \
+      LOG(ERROR)<< "MLUOPS STATUS CHECK:"<< message;                 \
+      return ret_status;                                             \
+    }                                                                \
+  }
+
+// Call CNNL API
+#define CALL_CNNL(cnnl_call_ret)                                        \
+  {                                                                     \
+    mluOpStatus_t ret = mluOpStatus_t(cnnl_call_ret);                   \
+    if (ret != MLUOP_STATUS_SUCCESS) {                                  \
+      LOG(ERROR)<< "CNNL_HELPER: Internal cnnl api call error accured.";\
+      return ret;                                                       \
+    }                                                                   \
   }
 
 // TensorDescriptor convert
@@ -59,12 +66,12 @@ DTYPE mluOpPointerForceConvert(STYPE ptr);
     if (desc != NULL) {                                                        \
       cnnlStatus_t ret = cnnlCreateTensorDescriptor(&_desc);                   \
       if (ret != CNNL_STATUS_SUCCESS) {                                        \
-        LOGERROR("CNNL_HELPER", "CNNL creates tensor descriptor failed.");     \
+        LOG(ERROR)<< "CNNL_HELPER: CNNL creates tensor descriptor failed.";    \
         return MLUOP_STATUS_INTERNAL_ERROR;                                    \
       }                                                                        \
       ret = mluOpConvertDescriptor(desc, _desc);                               \
       if (ret != CNNL_STATUS_SUCCESS) {                                        \
-        LOGERROR("CNNL_HELPER", "Internal convert tensor descriptor failed."); \
+        LOG(ERROR)<< "CNNL_HELPER: Internal convert tensor descriptor failed.";\
         return MLUOP_STATUS_INTERNAL_ERROR;                                    \
       }                                                                        \
     } else {                                                                   \
@@ -76,12 +83,12 @@ DTYPE mluOpPointerForceConvert(STYPE ptr);
   {                                                                            \
     cnnlStatus_t ret = cnnlCreateTensorDescriptor(&_desc);                     \
     if (ret != CNNL_STATUS_SUCCESS) {                                          \
-      LOGERROR("KernelWrapper", "Internal create tensor descriptor failed.");  \
+      LOG(ERROR)<< "CNNL_HELPER: CNNL creates tensor descriptor failed.";      \
       return MLUOP_STATUS_INTERNAL_ERROR;                                      \
     }                                                                          \
     ret = mluOpConvertDescriptor(desc, _desc);                                 \
     if (ret != CNNL_STATUS_SUCCESS) {                                          \
-      LOGERROR("KernelWrapper", "Internal convert tensor descriptor failed."); \
+      LOG(ERROR)<< "CNNL_HELPER: Internal convert tensor descriptor failed.";  \
       return MLUOP_STATUS_INTERNAL_ERROR;                                      \
     }                                                                          \
   }
@@ -91,28 +98,28 @@ DTYPE mluOpPointerForceConvert(STYPE ptr);
     if (_desc != NULL) {                                                       \
       cnnlStatus_t ret = cnnlDestroyTensorDescriptor(_desc);                   \
       if (ret != CNNL_STATUS_SUCCESS) {                                        \
-        LOGERROR("CNNL_HELPER", "Internal destroy tensor descriptor failed."); \
+        LOG(ERROR)<< "CNNL_HELPER: CNNL destroy tensor descriptor failed.";    \
         return MLUOP_STATUS_INTERNAL_ERROR;                                    \
       }                                                                        \
     }                                                                          \
   }
 
 // Handle
-#define CREATE_AND_SET_CNNL_HANDLE(handle, _handle)                 \
-  cnnlHandle_t _handle;                                             \
-  {                                                                 \
-    if (handle != NULL) {                                           \
-      cnnlStatus_t ret = cnnlCreate(&_handle);                      \
-      if (ret != CNNL_STATUS_SUCCESS) {                             \
-        LOGERROR("CNNL_HELPER", "Internal create handle failed.");  \
-        return MLUOP_STATUS_INTERNAL_ERROR;                         \
-      }                                                             \
-      ret = mluOpConvertHandle(handle, _handle);                    \
-      if (ret != CNNL_STATUS_SUCCESS) {                             \
-        LOGERROR("CNNL_HELPER", "Internal convert handle failed."); \
-        return MLUOP_STATUS_INTERNAL_ERROR;                         \
-      }                                                             \
-    }                                                               \
+#define CREATE_AND_SET_CNNL_HANDLE(handle, _handle)                  \
+  cnnlHandle_t _handle;                                              \
+  {                                                                  \
+    if (handle != NULL) {                                            \
+      cnnlStatus_t ret = cnnlCreate(&_handle);                       \
+      if (ret != CNNL_STATUS_SUCCESS) {                              \
+        LOG(ERROR)<< "CNNL_HELPER: CNNL create handle failed.";      \
+        return MLUOP_STATUS_INTERNAL_ERROR;                          \
+      }                                                              \
+      ret = mluOpConvertHandle(handle, _handle);                     \
+      if (ret != CNNL_STATUS_SUCCESS) {                              \
+        LOG(ERROR)<< "CNNL_HELPER: Internal convert handle failed."; \
+        return MLUOP_STATUS_INTERNAL_ERROR;                          \
+      }                                                              \
+    }                                                                \
   }
 
 #define DESTROY_CNNL_HANDLE(_handle)                                  \
@@ -120,25 +127,15 @@ DTYPE mluOpPointerForceConvert(STYPE ptr);
     if (_handle != NULL) {                                            \
       cnnlStatus_t ret = cnnlSetQueue(_handle, nullptr);              \
       if (ret != CNNL_STATUS_SUCCESS) {                               \
-        LOGERROR("CNNL_HELPER", "Internal set handle queue failed."); \
+        LOG(ERROR)<< "CNNL_HELPER: Internal set handle queue failed.";\
         return MLUOP_STATUS_INTERNAL_ERROR;                           \
       }                                                               \
       ret = cnnlDestroy(_handle);                                     \
       if (ret = CNNL_STATUS_SUCCESS) {                                \
-        LOGERROR("CNNL_HELPER", "Internal destroy handle failed.");   \
+        LOG(ERROR)<< "CNNL_HELPER: Internal destroy handle failed.";  \
         return MLUOP_STATUS_INTERNAL_ERROR;                           \
       }                                                               \
     }                                                                 \
-  }
-
-// Call CNNL API
-#define CALL_CNNL(cnnl_call_ret)                                        \
-  {                                                                     \
-    mluOpStatus_t ret = mluOpStatus_t(cnnl_call_ret);                   \
-    if (ret != MLUOP_STATUS_SUCCESS) {                                  \
-      LOGERROR("CNNL_HELPER", "Internal cnnl api call error accured."); \
-      return ret;                                                       \
-    }                                                                   \
   }
 
 #endif  // KERNELS_UTILS_CNNL_HELPER_H_

@@ -54,7 +54,7 @@ mluOpFill_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t value_desc,
   CHECK_FUNC_RETURN(
       cnnlFill_v2(_handle, _value_desc, value, _output_desc, output),
       CNNL_STATUS_SUCCESS,
-      "[mluOpFill_v2] Internal error accured in mluOpFill_v2.",  // NOLINT
+      "[mluOpFill_v2] Internal error accured in mluOpFill_v2.",
       MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_value_desc);
@@ -77,7 +77,7 @@ mluOpFill_v3(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
       cnnlFill_v3(_handle, cnnlPointerMode_t(int(pointer_mode)), value,
                   _output_desc, output),
       CNNL_STATUS_SUCCESS,
-      "[mluOpExpand] Internal error accured in mluOpExpand.",  // NOLINT
+      "[mluOpFill_v3] Internal error accured in mluOpFill_v3.",
       MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
   DESTROY_CNNL_HANDLE(_handle);

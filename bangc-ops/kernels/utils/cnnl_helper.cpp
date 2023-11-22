@@ -20,15 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_UTILS_INCLUDE_TYPE_CONVERT_H
-#define KERNELS_UTILS_INCLUDE_TYPE_CONVERT_H
-
 #include "cnnl_helper.h"
 
 // Enumeration convert template
-template <typename SENUM, typename DENUM>
-DENUM mluOpConvertEnum(SENUM param) {
-  return (DENUM)((int)param);
+template <typename SRC_ENUM, typename DST_ENUM>
+DST_ENUM mluOpConvertEnum(SRC_ENUM param) {
+  return (DST_ENUM)((int)param);
 }
 
 // TensorDescriptor convert
@@ -105,5 +102,3 @@ cnnlStatus_t mluOpConvertHandle(mluOpHandle_t handle, cnnlHandle_t _handle) {
                     "Internal set queue failed.", CNNL_STATUS_INTERNAL_ERROR);
   return CNNL_STATUS_SUCCESS;
 }
-
-#endif  // KERNELS_UTILS_INCLUDE_TYPE_CONVERT_H

@@ -68,7 +68,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormGatherStatsWithCounts(
           momentum, eps, _count_all_desc, count_all, _mean_desc, mean,
           _invstd_desc, invstd),
       CNNL_STATUS_SUCCESS,
-      "[mluOpSyncBatchNormStats_v2] Internal error"
+      "[mluOpSyncBatchNormGatherStatsWithCounts] Internal error"
       " accured in mluOpSyncBatchNormGatherStatsWithCounts.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
