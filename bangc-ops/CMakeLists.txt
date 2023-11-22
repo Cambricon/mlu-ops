@@ -103,6 +103,10 @@ endif()
 
 message(STATUS "BANG_CNCC_FLAGS:${BANG_CNCC_FLAGS}")
 
+if (${MLUOP_PACKAGE_INFO_SET} MATCHES "ON")
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/generate_package_info.cmake)
+endif()
+
 # resolve kernel dependency in MLUOP_BUILD_SPECIFIC_OP
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/mluop_kernel_depends.cmake)
 # populate_op is provided by mluop_kernel_depends.cmake

@@ -1,0 +1,5 @@
+mluops (@PKG_VERSION@-1.ubuntu16.04) xenial; urgency=medium
+
+  * Release @PKG_NAME@ v@PKG_VERSION@
+
+ -- Cambricon <service@cambricon.com> @PKG_DATE@
