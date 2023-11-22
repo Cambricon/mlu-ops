@@ -4299,7 +4299,7 @@ mluOpPolyNms(mluOpHandle_t handle,
  *   initialize and set the information to Nms descriptor.
  * - You need to call ::mluOpDestroyNmsDescriptor to destroy the descriptor.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -4326,7 +4326,7 @@ mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None
  * - This function should be called to destroy the Nms descriptor. Otherwise, the
  * memory leak may occur.
@@ -4397,7 +4397,7 @@ mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
  * - max_output_size should not be less than 0.
  * - pad_to_max_output_size should be true or false.
  * *
- * @note
+ * @par Note
  * - If the dimension of input box is 3 ([batches_num, boxes_num, 4] or
  * [batches_num, 4, boxes_num]), the dimension of input confidence is
  * 3 ([batches_num, classes_num, boxes_num]). If the dimension of input box
@@ -4483,7 +4483,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * - output size: int32, uint32
  * - If the output is the indices of boxes, the output data type should be int32 or uint32, otherwise
  * the output data type should be the same as input boxes data type. The data type of output size is int32 or uint32.
- * <b> Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num],
+ * Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num],
  * the combinations of input boxes tensor and input confidence tensor can be float-half, otherwise the data
  * type of input boxes and input confidence tensor must be the same.
  *
@@ -4511,7 +4511,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * The num_boxes represents the number of input boxes.
  * - When the dimension of input box is 2, it has better performance.
  *
- * @note
+ * @par Note
  * - When the input boxes is in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
  *   both of confidence_desc and confidence should be provided as null pointer.
  *   - In Nms3D mode, ::mluOpNms will get low precision on MLU200 platform.
@@ -4571,7 +4571,7 @@ mluOpNms(mluOpHandle_t handle,
  * - output size: int32, uint32
  * - If the output is the indices of boxes, the output data type should be int32 or uint32, otherwise
  * the output data type should be the same as input boxes data type. The data type of output size is int32 or uint32.
- * <b> Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num],
+ * Note that when the shape of \b boxes is [boxes_num, 4] or [4, boxes_num],
  * the combinations of input boxes tensor and input confidence tensor can be float-half, otherwise the data
  * type of input boxes and input confidence tensor must be the same.
  *
@@ -4583,7 +4583,7 @@ mluOpNms(mluOpHandle_t handle,
  * @par API Dependency
  * - The allocated extra workspace should be passed to ::mluOpNms to perform the Nms operation.
  * *
- * @note
+ * @par Note
  * - When the input boxes is in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
  * the confidence_desc must be provided with null pointer.
  * *
@@ -7731,7 +7731,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  * - Before calling this function you need to call ::mluOpGetMaskedIm2colForwardWorkspaceSize
  *   to get the extra space size needed in ::mluOpMaskedIm2colForward.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Example
@@ -11684,7 +11684,7 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  *   - boxes tensor: half, float
  *   - output tensor: half, float
  *   - argmax_idx tensor: int32_t
- *   <b>Note that the data type of \b input , \b boxes , and \b output
+ *   Note that the data type of \b input , \b boxes , and \b output
  *   must be the same.
  *
  * @par Data Layout
@@ -11829,7 +11829,7 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  *   - boxes tensor: half, float
  *   - argmax_idx tensor: int32_t
  *   - grad_input tensor: half, float
- *   <b>Note that the data type of \b grad_output , \b boxes , and \b grad_input
+ *   Note that the data type of \b grad_output , \b boxes , and \b grad_input
  *   must be the same.
  *
  * @par Data Layout
@@ -12367,7 +12367,7 @@ mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
  * @par API Dependency
  * - The allocated extra workspace should be passed to ::mluOpRoiPointPool3d.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Example
@@ -12447,7 +12447,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - The supported data types for input and output are as follows:
- *   <b>Note that the data type of \b points , \b point_features , \b boxes3d , and
+ *   Note that the data type of \b points , \b point_features , \b boxes3d , and
  *   \b pooled_features must be the same.
  *   - points: half, float
  *   - point_features: half, float
@@ -14598,7 +14598,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor \b x.
- * @param[in] mean_desc
+ * @param[in] desc_mean
  * The descriptor of \b mean tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] mean
  * Pointer to the MLU memory that stores the tensor \b mean, which denotes the average
@@ -14615,9 +14615,9 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
  * The size of the extra workspace in bytes that needs to be used in
  * the ::mluOpSyncBatchnormBackwardReduce_v2. You can get the size of the workspace with
  * the ::mluOpGetSyncBatchnormBackwardReduceWorkspaceSize function.
- * @param[out] desc_dfilters
+ * @param[out] desc_dfilter
  * The descriptor of \b dfilters tensor. For detailed information, see ::mluOpTensorDescriptor_t.
- * @param[out] dfilters
+ * @param[out] dfilter
  * Pointer to the MLU memory that stores the input tensor \b dfilters, which denotes
  * partial derivative of filter in sync batch normalization forward training. It will be computed
  * only if booleanvariable \b needs_input_grad1 is true.
@@ -14766,7 +14766,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
  * ::mluOpTensorDescriptor_t.
  * @param[in] x
  * Pointer to the MLU memory that stores the input tensor \b x.
- * @param[in] mean_desc
+ * @param[in] desc_mean
  * The descriptor of \b mean tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] mean
  * Pointer to the MLU memory that stores the tensor \b mean, which denotes the average result of
@@ -15182,7 +15182,7 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
  *  devices and queues.
  *  For detailed information, please refer to ::mluOpHandle_t.
  * @param[in] input_desc
- *   Descriptor of the input tensor \b.
+ *   Descriptor of the input tensor \b input.
  *  Refer to ::mluOpTensorDescriptor_t for further detail.
  * @param[in] input
  *   Device pointer to the MLU memory that stores the input tensor.
@@ -15229,7 +15229,7 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
  * - Tensor descriptors of input and output tensors must be the same.
  * - Dimension number should not exceeds \p MLUOP_DIM_MAX.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -15497,7 +15497,7 @@ mluOpConcat(mluOpHandle_t handle,
  * - The allocated extra workspace should be passed to ::mluOpConcat function to perform
  *   ::mluOpConcat operation.
  *
- * @Note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -15642,7 +15642,7 @@ typedef struct mluOpBatchMatMulBCastAlgoStruct *mluOpBatchMatMulBCastAlgo_t;
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -15676,7 +15676,7 @@ mluOpGetBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -15722,7 +15722,7 @@ mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMat
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - Currently the maximum number of algorithms \b requested_algo_count only supports 1.
  *
  * @par Requirements
@@ -15801,7 +15801,7 @@ mluOpGetBatchMatMulAlgoHeuristic(mluOpHandle_t handle,
  *   - \b a, \b b, \b c: half, half, half.
  *   - \b a, \b b, \b c: float, float, float.
  *
- * @note
+ * @par Note
  * - The combinations of the data types should satisfy the following rules:
  *   - The data type of \b c must be float when \b a data type is int31 or \b b data type is int31.
  *   - The number of dimensions is no more than \p MLUOP_DIM_MAX.
@@ -15822,7 +15822,6 @@ mluOpGetBatchMatMulAlgoHeuristic(mluOpHandle_t handle,
  * @par Performance Optimization
  * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
  *   needs to transpose.
- * - If \b a and \b b do not need broadcasting, for best practices, it is recommended to call ::mluOpBatchMatMul.
  *
  * @par Requirements
  * - None.
@@ -15927,7 +15926,7 @@ mluOpBatchMatMulBCast(mluOpHandle_t handle,
  *   - \b a, \b b, \b c offchip data type, \b c onchip data type: bfloat16, bfloat16, bfloat16, float.
  *   - \b a, \b b, \b c offchip data type, \b c onchip data type: float, float, float, float.
  *
- * @note
+ * @par Note
  * - The data type of \b c must be float when \b a data type is int31 or \b b data type is int31.
  * - The data type bitwidth of \b c onchip data type for operation computing is not shorter than
  *   \b c offchip data type.
@@ -16034,7 +16033,7 @@ mluOpBatchMatMulBCast_v2(mluOpHandle_t handle,
  *   and set the information to the batch matrix multiplication with broadcasting descriptor.
  * - You need to call the ::mluOpBatchMatMulBCastDescDestroy function to destroy the descriptor.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16060,7 +16059,7 @@ mluOpBatchMatMulBCastDescCreate(mluOpBatchMatMulBCastDescriptor_t *bmm_bcast_des
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16095,7 +16094,7 @@ mluOpBatchMatMulBCastDescDestroy(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_des
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16134,7 +16133,7 @@ mluOpSetBatchMatMulBCastDescAttr(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_des
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16169,7 +16168,7 @@ mluOpGetBatchMatMulBCastDescAttr(const mluOpBatchMatMulBCastDescriptor_t bmm_bca
  *   and set the information to the batch matrix multiplication with broadcasting algorithm.
  * - You need to call the ::mluOpBatchMatMulBCastAlgoDestroy function to destroy the descriptor.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16195,7 +16194,7 @@ mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo);
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16246,7 +16245,7 @@ mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCastAlgo_t algo);
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16304,10 +16303,8 @@ mluOpGetQuantizeBatchMatMulBCastAlgorithm(mluOpHandle_t handle,
  * - This function must be called after ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function. You also need to
  *   call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions to create and set
  *   tensor descriptors \b a_desc, \b b_desc, \b c_desc before calling this function.
- * - The allocated extra workspace should be passed to the ::mluOpQuantizeBatchMatMulBCast function to
- *   performs the batch matrix multiplication with broadcasting operation.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16405,7 +16402,7 @@ mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
  * - \b a ddr data type can be combined with any onchip data type.
  * - \b b ddr data type can be combined with any onchip data type.
  *
- * @note
+ * @par Note
  * - The combinations of the data types should satisfy the following rules:
  *   - The data type bitwidth for operation computing is not shorter than \b c ddr data type.
  *   - The data type for operation computing must be float when onchip data type is int31.
@@ -16427,8 +16424,6 @@ mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
  * @par Performance Optimization
  * - For best practices, to have a better performance, matrix \b a does not need to transpose and matrix \b b
  *   needs to transpose.
- * - If \b a and \b b do not need broadcasting, for best practices, it is recommended to call
- ::mluOpQuantizeBatchMatMul.
  *
  * @par Example
  * - The example of the operation is as follows:
