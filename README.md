@@ -3,7 +3,7 @@
 
 <div align="center">
   <b>
-    <a href="https://www.cambricon.com/docs/sdk_1.13.0/cambricon_bang_c_ops_0.7.1/user_guide/index.html">
+    <a href="https://www.cambricon.com/docs/sdk_1.15.0/cambricon_bang_c_ops_0.9.0/user_guide/index.html">
       <font size="4"> 📖 MLU-OPS 用户手册</font>
     </a>
   </b>
@@ -15,7 +15,7 @@
   </b>
   &nbsp;&nbsp;&nbsp;&nbsp;
   <b>
-    <a href="https://sdk.cambricon.com/download?sdk_version=V1.13.0&component_name=Basis">
+    <a href="https://sdk.cambricon.com/download?sdk_version=V1.15.0&component_name=Basis">
       <font size="4"> 🛠️ 依赖组件获取</font>
     </a>
   </b>

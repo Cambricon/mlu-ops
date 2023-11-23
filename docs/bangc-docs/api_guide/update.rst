@@ -3,6 +3,16 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V0.10.0
+
+  **Date:** November 24, 2023
+
+  - **Changes:**
+    - Added the following new operations:
+
+      - pad
+      - concat
+
 * V0.9.0
 
   **Date:** October 16, 2023
