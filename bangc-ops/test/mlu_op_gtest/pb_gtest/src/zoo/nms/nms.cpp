@@ -38,38 +38,63 @@ void NmsExecutor::paramCheck() {
 }
 
 void NmsExecutor::workspaceMalloc() {
-  size_t workspace_size = 0;
-  auto tensor_box = parser_->getMetaTensor("input1").tensor;
+  auto tensor_boxes = parser_->getMetaTensor("input1").tensor;
   auto tensor_confi = parser_->getMetaTensor("input2").tensor;
-  MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_box, tensor_confi,
-                                          &workspace_size));
+  auto input_layout = parser_->getProtoNode()->nms_param().input_layout();
+  if (tensor_boxes->dim == 2) {
+    if (input_layout == 0) {
+      box_dim_ = tensor_boxes->dims[1];
+    } else {
+      box_dim_ = tensor_boxes->dims[0];
+    }
+  }
+  VLOG(4) << "box_dim_: " << box_dim_;
+  if (box_dim_ == 4) {
+    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_boxes, tensor_confi,
+                                         &workspace_size_));
+  } else {
+    // box_dim_ = 7
+    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_boxes, nullptr,
+                                         &workspace_size_));
+  }
   VLOG(4) << "Malloc workspace space.";
-  void *temp = mlu_runtime_.allocate(workspace_size);
-  workspace_.push_back(temp);
-  VLOG(4) << "Malloc addr: " << temp << " , size: " << workspace_size;
+  if (workspace_size_ > 0) {
+    workspace_ = mlu_runtime_.allocate(workspace_size_);
+  }
+  VLOG(4) << "Malloc addr=" << workspace_ << ", size=" << workspace_size_;
+
   bool pad_to_max_output_size =
       parser_->getProtoNode()->nms_param().pad_to_max_output_size();
   VLOG(4) << "pad_to_max_output_size is " << pad_to_max_output_size;
 
   // this op will modify input data.
   // when repeat != 1, after second compute(), input data has been modified.
-  // input data changed, the result of this op ("result_num", aka
-  // output->dims[0]) is changed. so we don't know result_num when repeat
-  // finished. so ignore what result_num(valid data number in output0) is, set
-  // all data in output0 as 0. actually, if we know what result_num is, just set
-  // other data as 0.
-  if (!pad_to_max_output_size) {
-    auto output_tensor = parser_->getMetaTensor("output1").tensor;
+  // input data changed, the result of this op ("result_num",
+  // aka output->dims[0]) is changed.
+  // so we don't know result_num when repeat finished.
+  // so ignore what result_num(valid data number in output0) is,
+  // set all data in output0 as 0.
+  // actually, if we know what result_num is, just set other data as 0.
+  size_t output_size = parser_->getMetaTensor("output1").size_in_bytes;
+  if ((!pad_to_max_output_size ||
+       parser_->getMetaTensor("input1").size_in_bytes == 0) &&
+      output_size > 0) {
     void *output_ptr = parser_->getMetaTensor("output1").dev_origin_ptr;
-    size_t output_size = parser_->getMetaTensor("output1").size_in_bytes;
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr, 0, output_size));
   }
-  eva_->setMluWorkspaceSize(workspace_size);
+
+  void *output2_ptr = parser_->getMetaTensor("output2").dev_origin_ptr;
+  size_t output2_size = parser_->getMetaTensor("output2").size_in_bytes;
+  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output2_ptr, 0, output2_size));
+
+  eva_->setMluWorkspaceSize(workspace_size_);
 }
 
 void NmsExecutor::workspaceFree() {
-  VLOG(4) << "Free device workspace space.";
-  mlu_runtime_.deallocate(workspace_[0]);
+  if (workspace_) {
+    VLOG(4) << "Free device workspace space.";
+    mlu_runtime_.deallocate(workspace_);
+  }
 }
 
 void NmsExecutor::compute() {
@@ -80,8 +105,8 @@ void NmsExecutor::compute() {
       (mluOpNmsAlgo_t)parser_->getProtoNode()->nms_param().algo();
   float offset = parser_->getProtoNode()->nms_param().offset();
   auto input_layout = parser_->getProtoNode()->nms_param().input_layout();
-  int max_output_size = parser_->getProtoNode()->nms_param().max_output_boxes();
-  int run_mode = parser_->getProtoNode()->nms_param().run_mode();
+  int max_output_size =
+      parser_->getProtoNode()->nms_param().max_output_boxes();
   float confidence_threshold =
       parser_->getProtoNode()->nms_param().confidence_threshold();
   bool pad_to_max_output_size =
@@ -95,81 +120,42 @@ void NmsExecutor::compute() {
 
   // get tensor by name (in prototxt)
   auto tensor_boxes = parser_->getMetaTensor("input1").tensor;
-  auto tensor_confi = parser_->getMetaTensor("input2").tensor;
+
+  auto tensor_confi =
+      box_dim_ == 7 ? nullptr : parser_->getMetaTensor("input2").tensor;
   auto tensor_output = parser_->getMetaTensor("output1").tensor;
   auto dev_boxes = parser_->getMetaTensor("input1").dev_ptr;
-  auto dev_confi = parser_->getMetaTensor("input2").dev_ptr;
+  auto dev_confi =
+      box_dim_ == 7 ? nullptr : parser_->getMetaTensor("input2").dev_ptr;
   auto dev_output = parser_->getMetaTensor("output1").dev_ptr;
-  VLOG(4) << "call mluOp NmsTensor()";
+  VLOG(4) << "call mluop NmsTensor()";
 
   mluOpNmsDescriptor_t nms_desc;
-  nms_desc = cpu_runtime_.allocate(mluOpCreateNmsDescriptor,
-                                   mluOpDestroyNmsDescriptor);
-  // offset = 0.0;
-  struct timeval tstart;
-  struct timeval tend;
-  VLOG(5) << "tensor_boxes->dim\n" << tensor_boxes->dim;
-  if (tensor_boxes->dim == 2) {
-    VLOG(5) << "call mluOpSetNmsDescriptor\n";
-    MLUOP_CHECK(mluOpSetNmsDescriptor(
-        nms_desc, box_mode, mode, algo, method_mode, iou_threshold,
-        soft_nms_sigma, max_output_size, confidence_threshold, offset,
-        input_layout, pad_to_max_output_size));
-  } else {
-    // assert tensor_boxes->dim == 3
-    // algo = mluOpNmsAlgo_t::MLUOP_NMS_ALGO_INCLUDE_BOUNDARY;
-    MLUOP_CHECK(mluOpSetNmsDescriptor(
-        nms_desc, box_mode, mode, algo, method_mode, iou_threshold,
-        soft_nms_sigma, max_output_size, confidence_threshold, offset,
-        input_layout, pad_to_max_output_size));
-  }
+  nms_desc =
+      cpu_runtime_.allocate(mluOpCreateNmsDescriptor,
+                            mluOpDestroyNmsDescriptor);
+  VLOG(5) << "tensor_boxes->dim: " << tensor_boxes->dim;
+  MLUOP_CHECK(mluOpSetNmsDescriptor(
+      nms_desc, box_mode, mode, algo, method_mode, iou_threshold,
+      soft_nms_sigma, max_output_size, confidence_threshold, offset,
+      input_layout, pad_to_max_output_size));
   VLOG(4) << "algo: " << algo;
   VLOG(4) << "offset: " << offset;
   VLOG(4) << "sigma: " << soft_nms_sigma;
   VLOG(4) << "box_mode: " << box_mode;
   VLOG(4) << "method_mode: " << method_mode;
   auto dev_output_size = parser_->getMetaTensor("output2").dev_ptr;
-  size_t workspace_size = 0;
-  int box_dim = 4;
-  if (tensor_boxes->dim == 2) {
-    if (input_layout == 0) {
-      box_dim = tensor_boxes->dims[1];
-    } else {
-      box_dim = tensor_boxes->dims[0];
-    }
-  }
-  VLOG(4) << "box_dim " << box_dim;
-  if (box_dim == 4) {
-    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_boxes, tensor_confi,
-                                            &workspace_size));
-  } else {
-    // box_dim = 7
-    VLOG(4) << "spaceSize ";
-    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_boxes, nullptr,
-                                            &workspace_size));
-  }
-  gettimeofday(&tstart, NULL);
   interface_timer_.start();
-
-  // VLOG(4) << "box_dim: " << box_dim;
-  if (box_dim == 7) {
-    // NMS3D
-    MLUOP_CHECK(mluOpNms(handle_, nms_desc, tensor_boxes, dev_boxes, nullptr,
-                            nullptr, workspace_[0], workspace_size,
-                            tensor_output, dev_output, dev_output_size));
-  } else {
-    MLUOP_CHECK(mluOpNms(handle_, nms_desc, tensor_boxes, dev_boxes,
-                            tensor_confi, dev_confi, workspace_[0],
-                            workspace_size, tensor_output, dev_output,
-                            dev_output_size));
-  }
+  VLOG(4) << "tensor_confi=" << tensor_confi << ", dev_confi=" << dev_confi
+          << ", workspace_size_=" << workspace_size_;
+  MLUOP_CHECK(mluOpNms(
+      handle_, nms_desc, tensor_boxes, dev_boxes, tensor_confi, dev_confi,
+      workspace_, workspace_size_, tensor_output, dev_output,
+      dev_output_size));
   interface_timer_.stop();
-  gettimeofday(&tend, NULL);
   VLOG(4) << "mluOpNms-end";
 
   cpu_runtime_.deallocate(nms_desc);
-  uint32_t time_usec = (uint32_t)tend.tv_usec - (uint32_t)tstart.tv_usec;
-  uint32_t time_sec = (uint32_t)tend.tv_sec - (uint32_t)tstart.tv_sec;
 }
 
 void NmsExecutor::nms3D_detection_cpu(float *output_data, int &output_box_num,
