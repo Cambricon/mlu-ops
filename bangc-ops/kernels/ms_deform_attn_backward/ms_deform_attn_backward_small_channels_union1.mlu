@@ -334,6 +334,7 @@ void __mlu_func__ loadValue(
                  (unsigned int *)(grad_temp3 + 3 * num_deal_grid),
                  deal_num_real * sizeof(float), GDRAM2NRAM,
                  deal_num_real * sizeof(float), num_deal_grid);
+
   __sync_io_move_compute();
 
 #else
@@ -506,6 +507,14 @@ void __mlu_func__ computeGradValue(
   __bang_mul(grad_temp3, nram_w1, mask2, num_deal_grid);
   __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
                    num_deal_grid * deal_num_real, num_deal_grid);
+  __nram__ int32_t table[2] = {0, (int32_t)0xffffffff};
+  __bang_float2int32((int32_t *)grad_temp3, mask2, num_deal_grid, 0);
+  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
+                 num_deal_grid, 64);
+  __bang_cycle_band((char *)grad_temp1, (char *)grad_temp1, (char *)grad_temp3,
+                    deal_num_real * num_deal_grid * sizeof(float),
+                    num_deal_grid * sizeof(float));
+
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
@@ -517,6 +526,12 @@ void __mlu_func__ computeGradValue(
   __bang_mul(grad_temp3, nram_w2, mask1, num_deal_grid);
   __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
                    num_deal_grid * deal_num_real, num_deal_grid);
+  __bang_float2int32((int32_t *)grad_temp3, mask1, num_deal_grid, 0);
+  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
+                 num_deal_grid, 64);
+  __bang_cycle_band((char *)grad_temp1, (char *)grad_temp1, (char *)grad_temp3,
+                    deal_num_real * num_deal_grid * sizeof(float),
+                    num_deal_grid * sizeof(float));
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
@@ -528,7 +543,12 @@ void __mlu_func__ computeGradValue(
   __bang_mul(grad_temp3, nram_w3, mask4, num_deal_grid);
   __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
                    num_deal_grid * deal_num_real, num_deal_grid);
-
+  __bang_float2int32((int32_t *)grad_temp3, mask4, num_deal_grid, 0);
+  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
+                 num_deal_grid, 64);
+  __bang_cycle_band((char *)grad_temp1, (char *)grad_temp1, (char *)grad_temp3,
+                    deal_num_real * num_deal_grid * sizeof(float),
+                    num_deal_grid * sizeof(float));
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
@@ -539,6 +559,12 @@ void __mlu_func__ computeGradValue(
   __bang_mul(grad_temp3, nram_w4, mask3, num_deal_grid);
   __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
                    num_deal_grid * deal_num_real, num_deal_grid);
+  __bang_float2int32((int32_t *)grad_temp3, mask3, num_deal_grid, 0);
+  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
+                 num_deal_grid, 64);
+  __bang_cycle_band((char *)grad_temp1, (char *)grad_temp1, (char *)grad_temp3,
+                    deal_num_real * num_deal_grid * sizeof(float),
+                    num_deal_grid * sizeof(float));
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
 
   for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
