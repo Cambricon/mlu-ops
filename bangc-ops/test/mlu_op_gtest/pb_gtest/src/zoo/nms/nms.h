@@ -53,6 +53,9 @@ class NmsExecutor : public Executor {
   void diffPreprocess();
   int output_boxes_;
   int theory_ops = 0;
+  size_t workspace_size_ = 0;
+  void *workspace_ = nullptr;
+  int box_dim_ = 4;
 };
 
 }  // namespace mluoptest
