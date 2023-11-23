@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         runner: [mlu370-m8]
-        mlu_ops_version : [0.9.0]
+        mlu_ops_version : [0.10.0]
         cntoolkit_version : [3.7.0]
         os: [ubuntu18.04, ubuntu20.04, centos7, centos8, kylin10]
     runs-on: ${{matrix.runner}}
