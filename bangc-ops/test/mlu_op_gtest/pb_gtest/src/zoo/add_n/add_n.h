@@ -47,6 +47,7 @@ class AddNExecutor : public Executor {
                           float *output);
   bool canBroadCast(std::vector<int> shape0, std::vector<int> shape1);
   int64_t getTheoryOps() override;
+  void setMiscellaneousParam() override;
 };
 
 }  // namespace mluoptest

@@ -84,9 +84,6 @@ void UniqueExecutor::compute() {
                       *dev_out_len, workspace_.at(0), dev_output2,
                       (int *)dev_output3, NULL));
       interface_timer_.stop();
-      data_vector_[1].is_output = true;
-      data_vector_[2].is_output = true;
-      data_vector_[3].is_output = true;
     } else {
       if (return_inverse_ && return_counts_) {
         auto dev_output3 = data_vector_[3].device_ptr;
@@ -96,10 +93,6 @@ void UniqueExecutor::compute() {
                                 *dev_out_len, workspace_.at(0), dev_output2,
                                 (int *)dev_output3, (int *)dev_output4));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
-        data_vector_[3].is_output = true;
-        data_vector_[4].is_output = true;
       } else if (return_inverse_ && !return_counts_) {
         auto dev_output3 = data_vector_[3].device_ptr;
         interface_timer_.start();
@@ -107,9 +100,6 @@ void UniqueExecutor::compute() {
                                 *dev_out_len, workspace_.at(0), dev_output2,
                                 (int *)dev_output3, NULL));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
-        data_vector_[3].is_output = true;
       } else if (!return_inverse_ && return_counts_) {
         auto dev_output3 = data_vector_[3].device_ptr;
         interface_timer_.start();
@@ -117,17 +107,12 @@ void UniqueExecutor::compute() {
                                 *dev_out_len, workspace_.at(0), dev_output2,
                                 NULL, (int *)dev_output3));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
-        data_vector_[3].is_output = true;
       } else {
         interface_timer_.start();
         MLUOP_CHECK(mluOpUnique(handle_, unique_desc, tensor_input, dev_input,
                                 *dev_out_len, workspace_.at(0), dev_output2,
                                 NULL, NULL));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
       }
     }
     cpu_runtime_.deallocate(dev_out_len);
@@ -142,9 +127,6 @@ void UniqueExecutor::compute() {
                                  dev_output2, tensor_index, dev_output3,
                                  NULL, NULL));
       interface_timer_.stop();
-      data_vector_[1].is_output = true;
-      data_vector_[2].is_output = true;
-      data_vector_[3].is_output = true;
     } else {
       if (return_inverse_ && return_counts_) {
         auto tensor_index = tensor_desc_[3].tensor;
@@ -158,10 +140,6 @@ void UniqueExecutor::compute() {
                                    tensor_output, dev_output2, tensor_index,
                                    dev_output3, tensor_counts, dev_output4));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
-        data_vector_[3].is_output = true;
-        data_vector_[4].is_output = true;
       } else if (return_inverse_ && !return_counts_) {
         auto tensor_index = tensor_desc_[3].tensor;
         auto dev_output3 = data_vector_[3].device_ptr;
@@ -172,9 +150,6 @@ void UniqueExecutor::compute() {
                                    tensor_output, dev_output2, tensor_index,
                                    dev_output3, NULL, NULL));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
-        data_vector_[3].is_output = true;
       } else if (!return_inverse_ && return_counts_) {
         auto tensor_counts = tensor_desc_[3].tensor;
         auto dev_output3 = data_vector_[3].device_ptr;
@@ -185,9 +160,6 @@ void UniqueExecutor::compute() {
                                    tensor_output, dev_output2, NULL, NULL,
                                    tensor_counts, dev_output3));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
-        data_vector_[3].is_output = true;
       } else {
         interface_timer_.start();
         MLUOP_CHECK(mluOpUnique_v2(handle_, unique_desc, tensor_input,
@@ -196,13 +168,36 @@ void UniqueExecutor::compute() {
                                    tensor_output, dev_output2, NULL, NULL,
                                    NULL, NULL));
         interface_timer_.stop();
-        data_vector_[1].is_output = true;
-        data_vector_[2].is_output = true;
       }
     }
   }
 }
 
+void UniqueExecutor::setMiscellaneousParam() {
+  if (mode_ == MLUOP_UNSORT_FORWARD) {
+    data_vector_[1].alsoServeAsOutput();
+    data_vector_[2].alsoServeAsOutput();
+    data_vector_[3].alsoServeAsOutput();
+  } else {
+    if (return_inverse_ && return_counts_) {
+      data_vector_[1].alsoServeAsOutput();
+      data_vector_[2].alsoServeAsOutput();
+      data_vector_[3].alsoServeAsOutput();
+      data_vector_[4].alsoServeAsOutput();
+    } else if (return_inverse_ && !return_counts_) {
+      data_vector_[1].alsoServeAsOutput();
+      data_vector_[2].alsoServeAsOutput();
+      data_vector_[3].alsoServeAsOutput();
+    } else if (!return_inverse_ && return_counts_) {
+      data_vector_[1].alsoServeAsOutput();
+      data_vector_[2].alsoServeAsOutput();
+      data_vector_[3].alsoServeAsOutput();
+    } else {
+      data_vector_[1].alsoServeAsOutput();
+      data_vector_[2].alsoServeAsOutput();
+    }
+  }
+}
 void UniqueExecutor::cpuCompute() {
   assert(parser_->getInputNum() == 1);
   auto tensor_input = tensor_desc_[0].tensor;

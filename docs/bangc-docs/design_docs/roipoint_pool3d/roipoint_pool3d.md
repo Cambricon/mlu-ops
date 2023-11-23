@@ -363,7 +363,7 @@ void check_pts_in_box3d(const T *boxes3d,
   // |z - cz|
   __bang_active_abs(auxiliary_c, auxiliary_c, deal_num);
   // |z - cz| > dz / 2.0
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   __bang_gt_scalar(auxiliary_c, auxiliary_c, (0.5 * dz), deal_num);
 #else
   __bang_write_value(auxiliary_d, deal_num, (0.5 * dz));
@@ -380,7 +380,7 @@ void check_pts_in_box3d(const T *boxes3d,
   // |local_x|
   __bang_active_abs(auxiliary_d, auxiliary_d, deal_num);
   // |local_x| < dx / 2.0
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   __bang_lt_scalar(auxiliary_d, auxiliary_d, (0.5 * dx), deal_num);
 #else
   __bang_write_value(auxiliary_e, deal_num, (0.5 * dx));
@@ -395,7 +395,7 @@ void check_pts_in_box3d(const T *boxes3d,
   // |local_y|
   __bang_active_abs(auxiliary_e, auxiliary_e, deal_num);
   // |local_y| < dy / 2.0
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   __bang_lt_scalar(auxiliary_e, auxiliary_e, (0.5 * dy), deal_num);
 #else
   __bang_write_value(auxiliary_f, deal_num, (0.5 * dy));

@@ -47,7 +47,6 @@
 #define GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
 
 #include <limits>
-#include <string>
 
 #include "gtest/internal/gtest-port.h"
 
@@ -99,9 +98,7 @@ class GTEST_API_ Message {
   }
 
   // Constructs a Message from a C-string.
-  explicit Message(const char *str) : ss_(new ::std::stringstream) {
-    *ss_ << str;
-  }
+  explicit Message(const char *str) : ss_(new ::std::stringstream) { *ss_ << str; }
 
 #if GTEST_OS_SYMBIAN
   // Streams a value (either a pointer or not) to this object.
@@ -209,8 +206,7 @@ class GTEST_API_ Message {
     }
   }
   template <typename T>
-  inline void StreamHelper(internal::false_type /*is_pointer*/,
-                           const T &value) {
+  inline void StreamHelper(internal::false_type /*is_pointer*/, const T &value) {
     // See the comments in Message& operator <<(const T&) above for why
     // we need this using statement.
     using ::operator<<;

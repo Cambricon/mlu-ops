@@ -31,10 +31,17 @@
 #define MLUOP_MINOR 11
 #define MLUOP_PATCHLEVEL 0
 
+/*********************************************************************************
+ * deprecate MLUOP_VERSION is not recommended to use, it is recommended to directly
+ * use MLUOP_MAJOR, MLUOP_MINOR and MLUOP_PATCHLEVEL to get mluOp version.
+ ********************************************************************************/
+#define MLUOP_VERSION (MLUOP_MAJOR * 1000 + MLUOP_MINOR * 100 + MLUOP_PATCHLEVEL)
+
 #define MLUOP_DIM_MAX 8
 
 #include <stdint.h>
 
+#include "cn_api.h"
 #include "cnrt.h"
 
 #ifndef MLUOP_WIN_API
@@ -129,7 +136,30 @@ typedef enum {
   /*!< The data layout is in the following order: batch size, channel. */
   MLUOP_LAYOUT_NLC = 9,
   /*!< The data layout is in the following order: batch size, width, channel. */
+  MLUOP_LAYOUT_NCL = 10,
+  /*!< The data layout is in the following order: batch size, channel, length.*/
 } mluOpTensorLayout_t;
+
+/******************************************************************************
+ * Cambricon MLUOP sequence data Layout
+ ******************************************************************************/
+//! @brief
+/*! Enumeration variables describing the sequence data (SeqData) layouts. */
+/*! N is batch, B is beam, T is sequence length, C is embedding size. */
+typedef enum {
+  MLUOP_SEQDATA_TNC        = 0,  /*!< Sequence data layout order: TNC. */
+  MLUOP_SEQDATA_TNC_PACKED = 1,  /*!< Sequence data layout order: TNC_PACKED. */
+  MLUOP_SEQDATA_NTC        = 2,  /*!< Sequence data layout order: NTC. */
+  MLUOP_SEQDATA_NC         = 3,  /*!< Sequence data layout order:  NC. */
+  MLUOP_SEQDATA_TNBC       = 4,  /*!< Sequence data layout order: TNBC. */
+  MLUOP_SEQDATA_TBNC       = 5,  /*!< Sequence data layout order: TBNC. */
+  MLUOP_SEQDATA_NBTC       = 6,  /*!< Sequence data layout order: NBTC. */
+  MLUOP_SEQDATA_NTBC       = 7,  /*!< Sequence data layout order: NTBC. */
+  MLUOP_SEQDATA_BNTC       = 8,  /*!< Sequence data layout order: BNTC. */
+  MLUOP_SEQDATA_BTNC       = 9,  /*!< Sequence data layout order: BTNC. */
+  MLUOP_SEQDATA_TN         = 10, /*!< Sequence data layout order: TN. */
+  MLUOP_SEQDATA_NT         = 11, /*!< Sequence data layout order: NT. */
+} mluOpSeqDataLayout_t;
 
 /******************************************************************************
  * MLU-OPS Data Type
@@ -152,6 +182,9 @@ typedef enum {
   MLUOP_DTYPE_BOOL          = 8,  /*!< A boolean data type. */
   MLUOP_DTYPE_COMPLEX_HALF  = 15, /*!< A 32-bit complex number of two fp16. */
   MLUOP_DTYPE_COMPLEX_FLOAT = 16, /*!< A 64-bit complex number of two fp32. */
+  MLUOP_DTYPE_BFLOAT16      = 17,
+  /*!< The data is a 16-bit floating-point data type with one bit for sign,
+   * 8 bits for exponent and 7 bits for fraction. */
 } mluOpDataType_t;
 
 /*!
@@ -969,6 +1002,81 @@ mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode);
  * the MLU-OPS context at the end with ::mluOpDestroyTensorDescriptor.
  */
 typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
+
+/*! The descriptor of Sequence Data that holds the dimensions,
+ * layout, data type, sequence length, padding fill, position, and scale.
+ * The total size of the tensor descriptor only support less than 2 Giga-elements.
+ * You need to call the ::mluOpCreateSeqDataDescriptor function to create a descriptor, and
+ * call the ::mluOpSetSeqDataDescriptor to set the sequence data information to the descriptor.
+ * If the sequence data is in fixed-point data type, call ::mluOpSetSeqDataDescriptorPositionAndScale
+ * to set the position and scale of the sequence data.
+ * At last, you need to destroy the descriptor at the end with the ::mluOpDestroySeqDataDescriptor
+ * function. */
+typedef struct mluOpSeqDataStruct *mluOpSeqDataDescriptor_t;
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSeqDataDescriptor(const mluOpSeqDataDescriptor_t seq_data_desc,
+                          mluOpSeqDataLayout_t *layout,
+                          mluOpDataType_t *dtype,
+                          int *dimNb,
+                          int dimSize[],
+                          int *seqLengthArraySize,
+                          int seqLengthArray[],
+                          void *paddingFill);
+
+// Group:Common Interface
+// Subgroup:SeqData
+/*!
+ * @brief Retrieves the sequence data descriptor \p seq_data_desc that holds the dimensions,
+ * data type, layout, padding fill and the sequence lengths of the input sequence data.
+ *
+ * @param[in] seq_data_desc
+ *   Input. The descriptor of the sequence data. For detailed information,
+ *   see ::mluOpSeqDataDescriptor_t.
+ * @param[out] layout
+ *   Output. The layout of the sequence data. See ::mluOpSeqDataLayout_t.
+ * @param[out] dtype
+ *   Output. The data type of the sequence data. See ::mluOpDataType_t.
+ * @param[out] dimNb
+ *   Output. The number of dimensions of the sequence data.
+ * @param[out] dimSize
+ *   Output. An array that contains the size of the sequence data for each dimension.
+ * @param[out] seqLengthArraySize
+ *   Output. Number of elements in sequence length array, \p seqLengthArray[]. It is equal to
+ *   batch * beam (N and B described in the ::mluOpSeqDataLayout_t).
+ * @param[out] seqLengthArray
+ *   Output. An integer array recording the length of all sequences. Note that the array is
+ *   ordered in a batch-beam order, in despite of sequence data layout. Return NULL when sequence
+ *   length array is not set.
+ * @param[out] paddingFill
+ *   Output. A host pointer to the data type \p dtype to fill up the padding vectors within
+ *   the valid length of each sequence. Use NULL when extra padding is not requested.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - Before calling this function, ::mluOpCreateSeqDataDescriptor, ::mluOpSetSeqDataDescriptor_v2
+ *   should be called.
+ *
+ * @note
+ * - dimSize[0] represents the highest dimension, and dimSize[dimNb - 1] represents
+ *   the lowest dimension.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSeqDataDescriptor_v2(const mluOpSeqDataDescriptor_t seq_data_desc,
+                             mluOpSeqDataLayout_t *layout,
+                             mluOpDataType_t *dtype,
+                             int *dimNb,
+                             int64_t dimSize[],
+                             int64_t *seqLengthArraySize,
+                             int64_t seqLengthArray[],
+                             void *paddingFill);
 
 /*!
  * The descriptor of the matrix multiplication function that holds compute type, bias type,
@@ -2016,6 +2124,61 @@ mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc, int
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetTensorDescriptor(
     const mluOpTensorDescriptor_t desc, mluOpTensorLayout_t *layout, mluOpDataType_t *dtype, int *dimNb, int dimSize[]);
+
+// Group:Common Interface
+// Subgroup:Tensor
+/*!
+ * @brief Sets the pointer mode \p pointer_mode factor to the input tensor descriptor \p desc.
+ *
+ * @param[in,out] desc
+ *   Input. The descriptor of the tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] pointer_mode
+ *   Input. The pointer mode of the input tensor. For detailed information, seee ::mluOpPointerMode_t.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - Currently. the \p pointer_mode setting to MLUOP_POINTER_MODE_HOST is only supported when the number
+ *   of dimensions of \p desc is 0.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorPointerMode(mluOpTensorDescriptor_t desc, mluOpPointerMode_t pointer_mode);
+
+// Group:Common Interface
+// Subgroup:Tensor
+/*!
+ * @brief Retrieves the pointer mode of the input tensor descriptor \p desc set by
+ * ::mluOpSetTensorDescriptorPointerMode.
+ *
+ * @param[in] desc
+ *   Input. The descriptor of the tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] pointer_mode
+ *   Input. Pointer to the host memory that holds information about the pointer mode of the input tensor.
+ *   For detailed information, seee ::mluOpPointerMode_t.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorPointerMode(mluOpTensorDescriptor_t desc, mluOpPointerMode_t *pointer_mode);
 
 // Group:Tensor
 /*!
@@ -16014,8 +16177,6 @@ mluOpBatchMatMulBCast(mluOpHandle_t handle,
  *   with broadcasting.
  * @param[in] alpha
  *   Input. A host pointer to scaling factor of tensor \b a.
- *   In MLU200, CE3226 and SD5223 series, \p alpha and \p beta setting are not supported currently,
- *   and the value of alpha in the host pointer should be 1 in this case.
  * @param[in] a_desc
  *   Input. The descriptor of the input tensor of left matrix. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
@@ -16028,8 +16189,6 @@ mluOpBatchMatMulBCast(mluOpHandle_t handle,
  *   Input. Pointer to the MLU memory that stores the right matrix.
  * @param[in] beta
  *   Input. A host pointer to scaling factor of tensor \b c.
- *   In MLU200, CE3226 and SD5223 series, \p alpha and \p beta setting are not supported currently,
- *   and the value of beta in the host pointer should be 0 in this case.
  * @param[in] c_desc
  *   Input. The descriptor of the output tensor. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in,out] c
@@ -16082,7 +16241,6 @@ mluOpBatchMatMulBCast(mluOpHandle_t handle,
  *   of \b a.
  * - The offchip data types of \b a and \b b must be then same when they are both floating
  *   point.
- * - The onchip data types of \b a and \b b must be both fixed point on MLU200, CE3226 series.
  * - If \b a offchip data type is integer, it should be the same as \b a onchip data type.
  * - The floating point of \b a, \b b and \b c under the same combination need to be consistent.
  * - The number of dimensions is no more than \p MLUOP_DIM_MAX.

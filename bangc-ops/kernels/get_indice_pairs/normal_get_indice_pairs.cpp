@@ -633,7 +633,7 @@ mluOpStatus_t launchBalanceKernel(mluOpHandle_t handle,
 
 mluOpStatus_t launchFillOp(mluOpHandle_t handle,
                            const std::string interface_name,
-                           void *mluOp_fill_addr, int output_size,
+                           void *mluop_fill_addr, int output_size,
                            int fill_value) {
   mluOpTensorDescriptor_t fill_tensor_desc;
   INTERNAL_CHECK(
@@ -648,7 +648,7 @@ mluOpStatus_t launchFillOp(mluOpHandle_t handle,
   INTERNAL_CHECK(interface_name,
                  MLUOP_STATUS_SUCCESS ==
                      mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                  fill_tensor_desc, mluOp_fill_addr));
+                                  fill_tensor_desc, mluop_fill_addr));
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(fill_tensor_desc));

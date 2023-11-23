@@ -20,13 +20,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EXECUTOR_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EXECUTOR_H_
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_EXECUTOR_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_EXECUTOR_H_
 
 #include <chrono>  // NOLINT
 #include <tuple>
 #include <vector>
 #include <set>
+#include <stack>
 #include <algorithm>
 #include <sstream>
 #include <fstream>
@@ -43,16 +44,22 @@
 #include "core/type.h"
 #include "core/context.h"
 #include "core/logging.h"
-#include "pb_test_tools.h"
+#include "tools.h"
 #include "parser.h"
 #include "evaluator.h"
 #include "runtime.h"
 #include "memory_pool.h"
 #include "variable.h"
-#include "internal_kernel/fill_ram/fill_ram.h"
+#include "stride.h"
+#include "test_env.h"
+#include "math_half.h"
 
-using namespace std::chrono;  // NOLINT
+#include "cnpapi.h"
 
+#ifndef GTEST_ENABLE_GPERFTOOLS
+// compile with google/gerftools (which provides tcmalloc and cpu profiler)
+#define GTEST_ENABLE_GPERFTOOLS 0
+#endif
 namespace mluoptest {
 
 typedef std::function<void()> Func;
@@ -65,11 +72,9 @@ const float IO_BANDWIDTH_MLU290 = 1024;
 const float IO_BANDWIDTH_MLU370 = 307.2;
 const float IO_BANDWIDTH_MLU370_SINGLE_CLUSTER = 128;
 // 590 add
-const float IO_BANDWIDTH_MLU590 = 0.0;
+const float IO_BANDWIDTH_MLU590 = 2048;
 
 // mlu270 mlu220 mlu290 ct peak compute force is same;
-// ref pageid: 42177509
-// TODO(tp_520): CT_PEAK_COMPUTE_FORCE is half of these
 const int CT_PEAK_FLOAT16_COMPUTE_FORCE = 64;
 const int CT_PEAK_FLOAT32_COMPUTE_FORCE = 32;
 const int CT_PEAK_ELSE_COMPUTE_FORCE = 64;
@@ -101,7 +106,28 @@ const int LT_PEAK_FP32_FP32_COMPUTE_FORCE_590 = 2 * 0.0;
 const int LT_PEAK_TF32_TF32_COMPUTE_FORCE_590 = 2 * 0.0;
 
 // op that use lt peak force to get compute efficiency
-const std::unordered_set<std::string> lt_op_set = {};
+const std::unordered_set<std::string> lt_op_set = {
+    "convolution_forward",
+    "conv",
+    "convolution_backward_filter",
+    "fusedOp",
+    "convbpfilter",
+    "convolution_backward_data",
+    "convolution3d_backward_filter",
+    "Convolution_Backward_Data",
+    "convbpdata",
+    "deconvolution",
+    "deconv",
+    "batch_matmul",
+    "batch_matmul_bcast",
+    "quantize_batch_matmul",
+    "quantize_batch_matmul_bcast",
+    "gemm4conv",
+    "matmul",
+    "matmul_inference",
+    "quantize_matmul",
+    "stride_batch_matmul",
+    "rnn_inference"};
 
 const std::set<mluOpDevType_t> arch_skip_nan_inf = {MLUOP_MLU220, MLUOP_MLU270,
                                                     MLUOP_MLU290};
@@ -127,7 +153,18 @@ struct ExecuteConfig {
   bool perf_baseline = getEnv("MLUOP_GTEST_PERF_BASELINE", false);
   bool acc_baseline = getEnv("MLUOP_GTEST_ACC_BASELINE", false);
   bool test_llc = false;
+  bool compatible_test = false;
   size_t perf_repeat = 1;
+  int test_algo = -2147483648;
+  bool random_mlu_address = false;
+  bool enable_const_dram = false;
+  bool auto_tuning = false;
+#if GTEST_ENABLE_GPERFTOOLS
+  // TODO(jiaminghao) move into global_var
+  bool gtest_internal_cpu_profile =
+      getEnv("MLUOP_GTEST_ENABLE_GPERFTOOLS", false);
+#endif
+  std::string kernel_trace_policy;
 };
 
 struct HardwareTimeNotifier {
@@ -172,7 +209,7 @@ struct ExecuteContext {
   }
   // reserve for memory pool
   std::shared_ptr<CPUMemoryPool> cmp = nullptr;
-  std::shared_ptr<MLUMemoryPool> mmp = nullptr;
+  std::shared_ptr<MLUMemoryPool> mmp = std::make_shared<MLUMemoryPool>();
   void destroy() {
     hw_notifier->destroy();
     hw_notifier_layer->destroy();
@@ -219,9 +256,9 @@ struct HostTimer {
   double duration(int repeat = 1) {
     if (durations.empty()) {
       LOG(WARNING)
-          << "Please add interface_timer_.start() before mluOps op interface.";
+          << "Please add interface_timer_.start() before MLUOP op interface.";
       LOG(WARNING)
-          << "Please add interface_timer_.stop() after mluOps op interface.";
+          << "Please add interface_timer_.stop() after MLUOP op interface.";
       return -1;
     }
     double sum = 0;
@@ -244,10 +281,10 @@ struct HostTimer {
 };
 
 /* quant mode, used in cast_in().
- * 0:only set position;
- * 1:set position and scale;
- * 2:set posiiton, scale and offset;
- */
+ * 0:only set position;
+ * 1:set position and scale;
+ * 2:set posiiton, scale and offset;
+ */
 enum QuantMode {
   ONLY_POSITION = 0,
   POSITION_SCALE = 1,
@@ -264,10 +301,14 @@ enum class DramTensorType {
 };
 
 struct DataBlock {
-  DataBlock(MetaTensor *ts, bool o) {
-    is_null = ts->is_null;
-    is_output = o;
+  MetaTensor *_ts;  // should be private
+  MetaTensor *getMetaTensor() const { return _ts; }
+  inline bool is_null() const { return _ts->is_null; }
+  inline bool is_cpu_scalar() const { return _ts->is_cpu_scalar; }
+  inline mluOpPointerMode_t pointer_mode() const { return _ts->pointer_mode; }
 
+  DataBlock(MetaTensor *ts, DramTensorType dram_tensor_type_) : _ts(ts) {
+    dram_tensor_type = dram_tensor_type_;
     name = ts->name;
     dtype = ts->dtype;
     oc_dt = ts->oc_dt;
@@ -278,18 +319,18 @@ struct DataBlock {
     count_without_stride = ts->shape_count;
     size_without_stride = count_without_stride * ts->sizeof_dtype;
   }
-  void *host_ptr = nullptr;           // host pointer;
-  void *device_ptr = nullptr;         // device pointer
-  void *device_origin_ptr = nullptr;  // device pointer of origin
-  void *device_perf_ptr = nullptr;    // device pointer for perf test
+  void *host_ptr = nullptr;              // host pointer;
+  void *device_ptr = nullptr;            // device pointer
+  void *device_origin_ptr = nullptr;     // device pointer of origin
+  void *device_perf_ptr = nullptr;       // space fed to MLU kernel
+  void *device_perf_data_ptr = nullptr;  // store device real data only
 
   size_t size = 0;                  // size in bytes (count * sizeof[dtype])
   size_t count = 0;                 // element count
   size_t count_without_stride = 0;  // not include stride.
   size_t size_without_stride = 0;
 
-  bool is_output = false;
-  bool is_null = false;
+  DramTensorType dram_tensor_type;
 
   mluOpDataType_t dtype = MLUOP_DTYPE_INVALID;
   mluOpDataType_t oc_dt = MLUOP_DTYPE_INVALID;
@@ -298,18 +339,44 @@ struct DataBlock {
   std::vector<int64_t> stride;
   std::string name;
 
-  DramTensorType dram_tensor_type;
+  ///< wrap host_ptr or device_ptr selection based on is_cpu_scalar
+  inline void *get_data_ptr() const {
+    return (is_cpu_scalar() ? host_ptr : device_ptr);
+  }
+  DramTensorType getDramTensorType() const { return dram_tensor_type; }
   void setDramTensorType(DramTensorType dram_tensor_type_) {
     dram_tensor_type = dram_tensor_type_;
   }
+
+  bool is_only_input() const {
+    return dram_tensor_type == DramTensorType::ONLY_INPUT;
+  }
+  bool is_only_output() const {
+    return dram_tensor_type == DramTensorType::ONLY_OUTPUT;
+  }
+  bool is_both_inoutput() const {
+    return dram_tensor_type == DramTensorType::BOTH_INPUT_OUTPUT;
+  }
+  bool is_both_involatile() const {
+    return dram_tensor_type == DramTensorType::BOTH_INPUT_VOLATILE;
+  }
+  bool is_input() const {
+    return is_only_input() || is_both_inoutput() || is_both_involatile();
+  }
+  bool is_output() const { return is_only_output() || is_both_inoutput(); }
+  // NOTE: the following 3 methods are not recommended to use, instead go ahead
+  // with setDramTensorType
+  void onlyServeAsInput();
+  void alsoServeAsOutput();
+  void alsoServeAsVolatile();
 };
 
 struct TensorPair {
-  TensorPair(mluOpTensorDescriptor_t t, bool i) : tensor(t), is_output(i) {}
+  TensorPair(mluOpTensorDescriptor_t t) : tensor(t) {}  // NOLINT
   mluOpTensorDescriptor_t tensor = nullptr;
-  bool is_output = false;
 };
 
+class kernelTracingCtx;  // forward declaration, to avoid include headers
 class Executor {
  public:
   Executor() {}
@@ -326,13 +393,33 @@ class Executor {
   inline EvaluateResult *result() { return &eva_res_; }
 
  protected:
-  HostTimer interface_timer_;
+  class HostTimerWrapper : public HostTimer {
+    // XXX some op call other mluOp interfaces inside `compute`... to avoid
+    // tracing 'noise' kernels, I have to change state ugly inside HostTimer...
+   public:
+    explicit HostTimerWrapper(Executor *exec) : exec_(exec) {}
+    inline void start() {
+      exec_->enableKernelTracing();
+      dynamic_cast<HostTimer *>(this)->start();
+    }
+    inline void stop() {
+      dynamic_cast<HostTimer *>(this)->stop();
+      exec_->disableKernelTracing();
+    }
+    ~HostTimerWrapper() { exec_->disableKernelTracing(); }
+
+   private:
+    Executor *exec_;
+  };
+  //  HostTimer interface_timer_;
+  HostTimerWrapper interface_timer_{this};
   MLURuntime mlu_runtime_;
   CPURuntime cpu_runtime_;
   std::shared_ptr<Parser> parser_ = nullptr;
   std::shared_ptr<Evaluator> eva_ = nullptr;
   std::shared_ptr<ExecuteContext> exe_context_ = nullptr;
   std::shared_ptr<ExecuteConfig> exe_config_ = nullptr;
+  std::shared_ptr<Stride> stride_ = nullptr;
   // handle pointer point to the handle in ectx_, simplify coding.
   mluOpHandle_t handle_ = nullptr;
   // queue pointer point to the queue in ectx_.
@@ -341,7 +428,7 @@ class Executor {
   // true for output, false for input
   // if we have multi input or output
   // their order must consistent with order in prototxt.
-  // and consistent with mluOps api
+  // and consistent with mluOp api
   std::vector<TensorPair> tensor_desc_;  // = delete, same with *->get(i).tensor
   std::vector<DataBlock>
       data_vector_;  // = delete, same with *->get(i).host_ptr
@@ -353,6 +440,7 @@ class Executor {
   bool flag_input_reuse_ = false;
 
   // baseline data
+  // FIXME(taokai): actual data type might be fp64 for MLUOP_DTYPE_DOUBLE
   // cpu
   std::vector<float *> cpu_fp32_input_;
   std::vector<float *> cpu_fp32_stride_input_;
@@ -365,8 +453,19 @@ class Executor {
   virtual void paramCheck() {}  // check op params
   virtual void workspaceMalloc() {}
   virtual void workspaceFree() {}
-  virtual void cpuCompute() = 0;
+  virtual void cpuCompute();
   virtual void compute() = 0;
+  virtual void compute_v2() {}
+  virtual void compute_v3() {}
+  virtual void compute_v4() {}
+  virtual void compute_v5() {}
+  virtual void compute_v6() {}
+  virtual void compute_v7() {}
+  virtual void prepareComputeParam() {}
+  virtual void freeComputeParam() {}
+  virtual size_t getLatestApiVersion() { return 1; }
+  virtual size_t getProtoApiVersion();
+  inline size_t getTestVersion() { return test_version_; }
   virtual void computeByLayer() {}  // for fusedOp
   virtual void initHostData();
   virtual void baselineOutputMalloc();  // malloc cpu input and output
@@ -378,12 +477,25 @@ class Executor {
   virtual void diffPreprocess() {}
   virtual void hostMalloc();
   virtual void hostReorder() {}
+  virtual void searchAlgo() {}
   virtual bool useTf32ComputeForce();
 
-  bool isPlatformSupportTf32();
-  bool useFloatConvInst();
-  bool enableTf32MluEnv();
-  bool opParamSupportTf32();
+  virtual void selectStorageDtype() { storage_dtype_ = FLOAT; }
+  virtual void castOutByDtype();
+  virtual void getBaselineOutputByDtype();
+  virtual void baselineOutputMallocByDtype();
+  StorageDtype storage_dtype_;
+
+  /*
+          input
+         /     \
+     gpu        mlu
+     /           \
+  baseline    mlu_output
+  */
+  inline void *getInput(size_t index) { return cpu_input_.at(index); }
+  inline void *getBaseline(size_t index) { return cpu_output_.at(index); }
+  inline void *getMluOutput(size_t index) { return mlu_output_.at(index); }
 
   void castDataIn(float *src_data, mluOpDataType_t src_dtype, void *dst_data,
                   mluOpDataType_t dst_dtype, size_t count, QuantMode quant_mode,
@@ -404,13 +516,17 @@ class Executor {
             Evaluator::DIFF3_2, Evaluator::DIFF4, Evaluator::DIFF_KL};
   }
   inline void recordGtestTimePoint(const std::string &&name) {
-    // XXX  At present, this method does not have race condition cuz methods
+    // XXX At present, this method does not have race condition cuz methods
     //      in single executor instance
     //      are always invoked in-ordered even it is in multi-thread mode.
     //      But things may changed in the future, may need to add lock in the
     //      future
     time_point_records_.emplace_back(
         std::make_tuple(name, std::chrono::steady_clock::now()));
+  }
+  // some ops might allocate device space inside compute
+  virtual std::vector<size_t> getExtraDevSpaceCompute() {
+    return std::vector<size_t>();
   }
   virtual void setMiscellaneousParam() {
   }  // set dram_tensor_type, etc if needed
@@ -421,6 +537,10 @@ class Executor {
   std::vector<std::tuple<std::string,
                          std::chrono::time_point<std::chrono::steady_clock>>>
       time_point_records_;
+  // XXX workaround for op which not support map half inf to float inf
+  void (*arrayCastFloatAndNormalWrapper)(void *, mluOpDataType_t, void *,
+                                         mluOpDataType_t,
+                                         size_t) = arrayCastFloatAndNormal;
   void setHandle();
   void createTensors();
   void destroyTensors() noexcept;
@@ -436,32 +556,85 @@ class Executor {
   // save mlu fp32 output
   void mluOutputMalloc();
   void mluOutputFree() noexcept;
+  bool needDevPerfDataSpace();
+  bool needDevPerfSpace();
+  bool needDevRandomSpace() const;
+  inline bool perfUseOriginData() const {
+    return rely_real_data_ || zero_input_;
+  }
+  inline bool isComputeDiff() const { return !(exe_config_->mlu_only); }
 
   void hostFree() noexcept;
 
   void deviceMalloc();
+  void deviceRestSpaceMalloc();
   void deviceFree() noexcept;
   // switch data for perf test
   void switchDataToOrigin();
   void switchDataToPerf();
+  bool skipMallocDevice(MetaTensor *mt) {
+    return mt->empty() || mt->is_cpu_scalar;
+  }
   // memcpy
   void copyIn();
   void copyOut();
-  void isOpRelyRealData();
+  void getOpRelyRealData();
+  void getOpWorkspaceAfterDevMalloc();
   void getPerfTestMode();
   void printPerfTestInfo();
+  bool isPlatformSupportTf32();
+  bool useFloatConvInst();
+  bool enableTf32MluEnv();
+  bool opParamSupportTf32();
+  void dumpOutputData();
+  void postProcessAfterLaunch();
 
-  void checkBaseline();
-  void checkAccuracyBaseline();
-  EvaluateResult evaluate();
+  bool checkBaseline();
+  bool checkAccuracyBaseline();
+  bool checkMluOverWritten();
+  bool checkMluMemoryLeak();
+  bool checkDiff();
+  void getAllTestResult();
 
-  void castHalfOutput();
+  void setStorageFuncPtr();
+  void strideOutputByDtype();
+  void strideOutput();
+  void saveInputWithStride();
+  void saveInputWithStrideByDtype();
+  void mluOutputMallocByDtype();
+  /*
+          input
+         /     \
+     gpu        mlu
+     /           \
+  baseline    mlu_output
+  */
+  std::vector<void *> cpu_input_;  // input
+  std::vector<void *> cpu_stride_input_;
+  std::vector<void *> cpu_output_;  // baseline
+  std::vector<void *> mlu_output_;  // mlu_output
+
+  // for support both float * store and void * store
+  std::function<void(Executor *)> castOutFunc = nullptr;
+  std::function<void(Executor *)> getBaselineOutputFunc = nullptr;
+  std::function<void(Executor *)> baselineOutputMallocFunc = nullptr;
+  std::function<void(Executor *)> mluOutputMallocFunc = nullptr;
+  std::function<void(Executor *)> strideOutputFunc = nullptr;
+  std::function<void(Executor *)> saveInputWithStrideFunc = nullptr;
+
+  virtual void castHalfOuput();
 
   std::vector<DataBlock *> getInputBlocks();
-  std::vector<DataBlock *> getOutputBlocks();
+  std::vector<DataBlock *> getOutputBlocks(bool include_both_inout);
+
+  // cast mode for conv
+  void quantizeTensorByChannel(float *src_data, void *dst_data,
+                               mluOpDataType_t dst_dtype, size_t count,
+                               int tensor_index,
+                               mluoptest::ConvolutionCastMode cast_mode);
 
   // efficiency
-  int getMluCoreFrequency();
+  int getIpuFrequency();
 
   enum ComputeUnit { LT_COMPUTE, CT_COMPUTE };
   ComputeUnit compute_unit_;
@@ -473,6 +646,7 @@ class Executor {
   double getLtPeakComputeForce();
   double getPeakComputeForce();
   double getIoBandwidth();
+  // TODO(niewenchang): replace IoBandWidth later.
   double getBandWidthByDev();
   void getMluPerfInfo(PerfInfo *info);
   void getGpuPerfInfo(PerfInfo *info);
@@ -480,11 +654,27 @@ class Executor {
                                 // time_point_init_
   void fillRam();
 
+  std::shared_ptr<kernelTracingCtx> kernel_tracing_ctx;
+  void enableKernelTracing();
+  void disableKernelTracing();
+  void startInterfaceListening();
+  void stopInterfaceListening();
+  void recordKernel(cnrtFunctionType_t, cnrtDim3_t, const char *name);
+  void setLlcSize();
+  inline bool isSwift() {
+    return TestEnvironment::test_env_.mlu_platform.find("MLU590") !=
+           std::string::npos;
+  }
+  inline bool isMagpie() {
+    return handle_->arch == 592 && !isSwift();
+  }
+  size_t llc_size_ = 48 * 1024 * 1024;
+
   EvaluateResult eva_res_;
   // whether op rely on real data
   bool rely_real_data_ = false;
   // fast mode of mlu_only mode, do not malloc host space
-  bool mlu_only_fast_ = false;
+  bool mlu_need_host_data = true;
   // whether input data can be set zero
   bool zero_input_ = false;
   bool need_compute_by_layer_ = false;
@@ -499,20 +689,36 @@ class Executor {
                             float *dst_data, const mluOpDataType_t dst_dtype,
                             const size_t count,
                             const cnrtQuantizedParam_t quant_param);
-  float callBackKernelSyncAndGetTime(
+  std::tuple<size_t, float> callBackKernelSyncAndGetTime(
       Func gtest_kernel, std::shared_ptr<HardwareTimeNotifier> notifier);
+  void setupForPerfIter(int repeat, int iter, int iter_start);
+  void teardownForPerfIter(int repeat, int iter);
   void fillLLC();
   void freeLLC();
   // for llc test
   CNaddr const_addr_;
+  std::stack<CNaddr> const_dram_;
+
+  void selectApiVersion();
+  void (Executor::*compute_func)(void) = nullptr;
+  size_t test_version_ = 1;
+  const int repeat_val_1 = 1;
+  inline bool doPerf() const { return exe_config_->perf_repeat > repeat_val_1; }
+  size_t getTotalDevTensorSize() const;
+  void perfRepeat();
+  // used for check whether there is any mlu memory
+  // that has been forgotten to be released in compute()
+  struct MLUMemoryStatus {
+    size_t allocated_before = 0;
+    size_t allocated_after = 0;
+  };
+  struct MLUMemoryStatus mlu_mem_status_;
+  void getTestInfo();
 
  protected:
-  void tensor_stride_in(void *dst, void *src, const std::vector<size_t> &shape,
-                        const std::vector<size_t> &dst_stride,
-                        size_t sizeof_dtype);
-  void tensor_stride_out(void *dst, void *src, const std::vector<size_t> &shape,
-                         const std::vector<size_t> &src_stride,
-                         size_t sizeof_dtype);
+  // workaround for op that could not convert half inf to float inf
+  // (which has to be converted to 65504)
+  virtual bool getFlagHalfInfTo65504() { return false; }
 
   inline std::vector<size_t> getTensorShapeSizeT(MetaTensor *ts) {
     std::vector<size_t> shape_vec(ts->shape.begin(), ts->shape.end());
@@ -529,4 +735,4 @@ class Executor {
 
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EXECUTOR_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_EXECUTOR_H_

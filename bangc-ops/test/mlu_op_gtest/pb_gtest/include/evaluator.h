@@ -20,18 +20,18 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EVALUATOR_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EVALUATOR_H_
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_EVALUATOR_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_EVALUATOR_H_
 
 #ifdef __AVX__
 #include <immintrin.h>
 #include <limits>
 #endif
-
 #include <algorithm>
-#include <iostream>
 #include <cstring>
 #include <iomanip>
+#include <iostream>
+#include <list>
 #include <sstream>
 #include <vector>
 #include <tuple>
@@ -47,18 +47,18 @@
 
 #include "core/logging.h"
 #include "tools.h"
+#include "cpu_dtype.h"
 #include "internal_perf.h"
+#include "variable.h"
 #include "perf_test.h"
 #include "accuracy_test.h"
-#include "stats_test.h"
-#include "pb_test_tools.h"
 
 namespace mluoptest {
 
 // determine whether the test case passes.
 // this class receives:
 // 1.output data --> error
-// 2.latency of mlu
+// 2.latency of mlu and gpu
 // 3.io size/io bandwidth  --> io efficiency
 // 4.ops/peak force  --> compute efficiency
 // 5.interface time --> print
@@ -119,7 +119,54 @@ bool hasNanOrInf<double>(double *data, size_t count) {
   }
   return false;
 }
-#else
+
+template <typename T>
+static bool twoBytesNanInf(T *data, size_t count, int first_mask,
+                           int second_mask) {
+  float *data_float = reinterpret_cast<float *>(data);
+  __m256 first_half_inf_bit = _mm256_set1_ps(*(float *)&first_mask);
+  __m256 second_half_inf_bit = _mm256_set1_ps(*(float *)&second_mask);
+
+  size_t stride = 256 / (sizeof(float) * 8);
+  size_t deal_count = (count / 2 / stride) * stride;
+
+  __m256 m_data;
+  for (size_t i = 0; i < deal_count; i += stride) {
+    m_data = _mm256_loadu_ps(data_float + i);
+    m_data = _mm256_and_ps(first_half_inf_bit, m_data);
+    m_data = _mm256_cmp_ps(m_data, first_half_inf_bit, _CMP_EQ_OQ);
+    if (_mm256_movemask_ps(m_data) != 0) {
+      return true;
+    }
+  }
+  for (size_t i = 0; i < deal_count; i += stride) {
+    m_data = _mm256_loadu_ps(data_float + i);
+    m_data = _mm256_and_ps(second_half_inf_bit, m_data);
+    m_data = _mm256_cmp_ps(m_data, second_half_inf_bit, _CMP_EQ_OQ);
+    if (_mm256_movemask_ps(m_data) != 0) {
+      return true;
+    }
+  }
+  for (size_t i = deal_count * 2; i < count; ++i) {
+    if (std::isnan(data[i]) || std::isinf(data[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <>
+bool hasNanOrInf<half>(half *data, size_t count) {
+  return twoBytesNanInf(data, count, 0x7c000000, 0x00007c00);
+}
+
+// TODO(NONE): test itself
+template <>
+bool hasNanOrInf<bfloat16>(bfloat16 *data, size_t count) {
+  return twoBytesNanInf(data, count, 0x7f800000, 0x00007f80);
+}
+
+#else  // __AVX__
 template <typename T>
 bool hasNanOrInf(T *data, size_t count) {
   for (size_t i = 0; i < count; ++i) {
@@ -146,14 +193,14 @@ static void resetNanOrInfAsZero(T *a, T *b, size_t count) {
 
   for (size_t i = 0; i < count; ++i) {
     if (unlikely(std::isnan(a[i]) && std::isnan(b[i]))) {
-      a[i] = 0;
-      b[i] = 0;
+      a[i] = (T)0;
+      b[i] = (T)0;
       has_nan = true;
     } else if (unlikely(std::isinf(a[i]) && std::isinf(b[i]) && a[i] == b[i])) {
       // if a is inf, b is -inf, don't deal here.
       // when check hasNanOrInf will set diff as DBL_MAX (instead infinity).
-      a[i] = 0;
-      b[i] = 0;
+      a[i] = (T)0;
+      b[i] = (T)0;
       has_inf = true;
     }
   }
@@ -167,38 +214,17 @@ static void resetNanOrInfAsZero(T *a, T *b, size_t count) {
   }
 }
 
-template <typename T>
-static void skipNanOrInfAsZero(T *a, T *b, size_t count) {
-  bool has_nan = false;
-  bool has_inf = false;
-
-  for (size_t i = 0; i < count; ++i) {
-    int tmp = *(int *)&a[i];
-    if (unlikely(std::isnan(a[i]))) {
-      a[i] = 0;
-      b[i] = 0;
-      has_nan = true;
-    } else if (unlikely(std::isinf(a[i]))) {
-      a[i] = 0;
-      b[i] = 0;
-      has_inf = true;
-    }
-  }
-  if (has_nan) {
-    VLOG(4) << "Found result of baseline is NaN,"
-            << " set baseline and mlu as 0, and go on.";
-  }
-  if (has_inf) {
-    VLOG(4) << "Found result of baseline is Inf,"
-            << " set baseline and mlu as 0, and go on.";
-  }
-}
+enum StorageDtype {
+  FLOAT = 0,
+  VOID = 1,
+};
 
 class Evaluator {
  public:
   Evaluator() {}
   virtual ~Evaluator() {}
   void copy(const Evaluator *e);
+  void setStorageDtype(StorageDtype storage_dtype);
 
   enum Formula { DIFF1, DIFF2, DIFF3, DIFF3_2, DIFF4, DIFF_KL };
 
@@ -257,10 +283,9 @@ class Evaluator {
   };
 
   // compute error between baseline and mlu results by given criterion
-  void computeError(void *baseline_result, void *mlu_result, const size_t count,
-                    const std::set<Criterion> criterions,
-                    const std::string &name, const mluOpDataType_t dtype,
-                    const bool skip_nan_n_inf = false);
+  void computeDiff(void *baseline_result, void *mlu_result, const size_t count,
+                   const std::set<Criterion> criterions,
+                   const std::string &name, const mluOpDataType_t dtype);
 
   // compute efficiency by formula:
   // theory_ops / latency / peak_compute_force
@@ -272,24 +297,55 @@ class Evaluator {
   // get name + criterion + error
   const std::vector<ErrorWrap> &errors() { return error_vec_; }
 
-  // delete this api. but now the refactor plan is not ready,
+  // TODO(wangjianxin): delete this api. but now the refactor plan is not ready,
   // and all op called this api, so just keep it.
   void setMluWorkspaceSize(size_t size) { workspace_size_ = size; }
   double getMluWorkspaceSize() { return workspace_size_; }
 
  private:
-  // arch < 300, do not support nan/inf in mlu.
+  // distinguish_nan_inf
   template <typename T>
-  void dealNanInfOldArch() {
-    T *base_array = reinterpret_cast<T *>(base_array_);
-    T *mlu_array = reinterpret_cast<T *>(mlu_array_);
-    skipNanOrInfAsZero(base_array, mlu_array, count_total_);
-    nanInfRemain<T>();
+  bool compareNanInfStrict(T mlu_out[], T baseline_out[], size_t index) {
+    T mlu = mlu_out[index];
+    T baseline = baseline_out[index];
+    if (!((std::isnan(mlu) && std::isnan(baseline)) || (mlu == baseline))) {
+      return false;
+    }
+    return true;
   }
 
-  // if mlu arch is higher than 300, only compare nan/inf, skip other position
+  // not distinguish_nan_inf
   template <typename T>
-  void dealNanInfNewArch() {
+  bool compareNanInfLoose(T mlu_out[], T baseline_out[], size_t index) {
+    T mlu = mlu_out[index];
+    T baseline = baseline_out[index];
+    if (std::isnan(mlu)) {
+      if (std::isnan(baseline)) {
+        return true;
+      } else if (std::isinf(baseline)) {
+        nan_inf_neq_pos_.emplace_back(index);
+        return true;
+      } else {
+        return false;
+      }
+    }  // mlu is nan
+    if (std::isinf(mlu)) {
+      if (mlu == baseline) {
+        return true;
+      } else if (std::isnan(baseline)) {
+        nan_inf_neq_pos_.emplace_back(index);
+        return true;
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // if forst level accuracy(wiki:52441150), only compare nan/inf, skip other
+  // position
+  template <typename T>
+  void dealNanInf() {
     skip_compute_diff_ = false;
     bool has_nan_inf = false;
     T *a = reinterpret_cast<T *>(base_array_);
@@ -299,21 +355,43 @@ class Evaluator {
       nanInfRemain<T>();
       return;
     }
+    // TODO(niewenchang): have vector.push_back() in for loop, open it after
+    // modify code logic #pragma omp parallel for schedule(guided)
     for (size_t i = 0; i < count_total_; ++i) {
       if (isNanOrInf(a[i]) || isNanOrInf(b[i])) {
         skip_compute_diff_ = true;
         has_nan_inf = true;
-        if (!((std::isnan(a[i]) && std::isnan(b[i])) || (a[i] == b[i]))) {
-          LOG(ERROR) << "Found NaN or Inf, but mlu is not equal to baseline,"
-                     << " return DBL_MAX instead."
-                     << " First wrong position is " << i;
+        bool res = false;
+        if (true == global_var.loose_check_nan_inf_) {
+          res = compareNanInfLoose(a, b, i);
+        } else {
+          res = compareNanInfStrict(a, b, i);
+        }
+        if (false == res) {
+          nan_inf_wrong_pos_.emplace_back(i);
           nan_inf_pass_ = false;
-          return;
         }
       }
     }
+    if (!nan_inf_wrong_pos_.empty()) {
+      auto first_pos = *std::min_element(std::begin(nan_inf_wrong_pos_),
+                                         std::end(nan_inf_wrong_pos_));
+      LOG(ERROR) << "Found NaN or Inf, but mlu is not equal to baseline,"
+                 << " return DBL_MAX instead."
+                 << "The first wrong position is " << first_pos;
+      return;
+    }
     if (has_nan_inf) {
       nan_inf_pass_ = true;
+      if (!nan_inf_neq_pos_.empty()) {
+        auto first_pos = *std::min_element(std::begin(nan_inf_neq_pos_),
+                                           std::end(nan_inf_neq_pos_));
+        LOG(WARNING) << "The results of baseline and mlu are not equal, "
+                     << "one of them is nan and the other is inf, "
+                     << "the current mode will not distinguish nan and inf, "
+                     << "this case will pass. The first position is "
+                     << first_pos;
+      }
     }
   }
 
@@ -342,9 +420,6 @@ class Evaluator {
         computeDiffKl<T>();
       } break;
       default: {
-        // LOG(ERROR) << "Evaluator: found unsupported criterion when compute
-        // result error."; throw std::invalid_argument(std::string(__FILE__) + "
-        // +" + std::to_string(__LINE__)); GTEST_CHECK(false, "!!!");
         GTEST_CHECK(false,
                     "Evaluator: found unsupported criterion when compute "
                     "result error.");
@@ -361,8 +436,8 @@ class Evaluator {
     T *base_array = reinterpret_cast<T *>(base_array_);
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
 #pragma omp parallel for reduction \
-  (+:numerator_sum, denominator_sum, numerator_sum_imag, denominator_sum_imag) \
-  schedule(guided)
+        (+:numerator_sum, denominator_sum, numerator_sum_imag, \
+         denominator_sum_imag) schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       numerator_sum += std::abs(double(mlu_array[i]) - double(base_array[i]));
       denominator_sum += std::abs(double(base_array[i]));
@@ -387,8 +462,8 @@ class Evaluator {
     T *base_array = reinterpret_cast<T *>(base_array_);
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
 #pragma omp parallel for reduction \
-  (+:numerator_sum, denominator_sum, numerator_sum_imag, denominator_sum_imag) \
-  schedule(guided)
+        (+:numerator_sum, denominator_sum, numerator_sum_imag, \
+        denominator_sum_imag) schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       numerator_sum +=
           std::pow(double(mlu_array[i]) - double(base_array[i]), 2);
@@ -476,6 +551,31 @@ class Evaluator {
     }
   };
 
+#ifndef KL_EPSILON
+#define KL_EPSILON (1e-10)
+  template <typename T>
+  double diff_kl(T *data1, T *data2, size_t elem_num) {
+    double data1_sum = 0.0;
+    double data2_sum = 0.0;
+#pragma omp parallel for reduction(+ : data1_sum, data2_sum) schedule(guided)
+    for (size_t i = 0; i < elem_num; i++) {
+      data1_sum += std::max(std::abs((double)data1[i]), (double)KL_EPSILON);
+      data2_sum += std::max(std::abs((double)data2[i]), (double)KL_EPSILON);
+    }  // end omp parallel block
+    double entropy = 0.0;
+#pragma omp parallel for reduction(+ : entropy) schedule(guided)
+    for (size_t i = 0; i < elem_num; i++) {
+      double data1_prob =
+          std::max(std::abs((double)data1[i]), (double)KL_EPSILON) / data1_sum;
+      double data2_prob =
+          std::max(std::abs((double)data2[i]), (double)KL_EPSILON) / data2_sum;
+      entropy += 0.5 * data1_prob * log(data1_prob / data2_prob) +
+                 0.5 * data2_prob * log(data2_prob / data1_prob);
+    }  // end omp parallel block
+    return entropy;
+  }
+#endif
+
   template <typename T>
   void computeDiff4() {
     T *base_array = reinterpret_cast<T *>(base_array_);
@@ -487,8 +587,6 @@ class Evaluator {
     std::unordered_set<std::tuple<T, T>, TupleHash<T>> unrepeat_res;
     std::unordered_set<std::tuple<T, T>, TupleHash<T>> unrepeat_res_imag;
     for (size_t i = 0; i < count_total_; i += stride_) {
-      auto unrepeat_num = unrepeat_res.size();
-      auto unrepeat_num_imag = unrepeat_res_imag.size();
       if (is_complex_) {
         if (mlu_array[i + 1] != base_array[i + 1]) {
           auto unrepeat_tuple =
@@ -532,16 +630,9 @@ class Evaluator {
 
   template <typename T>
   void check_nan_inf() {
-    T *base_array = reinterpret_cast<T *>(base_array_);
-    T *mlu_array = reinterpret_cast<T *>(mlu_array_);
     skip_compute_diff_ = false;
-
-    if (skip_nan_n_inf_) {  // arch < 300, not support nan/inf
-      dealNanInfOldArch<T>();
-    } else {  // arch >= 300
-      // if diff is LEVEL 1, return. Else only compute where is nan/inf.
-      dealNanInfNewArch<T>();
-    }
+    // if diff is LEVEL 1, return. Else only compute where is nan/inf.
+    dealNanInf<T>();
     if (skip_compute_diff_) {
       setErrorWrap();
     }
@@ -562,12 +653,29 @@ class Evaluator {
 
   void init(void *baseline_result, void *mlu_result, const size_t count,
             const std::set<Criterion> criterions, const std::string &name,
-            const mluOpDataType_t dtype, const bool skip_nan_n_inf);
+            const mluOpDataType_t dtype);
 
-  void computeErrorForOneCriterion();
+  void computeDiffForOneCriterion();
+  void computeDiffFloatAndDouble();
+  void computeDiffByDtype();
   void thresholdLevel1();
   void setErrorWrap();
+  void checkNanInfFloatAndDouble();
+  void checkNanInfByDtype();
   inline std::string showFormula(Formula f);
+
+  std::function<void(Evaluator *)> checkNanInfFunc = nullptr;
+  std::function<void(Evaluator *)> computeDiffFunc = nullptr;
+
+  inline void selectFuncPtr() {
+    if (VOID == storage_dtype_) {
+      checkNanInfFunc = &Evaluator::checkNanInfByDtype;
+      computeDiffFunc = &Evaluator::computeDiffByDtype;
+    } else if (FLOAT == storage_dtype_) {
+      checkNanInfFunc = &Evaluator::checkNanInfFloatAndDouble;
+      computeDiffFunc = &Evaluator::computeDiffFloatAndDouble;
+    }
+  }
 
   void *base_array_ = nullptr;
   void *mlu_array_ = nullptr;
@@ -579,18 +687,23 @@ class Evaluator {
   double error_ = -1;
   double error_imag_ = -1;
   bool skip_compute_diff_ = false;
-  bool skip_nan_n_inf_ = false;
   bool is_complex_ = false;
   bool threshold_l1_ = false;
   bool nan_inf_pass_ = false;
   bool criterion_matching_ = true;
   Criterion cur_criterion_;
+  StorageDtype storage_dtype_ = FLOAT;
   Formula func_;
   std::string name_ = "";
   std::set<Criterion> criterions_;
   std::vector<Criterion>
       criterion_vec_;  // vector of (diff1+thresdhold) /(diff2 + threshold)
   std::vector<ErrorWrap> error_vec_;  // vetor output's error
+  // record the position where nan/inf output is wrong
+  std::vector<size_t> nan_inf_wrong_pos_;
+  // used for LOOSE_CHECK_NAN_INF mode, record the position where one is inf the
+  // other is nan
+  std::vector<size_t> nan_inf_neq_pos_;
 
   double workspace_size_ = -1;  // for -1
 };
@@ -617,15 +730,17 @@ struct PerfInfo {  // perf info for certain device (mlu or gpu)
   // workspace size of mlu or gpu
   double workspace_size = -1;
 
+  // kernel invoked by mlu or gpu
+  std::vector<std::string> kernel_name_lists;
+  bool kernel_tracing_enabled = false;
+  // time point and hardware time for monitor
+  std::list<std::tuple<size_t, float>> raw_hwtime_list;
+
   // theory ops/io/peak force/bandwidth for efficiency
   double theory_ops = -1;     // op
   double theory_io = -1;      // bytes
   double compute_force = -1;  // op/s
   double io_bandwidth = -1;   // GB/s
-
-  // gpu runtime env
-  std::string dl_framework = "";
-  bool has_runtime_env = false;
 };
 
 struct EvaluateResult {
@@ -639,10 +754,13 @@ struct EvaluateResult {
   std::vector<Evaluator::ErrorWrap> errors;
   // result
   bool is_passed = false;
+  // whether compute completely or enter foolproof
+  bool compute_completed = false;
   std::vector<std::string> what;
   // gtest internal time perf
   GtestInternal gtest;
 };
+
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_EVALUATOR_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_EVALUATOR_H_

@@ -64,7 +64,7 @@ inline int32_t getJobLimitCapability(mluOpHandle_t handle) {
 
 /******************************************************************************
  * MLUOP FUNC: getCoreNumOfJobLimitCapability
- * get mlu core number of every single CNRT_FUNC_TYPE with maximum job capacity.
+ * get ipu core number of every single CNRT_FUNC_TYPE with maximum job capacity.
  * param 'handle' is the handle of mluOpHandle_t.
  ******************************************************************************/
 inline int32_t getCoreNumOfJobLimitCapability(mluOpHandle_t handle) {
@@ -146,6 +146,16 @@ inline cnrtFunctionType_t getJobLimitCapabilityCnrtFuncType(
 // get the max parallel job num of certain cnrtFunctionType on current CNdevice.
 inline int getMaxParallelJobNum(mluOpHandle_t handle, cnrtFunctionType_t type) {
   return handle->getJobNum(type);
+}
+
+// get the llc pedding attribute on current CNdevice.
+inline bool isLLCPendding(mluOpHandle_t handle) {
+  if (0 == strncmp(handle->device_name, "MLU590-H8", strlen("MLU590-H8")) ||
+      0 == strncmp(handle->device_name, "MLU590-M9", strlen("MLU590-M9"))) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 }  // namespace runtime

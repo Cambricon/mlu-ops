@@ -34,6 +34,7 @@ class MoeDispatchForwardExecutor : public Executor {
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
+  void setMiscellaneousParam() override;
   int64_t getTheoryOps() override;
   int64_t getTheoryIoSize() override;
 

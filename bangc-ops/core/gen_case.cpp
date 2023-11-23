@@ -24,9 +24,10 @@
 
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <error.h>
 #include <time.h>
+#include <error.h>
 #include <limits.h>
+
 #include <algorithm>
 #include <iterator>
 #include <fstream>
@@ -38,7 +39,6 @@
 #include "core/type.h"
 #include "core/logging.h"
 #include "core/platform/env_time.h"
-#include "mlu_op.h"
 
 namespace mluop {
 namespace gen_case {
@@ -47,7 +47,7 @@ namespace gen_case {
 #define IS_DUMP_DATA (genCaseModeGet(false) == 2)
 #define IS_ONLY_SHOW (genCaseModeGet(false) == 3)
 
-// mode_stacks_ is used for eliminate internal prototxt in mluop interface
+// mode_stacks_ is used for eliminate internal prototxt in mluOp interface
 __attribute__((__unused__)) std::unordered_map<std::string, std::vector<int>>
     mode_stacks_;
 // nodes_ is like mode_stacks, keep nodes_vector for each thread
@@ -65,40 +65,40 @@ __attribute__((__unused__)) std::mutex stacks_mutex_;
 // MLUOP_GEN_CASE=2: Generate gen_case file with input data
 // MLUOP_GEN_CASE=3: Print gen_case simple infomation on screen
 __attribute__((__unused__)) int gen_case_mode_ =
-    getUintEnvVar("MLUOP_GEN_CASE", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE", 0);
 
 // MLUOP_GEN_CASE_DIR control where the prototxt file is stored
 // default value of MLUOP_GEN_CASE_DIR is curdir + '/gen_case'
 __attribute__((__unused__)) std::string gen_case_dir_ =
-    getStringEnvVar("MLUOP_GEN_CASE_DIR");
+    mluop::getStringEnvVar("MLUOP_GEN_CASE_DIR");
 
 // MLUOP_GEN_CASE_DUMP_INTERNAL control whether dump internal mluOpapi call
 __attribute__((__unused__)) bool dump_internal_ =
-    getBoolEnvVar("MLUOP_GEN_CASE_DUMP_INTERNAL", false);
+    mluop::getBoolEnvVar("MLUOP_GEN_CASE_DUMP_INTERNAL", false);
 
 // MLUOP_GEN_CASE_OP_NAME control generating prototxt
 // "conv;abs" means only generate prototxt for conv and abs
 // "-conv;-abs" means only not generate prototxt for conv and abs
 __attribute__((__unused__)) std::string op_name_ =
-    getStringEnvVar("MLUOP_GEN_CASE_OP_NAME", "all");
+    mluop::getStringEnvVar("MLUOP_GEN_CASE_OP_NAME", "all");
 
 // MLUOP_GEN_CASE_DUMP_DATA control whether dump input device data in prototxt
 // or not 0 : means not dump 1 : means dump readable value, is default value 2 :
 // means dump hex value
 __attribute__((__unused__)) int dump_data_ =
-    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA", 0);
 
 // MLUOP_GEN_CASE_DUMP_DATA_OUTPUT control whether dump output device data in
 // prototxt or not 0 : means not dump, is default value 1 : means dump readable
 // value 2 : means dump hex value
 __attribute__((__unused__)) int dump_data_output_ =
-    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_OUTPUT", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_OUTPUT", 0);
 
 // MLUOP_GEN_CASE_DUMP_DATA_FILE control whether dump data file separately
 // 0 : means not dump file
 // 1 : means dump file
 __attribute__((__unused__)) int dump_data_file_ =
-    getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_FILE", 0);
+    mluop::getUintEnvVar("MLUOP_GEN_CASE_DUMP_DATA_FILE", 0);
 
 bool isGenCaseOn() { return gen_case_mode_ > 0; }
 
@@ -115,10 +115,13 @@ int genCaseModeGet(bool first) {
     if (it != mode_stacks_.end()) {
       auto &mode_stack = it->second;
       // the top of mode_stack store the gen_case mode for current thread
+
+      // TODO(zhangchaojie): redundant first truth check
       if (first) {
         mode_stack.push_back(mode_stack.front());
         mode_stack.front() = mode;
       }
+
       // during current mluOpapi, gen_case mode is on the bottom
       return mode_stack.back();
     } else {
@@ -172,26 +175,23 @@ inline int getOpNameMask(const std::string op_name_,
     return 1;
   }
   std::unordered_map<std::string, int> op_name_mask;
-  // regex may cause invalid pointer
-  std::vector<std::string> split;
-  std::string tmp;
-  for (auto &c : op_name_) {
-    if (c == ';') {
-      if (!tmp.empty()) {
-        split.push_back(tmp);
-        tmp = "";
-      }
-    } else {
-      tmp.push_back(c);
-    }
+  std::vector<std::string> splits;
+
+  std::string op_name_origin = op_name_;
+  size_t pos = 0;
+  std::string delimiter = ";";
+  std::string token;
+  while ((pos = op_name_origin.find(delimiter)) != std::string::npos) {
+    token = op_name_origin.substr(0, pos);
+    splits.push_back(token);
+    op_name_origin.erase(0, pos + delimiter.length());
   }
-  if (!tmp.empty()) {
-    split.push_back(tmp);
-    tmp = "";
+  if (op_name_origin.length() != 0) {
+    splits.push_back(op_name_origin);
   }
 
   int specify_op = 0;
-  for (auto &name : split) {
+  for (auto &name : splits) {
     if (name[0] == '-') {
       specify_op = 1;
       op_name_mask.emplace(name.substr(1, name.size() - 1), -1);
@@ -209,7 +209,7 @@ inline int getOpNameMask(const std::string op_name_,
   }
 }
 
-PbNode *genCaseStart(std::string op_name) {
+PbNode *genCaseStart(std::string op_name, std::string op_type) {
   std::lock_guard<std::mutex> guard(stacks_mutex_);
   std::string tid(std::to_string(syscall(SYS_gettid)));
   auto it = nodes_.find(tid);
@@ -219,19 +219,19 @@ PbNode *genCaseStart(std::string op_name) {
     for (int i = 0; i < nodes_vector.size(); i++) {
       // so after serialization, node should be reset
       if (nodes_vector[i].op_name == "") {
-        nodes_vector[i].setOpNameAndType(op_name);
+        nodes_vector[i].setOpNameAndType(op_name, op_type);
         return &nodes_vector[i];
       }
     }
     // if there is no empty node, should new PbNode
     nodes_vector.push_back(PbNode());
-    nodes_vector.back().setOpNameAndType(op_name);
+    nodes_vector.back().setOpNameAndType(op_name, op_type);
     return &nodes_vector.back();
   } else {
     // first call in this thread, just set a vector of PbNode
     nodes_.emplace(tid, std::vector<PbNode>(1));
     PbNode &node = nodes_[tid].front();
-    node.setOpNameAndType(op_name);
+    node.setOpNameAndType(op_name, op_type);
     return &node;
   }
 }
@@ -253,6 +253,23 @@ void genCaseData(PbNode *node, bool is_input, std::string id,
     node->appendTensor(is_input, id, device_data, desc, false, params,
                        distribution, dump_data);
   }
+}
+
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, mluOpSeqDataDescriptor_t seq_desc,
+                 double param1, double param2, bool have_onchip,
+                 std::string distribution, bool dump_data) {
+  mluOpTensorDescriptor_t desc;
+  mluOpCreateTensorDescriptor(&desc);
+  mluOpDataType_t dtype;
+  int64_t dims[MLUOP_DIM_MAX];
+  int dim;
+  mluOpGetSeqDataDescriptor_v2(seq_desc, nullptr, &dtype, &dim, dims, nullptr,
+                               nullptr, nullptr);
+  mluOpSetTensorDescriptor_v2(desc, MLUOP_LAYOUT_ARRAY, dtype, dim, dims);
+  std::vector<double> params{param1, param2};
+  node->appendTensor(is_input, id, device_data, desc, true, params,
+                     distribution, dump_data);
 }
 
 void genCaseData(PbNode *node, bool is_input, std::string id,
@@ -342,11 +359,7 @@ void genCaseEnd() {
         }
       }
       if (dump_data_output_ != 0) {
-        if (dump_data_file_ == 0) {
-          nodes_vector[slot_num - 1].serialize();
-        } else {
-          nodes_vector[slot_num - 1].dumpOutputFile();
-        }
+        nodes_vector[slot_num - 1].dumpOutputFile();
       }
       nodes_vector[slot_num - 1].reset();
     }
@@ -354,8 +367,9 @@ void genCaseEnd() {
   genCaseModeRestore();
 }
 
-void PbNode::setOpNameAndType(std::string op_name) {
+void PbNode::setOpNameAndType(std::string op_name, std::string op_type) {
   this->op_name = op_name;
+  this->op_type = op_type;
   this->file_name = "";
   this->case_file_name = "";
 }
@@ -451,18 +465,19 @@ int PbNode::mkdir() {
   return error_number;
 }
 
-void PbNode::serialize(bool isFirst) {
+void PbNode::serialize() {
   int state = getOpNameMask(op_name_, op_name);
   if (state != -1) {
     if (state == 1) {
       if (IS_ONLY_SHOW) {
         printOnScreen();
       } else {
-        dumpToFile(isFirst, false);
+        dumpToFile(false);
       }
     } else if (state == 2) {
-      dumpToFile(isFirst, true);
+      dumpToFile(true);
     }
+    debugTensorAddress();
   }
 }
 
@@ -483,54 +498,50 @@ void PbNode::printOnScreen() {
 }
 
 void PbNode::dumpDataFile(std::string file_name, std::string folder_name,
-                          int index, std::ofstream &case_file, bool shouldDump,
+                          int index, std::ofstream &case_file,
                           enum DATASTATE data_state) {
+  cnrtQueue_t queue;
+  mluOpGetQueue(handle, &queue);
+  if (cnrtSuccess != cnrtQueueSync(queue)) {
+    LOG(ERROR) << "[gen_case] syncQueue failed";
+  }
+
   uint64_t total_num = getTensorSize(index);
   mluOpDataType_t dtype;
   mluOpGetTensorDescriptor(tensors[index].desc, nullptr, &dtype, nullptr,
                            nullptr);
   void *data = getDeviceData(index);
   std::string dataState = data_state == INPUT ? "input" : "output";
+  std::string tensor_file_suffix =
+      file_name + "_data" + std::to_string(index) + "_" + dataState;
   if (data != nullptr) {
-    if (dump_data_file_ == 1) {
-      std::string tensor_file_suffix =
-          file_name + "_data" + std::to_string(index) + "_" + dataState;
-      std::string tensor_file_name = folder_name + "/" + tensor_file_suffix;
-      if (data_state == INPUT) {
+    if (data_state == OUTPUT) {
+      case_file << "  path: \"" << tensor_file_suffix << "\"\n";
+    } else {
+      if (dump_data_file_ == 1) {
+        std::string tensor_file_name = folder_name + "/" + tensor_file_suffix;
+
         case_file << "  path: \"" << tensor_file_suffix << "\"\n";
         std::ofstream tensor_file;
         tensor_file.open(tensor_file_name.c_str(), std::ios::binary);
         tensor_file.write(reinterpret_cast<const char *>(data),
                           total_num * mluop::getSizeOfDataType(dtype));
         tensor_file.close();
+
       } else {
-        if (!shouldDump) {
-          case_file << "  path: \"" << tensor_file_suffix << "\"\n";
-        } else {
-          std::ofstream tensor_file;
-          tensor_file.open(tensor_file_name.c_str(), std::ios::binary);
-          tensor_file.write(reinterpret_cast<const char *>(data),
-                            total_num * mluop::getSizeOfDataType(dtype));
-          tensor_file.close();
-        }
-      }
-    } else {
-      total_num *= dtypeRatio(dtype);
-      for (uint64_t j = 0; j < total_num; ++j) {
-        if (dataState == "output" && dump_data_output_ == 2 &&
-            dtypeFloat(dtype)) {
-          case_file << "  value_h: " << get_data_hex_string(dtype, data, j)
-                    << "\n";
-        } else if (dataState == "input" && dump_data_ == 2 &&
-                   dtypeFloat(dtype)) {
-          case_file << "  value_h: " << get_data_hex_string(dtype, data, j)
-                    << "\n";
-        } else {
-          case_file << get_dtype_value_string(dtype)
-                    << get_data_string(dtype, data, j) << "\n";
+        total_num *= dtypeRatio(dtype);
+        for (uint64_t j = 0; j < total_num; ++j) {
+          if (dataState == "input" && dump_data_ == 2 && dtypeFloat(dtype)) {
+            case_file << "  value_h: " << get_data_hex_string(dtype, data, j)
+                      << "\n";
+          } else {
+            case_file << get_dtype_value_string(dtype)
+                      << get_data_string(dtype, data, j) << "\n";
+          }
         }
       }
     }
+
     // free resources to avoid memeory leak
     free(data);
   } else {
@@ -538,10 +549,27 @@ void PbNode::dumpDataFile(std::string file_name, std::string folder_name,
   }
 }
 
+void PbNode::debugTensorAddress() {
+  if (VLOG_IS_ON(1)) {
+    std::ostringstream fmt_oss;
+    fmt_oss << "[gen_case_debug_address] ";
+    fmt_oss << "[file_name: " << this->file_name << "]"
+            << " ";
+    for (const auto &tensor : tensors) {
+      fmt_oss << tensor.id << ": " << tensor.device_ptr << ", ";
+    }
+    LOG(INFO) << fmt_oss.str();
+  }
+}
+
+// when to get here?
+// 1. gen_case_end when dump_data > 0
 void PbNode::dumpOutputFile() {
   int st = getOpNameMask(op_name_, op_name);
-  if (st != 2 && !IS_DUMP_DATA) return;
-  int state = getOpNameMask(op_name_, op_name);
+
+  // st <=0 means gen_case do not work on this op_name
+  if (st <= 0) return;
+
   for (int i = 0; i < tensors.size(); i++) {
     if (!tensors[i].is_input) {
       // sync queue to dump output if necessary
@@ -577,11 +605,11 @@ void PbNode::dumpOutputFile() {
   }
 }
 
-void PbNode::dumpToFile(bool isFirst, bool valueDump) {
+void PbNode::dumpToFile(bool valueDump) {
   std::string folder_name = getFolderName();
   int error_number = mkdir();
   // use lock to ensure mkdir not conflict
-  if (error_number != 0) {
+  if (error_number != 0 && error_number != 17) {
     LOG(ERROR) << "[gen_case]: mkdir folder failed for " << folder_name
                << " ! (" << errno << ": " << strerror(errno) << ")";
     return;
@@ -603,6 +631,7 @@ void PbNode::dumpToFile(bool isFirst, bool valueDump) {
     case_file.open(case_file_name.c_str(), std::ios::ate | std::ios::out);
     if (case_file) {
       case_file << "op_name: \"" + op_name + "\"\n";
+      case_file << "op_type: " + op_type << "\n";
       for (int i = 0; i < tensors.size(); i++) {
         if (tensors[i].is_input) {
           case_file << "input {\n  id: \"" << tensors[i].id << "\"\n";
@@ -616,8 +645,7 @@ void PbNode::dumpToFile(bool isFirst, bool valueDump) {
             if ((tensors[i].dump_data || dump_data_ > 0) &&
                 tensors[i].device_ptr != nullptr) {
               // TO DO : should consider malloc failure
-              if (isFirst || dump_data_file_ == 0)
-                dumpDataFile(file_name, folder_name, i, case_file, true, INPUT);
+              dumpDataFile(file_name, folder_name, i, case_file, INPUT);
             } else {
               case_file << get_tensor_random_string(i);
             }
@@ -625,17 +653,8 @@ void PbNode::dumpToFile(bool isFirst, bool valueDump) {
             case_file << get_tensor_random_string(i);
           }
         } else {
-          // sync queue to dump output if necessary
-          if (dump_data_output_) {
-            cnrtQueue_t queue;
-            mluOpGetQueue(handle, &queue);
-            if (cnrtSuccess != cnrtQueueSync(queue)) {
-              LOG(ERROR) << "[gen_case] syncQueue failed!";
-            } else {
-              // TO DO : should consider malloc failure
-              dumpDataFile(file_name, folder_name, i, case_file, !isFirst,
-                           OUTPUT);
-            }
+          if (dump_data_output_ != 0) {
+            dumpDataFile(file_name, folder_name, i, case_file, OUTPUT);
           }
         }
         case_file << "}\n";
@@ -739,11 +758,20 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
     }
   }
   tensor_info << "  }" << delimiter;
-  tensor_info << "  layout: " << mluOpGetNameOfTensorLayout(layout)
+  tensor_info << "  layout: " << mluop::getNameOfTensorLayout(layout)
               << delimiter;
-  tensor_info << "  dtype: " << mluOpGetNameOfDataType(dtype) << delimiter;
+  tensor_info << "  dtype: " << mluop::getNameOfDataType(dtype) << delimiter;
+  if (desc->pointer_mode == MLUOP_POINTER_MODE_HOST) {
+    tensor_info << "  pointer_mode: POINTER_MODE_HOST" << delimiter;
+    if ((total_element_num != 1) || (dim != 0)) {
+      LOG(WARNING) << "[gen_case] Tensor has been set to POINTER_MODE_HOST, "
+                      "but it is not a scalar";
+    } else {
+      tensor_info << "  is_cpu_scalar: 1" << delimiter;
+    }
+  }
   if (onchip_dtype != MLUOP_DTYPE_INVALID) {
-    tensor_info << "  onchip_dtype: " << mluOpGetNameOfDataType(onchip_dtype)
+    tensor_info << "  onchip_dtype: " << mluop::getNameOfDataType(onchip_dtype)
                 << delimiter;
   }
   tensor_info << "  position: " << position << delimiter;

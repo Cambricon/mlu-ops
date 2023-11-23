@@ -96,10 +96,11 @@ bool isFile(std::string dir) {
   return false;
 }
 
-std::string int2str(const int src_int, const mluoptest::DataType dtype) {
+template <typename T>
+std::string int2str(const T src_int, const mluoptest::DataType dtype) {
   // 9: size that float represented as hex, and add one '\0'
   char value_char[9];
-  if (dtype == mluoptest::DTYPE_HALF) {
+  if (dtype == mluoptest::DTYPE_HALF || dtype == mluoptest::DTYPE_BFLOAT16) {
     snprintf(value_char, sizeof(value_char), "%hx", src_int);
   } else {
     snprintf(value_char, sizeof(value_char), "%x", src_int);
@@ -116,6 +117,7 @@ std::string long2str(const int64_t src_int) {
 bool isIntDtype(const mluoptest::Tensor *ts) {
   return ts->dtype() == mluoptest::DTYPE_INT8 ||
          ts->dtype() == mluoptest::DTYPE_INT16 ||
+         ts->dtype() == mluoptest::DTYPE_INT31 ||
          ts->dtype() == mluoptest::DTYPE_INT32 ||
          ts->dtype() == mluoptest::DTYPE_INT64 ||
          ts->dtype() == mluoptest::DTYPE_UINT8 ||
@@ -135,7 +137,7 @@ void tensorInt2Hex(mluoptest::Tensor *ts) {
   }
   if (ts->value_i_size()) {
     for (auto value = 0; value < ts->value_i_size(); value++) {
-      ts->add_value_h(int2str(ts->value_i(value), ts->dtype()));
+      ts->add_value_h(int2str<int>(ts->value_i(value), ts->dtype()));
     }
     ts->clear_value_i();
   } else if (ts->value_l_size()) {
@@ -143,6 +145,14 @@ void tensorInt2Hex(mluoptest::Tensor *ts) {
       ts->add_value_h(long2str(ts->value_l(value)));
     }
     ts->clear_value_l();
+  } else if (ts->value_ui_size()) {
+    for (auto idx = 0; idx < ts->value_ui_size(); ++idx) {
+      ts->add_value_h(int2str<uint32_t>(ts->value_ui(idx), ts->dtype()));
+    }
+    ts->clear_value_ui();
+  } else {
+    std::cout << ts->id() << ": Maybe no real data (" << __FILE__ << ":"
+              << __LINE__ << ").\n";
   }
 }
 
@@ -174,10 +184,9 @@ bool readIn(const std::string &filename, mluoptest::Node *proto) {
     google::protobuf::io::CodedInputStream *coded_stream =
         new google::protobuf::io::CodedInputStream(input);
     // Total bytes hard limit / warning limit are set to 1GB and 512MB, as same
-    // as TensorFlow.
+    // as tensorflow.
     coded_stream->SetTotalBytesLimit(INT_MAX, 512LL << 20);
     proto->ParseFromCodedStream(coded_stream);
-
     delete input;
     delete coded_stream;
     close(fd);

@@ -20,25 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
+#define TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
 
-#include "mlu_op.h"
-#include "core/tensor.h"
-#include "kernels/kernel.h"
-#include "kernels/debug.h"
+#include "mlu_op.h"  // mluOpStatus_t
+#include "fill_ram_utils.h"  // nram_value
 
-enum nram_value {
-  NAN_HALF = 0,
-  NAN_FLOAT = 1,
-  INF_HALF = 2,
-  INF_FLOAT = 3,
-  NO_FILL = 4
-};
+mluOpStatus_t mluOpFillRam(mluOpHandle_t handle,
+                         nram_value value);
 
-void mluBlockFillRam(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                     cnrtQueue_t queue, nram_value value);
-
-mluOpStatus_t mluOpFillRam(mluOpHandle_t handle, nram_value value);
-
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_

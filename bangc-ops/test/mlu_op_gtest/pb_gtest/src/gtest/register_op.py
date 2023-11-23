@@ -1,16 +1,11 @@
-#!/usr/bin/python
-
-# configparser python2/python3
-try:
-    import ConfigParser as configparser
-except:
-    import configparser
+#!/usr/bin/env python3
 
 from string import Template
 
 import os
 import sys
 import re
+import configparser
 
 def grep_info(ini_file_path):
     print("registering %s" % os.path.basename(ini_file_path))
@@ -32,14 +27,15 @@ def upper_camel(op_name):
 
 def get_black_list_op():
     return os.environ.get("MLUOP_BLACK_LIST_OP", "").strip().split(";")
+
 if __name__ == "__main__":
     # grep all ini files in zoo/
-    mlu_op_gtest_src_dir_path = os.path.dirname(os.path.abspath(__file__))
-    zoo_path = os.path.join(mlu_op_gtest_src_dir_path, "../zoo")
+    mluop_gtest_src_dir_path = os.path.dirname(os.path.abspath(__file__))
+    zoo_path = os.path.join(mluop_gtest_src_dir_path, "../zoo")
     inis = []
     if len(sys.argv) == 1:
         inis = os.listdir(zoo_path)
-        # inis = [os.path.join(mlu_op_gtest_src_dir_path, "zoo", f)
+        # inis = [os.path.join(mluop_gtest_src_dir_path, "zoo", f)
         #                      for f in inis if os.path.splitext(f)[1] == ".ini"]
         black_list = get_black_list_op()
         inis = sorted(filter(lambda x: x not in black_list, inis))
@@ -51,9 +47,9 @@ if __name__ == "__main__":
             inis.append(sys.argv[i])
     print(inis)
 
-    # generate mlu_op_gtest_case_list.cpp
-    filename1 = os.path.join(mlu_op_gtest_src_dir_path, "template/case_list.tpl")
-    filename2 = os.path.join(mlu_op_gtest_src_dir_path, "case_list.cpp")
+    # generate mluop_gtest_case_list.cpp
+    filename1 = os.path.join(mluop_gtest_src_dir_path, "template/case_list.tpl")
+    filename2 = os.path.join(mluop_gtest_src_dir_path, "case_list.cpp")
     file1 = open(filename1, "r")
     file2 = open(filename2, "w")
     gen = False
@@ -75,8 +71,8 @@ if __name__ == "__main__":
     print("Success generate case_list.cpp.")
 
     # generate op_register.py
-    filename1 = os.path.join(mlu_op_gtest_src_dir_path, "template/op_register.tpl")
-    filename2 = os.path.join(mlu_op_gtest_src_dir_path, "op_register.h")
+    filename1 = os.path.join(mluop_gtest_src_dir_path, "template/op_register.tpl")
+    filename2 = os.path.join(mluop_gtest_src_dir_path, "op_register.h")
     file1 = open(filename1, "r")
     file2 = open(filename2, "w")
     gen_header = False

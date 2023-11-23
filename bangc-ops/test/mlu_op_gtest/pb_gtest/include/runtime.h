@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_RUNTIME_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_RUNTIME_H_
 
 #include <atomic>
 #include <iostream>
@@ -112,6 +112,8 @@ class CPURuntime : public Runtime {
       return CNRT_RET_ERR_INVALID;
     }
     it->reset();
+    // XXX(zhaolianshui): since using erase rather frequently, memory_blocks_
+    // should be std::list?
     memory_blocks_.erase(it);
     return CNRT_RET_SUCCESS;
   }
@@ -146,7 +148,7 @@ class CPURuntime : public Runtime {
     }
     ~MemBlock() {
 #ifdef GTEST_DEBUG_LOG
-      VLOG(4) << "CPURuntime: [deallocate] free for [" << name << "] "
+      VLOG(4) << "CPURuntime: [deallocate] destructor  for [" << name << "] "
               << (void *)obj;
 #endif
       if (c_dtor != NULL) {
@@ -173,7 +175,6 @@ class CPURuntime : public Runtime {
     // by inheritance of struct, call son's dtor
     std::string name;
   };
-
   std::vector<std::shared_ptr<MemBlockBase>> memory_blocks_;
 };
 
@@ -181,11 +182,12 @@ class MLURuntime : public Runtime {
  public:
   MLURuntime();
   virtual ~MLURuntime();
-  void init(std::shared_ptr<MLUMemoryPool> mmp) {}
+  void init(std::shared_ptr<MLUMemoryPool> mmp_) { mmp = mmp_; }
 
   // this function throw exception
   // don't call this function in ctor
-  void *allocate(size_t num_bytes, std::string name = "");
+  void *allocate(size_t num_bytes, std::string name = "", size_t align_size = 0,
+                 bool const_dram = false);
   // this function throw exception
   cnrtRet_t deallocate(void *mlu_addr);
 
@@ -193,9 +195,13 @@ class MLURuntime : public Runtime {
   // return status
   cnrtRet_t destroy();
 
+  bool checkOverWritten();
+
+  // TODO(jiaminghao) consider move into `Runtime` public interface
   inline size_t getAllocatedSize() const { return allocated_size; }
 
   inline size_t getMemBlocksSize() const { return memory_blocks_.size(); }
+  std::shared_ptr<MLUMemoryPool> mmp;
 
  private:
   std::atomic<size_t> allocated_size{0};
@@ -224,16 +230,19 @@ class MLURuntime : public Runtime {
   std::shared_ptr<char> header_check_;
   std::shared_ptr<char> footer_check_;
 
+  // XXX(zhaolianshui): since using erase rather frequently, memory_blocks_
+  // should be std::list?
   std::vector<MemBlock> memory_blocks_;
 
   bool check_byte(void *new_mask, void *org_mask, size_t num);
   void reset_check();
   void rand_set_mask();
-  bool checkAndFree(struct MemBlock &mem_block);
+  bool freeOneMemBlock(const struct MemBlock &mem_block);
+  bool checkOneMemBlock(const struct MemBlock &mem_block);
   bool check_enable_ = true;
   bool unalign_address_ = false;
 };
 
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_RUNTIME_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_RUNTIME_H_

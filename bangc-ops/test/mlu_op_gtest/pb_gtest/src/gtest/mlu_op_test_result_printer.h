@@ -20,13 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_RESULT_PRINTER_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_RESULT_PRINTER_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_GTEST_MLU_OP_TEST_RESULT_PRINTER_H_
+#define TEST_MLU_OP_GTEST_SRC_GTEST_MLU_OP_TEST_RESULT_PRINTER_H_
 
 #include <limits>
 #include <ostream>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "gtest/internal/gtest-internal.h"
 #include "gtest/internal/gtest-string.h"
@@ -161,5 +161,4 @@ class JsonPrinter : public testing::EmptyTestEventListener {
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(JsonPrinter);
 };
-
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_RESULT_PRINTER_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_GTEST_TEST_RESULT_PRINTER_H_

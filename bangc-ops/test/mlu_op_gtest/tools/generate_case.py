@@ -1,4 +1,10 @@
 #! /usr/bin/python3
+
+# author: Wangguichun
+# date: 2020/5/14
+# eg: ./generate_case.py ../test/mlu_op_gtest/src/zoo/cycle_op/test_case/template
+
+
 import sys
 import os
 
@@ -75,3 +81,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

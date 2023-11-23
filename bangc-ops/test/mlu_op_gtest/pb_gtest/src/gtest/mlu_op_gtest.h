@@ -38,7 +38,7 @@
 #include "evaluator.h"
 #include "case_collector.h"
 #include "thread_pool.h"
-#include "pb_test_tools.h"
+#include "tools.h"
 
 using namespace ::testing;  // NOLINT
 
@@ -73,7 +73,7 @@ class TestSuite : public TestWithParam<std::tuple<std::string, size_t>> {
   std::list<mluoptest::EvaluateResult> res_;
 
   void report(mluoptest::EvaluateResult eva);
-  void recordXml(mluoptest::EvaluateResult &eva);
+  void recordXml(mluoptest::EvaluateResult& eva);
 };
 
 #endif  // TEST_MLU_OP_GTEST_SRC_GTEST_MLU_OP_GTEST_H_

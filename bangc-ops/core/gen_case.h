@@ -28,6 +28,7 @@
 #include <string>
 #include <limits>
 #include <utility>
+
 #include "mlu_op.h"
 #include "core/tensor.h"
 #include "core/tool.h"
@@ -60,6 +61,10 @@
 #define GEN_CASE_DATA_REAL(is_input, id, data, data_desc)                    \
   mluop::gen_case::genCaseData(node, is_input, id, data, data_desc, 10, -10, \
                                "UNIFORM", true)
+#define GEN_CASE_DATA_REAL_V2(is_input, id, data, data_desc, upper_bound, \
+                              lower_bound)                                \
+  mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,       \
+                               upper_bound, lower_bound, "UNIFORM", true)
 #define GEN_CASE_DATA_REAL_UNFOLD(is_input, id, data, dim, dims, dtype,    \
                                   layout)                                  \
   mluop::gen_case::genCaseData(node, is_input, id, data, dim, dims, dtype, \
@@ -106,7 +111,7 @@
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,    \
                                     diff1_threshold, diff2_threshold,      \
                                     diff3_threshold, ##__VA_ARGS__);       \
-  node->serialize(true);                                                   \
+  node->serialize();                                                       \
   node->reset()
 
 #define GEN_CASE_TEST_PARAM_NEW(is_diff1, is_diff2, is_diff3, diff1_threshold, \
@@ -114,7 +119,7 @@
   mluop::gen_case::genCaseTestParam(node, is_diff1, is_diff2, is_diff3,        \
                                     diff1_threshold, diff2_threshold,          \
                                     diff3_threshold, ##__VA_ARGS__);           \
-  node->serialize(true);
+  node->serialize();
 
 #define GEN_CASE_END() mluop::gen_case::genCaseEnd()
 
@@ -197,6 +202,7 @@ enum DATASTATE { INPUT, OUTPUT };
 class PbNode {
  public:
   std::string op_name;
+  std::string op_type;
   std::vector<TensorNode> tensors;
   std::vector<std::string> criterions;
   std::vector<double> thresholds;
@@ -210,6 +216,7 @@ class PbNode {
   ~PbNode() { reset(); }
   void reset() {
     op_name = "";
+    op_type = "";
     file_name = "";
     case_file_name = "";
     for (auto &t : tensors) {
@@ -231,7 +238,7 @@ class PbNode {
     handle_param.name = "";
     handle_param.params.clear();
   }
-  void setOpNameAndType(std::string op_name);
+  void setOpNameAndType(std::string op_name, std::string op_type);
   void appendTensor(bool is_input, std::string id, const void *device_data,
                     mluOpTensorDescriptor_t desc, bool inner_desc,
                     std::vector<double> params, std::string distribution,
@@ -242,16 +249,20 @@ class PbNode {
                             std::string param_node_name,
                             mluOpDataType_t dtype) {
     op_param.name = param_node_name;
-    if (dtype != MLUOP_DTYPE_HALF) {
+    if (dtype == MLUOP_DTYPE_HALF) {
+      op_param.params.push_back(
+          {param_name, std::to_string(castHalfToFloat32(param_value))});
+    } else if (std::is_same<paramType, int8_t>::value ||
+               std::is_same<paramType, uint8_t>::value) {
+      op_param.params.push_back(
+          {param_name, std::to_string(static_cast<int32_t>(param_value))});
+    } else {
       std::stringstream param_ss;
       param_ss.setf(std::ios::fixed);
       param_ss << std::setprecision(
                       std::numeric_limits<paramType>::max_digits10)
                << param_value;
       op_param.params.push_back({param_name, param_ss.str()});
-    } else {
-      op_param.params.push_back(
-          {param_name, std::to_string(castHalfToFloat32(param_value))});
     }
   }
   // user should control order of children
@@ -284,6 +295,7 @@ class PbNode {
   // helper function for dtype
   inline int dtypeRatio(mluOpDataType_t dtype) {
     switch (dtype) {
+      case MLUOP_DTYPE_INT31:
       case MLUOP_DTYPE_COMPLEX_HALF:
       case MLUOP_DTYPE_COMPLEX_FLOAT:
         return 2;
@@ -294,6 +306,7 @@ class PbNode {
   bool dtypeFloat(mluOpDataType_t dtype) {
     switch (dtype) {
       case MLUOP_DTYPE_HALF:
+      case MLUOP_DTYPE_BFLOAT16:
       case MLUOP_DTYPE_FLOAT:
       case MLUOP_DTYPE_DOUBLE:
       case MLUOP_DTYPE_COMPLEX_HALF:
@@ -331,12 +344,14 @@ class PbNode {
       case MLUOP_DTYPE_INT16:
       case MLUOP_DTYPE_INT32:
       case MLUOP_DTYPE_BOOL:
+      case MLUOP_DTYPE_INT31:
         return "  value_i: ";
       case MLUOP_DTYPE_INT64:
         return "  value_l: ";
       case MLUOP_DTYPE_UINT8:
       case MLUOP_DTYPE_UINT16:
       case MLUOP_DTYPE_UINT32:
+      case MLUOP_DTYPE_BFLOAT16:
         return "  value_ui: ";
       case MLUOP_DTYPE_UINT64:
         return "  value_ul: ";
@@ -349,6 +364,8 @@ class PbNode {
     switch (dtype) {
       case MLUOP_DTYPE_HALF:
         return std::to_string(castHalfToFloat32(((int16_t *)data)[offset]));
+      case MLUOP_DTYPE_BFLOAT16:
+        return std::to_string(((uint16_t *)data)[offset]);
       case MLUOP_DTYPE_FLOAT:
         return std::to_string(((float *)data)[offset]);
       case MLUOP_DTYPE_DOUBLE:
@@ -364,7 +381,9 @@ class PbNode {
       case MLUOP_DTYPE_INT32:
         return std::to_string(((int32_t *)data)[offset]);
       case MLUOP_DTYPE_BOOL:
-        return std::to_string(((bool *)data)[offset]);
+        return std::to_string(((int8_t *)data)[offset]);
+      case MLUOP_DTYPE_INT31:
+        return std::to_string(((int16_t *)data)[offset]);
       case MLUOP_DTYPE_INT64:
         return std::to_string(((int64_t *)data)[offset]);
       case MLUOP_DTYPE_UINT8:
@@ -384,6 +403,9 @@ class PbNode {
     std::stringstream s;
     switch (dtype) {
       case MLUOP_DTYPE_HALF:
+        s << std::hex << ((uint16_t *)data)[offset];
+        break;
+      case MLUOP_DTYPE_BFLOAT16:
         s << std::hex << ((uint16_t *)data)[offset];
         break;
       case MLUOP_DTYPE_FLOAT:
@@ -410,6 +432,8 @@ class PbNode {
     mluOpDataType_t dtype;
     mluOpGetTensorDescriptor_v2(tensors[index].desc, &layout, &dtype, &dim,
                                 nullptr);
+    mluOpPointerMode_t pointer_mode;
+    mluOpGetTensorDescriptorPointerMode(tensors[index].desc, &pointer_mode);
     int64_t *dims = new int64_t[dim];
     int64_t *strides = new int64_t[dim];
     mluOpGetTensorDescriptorEx_v2(tensors[index].desc, &layout, &dtype, &dim,
@@ -445,15 +469,19 @@ class PbNode {
                              nullptr);
     uint64_t data_size = total_num * mluop::getSizeOfDataType(dtype);
     void *data = malloc(data_size);
+    auto memcpy_dir =
+        (tensors[index].desc->pointer_mode == MLUOP_POINTER_MODE_HOST
+             ? CNRT_MEM_TRANS_DIR_HOST2HOST
+             : CNRT_MEM_TRANS_DIR_DEV2HOST);
     if (CNRT_RET_SUCCESS ==
         cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),
-                   data_size, CNRT_MEM_TRANS_DIR_DEV2HOST)) {
+                   data_size, memcpy_dir)) {
+      return data;
     } else {
       LOG(ERROR) << "[gen_case] Dump data failed! cnrtMemcpy data size is "
                  << data_size << " byte.";
       return nullptr;
     }
-    return data;
   }
   void appendCriterion(std::string criterion, double threshold,
                        double threshold_imag);
@@ -463,12 +491,12 @@ class PbNode {
   void setHandle(mluOpHandle_t handle) { this->handle = handle; }
   void getHandleParam();
   void dumpDataFile(std::string file_name, std::string folder_name, int index,
-                    std::ofstream &case_file, bool shouldDump,
-                    enum DATASTATE data_state);
+                    std::ofstream &case_file, enum DATASTATE data_state);
   void dumpOutputFile();
-  void dumpToFile(bool isFirst, bool valueDump = false);
+  void dumpToFile(bool valueDump = false);
   void printOnScreen();
-  void serialize(bool isFirst = false);
+  void serialize();
+  void debugTensorAddress();  // may be removed when [MLUOPCORE-13133] completed
 };
 
 template <>
@@ -506,7 +534,7 @@ inline void PbNode::appendOpParam<const void *>(std::string param_name,
   op_param.name = param_node_name;
   cnrtPointerAttributes_t attr;
   cnrtPointerGetAttributes(&attr, param_value);
-  int data_width = getSizeOfDataType(dtype);
+  int data_width = mluop::getSizeOfDataType(dtype);
   if (attr.type == cnrtMemTypeDevice) {
     void *data = malloc(data_width);
     if (CNRT_RET_SUCCESS == cnrtMemcpy(data, const_cast<void *>(param_value),
@@ -571,12 +599,15 @@ void genCaseModeRestore();
 void genCaseModeSet(int mode);
 inline int getOpNameMask(const std::string op_name_, const std::string op_name);
 
-PbNode *genCaseStart(std::string op_name);
+PbNode *genCaseStart(std::string op_name, std::string op_type = "NONE");
 void genCaseData(PbNode *node, bool is_input, std::string id,
                  const void *device_data, mluOpTensorDescriptor_t desc,
                  double param1, double param2,
                  std::string distribution = "UNIFORM", bool dump_data = false);
-
+void genCaseData(PbNode *node, bool is_input, std::string id,
+                 const void *device_data, mluOpSeqDataDescriptor_t desc,
+                 double param1, double param2, bool have_onchop,
+                 std::string distribution = "UNIFORM", bool dump_data = false);
 void genCaseData(PbNode *node, bool is_input, std::string id,
                  const void *device_data, int dim, int64_t *dims,
                  mluOpDataType_t dtype, mluOpTensorLayout_t layout,

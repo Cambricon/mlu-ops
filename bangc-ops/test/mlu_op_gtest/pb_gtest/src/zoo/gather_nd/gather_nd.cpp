@@ -47,7 +47,10 @@ void GatherNdExecutor::compute() {
       mluOpGatherNd(handle_, desc_params, params, desc_indices, indices,
                     desc_output, output));
   interface_timer_.stop();
-  data_vector_[2].is_output = true;
+}
+
+void GatherNdExecutor::setMiscellaneousParam() {
+  data_vector_[2].alsoServeAsOutput();
 }
 
 void GatherNdExecutor::cpuCompute() {

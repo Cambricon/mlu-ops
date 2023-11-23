@@ -357,22 +357,22 @@ spatial_scale 0.03125.
   if (mluOpGetTensorElementNum(grad_output_desc) == 0 || input_desc->dims[0] == 0 ||
       mluOpGetTensorElementNum(rois_desc) == 0) {
     VLOG(5) << "[mluOpDeformRoiPoolBackward] Zero element tensor failure";
-    return mluOp_STATUS_BAD_PARAM;
+    return mluop_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0) {
     VLOG(5) << "[mluOpDeformRoiPoolBackward] Skip zero element tensor";
-    return mluOp_STATUS_SUCCESS;
+    return mluop_STATUS_SUCCESS;
   }
   ```
 
  3、对输入输出支持的dtype、layout以及shape进行防呆；
 ```c++
-  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_output_desc->layout == mluOp_LAYOUT_NHWC);
-  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", input_desc->layout == mluOp_LAYOUT_NHWC);
-  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_input_desc->layout == mluOp_LAYOUT_NHWC);
+  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_output_desc->layout == mluop_LAYOUT_NHWC);
+  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", input_desc->layout == mluop_LAYOUT_NHWC);
+  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_input_desc->layout == mluop_LAYOUT_NHWC);
 
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              input_desc->dtype == mluOp_DTYPE_FLOAT || input_desc->dtype == mluOp_DTYPE_HALF);
+              input_desc->dtype == mluop_DTYPE_FLOAT || input_desc->dtype == mluop_DTYPE_HALF);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]", input_desc->dtype == grad_output_desc->dtype);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]", input_desc->dtype == rois_desc->dtype);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]", input_desc->dtype == grad_input_desc->dtype);
@@ -392,12 +392,12 @@ spatial_scale 0.03125.
     LOG(ERROR) << "[mluOpDeformRoiPoolBackward] rois number = " << rois_desc->dims[0]
                << ", grad_output batch = " << grad_output_desc->dims[0]
                << ", they should be equal.";
-    return mluOp_STATUS_BAD_PARAM;
+    return mluop_STATUS_BAD_PARAM;
   }
   if (input_desc->dims[3] != grad_output_desc->dims[3]) {
     LOG(ERROR) << "[mluOpDeformRoiPoolBackward] input channel = " << input_desc->dims[3]
                << ", output channel = " << grad_output_desc->dims[3] << ", they should be equal.";
-    return mluOp_STATUS_BAD_PARAM;
+    return mluop_STATUS_BAD_PARAM;
   }
 ```
 

@@ -190,7 +190,7 @@ void BorderAlignBackwardCUDAKernelLauncher(const Tensor &grad_output,
 
 ```c++
 // 给出mlu-ops算子接口 
-mluOpStatus_t mluOp_WIN_API 
+mluOpStatus_t mluop_WIN_API 
 mluOpBorderAlignBackward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t grad_output_desc,
                          const void *grad_output,
