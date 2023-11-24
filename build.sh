@@ -42,7 +42,11 @@ source env.sh
 # 1.build BANGC ops
 if [[ ${MLU_SUB_MODULE} == "bangc" ]]; then
   cd bangc-ops
-  ./build.sh
+  if [[ ${MLUOP_PACKAGE_INFO_SET} == "ON" ]]; then
+    ./independent_build.sh
+  else
+    ./build.sh
+  fi
   cd ..
 fi
 

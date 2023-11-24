@@ -409,7 +409,8 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
                 -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
                 -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
-                -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}"
+                -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}" \
+                -DMLUOP_PACKAGE_INFO_SET="${MLUOP_PACKAGE_INFO_SET}"
 
 popd > /dev/null
 ${CMAKE} --build ${BUILD_PATH} --  -j${BUILD_JOBS}
