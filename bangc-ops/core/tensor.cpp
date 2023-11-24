@@ -506,7 +506,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
                 << "), data width:" << mluop::getSizeOfDataType(desc->dtype)
                 << ".";
     LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow max tensor num. "
-                 << "Currently, mluOp supports tensor num smaller than 2^31, "
+                 << "Currently, mluop supports tensor num smaller than 2^31, "
                  << "now tensor " << tensor_info.str();
   }
   return MLUOP_STATUS_SUCCESS;
@@ -543,7 +543,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim_v2(
                 << "), data width:" << mluop::getSizeOfDataType(desc->dtype)
                 << ".";
     LOG(WARNING) << "[mluOpSetTensorDescriptor_v2]: overflow max tensor num. "
-                 << "Currently, mluOp supports tensor num smaller than 2^63, "
+                 << "Currently, mluop supports tensor num smaller than 2^63, "
                  << "now tensor " << tensor_info.str();
   }
   return MLUOP_STATUS_SUCCESS;

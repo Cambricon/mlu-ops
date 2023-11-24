@@ -1011,7 +1011,8 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  * If the sequence data is in fixed-point data type, call ::mluOpSetSeqDataDescriptorPositionAndScale
  * to set the position and scale of the sequence data.
  * At last, you need to destroy the descriptor at the end with the ::mluOpDestroySeqDataDescriptor
- * function. */
+ * function.
+ */
 typedef struct mluOpSeqDataStruct *mluOpSeqDataDescriptor_t;
 
 mluOpStatus_t MLUOP_WIN_API

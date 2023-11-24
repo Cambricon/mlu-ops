@@ -84,7 +84,7 @@ struct mluOpContext {
   int32_t capability_cluster_num;
   int32_t capability_job_limit;  // the max job type you can launch, e.g.
                                  // CN_KERNEL_CLASS_UNION1
-  int32_t clock_rate;  // the ipu clock frequency in kilohertz. 0 means that the
+  int32_t clock_rate;  // the mlu clock frequency in kilohertz. 0 means that the
                        // frequency cannot be obtained on the current device
   int32_t l2cache_size;                // the size of L2 cache in bytes
   int32_t persisting_l2cache_maxsize;  // the maximum persisting cache size of

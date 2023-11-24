@@ -295,7 +295,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
     ctx->round_mode = MLUOP_ROUND_HALF_TO_EVEN;
   }
   ctx->atomics_mode =
-      MLUOP_ATOMICS_NOT_ALLOWED;  // note: mluOp disallows atomics by defalut.
+      MLUOP_ATOMICS_NOT_ALLOWED;  // note: mluop disallows atomics by defalut.
   *handle = ctx;
   return MLUOP_STATUS_SUCCESS;
 }

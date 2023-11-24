@@ -13,8 +13,6 @@ bangc_googletest="bangc-ops/test/mlu_op_gtest/googletest/"
 bangc_gtest_third_party="bangc-ops/test/mlu_op_gtest/third_party/"
 bangc_gtest_json_file="jsoncppDist/"
 
-# bangc_exclude_list=${bangc_gtest_json_file}${bangc_googletest}${bangc_gtest_third_party}
-
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T  --name-only ${1} \
