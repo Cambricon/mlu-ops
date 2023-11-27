@@ -33,10 +33,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulBCastWorkspaceSize(
   PARAM_CHECK("mluOpBatchMatMulBCast", c_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace_size != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
 
   CHECK_FUNC_RETURN(cnnlGetBatchMatMulBCastWorkspaceSize(
                         _handle, _a_desc, _b_desc, _c_desc, workspace_size),
@@ -82,10 +82,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulAlgoHeuristic(
   PARAM_CHECK("mluOpBatchMatMulBCast", result_array != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", return_algo_count != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
 
   CHECK_FUNC_RETURN(cnnlGetBatchMatMulAlgoHeuristic(
                         _handle, bmm_bcast_desc, _a_desc, _b_desc, _c_desc,
@@ -193,10 +193,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastAlgorithm(
   PARAM_CHECK("mluOpBatchMatMulBCast", c_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
 
   CHECK_FUNC_RETURN(cnnlGetQuantizeBatchMatMulBCastAlgorithm(
                         _handle, bmm_bcast_desc, _a_desc, _b_desc, _c_desc,
@@ -225,10 +225,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace_size != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
 
   CHECK_FUNC_RETURN(cnnlGetQuantizeBatchMatMulBCastWorkspaceSize(
                         _handle, bmm_bcast_desc, _a_desc, _b_desc, _c_desc,
@@ -273,10 +273,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpQuantizeBatchMatMulBCast(
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
   CHECK_FUNC_RETURN(
       cnnlQuantizeBatchMatMulBCast(_handle, bmm_bcast_desc, alpha, _a_desc, a,
                                    a_position, a_scale, a_offset, _b_desc, b,
@@ -310,10 +310,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(
     PARAM_CHECK("mluOpBatchMatMulBCast", workspace != NULL);
   }
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
 
   CHECK_FUNC_RETURN(
       cnnlBatchMatMulBCast(_handle, is_transa, is_transb, _a_desc, a, _b_desc,
@@ -352,10 +352,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast_v2(
     PARAM_CHECK("mluOpBatchMatMulBCast", workspace != NULL);
   }
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
 
   CHECK_FUNC_RETURN(
       cnnlBatchMatMulBCast_v2(_handle, bmm_bcast_desc, algo, alpha, _a_desc, a,

@@ -28,8 +28,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFill(mluOpHandle_t handle, float value,
   PARAM_CHECK("mluOpFill", handle != NULL);
   PARAM_CHECK("mluOpFill", output_desc != NULL);
   PARAM_CHECK("mluOpFill", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlFill(_handle, value, _output_desc, output), CNNL_STATUS_SUCCESS,
       "[mluOpFill] Internal error accured in mluOpFill.",
@@ -48,9 +48,9 @@ mluOpFill_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t value_desc,
   PARAM_CHECK("mluOpFill_v2", value != NULL);
   PARAM_CHECK("mluOpFill_v2", output_desc != NULL);
   PARAM_CHECK("mluOpFill_v2", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(value_desc, _value_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(value_desc, _value_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlFill_v2(_handle, _value_desc, value, _output_desc, output),
       CNNL_STATUS_SUCCESS,
@@ -71,8 +71,8 @@ mluOpFill_v3(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
   PARAM_CHECK("mluOpFill_v3", value != NULL);
   PARAM_CHECK("mluOpFill_v3", output_desc != NULL);
   PARAM_CHECK("mluOpFill_v3", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlFill_v3(_handle, cnnlPointerMode_t(int(pointer_mode)), value,
                   _output_desc, output),

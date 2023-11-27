@@ -35,16 +35,16 @@ mluOpTransform(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
   PARAM_CHECK("[mluOpTransform]", output_desc != NULL);
   PARAM_CHECK("[mluOpTransform]", output != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   CHECK_FUNC_RETURN(cnnlTransform_v2(_handle, cnnlPointerMode_t(pointer_mode),
                                      alpha, _input_desc, input, beta,
                                      _output_desc, output),
                     CNNL_STATUS_SUCCESS,
                     "[cnnlTransform_v2] Internal error accured in "
-                    "cnnlTransform_v2.",  // NOLINT
+                    "cnnlTransform_v2.",
                     MLUOP_STATUS_INTERNAL_ERROR);
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);

@@ -52,14 +52,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormGatherStatsWithCounts(
   PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", mean != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormGatherStatsWithCounts]", invstd != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_all_desc, _mean_all_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_all_desc, _invstd_all_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(moving_mean_desc, _moving_mean_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(moving_var_desc, _moving_var_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_all_desc, _count_all_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_all_desc, _mean_all_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_all_desc,
+                                               _invstd_all_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(moving_mean_desc,
+                                               _moving_mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(moving_var_desc,
+                                               _moving_var_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_all_desc, _count_all_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
 
   CHECK_FUNC_RETURN(
       cnnlSyncBatchNormGatherStatsWithCounts(

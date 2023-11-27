@@ -35,9 +35,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpStridedSlice(
   PARAM_CHECK("mluOpStridedSlice", output_desc != NULL);
   PARAM_CHECK("mluOpstridedSlice", output != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   CHECK_FUNC_RETURN(cnnlStridedSlice(_handle, _input_desc, input, begin, end,
                                      stride, _output_desc, output),

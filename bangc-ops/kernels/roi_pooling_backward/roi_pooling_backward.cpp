@@ -39,11 +39,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPoolingBackward(
   PARAM_CHECK("[mluOpRoiPoolingBackward]", grads_image_desc != NULL);
   PARAM_CHECK("[mluOpRoiPoolingBackward]", grads_image != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(rois_desc, _rois_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_desc, _argmax_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc, _grads_image_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(rois_desc, _rois_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_desc, _argmax_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
+                                               _grads_image_desc);
 
   CHECK_FUNC_RETURN(cnnlRoiPoolingBackward(
                         _handle, cnnlPoolingMode_t(pooling_mode), _grads_desc,

@@ -30,13 +30,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(
   PARAM_CHECK("mluOpAddN_v2", input_descs != NULL);
   PARAM_CHECK("mluOpAddN_v2", output_desc != NULL);
   PARAM_CHECK("mluOpAddN_v2", input_num >= 2);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
   cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * input_num);
   for (int i = 0; i < input_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(input_descs[i], _input_descs[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], _input_descs[i]);
   }
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlGetAddNWorkspaceSize(_handle, _input_descs, input_num,
                                _output_desc, workspace_size),
@@ -60,13 +60,13 @@ mluOpAddN(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
   PARAM_CHECK("mluOpAddN", input_descs != NULL);
   PARAM_CHECK("mluOpAddN", output_desc != NULL);
   PARAM_CHECK("mluOpAddN", input_num >= 2);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
   cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * input_num);
   for (int i = 0; i < input_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(input_descs[i], _input_descs[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], _input_descs[i]);
   }
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlAddN(_handle, _input_descs, inputs, input_num, _output_desc, output),
       CNNL_STATUS_SUCCESS,
@@ -90,13 +90,13 @@ mluOpAddN_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
   PARAM_CHECK("mluOpAddN_v2", input_descs != NULL);
   PARAM_CHECK("mluOpAddN_v2", output_desc != NULL);
   PARAM_CHECK("mluOpAddN_v2", input_num >= 2);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
   cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * input_num);
   for (int i = 0; i < input_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(input_descs[i], _input_descs[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], _input_descs[i]);
   }
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlAddN_v2(_handle, _input_descs, inputs, input_num, _output_desc,
                   output, workspace, workspace_size),

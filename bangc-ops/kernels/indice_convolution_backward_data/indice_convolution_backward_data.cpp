@@ -450,12 +450,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
         input_grad_condence_desc, MLUOP_LAYOUT_ARRAY, input_grad_desc->dtype, 2,
         input_grad_condence_dims));
 
-    CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sub_filters_desc,
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sub_filters_desc,
                                           cnnl_sub_filters_desc);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_grad_condence_desc,
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_grad_condence_desc,
                                           cnnl_output_grad_condence_desc);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_condence_desc,
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_condence_desc,
                                           cnnl_input_grad_condence_desc);
 
     CALL_CNNL(cnnlCreateMatMulHeuristicResult(&cnnl_heuristic_result));

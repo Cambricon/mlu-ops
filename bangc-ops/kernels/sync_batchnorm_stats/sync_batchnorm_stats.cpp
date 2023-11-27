@@ -28,8 +28,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSyncBatchNormStatsWorkspaceSize(
   PARAM_CHECK("mluOpSyncBatchNormStats_v2", handle != NULL);
   PARAM_CHECK("mluOpSyncBatchNormStats_v2", x_desc != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
 
   CHECK_FUNC_RETURN(
       cnnlGetSyncBatchNormStatsWorkspaceSize(_handle, _x_desc, workspace_size),
@@ -55,10 +55,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormStats(
   PARAM_CHECK("[mluOpSyncBatchNormStats]", mean != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormStats]", invstd != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
 
   CHECK_FUNC_RETURN(cnnlSyncBatchNormStats(_handle, _x_desc, x, eps, _mean_desc,
                                            mean, _invstd_desc, invstd),
@@ -90,10 +90,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormStats_v2(
     PARAM_CHECK("mluOpSyncBatchNormStats_v2", workspace != NULL);
   }
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
 
   CHECK_FUNC_RETURN(
       cnnlSyncBatchNormStats_v2(_handle, _x_desc, x, workspace, workspace_size,

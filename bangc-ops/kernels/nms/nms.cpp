@@ -70,11 +70,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsWorkspaceSize(
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", boxes_desc != NULL);
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", workspace_size != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
   cnnlTensorDescriptor_t _confidence_desc = NULL;
   if (confidence_desc != NULL) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(confidence_desc, _confidence_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(confidence_desc, _confidence_desc);
   }
 
   CHECK_FUNC_RETURN(
@@ -105,13 +105,13 @@ mluOpNms(mluOpHandle_t handle, const mluOpNmsDescriptor_t nms_desc,
   PARAM_CHECK("mluOpNms", boxes != NULL);
   PARAM_CHECK("mluOpNms", output != NULL);
   PARAM_CHECK("mluOpNms", output_size != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   cnnlTensorDescriptor_t _confidence_desc = NULL;
   if (confidence_desc != NULL) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(confidence_desc, _confidence_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(confidence_desc, _confidence_desc);
   }
 
   CHECK_FUNC_RETURN(

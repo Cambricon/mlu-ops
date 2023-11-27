@@ -34,10 +34,10 @@ mluOpScatterNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t indices_desc,
   PARAM_CHECK("mluOpScatterNd", updates != NULL);
   PARAM_CHECK("mluOpScatterNd", output_desc != NULL);
   PARAM_CHECK("mluOpScatterNd", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   CHECK_FUNC_RETURN(
       cnnlScatterNd(_handle, _indices_desc, indices, _updates_desc, updates,
@@ -65,11 +65,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpScatterNd_v2(
   PARAM_CHECK("mluOpScatterNd_v2", updates_desc != NULL);
   PARAM_CHECK("mluOpScatterNd_v2", updates != NULL);
   PARAM_CHECK("mluOpScatterNd_v2", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   CHECK_FUNC_RETURN(
       cnnlScatterNd_v2(_handle, cnnlScatterNdMode_t(mode), _indices_desc,

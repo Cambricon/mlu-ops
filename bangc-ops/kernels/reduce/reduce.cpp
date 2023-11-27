@@ -108,9 +108,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetReduceOpWorkspaceSize(
   PARAM_CHECK("mluOpReduce", input_desc != NULL);
   PARAM_CHECK("mluOpReduce", output_desc != NULL);
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlGetReduceOpWorkspaceSize(_handle, _input_desc, _output_desc,
                                    reduce_desc, workspace_size_inbytes),
@@ -134,9 +134,9 @@ mluOpReduce(mluOpHandle_t handle, const mluOpReduceDescriptor_t reduce_desc,
   if (workspace_size > 0) {
     PARAM_CHECK("mluOpReduce", workspace != NULL);
   }
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlReduce(_handle, reduce_desc, workspace, workspace_size, alpha,
                  _input_desc, input, indices_size_inbytes, indices, beta,

@@ -86,10 +86,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward(
   PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
   PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   CHECK_FUNC_RETURN(cnnlRoiAlign(_handle, roialign_desc, _input_desc, input,
                                  _boxes_desc, boxes, _output_desc, output),
@@ -121,15 +121,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
   PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
   PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
   cnnlTensorDescriptor_t _argmax_x_desc = NULL;
   cnnlTensorDescriptor_t _argmax_y_desc = NULL;
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(argmax_x_desc, _argmax_x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(argmax_y_desc, _argmax_y_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, _argmax_x_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, _argmax_y_desc);
   CHECK_FUNC_RETURN(
       cnnlRoiAlign_v2(_handle, roialign_desc, _input_desc, input, _boxes_desc,
                       boxes, _output_desc, output, _argmax_x_desc, argmax_x,

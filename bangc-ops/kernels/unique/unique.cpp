@@ -64,8 +64,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetUniqueWorkSpace(
   PARAM_CHECK("mluOpUnique", unique_desc != NULL);
   PARAM_CHECK("mluOpUnique", input_desc != NULL);
   PARAM_CHECK("mluOpUnique", size != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
   CHECK_FUNC_RETURN(
       cnnlGetUniqueWorkSpace(_handle, unique_desc, _input_desc, size),
       CNNL_STATUS_SUCCESS,
@@ -86,8 +86,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpUniqueGetOutLen(
   PARAM_CHECK("mluOpUnique", input != NULL);
   PARAM_CHECK("mluOpUnique", unique_data != NULL);
   PARAM_CHECK("mluOpUnique", output_len != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
   CHECK_FUNC_RETURN(
       cnnlUniqueGetOutLen(_handle, unique_desc, _input_desc, input, unique_data,
                           output_len),
@@ -106,8 +106,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetUniqueWorkspaceSize(
   PARAM_CHECK("mluOpUnique", unique_desc != NULL);
   PARAM_CHECK("mluOpUnique", input_desc != NULL);
   PARAM_CHECK("mluOpUnique", workspace_size != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
   CHECK_FUNC_RETURN(
       cnnlGetUniqueWorkspaceSize(_handle, unique_desc, _input_desc,
                                  workspace_size),
@@ -130,8 +130,8 @@ mluOpUnique(mluOpHandle_t handle, const mluOpUniqueDescriptor_t unique_desc,
   PARAM_CHECK("mluOpUnique", input != NULL);
   PARAM_CHECK("mluOpUnique", unique_data != NULL);
   PARAM_CHECK("mluOpUnique", output_data != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
   CHECK_FUNC_RETURN(
       cnnlUnique(_handle, unique_desc, _input_desc, input, output_len,
                  unique_data, output_data, output_index, output_counts),
@@ -161,11 +161,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpUnique_v2(
   PARAM_CHECK("mluOpUnique_v2", output_desc != NULL);
   PARAM_CHECK("mluOpUnique_v2", output != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(counts_desc, _counts_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(counts_desc, _counts_desc);
 
   CHECK_FUNC_RETURN(
       cnnlUnique_v2(_handle, unique_desc, _input_desc, input, workspace,

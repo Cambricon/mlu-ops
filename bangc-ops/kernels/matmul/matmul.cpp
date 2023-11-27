@@ -123,11 +123,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMatMulAlgoHeuristic(
   PARAM_CHECK("mluOpMatMul", result_array != NULL);
   PARAM_CHECK("mluOpMatMul", return_algo_count != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(d_desc, _d_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(d_desc, _d_desc);
   CHECK_FUNC_RETURN(
       cnnlGetMatMulAlgoHeuristic(
           _handle, matmul_desc, _a_desc, _b_desc, _c_desc, _d_desc,
@@ -176,11 +176,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMatMulWorkspaceSize(
   PARAM_CHECK("mluOpMatMul", algo != NULL);
   PARAM_CHECK("mluOpMatMul", workspace_size != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(d_desc, _d_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(d_desc, _d_desc);
 
   CHECK_FUNC_RETURN(
       cnnlGetMatMulWorkspaceSize(_handle, matmul_desc, _a_desc, _b_desc,
@@ -210,10 +210,10 @@ mluOpMatMul(mluOpHandle_t handle, const bool is_trans_a, const bool is_trans_b,
   PARAM_CHECK("mluOpMatMul", beta != NULL);
   PARAM_CHECK("mluOpMatMul", c_desc != NULL);
   PARAM_CHECK("mluOpMatMul", c != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
   CHECK_FUNC_RETURN(cnnlMatMul(_handle, is_trans_a, is_trans_b, alpha, _a_desc,
                                a, _b_desc, b, beta, _c_desc, c),
                     CNNL_STATUS_SUCCESS,
@@ -249,11 +249,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpMatMul_v2(
   }
   PARAM_CHECK("mluOpMatMul", d_desc != NULL);
   PARAM_CHECK("mluOpMatMul", d != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(d_desc, _d_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(d_desc, _d_desc);
   CHECK_FUNC_RETURN(
       cnnlMatMul_v2(_handle, matmul_desc, algo, alpha, _a_desc, a, _b_desc, b,
                     beta, _c_desc, c, workspace, workspace_size, _d_desc, d),

@@ -29,7 +29,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetConcatWorkspaceSize(mluOpHandle_t handle,
   PARAM_CHECK("mluOpConcat", concat_num > 0);
   PARAM_CHECK("mluOpConcat", size != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
 
   CHECK_FUNC_RETURN(cnnlGetConcatWorkspaceSize(_handle, concat_num, size),
                     CNNL_STATUS_SUCCESS,
@@ -56,20 +56,19 @@ mluOpConcat(mluOpHandle_t handle, const int concat_num, const int axis,
     PARAM_CHECK("mluOpConcat", workspace != NULL);
   }
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
   cnnlTensorDescriptor_t *_inputs_desc = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * concat_num);
   for (int i = 0; i < concat_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(inputs_desc[i], _inputs_desc[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(inputs_desc[i], _inputs_desc[i]);
   }
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
 
-  CHECK_FUNC_RETURN(
-      cnnlConcat(_handle, concat_num, axis, _inputs_desc, inputs, workspace,
-                 workspace_size, _output_desc, output),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpConcat] Internal error accured in mluOpConcat.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(cnnlConcat(_handle, concat_num, axis, _inputs_desc, inputs,
+                               workspace, workspace_size, _output_desc, output),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpConcat] Internal error accured in mluOpConcat.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
 
   for (int i = 0; i < concat_num; i++) {
     DESTROY_CNNL_TENSOR_DESCRIPTOR(_inputs_desc[i]);

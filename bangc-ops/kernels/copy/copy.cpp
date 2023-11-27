@@ -30,14 +30,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpCopy(mluOpHandle_t handle,
   PARAM_CHECK("mluOpCopy", handle != NULL);
   PARAM_CHECK("mluOpCopy", input_desc != NULL);
   PARAM_CHECK("mluOpCopy", output_desc != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
-  CHECK_FUNC_RETURN(
-      cnnlCopy(_handle, _input_desc, input, _output_desc, output),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpCopy] Internal error accured in mluOpCopy.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  CHECK_FUNC_RETURN(cnnlCopy(_handle, _input_desc, input, _output_desc, output),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpCopy] Internal error accured in mluOpCopy.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
   DESTROY_CNNL_HANDLE(_handle);

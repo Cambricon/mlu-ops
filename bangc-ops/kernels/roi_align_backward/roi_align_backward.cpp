@@ -35,10 +35,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward(
   PARAM_CHECK("mluOpRoiAlignBackward", boxes != NULL);
   PARAM_CHECK("mluOpRoiAlignBackward", grads_image_desc != NULL);
   PARAM_CHECK("mluOpRoiAlignBackward", grads_image != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc, _grads_image_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
+                                               _grads_image_desc);
   CHECK_FUNC_RETURN(
       cnnlRoiAlignBackward(_handle, spatial_scale, sampling_ratio, aligned,
                            _grads_desc, grads, _boxes_desc, boxes,
@@ -70,10 +71,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward_v2(
   PARAM_CHECK("mluOpRoiAlignBackward_v2", grads_image_desc != NULL);
   PARAM_CHECK("mluOpRoiAlignBackward_v2", grads_image != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc, _grads_image_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
+                                               _grads_image_desc);
 
   cnnlTensorDescriptor_t _argmax_x_desc = NULL;
   cnnlTensorDescriptor_t _argmax_y_desc = NULL;
@@ -83,8 +85,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward_v2(
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_x != NULL);
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_y_desc != NULL);
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_y != NULL);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(argmax_x_desc, _argmax_x_desc);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_V2(argmax_y_desc, _argmax_y_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, _argmax_x_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, _argmax_y_desc);
   }
   CHECK_FUNC_RETURN(
       cnnlRoiAlignBackward_v2(_handle, _grads_desc, grads, _boxes_desc, boxes,

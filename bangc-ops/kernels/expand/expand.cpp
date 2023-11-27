@@ -31,9 +31,9 @@ mluOpExpand(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("mluOpExpand", input != NULL);
   PARAM_CHECK("mluOpExpand", output_desc != NULL);
   PARAM_CHECK("mluOpExpand", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(
       cnnlExpand(_handle, _input_desc, input, _output_desc, output),
       CNNL_STATUS_SUCCESS,

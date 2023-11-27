@@ -50,16 +50,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardElemtV2(
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", count != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", diff_x != NULL);
 
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_y_desc, _diff_y_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, _filter_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_desc, _sum_dy_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_xmu_desc, _sum_dy_xmu_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_desc, _count_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_x_desc, _diff_x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_y_desc, _diff_y_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, _filter_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_desc, _sum_dy_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_xmu_desc,
+                                               _sum_dy_xmu_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_desc, _count_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_x_desc, _diff_x_desc);
 
   CHECK_FUNC_RETURN(cnnlSyncBatchNormBackwardElemtV2(
                         _handle, _diff_y_desc, diff_y, _x_desc, x, _mean_desc,

@@ -48,8 +48,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetThreeNNForwardWorkspaceSize(
   size_t known_transpose_workspace_size = 0;
 
   cnnlTransposeDescriptor_t _trans_desc = NULL;
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(known_desc, _known_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(known_desc, _known_desc);
   CALL_CNNL(cnnlCreateTransposeDescriptor(&_trans_desc));
   CALL_CNNL(cnnlSetTransposeDescriptor(_trans_desc, known_dim, known_permute));
   CALL_CNNL(cnnlGetTransposeWorkspaceSize(_handle, _known_desc, _trans_desc,
@@ -69,9 +69,9 @@ static mluOpStatus_t transposeTensor(
   const int input_dim = input_desc->dim;
 
   cnnlTransposeDescriptor_t cnnl_trans_desc = NULL;
-  CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
                                         cnnl_workspace_dst_desc);
   CALL_CNNL(cnnlCreateTransposeDescriptor(&cnnl_trans_desc));
   CALL_CNNL(cnnlSetTransposeDescriptor(cnnl_trans_desc, input_dim, permute));

@@ -34,10 +34,10 @@ mluOpGatherNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_params,
   PARAM_CHECK("mluOpGatherNd", indices != NULL);
   PARAM_CHECK("mluOpGatherNd", desc_output != NULL);
   PARAM_CHECK("mluOpGatherNd", output != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_params, _desc_params);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_indices, _desc_indices);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_output, _desc_output);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_params, _desc_params);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_indices, _desc_indices);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_output, _desc_output);
   CHECK_FUNC_RETURN(
       cnnlGatherNd(_handle, _desc_params, params, _desc_indices, indices,
                    _desc_output, output),

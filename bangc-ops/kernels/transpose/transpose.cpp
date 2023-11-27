@@ -57,8 +57,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTransposeWorkspaceSize(
   PARAM_CHECK("mluOpTranspose", x_desc != NULL);
   PARAM_CHECK("mluOpTranspose", desc != NULL);
   PARAM_CHECK("mluOpTranspose", size != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
   CHECK_FUNC_RETURN(cnnlGetTransposeWorkspaceSize(_handle, _x_desc, desc, size),
                     CNNL_STATUS_SUCCESS,
                     "[mluOpTranspose] Internal error accured in "
@@ -79,9 +79,9 @@ mluOpTranspose(mluOpHandle_t handle, const mluOpTransposeDescriptor_t desc,
   PARAM_CHECK("mluOpTranspose", x != NULL);
   PARAM_CHECK("mluOpTranspose", y_desc != NULL);
   PARAM_CHECK("mluOpTranspose", y != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, _y_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, _y_desc);
   CHECK_FUNC_RETURN(
       cnnlTranspose(_handle, desc, _x_desc, x, _y_desc, y), CNNL_STATUS_SUCCESS,
       "[mluOpTranspose] Internal error accured in mluOpTranspose.",
@@ -106,9 +106,9 @@ mluOpTranspose_v2(mluOpHandle_t handle, const mluOpTransposeDescriptor_t desc,
   if (workspace_size > 0) {
     PARAM_CHECK("mluOpTranspose_v2", workspace != NULL);
   }
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, _y_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, _y_desc);
   CHECK_FUNC_RETURN(cnnlTranspose_v2(_handle, desc, _x_desc, x, _y_desc, y,
                                      workspace, workspace_size),
                     CNNL_STATUS_SUCCESS,

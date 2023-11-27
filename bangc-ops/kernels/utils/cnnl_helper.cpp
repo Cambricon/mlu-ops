@@ -22,6 +22,17 @@
  *************************************************************************/
 #include "cnnl_helper.h"
 
+void mluOpCnnlCheck(mluOpStatus_t result, char const *const func,
+                    const char *const file, int const line) {
+  if (result) {
+    std::string error =
+        "\"" + std::string(mluOpGetErrorString(result)).replace(0, 5, "CNNL") +
+        " in " + std::string(func) + "\"";
+    LOG(ERROR) << error;
+    throw std::runtime_error(error);
+  }
+}
+
 // Enumeration convert template
 template <typename SRC_ENUM, typename DST_ENUM>
 DST_ENUM mluOpConvertEnum(SRC_ENUM param) {

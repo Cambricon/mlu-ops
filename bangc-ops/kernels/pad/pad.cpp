@@ -33,9 +33,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpPad(mluOpHandle_t handle,
   PARAM_CHECK("mluOpPad", paddings != NULL);
   PARAM_CHECK("mluOpPad", padding_value != NULL);
   PARAM_CHECK("mluOpPad", output_desc != NULL);
-  CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
   CHECK_FUNC_RETURN(cnnlPad(_handle, _input_desc, input, paddings,
                             padding_value, _output_desc, output),
                     CNNL_STATUS_SUCCESS,
