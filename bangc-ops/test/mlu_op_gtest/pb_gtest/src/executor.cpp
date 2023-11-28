@@ -45,9 +45,9 @@
 #include "kernel_tracing.h"
 #include "hardware_monitor.h"
 
-#if GTEST_ENABLE_GPERFTOOLS
-#include "gperftools/profiler.h"
-#endif
+// #if GTEST_ENABLE_GPERFTOOLS
+// #include "gperftools/profiler.h"
+// #endif
 
 extern std::unordered_map<std::string, std::vector<double>> acc_baseline_map;
 
@@ -84,11 +84,11 @@ Executor::~Executor() {
   hostFree();
   baselineFree();
   destroyTensors();
-#if GTEST_ENABLE_GPERFTOOLS
-  if (exe_config_ != nullptr && exe_config_->gtest_internal_cpu_profile) {
-    ProfilerStop();
-  }
-#endif
+// #if GTEST_ENABLE_GPERFTOOLS
+//   if (exe_config_ != nullptr && exe_config_->gtest_internal_cpu_profile) {
+//     ProfilerStop();
+//   }
+// #endif
   VLOG(4) << "Executor end.";
 }
 
@@ -111,13 +111,13 @@ void Executor::setup(std::string file,
                      const std::shared_ptr<ExecuteConfig> ecfg) {
   exe_config_ = ecfg;
 
-#if GTEST_ENABLE_GPERFTOOLS
-  if (exe_config_->gtest_internal_cpu_profile) {
-    // TODO(None): make profile filename configurable
-    std::string profile_name = "mluop_gtest_cpu_capture.prof";
-    ProfilerStart(profile_name.c_str());
-  }
-#endif
+// #if GTEST_ENABLE_GPERFTOOLS
+//   if (exe_config_->gtest_internal_cpu_profile) {
+//     // TODO(None): make profile filename configurable
+//     std::string profile_name = "mluop_gtest_cpu_capture.prof";
+//     ProfilerStart(profile_name.c_str());
+//   }
+// #endif
   // VLOG(5) << __FUNCTION__ << ", " << __LINE__;
 
   // kernel_tracing_ctx =

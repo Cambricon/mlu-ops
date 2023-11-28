@@ -56,10 +56,10 @@
 
 #include "cnpapi.h"
 
-#ifndef GTEST_ENABLE_GPERFTOOLS
-// compile with google/gerftools (which provides tcmalloc and cpu profiler)
-#define GTEST_ENABLE_GPERFTOOLS 0
-#endif
+// #ifndef GTEST_ENABLE_GPERFTOOLS
+// // compile with google/gerftools (which provides tcmalloc and cpu profiler)
+// #define GTEST_ENABLE_GPERFTOOLS 0
+// #endif
 namespace mluoptest {
 
 typedef std::function<void()> Func;
@@ -159,11 +159,11 @@ struct ExecuteConfig {
   bool random_mlu_address = false;
   bool enable_const_dram = false;
   bool auto_tuning = false;
-#if GTEST_ENABLE_GPERFTOOLS
-  // TODO(None) move into global_var
-  bool gtest_internal_cpu_profile =
-      getEnv("MLUOP_GTEST_ENABLE_GPERFTOOLS", false);
-#endif
+// #if GTEST_ENABLE_GPERFTOOLS
+//   // TODO(None) move into global_var
+//   bool gtest_internal_cpu_profile =
+//       getEnv("MLUOP_GTEST_ENABLE_GPERFTOOLS", false);
+// #endif
   std::string kernel_trace_policy;
 };
 

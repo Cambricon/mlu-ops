@@ -200,8 +200,6 @@ endif()
 
 
 target_include_directories(mluop_pb_gtest_obj PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}/third_party/gperftools/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gperftools/src
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
   $<INSTALL_INTERFACE:include>
