@@ -116,7 +116,7 @@ int genCaseModeGet(bool first) {
       auto &mode_stack = it->second;
       // the top of mode_stack store the gen_case mode for current thread
 
-      // TODO(zhangchaojie): redundant first truth check
+      // TODO(None): redundant first truth check
       if (first) {
         mode_stack.push_back(mode_stack.front());
         mode_stack.front() = mode;

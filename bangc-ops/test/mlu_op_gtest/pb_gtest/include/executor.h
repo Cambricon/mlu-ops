@@ -160,7 +160,7 @@ struct ExecuteConfig {
   bool enable_const_dram = false;
   bool auto_tuning = false;
 #if GTEST_ENABLE_GPERFTOOLS
-  // TODO(jiaminghao) move into global_var
+  // TODO(None) move into global_var
   bool gtest_internal_cpu_profile =
       getEnv("MLUOP_GTEST_ENABLE_GPERFTOOLS", false);
 #endif
@@ -646,7 +646,7 @@ class Executor {
   double getLtPeakComputeForce();
   double getPeakComputeForce();
   double getIoBandwidth();
-  // TODO(niewenchang): replace IoBandWidth later.
+  // TODO(None): replace IoBandWidth later.
   double getBandWidthByDev();
   void getMluPerfInfo(PerfInfo *info);
   void getGpuPerfInfo(PerfInfo *info);

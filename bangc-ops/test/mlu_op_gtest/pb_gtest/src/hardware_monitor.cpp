@@ -181,7 +181,7 @@ void hardwareMonitor::monitorPowerOneGRepeat() {
   auto getPower = [&, this]() {
     power_info_curr.version = CNDEV_VERSION_5;
     t_curr = MONITOR_CLOCK::now().time_since_epoch().count() - start_time_point;
-    // TODO(zhaolianshui): cntoolkit-3.6, use cndevGetDevicePower
+    // TODO(None): cntoolkit-3.6, use cndevGetDevicePower
     // GTEST_CHECK(cndevGetDevicePower(&power_info_curr, dev_id) ==
     // CNDEV_SUCCESS);
     GTEST_CHECK(cndevGetPowerInfo(&power_info_curr, dev_id) == CNDEV_SUCCESS);
@@ -216,7 +216,7 @@ void hardwareMonitor::monitorPowerOneGRepeat() {
   auto time_span =
       std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(t2 -
                                                                             t1);
-  // TODO(zhaolianshui): cntoolkit-3.6, remove this warning
+  // TODO(None): cntoolkit-3.6, remove this warning
   LOG(WARNING) << "From cntoolkit-3.6 onward, use cndevGetDevicePower.";
   VLOG(4) << "cndevGetDevicePower took " << time_span.count() / i
           << "us per call.";

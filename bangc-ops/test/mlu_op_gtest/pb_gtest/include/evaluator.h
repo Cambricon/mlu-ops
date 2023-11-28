@@ -160,7 +160,7 @@ bool hasNanOrInf<half>(half *data, size_t count) {
   return twoBytesNanInf(data, count, 0x7c000000, 0x00007c00);
 }
 
-// TODO(NONE): test itself
+// TODO(None): test itself
 template <>
 bool hasNanOrInf<bfloat16>(bfloat16 *data, size_t count) {
   return twoBytesNanInf(data, count, 0x7f800000, 0x00007f80);
@@ -297,7 +297,7 @@ class Evaluator {
   // get name + criterion + error
   const std::vector<ErrorWrap> &errors() { return error_vec_; }
 
-  // TODO(wangjianxin): delete this api. but now the refactor plan is not ready,
+  // TODO(None): delete this api. but now the refactor plan is not ready,
   // and all op called this api, so just keep it.
   void setMluWorkspaceSize(size_t size) { workspace_size_ = size; }
   double getMluWorkspaceSize() { return workspace_size_; }
@@ -355,7 +355,7 @@ class Evaluator {
       nanInfRemain<T>();
       return;
     }
-    // TODO(niewenchang): have vector.push_back() in for loop, open it after
+    // TODO(None): have vector.push_back() in for loop, open it after
     // modify code logic #pragma omp parallel for schedule(guided)
     for (size_t i = 0; i < count_total_; ++i) {
       if (isNanOrInf(a[i]) || isNanOrInf(b[i])) {

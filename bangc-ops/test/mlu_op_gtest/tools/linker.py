@@ -124,13 +124,13 @@ class Linker:
         err = self._ret.stderr.decode('utf8')
 
         if self._ret.returncode and '_bfd_aarch64_erratum_843419_branch_to_stub' in err:
-            logging.warning("encounter ld internal bug, try to generate random object to link as a workaround (see [MLUOPCORE-11301])")
+            logging.warning("encounter ld internal bug, try to generate random object to link as a workaround")
             # workaround for error pattern:
             # > ld: ... internal error, aborting at ... elfnn-aarch64.c:4812 in _bfd_aarch64_erratum_843419_branch_to_stub
             # > ... aarch64-linux-gnu/bin/ld: Please report this bug.
             mode, source = next(self._workaround_src_iter)
             if source is None:
-                logging.error("Tried many times but cannot bypass ld internal bug (see [MLUOPCORE-11301])")
+                logging.error("Tried many times but cannot bypass ld internal bug")
                 return self.on_failure()
             return self(self.build_cmd(mode, args, self.compile(source)))
 #            return self(args + [self.compile(source)])
@@ -182,7 +182,7 @@ class Linker:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog="linker", description="wrap 'ld' command as a workaround for ld internal bug (MLUOPCORE-11301)")
+    parser = argparse.ArgumentParser(prog="linker", description="wrap 'ld' command as a workaround for ld internal bug")
     parser.add_argument("--compiler", help="c++ compiler", required=True)
     parser.add_argument("--target", help="cpu target", required=True)
     parser.add_argument("command", help="command to be executed", nargs='*')

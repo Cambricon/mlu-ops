@@ -33,7 +33,7 @@
 
 namespace mluoptest {
 
-// TODO(niewenchang): currently useless,
+// TODO(None): currently useless,
 // use it to integrage stride_in and stride_out in the future
 enum StrideDirection {
   STRIDE_IN = 1,   // total_count -> shape_count

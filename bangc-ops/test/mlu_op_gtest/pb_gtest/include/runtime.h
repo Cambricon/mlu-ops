@@ -197,7 +197,7 @@ class MLURuntime : public Runtime {
 
   bool checkOverWritten();
 
-  // TODO(jiaminghao) consider move into `Runtime` public interface
+  // TODO(None) consider move into `Runtime` public interface
   inline size_t getAllocatedSize() const { return allocated_size; }
 
   inline size_t getMemBlocksSize() const { return memory_blocks_.size(); }

@@ -43,7 +43,7 @@
 
 // failed tests in GoogleTest will have RUN_ALL_TEST() return 1, so to
 // distinguish it from mluOp, choose a different exit code
-// TODO(zhaolianshui): it it the right place to put this MACRO?
+// TODO(None): it it the right place to put this MACRO?
 #define EXIT_FAILURE_MLUOP 2
 
 #ifndef MLUOP_GTEST_DTYPE_ALIGN
@@ -269,7 +269,7 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
       }
     }; break;
     case DTYPE_BOOL: {
-      // [MLUOPCORE-14645] bool with data other than 0/1 is allowed
+      // bool with data other than 0/1 is allowed
       if (!hasRamdomBound(random_param)) {
         LOG(ERROR) << "Generate bool data should use uniform distribution.";
         throw std::invalid_argument(std::string(__FILE__) + " +" +

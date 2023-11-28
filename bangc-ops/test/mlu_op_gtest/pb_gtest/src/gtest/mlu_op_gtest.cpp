@@ -110,7 +110,7 @@ void TestSuite::Thread1() {
     exe = getOpExecutor(op_name_);
     VLOG(5) << __FUNCTION__ << ", " << __LINE__;
 
-    // TODO(wangjianxin): modify ctor, set op_name in ctor.
+    // TODO(None): modify ctor, set op_name in ctor.
     exe->result()->op_name = op_name_;
     exe->init(ectx_);
     VLOG(5) << __FUNCTION__ << ", " << __LINE__;
@@ -343,7 +343,7 @@ void TestSuite::ThreadX() {
     // run
     try {
       exe = getOpExecutor(op_name);
-      // TODO(wangjianxin): modify ctor, set op_name in ctor.
+      // TODO(None): modify ctor, set op_name in ctor.
       exe->result()->op_name = op_name;
       exe->init(ecw->ectx);
       exe->setup(case_path, ecfg_);

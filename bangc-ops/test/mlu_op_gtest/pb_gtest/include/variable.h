@@ -79,7 +79,7 @@ class GlobalVar {
       -2147483648;  // test the i-th algo of the operator with multiple algos
   bool random_mlu_address_ = false;
   bool monitor_mlu_hardware_ = false;
-  // TODO(zhaolianshui): once all op bugs are fixed, force const dram check and
+  // TODO(None): once all op bugs are fixed, force const dram check and
   // remove this arg
   bool enable_const_dram_ = false;
   bool auto_tuning_ = false;

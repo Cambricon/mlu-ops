@@ -137,7 +137,7 @@ void GlobalVar::init(int *argc, char **argv) {
     monitor_mlu_hardware_ = paramDefinedMatch(arg, "--monitor_mlu_hardware")
                                 ? true
                                 : monitor_mlu_hardware_;
-    // TODO(zhaolianshui): once all op bugs are fixed, force const dram check
+    // TODO(None): once all op bugs are fixed, force const dram check
     // and remove this arg
     enable_const_dram_ = paramDefinedMatch(arg, "--enable_const_dram")
                              ? true
@@ -186,7 +186,7 @@ void GlobalVar::init(int *argc, char **argv) {
       (monitor_mlu_hardware_ == false)
           ? getEnv("MLUOP_GTEST_MONITOR_MLU_HARDWARE", false)
           : monitor_mlu_hardware_;
-  // TODO(zhaolianshui): once all op bugs are fixed, force const dram check and
+  // TODO(None): once all op bugs are fixed, force const dram check and
   // remove this arg
   enable_const_dram_ = (enable_const_dram_ == false)
                            ? getEnv("MLUOP_GTEST_ENABLE_CONST_DRAM", false)

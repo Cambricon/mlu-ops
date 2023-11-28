@@ -113,7 +113,7 @@ void Executor::setup(std::string file,
 
 #if GTEST_ENABLE_GPERFTOOLS
   if (exe_config_->gtest_internal_cpu_profile) {
-    // TODO(jiaminghao): make profile filename configurable
+    // TODO(None): make profile filename configurable
     std::string profile_name = "mluop_gtest_cpu_capture.prof";
     ProfilerStart(profile_name.c_str());
   }
@@ -290,7 +290,7 @@ void Executor::launch() {
   // comute for warm up
   VLOG(4) << "compute once for warm up.";
 
-  // TODO(jiaminghao): For kernel symbol name tracing:
+  // TODO(None): For kernel symbol name tracing:
   //                   If any mluOp op launch other kernels inside `compute()`,
   //                   kernel recording would have 'noises',
   //                   we may need to consider put 'kernel tracing logic' inside
@@ -328,7 +328,7 @@ void Executor::sync() {
 }
 
 void Executor::fillLLC() {
-  // TODO(niewenchang): add conditions of test llc, such as arch
+  // TODO(None): add conditions of test llc, such as arch
   if (exe_config_->test_llc) {
     /*
     // if need get fill llc time, uncomment here instead
@@ -1426,8 +1426,8 @@ void Executor::saveInputWithStrideByDtype() {
     if (unlikely(ts->empty())) {
       continue;
     }
-    // TODO(niewenchang): use is_input_and_output, now it is bug
-    // TODO(niewenchang): move it to class Stride
+    // TODO(None): use is_input_and_output, now it is bug
+    // TODO(None): move it to class Stride
     if (!ts->stride.empty() && flag_input_reuse_) {
       cpu_stride_input_.push_back((float *)cpu_runtime_.allocate(
           ts->total_count * mluop::getSizeOfDataType(ts->dtype)));
@@ -1552,7 +1552,7 @@ void Executor::deviceMalloc() {
     GTEST_CHECK(CN_SUCCESS == cnMallocConstant(&const_addr_, llc_size_));
     const_dram_.push(const_addr_);
   }
-  // TODO(zhaolianshui): once enable_const_dram is removed, move is_const_dram()
+  // TODO(None): once enable_const_dram is removed, move is_const_dram()
   // into DataBlock
   auto is_const_dram = [this](DataBlock *db) {
     return (exe_config_->enable_const_dram) && (db->is_only_input());
@@ -1714,7 +1714,7 @@ void Executor::deviceFree() noexcept {
   // for llc test, free 48MB llc memory
   freeLLC();
   for (int i = 0; i < data_vector_.size(); ++i) {
-    // TODO(zhaolianshui): group those device ptrs into a vector?
+    // TODO(None): group those device ptrs into a vector?
     if (data_vector_[i].device_origin_ptr != nullptr) {
       EXPECT_EQ(mlu_runtime_.deallocate(data_vector_[i].device_origin_ptr),
                 CNRT_RET_SUCCESS);
@@ -2131,7 +2131,7 @@ void Executor::copyIn() {
       continue;
     }
 
-    // TODO(zhaolianshui): should use cnrtmemcpyasync to do host2dev dev2dev
+    // TODO(None): should use cnrtmemcpyasync to do host2dev dev2dev
     // copy in the same queue memcpy host to dev
     if (zero_input_) {
       VLOG(4) << "set device_origin_ptr space to 0";
@@ -2163,7 +2163,7 @@ void Executor::copyIn() {
   }
   // if flag_input_reuse_ is true, there should be no output block records up to
   // this point
-  // TODO(zhaolianshui): add a gest_check?
+  // TODO(None): add a gest_check?
   // ONLY_OUTPUT
   auto output_blocks = getOutputBlocks(false);
   for (size_t i = 0; i < output_blocks.size(); ++i) {
@@ -2258,7 +2258,7 @@ void Executor::castHalfOuput() {
       continue;  // null output
     }
     MetaTensor *ts = parser_->output(i);
-    // TODO(zhaolianshui): convert complex_half as well
+    // TODO(None): convert complex_half as well
     GTEST_WARNING(ts->dtype != MLUOP_DTYPE_COMPLEX_HALF,
                   "After cpuCompute, "
                   "complex_float->complex_half->complex_float conversion is "
@@ -2540,7 +2540,7 @@ void Executor::mluOutputMallocByDtype() {
   for (size_t i = 0; i < parser_->outputs().size(); ++i) {
     MetaTensor *ts = parser_->output(i);
     DataBlock *db = output_blocks[i];
-    // TODO(niewenchang): i do not know why, but it in mluOuptutMalloc, let it
+    // TODO(None): i do not know why, but it in mluOuptutMalloc, let it
     // here for now
     if (unlikely(ts->empty())) {
       mlu_output_.push_back(nullptr);
@@ -2560,7 +2560,7 @@ void Executor::strideOutputByDtype() {
   auto output_blocks = getOutputBlocks(true);
   for (int i = 0; i < output_blocks.size(); ++i) {
     MetaTensor *ts = parser_->output(i);
-    // TODO(niewenchang): bug, need map output with it's reused input
+    // TODO(None): bug, need map output with it's reused input
     bool init_by_input = data_vector_[i].is_output() && flag_input_reuse_;
     void *tensor_copy = nullptr;
     if (init_by_input) {

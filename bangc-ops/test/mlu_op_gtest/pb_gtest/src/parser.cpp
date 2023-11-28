@@ -443,7 +443,7 @@ void Parser::getOutputTensorValue(size_t index, void *data, size_t count) {
 }
 
 // Get value from field value_f
-// TODO(taokai): abandon value_f, use value_h for float numbers instead.
+// TODO(None): abandon value_f, use value_h for float numbers instead.
 void Parser::getTensorValueF(const Tensor *pt, void *data, size_t count) {
   switch (pt->dtype()) {
     case DTYPE_COMPLEX_HALF:

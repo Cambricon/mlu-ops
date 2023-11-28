@@ -53,7 +53,7 @@ static mluOpStatus_t getLowAndHighValueFrom64Bits(T value, uint32_t* high,
   return MLUOP_STATUS_SUCCESS;
 }
 
-// TODO(jiaminghao) use const char * instead of std::string (need mluop_extra
+// TODO(None) use const char * instead of std::string (need mluop_extra
 // fix first) hide visibility
 size_t MLUOP_WIN_API getSizeOfDataType(mluOpDataType_t dtype);
 std::string MLUOP_WIN_API getNameOfDataType(mluOpDataType_t dtype);  // NOLINT
@@ -62,7 +62,7 @@ std::string MLUOP_WIN_API getNameOfTensorLayout(mluOpTensorLayout_t layout);  //
 }  // namespace mluop
 
 extern "C" {
-// TODO(jiaminghao) consider move into mlu_op.h
+// TODO(None) consider move into mlu_op.h
 const char* MLUOP_WIN_API mluOpGetNameOfDataType(mluOpDataType_t dtype);
 const char* MLUOP_WIN_API
 mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout);

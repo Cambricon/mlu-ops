@@ -496,7 +496,7 @@ class PbNode {
   void dumpToFile(bool valueDump = false);
   void printOnScreen();
   void serialize();
-  void debugTensorAddress();  // may be removed when [MLUOPCORE-13133] completed
+  void debugTensorAddress();
 };
 
 template <>

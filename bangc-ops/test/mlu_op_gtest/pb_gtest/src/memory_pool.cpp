@@ -95,7 +95,7 @@ std::pair<bool, size_t> RandomSpaceWithinChunk::allocate(size_t bytes_needed) {
     return ((init_val + align_val - 1) / align_val) * align_val;
   };
   // the allocated bytes should be aligned
-  // TODO(zhaolianshui): delete
+  // TODO(None): delete
   size_t bytes_needed_del = bytes_needed;
   bytes_needed = padUp(bytes_needed, getSizeAlign(bytes_needed));
 

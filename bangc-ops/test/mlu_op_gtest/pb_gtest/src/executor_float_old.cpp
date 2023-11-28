@@ -22,7 +22,7 @@
  *************************************************************************/
 #include "executor.h"
 
-// TODO(niewenchang): delete this file when all ops use void *
+// TODO(None): delete this file when all ops use void *
 namespace mluoptest {
 
 // cast mlu's output to fp32
@@ -133,12 +133,12 @@ void Executor::strideOutput() {
   auto output_blocks = getOutputBlocks(true);
   for (int i = 0; i < output_blocks.size(); ++i) {
     MetaTensor *ts = parser_->output(i);
-    if (!ts->stride.empty()) {  // TODO(niewenchang): 2023-7-13: fix here
+    if (!ts->stride.empty()) {  // TODO(None): 2023-7-13: fix here
       VLOG(4) << "[WARNING] Executor: " << ts->name
               << " cpu ptr been strided_out.";
       size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
       void *temp = cpu_runtime_.allocate(ts->total_count * cpu_dtype_size);
-      if (!flag_input_reuse_) {  // TODO(niewenchang): fix after zhaolianshui
+      if (!flag_input_reuse_) {  // TODO(None): fix after zhaolianshui
                                  // fix is_output
         memset(temp, 0x0, ts->total_count * cpu_dtype_size);
       } else {
@@ -148,7 +148,7 @@ void Executor::strideOutput() {
           if (data_vector_[i].is_output()) {
             memcpy(temp, cpu_fp32_stride_input_[i],
                    ts->total_count *
-                       cpu_dtype_size);  // TODO(niewenchang): cpu_stride?
+                       cpu_dtype_size);  // TODO(None): cpu_stride?
             break;
           }
         }

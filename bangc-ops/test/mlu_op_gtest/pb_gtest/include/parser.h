@@ -93,7 +93,7 @@ struct MetaTensor {
   inline bool empty() { return shape_count == 0 || total_count == 0; }
   inline bool null() { return is_null; }
 
-  // TODO(wangjianxin): remove these pointer
+  // TODO(None): remove these pointer
   // it's a not good idea to put *ptr and layout.. together.
   mluOpTensorDescriptor_t tensor = nullptr;
   // bool is_output       = false;
@@ -161,7 +161,7 @@ class Parser {
     return list_rely_real_data_;
   }
 
-  // TODO(wangjianxin): remove the following api
+  // TODO(None): remove the following api
   MetaTensor &getMetaTensor(const std::string &name);
   MetaTensor &getMetaTensor(int index);
   inline int getInputNum() { return inputs_.size(); }
