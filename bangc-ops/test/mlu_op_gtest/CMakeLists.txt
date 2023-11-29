@@ -258,12 +258,6 @@ install(FILES "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/gtest_config/test_list"
   COMPONENT mluop_gtest
   DESTINATION test/mlu_op_gtest/pb_gtest/gtest_config
 )
-# install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
-#   "${CMAKE_CURRENT_LIST_DIR}/tools/search_case_v2.py"
-#   "${CMAKE_CURRENT_LIST_DIR}/tools/watch_mem.bash"
-#   COMPONENT mluop_gtest
-#   DESTINATION test/mluop_gtest/tools
-# )
 
 install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/zoo"
   COMPONENT mluop_gtest
