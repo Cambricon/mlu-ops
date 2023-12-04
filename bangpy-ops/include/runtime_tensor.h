@@ -193,6 +193,7 @@ typedef enum {
   RUNTIME_MLU270 = 270,
   RUNTIME_MLU290 = 290,
   RUNTIME_MLU370 = 372,
+  RUNTIME_CE3226 = 322,
   RUNTIME_MLU590 = 592,
 } RuntimeDevType_t;
 
