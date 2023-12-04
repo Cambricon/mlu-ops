@@ -35,23 +35,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward(
   PARAM_CHECK("mluOpRoiAlignBackward", boxes != NULL);
   PARAM_CHECK("mluOpRoiAlignBackward", grads_image_desc != NULL);
   PARAM_CHECK("mluOpRoiAlignBackward", grads_image != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, cnnl_grads_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
-                                               _grads_image_desc);
+                                               cnnl_grads_image_desc);
   CHECK_FUNC_RETURN(
-      cnnlRoiAlignBackward(_handle, spatial_scale, sampling_ratio, aligned,
-                           _grads_desc, grads, _boxes_desc, boxes,
-                           _grads_image_desc, grads_image),
+      cnnlRoiAlignBackward(cnnl_handle, spatial_scale, sampling_ratio, aligned,
+                           cnnl_grads_desc, grads, cnnl_boxes_desc, boxes,
+                           cnnl_grads_image_desc, grads_image),
       CNNL_STATUS_SUCCESS,
       "[mluOpRoiAlignBackward] Internal error accured in "
       "mluOpRoiAlignBackward.",
       MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_grads_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_grads_image_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_image_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -71,39 +71,39 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward_v2(
   PARAM_CHECK("mluOpRoiAlignBackward_v2", grads_image_desc != NULL);
   PARAM_CHECK("mluOpRoiAlignBackward_v2", grads_image != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, cnnl_grads_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
-                                               _grads_image_desc);
+                                               cnnl_grads_image_desc);
 
-  cnnlTensorDescriptor_t _argmax_x_desc = NULL;
-  cnnlTensorDescriptor_t _argmax_y_desc = NULL;
+  cnnlTensorDescriptor_t cnnl_argmax_x_desc = NULL;
+  cnnlTensorDescriptor_t cnnl_argmax_y_desc = NULL;
 
   if (pool_mode == 0) {
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_x_desc != NULL);
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_x != NULL);
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_y_desc != NULL);
     PARAM_CHECK("mluOpRoiAlignBackward_v2", argmax_y != NULL);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, _argmax_x_desc);
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, _argmax_y_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, cnnl_argmax_x_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, cnnl_argmax_y_desc);
   }
-  CHECK_FUNC_RETURN(
-      cnnlRoiAlignBackward_v2(_handle, _grads_desc, grads, _boxes_desc, boxes,
-                              _argmax_x_desc, argmax_x, _argmax_y_desc,
-                              argmax_y, spatial_scale, sampling_ratio, aligned,
-                              pool_mode, _grads_image_desc, grads_image),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpRoiAlignBackward_v2] Internal error accured in "
-      "mluOpRoiAlignBackward_v2.",
-      MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_grads_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_grads_image_desc);
+  CHECK_FUNC_RETURN(cnnlRoiAlignBackward_v2(
+                        cnnl_handle, cnnl_grads_desc, grads, cnnl_boxes_desc,
+                        boxes, cnnl_argmax_x_desc, argmax_x, cnnl_argmax_y_desc,
+                        argmax_y, spatial_scale, sampling_ratio, aligned,
+                        pool_mode, cnnl_grads_image_desc, grads_image),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpRoiAlignBackward_v2] Internal error accured in "
+                    "mluOpRoiAlignBackward_v2.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_image_desc);
   if (pool_mode == 0) {
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_x_desc);
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_y_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_argmax_x_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_argmax_y_desc);
   }
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

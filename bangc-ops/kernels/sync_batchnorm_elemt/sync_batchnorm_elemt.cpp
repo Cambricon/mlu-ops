@@ -45,29 +45,29 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormElemt(
   PARAM_CHECK("[mluOpSyncBatchNormElemt]", invstd != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormElemt]", y != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, _filter_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bias_desc, _bias_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, _y_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, cnnl_x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, cnnl_mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, cnnl_invstd_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, cnnl_filter_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bias_desc, cnnl_bias_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, cnnl_y_desc);
 
   CHECK_FUNC_RETURN(
-      cnnlSyncBatchNormElemt(_handle, _x_desc, x, _mean_desc, mean,
-                             _invstd_desc, invstd, _filter_desc, filter,
-                             _bias_desc, bias, _y_desc, y),
+      cnnlSyncBatchNormElemt(cnnl_handle, cnnl_x_desc, x, cnnl_mean_desc, mean,
+                             cnnl_invstd_desc, invstd, cnnl_filter_desc, filter,
+                             cnnl_bias_desc, bias, cnnl_y_desc, y),
       CNNL_STATUS_SUCCESS,
       "[mluOpSyncBatchNormElemt] Internal error"
       " accured in mluOpSyncBatchNormElemt.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_x_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_mean_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_invstd_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_filter_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_bias_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_y_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_invstd_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_filter_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_bias_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_y_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

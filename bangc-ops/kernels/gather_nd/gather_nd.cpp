@@ -27,6 +27,8 @@ mluOpGatherNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_params,
               const void *params, const mluOpTensorDescriptor_t desc_indices,
               const void *indices, const mluOpTensorDescriptor_t desc_output,
               void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpGatherNd] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpGatherNd", handle != NULL);
   PARAM_CHECK("mluOpGatherNd", desc_params != NULL);
   PARAM_CHECK("mluOpGatherNd", params != NULL);
@@ -34,19 +36,19 @@ mluOpGatherNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_params,
   PARAM_CHECK("mluOpGatherNd", indices != NULL);
   PARAM_CHECK("mluOpGatherNd", desc_output != NULL);
   PARAM_CHECK("mluOpGatherNd", output != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_params, _desc_params);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_indices, _desc_indices);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_output, _desc_output);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_params, cnnl_desc_params);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_indices, cnnl_desc_indices);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_output, cnnl_desc_output);
   CHECK_FUNC_RETURN(
-      cnnlGatherNd(_handle, _desc_params, params, _desc_indices, indices,
-                   _desc_output, output),
+      cnnlGatherNd(cnnl_handle, cnnl_desc_params, params, cnnl_desc_indices,
+                   indices, cnnl_desc_output, output),
       CNNL_STATUS_SUCCESS,
       "[mluOpGatherNd] Internal error accured in mluOpGatherNd.",
       MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_desc_params);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_desc_indices);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_desc_output);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_params);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_indices);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_output);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

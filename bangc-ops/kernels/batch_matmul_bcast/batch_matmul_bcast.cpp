@@ -27,34 +27,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulBCastWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t a_desc,
     const mluOpTensorDescriptor_t b_desc, const mluOpTensorDescriptor_t c_desc,
     size_t *workspace_size) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetBatchMatMulBCastWorkspaceSize] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", a_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", b_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", c_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace_size != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
-  CHECK_FUNC_RETURN(cnnlGetBatchMatMulBCastWorkspaceSize(
-                        _handle, _a_desc, _b_desc, _c_desc, workspace_size),
-                    CNNL_STATUS_SUCCESS,
-                    "[mluOpBatchMatMulBCast] Internal error accured in "
-                    "mluOpGetBatchMatMulBCastWorkspaceSize.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlGetBatchMatMulBCastWorkspaceSize(
+          cnnl_handle, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, workspace_size),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpBatchMatMulBCast] Internal error accured in "
+      "mluOpGetBatchMatMulBCastWorkspaceSize.",
+      MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulHeuristicResult(
     mluOpMatMulHeuristicResult_t result, mluOpMatMulAlgo_t algo,
     size_t *workspace_size) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetBatchMatMulHeuristicResult] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", result != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace_size != NULL);
@@ -74,6 +81,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulAlgoHeuristic(
     mluOpTensorDescriptor_t c_desc, mluOpMatMulPrefer_t preference,
     int requested_algo_count, mluOpMatMulHeuristicResult_t *result_array,
     int *return_algo_count) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetBatchMatMulAlgoHeuristic] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", a_desc != NULL);
@@ -82,28 +92,31 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulAlgoHeuristic(
   PARAM_CHECK("mluOpBatchMatMulBCast", result_array != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", return_algo_count != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
   CHECK_FUNC_RETURN(cnnlGetBatchMatMulAlgoHeuristic(
-                        _handle, bmm_bcast_desc, _a_desc, _b_desc, _c_desc,
-                        cnnlMatMulPrefer_t(preference), requested_algo_count,
-                        result_array, return_algo_count),
+                        cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc,
+                        cnnl_c_desc, cnnlMatMulPrefer_t(preference),
+                        requested_algo_count, result_array, return_algo_count),
                     CNNL_STATUS_SUCCESS,
                     "[mluOpBatchMatMulBCast] Internal error accured in "
                     "mluOpGetBatchMatMulAlgoHeuristic.",
                     MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastDescCreate(
     mluOpBatchMatMulBCastDescriptor_t *bmm_bcast_desc) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpBatchMatMulBCastDescCreate] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   CHECK_FUNC_RETURN(cnnlBatchMatMulBCastDescCreate(bmm_bcast_desc),
                     CNNL_STATUS_SUCCESS,
@@ -115,6 +128,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastDescCreate(
 
 mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCastDescDestroy(
     mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpBatchMatMulBCastDescDestroy] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   CHECK_FUNC_RETURN(cnnlBatchMatMulBCastDescDestroy(bmm_bcast_desc),
                     CNNL_STATUS_SUCCESS,
@@ -128,6 +144,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetBatchMatMulBCastDescAttr(
     mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
     mluOpBatchMatMulBCastDescAttribute_t attr, const void *buf,
     size_t size_in_bytes) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpSetBatchMatMulBCastDescAttr] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", buf != NULL);
   CHECK_FUNC_RETURN(
@@ -145,6 +164,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulBCastDescAttr(
     const mluOpBatchMatMulBCastDescriptor_t bmm_bcast_desc,
     mluOpBatchMatMulBCastDescAttribute_t attr, void *buf, size_t size_in_bytes,
     size_t *size_written) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetBatchMatMulBCastDescAttr] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", buf != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", size_written != NULL);
@@ -161,6 +183,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetBatchMatMulBCastDescAttr(
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpBatchMatMulBCastAlgoCreate] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   CHECK_FUNC_RETURN(cnnlBatchMatMulBCastAlgoCreate(algo), CNNL_STATUS_SUCCESS,
                     "[mluOpBatchMatMulBCast] Internal error accured in "
@@ -171,6 +196,9 @@ mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo) {
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCastAlgo_t algo) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpBatchMatMulBCastAlgoDestroy] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   CHECK_FUNC_RETURN(cnnlBatchMatMulBCastAlgoDestroy(algo), CNNL_STATUS_SUCCESS,
                     "[mluOpBatchMatMulBCast] Internal error accured in "
@@ -186,6 +214,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastAlgorithm(
     const mluOpTensorDescriptor_t c_desc,
     mluOpBatchMatMulBCastPreference_t preference,
     mluOpBatchMatMulBCastAlgo_t *algo) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetQuantizeBatchMatMulBCastAlgorithm] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", a_desc != NULL);
@@ -193,22 +224,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastAlgorithm(
   PARAM_CHECK("mluOpBatchMatMulBCast", c_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
-  CHECK_FUNC_RETURN(cnnlGetQuantizeBatchMatMulBCastAlgorithm(
-                        _handle, bmm_bcast_desc, _a_desc, _b_desc, _c_desc,
-                        cnnlBatchMatMulBCastPreference_t(preference), algo),
-                    CNNL_STATUS_SUCCESS,
-                    "[mluOpBatchMatMulBCast] Internal error accured in "
-                    "mluOpGetQuantizeBatchMatMulBCastAlgorithm.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  CHECK_FUNC_RETURN(
+      cnnlGetQuantizeBatchMatMulBCastAlgorithm(
+          cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
+          cnnlBatchMatMulBCastPreference_t(preference), algo),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpBatchMatMulBCast] Internal error accured in "
+      "mluOpGetQuantizeBatchMatMulBCastAlgorithm.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -217,6 +249,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(
     const mluOpTensorDescriptor_t a_desc, const mluOpTensorDescriptor_t b_desc,
     const mluOpTensorDescriptor_t c_desc, mluOpBatchMatMulBCastAlgo_t algo,
     size_t *workspace_size) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetQuantizeBatchMatMulBCastWorkspaceSize] is deprecated and"
+      << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", a_desc != NULL);
@@ -225,23 +260,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace_size != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
   CHECK_FUNC_RETURN(cnnlGetQuantizeBatchMatMulBCastWorkspaceSize(
-                        _handle, bmm_bcast_desc, _a_desc, _b_desc, _c_desc,
-                        algo, workspace_size),
+                        cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc,
+                        cnnl_c_desc, algo, workspace_size),
                     CNNL_STATUS_SUCCESS,
                     "[mluOpBatchMatMulBCast] Internal error accured in "
                     "mluOpGetQuantizeBatchMatMulBCastWorkspaceSize.",
                     MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -254,6 +289,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpQuantizeBatchMatMulBCast(
     const void *b_scale, const void *b_offset, const void *beta,
     const mluOpTensorDescriptor_t c_desc, void *c,
     mluOpBatchMatMulBCastAlgo_t algo, void *workspace, size_t workspace_size) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpQuantizeBatchMatMulBCast] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", alpha != NULL);
@@ -273,24 +310,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpQuantizeBatchMatMulBCast(
   PARAM_CHECK("mluOpBatchMatMulBCast", algo != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", workspace != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
   CHECK_FUNC_RETURN(
-      cnnlQuantizeBatchMatMulBCast(_handle, bmm_bcast_desc, alpha, _a_desc, a,
-                                   a_position, a_scale, a_offset, _b_desc, b,
-                                   b_position, b_scale, b_offset, beta, _c_desc,
-                                   c, algo, workspace, workspace_size),
+      cnnlQuantizeBatchMatMulBCast(
+          cnnl_handle, bmm_bcast_desc, alpha, cnnl_a_desc, a, a_position,
+          a_scale, a_offset, cnnl_b_desc, b, b_position, b_scale, b_offset,
+          beta, cnnl_c_desc, c, algo, workspace, workspace_size),
       CNNL_STATUS_SUCCESS,
       "[mluOpBatchMatMulBCast] Internal error accured in "
       "mluOpQuantizeBatchMatMulBCast.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -299,6 +336,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(
     const mluOpTensorDescriptor_t a_desc, const void *a,
     const mluOpTensorDescriptor_t b_desc, const void *b, void *workspace,
     size_t workspace_size, const mluOpTensorDescriptor_t c_desc, void *c) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpBatchMatMulBCast] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCast", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", a_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCast", a != NULL);
@@ -310,23 +349,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast(
     PARAM_CHECK("mluOpBatchMatMulBCast", workspace != NULL);
   }
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
   CHECK_FUNC_RETURN(
-      cnnlBatchMatMulBCast(_handle, is_transa, is_transb, _a_desc, a, _b_desc,
-                           b, workspace, workspace_size, _c_desc, c),
+      cnnlBatchMatMulBCast(cnnl_handle, is_transa, is_transb, cnnl_a_desc, a,
+                           cnnl_b_desc, b, workspace, workspace_size,
+                           cnnl_c_desc, c),
       CNNL_STATUS_SUCCESS,
       "[mluOpBatchMatMulBCast] Internal error accured in "
       "mluOpBatchMatMulBCast.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -337,6 +377,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast_v2(
     const mluOpTensorDescriptor_t b_desc, const void *b, const void *beta,
     const mluOpTensorDescriptor_t c_desc, void *c, void *workspace,
     size_t workspace_size) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpBatchMatMulBCast_v2] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpBatchMatMulBCastV2", handle != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCastV2", bmm_bcast_desc != NULL);
   PARAM_CHECK("mluOpBatchMatMulBCastV2", algo != NULL);
@@ -352,23 +394,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpBatchMatMulBCast_v2(
     PARAM_CHECK("mluOpBatchMatMulBCast", workspace != NULL);
   }
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, _a_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, _b_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, _c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
   CHECK_FUNC_RETURN(
-      cnnlBatchMatMulBCast_v2(_handle, bmm_bcast_desc, algo, alpha, _a_desc, a,
-                              _b_desc, b, beta, _c_desc, c, workspace,
-                              workspace_size),
+      cnnlBatchMatMulBCast_v2(cnnl_handle, bmm_bcast_desc, algo, alpha,
+                              cnnl_a_desc, a, cnnl_b_desc, b, beta, cnnl_c_desc,
+                              c, workspace, workspace_size),
       CNNL_STATUS_SUCCESS,
       "[mluOpBatchMatMulBCastV2] Internal error accured in "
       "mluOpBatchMatMulBCastV2.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_a_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_b_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_c_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

@@ -27,6 +27,8 @@ mluOpTransform(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
                const void *alpha, const mluOpTensorDescriptor_t input_desc,
                const void *input, const void *beta,
                const mluOpTensorDescriptor_t output_desc, void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpTransform] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("[mluOpTransform]", handle != NULL);
   PARAM_CHECK("[mluOpTransform]", alpha != NULL);
   PARAM_CHECK("[mluOpTransform]", input_desc != NULL);
@@ -35,20 +37,20 @@ mluOpTransform(mluOpHandle_t handle, const mluOpPointerMode_t pointer_mode,
   PARAM_CHECK("[mluOpTransform]", output_desc != NULL);
   PARAM_CHECK("[mluOpTransform]", output != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
-  CHECK_FUNC_RETURN(cnnlTransform_v2(_handle, cnnlPointerMode_t(pointer_mode),
-                                     alpha, _input_desc, input, beta,
-                                     _output_desc, output),
-                    CNNL_STATUS_SUCCESS,
-                    "[cnnlTransform_v2] Internal error accured in "
-                    "cnnlTransform_v2.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlTransform_v2(cnnl_handle, cnnlPointerMode_t(pointer_mode), alpha,
+                       cnnl_input_desc, input, beta, cnnl_output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[cnnlTransform_v2] Internal error accured in "
+      "cnnlTransform_v2.",
+      MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

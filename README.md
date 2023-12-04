@@ -38,6 +38,7 @@ MLU-OPS 提供了以下功能：
 - [算子精度标准](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Accuracy-Acceptance-Standard.md)
 - [算子性能标准](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md)
 - [Op List (高质量实现 BANG C 算子)](https://github.com/Cambricon/mlu-ops/blob/master/docs/bangc-docs/BANGC-OPS-OpList.md)
+- [CNNL基础算子使用](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-How-To-Use-CNNL-API.md)
 - [测试模块 GTest](https://github.com/cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md) 支持 [内存泄露测试](https://github.com/cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md#6-%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F%E6%A3%80%E6%B5%8B)、[代码覆盖率测试](https://github.com/cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md#7-%E4%BB%A3%E7%A0%81%E8%A6%86%E7%9B%96%E7%8E%87)
 - [Gen-case (运行时测例生成工具)](https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md)
 - [Perf-Analyse (算子性能分析工具)](https://github.com/Cambricon/mlu-ops/tree/master/tools/perf_analyse#readme)
@@ -47,7 +48,7 @@ MLU-OPS 提供了以下功能：
 - 操作系统：
   - 支持 x86_64 下 Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5、Kylin10
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.7.0 或更高版本
+  - 编译和运行时依赖 CNToolkit v3.7.0 或更高版本，CNNL v1.21.1 或者更高版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v5.10.15 或更高版本
 - 外部链接库：
@@ -66,12 +67,13 @@ MLU-OPS 提供了以下功能：
   git submodule update --init --recursive
   ```
 
-- 准备 CNToolkit 环境
+- 准备 CNToolkit、cnnl 环境
 
   ```sh
   sudo apt-get install ./cntoolkit-x.x.x_ubuntuxx.xx_amd64.deb
   sudo apt-get update
   sudo apt-get install cncc cnas cnbin cndrv cnrt cnrtc
+  sudo apt-get install ./cnnl_x.x.x-x.ubuntuxx.xx_amd64.deb
   ```
 
 - 准备 Python-3.8.0 环境
@@ -108,6 +110,7 @@ MLU-OPS 提供了以下功能：
 可查看最新版 [开发者文档](https://developer.cambricon.com/index/document/index/classid/3.html)
 - [BANG C/C++ 编程指南](https://www.cambricon.com/docs/sdk_1.13.0/cntoolkit_3.5.2/programming_guide_1.5.0/index.html)
 - [BANG C Developer Guide](https://www.cambricon.com/docs/sdk_1.13.0/cntoolkit_3.5.2/cambricon_bang_c_4.5.1/index.html)
+- [CNNL Developer Guide](https://www.cambricon.com/docs/sdk_1.15.0/cambricon_cnnl_1.21.1/developer_guide/index.html)
 - [MLU 架构调优指南](https://www.cambricon.com/docs/sdk_1.13.0/cntoolkit_3.5.2/cntoolkit_tuning_0.4.1/index.html)
 - [CNRT Developer Guide](https://www.cambricon.com/docs/sdk_1.13.0/cntoolkit_3.5.2/cnrt_6.5.2/index.html)
 - [CNRTC Developer Guide](https://www.cambricon.com/docs/sdk_1.13.0/cntoolkit_3.5.2/cambricon_cnrtc_0.6.0/index.html)

@@ -31,7 +31,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardElemtV2(
     const mluOpTensorDescriptor_t sum_dy_desc, const void *sum_dy,
     const mluOpTensorDescriptor_t sum_dy_xmu_desc, const void *sum_dy_xmu,
     const mluOpTensorDescriptor_t count_desc, const void *count,
-    const mluOpTensorDescriptor_t diff_x_desc, void *diff_x) {
+    const mluOpTensorDescriptor_t diffcnnl_x_desc, void *diff_x) {
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", handle != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", diff_y_desc != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", x_desc != NULL);
@@ -40,7 +40,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardElemtV2(
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", sum_dy_desc != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", sum_dy_xmu_desc != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", count_desc != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", diff_x_desc != NULL);
+  PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", diffcnnl_x_desc != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", diff_y != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", x != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", mean != NULL);
@@ -50,37 +50,39 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardElemtV2(
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", count != NULL);
   PARAM_CHECK("[mluOpSyncBatchNormBackwardElemtV2]", diff_x != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_y_desc, _diff_y_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, _x_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, _mean_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, _invstd_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, _filter_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_desc, _sum_dy_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_y_desc, cnnl_diff_y_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, cnnl_x_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, cnnl_mean_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, cnnl_invstd_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, cnnl_filter_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_desc, cnnl_sum_dy_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sum_dy_xmu_desc,
-                                               _sum_dy_xmu_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_desc, _count_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diff_x_desc, _diff_x_desc);
+                                               cnnl_sum_dy_xmu_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(count_desc, cnnl_count_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diffcnnl_x_desc,
+                                               cnnl_diffcnnl_x_desc);
 
-  CHECK_FUNC_RETURN(cnnlSyncBatchNormBackwardElemtV2(
-                        _handle, _diff_y_desc, diff_y, _x_desc, x, _mean_desc,
-                        mean, _invstd_desc, invstd, _filter_desc, filter,
-                        _sum_dy_desc, sum_dy, _sum_dy_xmu_desc, sum_dy_xmu,
-                        _count_desc, count, _diff_x_desc, diff_x),
-                    CNNL_STATUS_SUCCESS,
-                    "[mluOpSyncBatchNormBackwardElemtV2] Internal error"
-                    " accured in mluOpSyncBatchNormBackwardElemtV2.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlSyncBatchNormBackwardElemtV2(
+          cnnl_handle, cnnl_diff_y_desc, diff_y, cnnl_x_desc, x, cnnl_mean_desc,
+          mean, cnnl_invstd_desc, invstd, cnnl_filter_desc, filter,
+          cnnl_sum_dy_desc, sum_dy, cnnl_sum_dy_xmu_desc, sum_dy_xmu,
+          cnnl_count_desc, count, cnnl_diffcnnl_x_desc, diff_x),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpSyncBatchNormBackwardElemtV2] Internal error"
+      " accured in mluOpSyncBatchNormBackwardElemtV2.",
+      MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_diff_y_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_x_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_mean_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_invstd_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_filter_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_sum_dy_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_sum_dy_xmu_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_count_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_diff_x_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_diff_y_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_invstd_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_filter_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_sum_dy_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_sum_dy_xmu_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_count_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_diffcnnl_x_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

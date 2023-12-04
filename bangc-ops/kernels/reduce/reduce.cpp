@@ -30,6 +30,8 @@
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateReduceDescriptor(mluOpReduceDescriptor_t *reduce_desc) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpCreateReduceDescriptor] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
   CHECK_FUNC_RETURN(
       cnnlCreateReduceDescriptor(reduce_desc), CNNL_STATUS_SUCCESS,
@@ -40,6 +42,8 @@ mluOpCreateReduceDescriptor(mluOpReduceDescriptor_t *reduce_desc) {
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpDestroyReduceDescriptor] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
   CHECK_FUNC_RETURN(
       cnnlDestroyReduceDescriptor(reduce_desc), CNNL_STATUS_SUCCESS,
@@ -53,6 +57,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetReduceDescriptor(
     mluOpReduceOp_t reduce_op, mluOpDataType_t tensor_type,
     mluOpNanPropagation_t nan_propagation, mluOpReduceIndices_t tensor_indices,
     mluOpIndicesType_t indices_type) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpSetReduceDescriptor] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
   PARAM_CHECK_GE("mluOpReduce", reduce_op, 0);
   PARAM_CHECK_GE("mluOpReduce", tensor_type, 0);
@@ -61,12 +67,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetReduceDescriptor(
   PARAM_CHECK("mluOpReduce", axis != NULL);
   PARAM_CHECK_GT("mluOpReduce", axis_num, 0);
   CHECK_FUNC_RETURN(
-      cnnlSetReduceDescriptor(reduce_desc, axis, axis_num,
-                              cnnlReduceOp_t(reduce_op),
-                              cnnlDataType_t(tensor_type),
-                              cnnlNanPropagation_t(nan_propagation),
-                              cnnlReduceIndices_t(tensor_indices),
-                              cnnlIndicesType_t(indices_type)),
+      cnnlSetReduceDescriptor(
+          reduce_desc, axis, axis_num, cnnlReduceOp_t(reduce_op),
+          cnnlDataType_t(tensor_type), cnnlNanPropagation_t(nan_propagation),
+          cnnlReduceIndices_t(tensor_indices), cnnlIndicesType_t(indices_type)),
       CNNL_STATUS_SUCCESS,
       "[mluOpReduce] Internal error accured in mluOpSetReduceDescriptor.",
       MLUOP_STATUS_INTERNAL_ERROR);
@@ -78,6 +82,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetReduceDescriptor_v2(
     mluOpReduceOp_t reduce_op, mluOpDataType_t tensor_type,
     mluOpNanPropagation_t nan_propagation, mluOpReduceIndices_t tensor_indices,
     mluOpIndicesType_t indices_type, float p) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpSetReduceDescriptor_v2] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
   PARAM_CHECK_GE("mluOpReduce", reduce_op, 0);
   PARAM_CHECK_GE("mluOpReduce", tensor_type, 0);
@@ -90,10 +96,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetReduceDescriptor_v2(
   CHECK_FUNC_RETURN(
       cnnlSetReduceDescriptor_v2(
           reduce_desc, axis, axis_num, cnnlReduceOp_t(reduce_op),
-          cnnlDataType_t(tensor_type),
-          cnnlNanPropagation_t(nan_propagation),
-          cnnlReduceIndices_t(tensor_indices),
-          cnnlIndicesType_t(indices_type),
+          cnnlDataType_t(tensor_type), cnnlNanPropagation_t(nan_propagation),
+          cnnlReduceIndices_t(tensor_indices), cnnlIndicesType_t(indices_type),
           p),
       CNNL_STATUS_SUCCESS,
       "[mluOpReduce] Internal error accured in mluOpSetReduceDescriptor_v2.",
@@ -105,21 +109,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetReduceOpWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const mluOpTensorDescriptor_t output_desc,
     const mluOpReduceDescriptor_t reduce_desc, size_t *workspace_size_inbytes) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpGetReduceOpWorkspaceSize] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpReduce", input_desc != NULL);
   PARAM_CHECK("mluOpReduce", output_desc != NULL);
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
-  CHECK_FUNC_RETURN(
-      cnnlGetReduceOpWorkspaceSize(_handle, _input_desc, _output_desc,
-                                   reduce_desc, workspace_size_inbytes),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpReduce] Internal error accured in mluOpReduce.",
-      MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
+  CHECK_FUNC_RETURN(cnnlGetReduceOpWorkspaceSize(cnnl_handle, cnnl_input_desc,
+                                                 cnnl_output_desc, reduce_desc,
+                                                 workspace_size_inbytes),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpReduce] Internal error accured in mluOpReduce.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -129,23 +135,25 @@ mluOpReduce(mluOpHandle_t handle, const mluOpReduceDescriptor_t reduce_desc,
             const mluOpTensorDescriptor_t input_desc, const void *input,
             const size_t indices_size_inbytes, void *indices, const void *beta,
             const mluOpTensorDescriptor_t output_desc, void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpReduce] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpReduce", handle != NULL);
   PARAM_CHECK("mluOpReduce", reduce_desc != NULL);
   if (workspace_size > 0) {
     PARAM_CHECK("mluOpReduce", workspace != NULL);
   }
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
   CHECK_FUNC_RETURN(
-      cnnlReduce(_handle, reduce_desc, workspace, workspace_size, alpha,
-                 _input_desc, input, indices_size_inbytes, indices, beta,
-                 _output_desc, output),
+      cnnlReduce(cnnl_handle, reduce_desc, workspace, workspace_size, alpha,
+                 cnnl_input_desc, input, indices_size_inbytes, indices, beta,
+                 cnnl_output_desc, output),
       CNNL_STATUS_SUCCESS,
       "[mluOpReduce] Internal error accured in mluOpReduce.",
       MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

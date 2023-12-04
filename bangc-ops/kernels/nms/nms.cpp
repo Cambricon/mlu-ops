@@ -70,24 +70,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsWorkspaceSize(
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", boxes_desc != NULL);
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", workspace_size != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  cnnlTensorDescriptor_t _confidence_desc = NULL;
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
+  cnnlTensorDescriptor_t cnnl_confidence_desc = NULL;
   if (confidence_desc != NULL) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(confidence_desc, _confidence_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(confidence_desc,
+                                          cnnl_confidence_desc);
   }
 
   CHECK_FUNC_RETURN(
-      cnnlGetNmsWorkspaceSize_v3(_handle, _boxes_desc, _confidence_desc,
-                                 workspace_size),
+      cnnlGetNmsWorkspaceSize_v3(cnnl_handle, cnnl_boxes_desc,
+                                 cnnl_confidence_desc, workspace_size),
       CNNL_STATUS_SUCCESS,
       "[mluOpNms] Internal error accured in mluOpGetNmsWorkspaceSize.",
       MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
-  if (_confidence_desc != NULL) {
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_confidence_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
+  if (cnnl_confidence_desc != NULL) {
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_confidence_desc);
   }
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -105,28 +106,28 @@ mluOpNms(mluOpHandle_t handle, const mluOpNmsDescriptor_t nms_desc,
   PARAM_CHECK("mluOpNms", boxes != NULL);
   PARAM_CHECK("mluOpNms", output != NULL);
   PARAM_CHECK("mluOpNms", output_size != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
-  cnnlTensorDescriptor_t _confidence_desc = NULL;
+  cnnlTensorDescriptor_t cnnl_confidence_desc = NULL;
   if (confidence_desc != NULL) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(confidence_desc, _confidence_desc);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(confidence_desc,
+                                          cnnl_confidence_desc);
   }
 
   CHECK_FUNC_RETURN(
-      cnnlNms_v2(_handle, nms_desc, _boxes_desc, boxes, _confidence_desc,
-                 confidence, workspace, workspace_size, _output_desc, output,
-                 output_size),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpNms] Internal error accured in mluOpNms.",
+      cnnlNms_v2(cnnl_handle, nms_desc, cnnl_boxes_desc, boxes,
+                 cnnl_confidence_desc, confidence, workspace, workspace_size,
+                 cnnl_output_desc, output, output_size),
+      CNNL_STATUS_SUCCESS, "[mluOpNms] Internal error accured in mluOpNms.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  if (_confidence_desc != NULL) {
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_confidence_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  if (cnnl_confidence_desc != NULL) {
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_confidence_desc);
   }
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

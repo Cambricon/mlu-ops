@@ -2846,6 +2846,9 @@ mluOpAbs(mluOpHandle_t handle,
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpAddN_v2.
  *
+ * @par Deprecated
+ * - :: mluOpGetAddNWorkspaceSize is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in ::mluOpAddN
  * . For detailed information, see ::mluOpHandle_t.
@@ -2894,6 +2897,9 @@ mluOpGetAddNWorkspaceSize(mluOpHandle_t handle,
 // Group:AddN
 /*!
  * @brief Computes the sum of input tensors.
+ *
+ * @par Deprecated
+ * - ::mluOpAddN_v2 is deprecated and will be removed in the future release.
  *
  * AddN operation is wildly used in artificial intelligence as a kind of basic mathematical
  * operations. Also, this operation is supported in almost all common frameworks, like
@@ -3054,6 +3060,9 @@ mluOpAddN(mluOpHandle_t handle,
 /*!
  * @brief Uses constant mode to pad or crop the input tensor by \b padding_value. This operation is usually used in
  * ResNet and Transformer networks.
+ *
+ * @par Deprecated
+ * - ::mluOpPad is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the padding operation. For
@@ -7059,6 +7068,9 @@ mluOpBallQuery(mluOpHandle_t handle,
  * @brief Returns a copy of input tensor \b input in the output tensor \b output
  * on MLU device.
  *
+ * @par Deprecated
+ * - :: mluOpCopy is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the copy operation. For detailed information, see ::mluOpHandle_t.
@@ -7128,6 +7140,9 @@ mluOpCopy(mluOpHandle_t handle,
  * @brief Copies and expands the input tensor \b input to the shape of output
  * tensor \b output.
  *
+ * @par Deprecated
+ * - :: mluOpExpand is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the expand operation. For detailed information, see ::mluOpHandle_t.
@@ -7190,7 +7205,6 @@ mluOpExpand(mluOpHandle_t handle,
 // Group:Fill
 /*!
  * @brief Fills the output tensor \b output with a scale \b value.
- *
  * @par Deprecated
  * - ::mluOpFill is deprecated and will be removed in the future release. It is recommended
  *   to use ::mluOpFill_v3 instead, which supports the parameter \b pointer_mode that sets \b value
@@ -7310,6 +7324,9 @@ mluOpFill_v2(mluOpHandle_t handle,
 // Group:Fill
 /*!
  * @brief Fills the output tensor \b output with \b value.
+ *
+ * @par Deprecated
+ * - :: mluOpFill_v3 is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues
@@ -8935,6 +8952,9 @@ mluOpGetMatMulWorkspaceSize(mluOpHandle_t handle,
  * performance. You can get the size of the workspace \b workspace_size with
  * ::mluOpGetMatMulAlgoHeuristic and ::mluOpGetMatMulHeuristicResult in turn.
  *
+ * @par Deprecated
+ * - :: mluOpMatMul_v2 is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
  * matrix multiplication operation. For detailed information, see ::mluOpHandle_t.
@@ -9052,6 +9072,9 @@ mluOpMatMul_v2(mluOpHandle_t handle,
  * @brief Creates a descriptor pointed by \b result for a matrix multiplication heuristic result,
  * and allocates memory for the result. The result is defined in ::mluOpMatMulHeuristicResult_t.
  *
+ * @par Deprecated
+ * - :: mluOpCreateMatMulHeuristicResult is deprecated and will be removed in the future release.
+ *
  * @param[out] result
  * Host pointer to the struct of matrix multiplication heuristic result.
  *
@@ -9087,6 +9110,9 @@ mluOpCreateMatMulHeuristicResult(mluOpMatMulHeuristicResult_t *result);
  * @brief Destroys a matrix multiplication heuristic result, which was previously created with
  * ::mluOpCreateMatMulHeuristicResult.
  *
+ * @par Deprecated
+ * - :: mluOpDestroyMatMulHeuristicResult is deprecated and will be removed in the future release.
+ *
  * @param[in] result
  * The matrix multiplication heuristic result to be destroyed.
  *
@@ -9121,6 +9147,9 @@ mluOpDestroyMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result);
 /*!
  * @brief Gets the matrix multiplication algorithm and workspace size from heuristic result,
  * that is previously selected with ::mluOpGetMatMulAlgoHeuristic.
+ *
+ * @par Deprecated
+ * - :: mluOpGetMatMulHeuristicResult is deprecated and will be removed in the future release.
  *
  * @param[in] result
  * The matrix multiplication heuristic result obtained by ::mluOpGetMatMulAlgoHeuristic.
@@ -9161,6 +9190,9 @@ mluOpGetMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMatMulAl
 /*!
  * @brief Retrieves the possible algorithms can be used in the matrix multiplication.
  * The output is placed in result_array[] in the order of increasing estimated compute time.
+ *
+ * @par Deprecated
+ * - :: mluOpGetMatMulAlgoHeuristic is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
@@ -9234,6 +9266,9 @@ mluOpGetMatMulAlgoHeuristic(mluOpHandle_t handle,
  * and allocates memory for holding the information about the matrix multiplication operation.
  * The information is defined in ::mluOpMatMulDescriptor_t.
  *
+ * @par Deprecated
+ * - :: mluOpMatMulDescCreate is deprecated and will be removed in the future release.
+ *
  * @param[out] matmul_desc
  * The descriptor of matrix multiplication operation that holds information about matrix
  * multiplication operation.
@@ -9276,6 +9311,9 @@ mluOpMatMulDescCreate(mluOpMatMulDescriptor_t *matmul_desc);
  * The matrix multiplication descriptor is defined in ::mluOpMatMulDescriptor_t
  * and holds the information about the matrix multiplication operation.
  *
+ * @par Deprecated
+ * - :: mluOpMatMulDescDestroy is deprecated and will be removed in the future release.
+ *
  * @param[in] matmul_desc
  * The descriptor of matrix multiplication operation which needs to be destroyed.
  *
@@ -9314,6 +9352,9 @@ mluOpMatMulDescDestroy(mluOpMatMulDescriptor_t matmul_desc);
  * descriptor \b matmul_desc. The information includes the attribute defined in
  * ::mluOpMatMulDescAttribute_t \b attr, the host pointer to the attribute value \b buf, and
  * the size of buffer for verification.
+ *
+ * @par Deprecated
+ * - :: mluOpSetMatMulDescAttr is deprecated and will be removed in the future release.
  *
  * @param[in] matmul_desc
  * The descriptor of the matrix multiplication operation. For detailed
@@ -9365,6 +9406,9 @@ mluOpSetMatMulDescAttr(mluOpMatMulDescriptor_t matmul_desc,
  * You can set the attribute in the matrix multiplication descriptor based on the return value
  * of this function.
  *
+ * @par Deprecated
+ * - :: mluOpGetMatMulDescAttr is deprecated and will be removed in the future release.
+ *
  * @param[in] matmul_desc
  * The descriptor of the matrix multiplication operation. For detailed
  * information, see ::mluOpMatMulDescriptor_t.
@@ -9414,6 +9458,9 @@ mluOpGetMatMulDescAttr(const mluOpMatMulDescriptor_t matmul_desc,
  * and allocates memory for holding the information about the algorithm.
  * The information is defined in ::mluOpMatMulAlgo_t.
  *
+ * @par Deprecated
+ * - :: mluOpMatMulAlgoCreate is deprecated and will be removed in the future release.
+ *
  * @param[out] algo
  * Host pointer to the matrix multiplication algorithm that holds information about the matrix
  * multiplication algorithm.
@@ -9453,6 +9500,9 @@ mluOpMatMulAlgoCreate(mluOpMatMulAlgo_t *algo);
  * The matrix multiplication descriptor is defined in ::mluOpMatMulAlgo_t
  * and holds the information about the matrix multiplication algorithm.
  *
+ * @par Deprecated
+ * - :: mluOpMatMulAlgoDestroy is deprecated and will be removed in the future release.
+ *
  * @param[in] algo
  * The matrix multiplication algorithm descriptor to be destroyed.
  *
@@ -9488,6 +9538,9 @@ mluOpMatMulAlgoDestroy(mluOpMatMulAlgo_t algo);
  * @brief Creates a descriptor pointer by \b unique_desc for a unique operation, and allocates
  * memory for holding the information about the unique operation. The information is
  * defined in ::mluOpUniqueDescriptor_t.
+ *
+ * @par Deprecated
+ * - :: mluOpCreateUniqueDescriptor is deprecated and will be removed in the future release.
  *
  * @param[in] unique_desc
  * Pointer to the unique descriptor that holds information about the unique operation.
@@ -9525,6 +9578,9 @@ mluOpCreateUniqueDescriptor(mluOpUniqueDescriptor_t *unique_desc);
 /*!
  * @brief Destroys a unique descriptor \b unique_desc that was previously created with
  * ::mluOpCreateUniqueDescriptor.
+ *
+ * @par Deprecated
+ * - :: mluOpDestroyUniqueDescriptor is deprecated and will be removed in the future release.
  *
  * The unique descriptor is defined in ::mluOpUniqueDescriptor_t and holds the information
  * about the unique operation.
@@ -9568,6 +9624,9 @@ mluOpDestroyUniqueDescriptor(mluOpUniqueDescriptor_t unique_desc);
  * unique operation to the unique descriptor \b unique_desc. The information includes
  * the sorted mode of the unique \b mode, the number of the unique dimensions \b dim,
  * whether to output index \b return_inverse, and whether to output counts \b return_counts.
+ *
+ * @par Deprecated
+ * - :: mluOpSetUniqueDescriptor is deprecated and will be removed in the future release.
  *
  * @param[in] unique_desc
  * The descriptor of the unique operation. For detailed information,
@@ -9853,6 +9912,9 @@ mluOpUnique(mluOpHandle_t handle,
  * including the input tensor descriptor \b input_desc, and the unique operation
  * descriptor \b unique_desc.
  *
+ * @par Deprecated
+ * - :: mluOpGetUniqueWorkspaceSize is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the unique
  * operation. For detailed information, see ::mluOpHandle_t.
@@ -9910,6 +9972,9 @@ mluOpGetUniqueWorkspaceSize(mluOpHandle_t handle,
  * This function need extra MLU memory as the workspace to improve the unique
  * performance. You can get the size of the workspace \b workspace_size with
  * ::mluOpGetUniqueWorkspaceSize.
+ *
+ * @par Deprecated
+ * - :: mluOpUnique_v2 is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
@@ -10042,6 +10107,9 @@ mluOpUnique_v2(mluOpHandle_t handle,
 // Group:GatherNd
 /*!
  * @brief Gathers slices from \b params with shape specified by \b indices.
+ *
+ * @par Deprecated
+ * - :: mluOpGatherNd is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the gather_nd
@@ -10201,6 +10269,9 @@ mluOpScatterNd(mluOpHandle_t handle,
  * in tensor \b indices. Compared with ::mluOpScatterNd, this function supports the \b mode parameter that contains
  * more calculation methods when \b indices contains duplicates. This operation is the inverse of ::mluOpGatherNd
  * which extracts values or slices from a given tensor.
+ *
+ * @par Deprecated
+ * - :: mluOpScatterNd_v2 is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the scatter_nd operation.
@@ -10483,6 +10554,9 @@ mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
  *
  * The information is defined in ::mluOpTransposeDescriptor_t.
  *
+ * @par Deprecated
+ * - :: mluOpCreateTransposeDescriptor is deprecated and will be removed in the future release.
+ *
  * @param[out] desc
  * Pointer to the transpose descriptor that holds information about
  * the transpose operation.
@@ -10522,6 +10596,9 @@ mluOpCreateTransposeDescriptor(mluOpTransposeDescriptor_t *desc);
  * with ::mluOpCreateTransposeDescriptor, and set the information
  * about the transpose operation to the transpose descriptor \b desc.
  * The information includes the permute dimensions \b dims and permute rules \b permute.
+ *
+ * @par Deprecated
+ * - :: mluOpSetTransposeDescriptor is deprecated and will be removed in the future release.
  *
  * @param[in] desc
  * The descriptor of the transpose operation. For detailed information,
@@ -10568,6 +10645,9 @@ mluOpSetTransposeDescriptor(mluOpTransposeDescriptor_t desc, const int dims, con
  * The transpose descriptor is defined in ::mluOpTransposeDescriptor_t and holds the information
  * about the transpose operation.
  *
+ * @par Deprecated
+ * - :: mluOpDestroyTransposeDescriptor is deprecated and will be removed in the future release.
+ *
  * @param[in] desc
  * The transpose descriptor to be destroyed. For detailed information,
  * see ::mluOpTransposeDescriptor_t.
@@ -10607,6 +10687,9 @@ mluOpDestroyTransposeDescriptor(mluOpTransposeDescriptor_t desc);
  * The size of extra workspace is based on the given information of the transpose operation,
  * including the input tensor descriptor \b x_desc and transpose descriptor \b desc.
  * For more information about the workspace, see "Cambricon BANG C OPS User Guide".
+ *
+ * @par Deprecated
+ * - :: mluOpGetTransposeWorkspaceSize is deprecated and will be removed in the future release.
  *
  * @param[in]  handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
@@ -10745,6 +10828,9 @@ mluOpTranspose(mluOpHandle_t handle,
  * You can get the size of the workspace \b workspace_size with
  * ::mluOpGetTransposeWorkspaceSize.
  *
+ * @par Deprecated
+ * - :: mluOpTranspose_v2 is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the transpose operation. For detailed information,
@@ -10828,6 +10914,9 @@ mluOpTranspose_v2(mluOpHandle_t handle,
  * \b tensor_type , \b nan_propagation , \b tensor_indices , \b indices_type , and \b p.
  * The information is defined in ::mluOpReduceDescriptor_t.
  *
+ * @par Deprecated
+ * - :: mluOpCreateReduceDescriptor is deprecated and will be removed in the future release.
+ *
  * @param[out] reduce_desc
  * Host pointer to the reduce descriptor that holds information about reduce.
  * For detailed information, see ::mluOpReduceDescriptor_t.
@@ -10864,6 +10953,9 @@ mluOpCreateReduceDescriptor(mluOpReduceDescriptor_t *reduce_desc);
  * @brief Initializes the reduce descriptor \b reduce_desc that was previously created with
  * ::mluOpCreateReduceDescriptor, and sets the information about the reduce
  * operation. To use p-norm in this operation, call ::mluOpSetReduceDescriptor_v2.
+ *
+ * @par Deprecated
+ * - :: mluOpSetReduceDescriptor is deprecated and will be removed in the future release.
  *
  * @param[in] reduce_desc
  * The descriptor of the tensor \b reduce. For detailed information,
@@ -10929,6 +11021,9 @@ mluOpSetReduceDescriptor(mluOpReduceDescriptor_t reduce_desc,
  * ::mluOpCreateReduceDescriptor, and sets the information about the reduce
  * operation. Compared with ::mluOpSetReduceDescriptor, this function supports \b
  * reduce_op == \p MLUOP_REDUCE_NORMP, and includes more information such as \b p.
+ *
+ * @par Deprecated
+ * - :: mluOpSetReduceDescriptor_v2 is deprecated and will be removed in the future release.
  *
  * @param[in] reduce_desc
  * The descriptor of the the tensor \b reduce.
@@ -11000,6 +11095,9 @@ mluOpSetReduceDescriptor_v2(mluOpReduceDescriptor_t reduce_desc,
  * The reduce descriptor is defined in ::mluOpReduceDescriptor_t and holds the information
  * about the reduce.
  *
+ * @par Deprecated
+ * - :: mluOpDestroyReduceDescriptor is deprecated and will be removed in the future release.
+ *
  * @param[in] reduce_desc
  * The reduce descriptor to be destroyed.
  * For detailed information, see ::mluOpReduceDescriptor_t.
@@ -11035,6 +11133,9 @@ mluOpDestroyReduceDescriptor(mluOpReduceDescriptor_t reduce_desc);
 /*!
  * @brief Applies an operation of reduce to compute the sum value, mean value, maximum value,
  * maximum index, minimum value, and minimum index of tensor in the given dimension.
+ *
+ * @par Deprecated
+ * - :: mluOpReduce is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
@@ -11219,6 +11320,9 @@ mluOpReduce(mluOpHandle_t handle,
 /*!
  * @brief Returns in \b size the size of the MLU memory that is used to get
  * extra space size in reduce operation.
+ *
+ * @par Deprecated
+ * - :: mluOpGetReduceOpWorkspaceSize is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
@@ -15177,6 +15281,10 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
  *  and \b alpha and \b beta represent scale factors.
  *  \b mluOpTransform supports scale pointer
  *  from both host and device for \b alpha and \b beta parameter.
+ *
+ * @par Deprecated
+ * - :: mluOpTransform is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  *   Handle to a Cambricon MLU-OPS context used to manage MLU
  *  devices and queues.
@@ -15267,6 +15375,9 @@ mluOpTransform(mluOpHandle_t handle,
  * Strating at the location specified by \p begin, the slice continuously adds \p stride to
  * the index until all dimensions are greater than or equal to \p end. Note that a \p stride
  * can be negative, which causes a reverse slice.
+ *
+ * @par Deprecated
+ * - :: mluOpStridedSlice is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
@@ -15366,6 +15477,9 @@ mluOpStridedSlice(mluOpHandle_t handle,
 // Group:Concat
 /*!
  * @brief Concatenates the list of input tensors \b inputs along the given dimension \b axis.
+ *
+ * @par Deprecated
+ * - :: mluOpConcat is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
@@ -15467,6 +15581,9 @@ mluOpConcat(mluOpHandle_t handle,
 /*!
  * @brief Returns the size of the MLU memory used as an extra workspace to
  * optimize ::mluOpConcat.
+ *
+ * @par Deprecated
+ * - :: mluOpGetConcatWorkspaceSize is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues.
@@ -15663,6 +15780,9 @@ mluOpGetBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
  * @brief Gets the matrix multiplication algorithm and workspace size from heuristic result,
  *        that is previously selected with ::mluOpGetBatchMatMulAlgoHeuristic.
  *
+ * @par Deprecated
+ * - :: mluOpGetBatchMatMulHeuristicResult is deprecated and will be removed in the future release.
+ *
  * @param[in] result
  *   Input. The matrix multiplication heuristic result obtained by ::mluOpGetBatchMatMulAlgoHeuristic.
  *
@@ -15692,6 +15812,9 @@ mluOpGetBatchMatMulHeuristicResult(mluOpMatMulHeuristicResult_t result, mluOpMat
 /*!
  * @brief Retrieves the possible algorithms can be used in the matrix multiplication.
  *        The output is placed in result_array[] in the order of increasing estimated compute time.
+ *
+ * @par Deprecated
+ * - :: mluOpGetBatchMatMulAlgoHeuristic is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
@@ -15865,6 +15988,9 @@ mluOpBatchMatMulBCast(mluOpHandle_t handle,
  * with broadcasting performance. You can get the size of the workspace \b workspace_size with the
  * ::mluOpGetBatchMatMulAlgoHeuristic and ::mluOpGetBatchMatMulHeuristicResult functions in turn.
  *
+ * @par Deprecated
+ * - :: mluOpBatchMatMulBCast_v2 is deprecated and will be removed in the future release.
+ *
  * @param[in] handle
  *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
  *   matrix multiplication with broadcasting operation. For detailed information, see ::mluOpHandle_t.
@@ -16021,6 +16147,9 @@ mluOpBatchMatMulBCast_v2(mluOpHandle_t handle,
  *        matrix multiplication with broadcasting operation. The information is defined in
  *        ::mluOpBatchMatMulBCastDescriptor_t.
  *
+ * @par Deprecated
+ * - :: mluOpBatchMatMulBCastDescCreate is deprecated and will be removed in the future release.
+ *
  * @param[out] bmm_bcast_desc
  *   Output. A host pointer to the batch matrix multiplication with broadcasting descriptor that holds
  *   information about the batch matrix multiplication with broadcasting operation.
@@ -16053,6 +16182,9 @@ mluOpBatchMatMulBCastDescCreate(mluOpBatchMatMulBCastDescriptor_t *bmm_bcast_des
  * The batch matrix multiplication with broadcasting descriptor is defined in ::mluOpBatchMatMulBCastDescriptor_t
  * and holds the information about the batch matrix multiplication with broadcasting operation.
  *
+ * @par Deprecated
+ * - :: mluOpBatchMatMulBCastDescDestroy is deprecated and will be removed in the future release.
+ *
  * @param[in] bmm_bcast_desc
  *   Input. The batch matrix multiplication with broadcasting descriptor to be destroyed.
  *
@@ -16079,6 +16211,9 @@ mluOpBatchMatMulBCastDescDestroy(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_des
  * multiplication with broadcasting descriptor \b bmm_bcast_desc. The information includes the attribute
  * defined in ::mluOpBatchMatMulBCastDescAttribute_t \b attr, the host pointer to the attribute value
  * \b buf, and the size of buffer for verification.
+ *
+ * @par Deprecated
+ * - :: mluOpSetBatchMatMulBCastDescAttr is deprecated and will be removed in the future release.
  *
  * @param[in,out] bmm_bcast_desc
  *   Input/output. The descriptor of the batch matrix multiplication with broadcasting operation. For detailed
@@ -16118,6 +16253,9 @@ mluOpSetBatchMatMulBCastDescAttr(mluOpBatchMatMulBCastDescriptor_t bmm_bcast_des
  * You can set the attribute in the batch matrix multiplication with broadcasting descriptor based on
  * the return value of this function.
  *
+ * @par Deprecated
+ * - :: mluOpGetBatchMatMulBCastDescAttr is deprecated and will be removed in the future release.
+ *
  * @param[in] bmm_bcast_desc
  *   Input. The descriptor of the batch matrix multiplication with broadcasting operation. For detailed
  *   information, see ::mluOpBatchMatMulBCastDescriptor_t.
@@ -16156,6 +16294,9 @@ mluOpGetBatchMatMulBCastDescAttr(const mluOpBatchMatMulBCastDescriptor_t bmm_bca
  *        The information is defined in ::mluOpBatchMatMulBCastAlgo_t. For more information about descriptor,
  *        see "Cambricon MLUOP User Guide".
  *
+ * @par Deprecated
+ * - :: mluOpBatchMatMulBCastAlgoCreate is deprecated and will be removed in the future release.
+ *
  * @param[out] algo
  *   Output. A host pointer to the batch matrix multiplication with broadcasting algorithm that holds information about
  *   the batch matrix multiplication with broadcasting algorithm.
@@ -16188,6 +16329,9 @@ mluOpBatchMatMulBCastAlgoCreate(mluOpBatchMatMulBCastAlgo_t *algo);
  * The batch matrix multiplication with broadcasting descriptor is defined in ::mluOpBatchMatMulBCastAlgo_t
  * and holds the information about the batch matrix multiplication with broadcasting algorithm.
  *
+ * @par Deprecated
+ * - :: mluOpBatchMatMulBCastAlgoDestroy is deprecated and will be removed in the future release.
+ *
  * @param[in] algo
  *   Input. The batch matrix multiplication with broadcasting algorithm descriptor to be destroyed.
  *
@@ -16219,6 +16363,9 @@ mluOpBatchMatMulBCastAlgoDestroy(mluOpBatchMatMulBCastAlgo_t algo);
  *
  * The computing performance options \b preference defined in the ::mluOpBatchMatMulBCastPreference_t
  * enum, only supports the high speed mode.
+ *
+ * @par Deprecated
+ * - :: mluOpGetQuantizeBatchMatMulBCastAlgorithm is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
@@ -16273,6 +16420,9 @@ mluOpGetQuantizeBatchMatMulBCastAlgorithm(mluOpHandle_t handle,
  * \b bmm_bcast_desc, input tensor descriptor of left matrix \b a_desc, input tensor descriptor of
  * right matrix \b b_desc, output tensor descriptor \b c_desc, and the batch matrix multiplication
  * with broadcasting algorithm \b algo. For more information about the workspace, see "Cambricon MLUOP User Guide".
+ *
+ * @par Deprecated
+ * - :: mluOpGetQuantizeBatchMatMulBCastWorkspaceSize is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch
@@ -16335,6 +16485,9 @@ mluOpGetQuantizeBatchMatMulBCastWorkspaceSize(mluOpHandle_t handle,
  * ::mluOpGetQuantizeBatchMatMulBCastAlgorithm function to get the most suited algorithm.
  *
  * The scaling factors \b alpha and \b beta are not supported currently.
+ *
+ * @par Deprecated
+ * - :: mluOpQuantizeBatchMatMulBCast is deprecated and will be removed in the future release.
  *
  * @param[in] handle
  *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the batch

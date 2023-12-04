@@ -27,6 +27,8 @@ mluOpScatterNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t indices_desc,
                const void *indices, const mluOpTensorDescriptor_t updates_desc,
                const void *updates, const mluOpTensorDescriptor_t output_desc,
                void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpScatterNd] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpScatterNd", handle != NULL);
   PARAM_CHECK("mluOpScatterNd", indices_desc != NULL);
   PARAM_CHECK("mluOpScatterNd", indices != NULL);
@@ -34,21 +36,21 @@ mluOpScatterNd(mluOpHandle_t handle, const mluOpTensorDescriptor_t indices_desc,
   PARAM_CHECK("mluOpScatterNd", updates != NULL);
   PARAM_CHECK("mluOpScatterNd", output_desc != NULL);
   PARAM_CHECK("mluOpScatterNd", output != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, cnnl_indices_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, cnnl_updates_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
   CHECK_FUNC_RETURN(
-      cnnlScatterNd(_handle, _indices_desc, indices, _updates_desc, updates,
-                    _output_desc, output),
+      cnnlScatterNd(cnnl_handle, cnnl_indices_desc, indices, cnnl_updates_desc,
+                    updates, cnnl_output_desc, output),
       CNNL_STATUS_SUCCESS,
       "[mluOpScatterNd] Internal error accured in mluOpScatterNd.",
       MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_indices_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_updates_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_updates_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -58,6 +60,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpScatterNd_v2(
     const mluOpTensorDescriptor_t updates_desc, const void *updates,
     const mluOpTensorDescriptor_t input_desc, const void *input,
     const mluOpTensorDescriptor_t output_desc, void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpScatterNd_v2] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpScatterNd_v2", handle != NULL);
   PARAM_CHECK_GE("mluOpScatterNd_v2", mode, 0);
   PARAM_CHECK("mluOpScatterNd_v2", indices_desc != NULL);
@@ -65,23 +69,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpScatterNd_v2(
   PARAM_CHECK("mluOpScatterNd_v2", updates_desc != NULL);
   PARAM_CHECK("mluOpScatterNd_v2", updates != NULL);
   PARAM_CHECK("mluOpScatterNd_v2", output != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, _indices_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, _updates_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc, cnnl_indices_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc, cnnl_updates_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
   CHECK_FUNC_RETURN(
-      cnnlScatterNd_v2(_handle, cnnlScatterNdMode_t(mode), _indices_desc,
-                       indices, _updates_desc, updates, _input_desc, input,
-                       _output_desc, output),
+      cnnlScatterNd_v2(cnnl_handle, cnnlScatterNdMode_t(mode),
+                       cnnl_indices_desc, indices, cnnl_updates_desc, updates,
+                       cnnl_input_desc, input, cnnl_output_desc, output),
       CNNL_STATUS_SUCCESS,
       "[mluOpScatterNd] Internal error accured in mluOpScatterNd_v2.",
       MLUOP_STATUS_INTERNAL_ERROR);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_indices_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_updates_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_updates_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

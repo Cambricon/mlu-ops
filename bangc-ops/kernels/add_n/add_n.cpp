@@ -26,29 +26,32 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetAddNWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
     const uint32_t input_num, const mluOpTensorDescriptor_t output_desc,
     size_t *workspace_size) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetAddNWorkspaceSize] is deprecated and will be removed"
+      << " in furture.";
   PARAM_CHECK("mluOpAddN_v2", handle != NULL);
   PARAM_CHECK("mluOpAddN_v2", input_descs != NULL);
   PARAM_CHECK("mluOpAddN_v2", output_desc != NULL);
   PARAM_CHECK("mluOpAddN_v2", input_num >= 2);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  cnnlTensorDescriptor_t *cnnl_input_descs = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * input_num);
   for (int i = 0; i < input_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], _input_descs[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], cnnl_input_descs[i]);
   }
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
   CHECK_FUNC_RETURN(
-      cnnlGetAddNWorkspaceSize(_handle, _input_descs, input_num,
-                               _output_desc, workspace_size),
+      cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, input_num,
+                               cnnl_output_desc, workspace_size),
       CNNL_STATUS_SUCCESS,
       "[mluOpAddN_v2] Internal error accured in mluOpGetAddNWorkspaceSize.",
       MLUOP_STATUS_INTERNAL_ERROR);
   for (int i = 0; i < input_num; i++) {
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_descs[i]);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
   }
-  free(_input_descs);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  free(cnnl_input_descs);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -56,28 +59,30 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpAddN(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
           const void *inputs[], uint32_t input_num,
           const mluOpTensorDescriptor_t output_desc, void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpAddN] is deprecated and will be removed"
+                          << " in furture.";
   PARAM_CHECK("mluOpAddN", handle != NULL);
   PARAM_CHECK("mluOpAddN", input_descs != NULL);
   PARAM_CHECK("mluOpAddN", output_desc != NULL);
   PARAM_CHECK("mluOpAddN", input_num >= 2);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  cnnlTensorDescriptor_t *cnnl_input_descs = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * input_num);
   for (int i = 0; i < input_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], _input_descs[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], cnnl_input_descs[i]);
   }
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
-  CHECK_FUNC_RETURN(
-      cnnlAddN(_handle, _input_descs, inputs, input_num, _output_desc, output),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpAddN] Internal error accured in mluOpAddN.",  // NOLINT
-      MLUOP_STATUS_INTERNAL_ERROR);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
+  CHECK_FUNC_RETURN(cnnlAddN(cnnl_handle, cnnl_input_descs, inputs, input_num,
+                             cnnl_output_desc, output),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpAddN] Internal error accured in mluOpAddN.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
   for (int i = 0; i < input_num; i++) {
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_descs[i]);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
   }
-  free(_input_descs);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  free(cnnl_input_descs);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -86,28 +91,30 @@ mluOpAddN_v2(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
              const void *const inputs[], const uint32_t input_num,
              const mluOpTensorDescriptor_t output_desc, void *output,
              void *workspace, size_t workspace_size) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpAddN_v2] is deprecated and will be removed"
+                          << " in furture.";
   PARAM_CHECK("mluOpAddN_v2", handle != NULL);
   PARAM_CHECK("mluOpAddN_v2", input_descs != NULL);
   PARAM_CHECK("mluOpAddN_v2", output_desc != NULL);
   PARAM_CHECK("mluOpAddN_v2", input_num >= 2);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  cnnlTensorDescriptor_t *_input_descs = (cnnlTensorDescriptor_t *)malloc(
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  cnnlTensorDescriptor_t *cnnl_input_descs = (cnnlTensorDescriptor_t *)malloc(
       sizeof(cnnlTensorDescriptor_t) * input_num);
   for (int i = 0; i < input_num; i++) {
-    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], _input_descs[i]);
+    CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_descs[i], cnnl_input_descs[i]);
   }
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
   CHECK_FUNC_RETURN(
-      cnnlAddN_v2(_handle, _input_descs, inputs, input_num, _output_desc,
-                  output, workspace, workspace_size),
+      cnnlAddN_v2(cnnl_handle, cnnl_input_descs, inputs, input_num,
+                  cnnl_output_desc, output, workspace, workspace_size),
       CNNL_STATUS_SUCCESS,
-      "[mluOpAddN_v2] Internal error accured in mluOpAddN_v2.",  // NOLINT
+      "[mluOpAddN_v2] Internal error accured in mluOpAddN_v2.",
       MLUOP_STATUS_INTERNAL_ERROR);
   for (int i = 0; i < input_num; i++) {
-    DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_descs[i]);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
   }
-  free(_input_descs);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  free(cnnl_input_descs);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

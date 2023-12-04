@@ -86,22 +86,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward(
   PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
   PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
-  CHECK_FUNC_RETURN(cnnlRoiAlign(_handle, roialign_desc, _input_desc, input,
-                                 _boxes_desc, boxes, _output_desc, output),
-                    CNNL_STATUS_SUCCESS,
-                    "[mluOpRoiAlignForward] Internal error"
-                    " accured in mluOpRoiAlignForward.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlRoiAlign(cnnl_handle, roialign_desc, cnnl_input_desc, input,
+                   cnnl_boxes_desc, boxes, cnnl_output_desc, output),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpRoiAlignForward] Internal error"
+      " accured in mluOpRoiAlignForward.",
+      MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -121,29 +122,30 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
   PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
   PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, _boxes_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
-  cnnlTensorDescriptor_t _argmax_x_desc = NULL;
-  cnnlTensorDescriptor_t _argmax_y_desc = NULL;
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, _argmax_x_desc);
-  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, _argmax_y_desc);
+  cnnlTensorDescriptor_t cnnl_argmax_x_desc = NULL;
+  cnnlTensorDescriptor_t cnnl_argmax_y_desc = NULL;
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, cnnl_argmax_x_desc);
+  CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, cnnl_argmax_y_desc);
   CHECK_FUNC_RETURN(
-      cnnlRoiAlign_v2(_handle, roialign_desc, _input_desc, input, _boxes_desc,
-                      boxes, _output_desc, output, _argmax_x_desc, argmax_x,
-                      _argmax_y_desc, argmax_y),
+      cnnlRoiAlign_v2(cnnl_handle, roialign_desc, cnnl_input_desc, input,
+                      cnnl_boxes_desc, boxes, cnnl_output_desc, output,
+                      cnnl_argmax_x_desc, argmax_x, cnnl_argmax_y_desc,
+                      argmax_y),
       CNNL_STATUS_SUCCESS,
       "[mluOpRoiAlignForward_v2] Internal error"
       " accured in mluOpRoiAlignForward_v2.",
       MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_x_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_y_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_argmax_x_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_argmax_y_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

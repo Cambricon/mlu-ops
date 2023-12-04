@@ -39,26 +39,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPoolingBackward(
   PARAM_CHECK("[mluOpRoiPoolingBackward]", grads_image_desc != NULL);
   PARAM_CHECK("[mluOpRoiPoolingBackward]", grads_image != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, _grads_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(rois_desc, _rois_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_desc, _argmax_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, cnnl_grads_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(rois_desc, cnnl_rois_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_desc, cnnl_argmax_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
-                                               _grads_image_desc);
+                                               cnnl_grads_image_desc);
 
-  CHECK_FUNC_RETURN(cnnlRoiPoolingBackward(
-                        _handle, cnnlPoolingMode_t(pooling_mode), _grads_desc,
-                        grads, _rois_desc, rois, _argmax_desc, argmax,
-                        spatial_scale, _grads_image_desc, grads_image),
-                    CNNL_STATUS_SUCCESS,
-                    "[mluOpRoiPoolingBackward] Internal error"
-                    " accured in mluOpRoiPoolingBackward.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlRoiPoolingBackward(cnnl_handle, cnnlPoolingMode_t(pooling_mode),
+                             cnnl_grads_desc, grads, cnnl_rois_desc, rois,
+                             cnnl_argmax_desc, argmax, spatial_scale,
+                             cnnl_grads_image_desc, grads_image),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpRoiPoolingBackward] Internal error"
+      " accured in mluOpRoiPoolingBackward.",
+      MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_grads_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_rois_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_argmax_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_grads_image_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_rois_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_argmax_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_image_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

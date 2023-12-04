@@ -26,6 +26,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpStridedSlice(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, const int *begin, const int *end, const int *stride,
     const mluOpTensorDescriptor_t output_desc, void *output) {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpStridedSlice] is deprecated and"
+                          << " will be removed in furture.";
   PARAM_CHECK("mluOpStridedSlice", handle != NULL);
   PARAM_CHECK("mluOpStridedSlice", input_desc != NULL);
   PARAM_CHECK("mluOpStridedSlice", input != NULL);
@@ -35,19 +37,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpStridedSlice(
   PARAM_CHECK("mluOpStridedSlice", output_desc != NULL);
   PARAM_CHECK("mluOpstridedSlice", output != NULL);
 
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, _input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, _output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
-  CHECK_FUNC_RETURN(cnnlStridedSlice(_handle, _input_desc, input, begin, end,
-                                     stride, _output_desc, output),
+  CHECK_FUNC_RETURN(cnnlStridedSlice(cnnl_handle, cnnl_input_desc, input, begin,
+                                     end, stride, cnnl_output_desc, output),
                     CNNL_STATUS_SUCCESS,
                     "[mluOpStridedSlice] Internal error"
                     " accured in mluOpStridedSlice.",
                     MLUOP_STATUS_INTERNAL_ERROR);
 
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(_output_desc);
-  DESTROY_CNNL_HANDLE(_handle);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
