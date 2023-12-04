@@ -67,7 +67,7 @@ MLU-OPS 提供了以下功能：
   git submodule update --init --recursive
   ```
 
-- 准备 CNToolkit、cnnl 环境
+- 准备 CNToolkit、CNNL 环境
 
   ```sh
   sudo apt-get install ./cntoolkit-x.x.x_ubuntuxx.xx_amd64.deb
