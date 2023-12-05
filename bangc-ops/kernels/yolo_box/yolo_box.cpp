@@ -54,7 +54,8 @@ static mluOpStatus_t yoloBoxParamCheck(
     const mluOpTensorDescriptor_t anchors_desc, const void *anchors,
     const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
     const mluOpTensorDescriptor_t scores_desc, const void *scores,
-    const int class_num, const bool iou_aware, bool *zero_element) {
+    const int class_num, const bool iou_aware, const float iou_aware_factor,
+    bool *zero_element) {
   // check descriptor and data
   PARAM_CHECK(op_name, handle != NULL);
   PARAM_CHECK(op_name, x_desc != NULL);
@@ -76,6 +77,15 @@ static mluOpStatus_t yoloBoxParamCheck(
   PARAM_CHECK(op_name, anchors_desc->dtype == MLUOP_DTYPE_INT32);
   PARAM_CHECK(op_name, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(op_name, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
+
+  // check param except tensor
+  if (iou_aware) {
+    if (iou_aware_factor < 0 || iou_aware_factor > 1) {
+      LOG(ERROR) << "[mluOpYoloBox]: iou_aware_factor should be"
+                 << " between [0, 1].";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
 
   // check dim
   PARAM_CHECK(op_name, (x_desc->dims[0] == img_size_desc->dims[0]));
@@ -143,7 +153,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
   mluOpStatus_t param_check = yoloBoxParamCheck(
       "[mluOpYoloBox]", handle, x_desc, x, img_size_desc, img_size,
       anchors_desc, anchors, boxes_desc, boxes, scores_desc, scores, class_num,
-      iou_aware, &zero_element);
+      iou_aware, iou_aware_factor, &zero_element);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }

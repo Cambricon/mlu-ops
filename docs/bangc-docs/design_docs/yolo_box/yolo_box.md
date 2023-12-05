@@ -43,7 +43,7 @@
 | 输出数据类型                                                 | float                                                        |
 | 输出 Shape                                                   | boxes: [N, S, 4, H\*W]<br />scores: [N, S, class_num, H\*W]  |
 | 输出 Layout                                                  | boxes: ARRAY <br />scores: ARRAY                             |
-| 模式(可选）                                                  | 否                                                           |
+| 模式（可选）                                                  | 否                                                           |
 | 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理 | 否                                                           |
 | 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否                                                           |
 | 是否需要支持原位                                             | 否                                                           |
@@ -61,7 +61,7 @@
 
 通常情况下，每个网格称做特征图的一个`cell`。基于该`cell`，通过 `scale` 等参数生成与特征图长宽成比例的 `anchor box`。为了使得 `anchor box` 中心在与 `cell` 中心点对齐，计算过程中会加 `0.5 cell` 的偏移。每个 `cell` 对应的 `anchor box` 数量相同。
 
-`yolo_box` 算子对每个 `cell` 所对应的固定数个 `anchor box` 的坐标进行还原（从网格坐标还原到特征图坐标），对置信度 `conf` 进行处理。 
+`yolo_box` 算子对每个 `cell` 所对应的固定数个 `anchor box` 的坐标进行还原（从网格坐标还原到特征图坐标），对置信度 `conf` 进行处理。
 
 #### 1.2.2 参数说明
 
@@ -105,9 +105,9 @@
 
 
    1. 解码：
-   
+
       ```math
-      \begin{aligned} 
+      \begin{aligned}
          center_{x} & = (sigmoid(x_{0})*scale + bias + i) * img\_size_{w} / W \\
          center_{y} & = (sigmoid(y_{0})*scale + bias + j) * img\_size_{h} / H \\
          center_{w} & = anchors_{w} * e^{w_{0}}* img\_size_{w} / (downsample\_ratio * W) \\
@@ -122,7 +122,7 @@
    2. 计算左下、右上点坐标（转换）：
 
       ```math
-      \begin{aligned} 
+      \begin{aligned}
          box_{lx} & = center_{x} - center_{w} / 2 \\
          box_{ly} & = center_{y} - center_{h} / 2 \\
          box_{rx} & = center_{x} + center_{w} / 2 \\
@@ -135,7 +135,7 @@
       如果`clip_bbox==true`，则将输出坐标裁剪到 `img_size` 范围内。
 
       ```math
-      \begin{aligned} 
+      \begin{aligned}
          box_{lx} & = box_{lx} > 0 ? box_{rx} : 0 \\
          box_{ly} & = box_{ly} > 0 ? box_{ly} : 0 \\
          box_{rx} & = box_{rx} < (img\_size_{w} - 1) ? box_{rx} : img\_size_{w} - 1 \\
@@ -144,12 +144,12 @@
       ```
 
       一个 `anchor box` 计算得出一组左上、右下坐标数据，最终输出 `boxes.shape=[N,S*4,H,W]`。
-      
+
       此外，当 `anchor box` 置信度得分 score<sub>conf</sub> 小于 conf_thresh 时，对应坐标数据均为 `0`。
 
 
 **计算 scores ：**
-   
+
    ```math
    score_{conf} =
       \begin{cases}
@@ -175,7 +175,7 @@
    ```
 
    一个 `anchor box` 计算得出 `class_num` 个分类得分，`scores.shape=[N,S*class_num,H,W]`。
-   
+
    此外，当置信度得分 score<sub>conf</sub> 小于 conf_thresh 时，对应的`class_num` 个分类得分均为 `0`。
 
 ### 1.3 算子输入输出参数要求
@@ -195,7 +195,7 @@
 | clip_bbox        | 是否将输出的bbox裁剪到 img_size 范围内，默认为True           | 输入              | bool                    | /        | 无       |
 | scale            | 放缩解码边界框的中心点，默认值：1.0                          | 输入              | float                   | /        | 无       |
 | iou_aware        | 是否使用iou aware因子，默认值false                           | 输入              | bool                    | /        | 无       |
-| iou_aware_factor | iou aware因子，默认值0.5                                     | 输入              | float                   | /        | 无       |
+| iou_aware_factor | iou aware因子，默认值0.5                                     | 输入              | float                   | /        | iou_aware为true时，iou_aware_factor要求属于[0, 1]       |
 | boxes_desc       | 对输出数据 boxes 的形状描述，包含了 boxes 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
 | boxes            | 输出 tensor boxes 的地址，保存每个框的左上角和右下角的坐标   | 输出              | float                   | ARRAY    | 无       |
 | scores_desc      | 对输出数据  scores 的形状描述，包含了 scores 的数据类型、数据维度和布局等信息 | 输入              | mluOpTensorDescriptor_t | /        | 见1.4    |
@@ -207,9 +207,9 @@
 | ----------- | ---------------------------------------------------------- |
 | 数据类型限制 | x 仅支持 `float`                                             |
 | 布局限制     | x、img_size、anchors、boxes、scores 仅支持 ARRAY              |
-| 规模限制     | `anchors.shape=[2*S]`，`S` 须大于0，且 S % 2 == 0<br />`x.shape=[N,C,H,W]`，C须大于0<br />img_size的shape为`[N, 2]`，dim[1]为2<br />boxes的shape为`[N, S, 4, H*W]`，dim[1]==S，dim[2]须为4<br />scores的shape为`[N, S, class_num, H*W]`，dim[1]==S，dim[2]须为class_num<br />class_num须大于0且在200平台上小于1535，在300平台上小于2559，此处class_num的取值上限由NRAM空间大小决定，计算公式：(MAX_NRAM_SIZE / sizeof(float) / 2 / 32) - 2 （见scores空间划分）<br />参数中仅 `x` 、`conf_thresh`、`scale`、`iou_aware_factor` 允许包含 `nan/inf` |
+| 规模限制     | `anchors.shape=[2*S]`，`S` 须大于0，且 S % 2 == 0<br />`x.shape=[N,C,H,W]`，C须大于0<br />img_size的shape为`[N, 2]`，dim[1]为2<br />boxes的shape为`[N, S, 4, H*W]`，dim[1]==S，dim[2]须为4<br />scores的shape为`[N, S, class_num, H*W]`，dim[1]==S，dim[2]须为class_num<br />class_num须大于0且在200平台上小于1535，在300平台上小于2559，此处class_num的取值上限由NRAM空间大小决定，计算公式：(MAX_NRAM_SIZE / sizeof(float) / 2 / 32) - 2 （见scores空间划分）|
 | 功能限制     | 无限制                                                       |
-| 数据范围限制 | 无                                                           |
+| 数据范围限制 | 当 `iou_aware` 为 `true` 时，`iou_aware_factor` 的范围为 [0, 1]                                       |
 | 原位限制     | 不支持原位                                                   |
 | stride 限制  | 不支持 stride 机制                                           |
 | 广播限制     | 不支持广播                                                   |
@@ -261,7 +261,7 @@ void YoloBoxKernel(const Context& dev_ctx,
 ### 2.2 接口设计
 
 ```c++
-mluOpsStatus_t MLUOP_WIN_API 
+mluOpsStatus_t MLUOP_WIN_API
 mluOpYoloBox(mluOpHandle_t handle,
              const mluOpTensorDescriptor_t x_desc,
              const void *x,
@@ -325,8 +325,8 @@ const int32_t hw_per_core = (H*W) / taskDim + (tasdId < int32_t((H*W) % taskDim)
 
 ```c
 // hw 为 x.shape[:,:,H,W] 中 HW 维度的下标，为当前 core 处理的 HW 位置起始点横坐标
-cy = [hw/W, (hw+1)/W, (hw+2)/W, ..., (hw+deal_num-1)/W]; 
-cx = [hw%W, (hw+1)%W, (hw+2)%W, ..., (hw+deal_num-1)%W]; 
+cy = [hw/W, (hw+1)/W, (hw+2)/W, ..., (hw+deal_num-1)/W];
+cx = [hw%W, (hw+1)%W, (hw+2)%W, ..., (hw+deal_num-1)%W];
 ```
 
 3. 拆分 `deal_num`，循环完成 `boxes` 计算
@@ -366,7 +366,7 @@ if (mode == yoloBoxPartitionMode_t::PARTITION_N) {
    // 拆HW
    n_repeat = 1;
    s_repeat = 1;
-   
+
    hw_repeat = deal_num / hw_per_core;
    hw_rem = deal_num % hw_per_core;
 }
@@ -374,10 +374,10 @@ if (mode == yoloBoxPartitionMode_t::PARTITION_N) {
 // 循环完成数据处理
 for(int32_t n = 0; n < n_repeat + 1; ++n) {
    const int32_t deal_n = n < n_repeat ? n_deal_once : n_rem;
-   
+
    for (int32_t s = 0; s < s_repeat + 1; ++s) {
       const int32_t deal_s = s < n_repeat ? n_deal_once : n_rem;
-      
+
       for (int32_t hw = 0; hw < hw_repeat + 1; ++hw) {
          const int32_t deal_hw = hw < hw_repeat ? n_deal_once : hw_rem;
 
@@ -391,9 +391,9 @@ for(int32_t n = 0; n < n_repeat + 1; ++n) {
 
 1. 拆分逻辑
 
-![yolo_box](nram_score.png)  
+![yolo_box](nram_score.png)
 
-根据空间划分，一个`core` 一次能处理的最大数据量为`deal_num`，`C` 维度表现为对 `S` 的拆分。   
+根据空间划分，一个`core` 一次能处理的最大数据量为`deal_num`，`C` 维度表现为对 `S` 的拆分。
 
 - 当 `deal_num >= (N * S * hw_per_core)`时，一次可以处理`[N, S, hw_per_core]` 大小的数据；
 - 当 `deal_num >= (S * hw_per_core) && deal_num<(N * S * hw_per_core)`时，一次至少可以处理`[S, hw_per_core]` 大小的数据，外层拆分 `N`；
@@ -410,7 +410,7 @@ for(int32_t n = 0; n < n_repeat + 1; ++n) {
 
 - 基本任务类型为BLOCK任务；
 - 任务间拆`HW`维度；同一任务内，拆`N`、`NS`、`NSHW`。详见 3.1 节。
-  
+
 ### 3.4 性能优化设计
 
 1、资源分配
@@ -440,15 +440,15 @@ for(int32_t n = 0; n < n_repeat + 1; ++n) {
 
 - 算子在网络中用到的规模：
   - case1
-    - input tensor：ImgSize=[8, 2], X=[8, 255, 19, 19], 
+    - input tensor：ImgSize=[8, 2], X=[8, 255, 19, 19],
     - output tensor：Boxes=[8, 1083, 4], Scores=[8, 1083, 80]
 
   - case2
-    - input tensor：ImgSize=[8, 2], X=[8, 255,  38, 38], 
+    - input tensor：ImgSize=[8, 2], X=[8, 255,  38, 38],
     - output tensor：Boxes=[8, 4332, 4], Scores=[8, 4332, 80]
 
   - case3
-    - input tensor：ImgSize=[8, 2], X=[8, 255,  76, 76], 
+    - input tensor：ImgSize=[8, 2], X=[8, 255,  76, 76],
     - output tensor：Boxes=[8, 17328, 4], Scores=[8, 17328, 80]
 
 
@@ -459,7 +459,8 @@ for(int32_t n = 0; n < n_repeat + 1; ++n) {
 1. 描述符指针为空防呆：handle、x_desc、 img_size_desc、anchors_desc、boxes_desc、scores_desc；
 2. 0 元素检查防呆；
 3. 对输入输出支持的 dtype、layout 以及 shape 进行防呆；
-4. 指针为空防呆：x、img_size、anchors、boxes、scores。
+4. 指针为空防呆：x、img_size、anchors、boxes、scores；
+5. iou_aware_factor 防呆。
 
 ## 4 算子性能优化记录
 
