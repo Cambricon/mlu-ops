@@ -6332,7 +6332,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - None.
+ * - When the \b iou_aware is true, the \b iou_aware_factor should be between [0, 1].
  *
  * @par Example
  * - None.
