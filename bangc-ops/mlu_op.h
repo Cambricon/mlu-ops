@@ -7205,6 +7205,7 @@ mluOpExpand(mluOpHandle_t handle,
 // Group:Fill
 /*!
  * @brief Fills the output tensor \b output with a scale \b value.
+ *
  * @par Deprecated
  * - ::mluOpFill is deprecated and will be removed in the future release. It is recommended
  *   to use ::mluOpFill_v3 instead, which supports the parameter \b pointer_mode that sets \b value

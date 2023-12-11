@@ -26,6 +26,7 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <atomic>
 
 #include "core/logging.h"
 #include "mlu_op.h"

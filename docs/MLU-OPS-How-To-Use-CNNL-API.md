@@ -1,4 +1,4 @@
-## MLU-OPS 如何使用CNNL基础算子
+## MLU-OPS 如何使用 CNNL 基础算子
 在MLU-OPS 开发算子时，如果需要用到某个基础功能，其功能已经由CNNL 算子实现，我们不妨直接在MLU-OPS 代码中调用CNNL 的API，快速达成算子开发的目的。下面3个示例介绍了如何在MLU-OPS 代码中实现调用CNNL 算子的方法。
 
 ### 示例1
@@ -14,9 +14,9 @@ static mluOpStatus_t transposeTensor(
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
     void *transpose_workspace, size_t transpose_workspace_size) {
   const int input_dim = input_desc->dim;
-  // MLU-OPS代码中直接定义cnnl cnnl_trans_desc 变量
-  cnnlTransposeDescriptor_t cnnl_trans_desc = NULL;
-  
+
+  // step1. 将mluOpHandle、mluOpTensorDescriptor_t 等参数转换为 CNNL 公共参数类型
+
   // 宏 DEFINE_CREATE_AND_SET_CNNL_HANDLE 内部定义并创建 CNNL handle，
   // 并将 MLU-OPS handle 信息转换设置到 CNNL handle
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -26,7 +26,12 @@ static mluOpStatus_t transposeTensor(
   // 并将 MLU-OPS TensorDescriptor 信息转换设置到 CNNL TensorDescriptor
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
-                                        cnnl_workspace_dst_desc);
+                                               cnnl_workspace_dst_desc);
+
+  // step2. 定义 cnnlTranspose_v2 cnnlTranposeDescriptor 类型入参
+
+  // MLU-OPS代码中直接定义cnnl cnnl_trans_desc 变量
+  cnnlTransposeDescriptor_t cnnl_trans_desc = NULL;
 
   // 直接调用 CNNL api 创建 cnnlTranposeDescriptor
   CALL_CNNL(cnnlCreateTransposeDescriptor(&cnnl_trans_desc));
@@ -34,13 +39,19 @@ static mluOpStatus_t transposeTensor(
   // 直接调用 CNNL api 设置 cnnlTranposeDescriptor
   CALL_CNNL(cnnlSetTransposeDescriptor(cnnl_trans_desc, input_dim, permute));
 
+  // step3. 调用 cnnlTranspose_v2
+
   // 直接调用 CNNL 算子 api
   CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_input_desc,
                              input, cnnl_workspace_dst_desc, workspace_dst,
                              transpose_workspace, transpose_workspace_size));
 
+  // step4. Destroy cnnlTranspose_v2 cnnlTranposeDescriptor 类型入参
+
   // 直接调用 CNNL api 销毁 cnnlTranposeDescriptor
   CALL_CNNL(cnnlDestroyTransposeDescriptor(cnnl_trans_desc));
+
+  //step5. Destroy CNNL 公共类型参数 handle 及 tensor descriptor等.
 
   // 宏 DESTROY_CNNL_TENSOR_DESCRIPTOR 内部销毁新建的 CNNL TensorDescriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_workspace_dst_desc);
