@@ -72,7 +72,7 @@ const float IO_BANDWIDTH_MLU290 = 1024;
 const float IO_BANDWIDTH_MLU370 = 307.2;
 const float IO_BANDWIDTH_MLU370_SINGLE_CLUSTER = 128;
 // 590 add
-const float IO_BANDWIDTH_MLU590 = 2048;
+const float IO_BANDWIDTH_MLU590 = 0.0;
 
 // mlu270 mlu220 mlu290 ct peak compute force is same;
 const int CT_PEAK_FLOAT16_COMPUTE_FORCE = 64;
@@ -106,28 +106,7 @@ const int LT_PEAK_FP32_FP32_COMPUTE_FORCE_590 = 2 * 0.0;
 const int LT_PEAK_TF32_TF32_COMPUTE_FORCE_590 = 2 * 0.0;
 
 // op that use lt peak force to get compute efficiency
-const std::unordered_set<std::string> lt_op_set = {
-    "convolution_forward",
-    "conv",
-    "convolution_backward_filter",
-    "fusedOp",
-    "convbpfilter",
-    "convolution_backward_data",
-    "convolution3d_backward_filter",
-    "Convolution_Backward_Data",
-    "convbpdata",
-    "deconvolution",
-    "deconv",
-    "batch_matmul",
-    "batch_matmul_bcast",
-    "quantize_batch_matmul",
-    "quantize_batch_matmul_bcast",
-    "gemm4conv",
-    "matmul",
-    "matmul_inference",
-    "quantize_matmul",
-    "stride_batch_matmul",
-    "rnn_inference"};
+const std::unordered_set<std::string> lt_op_set = {};
 
 const std::set<mluOpDevType_t> arch_skip_nan_inf = {MLUOP_MLU220, MLUOP_MLU270,
                                                     MLUOP_MLU290};
