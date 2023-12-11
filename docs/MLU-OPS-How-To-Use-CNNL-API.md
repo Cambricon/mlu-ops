@@ -161,11 +161,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     // CNNL Handle，TensorDescritpor
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sub_filters_desc,
-                                          cnnl_sub_filters_desc);
+                                                 cnnl_sub_filters_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_grad_condence_desc,
-                                          cnnl_output_grad_condence_desc);
+                                                 cnnl_output_grad_condence_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_condence_desc,
-                                          cnnl_input_grad_condence_desc);
+                                                 cnnl_input_grad_condence_desc);
 
     // 直接调用 CNNL api 对结构进行创建、设置
     CALL_CNNL(cnnlCreateMatMulHeuristicResult(&cnnl_heuristic_result));
