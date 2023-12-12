@@ -45,6 +45,7 @@ set(LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIR})
 set(ORIG_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 find_package(Protobuf)
+find_package(Eigen3 REQUIRED)
 # FindProtobuf will generate important variables (could be overrided):
 # (cache) PROTOBUF_LIBRARY, (set) PROTOBUF_LIBRARIES
 # (cache) PROTOBUF_INCLUDE_DIR, (set) PROTOBUF_INCLUDE_DIRS
@@ -181,6 +182,7 @@ foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
   target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
   target_link_libraries(${target_gtest} mluop_test_proto)
+  target_link_libraries(${target_gtest} Eigen3::Eigen)
   set_target_properties(${target_gtest}
     PROPERTIES
     INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
@@ -203,10 +205,6 @@ target_include_directories(mluop_pb_gtest_obj PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
   $<INSTALL_INTERFACE:include>
-)
-
-target_include_directories(mluop_pb_gtest_obj PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}/third_party/eigen3
 )
 
 add_library(mluop_api_gtest_obj OBJECT ${MLUOP_API_TEST_DIR} ${MLUOP_API_GTEST_DIR})
