@@ -70,6 +70,8 @@ MLU-OPS 提供了以下功能：
 - 准备 CNToolkit、CNNL 环境
 
   ```sh
+  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu18.04/cntoolkit_x.x.x-1.ubuntu18.04_amd64.deb
+  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu18.04/cnnl_x.x.x-1.ubuntu18.04_amd64.deb
   sudo apt-get install ./cntoolkit-x.x.x_ubuntuxx.xx_amd64.deb
   sudo apt-get update
   sudo apt-get install cncc cnas cnbin cndrv cnrt cnrtc
