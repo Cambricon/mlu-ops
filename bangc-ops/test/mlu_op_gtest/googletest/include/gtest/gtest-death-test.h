@@ -314,8 +314,9 @@ class GTEST_API_ KilledBySignal {
     ::testing::internal::RE::PartialMatch(".*", (regex));                      \
     GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement);                 \
     terminator;                                                                \
-  } else                                                                       \
-  ::testing::Message()
+  } else {                                                                     \
+    ::testing::Message();                                                      \
+  }
 
 // EXPECT_DEATH_IF_SUPPORTED(statement, regex) and
 // ASSERT_DEATH_IF_SUPPORTED(statement, regex) expand to real death tests if

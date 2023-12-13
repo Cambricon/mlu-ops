@@ -230,8 +230,9 @@ GTEST_API_ bool ExitedUnsuccessfully(int exit_status);
   } else if (!::testing::internal::AlwaysTrue()) {             \
     const ::testing::internal::RE &gtest_regex = (regex);      \
     static_cast<void>(gtest_regex);                            \
-  } else                                                       \
-  ::testing::Message()
+  } else {                                                     \
+    ::testing::Message();                                      \
+  }
 
 // A class representing the parsed contents of the
 // --gtest_internal_run_death_test flag, as it existed when
