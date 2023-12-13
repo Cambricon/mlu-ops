@@ -104,20 +104,6 @@ class Config {
     }
   }
 
-#if 0
-      static bool get_event(ConfigEnvType evt) {
-        switch (evt) {
-          case ConfigEnvType::MLUOP_EVENT_ENABLE_API:
-            return instance().event_enable_api_;
-          case ConfigEnvType::MLUOP_EVENT_ENABLE_KERNEL:
-            return instance().event_enable_kernel_;
-          default:
-            // unsupported event type
-            return false;
-        }
-      }
-#endif
-
  private:
   Config() = default;
   // TODO(NONE): expose event enable/disable interface (not just env)
