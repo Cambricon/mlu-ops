@@ -1,4 +1,4 @@
- /*************************************************************************
+/*************************************************************************
  * Copyright (C) [2023] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -20,19 +20,32 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpPad(
-    mluOpHandle_t handle,
-    const mluOpTensorDescriptor_t input_desc,
-    const void *input,
-    const void *paddings,
-    const void *padding_value,
-    const mluOpTensorDescriptor_t output_desc,
-    void *output) {
-  padWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(
-      handle, input_desc, input, paddings, padding_value,
-      output_desc, output);
-  return ret;
+mluOpStatus_t MLUOP_WIN_API mluOpPad(mluOpHandle_t handle,
+                                     const mluOpTensorDescriptor_t input_desc,
+                                     const void *input, const void *paddings,
+                                     const void *padding_value,
+                                     const mluOpTensorDescriptor_t output_desc,
+                                     void *output) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpPad] is deprecated and"
+      << " will be removed in furture.";
+  PARAM_CHECK("mluOpPad", handle != NULL);
+  PARAM_CHECK("mluOpPad", input_desc != NULL);
+  PARAM_CHECK("mluOpPad", paddings != NULL);
+  PARAM_CHECK("mluOpPad", padding_value != NULL);
+  PARAM_CHECK("mluOpPad", output_desc != NULL);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
+  CHECK_FUNC_RETURN(cnnlPad(cnnl_handle, cnnl_input_desc, input, paddings,
+                            padding_value, cnnl_output_desc, output),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpPad] Internal error accured in mluOpPad.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
+  return MLUOP_STATUS_SUCCESS;
 }

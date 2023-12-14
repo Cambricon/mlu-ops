@@ -23,14 +23,33 @@
 #ifndef TEST_MLU_OP_GTEST_SRC_ZOO_TRANSPOSE_TRANSPOSE_H_
 #define TEST_MLU_OP_GTEST_SRC_ZOO_TRANSPOSE_TRANSPOSE_H_
 #include "executor.h"
+
+#define TRANSPOSE_MAX_DIM 8
+
 namespace mluoptest {
 class TransposeExecutor : public Executor {
  private:
   size_t size_workspace_ = 0;
+  mluOpTransposeDescriptor_t trans_desc_ = nullptr;
+  mluOpTensorDescriptor_t x_desc_ = nullptr;
+  mluOpTensorDescriptor_t y_desc_ = nullptr;
+  int permute_[TRANSPOSE_MAX_DIM] = {0};
+  int dims_ = 0;
+  template <typename T>
+  void transposeCpuNd(T *y,
+                      const T *x,
+                      uint64_t *dim,
+                      const uint64_t *DIM,
+                      const uint64_t *permute,
+                      const uint64_t element_num,
+                      const int loop_d);
 
  public:
   TransposeExecutor() {}
-  ~TransposeExecutor() {}  void paramCheck();
+  ~TransposeExecutor() {}
+
+  void prepareComputeParam();
+  void paramCheck();
   void compute();
   void cpuCompute();
   void workspaceMalloc();

@@ -20,23 +20,40 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/kernel_wrapper/wrapper.h"
+#include "kernels/utils/cnnl_helper.h"
 
-mluOpStatus_t MLUOP_WIN_API
-mluOpRoiPoolingForward(mluOpHandle_t handle,
-                       mluOpPoolingMode_t pooling_mode,
-                       const mluOpTensorDescriptor_t input_desc,
-                       const void *input,
-                       const mluOpTensorDescriptor_t rois_desc,
-                       const void *rois,
-                       float spatial_scale,
-                       const mluOpTensorDescriptor_t output_desc,
-                       void *output,
-                       int *argmax) {
-  RoiPoolingForwardWrapper wrapper;
-  mluOpStatus_t ret = wrapper.invoke(handle, pooling_mode, input_desc, input,
-                                     rois_desc, rois, spatial_scale,
-                                     output_desc, output, argmax);
-  return ret;
+mluOpStatus_t MLUOP_WIN_API mluOpRoiPoolingForward(
+    mluOpHandle_t handle, mluOpPoolingMode_t pooling_mode,
+    const mluOpTensorDescriptor_t input_desc, const void *input,
+    const mluOpTensorDescriptor_t rois_desc, const void *rois,
+    float spatial_scale, const mluOpTensorDescriptor_t output_desc,
+    void *output, int *argmax) {
+  PARAM_CHECK("[mluOpRoiPoolingForward]", handle != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", input_desc != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", input != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", rois_desc != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", rois != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", output_desc != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", output != NULL);
+  PARAM_CHECK("[mluOpRoiPoolingForward]", argmax != NULL);
+
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(rois_desc, cnnl_rois_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
+
+  CHECK_FUNC_RETURN(
+      cnnlRoiPoolingForward(cnnl_handle, cnnlPoolingMode_t(pooling_mode),
+                            cnnl_input_desc, input, cnnl_rois_desc, rois,
+                            spatial_scale, cnnl_output_desc, output, argmax),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpRoiPoolingForward] Internal error"
+      " accured in mluOpRoiPoolingForward.",
+      MLUOP_STATUS_INTERNAL_ERROR);
+
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_rois_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
+  return MLUOP_STATUS_SUCCESS;
 }
-

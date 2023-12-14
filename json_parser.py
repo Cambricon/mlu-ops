@@ -4,7 +4,7 @@ import json
 
 json_file = 'build.property'
 output = 'dependency.txt'
-modules = ["cntoolkit"]
+modules = ["cntoolkit", "cnnl"]
 
 
 with open(json_file) as json_data:

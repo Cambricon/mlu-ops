@@ -125,23 +125,24 @@ prepare_cntoolkit () {
   n=${#arr_vers[@]}
 
   sub_pkg_to_extract=(cncc cnas cnperf cngdb cndrv cnrt cnbin cnpapi cndev cntoolkit-cloud)
+      
+  if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
+    rm -rf ${PACKAGE_EXTRACT_DIR}
+  fi
+  mkdir -p ${PACKAGE_EXTRACT_DIR}
 
   if [ -f "/etc/os-release" ]; then
       source /etc/os-release
       if [ ${ID} == "ubuntu" ]; then
-
           for (( i =0; i < ${n}; i++))
           do
               PACKAGE_DIST="Ubuntu"
               PACKAGE_DIST_VER=${VERSION_ID}
               PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-              prog_log_info "cntoolkit url: ${REAL_PATH}"
-              wget -A deb -m -p -E -k -K -np -q ${PACKAGE_PATH}
-              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
-                rm -rf ${PACKAGE_EXTRACT_DIR}
-              fi
-              mkdir -p ${PACKAGE_EXTRACT_DIR}
+              prog_log_info "${arr_modules[$i]} url: ${REAL_PATH}"
+              wget -A deb -m -p -E -k -K -np -q --reject-regex 'static'  ${PACKAGE_PATH}
+              
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.deb; do
                 dpkg -x --force-overwrite ${filename} .
@@ -166,12 +167,9 @@ prepare_cntoolkit () {
               PACKAGE_DIST_VER=${VERSION_ID}
               PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-              prog_log_info "cntoolkit url: ${REAL_PATH}"
-              wget -A deb -m -p -E -k -K -np -q ${PACKAGE_PATH}
-              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
-                rm -rf ${PACKAGE_EXTRACT_DIR}
-              fi
-              mkdir -p ${PACKAGE_EXTRACT_DIR}
+              prog_log_info "${arr_modules[$i]} url: ${REAL_PATH}"
+              wget -A deb -m -p -E -k -K -np -q --reject-regex 'static'  ${PACKAGE_PATH}
+
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.deb; do
                 prog_log_info "extract ${filename}"
@@ -196,12 +194,9 @@ prepare_cntoolkit () {
               PACKAGE_DIST_VER=${VERSION_ID}
               PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
-              prog_log_info "cntoolkit url: ${REAL_PATH}"
-              wget -A rpm -m -p -E -k -K -np -q ${PACKAGE_PATH}
-              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
-                rm -rf ${PACKAGE_EXTRACT_DIR}
-              fi
-              mkdir -p ${PACKAGE_EXTRACT_DIR}
+              prog_log_info "${arr_modules[$i]} url: ${REAL_PATH}"
+              wget -A rpm -m -p -E -k -K -np -q --reject-regex 'static' ${PACKAGE_PATH}
+
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.rpm; do
                 prog_log_info "extract ${filename}"
@@ -227,11 +222,8 @@ prepare_cntoolkit () {
               echo "PACKAGE_PATH: $PACKAGE_PATH"
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
               echo "real_path $REAL_PATH"
-              wget -A rpm -m -p -E -k -K -np ${PACKAGE_PATH}
-              if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
-                rm -rf ${PACKAGE_EXTRACT_DIR}
-              fi
-              mkdir -p ${PACKAGE_EXTRACT_DIR}
+              wget -A rpm -m -p -E -k -K -np --reject-regex 'static' ${PACKAGE_PATH}
+
               pushd ${PACKAGE_EXTRACT_DIR}
               for filename in ../${REAL_PATH}*.rpm; do
                 echo "filename: $filename"

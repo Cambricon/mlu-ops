@@ -137,10 +137,9 @@ foreach(kernel ${build_kernel})
     continue()
   endif()
   file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/${kernel}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/kernels/${kernel}/*.mlu")
+  file(GLOB_RECURSE src_helper_files ${src_helper_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/utils/cnnl_helper.cpp")
   file(GLOB_RECURSE arch_binary_files ${arch_binary_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/${kernel}/${MLUOP_TARGET_CPU_ARCH}/*.o")
 endforeach()
-
-file(GLOB_RECURSE archive_binary_files ${archive_binary_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/*.a")
 
 file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
@@ -155,30 +154,14 @@ set(LINK_FLAGS "-Wl,--version-script=${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
 add_library(mluopscore STATIC ${core_src_files})
 
-if (archive_binary_files MATCHES ".a")
-  if ("${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/wrapper.cpp" IN_LIST src_files)
-    list(REMOVE_ITEM src_files "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/wrapper.cpp")
-  endif()
-  message(STATUS "Build MLUOP with static object file:${archive_binary_files}")
-else()
-  file(GLOB_RECURSE wrapper_binary_files ${wrapper_binary_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/*.o")
-  message(STATUS "Build External lib with object files.")
-  execute_process(COMMAND g++ -c -std=c++11 -fPIC -I ${CMAKE_CURRENT_SOURCE_DIR}
-                                 -I ${NEUWARE_HOME}/include
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/wrapper.cpp
-                                 -o ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/wrapper.cpp.o)
-  execute_process(COMMAND ar -rc ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/libextops.a
-                                  ${wrapper_binary_files} ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/wrapper.cpp.o)
-  execute_process(COMMAND rm ${CMAKE_CURRENT_SOURCE_DIR}/kernels/kernel_wrapper/lib/wrapper.cpp.o)
-endif()
-
-target_link_libraries(mluopscore cnrt cndrv)
-bang_add_library(mluops SHARED ${src_files})
+target_link_libraries(mluopscore cnnl cnrt cndrv)
+bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 target_link_libraries(mluops
   -Wl,--start-group
-  ${arch_binary_files} ${wrapper_binary_files}
+  ${arch_binary_files}
   -Wl,--whole-archive ${archive_binary_files} -Wl,--no-whole-archive
   mluopscore
+  cnnl
   cnrt cndrv dl
   -Wl,--end-group
 )

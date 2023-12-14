@@ -29,23 +29,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-
-static mluOpStatus_t MLUOP_WIN_API initTransposeDescriptor(
-    const mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
-    mluOpTransposeDescriptor_t *trans_desc, const int dim, const int *permute,
-    size_t *workspace_size) {
-  PARAM_CHECK(
-      "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS == mluOpCreateTransposeDescriptor(trans_desc));
-  PARAM_CHECK("[mluOpThreeNNForward]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpSetTransposeDescriptor(*trans_desc, dim, permute));
-  PARAM_CHECK("[mluOpThreeNNForward]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpGetTransposeWorkspaceSize(handle, input_desc,
-                                                 *trans_desc, workspace_size));
-  return MLUOP_STATUS_SUCCESS;
-}
+#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetThreeNNForwardWorkspaceSize(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t known_desc,
@@ -59,21 +43,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetThreeNNForwardWorkspaceSize(
   PARAM_CHECK("[mluOpThreeNNForwardWorkspace]", known_desc->dim == 3);
 
   *workspace_size = known_desc->total_tensor_size;
-  mluOpTransposeDescriptor_t trans_desc = NULL;
   const int known_dim = known_desc->dim;
   const int known_permute[3] = {0, 2, 1};
   size_t known_transpose_workspace_size = 0;
 
-  PARAM_CHECK("[mluOpThreeNNForwardWorkspace]",
-              MLUOP_STATUS_SUCCESS ==
-                  initTransposeDescriptor(handle, known_desc, &trans_desc,
-                                          known_dim, known_permute,
+  cnnlTransposeDescriptor_t _trans_desc = NULL;
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, _handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(known_desc, _known_desc);
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&_trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(_trans_desc, known_dim, known_permute));
+  CALL_CNNL(cnnlGetTransposeWorkspaceSize(_handle, _known_desc, _trans_desc,
                                           &known_transpose_workspace_size));
   *workspace_size += known_transpose_workspace_size;
-
-  PARAM_CHECK(
-      "[mluOpThreeNNForwardWorkspace]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(_trans_desc));
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(_known_desc);
+  DESTROY_CNNL_HANDLE(_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -81,26 +65,23 @@ static mluOpStatus_t transposeTensor(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, const int *permute,
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
-    void *transpose_workspace) {
+    void *transpose_workspace, size_t transpose_workspace_size) {
   const int input_dim = input_desc->dim;
-  mluOpTransposeDescriptor_t trans_desc = NULL;
-  size_t transpose_workspace_size = 0;
-  PARAM_CHECK(
-      "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS ==
-          initTransposeDescriptor(handle, input_desc, &trans_desc, input_dim,
-                                  permute, &transpose_workspace_size));
 
-  PARAM_CHECK(
-      "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS ==
-          mluOpTranspose_v2(handle, trans_desc, input_desc, input,
-                            workspace_dst_desc, workspace_dst,
-                            transpose_workspace, transpose_workspace_size));
-
-  PARAM_CHECK(
-      "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  cnnlTransposeDescriptor_t cnnl_trans_desc = NULL;
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
+                                        cnnl_workspace_dst_desc);
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&cnnl_trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(cnnl_trans_desc, input_dim, permute));
+  CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_input_desc,
+                             input, cnnl_workspace_dst_desc, workspace_dst,
+                             transpose_workspace, transpose_workspace_size));
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(cnnl_trans_desc));
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_workspace_dst_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -259,11 +240,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
       MLUOP_STATUS_SUCCESS ==
           mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY,
                                    input_dtype, known_dim, known_tmp_dims));
-  PARAM_CHECK("[mluOpThreeNNForward]",
-              MLUOP_STATUS_SUCCESS ==
-                  transposeTensor(handle, known_desc, known, known_permute,
-                                  known_desc_tmp, known_workspace,
-                                  transpose_workspace));
+  PARAM_CHECK(
+      "[mluOpThreeNNForward]",
+      MLUOP_STATUS_SUCCESS ==
+          transposeTensor(handle, known_desc, known, known_permute,
+                          known_desc_tmp, known_workspace, transpose_workspace,
+                          workspace_size - known_desc->total_tensor_size));
   PARAM_CHECK(
       "[mluOpThreeNNForward]",
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(known_desc_tmp));
