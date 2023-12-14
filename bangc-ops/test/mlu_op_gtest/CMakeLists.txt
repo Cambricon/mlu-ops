@@ -44,8 +44,18 @@ set(LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIR})
 # prefer to use protobuf static libraries
 set(ORIG_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+
 find_package(Protobuf)
 find_package(Eigen3 REQUIRED)
+if(NOT ${EIGEN3_INCLUDE_DIRS})
+  if( EXISTS "/usr/include/eigen3")
+    set(LIBEIGEN3_INCLUDE_DIRS "/usr/include/eigen3")
+  elseif(EXISTS "/usr/local/include/eigen3")
+    set(LIBEIGEN3_INCLUDE_DIRS "/usr/local/include/eigen3")
+  else()
+    message( FATAL_ERROR "Cannot find eigen3, CMake will exit." )
+  endif()
+endif()
 # FindProtobuf will generate important variables (could be overrided):
 # (cache) PROTOBUF_LIBRARY, (set) PROTOBUF_LIBRARIES
 # (cache) PROTOBUF_INCLUDE_DIR, (set) PROTOBUF_INCLUDE_DIRS
@@ -57,10 +67,11 @@ message(STATUS "libxml2 library: " ${LIBXML2_LIBRARIES})
 message(STATUS "protobuf include: " ${PROTOBUF_INCLUDE_DIRS})
 message(STATUS "protobuf libraries: " ${PROTOBUF_LIBRARIES})
 message(STATUS "protoc executable: " ${PROTOBUF_PROTOC_EXECUTABLE})
+message(STATUS "libeigen3 include: " ${LIBEIGEN3_INCLUDE_DIRS})
 
 include_directories(${LIBXML2_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIR})
-
+include_directories(${LIBEIGEN3_INCLUDE_DIRS})
 
 if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
@@ -182,7 +193,6 @@ foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
   target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
   target_link_libraries(${target_gtest} mluop_test_proto)
-  target_link_libraries(${target_gtest} Eigen3::Eigen)
   set_target_properties(${target_gtest}
     PROPERTIES
     INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
