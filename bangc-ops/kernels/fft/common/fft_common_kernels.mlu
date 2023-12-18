@@ -1,0 +1,570 @@
+/*************************************************************************
+ * Copyright (C) [2019-2022] by Cambricon, Inc.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include <algorithm>
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "kernels/fft/fft.h"
+
+#define PAD_SIZE 64
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+/*
+  convert function
+ */
+__mlu_func__ void convert(float *dst, float *src, int length) {
+  if (src == dst) {
+    return;
+  } else {
+    __memcpy(dst, src, length * sizeof(float), NRAM2NRAM, 0, 0, 0);
+  }
+}
+
+__mlu_func__ void convert(half *dst, float *src, int length) {
+  __mluOp_float2half(dst, src, length);
+}
+
+/*
+  mod function: input % n
+  [input] src_addr: input data
+  [input] temp_addr: temp space to store middle max data
+  [input] n: input mod n
+  [input] len: data number
+  [output] src_addr: output data
+ */
+template <typename T>
+__mlu_func__ void __mluOp_mod(T *src_addr, T *temp_addr, T n, int len) {
+  T array_max;
+  __bang_argmax(temp_addr, src_addr, len);
+  array_max = temp_addr[0];
+  while (array_max >= n) {
+    __bang_ge_scalar(temp_addr, src_addr, n, len);
+    __bang_mul_scalar(temp_addr, temp_addr, n, len);
+    __bang_sub(src_addr, src_addr, temp_addr, len);
+    __bang_argmax(temp_addr, src_addr, len);
+    array_max = temp_addr[0];
+  }
+}
+
+/*
+  generate sin and cos vector function:
+  [input] src_addr: input data
+  [input] deal_size: input data number(don't need align)
+  [output] sin_addr: input data sin result
+  [output] cos_addr: input data cos result
+ */
+__mlu_func__ void genSinCosVec(float *src_addr, float *sin_addr, float *cos_addr, int deal_size) {
+#if __BANG_ARCH__ >= 322
+  __bang_sin(sin_addr, src_addr, deal_size);
+  __bang_cos(cos_addr, src_addr, deal_size);
+#else
+  for (int i = 0; i < deal_size; i++) {
+    sin_addr[i] = sinf(src_addr[i]);
+    cos_addr[i] = cosf(src_addr[i]);
+  }
+#endif
+}
+
+/*
+  generate select offset vector function:
+  bang_arch >= 322, for gather inst offset, should mul sizeof(float)
+  bang_arch < 322, for scalar select offset
+  [input] offset_addr: offset data in float32
+  [input] deal_size: offset data number(don't need align)
+  [output] offset_int_addr: offset data in int32
+ */
+__mlu_func__ void genSelectOffsetVec(float *offset_addr, int32_t *offset_int_addr, int deal_size) {
+#if __BANG_ARCH__ >= 322
+  __bang_mul_scalar(offset_addr, offset_addr, (float)sizeof(float), deal_size);
+  __mluOp_float2int((int32_t *)offset_int_addr, nullptr, offset_addr, nullptr, deal_size);
+#else
+  for (int i = 0; i < deal_size; i++) {
+    offset_int_addr[i] = (int)(offset_addr[i]);
+  }
+#endif
+}
+
+/*
+  select data function:
+  bang_arch >= 322, use gather inst, offset should mul sizeof(float)
+  bang_arch < 322, use for and  scalar select inst
+  [input] src_addr: input data to be selected
+  [input] offset_int_addr: offset data to select data in int32
+  [input] deal_size: offset data number(don't need align)
+  [output] dst_addr: selected data
+ */
+__mlu_func__ void selectVec(float *src_addr,
+                            int32_t *offset_int_addr,
+                            float *dst_addr,
+                            int deal_size) {
+  for (auto i = 0; i < deal_size; i++) {
+    dst_addr[i] = src_addr[offset_int_addr[i]];
+  }
+}
+
+/*
+  generate rfft DFT matrix function: rfft result is FFT_HALF(n)
+  [input] n: fft length
+  [output] output: generated rfft matrix data
+  Matrix size: [FFT_HALF(n) * 2 * n]
+  Data:
+    forward: -2.0 * M_PI / n
+      cos00               cos01                ... cos0(n-1)
+      sin00               sin01                ... sin0(n-1)
+      cos10               cos11                ... cos1(n-1)
+      sin10               sin11                ... sin1(n-1)
+      ...                 ...                  ... ...
+      cos(FFT_HALF(n)-1)0 cos(FFT_HALF(n)-1)1  ... cos(FFT_HALF(n)-1)(n-1)
+      sin(FFT_HALF(n)-1)0 sin(FFT_HALF(n)-1)1  ... sin(FFT_HALF(n)-1)(n-1)
+ */
+template <typename DT>
+__mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
+  int deal_size = std::min(MAX_NRAM_SIZE >> 5, n);
+  deal_size = PAD_UP(deal_size, PAD_SIZE);
+  const int row = FFT_HALF(n);
+  const int col = n;
+  int pad_col = PAD_UP(col, PAD_SIZE);
+
+  float *inc_addr = (float *)nram_buffer;
+  float *cos_addr = inc_addr + deal_size;
+  float *sin_addr = cos_addr + deal_size;
+  float *offset_addr = sin_addr + deal_size;
+  int32_t *offset_int_addr = (int32_t *)offset_addr;
+  float *temp_addr = offset_addr + deal_size;
+  float *row_addr = temp_addr;
+
+  // generate 0 to n indices
+  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+
+  // generate sin and cos vectors
+  const float scale = -2.0 * M_PI / n;
+  __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+  __bang_mul_scalar(offset_addr, offset_addr, scale, deal_size);
+
+  genSinCosVec(offset_addr, sin_addr, cos_addr, deal_size);
+
+  for (auto row_i = taskId; row_i < row; row_i += taskDim) {
+    // generate offsets
+    __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+    __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, deal_size);
+    __mluOp_mod(offset_addr, temp_addr, (float)n, deal_size);
+
+    genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
+
+    // select cos result
+    selectVec(cos_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, deal_size);
+
+    // save cos result
+    DT *dst_addr = (DT *)output + 2 * row_i * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select sin result
+    selectVec(sin_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, deal_size);
+
+    // save sin result
+    dst_addr = (DT *)output + (2 * row_i + 1) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+  }
+}
+
+__mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+  switch (data_type) {
+    case (MLUOP_DTYPE_HALF): {
+      generateRFFTHalfDFTMatrixImpl<half>(n, output);
+      break;
+    };
+    case (MLUOP_DTYPE_FLOAT): {
+      generateRFFTHalfDFTMatrixImpl<float>(n, output);
+      break;
+    };
+    default: { MLULOG("Not Implemented."); }
+  }
+}
+
+/*
+  generate rfft DFT matrix function: rfft result is n
+  [input] n: fft length
+  [output] output: generated rfft matrix data
+  Matrix size: [2 * n * n]
+  Data:
+    forward: -2.0 * M_PI / n
+      cos00               cos01                ... cos0(n-1)
+      cos10               cos11                ... cos1(n-1)
+      ...                 ...                  ... ...
+      cos(n-1)0           cos(n-1)1            ... cos(n-1)(n-1)
+      sin00               sin01                ... sin0(n-1)
+      sin10               sin11                ... sin1(n-1)
+      ...                 ...                  ... ...
+      sin(n-1)0           sin(n-1)1            ... sin(n-1)(n-1)
+ */
+template <typename DT>
+__mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
+  int deal_size = std::min(MAX_NRAM_SIZE >> 5, n);
+  deal_size = PAD_UP(deal_size, PAD_SIZE);
+  const int col = n;
+  int pad_col = PAD_UP(col, PAD_SIZE);
+
+  float *inc_addr = (float *)nram_buffer;
+  float *cos_addr = inc_addr + deal_size;
+  float *sin_addr = cos_addr + deal_size;
+  float *offset_addr = sin_addr + deal_size;
+  int32_t *offset_int_addr = (int32_t *)offset_addr;
+  float *temp_addr = offset_addr + deal_size;
+  float *row_addr = temp_addr;
+
+  // generate 0 to n indices
+  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+
+  // generate sin and cos vectors
+  const float scale = -2.0 * M_PI / n;
+  __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+  __bang_mul_scalar(offset_addr, offset_addr, scale, deal_size);
+
+  genSinCosVec(offset_addr, sin_addr, cos_addr, deal_size);
+
+  for (auto row_i = taskId; row_i < row; row_i += taskDim) {
+    // generate offsets
+    __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+    __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, deal_size);
+    __mluOp_mod(offset_addr, temp_addr, (float)n, deal_size);
+
+    genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
+
+    // select cos result
+    selectVec(cos_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, deal_size);
+
+    // save cos result
+    DT *dst_addr = (DT *)output + row_i * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select sin result
+    selectVec(sin_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, deal_size);
+
+    // save sin result
+    dst_addr = (DT *)output + (row_i + row) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+  }
+}
+
+__mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type, int row, int n,
+                                              void *output) {
+  switch (data_type) {
+    case (MLUOP_DTYPE_HALF): {
+      generateRFFTFullDFTMatrixImpl<half>(row, n, output);
+      break;
+    };
+    case (MLUOP_DTYPE_FLOAT): {
+      generateRFFTFullDFTMatrixImpl<float>(row, n, output);
+      break;
+    };
+    default: { MLULOG("Not Implemented."); }
+  }
+}
+
+/*
+  generate irfft DFT matrix function: irfft input is FFT_HALF(n)
+  [input] n: fft length
+  [output] output: generated irfft matrix data
+  Matrix size: [2 * n * FFT_HALF(n)]
+  Data:
+    backward: 2.0 * M_PI / n
+    cos_coeff: [ 1,  2,  2, ...,  2,  1]
+    sin_coeff: [-1, -2, -2, ..., -2, -1]
+      cos00               cos01                ... cos0(FFT_HALF(n)-1)
+      cos10               cos11                ... cos1(FFT_HALF(n)-1)
+      ...                 ...                  ... ...
+      cos(n-1)0           cos(n-1)1            ... cos(n-1)(FFT_HALF(n)-1)
+      sin00               sin01                ... sin0(FFT_HALF(n)-1)
+      sin10               sin11                ... sin1(FFT_HALF(n)-1)
+      ...                 ...                  ... ...
+      sin(n-1)0           sin(n-1)1            ... sin(n-1)(FFT_HALF(n)-1)
+ */
+template <typename DT>
+__mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
+  int deal_size = std::min(MAX_NRAM_SIZE >> 5, n);
+  deal_size = PAD_UP(deal_size, PAD_SIZE);
+  const int row = n;
+  const int col = FFT_HALF(n);
+  int pad_col = PAD_UP(col, PAD_SIZE);
+
+  float *inc_addr = (float *)nram_buffer;
+  float *cos_addr = inc_addr + deal_size;
+  float *sin_addr = cos_addr + deal_size;
+  float *cos_coeff_addr = sin_addr + deal_size;
+  float *sin_coeff_addr = cos_coeff_addr + deal_size;
+  float *offset_addr = sin_coeff_addr + deal_size;
+  int32_t *offset_int_addr = (int32_t *)offset_addr;
+  float *temp_addr = offset_addr + deal_size;
+  float *row_addr = temp_addr;
+
+  // generate 0 to n indices
+  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+
+  // generate sin and cos coefficient vectors
+  __bang_write_value((float *)cos_coeff_addr, deal_size, (float)2.0);
+  __bang_write_value((float *)sin_coeff_addr, deal_size, (float)-2.0);
+  cos_coeff_addr[0] = 1.0;
+  sin_coeff_addr[0] = -1.0;
+  cos_coeff_addr[(n + 1) / 2] = 1.0;
+  sin_coeff_addr[(n + 1) / 2] = -1.0;
+
+  // generate sin and cos vectors
+  const float scale = 2.0 * M_PI / n;
+  __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+  __bang_mul_scalar(offset_addr, offset_addr, scale, deal_size);
+
+  genSinCosVec(offset_addr, sin_addr, cos_addr, deal_size);
+
+  for (auto row_i = taskId; row_i < row; row_i += taskDim) {
+    // generate offsets
+    __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
+    __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
+    __mluOp_mod(offset_addr, temp_addr, (float)n, pad_col);
+
+    genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
+
+    // select cos result
+    selectVec(cos_addr, offset_int_addr, row_addr, col);
+    __bang_mul(row_addr, row_addr, cos_coeff_addr, pad_col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save cos result
+    DT *dst_addr = (DT *)output + row_i * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select sin result
+    selectVec(sin_addr, offset_int_addr, row_addr, col);
+    __bang_mul(row_addr, row_addr, sin_coeff_addr, pad_col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save sin result
+    dst_addr = (DT *)output + (row_i + row) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+  }
+}
+
+__mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+  switch (data_type) {
+    case (MLUOP_DTYPE_HALF): {
+      generateIRFFTHalfDFTMatrixImpl<half>(n, output);
+      break;
+    };
+    case (MLUOP_DTYPE_FLOAT): {
+      generateIRFFTHalfDFTMatrixImpl<float>(n, output);
+      break;
+    };
+    default: { MLULOG("Not Implemented."); }
+  }
+}
+
+/*
+  generate irfft DFT matrix function: irfft input is padded to n
+  [input] n: fft length
+  [output] output: generated irfft matrix data
+  Matrix size: [2 * n * n]
+  Data:
+    backward: 2.0 * M_PI / n
+      cos00               cos01                ... cos0(n-1)
+      cos10               cos11                ... cos1(n-1)
+      ...                 ...                  ... ...
+      cos(n-1)0           cos(n-1)1            ... cos(n-1)(n-1)
+      sin00               sin01                ... sin0(n-1)
+      sin10               sin11                ... sin1(n-1)
+      ...                 ...                  ... ...
+      sin(n-1)0           sin(n-1)1            ... sin(n-1)(n-1)
+ */
+template <typename DT>
+__mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
+  int deal_size = std::min(MAX_NRAM_SIZE >> 5, n);
+  deal_size = PAD_UP(deal_size, PAD_SIZE);
+  const int row = n;
+  const int col = n;
+  int pad_col = PAD_UP(col, PAD_SIZE);
+
+  float *inc_addr = (float *)nram_buffer;
+  float *cos_addr = inc_addr + deal_size;
+  float *sin_addr = cos_addr + deal_size;
+  float *offset_addr = sin_addr + deal_size;
+  int32_t *offset_int_addr = (int32_t *)offset_addr;
+  float *temp_addr = offset_addr + deal_size;
+  float *row_addr = temp_addr;
+
+  // generate 0 to n indices
+  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+
+  // generate sin and cos vectors
+  const float scale = 2.0 * M_PI / n;
+  __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+  __bang_mul_scalar(offset_addr, offset_addr, scale, deal_size);
+
+  genSinCosVec(offset_addr, sin_addr, cos_addr, deal_size);
+
+  for (auto row_i = taskId; row_i < row; row_i += taskDim) {
+    // generate offsets
+    __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
+    __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
+    __mluOp_mod(offset_addr, temp_addr, (float)n, pad_col);
+
+    genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
+
+    // select cos result
+    selectVec(cos_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save cos result
+    DT *dst_addr = (DT *)output + row_i * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select sin result
+    selectVec(sin_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save cos result
+    dst_addr = (DT *)output + (row_i + row) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+  }
+}
+
+__mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+  switch (data_type) {
+    case (MLUOP_DTYPE_HALF): {
+      generateIRFFTFullDFTMatrixImpl<half>(n, output);
+      break;
+    };
+    case (MLUOP_DTYPE_FLOAT): {
+      generateIRFFTFullDFTMatrixImpl<float>(n, output);
+      break;
+    };
+    default: { MLULOG("Not Implemented."); }
+  }
+}
+
+/*
+  generate c2c fft DFT forward and backward matrix function:
+  [input] n: fft length
+  [output] output: generated irfft matrix data
+  Matrix size: [2 * 2 * n * n]
+  Data:
+    forward: -2.0 * M_PI / n
+      cos00               cos01                ... cos0(n-1)
+      cos10               cos11                ... cos1(n-1)
+      ...                 ...                  ... ...
+      cos(n-1)0           cos(n-1)1            ... cos(n-1)(n-1)
+      sin00               sin01                ... sin0(n-1)
+      sin10               sin11                ... sin1(n-1)
+      ...                 ...                  ... ...
+      sin(n-1)0           sin(n-1)1            ... sin(n-1)(n-1)
+    backward: 2.0 * M_PI / n
+      cos00               cos01                ... cos0(n-1)
+      cos10               cos11                ... cos1(n-1)
+      ...                 ...                  ... ...
+      cos(n-1)0           cos(n-1)1            ... cos(n-1)(n-1)
+      sin00               sin01                ... sin0(n-1)
+      sin10               sin11                ... sin1(n-1)
+      ...                 ...                  ... ...
+      sin(n-1)0           sin(n-1)1            ... sin(n-1)(n-1)
+ */
+template <typename DT>
+__mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
+  int deal_size = std::min(MAX_NRAM_SIZE >> 5, n);
+  deal_size = PAD_UP(deal_size, PAD_SIZE);
+  const int row = n;
+  const int col = n;
+  int pad_col = PAD_UP(col, PAD_SIZE);
+
+  float *inc_addr = (float *)nram_buffer;
+  float *forward_cos_addr = inc_addr + deal_size;
+  float *forward_sin_addr = forward_cos_addr + deal_size;
+  float *backward_cos_addr = forward_sin_addr + deal_size;
+  float *backward_sin_addr = backward_cos_addr + deal_size;
+  float *offset_addr = backward_sin_addr + deal_size;
+  int32_t *offset_int_addr = (int32_t *)offset_addr;
+  float *temp_addr = offset_addr + deal_size;
+  float *row_addr = temp_addr;
+
+  // generate 0 to n indices
+  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+
+  // generate sin and cos vectors
+  const float forward_scale = -2.0 * M_PI / n;
+  __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+  __bang_mul_scalar(offset_addr, offset_addr, forward_scale, deal_size);
+
+  genSinCosVec(offset_addr, forward_sin_addr, forward_cos_addr, deal_size);
+
+  const float backward_scale = 2.0 * M_PI / n;
+  __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
+  __bang_mul_scalar(offset_addr, offset_addr, backward_scale, deal_size);
+
+  genSinCosVec(offset_addr, backward_sin_addr, backward_cos_addr, deal_size);
+
+  for (auto row_i = taskId; row_i < row; row_i += taskDim) {
+    // generate offsets
+    __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
+    __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
+    __mluOp_mod(offset_addr, temp_addr, (float)n, pad_col);
+
+    genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
+
+    // select forward cos result
+    selectVec(forward_cos_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save forward cos result
+    DT *dst_addr = (DT *)output + row_i * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select forward sin result
+    selectVec(forward_sin_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save forward sin result
+    dst_addr = (DT *)output + (row_i + row) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select backward cos result
+    selectVec(backward_cos_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save backward cos result
+    dst_addr = (DT *)output + (row_i + 2 * row) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+
+    // select backward sin result
+    selectVec(backward_sin_addr, offset_int_addr, row_addr, col);
+    convert((DT *)row_addr, row_addr, pad_col);
+
+    // save backward sin result
+    dst_addr = (DT *)output + (row_i + 3 * row) * col;
+    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+  }
+}
+
+__mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+  switch (data_type) {
+    case (MLUOP_DTYPE_HALF): {
+      generateC2CFFTDFTMatrixImpl<half>(n, output);
+      break;
+    };
+    case (MLUOP_DTYPE_FLOAT): {
+      generateC2CFFTDFTMatrixImpl<float>(n, output);
+      break;
+    };
+    default: { MLULOG("Not Implemented."); }
+  }
+}
