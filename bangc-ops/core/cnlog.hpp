@@ -136,7 +136,7 @@ class LogMessage {
   std::string module_name_;       // used to print module name stamp
   bool is_print_head_;            // whether print log head or not
   bool is_print_tail_;            // whether print log tail or not
-  bool is_clear_endl_;            // whether clear endl int the string contex
+  bool is_clear_endl_;            // whether clear endl int the string context
   bool release_can_print_;        // whether can print in release mode
   std::stringstream contex_str_;  // the context behind "<<"
   std::stringstream cout_str_;    // the context to show in the screen
