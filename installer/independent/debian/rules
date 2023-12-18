@@ -4,3 +4,6 @@
 	dh $@ --parallel
 
 override_dh_usrlocal:
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
