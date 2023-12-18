@@ -4,7 +4,6 @@ on:
   push:
     branches: [master, r*]
     paths:
-      - 'bangc-ops/kernels/kernel_wrapper/**'
       - 'bangc-ops/CMakeLists.txt'
       - 'bangc-ops/independent_build.sh'
     tags:
