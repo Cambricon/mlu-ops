@@ -7,7 +7,7 @@ This section lists contents that were made for each product release.
 
   **Date:** December 15, 2023
 
-  - **Changes:**
+  **Changes:**
 
   - None.
 
@@ -15,28 +15,28 @@ This section lists contents that were made for each product release.
 
   **Date:** November 24, 2023
 
-  - **Changes:**
+  **Changes:**
 
-    - Added the following new operations:
+  - Added the following new operations:
 
-      - pad
-      - concat
+    - pad
+    - concat
 
 * V0.9.0
 
   **Date:** October 16, 2023
 
-  - **Changes:**
+  **Changes:**
 
-    - Added the following new operations:
+  - Added the following new operations:
 
-      - transform
-      - strided_slice
-      - sync_batchnorm_stats
-      - sync_batchnorm_gather_stats_with_counts
-      - sync_batchnorm_elemt
-      - sync_batchnorm_backward_reduce
-      - sync_batch_norm_backward_elemt
+    - transform
+    - strided_slice
+    - sync_batchnorm_stats
+    - sync_batchnorm_gather_stats_with_counts
+    - sync_batchnorm_elemt
+    - sync_batchnorm_backward_reduce
+    - sync_batch_norm_backward_elemt
 
 * V0.8.1
 
