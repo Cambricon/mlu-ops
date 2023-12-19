@@ -1064,7 +1064,7 @@ typedef struct cnnlRoiAlignStruct *mluOpRoiAlignForwardDescriptor_t;
  * ::mluOpDestroyUniqueDescriptor function.*/
 typedef struct cnnlUniqueStruct *mluOpUniqueDescriptor_t;
 
-typedef struct cnnlDCNStruct mluOpDCNDescriptor_t;
+typedef struct cnnlDCNStruct *mluOpDCNDescriptor_t;
 
 /*!
  * The descriptor of CARAFE (Content-Aware ReAssembly of FEatures) operation that holds
