@@ -16,6 +16,7 @@ This section lists contents that were made for each product release.
   **Date:** November 24, 2023
 
   - **Changes:**
+
     - Added the following new operations:
 
       - pad
@@ -26,6 +27,7 @@ This section lists contents that were made for each product release.
   **Date:** October 16, 2023
 
   - **Changes:**
+
     - Added the following new operations:
 
       - transform
