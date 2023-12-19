@@ -20,6 +20,7 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 #include "mluOp.h"
+#include "utils/cnnl_helper.h"
 
 bool fftIsIntDtype(const mluOpDataType_t dtype);
 

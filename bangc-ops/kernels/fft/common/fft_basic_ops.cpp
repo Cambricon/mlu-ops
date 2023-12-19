@@ -47,13 +47,16 @@ mluOpStatus_t fftGetQuantizeParamWorkspaceSize(mluOpHandle_t handle,
     status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY, data_type, 1, input_dims);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-    // get quantize param workspace
-    status = mluOpGetQuantizeParamWorkspaceSize(handle, input_desc, &required_size);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+    // convert to cnnl_tensor_descriptor
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
 
-    // destroy descriptor
-    status = mluOpDestroyTensorDescriptor(input_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    // get quantize param workspace
+    CALL_CNNL(mluOpGetQuantizeParamWorkspaceSize(cnnl_handle, cnnl_input_desc, &required_size));
+
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+
   }
   return status;
 }
@@ -80,17 +83,19 @@ mluOpStatus_t fftQuantizePositionScale(mluOpHandle_t handle,
     status = mluOpSetTensorDescriptor_v2(quant_desc, MLUOP_LAYOUT_ARRAY, data_type, 1, quant_dims);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+    // convert to cnnl_tensor_descriptor
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(quant_desc, cnnl_quant_desc);
     // get quantize param
     int bit_width;
     castDtypeToBitwidth(compute_type, &bit_width);
-    mluOpQuantizeMode_t mode = MLUOP_QUANTIZE_POSITION_SCALE;
-    status = mluOpQuantizeParam(handle, mode, quant_desc, input, bit_width, workspace,
-                               workspace_size, position, scale, nullptr);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    cnnlQuantizeMode_t mode = CNNL_QUANTIZE_POSITION_SCALE;
+    CALL_CNNL(cnnlQuantizeParam(cnnl_handle, mode, cnnl_quant_desc, input, bit_width, workspace,
+                               workspace_size, position, scale, nullptr));
 
-    // destroy descriptor
-    status = mluOpDestroyTensorDescriptor(quant_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_quant_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
   }
   return status;
 }
@@ -161,48 +166,45 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(mluOpHandle_t handle,
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   }
 
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
+
   // get matmul workspace
   if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type)) {
-    mluOpMatMulDescriptor_t matmul_desc;
-    status = mluOpMatMulDescCreate(&matmul_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_COMPUTE_TYPE, &data_type,
-                                   sizeof(int32_t));
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSA, &trans_a_int,
-                                   sizeof(int32_t));
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSB, &trans_b_int,
-                                   sizeof(int32_t));
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    cnnlMatMulDescriptor_t matmul_desc;
+    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_COMPUTE_TYPE, &data_type,
+                                   sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSA, &trans_a_int,
+                                   sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSB, &trans_b_int,
+                                   sizeof(int32_t)));
 
-    mluOpMatMulAlgo_t matmul_algo;
-    status = mluOpMatMulAlgoCreate(&matmul_algo);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    mluOpMatMulPreference_t preference = MLUOP_MATMUL_FASTEST;
-    status = mluOpGetQuantizeMatMulAlgorithm(handle, matmul_desc, a_desc, b_desc, c_desc,
-                                            preference, &matmul_algo);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    cnnlMatMulAlgo_t matmul_algo;
+    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+    cnnlMatMulPreference_t preference = CNNL_MATMUL_FASTEST;
+    CALL_CHECK(cnnlGetQuantizeMatMulAlgorithm(cnnl_handle, cnnl_matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
+                                            preference, &matmul_algo));
 
-    status = mluOpGetQuantizeMatMulWorkspaceSize(handle, matmul_desc, a_desc, b_desc, c_desc,
-                                                matmul_algo, &workspace_size);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CALL_CNNL(cnnlGetQuantizeMatMulWorkspaceSize(cnnl_handle, cnnl_matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
+                                                matmul_algo, &workspace_size));
 
-    status = mluOpMatMulDescDestroy(matmul_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpMatMulAlgoDestroy(matmul_algo);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc);
+    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo);
   } else {
     workspace_size = 0;  // mluOpMatmul doesn't need workspace.
   }
 
-  // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  // destroy cnnl descriptor
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return status;
 }
 
@@ -282,60 +284,55 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle,
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   }
 
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
+
   // compute matmul result
   if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type)) {
-    mluOpMatMulDescriptor_t matmul_desc;
-    status = mluOpMatMulDescCreate(&matmul_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_COMPUTE_TYPE, &data_type,
-                                   sizeof(int32_t));
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSA, &trans_a_int,
-                                   sizeof(int32_t));
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpSetMatMulDescAttr(matmul_desc, MLUOP_MATMUL_DESC_TRANSB, &trans_b_int,
-                                   sizeof(int32_t));
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    cnnlMatMulDescriptor_t matmul_desc;
+    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE, &data_type,
+                                   sizeof(int32_t)));
+    CNLL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA, &trans_a_int,
+                                   sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB, &trans_b_int,
+                                   sizeof(int32_t)));
 
-    mluOpMatMulAlgo_t matmul_algo;
-    status = mluOpMatMulAlgoCreate(&matmul_algo);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    mluOpMatMulPreference_t preference = MLUOP_MATMUL_FASTEST;
-    status = mluOpGetQuantizeMatMulAlgorithm(handle, matmul_desc, a_desc, b_desc, c_desc, preference,
-                                            &matmul_algo);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    cnnlMatMulAlgo_t matmul_algo;
+    CALL_CNNL(cnnlOpMatMulAlgoCreate(&matmul_algo));
+    cnnlMatMulPreference_t preference = MLUOP_MATMUL_FASTEST;
+    CALL_CNNL(cnnlGetQuantizeMatMulAlgorithm(cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, preference,
+                                            &matmul_algo));
 
     const float one = 1.0;
     const float zero = 0.0;
-    status = mluOpQuantizeMatMul(handle, matmul_desc, &one, a_desc, a_ptr, a_pos, a_scale, nullptr,
-                                b_desc, b_ptr, b_pos, b_scale, nullptr, &zero, c_desc, c_ptr,
-                                matmul_algo, workspace, workspace_size);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CALL_CNNL(cnnlQuantizeMatMul(cnnl_handle, matmul_desc, &one, cnnl_a_desc, a_ptr, a_pos, a_scale, nullptr,
+                                 cnnl_b_desc, b_ptr, b_pos, b_scale, nullptr, &zero, cnnl_c_desc, c_ptr,
+                                 matmul_algo, workspace, workspace_size));
 
     if ((alpha != 1.0) || (beta != 0.0)) {
-      status = mluOpTransform_v2(handle, MLUOP_POINTER_MODE_HOST, &alpha, c_desc, c_ptr, &beta,
-                                c_desc, c_ptr);
-      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+      CALL_CNNL(cnnlTransform_v2(cnnl_handle, MLUOP_POINTER_MODE_HOST, &alpha, cnnl_c_desc, c_ptr, &beta,
+                                 cnnl_c_desc, c_ptr));
     }
 
-    status = mluOpMatMulDescDestroy(matmul_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpMatMulAlgoDestroy(matmul_algo);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
+    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
   } else {
     c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
-    status = mluOpMatMul(handle, is_trans_a, is_trans_b, &alpha, a_desc, a_ptr, b_desc, b_ptr, &beta,
-                        c_desc, c_ptr);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CALL_CNNL(cnnlMatMul(cnnl_handle, is_trans_a, is_trans_b, &alpha, cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr, &beta,
+                         cnnl_c_desc, c_ptr));
   }
 
-  // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  // destroy cnnl descriptor
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+
+  DESTROY_CNNL_HANDLE(cnnl_handle);
 
   return status;
 }
@@ -405,19 +402,25 @@ mluOpStatus_t fftBatchMatMulBcast(mluOpHandle_t handle,
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   status = mluOpSetTensorDescriptor(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3, c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
   c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
-  status = mluOpBatchMatMulBCast(handle, is_trans_a, is_trans_b, a_desc, a_ptr, b_desc, b_ptr, NULL,
-                                0, c_desc, c_ptr);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
+
+  CALL_CNNL(cnnlBatchMatMulBCast(handle, is_trans_a, is_trans_b, cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr, NULL,
+                                0, cnnl_c_desc, c_ptr));
 
   // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  // destroy cnnl descriptor
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+
+  DESTROY_CNNL_HANDLE(cnnl_handle);
 
   return status;
 }
@@ -440,23 +443,20 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   status = mluOpCreateTransposeDescriptor(&trans_desc);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
   // set descriptor
   status = mluOpSetTensorDescriptor(input_desc, MLUOP_LAYOUT_ARRAY, data_type, dim_num, ori_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
 
-  status = mluOpSetTransposeDescriptor(trans_desc, dim_num, permute);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, dim_num, permute));
 
   // get workspace
-  status = mluOpGetTransposeWorkspaceSize(handle, input_desc, trans_desc, &workspace_size);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CALL_CNNL(cnnlGetTransposeWorkspaceSize(handle, cnnl_input_desc, trans_desc, &workspace_size));
 
   // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(input_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
-  status = mluOpDestroyTransposeDescriptor(trans_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
 
   return status;
 }
@@ -489,24 +489,25 @@ mluOpStatus_t fftTranspose(mluOpHandle_t handle,
                                    transed_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  // compute transpose
-  mluOpTransposeDescriptor_t trans_desc = nullptr;
-  status = mluOpCreateTransposeDescriptor(&trans_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpSetTransposeDescriptor(trans_desc, dim_num, permute);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(transed_input_desc, cnnl_transed_input_desc);
 
-  status = mluOpTranspose_v2(handle, trans_desc, input_desc, ori_ptr, transed_input_desc,
-                            transed_ptr, workspace, workspace_size);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  // compute transpose
+  cnnlTransposeDescriptor_t trans_desc = nullptr;
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, dim_num, permute));
+
+  CALL_CNNL(cnnlTranspose_v2(handle, trans_desc, input_desc, ori_ptr, transed_input_desc,
+                            transed_ptr, workspace, workspace_size));
 
   // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(input_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(transed_input_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTransposeDescriptor(trans_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_transed_input_desc);
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
+
+  DESTROY_CNNL_HANDLE(cnnl_handle);
 
   return status;
 }
@@ -538,17 +539,19 @@ mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
   status = mluOpSetTensorDescriptor_v2(out_desc, MLUOP_LAYOUT_ARRAY, data_type, 1, dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(in1_desc, cnnl_in1_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(in2_desc, cnnl_in2_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(out_desc, cnnl_out_desc);
+
   // get workspace
-  status = mluOpGetOpTensorWorkspaceSize(handle, in1_desc, in2_desc, out_desc, &workspace_size);
+  CALL_CNNL(cnnlGetOpTensorWorkspaceSize(handle, cnnl_in1_desc, cnnl_in2_desc, cnnl_out_desc, &workspace_size));
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
   // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(in1_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(in2_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(out_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(in1_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(in2_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(out_desc);
 
   return status;
 }
@@ -588,28 +591,29 @@ mluOpStatus_t fftOptensor(mluOpHandle_t handle,
   status = mluOpSetTensorDescriptor_v2(out_desc, MLUOP_LAYOUT_ARRAY, data_type, 1, dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(in1_desc, cnnl_in1_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(in2_desc, cnnl_in2_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(out_desc, cnnl_out_desc);
   // compute optensor 
-  mluOpOpTensorDescriptor_t opTensor_desc = nullptr;
-  status = mluOpCreateOpTensorDescriptor(&opTensor_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  cnnlOpTensorDescriptor_t opTensor_desc = nullptr;
+  CALL_CNNL(cnnlCreateOpTensorDescriptor(&opTensor_desc));
+  CALL_CNNL(cnnlSetOpTensorDescriptor(opTensor_desc, op_type, data_type, MLUOP_NOT_PROPAGATE_NAN));
 
-  status = mluOpSetOpTensorDescriptor(opTensor_desc, op_type, data_type, MLUOP_NOT_PROPAGATE_NAN);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
-  status = mluOpOpTensor(handle, opTensor_desc, &alpha1, in1_desc, in1_ptr, &alpha2, in2_desc,
-                        in2_ptr, workspace, workspace_size, &beta, out_desc, out_ptr);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CALL(cnnlOpTensor(handle, opTensor_desc, &alpha1, cnnl_in1_desc, in1_ptr, &alpha2, cnnl_in2_desc,
+                        in2_ptr, workspace, workspace_size, &beta, cnnl_out_desc, out_ptr));
 
   // destroy descriptor
-  status = mluOpDestroyTensorDescriptor(in1_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(in2_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpDestroyTensorDescriptor(out_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CALL_CNNL(cnnlDestroyOpTensorDescriptor(opTensor_desc));
 
-  status = mluOpDestroyOpTensorDescriptor(opTensor_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  // destroy cnnl descriptor
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(in1_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(in2_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(out_desc);
+
+  DESTROY_CNNL_HANDLE(cnnl_handle);
 
   return status;
 }

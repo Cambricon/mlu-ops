@@ -673,14 +673,20 @@ mluOpStatus_t padIRFFT1dContiguousInput(mluOpHandle_t handle, mluOpFFTPlan_t fft
     const int pad_dim_num = 4;
     int paddings[pad_dim_num] = {0, 0, 0, (FFT_HALF(n) - fft_plan->inembed[0]) * COMPLEX};
     uint64_t padding_value = 0x00000000;
-    status = mluOpPad(handle, input_desc, fft_plan->matmul_addrs.input_contiguous_addr, paddings,
-                     &padding_value, padded_input_desc, fft_plan->matmul_addrs.input_pad_addr);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-    status = mluOpDestroyTensorDescriptor(input_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpDestroyTensorDescriptor(padded_input_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+    // convert to cnnl_tensor_descriptor
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(padded_input_desc, cnnl_padded_input_desc);
+    CALL_CNNL(cnnlPad(cnnl_handle, cnnl_input_desc, fft_plan->matmul_addrs.input_contiguous_addr, paddings,
+                     &padding_value, cnnl_padded_input_desc, fft_plan->matmul_addrs.input_pad_addr));
+
+    // destroy cnnl descriptor
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_padded_input_desc);
+
+    DESTROY_CNNL_HANDLE(cnnl_handle);
   }
   return status;
 }
@@ -767,9 +773,14 @@ mluOpStatus_t mergeIRFFT1dInput(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
 
     void *ss_input_addr = fft_plan->matmul_addrs.input_transed_addr;
     void *ss_output_addr = fft_plan->matmul_addrs.input_reversed_addr;
-    status = mluOpStridedSlice(handle, ss_input_desc, ss_input_addr, begin, end, stride,
-                              ss_output_desc, ss_output_addr);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+    // convert to cnnl_tensor_descriptor
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(ss_input_desc, cnnl_ss_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(ss_output_desc, cnnl_ss_output_desc);
+    CALL_CNNL(cnnlStridedSlice(handle, ss_input_desc, ss_input_addr, begin, end, stride,
+                              ss_output_desc, ss_output_addr));
 
     // reversed input imag part mul -1
     int reversed_input_num = batch * (n - FFT_HALF(n));
@@ -795,24 +806,27 @@ mluOpStatus_t mergeIRFFT1dInput(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
                                         concat_dim_num, concat_out_dims);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);  // convert to cnnl_handle
+
+    // convert to cnnl_tensor_descriptor
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(ss_input_descs, cnnl_ss_input_descs);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(concat_output_desc, cnnl_concat_output_desc);
     const int concat_num = 2;
     const int concat_axis = -1;
-    mluOpTensorDescriptor_t concat_in_descs[concat_num] = {ss_input_desc, ss_output_desc};
+    cnnlTensorDescriptor_t concat_in_descs[concat_num] = {cnnl_ss_input_desc, cnnl_ss_output_desc};
 
     void *concat_in_addrs[concat_num] = {ss_input_addr, ss_output_addr};
     void *concat_out_addr = fft_plan->matmul_addrs.input_merged_addr;
-    status = mluOpConcat(handle, concat_num, concat_axis, concat_in_descs, concat_in_addrs,
+    CALL_CNNL(cnnlConcat(handle, concat_num, concat_axis, concat_in_descs, concat_in_addrs,
                         fft_plan->matmul_addrs.internal_workspace_addr,
-                        fft_plan->matmul_addrs.internal_workspace_size, concat_output_desc,
-                        concat_out_addr);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+                        fft_plan->matmul_addrs.internal_workspace_size, cnnl_concat_output_desc,
+                        concat_out_addr));
 
-    status = mluOpDestroyTensorDescriptor(ss_input_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpDestroyTensorDescriptor(ss_output_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-    status = mluOpDestroyTensorDescriptor(concat_output_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_ss_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_ss_output_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_concat_output_desc);
+
+    DESTROY_CNNL_HANDLE(cnnl_handle);
   }
   return status;
 }
