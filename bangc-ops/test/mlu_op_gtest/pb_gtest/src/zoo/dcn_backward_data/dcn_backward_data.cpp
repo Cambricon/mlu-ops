@@ -131,6 +131,9 @@ void DcnBackwardDataExecutor::workspaceMalloc() {
 
   dcn_desc_ = cpu_runtime_.allocate(mluOpCreateDCNDescriptor,
                                     mluOpDestroyDCNDescriptor);
+
+  VLOG(5) << compute_type_ << "  11111";
+
   MLUOP_CHECK(mluOpSetDCNDescriptor(dcn_desc_, dimNb_, pad_, stride_, dilation_,
                                     deformable_group_, conv_group_,
                                     im2col_step_, compute_type_));

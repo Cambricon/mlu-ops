@@ -16615,6 +16615,160 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
                               void *workspace,
                               size_t workspace_size);
 
+// Group:DCNForward
+/*!
+ * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward
+ *        or backward operation, and allocates memory for holding the information about the
+ *        deformable convolution operation. The information is defined in
+ *        ::mluOpDCNDescriptor_t. For more information about descriptor,
+ *        see "Cambricon CNNL User Guide".
+ *
+ * @param[out] dcn_desc
+ *  Output. A host pointer to the deformable convolution descriptor that holds information about the
+ *  deformable convolution operation.
+ * @par Return
+ * - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_NOT_INITIALIZED
+ *
+ *
+ * @par API Dependency
+ * - After calling this function, you can call the ::mluOpSetDCNDescriptor function to initialize
+ *   and set the information to the deformable convolution descriptor.
+ * - You need to call the ::mluOpDestroyDCNDescriptor function to destroy the descriptor.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
+
+// Group:DCNForward
+/*!
+ * @brief Initializes the deformable convolution descriptor \p dcn_desc that is previously
+ *        created with the ::mluOpCreateDCNDescriptor function, and sets the information about the
+ *        deformable convolution forward and backward operation to the deformable convolution descriptor
+ *        \p dcn_desc. The information includes the number of deformable convolution dimensions \p dimNb,
+ *        the padding size for each dimension \p pad, the stride of the sliding window for each dimension
+ *        \p stride, the dilation factor for each dimension \p dilation, the number of groups of input
+ *        offset to be split along the input channel \p deformable_group, the number of convolution group
+ *        \p conv_group, and the maximum image number per deformable convolution computing \p im2col_step.
+ *
+ * @param[in,out] dcn_desc
+ *   Input/output. The descriptor of the deformable convolution operation. For detailed information,
+ *   see ::mluOpDCNDescriptor_t.
+ * @param[in] dimNb
+ *   Input. The number of dimensions in the input tensor of the deformable convolution operation.
+ *   Currently, the value of this parameter can only be set to 4 and should be the
+ *   same as the one you set in the input tensor descriptor.
+ * @param[in] pad
+ *   Input. An array that stores the zero-padding size for each dimension of the input tensor
+ *   used in the deformable convolution operation.
+ *   For each dimension, the padding size represents the number of zeros to be concatenated at the
+ *   start and end of that dimension. For 2D deformable convolution, the padding is
+ *   on top, bottom, left, and right.
+ * @param[in] stride
+ *   Input. An array that stores the filter stride for each dimension of the input tensor
+ *   used in the deformable convolution operation. For each dimension, the filter stride represents
+ *   the number of elements to slide over the input tensor. For 2D deformable
+ *   convolution, the stride should be set in height and width order.
+ * @param[in] dilation
+ *   Input. An array that stores the dilation factor for each dimension of the filter tensor
+ *   used in the deformable convolution operation. For each dimension, the dilation factor
+ *   represents the spacing between the kernel points. For 2D deformable convolution,
+ *   the dilation should be set in height and width order.
+ * @param[in] deformable_group
+ *   Input. The number of deformable offset groups that split the input offset along the channel
+ *   of input tensor. Each deformable group is deformed separately for detecting different input parts.
+ * @param[in] conv_group
+ *   Input. The number of groups that the input data is split by the number of channels
+ *   in the input tensor. Each convolution group is convolved separately. The filter used for
+ *   each group is the filter tensor divides \p conv_group. The result of
+ *   the deformable convolution operation is the concatenation of all the group convolution results
+ *   along the output channel dimension.
+ * @param[in] im2col_step
+ *   Input. The maximum number of images per deformable convolution computing. This parameter
+ *   affects both the workspace size and the computing efficiency.
+ *   A larger \p im2col_step will consume a larger workspace size and have a higher performance,
+ *   while a smaller one will consume a smaller workspace size and have a lower performance.
+ * @param[in] compute_type
+ *   Input. The data type of temporary result in convolution operation. Only supports
+ *   \p CNNL_DTYPE_FLOAT type.
+ *
+ * @par Return
+ * - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - Before calling this function, ::mluOpCreateDCNDescriptor should be called.
+ *
+ * @note
+ * - Currently, only supports 4D input tensor for deformable convolution forward
+ *   and backward operation.
+ * - The values of \p pad should be greater than or equal to 0.
+ * - The values of \p stride should be greater than or equal to 1.
+ * - The values of \p dilation should be greater than or equal to 1.
+ * - The value of \p deformable_group should be greater than or equal to 1 and
+ *   less than or equal to the number of channels in the input tensor, and input channel must be
+ *   divisible by \p deformable_group.
+ *   - If \p deformable_group is set to 1, the same input offset is applied to all channels
+ *   of one pixel.
+ *   - If the value of \p deformable_group is between 1 and the number of channels of input tensor,
+ *     the input channel will be split into \p deformable_group parts. Each part is responsible for
+ *     detecting different input parts, which results in a more flexible geometric transformation.
+ * - The value of \p conv_group should be greater than or equal to 1 and less than or equal to the
+ *   number of channels in the input tensor, and input channels and output channels must both be
+ *   divisible by \p conv_group.
+ * - The value of \p im2col_step should be greater than or equal to 1 and less than or equal to
+ *   the number of batch size in the input tensor, and input batch should be divisible by
+ *   \p im2col_step.
+ *
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
+                      int dimNb,
+                      const int pad[],
+                      const int stride[],
+                      const int dilation[],
+                      int deformable_group,
+                      int conv_group,
+                      int im2col_step,
+                      const mluOpDataType_t compute_type);
+
+// Group:DCNForward
+/*!
+ * @brief Destroys a deformable convolution descriptor \p dcn_desc that is previously created with
+ *        the ::mluOpCreateDCNDescriptor function.
+ *
+ * @param[in] dcn_desc
+ *   Input. The deformable convolution descriptor to be destroyed.
+ * @par Return
+ * - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_EXECUTION_FAILED
+ *
+ * @note
+ * - You need to call this function after calling the ::mluOpDCNForward, ::mluOpDCNBackwardData,
+ *   or ::mluOpDCNBackwardWeight function. Otherwise, \p CNNL_STATUS_BAD_PARAM is returned.
+ * - This function should be called to destroy the deformable convolution descriptor.
+ *   Otherwise, the memory leak may occur.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
+
 // Group:DCNBackwardData
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
@@ -16631,37 +16785,37 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
  *
  * @param[in] handle
  *   Input. Handle to a Cambricon CNNL context that is used to manage MLU devices and queues in the
- *   deformable convolution operation. For detailed information, see ::cnnlHandle_t.
+ *   deformable convolution operation. For detailed information, see ::mluOpHandle_t.
  * @param[in] dcn_desc
  *   Input. The descriptor of the deformable convolution operation. For detailed information, see
- *   ::cnnlDCNDescriptor_t.
+ *   ::mluOpDCNDescriptor_t.
  * @param[in] input_desc
  *   Input. The descriptor of the input tensor. For detailed information, see
- *   ::cnnlTensorDescriptor_t.
+ *   ::mluOpTensorDescriptor_t.
  * @param[in] offset_desc
  *   Input. The descriptor of the offset tensor. For detailed information, see
- *   ::cnnlTensorDescriptor_t.
+ *   ::mluOpTensorDescriptor_t.
  * @param[in] mask_desc
  *   Input. The descriptor of the mask tensor. Set this parameter to NULL if mask is not needed. For detailed
- *   information, see ::cnnlTensorDescriptor_t.
+ *   information, see ::mluOpTensorDescriptor_t.
  * @param[in] filter_desc
  *   Input. The descriptor of the filter tensor as a filter in the deformable convolution
- *   operation. For detailed information, see ::cnnlTensorDescriptor_t.
+ *   operation. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] grad_output_desc
  *   Input. The descriptor of the gradient with respect to the output tensor.
- *   For detailed information, see ::cnnlTensorDescriptor_t.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] grad_input_desc
  *   Input. The descriptor of the gradient with respect to the input tensor.
  *   This parameter is requested to be the same as \p input_desc. For detailed information,
- *   see ::cnnlTensorDescriptor_t.
+ *   see ::mluOpTensorDescriptor_t.
  * @param[in] grad_offset_desc
  *   Input. The descriptor of the gradient with respect to the offset tensor.
  *   This parameter is requested to be the same as \p offset_desc.
- *   For detailed information, see ::cnnlTensorDescriptor_t.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] grad_mask_desc
  *   Input. The descriptor of the gradient with respect to the mask tensor.
  *   This parameter is requested to be the same with \p mask_desc. Set this parameter to NULL when mask and
- *   grad_mask are not needed. For detailed information, see ::cnnlTensorDescriptor_t.
+ *   grad_mask are not needed. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
  *   Output. Pointer to the returned size of the extra workspace in bytes that is used in the
  *   deformable convolution backward data operation.
@@ -16670,11 +16824,11 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
  * - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_BAD_PARAM
  *
  * @par API Dependency
- * - You need to call the ::cnnlCreateTensorDescriptor and ::cnnlSetTensorDescriptor functions
+ * - You need to call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
  *   to create and set the tensor descriptors \p input, \p offset, \p mask (optional), \p filter,
  *   \p grad_output, \p grad_input, \p grad_offset, \p grad_mask (optional) before calling this
  *   function.
- * - The allocated extra workspace should be passed to the ::cnnlDCNBackwardData function to perform
+ * - The allocated extra workspace should be passed to the ::mluOpDCNBackwardData function to perform
  *   the deformable convolution backward data operation.
  *
  * @note
