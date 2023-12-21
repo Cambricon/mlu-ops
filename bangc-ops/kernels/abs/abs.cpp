@@ -54,7 +54,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   mluOpStatus_t param_check =
       unaryOpParamCheck("[mluOpAbs]", handle, x_desc, x, y_desc, y,
                         support_type, 2, zero_element);
-  if (zero_element == true) {
+  if (zero_element) {
     return MLUOP_STATUS_SUCCESS;
   }
   if (param_check != MLUOP_STATUS_SUCCESS) {
