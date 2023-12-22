@@ -9,19 +9,25 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_FFT_C2C_FFT_C2C_FFT_H_
-#define KERNELS_FFT_C2C_FFT_C2C_FFT_H_
-
+#include <iostream>
+#include <vector>
 #include <string>
-#include "kernels/fft/fft.h"
+#include <tuple>
 
-mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan);
+#include "gtest/gtest.h"
+#include "mlu_op.h"
+#include "core/logging.h"
+#include "api_test_tools.h"
 
-mluOpStatus_t setFFT1dReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
-                                  const std::string api);
-
-mluOpStatus_t execFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
-                        const void *input, const float scale_factor,
-                        void *workspace, void *output, int direction);
-
-#endif  // KERNELS_FFT_C2C_FFT_C2C_FFT_H_
+namespace mluopapitest {
+TEST(fft_plan_descriptor, BAD_PARAM_DestroyDesc_null) {
+  try {
+    mluOpFFTPlan_t fft_plan = nullptr;
+    mluOpStatus_t status = mluOpDestroyFFTPlan(fft_plan);
+    EXPECT_TRUE(status == MLUOP_STATUS_BAD_PARAM);
+  } catch (const std::exception &e) {
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_plan_descriptor"
+           << ")";
+  }
+}
+}  // namespace mluopapitest

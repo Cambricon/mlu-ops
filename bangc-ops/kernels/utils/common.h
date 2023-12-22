@@ -687,13 +687,13 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram,
 }
 
 template <typename T>
-__mlu_func__ void __mluops_getMToNIndices(const uint32_t num_integers,
-                                        T first_index,
-                                        float *TInt32_temp,
-                                        float *float2int_src128B,
-                                        T *dst,
-                                        float *float2int_dst_ad,
-                                        int float2int_dst_add_space = -1) {
+__mlu_func__ void __mluop_get_indices(const uint32_t num_integers,
+                                         T first_index,
+                                         float *TInt32_temp,
+                                         float *float2int_src128B,
+                                         T *dst,
+                                         float *float2int_dst_ad,
+                                         int float2int_dst_add_space = -1) {
   // cache miss is so bad at MLU290 when doing (int)MAX_INT2FLOAT_EXACT, so skip it, which results
   // in not being able to distinguish MAX_INT2FLOAT_EXACT and (MAX_INT2FLOAT_EXACT + 1), same for
   // the negative end. The following way of programming reduces cache miss.
@@ -723,8 +723,7 @@ __mlu_func__ void __mluops_getMToNIndices(const uint32_t num_integers,
       return;
     }
     if (float2int_dst_add_space < 0) {
-      __mluops_float2int((int *)dst, (float *)float2int_dst_ad, (float *)TInt32_temp,
-                       (float *)float2int_src128B, num_integers);
+      __bang_float2int32((int *)dst, (float *)TInt32_temp, num_integers, 0);
     } else {
       // limited temp space is provided
       float2int_dst_add_space = (num_integers * sizeof(float) > float2int_dst_add_space)
@@ -735,9 +734,8 @@ __mlu_func__ void __mluops_getMToNIndices(const uint32_t num_integers,
       int remain          = num_integers % max_num_convert;  // remain%32 is 0
       for (int i = 0; i < repeat; ++i) {
         int num_convert = ((i == repeat - 1) && (remain != 0)) ? remain : max_num_convert;
-        __mluops_float2int((int *)dst + i * max_num_convert, (float *)float2int_dst_ad,
-                         (float *)TInt32_temp + i * max_num_convert, (float *)float2int_src128B,
-                         num_convert);
+        __bang_float2int32((int *)dst + i * max_num_convert, 
+                         (float *)TInt32_temp + i * max_num_convert, num_convert, 0);
       }
     }
   } else {

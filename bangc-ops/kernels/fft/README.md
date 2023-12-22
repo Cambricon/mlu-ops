@@ -5,25 +5,25 @@
 ## 代码目录以及说明
 
 1.目录的树状图如下：
-  ├── c2c_fft
-  │   ├── c2c_fft.h
-  │   └── c2c_fft_host.mlu
-  ├── common
-  │   ├── fft_basic_ops.cpp
-  │   ├── fft_basic_ops.h
-  │   ├── fft_common_kernels.h
-  │   └── fft_common_kernels.mlu
-  ├── fft.h
-  ├── fft.mlu
-  ├── fft_optm_device
-  │   ├── fft_cooley-tukey_ux_device.mlu
-  │   └── fft_stockham_u1_device.mlu
-  ├── irfft
-  │   ├── irfft.h
-  │   └── irfft_host.mlu
-  └── rfft
-      ├── rfft.h
-          └── rfft_host.mlu
+  ├── c2c_fft <br>
+  │   ├── c2c_fft.h <br>
+  │   └── c2c_fft_host.mlu <br>
+  ├── common <br>
+  │   ├── fft_basic_ops.cpp <br>
+  │   ├── fft_basic_ops.h <br>
+  │   ├── fft_common_kernels.h <br>
+  │   └── fft_common_kernels.mlu <br>
+  ├── fft.h <br>
+  ├── fft.mlu <br>
+  ├── fft_optm_device <br>
+  │   ├── fft_cooley-tukey_ux_device.mlu <br>
+  │   └── fft_stockham_u1_device.mlu <br> 
+  ├── irfft <br>
+  │   ├── irfft.h <br>
+  │   └── irfft_host.mlu <br>
+  └── rfft <br>
+      ├── rfft.h <br>
+          └── rfft_host.mlu <br>
 
 2.fft.h和fft.mlu：
    * fft.h：文件中定义了一些基本的结构体，如：不同模式、策略、地址等；进行了golbal函数的声明；

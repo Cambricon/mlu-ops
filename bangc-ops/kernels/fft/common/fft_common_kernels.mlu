@@ -32,7 +32,7 @@ __mlu_func__ void convert(float *dst, float *src, int length) {
 }
 
 __mlu_func__ void convert(half *dst, float *src, int length) {
-  __mluOp_float2half(dst, src, length);
+  __mluop_float2half(dst, src, length);
 }
 
 /*
@@ -64,8 +64,9 @@ __mlu_func__ void __mluOp_mod(T *src_addr, T *temp_addr, T n, int len) {
   [output] sin_addr: input data sin result
   [output] cos_addr: input data cos result
  */
-__mlu_func__ void genSinCosVec(float *src_addr, float *sin_addr, float *cos_addr, int deal_size) {
-#if __BANG_ARCH__ >= 322
+__mlu_func__ void genSinCosVec(float *src_addr, float *sin_addr,
+                               float *cos_addr, int deal_size) {
+#if __BANG_ARCH__ >= 372
   __bang_sin(sin_addr, src_addr, deal_size);
   __bang_cos(cos_addr, src_addr, deal_size);
 #else
@@ -78,36 +79,30 @@ __mlu_func__ void genSinCosVec(float *src_addr, float *sin_addr, float *cos_addr
 
 /*
   generate select offset vector function:
-  bang_arch >= 322, for gather inst offset, should mul sizeof(float)
-  bang_arch < 322, for scalar select offset
+  bang_arch >= 372, for gather inst offset, should mul sizeof(float)
+  bang_arch < 372, for scalar select offset
   [input] offset_addr: offset data in float32
   [input] deal_size: offset data number(don't need align)
   [output] offset_int_addr: offset data in int32
  */
-__mlu_func__ void genSelectOffsetVec(float *offset_addr, int32_t *offset_int_addr, int deal_size) {
-#if __BANG_ARCH__ >= 322
-  __bang_mul_scalar(offset_addr, offset_addr, (float)sizeof(float), deal_size);
-  __mluOp_float2int((int32_t *)offset_int_addr, nullptr, offset_addr, nullptr, deal_size);
-#else
+__mlu_func__ void genSelectOffsetVec(float *offset_addr,
+                                     int32_t *offset_int_addr, int deal_size) {
   for (int i = 0; i < deal_size; i++) {
     offset_int_addr[i] = (int)(offset_addr[i]);
   }
-#endif
 }
 
 /*
   select data function:
-  bang_arch >= 322, use gather inst, offset should mul sizeof(float)
-  bang_arch < 322, use for and  scalar select inst
+  bang_arch >= 372, use gather inst, offset should mul sizeof(float)
+  bang_arch < 372, use for and  scalar select inst
   [input] src_addr: input data to be selected
   [input] offset_int_addr: offset data to select data in int32
   [input] deal_size: offset data number(don't need align)
   [output] dst_addr: selected data
  */
-__mlu_func__ void selectVec(float *src_addr,
-                            int32_t *offset_int_addr,
-                            float *dst_addr,
-                            int deal_size) {
+__mlu_func__ void selectVec(float *src_addr, int32_t *offset_int_addr,
+                            float *dst_addr, int deal_size) {
   for (auto i = 0; i < deal_size; i++) {
     dst_addr[i] = src_addr[offset_int_addr[i]];
   }
@@ -145,7 +140,8 @@ __mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                      nullptr);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -180,7 +176,8 @@ __mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
   }
 }
 
-__mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+__mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
+                                              void *output) {
   switch (data_type) {
     case (MLUOP_DTYPE_HALF): {
       generateRFFTHalfDFTMatrixImpl<half>(n, output);
@@ -190,7 +187,9 @@ __mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, 
       generateRFFTHalfDFTMatrixImpl<float>(n, output);
       break;
     };
-    default: { MLULOG("Not Implemented."); }
+    default: {
+      MLULOG("Not Implemented.");
+    }
   }
 }
 
@@ -226,7 +225,8 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                         nullptr);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -261,8 +261,8 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
   }
 }
 
-__mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type, int row, int n,
-                                              void *output) {
+__mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type,
+                                              int row, int n, void *output) {
   switch (data_type) {
     case (MLUOP_DTYPE_HALF): {
       generateRFFTFullDFTMatrixImpl<half>(row, n, output);
@@ -272,7 +272,9 @@ __mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type, int row
       generateRFFTFullDFTMatrixImpl<float>(row, n, output);
       break;
     };
-    default: { MLULOG("Not Implemented."); }
+    default: {
+      MLULOG("Not Implemented.");
+    }
   }
 }
 
@@ -313,7 +315,8 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                         nullptr);
 
   // generate sin and cos coefficient vectors
   __bang_write_value((float *)cos_coeff_addr, deal_size, (float)2.0);
@@ -358,7 +361,8 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   }
 }
 
-__mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+__mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
+                                               void *output) {
   switch (data_type) {
     case (MLUOP_DTYPE_HALF): {
       generateIRFFTHalfDFTMatrixImpl<half>(n, output);
@@ -368,7 +372,9 @@ __mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
       generateIRFFTHalfDFTMatrixImpl<float>(n, output);
       break;
     };
-    default: { MLULOG("Not Implemented."); }
+    default: {
+      MLULOG("Not Implemented.");
+    }
   }
 }
 
@@ -405,7 +411,8 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                         nullptr);
 
   // generate sin and cos vectors
   const float scale = 2.0 * M_PI / n;
@@ -440,7 +447,8 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
   }
 }
 
-__mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+__mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n,
+                                               void *output) {
   switch (data_type) {
     case (MLUOP_DTYPE_HALF): {
       generateIRFFTFullDFTMatrixImpl<half>(n, output);
@@ -450,7 +458,9 @@ __mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n,
       generateIRFFTFullDFTMatrixImpl<float>(n, output);
       break;
     };
-    default: { MLULOG("Not Implemented."); }
+    default: {
+      MLULOG("Not Implemented.");
+    }
   }
 }
 
@@ -498,7 +508,8 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluOp_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr, nullptr);
+  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                         nullptr);
 
   // generate sin and cos vectors
   const float forward_scale = -2.0 * M_PI / n;
@@ -555,7 +566,8 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
   }
 }
 
-__mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n, void *output) {
+__mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n,
+                                            void *output) {
   switch (data_type) {
     case (MLUOP_DTYPE_HALF): {
       generateC2CFFTDFTMatrixImpl<half>(n, output);
@@ -565,6 +577,8 @@ __mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n, vo
       generateC2CFFTDFTMatrixImpl<float>(n, output);
       break;
     };
-    default: { MLULOG("Not Implemented."); }
+    default: {
+      MLULOG("Not Implemented.");
+    }
   }
 }

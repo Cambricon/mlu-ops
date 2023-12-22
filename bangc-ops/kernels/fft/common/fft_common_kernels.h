@@ -14,15 +14,19 @@
 
 #include "kernels/fft/fft.h"
 
-__mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, void *output);
-
-__mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type, int row, int n,
+__mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
                                               void *output);
 
-__mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n, void *output);
+__mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type,
+                                              int row, int n, void *output);
 
-__mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n, void *output);
+__mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
+                                               void *output);
 
-__mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n, void *output);
+__mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n,
+                                               void *output);
+
+__mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n,
+                                            void *output);
 
 #endif  // KERNELS_FFT_COMMON_FFT_COMMON_KERNELS_H_

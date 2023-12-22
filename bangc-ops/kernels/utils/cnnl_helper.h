@@ -139,7 +139,7 @@ DTYPE mluOpPointerForceConvert(STYPE ptr);
         return MLUOP_STATUS_INTERNAL_ERROR;                             \
       }                                                                 \
       ret = cnnlDestroy(_handle);                                       \
-      if (ret = CNNL_STATUS_SUCCESS) {                                  \
+      if (ret != CNNL_STATUS_SUCCESS) {                                  \
         LOG(ERROR) << "CNNL_HELPER: Internal destroy handle failed.";   \
         return MLUOP_STATUS_INTERNAL_ERROR;                             \
       }                                                                 \

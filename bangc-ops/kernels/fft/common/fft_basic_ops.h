@@ -19,133 +19,74 @@
 #include "core/context.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
-#include "mluOp.h"
-#include "utils/cnnl_helper.h"
+#include "kernels/utils/cnnl_helper.h"
+#include "mlu_op.h"
 
 bool fftIsIntDtype(const mluOpDataType_t dtype);
 
 bool fftIsFloatDtype(const mluOpDataType_t dtype);
 
 mluOpStatus_t fftGetQuantizeParamWorkspaceSize(mluOpHandle_t handle,
-                                              size_t& required_size,
-                                              int array_length,
-                                              mluOpDataType_t data_type,
-                                              mluOpDataType_t compute_type,
-                                              const std::string api);
-
-mluOpStatus_t fftQuantizePositionScale(mluOpHandle_t handle,
-                                      int array_length,
-                                      mluOpDataType_t data_type,
-                                      mluOpDataType_t compute_type,
-                                      const void *input,
-                                      void *position,
-                                      void *scale,
-                                      void *workspace,
-                                      size_t workspace_size,
-                                      const std::string api);
-
-mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(mluOpHandle_t handle,
-                                               size_t& workspace_size,
-                                               int m,
-                                               int k,
-                                               int n,
-                                               bool is_trans_a,
-                                               bool is_trans_b,
-                                               mluOpDataType_t a_compute_type,
-                                               mluOpDataType_t b_compute_type,
+                                               size_t &required_size,
+                                               int array_length,
                                                mluOpDataType_t data_type,
+                                               mluOpDataType_t compute_type,
                                                const std::string api);
 
-mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle,
-                            int m,
-                            int k,
-                            int n,
-                            void *a_ptr,
-                            void *a_pos,
-                            void *a_scale,
-                            void *b_ptr,
-                            void *b_pos,
-                            void *b_scale,
-                            void *c_ptr,
-                            bool is_trans_a,
-                            bool is_trans_b,
-                            float alpha,
-                            float beta,
-                            mluOpDataType_t a_compute_type,
-                            mluOpDataType_t b_compute_type,
-                            mluOpDataType_t data_type,
-                            void *workspace,
-                            size_t workspace_size,
-                            const std::string api);
+mluOpStatus_t fftQuantizePositionScale(
+    mluOpHandle_t handle, int array_length, mluOpDataType_t data_type,
+    mluOpDataType_t compute_type, const void *input, void *position,
+    void *scale, void *workspace, size_t workspace_size, const std::string api);
 
-mluOpStatus_t fftBatchMatMulBcast(mluOpHandle_t handle,
-                                 int m,
-                                 int k,
-                                 int n,
-                                 int batch,
-                                 void *a_ptr,
-                                 void *a_pos,
-                                 void *a_scale,
-                                 void *b_ptr,
-                                 void *b_pos,
-                                 void *b_scale,
-                                 void *c_ptr,
-                                 bool is_trans_a,
-                                 bool is_trans_b,
-                                 float alpha,
-                                 float beta,
-                                 mluOpDataType_t a_compute_type,
-                                 mluOpDataType_t b_compute_type,
-                                 mluOpDataType_t data_type,
-                                 void *workspace,
-                                 size_t workspace_size,
-                                 const std::string api);
+mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
+    mluOpHandle_t handle, size_t &workspace_size, int m, int k, int n,
+    bool is_trans_a, bool is_trans_b, mluOpDataType_t a_compute_type,
+    mluOpDataType_t b_compute_type, mluOpDataType_t data_type,
+    const std::string api);
+
+mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
+                             void *a_ptr, void *a_pos, void *a_scale,
+                             void *b_ptr, void *b_pos, void *b_scale,
+                             void *c_ptr, bool is_trans_a, bool is_trans_b,
+                             float alpha, float beta,
+                             mluOpDataType_t a_compute_type,
+                             mluOpDataType_t b_compute_type,
+                             mluOpDataType_t data_type, void *workspace,
+                             size_t workspace_size, const std::string api);
+
+mluOpStatus_t fftBatchMatMulBcast(mluOpHandle_t handle, int m, int k, int n,
+                                  int batch, void *a_ptr, void *a_pos,
+                                  void *a_scale, void *b_ptr, void *b_pos,
+                                  void *b_scale, void *c_ptr, bool is_trans_a,
+                                  bool is_trans_b, float alpha, float beta,
+                                  mluOpDataType_t a_compute_type,
+                                  mluOpDataType_t b_compute_type,
+                                  mluOpDataType_t data_type, void *workspace,
+                                  size_t workspace_size, const std::string api);
 
 mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
-                                          size_t& workspace_size,
-                                          int dim_num,
-                                          int ori_dims[],
-                                          int permute[],
+                                           size_t &workspace_size, int dim_num,
+                                           int ori_dims[], int permute[],
+                                           mluOpDataType_t data_type,
+                                           const std::string api);
+
+mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num, int ori_dims[],
+                           int transed_dims[], int permute[], void *ori_ptr,
+                           void *transed_ptr, mluOpDataType_t data_type,
+                           void *workspace, size_t workspace_size,
+                           const std::string api);
+
+mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
+                                          size_t &workspace_size, int elem_num,
                                           mluOpDataType_t data_type,
                                           const std::string api);
 
-mluOpStatus_t fftTranspose(mluOpHandle_t handle,
-                          int dim_num,
-                          int ori_dims[],
-                          int transed_dims[],
-                          int permute[],
-                          void *ori_ptr,
-                          void *transed_ptr,
-                          mluOpDataType_t data_type,
-                          void *workspace,
-                          size_t workspace_size,
-                          const std::string api);
+mluOpStatus_t fftOptensor(mluOpHandle_t handle, int elem_num, void *in1_ptr,
+                          void *in2_ptr, void *out_ptr, float alpha1,
+                          float alpha2, float beta, mluOpDataType_t data_type,
+                          cnnlOpTensorDesc_t op_type, void *workspace,
+                          size_t workspace_size, const std::string api);
 
-mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
-                                         size_t& workspace_size,
-                                         int elem_num,
-                                         mluOpDataType_t data_type,
-                                         const std::string api);
-
-mluOpStatus_t fftOptensor(mluOpHandle_t handle,
-                         int elem_num,
-                         void *in1_ptr,
-                         void *in2_ptr,
-                         void *out_ptr,
-                         float alpha1,
-                         float alpha2,
-                         float beta,
-                         mluOpDataType_t data_type,
-                         mluOpOpTensorDesc_t op_type,
-                         void *workspace,
-                         size_t workspace_size,
-                         const std::string api);
-
-int findFFTOptLimit(mluOpHandle_t handle,
-                    const int n,
-                    int& m,
-                    int& L,
-                    int& s,
-                    int& L_sub,
-                    bool& find_stockham);
+int findFFTOptLimit(mluOpHandle_t handle, const int n, int &m, int &L, int &s,
+                    int &L_sub, bool &find_stockham);
 #endif  // KERNELS_FFT_COMMON_FFT_BASIC_OPS_H_

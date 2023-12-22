@@ -2,9 +2,9 @@
 
 
 * #### 文档基本信息
-
-| ----------- | ------------------------------------------------------------ |
-| 算子名称    | mluopFFT(RFFT1d, IRFFT1d, FFT1d, IFFT1d)                       |
+| 算子名称                                   |
+| ------------------------------------------ | 
+| mluopFFT(RFFT1d, IRFFT1d, FFT1d, IFFT1d)   | 
 
 * #### 内容描述
 
@@ -24,7 +24,6 @@
 - 是否需要支持stride机制：需要
 - 框架单元测试阈值指标（可选）
 - 其他特殊需求（在线量化/融合/转数提前等，可选）
-- 确认算子需求是否已经过框架层review（滤除CNNL已支持的算子）
 
 *当支持原位的时候，需要保证input的sequence长度补齐到output的sequence的长度，否则会出现未定义的结果。
 
@@ -41,9 +40,6 @@
 ## 1 需求分析
 
 ### 1.1 算子需求分析
-
-该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但CNNL当前版本不支持的功能，需要在
-1.4算子限制 章节中显式注明。未明确注明不支持的功能，默认CNNL全部支持。
 
 example:
 
@@ -279,7 +275,7 @@ void fftw_destroy_plan(fftw_plan plan);
  * You need to call the ::mluopCreateFFTPlan function to create a descriptor for the FFT operator, and call
  * the ::mluopMakeFFTPlanMany function to set the information of the FFT operator to the descriptor.
  * Then, you need to allocate the reserved space and set the space to the fft descriptor by ::mluopSetReserveArea.
- * Also, you need to destroy the CNNL context at the end with the ::mluopDestroyFFTPlan.
+ * Also, you need to destroy the MluOp context at the end with the ::mluopDestroyFFTPlan.
  */
 typedef struct mluopFFTStruct *mluopFFTPlan_t;
 
@@ -347,9 +343,9 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
 
    ```c
    mluopTensorDescriptor_t input_desc, output_desc;
-   mluopDataType_t input_data_type = CNNL_DTYPE_FLOAT;
-   mluopDataType_t output_data_type = CNNL_DTYPE_COMPLEX_FLOAT;
-   mluopDataType_t execution_dtype = CNNL_DTYPE_FLOAT;
+   mluopDataType_t input_data_type = MLUOP_DTYPE_FLOAT;
+   mluopDataType_t output_data_type = MLUOP_DTYPE_COMPLEX_FLOAT;
+   mluopDataType_t execution_dtype = MLUOP_DTYPE_FLOAT;
    const int rank = 1;
    const int batch = 2000;
    const int n[rank] = {400};
@@ -362,9 +358,9 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
 
    mluopCreateTensorDescriptor(&input_desc);
    mluopCreateTensorDescriptor(&output_desc);
-   mluopSetTensorDescriptorEx(input_desc, CNNL_LAYOUT_ARRAY, input_data_type, ndim, input_dim_size, input_dim_stride);
+   mluopSetTensorDescriptorEx(input_desc, MLUOP_LAYOUT_ARRAY, input_data_type, ndim, input_dim_size, input_dim_stride);
    mluopSetTensorDescriptorOnchipDataType(execution_dtype);
-   mluopSetTensorDescriptorEx(output_desc, CNNL_LAYOUT_ARRAY, output_data_type, ndim,
+   mluopSetTensorDescriptorEx(output_desc, MLUOP_LAYOUT_ARRAY, output_data_type, ndim,
                              output_dim_size, output_dim_stride);
    size_t reservespace_size;
    size_t workspace_size;
