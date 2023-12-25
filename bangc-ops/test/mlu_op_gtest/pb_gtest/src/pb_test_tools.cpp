@@ -36,7 +36,6 @@
 
 #include "variable.h"
 
-
 namespace mluoptest {
 
 extern GlobalVar global_var;
@@ -303,6 +302,8 @@ cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
 
 mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype) {
   switch (dtype) {
+    case DTYPE_UNSET:
+      return MLUOP_DTYPE_INVALID;
     case DTYPE_HALF:
       return MLUOP_DTYPE_HALF;
     case DTYPE_FLOAT:

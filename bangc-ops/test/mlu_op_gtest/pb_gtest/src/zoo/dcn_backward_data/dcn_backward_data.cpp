@@ -31,14 +31,6 @@
 
 namespace mluoptest {
 
-static inline bool isFixData(mluOpDataType_t type) {
-  if (MLUOP_DTYPE_INT8 == type || MLUOP_DTYPE_INT16 == type ||
-      MLUOP_DTYPE_INT31 == type) {
-    return true;
-  }
-  return false;
-}
-
 void DcnBackwardDataExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_dcn_param()) {
     LOG(ERROR) << "Missing dcn param. ";
@@ -75,12 +67,9 @@ void DcnBackwardDataExecutor::paramCheck() {
   dtype = cvtProtoDtypeToMluOp(
       parser_->getProtoNode()->input(2 + use_mask_).onchip_dtype());
   weight_oc_dt_ = dtype;
-  parser_->input(2 + use_mask_)->oc_dt = MLUOP_DTYPE_INVALID;
-
   dtype = cvtProtoDtypeToMluOp(
       parser_->getProtoNode()->input(3 + use_mask_).onchip_dtype());
   grad_output_oc_dt_ = dtype;
-  parser_->input(3 + use_mask_)->oc_dt = MLUOP_DTYPE_INVALID;
 }
 
 int DcnBackwardDataExecutor::getCoefficientOfLT2CT() {
@@ -88,25 +77,11 @@ int DcnBackwardDataExecutor::getCoefficientOfLT2CT() {
       cvtProtoDtypeToMluOp(parser_->getProtoNode()->input(0).dtype());
   int lt_compute_force = 0;
   int ct_compute_force = input_dtype == MLUOP_DTYPE_FLOAT ? 32 : 64;
-  if (isFixData(grad_output_oc_dt_)) {  // intx peak compute force
-    if (grad_output_oc_dt_ == MLUOP_DTYPE_INT16 &&
-        weight_oc_dt_ == MLUOP_DTYPE_INT16) {
-      lt_compute_force = 2 * 2048;
-    } else if (grad_output_oc_dt_ == MLUOP_DTYPE_INT16 &&
-               weight_oc_dt_ == MLUOP_DTYPE_INT31) {
-      lt_compute_force = 2 * 2048 / 2;
-    } else if (grad_output_oc_dt_ == MLUOP_DTYPE_INT31 &&
-               weight_oc_dt_ == MLUOP_DTYPE_INT16) {
-      lt_compute_force = 2 * 2048 / 2;
-    } else {  // int31 x int31
-      lt_compute_force = 2 * 2048 / 4;
-    }
-  } else {  // float/half peak compute force
-    if (input_dtype == MLUOP_DTYPE_FLOAT) {
-      lt_compute_force = 2 * 1.5 * 1024;
-    } else {
-      lt_compute_force = 2 * 0.375 * 1024;
-    }
+  // float/half peak compute force
+  if (input_dtype == MLUOP_DTYPE_FLOAT) {
+    lt_compute_force = 2 * 1.5 * 1024;
+  } else {
+    lt_compute_force = 2 * 0.375 * 1024;
   }
   return lt_compute_force / ct_compute_force;
 }
@@ -131,8 +106,6 @@ void DcnBackwardDataExecutor::workspaceMalloc() {
 
   dcn_desc_ = cpu_runtime_.allocate(mluOpCreateDCNDescriptor,
                                     mluOpDestroyDCNDescriptor);
-
-  VLOG(5) << compute_type_ << "  11111";
 
   MLUOP_CHECK(mluOpSetDCNDescriptor(dcn_desc_, dimNb_, pad_, stride_, dilation_,
                                     deformable_group_, conv_group_,
