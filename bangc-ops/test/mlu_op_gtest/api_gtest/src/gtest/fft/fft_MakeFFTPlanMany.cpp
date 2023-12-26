@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -23,12 +34,8 @@
 namespace mluopapitest {
 class fft_MakeFFTPlanMany : public testing::Test {
  public:
-  void setParam(bool handle,
-                bool fft_plan,
-                bool input_desc,
-                bool output_desc,
-                bool reservespace_size,
-                bool workspace_size) {
+  void setParam(bool handle, bool fft_plan, bool input_desc, bool output_desc,
+                bool reservespace_size, bool workspace_size) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
@@ -41,18 +48,20 @@ class fft_MakeFFTPlanMany : public testing::Test {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
       std::vector<int> input_dims{1, 400};
       const int input_dim_stride[2] = {400, 1};
-      MLUOP_CHECK(mluOpSetTensorDescriptorEx(input_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                           input_dims.size(), input_dims.data(), input_dim_stride));
-      MLUOP_CHECK(mluOpSetTensorDescriptorOnchipDataType(input_desc_, MLUOP_DTYPE_FLOAT));
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+          input_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, input_dims.size(),
+          input_dims.data(), input_dim_stride));
+      MLUOP_CHECK(mluOpSetTensorDescriptorOnchipDataType(input_desc_,
+                                                         MLUOP_DTYPE_FLOAT));
     }
 
     if (output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
       std::vector<int> output_dims{1, 201};
       const int output_dim_stride[2] = {201, 1};
-      MLUOP_CHECK(mluOpSetTensorDescriptorEx(output_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_COMPLEX_FLOAT, output_dims.size(),
-                                           output_dims.data(), output_dim_stride));
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+          output_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_COMPLEX_FLOAT,
+          output_dims.size(), output_dims.data(), output_dim_stride));
     }
 
     if (reservespace_size) {
@@ -65,8 +74,9 @@ class fft_MakeFFTPlanMany : public testing::Test {
   }
 
   mluOpStatus_t compute() {
-    mluOpStatus_t status = mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_, rank,
-                                              n, reservespace_size_, workspace_size_);
+    mluOpStatus_t status =
+        mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_,
+                             rank, n, reservespace_size_, workspace_size_);
     destroy();
     return status;
   }
@@ -105,7 +115,8 @@ class fft_MakeFFTPlanMany : public testing::Test {
         output_desc_ = nullptr;
       }
     } catch (const std::exception &e) {
-      FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+      FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+             << " in fft_MakeFFTPlanMany";
     }
   }
 
@@ -127,7 +138,8 @@ TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_handle_null) {
     setParam(false, true, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_MakeFFTPlanMany";
   }
 }
 
@@ -136,7 +148,8 @@ TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_fft_plan_null) {
     setParam(true, false, true, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_NOT_INITIALIZED, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_MakeFFTPlanMany";
   }
 }
 
@@ -145,7 +158,8 @@ TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_input_desc_null) {
     setParam(true, true, false, true, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_MakeFFTPlanMany";
   }
 }
 
@@ -154,7 +168,8 @@ TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_output_desc_null) {
     setParam(true, true, true, false, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_MakeFFTPlanMany";
   }
 }
 
@@ -163,7 +178,8 @@ TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_reservespace_size_null) {
     setParam(true, true, true, true, false, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_MakeFFTPlanMany";
   }
 }
 
@@ -172,7 +188,8 @@ TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_workspace_size_null) {
     setParam(true, true, true, true, true, false);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_MakeFFTPlanMany";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_MakeFFTPlanMany";
   }
 }
 

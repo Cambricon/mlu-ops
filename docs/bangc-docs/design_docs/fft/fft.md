@@ -422,7 +422,7 @@ https://docs.nvidia.com/cuda/cufft/index.html
 ```math
 \text{DFT}_n=(\text{DFT}_k \otimes I_m) T_m^n(I_k \otimes \text{DFT}_m) L_k^n,n=km,\tag{1}
 ```
-其中$`\otimes`$表示为克罗内克乘积，$`(\text{DFT}_k \otimes I_m)`$为向量并行矩阵；$`T_m^n`$为旋转因子，为对角矩阵；$`(I_k \otimes \text{DFT}_m)`$为块内并行矩阵；$`L_k^n`$形式为$`L_m^{mn}:={in+j \rarr jm+i, 0\le i<m, 0 \le j < n}`$ 的置换矩阵。下面展示了 $`k=4,m=2`$下的矩阵：
+其中$`\otimes`$表示为克罗内克乘积，$`(\text{DFT}_k \otimes I_m)`$为向量并行矩阵；$`T_m^n`$为旋转因子，为对角矩阵；$`(I_k \otimes \text{DFT}_m)`$为块内并行矩阵；$`L_k^n`$形式为$`L_m^{mn}:={in+j \rightarrow jm+i, 0\le i<m, 0 \le j < n}`$ 的置换矩阵。下面展示了 $`k=4,m=2`$下的矩阵：
 ```math
 I_4 \otimes \text{DFT}_2=\left[
 \begin{array}{cccccccc}
@@ -480,7 +480,7 @@ $R_r^{r^l}$为bit-reverse矩阵，即按位逆序置换矩阵。下面给出长�
 ```
 其中旋转因子矩阵为
 ```math
-DiagMatrix[W_{r^{j+2}}^{(\alpha r^j +\xi) \beta}, 0 \le \alpha, \beta <r, 0 \le \gamma < r^{l-j-2}, 0 \le \xi < r^j]\tag{6}
+\text{DiagMatrix}[W_{r^{j+2}}^{(\alpha r^j +\xi) \beta}, 0 \le \alpha, \beta <r, 0 \le \gamma < r^{l-j-2}, 0 \le \xi < r^j]\tag{6}
 ```
 
 
@@ -490,7 +490,7 @@ DiagMatrix[W_{r^{j+2}}^{(\alpha r^j +\xi) \beta}, 0 \le \alpha, \beta <r, 0 \le 
 
 循环FFT是将$`n`$拆分为$`km`$的形式，式$`(1)`$就是一种Recursive FFT的计算形式，根据不同的硬件平台，我们可以将向量并行矩阵和块内并行矩阵进行转化来适应各种硬件平台。其中将块内并行矩阵转化的表达形式为4步法FFT：
 ```math
-\text{DFT}_n=(\text{DFT_k}\otimes I_m)T_m^n L_k^n (\text{DFT}_m \times I_k), n=km, \tag{7}
+\text{DFT}_{n}=(\text{DFT}_{k}\otimes I_{m})T_{m}^{n} L_{k}^{n} (\text{DFT}_{m} \times I_{k}), n=km, \tag{7}
 ```
 类似的，还有6步法FFT：
 ```math
@@ -553,7 +553,6 @@ X_j=b_j^{*}\left(\sum_{j=0}^{n-1}a_j b_{k-j}\right), \tag{18}
 
 $`a_j, b_j`$的分别卷积可以使用 zero-padding 到 $`r^l`$ 次方然后使用快速傅里叶变换进行实现，可以看到，该算法也具有 $`O(nlogn)`$ 的计算复杂度。但是由于3次傅里叶变换，该算法比 Cooley-Tukey 算法要慢。
 
-**这个坑本次开发周期先不填，来不及做。**
 
 #### 3.1.4 暴力解法：Direct FFT Algorithm
 

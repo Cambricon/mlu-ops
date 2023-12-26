@@ -4,26 +4,26 @@
 
 ## 代码目录以及说明
 
-1.目录的树状图如下：
+1.目录的树状图如下： <br>
   ├── c2c_fft <br>
   │   ├── c2c_fft.h <br>
-  │   └── c2c_fft_host.mlu <br>
+  │   └── c2c_fft_host.cpp <br>
   ├── common <br>
   │   ├── fft_basic_ops.cpp <br>
   │   ├── fft_basic_ops.h <br>
   │   ├── fft_common_kernels.h <br>
   │   └── fft_common_kernels.mlu <br>
   ├── fft.h <br>
-  ├── fft.mlu <br>
+  ├── fft.cpp <br>
   ├── fft_optm_device <br>
   │   ├── fft_cooley-tukey_ux_device.mlu <br>
   │   └── fft_stockham_u1_device.mlu <br> 
   ├── irfft <br>
   │   ├── irfft.h <br>
-  │   └── irfft_host.mlu <br>
+  │   └── irfft_host.cpp <br>
   └── rfft <br>
       ├── rfft.h <br>
-          └── rfft_host.mlu <br>
+          └── rfft_host.cpp <br>
 
 2.fft.h和fft.mlu：
    * fft.h：文件中定义了一些基本的结构体，如：不同模式、策略、地址等；进行了golbal函数的声明；
@@ -37,7 +37,7 @@
 
 4.rfft文件夹：
    * rfft.h：给出rfft的策略函数、workspace空间申请函数和执行函数等的声明；
-   * rfft_host.mlu：rfft host函数的具体实现；会根据策略函数的结果选择：DFT、FFT_cooley-tukey或FFT_stockham算法；
+   * rfft_host.cpp：rfft host函数的具体实现；会根据策略函数的结果选择：DFT、FFT_cooley-tukey或FFT_stockham算法；
 
 5.irfft文件夹：
    * 文件夹结构同rfft，只是针对irfft的声明和实现；

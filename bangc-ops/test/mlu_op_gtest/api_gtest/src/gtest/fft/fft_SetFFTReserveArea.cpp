@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -33,12 +44,14 @@ class fft_SetFFTReserveArea : public testing::Test {
     }
 
     if (reservespace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&reservespace_, reservespace_size));
+      GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtMalloc(&reservespace_, reservespace_size));
     }
   }
 
   mluOpStatus_t compute() {
-    mluOpStatus_t status = mluOpSetFFTReserveArea(handle_, fft_plan_, reservespace_);
+    mluOpStatus_t status =
+        mluOpSetFFTReserveArea(handle_, fft_plan_, reservespace_);
 
     destroy();
     return status;
@@ -70,7 +83,8 @@ class fft_SetFFTReserveArea : public testing::Test {
         reservespace_ = nullptr;
       }
     } catch (const std::exception &e) {
-      FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_SetFFTReserveArea";
+      FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+             << " in fft_SetFFTReserveArea";
     }
   }
 
@@ -86,7 +100,8 @@ TEST_F(fft_SetFFTReserveArea, BAD_PARAM_handle_null) {
     setParam(false, true, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_SetFFTReserveArea";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_SetFFTReserveArea";
   }
 }
 
@@ -95,7 +110,8 @@ TEST_F(fft_SetFFTReserveArea, BAD_PARAM_fft_plan_null) {
     setParam(true, false, true);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_SetFFTReserveArea";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_SetFFTReserveArea";
   }
 }
 
@@ -104,7 +120,8 @@ TEST_F(fft_SetFFTReserveArea, BAD_PARAM_reservespace_null) {
     setParam(true, true, false);
     EXPECT_EQ(MLUOP_STATUS_BAD_PARAM, compute());
   } catch (const std::exception &e) {
-    FAIL() << "MLUOPAPIGTEST: catched " << e.what() << " in fft_SetFFTReserveArea";
+    FAIL() << "MLUOPAPIGTEST: catched " << e.what()
+           << " in fft_SetFFTReserveArea";
   }
 }
 

@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -15,8 +26,6 @@
 #include "kernels/utils/common.h"
 #include "kernels/fft/fft.h"
 
-#if TARGET_MLU_ARCH != 520
-#if __BANG_ARCH__ != 520
 #define TRANS_ALIGN_SIZE 64
 
 #define ITER_ONCHIP 0
@@ -51,14 +60,14 @@ __mlu_func__ void genWVec1(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
     float *tmp_inc_addr = inc_addr + L_align * i;
     float start_value = L * i;
 #if __BANG_ARCH__ >= 372
-    __mluop_getMToNIndices(L_align, start_value, tmp_inc_addr, nullptr,
-                           tmp_inc_addr, nullptr);
+    __mluop_get_indices(L_align, start_value, tmp_inc_addr, nullptr,
+                        tmp_inc_addr, nullptr);
 #else
     float *int32_temp_addr = tmp_cos_addr;
     float *float2int_dst_ad = tmp_sin_addr;
     float *float2int_src128B = w_tmp3;
-    __mluop_getMToNIndices(L_align, start_value, int32_temp_addr,
-                           float2int_src128B, tmp_inc_addr, float2int_dst_ad);
+    __mluop_get_indices(L_align, start_value, int32_temp_addr,
+                        float2int_src128B, tmp_inc_addr, float2int_dst_ad);
 #endif
     float scale =
         2.0 * M_PI / (n / L_align * L * 2.0) * (fft_flag != IRFFT ? -1 : 1);
@@ -91,29 +100,26 @@ __mlu_func__ void genWVec2(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
   scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
   float start_value = ri * op_size;
 #if __BANG_ARCH__ >= 372
-  __mluop_getMToNIndices(op_size_align, start_value, inc_addr, nullptr,
-                         inc_addr, nullptr);
+  __mluop_get_indices(op_size_align, start_value, inc_addr, nullptr, inc_addr,
+                      nullptr);
 #else
   float *int32_temp_addr = cos_addr;
   float *float2int_dst_ad = sin_addr;
   float *float2int_src128B = w_tmp3;
-  __mluop_getMToNIndices(op_size_align, start_value, int32_temp_addr,
-                         float2int_src128B, inc_addr, float2int_dst_ad);
+  __mluop_get_indices(op_size_align, start_value, int32_temp_addr,
+                      float2int_src128B, inc_addr, float2int_dst_ad);
 #endif
   __bang_mul_scalar(offset_addr, inc_addr, scale, op_size_align);
-#if __BANG_ARCH__ >= 372 && __BANG_ARCH__ != 520
   __bang_cos(cos_addr, offset_addr, op_size);
   if (n <= 48000) {
     __bang_sin(sin_addr, offset_addr, op_size);
   } else {
     __cn_vector_sin_f32(op_size, sin_addr, offset_addr);
   }
-#else
   for (int i = 0; i < op_size; i++) {
     cos_addr[i] = cosf(offset_addr[i]);
     sin_addr[i] = sinf(offset_addr[i]);
   }
-#endif
 }
 
 template <typename DT>
@@ -735,14 +741,12 @@ __mlu_func__ void fftCooleyTukey(DT *matmul_re_mul_re_addr,
   computeLayerByLayer(addr, param, output, batch, n, m, L, s, fft_flag,
                       direction);
 }
-#endif  // #if __BANG_ARCH__ != 520
 
 __mlu_global__ void MLUKernelFFTCooleyTukey(
     void *matmul_re_mul_re_addr, void *matmul_re_mul_im_addr,
     void *matmul_im_mul_re_addr, void *matmul_im_mul_im_addr,
     void *internal_workspace_addr, void *output, int fft_flag, int direction,
     int n, int batch, int L, int m, int s, int dtype_size) {
-#if __BANG_ARCH__ != 520
   if (coreId == 0x80) return;
   switch (dtype_size) {
     default: {
@@ -767,6 +771,23 @@ __mlu_global__ void MLUKernelFFTCooleyTukey(
           n, batch, L, m, s);
     }; break;
   }
-#endif  // #if __BANG_ARCH__ != 520
 }
-#endif  // #if TARGET_MLU_ARCH != 520
+
+mluOpStatus_t MLUOP_WIN_API kernelFFTCooleyTukey(cnrtDim3_t k_dim,
+                                                 cnrtFunctionType_t k_type,
+                                                 cnrtQueue_t queue,
+                                                 mluOpFFTPlan_t fft_plan,
+                                                 int direction, FFTFlag flag) {
+  VLOG(5) << "Launch Kernel MLUKernelFFTCooleyTukey<<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTCooleyTukey<<<k_dim, k_type, queue>>>(
+      fft_plan->matmul_addrs.matmul_re_mul_re_addr,
+      fft_plan->matmul_addrs.matmul_re_mul_im_addr,
+      fft_plan->matmul_addrs.matmul_im_mul_re_addr,
+      fft_plan->matmul_addrs.matmul_im_mul_im_addr,
+      fft_plan->matmul_addrs.internal_workspace_addr,
+      fft_plan->matmul_addrs.output_contiguous_addr, flag, direction,
+      fft_plan->n[0], fft_plan->batch, fft_plan->L, fft_plan->m, fft_plan->s,
+      fft_plan->output_dtype)));
+  return MLUOP_STATUS_SUCCESS;
+}

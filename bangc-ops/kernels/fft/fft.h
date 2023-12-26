@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -25,7 +36,6 @@
 #include "kernels/fft/common/fft_common_kernels.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/common.h"
 
 #ifndef FFT_DIM_MAX
 #define FFT_DIM_MAX 3
@@ -123,26 +133,26 @@ struct mluOpFFTStruct {
   int idim;                  // the dimension size of input tensor
   int inembed[FFT_DIM_MAX];  // Pointer of size rank that indicates the storage
                              // dimensions of the input data in memory.
-  int inum;     // element num of input tensor
+  int inum;                  // element num of input tensor
   int istride;  // distance between two successive input elements in the
                 // innermost dimension
   int idist;    // distance between the first element of two consecutive signals
-              // in a batch of the input data
-  int odim;                  // the dimension size of output tensor
+                // in a batch of the input data
+  int odim;     // the dimension size of output tensor
   int onembed[FFT_DIM_MAX];  // Pointer of size rank that indicates the storage
                              // dimensions of the output data in memory
-  int onum;     // element num of output tensor
+  int onum;                  // element num of output tensor
   int ostride;  // distance between two successive output elements in the
                 // innermost dimension
   int odist;    // distance between the first element of two consecutive signals
-              // in a batch of the output data
-  int batch;  // batch size for this transform
-  int L;      // n = L * 2^m, L size for this transform
-  int m;      // n = L * 2^m, m size for this transform
-  int s;      // The size that can be put down on NRAM: L * 2^s, only used by
-          // Cooley-Tukey algorithm
-  int L_sub;  // The size that can be put down on NRAM: L_sub * 2^m, only used
-              // by  Stockham algorithm
+                // in a batch of the output data
+  int batch;    // batch size for this transform
+  int L;        // n = L * 2^m, L size for this transform
+  int m;        // n = L * 2^m, m size for this transform
+  int s;        // The size that can be put down on NRAM: L * 2^s, only used by
+                // Cooley-Tukey algorithm
+  int L_sub;    // The size that can be put down on NRAM: L_sub * 2^m, only used
+                // by  Stockham algorithm
   bool is_input_contiguous;
   bool is_output_contiguous;
   size_t reservespace_size;
@@ -205,24 +215,22 @@ struct AddrNode {
   DT *wz_i;
 };
 
-mluOpStatus_t selectStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
-                             const std::string make_plan_api);
+mluOpStatus_t selectFFTStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
+                                const std::string make_plan_api);
 
-#if TARGET_MLU_ARCH != 520
-__mlu_global__ void MLUKernelFFTCooleyTukey(void *matmul_re_mul_re_addr,
-                                            void *matmul_re_mul_im_addr,
-                                            void *matmul_im_mul_re_addr,
-                                            void *matmul_im_mul_im_addr,
-                                            void *internal_workspace_addr,
-                                            void *output, int fft_flag,
-                                            int direction, int n, int batch,
-                                            int L,  // less than 4096
-                                            int m, int s, int output_dtype);
+mluOpStatus_t MLUOP_WIN_API kernelFFTCooleyTukey(cnrtDim3_t k_dim,
+                                                 cnrtFunctionType_t k_type,
+                                                 cnrtQueue_t queue,
+                                                 mluOpFFTPlan_t fft_plan,
+                                                 int direction, FFTFlag flag);
 
-__mlu_global__ void MLUKernelFFTStockham(void *matmul_re_mul_re_addr,
-                                         void *output, int fft_flag,
-                                         int direction, int n, int batch, int L,
-                                         int m, int L_sub, int output_dtype,
-                                         const float scale_factor);
-#endif  // #if TARGET_MLU_ARCH != 520
+mluOpStatus_t MLUOP_WIN_API
+kernelFFTStockham(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                  cnrtQueue_t queue, mluOpFFTPlan_t fft_plan, int direction,
+                  const float scale_factor, FFTFlag flag);
+
+mluOpStatus_t MLUOP_WIN_API kernelC2CFFTDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n);
+
 #endif  // KERNELS_FFT_FFT_H_

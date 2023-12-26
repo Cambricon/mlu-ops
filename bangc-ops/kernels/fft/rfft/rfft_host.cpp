@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -14,8 +25,8 @@
 #include <algorithm>
 #include <string>
 
-mluOpStatus_t selectRFFT1dStrategy(mluOpHandle_t handle,
-                                   mluOpFFTPlan_t fft_plan) {
+static mluOpStatus_t selectRFFT1dStrategy(mluOpHandle_t handle,
+                                          mluOpFFTPlan_t fft_plan) {
   const std::string make_plan_api = "[selectRFFT1dStrategy]";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   /* there are plenty of algorithms for FFT, depending on the fft length.
@@ -27,7 +38,7 @@ mluOpStatus_t selectRFFT1dStrategy(mluOpHandle_t handle,
    */
   // select Four-Step FFT or MATMUL strategy logic
   fft_plan->fft_strategy = CNFFT_FUNC_MATMUL;
-  status = selectStrategy(handle, fft_plan, make_plan_api);
+  status = selectFFTStrategy(handle, fft_plan, make_plan_api);
   return status;
 }
 
@@ -306,8 +317,8 @@ mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
   return status;
 }
 
-void configureRFFT1dMatmulReserveAddrs(mluOpHandle_t handle,
-                                       mluOpFFTPlan_t fft_plan) {
+static void configureRFFT1dMatmulReserveAddrs(mluOpHandle_t handle,
+                                              mluOpFFTPlan_t fft_plan) {
   size_t dft_mat_size = 0;
   mluOpDataType_t in_r_dtype = fft_plan->input_dtype;
   mluOpDataType_t in_e_dtype = fft_plan->execution_dtype;
@@ -381,9 +392,8 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       int dim1 = COMPLEX;
       int dim2 = n;
       int dft_mat_num = dim0 * dim1 * dim2;
-      VLOG(5) << "CNFFT_FUNC_MATMUL generateRFFTHalfDFTMatrix";
-      KERNEL_CHECK((generateRFFTHalfDFTMatrix<<<k_dim, k_type, handle->queue>>>(
-          in_r_dtype, n, fft_plan->matmul_addrs.dft_matrix_addr)));
+      kernelGenerateRFFTHalfDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
+                                      in_r_dtype, n);
       status = fftQuantizePositionScale(
           handle, dft_mat_num, in_r_dtype, in_e_dtype,
           fft_plan->matmul_addrs.dft_matrix_addr,
@@ -399,9 +409,8 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       int L = fft_plan->L;
       int dft_mat_times = COMPLEX;
       int dft_mat_num = dft_mat_times * L * L;
-      VLOG(5) << "CNFFT_FUNC_COOLEY_TUKEY generateRFFTFullDFTMatrix";
-      KERNEL_CHECK((generateRFFTFullDFTMatrix<<<k_dim, k_type, handle->queue>>>(
-          in_r_dtype, L, L, fft_plan->matmul_addrs.dft_matrix_addr)));
+      kernelGenerateRFFTFullDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
+                                      in_r_dtype, L, L);
       status = fftQuantizePositionScale(
           handle, dft_mat_num, in_r_dtype, in_e_dtype,
           fft_plan->matmul_addrs.dft_matrix_addr,
@@ -419,8 +428,8 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       int dft_mat_times = COMPLEX;
       int dft_mat_num = dft_mat_times * L * L;
       VLOG(5) << "CNFFT_FUNC_STOCKHAM generateRFFTFullDFTMatrix";
-      KERNEL_CHECK((generateRFFTFullDFTMatrix<<<k_dim, k_type, handle->queue>>>(
-          in_r_dtype, row, L, fft_plan->matmul_addrs.dft_matrix_addr)));
+      kernelGenerateRFFTFullDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
+                                      in_r_dtype, row, L);
       status = fftQuantizePositionScale(
           handle, dft_mat_num, in_r_dtype, in_e_dtype,
           fft_plan->matmul_addrs.dft_matrix_addr,
@@ -438,9 +447,10 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
   return status;
 }
 
-void configureRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
-                                         mluOpFFTPlan_t fft_plan, void *input,
-                                         void *workspace, void *output) {
+static void configureRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
+                                                mluOpFFTPlan_t fft_plan,
+                                                void *input, void *workspace,
+                                                void *output) {
   VLOG(5) << "Into configure RFFT1d Matmul Workspace Addrs";
   size_t workspace_cur_offset = 0;
   size_t workspace_cur_offset_to_end = 0;
@@ -535,9 +545,9 @@ void configureRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
 
 // input    : in input
 // output   : in input_contiguous_addr
-mluOpStatus_t makeRFFT1dContiguousInput(mluOpHandle_t handle,
-                                        mluOpFFTPlan_t fft_plan,
-                                        const void *input) {
+static mluOpStatus_t makeRFFT1dContiguousInput(mluOpHandle_t handle,
+                                               mluOpFFTPlan_t fft_plan,
+                                               const void *input) {
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into makeRFFT1dContiguousInput";
   auto status = MLUOP_STATUS_SUCCESS;
@@ -567,8 +577,8 @@ mluOpStatus_t makeRFFT1dContiguousInput(mluOpHandle_t handle,
 
 // input    : in input_contiguous_addr
 // output   : in input_pad_addr
-mluOpStatus_t padRFFT1dContiguousInput(mluOpHandle_t handle,
-                                       mluOpFFTPlan_t fft_plan) {
+static mluOpStatus_t padRFFT1dContiguousInput(mluOpHandle_t handle,
+                                              mluOpFFTPlan_t fft_plan) {
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into padRFFT1dContiguousInput";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
@@ -623,8 +633,8 @@ mluOpStatus_t padRFFT1dContiguousInput(mluOpHandle_t handle,
 // batch * L * 2^m --> batch * 2^m * L
 // input    : in input_pad_addr
 // output   : in input_transed_addr
-mluOpStatus_t transposeRFFT1dPaddedInput(mluOpHandle_t handle,
-                                         mluOpFFTPlan_t fft_plan) {
+static mluOpStatus_t transposeRFFT1dPaddedInput(mluOpHandle_t handle,
+                                                mluOpFFTPlan_t fft_plan) {
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into transposeRFFT1dPaddedInput";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
@@ -653,8 +663,8 @@ mluOpStatus_t transposeRFFT1dPaddedInput(mluOpHandle_t handle,
 
 // input    : in input_pad_addr
 // output   : in input_pos_addr and input_scale_addr
-mluOpStatus_t quantizeRFFT1dPaddedInput(mluOpHandle_t handle,
-                                        mluOpFFTPlan_t fft_plan) {
+static mluOpStatus_t quantizeRFFT1dPaddedInput(mluOpHandle_t handle,
+                                               mluOpFFTPlan_t fft_plan) {
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into quantizeRFFT1dPaddedInput";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
@@ -681,9 +691,9 @@ mluOpStatus_t quantizeRFFT1dPaddedInput(mluOpHandle_t handle,
 // input    : in input_transed_addr
 // output   : input real matmul dft real result in matmul_re_mul_re_addr
 //            input real matmul dft imag result in matmul_re_mul_im_addr
-mluOpStatus_t computeRFFT1dMatmulResult(mluOpHandle_t handle,
-                                        mluOpFFTPlan_t fft_plan,
-                                        const float scale_factor) {
+static mluOpStatus_t computeRFFT1dMatmulResult(mluOpHandle_t handle,
+                                               mluOpFFTPlan_t fft_plan,
+                                               const float scale_factor) {
   std::string api = "[mluOpExecFFT]";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
 
@@ -765,7 +775,6 @@ mluOpStatus_t computeRFFT1dMatmulResult(mluOpHandle_t handle,
   return status;
 }
 
-#if TARGET_MLU_ARCH != 520
 static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type) {
   *k_type = CNRT_FUNC_TYPE_UNION1;
@@ -774,17 +783,16 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
   return MLUOP_STATUS_SUCCESS;
 }
-#endif  // #if TARGET_MLU_ARCH != 520
 
 // only for CNFFT_FUNC_COOLEY_TUKEY and CNFFT_FUNC_STOCKHAM
 // input    : input real matmul dft real result in matmul_re_mul_re_addr
 //            input real matmul dft imag result in matmul_re_mul_im_addr
 // output   : output complex result in output_contiguous_addr
-mluOpStatus_t mergeRFFT1dOutput(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
-                                const float scale_factor) {
+static mluOpStatus_t mergeRFFT1dOutput(mluOpHandle_t handle,
+                                       mluOpFFTPlan_t fft_plan,
+                                       const float scale_factor) {
   std::string api = "[mluOpExecFFT]";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
-#if TARGET_MLU_ARCH != 520
   if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
     VLOG(5) << "launch merge rfft1d output";
     int core_num = handle->core_num_per_cluster;
@@ -812,42 +820,25 @@ mluOpStatus_t mergeRFFT1dOutput(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     unsigned int dimx = task_num;
     cnrtDim3_t k_dim = {dimx, 1, 1};
     k_type = (cnrtFunctionType_t)dimx;
-    VLOG(5) << "Launch Kernel MLUKernelFFTCooleyTukey<<Union"
-            << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-            << k_dim.z << ">>>";
-    KERNEL_CHECK((MLUKernelFFTCooleyTukey<<<k_dim, k_type, handle->queue>>>(
-        fft_plan->matmul_addrs.matmul_re_mul_re_addr,
-        fft_plan->matmul_addrs.matmul_re_mul_im_addr,
-        fft_plan->matmul_addrs.matmul_im_mul_re_addr,
-        fft_plan->matmul_addrs.matmul_im_mul_im_addr,
-        fft_plan->matmul_addrs.internal_workspace_addr,
-        fft_plan->matmul_addrs.output_contiguous_addr, RFFT,
-        -1,  // direction, -1 means invalid(only FFT_IFFT use).
-        fft_plan->n[0], fft_plan->batch, fft_plan->L, fft_plan->m, fft_plan->s,
-        fft_plan->output_dtype)));
+    kernelFFTCooleyTukey(k_dim, k_type, handle->queue, fft_plan, -1, RFFT);
+    // direction, -1 means invalid(only FFT_IFFT use)
   } else if (fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
     VLOG(5) << "launch mrege four-step rfft1d output";
     cnrtDim3_t k_dim;
     cnrtFunctionType_t k_type;
     policyFunc(handle, &k_dim, &k_type);
-    VLOG(5) << "Launch Kernel MLUKernelFFTStockham<<Union" << k_type / CORE_DIM
-            << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
-    KERNEL_CHECK((MLUKernelFFTStockham<<<k_dim, k_type, handle->queue>>>(
-        fft_plan->matmul_addrs.matmul_re_mul_re_addr,
-        fft_plan->matmul_addrs.output_contiguous_addr, RFFT,
-        -1,  // direction, -1 means invalid(only FFT_IFFT use).
-        fft_plan->n[0], fft_plan->batch, fft_plan->L, fft_plan->m,
-        fft_plan->L_sub, fft_plan->output_dtype, scale_factor)));
+    kernelFFTStockham(k_dim, k_type, handle->queue, fft_plan, -1, scale_factor,
+                      RFFT);
+    // direction, -1 means invalid(only FFT_IFFT use).
   }
-#endif  // #if TARGET_MLU_ARCH != 520
   return status;
 }
 
 // input    : in output_contiguous_addr
 // output   : in output
-mluOpStatus_t makeRFFT1dContiguousOutput(mluOpHandle_t handle,
-                                         mluOpFFTPlan_t fft_plan,
-                                         void *output) {
+static mluOpStatus_t makeRFFT1dContiguousOutput(mluOpHandle_t handle,
+                                                mluOpFFTPlan_t fft_plan,
+                                                void *output) {
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into makeRFFT1dContiguousOutput";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;

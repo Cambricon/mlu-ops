@@ -16613,7 +16613,8 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
                               void *workspace,
                               size_t workspace_size);
 
-/*! The descriptor of FFT (Fast Fourier Transform) operation that holds FFT information including
+// Group:FFT
+/*! @brief The descriptor of FFT (Fast Fourier Transform) operation that holds FFT information including
 
     the tensor descriptor of input tensor and output tensor, the rank of FFT, the FFT size on each
     dimension, the size of reserved space and the size of workspace.
@@ -16621,11 +16622,11 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     You need to call the ::mluOpCreateFFTPlan function to create a descriptor for the FFT operation, and call
     the ::mluOpMakeFFTPlanMany function to set the information of the FFT operation to the descriptor.
     Then, you need to allocate the reserved space and set the space to the FFT descriptor by ::mluOpSetFFTReserveArea.
-    Also, you need to destroy the Cambricon CNNL context at the end with the ::mluOpDestroyFFTPlan.
+    Also, you need to destroy the Cambricon MLUOP context at the end with the ::mluOpDestroyFFTPlan.
     */
-    typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
+typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
 
-// Group: FFT
+// Group:FFT
 /*!
 
     @brief Creates a descriptor pointed by \p fft_plan for the FFT operation, and allocates memory
@@ -16635,7 +16636,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     Output. Pointer to the FFT descriptor that holds information about the FFT operation.
     *
     @par Return
-    - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_ALLOC_FAILED
+    - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
     *
     @par API Dependency
     - After calling this function, you can call the ::mluOpMakeFFTPlanMany function to initialize and set the
@@ -16643,7 +16644,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     - You need to call the ::mluOpDestroyFFTPlan to destroy the descriptor.
     Otherwise, the memory leak may occur.
     *
-    @note
+    @par Note
     - This function only supports 1D FFT currently. 2D FFT and 3D FFT
     will be supported in the future.
     - When the data type of input is float or complex_float, the 1D FFT length should be equal to:
@@ -16659,7 +16660,8 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     @par Example
     - None.
     */
-    mluOpStatus_t mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
+mluOpStatus_t
+mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
 
 // Group:FFT
 /*!
@@ -16674,7 +16676,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     \p fft_plan.
     *
     @param[in] handle
-    Input. Handle to a Cambricon CNNL context that is used to manage MLU devices and queues
+    Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
     in the FFT operation. For detailed information, see ::mluOpHandle_t.
     @param[in,out] fft_plan
     Input/output. The descriptor of FFT. For detailed information, see ::mluOpFFTPlan_t.
@@ -16698,7 +16700,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     Output. The size of the extra workspace in bytes that needs to be used in FFT operation.
     *
     @par Return
-    - ::CNNL_STATUS_SUCCESS, CNNL_STATUS_BAD_PARAM, ::CNNL_STATUS_NOT_SUPPORTED, ::CNNL_STATUS_NOT_INITIALIZED
+    - ::MLUOP_STATUS_SUCCESS, MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_NOT_INITIALIZED
     *
     @par Data Type
     - The supported data types of \p input and \p output tensors are as follows:
@@ -16730,7 +16732,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     and then call the ::mluOpSetTensorDescriptorOnchipDataType to set the onchip data type
     of input tensor descriptor.
     *
-    @note
+    @par Note
     - The advanced data layout parameters, (i/o)nembed, (i/o)istride, (i/o)idist, are set through
     ::mluOpSetTensorDescriptorEx. If stride information is not needed, you can set the simple data layout
     through ::mluOpSetTensorDescriptor.
@@ -16750,14 +16752,15 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     - None.
     *
     */
-    mluOpStatus_t mluOpMakeFFTPlanMany(mluOpHandle_t handle,
-    mluOpFFTPlan_t fft_plan,
-    const mluOpTensorDescriptor_t input_desc,
-    const mluOpTensorDescriptor_t output_desc,
-    const int rank,
-    const int n[],
-    size_t *reservespace_size,
-    size_t *workspace_size);
+mluOpStatus_t
+mluOpMakeFFTPlanMany(mluOpHandle_t handle,
+                     mluOpFFTPlan_t fft_plan,
+                     const mluOpTensorDescriptor_t input_desc,
+                     const mluOpTensorDescriptor_t output_desc,
+                     const int rank,
+                     const int n[],
+                     size_t *reservespace_size,
+                     size_t *workspace_size);
 
 // Group:FFT
 /*!
@@ -16766,7 +16769,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     through ::mluOpMakeFFTPlanMany.
     *
     @param[in] handle
-    Input. Handle to a Cambricon CNNL context that is used to manage MLU devices and queues in the
+    Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
     ::mluOpExecFFT. For detailed information, see ::mluOpHandle_t.
     @param[in, out] fft_plan
     Input/Output. The descriptor of FFT. For detailed information, see ::mluOpFFTPlan_t.
@@ -16781,11 +16784,10 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     cnrtMalloc function to create MLU memory according to the rservespace_size given.
     *
     @par Return
-    - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_BAD_PARAM, ::CNNL_STATUS_INTERNAL_ERROR
+    - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
     */
-    mluOpStatus_t mluOpSetFFTReserveArea(mluOpHandle_t handle,
-    mluOpFFTPlan_t fft_plan,
-    void *reservespace);
+mluOpStatus_t
+mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *reservespace);
 
 // Group:FFT
 /*!
@@ -16796,7 +16798,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     is adopted.
     *
     @param[in] handle
-    Input. Handle to a Cambricon CNNL context that is used to manage MLU devices and queues
+    Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
     in the FFT execution. For detailed information, see ::mluOpHandle_t.
     @param[in] fft_plan
     Input. The plan for FFT execution. For detailed information, see ::mluOpFFTPlan_t.
@@ -16813,7 +16815,7 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     Input. The transform direction: 0 means FFT forward and 1 means FFT inverse.
     Direction is ignored for real-to-complex and complex-to-real transforms.
     *
-    @note
+    @par Note
     - For in-place 1D real-to-complex FFTs, the input is a batch of n real numbers, and the
     output is n/2 + 1 non-redundant complex numbers. This requires a padding of input array.
     - For in-place N-D real-to-complex FFTs, extra padding of the real-data array on the innermost
@@ -16838,15 +16840,16 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     and then call the ::mluOpSetFFTReserveArea to bond the reservespace area to the descriptor.
     *
     @par Return
-    - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_BAD_PARAM, ::CNNL_STATUS_INTERNAL_ERROR
+    - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
     */
-    mluOpStatus_t mluOpExecFFT(mluOpHandle_t handle,
-    const mluOpFFTPlan_t fft_plan,
-    const void *input,
-    const float scale_factor,
-    void *workspace,
-    void *output,
-    int direction);
+mluOpStatus_t
+mluOpExecFFT(mluOpHandle_t handle,
+             const mluOpFFTPlan_t fft_plan,
+             const void *input,
+             const float scale_factor,
+             void *workspace,
+             void *output,
+             int direction);
 
 // Group:FFT
 /*!
@@ -16861,9 +16864,9 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     Input. The fft plan to be destroyed.
     *
     @par Return
-    - ::CNNL_STATUS_SUCCESS, ::CNNL_STATUS_EXECUTION_FAILED
+    - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
     *
-    @note
+    @par Note
     - You need to call this function after calling the ::mluOpExecFFT.
     Otherwise, memory leak may occur.
     *
@@ -16873,7 +16876,8 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
     @par Example.
     - None.
     */
-    mluOpStatus_t mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
+mluOpStatus_t
+mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 #if defined(__cplusplus)
 }
 #endif

@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -16,7 +27,7 @@
 #include "kernels/fft/c2c_fft/c2c_fft.h"
 
 // May be use a common function is a better choice?
-inline bool supportFloatConv(mluOpHandle_t handle) {
+static inline bool supportFloatConv(mluOpHandle_t handle) {
   switch (handle->arch) {
     case MLUOP_MLU370:
       return true;
@@ -28,8 +39,8 @@ inline bool supportFloatConv(mluOpHandle_t handle) {
 // Calculate whether the optimization strategy can be
 // entered(CNFFT_FUNC_STOCKHAM and CNFFT_FUNC_COOLEY_TUKEY). If it can enter,
 // select the optimal strategy and calculate corresponding parameters.
-mluOpStatus_t selectStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
-                             const std::string make_plan_api) {
+mluOpStatus_t selectFFTStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
+                                const std::string make_plan_api) {
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   fft_plan->fft_strategy = CNFFT_FUNC_MATMUL;
   // The basic conditions for entering the optimization.
@@ -452,8 +463,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(
   const std::string exec_api = "[mluOpExecFFT]";
   PARAM_CHECK_NE(exec_api, handle, NULL);
   PARAM_CHECK_NE(exec_api, fft_plan, NULL);
-  bool is_in_place = (input == output);
-  VLOG(5) << exec_api << ": in place ? " << is_in_place;
   VLOG(5) << "input contiguous ? " << fft_plan->is_input_contiguous;
   VLOG(5) << "output contiguous ? " << fft_plan->is_output_contiguous;
 
@@ -492,6 +501,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(
   PARAM_CHECK_NE(exec_api, output, NULL);
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
 
+  bool is_in_place = (input == output);
+  VLOG(5) << exec_api << ": in place ? " << is_in_place;
   switch (fft_plan->fft_type) {
     // r2c
     case CNFFT_HALF2COMPLEX_HALF:

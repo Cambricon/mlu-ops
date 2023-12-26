@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -21,7 +32,8 @@
 #include "api_test_tools.h"
 
 namespace mluopapitest {
-typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, int, int, mluOpDevType_t, mluOpStatus_t>
+typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, int, int, mluOpDevType_t,
+                   mluOpStatus_t>
     FFTParams;
 
 class fft_general : public testing::TestWithParam<FFTParams> {
@@ -35,31 +47,35 @@ class fft_general : public testing::TestWithParam<FFTParams> {
     MLUOpTensorParam input_params = std::get<0>(GetParam());
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
     MLUOP_CHECK(mluOpSetTensorDescriptorEx(
-        input_desc_, input_params.get_layout(), input_params.get_dtype(), input_params.get_dim_nb(),
-        input_params.get_dim_size().data(), input_params.get_dim_stride().data()));
+        input_desc_, input_params.get_layout(), input_params.get_dtype(),
+        input_params.get_dim_nb(), input_params.get_dim_size().data(),
+        input_params.get_dim_stride().data()));
 
-    MLUOP_CHECK(mluOpSetTensorDescriptorOnchipDataType(input_desc_, input_params.get_onchip_dtype()));
+    MLUOP_CHECK(mluOpSetTensorDescriptorOnchipDataType(
+        input_desc_, input_params.get_onchip_dtype()));
 
     MLUOpTensorParam output_params = std::get<1>(GetParam());
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
 
-    MLUOP_CHECK(mluOpSetTensorDescriptorEx(output_desc_, output_params.get_layout(),
-                                         output_params.get_dtype(), output_params.get_dim_nb(),
-                                         output_params.get_dim_size().data(),
-                                         output_params.get_dim_stride().data()));
+    MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+        output_desc_, output_params.get_layout(), output_params.get_dtype(),
+        output_params.get_dim_nb(), output_params.get_dim_size().data(),
+        output_params.get_dim_stride().data()));
     n_[0] = std::get<3>(GetParam());
     rank_ = std::get<2>(GetParam());
   }
 
   bool compute() {
-    if (!(target_device_ == MLUOP_UNKNOWN_DEVICE || target_device_ == handle_->arch)) {
+    if (!(target_device_ == MLUOP_UNKNOWN_DEVICE ||
+          target_device_ == handle_->arch)) {
       destroy();
       return true;
     }
 
     mluOpStatus_t status;
-    status = mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_, rank_, n_,
-                                 &reserveSpaceSizeInBytes_, &workSpaceSizeInBytes_);
+    status = mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_,
+                                  rank_, n_, &reserveSpaceSizeInBytes_,
+                                  &workSpaceSizeInBytes_);
     destroy();
 
     return expected_status_ == status;
@@ -118,192 +134,181 @@ class fft_general : public testing::TestWithParam<FFTParams> {
   mluOpStatus_t expected_status_ = MLUOP_STATUS_BAD_PARAM;
 };
 
-TEST_P(fft_general, negative) {
-  EXPECT_TRUE(compute());
-}
-
-INSTANTIATE_TEST_CASE_P(zero_element,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({0, 1}), std::vector<int>({1, 1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1, 1}), std::vector<int>({1, 1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_SUCCESS)));
-
-INSTANTIATE_TEST_CASE_P(negative_2_n,  // half,complex_half，fft length can be broken down into 2^m
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 2,
-                                             std::vector<int>({1, 7}), std::vector<int>({1, 1}),
-                                             MLUOP_DTYPE_INT16}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 2,
-                                             std::vector<int>({1, 7}), std::vector<int>({1, 1})}),
-                                         testing::Values(1),
-                                         testing::Values(7),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+TEST_P(fft_general, negative) { EXPECT_TRUE(compute()); }
 
 INSTANTIATE_TEST_CASE_P(
-    negative_2_m_l,  // float/complex_float，n>4096, fft length can be broken down into 2^m*l
+    zero_element, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({0, 1}), std::vector<int>({1, 1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1, 1}), std::vector<int>({1, 1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_SUCCESS)));
+
+INSTANTIATE_TEST_CASE_P(
+    negative_2_n,  // half,complex_half，fft length can be broken down into 2^m
     fft_general,
-    testing::Combine(testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT,
-                                                       2, std::vector<int>({1, 4097}),
-                                                       std::vector<int>({1, 1}), MLUOP_DTYPE_INT31}),
-                     testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT,
-                                                       2, std::vector<int>({1, 4097}),
-                                                       std::vector<int>({1, 1})}),
-                     testing::Values(1),
-                     testing::Values(4097),
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 2,
+                         std::vector<int>({1, 7}), std::vector<int>({1, 1}),
+                         MLUOP_DTYPE_INT16}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 2,
+                         std::vector<int>({1, 7}), std::vector<int>({1, 1})}),
+                     testing::Values(1), testing::Values(7),
                      testing::Values(MLUOP_UNKNOWN_DEVICE),
                      testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
-INSTANTIATE_TEST_CASE_P(negative_rank_1,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1})}),
-                                         testing::Values(4),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_2_m_l,  // float/complex_float，n>4096, fft length can be broken
+                     // down into 2^m*l
+    fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
+                         std::vector<int>({1, 4097}), std::vector<int>({1, 1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
+                         std::vector<int>({1, 4097}),
+                         std::vector<int>({1, 1})}),
+                     testing::Values(1), testing::Values(4097),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
-INSTANTIATE_TEST_CASE_P(negative_N_le_0,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(0, -1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_rank_1, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1})}),
+                     testing::Values(4), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
-INSTANTIATE_TEST_CASE_P(negative_batch,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
-                                             std::vector<int>({1, 1}), std::vector<int>({1, 1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
-                                             std::vector<int>({2, 1}), std::vector<int>({1, 1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_N_le_0, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(0, -1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
-INSTANTIATE_TEST_CASE_P(negative_input_stride,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({-1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_batch, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
+                         std::vector<int>({1, 1}), std::vector<int>({1, 1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
+                         std::vector<int>({2, 1}), std::vector<int>({1, 1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
-INSTANTIATE_TEST_CASE_P(negative_output_stride,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({-1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_input_stride, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({-1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
-INSTANTIATE_TEST_CASE_P(negative_unsupported_dtype_combination,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 1,
-                                             std::vector<int>({1}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_output_stride, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({-1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
-INSTANTIATE_TEST_CASE_P(negative_onchip_dtype,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_HALF}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_unsupported_dtype_combination, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 1,
+                         std::vector<int>({1}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    negative_onchip_dtype, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1}),
+                         MLUOP_DTYPE_HALF}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 // r2c,output!=n/2+1
-INSTANTIATE_TEST_CASE_P(negative_r2c_length,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 1,
-                                             std::vector<int>({4}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(4),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_r2c_length, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 1,
+                         std::vector<int>({4}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(4),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 // c2c,output != n
-INSTANTIATE_TEST_CASE_P(negative_c2c_length,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({1}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({0}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(1),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_c2c_length, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({1}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({0}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(1),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 // c2r,output!=n
-INSTANTIATE_TEST_CASE_P(negative_c2r_length,
-                        fft_general,
-                        testing::Combine(testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
-                                             std::vector<int>({4}), std::vector<int>({1}),
-                                             MLUOP_DTYPE_INT31}),
-                                         testing::Values(MLUOpTensorParam{
-                                             MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 1,
-                                             std::vector<int>({3}), std::vector<int>({1})}),
-                                         testing::Values(1),
-                                         testing::Values(4),
-                                         testing::Values(MLUOP_UNKNOWN_DEVICE),
-                                         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+INSTANTIATE_TEST_CASE_P(
+    negative_c2r_length, fft_general,
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
+                         std::vector<int>({4}), std::vector<int>({1}),
+                         MLUOP_DTYPE_INT31}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 1,
+                         std::vector<int>({3}), std::vector<int>({1})}),
+                     testing::Values(1), testing::Values(4),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // namespace mluopapitest

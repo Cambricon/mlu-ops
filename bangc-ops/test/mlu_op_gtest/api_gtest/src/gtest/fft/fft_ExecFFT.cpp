@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -24,7 +35,8 @@
 namespace mluopapitest {
 class fft_ExecFFT : public testing::Test {
  public:
-  void setParam(bool handle, bool fft_plan, bool input, bool workspace, bool output) {
+  void setParam(bool handle, bool fft_plan, bool input, bool workspace,
+                bool output) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
     }
@@ -48,7 +60,7 @@ class fft_ExecFFT : public testing::Test {
     }
   }
 
-  bool compute() {
+  mluOpStatus_t compute() {
     mluOpDataType_t input_data_type = MLUOP_DTYPE_FLOAT;
     mluOpDataType_t output_data_type = MLUOP_DTYPE_COMPLEX_FLOAT;
     mluOpDataType_t execution_dtype = MLUOP_DTYPE_FLOAT;
@@ -64,11 +76,12 @@ class fft_ExecFFT : public testing::Test {
 
     mluOpCreateTensorDescriptor(&input_desc_);
     mluOpCreateTensorDescriptor(&output_desc_);
-    mluOpSetTensorDescriptorEx(input_desc_, MLUOP_LAYOUT_ARRAY, input_data_type, ndim, input_dim_size,
-                              input_dim_stride);
+    mluOpSetTensorDescriptorEx(input_desc_, MLUOP_LAYOUT_ARRAY, input_data_type,
+                               ndim, input_dim_size, input_dim_stride);
     mluOpSetTensorDescriptorOnchipDataType(input_desc_, execution_dtype);
-    mluOpSetTensorDescriptorEx(output_desc_, MLUOP_LAYOUT_ARRAY, output_data_type, ndim,
-                              output_dim_size, output_dim_stride);
+    mluOpSetTensorDescriptorEx(output_desc_, MLUOP_LAYOUT_ARRAY,
+                               output_data_type, ndim, output_dim_size,
+                               output_dim_stride);
     size_t reservespaceSizeInBytes_ = 64;
     size_t workspaceSizeInBytes_ = 64;
     size_t *reservespace_size = &reservespaceSizeInBytes_;
@@ -76,20 +89,21 @@ class fft_ExecFFT : public testing::Test {
 
     mluOpStatus_t status;
     if (handle_ != nullptr && fft_plan_ != nullptr) {
-      status = mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_, rank, n,
-                                   reservespace_size, workspace_size);
+      status =
+          mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_,
+                               rank, n, reservespace_size, workspace_size);
 
       if (status != MLUOP_STATUS_SUCCESS) {
         destroy();
-        return MLUOP_STATUS_BAD_PARAM == status;
+        return status;
       }
     }
 
-    status =
-        mluOpExecFFT(handle_, fft_plan_, input_, scale_factor_, workspace_, output_, direction_);
+    status = mluOpExecFFT(handle_, fft_plan_, input_, scale_factor_, workspace_,
+                          output_, direction_);
     destroy();
 
-    return MLUOP_STATUS_BAD_PARAM == status;
+    return status;
   }
 
  protected:

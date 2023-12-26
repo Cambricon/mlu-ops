@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -15,6 +26,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 #include "kernels/fft/fft.h"
+#include "kernels/fft/common/fft_common_kernels.h"
 
 #define PAD_SIZE 64
 
@@ -225,8 +237,8 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                         nullptr);
+  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                      nullptr);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -315,8 +327,8 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                         nullptr);
+  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                      nullptr);
 
   // generate sin and cos coefficient vectors
   __bang_write_value((float *)cos_coeff_addr, deal_size, (float)2.0);
@@ -411,8 +423,8 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                         nullptr);
+  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                      nullptr);
 
   // generate sin and cos vectors
   const float scale = 2.0 * M_PI / n;
@@ -508,8 +520,8 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_getMToNIndices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                         nullptr);
+  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
+                      nullptr);
 
   // generate sin and cos vectors
   const float forward_scale = -2.0 * M_PI / n;
@@ -581,4 +593,50 @@ __mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n,
       MLULOG("Not Implemented.");
     }
   }
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelC2CFFTDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n) {
+  VLOG(5) << "Launch Kernel generateC2CFFTDFTMatrix<<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((generateC2CFFTDFTMatrix<<<k_dim, k_type, queue>>>(
+      in_r_dtype, n, fft_plan->matmul_addrs.dft_matrix_addr)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelGenerateRFFTHalfDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n) {
+  VLOG(5) << "Launch Kernel generateRFFTHalfDFTMatrix";
+  KERNEL_CHECK((generateRFFTHalfDFTMatrix<<<k_dim, k_type, queue>>>(
+      in_r_dtype, n, fft_plan->matmul_addrs.dft_matrix_addr)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelGenerateRFFTFullDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int row, int n) {
+  VLOG(5) << "Launch Kernel generateRFFTFullDFTMatrix";
+  KERNEL_CHECK((generateRFFTFullDFTMatrix<<<k_dim, k_type, queue>>>(
+      in_r_dtype, row, n, fft_plan->matmul_addrs.dft_matrix_addr)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelGenerateIRFFTHalfDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n) {
+  VLOG(5) << "Launch Kernel generateIRFFTHalfDFTMatrix";
+  KERNEL_CHECK((generateIRFFTHalfDFTMatrix<<<k_dim, k_type, queue>>>(
+      in_r_dtype, n, fft_plan->matmul_addrs.dft_matrix_addr)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelGenerateIRFFTFullDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n) {
+  VLOG(5) << "Launch Kernel kernelGenerateIRFFTFullDFTMatrix";
+  KERNEL_CHECK((generateIRFFTFullDFTMatrix<<<k_dim, k_type, queue>>>(
+      in_r_dtype, n, fft_plan->matmul_addrs.dft_matrix_addr)));
+  return MLUOP_STATUS_SUCCESS;
 }

@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -30,8 +41,9 @@ void FftExecutor::workspaceMalloc() {
   }
 
   MLUOP_CHECK(mluOpCreateFFTPlan(&fft_plan_));
-  MLUOP_CHECK(mluOpMakeFFTPlanMany(handle_, fft_plan_, input_tensor, output_tensor, rank, n.data(),
-                                 &reservespace_size_, &workspace_size_));
+  MLUOP_CHECK(mluOpMakeFFTPlanMany(handle_, fft_plan_, input_tensor,
+                                   output_tensor, rank, n.data(),
+                                   &reservespace_size_, &workspace_size_));
 
   VLOG(4) << "reserve space size: " << reservespace_size_;
   VLOG(4) << "workspace size: " << workspace_size_;
@@ -62,8 +74,8 @@ void FftExecutor::compute() {
   VLOG(4) << "call mluOpFFT";
 
   interface_timer_.start();
-  MLUOP_CHECK(mluOpExecFFT(handle_, fft_plan_, input_dev, scale_factor, workspace_addr_, output_dev,
-                         direction));
+  MLUOP_CHECK(mluOpExecFFT(handle_, fft_plan_, input_dev, scale_factor,
+                           workspace_addr_, output_dev, direction));
   interface_timer_.stop();
 }
 
@@ -90,16 +102,16 @@ int64_t FftExecutor::getTheoryOps() {
   int n = fft_param.n(0);
 
   int64_t ops_each_batch;
-  // Convert LT and CT computing power. The computing power of a single LT is 4096 * 2, the
-  // computing power of a single CT is 128.
+  // Convert LT and CT computing power. The computing power of a single LT is
+  // 4096 * 2, the computing power of a single CT is 128.
   int cp_ratio = 4096 * 2 / 128;
   if (n <= 4096) {
     // fft_plan->fft_strategy = CNFFT_FUNC_MATMUL. Mainly use LT.
     ops_each_batch = n * n * 2 / cp_ratio;
   } else {
     ops_each_batch = n * int(std::log(n)) * 2;
-    // fft_plan->fft_strategy = CNFFT_FUNC_COOLEY_TUKEY or CNFFT_FUNC_STOCKHAM. Half use LT and half
-    // use CT.
+    // fft_plan->fft_strategy = CNFFT_FUNC_COOLEY_TUKEY or CNFFT_FUNC_STOCKHAM.
+    // Half use LT and half use CT.
     ops_each_batch = ops_each_batch * (0.5 / cp_ratio + 0.5);
   }
   int64_t theory_ops = bc * ops_each_batch;
@@ -109,12 +121,12 @@ int64_t FftExecutor::getTheoryOps() {
 
 int64_t FftExecutor::getTheoryIoSize() {
   // dtype check
-  auto input_tensor           = tensor_desc_[0].tensor;
-  auto output_tensor          = tensor_desc_[1].tensor;
-  mluOpDataType_t input_dtype  = input_tensor->dtype;
+  auto input_tensor = tensor_desc_[0].tensor;
+  auto output_tensor = tensor_desc_[1].tensor;
+  mluOpDataType_t input_dtype = input_tensor->dtype;
   mluOpDataType_t output_dtype = output_tensor->dtype;
 
-  auto fft_param    = parser_->getProtoNode()->fft_param();
+  auto fft_param = parser_->getProtoNode()->fft_param();
   int rank = fft_param.rank();
   int bc = 1;
   if (input_tensor->dim != rank) {
@@ -126,15 +138,15 @@ int64_t FftExecutor::getTheoryIoSize() {
   if (n <= 4096) {
     if (input_dtype == output_dtype) {
       theory_ios += bc * n * 4;  // matmul io
-    } else {  // r2c or c2r
+    } else {                     // r2c or c2r
       theory_ios += bc * n * 2;  // matmul io
     }
-    theory_ios += n  * n * 2;  // W io
+    theory_ios += n * n * 2;  // W io
   } else {
     if (input_dtype == output_dtype) {
       theory_ios += bc * n * 4;  // matmul io
       theory_ios += bc * n * 4;  // stockham or cooley_tukey io
-    } else {  // r2c or c2r
+    } else {                     // r2c or c2r
       theory_ios += bc * n * 2;  // matmul
       theory_ios += bc * n * 2;  // stockham or cooley_tukey io
     }
@@ -151,7 +163,8 @@ int64_t FftExecutor::getTheoryIoSize() {
 }
 
 std::set<Evaluator::Formula> FftExecutor::getCriterionsUse() const {
-  return { Evaluator::DIFF1, Evaluator::DIFF2, Evaluator::DIFF3, Evaluator::DIFF4 };
+  return {Evaluator::DIFF1, Evaluator::DIFF2, Evaluator::DIFF3,
+          Evaluator::DIFF4};
 }
 
 }  // namespace mluoptest

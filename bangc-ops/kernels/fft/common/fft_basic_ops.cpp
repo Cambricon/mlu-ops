@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -619,7 +630,7 @@ mluOpStatus_t fftOptensor(mluOpHandle_t handle, int elem_num, void *in1_ptr,
 }
 
 //
-void initBasicParam(const int n, int &L, int &m) {
+static void initBasicParam(const int n, int &L, int &m) {
   // split n into 2^m * L
   m = 0;
   L = n;
@@ -639,8 +650,8 @@ void initBasicParam(const int n, int &L, int &m) {
   }
 }
 
-bool findStockham(mluOpHandle_t handle, int &L, int &m, int &L_sub,
-                  bool &find_stockham) {
+static bool findStockham(mluOpHandle_t handle, int &L, int &m, int &L_sub,
+                         bool &find_stockham) {
   if (find_stockham) {
     int NFU_ALIGN_NUM = NFU_ALIGN_SIZE / sizeof(float);
     int max_nram_size = handle->nram_size + REM_FOR_STACK - 32 * 1024;
@@ -680,7 +691,7 @@ bool findStockham(mluOpHandle_t handle, int &L, int &m, int &L_sub,
   return false;
 }
 
-bool findCooleyTukey(mluOpHandle_t handle, int &L, int &m, int &s) {
+static bool findCooleyTukey(mluOpHandle_t handle, int &L, int &m, int &s) {
   int cal_unit = 14;
   int cal_unit_once =
       PAD_UP(L, NFU_ALIGN_SIZE / sizeof(float)) * cal_unit * sizeof(float);

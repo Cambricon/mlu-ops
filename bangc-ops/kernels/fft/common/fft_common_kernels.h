@@ -1,5 +1,16 @@
 /*************************************************************************
- * Copyright (C) [2019-2022] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -14,19 +25,20 @@
 
 #include "kernels/fft/fft.h"
 
-__mlu_global__ void generateRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
-                                              void *output);
+mluOpStatus_t MLUOP_WIN_API kernelGenerateRFFTHalfDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n);
 
-__mlu_global__ void generateRFFTFullDFTMatrix(mluOpDataType_t data_type,
-                                              int row, int n, void *output);
+mluOpStatus_t MLUOP_WIN_API kernelGenerateRFFTFullDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int row, int n);
 
-__mlu_global__ void generateIRFFTHalfDFTMatrix(mluOpDataType_t data_type, int n,
-                                               void *output);
+mluOpStatus_t MLUOP_WIN_API kernelGenerateIRFFTHalfDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n);
 
-__mlu_global__ void generateIRFFTFullDFTMatrix(mluOpDataType_t data_type, int n,
-                                               void *output);
-
-__mlu_global__ void generateC2CFFTDFTMatrix(mluOpDataType_t data_type, int n,
-                                            void *output);
+mluOpStatus_t MLUOP_WIN_API kernelGenerateIRFFTFullDFTMatrix(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, mluOpDataType_t in_r_dtype, int n);
 
 #endif  // KERNELS_FFT_COMMON_FFT_COMMON_KERNELS_H_
