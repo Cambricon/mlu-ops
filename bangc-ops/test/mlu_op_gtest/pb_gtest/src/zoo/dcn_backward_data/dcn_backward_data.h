@@ -31,7 +31,6 @@
 #define MAX_DILATION_DIM 3
 
 namespace mluoptest {
-
 class DcnBackwardDataExecutor : public Executor {
  public:
   DcnBackwardDataExecutor() {}
