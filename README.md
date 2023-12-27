@@ -74,7 +74,7 @@ MLU-OPS 提供了以下功能：
   wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu18.04/cnnl_x.x.x-1.ubuntuxx.xx_amd64.deb
   sudo apt-get install ./cntoolkit-x.x.x_ubuntuxx.xx_amd64.deb
   sudo apt-get update
-  sudo apt-get install cncc cnas cnbin cndrv cnrt cnrtc
+  sudo apt-get install cncc cnas cnbin cndrv cndev cnrt cnrtc cngdb cnperf
   sudo apt-get install ./cnnl_x.x.x-x.ubuntuxx.xx_amd64.deb
   ```
 
