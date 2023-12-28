@@ -16661,7 +16661,7 @@ mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
 // Group:DCN
 /*!
  * @brief Initializes the deformable convolution descriptor \p dcn_desc that was
- * created with the ::mluOpCreateDCNDescriptor function, and sets the information about the
+ * created by ::mluOpCreateDCNDescriptor function, and sets the information about the
  * deformable convolution forward and backward operation to the deformable convolution descriptor
  * \p dcn_desc. The information includes the number of deformable convolution dimensions \p dimNb,
  * the padding size for each dimension \p pad, the stride of the sliding window for each dimension
@@ -16674,30 +16674,30 @@ mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
  *   see ::mluOpDCNDescriptor_t.
  * @param[in] dimNb
  *   Input. The number of dimensions in the input tensor of the deformable convolution operation.
- *   Currently, the value of this parameter can only be set to 4 and should be the
+ *   Currently, the value of this parameter can only be set to 4 and must be the
  *   same as the one you set in the input tensor descriptor.
  * @param[in] pad
  *   Input. An array that stores the zero-padding size for each dimension of the input tensor
  *   used in the deformable convolution operation.
  *   For each dimension, the padding size represents the number of zeros to be concatenated at the
  *   start and end of that dimension. For 2D deformable convolution, the padding is
- *   on top, bottom, left, and right.
+ *   on the top, bottom, left, and right.
  * @param[in] stride
  *   Input. An array that stores the filter stride for each dimension of the input tensor
  *   used in the deformable convolution operation. For each dimension, the filter stride represents
  *   the number of elements to slide over the input tensor. For 2D deformable
- *   convolution, the stride should be set in height and width order.
+ *   convolution, the stride must be set in height and width order.
  * @param[in] dilation
  *   Input. An array that stores the dilation factor for each dimension of the filter tensor
  *   used in the deformable convolution operation. For each dimension, the dilation factor
  *   represents the spacing between the kernel points. For 2D deformable convolution,
- *   the dilation should be set in height and width order.
+ *   the dilation must be set in height and width order.
  * @param[in] deformable_group
  *   Input. The number of deformable offset groups that split the input offset along the channel
- *   of input tensor. Each deformable group is deformed separately for detecting different input parts.
+ *   of input tensor. Each deformable group is deformed separately to detect different input parts.
  * @param[in] conv_group
- *   Input. The number of groups that the input data is split by the number of channels
- *   in the input tensor. Each convolution group is convolved separately. The filter used for
+ *   Input. The number of groups that the input channel been divided.
+ *   Each convolution group is convolved separately. The filter used for
  *   each group is the filter tensor divides \p conv_group. The result of
  *   the deformable convolution operation is the concatenation of all the group convolution results
  *   along the output channel dimension.
@@ -16707,22 +16707,22 @@ mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
  *   A larger \p im2col_step will consume a larger workspace size and have a higher performance,
  *   while a smaller one will consume a smaller workspace size and have a lower performance.
  * @param[in] compute_type
- *   Input. The data type of temporary result in convolution operation. Only supports
+ *   Input. The data type of the temporary result in the convolution operation. Only supports
  *   \p MLUOP_DTYPE_FLOAT type.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
  * @par API Dependency
- * - Before calling this function, ::mluOpCreateDCNDescriptor should be called.
+ * - Before calling this function, ::mluOpCreateDCNDescriptor must be called.
  *
  * @par Note
  * - Currently, only supports 4D input tensor for deformable convolution forward
- *   and backward operation.
- * - The values of \p pad should be greater than or equal to 0.
- * - The values of \p stride should be greater than or equal to 1.
- * - The values of \p dilation should be greater than or equal to 1.
- * - The value of \p deformable_group should be greater than or equal to 1 and
+ *   and backward operations.
+ * - The values of \p pad must be greater than or equal to 0.
+ * - The values of \p stride must be greater than or equal to 1.
+ * - The values of \p dilation must be greater than or equal to 1.
+ * - The value of \p deformable_group must be greater than or equal to 1 and
  *   less than or equal to the number of channels in the input tensor, and input channel must be
  *   divisible by \p deformable_group.
  *   - If \p deformable_group is set to 1, the same input offset is applied to all channels
@@ -16730,11 +16730,11 @@ mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
  *   - If the value of \p deformable_group is between 1 and the number of channels of input tensor,
  *     the input channel will be split into \p deformable_group parts. Each part is responsible for
  *     detecting different input parts, which results in a more flexible geometric transformation.
- * - The value of \p conv_group should be greater than or equal to 1 and less than or equal to the
+ * - The value of \p conv_group must be greater than or equal to 1 and less than or equal to the
  *   number of channels in the input tensor, and input channels and output channels must both be
  *   divisible by \p conv_group.
- * - The value of \p im2col_step should be greater than or equal to 1 and less than or equal to
- *   the number of batch size in the input tensor, and input batch should be divisible by
+ * - The value of \p im2col_step must be greater than or equal to 1 and less than or equal to
+ *   the number of batch sizes in the input tensor, and the input batch must be divisible by
  *   \p im2col_step.
  *
  * @par Requirements
@@ -16759,8 +16759,8 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
 
 // Group:DCN
 /*!
- * @brief Destroys a deformable convolution descriptor \p dcn_desc that is previously created with
- * the ::mluOpCreateDCNDescriptor function.
+ * @brief Destroys a deformable convolution descriptor \p dcn_desc that was previously created by
+ * ::mluOpCreateDCNDescriptor.
  *
  * @param[in] dcn_desc
  *   Input. The deformable convolution descriptor to be destroyed.
@@ -16844,7 +16844,7 @@ mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
  *   to create and set the tensor descriptors \p input, \p offset, \p mask (optional), \p filter,
  *   \p grad_output, \p grad_input, \p grad_offset, \p grad_mask (optional) before calling this
  *   function.
- * - The allocated extra workspace should be passed to the ::mluOpDCNBackwardData function to perform
+ * - The allocated extra workspace must be passed to the ::mluOpDCNBackwardData function to perform
  *   the deformable convolution backward data operation.
  *
  * @par Note
@@ -16896,13 +16896,13 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  *   Input. Pointer to the MLU memory that stores the input tensor.
  * @param[in] offset_desc
  *   Input. The descriptor of the offset to be applied for each position in the convolution kernel.
- *   The shape of offset should be (batch, out_height, out_width, 2 * deformable_group *
+ *   The shape of offset must be (batch, out_height, out_width, 2 * deformable_group *
  *   filter_height * filter_width). For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] offset
  *   Input. Pointer to the MLU memory that stores the offset tensor.
  * @param[in] mask_desc
  *   Input. The descriptor of the scaling factor to be applied for each position in the convolution
- *   kernel. The shape of mask should be (batch, out_height, out_width,
+ *   kernel. The shape of mask must be (batch, out_height, out_width,
  *   deformable_group * filter_height * filter_width). Set this parameter to NULL when
  *   mask is not requested. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] mask
@@ -16964,12 +16964,12 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * - \p grad_output offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
  * - This function also supports float-point computation on MLU300 series or above. To perform
- *   float-point computation, the onchip data type of \p grad_output and \p filter should be
+ *   float-point computation, the onchip data type of \p grad_output and \p filter must be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
  * @par Data Layout
  * - The data layout of the input, offset, mask, filter, grad_output, grad_input, grad_offset,
- *   and grad_mask should be \p MLUOP_LAYOUT_NHWC.
+ *   and grad_mask must be \p MLUOP_LAYOUT_NHWC.
  *
  * @par Scale Limitation
  * - The input, offset, mask, filter, grad_output, grad_input, grad_offset, grad_mask and
@@ -16977,19 +16977,19 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  *   (including pad, stride, dilation, deformable_group, conv_group, im2col_step) must meet the
  *   following requirements:
  *   - input tensor: \p batch > 0, \p height > 0, \p width > 0, \p channel > 0
- *   - offset tensor: \p batch should be equal to the batch size of input tensor, \p height and \p width
- *     should be equal to the height and width of output tensor accordingly. \p channel should be equal to
+ *   - offset tensor: \p batch must be equal to the batch size of input tensor, \p height and \p width
+ *     must be equal to the height and width of output tensor accordingly. \p channel must be equal to
  *     deformable_group * filter_height * filter_width * 2.
- *   - grad offset tensor: the data type, layout, and shape of grad offset should be equal to the
+ *   - grad offset tensor: the data type, layout, and shape of grad offset must be equal to the
  *     offset tensor.
- *   - mask tensor: When mask is needed, \p batch should be equal to the batch size of input tensor,
- *     \p height and \p width should be equal to the height and width of output tensor accordingly.
- *     \p channel should be equal to deformable_group * filter_height * filter_width.
- *   - grad mask tensor: the data type, layout and shape of the grad mask should be equal to
+ *   - mask tensor: When mask is needed, \p batch must be equal to the batch size of input tensor,
+ *     \p height and \p width must be equal to the height and width of output tensor accordingly.
+ *     \p channel must be equal to deformable_group * filter_height * filter_width.
+ *   - grad mask tensor: the data type, layout and shape of the grad mask must be equal to
  *     the mask tensor. When mask is passed NULL, grad mask must be NULL.
  *   - The data bytes of (im2col_step * out_height * out_filter * filter_h * filter_w * input_channel)
- *     should be less than or equal to the INT_MAX defined in limits.h.
- *   - When mask is not needed, \p mask, \p mask_desc, \p grad_mask and \p grad_mask_desc should be
+ *     must be less than or equal to the INT_MAX defined in limits.h.
+ *   - When mask is not needed, \p mask, \p mask_desc, \p grad_mask and \p grad_mask_desc must be
  *     set to NULL. When it is needed, any of \p mask, \p mask_desc, \p grad_mask and
  *     \p grad_mask_desc cannot be NULL.
  *
@@ -17002,7 +17002,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * - For best practices, to have better performance, set the im2col_step of to the batch size.
  *
  * @par Note
- * - \p input, \p mask, \p filter, and \p grad_output should be smaller enough to prevent the result
+ * - \p input, \p mask, \p filter, and \p grad_output must be smaller enough to prevent the result
  *   from data overflow especially when the data type is \p MLUOP_DTYPE_HALF.
  * - \p offset with NaN is not supported on MLU300 series and lower platforms.
  *
