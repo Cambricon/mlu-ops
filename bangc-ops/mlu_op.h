@@ -16872,7 +16872,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
                                      const mluOpTensorDescriptor_t grad_mask_desc,
                                      size_t *workspace_size);
 
-// Group:DCNBackwardData
+// Group:DCN
 /*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  * the gradient with respect to input \p grad_input, offset \p grad_offset, and mask
