@@ -20,10 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <math.h>
 #include <limits.h>
-#include <cstdio>
-
+#include <math.h>
 #include <vector>
 
 #include "kernels/utils/cnnl_helper.h"

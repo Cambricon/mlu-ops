@@ -1064,6 +1064,15 @@ typedef struct cnnlRoiAlignStruct *mluOpRoiAlignForwardDescriptor_t;
  * ::mluOpDestroyUniqueDescriptor function.*/
 typedef struct cnnlUniqueStruct *mluOpUniqueDescriptor_t;
 
+/*!
+ * The descriptor of deformable convolution function that holds the deformable convolution
+ * information including the number of input dimensions, padding, stride, dilation,
+ * deformable group, convolution group, and img2col_step.
+ *
+ * You need to call the ::mluOpCreateDCNDescriptor function to create a descriptor, and call the
+ * ::mluOpSetDCNDescriptor function to set the information of the deformable convolution operation
+ * to the descriptor. Also, you need to destroy the Cambricon CNNL context at the end with the
+ * ::mluOpDestroyDCNDescriptor function.*/
 typedef struct cnnlDCNStruct *mluOpDCNDescriptor_t;
 
 /*!
@@ -16620,21 +16629,21 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
  * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward
  * or backward operation, and allocates memory for holding the information about the
  * deformable convolution operation. The information is defined in ::mluOpDCNDescriptor_t.
- * For more information about descriptor, see "Cambricon MLUOP User Guide".
+ * For more information about descriptor, see "Cambricon BANG C OPS User Guide".
  *
  * @param[out] dcn_desc
- *   Output. A host pointer to the deformable convolution descriptor that holds information about the
+ *   A host pointer to the deformable convolution descriptor that holds information about the
  *   deformable convolution operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_NOT_INITIALIZED
  *
  * @par API Dependency
- * - After calling this function, you can call the ::mluOpSetDCNDescriptor function to initialize
+ * - After calling this function, call ::mluOpSetDCNDescriptor function to initialize
  *   and set the information to the deformable convolution descriptor.
- * - You need to call the ::mluOpDestroyDCNDescriptor function to destroy the descriptor.
+ * - Call ::mluOpDestroyDCNDescriptor function to destroy the descriptor.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
@@ -16642,13 +16651,16 @@ mluOpQuantizeBatchMatMulBCast(mluOpHandle_t handle,
  *
  * @par Example
  * - None.
+ *
+ * @par Reference
+ * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
 
 // Group:DCN
 /*!
- * @brief Initializes the deformable convolution descriptor \p dcn_desc that is previously
+ * @brief Initializes the deformable convolution descriptor \p dcn_desc that was
  * created with the ::mluOpCreateDCNDescriptor function, and sets the information about the
  * deformable convolution forward and backward operation to the deformable convolution descriptor
  * \p dcn_desc. The information includes the number of deformable convolution dimensions \p dimNb,
@@ -16704,7 +16716,7 @@ mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
  * @par API Dependency
  * - Before calling this function, ::mluOpCreateDCNDescriptor should be called.
  *
- * @note
+ * @par Note
  * - Currently, only supports 4D input tensor for deformable convolution forward
  *   and backward operation.
  * - The values of \p pad should be greater than or equal to 0.
@@ -16730,6 +16742,9 @@ mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
  *
  * @par Example
  * - None.
+ *
+ * @par Reference
+ * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
@@ -16752,17 +16767,20 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
  *
- * @note
- * - You need to call this function after calling the ::mluOpDCNForward, ::mluOpDCNBackwardData,
- *   or ::mluOpDCNBackwardWeight function. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
- * - This function should be called to destroy the deformable convolution descriptor.
- *   Otherwise, the memory leak may occur.
+ * @par Note
+ * - Call this function after calling the ::mluOpDCNForward, ::mluOpDCNBackwardData,
+ *   or ::mluOpDCNBackwardWeight. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
+ * - It is necessary to call this function destroy the deformable convolution descriptor.
+ *   to avoid the memory leaks.
  *
  * @par Requirements
  * - None.
  *
  * @par Example
  * - None.
+ *
+ * @par Reference
+ * - None
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
@@ -16772,7 +16790,7 @@ mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the deformable convolution backward data operation.
  *
- * The size of extra workspace is based on the given information of the deformable convolution
+ * The size of the extra workspace is based on the information of the deformable convolution
  * backward data operation, including the deformable convolution descriptor \p dcn_desc,
  * input tensor descriptor \p input_desc, offset tensor
  * descriptor \p offset_desc, mask tensor descriptor \p mask_desc, filter tensor descriptor
@@ -16815,7 +16833,7 @@ mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
  *   This parameter is requested to be the same with \p mask_desc. Set this parameter to NULL when mask and
  *   grad_mask are not needed. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
- *   Output. Pointer to the returned size of the extra workspace in bytes that is used in the
+ *   Pointer to the returned size of the extra workspace in bytes that is used in the
  *   deformable convolution backward data operation.
  *
  * @par Return
@@ -16829,13 +16847,16 @@ mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
  * - The allocated extra workspace should be passed to the ::mluOpDCNBackwardData function to perform
  *   the deformable convolution backward data operation.
  *
- * @note
+ * @par Note
  * - None.
  *
  * @par Requirements
  * - None.
  *
  * @par Example
+ * - None.
+ *
+ * @par Reference
  * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
@@ -16900,7 +16921,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace
  *   Input. Pointer to the MLU memory that is used as an extra workspace for the
  *   deformable convolution backward data operation. For more information about workspace,
- *   see "Cambricon MLUOP User Guide".
+ *   see "Cambricon BANG C OPS User Guide".
  * @param[in] workspace_size
  *   Input. The size of the extra workspace in bytes that needs to be used in
  *   the deformable convolution backward data operation. You can get the size of the workspace
@@ -16910,26 +16931,26 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  *   This parameter is requested to be the same as \p input_desc. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
  * @param[out] grad_input
- *   Output. Pointer to the MLU memory that stores the gradient with respect to \p input.
+ *   Pointer to the MLU memory that stores the gradient with respect to \p input.
  * @param[in] grad_offset_desc
  *   Input. The descriptor of the gradient with respect to the offset tensor.
  *   This parameter is requested to be the same as \p offset_desc.
  *   For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] grad_offset
- *   Output. Pointer to the MLU memory that stores the gradient with respect to \p offset.
+ *   Pointer to the MLU memory that stores the gradient with respect to \p offset.
  * @param[in] grad_mask_desc
  *   Input. The descriptor of the gradient with respect to the mask tensor.
  *   This parameter is requested to be the same with \p mask_desc. Set this parameter to NULL when mask and
  *   grad_mask are not needed. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] grad_mask
- *   Output. Pointer to the MLU memory that stores the gradient with respect to \p mask.
+ *   Pointer to the MLU memory that stores the gradient with respect to \p mask.
  *   Set this parameter to NULL when mask and grad_mask are not needed.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
  *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_NUMERICAL_OVERFLOW
  *
  * @par Formula
- * - See "Deformable Convolution Operator" section in "Cambricon MLUOP User Guide" for details.
+ * - See "Deformable Convolution Operator" section in "Cambricon BANG C OPS User Guide" for details.
  *
  * @par Data Type
  * - Offchip data type of \p input, \p offset, \p mask, \p filter, \p grad_output,
@@ -16980,7 +17001,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * @par Performance Optimization
  * - For best practices, to have better performance, set the im2col_step of to the batch size.
  *
- * @note
+ * @par Note
  * - \p input, \p mask, \p filter, and \p grad_output should be smaller enough to prevent the result
  *   from data overflow especially when the data type is \p MLUOP_DTYPE_HALF.
  * - \p offset with NaN is not supported on MLU300 series and lower platforms.

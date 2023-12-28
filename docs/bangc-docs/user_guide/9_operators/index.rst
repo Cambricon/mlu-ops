@@ -1008,3 +1008,9 @@ mluOpConcat
  - ``N`` 为每个input和output的维度数。
  - ``sum(axis_1, ..., axis_m)`` 表示对待拼接维度求和，output的拼接维度大小为所有input拼接维度的总和。
  - 除拼接维度外，其余维度的大小需要相等。
+
+.. _dcn_backward_data:
+
+mluOpDCNBackwardData
+---------------------------------
+该算子用于求取可变形卷积算子关于input、offset、mask的反向梯度；
