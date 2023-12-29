@@ -1013,4 +1013,4 @@ mluOpConcat
 
 mluOpDCNBackwardData
 ---------------------------------
-该算子用于求取可变形卷积算子关于input、offset、mask的反向梯度；
+该算子用于求取可变形卷积算子关于input、offset、mask的反向梯度。
