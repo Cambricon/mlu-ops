@@ -101,3 +101,4 @@ MLU Binary Op算子结构：　
 | voxel_pooling_forward                  | √             |               |
 | voxelization                           | √             |               |
 | yolo_box                               | √             |               |
+| dcn_backward_data                      |               | √             |
