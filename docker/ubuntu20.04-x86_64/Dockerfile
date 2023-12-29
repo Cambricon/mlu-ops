@@ -29,7 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 
 ARG CNNL_VERSION="1.21.1-1"
 ENV CNNL_VERSION ${CNNL_VERSION}
-# NOTE: you could replace with your own cntoolkit package.
+# NOTE: you could replace with your own cnnl package.
 ADD https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cnnl_${CNNL_VERSION}.ubuntu20.04_amd64.deb /tmp/
 
 RUN set -ex && \
