@@ -4,7 +4,7 @@
 import logging
 import json
 
-import mluop_test_pb2
+import mlu_op_test_pb2
 
 # miscellaneous config
 class Config:
@@ -19,8 +19,7 @@ class Config:
         'MLU370-S4': 'MLU370',
         'MLU370-X4': 'MLU370',
         'MLU370-X8': 'MLU370',
-        'MLU590-H8': 'MLU590',
-        'MLU590-M9': 'MLU590',
+        'MLU590': 'MLU590',
         'MLU270-X5K': 'MLU270_X5K',
         'MLU270-F4': 'MLU270_F4',
         'MLU290-M5': 'MLU290'

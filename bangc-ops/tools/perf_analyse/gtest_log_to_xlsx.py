@@ -49,14 +49,14 @@ Example:
 
 
 def check_mluop_proto():
-    # generate mluop_test_pb2.py
+    # generate mlu_op_test_pb2.py
     proto_dir = os.path.abspath(
-        os.path.realpath(__file__) + "/../../../test/mluop_gtest/mluoptest_proto")
+        os.path.realpath(__file__) + "/../../../test/mlu_op_gtest/pb_gtest/mlu_op_test_proto")
 
     cwd = os.path.abspath(os.path.realpath(__file__) + "/../")
     cmd_args = [
         "protoc", "--python_out", cwd, "--proto_path", proto_dir,
-        proto_dir + "/mluop_test.proto"
+        proto_dir + "/mlu_op_test.proto"
     ]
     try:
         # check returncode
@@ -67,7 +67,7 @@ def check_mluop_proto():
 
 
 if __name__ == "__main__":
-    # assure mluop_test_pb2.py exists
+    # assure mlu_op_test_pb2.py exists
     check_mluop_proto()
 
     # argument parse

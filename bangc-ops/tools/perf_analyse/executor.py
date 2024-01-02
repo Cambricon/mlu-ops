@@ -12,7 +12,7 @@ import tqdm
 import logging
 import hashlib
 
-import mluop_test_pb2
+import mlu_op_test_pb2
 from db_cache import DBCache
 from dirty_worker import DirtyWorker
 from parser import Parser
@@ -25,8 +25,8 @@ class Executor:
     def __init__(self, args):
         self.args_ = args
         self.db_ = None
-        if self.args_.use_db == 1:
-            self.db_ = DBCache()
+
+        # unused db_cache
 
     def run(self):
         try:

@@ -22,11 +22,11 @@ import collections
 proto_files = []
 
 def check_mluop_proto(parser):
-    # if mluop_test_pb2.py do not exist, generate it
-    if not os.path.exists("mluop_test_pb2.py"):
+    # if mlu_op_test_pb2.py do not exist, generate it
+    if not os.path.exists("mlu_op_test_pb2.py"):
         proto_dir = os.path.abspath(
             os.path.realpath(__file__) +
-            "/../../../test/mluop_gtest/mluoptest_proto")
+            "/../../../bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto")
         if not os.path.exists(proto_dir + "/mluop_test.proto"):
             print('{} do not exist, please check!'.format(proto_dir +
                                                           "/mluop_test.proto"))
@@ -55,7 +55,7 @@ def gci(path):
 
 
 def resolve_case(path):
-    node = mluop_test_pb2.Node()
+    node = mlu_op_test_pb2.Node()
     if path.endswith(".prototxt"):
         with open(path) as f:
             google.protobuf.text_format.Parse(f.read(), node)
@@ -82,12 +82,12 @@ def get_node_info(node):
             input_stride.append(
                 [str(i) for i in list(one_input.shape.dim_stride)])
             input_layout.append(
-                mluop_test_pb2.TensorLayout.Name(one_input.layout))
-            input_dtype.append(mluop_test_pb2.DataType.Name(one_input.dtype))
+                mlu_op_test_pb2.TensorLayout.Name(one_input.layout))
+            input_dtype.append(mlu_op_test_pb2.DataType.Name(one_input.dtype))
             # onchip_dtype and params should be carefully
             if one_input.HasField('onchip_dtype'):
                 onchip_dtype.append(
-                    mluop_test_pb2.DataType.Name(one_input.onchip_dtype))
+                    mlu_op_test_pb2.DataType.Name(one_input.onchip_dtype))
         result["inputs"] = ';'.join(
             [','.join(shape) for shape in inputs_shape])
         result["input_stride"] = ';'.join(
@@ -104,11 +104,11 @@ def get_node_info(node):
             output_stride.append(
                 [str(i) for i in list(one_output.shape.dim_stride)])
             output_layout.append(
-                mluop_test_pb2.TensorLayout.Name(one_output.layout))
-            output_dtype.append(mluop_test_pb2.DataType.Name(one_output.dtype))
+                mlu_op_test_pb2.TensorLayout.Name(one_output.layout))
+            output_dtype.append(mlu_op_test_pb2.DataType.Name(one_output.dtype))
             if one_output.HasField('onchip_dtype'):
                 onchip_dtype.append(
-                    mluop_test_pb2.DataType.Name(one_output.onchip_dtype))
+                    mlu_op_test_pb2.DataType.Name(one_output.onchip_dtype))
         result["outputs"] = ';'.join(
             [','.join(shape) for shape in outputs_shape])
         result["output_stride"] = ';'.join(
@@ -254,7 +254,7 @@ if __name__ == '__main__':
         required=False)
     opt, unknown = parser.parse_known_args()
     check_mluop_proto(parser)
-    import mluop_test_pb2
+    import mlu_op_test_pb2
     logpath = os.path.abspath(opt.case_path)
     proto_files = gci(logpath)
     if len(proto_files) == 0:

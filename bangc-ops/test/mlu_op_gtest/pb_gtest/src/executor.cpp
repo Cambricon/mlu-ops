@@ -111,29 +111,11 @@ void Executor::setup(std::string file,
                      const std::shared_ptr<ExecuteConfig> ecfg) {
   exe_config_ = ecfg;
 
-// #if GTEST_ENABLE_GPERFTOOLS
-//   if (exe_config_->gtest_internal_cpu_profile) {
-//     // TODO(None): make profile filename configurable
-//     std::string profile_name = "mluop_gtest_cpu_capture.prof";
-//     ProfilerStart(profile_name.c_str());
-//   }
-// #endif
-  // VLOG(5) << __FUNCTION__ << ", " << __LINE__;
+  eva_res_.mlu.kernel_tracing_enabled = true;
 
-  // kernel_tracing_ctx =
-  // kernelTracingCtx::instance(exe_config_->kernel_trace_policy.c_str());
-  // VLOG(7) << "kernel tracing policy: " << exe_config_->kernel_trace_policy;
-  // VLOG(5) << __FUNCTION__ << ", " << __LINE__;
-
-  // if (kernel_tracing_ctx) {
-  //   eva_res_.mlu.kernel_tracing_enabled = true;
-  // }
-  // VLOG(5) << __FUNCTION__ << ", " << __LINE__;
-
-  // if (getFlagHalfInfTo65504()) {
-  //   arrayCastFloatAndNormalWrapper = arrayCastFloatAndNormalInvalidInf;
-  // }
-  // VLOG(5) << __FUNCTION__ << ", " << __LINE__;
+  if (getFlagHalfInfTo65504()) {
+    arrayCastFloatAndNormalWrapper = arrayCastFloatAndNormalInvalidInf;
+  }
 
   jobLimitCheck();
 

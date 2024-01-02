@@ -137,9 +137,9 @@ class Processor:
 
         # add network_summary in database
         # TODO(network_summary): what aboud multi version
-        if df.loc[0, 'mlu_platform'] == 'MLU590-M9':
+        if df.loc[0, 'mlu_platform'] == 'MLU590':
             network_summary = pd.merge(network_summary,
-                                       self.db_.network_summary[self.db_.network_summary['mlu_platform']=='MLU590-M9U'].drop(columns=['mlu_platform']),
+                                       self.db_.network_summary[self.db_.network_summary['mlu_platform']=='MLU590'].drop(columns=['mlu_platform']),
                                        how='left',
                                        on=['network_id'],
                                        suffixes=["", "_database"])

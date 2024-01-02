@@ -2,22 +2,22 @@
 #coding:utf-8
 
 import google.protobuf.json_format as json_format
-import mluop_test_pb2
+import mlu_op_test_pb2
 
 # see http://gitlab.software.cambricon.com/neuware/software/test/
 # test_mluOp/-/blob/master/scripts/database/protobuf_case_parser.py
 class ProtobufCaseParserImplInputOutput:
 
-    def __init__(self, mluop_test_pb2):
-        self.mluop_test_pb2 = mluop_test_pb2
+    def __init__(self, mlu_op_test_pb2):
+        self.mlu_op_test_pb2 = mlu_op_test_pb2
         # emun map
         self.dtype_names = {
             k: v.lower().partition('dtype_')[-1]
-            for (v, k) in self.mluop_test_pb2.DataType.items()
+            for (v, k) in self.mlu_op_test_pb2.DataType.items()
         }
         self.layout_names = {
             k: v.partition('LAYOUT_')[-1]
-            for (v, k) in self.mluop_test_pb2.TensorLayout.items()
+            for (v, k) in self.mlu_op_test_pb2.TensorLayout.items()
         }
 
     def parse_param(self, node):

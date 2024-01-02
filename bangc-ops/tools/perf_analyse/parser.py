@@ -15,7 +15,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 
-import mluop_test_pb2
+import mlu_op_test_pb2
 from config import Config,PerfConfig
 from protobuf_case_parser_impl_inputoutput import ProtobufCaseParserImplInputOutput
 
@@ -246,7 +246,7 @@ class Parser:
         return result
 
     def resolve_case(path):
-        node = mluop_test_pb2.Node()
+        node = mlu_op_test_pb2.Node()
         if path.endswith(".prototxt"):
             with open(path) as f:
                 google.protobuf.text_format.Parse(f.read(), node)
@@ -257,7 +257,7 @@ class Parser:
         return Parser.get_node_info(node)
 
     def get_node_info(node):
-        pbParser = ProtobufCaseParserImplInputOutput(mluop_test_pb2)
+        pbParser = ProtobufCaseParserImplInputOutput(mlu_op_test_pb2)
         params = pbParser(node)
         # assure stability
         magic_str = json.dumps(params, sort_keys=True)

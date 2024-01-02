@@ -108,20 +108,14 @@ void TestSuite::Thread1() {
   std::shared_ptr<mluoptest::Executor> exe = nullptr;
   try {
     exe = getOpExecutor(op_name_);
-    VLOG(5) << __FUNCTION__ << ", " << __LINE__;
 
     // TODO(None): modify ctor, set op_name in ctor.
     exe->result()->op_name = op_name_;
     exe->init(ectx_);
-    VLOG(5) << __FUNCTION__ << ", " << __LINE__;
-
     exe->setup(case_path_vec_[case_idx], ecfg_);
-    VLOG(5) << __FUNCTION__ << ", " << __LINE__;
-
     exe->launch();
     auto res = exe->teardown();
     res_.emplace_back(res);
-    VLOG(5) << __FUNCTION__ << ", " << __LINE__;
 
     if (global_var.get_vmpeak_ != "") {
       std::ofstream get_vmpeak_oss;
