@@ -2,6 +2,9 @@ FROM ubuntu:20.04
 
 LABEL org.opencontainers.image.authors="www.cambricon.com"
 
+# NOTE: the following parameters is required when you run a docker container to use the MLU device
+#       --device /dev/cambricon_ctl  --device /dev/cambricon_dev0
+
 ENV NEUWARE_HOME="/usr/local/neuware/"
 
 WORKDIR /tmp
@@ -22,7 +25,7 @@ ADD https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cntoolkit_${CN
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y /tmp/cntoolkit_${CNTOOLKIT_VERSION}.ubuntu20.04_amd64.deb && \
     apt-get update && \
-    apt-get install --no-install-recommends -y cncc cnas cnbin cnrt cndrv cndev cnrtc cngdb cnperf && \
+    apt-get install -y cncc cnas cnbin cnrt cndrv cndev cnrtc cngdb cnperf && \
     echo "/usr/local/neuware/lib64" > /etc/ld.so.conf.d/neuware.conf && ldconfig && \
     rm -rf /tmp/*.deb && apt-get autoclean && apt-get clean && rm -rf /var/lib/apt/lists/*
 
