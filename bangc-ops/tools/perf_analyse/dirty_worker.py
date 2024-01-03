@@ -43,19 +43,15 @@ class DirtyWorker:
             elif "mluOpbenchmak-290" in network_name:
                 platforms = "MLU290"
             elif "mluOpbenchmak-all-cloud" in network_name:
-                platforms = "MLU290 MLU370 MLU365-D2 MLU590"
+                platforms = "MLU290 MLU370 MLU590"
             elif "tf32" in network_name:
                 platforms = "MLU590"
-            elif "sd5223" in network_name or "ce3225" in network_name or "1v" in network_name.lower():
-                platforms = "SD5223"
             else:
-                platforms = "MLU370 MLU365-D2 MLU590"
-            if "mm" in framework_name and "caffe" in additional:
-                platforms += "CE3226"
+                platforms = "MLU370 MLU590"
 
         except Exception as e:
             print(e)
-            platforms = "MLU370-S4 MLU370-X4 MLU370-X8 MLU365-D2"
+            platforms = "MLU370-S4 MLU370-X4 MLU370-X8"
 
         return platforms
 
@@ -139,7 +135,7 @@ class DirtyWorker:
                         data=mluop_network_list_dict['up_to_date']
                         [network_index])
                     platforms = set([
-                        i.split("-")[0] if i != 'MLU365-D2' else i
+                        i.split("-")[0]
                         for i in DirtyWorker.get_platforms_for_name(
                             network, network_info[0], additional).split(" ")
                     ])

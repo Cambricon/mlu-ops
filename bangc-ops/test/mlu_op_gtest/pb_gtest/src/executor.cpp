@@ -944,7 +944,7 @@ int Executor::getIpuFrequency() {
               cnDeviceGetAttribute(&ipu_frequency,
                                     CN_DEVICE_ATTRIBUTE_CLUSTER_CLOCK_RATE,
                                     ordinal));
-  VLOG(4) << "IPU Frequency = " << (double)ipu_frequency / 1000 / 1000
+  VLOG(4) << "MLU Core Frequency = " << (double)ipu_frequency / 1000 / 1000
           << " GHz";
   return ipu_frequency;
 }

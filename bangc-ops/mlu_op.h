@@ -17118,7 +17118,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * - The supported offchip data types of the input tensor and output tensor are as follows:
  *   - input, offset, mask, filter, grad_output, grad_input, grad_offset, grad_mask: half, float.
  * - This function supports any combinations of the following onchip data types for input tensor
- *   \p grad_output and \p filter on MLU200 series and CE3226.
+ *   \p grad_output and \p filter on MLU200 series.
  *   - \p grad_output onchip data type: int16, int31.
  *   - \p filter onchip data type: int16, int31.
  * - \p grad_output offchip data type can be combined with any supported onchip data types.

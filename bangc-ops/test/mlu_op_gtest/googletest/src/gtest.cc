@@ -5497,11 +5497,11 @@ static const char kColorEncodedHelpMessage[] =
     "      performance differences caused by the address.\n"
     "  @G--"
     "monitor_mlu_hardware@D\n"
-    "      [Cambricon] Enable monitoring mlu hardware, e.g. IPU frequency, instantaneous power, "
+    "      [Cambricon] Enable monitoring mlu hardware, e.g. instantaneous power, "
     "      average power, etc., as well as kernel execution time\n"
     "  @G--"
     "enable_const_dram@D\n"
-    "      [Cambricon] If true, ensure the read-only tensor space won't be written by IPU or MPU.\n"
+    "      [Cambricon] If true, ensure the read-only tensor space won't be written by MPU.\n"
     "\n"
     "Test Output:\n"
     "  @G--" GTEST_FLAG_PREFIX_
