@@ -385,7 +385,7 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
    const float scale = 1.0;
    mluopStatus_t mluopExecFFT(handle, fft_plan, input, scale, workspace, output, 0);
    cnrtFree(workspace);
-   ```
+   ```pull/902/files#diff-7274399dd2d36c9d582d793971e1ecb6a43564088f8c10c16d32d6297520bd5b
 
 5. 算子运行完以后释放plan，释放reservespace。
 
@@ -422,7 +422,7 @@ https://docs.nvidia.com/cuda/cufft/index.html
 ```math
 \text{DFT}_n=(\text{DFT}_k \otimes I_m) T_m^n(I_k \otimes \text{DFT}_m) L_k^n,n=km,\tag{1}
 ```
-其中$`\otimes`$表示为克罗内克乘积，$`(\text{DFT}_k \otimes I_m)`$为向量并行矩阵；$`T_m^n`$为旋转因子，为对角矩阵；$`(I_k \otimes \text{DFT}_m)`$为块内并行矩阵；$`L_k^n`$形式为$`L_m^{mn}:={in+j \rightarrow jm+i, 0\le i<m, 0 \le j < n}`$ 的置换矩阵。下面展示了 $`k=4,m=2`$下的矩阵：
+其中$`\otimes`$表示为克罗内克乘积，$`(\text{DFT}_k \otimes I_m)`$为向量并行矩阵；$`T_m^n`$为旋转因子，为对角矩阵；$`(I_k \otimes \text{DFT}_m)`$为块内并行矩阵；$`L_k^n`$形式为$`L_m^{mn}:={in+j \rightarrow jm+i, 0\le i&lt;m, 0 \le j < n}`$ 的置换矩阵。下面展示了 $`k=4,m=2`$下的矩阵：
 ```math
 I_4 \otimes \text{DFT}_2=\left[
 \begin{array}{cccccccc}
@@ -480,7 +480,7 @@ $R_r^{r^l}$为bit-reverse矩阵，即按位逆序置换矩阵。下面给出长�
 ```
 其中旋转因子矩阵为
 ```math
-\text{DiagMatrix}[W_{r^{j+2}}^{(\alpha r^j +\xi) \beta}, 0 \le \alpha, \beta <r, 0 \le \gamma < r^{l-j-2}, 0 \le \xi < r^j]\tag{6}
+\text{DiagMatrix}\left[ W_{r^{j+2}}^{(\alpha r^j +\xi) \beta}, 0 \leq \alpha, \beta < r, 0 \leq \gamma < r^{l-j-2}, 0 \leq \xi < r^j \right] \tag{6}
 ```
 
 
