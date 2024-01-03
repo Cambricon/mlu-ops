@@ -54,7 +54,10 @@ void BorderAlignBackwardExecutor::compute() {
       argmax_idx_desc, argmax_idx_dev, pool_size, grad_input_desc,
       grad_input_dev));
   interface_timer_.stop();
-  data_vector_[3].is_output = true;
+}
+
+void BorderAlignBackwardExecutor::setMiscellaneousParam() {
+  data_vector_[3].alsoServeAsOutput();
 }
 
 void bilinear_interpolate_gradient(

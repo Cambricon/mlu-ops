@@ -20,20 +20,20 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <wctype.h>
+
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <sstream>
+
 #include "gtest/internal/custom/gtest.h"
 #include "gtest/gtest-spi.h"
-
-#include <ctype.h>   // NOLINT
-#include <math.h>    // NOLINT
-#include <stdarg.h>  // NOLINT
-#include <stdlib.h>  // NOLINT
-#include <wchar.h>   // NOLINT
-#include <wctype.h>  // NOLINT
-
-#include <algorithm> // NOLINT
-#include <iomanip>   // NOLINT
-#include <sstream>   // NOLINT
-#include <string>    // NOLINT
 
 #if GTEST_OS_LINUX
 
@@ -49,6 +49,7 @@
 #include <sys/mman.h>  // NOLINT
 #include <sys/time.h>  // NOLINT
 #include <unistd.h>    // NOLINT
+#include <string>
 
 #elif GTEST_OS_SYMBIAN
 #define GTEST_HAS_GETTIMEOFDAY_ 1
@@ -122,6 +123,7 @@
 
 #include "mlu_op_test_result_printer.h"
 #include "gtest/internal/gtest-filepath.h"
+
 static const char kUniversalFilter[] = "*";
 static const char *GetDefaultFilter() {
 #ifdef GTEST_TEST_FILTER_ENV_VAR_
@@ -446,6 +448,23 @@ void xmlPrinter::PrintXmlTestCase(std::ostream *stream,
   *stream << TestPropertiesAsXmlAttributes(test_case.ad_hoc_test_result())
           << ">\n";
 
+  // provide bug information for AuotoJira to create Jira Issues
+  // if (test_case.failed_test_count()) {
+  *stream << "    <properties>\n";
+  *stream << "      <property name=\"project\" value=\"MLUOPCORE\" />\n";
+  *stream << "      <property name=\"component\" value=\"mluOp\" />\n";
+  *stream << "      <property name=\"bug_level\" value=\"一般\" />\n";
+  *stream << "      <property name=\"bug_label\" value=\"master\" />\n";
+  *stream
+      << "      <property name=\"product_component\" value=\"MLUOP-Core\" />\n";
+  *stream << "      <property name=\"bug_source\" value=\"集成测试\" />\n";
+  *stream << "      <property name=\"bug_category\" value=\"功能\" />\n";
+  *stream << "      <property name=\"bug_frequency\" value=\"必现\" />\n";
+  *stream << "      <property name=\"bug_boardform\" value=\" \" />\n";
+  *stream << "      <property name=\"bug_scenarios\" value=\"通用\" />\n";
+  *stream << "    </properties>\n";
+  //}
+
   for (int i = 0; i < test_case.total_test_count(); ++i) {
     if (test_case.GetTestInfo(i)->is_reportable())
       OutputXmlTestInfo(stream, test_case.name(), *test_case.GetTestInfo(i));
@@ -515,7 +534,7 @@ void xmlPrinter::OutputXmlTestProperties(std::ostream *stream,
     *stream << "<" << kProperty;
     *stream << " name=\"" << EscapeXmlAttribute(property.key()) << "\"";
     *stream << " value=\"" << EscapeXmlAttribute(property.value()) << "\"";
-    *stream << "/>\n";
+    *stream << " />\n";
   }
   *stream << "</" << kProperties << ">\n";
 }

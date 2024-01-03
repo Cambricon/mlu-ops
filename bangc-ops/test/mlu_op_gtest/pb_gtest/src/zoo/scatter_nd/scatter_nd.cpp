@@ -76,7 +76,6 @@ void ScatterNdExecutor::compute() {
     MLUOP_CHECK(mluOpScatterNd(handle_, desc_indices, indices, desc_updates,
                                updates, desc_output, output));
     interface_timer_.stop();
-    data_vector_[2].is_output = true;
   } else {
     auto desc_input = tensor_desc_[2].tensor;
     auto desc_output = tensor_desc_[3].tensor;
@@ -88,7 +87,14 @@ void ScatterNdExecutor::compute() {
                                   desc_updates, updates, desc_input, input,
                                   desc_output, output));
     interface_timer_.stop();
-    data_vector_[3].is_output = true;
+  }
+}
+
+void ScatterNdExecutor::setMiscellaneousParam() {
+  if (m_version == 1) {
+    data_vector_[2].alsoServeAsOutput();
+  } else {
+    data_vector_[3].alsoServeAsOutput();
   }
 }
 

@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_PARSER_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_PARSER_H_
 
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -41,7 +41,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "evaluator.h"
-#include "pb_test_tools.h"
+#include "tools.h"
 
 namespace mluoptest {
 
@@ -62,6 +62,8 @@ enum ValueType {
 struct MetaTensor {
   std::string name = "unknown";
   bool is_null = false;  // null means desc and ptr both null;
+  bool is_cpu_scalar = false;
+  mluOpPointerMode_t pointer_mode = MLUOP_POINTER_MODE_DEVICE;
 
   // these size are for memory malloc
   size_t shape_count = 0;  // not include stride.
@@ -91,14 +93,16 @@ struct MetaTensor {
   inline bool empty() { return shape_count == 0 || total_count == 0; }
   inline bool null() { return is_null; }
 
-  // TODO(wangjianxin): remove these pointer
+  // TODO(None): remove these pointer
   // it's a not good idea to put *ptr and layout.. together.
   mluOpTensorDescriptor_t tensor = nullptr;
   // bool is_output       = false;
   void *host_ptr = nullptr;
   void *dev_ptr = nullptr;
-  void *dev_origin_ptr = nullptr;  // for origin device data
-  void *dev_perf_ptr = nullptr;    // for perf test data
+  void *dev_origin_ptr = nullptr;     // for origin device data
+  void *dev_perf_ptr = nullptr;       // actual space fed to MLU kernel
+  void *dev_perf_data_ptr = nullptr;  // for storing perf test data only
+
   float *cpu_ptr = nullptr;
   void print() {
     std::cout << "-=-=-=-=-=--=-=-=\n";
@@ -140,6 +144,7 @@ class Parser {
   // op params
   inline Node *node() { return proto_node_; }
   inline std::string getOpName() { return proto_node_->op_name(); }
+  size_t getProtoApiVersion();
   void getTestInfo();
 
   // else
@@ -156,7 +161,7 @@ class Parser {
     return list_rely_real_data_;
   }
 
-  // TODO(wangjianxin): remove the following api
+  // TODO(None): remove the following api
   MetaTensor &getMetaTensor(const std::string &name);
   MetaTensor &getMetaTensor(int index);
   inline int getInputNum() { return inputs_.size(); }
@@ -301,8 +306,13 @@ class Parser {
   size_t getTensorSize(Tensor *pt);
   void setCurPbPath(const std::string &file);
   void isSupportTF32(Node *protoNode);
+  inline std::string getApiName() {
+    if (proto_node_->has_api_name()) {
+      return proto_node_->api_name();
+    }
+    return "";
+  }
 };
 
 }  // namespace mluoptest
-
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_PARSER_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_PARSER_H_

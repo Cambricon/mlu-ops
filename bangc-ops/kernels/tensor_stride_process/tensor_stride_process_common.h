@@ -22,11 +22,13 @@
  *************************************************************************/
 #ifndef KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_COMMON_H_
 #define KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_COMMON_H_
+
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
 
 #include "mlu.h"
+
 // b is always pow(2, n), no need to worry about int2float precision loss
-#define OFFSET_SHIFT(a, b) (((int)a) << ((int)log2f(b)))
+#define OFFSET_SHIFT(a, b) (((uint64_t)a) << ((uint64_t)log2f(b)))
 
 // sync load & store
 #define TENSOR_STRIDE_LOAD(T, dst_nram, src_gdram, src_offset, data_num,       \
@@ -95,7 +97,8 @@
 // There are some public mlu functions for load or store tensor that with
 // strides parameters.
 /******************************************************************************
- * Function API: int getTrueOffset(int offset, TensorShape &tensor_shape);
+ * Function API: uint64_t getTrueOffset(uint64_t offset, mluop::TensorShape
+ *&tensor_shape);
  *
  * This function will return the true address offset of the tensor that with
  *special stride parameters.
@@ -106,10 +109,10 @@
  *
  * Function API: void tensorStrideLoad(T *dst_nram,
  *                                     const T *src_gdram,
- *                                     int src_offset,
- *                                     int data_num,
+ *                                     uint64_t src_offset,
+ *                                     uint64_t data_num,
  *                                     int dtype_size,
- *                                     TensorShape tensor_shape);
+ *                                     mluop::TensorShape tensor_shape);
  *
  * This function can load data from gdram to nram instead of __memcpy(...,
  *GDRAM2NRAM) when the tensor has special stride parameters.
@@ -127,10 +130,10 @@
  * ----------------------------------------------------------------------------
  * Function API: void tensorStrideLoadSram(T *dst_sram,
  *                                         const T *src_gdram,
- *                                         int src_offset,
- *                                         int data_num,
+ *                                         uint64_t src_offset,
+ *                                         uint64_t data_num,
  *                                         int dtype_size,
- *                                         TensorShape tensor_shape);
+ *                                         mluop::TensorShape tensor_shape);
  *
  * This function is as the same with tensorStrideLoad except that the dst is
  *SRAM. It can load data from gdram to sram instead of __memcpy(..., GDRAM2SRAM)
@@ -139,13 +142,13 @@
  * ----------------------------------------------------------------------------
  * Function API: void tensorStrideLoad(T *dst_nram,
  *                                     const T *src_gdram,
- *                                     int src_offset,
- *                                     int data_num,
+ *                                     uint64_t src_offset,
+ *                                     uint64_t data_num,
  *                                     int dtype_size,
- *                                     int dst_stride,
- *                                     int src_stride,
- *                                     int count,
- *                                     TensorShape tensor_shape);
+ *                                     int64_t dst_stride,
+ *                                     int64_t src_stride,
+ *                                     uint64_t count,
+ *                                     mluop::TensorShape tensor_shape);
  *
  * This function can load data from gdram to nram with strideIO instead of
  * __memcpy(..., GDRAM2NRAM, ...) when the tensor has special stride parameters.
@@ -165,24 +168,24 @@
  * ----------------------------------------------------------------------------
  * Function API: void tensorStrideLoadSram(T *dst_sram,
  *                                         const T *src_gdram,
- *                                         int src_offset,
- *                                         int data_num,
+ *                                         uint64_t src_offset,
+ *                                         uint64_t data_num,
  *                                         int dtype_size,
- *                                         int dst_stride,
- *                                         int src_stride,
- *                                         int count,
- *                                         TensorShape tensor_shape);
+ *                                         int64_t dst_stride,
+ *                                         int64_t src_stride,
+ *                                         uint64_t count,
+ *                                         mluop::TensorShape tensor_shape);
  *
  * This function is as the same with tensorStrideLoad except that the dst is
  *SRAM. It can load data from gdram to sram with strideIO instead of
  * __memcpy(..., GDRAM2SRAM, ...) when the tensor has special stride parameters.
  *
  * Function API: void tensorStrideStore(T *dst_gdram,
- *                                      int dst_offset,
+ *                                      uint64_t dst_offset,
  *                                      const T *src_nram,
- *                                      int data_num,
+ *                                      uint64_t data_num,
  *                                      int dtype_size,
- *                                      TensorShape &tensor_shape) {
+ *                                      mluop::TensorShape &tensor_shape) {
  *
  * This function can store data from nram to gdram instead of __memcpy(...,
  *NRAM2GDRAM) when the tensor has special stride parameters.
@@ -199,25 +202,25 @@
  *
  * ----------------------------------------------------------------------------
  * Function API: void tensorStrideStoreSram(T *dst_gdram,
- *                                          int dst_offset,
+ *                                          uint64_t dst_offset,
  *                                          const T *src_sram,
- *                                          int data_num,
+ *                                          uint64_t data_num,
  *                                          int dtype_size,
- *                                          TensorShape &tensor_shape) {
+ *                                          mluop::TensorShape &tensor_shape) {
  *
  * This function can store data from sram to gdram instead of __memcpy(...,
  *SRAM2GDRAM) when the tensor has special stride parameters.
  *
  * ----------------------------------------------------------------------------
  * Function API: void tensorStrideStore(T *dst_gdram,
- *                                      int dst_offset,
+ *                                      uint64_t dst_offset,
  *                                      const T *src_nram,
- *                                      int data_num,
+ *                                      uint64_t data_num,
  *                                      int dtype_size,
- *                                      int dst_stride,
- *                                      int src_stride,
- *                                      int count,
- *                                      TensorShape &tensor_shape) {
+ *                                      int64_t dst_stride,
+ *                                      int64_t src_stride,
+ *                                      uint64_t count,
+ *                                      mluop::TensorShape &tensor_shape) {
  *
  * This function can store data from nram to gdram with strideIO instead of
  * __memcpy(..., NRAM2GDRAM, ...) when the tensor has special stride parameters.
@@ -236,19 +239,23 @@
  *
  * ----------------------------------------------------------------------------
  * Function API: void tensorStrideStoreSram(T *dst_gdram,
- *                                          int dst_offset,
+ *                                          uint64_t dst_offset,
  *                                          const T *src_sram,
- *                                          int data_num,
+ *                                          uint64_t data_num,
  *                                          int dtype_size,
- *                                          int dst_stride,
- *                                          int src_stride,
- *                                          int count,
- *                                          TensorShape &tensor_shape) {
+ *                                          int64_t dst_stride,
+ *                                          int64_t src_stride,
+ *                                          uint64_t count,
+ *                                          mluop::TensorShape &tensor_shape) {
  *
  * This function can store data from sram to gdram with strideIO instead of
  * __memcpy(..., SRAM2GDRAM, ...) when the tensor has special stride parameters.
  ******************************************************************************/
-__mlu_func__ bool isUse64BitDiv(int offset, int *tensor_dims, int total_num) {
+template <class T>
+using make_signed_t = typename std::make_signed<T>::type;
+
+__mlu_func__ bool isUse64BitDiv(uint64_t offset, uint64_t total_num,
+                                int64_t *tensor_dims) {
   if (offset > UINT32_MAX || total_num > UINT32_MAX) {
     return true;
   }
@@ -261,44 +268,56 @@ __mlu_func__ bool isUse64BitDiv(int offset, int *tensor_dims, int total_num) {
   return false;
 }
 
-template <typename U>
-__mlu_func__ int getTrueOffsetInternel(U offset, TensorShape &tensor_shape) {
+__mlu_func__ bool isUse64Bit(uint64_t offset, uint64_t total_num,
+                             uint64_t total_stride) {
+  if (offset > UINT32_MAX || total_num > UINT32_MAX ||
+      total_stride > UINT32_MAX) {
+    return true;
+  }
+  return false;
+}
+
+template <typename U, typename U_M>
+__mlu_func__ uint64_t getTrueOffsetInternel(U offset,
+                                            mluop::TensorShape &tensor_shape) {
   if (tensor_shape.is_contiguous) {
     return offset;
   }
   U offset_temp = offset;
-  int true_offset = 0;
+  uint64_t true_offset = 0;
   U total_num = tensor_shape.total_num;
   U temp = 0;
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
     total_num = total_num / (U)tensor_shape.tensor_dims[i];
     temp = offset_temp / total_num;
-    true_offset += temp * tensor_shape.tensor_strides[i];
+    true_offset += temp * (U_M)tensor_shape.tensor_strides[i];  // FIXME:(here)
     offset_temp -= temp * total_num;
   }
   return true_offset;
 }
 
-__mlu_func__ int getTrueOffset(int offset, TensorShape &tensor_shape) {
+__mlu_func__ uint64_t getTrueOffset(uint64_t offset,
+                                    mluop::TensorShape &tensor_shape) {
   // write this because of the bad performance of 64-bit div
-  if (isUse64BitDiv(offset, tensor_shape.tensor_dims, tensor_shape.total_num)) {
-    return getTrueOffsetInternel<int>(offset, tensor_shape);
+  if (isUse64BitDiv(offset, tensor_shape.total_num, tensor_shape.tensor_dims)) {
+    return getTrueOffsetInternel<uint64_t, int64_t>(offset, tensor_shape);
   } else {
-    return getTrueOffsetInternel<uint32_t>(offset, tensor_shape);
+    return getTrueOffsetInternel<uint32_t, int64_t>(offset, tensor_shape);
   }
 }
 
-template <typename U>
+template <typename U, typename SU>
 __mlu_func__ void getLineOffsetIndexArrayInternel(
-    const U origin_offset, const int length, int *offset_start, int *offset_end,
-    int *offset_flag, int *tensor_dims, U origin_total_num) {
+    const SU origin_offset, const SU length, U *offset_start, U *offset_end,
+    int *offset_flag, make_signed_t<U> *tensor_dims,
+    uint64_t origin_total_num) {
   // use template because of the bad performance of 64-bit div
-  U offset_temp = origin_offset;
-  U total_num = origin_total_num;
-  int temp = 0;
+  SU offset_temp = origin_offset;
+  SU total_num = origin_total_num;
+  SU temp = 0;
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
     offset_flag[i] = 0;
-    total_num = total_num / (U)tensor_dims[i];
+    total_num = total_num / (SU)tensor_dims[i];
     temp = offset_temp / total_num;
     offset_start[i] = temp;
     offset_temp -= temp * total_num;
@@ -308,34 +327,33 @@ __mlu_func__ void getLineOffsetIndexArrayInternel(
   total_num = origin_total_num;
   temp = 0;
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
-    total_num = total_num / (U)tensor_dims[i];
+    total_num = total_num / (SU)tensor_dims[i];
     temp = offset_temp / total_num;
     offset_end[i] = temp;
     offset_temp -= temp * total_num;
   }
 }
 
-__mlu_func__ void getLineOffsetIndexArray(const int origin_offset,
-                                          const int length, int *offset_start,
-                                          int *offset_end, int *offset_flag,
-                                          int *tensor_dims,
-                                          int origin_total_num) {
+__mlu_func__ void getLineOffsetIndexArray(
+    const uint64_t origin_offset, const uint64_t length, uint64_t *offset_start,
+    uint64_t *offset_end, int *offset_flag, int64_t *tensor_dims,
+    uint64_t origin_total_num) {
   // write this because of the bad performance of 64-bit div
-  if (isUse64BitDiv(origin_offset, tensor_dims, origin_total_num)) {
-    getLineOffsetIndexArrayInternel<int>(origin_offset, length, offset_start,
-                                         offset_end, offset_flag, tensor_dims,
-                                         origin_total_num);
+  if (isUse64BitDiv(origin_offset, origin_total_num, tensor_dims)) {
+    getLineOffsetIndexArrayInternel<uint64_t, uint64_t>(
+        origin_offset, length, offset_start, offset_end, offset_flag,
+        tensor_dims, origin_total_num);
 
   } else {
-    getLineOffsetIndexArrayInternel<uint32_t>(
+    getLineOffsetIndexArrayInternel<uint64_t, uint32_t>(
         origin_offset, length, offset_start, offset_end, offset_flag,
         tensor_dims, origin_total_num);
   }
 }
 
-__mlu_func__ void updateOffsetFlag(int dim, int *index, int *offset_start,
-                                   int *offset_end, int *offset_flag,
-                                   int *tensor_dims) {
+template <typename U>
+__mlu_func__ void updateOffsetFlag(int dim, U *index, U *offset_start,
+                                   U *offset_end, int *offset_flag) {
   if (offset_flag[dim] == 0) {
     index[dim] = offset_start[dim];
     offset_flag[dim] = 1;
@@ -347,26 +365,27 @@ __mlu_func__ void updateOffsetFlag(int dim, int *index, int *offset_start,
   }
 }
 
-template <typename T>
+template <typename T, typename U>
 __mlu_func__ void strideLoad(int8_t *dst, const int8_t *src,
-                             int num,  // tensor_shape.tensor_dims
-                             int dtype_size, int dst_stride, int src_stride,
-                             int seg_num) {  // tensor_shape.tensor_dims
+                             U num,  // tensor_shape.tensor_dims
+                             uint32_t dtype_size, make_signed_t<U> dst_stride,
+                             make_signed_t<U> src_stride,
+                             U seg_num) {  // tensor_shape.tensor_dims
   if (dst_stride == num && src_stride == num) {
     __memcpy(dst, src, seg_num * num * dtype_size, GDRAM2NRAM);
     return;
   }
   // The range if <count> in __memcpy is [0, 65535].
-  int count_max = 65536;
+  uint32_t count_max = 65536;
   if (seg_num > count_max) {
-    int repeat_time = seg_num >> 16;
-    // __memcpy dtype of segment is int32_t (except G2G, which is int)
-    int rem = seg_num % count_max;
-    for (int i = 0; i < repeat_time; ++i) {
+    make_signed_t<U> repeat_time = seg_num >> 16;
+    // __memcpy dtype of segment is int32_t (except G2G, which is int64_t)
+    uint32_t rem = seg_num % count_max;
+    for (make_signed_t<U> i = 0; i < repeat_time; ++i) {
       __memcpy(dst + i * count_max * dst_stride * dtype_size,
-               src + OFFSET_SHIFT(i * count_max * src_stride, sizeof(T)),
-               num * dtype_size, GDRAM2NRAM, dst_stride * dtype_size,
-               src_stride * dtype_size, count_max - 1);
+               src + i * count_max * src_stride * sizeof(T), num * dtype_size,
+               GDRAM2NRAM, dst_stride * dtype_size, src_stride * dtype_size,
+               count_max - 1);
     }
     if (rem) {
       __memcpy(
@@ -381,22 +400,23 @@ __mlu_func__ void strideLoad(int8_t *dst, const int8_t *src,
   }
 }
 
-template <typename T>
-__mlu_func__ void strideLoadSram(int8_t *dst, const int8_t *src, int num,
-                                 int dtype_size, int dst_stride, int src_stride,
-                                 int seg_num) {
-#if MAX_SRAM_SIZE > 0  // TODO(sram): tp_520
+template <typename T, typename U>
+__mlu_func__ void strideLoadSram(int8_t *dst, const int8_t *src, U num,
+                                 uint32_t dtype_size,
+                                 make_signed_t<U> dst_stride,
+                                 make_signed_t<U> src_stride, U seg_num) {
+#if MAX_SRAM_SIZE > 0
   if (dst_stride == num && src_stride == num) {
     __memcpy(dst, src, seg_num * num * dtype_size, GDRAM2SRAM);
     return;
   }
   // The range if <count> in __memcpy is [0, 65535].
-  int count_max = 65536;
+  uint32_t count_max = 65536;
   if (seg_num > count_max) {
-    int repeat_time = seg_num >> 16;
-    // __memcpy dtype of segment is int32_t (except G2G, which is int)
-    int rem = seg_num % count_max;
-    for (int i = 0; i < repeat_time; ++i) {
+    make_signed_t<U> repeat_time = seg_num >> 16;
+    // __memcpy dtype of segment is int32_t (except G2G, which is int64_t)
+    uint32_t rem = seg_num % count_max;
+    for (make_signed_t<U> i = 0; i < repeat_time; ++i) {
       __memcpy(dst + i * count_max * dst_stride * dtype_size,
                src + OFFSET_SHIFT(i * count_max * src_stride, sizeof(T)),
                num * dtype_size, GDRAM2SRAM, dst_stride * dtype_size,
@@ -416,11 +436,12 @@ __mlu_func__ void strideLoadSram(int8_t *dst, const int8_t *src, int num,
 #endif
 }
 
-template <typename T>
-__mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
-                                     int src_offset, int data_num,
-                                     int dtype_size,
-                                     TensorShape &tensor_shape) {
+template <typename T, typename U>
+__mlu_device__ void tensorStrideLoadTemplate(void *dst_nram,
+                                             const void *src_gdram,
+                                             U src_offset, U data_num,
+                                             uint32_t dtype_size,
+                                             mluop::TensorShape &tensor_shape) {
   if (data_num == 0) {
     return;
   }
@@ -431,69 +452,65 @@ __mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
     return;
   }
   if (data_num == 1) {
-    __memcpy(
-        (int8_t *)dst_nram,
-        (const int8_t *)src_gdram +
-            OFFSET_SHIFT(getTrueOffset(src_offset, tensor_shape), sizeof(T)),
-        dtype_size, GDRAM2NRAM);
+    __memcpy((int8_t *)dst_nram,
+             (const int8_t *)src_gdram +
+                 OFFSET_SHIFT((getTrueOffsetInternel<U, make_signed_t<U>>(
+                                  src_offset, tensor_shape)),
+                              sizeof(T)),
+             dtype_size, GDRAM2NRAM);
     return;
   }
-  int offset_0 = 0;
-  int offset_1 = 0;
-  int offset_2 = 0;
-  int offset_3 = 0;
-  int offset_4 = 0;
-  int offset_5 = 0;
-  int offset_6 = 0;
-  int count = 0;
-  int index[MLUOP_DIM_MAX];
-  int offset_start[MLUOP_DIM_MAX];
-  int offset_end[MLUOP_DIM_MAX];
+  U offset_0 = 0;
+  U offset_1 = 0;
+  U offset_2 = 0;
+  U offset_3 = 0;
+  U offset_4 = 0;
+  U offset_5 = 0;
+  U offset_6 = 0;
+  U count = 0;
+  U index[MLUOP_DIM_MAX];
+  U offset_start[MLUOP_DIM_MAX];
+  U offset_end[MLUOP_DIM_MAX];
   int offset_flag[MLUOP_DIM_MAX];
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_dims[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_strides[MLUOP_DIM_MAX];
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
     tensor_dims[i] = tensor_shape.tensor_dims[i];
     tensor_strides[i] = tensor_shape.tensor_strides[i];
   }
-  getLineOffsetIndexArray(src_offset, data_num, offset_start, offset_end,
-                          offset_flag, tensor_dims, tensor_shape.total_num);
+  getLineOffsetIndexArrayInternel(src_offset, data_num, offset_start,
+                                  offset_end, offset_flag, tensor_dims,
+                                  tensor_shape.total_num);
   for (index[0] = 0; index[0] < offset_end[0] + 1; ++index[0]) {
-    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag,
-                     tensor_dims);
+    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag);
     offset_flag[0] = 2;
     offset_0 = index[0] * tensor_strides[0];
     for (index[1] = 0; index[1] < tensor_dims[1]; ++index[1]) {
-      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag,
-                       tensor_dims);
+      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag);
       if (offset_flag[1] == 2 && index[1] > offset_end[1]) {
         break;
       }
       offset_1 = offset_0 + index[1] * tensor_strides[1];
       for (index[2] = 0; index[2] < tensor_dims[2]; ++index[2]) {
-        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag,
-                         tensor_dims);
+        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag);
         if (offset_flag[2] == 2 && index[2] > offset_end[2]) {
           break;
         }
         offset_2 = offset_1 + index[2] * tensor_strides[2];
         for (index[3] = 0; index[3] < tensor_dims[3]; ++index[3]) {
-          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag,
-                           tensor_dims);
+          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag);
           if (offset_flag[3] == 2 && index[3] > offset_end[3]) {
             break;
           }
           offset_3 = offset_2 + index[3] * tensor_strides[3];
           for (index[4] = 0; index[4] < tensor_dims[4]; ++index[4]) {
-            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag,
-                             tensor_dims);
+            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag);
             if (offset_flag[4] == 2 && index[4] > offset_end[4]) {
               break;
             }
             offset_4 = offset_3 + index[4] * tensor_strides[4];
             for (index[5] = 0; index[5] < tensor_dims[5]; ++index[5]) {
-              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag,
-                               tensor_dims);
+              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag);
               if (offset_flag[5] == 2 && index[5] > offset_end[5]) {
                 break;
               }
@@ -501,16 +518,16 @@ __mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
               if (tensor_strides[7] == 1 && offset_start[6] == 0 &&
                   offset_end[6] == tensor_dims[6] && offset_start[7] == 0 &&
                   offset_end[7] == tensor_dims[7]) {
-                strideLoad<T>((int8_t *)dst_nram + count * dtype_size,
-                              (const int8_t *)src_gdram +
-                                  OFFSET_SHIFT(offset_5, sizeof(T)),
-                              tensor_dims[7], dtype_size, tensor_dims[7],
-                              tensor_strides[6], tensor_dims[6]);
+                strideLoad<T, U>((int8_t *)dst_nram + count * dtype_size,
+                                 (const int8_t *)src_gdram +
+                                     OFFSET_SHIFT(offset_5, sizeof(T)),
+                                 tensor_dims[7], dtype_size, tensor_dims[7],
+                                 tensor_strides[6], tensor_dims[6]);
                 count += tensor_dims[6] * tensor_dims[7];
               } else {
                 for (index[6] = 0; index[6] < tensor_dims[6]; ++index[6]) {
                   updateOffsetFlag(6, index, offset_start, offset_end,
-                                   offset_flag, tensor_dims);
+                                   offset_flag);
                   if (offset_flag[6] == 2 && index[6] > offset_end[6]) {
                     break;
                   }
@@ -518,35 +535,35 @@ __mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
                   if (offset_flag[7] == 0) {
                     offset_6 += offset_start[7] * tensor_strides[7];
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideLoad<T>((int8_t *)dst_nram + count * dtype_size,
-                                    (const int8_t *)src_gdram +
-                                        OFFSET_SHIFT(offset_6, sizeof(T)),
-                                    1, dtype_size, 1, tensor_strides[7],
-                                    offset_end[7] - offset_start[7] + 1);
+                      strideLoad<T, U>((int8_t *)dst_nram + count * dtype_size,
+                                       (const int8_t *)src_gdram +
+                                           OFFSET_SHIFT(offset_6, sizeof(T)),
+                                       1, dtype_size, 1, tensor_strides[7],
+                                       offset_end[7] - offset_start[7] + 1);
                       count += offset_end[7] - offset_start[7] + 1;
                     } else {
-                      strideLoad<T>((int8_t *)dst_nram + count * dtype_size,
-                                    (const int8_t *)src_gdram +
-                                        OFFSET_SHIFT(offset_6, sizeof(T)),
-                                    1, dtype_size, 1, tensor_strides[7],
-                                    tensor_dims[7] - offset_start[7]);
+                      strideLoad<T, U>((int8_t *)dst_nram + count * dtype_size,
+                                       (const int8_t *)src_gdram +
+                                           OFFSET_SHIFT(offset_6, sizeof(T)),
+                                       1, dtype_size, 1, tensor_strides[7],
+                                       tensor_dims[7] - offset_start[7]);
                       count += tensor_dims[7] - offset_start[7];
                       offset_flag[7] = 1;
                     }
                   } else {
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideLoad<T>((int8_t *)dst_nram + count * dtype_size,
-                                    (const int8_t *)src_gdram +
-                                        OFFSET_SHIFT(offset_6, sizeof(T)),
-                                    1, dtype_size, 1, tensor_strides[7],
-                                    offset_end[7] + 1);
+                      strideLoad<T, U>((int8_t *)dst_nram + count * dtype_size,
+                                       (const int8_t *)src_gdram +
+                                           OFFSET_SHIFT(offset_6, sizeof(T)),
+                                       1, dtype_size, 1, tensor_strides[7],
+                                       offset_end[7] + 1);
                       count += offset_end[7] + 1;
                     } else {
-                      strideLoad<T>((int8_t *)dst_nram + count * dtype_size,
-                                    (const int8_t *)src_gdram +
-                                        OFFSET_SHIFT(offset_6, sizeof(T)),
-                                    1, dtype_size, 1, tensor_strides[7],
-                                    tensor_dims[7]);
+                      strideLoad<T, U>((int8_t *)dst_nram + count * dtype_size,
+                                       (const int8_t *)src_gdram +
+                                           OFFSET_SHIFT(offset_6, sizeof(T)),
+                                       1, dtype_size, 1, tensor_strides[7],
+                                       tensor_dims[7]);
                       count += tensor_dims[7];
                       offset_flag[7] = 1;
                     }
@@ -562,11 +579,25 @@ __mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
 }
 
 template <typename T>
-__mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
-                                         int src_offset, int data_num,
-                                         int dtype_size,
-                                         TensorShape &tensor_shape) {
-#if MAX_SRAM_SIZE > 0  // TODO(sram): tp_520
+__mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
+                                     uint64_t src_offset, uint64_t data_num,
+                                     int dtype_size,
+                                     mluop::TensorShape &tensor_shape) {
+  if (isUse64Bit(src_offset, tensor_shape.total_num,
+                 tensor_shape.total_stride)) {
+    return tensorStrideLoadTemplate<T, uint64_t>(
+        dst_nram, src_gdram, src_offset, data_num, dtype_size, tensor_shape);
+  } else {
+    return tensorStrideLoadTemplate<T, uint32_t>(
+        dst_nram, src_gdram, src_offset, data_num, dtype_size, tensor_shape);
+  }
+}
+
+template <typename T, typename U>
+__mlu_device__ void tensorStrideLoadSramTemplate(
+    void *dst_sram, const void *src_gdram, U src_offset, U data_num,
+    uint32_t dtype_size, mluop::TensorShape &tensor_shape) {
+#if MAX_SRAM_SIZE > 0
   if (data_num == 0) {
     return;
   }
@@ -577,70 +608,66 @@ __mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
     return;
   }
   if (data_num == 1) {
-    __memcpy(
-        (int8_t *)dst_sram,
-        (const int8_t *)src_gdram +
-            OFFSET_SHIFT(getTrueOffset(src_offset, tensor_shape), sizeof(T)),
-        dtype_size, GDRAM2SRAM);
+    __memcpy((int8_t *)dst_sram,
+             (const int8_t *)src_gdram +
+                 OFFSET_SHIFT((getTrueOffsetInternel<U, make_signed_t<U>>(
+                                  src_offset, tensor_shape)),
+                              sizeof(T)),
+             dtype_size, GDRAM2SRAM);
     return;
   }
-  int offset_0 = 0;
-  int offset_1 = 0;
-  int offset_2 = 0;
-  int offset_3 = 0;
-  int offset_4 = 0;
-  int offset_5 = 0;
-  int offset_6 = 0;
-  int count = 0;
-  int index[MLUOP_DIM_MAX];
-  int offset_start[MLUOP_DIM_MAX];
-  int offset_end[MLUOP_DIM_MAX];
+  U offset_0 = 0;
+  U offset_1 = 0;
+  U offset_2 = 0;
+  U offset_3 = 0;
+  U offset_4 = 0;
+  U offset_5 = 0;
+  U offset_6 = 0;
+  U count = 0;
+  U index[MLUOP_DIM_MAX];
+  U offset_start[MLUOP_DIM_MAX];
+  U offset_end[MLUOP_DIM_MAX];
   int offset_flag[MLUOP_DIM_MAX];
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_dims[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_strides[MLUOP_DIM_MAX];
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
     tensor_dims[i] = tensor_shape.tensor_dims[i];
     tensor_strides[i] = tensor_shape.tensor_strides[i];
   }
-  getLineOffsetIndexArray(src_offset, data_num, offset_start, offset_end,
-                          offset_flag, tensor_dims, tensor_shape.total_num);
+  getLineOffsetIndexArrayInternel(src_offset, data_num, offset_start,
+                                  offset_end, offset_flag, tensor_dims,
+                                  tensor_shape.total_num);
 
   for (index[0] = 0; index[0] < offset_end[0] + 1; ++index[0]) {
-    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag,
-                     tensor_dims);
+    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag);
     offset_flag[0] = 2;
     offset_0 = index[0] * tensor_strides[0];
     for (index[1] = 0; index[1] < tensor_dims[1]; ++index[1]) {
-      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag,
-                       tensor_dims);
+      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag);
       if (offset_flag[1] == 2 && index[1] > offset_end[1]) {
         break;
       }
       offset_1 = offset_0 + index[1] * tensor_strides[1];
       for (index[2] = 0; index[2] < tensor_dims[2]; ++index[2]) {
-        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag,
-                         tensor_dims);
+        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag);
         if (offset_flag[2] == 2 && index[2] > offset_end[2]) {
           break;
         }
         offset_2 = offset_1 + index[2] * tensor_strides[2];
         for (index[3] = 0; index[3] < tensor_dims[3]; ++index[3]) {
-          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag,
-                           tensor_dims);
+          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag);
           if (offset_flag[3] == 2 && index[3] > offset_end[3]) {
             break;
           }
           offset_3 = offset_2 + index[3] * tensor_strides[3];
           for (index[4] = 0; index[4] < tensor_dims[4]; ++index[4]) {
-            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag,
-                             tensor_dims);
+            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag);
             if (offset_flag[4] == 2 && index[4] > offset_end[4]) {
               break;
             }
             offset_4 = offset_3 + index[4] * tensor_strides[4];
             for (index[5] = 0; index[5] < tensor_dims[5]; ++index[5]) {
-              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag,
-                               tensor_dims);
+              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag);
               if (offset_flag[5] == 2 && index[5] > offset_end[5]) {
                 break;
               }
@@ -648,16 +675,16 @@ __mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
               if (tensor_strides[7] == 1 && offset_start[6] == 0 &&
                   offset_end[6] == tensor_dims[6] && offset_start[7] == 0 &&
                   offset_end[7] == tensor_dims[7]) {
-                strideLoadSram<T>((int8_t *)dst_sram + count * dtype_size,
-                                  (const int8_t *)src_gdram +
-                                      OFFSET_SHIFT(offset_5, sizeof(T)),
-                                  tensor_dims[7], dtype_size, tensor_dims[7],
-                                  tensor_strides[6], tensor_dims[6]);
+                strideLoadSram<T, U>((int8_t *)dst_sram + count * dtype_size,
+                                     (const int8_t *)src_gdram +
+                                         OFFSET_SHIFT(offset_5, sizeof(T)),
+                                     tensor_dims[7], dtype_size, tensor_dims[7],
+                                     tensor_strides[6], tensor_dims[6]);
                 count += tensor_dims[6] * tensor_dims[7];
               } else {
                 for (index[6] = 0; index[6] < tensor_dims[6]; ++index[6]) {
                   updateOffsetFlag(6, index, offset_start, offset_end,
-                                   offset_flag, tensor_dims);
+                                   offset_flag);
                   if (offset_flag[6] == 2 && index[6] > offset_end[6]) {
                     break;
                   }
@@ -665,35 +692,38 @@ __mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
                   if (offset_flag[7] == 0) {
                     offset_6 += offset_start[7] * tensor_strides[7];
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideLoadSram<T>((int8_t *)dst_sram + count * dtype_size,
-                                        (const int8_t *)src_gdram +
-                                            OFFSET_SHIFT(offset_6, sizeof(T)),
-                                        1, dtype_size, 1, tensor_strides[7],
-                                        offset_end[7] - offset_start[7] + 1);
+                      strideLoadSram<T, U>(
+                          (int8_t *)dst_sram + count * dtype_size,
+                          (const int8_t *)src_gdram +
+                              OFFSET_SHIFT(offset_6, sizeof(T)),
+                          1, dtype_size, 1, tensor_strides[7],
+                          offset_end[7] - offset_start[7] + 1);
                       count += offset_end[7] - offset_start[7] + 1;
                     } else {
-                      strideLoadSram<T>((int8_t *)dst_sram + count * dtype_size,
-                                        (const int8_t *)src_gdram +
-                                            OFFSET_SHIFT(offset_6, sizeof(T)),
-                                        1, dtype_size, 1, tensor_strides[7],
-                                        tensor_dims[7] - offset_start[7]);
+                      strideLoadSram<T, U>(
+                          (int8_t *)dst_sram + count * dtype_size,
+                          (const int8_t *)src_gdram +
+                              OFFSET_SHIFT(offset_6, sizeof(T)),
+                          1, dtype_size, 1, tensor_strides[7],
+                          tensor_dims[7] - offset_start[7]);
                       count += tensor_dims[7] - offset_start[7];
                       offset_flag[7] = 1;
                     }
                   } else {
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideLoadSram<T>((int8_t *)dst_sram + count * dtype_size,
-                                        (const int8_t *)src_gdram +
-                                            OFFSET_SHIFT(offset_6, sizeof(T)),
-                                        1, dtype_size, 1, tensor_strides[7],
-                                        offset_end[7] + 1);
+                      strideLoadSram<T, U>(
+                          (int8_t *)dst_sram + count * dtype_size,
+                          (const int8_t *)src_gdram +
+                              OFFSET_SHIFT(offset_6, sizeof(T)),
+                          1, dtype_size, 1, tensor_strides[7],
+                          offset_end[7] + 1);
                       count += offset_end[7] + 1;
                     } else {
-                      strideLoadSram<T>((int8_t *)dst_sram + count * dtype_size,
-                                        (const int8_t *)src_gdram +
-                                            OFFSET_SHIFT(offset_6, sizeof(T)),
-                                        1, dtype_size, 1, tensor_strides[7],
-                                        tensor_dims[7]);
+                      strideLoadSram<T, U>(
+                          (int8_t *)dst_sram + count * dtype_size,
+                          (const int8_t *)src_gdram +
+                              OFFSET_SHIFT(offset_6, sizeof(T)),
+                          1, dtype_size, 1, tensor_strides[7], tensor_dims[7]);
                       count += tensor_dims[7];
                       offset_flag[7] = 1;
                     }
@@ -710,12 +740,27 @@ __mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
 }
 
 template <typename T>
+__mlu_device__ void tensorStrideLoadSram(void *dst_nram, const void *src_gdram,
+                                         uint64_t src_offset, uint64_t data_num,
+                                         int dtype_size,
+                                         mluop::TensorShape &tensor_shape) {
+  if (isUse64Bit(src_offset, tensor_shape.total_num,
+                 tensor_shape.total_stride)) {
+    return tensorStrideLoadSramTemplate<T, uint64_t>(
+        dst_nram, src_gdram, src_offset, data_num, dtype_size, tensor_shape);
+  } else {
+    return tensorStrideLoadSramTemplate<T, uint32_t>(
+        dst_nram, src_gdram, src_offset, data_num, dtype_size, tensor_shape);
+  }
+}
+
+template <typename T>
 __mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
-                                     int src_offset, int data_num,
-                                     int dtype_size, int dst_stride,
-                                     int src_stride, int count,
-                                     TensorShape &tensor_shape) {
-  for (int i = 0; i < count; i++) {
+                                     uint64_t src_offset, uint64_t data_num,
+                                     int dtype_size, int64_t dst_stride,
+                                     int64_t src_stride, uint64_t count,
+                                     mluop::TensorShape &tensor_shape) {
+  for (uint64_t i = 0; i < count; i++) {
     tensorStrideLoad<T>(
         (int8_t *)dst_nram + OFFSET_SHIFT(i * dst_stride, sizeof(T)),
         (const int8_t *)src_gdram, src_offset + i * src_stride, data_num,
@@ -725,12 +770,12 @@ __mlu_device__ void tensorStrideLoad(void *dst_nram, const void *src_gdram,
 
 template <typename T>
 __mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
-                                         int src_offset, int data_num,
-                                         int dtype_size, int dst_stride,
-                                         int src_stride, int count,
-                                         TensorShape &tensor_shape) {
-#if MAX_SRAM_SIZE > 0  // TODO(sram): tp_520
-  for (int i = 0; i < count; i++) {
+                                         uint64_t src_offset, uint64_t data_num,
+                                         int dtype_size, int64_t dst_stride,
+                                         int64_t src_stride, uint64_t count,
+                                         mluop::TensorShape &tensor_shape) {
+#if MAX_SRAM_SIZE > 0
+  for (uint64_t i = 0; i < count; i++) {
     tensorStrideLoadSram<T>(
         (int8_t *)dst_sram + OFFSET_SHIFT(i * dst_stride, sizeof(T)),
         (const int8_t *)src_gdram, src_offset + i * src_stride, data_num,
@@ -739,21 +784,21 @@ __mlu_device__ void tensorStrideLoadSram(void *dst_sram, const void *src_gdram,
 #endif
 }
 
-template <typename T>
-__mlu_func__ void strideStore(const int8_t *src, int8_t *dst, int num,
-                              int dtype_size, int src_stride, int dst_stride,
-                              int seg_num) {
+template <typename T, typename U>
+__mlu_func__ void strideStore(const int8_t *src, int8_t *dst, U num,
+                              uint32_t dtype_size, make_signed_t<U> src_stride,
+                              make_signed_t<U> dst_stride, U seg_num) {
   if (dst_stride == num && src_stride == num) {
     __memcpy(dst, src, seg_num * num * dtype_size, NRAM2GDRAM);
     return;
   }
   // The range if <count> in __memcpy is [0, 65535].
-  int count_max = 65536;
+  uint32_t count_max = 65536;
   if (seg_num > count_max) {
-    int repeat_time = seg_num >> 16;
-    int rem = seg_num % count_max;
-    for (int i = 0; i < repeat_time; ++i) {
-      __memcpy(dst + OFFSET_SHIFT(i * count_max * dst_stride, sizeof(T)),
+    make_signed_t<U> repeat_time = seg_num >> 16;
+    uint32_t rem = seg_num % count_max;
+    for (make_signed_t<U> i = 0; i < repeat_time; ++i) {
+      __memcpy(dst + i * count_max * dst_stride * sizeof(T),
                src + i * count_max * src_stride * dtype_size, num * dtype_size,
                NRAM2GDRAM, dst_stride * dtype_size, src_stride * dtype_size,
                count_max - 1);
@@ -771,21 +816,22 @@ __mlu_func__ void strideStore(const int8_t *src, int8_t *dst, int num,
   }
 }
 
-template <typename T>
-__mlu_func__ void strideStoreSram(const int8_t *src, int8_t *dst, int num,
-                                  int dtype_size, int src_stride,
-                                  int dst_stride, int seg_num) {
-#if MAX_SRAM_SIZE > 0  // TODO(sram): tp_520
+template <typename T, typename U>
+__mlu_func__ void strideStoreSram(const int8_t *src, int8_t *dst, U num,
+                                  uint32_t dtype_size,
+                                  make_signed_t<U> src_stride,
+                                  make_signed_t<U> dst_stride, U seg_num) {
+#if MAX_SRAM_SIZE > 0
   if (dst_stride == num && src_stride == num) {
     __memcpy(dst, src, seg_num * num * dtype_size, SRAM2GDRAM);
     return;
   }
   // The range if <count> in __memcpy is [0, 65535].
-  int count_max = 65536;
+  uint32_t count_max = 65536;
   if (seg_num > count_max) {
-    int repeat_time = seg_num >> 16;
-    int rem = seg_num % count_max;
-    for (int i = 0; i < repeat_time; ++i) {
+    make_signed_t<U> repeat_time = seg_num >> 16;
+    uint32_t rem = seg_num % count_max;
+    for (make_signed_t<U> i = 0; i < repeat_time; ++i) {
       __memcpy(dst + OFFSET_SHIFT(i * count_max * dst_stride, sizeof(T)),
                src + i * count_max * src_stride * dtype_size, num * dtype_size,
                SRAM2GDRAM, dst_stride * dtype_size, src_stride * dtype_size,
@@ -805,11 +851,10 @@ __mlu_func__ void strideStoreSram(const int8_t *src, int8_t *dst, int num,
 #endif
 }
 
-template <typename T>
-__mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
-                                      const void *src_nram, int data_num,
-                                      int dtype_size,
-                                      TensorShape &tensor_shape) {
+template <typename T, typename U>
+__mlu_device__ void tensorStrideStoreTemplate(
+    void *dst_gdram, U dst_offset, const void *src_nram, U data_num,
+    uint32_t dtype_size, mluop::TensorShape &tensor_shape) {
   if (data_num == 0) {
     return;
   }
@@ -819,69 +864,65 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
     return;
   }
   if (data_num == 1) {
-    __memcpy(
-        (int8_t *)dst_gdram +
-            OFFSET_SHIFT(getTrueOffset(dst_offset, tensor_shape), sizeof(T)),
-        (const int8_t *)src_nram, dtype_size, NRAM2GDRAM);
+    __memcpy((int8_t *)dst_gdram +
+                 OFFSET_SHIFT((getTrueOffsetInternel<U, make_signed_t<U>>(
+                                  dst_offset, tensor_shape)),
+                              sizeof(T)),
+             (const int8_t *)src_nram, dtype_size, NRAM2GDRAM);
     return;
   }
-  int offset_0 = 0;
-  int offset_1 = 0;
-  int offset_2 = 0;
-  int offset_3 = 0;
-  int offset_4 = 0;
-  int offset_5 = 0;
-  int offset_6 = 0;
-  int count = 0;
-  int index[MLUOP_DIM_MAX];
-  int offset_start[MLUOP_DIM_MAX];
-  int offset_end[MLUOP_DIM_MAX];
+  U offset_0 = 0;
+  U offset_1 = 0;
+  U offset_2 = 0;
+  U offset_3 = 0;
+  U offset_4 = 0;
+  U offset_5 = 0;
+  U offset_6 = 0;
+  U count = 0;
+  U index[MLUOP_DIM_MAX];
+  U offset_start[MLUOP_DIM_MAX];
+  U offset_end[MLUOP_DIM_MAX];
   int offset_flag[MLUOP_DIM_MAX];
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_dims[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_strides[MLUOP_DIM_MAX];
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
     tensor_dims[i] = tensor_shape.tensor_dims[i];
     tensor_strides[i] = tensor_shape.tensor_strides[i];
   }
-  getLineOffsetIndexArray(dst_offset, data_num, offset_start, offset_end,
-                          offset_flag, tensor_dims, tensor_shape.total_num);
+  getLineOffsetIndexArrayInternel(dst_offset, data_num, offset_start,
+                                  offset_end, offset_flag, tensor_dims,
+                                  tensor_shape.total_num);
 
   for (index[0] = 0; index[0] < offset_end[0] + 1; ++index[0]) {
-    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag,
-                     tensor_dims);
+    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag);
     offset_flag[0] = 2;
     offset_0 = index[0] * tensor_strides[0];
     for (index[1] = 0; index[1] < tensor_dims[1]; ++index[1]) {
-      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag,
-                       tensor_dims);
+      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag);
       if (offset_flag[1] == 2 && index[1] > offset_end[1]) {
         break;
       }
       offset_1 = offset_0 + index[1] * tensor_strides[1];
       for (index[2] = 0; index[2] < tensor_dims[2]; ++index[2]) {
-        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag,
-                         tensor_dims);
+        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag);
         if (offset_flag[2] == 2 && index[2] > offset_end[2]) {
           break;
         }
         offset_2 = offset_1 + index[2] * tensor_strides[2];
         for (index[3] = 0; index[3] < tensor_dims[3]; ++index[3]) {
-          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag,
-                           tensor_dims);
+          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag);
           if (offset_flag[3] == 2 && index[3] > offset_end[3]) {
             break;
           }
           offset_3 = offset_2 + index[3] * tensor_strides[3];
           for (index[4] = 0; index[4] < tensor_dims[4]; ++index[4]) {
-            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag,
-                             tensor_dims);
+            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag);
             if (offset_flag[4] == 2 && index[4] > offset_end[4]) {
               break;
             }
             offset_4 = offset_3 + index[4] * tensor_strides[4];
             for (index[5] = 0; index[5] < tensor_dims[5]; ++index[5]) {
-              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag,
-                               tensor_dims);
+              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag);
               if (offset_flag[5] == 2 && index[5] > offset_end[5]) {
                 break;
               }
@@ -889,7 +930,7 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
               if (tensor_strides[7] == 1 && offset_start[6] == 0 &&
                   offset_end[6] == tensor_dims[6] && offset_start[7] == 0 &&
                   offset_end[7] == tensor_dims[7]) {
-                strideStore<T>(
+                strideStore<T, U>(
                     (const int8_t *)src_nram + count * dtype_size,
                     (int8_t *)dst_gdram + OFFSET_SHIFT(offset_5, sizeof(T)),
                     tensor_dims[7], dtype_size, tensor_dims[7],
@@ -898,7 +939,7 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
               } else {
                 for (index[6] = 0; index[6] < tensor_dims[6]; ++index[6]) {
                   updateOffsetFlag(6, index, offset_start, offset_end,
-                                   offset_flag, tensor_dims);
+                                   offset_flag);
                   if (offset_flag[6] == 2 && index[6] > offset_end[6]) {
                     break;
                   }
@@ -906,7 +947,7 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
                   if (offset_flag[7] == 0) {
                     offset_6 += offset_start[7] * tensor_strides[7];
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideStore<T>(
+                      strideStore<T, U>(
                           (const int8_t *)src_nram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -914,7 +955,7 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
                           offset_end[7] - offset_start[7] + 1);
                       count += offset_end[7] - offset_start[7] + 1;
                     } else {
-                      strideStore<T>(
+                      strideStore<T, U>(
                           (const int8_t *)src_nram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -925,7 +966,7 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
                     }
                   } else {
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideStore<T>(
+                      strideStore<T, U>(
                           (const int8_t *)src_nram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -933,7 +974,7 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
                           offset_end[7] + 1);
                       count += offset_end[7] + 1;
                     } else {
-                      strideStore<T>(
+                      strideStore<T, U>(
                           (const int8_t *)src_nram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -972,13 +1013,26 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
     }
   }
 }
-
 template <typename T>
-__mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
-                                          const void *src_sram, int data_num,
-                                          int dtype_size,
-                                          TensorShape &tensor_shape) {
-#if MAX_SRAM_SIZE > 0  // TODO(sram): tp_520
+__mlu_device__ void tensorStrideStore(void *dst_gdram, uint64_t dst_offset,
+                                      const void *src_nram, uint64_t data_num,
+                                      int dtype_size,
+                                      mluop::TensorShape &tensor_shape) {
+  if (isUse64Bit(dst_offset, tensor_shape.total_num,
+                 tensor_shape.total_stride)) {
+    return tensorStrideStoreTemplate<T, uint64_t>(
+        dst_gdram, dst_offset, src_nram, data_num, dtype_size, tensor_shape);
+  } else {
+    return tensorStrideStoreTemplate<T, uint32_t>(
+        dst_gdram, dst_offset, src_nram, data_num, dtype_size, tensor_shape);
+  }
+}
+
+template <typename T, typename U>
+__mlu_device__ void tensorStrideStoreSramTemplate(
+    void *dst_gdram, U dst_offset, const void *src_sram, U data_num,
+    uint32_t dtype_size, mluop::TensorShape &tensor_shape) {
+#if MAX_SRAM_SIZE > 0
   if (data_num == 0) {
     return;
   }
@@ -988,69 +1042,65 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
     return;
   }
   if (data_num == 1) {
-    __memcpy(
-        (int8_t *)dst_gdram +
-            OFFSET_SHIFT(getTrueOffset(dst_offset, tensor_shape), sizeof(T)),
-        (const int8_t *)src_sram, dtype_size, SRAM2GDRAM);
+    __memcpy((int8_t *)dst_gdram +
+                 OFFSET_SHIFT((getTrueOffsetInternel<U, make_signed_t<U>>(
+                                  dst_offset, tensor_shape)),
+                              sizeof(T)),
+             (const int8_t *)src_sram, dtype_size, SRAM2GDRAM);
     return;
   }
-  int offset_0 = 0;
-  int offset_1 = 0;
-  int offset_2 = 0;
-  int offset_3 = 0;
-  int offset_4 = 0;
-  int offset_5 = 0;
-  int offset_6 = 0;
-  int count = 0;
-  int index[MLUOP_DIM_MAX];
-  int offset_start[MLUOP_DIM_MAX];
-  int offset_end[MLUOP_DIM_MAX];
+  U offset_0 = 0;
+  U offset_1 = 0;
+  U offset_2 = 0;
+  U offset_3 = 0;
+  U offset_4 = 0;
+  U offset_5 = 0;
+  U offset_6 = 0;
+  U count = 0;
+  U index[MLUOP_DIM_MAX];
+  U offset_start[MLUOP_DIM_MAX];
+  U offset_end[MLUOP_DIM_MAX];
   int offset_flag[MLUOP_DIM_MAX];
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_dims[MLUOP_DIM_MAX];
+  make_signed_t<U> tensor_strides[MLUOP_DIM_MAX];
   for (int i = 0; i < MLUOP_DIM_MAX; i++) {
     tensor_dims[i] = tensor_shape.tensor_dims[i];
     tensor_strides[i] = tensor_shape.tensor_strides[i];
   }
-  getLineOffsetIndexArray(dst_offset, data_num, offset_start, offset_end,
-                          offset_flag, tensor_dims, tensor_shape.total_num);
+  getLineOffsetIndexArrayInternel(dst_offset, data_num, offset_start,
+                                  offset_end, offset_flag, tensor_dims,
+                                  tensor_shape.total_num);
 
   for (index[0] = 0; index[0] < offset_end[0] + 1; ++index[0]) {
-    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag,
-                     tensor_dims);
+    updateOffsetFlag(0, index, offset_start, offset_end, offset_flag);
     offset_flag[0] = 2;
     offset_0 = index[0] * tensor_strides[0];
     for (index[1] = 0; index[1] < tensor_dims[1]; ++index[1]) {
-      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag,
-                       tensor_dims);
+      updateOffsetFlag(1, index, offset_start, offset_end, offset_flag);
       if (offset_flag[1] == 2 && index[1] > offset_end[1]) {
         break;
       }
       offset_1 = offset_0 + index[1] * tensor_strides[1];
       for (index[2] = 0; index[2] < tensor_dims[2]; ++index[2]) {
-        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag,
-                         tensor_dims);
+        updateOffsetFlag(2, index, offset_start, offset_end, offset_flag);
         if (offset_flag[2] == 2 && index[2] > offset_end[2]) {
           break;
         }
         offset_2 = offset_1 + index[2] * tensor_strides[2];
         for (index[3] = 0; index[3] < tensor_dims[3]; ++index[3]) {
-          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag,
-                           tensor_dims);
+          updateOffsetFlag(3, index, offset_start, offset_end, offset_flag);
           if (offset_flag[3] == 2 && index[3] > offset_end[3]) {
             break;
           }
           offset_3 = offset_2 + index[3] * tensor_strides[3];
           for (index[4] = 0; index[4] < tensor_dims[4]; ++index[4]) {
-            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag,
-                             tensor_dims);
+            updateOffsetFlag(4, index, offset_start, offset_end, offset_flag);
             if (offset_flag[4] == 2 && index[4] > offset_end[4]) {
               break;
             }
             offset_4 = offset_3 + index[4] * tensor_strides[4];
             for (index[5] = 0; index[5] < tensor_dims[5]; ++index[5]) {
-              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag,
-                               tensor_dims);
+              updateOffsetFlag(5, index, offset_start, offset_end, offset_flag);
               if (offset_flag[5] == 2 && index[5] > offset_end[5]) {
                 break;
               }
@@ -1058,7 +1108,7 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
               if (tensor_strides[7] == 1 && offset_start[6] == 0 &&
                   offset_end[6] == tensor_dims[6] && offset_start[7] == 0 &&
                   offset_end[7] == tensor_dims[7]) {
-                strideStoreSram<T>(
+                strideStoreSram<T, U>(
                     (const int8_t *)src_sram + count * dtype_size,
                     (int8_t *)dst_gdram + OFFSET_SHIFT(offset_5, sizeof(T)),
                     tensor_dims[7], dtype_size, tensor_dims[7],
@@ -1067,7 +1117,7 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
               } else {
                 for (index[6] = 0; index[6] < tensor_dims[6]; ++index[6]) {
                   updateOffsetFlag(6, index, offset_start, offset_end,
-                                   offset_flag, tensor_dims);
+                                   offset_flag);
                   if (offset_flag[6] == 2 && index[6] > offset_end[6]) {
                     break;
                   }
@@ -1075,7 +1125,7 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
                   if (offset_flag[7] == 0) {
                     offset_6 += offset_start[7] * tensor_strides[7];
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideStoreSram<T>(
+                      strideStoreSram<T, U>(
                           (const int8_t *)src_sram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -1083,7 +1133,7 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
                           offset_end[7] - offset_start[7] + 1);
                       count += offset_end[7] - offset_start[7] + 1;
                     } else {
-                      strideStoreSram<T>(
+                      strideStoreSram<T, U>(
                           (const int8_t *)src_sram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -1094,7 +1144,7 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
                     }
                   } else {
                     if (index[6] == offset_end[6] && offset_flag[6] == 2) {
-                      strideStoreSram<T>(
+                      strideStoreSram<T, U>(
                           (const int8_t *)src_sram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -1102,7 +1152,7 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
                           offset_end[7] + 1);
                       count += offset_end[7] + 1;
                     } else {
-                      strideStoreSram<T>(
+                      strideStoreSram<T, U>(
                           (const int8_t *)src_sram + count * dtype_size,
                           (int8_t *)dst_gdram +
                               OFFSET_SHIFT(offset_6, sizeof(T)),
@@ -1144,12 +1194,27 @@ __mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
 }
 
 template <typename T>
-__mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
-                                      const void *src_nram, int data_num,
-                                      int dtype_size, int dst_stride,
-                                      int src_stride, int count,
-                                      TensorShape &tensor_shape) {
-  for (int i = 0; i < count; i++) {
+__mlu_device__ void tensorStrideStoreSram(void *dst_gdram, uint64_t dst_offset,
+                                          const void *src_nram,
+                                          uint64_t data_num, int dtype_size,
+                                          mluop::TensorShape &tensor_shape) {
+  if (isUse64Bit(dst_offset, tensor_shape.total_num,
+                 tensor_shape.total_stride)) {
+    return tensorStrideStoreSramTemplate<T, uint64_t>(
+        dst_gdram, dst_offset, src_nram, data_num, dtype_size, tensor_shape);
+  } else {
+    return tensorStrideStoreSramTemplate<T, uint32_t>(
+        dst_gdram, dst_offset, src_nram, data_num, dtype_size, tensor_shape);
+  }
+}
+
+template <typename T>
+__mlu_device__ void tensorStrideStore(void *dst_gdram, uint64_t dst_offset,
+                                      const void *src_nram, uint64_t data_num,
+                                      int dtype_size, int64_t dst_stride,
+                                      int64_t src_stride, uint64_t count,
+                                      mluop::TensorShape &tensor_shape) {
+  for (uint64_t i = 0; i < count; i++) {
     tensorStrideStore<T>(
         (int8_t *)dst_gdram, dst_offset + i * dst_stride,
         (const int8_t *)src_nram + OFFSET_SHIFT(i * src_stride, sizeof(T)),
@@ -1158,13 +1223,14 @@ __mlu_device__ void tensorStrideStore(void *dst_gdram, int dst_offset,
 }
 
 template <typename T>
-__mlu_device__ void tensorStrideStoreSram(void *dst_gdram, int dst_offset,
-                                          const void *src_sram, int data_num,
-                                          int dtype_size, int dst_stride,
-                                          int src_stride, int count,
-                                          TensorShape &tensor_shape) {
-#if MAX_SRAM_SIZE > 0  // TODO(sram): tp_520
-  for (int i = 0; i < count; i++) {
+__mlu_device__ void tensorStrideStoreSram(void *dst_gdram, uint64_t dst_offset,
+                                          const void *src_sram,
+                                          uint64_t data_num, int dtype_size,
+                                          int64_t dst_stride,
+                                          int64_t src_stride, uint64_t count,
+                                          mluop::TensorShape &tensor_shape) {
+#if MAX_SRAM_SIZE > 0
+  for (uint64_t i = 0; i < count; i++) {
     tensorStrideStoreSram<T>(
         (int8_t *)dst_gdram, dst_offset + i * dst_stride,
         (const int8_t *)src_sram + OFFSET_SHIFT(i * src_stride, sizeof(T)),

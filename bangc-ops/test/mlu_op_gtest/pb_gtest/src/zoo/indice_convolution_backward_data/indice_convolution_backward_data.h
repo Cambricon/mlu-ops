@@ -37,6 +37,7 @@ class IndiceConvolutionBackwardDataExecutor : public Executor {
   void cpuCompute();
   void workspaceMalloc();
   void workspaceFree();
+  void setMiscellaneousParam() override;
   int64_t getTheoryOps() override;
 
   void getFilterDims();

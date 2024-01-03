@@ -44,7 +44,18 @@ set(LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIR})
 # prefer to use protobuf static libraries
 set(ORIG_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+
 find_package(Protobuf)
+find_package(Eigen3 REQUIRED)
+if(NOT ${EIGEN3_INCLUDE_DIRS})
+  if( EXISTS "/usr/include/eigen3")
+    set(LIBEIGEN3_INCLUDE_DIRS "/usr/include/eigen3")
+  elseif(EXISTS "/usr/local/include/eigen3")
+    set(LIBEIGEN3_INCLUDE_DIRS "/usr/local/include/eigen3")
+  else()
+    message( FATAL_ERROR "Cannot find eigen3, CMake will exit." )
+  endif()
+endif()
 # FindProtobuf will generate important variables (could be overrided):
 # (cache) PROTOBUF_LIBRARY, (set) PROTOBUF_LIBRARIES
 # (cache) PROTOBUF_INCLUDE_DIR, (set) PROTOBUF_INCLUDE_DIRS
@@ -56,10 +67,11 @@ message(STATUS "libxml2 library: " ${LIBXML2_LIBRARIES})
 message(STATUS "protobuf include: " ${PROTOBUF_INCLUDE_DIRS})
 message(STATUS "protobuf libraries: " ${PROTOBUF_LIBRARIES})
 message(STATUS "protoc executable: " ${PROTOBUF_PROTOC_EXECUTABLE})
+message(STATUS "libeigen3 include: " ${LIBEIGEN3_INCLUDE_DIRS})
 
 include_directories(${LIBXML2_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIR})
-
+include_directories(${LIBEIGEN3_INCLUDE_DIRS})
 
 if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
@@ -67,7 +79,7 @@ if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_LIBXML2_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/include/libxml2")
   # set(DEFAULT_LIBXML2_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/lib/")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2  -mf16c")
 endif()
 
 message(STATUS "[MLUOP GTEST PROTOC]: ")
@@ -137,6 +149,25 @@ file(GLOB SRC_DIR "${GOOGLETEST_SRC}/*.cc")
 #add_library(gtest_shared SHARED ${SRC_DIR})
 add_library(gtest_shared STATIC ${SRC_DIR}) # for runtime convenience
 
+# For some code generation
+# generate Half(uint16) to Float32 mapping table, for debug purpose
+# #add_executable(gen_half2float_table ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_half2float_table.cpp)
+# #target_link_libraries(gen_half2float_table cnrt)
+add_custom_command(
+ OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gen_half2float_table
+ COMMAND ${BANG_CNCC_EXECUTABLE} -mavx2 -mf16c -std=c++14 -I ${CMAKE_CURRENT_SOURCE_DIR}/include -I ${NEUWARE_HOME}/include ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_half2float_table.cpp -o ${CMAKE_CURRENT_BINARY_DIR}/gen_half2float_table -L ${NEUWARE_HOME}/lib64 -lcnrt -lm -lstdc++ -Wl,-rpath=${NEUWARE_HOME}/lib64
+ DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_half2float_table.cpp ${CMAKE_CURRENT_SOURCE_DIR}/include/math_half.h
+)
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/half2float_table.cpp
+  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/gen_half2float_table
+  DEPENDS gen_half2float_table ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_half2float_table.cpp
+)
+add_custom_target(half2float_table
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/half2float_table.cpp
+)
+set(GENERATED_SRC ${CMAKE_CURRENT_BINARY_DIR}/half2float_table.cpp)
+
 file(GLOB MLUOP_PB_TEST_DIR ${MLUOP_PB_GTEST_SRC})
 
 if (MLUOP_BUILD_SPECIFIC_OP)
@@ -148,7 +179,7 @@ else()
   file(GLOB_RECURSE MLUOP_PB_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/*/*.cpp")
 endif()
 
-add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR} ${PROTO_HDRS})
+add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR} ${PROTO_HDRS} ${GENERATED_SRC})
 target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} ${PROTO_PATH})
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
@@ -178,6 +209,13 @@ if (MLUOP_BUILD_SPECIFIC_OP)
 else()
   file(GLOB_RECURSE MLUOP_API_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/*/*.cpp")
 endif()
+
+
+target_include_directories(mluop_pb_gtest_obj PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
+  $<INSTALL_INTERFACE:include>
+)
 
 add_library(mluop_api_gtest_obj OBJECT ${MLUOP_API_TEST_DIR} ${MLUOP_API_GTEST_DIR})
 target_include_directories(mluop_api_gtest_obj PRIVATE ${MLUOP_API_GTEST_INCLUDE})
@@ -228,12 +266,6 @@ install(FILES "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/gtest_config/test_list"
   COMPONENT mluop_gtest
   DESTINATION test/mlu_op_gtest/pb_gtest/gtest_config
 )
-# install(PROGRAMS "${CMAKE_CURRENT_LIST_DIR}/tools/search_case.py"
-#   "${CMAKE_CURRENT_LIST_DIR}/tools/search_case_v2.py"
-#   "${CMAKE_CURRENT_LIST_DIR}/tools/watch_mem.bash"
-#   COMPONENT mluop_gtest
-#   DESTINATION test/mluop_gtest/tools
-# )
 
 install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/zoo"
   COMPONENT mluop_gtest

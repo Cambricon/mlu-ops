@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_INTERNAL_PERF_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_INTERNAL_PERF_H_
+
+#pragma once
 
 #include <algorithm>
 #include <mutex>  // NOLINT
@@ -30,14 +30,15 @@
 #include <vector>
 
 namespace mluoptest {
+
 using TimePoint_t = std::tuple<std::string, double>;
 using TimeSeries_t = std::vector<TimePoint_t>;
 
 /**
- * convert `TimeSeries_t` value into '[ [<key1>,<val1>], [<key1>,<val1>],
- * ...]' format
+ * convert `TimeSeries_t` value into '[ [<key1>, <val1>], [<key2>, <val2>], ...
+ * ]' format
  */
-std::string timeseries_to_array_str(const TimeSeries_t &);
+std::string timeseries_to_array_str(const TimeSeries_t&);
 
 struct GtestInternal {
   size_t parsed_file_size = 0;
@@ -59,8 +60,8 @@ class TestInternalInfo {
   /**
    * save gtest internal perf info
    */
-  void record_case(const std::string &case_path,
-                   const GtestInternal &gtest_internal);
+  void record_case(const std::string& case_path,
+                   const GtestInternal& gtest_internal);
 
   template <typename Functor>
   void iterate_invoke(Functor f) {
@@ -68,14 +69,14 @@ class TestInternalInfo {
     std::for_each(cases_info_.begin(), cases_info_.end(), f);
     cases_info_mutex.unlock();
   }
+
   void clear_cases() { cases_info_.clear(); }
 
  private:
   // compute timespan based on cumulative time
-  static TimeSeries_t evaluate_timespan(const TimeSeries_t &);
+  static TimeSeries_t evaluate_timespan(const TimeSeries_t&);
   std::vector<GtestInternalMsg> cases_info_;
   std::mutex cases_info_mutex;
 };
-}  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_INTERNAL_PERF_H_
+}  // namespace mluoptest  // NOLINT

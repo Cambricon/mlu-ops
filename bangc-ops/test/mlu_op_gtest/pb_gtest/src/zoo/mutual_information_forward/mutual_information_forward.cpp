@@ -105,15 +105,17 @@ void MutualInformationForwardExecutor::compute() {
       dev_opt_boundary, p_desc_, dev_p, workspace_[0], workspace_size_,
       ans_desc_, dev_ans));
   interface_timer_.stop();
+}
 
+void MutualInformationForwardExecutor::setMiscellaneousParam() {
   if (tensor_desc_.size() == max_tensor_num_) {
-    data_vector_[3].is_output = true;
-    data_vector_[4].is_output = false;
-    data_vector_[5].is_output = true;
+    data_vector_[3].alsoServeAsOutput();
+    data_vector_[4].onlyServeAsInput();
+    data_vector_[5].alsoServeAsOutput();
   } else {
-    data_vector_[2].is_output = true;
-    data_vector_[3].is_output = false;
-    data_vector_[4].is_output = true;
+    data_vector_[2].alsoServeAsOutput();
+    data_vector_[3].onlyServeAsInput();
+    data_vector_[4].alsoServeAsOutput();
   }
 }
 

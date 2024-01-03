@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -30,6 +31,10 @@
 #include <memory>
 #include <mutex>  // NOLINT
 #include "core/logging.h"
+#include "core/tool.h"
+
+__attribute__((__unused__)) bool mluop_check_large_tensor_dim_size_ =
+    mluop::getBoolEnvVar("MLUOP_CHECK_DIM_SIZE", false);
 
 namespace {
 

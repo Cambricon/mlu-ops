@@ -20,13 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_EVENT_LISTENER_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_EVENT_LISTENER_H_
 
 #pragma once
 
 #include <iostream>
 #include <string>
+#include <utility>
+
 
 #include "gtest/internal/custom/gtest.h"
 #include "gtest/gtest-spi.h"
@@ -129,7 +129,7 @@ class MLUOPGtestInternalPerfEventListener
       need_csv_header = true;
     }
     if (need_csv_header) {
-      csv_header = std::move(_csv_header);  // NOLINT
+      csv_header = std::move(_csv_header);
       fprintf(fout, "x%s\n", csv_header.c_str());
       need_csv_header = false;
     }
@@ -141,11 +141,9 @@ class MLUOPGtestInternalPerfEventListener
   // XXX At present, just use fixed name for convenience
   bool need_csv_header = true;
   FILE* fout = NULL;
-  std::string fileprefix = "mluops_gtest_internal_perf";
+  std::string fileprefix = "mluop_gtest_internal_perf";
   std::string file_ext = ".csv";
   std::string csv_header;
 };
 
 }  // namespace mluoptest
-
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_GTEST_MLU_OP_GTEST_EVENT_LISTENER_H_

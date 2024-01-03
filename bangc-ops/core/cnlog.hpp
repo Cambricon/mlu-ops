@@ -20,13 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef CORE_CNLOG_H_
-#define CORE_CNLOG_H_
+#ifndef CNLOG_HPP_
+#define CNLOG_HPP_
 
 #include <sstream>
 #include <iostream>
 #include <fstream>
-#include <string>
 
 namespace mluop {
 namespace logging {
@@ -79,6 +78,7 @@ namespace logging {
 #define LOG_ERROR 2
 #define LOG_FATAL 3
 #define LOG_VLOG 4
+#define LOG_CNPAPI 5
 
 /**
  * @brief: define the interface of the log system.
@@ -126,7 +126,7 @@ class LogMessage {
   /**
    * @brief: used by interface macro, use << to get the string content.
    */
-  std::stringstream &stream();
+  std::stringstream& stream();
 
  private:
   std::string logInfoFile_;  // the file that the log message code belongs to
@@ -164,4 +164,4 @@ class LogMessage {
 }  // namespace logging
 }  // namespace mluop
 
-#endif  // CORE_CNLOG_H_
+#endif  // CNLOG_HPP_

@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_TESTS_MLU_OP_TEST_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_TESTS_MLU_OP_TEST_H_
+#ifndef TEST_MLU_OP_GTEST_TESTS_MLUOP_TEST_H_
+#define TEST_MLU_OP_GTEST_TESTS_MLUOP_TEST_H_
 
 #include <limits.h>
 #include <functional>
@@ -34,10 +34,14 @@
 #include <fstream>
 #include <list>
 #include "gtest/gtest.h"
+#include "Eigen/Core"
 #include "cnrt.h"
 #include "mlu_op.h"
 #include "core/tensor.h"
 #include "core/type.h"
+
+using Eigen::bfloat16;
+using Eigen::half;
 
 #define CHECK_VALID(expect, func)                                             \
   {                                                                           \
@@ -50,6 +54,32 @@
              << ", but expect " #expect;                                      \
     }                                                                         \
   }
+
+TEST(BFLOATTEST_NAN, MLUOP_GTEST_INTERNAL_TEST) {
+  int16_t a = 0x7fc0;
+  bfloat16 b = *((bfloat16 *)(&a));
+  EXPECT_EQ(1, std::isnan(b));
+  a = 0xffc0;
+  b = *((bfloat16 *)(&a));
+  EXPECT_EQ(1, std::isnan(b));
+  a = 0xffcf;
+  b = *((bfloat16 *)(&a));
+  EXPECT_EQ(1, std::isnan(b));
+  a = 0xffcc;
+  b = *((bfloat16 *)(&a));
+  EXPECT_EQ(1, std::isnan(b));
+  a = 0xffe0;
+  b = *((bfloat16 *)(&a));
+  EXPECT_EQ(1, std::isnan(b));
+}
+
+TEST(BFLOATTEST_INF, MLUOP_GTEST_INTERNAL_TEST) {
+  int16_t a = 0x7f80;
+  bfloat16 b = *((bfloat16 *)(&a));
+  a = 0xff80;
+  b = *((bfloat16 *)(&a));
+  EXPECT_EQ(1, std::isinf(b));
+}
 
 TEST(DISABLED_MLUOP, mluOpSetTensorDescriptor) {
   mluOpTensorDescriptor_t desc = nullptr;
@@ -373,4 +403,4 @@ TEST(DISABLED_MLUOP, MULTI_THREAD_mluOpTensorDescriptor_t) {
   }
 }
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_TESTS_MLU_OP_TEST_H_
+#endif  // TEST_MLU_OP_GTEST_TESTS_MLUOP_TEST_H_

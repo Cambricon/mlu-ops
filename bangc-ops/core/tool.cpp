@@ -28,9 +28,11 @@
 #include "core/tool.h"
 #include "core/logging.h"
 
+#define INT31_BITWIDTH 31
 #define INT16_BITWIDTH 16
 
 namespace mluop {
+
 mluOpStatus_t castDtypeToBitwidth(mluOpDataType_t quantize_dtype,
                                   int *bitwidth) {
   if (bitwidth == NULL) {
@@ -42,10 +44,74 @@ mluOpStatus_t castDtypeToBitwidth(mluOpDataType_t quantize_dtype,
     *bitwidth = 8;
   } else if (quantize_dtype == MLUOP_DTYPE_INT16) {
     *bitwidth = 16;
+  } else if (quantize_dtype == MLUOP_DTYPE_INT31) {
+    *bitwidth = 31;
   } else {
     LOG(ERROR) << "[castDtypeToBitwidth]:quantize_dtype is not supported, it "
-                  "supports int8, int16.";
+                  "supports int8, int16 "
+                  "or int31.";
     return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst) {
+  if (src == NULL) {
+    LOG(ERROR) << "[castFloat32ToInt31]:The pointer of src is NULL.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (dst == NULL) {
+    LOG(ERROR) << "[castFloat32ToInt31]:The pointer of dst is NULL.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (num == 0) {
+    LOG(ERROR) << "[castFloat32ToInt31]:Intput num is wrong, it must be "
+                  "greater than 0.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+
+  int position = 0;
+  int var = std::pow(2, INT31_BITWIDTH - 1) - 1;
+  float temp = 0.0f;
+  float temp_high = 0.0f;
+  float temp_low = 0.0f;
+
+  // get absmax of the float data
+  float absmax = std::fabs(src[0]);
+  for (size_t i = 0; i < num; ++i) {
+    if (std::fabs(src[i]) > absmax) absmax = std::fabs(src[i]);
+  }
+
+  // Formula: int31 , position = floor(log2(absmax) - 29))
+  if (absmax == 0) {
+    position = 0;
+  } else {
+    position = static_cast<int>(std::floor(std::log2(absmax)) - 29);
+  }
+  position = position >= -127 ? position : -127;
+
+  if (absmax == 0) {
+    for (size_t i = 0; i < num; ++i) {
+      // low int16 data
+      ((int16_t *)dst)[i] = 0;
+      // high int16 data
+      ((int16_t *)dst)[i + num] = 0;
+    }
+  } else {
+    // Formula: f = (high * 2^15 + low) * 2^position.
+    var = std::pow(2, INT16_BITWIDTH - 1);
+    for (size_t i = 0; i < num; ++i) {
+      temp = src[i] / (std::pow(2, position));
+      temp = (temp >= 0) ? (temp + 0.5f) : (temp - 0.5f);
+
+      // high int16 data
+      temp_high = temp / var;
+      ((int16_t *)dst)[i + num] = static_cast<int16_t>(temp_high);
+      // low int16 data
+      temp_low = temp - ((int16_t *)dst)[i + num] * var;
+      ((int16_t *)dst)[i] = static_cast<int16_t>(temp_low);
+    }
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -72,6 +138,8 @@ mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
     bitwidth = 8;
   } else if (datatype == MLUOP_DTYPE_INT16) {
     bitwidth = 16;
+  } else if (datatype == MLUOP_DTYPE_INT31) {
+    bitwidth = 31;
   } else {
     LOG(ERROR) << "[getPosition]:Input data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -89,7 +157,9 @@ mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
     *position =
         static_cast<int>(std::floor(std::log2(absmax)) - (bitwidth - 2));
   }
-
+  if (bitwidth == 31) {
+    *position = *position >= -127 ? *position : -127;
+  }
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -119,6 +189,8 @@ mluOpStatus_t getPositionAndScale(float *input, size_t num,
     bitwidth = 8;
   } else if (datatype == MLUOP_DTYPE_INT16) {
     bitwidth = 16;
+  } else if (datatype == MLUOP_DTYPE_INT31) {
+    bitwidth = 31;
   } else {
     LOG(ERROR) << "[getPositionAndScale]:Input data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -140,6 +212,10 @@ mluOpStatus_t getPositionAndScale(float *input, size_t num,
     *position =
         static_cast<int>(std::floor(std::log2(max_data)) - (bitwidth - 2));
     *scale = 1.0;
+  }
+
+  if (bitwidth == 31) {
+    *position = *position >= -127 ? *position : -127;
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -202,6 +278,35 @@ mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
     *offset =
         (int)roundf(-powf(2, bitwidth - 1) -
                     min_data * (powf(2, bitwidth) - 1) / (max_data - min_data));
+  }
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
+                                 int position) {
+  if (src == NULL) {
+    LOG(ERROR) << "[castInt31ToFloat32]:The pointer of src is NULL.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (dst == NULL) {
+    LOG(ERROR) << "[castInt31ToFloat32]:The pointer of dst is NULL.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+  if (num == 0) {
+    LOG(ERROR) << "[castInt31ToFloat32]:Intput num is wrong, it must be "
+                  "greater than 0.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+
+  // Formula: f = (high * 2^15 + low) * 2^position.
+  int16_t *low = (int16_t *)src;
+  int16_t *high = (int16_t *)(low + num);
+  float tmp = 0.0f;
+  for (size_t i = 0; i < num; i++) {
+    tmp = high[i] * std::pow(2, INT16_BITWIDTH - 1);
+    tmp = tmp + low[i];
+    dst[i] = tmp * std::pow(2, position);
   }
 
   return MLUOP_STATUS_SUCCESS;

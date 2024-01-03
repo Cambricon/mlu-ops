@@ -20,11 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "internal_kernel/fill_ram/fill_ram.h"
 
-#if defined(__BANG__)
-#include <mlu.h>
-#endif
+#include "fill_ram_device.h"
+#include "kernels/kernel.h"  // MAX_NRAM_SIZE
+#include "kernels/debug.h"  // MLULOG
 
 #define FILL_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 4096)
 #define FILL_SRAM_SIZE (MAX_SRAM_SIZE + REM_FOR_STACK - 4096)
@@ -34,7 +33,8 @@ __nram__ char nram_buffer[FILL_NRAM_SIZE];
 __wram__ char wram_buffer[MAX_WRAM_SIZE];
 
 template <typename T>
-__mlu_func__ void fillRamBase(const int &fill_value, char *sram_buffer) {
+__mlu_func__ void fillRamBase(const int &fill_value,
+                              char *sram_buffer) {
   T *tmp = (T *)&fill_value;
   __bang_write_value(nram_buffer, FILL_NRAM_SIZE / sizeof(T), (T)*tmp);
 #if __BANG_ARCH__ == 520  // use nram to fill wram
@@ -50,11 +50,11 @@ __mlu_func__ void fillRamBase(const int &fill_value, char *sram_buffer) {
   __sync_cluster();
 #if __BANG_ARCH__ == 290
   // 290: MAX_WRAM_SIZE = physical wram size - 8KB
-  __memcpy(wram_buffer, sram_buffer, MAX_WRAM_SIZE, SRAM2WRAM, MAX_WRAM_SIZE,
-           MAX_WRAM_SIZE, 0);
-#else   // fill all wram
-  __memcpy(wram_buffer, sram_buffer, WRAM_LT_STRIDE, SRAM2WRAM, WRAM_LT_STRIDE,
-           WRAM_LT_STRIDE, LT_NUM - 1);
+  __memcpy(wram_buffer, sram_buffer, MAX_WRAM_SIZE,
+           SRAM2WRAM, MAX_WRAM_SIZE, MAX_WRAM_SIZE, 0);
+#else  // fill all wram
+  __memcpy(wram_buffer, sram_buffer, WRAM_LT_STRIDE, SRAM2WRAM,
+           WRAM_LT_STRIDE, WRAM_LT_STRIDE, LT_NUM - 1);
 #endif  // 290
 #endif  // 520
 }
@@ -91,9 +91,4 @@ __mlu_global__ void MLUBlockKernelFillRam(nram_value value) {
     default:
       MLULOG("cannot find a type to write nram \n");
   }
-}
-
-void mluBlockFillRam(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                     cnrtQueue_t queue, nram_value value) {
-  MLUBlockKernelFillRam<<<k_dim, k_type, queue>>>(value);
 }

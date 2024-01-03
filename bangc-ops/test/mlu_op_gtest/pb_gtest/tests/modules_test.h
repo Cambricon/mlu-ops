@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST__PB_GTEST_TESTS_MODULES_TEST_H_
-#define TEST_MLU_OP_GTEST__PB_GTEST_TESTS_MODULES_TEST_H_
+#ifndef TEST_MLU_OP_GTEST_TESTS_MODULES_TEST_H_
+#define TEST_MLU_OP_GTEST_TESTS_MODULES_TEST_H_
 
 #include <memory>
 #include <string>
@@ -39,8 +39,7 @@
   }
 
 TEST(DISABLED_GTEST_PARSER, parse) {
-  auto test_path =
-      "../../test/mlu_op_gtest/pb_gtest/tests/parser_test.prototxt";
+  auto test_path = "../../test/mlu_op_gtest/tests/parser_test.prototxt";
   std::ifstream fin(test_path);
   if (!fin.good()) {
     std::cout << "DISABLED_GTEST_PARSER.parse: miss " << test_path
@@ -76,4 +75,4 @@ TEST(DISABLED_GTEST_PARSER, parse) {
   ASSERT_NO_THROW(parse(test_path));
 }
 
-#endif  // TEST_MLU_OP_GTEST__PB_GTEST_TESTS_MODULES_TEST_H_
+#endif  // TEST_MLU_OP_GTEST_TESTS_MODULES_TEST_H_

@@ -58,7 +58,10 @@ void BallQueryExecutor::compute() {
                              xyz_ptr, min_radius_, max_radius_, nsample_,
                              idx_desc, idx_ptr));
   interface_timer_.stop();
-  data_vector_[2].is_output = true;
+}
+
+void BallQueryExecutor::setMiscellaneousParam() {
+  data_vector_[2].alsoServeAsOutput();
 }
 
 void BallQueryExecutor::cpuCompute() {

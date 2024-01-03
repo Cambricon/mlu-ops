@@ -24,7 +24,7 @@
 
 #include <vector>
 
-#include "test/mlu_op_gtest/pb_gtest/include/pb_test_tools.h"
+#include "test/mlu_op_gtest/include/tools.h"
 
 namespace mluoptest {
 
@@ -148,7 +148,6 @@ void IndiceConvolutionBackwardDataExecutor::compute() {
   auto filter = data_vector_[1].device_ptr;
   auto indice_pairs = data_vector_[2].device_ptr;
   auto input_grad = data_vector_[3].device_ptr;
-  data_vector_[3].is_output = true;
   int K = filter_4d ? kh * kw : kd * kh * kw;
   std::vector<int64_t> indice_num_;
 
@@ -169,6 +168,10 @@ void IndiceConvolutionBackwardDataExecutor::compute() {
       workspace_[0], workspace_size, input_grad_desc, input_grad));
   interface_timer_.stop();
   VLOG(4) << "finish calling mluOpIndiceConvolutionBackwardData()";
+}
+
+void IndiceConvolutionBackwardDataExecutor::setMiscellaneousParam() {
+  data_vector_[3].alsoServeAsOutput();
 }
 
 /* transpose filter to HWCN / DHWCN */

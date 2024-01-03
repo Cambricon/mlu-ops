@@ -1,0 +1,10 @@
+{
+  "criterion" : {
+    "good": [0.6, 1.0],
+    "qualified": [0.3, 0.6],
+    "unqualified": [0.0, 0.3]
+  },
+  "ignore_case": {
+      "mlu_hardware_time": 30
+  }
+}

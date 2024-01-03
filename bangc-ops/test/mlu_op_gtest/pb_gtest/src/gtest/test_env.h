@@ -37,7 +37,6 @@
 #include <tuple>
 #include <random>
 #include "gtest/gtest.h"
-#include "cn_api.h"
 #include "mlu_op.h"
 #include "core/logging.h"
 #include "variable.h"
@@ -45,12 +44,21 @@
 struct TestEnvInfo {
   std::string commit_id;
   std::string mluop_version;
+  std::string driver_version;
+  std::string cnrt_version;
   std::string date;
   std::string ip;
   std::string mluop_branch;
   std::string mlu_platform;
   std::string job_limit;
   std::string cluster_limit;
+};
+
+struct DeviceInfo {
+  unsigned int device_id;
+  std::string bus_id;
+  char compute_mode;  // '0' = default, '1'= exclusive;
+  unsigned int process_count;
 };
 
 class TestEnvironment : public testing::Environment {
@@ -62,22 +70,35 @@ class TestEnvironment : public testing::Environment {
  private:
   void convertBaselineXml2Txt();
   void getAccuracyBaselineXml();
+  // set device
+  static void setDevice();
+  // set computemode as default before teardown.
+  static void restoreComputeMode();
   // set environment of test, such as date, mluop_version.
   static void setTestEnv();
   // record environment info to xml.
   static void recordEnvXml();
+  // record environment info to log.
+  static void recordEnvLog();
 
   static void setDate();
   static void setMluOpVersion();
+  static void setDriverVersion();
+  static void setCnrtVersion();
   static void setMluPlatform();
   static void setClusterLimit();
   static void setJobLimit();
-  // CommitId, MluopBranch will be null when not a mluops envrionment.
+  // CommitId, MluOpBranch will be null when not a mluOp envrionment.
   static void setCommitId();
   static void setMluOpBranch();
   // Ip will be null when "ifconfig" is not installed,
   //  such as testing in docker.
   static void setIp();
+  static bool getBusId(int device_id, std::string &bus_id_str);
+  static bool setComputeMode(std::string bus_id_str, char mode);
+  static bool getComputeMode(std::string bus_id_str, char &mode);
+
+  static void showSummary();
 };
 
 #endif  // TEST_MLU_OP_GTEST_SRC_GTEST_TEST_ENV_H_

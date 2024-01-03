@@ -58,8 +58,11 @@ void BorderAlignForwardExecutor::compute() {
       handle_, input_desc, input_dev, boxes_desc, boxes_dev, pool_size,
       output_desc, output_dev, argmax_idx_desc, argmax_idx_dev));
   interface_timer_.stop();
-  data_vector_[2].is_output = true;
-  data_vector_[3].is_output = true;
+}
+
+void BorderAlignForwardExecutor::setMiscellaneousParam() {
+  data_vector_[2].alsoServeAsOutput();
+  data_vector_[3].alsoServeAsOutput();
 }
 
 float bilinear_interpolate(const float *input, const int32_t H, const int32_t W,

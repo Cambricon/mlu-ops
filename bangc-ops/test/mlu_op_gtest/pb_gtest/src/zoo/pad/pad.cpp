@@ -21,43 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "pad.h"
+
 #include <algorithm>
 #include <string>
 
 namespace mluoptest {
-
-cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype) {
-  switch (dtype) {
-    case MLUOP_DTYPE_HALF:
-      return cnrtHalf;
-    case MLUOP_DTYPE_FLOAT:
-      return cnrtFloat;
-    case MLUOP_DTYPE_DOUBLE:
-      return cnrtDouble;
-    case MLUOP_DTYPE_INT8:
-      return cnrtChar;
-    case MLUOP_DTYPE_INT16:
-      return cnrtShort;
-    case MLUOP_DTYPE_INT32:
-      return cnrtInt;
-    case MLUOP_DTYPE_INT64:
-      return cnrtLonglong;
-    case MLUOP_DTYPE_BOOL:
-      return cnrtBoolean;
-    case MLUOP_DTYPE_UINT8:
-      return cnrtUchar;
-    case MLUOP_DTYPE_UINT16:
-      return cnrtUshort;
-    case MLUOP_DTYPE_UINT32:
-      return cnrtUint;
-    case MLUOP_DTYPE_UINT64:
-      return cnrtUlonglong;
-    default:
-      LOG(ERROR) << "NOT support this dtype yet";
-      throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                  std::to_string(__LINE__));
-  }
-}
 
 void PadExecutor::paramCheck() {
   GTEST_CHECK(parser_->getProtoNode()->has_pad_param(),

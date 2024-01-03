@@ -36,6 +36,7 @@ class BallQueryExecutor : public Executor {
   void compute();
   void cpuCompute();
   int64_t getTheoryOps() override;
+  void setMiscellaneousParam() override;
 
  private:
   float min_radius_;

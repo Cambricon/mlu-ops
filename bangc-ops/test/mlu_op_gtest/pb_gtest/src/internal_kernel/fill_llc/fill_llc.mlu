@@ -20,12 +20,18 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_SRC_STATS_TEST_STATS_TEST_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_SRC_STATS_TEST_STATS_TEST_H_
-#include <stdio.h>
-#include <stdlib.h>
+#include "fill_llc.h"
+#include "core/context.h"     // cnrtDim3_t
+#include "fill_llc_device.h"  // flushLLC
 
-template <typename T>
-double diff_kl(T *data1, T *data2, size_t elem_num);
-
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_SRC_STATS_TEST_STATS_TEST_H_
+mluOpStatus_t mluOpFillLLC(mluOpHandle_t handle, void *const_addr,
+                           const int llc_size) {
+  if (592 != handle->arch) {
+    return MLUOP_STATUS_SUCCESS;
+  }
+  cnrtDim3_t k_dim{1, 1, 1};
+  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_BLOCK;
+  KERNEL_CHECK(
+      (flushLLC<<<k_dim, k_type, handle->queue>>>(const_addr, llc_size)));
+  return MLUOP_STATUS_SUCCESS;
+}

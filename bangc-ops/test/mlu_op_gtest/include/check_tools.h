@@ -20,34 +20,35 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "mlu_op.h"
-#include "core/context.h"
-#include "core/logging.h"
-#include "core/runtime/device.h"
-#include "core/tensor.h"
-#include "core/type.h"
-#include "core/tool.h"
-#include "fill_ram.h"
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_CHECK_TOOLS_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_CHECK_TOOLS_H_
 
-static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type) {
-#if TARGET_MLU_ARCH == 520
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
-#else
-  *k_type = CNRT_FUNC_TYPE_UNION1;
-#endif
-  k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
-  k_dim->z = 1;
+#include <string>
+#include <sstream>
+
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
+namespace {  // NOLINT
+std::string fmt() { return ""; }
+template <typename lhs, typename... T>
+std::string fmt(lhs first, T... args) {
+  std::ostringstream oss;
+  oss << first << fmt(args...);
+  return oss.str();
 }
+}  // namespace
 
-mluOpStatus_t mluOpFillRam(mluOpHandle_t handle, nram_value value) {
-  if (value == NO_FILL) {
-    return MLUOP_STATUS_SUCCESS;
+#define GTEST_CHECK(condition, ...)                                          \
+  if (unlikely(!(condition))) {                                              \
+    ADD_FAILURE() << fmt("Check failed: ", #condition, ". ", ##__VA_ARGS__); \
+    throw std::invalid_argument(std::string(__FILE__) + " +" +               \
+                                std::to_string(__LINE__));                   \
   }
-  cnrtDim3_t k_dim;
-  cnrtFunctionType_t k_type;
-  policyFunc(handle, &k_dim, &k_type);
-  KERNEL_CHECK((mluBlockFillRam(k_dim, k_type, handle->queue, value)));
-  return MLUOP_STATUS_SUCCESS;
-}
+
+#define GTEST_WARNING(condition, ...)                                     \
+  if (unlikely(!(condition))) {                                           \
+    LOG(WARNING) << "Check failed: " #condition ". " << fmt(__VA_ARGS__); \
+  }
+
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_CHECK_TOOLS_H_

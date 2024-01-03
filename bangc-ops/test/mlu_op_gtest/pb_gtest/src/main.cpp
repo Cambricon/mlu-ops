@@ -22,10 +22,10 @@
  *************************************************************************/
 
 /************************************************************************
- *
- *  @file main.c
- *
- **************************************************************************/
+ *
+ *  @file main.c
+ *
+ **************************************************************************/
 
 #include <stdlib.h>
 #include "gtest/gtest.h"
@@ -37,6 +37,7 @@
 #include "mlu_op_gtest_event_listener.h"
 #include "modules_test.h"
 #include "src/gtest-internal-inl.h"
+#include "hardware_monitor.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -58,12 +59,57 @@ static void setup_parallel_execution_policy() {
 #endif
 }
 
-using namespace mluoptest;  // NOLINT
+static void assertValidCmdArg(int argc, char **argv, std::string file,
+                              int line_num) {
+  int invalid_cmd_arg = 0;
+  std::ostringstream invalid_arg_ss;
+  invalid_arg_ss << "[";
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) != "--help") {
+      ++invalid_cmd_arg;
+      invalid_arg_ss << argv[i] << " ";
+    }
+  }
+  invalid_arg_ss << "]";
+  if (invalid_cmd_arg > 0) {
+    LOG(ERROR) << file << ":" << line_num << ":: "
+               << "The following command line arguments are invalid "
+               << invalid_arg_ss.str();
+    exit(EXIT_FAILURE_MLUOP);
+  }
+}
+
+extern "C" {
+const char *__asan_default_options() {
+  return "check_initialization_order=true:strict_init_order=true";
+}
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#include <sanitizer/asan_interface.h>
+
+static int init_asan_process() {
+  auto callback = [](const char *err) {
+    ADD_FAILURE() << "asan error occurred";
+  };
+  __asan_set_error_report_callback(callback);
+  return 0;
+}
+static int __attribute__((unused)) init_asan_stuff = init_asan_process();
+#endif
+}
+
+using namespace mluoptest; // NOLINT
+
 int main(int argc, char **argv) {
-  global_var.init(argc, argv);
+  // XXX(zhaolianshui): do we need a try-catch block?
+  // be consistent with gtest and remove valid arguments from argv
+  global_var.init(&argc, argv);
   setup_parallel_execution_policy();
   testing::AddGlobalTestEnvironment(new TestEnvironment);
+  // InitGoogleTest -> RegisterParameterizedTests -> case Collector ->
+  // global_var
   testing::InitGoogleTest(&argc, argv);
+  assertValidCmdArg(argc, argv, __FILE__, __LINE__);
   testing::TestEventListeners &listeners =
       testing::UnitTest::GetInstance()->listeners();
   delete listeners.Release(listeners.default_xml_generator());
@@ -85,5 +131,6 @@ int main(int argc, char **argv) {
     testing::UnitTest::GetInstance()->listeners().Append(
         new MLUOPGtestInternalPerfEventListener);
   }
+  monitor->start();
   return RUN_ALL_TESTS();
 }

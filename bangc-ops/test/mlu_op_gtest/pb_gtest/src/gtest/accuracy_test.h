@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLUOP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
-#define TEST_MLUOP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
+#define TEST_MLU_OP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
 #include <string>
 #include <vector>
 
@@ -34,4 +34,4 @@ bool checkAccuracyBaselineStrategy(std::string case_name,
                                    std::vector<double> &errors,
                                    double threshold);
 
-#endif  // TEST_MLUOP_GTEST_SRC_GTEST_ACCURACY_TEST_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_GTEST_ACCURACY_TEST_H_

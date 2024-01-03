@@ -27,11 +27,47 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include "mlu_op.h"
 #include "core/logging.h"
 #include "core/type.h"
-#include "mlu_op.h"
 
 namespace mluop {
+/**
+ ** @brief cast float32 data to int31 data
+ *
+ *   -----------           --------- low addr
+ *   | float32 |           | int16 |
+ *   | float32 |           | int16 |
+ *   | float32 |           | int16 |
+ *   | float32 |           |   .   |
+ *   | float32 |           |   .   | low int16
+ *   | float32 |           |   .   |
+ *   | float32 |           | int16 |
+ *   | float32 |           | int16 |
+ *   |    .    | -------\  | int16 |
+ *   |    .    | -------/  --------
+ *   |    .    |           | int16 |
+ *   | float32 |           | int16 |
+ *   | float32 |           | int16 |
+ *   | float32 |           |   .   |
+ *   | float32 |           |   .   | high int16
+ *   | float32 |           |   .   |
+ *   | float32 |           | int16 |
+ *   | float32 |           | int16 |
+ *   | float32 |           | int16 |
+ *   -----------           --------- high addr
+ *
+ * @param[in]
+ *        src. a pointer to float32 data
+ * @param[in]
+ *        num. the number of float32 data
+ * @param[out]
+ *        dst. a pointer to int31 data
+ * @return MLUOP_STATUS_SUCCESS if success,
+ *         otherwise the error code is returned.
+ */
+mluOpStatus_t castFloat32ToInt31(float *src, size_t num, void *dst);
+
 // The API is used for no scling factor quantization.
 mluOpStatus_t getPosition(float *input, size_t num, mluOpDataType_t datatype,
                           int *position);
@@ -44,6 +80,47 @@ mluOpStatus_t getPositionAndScale(float *input, size_t num,
 mluOpStatus_t getPositionScaleAndOffset(float *input, size_t num,
                                         mluOpDataType_t datatype, int *position,
                                         float *scale, int *offset);
+
+/**
+ ** @brief cast int31 data to float32 data
+ *
+ *  low addr   ---------            -----------
+ *             | int16 |            | float32 |
+ *             | int16 |            | float32 |
+ *             | int16 |            | float32 |
+ *             |   .   |            | float32 |
+ *  low int16  |   .   |            | float32 |
+ *             |   .   |            | float32 |
+ *             | int16 |            | float32 |
+ *             | int16 |            | float32 |
+ *             | int16 |  -------\  |    .    |
+ *             --------   -------/  |    .    |
+ *             | int16 |            |    .    |
+ *             | int16 |            | float32 |
+ *             | int16 |            | float32 |
+ *             |   .   |            | float32 |
+ *  high int16 |   .   |            | float32 |
+ *             |   .   |            | float32 |
+ *             | int16 |            | float32 |
+ *             | int16 |            | float32 |
+ *             | int16 |            | float32 |
+ *  high addr  ---------            -----------
+ *
+ * @param[in]
+ *        src. a pointer to int31 data
+ * @param[out]
+ *        dst. a pointer to float data
+ * @param[in]
+ *        num. the number of float32 data
+ * @param[in]
+ *         position. the position of quantify param
+ * @return MLUOP_STATUS_SUCCESS if success,
+ *         otherwise the error code is returned.
+ */
+
+mluOpStatus_t castInt31ToFloat32(void *src, float *dst, size_t num,
+                                 int position);
+
 mluOpStatus_t castDtypeToBitwidth(mluOpDataType_t quantize_dtype,
                                   int *bitwidth);
 
@@ -72,7 +149,9 @@ std::string getStringEnvVar(const std::string &str,
 bool getBoolEnvVar(const std::string &str, bool default_para = false);
 
 /**
- * @brief Casts data from float32 to int8/int16.
+ * @brief Casts data from float32 to int8/int16. If you would like to
+ *        cast from float32 to int31, please call castFloat32ToInt31
+ *        rather than this function.
  *
  * @param[in] src
  *   Input. Pointer to float32 data.
@@ -122,7 +201,9 @@ mluOpStatus_t castFloat32ToFixed(
 }
 
 /**
- * @brief Casts data from int8/int16 to float32.
+ * @brief Casts data from int8/int16 to float32. If you would like to
+ *        cast from int31 to float32, please call castInt31ToFloat32
+ *        rather than this function.
  *
  * @param[in] src
  *   Input. Pointer to int8/int16 data.
@@ -153,6 +234,6 @@ mluOpStatus_t castFixedToFloat32(const FixedType *src, float *dst,
   }
   return MLUOP_STATUS_SUCCESS;
 }
-}  // namespace mluop
 
+}  // namespace mluop
 #endif  // CORE_TOOL_H_

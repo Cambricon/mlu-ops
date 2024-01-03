@@ -26,8 +26,10 @@
 #include <iterator>
 #include <functional>
 #include <queue>
+#include <map>
 #include <set>
 #include <stdexcept>
+#include <utility>
 #include "mlu_op_gtest.h"
 #include "op_register.h"
 #include "internal_perf.h"
@@ -59,8 +61,14 @@ void TestSuite::SetUpTestCase() {
   ecfg_->zero_input = global_var.zero_input_;
   ecfg_->mlu_only = global_var.mlu_only_;
   ecfg_->test_llc = global_var.test_llc_;
+  ecfg_->compatible_test = global_var.compatible_test_;
+  ecfg_->test_algo = global_var.test_algo_;
+  ecfg_->random_mlu_address = global_var.random_mlu_address_;
+  ecfg_->kernel_trace_policy = global_var.kernel_trace_policy_;
+  ecfg_->enable_const_dram = global_var.enable_const_dram_;
+  ecfg_->auto_tuning = global_var.auto_tuning_;
   if (ecfg_->mlu_only) {
-    LOG(WARNING) << "MLUOPSGTEST: MLU-ONLY mode, skip computing cpu result (or "
+    LOG(WARNING) << "MLUOPGTEST: MLU-ONLY mode, skip computing cpu result (or "
                     "reading from *pb) and "
                     "computing diff.";
   }
@@ -97,15 +105,18 @@ void TestSuite::TearDown() {
 void TestSuite::Thread1() {
   size_t case_idx = std::get<1>(GetParam());
   auto case_path = case_path_vec_[case_idx];
+  std::shared_ptr<mluoptest::Executor> exe = nullptr;
   try {
-    auto exe = getOpExecutor(op_name_);
-    // TODO(wangjianxin): modify ctor, set op_name in ctor.
+    exe = getOpExecutor(op_name_);
+
+    // TODO(None): modify ctor, set op_name in ctor.
     exe->result()->op_name = op_name_;
     exe->init(ectx_);
     exe->setup(case_path_vec_[case_idx], ecfg_);
     exe->launch();
     auto res = exe->teardown();
     res_.emplace_back(res);
+
     if (global_var.get_vmpeak_ != "") {
       std::ofstream get_vmpeak_oss;
       get_vmpeak_oss.open(global_var.get_vmpeak_, std::ios::app);
@@ -113,16 +124,18 @@ void TestSuite::Thread1() {
                      << mluoptest::proc_usage_peak() << std::endl;
       get_vmpeak_oss.close();
     }
+    exe = nullptr;
   } catch (std::exception &e) {
     ectx_->reset();
 
     mluoptest::EvaluateResult res;
-    res.op_name = case_path;
+    if (exe) res = *(exe->result());
+    res.op_name = op_name_;
     res.case_path = case_path;
     res.what.emplace_back(
         "Unknown error: maybe exception raised, other info is lost.");
     res_.emplace_back(res);
-    ADD_FAILURE() << "MLUOPSGTEST: catched " << e.what()
+    ADD_FAILURE() << "MLUOPGTEST: catched " << e.what()
                   << " in single thread mode. (of " << case_path << ")";
   }
 }
@@ -297,7 +310,7 @@ void TestSuite::ThreadX() {
       res = *(exe->result());
       res.what.emplace_back(
           "Unknown error: maybe exception raised, other info is lost.");
-      ADD_FAILURE() << "MLUOPSGTEST: catched " << e.what()
+      ADD_FAILURE() << "MLUOPGTEST: catched " << e.what()
                     << " in teardown. (of " << res.case_path
                     << ") tid: " << std::this_thread::get_id();
     }
@@ -320,10 +333,11 @@ void TestSuite::ThreadX() {
     auto ecw = ctx->ecw_vec[pos];
     ecw->init();  // if initialized, this func will return directly.
 
+    std::shared_ptr<mluoptest::Executor> exe = nullptr;
     // run
     try {
-      auto exe = getOpExecutor(op_name);
-      // TODO(wangjianxin): modify ctor, set op_name in ctor.
+      exe = getOpExecutor(op_name);
+      // TODO(None): modify ctor, set op_name in ctor.
       exe->result()->op_name = op_name;
       exe->init(ecw->ectx);
       exe->setup(case_path, ecfg_);
@@ -337,11 +351,13 @@ void TestSuite::ThreadX() {
         std::lock_guard<std::mutex> lk(ctx->mtx);
         ctx->exe_vec[pos]->set(exe);  // push exe into task queue.
       }
+      exe = nullptr;
     } catch (std::exception &e) {
       ctx->ecw_vec[pos]->reset();  // reset running env
       ctx->exe_vec[pos]->reset();  // mark pos as free
 
       mluoptest::EvaluateResult res;
+      if (exe) res = *(exe->result());
       res.op_name = op_name;
       res.case_path = case_path;
       res.what.emplace_back(
@@ -350,7 +366,7 @@ void TestSuite::ThreadX() {
         std::lock_guard<std::mutex> lk(ctx->mtx);
         ctx->results.emplace_back(res);
       }
-      ADD_FAILURE() << "MLUOPSGTEST: catched " << e.what() << " in setup. (of "
+      ADD_FAILURE() << "MLUOPGTEST: catched " << e.what() << " in setup. (of "
                     << res.case_path << ") tid: " << std::this_thread::get_id();
     }
   };
@@ -434,7 +450,7 @@ std::string showFormula(mluoptest::Evaluator::Formula f) {
       return "DIFF_KL";
     default:
       GTEST_CHECK(false,
-                  "MLUOPSGTEST: got an unsupported formula when print it.");
+                  "MLUOPGTEST: got an unsupported formula when print it.");
   }
 }
 
@@ -486,6 +502,94 @@ std::ostringstream print_error(
   return oss;
 }
 
+/*!
+ * @brief simple preprocess to format kernel symbol name to reduce string size
+ *
+ * will remove function param and return type, only keep kernel function name
+ * and template param
+ *
+ * for example: "void MLUKernelName<int, int>(int, char)" -> "MLUKernelName<int,
+ * int>"
+ *
+ * @param[in] name original kernel symbol name
+ */
+static std::string stripKernelNameParam(const std::string &name) {
+  const std::string void_prefix = "void ";
+  size_t start_pos = 0;
+  // remove return type: void
+  if (name.size() > void_prefix.size() &&
+      name.substr(0, void_prefix.size()).compare(void_prefix) == 0) {
+    start_pos = void_prefix.size();
+  }
+  GTEST_CHECK(name.size() > void_prefix.size(),
+              "MLUOPGTEST: got unexpected kernel name.");
+  size_t pos = name.find(">(");
+  if (pos == std::string::npos) {
+    // normal kernel name, find param location '('
+    pos = name.find("(");
+  } else {
+    // templated kernel name, remove string after xxxx<...>
+    pos++;
+  }
+  GTEST_CHECK(pos != std::string::npos,
+              "MLUOPGTEST: got unexpected kernel name.");
+  return name.substr(start_pos, pos - start_pos);
+}
+
+static std::map<std::string, size_t> filterCounterNameLists(
+    const std::vector<std::string> &name_lists) {  // NOLINT
+  std::map<std::string, size_t> counter;
+  for (const auto &n : name_lists) {
+    counter[stripKernelNameParam(n)]++;
+  }
+  return counter;
+}
+
+static std::string counterJsonStringify(
+    const std::map<std::string, size_t> &&name_counter) {
+  /* Target format:
+   * {"<kernel_name1>": <cnt1>, "<kernel_name2>": <cnt2>},
+   * In string, would be:
+   * "{\"<kernel_name1>\": <cnt1>, \"<kernel_name2>\": <cnrt2>}"
+   */
+  std::string s("{");
+  for (auto it = name_counter.cbegin(); it != name_counter.cend(); it++) {
+    s += "\"" + it->first + "\": " + std::to_string(it->second);
+    if (std::next(it) != name_counter.cend()) {
+      s += ", ";
+    }
+  }
+  s += "}";
+  return s;
+}
+
+static inline std::string dumpCaseKernelInfoJson(
+    const std::vector<std::string> &name_list) {
+  return counterJsonStringify(filterCounterNameLists(name_list));
+}
+
+#if 0  // just for backup, not be used yet
+static std::string JsonStringify(const std::vector<std::string>& name_list) {
+  auto add_quote = [](const std::string &in_str) -> std::string {
+    std::string s("\"");
+    s += in_str;
+    s += "\"";
+    return s;
+  };
+  auto concat_name = [add_quote](
+      const std::string &prev, const std::string &next) -> std::string {
+    return std::move(prev) + ", " + add_quote(next);
+  };
+  std::string s("[");
+  if (name_list.size()) {
+    s += std::accumulate(std::next(name_list.begin()), name_list.end(),
+        add_quote(name_list[0]), concat_name);
+  }
+  s += "]";
+  return s;
+}
+#endif
+
 static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
                                     Test *self) {
   std::ostringstream out;
@@ -509,6 +613,14 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
         << "[MLU Workspace Size     ]: " << eva.mlu.workspace_size
         << " (Bytes)\n";
   }
+  if (eva.mlu.kernel_tracing_enabled) {
+    out << "[MLU Kernel Name(s)     ]: "
+        << dumpCaseKernelInfoJson(eva.mlu.kernel_name_lists) << "\n";
+  } else {
+    out << "[MLU Kernel Name(s)     ]: "
+        << "N/A"
+        << "\n";
+  }
   out << "[MLU TheoryOps          ]: " << eva.mlu.theory_ops << " (Ops)\n"
       << "[MLU TheoryIOs          ]: " << eva.mlu.theory_io << " (Bytes)\n"
       << "[MLU ComputeForce       ]: " << eva.mlu.compute_force << " (op/s)\n"
@@ -522,10 +634,6 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
       << "[GPU Compute Efficiency ]: " << eva.gpu.compute_efficiency << "\n"
       << "[GPU Workspace Size     ]: " << eva.gpu.workspace_size
       << " (Bytes)\n";
-  if (eva.gpu.has_runtime_env) {
-    out << "[GPU dl_framework      ]: " << eva.gpu.dl_framework << "\n";
-  }
-
   if (global_var.enable_gtest_internal_perf) {
     out << "[GTEST Internal Time(ms)]: "
         << mluoptest::timeseries_to_array_str(eva.gtest.time_costs_ms) << "\n";
@@ -562,13 +670,13 @@ void TestSuite::report(mluoptest::EvaluateResult eva) {
       throw std::runtime_error("Errors found during test");
     }
   } catch (std::exception &e) {
-    ADD_FAILURE() << "MLUOPSGTEST: " << e.what() << "\n" << log.str();
+    ADD_FAILURE() << "MLUOPGTEST: " << e.what() << "\n" << log.str();
   }
 }
 
 void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
   // add keywords for write-back
-  std::string mlu_op_jira_id;
+  std::string mluop_jira_id;
   std::string test_case_key;
 
   // save case_name
@@ -581,12 +689,12 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
     case_name = er.case_path;
   }
 
-  if (mlu_op_test_case.find(op_name_) != mlu_op_test_case.end()) {
-    mlu_op_jira_id = mlu_op_test_case[op_name_];
+  if (mluop_test_case.find(op_name_) != mluop_test_case.end()) {
+    mluop_jira_id = mluop_test_case[op_name_];
   } else {
-    mlu_op_jira_id = mlu_op_test_case["default"];
+    mluop_jira_id = mluop_test_case["default"];
   }
-  test_case_key = "['" + mlu_op_jira_id + "']";
+  test_case_key = "['" + mluop_jira_id + "']";
   this->RecordProperty("caseId", case_name);
   this->RecordProperty("test_case_issue_key", test_case_key);
 
@@ -620,6 +728,11 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
     this->RecordProperty("hardware_time_mlu_by_layer", mhwl_oss.str());
   }
 
+  if (er.mlu.kernel_tracing_enabled) {
+    this->RecordProperty("kernel_names_mlu",
+                         dumpCaseKernelInfoJson(er.mlu.kernel_name_lists));
+  }
+
   std::ostringstream interface_oss;
   interface_oss << std::setprecision(10) << er.mlu.interface_time;
   this->RecordProperty("interface_time_mlu", interface_oss.str());
@@ -647,12 +760,6 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
   std::ostringstream gce_oss;
   gce_oss << std::setprecision(10) << er.gpu.compute_efficiency;
   this->RecordProperty("compute_efficiency_gpu", gce_oss.str());
-
-  if (er.gpu.has_runtime_env) {
-    std::ostringstream gdl_oss;
-    gdl_oss << er.gpu.dl_framework;
-    this->RecordProperty("dl_framework_gpu", gdl_oss.str());
-  }
 
   std::ostringstream theory_ops_oss;
   theory_ops_oss << std::setprecision(10) << er.mlu.theory_ops;
@@ -682,6 +789,7 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
     error_oss << error;
     this->RecordProperty(key, error_oss.str());
   }
+
 #if 0
   // At present SEPP team does not support xml larger than 800Mb
   // record gtest internal perf

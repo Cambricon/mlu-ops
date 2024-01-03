@@ -29,22 +29,22 @@ __nram__ char ram[SIZE_NRAM_BUF];
 
 template <typename T>
 __mlu_func__ void blockTensorStridedOut(T *input, T *output,
-                                        TensorShape &output_shape) {
-  int total_num = output_shape.total_num;
-  int rem_per_core = total_num % taskDim;
-  int data_per_core =
+                                        mluop::TensorShape &output_shape) {
+  uint64_t total_num = output_shape.total_num;
+  uint64_t rem_per_core = total_num % taskDim;
+  uint64_t data_per_core =
       taskId < rem_per_core ? total_num / taskDim + 1 : total_num / taskDim;
 
   // currently SIZE_NRAM_BUF does not exceed 2GB, keep int32 for performance
   // reasons
   int load_once = SIZE_NRAM_BUF / sizeof(T);
-  int load_repeat = data_per_core / load_once;
+  uint64_t load_repeat = data_per_core / load_once;
   int load_remain = data_per_core % load_once;
 
-  int gdram_offset = taskId < rem_per_core
-                         ? taskId * data_per_core
-                         : taskId * data_per_core + rem_per_core;
-  for (int i = 0; i < load_repeat; i++) {
+  uint64_t gdram_offset = taskId < rem_per_core
+                              ? taskId * data_per_core
+                              : taskId * data_per_core + rem_per_core;
+  for (uint64_t i = 0; i < load_repeat; i++) {
     __memcpy((T *)ram, input + gdram_offset + i * load_once,
              load_once * sizeof(T), GDRAM2NRAM);
     tensorStrideStore<T>(output, gdram_offset + i * load_once, (T *)ram,
@@ -59,15 +59,16 @@ __mlu_func__ void blockTensorStridedOut(T *input, T *output,
 }
 
 template <typename T>
-__mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
-                                                  void *output,
-                                                  TensorShape output_shape) {
+__mlu_global__ void MLUUnionKernelTensorStrideOut(
+    const void *input, void *output, mluop::TensorShape output_shape) {
+  PERF_TIME_BEGIN();
   blockTensorStridedOut((T *)input, (T *)output, output_shape);
+  PERF_TIME_END();
 }
 
 template __mlu_global__ void MLUUnionKernelTensorStrideOut<int8>(
-    const void *input, void *output, TensorShape output_shape);
+    const void *input, void *output, mluop::TensorShape output_shape);
 template __mlu_global__ void MLUUnionKernelTensorStrideOut<half>(
-    const void *input, void *output, TensorShape output_shape);
+    const void *input, void *output, mluop::TensorShape output_shape);
 template __mlu_global__ void MLUUnionKernelTensorStrideOut<float>(
-    const void *input, void *output, TensorShape output_shape);
+    const void *input, void *output, mluop::TensorShape output_shape);

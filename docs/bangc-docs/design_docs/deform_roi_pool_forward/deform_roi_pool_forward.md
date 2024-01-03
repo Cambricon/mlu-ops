@@ -147,7 +147,7 @@ void DeformRoIPoolForwardCUDAKernelLauncher(Tensor input, Tensor rois,
 ### 2.2 接口设计
 
 ```c++
-mluOpStatus_t mluOp_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
+mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
                                                       const mluOpTensorDescriptor_t input_desc,
                                                       const void *input,
                                                       const mluOpTensorDescriptor_t rois_desc,
@@ -245,20 +245,20 @@ spatial_scale 0.03125.
   if (input_desc->dims[0] == 0 || mluOpGetTensorElementNum(rois_desc) == 0 ||
       mluOpGetTensorElementNum(output_desc) == 0) {
     VLOG(5) << "[mluOpDeformRoiPoolForward] Zero element tensor failure";
-    return mluOp_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0 || mluOpGetTensorElementNum(output_desc) == 0) {
     VLOG(5) << "[mluOpDeformRoiPoolForward] Skip zero element tensor";
-    return mluOp_STATUS_SUCCESS;
+    return MLUOP_STATUS_SUCCESS;
   }
   ```
  3、对输入输出支持的dtype、layout以及shape进行防呆；
 ```c++
-  PARAM_CHECK("[mluOpDeformRoiPoolForward]", input_desc->layout == mluOp_LAYOUT_NHWC);
-  PARAM_CHECK("[mluOpDeformRoiPoolForward]", output_desc->layout == mluOp_LAYOUT_NHWC);
+  PARAM_CHECK("[mluOpDeformRoiPoolForward]", input_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK("[mluOpDeformRoiPoolForward]", output_desc->layout == MLUOP_LAYOUT_NHWC);
 
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              input_desc->dtype == mluOp_DTYPE_FLOAT || input_desc->dtype == mluOp_DTYPE_HALF);
+              input_desc->dtype == MLUOP_DTYPE_FLOAT || input_desc->dtype == MLUOP_DTYPE_HALF);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]", input_desc->dtype == rois_desc->dtype);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]", input_desc->dtype == output_desc->dtype);
 ```
@@ -284,12 +284,12 @@ spatial_scale 0.03125.
   if (rois_desc->dims[0] != output_desc->dims[0]) {
     LOG(ERROR) << "[mluOpDeformRoiPoolForward] rois number = " << rois_desc->dims[0]
                << ", output batch = " << output_desc->dims[0] << ", they should be equal.";
-    return mluOp_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->dims[3] != output_desc->dims[3]) {
     LOG(ERROR) << "[mluOpDeformRoiPoolForward] input channel = " << input_desc->dims[3]
                << ", output channel = " << output_desc->dims[3] << ", they should be equal.";
-    return mluOp_STATUS_BAD_PARAM;
+    return MLUOP_STATUS_BAD_PARAM;
   }
 ```
 

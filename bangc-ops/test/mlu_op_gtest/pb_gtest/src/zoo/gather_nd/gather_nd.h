@@ -30,6 +30,7 @@ class GatherNdExecutor : public Executor {
   ~GatherNdExecutor() {}  void paramCheck();
   void compute();
   void cpuCompute();
+  void setMiscellaneousParam() override;
   int64_t getTheoryOps() override;
   int64_t getTheoryIoSize() override;
 };

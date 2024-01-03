@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_CASE_COLLECTOR_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_CASE_COLLECTOR_H_
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_CASE_COLLECTOR_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_CASE_COLLECTOR_H_
 
 #include <unistd.h>
 #include <dirent.h>
@@ -30,9 +30,18 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include "pb_test_tools.h"
+#include "tools.h"
 #include "variable.h"
 #include "gtest/gtest.h"
+
+#define RETURN_IF_PATH_INVALID() \
+  do {                           \
+    if (!path_exist) {           \
+      return {};                 \
+    }                            \
+  } while (false)
+
+enum class caseType { CASE_FILE, CASE_LIST, CASE_DIR };
 
 class Collector {
  public:
@@ -40,6 +49,7 @@ class Collector {
   virtual ~Collector() {}
   std::vector<std::string> list();
   size_t num();  // return gtest repeat num NOT case number.
+
  private:
   std::string op_name_ = "";
   std::vector<std::string> read_case(std::string file_name);
@@ -50,6 +60,9 @@ class Collector {
   std::vector<std::string> list_by_case_list(std::string);
   std::vector<std::string> list_by_case_dir(std::string);
   std::vector<std::string> list_by_case_path(std::string);
+
+  void assertPath(std::string &, caseType, std::string, int);
+  bool path_exist = false;
 };
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_CASE_COLLECTOR_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_CASE_COLLECTOR_H_

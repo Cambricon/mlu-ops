@@ -356,7 +356,7 @@ __bang_add(vec_sub_x1, vec_sub_x1, vec_sub_z1, PAD_UP(num_deal_xyz, 64));
 ```
 step 6：对于step5得到dist2， dist2 和min_radius2和max_radius2、0进行对比，求出dist2== 0||  (dist2 >= min_radius2 && dist2 < max_radius2)对应位置的值为1（表示当前xyz点在以new_xyz点为球心，以min_radius和max_radius为半径的球域内）。
 ```C++
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   // distance2 >= min_radius2
   __bang_ge_scalar(tmp_addr, distance2, min_radius2, num_deal_xyz);
   // distance2 < max_radius2

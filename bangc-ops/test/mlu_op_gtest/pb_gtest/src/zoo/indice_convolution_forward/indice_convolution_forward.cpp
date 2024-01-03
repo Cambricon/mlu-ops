@@ -41,7 +41,7 @@ void IndiceConvolutionForwardExecutor::paramInit() {
 
 void IndiceConvolutionForwardExecutor::paramCheck() {
   GTEST_CHECK(parser_->getInputNum() == 3 && parser_->getOutputNum() == 1,
-              op_name + ": wrong input or output number.")
+              op_name_ + ": wrong input or output number.")
 }
 
 void IndiceConvolutionForwardExecutor::workspaceMalloc() {

@@ -49,8 +49,10 @@ void LogExecutor::compute() {
   MLUOP_CHECK(mluOpLog(handle_, prefer, base, input_tensor, input_dev,
                        output_tensor, output_dev));
   interface_timer_.stop();
+}
 
-  data_vector_[1].is_output = true;
+void LogExecutor::setMiscellaneousParam() {
+  data_vector_[1].alsoServeAsOutput();
 }
 
 void LogExecutor::cpuCompute() {

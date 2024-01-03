@@ -22,35 +22,42 @@
  *************************************************************************/
 #ifndef KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_HOST_H_
 #define KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_HOST_H_
-
+#include "mlu_op.h"
+#include "kernels/kernel.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/tool.h"
 #include "core/type.h"
+#include "core/tool.h"
+
+namespace mluop {
 
 struct TensorShape {
-  int tensor_dims[MLUOP_DIM_MAX];
-  int tensor_strides[MLUOP_DIM_MAX];
-  int total_num = 1;
+  int64_t tensor_dims[MLUOP_DIM_MAX];
+  int64_t tensor_strides[MLUOP_DIM_MAX];
+  uint64_t total_num = 1;
+  uint64_t total_stride = 1;
   bool is_contiguous = 1;
 };
 
-bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc);
+bool strideCaseWithNotConsistentDense(int tensor_num, ...);
 
 bool isDenseStrideTensor(const mluOpTensorDescriptor_t tensor_desc);
 
-bool strideCaseWithNotConsistentDense(int tensor_num, ...);
+bool ifNeedTensorStrideProcess(const mluOpTensorDescriptor_t tensor_desc);
 
-bool isTransPadStride(TensorShape &tensor_shape, int *dims, int *strides);
+bool isTransPadStride(TensorShape &tensor_shape, int64_t *dims,
+                      int64_t *strides);
 
 void getTensorShape(const mluOpTensorDescriptor_t tensor_desc,
                     TensorShape *tensor_shape);
 
 void getExpandTensorShape(const mluOpTensorDescriptor_t tensor_desc,
-                          int *target_shape, int target_dim,
+                          int64_t *target_shape, int target_dim,
                           TensorShape *tensor_shape);
+
+}  // namespace mluop
 
 mluOpStatus_t MLUOP_WIN_API mluOpTensorStrideIn(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,

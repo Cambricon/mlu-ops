@@ -20,6 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "parser.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #include <chrono>  // NOLINT
 #include <algorithm>
 #include <string>
@@ -29,13 +35,7 @@
 #include <utility>
 #include <functional>
 
-#include <sys/types.h>  // NOLINT
-#include <sys/stat.h>   // NOLINT
-#include <unistd.h>     // NOLINT
-#include <fcntl.h>      // NOLINT
-
-#include "pb_test_tools.h"
-#include "parser.h"
+#include "tools.h"
 #include "zero_element.h"
 
 static void zeroElementCreate(mluoptest::Node *node) {
@@ -217,12 +217,51 @@ void Parser::parse(const std::string &file) {
       mt->stride[i] = pt->mutable_shape()->dim_stride(i);
     }
 
-    // 2.else info
     mt->dtype = cvtProtoDtypeToMluOp(pt->dtype());
     mt->oc_dt = pt->has_onchip_dtype()
                     ? cvtProtoDtypeToMluOp(pt->onchip_dtype())
                     : MLUOP_DTYPE_INVALID;
     mt->layout = cvtProtoLayoutToMluOp(pt->layout());
+
+    // 2.pointer mode and cpu scalar info
+    if (pt->has_is_cpu_scalar()) {
+      mt->is_cpu_scalar = (pt->is_cpu_scalar());
+    } else {
+      mt->is_cpu_scalar = false;
+    }
+    if (mt->is_cpu_scalar) {
+      if (mt->shape.size() != 0) {
+        LOG(ERROR) << "Parser: is_cpu_scalar is true but tensor shape size is "
+                      "not zero";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
+      }
+      if ((!pt->has_pointer_mode()) ||
+          (pt->pointer_mode() != POINTER_MODE_HOST)) {
+        LOG(WARNING) << "Parser: is_cpu_scalar is true but pointer_mode in "
+                        "proto is not POINTER_MODE_HOST in proto, set to "
+                        "POINTER_MODE_HOST forcely";  // NOLINT
+      }
+      // At present, always setup pointer_mode to HOST when is_cpu_scalar is
+      // true
+      mt->pointer_mode = MLUOP_POINTER_MODE_HOST;
+    }
+    if (pt->has_pointer_mode() && pt->pointer_mode() == POINTER_MODE_HOST) {
+      if (mt->shape.size() == 0) {
+        mt->pointer_mode = MLUOP_POINTER_MODE_HOST;
+        // At present, if pointer_mode is POINTER_MODE_HOST, is_cpu_scalar must
+        // be true that is, only support scalar when 'tensor' is on cpu
+        if (!pt->is_cpu_scalar()) {
+          LOG(ERROR) << "Parser: pointer_mode has been set to "
+                        "POINTER_MODE_HOST but is_cpu_scalar is false in "
+                        "proto, set to true forcely";  // NOLINT
+        }
+        mt->is_cpu_scalar = true;
+      } else {
+        LOG(ERROR) << "Parser: pointer_mode is POINTER_MODE_HOST but it is not "
+                      "scalar, skip this info";  // NOLINT
+      }
+    }
 
     // 3.size to malloc memory. (shape may not equal to size)
     // stride_count include stride, if no stride stride_count == shape_count
@@ -232,7 +271,6 @@ void Parser::parse(const std::string &file) {
     mt->shape_count = getTensorShapeCount(pt);
     mt->sizeof_dtype = mluop::getSizeOfDataType(mt->dtype);
     mt->size_in_bytes = mt->total_count * mt->sizeof_dtype;
-
     if (mt->total_count != mt->shape_count) {
       VLOG(4) << "WARNING: Parser: the " << mt->name
               << " strided element count is " << mt->total_count
@@ -247,6 +285,7 @@ void Parser::parse(const std::string &file) {
     checkTensorValid(mt, pt);
   };
 
+  bool is_int31 = false;
   bool is_float = false;
   bool is_group = false;
   bool is_round_half_up = false;
@@ -258,10 +297,20 @@ void Parser::parse(const std::string &file) {
       }
     }
   }
+  if (proto_node_->has_convolution_forward_param()) {
+    if (proto_node_->convolution_forward_param().group_count() > 1 &&
+        proto_node_->convolution_forward_param().dimnb() != 4) {
+      is_group = true;
+    }
+  }
   inputs_.resize(proto_node_->input_size());
   for (size_t i = 0; i < proto_node_->input_size(); ++i) {
     parse_tensor(&inputs_[i], proto_node_->mutable_input(i));
     if (negative_scale_) {
+      if (inputs_[i].dtype == MLUOP_DTYPE_INT31 ||
+          inputs_[i].oc_dt == MLUOP_DTYPE_INT31) {
+        is_int31 = true;
+      }
       if ((inputs_[i].dtype == MLUOP_DTYPE_HALF &&
            (inputs_[i].oc_dt == MLUOP_DTYPE_HALF ||
             inputs_[i].oc_dt == MLUOP_DTYPE_INVALID)) ||
@@ -272,7 +321,8 @@ void Parser::parse(const std::string &file) {
       }
     }
   }
-  if (!is_group && !is_float && !is_round_half_up && negative_scale_) {
+  if (!is_group && !is_int31 && !is_float && !is_round_half_up &&
+      negative_scale_) {
     for (size_t i = 0; i < proto_node_->input_size(); ++i) {
       // only test symmetric quantify
       if (inputs_[i].offset == 0) {
@@ -393,7 +443,7 @@ void Parser::getOutputTensorValue(size_t index, void *data, size_t count) {
 }
 
 // Get value from field value_f
-// TODO(taokai): abandon value_f, use value_h for float numbers instead.
+// TODO(None): abandon value_f, use value_h for float numbers instead.
 void Parser::getTensorValueF(const Tensor *pt, void *data, size_t count) {
   switch (pt->dtype()) {
     case DTYPE_COMPLEX_HALF:
@@ -447,7 +497,8 @@ void Parser::getTensorValueF(const Tensor *pt, void *data, size_t count) {
 // get value from value_i
 // no quant intx, saved in value_i
 void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
-  if (pt->dtype() == DTYPE_COMPLEX_HALF || pt->dtype() == DTYPE_COMPLEX_FLOAT) {
+  if (pt->dtype() == DTYPE_INT31 || pt->dtype() == DTYPE_COMPLEX_HALF ||
+      pt->dtype() == DTYPE_COMPLEX_FLOAT) {
     GTEST_CHECK(pt->value_i_size() == 2 * count,
                 "Parser: when read value_i, expected element num is not equal "
                 "to real element num.");
@@ -497,6 +548,17 @@ void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
         ((int8_t *)data)[i] = pt->value_i(i);
       }
       break;
+    case DTYPE_INT31: {
+      // in generator prototxt, 1*int31 split into 2*int16, so data_num =
+      // value_size() / 2
+      auto num = count;
+      for (int i = 0; i < num; ++i) {
+        int16_t I1 = pt->value_i(i);
+        int16_t I2 = pt->value_i(i + num);
+        ((int16_t *)data)[i] = I2;        // low int16
+        ((int16_t *)data)[i + num] = I1;  // high int16
+      }
+    } break;
     case DTYPE_HALF:
       for (int i = 0; i < count; ++i) {
         ((int16_t *)data)[i] = pt->value_i(i);
@@ -526,7 +588,7 @@ void Parser::getTensorValueI(const Tensor *pt, void *data, size_t count) {
       GTEST_CHECK(
           false,
           "Parser: found unsuppored dtype in value_i, value_i only support "
-          "int8/uint8/int16/uint16/int32/int64/bool.");
+          "int8/uint8/int16/uint16/int31/int32/int64/bool.");
   }
 }
 
@@ -558,6 +620,17 @@ void Parser::getTensorValueL(const Tensor *pt, void *data, size_t count) {
         ((int32_t *)data)[i] = pt->value_l(i);
       }
       break;
+    case DTYPE_INT31: {
+      // in generator prototxt, 1*int31 split into 2*int16, so data_num =
+      // value_size() / 2
+      auto num = count;
+      for (int i = 0; i < num; ++i) {
+        int16_t I1 = pt->value_l(i);
+        int16_t I2 = pt->value_l(i + num);
+        ((int16_t *)data)[i] = I2;        // low int16
+        ((int16_t *)data)[i + num] = I1;  // high int16
+      }
+    } break;
     case DTYPE_DOUBLE:
       for (int i = 0; i < count; ++i) {
         int64_t value_l = pt->value_l(i);
@@ -568,7 +641,7 @@ void Parser::getTensorValueL(const Tensor *pt, void *data, size_t count) {
       GTEST_CHECK(
           false,
           "Parser: found unsuppored dtype in value_l, value_l only support "
-          "bool/int8/int16/int32/int64.");
+          "bool/int8/int16/int31/int32/int64.");
   }
 }
 
@@ -585,6 +658,7 @@ void Parser::getTensorValueUI(const Tensor *pt, void *data, size_t count) {
       }
       break;
     case DTYPE_UINT16:
+    case DTYPE_BFLOAT16:
       for (int i = 0; i < count; ++i) {
         ((uint16_t *)data)[i] = pt->value_ui(i);
       }
@@ -737,17 +811,22 @@ void Parser::getTensorValueByFile(Tensor *pt, void *data, size_t count) {
   size_t tensor_length = count * getTensorSize(pt);
   auto start = std::chrono::steady_clock::now();
   std::ifstream fin(cur_pb_path, std::ios::in | std::ios::binary);
-  fin.read((char *)data, tensor_length);
+  if (pt->dtype() == DTYPE_INT31) {
+    auto tensor_length_int31 = tensor_length / 2;
+    fin.read((char *)data + tensor_length_int31, tensor_length_int31);
+    fin.read((char *)data, tensor_length_int31);
+  } else {
+    fin.read((char *)data, tensor_length);
+  }
   auto stop = std::chrono::steady_clock::now();
   std::chrono::duration<double> cost_s = stop - start;
 
   ASSERT_TRUE(fin) << "read data in file failed.";
-
 #if 0
   if (!fin) {
     LOG(ERROR) << "read data in file failed.";
-    throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                std::to_string(__LINE__));
+    throw std::invalid_argument(
+      std::string(__FILE__) + " +" + std::to_string(__LINE__));
   }
 #endif
 
@@ -986,8 +1065,8 @@ bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
   bool status = false;
   auto start = std::chrono::steady_clock::now();
 
-  // ref ProtoBuf docs, `FileInputStream` is preferred over using an ifstream
-  // with `IstreamInputStream`
+  // ref ProtoBuf docs, `FileInputStream` is preferred over
+  // using an ifstream with `IstreamInputStream`
   google::protobuf::io::FileInputStream input(fd);
   if (strEndsWith(filename, ".pb")) {
     google::protobuf::io::CodedInputStream coded_input(&input);
@@ -1086,6 +1165,14 @@ inline size_t Parser::getTensorStrideCount(Tensor *pt, ValueType value_type) {
     return shapeStrideCount(pt->mutable_shape());
   }
 
+  // special case: int31 = int16 * 2 in pb
+  if (pt->dtype() == DTYPE_INT31 && value_type == VALUE_I) {
+    GTEST_CHECK(
+        pt->value_i_size() % 2 == 0,
+        "Parser: number of value_i should be multiples of 2 for int31.");
+    return pt->value_i_size() / 2;
+  }
+
   if (pt->dtype() == DTYPE_COMPLEX_HALF || pt->dtype() == DTYPE_COMPLEX_FLOAT) {
     int num = 0;
     if (value_type == VALUE_F) {
@@ -1169,7 +1256,6 @@ void Parser::setCurPbPath(const std::string &filename) {
     pb_path_ = filename.substr(0, pos_pb + 1);
   }
 }
-
 void Parser::isSupportTF32(Node *protoNode) {
   // get proto_node_'s description
   const google::protobuf::Descriptor *desc = protoNode->GetDescriptor();
@@ -1196,7 +1282,6 @@ void Parser::isSupportTF32(Node *protoNode) {
     is_support_TF32_ = 0;
     return;
   }
-
   const google::protobuf::Message &message_param = reflection->GetMessage(
       dynamic_cast<google::protobuf::Message &>(*protoNode), op_param_des);
   // get allow_tf32 etc in  message of message
@@ -1229,16 +1314,34 @@ size_t Parser::getTensorSize(Tensor *pt) {
     GET_WIDTH_TENSOR_TYPE(DTYPE_FLOAT, 4);
     GET_WIDTH_TENSOR_TYPE(DTYPE_INT32, 4);
     GET_WIDTH_TENSOR_TYPE(DTYPE_UINT32, 4);
+    GET_WIDTH_TENSOR_TYPE(DTYPE_INT31, 4);
     GET_WIDTH_TENSOR_TYPE(DTYPE_INT16, 2);
     GET_WIDTH_TENSOR_TYPE(DTYPE_UINT16, 2);
     GET_WIDTH_TENSOR_TYPE(DTYPE_INT8, 1);
     GET_WIDTH_TENSOR_TYPE(DTYPE_UINT8, 1);
     GET_WIDTH_TENSOR_TYPE(DTYPE_HALF, 2);
+    GET_WIDTH_TENSOR_TYPE(DTYPE_BFLOAT16, 2);
     GET_WIDTH_TENSOR_TYPE(DTYPE_BOOL, 1);
     default:
       GTEST_CHECK(false, "Parser: Unknown tensor DTYPE.");
   }
 #undef GET_WIDTH_TENSOR_TYPE
+}
+
+size_t Parser::getProtoApiVersion() {
+  auto api_name = getApiName();
+  if (api_name.empty()) {
+    return -1;
+  }
+  auto pos = api_name.rfind("_v");
+  if (std::string::npos == pos) {
+    return 1;
+  }
+  std::string str_version = api_name.substr(pos + 2);
+  if (!isNumber(str_version)) {
+    return 1;
+  }
+  return stoi(str_version);
 }
 
 }  // namespace mluoptest

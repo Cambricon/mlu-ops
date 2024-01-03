@@ -73,11 +73,14 @@ void MoeDispatchForwardExecutor::compute() {
       capacity_, hidden_, num_experts_, dispatch_desc, dev_dispatch));
   interface_timer_.stop();
   VLOG(4) << "[MoeDispatchForwardExecutor] call compute() end.";
-  data_vector_[0].is_output = false;
-  data_vector_[1].is_output = false;
-  data_vector_[2].is_output = false;
-  data_vector_[3].is_output = false;
-  data_vector_[4].is_output = true;
+}
+
+void MoeDispatchForwardExecutor::setMiscellaneousParam() {
+  data_vector_[0].onlyServeAsInput();
+  data_vector_[1].onlyServeAsInput();
+  data_vector_[2].onlyServeAsInput();
+  data_vector_[3].onlyServeAsInput();
+  data_vector_[4].alsoServeAsOutput();
 }
 
 void MoeDispatchForwardExecutor::cpuCompute() {

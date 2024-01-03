@@ -34,6 +34,7 @@ class LogExecutor : public Executor {
   void paramCheck();
   void compute();
   void cpuCompute();
+  void setMiscellaneousParam() override;
   int64_t getTheoryOps() override;
 };
 

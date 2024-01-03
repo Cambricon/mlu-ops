@@ -148,6 +148,16 @@ inline int getMaxParallelJobNum(mluOpHandle_t handle, cnrtFunctionType_t type) {
   return handle->getJobNum(type);
 }
 
+// get the llc pedding attribute on current CNdevice.
+inline bool isLLCPendding(mluOpHandle_t handle) {
+  if (0 == strncmp(handle->device_name, "MLU590-H8", strlen("MLU590-H8")) ||
+      0 == strncmp(handle->device_name, "MLU590-M9", strlen("MLU590-M9"))) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 }  // namespace runtime
 }  // namespace mluop
 

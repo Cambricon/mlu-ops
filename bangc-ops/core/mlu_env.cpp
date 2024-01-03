@@ -20,11 +20,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
 #include "core/mlu_env.h"
+
+namespace mluop {
+
 // Get CAMBRICON_TF32_OVERRIDE from env.
 // CAMBRICON_TF32_OVERRIDE=0: do not use tf32.
 // CAMBRICON_TF32_OVERRIDE=1: use tf32 for fp32 compute.
-namespace mluop {
 __attribute__((__unused__)) int cambricon_tf32_override_ =
     mluop::getUintEnvVar("CAMBRICON_TF32_OVERRIDE", 1);
 
@@ -35,7 +38,7 @@ __attribute__((__unused__)) int mluop_check_dep_version_ =
     mluop::getUintEnvVar("MLUOP_CHECK_DEP_VERSION", 1);
 
 namespace mlu_env {
-int getCarmbriconTF32Override() { return mluop::cambricon_tf32_override_; }
-int getCheckDepVersion() { return mluop::mluop_check_dep_version_; }
+int getCarmbriconTF32Override() { return cambricon_tf32_override_; }
+int getCheckDepVersion() { return mluop_check_dep_version_; }
 }  // namespace mlu_env
 }  // namespace mluop

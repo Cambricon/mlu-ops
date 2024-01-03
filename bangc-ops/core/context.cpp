@@ -158,7 +158,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   PARAM_CHECK("[mluOpCreate]", handle != NULL);
 
   if (MLUOP_STATUS_SUCCESS != mluOpCheckDependency(true, false, ERROR)) {
-    LOG(ERROR) << "Check version dependency failed in mluOpCreate function.";
+    LOG(ERROR)
+        << "Check version dependency failed in mluOpCreate function. "
+        << "If don't want this check, set env MLUOP_CHECK_DEP_VERSION to 0, "
+        << "but probably cause unexpected errors.";
     return MLUOP_STATUS_NOT_INITIALIZED;
   }
 
@@ -168,10 +171,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   int32_t nram_size = 0;
   int32_t wram_size = 0;
   int32_t sram_size = 0;
+  int32_t clock_rate = 0;
+  int32_t memory_clock_rate = 0;
+  int32_t memory_bus_width = 0;
+  int32_t l2cache_size = 0;
+  int32_t persisting_l2cache_maxsize = 0;
+  double memory_band_width = 0;
   char device_name[CONTEXT_DEVICENAME_BUFFER_SIZE] = "";
   mluOpContext *ctx = new (std::nothrow) mluOpContext();
   CNcontext drv_ctx;
   CNctxConfigParam ctx_conf_param;
+  int dev = 0;
+  INTERNAL_CHECK("[mluOpCreate]", cnrtSuccess == cnrtGetDevice(&dev));
+  INTERNAL_CHECK("[mluOpCreate]", cnrtSuccess == cnrtSetDevice(dev));
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetCurrent(&drv_ctx));
   INTERNAL_CHECK("[mluOpCreate]", CN_SUCCESS == cnCtxGetDevice(&mlu_dev));
   INTERNAL_CHECK("[mluOpCreate]",
@@ -205,6 +217,36 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
                         mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
+      CN_SUCCESS == cnDeviceGetAttribute(&clock_rate,
+                                         CN_DEVICE_ATTRIBUTE_CLUSTER_CLOCK_RATE,
+                                         mlu_dev) ||
+          CN_OPS_ERROR_NOT_SUPPORTED ==
+              cnDeviceGetAttribute(&clock_rate,
+                                   CN_DEVICE_ATTRIBUTE_CLUSTER_CLOCK_RATE,
+                                   mlu_dev));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
+      CN_SUCCESS == cnDeviceGetAttribute(&memory_clock_rate,
+                                         CN_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE,
+                                         mlu_dev));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
+      CN_SUCCESS == cnDeviceGetAttribute(
+                        &memory_bus_width,
+                        CN_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, mlu_dev));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
+      CN_SUCCESS == cnDeviceGetAttribute(&l2cache_size,
+                                         CN_DEVICE_ATTRIBUTE_MAX_L2_CACHE_SIZE,
+                                         mlu_dev));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
+      CN_SUCCESS ==
+          cnDeviceGetAttribute(&persisting_l2cache_maxsize,
+                               CN_DEVICE_ATTRIBUTE_MAX_PERSISTING_L2_CACHE_SIZE,
+                               mlu_dev));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
       CN_SUCCESS == cnDeviceGetName(device_name, CONTEXT_DEVICENAME_BUFFER_SIZE,
                                     mlu_dev));
   //  ClusterLimitCapability and JobLimitCapability
@@ -227,10 +269,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
       device_name);  // warning: possible return unknown.
   ctx->sram_size = sram_size - REM_FOR_STACK;
 
+  strncpy(ctx->device_name, device_name, sizeof(device_name));
+  memory_band_width = double(memory_bus_width) * double(memory_clock_rate) /
+                      1000.0 / 1000.0 / 8.0 * 2.0;  // NOLINT
   ctx->device = mlu_dev;
   ctx->cluster_num = cluster_num;
   ctx->core_num_per_cluster = core_num_per_cluster;
   ctx->nram_size = nram_size - REM_FOR_STACK;
+  ctx->clock_rate = clock_rate;
+  ctx->l2cache_size = l2cache_size;
+  ctx->persisting_l2cache_maxsize = persisting_l2cache_maxsize;
+  ctx->memory_band_width = memory_band_width;
   if (ctx->arch == 290) {
 #ifdef CONV_WARM_UP
     ctx->wram_size = wram_size - 8 * 1024;
@@ -240,12 +289,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   } else {
     ctx->wram_size = wram_size;
   }
-  if (ctx->arch < 322) {
+  if (ctx->arch < 372) {
     ctx->round_mode = MLUOP_ROUND_HALF_OFF_ZERO;
   } else {
-    // round to even is supported by hardware since arch >= 322.
-    // default usage mode is round to even when arch >= 322,
-    // which change accuracy because of using round off zero before.
     ctx->round_mode = MLUOP_ROUND_HALF_TO_EVEN;
   }
   ctx->atomics_mode =
@@ -271,11 +317,8 @@ mluOpUpdateContextInformation(mluOpHandle_t handle) {
       "[mluOpUpdateContextInformation]",
       CN_SUCCESS == cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_UNION_LIMIT,
                                         &ctx_conf_param));
-#if TARGET_MLU_ARCH == 520  // run 3225/5223 using 3226
-  handle->capability_job_limit = CN_KERNEL_CLASS_BLOCK;
-#else
   handle->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
-#endif
+
   if (MLUOP_STATUS_SUCCESS !=
       handle->initJobNum(drv_ctx, "[mluOpUpdateContextInformation]")) {
     return MLUOP_STATUS_INTERNAL_ERROR;
@@ -347,7 +390,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(
               round_mode == MLUOP_ROUND_HALF_TO_EVEN ||
                   round_mode == MLUOP_ROUND_HALF_OFF_ZERO ||
                   round_mode == MLUOP_ROUND_HALF_UP);
-  if (handle->arch < 322) {
+  if (handle->arch < 372) {
     if (round_mode == MLUOP_ROUND_HALF_TO_EVEN) {
       LOG(ERROR)
           << "[mluOpSetQuantizeRoundMode] Unsupported rounding mode on MLU200";
@@ -399,6 +442,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetContextParam(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
+/*********************************************************************************************
+ * @deprecate The function implementation is not recommended to use, it is
+ *recommended to use the following function implementation: void
+ *mluOpGetLibVersion(int* major, int* minor, int* patch);
+ **********************************************************************************************/
+size_t MLUOP_WIN_API mluOpGetVersion() {
+  LOG_FIRST_N(WARNING, 1) << "[mluOpGetVersion] is deprecated and will be "
+                             "removed in the future release,"
+                          << " please use [mluOpGetLibVersion] instead.";
+  return MLUOP_VERSION;
+}
 void MLUOP_WIN_API mluOpGetLibVersion(int *major, int *minor, int *patch) {
   *major = MLUOP_MAJOR;
   *minor = MLUOP_MINOR;

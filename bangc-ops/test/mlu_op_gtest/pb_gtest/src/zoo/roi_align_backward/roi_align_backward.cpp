@@ -20,16 +20,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "roi_align_backward.h"
+
 #include <algorithm>
 #include <iostream>
 #include <vector>
-#include "roi_align_backward.h"
 
 namespace mluoptest {
 
 void RoiAlignBackwardExecutor::paramCheck() {
   GTEST_CHECK(parser_->getProtoNode()->has_roi_align_backward_param(),
-              LOG(ERROR) << "mluOpRoiAlignBackward: lose param. ");
+              "mluOpRoiAlignBackward: lose param. ");
 
   GTEST_CHECK(
       parser_->getInputNum() == 2 || parser_->getInputNum() == 4,

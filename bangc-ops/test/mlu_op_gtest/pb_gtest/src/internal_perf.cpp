@@ -30,7 +30,7 @@
 #include <thread>  // NOLINT
 #include <iostream>
 
-using namespace mluoptest;  // NOLINT
+using namespace mluoptest; // NOLINT
 
 std::string mluoptest::timeseries_to_array_str(const TimeSeries_t &series) {
   std::string s("[ ");
@@ -46,6 +46,7 @@ std::string mluoptest::timeseries_to_array_str(const TimeSeries_t &series) {
         });
   }
   s += " ]";
+
   return s;
 }
 

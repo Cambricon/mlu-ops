@@ -20,20 +20,25 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_UNIQUE_UNIQUE_H_
-#define TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_UNIQUE_UNIQUE_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_UNIQUE_UNIQUE_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_UNIQUE_UNIQUE_H_
 #include "executor.h"
+
 namespace mluoptest {
+
 class UniqueExecutor : public Executor {
  public:
   UniqueExecutor() {}
   ~UniqueExecutor() {}
+
   void paramCheck();
   void compute();
   void cpuCompute();
   void workspaceMalloc();
   void workspaceFree();
   int64_t getTheoryOps() override;
+  void setMiscellaneousParam() override;
+
  private:
   mluOpUniqueSort_t mode_;
   bool return_inverse_;
@@ -42,5 +47,6 @@ class UniqueExecutor : public Executor {
   int32_t version_;
   size_t workspace_size_;
 };
+
 }  // namespace mluoptest
-#endif  // TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_UNIQUE_UNIQUE_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_UNIQUE_UNIQUE_H_
