@@ -5,7 +5,6 @@ on:
     branches: [master, r*]
     paths-ignore:
       - 'docs/**'
-      - 'bangpy-ops/**'
       - 'docker/**'
       - 'samples/**'
       - 'installer/**'
@@ -15,16 +14,13 @@ on:
       - 'CPPLINT.cfg'
       - 'LICENSE'
       - 'README.md'
-      - 'bangc-ops/README.md'
       - 'requirements.txt'
       - '.github/workflows/bangc_all_system_ci.yaml'
-      - '.github/workflows/bangpy_ci.yaml'
       - '.github/workflows/daily.yaml'
   pull_request:
     branches: [master, r*]
     paths-ignore:
       - 'docs/**'
-      - 'bangpy-ops/**'
       - 'docker/**'
       - 'samples/**'
       - 'installer/**'
@@ -34,10 +30,8 @@ on:
       - 'CPPLINT.cfg'
       - 'LICENSE'
       - 'README.md'
-      - 'bangc-ops/README.md'
       - 'requirements.txt'
       - '.github/workflows/bangc_all_system_ci.yaml'
-      - '.github/workflows/bangpy_ci.yaml'
       - '.github/workflows/daily.yaml'
 
 jobs:
@@ -52,6 +46,6 @@ jobs:
         with:
           submodules: 'true'
 
-      - name: run_bangc_ops_ci
+      - name: run_mlu_ops_ci
         run: >
           bash .github/ci_script/mlu-ops-ci_script.sh
