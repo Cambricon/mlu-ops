@@ -2,7 +2,7 @@
 # get PR id
 PR_string=$(echo $GITHUB_REF | grep -Eo "/[0-9]*/")
 pr_id=(${PR_string//// })
-echo 11111111111111
+
 # generate time stamp
 current=`date "+%Y-%m-%d %H:%M:%S"`
 timeStamp=`date -d "$current" +%s` 
@@ -16,6 +16,7 @@ repo_name="mlu-ops"
 
 # repo ci root path
 repo_root="../../../../../../${repo_name}_ci/"
+touch ${repo_root}/a.txt
 if [ ! -d $repo_root ];then
     mkdir $repo_root
 fi
