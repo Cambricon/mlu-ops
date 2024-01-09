@@ -1,26 +1,21 @@
 #! /bin/bash
 
-bangc_ops="bangc-ops"
-bangpy_ops="bangpy-ops"
-bangc_check_list=${bangc_ops}
-bangpy_check_list=${bangpy_ops}
+check_list=" "
 
-bangc_mlu_op_h="bangc-ops/mlu_op.h"
-bangc_kernels_dir='bangc-ops/kernels/'
-bangc_gtest_json_file="jsoncppDist/"
+mlu_op_h="mlu_op.h"
+kernels_dir='kernels/'
+gtest_json_file="jsoncppDist/"
 
-bangc_exclude_list=${bangc_gtest_json_file}
+exclude_list=${gtest_json_file}
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T  --name-only ${1} \
-    | grep -v ${bangc_exclude_list} \
-    | grep -E ${bangc_check_list})
+    | grep -v ${exclude_list})
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -v ${bangc_exclude_list} \
-    | grep -E ${bangc_check_list})
+    | grep -v ${exclude_list})
 fi
 
 ret=0
@@ -32,7 +27,7 @@ fi
 
 echo "-- [pre-commit] Using cpplint to check patch by .git/hooks/pre-commit..."
 for i in ${filenames} ; do
-  if [[ $i == *$bangc_mlu_op_h ]]; then
+  if [[ $i == *$mlu_op_h ]]; then
     cpplint --linelength=200 $i 2>&1 \
       | grep -v Ignoring \
       | grep -v "Total errors" \
@@ -57,12 +52,12 @@ else
   echo "-- [pre-commit] cpplint PASSED."
 fi
 
-format_mluop_h=$(tools/format2google ${bangc_mlu_op_h})
-diff_mluop_h=$(git diff ${bangc_mlu_op_h})
+format_mluop_h=$(tools/format2google ${mlu_op_h})
+diff_mluop_h=$(git diff ${mlu_op_h})
 
 if [[ ${diff_mluop_h} != "" ]]; then
   echo ${diff_mluop_h}
-  echo "Please tools/format2google bangc-ops/mlu_op.h!"
+  echo "Please tools/format2google mlu_op.h!"
   exit -1
 fi
 
@@ -156,44 +151,10 @@ for i in $filenames; do
 done
 
 echo "-- [check_file_name] Using tools/check_file_name.py to check the file_name"
-python tools/check_file_name.py ${bangc_kernels_dir}
+python tools/check_file_name.py ${kernels_dir}
 
 if [[ $? -ne 0 ]]; then
   exit 1
-fi
-
-if [[ $# -eq 1 ]]; then
-  bangpy_filenames=$(git diff --name-only ${1} \
-    | grep -E ${bangpy_check_list})
-else
-  bangpy_filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
-    --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -E ${bangpy_check_list})
-fi
-
-if [[ ${bangpy_filenames} != "" ]]; then
-  if [[ "$(which pylint)" == "" ]]; then
-    echo "Please pip install pylint!(pylint==2.9)"
-    exit -1
-  fi
-
-  echo "-- [pre-commit] Using pylint to check bangpy/ops \
-  by .git/hooks/pre-commit..."
-  python3 -m pylint ./bangpy-ops --rcfile=./bangpy-ops/utils/pylintrc 2>&1 \
-       | grep -v "Your code" \
-       | grep -v "Module bangpy" \
-       | grep -E ".py"
-
-  if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-    ret=1
-  fi
-
-  if [[ ${ret} != 0 ]]; then
-    echo "-- [pre-commit] pylint FAILED: Please fix pylint errors."
-    exit ${ret}
-  else
-    echo "-- [pre-commit] pylint PASSED."
-  fi
 fi
 
 exit 0

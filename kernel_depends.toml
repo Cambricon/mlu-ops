@@ -1,8 +1,8 @@
 [mlu-ops]
 
-[bangc-ops.kernels]
+[kernels]
 
-# # bangc-ops API dependencies: only bangc-ops/kernels/<> compile dependencies
+# # mlu-ops API dependencies: only kernels/<> compile dependencies
 # ##  format:
 # ##  <kernel_name> = ["op_1", "op_2"]
 
@@ -38,7 +38,7 @@ masked_im2col_forward = ["fill", "transpose"]
 mutual_information_backward = ["fill"]
 batch_matmul_bcast = ["matmul"]
 
-[bangc-ops.gtest]
+[gtest]
 
 # # mlu_op_gtest API dependencies under mlu_op_gtest/pb_gtest/src/zoo/<op>
 # ## If mlu_op_gtest use dlopen to call mluops, dependencies below may not be necessary

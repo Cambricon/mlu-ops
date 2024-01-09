@@ -52,13 +52,13 @@ set(MAP_debian9 "stretch")
 set(MAP_debian10 "buster")
 set(MAP_debian11 "bullseye")
 set(PKG_DISTRIBUTION "${MAP_${DEB_DISTRO}}")
+# configure_file(
+#   "${CMAKE_SOURCE_DIR}/../installer/centos7.5/SPECS/mluops-independent.spec.in"
+#   "${CMAKE_SOURCE_DIR}/../installer/centos7.5/SPECS/mluops-independent.spec"
+#   @ONLY
+# )
 configure_file(
-  "${CMAKE_SOURCE_DIR}/../installer/centos7.5/SPECS/mluops-independent.spec.in"
-  "${CMAKE_SOURCE_DIR}/../installer/centos7.5/SPECS/mluops-independent.spec"
-  @ONLY
-)
-configure_file(
-  "${CMAKE_SOURCE_DIR}/../installer/independent/debian/changelog.in"
-  "${CMAKE_SOURCE_DIR}/../installer/independent/debian/changelog"
+  "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog.in"
+  "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog"
   @ONLY
 )

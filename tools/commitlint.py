@@ -26,7 +26,18 @@ import sys
 import re
 
 types = ('[Feature]', '[Fix]', '[Docs]', '[TEST]', '[WIP]')
-scopes = ('(bangc-ops)', '(bangpy-ops)','(mlu-ops)')
+
+#get api name
+def get_mluops_api(input_file):
+    ops_str=[]
+    pattern = re.compile(r'(?P<api>mluOp\w+) *\(')
+    with open(input_file,'r', encoding='utf8') as f:
+        for line in f:
+            match = pattern.search(line)
+            if match:
+                op = match.groupdict()['api']
+                ops_str.append(op)
+    return ops_str
 
 #get header
 def get_commit_msg(msg):
@@ -36,23 +47,29 @@ def get_commit_msg(msg):
     else:
         return msg[0:res.span()[0]]
 
-def valid_commit_msg(commit_msg):
-    res = re.match(r'(?P<type>\[\w+\])(?P<scope>\(\w+-ops\))(?P<colon>:)(?P<subject> *\w+)', commit_msg)
-    if res == None:
+def valid_commit_msg(commit_msg, scopes):
+    res1 = re.match(r'(?P<type>\[\w+\])(?P<scope>\(\w+\))(?P<colon>:)(?P<subject> *\w+)', commit_msg)
+    res2 = re.match(r'(?P<type>\[\w+\])(?P<scope>\(mlu-ops\))(?P<colon>:)(?P<subject> *\w+)', commit_msg)
+    if res1 == None and res2 == None:
         print("\033[0;35m-- please input standard format for commit: {[type](scope): <subject> }\033[0m")
         print("\033[0;35m-- the type should be one of: 'Feature', 'Fix', 'Docs', 'TEST', 'WIP' \033[0m")
-        print("\033[0;35m-- the msg_scope should be one of: 'bangc-ops', 'bangpy-ops', 'mlu-ops' \033[0m")
+        print("\033[0;35m-- the msg_scope should be one of api name 'mluOpXXX' in mlu_op.h or 'mlu-ops' \033[0m")
         return False
     else:
+        res = ""
+        if res1 is not None:
+            res = res1
+        else:
+            res = res2
         msg_type = res.groupdict()['type'].lstrip().rstrip()
         if msg_type not in types:
             print("\033[0;35m-- type not match, the type should be one of: 'Feature', 'Fix', 'Docs', 'TEST', 'WIP' \033[0m")
             print("\033[0;35m-- please input standard format for commit: {[type](scope): <subject> }\033[0m")
             return False
 
-        msg_scope = res.groupdict()['scope'].lstrip().rstrip()
+        msg_scope = res.groupdict()['scope'].lstrip('(').rstrip(')')
         if msg_scope not in scopes:
-            print("\033[0;35m-- msg_scope not match, the msg_scope should be one of: 'bangc-ops', 'bangpy-ops'', 'mlu-ops'' \033[0m")
+            print("\033[0;35m-- msg_scope not match, the msg_scope should one of api name 'mluOpXXX' in mlu_op.h or 'mlu-ops' \033[0m")
             print("\033[0;35m-- please input standard format for commit: {[type](scope): <subject> }\033[0m")
             return False
     return True
@@ -63,7 +80,9 @@ def main():
     txt_file = open(message_file, 'r')
     msg = txt_file.read()
     commit_msg = get_commit_msg(msg)
-    if(valid_commit_msg(commit_msg)):
+    api_set = get_mluops_api("mlu_op.h")
+    api_set.append('mlu-ops')
+    if(valid_commit_msg(commit_msg, api_set)):
         print('-- commit format is correct')
         sys.exit(0)
     sys.exit(1)

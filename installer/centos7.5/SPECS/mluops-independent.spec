@@ -1,11 +1,11 @@
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
 %define debug_package %{nil}
 %define neuware_dir /usr/local/neuware
-%define build_dir bangc-ops/build
+%define build_dir build
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
-Version: 0.10.0
+Version: 0.11.0
 Release: 1%{?dist}
 License: Cambricon Release License
 Vendor: Cambricon Inc.
@@ -56,8 +56,8 @@ install -d $RPM_BUILD_ROOT%{neuware_dir}/include
 install -d $RPM_BUILD_ROOT/etc/ld.so.conf.d
 strip %{build_dir}/lib/libmluops.so*
 cp %{build_dir}/lib/libmluops.so* $RPM_BUILD_ROOT%{neuware_dir}/lib64/
-cp bangc-ops/mlu_op.h $RPM_BUILD_ROOT%{neuware_dir}/include/
-cp -r samples/ $RPM_BUILD_ROOT%{neuware_dir}/
+cp mlu_op.h $RPM_BUILD_ROOT%{neuware_dir}/include/
+cp -r samples $RPM_BUILD_ROOT%{neuware_dir}/
 cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 
 %clean
@@ -68,13 +68,17 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %defattr (-, root, root)
 %{neuware_dir}/include/mlu_op.h
 %{neuware_dir}/lib64/libmluops.so*
-%{neuware_dir}/samples/bangc-ops
+%{neuware_dir}/samples/mlu-ops
 /etc/ld.so.conf.d/neuware-env.conf
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 
 %changelog
+* Mon Dec 18 2023 Cambricon Software Team <service@cambricon.com>
+- release mluops v0.11.0
+* Fri Nov 24 2023 Cambricon Software Team <service@cambricon.com>
+- release mluops v0.10.0
 * Mon Oct 16 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.9.0
 * Tue Aug 31 2023 Cambricon Software Team <service@cambricon.com>

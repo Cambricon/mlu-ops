@@ -16768,7 +16768,7 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Note
- * - Call this function after calling the ::mluOpDCNForward, ::mluOpDCNBackwardData,
+ * - Call this function after calling the ::mluOpDCNBackwardData,
  *   or ::mluOpDCNBackwardWeight. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
  * - It is necessary to call this function destroy the deformable convolution descriptor.
  *   to avoid the memory leaks.

@@ -1,3 +1,3 @@
-[submodule "bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto"]
-	path = bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto
+[submodule "test/mlu_op_gtest/pb_gtest/mlu_op_test_proto"]
+	path = test/mlu_op_gtest/pb_gtest/mlu_op_test_proto
 	url = https://github.com/Cambricon/mlu-ops-proto.git

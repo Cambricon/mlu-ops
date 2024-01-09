@@ -1,5 +1,4 @@
 SCRIPT_PATH="$(cd "../../$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BANGC_HOME=${SCRIPT_PATH}/bangc-ops
 
 if [[ -z ${NEUWARE_HOME} ]]; then
   export NEUWARE_HOME=/usr/local/neuware
@@ -11,11 +10,11 @@ fi
 MLU_OP_H=${NEUWARE_HOME}/include/mlu_op.h
 
 if [[ ! -f ${MLU_OP_H} || -h ${MLU_OP_H} ]]; then
-  ln -sf ${BANGC_HOME}/mlu_op.h ${MLU_OP_H}
-  for MLU_OPS_SO in $(ls ${BANGC_HOME}/build/lib/)
+  ln -sf ${SCRIPT_PATH}/mlu_op.h ${MLU_OP_H}
+  for MLU_OPS_SO in $(ls ${SCRIPT_PATH}/build/lib/)
   do 
     if [[ ${MLU_OPS_SO} == libmluops.so* ]]; then
-      ln -sf ${BANGC_HOME}/build/lib/${MLU_OPS_SO} ${NEUWARE_HOME}/lib64/${MLU_OPS_SO}
+      ln -sf ${SCRIPT_PATH}/build/lib/${MLU_OPS_SO} ${NEUWARE_HOME}/lib64/${MLU_OPS_SO}
     fi
   done
 fi

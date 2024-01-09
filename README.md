@@ -31,7 +31,7 @@
 </div>
 
 ## 简介
-MLU-OPS 提供基于寒武纪人工智能单元（MLU），使用 C 接口或者 Python 接口开发高性能算子的示例代码。
+MLU-OPS 提供基于寒武纪人工智能单元（MLU），使用 C 接口开发高性能算子的示例代码。
 MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开发自定义算子，实现对应模型的计算。
 
 MLU-OPS 提供了以下功能：
@@ -85,14 +85,6 @@ MLU-OPS 提供了以下功能：
   tar -xvf Python-3.8.0.tgz
   cd Python-3.8.0
   make -j24 && make install
-  ```
-
-- 准备 BANGPy 环境
-
-  获取 BANGPy 最新版发布包：(https://cair.cambricon.com/)
-  ```sh
-  pip3.8 install bangpy-x.x.x-py3-none-any.whl
-  ```
 
 - 准备链接库环境
 
@@ -100,13 +92,6 @@ MLU-OPS 提供了以下功能：
   sudo apt-get update
   sudo apt-get install protobuf-compiler libxml2-dev libprotobuf-dev llvm-6.0-dev
   ```
-## 开发、编译及测试
-
-当前 C 接口（`BANGC`）、 Python 接口（`BANGPy`）算子开发、编译及测试相互独立
-- `BANGC` 算子见 [BANGC-OPS 算子开发流程](docs/bangc-docs/BANGC-OPS-Operator-Development-Process.md)、[README.md](bangc-ops/README.md)
-- `BANGPy` 算子见 [BANGPy-OPS 算子开发流程](docs/bangpy-docs/BANGPy-OPS-Operator-Development-Process.md)、[README.md](bangpy-ops/README.md)
-
-更多内容见 docs 目录下文档。
 
 ## 获取关于 BANG 语言基础和开发相关工具介绍的文档
 可查看最新版 [开发者文档](https://developer.cambricon.com/index/document/index/classid/3.html)
@@ -125,7 +110,18 @@ MLU-OPS 提供了以下功能：
 
 | 目录/文件                 | 描述                                    |
 | ------------------------ | -------------------------------------- |
-| [bangc-ops](bangc-ops)   | C 接口算子开发目录                        |
-| [bangpy-ops](bangpy-ops) | Python 接口算子开发目录                   |
+| [cmake](cmake)           | 存放编译相关的 make 文件。                 |
+| [core](core)             | 存放公共数据类型的操作、运行时管理、日志等公共实现。|
 | [docker](docker)         | 存放 docker 打包脚本，提供 CI 构建环境。    |
-| [docs](docs)             | 算子开发、测试、精度验收的说明文档。         |
+| [docs](docs)             | 存放算子开发、测试、精度验收等说明文档。         |
+| [kernels](kernels)       | 算子代码实现，包含一元、二元算子模板供其他算子调用。           |
+| [test](test)             | 存放测试算子用的代码。                                    |
+| [mlu_op.h](mlu_op.h)     | 公共数据类型描述，以及 kernels 目录中的算子对外提供的 C 接口。 |
+
+## 编译、开发与测试
+
+提供基于寒武纪人工智能单元（MLU）开发高性能算子、C 接口封装的示例代码。
+
+具体的编译、开发与测试介绍见 [MLU-OPS 算子编译、开发与测试介绍.md](docs/MLU-OPS-Compile-Develop-And-Test.md)。
+
+更多内容见 docs 目录下文档。

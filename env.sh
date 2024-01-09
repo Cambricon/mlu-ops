@@ -1,9 +1,6 @@
 SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BANGC_HOME=${SCRIPT_PATH}/bangc-ops
-export BANGPY_HOME=${SCRIPT_PATH}/bangpy-ops
-export BANGPY_BUILD_PATH=${BANGPY_HOME}/outs
-export CPLUS_INCLUDE_PATH=${BANGPY_HOME}/include/:${CPLUS_INCLUDE_PATH}
-export PYTHONPATH=${BANGPY_HOME}:${PYTHONPATH}
+export MLUOPS_HOME=${SCRIPT_PATH}
+
 if [[ -z ${NEUWARE_HOME} ]]; then
   export NEUWARE_HOME=/usr/local/neuware
   echo "set env 'NEUWARE_HOME' to default: ${NEUWARE_HOME}."
@@ -12,7 +9,7 @@ else
 fi
 
 export PATH=${NEUWARE_HOME}/bin:${PATH}
-export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:${BANGC_HOME}/build/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:${MLUOPS_HOME}/build/lib:${LD_LIBRARY_PATH}
 
 if [[ ! -d "${PWD}/.git/" ]]; then
   # pass
