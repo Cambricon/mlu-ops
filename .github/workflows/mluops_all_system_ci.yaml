@@ -1,4 +1,4 @@
-name: bangc_all_system_test
+name: mluops_all_system_test
 
 on:
   push:
