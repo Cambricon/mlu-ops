@@ -27,7 +27,8 @@ void mluOpCnnlCheck(mluOpStatus_t result, char const *const func,
   if (result) {
     std::string error =
         "\"" + std::string(mluOpGetErrorString(result)).replace(0, 5, "CNNL") +
-        " in " + std::string(func) + "\"";
+        " in " + std::string(func) + " at " + std::string(file) +
+        " line: " + std::to_string(line) + "\"";
     LOG(ERROR) << error;
     throw std::runtime_error(error);
   }
