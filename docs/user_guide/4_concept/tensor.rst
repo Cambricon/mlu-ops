@@ -9,15 +9,15 @@
 
 张量描述符的信息如下：
 
-- 数据布局：表示没有维度语义的array，或者具有维度语义的布局，如NCHW、NHWC、HWCN、NDHWC和NCDHW。Cambricon BANG C OPS使用 ``mluOpTensorLayout_t`` 来描述数据布局。
-- 数据类型：表示张量中数据的类型，如HALF、FLOAT、INT8和INT16等。Cambricon BANG C OPS使用 ``mluOpDataType_t`` 来描述数据类型。
-- 维度个数：针对数据布局为array的张量，表示张量的维度，Cambricon BANG C OPS库支持1-8维。
+- 数据布局：表示没有维度语义的array，或者具有维度语义的布局，如NCHW、NHWC、HWCN、NDHWC和NCDHW。Cambricon MLU-OPS使用 ``mluOpTensorLayout_t`` 来描述数据布局。
+- 数据类型：表示张量中数据的类型，如HALF、FLOAT、INT8和INT16等。Cambricon MLU-OPS使用 ``mluOpDataType_t`` 来描述数据类型。
+- 维度个数：针对数据布局为array的张量，表示张量的维度，Cambricon MLU-OPS库支持1-8维。
 - 维度大小：表示每个维度的大小。
-- 步长大小：表示在同一个维度中访问两个相邻元素时需要走过的步数。例如，定义一个[3,4]的二维矩阵matrix，默认情况下其具有隐含的步长信息数组[4,1]，隐含着用户访问矩阵同维度内相邻元素需要间隔的元素个数信息，步长数组[4,1]的1表示访问第二个维度相邻元素时（例如matrix[2][1]和matrix[2][2]之间），内存上的间隔是0，也就是步长为1；访问第一个维度相邻元素时（例如matrix[1][1]和matrix[2][1]之间），内存上的间隔是3，也就是步长为4。用户可以在Cambricon BANG C OPS提供的张量描述符的相关接口中显示地、灵活地配置步长数组，来对真实张量数据进行灵活地操作。
+- 步长大小：表示在同一个维度中访问两个相邻元素时需要走过的步数。例如，定义一个[3,4]的二维矩阵matrix，默认情况下其具有隐含的步长信息数组[4,1]，隐含着用户访问矩阵同维度内相邻元素需要间隔的元素个数信息，步长数组[4,1]的1表示访问第二个维度相邻元素时（例如matrix[2][1]和matrix[2][2]之间），内存上的间隔是0，也就是步长为1；访问第一个维度相邻元素时（例如matrix[1][1]和matrix[2][1]之间），内存上的间隔是3，也就是步长为4。用户可以在Cambricon MLU-OPS提供的张量描述符的相关接口中显示地、灵活地配置步长数组，来对真实张量数据进行灵活地操作。
 
-每一个Cambricon BANG C OPS算子，维度大小一般是可变的，用户可以在调用对应接口之前通过 ``mluOpSetTensorDescriptor()`` 或 ``mluOpSetTensorDescriptorEx()`` 来设置张量信息。其中调用接口 ``mluOpSetTensorDescriptor()`` 时会自动设置张量的步长大小。如果要设置特殊的步长大小，可以调用 ``mluOpSetTensorDescriptorEx()`` 接口。另外，为了减少多次接口调用的时间开销，我们为用户提供了group接口 ``mluOpCreateGroupTensorDescriptors`` ， ``mluOpSetGroupTensorDescriptors`` 和 ``mluOpDestroyGroupTensorDescriptors`` ，用户可以在一次接口调用中完成一组张量描述符的创建、设置与销毁。详情查看《Cambricon BANG C OPS Developer Guide》。
+每一个Cambricon MLU-OPS算子，维度大小一般是可变的，用户可以在调用对应接口之前通过 ``mluOpSetTensorDescriptor()`` 或 ``mluOpSetTensorDescriptorEx()`` 来设置张量信息。其中调用接口 ``mluOpSetTensorDescriptor()`` 时会自动设置张量的步长大小。如果要设置特殊的步长大小，可以调用 ``mluOpSetTensorDescriptorEx()`` 接口。另外，为了减少多次接口调用的时间开销，我们为用户提供了group接口 ``mluOpCreateGroupTensorDescriptors`` ， ``mluOpSetGroupTensorDescriptors`` 和 ``mluOpDestroyGroupTensorDescriptors`` ，用户可以在一次接口调用中完成一组张量描述符的创建、设置与销毁。详情查看《Cambricon MLU-OPS Developer Guide》。
 
-Cambricon BANG C OPS函数库目前与张量描述符相关的接口有如下几个类别：
+Cambricon MLU-OPS函数库目前与张量描述符相关的接口有如下几个类别：
 
 - 普通张量描述符相关接口：对张量描述符的普通操作，例如创建、设置、获取、销毁，重置以及设置片上数据类型、量化参数等信息。
 - Group张量描述符相关接口：对一组张量描述符的普通操作，例如一组张量描述符的创建、设置和销毁。该接口旨在为同时大量创建、设置和销毁一组张量描述的使用场景提供简单易用、高性能的接口。通常来说，该接口的性能收益来自两部分：一、一次接口调用代替了原先的多次接口调用，减少了接口调用的开销；二、该接口内剔除了一些繁琐的检查操作，例如剔除了检查这一组描述符指针中是否有NULL，剔除了张量设置时候的最大维度限制检查。建议用户在保证功能正确开发后使用该组接口进行性能调优。
@@ -105,7 +105,7 @@ Cambricon BANG C OPS函数库目前与张量描述符相关的接口有如下几
    |                                                    |据的硬件地址                    |                             |
    +----------------------------------------------------+--------------------------------+-----------------------------+
    
-相关接口详情，请参见《Cambricon BANG C OPS Developer Guide》。
+相关接口详情，请参见《Cambricon MLU-OPS Developer Guide》。
 
 对于具有维度语义的张量，其形状的对应含义如下：
 

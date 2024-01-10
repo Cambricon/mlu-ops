@@ -1,6 +1,6 @@
 #!/bin/bash
-# Test BANGC and BANGPy all operators cases, used for CI test.
-# If you want to run specify operators, refer to bangc-ops and bangpy-ops README.md.
+# Test all operators cases, used for CI test.
+# If you want to run specify operators, refer to README.md.
 # You need to run build.sh, before running this script.
 set -e
 
@@ -10,7 +10,7 @@ usage () {
     echo
     echo "OPTIONS:"
     echo "      -h, --help         Print usage"
-    echo "      --cases_dir=*      [Optional]Test cases for bangc-ops test"
+    echo "      --cases_dir=*      [Optional]Test cases for test"
     echo
 }
 if [ $# == 0 ]; then echo "Have no options, use -h or --help"; exit -1; fi

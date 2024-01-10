@@ -23,7 +23,7 @@
 
 操作过程：
 
-文件路径：[mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto/mlu_op_test.proto](https://github.com/Cambricon/mlu-ops-proto/tree/master)
+文件路径：[mlu-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto/mlu_op_test.proto](https://github.com/Cambricon/mlu-ops-proto/tree/master)
 
 1. 增加内容
 
@@ -66,7 +66,7 @@
 
 1. 新增算子测试代码文件(以新增div算子为例)
 
-- 路径： `mlu-ops/bangc-ops/test/mlu_op_gtest/pb_gtest/src/zoo/` ，新增文件夹 `div/`
+- 路径： `mlu-ops/test/mlu_op_gtest/pb_gtest/src/zoo/` ，新增文件夹 `div/`
 
 - 文件结构：
 
@@ -157,7 +157,7 @@ test_param: {
 - 执行`pb/prototxt`测例
 
   ```
-  cd mlu-ops/bangc-ops/build/test
+  cd mlu-ops/build/test
   test$ ./mluop_gtest --gtest_filter=*div*  // --gtest_filter指定具体的执行算子
   ```
   
@@ -167,14 +167,14 @@ test_param: {
 - `pb2prototxt`
 
   ```bash
-  cd mlu-ops/bangc-ops/build/test
+  cd mlu-ops/build/test
   test$ ./pb2prototxt case_0.pb case_0.prototxt  // 第一个参数是pb路径,第二个参数是prototxt路径,支持文件夹批量转换
   ```
 
 - `prototxt2pb`
 
   ```{bash}
-  cd mlu-ops/bangc-ops/build/test
+  cd mlu-ops/build/test
   test$ ./prototxt2pb case_0.prototxt case_0.pb  // 第一个参数是prototxt路径,第二个参数是pb路径,支持文件夹批量转换
   ```
 
@@ -187,8 +187,8 @@ test_param: {
 #### 6.2 DEVICE 内存检测
 
 ```bash
-cd mlu-ops/bangc-ops
-bangc-ops$ ./build.sh --filter="div" --enable-bang-memcheck
+cd mlu-ops
+mlu-ops$ ./build.sh --filter="div" --enable-bang-memcheck
 cd build/test
 test$ ./mluop_gtest --gtest_filter=\*div\*  # 存在 DEVICE 内存泄漏会输出内存溢出提示
 ```
@@ -221,8 +221,7 @@ cd mlu-ops
 mlu-ops$ source env.sh
 # 若NEUWARE_HOME不是默认路径/usr/local/neuware则一定要指定NEUWARE_HOME，
 # 否则出现llvm-protobuf: command not found
-mlu-ops$ cd bangc-ops
-bangc-ops$ ./build.sh -c --filter="roi_crop_forward;roi_crop_backward"
+mlu-ops$ ./build.sh -c --filter="roi_crop_forward;roi_crop_backward"
 ```
 - 情况2
 
@@ -233,8 +232,7 @@ cd mlu-ops
 mlu-ops$ source env.sh
 # 若NEUWARE_HOME不是默认路径/usr/local/neuware则一定要指定NEUWARE_HOME，
 # 否则出现llvm-protobuf: command not found
-mlu-ops$ cd bangc-ops
-bangc-ops$ ./build.sh -c --filter="dynamic_point_to_voxel_forward"
+mlu-ops$ ./build.sh -c --filter="dynamic_point_to_voxel_forward"
 ```
 
 #### 7.3 测试
@@ -242,8 +240,8 @@ bangc-ops$ ./build.sh -c --filter="dynamic_point_to_voxel_forward"
 - 针对情况1
 
 ```
-bangc-ops$ cd build/test
-test$ ../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*roi_crop* [--cases_dir=path]"
+mlu-ops$ cd build/test
+test$ ../../tools/coverage.sh "./mluop_gtest --gtest_filter=*roi_crop* [--cases_dir=path]"
 ```
 得到四个文件夹 info、output、profdata 和 result；scp -r result 文件夹中所有内容到本地中，通过浏览器查看 index.html 文件可以可视化查看代码覆盖率情况；测试要求算子 kernels 各代码文本 Line Coverage 不低于 95%，当代码覆盖率很低的时候建议多写一点测试用例，覆盖代码中各种条件分支。
 测试报告只需贴上如下信息：
@@ -255,8 +253,8 @@ Filename [Sort by name]         Line Coverage [Sort_by_line_coverage]      Funct
 - 针对情况2
 
 ```
-bangc-ops$ cd build/test
-test$ ../../../tools/coverage.sh "./mluop_gtest --gtest_filter=*dynamic_point_to_voxel_forward* [--cases_dir=path]"
+mlu-ops$ cd build/test
+test$ ../../tools/coverage.sh "./mluop_gtest --gtest_filter=*dynamic_point_to_voxel_forward* [--cases_dir=path]"
 ```
 同样可以得到上面信息，只需在测试报告上贴上如下信息：
 ```

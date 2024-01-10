@@ -76,9 +76,9 @@ usage () {
     echo
     echo "OPTIONS:"
     echo "    -h, --help                  Print usage."
-    echo "    -c, --coverage              Build bangc-ops with coverage test."
+    echo "    -c, --coverage              Build mlu-ops with coverage test."
     echo "    --asan                      Build with asan check enabled"
-    echo "    -d, --debug                 Build bangc-ops with debug mode"
+    echo "    -d, --debug                 Build mlu-ops with debug mode"
     echo "    --enable-bang-memcheck      Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
     echo "    --mlu370                    Build for target product MLU370: __BANG_ARCH__ = 372"
     echo "                                                                 __MLU_NRAM_SIZE__ = 768KB"

@@ -3,7 +3,7 @@
 调试方法
 ========
 
-本章介绍Cambricon BANG C OPS算子的调试方法。
+本章介绍Cambricon MLU-OPS算子的调试方法。
 
 
 .. _算子调试信息的保存:
@@ -11,7 +11,7 @@
 算子调试信息的保存
 --------------------------------
 
-Cambricon BANG C OPS提供了一个用于辅助算子调试的工具，开启功能后，该工具会将Cambricon BANG C OPS API接受到的部分输入参数信息保存起来，方便用户更快捷地重现问题。启用本功能将降低算子性能，因此仅能用于调试。
+Cambricon MLU-OPS提供了一个用于辅助算子调试的工具，开启功能后，该工具会将Cambricon MLU-OPS API接受到的部分输入参数信息保存起来，方便用户更快捷地重现问题。启用本功能将降低算子性能，因此仅能用于调试。
 
 保存的调试信息主要包括：
 
@@ -25,13 +25,13 @@ Cambricon BANG C OPS提供了一个用于辅助算子调试的工具，开启功
 - 算子自身的名字 （``op_name``） ，算子类别 （``op_type``）；
 - 算子运行所需参数。
 
-算子接受到的参数将会以Cambricon BANG C OPS内部定义的 ``protobuf`` 格式保存到当前路径下的 ``gen_case`` 文件夹内。
+算子接受到的参数将会以Cambricon MLU-OPS内部定义的 ``protobuf`` 格式保存到当前路径下的 ``gen_case`` 文件夹内。
 
 开启方法
 >>>>>>>>>>>>>
 该工具可以通过设置环境变量 ``export MLUOP_GEN_CASE=k`` 或者调用函数 ``mluOpSetGenCaseMode(k)`` （其中k为整数）来切换工具的功能等级，具体为：
 
-- 当k为1时：开启算子调试信息保存功能。在调用任意Cambricon BANG C OPS算子接口后，会在当前目录生成名为 ``gen_case`` 的文件夹，里面包含算子的调试信息文件。调试信息文件中会记录算子本次被调用时的输入输出形状以及算子参数等信息。
+- 当k为1时：开启算子调试信息保存功能。在调用任意Cambricon MLU-OPS算子接口后，会在当前目录生成名为 ``gen_case`` 的文件夹，里面包含算子的调试信息文件。调试信息文件中会记录算子本次被调用时的输入输出形状以及算子参数等信息。
 
 - 当k为2时：开启算子调试信息保存功能。在算子被调用时生成调试信息文件，调试信息文件会记录算子本次被调用时的输入输出形状、算子参数等信息以及算子输入输出数据。此功能需要配合环境变量MLUOP_GEN_CASE_DUMP_DATA一起使用，MLUOP_GEN_CASE_DUMP_DATA等于1时，会在调试文件中以文本形式保存数据，等于2时，会以二进制形式保存浮点数据，MLUOP_GEN_CASE_DUMP_DATA_OUTPUT记录输出数据，用法类似。
 
@@ -39,9 +39,9 @@ Cambricon BANG C OPS提供了一个用于辅助算子调试的工具，开启功
 
 - 当k为其他值时：关闭算子调试信息保存功能。
 
-有关函数 ``mluOpSetGenCaseMode(int mode)`` 详情，可参考《Cambricon BANG C OPS Developer Guide》。
+有关函数 ``mluOpSetGenCaseMode(int mode)`` 详情，可参考《Cambricon MLU-OPS Developer Guide》。
 
-Cambricon BANG C OPS会自动创建路径并保存文件，并打印log信息提示调试信息已成功保存至上述路径。以Abs算子为例，设置 ``export MLUOP_GEN_CASE=1`` 后，log信息打印如下：
+Cambricon MLU-OPS会自动创建路径并保存文件，并打印log信息提示调试信息已成功保存至上述路径。以Abs算子为例，设置 ``export MLUOP_GEN_CASE=1`` 后，log信息打印如下：
 
 ::
 
@@ -88,7 +88,7 @@ mlu unfinished问题定位
 
   2021-04-20 17:30:05.370267: [cnrtError] [11621] [Card : 0] cnrtQueueSync: MLU queue sync failed.
 
-1. 当出现mlu unfinished时，Cambricon BANG C OPS会自动保存名为 ``core_***.cndump`` 的文件。保存路径为当前调用Cambricon BANG C OPS API的可执行文件的同级路径。该文件是二进制文件，可以用CNToolkit工具链中的CNGDB工具进行解析。CNGDB的具体使用方式，请参考《寒武纪CNGDB用户手册》。从解析结果中，能获取到以下信息：
+1. 当出现mlu unfinished时，Cambricon MLU-OPS会自动保存名为 ``core_***.cndump`` 的文件。保存路径为当前调用Cambricon MLU-OPS API的可执行文件的同级路径。该文件是二进制文件，可以用CNToolkit工具链中的CNGDB工具进行解析。CNGDB的具体使用方式，请参考《寒武纪CNGDB用户手册》。从解析结果中，能获取到以下信息：
 
    - ``Device name`` 出现异常时硬件的型号信息。
 
@@ -96,8 +96,8 @@ mlu unfinished问题定位
 
    - 出现异常时硬件的状态信息， ``exception`` 代表异常的类型。例如 ``barrier sync timeout`` ，说明是硬件同步出现了问题。
 
-#. 用户可单独运行上述过程得到的Cambricon BANG C OPS算子，以确认算子是否存在问题。
+#. 用户可单独运行上述过程得到的Cambricon MLU-OPS算子，以确认算子是否存在问题。
 
 #. 如果单算子可以复现问题，设置环境变量 ``MLUOP_GEN_CASE`` ，或者在调用此算子前先调用 ``mluOpSetGenCaseMode`` 函数，然后重新运行该算子（此过程可以保存包含算子调试信息的 ``*.prototxt`` 文件）。最终将出现异常时的 ``core_***.cndump`` 文件、包含 ``*.prototxt`` 文件的 ``gen_case`` 文件夹，以及出现问题时操作系统的dmesg信息提交到github，我们会尽快修复问题。关于如何保存算子的调试信息，详情参看 算子调试信息的保存_。
 
-#. 如果在同参数下验证上述Cambricon BANG C OPS算子没有问题，那导致问题的原因可能是较为底层或其他影响范围更大的特性没有正常工作。如果条件允许（复现问题成本不高），请尽可能缩小复现问题的条件范围，明确问题算子和出现问题的条件，可以帮助Cambricon BANG C OPS更快地定位和解决问题。
+#. 如果在同参数下验证上述Cambricon MLU-OPS算子没有问题，那导致问题的原因可能是较为底层或其他影响范围更大的特性没有正常工作。如果条件允许（复现问题成本不高），请尽可能缩小复现问题的条件范围，明确问题算子和出现问题的条件，可以帮助Cambricon MLU-OPS更快地定位和解决问题。

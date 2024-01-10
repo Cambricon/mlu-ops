@@ -10,7 +10,7 @@ on:
       - v*
   pull_request:
     paths:
-      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/mluops_all_system_ci.yaml'
 
 jobs:
   test:
