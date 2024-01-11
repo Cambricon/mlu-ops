@@ -12,7 +12,7 @@
 
 如：算子采用静态阈值标准：diffs=[diff1, diff2], diff1<=3e-3 && diff2 <= 3e-3
 
-详细见 [MLU-OPS 精度验收标准](./MLU-OPS-Accuracy-Acceptance-Standard.md)
+详细见 [MLU-OPS™ 精度验收标准](./MLU-OPS-Accuracy-Acceptance-Standard.md)
 
 ### 1.2 算子方案CHECKLIST
 
@@ -40,7 +40,7 @@
 - [ ] bug 修复测试
 - [ ] 内存泄漏检查, 详见[GTest-User-Guide-zh](./GTest-User-Guide-zh.md)
 - [ ] 代码覆盖率检查，详见[GTest-User-Guide-zh](./GTest-User-Guide-zh.md)
-- [ ] IO计算效率检查，详见[MLU-OPS性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md) 
+- [ ] IO计算效率检查，详见[MLU-OPS™ 性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md) 
 
 
 ### 1.4 参数检查
@@ -70,7 +70,7 @@
 
 # 3. 性能测试
 
-详见：[MLU-OPS性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md)
+详见：[MLU-OPS™性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md)
 
 平台：MLU370
 

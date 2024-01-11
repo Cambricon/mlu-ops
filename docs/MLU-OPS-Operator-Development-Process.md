@@ -1,4 +1,4 @@
-# MLU-OPS 算子开发流程
+# MLU-OPS™ 算子开发流程
 
 [概述](./MLU-OPS-Operator-Development-Process.md#概述)
 
@@ -12,7 +12,7 @@
 
 ## 概述
 
-MLU-OPS 是面向 MLU 平台的人工智能网络加速库，算子的功能实现可以利用寒武纪特有的 BANG C 语言实现。
+MLU-OPS™ 是面向 MLU 平台的人工智能网络加速库，算子的功能实现可以利用寒武纪特有的 BANG C 语言实现。
 
 在介绍算子前，需明确一个理念，算子的设计文档与代码实现同样重要。优秀的设计文档可以帮助其他开发者快速了解算子功能与接口使用方式，从而提升算子质量，故算子设计文档的撰写需格式规范、层次清晰、功能完整。当修改算子的实现代码时，文档需同步进行修改，保持二者的一致性。
 
@@ -28,7 +28,7 @@ MLU-OPS 是面向 MLU 平台的人工智能网络加速库，算子的功能实�
 
 ## 算子设计文档
 
-本章节会详细说明在整个算子开发和维护过程中需要添加和修改的文件及其所在目录。算子开发者在开发过程中务必按照说明中的目录和文件进行添加和修改，以确保 MLU-OPS 库文件和目录结构的简洁。
+本章节会详细说明在整个算子开发和维护过程中需要添加和修改的文件及其所在目录。算子开发者在开发过程中务必按照说明中的目录和文件进行添加和修改，以确保 MLU-OPS™ 库文件和目录结构的简洁。
 
 下面以添加一个 abs 算子为例说明整个算子开发过程中添加的文件。
 
@@ -43,7 +43,7 @@ $ cd abs
 $ vim abs.md
 ```
 
-在 abs 目录下添加的 abs.md 文件，为算子的设计文档，设计文档模板可参考[MLU-OPS 算子设计文档模板](./MLU-OPS-Operator-Design-Doc-Template.md)。
+在 abs 目录下添加的 abs.md 文件，为算子的设计文档，设计文档模板可参考[MLU-OPS™ 算子设计文档模板](./MLU-OPS-Operator-Design-Doc-Template.md)。
 
 如果一个算子存在正向和反向，那么正反向算子当做两个不同的算子来处理，目录结构应为
 
@@ -117,26 +117,26 @@ GTest 测试例的添加原则为能够测试到该算子的各种应用场景�
 
   - prototxt 文件可以自己手动添加，也可以通过工具批量生成
   - pb 文件为序列化后的测试例文件，可以通过工具批量生成
-  - MLU-OPS GTest 支持解析 prototxt 以及 pb 两种文件类型 
+  - MLU-OPS™ GTest 支持解析 prototxt 以及 pb 两种文件类型 
 
 ## 算子测试报告
 
-详见：[MLU-OPS测试报告模板](../MLU-OPS-Test-Report-Template.md)
+详见：[MLU-OPS™ 测试报告模板](../MLU-OPS-Test-Report-Template.md)
 
 ### 1 测试覆盖率
 
-MLU-OPS coverage test 是面向 bangc 语言的代码覆盖率测试工具。
-关于 MLU-OPS coverage test 的使用方法见[GTest-User-Guide-zh](../GTest-User-Guide-zh.md)。
+MLU-OPS™ coverage test 是面向 bangc 语言的代码覆盖率测试工具。
+关于 MLU-OPS™ coverage test 的使用方法见[GTest-User-Guide-zh](../GTest-User-Guide-zh.md)。
 
 ### 2 算子验收标准
 
 #### 2.1 精度验收标准
 
-kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为 baseline 进行精度对比验证，具体精度标准见 [MLU-OPS 精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)。
+kernels 下的 bangc 算子实现需要与 GTest 中的 cpuCompute()实现作为 baseline 进行精度对比验证，具体精度标准见 [MLU-OPS™ 精度验收标准](../MLU-OPS-Accuracy-Acceptance-Standard.md)。
 
 #### 2.1 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
+见 [MLU-OPS™ 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 代码提交流程
 

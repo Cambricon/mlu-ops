@@ -18,7 +18,7 @@ If you want to know how to do operator testing, you can see [GTest-User-Guide-zh
 
 #### 3.1.1 Accuracy Acceptance Standard
 
-For static threshold standard details, see: [MLU-OPS Accuracy Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Accuracy-Acceptance-Standard.md).
+For static threshold standard details, see: [MLU-OPS™ Accuracy Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Accuracy-Acceptance-Standard.md).
 
 - static threshold
   - diff1
@@ -70,7 +70,7 @@ If you have checked the following items, please tick the relevant box.
 - [ ] Bug fix tests
 - [ ] For memory leak check details, see: [GTest-User-Guide-zh](https://github.com/Cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md)
 - [ ] For code coverage check details, see: [GTest-User-Guide-zh](https://github.com/Cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md)
-- [ ] For I/O calculation efficiency check details, see: [MLU-OPS-Performance-Acceptance-Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md)
+- [ ] For I/O calculation efficiency check details, see: [MLU-OPS™-Performance-Acceptance-Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md)
 
 #### 3.2.2 Parameter Check
 
@@ -87,7 +87,7 @@ Test results...
 
 ### 3.3 Performance Test
 
-See [MLU-OPS Performance Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
+See [MLU-OPS™ Performance Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
 
 Platform：MLU370
 

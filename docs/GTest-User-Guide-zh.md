@@ -1,8 +1,8 @@
 ## GTest测试框架使用说明
 
-### 1. `MLU-OPS` `GTest` 介绍
+### 1. `MLU-OPS™` `GTest` 介绍
 
- `MLU-OPS` `GTest` 是 MLU-OPS 中的测试框架，目前支持 `pb/prototxt` 测例，通过解析 `pb/prototxt` 中的数据，来调用 MLU-OPS 中的算子接口，完成算子接口测试
+ `MLU-OPS™` `GTest` 是 MLU-OPS™ 中的测试框架，目前支持 `pb/prototxt` 测例，通过解析 `pb/prototxt` 中的数据，来调用 MLU-OPS™ 中的算子接口，完成算子接口测试
 
 ### 2. 如何给算子添加 `GTest ` 测例
 
@@ -17,9 +17,9 @@
 
 基本原则：
 
-- `MLU-OPS` 算子接口需要什么信息，`proto` 中就需要定义什么信息（主要是结构体和枚举）
-- 内容与 `MLU-OPS` 接口所需参数对应
-- 命名也尽可能与 `MLU-OPS` 接口一一对应，以防出现歧义
+- `MLU-OPS™` 算子接口需要什么信息，`proto` 中就需要定义什么信息（主要是结构体和枚举）
+- 内容与 `MLU-OPS™` 接口所需参数对应
+- 命名也尽可能与 `MLU-OPS™` 接口一一对应，以防出现歧义
 
 操作过程：
 
@@ -84,7 +84,7 @@
 
 2. 实现测例代码
 
-- compute()： 必须重载调用 `MLU-OPS`算子的API
+- compute()： 必须重载调用 `MLU-OPS™`算子的API
 - cpuCompute()：实现算子的 `cpu`功能，用于基本功能的测试和日常调试
 - 其他函数，按需重载
 

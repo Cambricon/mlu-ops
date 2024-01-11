@@ -1,4 +1,4 @@
-Cambricon MLU-OPS 用户手册
+Cambricon MLU-OPS™ 用户手册
 ===============================
 
 .. toctree::
