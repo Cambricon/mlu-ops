@@ -90,6 +90,24 @@ mluOpCopy
 -----------------------------
 该算子主要在语音网络中使用，对数据块进行 device 到 device 的拷贝。
 
+.. _dcn_backward_data:
+
+mluOpDCNBackwardData
+---------------------------------
+该算子用于求取可变形卷积算子关于input、offset、mask的反向梯度。
+
+.. _dcn_backward_weight:
+
+mluOpDCNBackwardWeight
+-----------------------------
+求取可变形卷积算子关于filter和bias的反向梯度。
+
+.. _dcn_forward:
+
+mluOpDCNForward
+-----------------------------
+可变形卷积。通过额外的offset和mask来增强滤波器对空间的几何表达能力，并且该卷积可以任意替代之前卷及网络里面的任意常规卷积层。
+
 .. _deform_roi_pool_backward:
 
 mluOpDeformRoiPoolBackward
@@ -1008,9 +1026,3 @@ mluOpConcat
  - ``N`` 为每个input和output的维度数。
  - ``sum(axis_1, ..., axis_m)`` 表示对待拼接维度求和，output的拼接维度大小为所有input拼接维度的总和。
  - 除拼接维度外，其余维度的大小需要相等。
-
-.. _dcn_backward_data:
-
-mluOpDCNBackwardData
----------------------------------
-该算子用于求取可变形卷积算子关于input、offset、mask的反向梯度。
