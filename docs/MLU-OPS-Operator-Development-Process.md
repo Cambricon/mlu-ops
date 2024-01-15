@@ -1,14 +1,14 @@
-# BANGC-OPS 算子开发流程
+# MLU-OPS 算子开发流程
 
-[概述](./BANGC-OPS-Operator-Development-Process.md#概述)
+[概述](./MLU-OPS-Operator-Development-Process.md#概述)
 
-[算子设计文档](./BANGC-OPS-Operator-Development-Process.md#算子设计文档)
+[算子设计文档](./MLU-OPS-Operator-Development-Process.md#算子设计文档)
 
-[算子实现代码](./BANGC-OPS-Operator-Development-Process.md#算子实现代码)
+[算子实现代码](./MLU-OPS-Operator-Development-Process.md#算子实现代码)
 
-[算子测试报告](./BANGC-OPS-Operator-Development-Process.md#算子测试报告)
+[算子测试报告](./MLU-OPS-Operator-Development-Process.md#算子测试报告)
 
-[代码提交流程](./BANGC-OPS-Operator-Development-Process.md#代码提交流程)
+[代码提交流程](./MLU-OPS-Operator-Development-Process.md#代码提交流程)
 
 ## 概述
 
@@ -43,7 +43,7 @@ $ cd abs
 $ vim abs.md
 ```
 
-在 abs 目录下添加的 abs.md 文件，为算子的设计文档，设计文档模板可参考[BANGC-OPS 算子设计文档模板](./BANGC-OPS-Operator-Design-Doc-Template.md)。
+在 abs 目录下添加的 abs.md 文件，为算子的设计文档，设计文档模板可参考[MLU-OPS 算子设计文档模板](./MLU-OPS-Operator-Design-Doc-Template.md)。
 
 如果一个算子存在正向和反向，那么正反向算子当做两个不同的算子来处理，目录结构应为
 
@@ -62,7 +62,7 @@ $ vim abs.md
 
 ### 1 代码开发阶段
 
-在 bangc-ops/ 目录下，添加以算子名命名的目录，然后在该目录下添加算子功能的实现文件、接口声明文件以及 bangc 编写的 kernel 文件，文件名首字母小写。如：
+在 kernels 目录下，添加以算子名命名的目录，然后在该目录下添加算子功能的实现文件、接口声明文件以及 bangc 编写的 kernel 文件，文件名首字母小写。如：
 
 ```bash
 $ cd kernels

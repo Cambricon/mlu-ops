@@ -104,7 +104,7 @@ mluops 样例
 
 故障处理示例文件目录，其中代码可以引发典型的mlu unfinished错误，用于验证用户手册中调试方法的可行性。
 
-具体可以参考BANGC OPS用户手册中“调试方法”一章的“MLU Unfinished问题定位”一节。
+具体可以参考MLU-OPS用户手册中“调试方法”一章的“MLU Unfinished问题定位”一节。
 - 文件介绍
 1. fault_demo.cc：运行代码样例，执行后将会引发mlu unfinished错误。
 2. fault_kernel.h：可以引发mlu unfinished的kernel代码。
@@ -125,7 +125,7 @@ mluops 样例
 ```
 - 运行流程：
 
-1. 参照用户手册中“部署BANGC OPS”一节中内容配置CNtookit，获得neuware文件夹。
+1. 参照用户手册中“部署MLU-OPS”一节中内容配置CNtookit，获得neuware文件夹。
 2. export NEUWARE_HOME=/path/to/your/neuware
 3. 执行source env.sh
 4. 执行./build.sh，默认编译所有样例代码。

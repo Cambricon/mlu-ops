@@ -43,7 +43,7 @@
 
   - 添加依赖
   
-    在[kernel_depends.toml](../kernel_depends.toml)文件中的[bangc-ops.gtest]下添加依赖说明
+    在[kernel_depends.toml](../kernel_depends.toml)文件中的[gtest]下添加依赖说明
 
     ```sh
     op_name_backward = ["op_name"]
@@ -118,7 +118,7 @@ test$ ./mluop_gtest --gtest_filter=*abs*
 
 ## 新算子开发流程
 
-详情可以参考文档 [BANGC-OPS 算子开发流程.md](./BANGC-OPS-Operator-Development-Process.md)以及 docs 目录下的其它补充说明。
+详情可以参考文档 [MLU-OPS 算子开发流程.md](./MLU-OPS-Operator-Development-Process.md)以及 docs 目录下的其它补充说明。
 
 1. 在`mlu-ops/kernels/`路径下，创建算子文件夹，添加算子实现，可以参考现有的 abs 算子进行添加。
 2. 在`mlu-ops/test/mlu_op_gtest/src/zoo`创建算子文件夹，添加测试代码。

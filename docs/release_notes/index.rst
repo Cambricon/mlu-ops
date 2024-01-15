@@ -1,4 +1,4 @@
-Cambricon BANG C OPS版本说明书
+Cambricon MLU-OPS版本说明书
 ===================================
 
 .. toctree::

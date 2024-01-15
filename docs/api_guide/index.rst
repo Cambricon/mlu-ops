@@ -1,4 +1,4 @@
-Cambricon BANG C OPS Developer Guide
+Cambricon MLU-OPS Developer Guide
 ======================================
 
 .. toctree::

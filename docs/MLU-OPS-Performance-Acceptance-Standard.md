@@ -98,14 +98,14 @@ GTest测试框架依赖 `getTheoryIoSize` 以及 `getTheoryOps` 计算 IO 效率
 
 **getTheoryIoSize**
 
-GTest测试框架中默认实现 `Executor::getTheoryIoSize` 接口。该接口预设 IO 的数据量为输入 Tensor 的总数据量加上输出 Tensor 的总数据量，如有特殊需求，请在继承的 `XXXExecutor` 类中重写 `XXXExecutor::getTheoryIoSize` 。相关函数原型见 [bangc-ops/test/mlu_op_gtest/pb_gtest/include/executor.h](https://github.com/Cambricon/mlu-ops/blob/master/bangc-ops/test/mlu_op_gtest/pb_gtest/include/executor.h)。算子理论 IO 量概念、 IO 效率概念及 IO 效率公式请参考本文档第一节。
+GTest测试框架中默认实现 `Executor::getTheoryIoSize` 接口。该接口预设 IO 的数据量为输入 Tensor 的总数据量加上输出 Tensor 的总数据量，如有特殊需求，请在继承的 `XXXExecutor` 类中重写 `XXXExecutor::getTheoryIoSize` 。相关函数原型见 [test/mlu_op_gtest/pb_gtest/include/executor.h](https://github.com/Cambricon/mlu-ops/blob/master/test/mlu_op_gtest/pb_gtest/include/executor.h)。算子理论 IO 量概念、 IO 效率概念及 IO 效率公式请参考本文档第一节。
 
 **getTheoryOps**
 
-GTest测试框架中未实现 `Executor::getTheoryOps` 接口。该接口需由开发者在继承的 `XXXExecutor` 类中实现`XXXExecutor::getTheoryOps` ，返回算子理论计算量数值。相关函数原型见 [bangc-ops/test/mlu_op_gtest/pb_gtest/include/executor.h](https://github.com/Cambricon/mlu-ops/blob/master/bangc-ops/test/mlu_op_gtest/pb_gtest/include/executor.h)。算子理论计算量概念、计算效率概念及计算效率公式请参考本文档第一节。
+GTest测试框架中未实现 `Executor::getTheoryOps` 接口。该接口需由开发者在继承的 `XXXExecutor` 类中实现`XXXExecutor::getTheoryOps` ，返回算子理论计算量数值。相关函数原型见 [test/mlu_op_gtest/pb_gtest/include/executor.h](https://github.com/Cambricon/mlu-ops/blob/master/test/mlu_op_gtest/pb_gtest/include/executor.h)。算子理论计算量概念、计算效率概念及计算效率公式请参考本文档第一节。
 
 ### 4. mlu-only 模式
 
 仓库提供 `mlu-only` 模式以加速性能测试。该模式下，测试框架调用 mluOp 接口，跳过算子的 cpu 计算以及结果的 diff 比对。
 
-**注意** ：该模式下测试数据随机数据。对于**依赖真实值**的算子，不应当在该模式下测试性能数据，请在 [bangc-ops/test/mlu_op_gtest/pb_gtest/gtest_config/test_list](https://github.com/Cambricon/mlu-ops/blob/master/bangc-ops/test/mlu_op_gtest/pb_gtest/gtest_config/test_list) 中添加算子名可屏蔽该模式的影响。添加后即使传如 `--mlu_only` 现象，GTest将默认忽略该选项。
+**注意** ：该模式下测试数据随机数据。对于**依赖真实值**的算子，不应当在该模式下测试性能数据，请在 [test/mlu_op_gtest/pb_gtest/gtest_config/test_list](https://github.com/Cambricon/mlu-ops/blob/master/test/mlu_op_gtest/pb_gtest/gtest_config/test_list) 中添加算子名可屏蔽该模式的影响。添加后即使传如 `--mlu_only` 现象，GTest将默认忽略该选项。

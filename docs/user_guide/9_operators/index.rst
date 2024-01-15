@@ -3,7 +3,7 @@
 算子支持
 ==========================
 
-下面具体介绍Cambricon BANG C OPS支持的算子及其功能描述。有关算子详情，请参见《Cambricon BANG C OPS Developer Guide》。
+下面具体介绍Cambricon MLU-OPS支持的算子及其功能描述。有关算子详情，请参见《Cambricon MLU-OPS Developer Guide》。
 
 .. _abs:
 

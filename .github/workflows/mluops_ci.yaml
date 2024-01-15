@@ -1,4 +1,4 @@
-name: bangc_ci
+name: mluops_ci
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
       - 'LICENSE'
       - 'README.md'
       - 'requirements.txt'
-      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/mluops_all_system_ci.yaml'
       - '.github/workflows/daily.yaml'
   pull_request:
     branches: [master, r*]
@@ -31,7 +31,7 @@ on:
       - 'LICENSE'
       - 'README.md'
       - 'requirements.txt'
-      - '.github/workflows/bangc_all_system_ci.yaml'
+      - '.github/workflows/mluops_all_system_ci.yaml'
       - '.github/workflows/daily.yaml'
 
 jobs:

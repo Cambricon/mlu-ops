@@ -1,19 +1,19 @@
 API日志
 =================
 
-本章介绍Cambricon BANG C OPS的API日志。
+本章介绍Cambricon MLU-OPS的API日志。
 
 执行以下步骤，设置打印API日志：
 
-1. 调用Cambricon BANG C OPS函数时，在想要打印信息的位置输入下面指令。用户需要在指令中选择日志级别为INFO、WARNING、ERROR或FATAL，并且在双引号中输入想要打印在屏幕上的内容。
+1. 调用Cambricon MLU-OPS函数时，在想要打印信息的位置输入下面指令。用户需要在指令中选择日志级别为INFO、WARNING、ERROR或FATAL，并且在双引号中输入想要打印在屏幕上的内容。
 
    ::
    
       LOG(INFO/WARNING/ERROR/FATAL) << "Information printed on the screen."
    
-2. 在运行Cambricon BANG C OPS算子前，设置 :ref:`MLUOP_MIN_VLOG_LEVEL` 环境变量指定日志的最小打印级别。该环境变量支持设置INFO及以上级别日志、WARNING及以上级别日志、ERROR及以上级别日志以及FATAL级别日志。
+2. 在运行Cambricon MLU-OPS算子前，设置 :ref:`MLUOP_MIN_VLOG_LEVEL` 环境变量指定日志的最小打印级别。该环境变量支持设置INFO及以上级别日志、WARNING及以上级别日志、ERROR及以上级别日志以及FATAL级别日志。
 
-   例如在调用Cambricon BANG C OPS函数时，输入以下指令：
+   例如在调用Cambricon MLU-OPS函数时，输入以下指令：
 
    ::
    
