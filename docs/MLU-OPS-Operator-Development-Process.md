@@ -34,10 +34,10 @@ MLU-OPS 是面向 MLU 平台的人工智能网络加速库，算子的功能实�
 
 ### 文档开发阶段
 
-在 docs/bangc-docs/design_docs/ 目录下新建以算子名命名的目录，目录名首字母小写，并在算子目录下新建以算子名命名的 md 文件。如：
+在 docs/design_docs/ 目录下新建以算子名命名的目录，目录名首字母小写，并在算子目录下新建以算子名命名的 md 文件。如：
 
 ```bash
-$ cd docs/bangc-docs/design_docs/
+$ cd docs/design_docs/
 $ mkdir abs
 $ cd abs
 $ vim abs.md
