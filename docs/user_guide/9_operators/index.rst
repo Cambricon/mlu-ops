@@ -27,7 +27,7 @@ mluOpActiveRotatedFilterForward
 ----------------------------------
 该算子根据输入的方向信息进行编码，生成某个方向上的特征图。
 
-.. _ball_qeury:
+.. _ball_query:
 
 mluOpBallQuery
 -----------------------------
@@ -542,13 +542,13 @@ mluOpRoiCropForward
 
 .. _roiaware_pool3d_backward:
 
-mluOpRoiawarePool3dBackward
+mluOpRoiAwarePool3dBackward
 -----------------------------
-该算子为 ``mluOpRoiawarePool3dForward`` 的反向算子，输入体素中的 idx 以及前向的池化特征值，计算反向梯度值。
+该算子为 ``mluOpRoiAwarePool3dForward`` 的反向算子，输入体素中的 idx 以及前向的池化特征值，计算反向梯度值。
 
 .. _roiaware_pool3d_forward:
 
-mluOpRoiawarePool3dForward
+mluOpRoiAwarePool3dForward
 -----------------------------
 给定一组点和点的特征值，以及一组长方体框，将框中的点的特征进行池化，输出指定数量的体素中的最大或者平均特征值以及点在对应体素中的索引。
 
@@ -720,7 +720,7 @@ mluOpSyncBatchNormElemt
 
 .. _sync_batchnorm_backward_reduce:
 
-mluOpSyncBatchnormBackwardReduce
+mluOpSyncBatchNormBackwardReduce
 ----------------------------------
 该算子用来计算损失函数想对于weight和bias的梯度，以及根据开关情况决定是否输出下级element函数的中间变量 ``sum_dy`` 和 ``sum_dy_xmu`` 。本算子通过多卡通信的方式，解决sync_batchnorm_backward在单卡上batch size数据过大导致训练时间较长的问题。
 
