@@ -3,6 +3,139 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.0.0
+
+  **Date:** February 6, 2024
+
+  **Changes:**
+
+  - Added the following new operations:
+
+    - ``dcn``
+
+      - mluOpDCNForward
+      - mluOpDCNBackwardWeight
+      - mluOpDCNBackwardData
+      - mluOpCreateDCNDescriptor
+      - mluOpDestroyDCNDescriptor
+      - mluOpSetDCNDescriptor
+      - mluOpGetDCNBakcwardDataWorkspaceSize 
+  - Removed the following operations:
+
+    - ``add_n``
+
+      - mluOpAddN
+      - mluOpGetAddNWorkspaceSize
+      - mluOpAddN_v2
+
+    - ``batch_matmul_bcast``
+
+      - mluOpGetBatchMatMulBCastWorkspaceSize
+      - mluOpGetBatchMatMulHeuristicResult
+      - mluOpGetBatchMatMulAlgoHeuristic
+      - mluOpBatchMatMulBCastDescCreate
+      - mluOpBatchMatMulBCastDescDestroy
+      - mluOpSetBatchMatMulBCastDescAttr
+      - mluOpGetBatchMatMulBCastDescAttr
+      - mluOpBatchMatMulBCastAlgoCreate
+      - mluOpBatchMatMulBCastAlgoDestroy
+      - mluOpGetQuantizeBatchMatMulBCastAlgorithm
+      - mluOpGetQuantizeBatchMatMulBCastWorkspaceSize
+      - mluOpQuantizeBatchMatMulBCast
+      - mluOpBatchMatMulBCast
+      - mluOpBatchMatMulBCast_v2
+
+    - ``copy``
+
+      - mluOpCopy
+
+    - ``concat``
+
+      - mluOpConcat
+      - mluOpGetConcatWorkspaceSize
+
+    - ``expand``
+
+      - mluOpExpand 
+
+    - ``fill``
+
+      - mluOpFill
+      - mluOpFill_v3
+
+    - ``gather_nd``
+
+      - mluOpGatherNd
+
+    - ``matmul``
+
+      - mluOpMatMul
+      - mluOpMatMulDescCreate
+      - mluOpMatMulDescDestroy
+      - mluOpSetMatMulDescAttr
+      - mluOpGetMatMulDescAttr
+      - mluOpCreateMatMulHeuristicResult
+      - mluOpDestroyMatMulHeuristicResult
+      - mluOpGetMatMulHeuristicResult
+      - mluOpGetMatMulAlgoHeuristic
+      - mluOpMatMulAlgoCreate
+      - mluOpMatMulAlgoDestroy
+      - mluOpGetMatMulWorkspaceSize
+      - mluOpMatMul_v2
+
+    - ``nms``
+
+      - mluOpNms
+
+    - ``pad``
+
+      - mluOpPad
+
+    - ``reduce``
+
+      - mluOpReduce
+      - mluOpCreateReduceDescriptor
+      - mluOpDestroyReduceDescriptor
+      - mluOpSetReduceDescriptor
+      - mluOpSetReduceDescriptor_v2
+      - mluOpGetReduceOpWorkspaceSize
+
+    - ``scatter_nd``
+
+      - mluOpScatterNd
+      - mluOpScatterNd_v2
+
+    - ``stride_slice``
+
+      - mluOpStrideSlice
+
+    - ``transform``
+
+      - mluOpTransform
+
+    - ``transpose``
+
+      - mluOpCreateTransposeDescriptor
+      - mluOpDestroyTransposeDescriptor
+      - mluOpSetTransposeDescriptor
+      - mluOpGetTransposeWorkspaceSize
+      - mluOpTranspose
+      - mluOpTranspose_v2
+
+    - ``unique``
+
+      - mluOpUnique
+      - mluOpCreateUniqueDescriptor
+      - mluOpDestroyUniqueDescriptor
+      - mluOpSetUniqueDescriptor
+      - mluOpGetUniqueWorkSpace
+      - mluOpUniqueGetOutLen
+      - mluOpGetUniqueWorkspaceSize
+      - mluOpUnique_v2
+
+  - Removed BangPy APIs and adjusted repository structure.
+
+
 * V0.11.0
 
   **Date:** December 15, 2023

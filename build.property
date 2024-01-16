@@ -1,9 +1,9 @@
 {
-  "version": "0.11.0-1",
+  "version": "1.0.0-1",
   "python": "3.6.0",
-  "build_requires": {"cntoolkit": ["release","3.8.4-1"],
-                     "cnnl":["release","1.21.1-1"],
-                     "driver": "5.10.15",
+  "build_requires": {"cntoolkit": ["release","3.9.0-1"],
+                     "cnnl":["release","1.24.0-1"],
+                     "driver": "5.10.27",
                      "eigen3": "3.4.0",
                      "libxml2": "2.9.0",
                      "protoc": "3.6.0"},

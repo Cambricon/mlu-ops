@@ -46,11 +46,12 @@ MLU-OPS™提供了以下功能：
 ## 依赖条件
 
 - 操作系统：
-  - 支持 x86_64 下 Ubuntu18.04、Ubuntu20.04、Centos7.6、Centos8.5、Kylin10
+  - 支持 x86_64 下 Ubuntu20.04、Ubuntu22.04、Centos7.6、Centos8.5、Kylin10
+  - MLU-OPS v1.0.0版本后不再发布Ubuntu18.04的软件包
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.7.0 或更高版本，CNNL v1.21.1 或者更高版本
+  - 编译和运行时依赖 CNToolkit v3.9.0 或更高版本，CNNL v1.24.0 或者更高版本
 - 寒武纪 MLU 驱动：
-  - 运行时依赖驱动 v5.10.15 或更高版本
+  - 运行时依赖驱动 v5.10.27 或更高版本
 - 外部链接库：
   - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev、libeigen3-dev>=3.4
 - Python环境：
@@ -61,6 +62,8 @@ MLU-OPS™提供了以下功能：
 
 - 获取 MLU-OPS™ 代码
 
+以Ubuntu20.04版本为例
+
   ```sh
   git clone https://github.com/Cambricon/mlu-ops.git
   cd mlu-ops
@@ -70,12 +73,12 @@ MLU-OPS™提供了以下功能：
 - 准备 CNToolkit、CNNL 环境
 
   ```sh
-  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu18.04/cntoolkit_x.x.x-1.ubuntuxx.xx_amd64.deb
-  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu18.04/cnnl_x.x.x-1.ubuntuxx.xx_amd64.deb
-  sudo apt-get install ./cntoolkit-x.x.x_ubuntuxx.xx_amd64.deb
+  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cntoolkit_3.9.0-1.ubuntu20.04_amd64.deb
+  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cnnl_1.24.0-1.ubuntu20.04_amd64.deb
+  sudo apt-get install ./cntoolkit-3.9.0-1.ubuntu20.04_amd64.deb
   sudo apt-get update
   sudo apt-get install cncc cnas cnbin cndrv cndev cnrt cnrtc cngdb cnperf
-  sudo apt-get install ./cnnl_x.x.x-x.ubuntuxx.xx_amd64.deb
+  sudo apt-get install ./cnnl_1.24.0-1.ubuntu20.04_amd64.deb
   ```
 
 - 准备 Python-3.8.0 环境

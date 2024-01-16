@@ -12,9 +12,9 @@ jobs:
     strategy:
       matrix:
         runner: [mlu370-m8]
-        mlu_ops_version : [0.11.0]
-        cntoolkit_version : [3.7.0]
-        cnnl_version: [1.21.1]
+        mlu_ops_version : [1.0.0]
+        cntoolkit_version : [3.9.0]
+        cnnl_version: [1.24.0]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
@@ -28,33 +28,33 @@ jobs:
 
       - name: build_mlu_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
+          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./build.sh
 
       - name: release_test_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./test.sh --cases_dir=/testdata/release_test/default_platform
 
       - name: release_temp_cases
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./test.sh --cases_dir=/testdata/release_temp/default_platform
 
       - name: test_release_test_370_cases
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./test.sh --cases_dir=/testdata/release_test/370
 
       - name: test_release_temp_370_cases
         if: matrix.runner == 'mlu370-m8'
         run: >
           docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/commu0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu18.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
+          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./test.sh --cases_dir=/testdata/release_temp/370
 
       - name: clean
