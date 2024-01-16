@@ -31,6 +31,7 @@
 #include "core/tensor.h"
 #include "core/type.h"  // mluop::getSizeOfDataType
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 static mluOpStatus_t DynamicPointToVoxelBackwardParamCheck(
     const char *interface_name, const mluOpHandle_t handle,
@@ -255,10 +256,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
           << ", grad_feats_element_num=" << grad_feats_element_num;
   // 1. init output
   uint64_t fill_0 = 0x0;
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_0,
-                                  grad_feats_desc, grad_feats));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_feats_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_0,
+                          cnnl_output_desc, grad_feats));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, N);
@@ -273,18 +280,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
                                        mluOpSetTensorDescriptor(
                                            indices_desc, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_INT32, 2, indices_dims));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                             &grad_feats_element_num,
-                                             indices_desc, workspace));
+    {
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc,
+                                                   cnnl_output_desc);
+      CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                            &grad_feats_element_num, cnnl_output_desc,
+                            workspace));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    }
     // 3. get scatter indices
     CHECK_RETURN("[mluOpDynamicPointToVoxelBackward]",
                  KernelDynamicPointToVoxelBackward(
                      k_dim, k_type, handle->queue, feats, voxel_feats,
                      grad_feats, workspace, point2voxel_map, voxel_num, N, C));
     // 4. scatter
-    mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_ADD;
+    cnnlScatterNdMode_t scatter_mode = CNNL_SCATTERND_ADD;
     mluOpTensorDescriptor_t updates_desc;
     INTERNAL_CHECK(
         interface_name,
@@ -303,12 +315,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
                                        mluOpSetTensorDescriptor(
                                            output_desc, MLUOP_LAYOUT_ARRAY,
                                            MLUOP_DTYPE_FLOAT, 1, output_dims));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            mluOpScatterNd_v2(handle, scatter_mode, indices_desc, workspace,
-                              updates_desc, grad_voxel_feats, NULL, NULL,
-                              output_desc, grad_feats));
+    {
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(indices_desc,
+                                                   cnnl_indices_desc);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(updates_desc,
+                                                   cnnl_updates_desc);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc,
+                                                   cnnl_output_desc);
+
+      CALL_CNNL(cnnlScatterNd_v2(cnnl_handle, scatter_mode, cnnl_indices_desc,
+                                 workspace, cnnl_updates_desc, grad_voxel_feats,
+                                 NULL, NULL, cnnl_output_desc, grad_feats));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_updates_desc);
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    }
     INTERNAL_CHECK(
         interface_name,
         MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(updates_desc));

@@ -29,6 +29,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 void policyFunc(const mluOpHandle_t handle,
@@ -424,17 +425,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
   // generate mluOpDeformRoiPoolBackward prototxt end!
-  VLOG(5) << "[mluOpDeformRoiPoolBackward] mluOpFill start.";
+  VLOG(5) << "[mluOpDeformRoiPoolBackward] cnnlFill_v3 start.";
   const uint32_t fill_value = 0x00;
-  PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               grad_input_desc, grad_input));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_input_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_input));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   if (offset != NULL) {
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                MLUOP_STATUS_SUCCESS ==
-                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                 grad_offset_desc, grad_offset));
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_offset_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_offset));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
   }
 
   cnrtDim3_t k_dim;

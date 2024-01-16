@@ -29,14 +29,14 @@ namespace mluoptest {
 
 void RoialignForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_roialign_param()) {
-    LOG(ERROR) << "mluOpRoiAlignForward: lose roialign_param. ";
+    LOG(ERROR) << "mluOpRoiAlignForward_v2: lose roialign_param. ";
   }
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "mluOpRoiAlignForward: tensor input number is wrong.";
+    LOG(ERROR) << "mluOpRoiAlignForward_v2: tensor input number is wrong.";
   }
   if (parser_->getOutputNum() != 1 && parser_->getOutputNum() != 3) {
     LOG(ERROR) << "output number is" << parser_->getOutputNum();
-    LOG(ERROR) << "mluOpRoiAlignForward: tensor output number is wrong.";
+    LOG(ERROR) << "mluOpRoiAlignForward_v2: tensor output number is wrong.";
   }
 }
 
@@ -64,15 +64,7 @@ void RoialignForwardExecutor::compute() {
   VLOG(4) << "call mluOpRoiAlignForward";
   interface_timer_.start();
 
-  if (verison == 0) {
-    VLOG(4) << "verison = " << verison;
-    mluOpSetRoiAlignForwardDescriptor(roialign_desc, pooled_height,
-                                      pooled_width, sampling_ratio,
-                                      spatial_scale, aligned);
-    MLUOP_CHECK(mluOpRoiAlignForward(handle_, roialign_desc, input_desc,
-                                     input_dev, input_rois_desc, input_rois_dev,
-                                     output_desc, output_dev));
-  } else {
+  {
     VLOG(4) << "verison = " << verison;
     mluOpSetRoiAlignForwardDescriptor_v2(roialign_desc, pooled_height,
                                          pooled_width, sampling_ratio,

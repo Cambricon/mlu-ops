@@ -30,6 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 static void policyFuncDefault(const mluOpHandle_t handle,
                               const size_t num_points, cnrtDim3_t *k_dim,
@@ -280,19 +281,31 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   policyFuncDefault(handle, num_points, &k_dim, &k_type);
 
   const size_t fill_value = 0x0;
-  PARAM_CHECK(
-      "[mluOpVoxelization]",
-      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                           &fill_value, voxels_desc, voxels));
-  PARAM_CHECK(
-      "[mluOpVoxelization]",
-      MLUOP_STATUS_SUCCESS == mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                           &fill_value, coors_desc, coors));
-  PARAM_CHECK(
-      "[mluOpVoxelization]",
-      MLUOP_STATUS_SUCCESS ==
-          mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                       num_points_per_voxel_desc, num_points_per_voxel));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxels_desc, cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, voxels));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(coors_desc, cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, coors));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(num_points_per_voxel_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, num_points_per_voxel));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
   VLOG(5) << "Launch Kernel KernelDynamicVoxelize.";
   CHECK_RETURN(

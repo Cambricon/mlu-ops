@@ -26,6 +26,7 @@
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 static void policyFunc(const mluOpHandle_t handle, const int mask_cnt,
@@ -119,22 +120,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedIm2colForwardWorkspaceSize(
   *workspace_size = feature_desc->total_tensor_size;
   *workspace_size += data_col_desc->total_tensor_size;
 
-  mluOpTransposeDescriptor_t trans_desc;
+  cnnlTransposeDescriptor_t trans_desc;
   size_t feature_transpose_workspace_size = 0;
   int feature_dim = feature_desc->dim;
   int feature_permute[4] = {0, 3, 1, 2};
 
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpCreateTransposeDescriptor(&trans_desc));
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpSetTransposeDescriptor(
-                                  trans_desc, feature_dim, feature_permute));
-  PARAM_CHECK("[mluOpMaskedIm2colForward]",
-              MLUOP_STATUS_SUCCESS == mluOpGetTransposeWorkspaceSize(
-                                          handle, feature_desc, trans_desc,
-                                          &feature_transpose_workspace_size));
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
+  CALL_CNNL(
+      cnnlSetTransposeDescriptor(trans_desc, feature_dim, feature_permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(feature_desc, cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_x_desc,
+                                            trans_desc,
+                                            &feature_transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   if (mluOpGetTensorElementNum(feature_desc) == 0 ||
       data_col_desc->dims[0] == 0) {
     VLOG(5) << "[mluOpMaskedIm2colForward] Zero element tensor failure.";
@@ -159,15 +161,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedIm2colForwardWorkspaceSize(
                   mluOpSetTensorDescriptor(
                       data_col_HWC_desc_tmp, MLUOP_LAYOUT_ARRAY,
                       feature_desc->dtype, data_col_dim, data_col_HWC_dims));
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpSetTransposeDescriptor(
-                                  trans_desc, data_col_dim, data_col_permute));
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpGetTransposeWorkspaceSize(
-                                  handle, data_col_HWC_desc_tmp, trans_desc,
-                                  &data_col_transpose_workspace_size));
+  CALL_CNNL(
+      cnnlSetTransposeDescriptor(trans_desc, data_col_dim, data_col_permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(data_col_HWC_desc_tmp,
+                                                 cnnl_x_desc);
+    CALL_CNNL(
+        cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_x_desc, trans_desc,
+                                      &data_col_transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   *workspace_size +=
       data_col_transpose_workspace_size > feature_transpose_workspace_size
           ? data_col_transpose_workspace_size
@@ -175,9 +180,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedIm2colForwardWorkspaceSize(
   PARAM_CHECK("[mluOpMaskedIm2colForward]",
               MLUOP_STATUS_SUCCESS ==
                   mluOpDestroyTensorDescriptor(data_col_HWC_desc_tmp));
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -187,27 +190,31 @@ static mluOpStatus_t transposeTensor(
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
     void *transpose_workspace) {
   int input_dim = input_desc->dim;
-  mluOpTransposeDescriptor_t trans_desc;
+  cnnlTransposeDescriptor_t trans_desc;
   size_t transpose_workspace_size = 0;
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpCreateTransposeDescriptor(&trans_desc));
-  PARAM_CHECK("[mluOpMaskedIm2colForward]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpSetTransposeDescriptor(trans_desc, input_dim, permute));
-  PARAM_CHECK("[mluOpMaskedIm2colForward]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpGetTransposeWorkspaceSize(handle, input_desc, trans_desc,
-                                                 &transpose_workspace_size));
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS ==
-          mluOpTranspose_v2(handle, trans_desc, input_desc, input,
-                            workspace_dst_desc, workspace_dst,
-                            transpose_workspace, transpose_workspace_size));
-  PARAM_CHECK(
-      "[mluOpMaskedIm2colForward]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, input_dim, permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(
+        cnnl_handle, cnnl_x_desc, trans_desc, &transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_x_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
+                                                 cnnl_y_desc);
+    CALL_CNNL(cnnlTranspose_v2(cnnl_handle, trans_desc, cnnl_x_desc, input,
+                               cnnl_y_desc, workspace_dst, transpose_workspace,
+                               transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_y_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -271,14 +278,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedIm2colForward(
   const int mask_cnt = mask_h_idx_desc->dims[0];
   policyFunc(handle, mask_cnt, &k_dim, &k_type);
 
-  VLOG(5) << "[mluOpMaskedIm2colForward] mluOpFill_v3 start.";
+  VLOG(5) << "[mluOpMaskedIm2colForward] cnnlFill_v3 start.";
   uint64_t fill_value = 0x0;
-  PARAM_CHECK("[mluOpMaskedIm2colForward]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               data_col_desc, data_col_workspace));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(data_col_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, data_col_workspace));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
-  VLOG(5) << "[mluOpMaskedIm2colForward] mluOpTranspose_v2 feature start.";
+  VLOG(5) << "[mluOpMaskedIm2colForward] cnnlTranspose_v2 feature start.";
 
   int feature_dim = feature_desc->dim;
   int feature_permute[4] = {0, 2, 3, 1};
@@ -316,7 +328,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedIm2colForward(
                    height, width, channels, kernel_h, kernel_w, pad_h, pad_w,
                    mask_h_idx, mask_w_idx, mask_cnt, data_col_workspace));
 
-  VLOG(5) << "[mluOpMaskedIm2colForward] mluOpTranspose_v2 data_col start.";
+  VLOG(5) << "[mluOpMaskedIm2colForward] cnnlTranspose_v2 data_col start.";
   const int data_col_dim = 3;
   int data_col_permute[3] = {2, 1, 0};
   int data_col_HWC_dims[3] = {0, 0, 0};

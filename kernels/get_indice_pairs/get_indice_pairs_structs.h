@@ -33,7 +33,7 @@
 #define MAX_FILTER_DIM 3
 #define MAX_OUTPUT_DIM 3
 
-#define INDICE_IN_LARGE_TENSOR_NUM  1000000
+#define INDICE_IN_LARGE_TENSOR_NUM 1000000
 
 struct FilterSpace {
   int k_d;

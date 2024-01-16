@@ -28,6 +28,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 static void policyFunc(const mluOpHandle_t handle,
@@ -273,11 +274,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
   }
   // generate mluOpRotatedFeatureAlignBackward prototxt end!
 
-  VLOG(5) << "mluOpFill_v3 start.";
+  VLOG(5) << "cnnlFill_v3 start.";
   const uint32_t fill_value = 0x00;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                           bottom_input_desc, bottom_input));
-  VLOG(5) << "mluOpFill_v3 end.";
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bottom_input_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, bottom_input));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  VLOG(5) << "cnnlFill_v3 end.";
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;

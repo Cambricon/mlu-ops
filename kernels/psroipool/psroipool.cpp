@@ -31,6 +31,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 static void policyFuncPsRoiPool(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -329,8 +330,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
 
   // gdram set zero
   float fill_value = 0;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                           bottom_grad_desc, bottom_grad));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bottom_grad_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, bottom_grad));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
   KERNEL_CHECK((KernelPsRoiPoolBackward(
       k_dim, k_type, handle->queue, top_grad, mapping_channel, rois,

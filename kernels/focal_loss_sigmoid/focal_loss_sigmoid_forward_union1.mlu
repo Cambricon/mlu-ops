@@ -232,8 +232,10 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer,
     __bang_le_scalar(input, compute_b, (float)FLT_MAX, deal_num);
     __bang_float2int32((int32_t *)input, input, deal_num, 0);
     __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
-    __bang_lut_s32((int32_t *)input, (int32_t *)input, table, deal_num, COMPUTE_COUNT_ALIGN);  // NOLINT
-    __bang_band((char *)compute_b, (char *)compute_b, (char *)input, sizeof(float) * deal_num);  // NOLINT
+    __bang_lut_s32((int32_t *)input, (int32_t *)input, table, deal_num,
+                   COMPUTE_COUNT_ALIGN);  // NOLINT
+    __bang_band((char *)compute_b, (char *)compute_b, (char *)input,
+                sizeof(float) * deal_num);  // NOLINT
     __bang_sub(compute_a, compute_a, compute_b, deal_num);
 
     // 3. output = alpha_t * p_t^r * [-log(p_t)]

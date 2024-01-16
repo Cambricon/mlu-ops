@@ -31,6 +31,7 @@
 #include "core/type.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 typedef enum {
   /*!< Index is invalid. */
@@ -193,13 +194,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num_levels == 0 || num_points == 0) {
-    VLOG(5) << "mluOpFill_v3 start.";
+    VLOG(5) << "cnnlFill_v3 start.";
     const float fill_value = 0.0f;
-    PARAM_CHECK("[mluOpMsDeformAttnForward]",
-                MLUOP_STATUS_SUCCESS ==
-                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                 data_col_desc, data_col));
-    VLOG(5) << "mluOpFill_v3 end.";
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(data_col_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, data_col));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+    VLOG(5) << "cnnlFill_v3 end.";
     VLOG(5) << "mluOpMsDeformAttnForward skip zero element.";
     return MLUOP_STATUS_SUCCESS;
   }
