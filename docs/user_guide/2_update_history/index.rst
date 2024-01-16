@@ -1,6 +1,37 @@
 更新历史
 ========
 
+* **V1.0.0**
+
+  **更新时间**：2024年2月6日
+
+  **更新内容**：
+
+  - 新增以下算子章节内容
+
+     + :ref:`dcn_backward_data`
+     + :ref:`dcn_backward_weight`
+     + :ref:`dcn_forward`
+
+  - 移除以下算子章节内容：
+
+     + add_n
+     + batch_matmul_bcast
+     + copy
+     + concat
+     + expand
+     + fill
+     + gather_nd 
+     + matmul
+     + nms
+     + pad
+     + reduce
+     + scatter_nd
+     + stride_slice
+     + transform
+     + transpose
+     + unique
+
 * **V0.11.0**
 
   **更新时间**：2023年12月15日
