@@ -290,23 +290,34 @@ KERNEL_CHECK((KernelMaskFillCoorsForward(
       k_dim, k_type, handle->queue, num_points, coors)));
 ```
 
-- kernel2: mluOpUnique_v2 
+- kernel2: cnnlUnique_v2 
 
 该 kernel 用于完成 3.1.1节 第 2 点;
 
 ```c++
-  mluOpUniqueSort_t unique_mode = MLUOP_SORT_ASCEND;
-  mluOpUniqueDescriptor_t unique_desc;
-  MLUOP_CHECK(mluOpCreateUniqueDescriptor(&unique_desc));
-  MLUOP_CHECK(mluOpSetUniqueDescriptor(unique_desc, unique_mode, 0, true, true));
-  //unique op
-  MLUOP_CHECK((mluOpUnique_v2(handle, unique_desc, coors_desc,
-                              coors, workspace, workspace_size,
-                              (int *)voxel_num, voxel_coors_desc,
-                              voxel_coors, point2voxel_map_desc,
-                              point2voxel_map, voxel_points_count_desc,
-                              voxel_points_count)));
-  MLUOP_CHECK(mluOpDestroyUniqueDescriptor(unique_desc));
+  cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
+  cnnlUniqueDescriptor_t unique_desc;
+
+  CALL_CNNL(cnnlCreateUniqueDescriptor(&unique_desc));
+  CALL_CNNL(cnnlSetUniqueDescriptor(unique_desc, unique_mode, 0, true, true));
+
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(coors_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxel_coors_desc, cnnl_output_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(point2voxel_map_desc, cnnl_indices_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxel_points_count_desc, cnnl_counts_desc);
+
+  CALL_CNNL(cnnlUnique_v2(cnnl_handle, unique_desc, cnnl_input_desc,
+                          coors, workspace, workspace_size, (int *)voxel_num,
+                          cnnl_output_desc, voxel_coors, cnnl_indices_desc,
+                          point2voxel_map, cnnl_counts_desc, voxel_points_count));
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_counts_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
+  
+  CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
   int32_t num_voxels = 0;
   cnrtMemcpy(&num_voxels, voxel_num, sizeof(int), CNRT_MEM_TRANS_DIR_DEV2HOST);
 ```

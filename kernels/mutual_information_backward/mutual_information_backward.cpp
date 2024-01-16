@@ -31,6 +31,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 #define API_NAME "[mluOpMutualInformationBackward]"
 
@@ -697,19 +698,25 @@ static mluOpStatus_t launchMutualInformationBackwardDefaultKernel(
     const bool overwrite_ans_grad, void *ans_grad, void *px_grad, void *py_grad,
     void *p_grad) {
   // At first, use Fill Op to set px_grad, py_grad to all 0
-  VLOG(5) << API_NAME << " mluOpFill_v3 start.";
+  VLOG(5) << API_NAME << " cnnlFill_v3 start.";
   uint64_t fill_value = 0x0;
   if (mluOpGetTensorElementNum(px_desc) > 0) {
-    PARAM_CHECK(API_NAME, MLUOP_STATUS_SUCCESS ==
-                              mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                           &fill_value, px_desc, px_grad));
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(px_desc, cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, px_grad));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
   }
   if (mluOpGetTensorElementNum(py_desc) > 0) {
-    PARAM_CHECK(API_NAME, MLUOP_STATUS_SUCCESS ==
-                              mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                           &fill_value, py_desc, py_grad));
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(py_desc, cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, py_grad));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  VLOG(5) << API_NAME << " mluOpFill_v3 end.";
+  VLOG(5) << API_NAME << " cnnlFill_v3 end.";
 
   // When S and T is too large, launch default kernel with partition of S and T
   // 1. Compute current arch max N size, according to NRAM size and device RAM

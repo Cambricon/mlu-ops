@@ -30,6 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 static void policyFunc(const mluOpHandle_t handle, const int bin_num,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -253,11 +254,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
   VLOG(5) << "[mluOpRoiAlignRotatedBackward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
 
-  VLOG(5) << "mluopFill start.";
+  VLOG(5) << "cnnlFill_v3 start.";
   const size_t fill_value = 0x0;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                           bottom_grad_desc, bottom_grad));
-  VLOG(5) << "mluopFill end.";
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bottom_grad_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, bottom_grad));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  VLOG(5) << "cnnlFill_v3 end.";
 
   KERNEL_CHECK((KernelRoiAlignRotatedBackward(
       k_dim, k_type, handle->queue, top_grad_desc->dtype, top_grad, rois, batch,

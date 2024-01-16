@@ -32,8 +32,8 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc) {
   PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
   CHECK_FUNC_RETURN(cnnlCreateDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDcnBackwardData] Internal error accured in "
-                    "mluOpCreateDCNDescriptor.",
+                    "[mluOpCreateDCNDescriptor] Internal error accured in "
+                    "cnnlCreateDCNDescriptor.",
                     MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
@@ -42,8 +42,8 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc) {
   PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
   CHECK_FUNC_RETURN(cnnlDestroyDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDcnBackwardData] Internal error accured in "
-                    "mluOpDestroyDCNDescriptor.",
+                    "[mluOpDestroyDCNDescriptor] Internal error accured in "
+                    "cnnlDestroyDCNDescriptor.",
                     MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
@@ -58,7 +58,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetDCNDescriptor(
                            deformable_group, conv_group, im2col_step,
                            cnnlDataType_t(compute_type)),
       CNNL_STATUS_SUCCESS,
-      "[mluOpDcnBackwardData] Internal error accured in mluOpSetDCNDescriptor.",
+      "[mluOpSetDCNDescriptor] Internal error accured in "
+      "cnnlSetDCNDescriptor.",
       MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
@@ -104,7 +105,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDCNBakcwardDataWorkspaceSize(
           cnnl_grad_input_desc, cnnl_grad_offset_desc, cnnl_grad_mask_desc,
           workspace_size),
       CNNL_STATUS_SUCCESS,
-      "[mluOpDcnBackwardData] Internal error accured in mluOpReduce.",
+      "[mluOpGetDCNBakcwardDataWorkspaceSize] Internal error accured in "
+      "cnnlGetDCNBakcwardDataWorkspaceSize.",
       MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
@@ -155,7 +157,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDCNBackwardData(
           cnnl_grad_input_desc, grad_input, cnnl_grad_offset_desc, grad_offset,
           cnnl_grad_mask_desc, grad_mask),
       CNNL_STATUS_SUCCESS,
-      "[mluOpDcnBackwardData] Internal error accured in mluOpDcnBackwardData.",
+      "[mluOpDcnBackwardData] Internal error accured in cnnlDCNBackwardData.",
       MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);

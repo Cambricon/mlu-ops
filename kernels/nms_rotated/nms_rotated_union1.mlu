@@ -90,9 +90,9 @@ __mlu_func__ void nms_detection(
    * | 1               | 1             | 10        | 24x2              |
    * | ordered_pts+x/y | temp_long_1~3 | dist_ram  | valid_pts         |
    * | 24x2            | 24x3          | 24        | 24                |
-   * | nums_in_ram     | box1          | box2      | box1_buffer       | 
-   * | 1               | 5             | 5         | 5                 | 
-   * 
+   * | nums_in_ram     | box1          | box2      | box1_buffer       |
+   * | 1               | 5             | 5         | 5                 |
+   *
    * |-- reuse memory from dist_ram: 16 copies of ram --|
    * | rotated_pts1/2_x/y                               |
    * | 4x4                                              |
@@ -163,8 +163,8 @@ __mlu_func__ void nms_detection(
     // to remove warnings(address space doesn't match) raises when compiling.
     // Performance may drop in the 300 series if this computation is moved
     // outside the loop.
-    boxes_load_dir   = (boxes_load_dir   == SRAM2NRAM) ? SRAM2NRAM : GDRAM2NRAM;
-    scores_load_dir  = (scores_load_dir  == SRAM2NRAM) ? SRAM2NRAM : GDRAM2NRAM;
+    boxes_load_dir = (boxes_load_dir == SRAM2NRAM) ? SRAM2NRAM : GDRAM2NRAM;
+    scores_load_dir = (scores_load_dir == SRAM2NRAM) ? SRAM2NRAM : GDRAM2NRAM;
     scores_store_dir = (scores_store_dir == NRAM2SRAM) ? NRAM2SRAM : NRAM2GDRAM;
 
     findCoreMaxBox(input_data_score, score, temp, max_box, input_x_ptr,
@@ -368,7 +368,7 @@ __mlu_func__ void nms_detection(
       __bang_write_value((float *)temp4_ram, seg_len, float(max_area));
       calIntersectIou((float *)temp2_ram, (float *)temp4_ram,
                       (float *)temp10_ram, (float *)temp1_ram,
-                      (float *)temp2_ram,  /*mode=*/0, seg_len);
+                      (float *)temp2_ram, /*mode=*/0, seg_len);
       __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram, seg_len, 0);
       __bang_lut_s32((int32_t *)temp9_ram, (int32_t *)temp9_ram,
                      (int32_t *)table_float, seg_len, TABLE_LENGTH);

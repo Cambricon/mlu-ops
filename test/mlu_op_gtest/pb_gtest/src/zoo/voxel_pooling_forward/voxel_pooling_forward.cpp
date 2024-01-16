@@ -81,18 +81,8 @@ void VoxelPoolingForwardExecutor::compute() {
   auto input_features_data_ptr = data_vector_[1].device_ptr;
   auto output_features_data_ptr = data_vector_[2].device_ptr;
   auto pos_memo_data_ptr = data_vector_[3].device_ptr;
-  VLOG(4) << "VoxelPoolingForwardExecutor call mluOpFill().";
-  float output_features_init_vaule = 0;
-  MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_HOST,
-                        &output_features_init_vaule, output_features_desc,
-                        output_features_data_ptr));
-  int pos_memo_init_vaule = -1;
-  MLUOP_CHECK(mluOpFill_v3(handle_, MLUOP_POINTER_MODE_HOST,
-                           &pos_memo_init_vaule,
-                           pos_memo_desc, pos_memo_data_ptr));
 
   VLOG(4) << "VoxelPoolingForwardExecutor call mluOpVoxelPoolingForward().";
-
   interface_timer_.start();
   MLUOP_CHECK(mluOpVoxelPoolingForward(
       handle_, batch_size_, num_points_, num_channels_, num_voxel_x_,

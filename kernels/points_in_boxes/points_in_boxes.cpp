@@ -118,10 +118,10 @@ static mluOpStatus_t pointsInBoxesPreCheck(
 
   const size_t points_element_num = mluOpGetTensorElementNum(points_desc);
   const size_t boxes_element_num = mluOpGetTensorElementNum(boxes_desc);
-  TENSOR_NUM_CHECK("[mluOpPointsInBoxes]", points_element_num,
-                   LARGE_TENSOR_NUM, "");
-  TENSOR_NUM_CHECK("[mluOpPointsInBoxes]", boxes_element_num,
-                   LARGE_TENSOR_NUM, "");
+  TENSOR_NUM_CHECK("[mluOpPointsInBoxes]", points_element_num, LARGE_TENSOR_NUM,
+                   "");
+  TENSOR_NUM_CHECK("[mluOpPointsInBoxes]", boxes_element_num, LARGE_TENSOR_NUM,
+                   "");
 
   return MLUOP_STATUS_SUCCESS;
 }

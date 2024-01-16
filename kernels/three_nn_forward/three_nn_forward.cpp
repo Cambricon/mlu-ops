@@ -72,7 +72,7 @@ static mluOpStatus_t transposeTensor(
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
-                                        cnnl_workspace_dst_desc);
+                                               cnnl_workspace_dst_desc);
   CALL_CNNL(cnnlCreateTransposeDescriptor(&cnnl_trans_desc));
   CALL_CNNL(cnnlSetTransposeDescriptor(cnnl_trans_desc, input_dim, permute));
   CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_input_desc,
@@ -223,7 +223,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
   k_dims.z = 1;
   cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
 
-  VLOG(5) << "[mluOpThreeNNForward] mluOpTranspose_v2 feature start.";
+  VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature start.";
 
   const int known_dim = known_desc->dim;
   const int known_permute[3] = {0, 2, 1};
@@ -250,7 +250,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
       "[mluOpThreeNNForward]",
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(known_desc_tmp));
 
-  VLOG(5) << "[mluOpThreeNNForward] mluOpTranspose_v2 feature end.";
+  VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature end.";
   VLOG(5) << "Launch Kernel KernelThreeNNForward<<<Union" << k_type / CORE_DIM
           << ", " << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>.";
   CHECK_RETURN(

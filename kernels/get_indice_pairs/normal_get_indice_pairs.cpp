@@ -32,6 +32,7 @@
 #include "kernels/get_indice_pairs/get_indice_pairs_structs.h"
 #include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 #include "mlu_op.h"
 
 static mluOpStatus_t getIndiceMaskAll(
@@ -128,28 +129,32 @@ static mluOpStatus_t getReduceOpWS(mluOpHandle_t handle,
   // reduce along lowest dimension
   int axis[1] = {1};
   int axis_num = 1;
-  mluOpReduceDescriptor_t reduce_desc;
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpCreateReduceDescriptor(&reduce_desc));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpSetReduceDescriptor(
-                         reduce_desc, axis, axis_num, MLUOP_REDUCE_ADD,
-                         reduce_in_desc->dtype, MLUOP_PROPAGATE_NAN,
-                         MLUOP_REDUCE_NO_INDICES, MLUOP_16BIT_INDICES));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpGetReduceOpWorkspaceSize(handle, reduce_in_desc, reduce_out_desc,
-                                        reduce_desc, &total_size));
+  cnnlReduceDescriptor_t reduce_desc;
+  CALL_CNNL(cnnlCreateReduceDescriptor(&reduce_desc));
+  CALL_CNNL(cnnlSetReduceDescriptor(
+      reduce_desc, axis, axis_num, CNNL_REDUCE_ADD,
+      cnnlDataType_t(reduce_in_desc->dtype), CNNL_PROPAGATE_NAN,
+      CNNL_REDUCE_NO_INDICES, CNNL_16BIT_INDICES));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(reduce_in_desc,
+                                                 cnnl_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(reduce_out_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlGetReduceOpWorkspaceSize(cnnl_handle, cnnl_input_desc,
+                                           cnnl_output_desc, reduce_desc,
+                                           &total_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_in_desc));
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_out_desc));
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpDestroyReduceDescriptor(reduce_desc));
+  CALL_CNNL(cnnlDestroyReduceDescriptor(reduce_desc));
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -160,14 +165,6 @@ static mluOpStatus_t getUniqueOpWS(mluOpHandle_t handle,
                                    const int kernel_volume,
                                    const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  mluOpUniqueSort_t unique_mode = MLUOP_SORT_ASCEND;
-  mluOpUniqueDescriptor_t unique_desc;
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpCreateUniqueDescriptor(&unique_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetUniqueDescriptor(unique_desc, unique_mode, 0, false, false));
   mluOpTensorDescriptor_t input_unique_desc;
   INTERNAL_CHECK(
       interface_name,
@@ -179,15 +176,30 @@ static mluOpStatus_t getUniqueOpWS(mluOpHandle_t handle,
           mluOpSetTensorDescriptor(input_unique_desc, MLUOP_LAYOUT_ARRAY,
                                    MLUOP_DTYPE_INT32, unique_in_dims.size(),
                                    unique_in_dims.data()));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpGetUniqueWorkspaceSize(
-                         handle, unique_desc, input_unique_desc, &total_size));
+
+  {
+    cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
+    cnnlUniqueDescriptor_t unique_desc;
+
+    CALL_CNNL(cnnlCreateUniqueDescriptor(&unique_desc));
+    CALL_CNNL(
+        cnnlSetUniqueDescriptor(unique_desc, unique_mode, 0, false, false));
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_unique_desc,
+                                                 cnnl_input_desc);
+    CALL_CNNL(cnnlGetUniqueWorkspaceSize(cnnl_handle, unique_desc,
+                                         cnnl_input_desc, &total_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+
+    CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
+  }
+
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(input_unique_desc));
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpDestroyUniqueDescriptor(unique_desc));
+
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -475,30 +487,34 @@ mluOpStatus_t launchReduceOp(mluOpHandle_t handle,
   // reduce along lowest dimension
   int axis[1] = {1};
   int axis_num = 1;
-  mluOpReduceDescriptor_t reduce_desc;
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpCreateReduceDescriptor(&reduce_desc));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpSetReduceDescriptor(
-                         reduce_desc, axis, axis_num, MLUOP_REDUCE_ADD,
-                         reduce_in_desc->dtype, MLUOP_PROPAGATE_NAN,
-                         MLUOP_REDUCE_NO_INDICES, MLUOP_16BIT_INDICES));
+  cnnlReduceDescriptor_t reduce_desc;
+  CALL_CNNL(cnnlCreateReduceDescriptor(&reduce_desc));
+  CALL_CNNL(cnnlSetReduceDescriptor(
+      reduce_desc, axis, axis_num, CNNL_REDUCE_ADD,
+      cnnlDataType_t(reduce_in_desc->dtype), CNNL_PROPAGATE_NAN,
+      CNNL_REDUCE_NO_INDICES, CNNL_16BIT_INDICES));
   void *alpha = NULL, *beta = NULL, *indices = NULL;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpReduce(handle, reduce_desc, reduce_workspace_ptr, reduce_op_ws,
-                      alpha, reduce_in_desc, reduce_input_addr, 0, indices,
-                      beta, reduce_out_desc, reduce_output_addr));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(reduce_in_desc,
+                                                 cnnl_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(reduce_out_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlReduce(cnnl_handle, reduce_desc, reduce_workspace_ptr,
+                         reduce_op_ws, alpha, cnnl_input_desc,
+                         reduce_input_addr, 0, indices, beta, cnnl_output_desc,
+                         reduce_output_addr));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_in_desc));
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_out_desc));
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpDestroyReduceDescriptor(reduce_desc));
+  CALL_CNNL(cnnlDestroyReduceDescriptor(reduce_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -510,14 +526,6 @@ mluOpStatus_t launchUniqueOp(mluOpHandle_t handle,
                              void *unique_workspace_ptr, size_t unique_op_ws,
                              int kernel_volume, int input_active_site,
                              int *return_num_act) {
-  mluOpUniqueSort_t unique_mode = MLUOP_SORT_ASCEND;
-  mluOpUniqueDescriptor_t unique_desc;
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpCreateUniqueDescriptor(&unique_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetUniqueDescriptor(unique_desc, unique_mode, 0, false, false));
   mluOpTensorDescriptor_t unique_input_desc, unique_output_desc;
   INTERNAL_CHECK(
       interface_name,
@@ -538,18 +546,33 @@ mluOpStatus_t launchUniqueOp(mluOpHandle_t handle,
           mluOpSetTensorDescriptor(unique_output_desc, MLUOP_LAYOUT_ARRAY,
                                    MLUOP_DTYPE_INT32, unique_in_dims.size(),
                                    unique_in_dims.data()));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpUnique_v2(handle, unique_desc, unique_input_desc,
-                                    unique_input_addr, unique_workspace_ptr,
-                                    unique_op_ws, (int *)unique_output_num_addr,
-                                    unique_output_desc, unique_output_addr,
-                                    nullptr, nullptr, nullptr, nullptr));
+  {
+    cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
+    cnnlUniqueDescriptor_t unique_desc;
+
+    CALL_CNNL(cnnlCreateUniqueDescriptor(&unique_desc));
+    CALL_CNNL(
+        cnnlSetUniqueDescriptor(unique_desc, unique_mode, 0, false, false));
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(unique_input_desc,
+                                                 cnnl_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(unique_output_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlUnique_v2(cnnl_handle, unique_desc, cnnl_input_desc,
+                            unique_input_addr, unique_workspace_ptr,
+                            unique_op_ws, (int *)unique_output_num_addr,
+                            cnnl_output_desc, unique_output_addr, nullptr,
+                            nullptr, nullptr, nullptr));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+
+    CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
+  }
   cnrtQueueSync(handle->queue);
   cnrtMemcpy(return_num_act, unique_output_num_addr, sizeof(float),
              CNRT_MEM_TRANS_DIR_DEV2HOST);
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpDestroyUniqueDescriptor(unique_desc));
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(unique_input_desc));
@@ -645,10 +668,15 @@ mluOpStatus_t launchFillOp(mluOpHandle_t handle,
                                          fill_tensor_desc, MLUOP_LAYOUT_ARRAY,
                                          MLUOP_DTYPE_INT32, fill_in_dims.size(),
                                          fill_in_dims.data()));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                  fill_tensor_desc, mluOp_fill_addr));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(fill_tensor_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, mluOp_fill_addr));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(fill_tensor_desc));
@@ -663,7 +691,7 @@ mluOpStatus_t launchScatterNdOp(mluOpHandle_t handle,
                                 void *scatter_indice_addr, int output_size,
                                 int num_act_out) {
   VLOG(5) << interface_name << " call scatterNd";
-  mluOpScatterNdMode_t scatter_mode = MLUOP_SCATTERND_UPDATE;
+  cnnlScatterNdMode_t scatter_mode = CNNL_SCATTERND_UPDATE;
   mluOpTensorDescriptor_t scatter_input_desc, scatter_output_desc,
       scatter_indice_desc;
   INTERNAL_CHECK(
@@ -696,13 +724,27 @@ mluOpStatus_t launchScatterNdOp(mluOpHandle_t handle,
           mluOpSetTensorDescriptor(scatter_output_desc, MLUOP_LAYOUT_ARRAY,
                                    MLUOP_DTYPE_INT32, scatter_out_dims.size(),
                                    scatter_out_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpScatterNd_v2(
-              handle, scatter_mode, scatter_indice_desc, scatter_indice_addr,
-              scatter_input_desc, scatter_input_addr, scatter_output_desc,
-              scatter_output_addr, scatter_output_desc, scatter_output_addr));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(scatter_indice_desc,
+                                                 cnnl_indices_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(scatter_input_desc,
+                                                 cnnl_updates_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(scatter_output_desc,
+                                                 cnnl_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(scatter_output_desc,
+                                                 cnnl_output_desc);
+
+    CALL_CNNL(cnnlScatterNd_v2(
+        cnnl_handle, scatter_mode, cnnl_indices_desc, scatter_indice_addr,
+        cnnl_updates_desc, scatter_input_addr, cnnl_input_desc,
+        scatter_output_addr, cnnl_output_desc, scatter_output_addr));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_updates_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(scatter_input_desc));
@@ -755,11 +797,22 @@ mluOpStatus_t launchGatherNdOp(mluOpHandle_t handle,
           mluOpSetTensorDescriptor(gather_output_desc, MLUOP_LAYOUT_ARRAY,
                                    MLUOP_DTYPE_INT32, gather_out_dims.size(),
                                    gather_out_dims.data()));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpGatherNd(handle, gather_input_desc, gather_input_addr,
-                                   gather_indice_desc, gather_indice_addr,
-                                   gather_output_desc, gather_output_addr));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(gather_input_desc,
+                                                 cnnl_params_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(gather_indice_desc,
+                                                 cnnl_indices_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(gather_output_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlGatherNd(cnnl_handle, cnnl_params_desc, gather_input_addr,
+                           cnnl_indices_desc, gather_indice_addr,
+                           cnnl_output_desc, gather_output_addr));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_params_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   INTERNAL_CHECK(
       interface_name,
       MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(gather_input_desc));

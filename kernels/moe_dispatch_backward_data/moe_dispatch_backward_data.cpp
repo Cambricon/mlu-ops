@@ -30,6 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 static void PolicyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
@@ -133,10 +134,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
     // Initialize output space
     PARAM_CHECK(API, grad_input != NULL);
     const size_t grad_input_initial_value = 0x00;
-    PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                         mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                      &grad_input_initial_value,
-                                      grad_input_desc, grad_input));
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_input_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &grad_input_initial_value, cnnl_output_desc,
+                          grad_input));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
     VLOG(5) << API << "Initialize output tensor done.";
   }
 

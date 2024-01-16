@@ -30,6 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 #define THRESHOLD_OF_BOXES_NUM_AND_CHANNELS 65536
 #define THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD 2976
@@ -103,16 +104,31 @@ static mluOpStatus_t transposeTensor(
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
     void *transpose_workspace) {
   int input_dim = input_desc->dim;
-  mluOpTransposeDescriptor_t trans_desc = NULL;
+  cnnlTransposeDescriptor_t trans_desc = NULL;
   size_t transpose_workspace_size = 0;
-  MLUOP_CHECK(mluOpCreateTransposeDescriptor(&trans_desc));
-  MLUOP_CHECK(mluOpSetTransposeDescriptor(trans_desc, input_dim, permute));
-  MLUOP_CHECK(mluOpGetTransposeWorkspaceSize(handle, input_desc, trans_desc,
-                                             &transpose_workspace_size));
-  MLUOP_CHECK(mluOpTranspose_v2(handle, trans_desc, input_desc, input,
-                                workspace_dst_desc, workspace_dst,
-                                transpose_workspace, transpose_workspace_size));
-  MLUOP_CHECK(mluOpDestroyTransposeDescriptor(trans_desc));
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, input_dim, permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(
+        cnnl_handle, cnnl_x_desc, trans_desc, &transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_x_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(workspace_dst_desc,
+                                                 cnnl_y_desc);
+    CALL_CNNL(cnnlTranspose_v2(cnnl_handle, trans_desc, cnnl_x_desc, input,
+                               cnnl_y_desc, workspace_dst, transpose_workspace,
+                               transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_y_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -349,7 +365,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   void *transpose_workspace =
       (char *)pts_feature_workspace + pts_feature_dtype_size;
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts start.";
+  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts start.";
   int pts_dim = pts_desc->dim;
   int pts_permute[2] = {1, 0};
   int pts_tmp_dims[2] = {0, 0};
@@ -368,9 +384,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
 
   MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_desc_tmp));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts end.";
+  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts end.";
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts_feature start.";
+  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts_feature start.";
   int pts_feature_dim = pts_feature_desc->dim;
   int pts_feature_permute[2] = {1, 0};
   int pts_feature_tmp_dims[2] = {0, 0};
@@ -391,21 +407,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
 
   MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_feature_desc_tmp));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpTranspose pts_feature end.";
+  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts_feature end.";
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpFill_v3 host pointer start.";
+  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlFill_v3 host pointer start.";
   int argmax_initial_value = (pool_method == 0) ? -1 : 0;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                           &argmax_initial_value, argmax_desc, argmax));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_desc, cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &argmax_initial_value, cnnl_output_desc, argmax));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   int pts_idx_initial_value = 0;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                           &pts_idx_initial_value, pts_idx_of_voxels_desc,
-                           pts_idx_of_voxels));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(pts_idx_of_voxels_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &pts_idx_initial_value, cnnl_output_desc,
+                          pts_idx_of_voxels));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   int pooled_features_initial_value = 0;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                           &pooled_features_initial_value, pooled_features_desc,
-                           pooled_features));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] mluOpFill host pointer end.";
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(pooled_features_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &pooled_features_initial_value, cnnl_output_desc,
+                          pooled_features));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlFill_v3 host pointer end.";
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -612,8 +648,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   // generate mluOpRoiawarePool3dBackward prototxt end!
 
   int grad_in_initial_value = 0;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                           &grad_in_initial_value, grad_in_desc, grad_in));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_in_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &grad_in_initial_value, cnnl_output_desc, grad_in));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   VLOG(5)
       << "[mluOpRoiawarePool3dBackward] Initialize output space successfully.";
 

@@ -30,6 +30,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 static void policyFuncDynamicPointToVoxelForward(const mluOpHandle_t handle,
@@ -189,14 +190,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelForwardWorkspaceSize(
   PARAM_CHECK(api, coors_desc != NULL);
   PARAM_CHECK(api, workspace_size != NULL);
 
-  mluOpUniqueSort_t unique_mode = MLUOP_SORT_ASCEND;
-  mluOpUniqueDescriptor_t unique_desc;
-  MLUOP_CHECK(mluOpCreateUniqueDescriptor(&unique_desc));
-  MLUOP_CHECK(
-      mluOpSetUniqueDescriptor(unique_desc, unique_mode, 0, true, true));
-  MLUOP_CHECK(mluOpGetUniqueWorkspaceSize(handle, unique_desc, coors_desc,
-                                          workspace_size));
-  MLUOP_CHECK(mluOpDestroyUniqueDescriptor(unique_desc));
+  {
+    cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
+    cnnlUniqueDescriptor_t unique_desc;
+
+    CALL_CNNL(cnnlCreateUniqueDescriptor(&unique_desc));
+    CALL_CNNL(cnnlSetUniqueDescriptor(unique_desc, unique_mode, 0, true, true));
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(coors_desc, cnnl_input_desc);
+    CALL_CNNL(cnnlGetUniqueWorkspaceSize(cnnl_handle, unique_desc,
+                                         cnnl_input_desc, workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+
+    CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
+  }
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -266,28 +275,54 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   VLOG(5) << api << " launch KernelMaskFillCoorsForward end.";
 
   // 2. unique op
-  mluOpUniqueSort_t unique_mode = MLUOP_SORT_ASCEND;
-  mluOpUniqueDescriptor_t unique_desc;
-  MLUOP_CHECK(mluOpCreateUniqueDescriptor(&unique_desc));
-  MLUOP_CHECK(
-      mluOpSetUniqueDescriptor(unique_desc, unique_mode, 0, true, true));
-  MLUOP_CHECK((mluOpUnique_v2(
-      handle, unique_desc, coors_desc, coors, workspace, workspace_size,
-      (int *)voxel_num, voxel_coors_desc, voxel_coors, point2voxel_map_desc,
-      point2voxel_map, voxel_points_count_desc, voxel_points_count)));
-  MLUOP_CHECK(mluOpDestroyUniqueDescriptor(unique_desc));
+  {
+    cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
+    cnnlUniqueDescriptor_t unique_desc;
+
+    CALL_CNNL(cnnlCreateUniqueDescriptor(&unique_desc));
+    CALL_CNNL(cnnlSetUniqueDescriptor(unique_desc, unique_mode, 0, true, true));
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(coors_desc, cnnl_input_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxel_coors_desc,
+                                                 cnnl_output_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(point2voxel_map_desc,
+                                                 cnnl_indices_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxel_points_count_desc,
+                                                 cnnl_counts_desc);
+
+    CALL_CNNL(cnnlUnique_v2(cnnl_handle, unique_desc, cnnl_input_desc, coors,
+                            workspace, workspace_size, (int *)voxel_num,
+                            cnnl_output_desc, voxel_coors, cnnl_indices_desc,
+                            point2voxel_map, cnnl_counts_desc,
+                            voxel_points_count));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_counts_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+
+    CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
+  }
 
   // 3. reduce
   // fill -inf or zero
-  VLOG(5) << "mluopFill min value start.";
+  VLOG(5) << "cnnlFill_v3 min value start.";
   float inf_value = 0x0;
   if (reduce_type == MLUOP_REDUCE_DMAX) {
     inf_value = -INFINITY;
   }
   const float fill_value = inf_value;
-  MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                           voxel_feats_desc, voxel_feats));
-  VLOG(5) << "mluopFill min value end.";
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxel_feats_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, voxel_feats));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  VLOG(5) << "cnnlFill_v3 min value end.";
 
   VLOG(5) << api << " launch KernelDynamicPointToVoxelForward start.";
   CHECK_RETURN("[mluOpDynamicPointToVoxelForward]",

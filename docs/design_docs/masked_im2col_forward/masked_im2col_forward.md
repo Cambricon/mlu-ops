@@ -144,15 +144,15 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
 ### 3.1 实现方案
 ![im2col2](./im2col2.png)
 - step1. host代码首先将feature的layout由NCHW转置为NHWC，转置后的feature保存在workspace中;
-- step2. host代码中调用mluOpFill()对workspace中的data_col内存部分进行刷0；
+- step2. host代码中调用cnnlFill()对workspace中的data_col内存部分进行刷0；
 - step3. 判断mask覆盖的区域在feature中实际有效的部分，仅需处理实际有效部分的像素即可，使用GDRAM2GDRAM的memcpy将mask在feature中的有效覆盖区域拷贝到workspace中的data_col对应位置。
 - step4. host代码将workspace中的data_col的shape由$`[mask\_cnt, kernel\_h*kernel\_w*channels]`$转回$`[kernel\_h*kernel\_w*channels, mask\_cnt]`$，转置后的数据保存在data_col中;
 ### 3.2 伪代码实现（可选）
 
 ```c++
-//host
-//mluOpTranspose_v2对feature进行转置
-//mluOpFill()对workspace中的data_col内存刷成0
+// host
+// cnnlTranspose_v2对feature进行转置
+// cnnlFill()对workspace中的data_col内存刷成0
 
 //kernel
 for (int mask_index = taskId; mask_index < mask_cnt; ++mask_index) {
@@ -196,7 +196,7 @@ for (int mask_index = taskId; mask_index < mask_cnt; ++mask_index) {
 }
 
 //host
-//mluOpTranspose_v2对data_col进行转置
+//cnnlTranspose_v2对data_col进行转置
 ```
 
 ### 3.3 拆分(任务拆分，多核拆分)

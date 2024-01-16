@@ -30,6 +30,7 @@
 #include "core/tool.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -156,29 +157,31 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiPointPool3dWorkspaceSize(
   *size += point_features_element_num *
            mluop::getSizeOfDataType(point_features_desc->dtype);
 
-  mluOpTransposeDescriptor_t trans_desc;
+  cnnlTransposeDescriptor_t trans_desc;
   size_t transpose_workspace_size0 = 0;
   size_t transpose_workspace_size1 = 0;
   int permute[3] = {2, 0, 1};
-  PARAM_CHECK(
-      "[mluOpGetRoiPointPool3dWorkspaceSize]",
-      MLUOP_STATUS_SUCCESS == mluOpCreateTransposeDescriptor(&trans_desc));
-  PARAM_CHECK("[mluOpGetRoiPointPool3dWorkspaceSize]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpSetTransposeDescriptor(trans_desc, (int)3, permute));
-  PARAM_CHECK("[mluOpGetRoiPointPool3dWorkspaceSize]",
-              MLUOP_STATUS_SUCCESS == mluOpGetTransposeWorkspaceSize(
-                                          handle, points_desc, trans_desc,
-                                          &transpose_workspace_size0));
-  PARAM_CHECK("[mluOpGetRoiPointPool3dWorkspaceSize]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpGetTransposeWorkspaceSize(handle, point_features_desc,
-                                                 trans_desc,
-                                                 &transpose_workspace_size1));
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, 3, permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(points_desc, cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(
+        cnnl_handle, cnnl_x_desc, trans_desc, &transpose_workspace_size0));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(point_features_desc,
+                                                 cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(
+        cnnl_handle, cnnl_x_desc, trans_desc, &transpose_workspace_size1));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   *size += MAX(transpose_workspace_size0, transpose_workspace_size1);
-  PARAM_CHECK(
-      "[mluOpGetRoiPointPool3dWorkspaceSize]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -268,7 +271,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
           mluop::getSizeOfDataType(point_features_desc->dtype);
   size_t transpose_workspace_size = 0;
   mluOpTensorDescriptor_t output_transpose_desc;
-  mluOpTransposeDescriptor_t trans_desc;
+  cnnlTransposeDescriptor_t trans_desc;
   const int dims = 3;
   int points_permute[3] = {2, 0, 1};
   int points_dims[3];
@@ -284,23 +287,29 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
       MLUOP_STATUS_SUCCESS ==
           mluOpSetTensorDescriptor(output_transpose_desc, MLUOP_LAYOUT_ARRAY,
                                    points_desc->dtype, dims, points_dims));
-  PARAM_CHECK(
-      "[mluOpGetRoiPointPool3d]",
-      MLUOP_STATUS_SUCCESS == mluOpCreateTransposeDescriptor(&trans_desc));
-  PARAM_CHECK("[mluOpGetRoiPointPool3d]",
-              MLUOP_STATUS_SUCCESS == mluOpSetTransposeDescriptor(
-                                          trans_desc, dims, points_permute));
-  PARAM_CHECK("[mluOpGetRoiPointPool3d]",
-              MLUOP_STATUS_SUCCESS == mluOpGetTransposeWorkspaceSize(
-                                          handle, points_desc, trans_desc,
-                                          &transpose_workspace_size));
+  CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
+  CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, dims, points_permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(points_desc, cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(
+        cnnl_handle, cnnl_x_desc, trans_desc, &transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   // transpose points [B, N ,3] -> [3, B, N]
-  PARAM_CHECK(
-      "[mluOpGetRoiPointPool3d]",
-      MLUOP_STATUS_SUCCESS == mluOpTranspose_v2(handle, trans_desc, points_desc,
-                                                points, output_transpose_desc,
-                                                points_xyz, transpose_workspace,
-                                                transpose_workspace_size));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(points_desc, cnnl_x_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_transpose_desc,
+                                                 cnnl_y_desc);
+    CALL_CNNL(cnnlTranspose_v2(cnnl_handle, trans_desc, cnnl_x_desc, points,
+                               cnnl_y_desc, points_xyz, transpose_workspace,
+                               transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_y_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
   int point_features_permute[3] = {0, 2, 1};
   int point_features_dims[3];
@@ -312,28 +321,36 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
                   mluOpSetTensorDescriptor(
                       output_transpose_desc, MLUOP_LAYOUT_ARRAY,
                       point_features_desc->dtype, dims, point_features_dims));
-  PARAM_CHECK(
-      "[mluOpGetRoiPointPool3d]",
-      MLUOP_STATUS_SUCCESS == mluOpSetTransposeDescriptor(
-                                  trans_desc, dims, point_features_permute));
-  PARAM_CHECK("[mluOpGetRoiPointPool3d]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpGetTransposeWorkspaceSize(handle, point_features_desc,
-                                                 trans_desc,
-                                                 &transpose_workspace_size));
+  CALL_CNNL(
+      cnnlSetTransposeDescriptor(trans_desc, dims, point_features_permute));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(point_features_desc,
+                                                 cnnl_x_desc);
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(
+        cnnl_handle, cnnl_x_desc, trans_desc, &transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   // transpose point_features [B, N, C] -> [B, C, N]
-  PARAM_CHECK("[mluOpGetRoiPointPool3d]",
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpTranspose_v2(
-                      handle, trans_desc, point_features_desc, point_features,
-                      output_transpose_desc, point_features_transpose,
-                      transpose_workspace, transpose_workspace_size));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(point_features_desc,
+                                                 cnnl_x_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_transpose_desc,
+                                                 cnnl_y_desc);
+    CALL_CNNL(cnnlTranspose_v2(cnnl_handle, trans_desc, cnnl_x_desc,
+                               point_features, cnnl_y_desc,
+                               point_features_transpose, transpose_workspace,
+                               transpose_workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_y_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
   PARAM_CHECK("[mluOpGetRoiPointPool3d]",
               MLUOP_STATUS_SUCCESS ==
                   mluOpDestroyTensorDescriptor(output_transpose_desc));
-  PARAM_CHECK(
-      "[mluOpGetRoiPointPool3d]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTransposeDescriptor(trans_desc));
+  CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
 
   // start U1 task, occupy all available clusters
   cnrtDim3_t k_dims;

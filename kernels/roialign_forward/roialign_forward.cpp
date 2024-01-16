@@ -24,9 +24,9 @@
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc) {
-  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  PARAM_CHECK("[mluOpRoiAlignForward_v2]", desc != NULL);
   CHECK_FUNC_RETURN(cnnlCreateRoiAlignDescriptor(desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpRoiAlignForward] Internal error accured in "
+                    "[mluOpRoiAlignForward_v2] Internal error accured in "
                     "mluOpCreateRoiAlignForwardDescriptor.",
                     MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
@@ -34,26 +34,11 @@ mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc) {
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc) {
-  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  PARAM_CHECK("[mluOpRoiAlignForward_v2]", desc != NULL);
   CHECK_FUNC_RETURN(cnnlDestroyRoiAlignDescriptor(desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpRoiAlignForward] Internal error accured in "
+                    "[mluOpRoiAlignForward_v2] Internal error accured in "
                     "mluOpDestroyRoiAlignForwardDescriptor.",
                     MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetRoiAlignForwardDescriptor(
-    mluOpRoiAlignForwardDescriptor_t desc, const int pooled_height,
-    const int pooled_width, const int sampling_ratio, const float spatial_scale,
-    const bool aligned) {
-  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
-  CHECK_FUNC_RETURN(
-      cnnlSetRoiAlignDescriptor(desc, pooled_height, pooled_width,
-                                sampling_ratio, spatial_scale, aligned),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpRoiAlignForward] Internal error accured in "
-      "mluOpSetRoiAlignForwardDescriptor.",
-      MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -61,48 +46,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetRoiAlignForwardDescriptor_v2(
     mluOpRoiAlignForwardDescriptor_t desc, const int pooled_height,
     const int pooled_width, const int sampling_ratio, const float spatial_scale,
     const int pool_mode, const bool aligned) {
-  PARAM_CHECK("mluOpRoiAlignForward", desc != NULL);
+  PARAM_CHECK("[mluOpRoiAlignForward_v2]", desc != NULL);
   CHECK_FUNC_RETURN(cnnlSetRoiAlignDescriptor_v2(
                         desc, pooled_height, pooled_width, sampling_ratio,
                         spatial_scale, pool_mode, aligned),
                     CNNL_STATUS_SUCCESS,
-                    "[mluOpRoiAlignForward] Internal error accured in "
+                    "[mluOpRoiAlignForward_v2] Internal error accured in "
                     "mluOpSetRoiAlignForwardDescriptor_v2.",
                     MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward(
-    mluOpHandle_t handle, const mluOpRoiAlignForwardDescriptor_t roialign_desc,
-    const mluOpTensorDescriptor_t input_desc, const void *input,
-    const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
-    const mluOpTensorDescriptor_t output_desc, void *output) {
-  PARAM_CHECK("mluOpRoiAlignForward", handle != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", roialign_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", input_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", boxes_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", output_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", input != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
-
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
-
-  CHECK_FUNC_RETURN(
-      cnnlRoiAlign(cnnl_handle, roialign_desc, cnnl_input_desc, input,
-                   cnnl_boxes_desc, boxes, cnnl_output_desc, output),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpRoiAlignForward] Internal error"
-      " accured in mluOpRoiAlignForward.",
-      MLUOP_STATUS_INTERNAL_ERROR);
-
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
-  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -113,14 +64,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
     const mluOpTensorDescriptor_t output_desc, void *output,
     const mluOpTensorDescriptor_t argmax_x_desc, void *argmax_x,
     const mluOpTensorDescriptor_t argmax_y_desc, void *argmax_y) {
-  PARAM_CHECK("mluOpRoiAlignForward", handle != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", roialign_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", input_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", boxes_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", output_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", input != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", boxes != NULL);
-  PARAM_CHECK("mluOpRoiAlignForward", output != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", handle != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", roialign_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", input_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", boxes_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", output_desc != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", input != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", boxes != NULL);
+  PARAM_CHECK("mluOpRoiAlignForward_v2", output != NULL);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
