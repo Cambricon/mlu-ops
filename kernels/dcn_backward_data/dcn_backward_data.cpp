@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -26,43 +26,7 @@
 
 #include "kernels/utils/cnnl_helper.h"
 
-#define DCNBPDATA_API "mluOpDcnBackwardData"
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc) {
-  PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(cnnlCreateDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpCreateDCNDescriptor] Internal error accured in "
-                    "cnnlCreateDCNDescriptor.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc) {
-  PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(cnnlDestroyDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDestroyDCNDescriptor] Internal error accured in "
-                    "cnnlDestroyDCNDescriptor.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetDCNDescriptor(
-    mluOpDCNDescriptor_t dcn_desc, int dimNb, const int pad[],
-    const int stride[], const int dilation[], int deformable_group,
-    int conv_group, int im2col_step, const mluOpDataType_t compute_type) {
-  PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(
-      cnnlSetDCNDescriptor(dcn_desc, dimNb, pad, stride, dilation,
-                           deformable_group, conv_group, im2col_step,
-                           cnnlDataType_t(compute_type)),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpSetDCNDescriptor] Internal error accured in "
-      "cnnlSetDCNDescriptor.",
-      MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
+#define DCNBPDATA_API "mluOpDCNBackwardData"
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetDCNBakcwardDataWorkspaceSize(
     mluOpHandle_t handle, const mluOpDCNDescriptor_t dcn_desc,

@@ -12070,7 +12070,7 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Note
- * - Call this function after calling the ::mluOpDCNBackwardData,
+ * - Call this function after calling the ::mluOpDCNBackwardData, ::mluOpDCNForward,
  *   or ::mluOpDCNBackwardWeight. Otherwise, \p MLUOP_STATUS_BAD_PARAM is returned.
  * - It is necessary to call this function destroy the deformable convolution descriptor.
  *   to avoid the memory leaks.
@@ -12086,6 +12086,470 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
+
+// Group:DCN
+/*!
+ * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
+ *        workspace to optimize the deformable convolution forward operation.
+ *
+ * The size of the extra workspace is determined by the deformable convolution
+ * forward operation, including the deformable convolution descriptor \p dcn_desc,
+ * input tensor descriptor \p input_desc, offset tensor
+ * descriptor \p offset_desc, mask tensor descriptor \p mask_desc, filter tensor descriptor
+ * \p filter_desc, bias tensor descriptor \p bias_desc, and output tensor descriptor \p output_desc.
+ * For more information about the workspace, see "Cambricon MLUOP User Guide."
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ *   deformable convolution operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] dcn_desc
+ *   Input. The descriptor of the deformable convolution operation. For detailed information, see
+ *   ::mluOpDCNDescriptor_t.
+ * @param[in] input_desc
+ *   Input. The descriptor of the input tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] offset_desc
+ *   Input. The descriptor of the offset tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] mask_desc
+ *   Input. The descriptor of the mask tensor. Set this parameter to NULL if mask is not needed. For detailed
+ *   information, see ::mluOpTensorDescriptor_t.
+ * @param[in] filter_desc
+ *   Input. The descriptor of the filter tensor used as a filter in the deformable convolution
+ *   operation. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bias_desc
+ *   Input. The descriptor of the bias tensor. Set this parameter to NULL if bias is not needed.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] output_desc
+ *   Input. The descriptor of the output tensor.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ *   Output. Pointer to the returned size of the extra workspace in bytes that is used in the
+ *   deformable convolution forward operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - You must call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
+ *   to create and set the tensor descriptors \p input_desc, \p offset_desc, \p mask_desc (optional),
+ *   \p filter_desc, and \p bias_desc (optional) before calling this function.
+ * - The allocated extra workspace must be passed to the ::mluOpDCNForward function to perform
+ *   the deformable convolution forward operation.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
+                                const mluOpDCNDescriptor_t dcn_desc,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const mluOpTensorDescriptor_t offset_desc,
+                                const mluOpTensorDescriptor_t mask_desc,
+                                const mluOpTensorDescriptor_t filter_desc,
+                                const mluOpTensorDescriptor_t bias_desc,
+                                const mluOpTensorDescriptor_t output_desc,
+                                size_t *workspace_size);
+
+// Group:DCN
+/*!
+ * @brief Performs a 2D deformable convolution forward operation. Compared with the standard
+ *        convolution, the deformable convolution introduces 2D offsets and masks to make
+ *        the convolution adapt to the geometric variation of objects.
+ *        Offsets act on the regular grid sampling locations, which enables a free form
+ *        deformation of the sampling grid. The mask is a modulation mechanism that improves the ability
+ *        to focus on pertinent image regions. Both offsets and masks are
+ *        learnable parameters obtained from additional convolutional layers.
+ *
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues. For
+ *   detailed information, see ::mluOpHandle_t.
+ * @param[in] dcn_desc
+ *   Input. The descriptor of the deformable convolution. For detailed information, see
+ *   ::mluOpDCNDescriptor_t.
+ * @param[in] input_desc
+ *   Input. The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] offset_desc
+ *   Input. The descriptor of the offset tensor to be applied to each position in the convolution kernel.
+    The shape of the offset should be (batch, out_height, out_width, 2 * deformable_group *
+    filter_height, filter_width). For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] offset
+ *   Input. Pointer to the MLU memory that stores the offset tensor.
+ * @param[in] mask_desc
+ *   Input. The descriptor of the scaling factor to be applied to each position in the convolution
+ *   kernel. The shape of the mask must be (batch, out_height, out_width,
+    deformable_group  filter_height * filter_width). Set this parameter to NULL when
+ *  the mask is not requested. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask
+ *   Input. Pointer to the MLU memory that stores the mask tensor. Set this parameter to NULL
+ *   when mask is not requested.
+ * @param[in] filter_desc
+ *   Input. The descriptor of the filter tensor used as a filter in the deformable convolution
+ *   operation. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] filter
+ *   Input. Pointer to the MLU memory that stores the filter tensor.
+ * @param[in] bias_desc
+ *   Input. The descriptor of the bias tensor. Set this parameter to NULL when bias is not
+ *   requested. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] bias
+ *   Input. Pointer to the MLU memory that stores the bias tensor. Set this parameter to NULL when bias is not
+ *   requested.
+ * @param[in] workspace
+ *   Input. Pointer to the MLU memory that is used as an extra workspace for the
+ *   deformable convolution operation. For more information about workspace, see
+ *   "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ *   Input. The size of the extra workspace in bytes needed for the deformable
+ *   convolution operation. You can get the size of the workspace with the
+ *   ::mluOpGetDCNForwardWorkspaceSize function.
+ * @param[in] output_desc
+ *   Input. The descriptor of the output tensor. The shape of output is the same with the
+ *   shape of output in the convolution.
+ * @param[out] output
+ *   Output. Pointer to the MLU memory that stores the output tensor.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_NUMERICAL_OVERFLOW
+ * @par Formula
+ * - See "Deformable Convolution Operator" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - The off-chip data type of \p input, \p offset, \p mask, \p filter, \p bias, and \p output must be the same.
+ * - The supported off-chip data types of the input tensor and output tensor are as follows:
+ *   - input, offset, mask, filter, bias, output: half, float.
+ * - This function supports any combinations of the following on-chip data types for input tensor
+ *   \p input and \p filter on MLU200 series and CE3226.
+ *   - \p input onchip data type: int16, int31.
+ *   - \p filter onchip data type: int16, int31.
+ * - \p input offchip data type can be combined with any supported onchip data types.
+ * - \p filter offchip data type can be combined with any supported onchip data types.
+ * - This function also supports floating-point computation on MLU300 series or above.
+ *   To perform floating-point computation, the onchip data type of \p input and \p filter
+ *   should be \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
+ *
+ * @par Data Layout
+ * - The supported data layouts of the input tensor, filter, bias tensor, and output tensor are
+ *   as follows:
+ *   - input, offset, mask, filter, output: \p MLUOP_LAYOUT_NHWC.
+ *   - bias: \p MLUOP_LAYOUT_ARRAY
+ *
+ * @par Scale Limitation
+ * - The input, offset, mask, filter, bias, output and the deformable convolution descriptor
+ *   (including pad, stride, dilation, deformable_group, conv_group, im2col_step) must meet the
+ *   following requirements:
+ *   - input tensor: \p batch > 0, \p height > 0, \p width > 0, \p channel > 0
+ *   - offset tensor: \p batch should be equal to the batch size of input tensor, \p height and \p width
+ *     should be equal to the height and width of output tensor accordingly. \p channel should be equal to
+      deformable_group  filter_height  filter_width  2.
+ *   - mask tensor: When mask is needed, \p batch should be equal to the batch size of input tensor,
+ *     \p height and \p width should be equal to the height and width of output tensor accordingly.
+      \p channel should be equal to deformable_group  filter_height * filter_width.
+    - The value of (im2col_step  out_height  out_filter  filter_h  filter_w  input_channel)
+ *     should be less than or equal to the INT_MAX defined in limits.h.
+ * @par API Dependency
+ * - Before calling this function to implement deformable convolution, you need to prepare
+ *   all the parameters passed to this function. See each parameter description
+ *   for details.
+ *
+ * @par Performance Optimization
+ * - To achieve better performance, set the im2col_step equal to the batch
+ *   size of the input tensor.
+ *
+ * @par Note
+ * - The alignment of \p input, \p offset, \p mask, \p filter, \p bias, \p output,
+ *   should be contiguous in the MLU memory.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - The example of the deformable convolution forward operation is as follows:
+     @verbatim
+
+     input tensor by 1  3  3 * 2 --> input:
+     [[[[0.7944, 0.4922], [0.2008, 0.2081], [0.9998, 0.3053]],
+       [[0.1815, 0.9210], [0.8463, 0.1819], [0.9159, 0.4917]],
+       [[0.6668, 0.2843], [0.8364, 0.2765], [0.7150, 0.6780]]]]
+     offset tensor by 1  3  3 * 2 --> offset:
+     [[[[-0.6317, -1.4928], [-0.0696,  1.1910], [ 0.8778,  0.5145]],
+       [[-0.9248, -0.9889], [ 0.6157,  0.2157], [-1.1540, -0.1283]],
+       [[-0.5704,  1.0237], [ 0.7956,  1.1203], [-0.0129, -0.2686]]]]
+     mask tensor by 1  3  3 * 1 --> mask:
+     [[[[ 0.4581], [-1.1605], [ 0.5951]],
+       [[ 0.4313], [ 0.1070], [ 0.0225]],
+       [[ 0.7484], [ 0.6262], [ 1.1908]]]]
+     filter tensor by 2  1  1 * 2 --> filter:
+     [[[[0.8928, 0.9682]]], [[[0.9301, 0.6817]]]]
+     bias tensor by 2 --> bias:
+     [0.4356, 0.0840]
+
+     param:
+       pad: (0, 0, 0, 0), stride: (1, 1), dilation: (1, 1)
+
+     output tensor by 1  3  3 * 2 --> output:
+     [[[[ 0.4356,  0.0840], [-0.6024, -0.9101], [ 0.8056,  0.4252]],
+       [[ 0.4412,  0.0890], [ 0.5478,  0.1898], [ 0.4562,  0.1037]],
+       [[ 1.1652,  0.7876], [ 0.5814,  0.2109], [ 1.8874,  1.3752]]]]
+     @endverbatim
+ *
+ * @par Reference
+ * - https://github.com/msracver/Deformable-ConvNets
+ * - Deformable Convolutional Networks, Jifeng Dai, et al., 2017.
+ * - Deformable ConvNets v2: More Deformable, Better Results, Xizhou Zhu, et al., 2018.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDCNForward(mluOpHandle_t handle,
+                const mluOpDCNDescriptor_t dcn_desc,
+                const mluOpTensorDescriptor_t input_desc,
+                const void *input,
+                const mluOpTensorDescriptor_t offset_desc,
+                const void *offset,
+                const mluOpTensorDescriptor_t mask_desc,
+                const void *mask,
+                const mluOpTensorDescriptor_t filter_desc,
+                const void *filter,
+                const mluOpTensorDescriptor_t bias_desc,
+                const void *bias,
+                void *workspace,
+                size_t workspace_size,
+                const mluOpTensorDescriptor_t output_desc,
+                void *output);
+
+// Group:DCN
+/*!
+ * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
+ *        workspace to optimize the deformable convolution backward filter operation.
+ *
+ * The size of the extra workspace is determined by the deformable convolution
+ * backward filter operation, including the deformable convolution descriptor \p dcn_desc,
+ * input tensor descriptor \p input_desc, offset tensor
+ * descriptor \p offset_desc, mask tensor descriptor \p mask_desc, gradient with respect to
+ * the output tensor \p grad_output_desc, the gradient with respect to the filter tensor
+ * \p grad_filter_desc, and the gradient with respect to the bias tensor \p grad_bias_desc.
+ * For more information about the workspace, see "Cambricon MLUOP User Guide."
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ *   deformable convolution operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] dcn_desc
+ *   Input. The descriptor of the deformable convolution operation. For detailed information, see
+ *   ::mluOpDCNDescriptor_t.
+ * @param[in] input_desc
+ *   Input. The descriptor of the input tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] offset_desc
+ *   Input. The descriptor of the offset tensor. For detailed information, see
+ *   ::mluOpTensorDescriptor_t.
+ * @param[in] mask_desc
+ *   Input. The descriptor of the mask tensor. Set this parameter to NULL if mask is not needed. For detailed
+ *   information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output_desc
+ *   Input. The descriptor of the gradient with respect to the output tensor.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_filter_desc
+ *   Input. The descriptor of the gradient with respect to the filter tensor.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_bias_desc
+ *   Input. The descriptor of the gradient with respect to the bias tensor.
+ *   Set this parameter to NULL if the gradient with respect to bias is not needed.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] workspace_size
+ *   Output. Pointer to the returned size of the extra workspace in bytes that is used in the
+ *   deformable convolution backward filter operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par API Dependency
+ * - You must call the ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor functions
+ *   to create and set the tensor descriptors \p input, \p offset, \p mask (optional),
+ *   \p grad_output, \p grad_filter, and \p grad_bias (optional) before calling this
+ *   function.
+ * - The allocated extra workspace must be passed to the ::mluOpDCNBackwardWeight function to
+ *   perform the deformable convolution backward filter operation.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
+                                       const mluOpDCNDescriptor_t dcn_desc,
+                                       const mluOpTensorDescriptor_t input_desc,
+                                       const mluOpTensorDescriptor_t offset_desc,
+                                       const mluOpTensorDescriptor_t mask_desc,
+                                       const mluOpTensorDescriptor_t grad_output_desc,
+                                       const mluOpTensorDescriptor_t grad_filter_desc,
+                                       const mluOpTensorDescriptor_t grad_bias_desc,
+                                       size_t *workspace_size);
+
+// Group:DCN
+/*!
+ * @brief Performs the back-propagation of a deformable convolution operation to compute
+ *        the gradient with respect to filter \p grad_filter and bias \p grad_bias
+ *        based on the gradient of response \p grad_output.
+ *
+ * This function needs extra MLU memory as the workspace to improve the performance.
+ * You can get the size of the workspace \p workspace_size with the
+ * ::mluOpGetDCNBackwardWeightWorkspaceSize function.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the deformable convolution backward filter operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] dcn_desc
+ *   Input. The descriptor of the deformable convolution operation. For detailed information,
+ *   see ::mluOpDCNDescriptor_t.
+ * @param[in] input_desc
+ *   Input. The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] input
+ *   Input. Pointer to the MLU memory that stores the input tensor.
+ * @param[in] offset_desc
+ *   Input. The descriptor of the offset to be applied to each position in the convolution kernel.
+    The shape of offset should be (batch, out_height, out_width, 2  deformable_group *
+    weight_height  filter_width). For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] offset
+ *   Input. Pointer to the MLU memory that stores the offset tensor.
+ * @param[in] mask_desc
+ *   Input. The descriptor of the scaling factor to be applied to each position in the convolution
+ *   kernel. The shape of the mask must be (batch, out_height, out_width,
+    deformable_group  filter_height * filter_width). Set this parameter to NULL when
+ *   mask is not requested. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] mask
+ *   Input. Pointer to the MLU memory that stores the mask tensor. Set this parameter to NULL when mask is not
+ *   requested.
+ * @param[in] grad_output_desc
+ *   Input. The descriptor of the gradient with respect to the output tensor.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad_output
+ *   Input. Pointer to the MLU memory that stores the gradient with respect to the output tensor.
+ * @param[in] workspace
+ *   Input. Pointer to the MLU memory that is used as an extra workspace for the
+ *   deformable convolution backward filter operation. For more information about workspace,
+ *   see "Cambricon MLUOP User Guide".
+ * @param[in] workspace_size
+ *   Input. The size of the extra workspace in bytes needed for
+ *   the deformable convolution backward filter operation. You can get the size of the workspace
+ *   with the ::mluOpGetDCNBackwardWeightWorkspaceSize function.
+ * @param[in] grad_filter_desc
+ *   Input. The descriptor of the gradient with respect to the filter tensor.
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_filter
+ *   Output. Pointer to the MLU memory that stores the gradient with respect to the filter tensor.
+ * @param[in] grad_bias_desc
+ *   Input. The descriptor of the gradient with respect to the bias tensor. Set this parameter to NULL if the
+ *   gradient of the bias tensor is not needed. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] grad_bias
+ *   Output. Pointer to the MLU memory that stores the gradient with respect to the bias tensor.
+ *   Set this parameter to NULL if the gradient of the bias tensor is not needed.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
+ *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_NUMERICAL_OVERFLOW
+ *
+ * @par Formula
+ * - See "Deformable Convolution Operator" section in "Cambricon MLUOP User Guide" for details.
+ *
+ * @par Data Type
+ * - The off-chip data type of \p input, \p offset, \p mask, \p grad_output, \p grad_filter,
+ *   and \p grad_bias must be the same.
+ * - The supported off-chip data types of the input tensor and output tensor are as follows:
+ *   - input, offset, mask, grad_output, grad_filter, grad_bias, grad_mask: half, float.
+ * - This function supports any combinations of the following on-chip data types for input tensor
+ *   \p grad_output and \p input on MLU200 series and CE3226.
+ *   - \p grad_output on-chip data type: int16, int31.
+ *   - \p filter on-chip data type: int16, int31.
+ * - \p grad_output off-chip data type can be combined with any supported on-chip data types.
+ * - \p input off-chip data type can be combined with any supported on-chip data types.
+ * - This function also supports floating-point computation on MLU300 series or above. To perform
+ *   floating-point computation, the on-chip data type of \p input and \p grad_output should be
+ *   \p MLUOP_DTYPE_INVALID or the same as the corresponding off-chip data type.
+ *
+ * @par Data Layout
+ * - The data layout of the input, offset, mask, grad_output, and grad_filter
+ *   should be \p MLUOP_LAYOUT_NHWC.
+ * - The data layout of grad_bias should be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The input, offset, mask, grad_output, grad_filter, grad_bias and
+ *   the deformable convolution descriptor
+ *   (including pad, stride, dilation, deformable_group, conv_group, im2col_step) must meet the
+ *   following requirements:
+ *   - input tensor: \p batch > 0, \p height > 0, \p width > 0, \p channel > 0
+ *   - offset tensor: \p batch should be equal to the batch of input tensor, \p height and \p width
+ *     should be equal to the height and width of output tensor. \p channel should be equal to
+      deformable_group  filter_height  filter_width  2.
+ *   - mask tensor: When mask is needed, \p batch should be equal to the batch of input tensor,
+ *     \p height and \p width should be equal to the height and width of output tensor.
+      \p channel should be equal to deformable_group  filter_height * filter_width.
+ *   - grad bias tensor: When the gradient of bias is needed, the \p grad_bias should be a
+ *     one-dimensional array with the length of \p out_channel.
+    - The value of (im2col_step  out_height  out_filter  filter_h  filter_w  input_channel)
+ *     should be less than or equal to the INT_MAX defined in limits.h.
+
+ * @par API Dependency
+ * - Before calling this function to implement the backward filter of deformable convolution,
+ *   you need to prepare all the parameters passed to this function. See each parameter
+ *   description for details.
+ *
+ * @par Performance Optimization
+ * - To achieve better performance, set the im2col_step to the batch size.
+ *
+ * @par Note
+ * - The alignment of \p input, \p offset, \p mask, \p grad_output, \p grad_filter, \p grad_bias
+ *   should be contiguous in the MLU memory.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/msracver/Deformable-ConvNets
+ * - Deformable Convolutional Networks, Jifeng Dai, et al., 2017.
+ * - Deformable ConvNets v2: More Deformable, Better Results, Xizhou Zhu, et al., 2018.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDCNBackwardWeight(mluOpHandle_t handle,
+                       const mluOpDCNDescriptor_t dcn_desc,
+                       const mluOpTensorDescriptor_t input_desc,
+                       const void *input,
+                       const mluOpTensorDescriptor_t offset_desc,
+                       const void *offset,
+                       const mluOpTensorDescriptor_t mask_desc,
+                       const void *mask,
+                       const mluOpTensorDescriptor_t grad_output_desc,
+                       const void *grad_output,
+                       void *workspace,
+                       size_t workspace_size,
+                       const mluOpTensorDescriptor_t grad_filter_desc,
+                       void *grad_filter,
+                       const mluOpTensorDescriptor_t grad_bias_desc,
+                       void *grad_bias);
 
 // Group:DCN
 /*!
@@ -12203,7 +12667,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * @param[in] offset
  *   Input. Pointer to the MLU memory that stores the offset tensor.
  * @param[in] mask_desc
- *   Input. The descriptor of the scaling factor to be applied for each position in the convolution
+ *   Input. The descriptor of the scaling factor to be applied to each position in the convolution
  *   kernel. The shape of mask must be (batch, out_height, out_width,
  *   deformable_group * filter_height * filter_width). Set this parameter to NULL when
  *   mask is not requested. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -12225,7 +12689,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  *   deformable convolution backward data operation. For more information about workspace,
  *   see "Cambricon MLU-OPS User Guide".
  * @param[in] workspace_size
- *   Input. The size of the extra workspace in bytes that needs to be used in
+ *   Input. The size of the extra workspace in bytes needed for
  *   the deformable convolution backward data operation. You can get the size of the workspace
  *   with the ::mluOpGetDCNBakcwardDataWorkspaceSize function.
  * @param[in] grad_input_desc
@@ -12265,8 +12729,8 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  *   - \p filter onchip data type: int16, int31.
  * - \p grad_output offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports float-point computation on MLU300 series or above. To perform
- *   float-point computation, the onchip data type of \p grad_output and \p filter must be
+ * - This function also supports floating-point computation on MLU300 series or above. To perform
+ *   floating-point computation, the onchip data type of \p grad_output and \p filter must be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
  * @par Data Layout
