@@ -897,7 +897,6 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  * Call ::mluOpCreateSeqDataDescriptor to create a descriptor, and
  * call ::mluOpSetSeqDataDescriptor to set the sequence data information to the descriptor.
  * If the sequence data is in fixed-point data type, call ::mluOpSetSeqDataDescriptorPositionAndScale
-duzekunKTH marked this conversation as resolved.
  * to set the position and scale of the sequence data.
  * To destroy the descriptor, call ::mluOpDestroySeqDataDescriptor.
  */
@@ -12288,7 +12287,7 @@ mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
  *   The descriptor of the output tensor.
  *   For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
- *   Output. Pointer to the returned size of the extra workspace in bytes that is used in the
+ *   Pointer to the returned size of the extra workspace in bytes that is used in the
  *   deformable convolution forward operation.
  *
  * @par Return
@@ -12383,7 +12382,7 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
  *   The descriptor of the output tensor. The shape of output is the same with the
  *   shape of output in the convolution.
  * @param[out] output
- *   Output. Pointer to the MLU memory that stores the output tensor.
+ *   Pointer to the MLU memory that stores the output tensor.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
  *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_NUMERICAL_OVERFLOW
@@ -12531,7 +12530,7 @@ mluOpDCNForward(mluOpHandle_t handle,
  *   Set this parameter to NULL if the gradient with respect to bias is not needed.
  *   For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] workspace_size
- *   Output. Pointer to the returned size of the extra workspace in bytes that is used in the
+ *   Pointer to the returned size of the extra workspace in bytes that is used in the
  *   deformable convolution backward filter operation.
  *
  * @par Return
@@ -12622,13 +12621,13 @@ mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
  *   The descriptor of the gradient with respect to the filter tensor.
  *   For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] grad_filter
- *   Output. Pointer to the MLU memory that stores the gradient with respect to the filter tensor.
+ *   Pointer to the MLU memory that stores the gradient with respect to the filter tensor.
  * @param[in] grad_bias_desc
  *   The descriptor of the gradient with respect to the bias tensor. Set this parameter to NULL if the
  *   gradient of the bias tensor is not needed. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
  * @param[out] grad_bias
- *   Output. Pointer to the MLU memory that stores the gradient with respect to the bias tensor.
+ *   Pointer to the MLU memory that stores the gradient with respect to the bias tensor.
  *   Set this parameter to NULL if the gradient of the bias tensor is not needed.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM,
