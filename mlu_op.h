@@ -12253,11 +12253,11 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
  *   - input tensor: \p batch > 0, \p height > 0, \p width > 0, \p channel > 0
  *   - offset tensor: \p batch should be equal to the batch size of input tensor, \p height and \p width
  *     should be equal to the height and width of output tensor accordingly. \p channel should be equal to
-      deformable_group  filter_height  filter_width  2.
+ *     deformable_group  filter_height  filter_width  2.
  *   - mask tensor: When mask is needed, \p batch should be equal to the batch size of input tensor,
  *     \p height and \p width should be equal to the height and width of output tensor accordingly.
-      \p channel should be equal to deformable_group  filter_height * filter_width.
-    - The value of (im2col_step  out_height  out_filter  filter_h  filter_w  input_channel)
+ *     \p channel should be equal to deformable_group  filter_height * filter_width.
+ *   - The value of (im2col_step  out_height  out_filter  filter_h  filter_w  input_channel)
  *     should be less than or equal to the INT_MAX defined in limits.h.
  * @par API Dependency
  * - Before calling this function to implement deformable convolution, you need to prepare
