@@ -35,7 +35,7 @@ CentOS系统
 <x.y.z>为Cambricon MLU-OPS版本号，<arch>为CPU架构（x86_64），例如Cambricon MLU-OPS v0.3.0版本在 CentOS7 系统下的包名为 ``mluops-0.3.0-1.el7.x86_64.rpm``。
 
 
-.. _卸载或升降级BANGC_OPS版本:
+.. _卸载或升降级MLU-OPS版本:
 
 卸载或升降级Cambricon MLU-OPS版本
 ------------------------------------
