@@ -22,12 +22,11 @@
  *************************************************************************/
 #ifndef TEST_MLU_OP_GTEST_SRC_GTEST_PERF_TEST_H_
 #define TEST_MLU_OP_GTEST_SRC_GTEST_PERF_TEST_H_
-
 #include <string>
 
 std::string getTestCaseName(std::string str);
 
-bool getTxtData(std::string case_name, double *txt_time,
+bool getTxtData(std::string case_name, double *xml_time,
                 double *workspace_size);
 
 bool getThreshold(std::string op_name, double *scale_bound,

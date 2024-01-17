@@ -94,11 +94,6 @@ std::vector<std::string> Collector::read_case(std::string cases_list) {
   std::string op_dir = "/" + op_name_ + "/";
   std::ifstream fin(cases_list, std::ios::in);
 
-  if (!fin.is_open()) {
-    LOG(ERROR) << "Can't open " << cases_list;
-    return res;  // return empty
-  }
-
   std::string case_path;
   while (getline(fin, case_path)) {
     if (case_path.find(op_dir) != std::string::npos) {
@@ -129,15 +124,15 @@ std::string Collector::current_dir() {
 }
 
 std::vector<std::string> Collector::list_by_case_path(std::string path) {
+  std::string abs_case_path = (path[0] != '/') ? (current_dir() + path) : path;
   if (path.find("/" + op_name_ + "/") == std::string::npos) {
     // case path is not belong this op
+    assertPath(abs_case_path, caseType::CASE_FILE, __FILE__, __LINE__);
     return {};
   }
-  if (path[0] != '/') {
-    return {current_dir() + path};
-  } else {
-    return {path};
-  }
+  assertPath(abs_case_path, caseType::CASE_FILE, __FILE__, __LINE__);
+  RETURN_IF_PATH_INVALID();
+  return {abs_case_path};
 }
 
 std::vector<std::string> Collector::list_by_case_list(std::string list_file) {
@@ -145,11 +140,46 @@ std::vector<std::string> Collector::list_by_case_list(std::string list_file) {
     // turn to abs
     list_file = current_dir() + list_file;
   }
+  assertPath(list_file, caseType::CASE_LIST, __FILE__, __LINE__);
+  RETURN_IF_PATH_INVALID();
   return read_case(list_file);
 }
 
+void Collector::assertPath(std::string &case_path, caseType case_type,
+                           std::string file, int line_num) {
+  // error message is not displayed like a normal FAILED test would be, so use
+  // LOG(ERROR) to highlight it
+  switch (case_type) {
+    case caseType::CASE_FILE:
+    case caseType::CASE_LIST: {
+      std::ifstream fin(case_path, std::ios::in);
+      if (!fin) {
+        LOG(ERROR) << file << ":" << line_num << ":: "
+                   << "Can not open case_path/cases_list " << case_path;
+        exit(EXIT_FAILURE_MLUOP);
+      }
+      path_exist = true;
+    } break;
+    case caseType::CASE_DIR: {
+      DIR *dp = opendir(case_path.c_str());
+      if (!dp) {
+        LOG(ERROR) << file << ":" << line_num << ":: "
+                   << "Can not open cases_dir " << case_path;
+        exit(EXIT_FAILURE_MLUOP);
+      }
+      path_exist = true;
+      closedir(dp);
+    } break;
+    default:
+      break;
+  }
+}
+
 std::vector<std::string> Collector::list_by_case_dir(std::string case_dir) {
+  assertPath(case_dir, caseType::CASE_DIR, __FILE__, __LINE__);
+  RETURN_IF_PATH_INVALID();
   std::vector<std::string> res;
+
   std::string suffix_txt = ".prototxt";
   std::string suffix_pb = ".pb";
 
@@ -189,12 +219,13 @@ std::vector<std::string> Collector::list_by_case_dir(std::string case_dir) {
 std::vector<std::string> Collector::list() {
   // for --case_path
   // vector<> size is 1
+  std::vector<std::string> case_names;
   if (!global_var.case_path_.empty()) {
-    return list_by_case_path(global_var.case_path_);
+    case_names = list_by_case_path(global_var.case_path_);
+    return case_names;
   }
 
   // for --case_list
-  std::vector<std::string> case_names;
   if (!global_var.cases_list_.empty()) {
     case_names = list_by_case_list(global_var.cases_list_);
   } else if (!global_var.cases_dir_.empty()) {
@@ -225,6 +256,10 @@ std::vector<std::string> Collector::list() {
   // shuffle
   if (global_var.shuffle_) {
     std::random_shuffle(case_names.begin(), case_names.end());
+  }
+
+  if (case_names.size() == 0) {
+    LOG(INFO) << "No cases found for " << op_name_;
   }
 
   return case_names;

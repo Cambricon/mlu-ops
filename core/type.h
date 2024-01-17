@@ -30,7 +30,8 @@
 namespace mluop {
 // This function is used to get high 32bit and low 32bit of param value.
 // The hardware hasn't support 8 bytes operation, so if the sizeof(dtype) is 8
-// bytes, sometimes we need to separate 8bytes to two 4bytes. Example:
+// bytes, sometimes we need to separate 8bytes to two 4bytes. Example:for
+// mluOpPad, users will pass the host pointer of padding_value to mluOpPad.
 // uint32_t high_value = 0, low_value = 0;
 // if (getSizeOfDataType(dtype) == sizeof(int64_t)) {
 //   getLowAndHighValueFrom64Bits(*(int64_t*)padding_value_ptr, &high_value,
@@ -52,12 +53,19 @@ static mluOpStatus_t getLowAndHighValueFrom64Bits(T value, uint32_t* high,
   return MLUOP_STATUS_SUCCESS;
 }
 
-size_t getSizeOfDataType(const mluOpDataType_t dtype);
+// TODO(None) use const char * instead of std::string (need mluop_extra
+// fix first) hide visibility
+size_t MLUOP_WIN_API getSizeOfDataType(mluOpDataType_t dtype);
+std::string MLUOP_WIN_API getNameOfDataType(mluOpDataType_t dtype);  // NOLINT
+std::string MLUOP_WIN_API getNameOfTensorLayout(mluOpTensorLayout_t layout);  // NOLINT
 
 }  // namespace mluop
 
+extern "C" {
+// TODO(None) consider move into mlu_op.h
 const char* MLUOP_WIN_API mluOpGetNameOfDataType(mluOpDataType_t dtype);
 const char* MLUOP_WIN_API
 mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout);
+}
 
 #endif  // CORE_TYPE_H_

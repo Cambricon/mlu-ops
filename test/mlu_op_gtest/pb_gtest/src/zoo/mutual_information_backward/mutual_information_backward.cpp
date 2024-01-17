@@ -121,17 +121,19 @@ void MutualInformationBackwardExecutor::compute() {
       overwrite_ans_grad_, workspace_[0], workspace_size_,
       px_grad_desc_, dev_px_grad, py_grad_desc_, dev_py_grad));
   interface_timer_.stop();
+}
 
+void MutualInformationBackwardExecutor::setMiscellaneousParam() {
   if (tensor_desc_.size() == max_tensor_num_) {
-    data_vector_[4].is_output = true;
-    data_vector_[5].is_output = false;
-    data_vector_[6].is_output = true;
-    data_vector_[7].is_output = true;
+    data_vector_[4].alsoServeAsOutput();
+    data_vector_[5].onlyServeAsInput();
+    data_vector_[6].alsoServeAsOutput();
+    data_vector_[7].alsoServeAsOutput();
   } else {
-    data_vector_[3].is_output = true;
-    data_vector_[4].is_output = false;
-    data_vector_[5].is_output = true;
-    data_vector_[6].is_output = true;
+    data_vector_[3].alsoServeAsOutput();
+    data_vector_[4].onlyServeAsInput();
+    data_vector_[5].alsoServeAsOutput();
+    data_vector_[6].alsoServeAsOutput();
   }
 }
 

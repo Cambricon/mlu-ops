@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_TESTS_CNRT_TEST_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_TESTS_CNRT_TEST_H_
+#ifndef TEST_MLU_OP_GTEST_TESTS_CNRT_TEST_H_
+#define TEST_MLU_OP_GTEST_TESTS_CNRT_TEST_H_
 
 #include <thread>  // NOLINT
 #include <vector>
@@ -164,4 +164,4 @@ TEST(DISABLED_CNRT, cnrtNotifier) {
   ASSERT_TRUE(cnrtSuccess == cnrtQueueDestroy(queue));
 }
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_TESTS_CNRT_TEST_H_
+#endif  // TEST_MLU_OP_GTEST_TESTS_CNRT_TEST_H_

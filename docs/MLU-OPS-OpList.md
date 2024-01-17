@@ -66,7 +66,6 @@ MLU Binary Op算子结构：　
 | ms_deform_attn_backward                | √             |               |
 | ms_deform_attn_forward                 | √             |               |
 | mutual_information_backward            | √             |               |
-| mutual_information_backward            | √             |               |
 | nms                                    |               | √             |
 | nms_rotated                            | √             |               |
 | points_in_boxes                        | √             |               |

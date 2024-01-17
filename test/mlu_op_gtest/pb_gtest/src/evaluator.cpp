@@ -33,18 +33,19 @@
 
 namespace mluoptest {
 
+void Evaluator::setStorageDtype(StorageDtype storage_dtype) {
+  storage_dtype_ = storage_dtype;
+}
+
 void Evaluator::init(void *baseline_result, void *mlu_result,
                      const size_t count, const std::set<Criterion> criterions,
-                     const std::string &name, const mluOpDataType_t dtype,
-                     const bool skip_nan_n_inf) {
+                     const std::string &name, const mluOpDataType_t dtype) {
   base_array_ = baseline_result;
   mlu_array_ = mlu_result;
   count_ = count;
-  count_total_ = is_complex_ ? count_ * 2 : count_;
   criterions_ = criterions;
   name_ = name;
   dtype_ = dtype;
-  skip_nan_n_inf_ = skip_nan_n_inf;
   if (dtype_ == MLUOP_DTYPE_COMPLEX_HALF ||
       dtype_ == MLUOP_DTYPE_COMPLEX_FLOAT) {
     is_complex_ = true;
@@ -52,15 +53,42 @@ void Evaluator::init(void *baseline_result, void *mlu_result,
     is_complex_ = false;
   }
   stride_ = is_complex_ ? 2 : 1;
+  count_total_ = is_complex_ ? count_ * 2 : count_;
   thresholdLevel1();
 }
 
-void Evaluator::computeErrorForOneCriterion() {
-  if (skip_compute_diff_) {
-    return;
+void Evaluator::computeDiffByDtype() {
+#define COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE, ORIGIN_DTYPE) \
+  case MLUOP_DTYPE: {                                    \
+    compute_diff<ORIGIN_DTYPE>();                        \
+  } break;
+  switch (dtype_) {
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_DOUBLE, CPU_DTYPE(MLUOP_DTYPE_DOUBLE));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_FLOAT, CPU_DTYPE(MLUOP_DTYPE_FLOAT));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_HALF, CPU_DTYPE(MLUOP_DTYPE_HALF));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_INT8, CPU_DTYPE(MLUOP_DTYPE_INT8));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_INT16, CPU_DTYPE(MLUOP_DTYPE_INT16));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_INT32, CPU_DTYPE(MLUOP_DTYPE_INT32));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_INT64, CPU_DTYPE(MLUOP_DTYPE_INT64));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_UINT8, CPU_DTYPE(MLUOP_DTYPE_UINT8));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_UINT16, CPU_DTYPE(MLUOP_DTYPE_UINT16));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_UINT32, CPU_DTYPE(MLUOP_DTYPE_UINT32));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_UINT64, CPU_DTYPE(MLUOP_DTYPE_UINT64));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_BOOL, CPU_DTYPE(MLUOP_DTYPE_BOOL));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_BFLOAT16,
+                          CPU_DTYPE(MLUOP_DTYPE_BFLOAT16));
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_COMPLEX_HALF, half);
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_COMPLEX_FLOAT, float);
+    COMPUTE_DIFF_BY_DTYPE(MLUOP_DTYPE_INT31, int32_t);
+    default: {
+      GTEST_CHECK(false, "this dtyoe not support compute diff.");
+    }
   }
-  func_ = cur_criterion_.formula;
+#undef COMPUTE_DIFF_BY_DTYPE
+}
 
+// old: use double to store double, float to store other dtypes.
+void Evaluator::computeDiffFloatAndDouble() {
   switch (dtype_) {
     case MLUOP_DTYPE_DOUBLE: {
       compute_diff<double>();
@@ -69,6 +97,14 @@ void Evaluator::computeErrorForOneCriterion() {
       compute_diff<float>();
     }
   }
+}
+
+void Evaluator::computeDiffForOneCriterion() {
+  if (skip_compute_diff_) {
+    return;
+  }
+  func_ = cur_criterion_.formula;
+  computeDiffFunc(this);
   error_vec_.push_back(
       ErrorWrap(name_, cur_criterion_, error_, error_imag_, dtype_));
 }
@@ -103,19 +139,8 @@ void Evaluator::thresholdLevel1() {
   }
 }
 
-void Evaluator::computeError(void *baseline_result, void *mlu_result,
-                             const size_t count,
-                             const std::set<Criterion> criterions,
-                             const std::string &name,
-                             const mluOpDataType_t dtype,
-                             const bool skip_nan_n_inf) {
-  if (0 == criterions.size()) {
-    criterion_matching_ = false;
-    LOG(ERROR) << "Error func in mluop_gtest and pb/pt may mismatch,"
-               << " now no error func is used, please check.";
-  }
-  init(baseline_result, mlu_result, count, criterions, name, dtype,
-       skip_nan_n_inf);
+// old: delete after all op use void *
+void Evaluator::checkNanInfFloatAndDouble() {
   switch (dtype_) {
     case MLUOP_DTYPE_DOUBLE: {
       check_nan_inf<double>();
@@ -124,9 +149,46 @@ void Evaluator::computeError(void *baseline_result, void *mlu_result,
       check_nan_inf<float>();
     }
   }
+}
+
+void Evaluator::checkNanInfByDtype() {
+  switch (dtype_) {
+    case MLUOP_DTYPE_DOUBLE: {
+      check_nan_inf<double>();
+    } break;
+    case MLUOP_DTYPE_COMPLEX_FLOAT:
+    case MLUOP_DTYPE_FLOAT: {
+      check_nan_inf<float>();
+    } break;
+    case MLUOP_DTYPE_COMPLEX_HALF:
+    case MLUOP_DTYPE_HALF: {
+      check_nan_inf<half>();
+    } break;
+    case MLUOP_DTYPE_BFLOAT16: {
+      check_nan_inf<bfloat16>();
+    } break;
+    default: {
+      // only float point need check nan/inf
+    }
+  }
+}
+
+void Evaluator::computeDiff(void *baseline_result, void *mlu_result,
+                            const size_t count,
+                            const std::set<Criterion> criterions,
+                            const std::string &name,
+                            const mluOpDataType_t dtype) {
+  if (0 == criterions.size()) {
+    criterion_matching_ = false;
+    LOG(ERROR) << "Error func in mluop_gtest and pb/pt may mismatch,"
+               << " now no error func is used, please check.";
+  }
+  init(baseline_result, mlu_result, count, criterions, name, dtype);
+  selectFuncPtr();
+  checkNanInfFunc(this);
   for (auto &it : criterions_) {
     cur_criterion_ = it;
-    computeErrorForOneCriterion();
+    computeDiffForOneCriterion();
   }
 }
 
@@ -152,7 +214,9 @@ bool Evaluator::isPassed() {
 
 // for diff4, error < 0 means it is not used because number of data points are
 // less than 100. also, for diff4, thred < 0 means gpu_diff4 is 0.0 or 1.0, in
-// this case, mlu should always pass
+// this case, mlu should always pass for diff_kl, error < 0 means it is not used
+// because number of data points are less than 1000. In this case, mlu should
+// always pass.
 #define CHECK_ERROR(err, thred)             \
   if (std::isnan(err) || std::isinf(err)) { \
     return false;                           \

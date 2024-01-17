@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
 #ifndef CORE_LOGGING_H_
 #define CORE_LOGGING_H_
 
@@ -28,16 +29,11 @@
 #include <limits>
 #include <sstream>
 #include "core/macros.h"
-#include "core/cnlog.h"
+#include "core/cnlog.hpp"
 #include "mlu_op.h"
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
-
-
-// This marco is determined by specific experiment on 40g device in market.
-// Cases with indices exceeded this number may raise OOM error when generating
-// test cases.
 
 #define LOG(severity) mluop::logging::CLOG(MLUOP, severity)
 
@@ -88,7 +84,10 @@
   }                                                                            \
   symbol
 
-// return if found cnrt error.
+// Use cnrtGetLastError() to clear error before launch kernel and set
+// return value to CN_SUCCESS, then use cnrtPeekAtLastError() to get
+// the error occured when launch kernel. Error now is thread local variable
+
 #define KERNEL_CHECK(kernel...)                                    \
   {                                                                \
     cnrtGetLastError();                                            \
@@ -109,21 +108,29 @@
   }
 
 // CHECK if return value equals MLUOP_STATUS_SUCCESS
-#define CHECK_RETURN(api, status, ...)                                     \
-  {                                                                        \
-    mluOpStatus_t __status__ = (status);                                   \
-    if ((__status__) != MLUOP_STATUS_SUCCESS) {                            \
-      LOG(ERROR) << api << "BAD return status: " << #status << " returns " \
-                 << (__status__) << " (FILE: " << __FILE__                 \
-                 << ", LINE: " << __LINE__ << "). " __VA_ARGS__;           \
-      return (__status__);                                                 \
-    }                                                                      \
+#define CHECK_RETURN(api, status, ...)                                    \
+  {                                                                       \
+    mluOpStatus_t __status__ = (status);                                  \
+    if ((__status__) != MLUOP_STATUS_SUCCESS) {                           \
+      LOG(ERROR) << api << "BAD return status: " << #status << "returns " \
+                 << (__status__) << " (FILE: " << __FILE__                \
+                 << ", LINE: " << __LINE__ << "). " __VA_ARGS__;          \
+      return (__status__);                                                \
+    }                                                                     \
   }
 
 #define PARAM_CHECK(api, condition, ...)                                 \
   if (!(condition)) {                                                    \
     LOG(ERROR) << api << " Check failed: " #condition ". " #__VA_ARGS__; \
     return MLUOP_STATUS_BAD_PARAM;                                       \
+  }
+
+#define NOT_SUPPORT_BFLOAT16_DATATYPE(interface_name, condition) \
+  if (condition) {                                               \
+    LOG(ERROR) << interface_name                                 \
+               << " This api do not support BFLOAT16 data type " \
+               << "temporarily.";                                \
+    return MLUOP_STATUS_NOT_SUPPORTED;                           \
   }
 
 // This prints out values instead of names of variables inside __VA_ARGS__
@@ -179,6 +186,28 @@
     return MLUOP_STATUS_NOT_SUPPORTED;                                        \
   }
 
+#define TENSOR_DIM_SIZE_CHECK(api, desc, max_num, reason, ...)            \
+  for (int i = 0; i < desc->dim; i++) {                                   \
+    if (!(desc->dims[i] < max_num)) {                                     \
+      LOG(ERROR) << api << " overflow max supported tensor dim size "     \
+                 << max_num - 1 << ", "                                   \
+                 << "now tensor's dims[" << i << "] is " << desc->dims[i] \
+                 << ". " << reason;                                       \
+      return MLUOP_STATUS_NOT_SUPPORTED;                                  \
+    }                                                                     \
+  }
+
+extern bool mluop_check_large_tensor_dim_size_;
+#define LARGE_TENSOR_CHECK(api, desc)                                         \
+  if (desc != NULL) {                                                         \
+    if (mluop_check_large_tensor_dim_size_) {                                 \
+      TENSOR_DIM_SIZE_CHECK(api, desc, LARGE_TENSOR_NUM, "");                 \
+    } else {                                                                  \
+      TENSOR_NUM_CHECK(api, mluOpGetTensorElementNum(desc), LARGE_TENSOR_NUM, \
+                       "");                                                   \
+    }                                                                         \
+  }
+
 #define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)                \
   if (!(size < max_size)) {                                                \
     LOG(ERROR) << api << " overflow max supported tensor size "            \
@@ -189,7 +218,6 @@
 
 void mluOpCheck(mluOpStatus_t result, char const *const func,
                 const char *const file, int const line);
-
 #define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
 #define KERNEL_CALL_CHECK(parent_kernel, sub_kernel, status, statement)        \
@@ -227,12 +255,14 @@ class LogMessage {
   static int64_t MinVLogLevel();
 };
 
+inline namespace {  // NOLINT
 // Uses the lower operator & precedence to voidify a LogMessage reference, so
 // that the ternary VLOG() implementation is balanced, type wise.
 struct Voidifier {
   template <typename T>
   void operator&(const T &) const {}
 };
+}  // namespace
 
 // Otherwise, set MLUOP_MIN_VLOG_LEVEL environment to update minimum log level
 // of VLOG, or MLUOP_CPP_VMODULE to set the minimum log level for individual
@@ -405,8 +435,7 @@ inline unsigned long GetReferenceableValue(unsigned long t) {  // NOLINT
 inline long long GetReferenceableValue(long long t) {  // NOLINT
   return t;
 }
-inline unsigned long long                      // NOLINT
-GetReferenceableValue(unsigned long long t) {  // NOLINT
+inline unsigned long long GetReferenceableValue(unsigned long long t) {  // NOLINT
   return t;
 }
 

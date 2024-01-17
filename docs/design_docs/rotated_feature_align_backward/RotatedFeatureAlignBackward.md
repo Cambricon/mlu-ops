@@ -232,14 +232,14 @@ for (int pixel_index = pixel_first; pixel_index < pixel_end; pixel_index += task
     for(int i = 1; i < points; i++){
       bilinearInterpolateGradient(px,py); // 双线性插值
       compute();  // 4次乘法
-      __mluOp_atomic_add_reduce(); // 4次store
+      __mluop_atomic_add_reduce(); // 4次store
       __sync();
       swap(nram_ping, nram_pong);
     }
     // S4
-    __mluOp_atomic_add_reduce();
+    __mluop_atomic_add_reduce();
     // store 原位
-    __mluOp_atomic_add_reduce();
+    __mluop_atomic_add_reduce();
     // 处理下一个 Lo、C0
     if (channel_loop_index + 1 <= channel_loops){
         load(); // 加载 top_output 中 rem C 数据到 nram_ping

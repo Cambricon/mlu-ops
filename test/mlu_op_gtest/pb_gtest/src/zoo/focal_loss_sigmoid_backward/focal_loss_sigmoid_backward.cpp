@@ -64,7 +64,6 @@ void FocalLossSigmoidBackwardExecutor::compute() {
     auto grad_input_desc = tensor_desc_[3].tensor;
     auto weight_mlu = data_vector_[2].device_ptr;
     auto grad_input_mlu = data_vector_[3].device_ptr;
-    data_vector_[3].is_output = true;
     interface_timer_.start();
     MLUOP_CHECK(mluOpFocalLossSigmoidBackward(
         handle_, prefer, reduction, input_desc, input_mlu, target_desc,
@@ -74,13 +73,20 @@ void FocalLossSigmoidBackwardExecutor::compute() {
   } else {
     auto grad_input_desc = tensor_desc_[2].tensor;
     auto grad_input_mlu = data_vector_[2].device_ptr;
-    data_vector_[2].is_output = true;
     interface_timer_.start();
     MLUOP_CHECK(mluOpFocalLossSigmoidBackward(
         handle_, prefer, reduction, input_desc, input_mlu, target_desc,
         target_mlu, NULL, NULL, alpha, gamma,
         grad_input_desc, grad_input_mlu));
     interface_timer_.stop();
+  }
+}
+
+void FocalLossSigmoidBackwardExecutor::setMiscellaneousParam() {
+  if (parser_->getInputNum() == 3) {
+    data_vector_[3].alsoServeAsOutput();
+  } else {
+    data_vector_[2].alsoServeAsOutput();
   }
 }
 
