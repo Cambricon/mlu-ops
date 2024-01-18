@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -217,11 +217,6 @@ class mluOpTrace {
     static mluOpTrace mluop_trace;
     return mluop_trace;
   }
-
-  //  static void addApi(const std::string &api) {
-  //    const std::lock_guard<std::mutex> lock(getInstance().mtx_trace_);
-  //    getInstance().api_list_.insert(api);
-  //  }
 
   static void addApi(int api_idx) {
     getInstance().api_counter_[api_idx]++;

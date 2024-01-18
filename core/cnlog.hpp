@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef CNLOG_HPP_
-#define CNLOG_HPP_
+#ifndef CORE_CNLOG_HPP_
+#define CORE_CNLOG_HPP_
 
 #include <sstream>
 #include <iostream>
@@ -164,4 +164,4 @@ class LogMessage {
 }  // namespace logging
 }  // namespace mluop
 
-#endif  // CNLOG_HPP_
+#endif  // CORE_CNLOG_HPP_
