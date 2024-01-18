@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 import os
 import sys
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     macro_error = []
     malloc_error = []
     for cpp in all_cpps:
-        # print("Checking %s \n" %(cpp))
+        print("Checking %s \n" %(cpp))
         fin = open(cpp, "r")
         lines = fin.readlines()
         func_mark = find_func(lines)
