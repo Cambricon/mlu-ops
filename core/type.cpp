@@ -41,13 +41,14 @@
       MLUOP_STATUS_NUMERICAL_OVERFLOW
 
 #define MLUOP_DATA_TYPE_ENUM_NO_PREFIX_LIST                                    \
-  DTYPE_BOOL, DTYPE_INT8, DTYPE_UINT8, DTYPE_INT16, DTYPE_UINT16, DTYPE_INT32, \
-      DTYPE_UINT32, DTYPE_INT64, DTYPE_UINT64, DTYPE_HALF, DTYPE_FLOAT,        \
-      DTYPE_DOUBLE, DTYPE_COMPLEX_HALF, DTYPE_COMPLEX_FLOAT
+  DTYPE_BOOL, DTYPE_INT8, DTYPE_UINT8, DTYPE_INT16, DTYPE_UINT16, DTYPE_INT31, \
+      DTYPE_INT32, DTYPE_UINT32, DTYPE_INT64, DTYPE_UINT64, DTYPE_HALF,        \
+      DTYPE_BFLOAT16, DTYPE_FLOAT, DTYPE_DOUBLE, DTYPE_COMPLEX_HALF,           \
+      DTYPE_COMPLEX_FLOAT
 
 #define MLUOP_TENSOR_LAYOUT_ENUM_NO_PREFIX_LIST                      \
   LAYOUT_NCHW, LAYOUT_NHWC, LAYOUT_HWCN, LAYOUT_NDHWC, LAYOUT_ARRAY, \
-      LAYOUT_NCDHW, LAYOUT_TNC, LAYOUT_NTC, LAYOUT_NC, LAYOUT_NLC
+      LAYOUT_NCDHW, LAYOUT_TNC, LAYOUT_NTC, LAYOUT_NC, LAYOUT_NLC, LAYOUT_NCL
 
 const char* MLUOP_WIN_API mluOpGetErrorString(mluOpStatus_t status) {
   CHECK_GE(status, 0);
@@ -75,6 +76,14 @@ mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout) {
 
 namespace mluop {
 
+std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN getNameOfDataType(mluOpDataType_t dtype) {  // NOLINT
+  return mluOpGetNameOfDataType(dtype);
+}
+
+std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN getNameOfTensorLayout(mluOpTensorLayout_t layout) {  // NOLINT
+  return mluOpGetNameOfTensorLayout(layout);
+}
+
 size_t getSizeOfDataType(mluOpDataType_t dtype) {
   switch (dtype) {
     default: {
@@ -87,9 +96,11 @@ size_t getSizeOfDataType(mluOpDataType_t dtype) {
     }
     case MLUOP_DTYPE_INT16:
     case MLUOP_DTYPE_UINT16:
-    case MLUOP_DTYPE_HALF: {
+    case MLUOP_DTYPE_HALF:
+    case MLUOP_DTYPE_BFLOAT16: {
       return 2;
     }
+    case MLUOP_DTYPE_INT31:
     case MLUOP_DTYPE_INT32:
     case MLUOP_DTYPE_UINT32:
     case MLUOP_DTYPE_FLOAT:

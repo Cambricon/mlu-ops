@@ -40,6 +40,7 @@ class SyncBatchnormGatherStatsWithCountsExecutor : public Executor {
   void paramCheck();
   void compute();
   void cpuCompute();
+  void setMiscellaneousParam() override;
   int64_t getTheoryOps() override;
   std::set<Evaluator::Formula> getCriterionsUse() const override;
 };

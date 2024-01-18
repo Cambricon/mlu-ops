@@ -144,14 +144,14 @@ fi
 
 echo "-- [check_log_error] Using tools/check_log_error.py to check the LOG(error)"
 for i in $filenames; do
-  python tools/check_log_error.py $i
+  python3 tools/check_log_error.py $i
   if [[ $? -ne 0 ]]; then
     exit 1
   fi
 done
 
 echo "-- [check_file_name] Using tools/check_file_name.py to check the file_name"
-python tools/check_file_name.py ${kernels_dir}
+python3 tools/check_file_name.py ${kernels_dir}
 
 if [[ $? -ne 0 ]]; then
   exit 1

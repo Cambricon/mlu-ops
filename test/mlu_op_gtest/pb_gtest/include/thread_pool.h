@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_THREAD_POOL_H_
-#define TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_THREAD_POOL_H_
+#ifndef TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_
+#define TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_
 
 #include <mutex>               // NOLINT
 #include <condition_variable>  // NOLINT
@@ -34,7 +34,7 @@
 #include <vector>
 #include <iostream>
 #include <atomic>
-#include "pb_test_tools.h"
+#include "tools.h"
 
 namespace mluoptest {
 
@@ -69,4 +69,4 @@ class ThreadPool {
 
 }  // namespace mluoptest
 
-#endif  // TEST_MLU_OP_GTEST_PB_GTEST_INCLUDE_THREAD_POOL_H_
+#endif  // TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_

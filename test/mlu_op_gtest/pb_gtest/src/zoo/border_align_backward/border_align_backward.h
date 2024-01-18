@@ -35,6 +35,7 @@ class BorderAlignBackwardExecutor : public Executor {
   void compute() override;
   void cpuCompute() override;
   int64_t getTheoryOps() override;
+  void setMiscellaneousParam() override;
 };
 }  // namespace mluoptest
 #endif

@@ -97,8 +97,9 @@ bool isFile(std::string dir) {
   return false;
 }
 
-int str2int(const std::string src_str) {
-  int value_int = 0;
+template <typename T>
+T str2int(const std::string src_str) {
+  T value_int = 0;
   const char *value_char = src_str.c_str();
   sscanf(value_char, "%x", &value_int);
   return value_int;
@@ -117,9 +118,13 @@ void tensorHex2Int(mluoptest::Tensor *ts) {
       for (auto value = 0; value < ts->value_h_size(); value++) {
         ts->add_value_l(str2long(ts->value_h(value)));
       }
+    } else if (ts->dtype() == mluoptest::DTYPE_BFLOAT16) {
+      for (auto idx = 0; idx < ts->value_h_size(); ++idx) {
+        ts->add_value_ui(str2int<uint32_t>(ts->value_h(idx)));
+      }
     } else {
       for (auto value = 0; value < ts->value_h_size(); value++) {
-        ts->add_value_i(str2int(ts->value_h(value)));
+        ts->add_value_i(str2int<int>(ts->value_h(value)));
       }
     }
     ts->clear_value_h();

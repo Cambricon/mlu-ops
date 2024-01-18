@@ -32,7 +32,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "kernels/tensor_stride_process/tensor_stride_process.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_host.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
 #include "kernels/utils/cnnl_helper.h"
 
@@ -340,11 +340,11 @@ mluOpStatus_t CarafeForwardParamCheck(
    * tensor contiguousness check
    */
   VLOG(5) << CARAFE_FORWARD_API << "Check data contiguousness.";
-  PARAM_CHECK(CARAFE_FORWARD_API, !ifNeedTensorStrideProcess(input_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API, !mluop::ifNeedTensorStrideProcess(input_desc),
               "The input tensor is not contiguous!");
-  PARAM_CHECK(CARAFE_FORWARD_API, !ifNeedTensorStrideProcess(mask_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API, !mluop::ifNeedTensorStrideProcess(mask_desc),
               "The mask tensor is not contiguous!");
-  PARAM_CHECK(CARAFE_FORWARD_API, !ifNeedTensorStrideProcess(output_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API, !mluop::ifNeedTensorStrideProcess(output_desc),
               "The output tensor is not contiguous!");
   /*
    * off-chip data type check
@@ -677,25 +677,25 @@ mluOpStatus_t CarafeBackwardParamCheck(
   /*
    * tensor contiguous check
    */
-  if (ifNeedTensorStrideProcess(input_desc)) {
+  if (mluop::ifNeedTensorStrideProcess(input_desc)) {
     LOG(ERROR) << CARAFE_BACKWARD_API << "The input tensor is not contiguous.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (ifNeedTensorStrideProcess(mask_desc)) {
+  if (mluop::ifNeedTensorStrideProcess(mask_desc)) {
     LOG(ERROR) << CARAFE_BACKWARD_API << "The mask tensor is not contiguous.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (ifNeedTensorStrideProcess(grad_output_desc)) {
+  if (mluop::ifNeedTensorStrideProcess(grad_output_desc)) {
     LOG(ERROR) << CARAFE_BACKWARD_API
                << "The grad output tensor is not contiguous.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (ifNeedTensorStrideProcess(grad_input_desc)) {
+  if (mluop::ifNeedTensorStrideProcess(grad_input_desc)) {
     LOG(ERROR) << CARAFE_BACKWARD_API
                << "The grad input tensor is not contiguous.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (ifNeedTensorStrideProcess(grad_mask_desc)) {
+  if (mluop::ifNeedTensorStrideProcess(grad_mask_desc)) {
     LOG(ERROR) << CARAFE_BACKWARD_API
                << "The grad mask tensor is not contiguous.";
     return MLUOP_STATUS_NOT_SUPPORTED;

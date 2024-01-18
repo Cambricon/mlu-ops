@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -20,34 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "mlu_op.h"
-#include "core/context.h"
-#include "core/logging.h"
-#include "core/runtime/device.h"
-#include "core/tensor.h"
-#include "core/type.h"
-#include "core/tool.h"
-#include "fill_ram.h"
+#ifndef TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_LLC_FILL_LLC_H_
+#define TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_LLC_FILL_LLC_H_
 
-static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type) {
-#if TARGET_MLU_ARCH == 520
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
-#else
-  *k_type = CNRT_FUNC_TYPE_UNION1;
-#endif
-  k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
-  k_dim->z = 1;
-}
+#include "mlu_op.h"  // mluOpStatus_t
 
-mluOpStatus_t mluOpFillRam(mluOpHandle_t handle, nram_value value) {
-  if (value == NO_FILL) {
-    return MLUOP_STATUS_SUCCESS;
-  }
-  cnrtDim3_t k_dim;
-  cnrtFunctionType_t k_type;
-  policyFunc(handle, &k_dim, &k_type);
-  KERNEL_CHECK((mluBlockFillRam(k_dim, k_type, handle->queue, value)));
-  return MLUOP_STATUS_SUCCESS;
-}
+mluOpStatus_t mluOpFillLLC(mluOpHandle_t handle,
+                         void *const_addr,
+                         const int llc_size);
+
+#endif  // TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_LLC_FILL_LLC_H_

@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-
-#include "pb_test_tools.h"
+#include "tools.h"
+#include <math.h>
 #include <limits.h>
 #include <stdint.h>
 #include <algorithm>
@@ -35,6 +35,12 @@
 #endif
 
 #include "variable.h"
+#include "evaluator.h"
+#include "cpu_dtype.h"
+#include "internal_perf.h"
+#include "perf_test.h"
+#include "accuracy_test.h"
+#include "math_half.h"
 
 namespace mluoptest {
 
@@ -52,7 +58,8 @@ cnrtRet_t wrapRtConvertHalfToFloat(float *d, uint16_t f16) {
 
 size_t shapeStrideCount(const Shape *shape) {
   if (shape->dims_size() == 0) {
-    return 0;
+    // count is 1 for 0 dimension tensor.
+    return 1;
   }
   size_t total = 1;
   if (shape->dim_stride_size() == 0) {
@@ -80,7 +87,8 @@ size_t shapeStrideCount(const Shape *shape) {
 
 size_t shapeElementCount(const Shape *shape) {
   if (shape->dims_size() == 0) {
-    return 0;
+    // count is 1 for 0 dimension tensor.
+    return 1;
   }
   size_t total = 1;
   for (int i = 0; i < shape->dims_size(); ++i) {
@@ -96,9 +104,65 @@ void saveDataToFile(const std::string &file, void *data, mluOpDataType_t dtype,
   VLOG(4) << "Save data to file: " << file;
   std::ofstream fout(file + "_" + oss.str(), std::ios::out);
   switch (dtype) {
+    case MLUOP_DTYPE_HALF: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((half *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_BFLOAT16: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((bfloat16 *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_BOOL:
+    case MLUOP_DTYPE_INT8: {
+      for (auto i = 0; i < count; ++i) {
+        fout << (int)((int8_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_INT16: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((int16_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_INT32: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((int32_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_INT64: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((int64_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_UINT8: {
+      for (auto i = 0; i < count; ++i) {
+        fout << (int)((uint8_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_UINT16: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((uint16_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_UINT32: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((uint32_t *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_UINT64: {
+      for (auto i = 0; i < count; ++i) {
+        fout << ((uint64_t *)data)[i] << std::endl;
+      }
+    } break;
     case MLUOP_DTYPE_DOUBLE: {
       for (auto i = 0; i < count; ++i) {
         fout << ((double *)data)[i] << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_COMPLEX_HALF: {
+      for (auto i = 0; i < 2 * count; ++i) {
+        fout << ((half *)data)[i] << std::endl;
       }
     } break;
     case MLUOP_DTYPE_COMPLEX_FLOAT: {
@@ -177,6 +241,13 @@ void saveHexDataToFile(const std::string &file, void *data,
         fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
              << std::setw(20) << "dec: " << std::setw(10) << std::dec
              << cvtHalfToFloat(((int16_t *)data)[i]) << std::endl;
+      }
+    } break;
+    case MLUOP_DTYPE_BFLOAT16: {
+      for (size_t i = 0; i < count; ++i) {
+        fout << "hex: " << std::setw(10) << std::hex << ((uint16_t *)data)[i]
+             << std::setw(20) << "dec: " << std::setw(10) << std::dec
+             << cvtBF16ToFloat(((uint16_t *)data)[i]) << "\n";
       }
     } break;
     case MLUOP_DTYPE_FLOAT: {
@@ -261,9 +332,16 @@ void saveHexDataToFile(const std::string &file, void *data,
              << (int32_t)((bool *)data)[i] << std::endl;
       }
     } break;
-
+    case MLUOP_DTYPE_INT31: {
+      // int31 save as int16 * 2
+      for (size_t i = 0; i < count * 2; ++i) {
+        fout << "hex: " << std::setw(10) << std::hex << ((int16_t *)data)[i]
+             << std::setw(20) << "dec: " << std::setw(10) << std::dec
+             << ((int16_t *)data)[i] << std::endl;
+      }
+    } break;
     default: {
-      VLOG(4) << "Unsupported dtype " << mluOpGetNameOfDataType(dtype);
+      LOG(ERROR) << "Unsupported dtype " << mluop::getNameOfDataType(dtype);
     } break;
   }
   fout.close();
@@ -300,12 +378,49 @@ cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
   }
 }
 
+cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype) {
+  switch (dtype) {
+    case MLUOP_DTYPE_HALF:
+      return cnrtHalf;
+    case MLUOP_DTYPE_FLOAT:
+      return cnrtFloat;
+    case MLUOP_DTYPE_DOUBLE:
+      return cnrtDouble;
+    case MLUOP_DTYPE_BFLOAT16:
+      return cnrtBfloat;
+    case MLUOP_DTYPE_INT8:
+      return cnrtChar;
+    case MLUOP_DTYPE_INT16:
+      return cnrtShort;
+    case MLUOP_DTYPE_INT32:
+      return cnrtInt;
+    case MLUOP_DTYPE_INT64:
+      return cnrtLonglong;
+    case MLUOP_DTYPE_BOOL:
+      return cnrtBoolean;
+    case MLUOP_DTYPE_UINT8:
+      return cnrtUchar;
+    case MLUOP_DTYPE_UINT16:
+      return cnrtUshort;
+    case MLUOP_DTYPE_UINT32:
+      return cnrtUint;
+    case MLUOP_DTYPE_UINT64:
+      return cnrtUlonglong;
+    default:
+      LOG(ERROR) << "NOT support this dtype yet";
+      throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                  std::to_string(__LINE__));
+  }
+}
+
 mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype) {
   switch (dtype) {
     case DTYPE_UNSET:
       return MLUOP_DTYPE_INVALID;
     case DTYPE_HALF:
       return MLUOP_DTYPE_HALF;
+    case DTYPE_BFLOAT16:
+      return MLUOP_DTYPE_BFLOAT16;
     case DTYPE_FLOAT:
       return MLUOP_DTYPE_FLOAT;
     case DTYPE_DOUBLE:
@@ -318,6 +433,8 @@ mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype) {
       return MLUOP_DTYPE_INT8;
     case DTYPE_INT16:
       return MLUOP_DTYPE_INT16;
+    case DTYPE_INT31:
+      return MLUOP_DTYPE_INT31;
     case DTYPE_INT32:
       return MLUOP_DTYPE_INT32;
     case DTYPE_INT64:
@@ -361,6 +478,8 @@ mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order) {
       return MLUOP_LAYOUT_NLC;
     case LAYOUT_NC:
       return MLUOP_LAYOUT_NC;
+    case LAYOUT_NCL:
+      return MLUOP_LAYOUT_NCL;
     default:
       LOG(ERROR) << "Don't support this layout.";
       throw std::invalid_argument(std::string(__FILE__) + " +" +
@@ -368,18 +487,64 @@ mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order) {
   }
 }
 
-int16_t cvtFloatToHalf(float src) {
-  int16_t dst = 0;
-  cnrtCastDataType_V2(&src, cnrtFloat, &dst, cnrtHalf, 1, NULL,
-                      cnrtRounding_rm);
-  return dst;
+// ref: sopa/core/src/util/type_converter.cpp
+int16_t cvtFloatToHalf(float x) {
+  const int fs_shift = 31;
+  const int fe_shift = 23;
+  const int fe_mark = 0xff;
+  const int hs_shift = 15;
+  const int he_shift = 10;
+  int *in1 = (int *)&x;
+  int in = *in1;
+  int sign = in >> fs_shift;
+  int exp = ((in >> fe_shift) & fe_mark) - 127;
+  int denorm = 0;
+  int eff;
+  int g = 0;  // for round
+  int gr_last = 0;
+  int gr_first = 0;
+  int g_last = 0;
+  if ((exp == 128) && (in & 0x7fffff)) {  // NaN
+    exp = 0x1f - 15;
+    eff = 0x200;
+  } else if ((exp == 128)) {
+    exp = 0x1f - 15;
+    eff = 0x000;
+  } else if (exp >= 16) {
+    exp = 0xf;
+    eff = 0x3ff;
+  } else if (exp >= -14) {
+    gr_last = in & (0xfff);
+    gr_first = (in >> 12) & 1;
+    g_last = (in >> 13) & 1;
+    g = ((gr_first && gr_last) || (gr_first && g_last));
+    eff = (in >> 13) & 0x3ff;
+  } else if (exp >= -24) {
+    g = (((in & 0x7fffff) | 0x800000) >> (-exp - 2)) & 1;
+    eff = (((in & 0x7fffff) | 0x800000) >> (-exp - 1)) & 0x3ff;
+    denorm = 1;
+    exp = 0;
+  } else {
+    exp = 0;
+    denorm = 1;
+    eff = (in & 0x7fffffff) ? 1 : 0;
+  }
+  eff += g;  // round
+  exp = (denorm == 1) ? exp : (exp + 15);
+  int result = (sign << hs_shift) + (exp << he_shift) + eff;
+  return result;
 }
 
 float cvtHalfToFloat(int16_t src) {
-  float dst = 0;
-  cnrtCastDataType_V2(&src, cnrtHalf, &dst, cnrtFloat, 1, NULL,
-                      cnrtRounding_rm);
-  return dst;
+#undef FUNC_MAPPING_
+#define FUNC_MAPPING_(x) {x, cvtHalfToFloatImpl<x>},
+  static uint32_t algo = global_var.half2float_algo_;
+  const std::unordered_map<
+      uint32_t, decltype(cvtHalfToFloatImpl<AlgoHalfToFloat::INVALID>) *>
+      function_mapping = {ALGO_HALF_TO_FLOAT_MAP(FUNC_MAPPING_)};
+  static auto func = function_mapping.at(algo);
+  return func(static_cast<uint16_t>(src));
+#undef FUNC_MAPPING_
 }
 
 bool getEnv(const std::string &env, bool default_ret) {
@@ -405,7 +570,7 @@ int getEnvInt(const std::string &env, int default_ret) {
   return default_ret;
 }
 
-bool hasRandomBound(const RandomData *random_param) {
+bool hasRamdomBound(const RandomData *random_param) {
   bool has_float_bound = false;
   bool has_double_bound = false;
   if (random_param->has_lower_bound() && random_param->has_upper_bound()) {
@@ -461,8 +626,19 @@ void arrayCastFloatToHalf(int16_t *dst, float *src, size_t num) {
   }
 }
 
-void arrayCastHalfToFloat(float *dst, int16_t *src, size_t num) {
-  while (num > 0) {
+template <AlgoHalfToFloat algo>
+void arrayCastHalfToFloatAlgoImpl(float *dst, uint16_t *src, size_t num) {
+#pragma omp parallel for schedule(guided)
+  for (size_t i = 0; i < num; ++i) {
+    dst[i] = cvtHalfToFloatImpl<algo>(src[i]);
+  }
+}
+
+template <>
+void arrayCastHalfToFloatAlgoImpl<AlgoHalfToFloat::CNRT>(float *dst,
+                                                         uint16_t *src,
+                                                         size_t num) {
+  while (num) {
     int count = (int)std::min(num, (size_t)(INT_MAX));
     GTEST_CHECK(cnrtCastDataType_V2(src, cnrtHalf, dst, cnrtFloat, count, NULL,
                                     cnrtRounding_rm) == cnrtSuccess);
@@ -472,18 +648,121 @@ void arrayCastHalfToFloat(float *dst, int16_t *src, size_t num) {
   }
 }
 
+void arrayCastHalfToFloatInvalidInf(float *dst, uint16_t *src, size_t num) {
+  constexpr AlgoHalfToFloat algo{AlgoHalfToFloat::MLUOPGTEST2};
+  VLOG(4) << __func__ << " using algo " << AlgoHalfToFloatStr.at(algo).c_str();
+  return arrayCastHalfToFloatAlgoImpl<algo>(dst, src, num);
+}
+
+void arrayCastHalfToFloatInvalidInf(float *dst, int16_t *src, size_t num) {
+  return arrayCastHalfToFloatInvalidInf(dst, reinterpret_cast<uint16_t *>(src),
+                                        num);
+}
+
+void arrayCastHalfToFloat(float *dst, uint16_t *src, size_t num) {
+#undef FUNC_MAPPING_
+#define FUNC_MAPPING_(x) {x, arrayCastHalfToFloatAlgoImpl<x>},
+  static uint32_t algo = global_var.half2float_algo_;
+  if (algo >= AlgoHalfToFloat::INVALID) {
+    ADD_FAILURE() << "MLUOP_GTEST_EXPERIMENT_HALF2FLOAT_ALGO should less than "
+                  << AlgoHalfToFloat::INVALID << ", you have set " << algo;
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
+  }
+  VLOG(4) << __func__ << " using algo " << AlgoHalfToFloatStr.at(algo).c_str();
+  const std::unordered_map<uint32_t, decltype(arrayCastHalfToFloatAlgoImpl<
+                                              AlgoHalfToFloat::INVALID>) *>
+      function_mapping = {ALGO_HALF_TO_FLOAT_MAP(FUNC_MAPPING_)};
+  auto func = function_mapping.at(algo);
+
+  return func(dst, src, num);
+#undef FUNC_MAPPING_
+}
+
+void arrayCastHalfToFloat(float *dst, int16_t *src, size_t num) {
+  return arrayCastHalfToFloat(dst, reinterpret_cast<uint16_t *>(src), num);
+}
+
 // support uint8, uint16, uint32, uint64, int32, int64
-template <typename T1, typename T2>
+template <typename TSrc, typename TDst>
 void arrayCastFloatAndNormal(void *dst, void *src, size_t num) {
+#pragma omp parallel for schedule(guided)
   for (size_t i = 0; i < num; ++i) {
-    ((T2 *)dst)[i] = (T2)((T1 *)src)[i];
+    ((TDst *)dst)[i] = (TDst)(((TSrc *)src)[i]);
+  }
+}
+
+template <>
+void arrayCastFloatAndNormal<float, bool>(void *dst, void *src, size_t num) {
+#pragma omp parallel for schedule(guided)
+  for (size_t i = 0; i < num; ++i) {
+    // fabs(v) in (0, 1], will be 1, v >= 127 will be 0x7f, v <= -128 will be
+    // 0xff, NAN will be 1, copy sign
+    float v = ((float *)src)[i];
+    int8_t d = 0;
+    if (isnan(v)) {
+      d = 1;
+    } else if (v >= 127.f) {
+      d = 0x7f;
+    } else if (v <= -128.f) {
+      d = 0xff;
+    } else if (v != 0 && fabs(v) < 1) {
+      d = 1;
+    } else {
+      d = (int8_t)v;
+    }
+    if (*((uint32_t *)&v) & 0x80000000) {
+      d |= 0x80;
+    }
+    ((int8_t *)dst)[i] = d;
+  }
+}
+
+// Note: here uint16_t is acutally bf16
+void arrayCastFloatToBF16(uint16_t *dst, float *src, size_t num) {
+// rounding mode: rn
+#pragma omp parallel for schedule(guided)
+  for (size_t i = 0; i < num; ++i) {
+    union {
+      uint32_t src_i_u32;
+      float src_i_f32;
+    };
+    src_i_f32 = src[i];
+    if (std::isnan(src_i_f32)) {
+      // XXX(zhaolianshui): loosing sign and quiet_nan/signaling_nan info
+      ((uint16_t *)dst)[i] = 0x7FC0;
+    } else {
+      uint32_t rounding_bias = ((src_i_u32 >> 16) & 1) + (uint32_t)0x7FFF;
+      dst[i] = static_cast<uint16_t>((src_i_u32 + rounding_bias) >> 16);
+    }
+  }
+}
+
+// the actual dtype of src is bf16
+float cvtBF16ToFloat(uint16_t src_i) {
+  union {
+    uint32_t src_i_u32;
+    float src_i_f32;
+  };
+  src_i_u32 = src_i;
+  src_i_u32 <<= 16;
+  return src_i_f32;
+}
+
+// Note: here uint16_t is acutally bf16
+void arrayCastBF16ToFloat(float *dst, uint16_t *src, size_t num) {
+#pragma omp parallel for schedule(guided)
+  for (size_t i = 0; i < num; ++i) {
+    uint16_t src_i = src[i];
+    dst[i] = cvtBF16ToFloat(src_i);
   }
 }
 
 // support uint8, uint16, uint32, uint64, int8, int16, int32, int64, bool
-void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype,
-                             void *dst_data, mluOpDataType_t dst_dtype,
-                             size_t num) {
+static inline void arrayCastFloatAndNormalDispatch(
+    void *src_data, mluOpDataType_t src_dtype, void *dst_data,
+    mluOpDataType_t dst_dtype, size_t num,
+    void (*arrayCastHalfToFloat)(float *, uint16_t *, size_t)) {
   if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_UINT8) {
     arrayCastFloatAndNormal<float, uint8_t>(dst_data, src_data, num);
   } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
@@ -507,6 +786,9 @@ void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype,
     arrayCastFloatAndNormal<float, bool>(dst_data, src_data, num);
   } else if (src_dtype == MLUOP_DTYPE_FLOAT && dst_dtype == MLUOP_DTYPE_HALF) {
     arrayCastFloatToHalf((int16_t *)dst_data, (float *)src_data, num);
+  } else if (src_dtype == MLUOP_DTYPE_FLOAT &&
+             dst_dtype == MLUOP_DTYPE_BFLOAT16) {
+    arrayCastFloatToBF16((uint16_t *)dst_data, (float *)src_data, num);
   } else if (src_dtype == MLUOP_DTYPE_UINT8 && dst_dtype == MLUOP_DTYPE_FLOAT) {
     arrayCastFloatAndNormal<uint8_t, float>(dst_data, src_data, num);
   } else if (src_dtype == MLUOP_DTYPE_UINT16 &&
@@ -527,14 +809,17 @@ void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype,
   } else if (src_dtype == MLUOP_DTYPE_INT64 && dst_dtype == MLUOP_DTYPE_FLOAT) {
     arrayCastFloatAndNormal<int64_t, float>(dst_data, src_data, num);
   } else if (src_dtype == MLUOP_DTYPE_BOOL && dst_dtype == MLUOP_DTYPE_FLOAT) {
-    arrayCastFloatAndNormal<bool, float>(dst_data, src_data, num);
+    arrayCastFloatAndNormal<int8_t, float>(dst_data, src_data, num);
   } else if (src_dtype == MLUOP_DTYPE_HALF && dst_dtype == MLUOP_DTYPE_FLOAT) {
-    arrayCastHalfToFloat((float *)dst_data, (int16_t *)src_data, num);
+    arrayCastHalfToFloat((float *)dst_data, (uint16_t *)src_data, num);
+  } else if (src_dtype == MLUOP_DTYPE_BFLOAT16 &&
+             dst_dtype == MLUOP_DTYPE_FLOAT) {
+    arrayCastBF16ToFloat((float *)dst_data, (uint16_t *)src_data, num);
   } else if ((src_dtype == MLUOP_DTYPE_COMPLEX_HALF &&
               dst_dtype == MLUOP_DTYPE_FLOAT) ||
              (src_dtype == MLUOP_DTYPE_COMPLEX_HALF &&
               dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT)) {
-    arrayCastHalfToFloat((float *)dst_data, (int16_t *)src_data, 2 * num);
+    arrayCastHalfToFloat((float *)dst_data, (uint16_t *)src_data, 2 * num);
   } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
               dst_dtype == MLUOP_DTYPE_COMPLEX_HALF) ||
              (src_dtype == MLUOP_DTYPE_COMPLEX_FLOAT &&
@@ -547,6 +832,22 @@ void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype,
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
+}
+
+void arrayCastFloatAndNormal(void *src_data, mluOpDataType_t src_dtype,
+                             void *dst_data, mluOpDataType_t dst_dtype,
+                             size_t num) {
+  return arrayCastFloatAndNormalDispatch(src_data, src_dtype, dst_data,
+                                         dst_dtype, num, arrayCastHalfToFloat);
+}
+
+void arrayCastFloatAndNormalInvalidInf(void *src_data,
+                                       mluOpDataType_t src_dtype,
+                                       void *dst_data,
+                                       mluOpDataType_t dst_dtype, size_t num) {
+  return arrayCastFloatAndNormalDispatch(src_data, src_dtype, dst_data,
+                                         dst_dtype, num,
+                                         arrayCastHalfToFloatInvalidInf);
 }
 
 // read info from file, return a map, key is name, value is ops
@@ -589,7 +890,6 @@ void arrayCastHalfToInt8or16HalfUp(void *dst, int16_t *src, int pos, size_t num,
                                    int int8or16) {
 #pragma omp parallel for schedule(guided)
   for (size_t i = 0; i < num; ++i) {
-    int8_t res = 0;
     int16_t src_int16 = src[i];
 
     float offset_f = powf(2, pos - 1);
@@ -1156,4 +1456,29 @@ int float_mult(int in_a, int in_b, int float_16or32, int round_mode,
                             down);
 }
 
+// check if string is number
+bool isNumber(const std::string str) {
+  for (auto &c : str) {
+    if (std::isdigit(c) == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+size_t getAlignedMLUMemorySize(size_t bytes_needed) {
+  size_t align_value = getSizeAlign(bytes_needed);
+  return ((bytes_needed + align_value - 1) / align_value) * align_value;
+}
+
+void printLinearMemoryMsg(void *ptr, size_t bytes) {
+  int is_linear = 0;
+  cnGetMemAttribute((void *)&is_linear, CN_MEM_ATTRIBUTE_ISLINEAR, (CNaddr)ptr);
+  if (is_linear) {
+    VLOG(4) << "malloc device memory size = " << bytes << ", get linear memory";
+  } else {
+    VLOG(4) << "malloc device memory size = " << bytes
+            << ", get non-linear memory";
+  }
+}
 }  // namespace mluoptest

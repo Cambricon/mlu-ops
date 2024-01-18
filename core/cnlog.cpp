@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "core/cnlog.h"
+#include "cnlog.hpp"
 
 #include <string>
 #include <mutex>  // NOLINT
@@ -64,43 +64,111 @@
 #define SECONDS_PER_HOUR 3600
 #define HOURS_DIFFERENCE 8
 
+#define CNLOG_INIT_MAGIC_NUM 1
+
 namespace mluop {
 namespace logging {
 
 static int getLevelEnvVar(const std::string& str, int default_para = false);
 
-static std::ofstream logFile;  // which file to save log message.
-static std::ostream userStream(
-    std::cout.rdbuf());           // stream to print on screen.
-static uint64_t warningCnt = 0;   // counts of warning
-static uint64_t errorCnt = 0;     // counts of error
-static int64_t fatalCnt = 0;      // counts of fatal
-static bool is_open_log = false;  // whether log system is work.
-__attribute__((__unused__)) static int logLevel = getLevelEnvVar(
-    "MLUOP_MIN_LOG_LEVEL", 0);  // only the level GE this will be print.
-__attribute__((__unused__)) static bool is_only_show =
-    getBoolEnvVar("MLUOP_LOG_ONLY_SHOW", true);  // whether only show on screen.
-__attribute__((__unused__)) static bool g_color_print =
-    getBoolEnvVar("MLUOP_LOG_COLOR_PRINT", true);  // whether print with color
-__attribute__((__unused__)) static const std::map<std::string, bool>
-    module_print_map = {
-        {"MLUOP", getBoolEnvVar("MLUOP_LOG_PRINT", true)},
+class cnlogSingleton {
+ public:
+  static inline cnlogSingleton& get() {
+    static cnlogSingleton _log;  // = new cnlogSingleton;
+    return _log;
+  }
+  static inline bool is_only_show() { return get().is_only_show_; }
+  static int init() {
+    get().initCNLog();
+    return 0;
+  }
+  static inline const std::map<std::string, bool>& module_print_map() {
+    return get().module_print_map_;
+  }
+  static inline int logLevel() { return get().logLevel_; }
+  static inline bool g_color_print() { return get().g_color_print_; }
+  static inline std::ofstream& logFile() { return get().logFile_; }
+  static inline std::ostream& userStream() { return get().userStream_; }
+
+  bool isPrintToScreen() {
+    if (userStream_.rdbuf() == std::cout.rdbuf()) {
+      return isatty(fileno(stdout));
+    }
+    if (userStream_.rdbuf() == std::cerr.rdbuf()) {
+      return isatty(fileno(stderr));
+    }
+    return false;
+  }
+  ~cnlogSingleton() { cnlogSingletonInitFlag_ = 0; }
+  static int cnlogSingletonInitFlag_;
+
+ private:
+  void initCNLog() {
+    if (is_only_show_) {
+      initLogOnlyShow();
+    } else {
+      initLog("mlu_op_auto_log");
+    }
+    cnlogSingletonInitFlag_ = CNLOG_INIT_MAGIC_NUM;
+  }
+
+  void initLogOnlyShow() {
+    if (is_open_log_) {
+      return;
+    }
+    is_open_log_ = true;
+  }
+
+  /*
+   * @brief: initialing log system, make sure use it before any log
+   */
+  void initLog(std::string file) {
+#ifndef ANDROID_LOG
+    if (is_open_log_) {
+      return;
+    }
+    logFile_.open(file);
+    if (!logFile_.is_open()) {
+      std::cerr << "can't init Log, open file failed!" << std::endl;
+    } else {
+      is_open_log_ = true;
+    }
+#else
+    is_open_log_ = true;
+#endif
+  }
+
+  cnlogSingleton() {
+    initCNLog();
+    if (g_color_print_) {
+      g_color_print_ = isPrintToScreen();
+    }
+  }
+  std::ostream userStream_{std::cout.rdbuf()};  // stream to print on screen.
+  bool is_open_log_ = false;
+  std::ofstream logFile_;  // which file to save log message.
+  int logLevel_ = getLevelEnvVar("MLUOP_MIN_LOG_LEVEL",
+                                 0);  // only the level GE this will be print.
+  bool is_only_show_ = mluop::getBoolEnvVar(
+      "MLUOP_LOG_ONLY_SHOW", true);  // whether only show on screen.
+  bool g_color_print_ = mluop::getBoolEnvVar("MLUOP_LOG_COLOR_PRINT",
+                                             true);  // whether print with color
+  const std::map<std::string, bool> module_print_map_{
+      {"MLUOP", mluop::getBoolEnvVar("MLUOP_LOG_PRINT", true)}};
 };
 
-bool isPrintToScreen() {
-  if (userStream.rdbuf() == std::cout.rdbuf()) {
-    return isatty(fileno(stdout));
-  }
-  if (userStream.rdbuf() == std::cerr.rdbuf()) {
-    return isatty(fileno(stderr));
-  }
-  return false;
-}
+static uint64_t warningCnt = 0;  // counts of warning
+static uint64_t errorCnt = 0;    // counts of error
+static int64_t fatalCnt = 0;     // counts of fatal
 
-bool releasePrint(std::string module_name) {
+int cnlogSingleton::cnlogSingletonInitFlag_ = 0;
+
+static bool releasePrint(std::string module_name) {
+  if (cnlogSingleton::cnlogSingletonInitFlag_ != CNLOG_INIT_MAGIC_NUM)
+    return false;
   bool module_print = false;
-  if (module_print_map.count(module_name) > 0) {
-    module_print = module_print_map.at(module_name);
+  if (cnlogSingleton::module_print_map().count(module_name) > 0) {
+    module_print = cnlogSingleton::module_print_map().at(module_name);
   }
   return module_print;
 }
@@ -118,13 +186,10 @@ LogMessage::LogMessage(std::string file, int line, int module, int severity,
       is_print_tail_(is_print_tail),
       is_clear_endl_(is_clear_endl),
       release_can_print_(release_can_print) {
-  if (g_color_print) {
-    g_color_print = isPrintToScreen();
-  }
 #ifndef ANDROID_LOG
   if (is_print_head_) {
     if ((log_module_ == LOG_SHOW_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
-      if (g_color_print) {
+      if (cnlogSingleton::g_color_print()) {
         printHead(true);  // print head colored.
       } else {
         printHead(false);  // print head no colored.
@@ -154,24 +219,23 @@ void clearEnter(std::string* ss) {
   }
 }
 
-static std::mutex log_mutex;  // to protect write to file.
-
 /*
  * @brief: the destructor that output the string to the file or screen.
  */
 LogMessage::~LogMessage() {
+  static std::mutex log_mutex;  // to protect write to file.
   int log_level = LOG_INFO;
 #ifdef NDEBUG
   if (!releasePrint(module_name_)) {
     return;
   }
-  log_level = logLevel;
+  log_level = cnlogSingleton::logLevel();
   is_print_tail_ = false;
 #else
   if (!releasePrint(module_name_)) {
     return;
   }
-  log_level = logLevel;
+  log_level = cnlogSingleton::logLevel();
   is_print_tail_ = true;
 #endif
   file_str_ << contex_str_.str();
@@ -179,7 +243,7 @@ LogMessage::~LogMessage() {
   if (is_print_tail_) {
 #ifndef ANDROID_LOG
     if ((log_module_ == LOG_SHOW_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
-      if (g_color_print) {
+      if (cnlogSingleton::g_color_print()) {
         printTail(true);
       } else {
         printTail(false);
@@ -191,75 +255,75 @@ LogMessage::~LogMessage() {
     printTail(false);
 #endif
   }
-  if (is_open_log) {
-    std::string file_ss = file_str_.str();
-    std::string cout_ss = cout_str_.str();
-    if (is_clear_endl_) {
-      clearEnter(&file_ss);
-      clearEnter(&cout_ss);
-    }
-    if (logSeverity_ >= log_level) {
-      std::lock_guard<std::mutex> lock(log_mutex);
-      switch (logSeverity_) {
-        case LOG_WARNING: {
-          warningCnt++;
-          break;
-        }
-        case LOG_ERROR: {
-          errorCnt++;
-          break;
-        }
-        case LOG_FATAL: {
-          fatalCnt++;
-          break;
-        }
-        default: {
-          break;
-        }
+  std::string file_ss = file_str_.str();
+  std::string cout_ss = cout_str_.str();
+  if (is_clear_endl_) {
+    clearEnter(&file_ss);
+    clearEnter(&cout_ss);
+  }
+  if (logSeverity_ >= log_level) {
+    std::lock_guard<std::mutex> lock(log_mutex);
+    switch (logSeverity_) {
+      case LOG_WARNING: {
+        warningCnt++;
+        break;
       }
+      case LOG_ERROR: {
+        errorCnt++;
+        break;
+      }
+      case LOG_FATAL: {
+        fatalCnt++;
+        break;
+      }
+      default: {
+        break;
+      }
+    }
 #ifndef ANDROID_LOG
-      if ((log_module_ == LOG_SAVE_ONLY) ||
-          (log_module_ == LOG_SAVE_AND_SHOW)) {
-        if (!is_only_show) {
-          logFile << file_ss;
-          if (is_clear_endl_) {
-            logFile << std::endl;
-          }
-        }
-      }
-      if ((log_module_ == LOG_SHOW_ONLY) ||
-          (log_module_ == LOG_SAVE_AND_SHOW)) {
-        userStream << cout_ss;
+    if ((log_module_ == LOG_SAVE_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
+      if (!cnlogSingleton::is_only_show()) {
+        cnlogSingleton::logFile() << file_ss;
         if (is_clear_endl_) {
-          userStream << std::endl;
+          cnlogSingleton::logFile() << std::endl;
         }
       }
-#else
-      switch (logSeverity_) {
-        case LOG_INFO: {
-          LOGI("%s", file_ss.c_str());
-          break;
-        }
-        case LOG_WARNING: {
-          LOGW("%s", file_ss.c_str());
-          break;
-        }
-        case LOG_ERROR: {
-        }
-        case LOG_FATAL: {
-          LOGE("%s", file_ss.c_str());
-          break;
-        }
-        case LOG_VLOG: {
-          LOGD("%s", file_ss.c_str());
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-#endif
     }
+    if ((log_module_ == LOG_SHOW_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
+      cnlogSingleton::userStream() << cout_ss;
+      if (is_clear_endl_) {
+        cnlogSingleton::userStream() << std::endl;
+      }
+    }
+#else
+    switch (logSeverity_) {
+      case LOG_INFO: {
+        LOGI("%s", file_ss.c_str());
+        break;
+      }
+      case LOG_WARNING: {
+        LOGW("%s", file_ss.c_str());
+        break;
+      }
+      case LOG_ERROR: {
+      }
+      case LOG_FATAL: {
+        LOGE("%s", file_ss.c_str());
+        break;
+      }
+      case LOG_VLOG: {
+        LOGD("%s", file_ss.c_str());
+        break;
+      }
+      case LOG_CNPAPI: {
+        LOGD("%s", file_ss.c_str());
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+#endif
   }
 }
 
@@ -310,7 +374,7 @@ std::string LogMessage::getTime() {
  */
 void LogMessage::printHead(bool is_colored) {
 #ifndef NDEBUG
-  if (logLevel == 5) {
+  if (cnlogSingleton::logLevel() == 5) {
     return;
   }
 #endif
@@ -335,6 +399,10 @@ void LogMessage::printHead(bool is_colored) {
     }
     case LOG_VLOG: {
       file_str_ << "[Vlog]: ";
+      break;
+    }
+    case LOG_CNPAPI: {
+      file_str_ << "[Cnpapi]: ";
       break;
     }
     default: {
@@ -363,6 +431,10 @@ void LogMessage::printHead(bool is_colored) {
       }
       case LOG_VLOG: {
         cout_str_ << HIGHLIGHT << BLUE << "[Vlog]:" << RESET;
+        break;
+      }
+      case LOG_CNPAPI: {
+        cout_str_ << HIGHLIGHT << BLUE << "[Cnpapi]:" << RESET;
         break;
       }
       default: {
@@ -437,42 +509,6 @@ void LogMessage::printTail(bool is_colored) {
 #endif
 }
 
-/*
- * @brief: initialing log system, make sure use it before any log
- * @param index: the log level set by macro, file name to write log.
- * @example:
- * // the file to write log is "test_log.log".
- * // only log message level higher than LOG_WARNING can be print.
- * initLog(LOG_WARNING, test_log.log);
- */
-static int initLog(std::string file) {
-#ifndef ANDROID_LOG
-  if (is_open_log) {
-    return 0;
-  }
-  logFile.open(file);
-  if (!logFile.is_open()) {
-    std::cout << "can't init Log, open file failed!" << std::endl;
-    return 0;
-  } else {
-    is_open_log = true;
-    return 1;
-  }
-#else
-  is_open_log = true;
-  return 1;
-#endif
-}
-
-static int initLogOnlyShow() {
-  if (is_open_log) {
-    return 0;
-  }
-  is_only_show = true;
-  is_open_log = true;
-  return 1;
-}
-
 int getLevelEnvVar(const std::string& str, int default_para) {
   const char* env_raw_ptr = std::getenv(str.c_str());
   if (env_raw_ptr == nullptr) {
@@ -493,16 +529,14 @@ int getLevelEnvVar(const std::string& str, int default_para) {
   return default_para;
 }
 
-static int initCNLog() {
-  if (is_only_show) {
-    initLogOnlyShow();
-  } else {
-    initLog("mluop_auto_log");
-  }
-  return 0;
-}
-
-__attribute__((__unused__)) static int initlog = initCNLog();
-
 }  // namespace logging
 }  // namespace mluop
+
+#if 0  // TODO(None): extend lifetime
+using mluop::logging::cnlogSingleton;
+static cnlogSingleton *log_ctx = nullptr;
+
+static void __attribute__((destructor(101))) mluOpLoggingLibDestructor() {
+  std::cout << __func__ << std::endl;
+}
+#endif

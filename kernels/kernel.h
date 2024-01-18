@@ -52,7 +52,7 @@
 #define LT_NUM 64
 #define COMPUTE_COUNT_ALIGN 64  // elem_count must be divisible by 64
 
-#if __BANG_ARCH__ == 322 || __BANG_ARCH__ == 520
+#if __BANG_ARCH__ == 322
 #define CORE_DIM 1
 #else
 #define CORE_DIM 4

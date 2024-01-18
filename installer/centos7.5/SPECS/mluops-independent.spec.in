@@ -29,9 +29,6 @@ BuildRequires: valgrind >= 3.13.0
 BuildRequires: xz
 BuildRequires: doxygen
 BuildRequires: texlive-latex
-#BuildRequires: python >= 2.7.0
-#BuildRequires: cncc >= 2.6.0
-#BuildRequires: cnas >= 2.6.0
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Requires: cndrv >= 0.2.0

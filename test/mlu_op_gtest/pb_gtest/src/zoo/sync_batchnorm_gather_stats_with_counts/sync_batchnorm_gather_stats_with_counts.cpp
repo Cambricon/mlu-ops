@@ -91,11 +91,20 @@ void SyncBatchnormGatherStatsWithCountsExecutor::compute() {
           data_vector_[5].device_ptr, mean_desc, data_vector_[8].device_ptr,
           invstd_desc, data_vector_[9].device_ptr));
       interface_timer_.stop();
+    }
+  }
+}
 
-      data_vector_[3].is_output = true;
-      data_vector_[4].is_output = true;
-      data_vector_[6].is_output = false;
-      data_vector_[7].is_output = false;
+void SyncBatchnormGatherStatsWithCountsExecutor::setMiscellaneousParam() {
+  if (parser_->getInputNum() == 6) {
+    if (parser_->getOutputNum() == 2) {
+      data_vector_[3].alsoServeAsVolatile();
+      data_vector_[4].alsoServeAsVolatile();
+    } else {
+      data_vector_[3].alsoServeAsOutput();
+      data_vector_[4].alsoServeAsOutput();
+      data_vector_[6].onlyServeAsInput();
+      data_vector_[7].onlyServeAsInput();
     }
   }
 }
