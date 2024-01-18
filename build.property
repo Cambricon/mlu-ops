@@ -1,5 +1,11 @@
 {
   "version": "0.11.0-1",
-  "build_requires": {"cntoolkit": ["release","3.7.0-1"], "cnnl":["release","1.21.1-1"]},
+  "python": "3.6.0",
+  "build_requires": {"cntoolkit": ["release","3.7.0-1"],
+                     "cnnl":["release","1.21.1-1"],
+                     "driver": "5.10.15",
+                     "eigen3": "3.4.0",
+                     "libxml2": "2.9.0",
+                     "protoc": "3.8.0"},
   "package_type": ["rpm","deb"]
 }
