@@ -902,16 +902,6 @@ typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
  */
 typedef struct mluOpSeqDataStruct *mluOpSeqDataDescriptor_t;
 
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetSeqDataDescriptor(const mluOpSeqDataDescriptor_t seq_data_desc,
-                          mluOpSeqDataLayout_t *layout,
-                          mluOpDataType_t *dtype,
-                          int *dimNb,
-                          int dimSize[],
-                          int *seqLengthArraySize,
-                          int seqLengthArray[],
-                          void *paddingFill);
-
 // Group:Common Interface
 // Subgroup:SeqData
 /*!

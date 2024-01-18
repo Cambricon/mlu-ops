@@ -244,27 +244,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSeqDataDescriptor_v2(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpGetSeqDataDescriptor(
-    const mluOpSeqDataDescriptor_t seq_data_desc, mluOpSeqDataLayout_t *layout,
-    mluOpDataType_t *dtype, int *dimNb, int *dimSize, int *seqLengthArraySize,
-    int *seqLengthArray, void *paddingFill) {
-  PARAM_CHECK_NE("[mluOpGetSeqDataDescriptor]", seq_data_desc, NULL);
-
-  SET_PARAM_FOR_POINTER(layout, seq_data_desc->layout);
-  SET_PARAM_FOR_POINTER(dtype, seq_data_desc->dtype);
-  SET_PARAM_FOR_POINTER(dimNb, seq_data_desc->dim);
-  SET_ARRAY_PARAM_FOR_POINTER(dimSize, seq_data_desc->dims, seq_data_desc->dim);
-  SET_PARAM_FOR_POINTER(seqLengthArraySize, seq_data_desc->seq_length_size);
-  SET_ARRAY_PARAM_FOR_POINTER(seqLengthArray, seq_data_desc->seq_length,
-                              seq_data_desc->seq_length_size);
-
-  if (paddingFill != nullptr && seq_data_desc->padding_fill != nullptr) {
-    int size_pd = mluop::getSizeOfDataType(*dtype);
-    std::memcpy(paddingFill, seq_data_desc->padding_fill, size_pd);
-  }
-  return MLUOP_STATUS_SUCCESS;
-}
-
 mluOpStatus_t MLUOP_WIN_API mluOpGetSeqDataDescriptor_v2(
     const mluOpSeqDataDescriptor_t seq_data_desc, mluOpSeqDataLayout_t *layout,
     mluOpDataType_t *dtype, int *dimNb, int64_t *dimSize,

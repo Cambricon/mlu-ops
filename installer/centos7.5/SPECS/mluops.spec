@@ -19,7 +19,6 @@ BuildRequires: glibc-devel
 BuildRequires: binutils >= 2.27
 BuildRequires: readline-devel >= 6.2-4
 BuildRequires: rpm-devel
-#BuildRequires: python-devel
 BuildRequires: texinfo-tex
 BuildRequires: /usr/bin/pod2man
 BuildRequires: texlive-ec texlive-cm-super
@@ -29,9 +28,6 @@ BuildRequires: valgrind >= 3.13.0
 BuildRequires: xz
 BuildRequires: doxygen
 BuildRequires: texlive-latex
-#BuildRequires: python >= 2.7.0
-#BuildRequires: cncc >= 2.6.0
-#BuildRequires: cnas >= 2.6.0
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Requires: cndrv >= 0.2.0
