@@ -1,4 +1,4 @@
 线程安全
 =================
 
-Cambricon BANG C OPS确保线程安全。只要用户根据句柄的使用要求，多个线程不同时共享同一个Cambricon BANG C OPS 句柄，则可以保证函数从多个主机线程进行调用。
+Cambricon MLU-OPS确保线程安全。只要用户根据句柄的使用要求，多个线程不同时共享同一个Cambricon MLU-OPS 句柄，则可以保证函数从多个主机线程进行调用。

@@ -66,7 +66,7 @@ gen_case宏函数说明，gen_case.h 主要定义了多个宏函数，在使用�
 
 1）添加头文件
 
-在 bangc-docs/kernel/算子名文件夹/op_name.cpp 文件下添加头文件
+在 kernels/算子名文件夹/op_name.cpp 文件下添加头文件
 ```
 #include "core/context.h"
 #include "core/gen_case.h"

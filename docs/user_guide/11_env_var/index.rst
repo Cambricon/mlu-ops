@@ -1,10 +1,10 @@
 .. _环境变量:
 
-Cambricon BANG C OPS库环境变量
+Cambricon MLU-OPS库环境变量
 ================================
 
 
-本章介绍 Cambricon BANG C OPS 库环境变量。
+本章介绍 Cambricon MLU-OPS 库环境变量。
 
 .. _MLUOP_BUILD_GTEST:
  

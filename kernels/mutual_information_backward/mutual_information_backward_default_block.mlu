@@ -68,7 +68,7 @@ __mlu_func__ bool calPartitionJobScope(
     batch_t_begin = boundary[1];
     batch_s_end = boundary[2];
     batch_t_end = boundary[3];
-    // invalid boundary, already use mluOpFill to set px_grad and py_grad to 0
+    // invalid boundary, already use cnnlFill to set px_grad and py_grad to 0
     if (batch_s_begin > batch_s_end || batch_t_begin > batch_t_end) {
       return true;
     }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -26,42 +26,7 @@
 
 #include "kernels/utils/cnnl_helper.h"
 
-#define DCNBPDATA_API "mluOpDcnBackwardData"
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc) {
-  PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(cnnlCreateDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDcnBackwardData] Internal error accured in "
-                    "mluOpCreateDCNDescriptor.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc) {
-  PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(cnnlDestroyDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDcnBackwardData] Internal error accured in "
-                    "mluOpDestroyDCNDescriptor.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetDCNDescriptor(
-    mluOpDCNDescriptor_t dcn_desc, int dimNb, const int pad[],
-    const int stride[], const int dilation[], int deformable_group,
-    int conv_group, int im2col_step, const mluOpDataType_t compute_type) {
-  PARAM_CHECK(DCNBPDATA_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(
-      cnnlSetDCNDescriptor(dcn_desc, dimNb, pad, stride, dilation,
-                           deformable_group, conv_group, im2col_step,
-                           cnnlDataType_t(compute_type)),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpDcnBackwardData] Internal error accured in mluOpSetDCNDescriptor.",
-      MLUOP_STATUS_INTERNAL_ERROR);
-  return MLUOP_STATUS_SUCCESS;
-}
+#define DCNBPDATA_API "mluOpDCNBackwardData"
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetDCNBakcwardDataWorkspaceSize(
     mluOpHandle_t handle, const mluOpDCNDescriptor_t dcn_desc,
@@ -104,7 +69,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDCNBakcwardDataWorkspaceSize(
           cnnl_grad_input_desc, cnnl_grad_offset_desc, cnnl_grad_mask_desc,
           workspace_size),
       CNNL_STATUS_SUCCESS,
-      "[mluOpDcnBackwardData] Internal error accured in mluOpReduce.",
+      "[mluOpGetDCNBakcwardDataWorkspaceSize] Internal error accured in "
+      "cnnlGetDCNBakcwardDataWorkspaceSize.",
       MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
@@ -155,7 +121,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDCNBackwardData(
           cnnl_grad_input_desc, grad_input, cnnl_grad_offset_desc, grad_offset,
           cnnl_grad_mask_desc, grad_mask),
       CNNL_STATUS_SUCCESS,
-      "[mluOpDcnBackwardData] Internal error accured in mluOpDcnBackwardData.",
+      "[mluOpDcnBackwardData] Internal error accured in cnnlDCNBackwardData.",
       MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);

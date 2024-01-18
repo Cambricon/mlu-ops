@@ -1,7 +1,7 @@
-bangc-ops/test/mlu_op_gtest/pb_gtest/src/gtest/case_list.cpp
-bangc-ops/test/mlu_op_gtest/pb_gtest/src/gtest/op_register.h
-bangc-ops/daily.software.cambricon.com/
-bangc-ops/dep_libs_extract
+test/mlu_op_gtest/pb_gtest/src/gtest/case_list.cpp
+test/mlu_op_gtest/pb_gtest/src/gtest/op_register.h
+daily.software.cambricon.com/
+dep_libs_extract
 dependency.txt
 
 # Swap

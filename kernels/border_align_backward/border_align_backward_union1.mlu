@@ -165,25 +165,32 @@ __mlu_func__ void computeImpl(T *nram_grad_output, const T *grad_output,
                         &x_high, &y_low, &y_high, &empty);
     if (!empty) {
       // load argmax,
-      __memcpy(nram_argmax_idx, argmax_idx + src_offset, deal_num * sizeof(int32_t), GDRAM2NRAM);  // NOLINT
+      __memcpy(nram_argmax_idx, argmax_idx + src_offset,
+               deal_num * sizeof(int32_t), GDRAM2NRAM);  // NOLINT
 
       /* Creat mask, mask.shape([1, deal_num]) is the same as argmax_idx
        * mask[1, j] = (T)1  if (argmax_idx[1, j] == pool_idx)
        *            = (T)0  otherwise
        */
       __bang_write_value(nram_grad_output, deal_num_align, int32_t(i));
-      __bang_eq(nram_argmax_idx, nram_argmax_idx, (int32_t *)nram_grad_output, deal_num_align);  // NOLINT
+      __bang_eq(nram_argmax_idx, nram_argmax_idx, (int32_t *)nram_grad_output,
+                deal_num_align);  // NOLINT
       if (__mluop_is_float<T>()) {
         __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
-        __bang_lut_s32((int32_t *)nram_argmax_idx, (int32_t *)nram_argmax_idx, table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+        __bang_lut_s32((int32_t *)nram_argmax_idx, (int32_t *)nram_argmax_idx,
+                       table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
       } else {
         __nram__ int16_t table[COMPUTE_COUNT_ALIGN] = {0, (int16_t)0xffff};
-        __bang_int322int16((int16_t *)nram_argmax_idx, (int32_t *)nram_argmax_idx, deal_num_align, 0, 0);  // NOLINT
-        __bang_lut_s16((int16_t *)nram_argmax_idx, (int16_t *)nram_argmax_idx, table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+        __bang_int322int16((int16_t *)nram_argmax_idx,
+                           (int32_t *)nram_argmax_idx, deal_num_align, 0,
+                           0);  // NOLINT
+        __bang_lut_s16((int16_t *)nram_argmax_idx, (int16_t *)nram_argmax_idx,
+                       table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
       }
 
       // load grad_output, and calculate grad_input
-      __memcpy(nram_grad_output, grad_output + src_offset, deal_num * sizeof(T), GDRAM2NRAM);  // NOLINT
+      __memcpy(nram_grad_output, grad_output + src_offset, deal_num * sizeof(T),
+               GDRAM2NRAM);  // NOLINT
       computeGradInput(nram_grad_input, nram_grad_output, grad_input,
                        (T *)nram_argmax_idx, w1, w2, w3, w4, x_low, y_low,
                        x_high, y_high, origin_c, c, origin_w, n, origin_h,

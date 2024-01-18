@@ -2,7 +2,7 @@
 
 软件包发布信息
 ===================================
-Cambricon BANG C OPS库为两种主流Linux发行版提供端侧软件包，包括适用于CentOS的rpm包和适用于Ubuntu的deb包。
+Cambricon MLU-OPS库为两种主流Linux发行版提供端侧软件包，包括适用于CentOS的rpm包和适用于Ubuntu的deb包。
 
 软件包命名格式
 -----------------------------------
@@ -29,7 +29,7 @@ Cambricon BANG C OPS库为两种主流Linux发行版提供端侧软件包，包�
 - <distro_suffix>：deb文件。根据所在发行版，保持和对应deb或RPM包相同的文件后缀名。
 
 
-示例：x86_64架构的CentOS 7下，Cambricon BANG C OPS的包为 ``mluops-x.y.z-1.el7.x86_64.rpm`` 。
+示例：x86_64架构的CentOS 7下，Cambricon MLU-OPS的包为 ``mluops-x.y.z-1.el7.x86_64.rpm`` 。
 
 
 面向x86_64架构

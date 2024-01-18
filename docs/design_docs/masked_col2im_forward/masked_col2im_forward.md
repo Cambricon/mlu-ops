@@ -148,11 +148,11 @@ mluOpMaskedCol2imForward(mluOpHandle_t handle,
 ### 3.1 实现方案
 
 - 该算子会将col中的channel * mask_cnt个数据赋值给im，每个channel的数据可以作为一组进行处理。为了使输入输出数据在channel维度连续，需要将输入col的shape由[co, mask_cnt]转置为[mask_cnt, co]，输出im由NCHW转置为NHWC。具体步骤如下：
-- step1、host端调用mluOpTranspose_v2对col进行转置。
+- step1、host端调用 transpose op 对col进行转置。
 - step2、根据channel的大小选择不同处理逻辑：
   - step2-1、如果满足channel <= MAX_NRAM_SIZE / sizeof(T)，此时nram能够容纳多个channel，可以一次性memcpy(GDRAM2NRAM)连续MAX_NRAM_SIZE / sizeof(T) / channel * channel数据；分别计算这些channel对应im中的位置(mask_h_idx[index%mask_cnt], mask_w_idx[index%mask_cnt])，依次memcpy(NRAM2GDRAM)至im，其中index的范围为[0, mask_cnt]。
   - step2_2、如果满足channel > MAX_NRAM_SIZE / sizeof(T)，此时使用GDRAM2GDRAM的memcpy对单个位置的channel进行处理。
-- step3、host端调用mluOpTranspose_v2对im进行转置。
+- step3、host端调用 transpose op 对im进行转置。
 
 ### 3.2 伪代码实现（可选）
 

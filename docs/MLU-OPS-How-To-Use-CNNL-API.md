@@ -7,7 +7,7 @@
 // 需要包含该文件
 #include "utils/cnnl_helper.h"
 
-// https://github.com/Cambricon/mlu-ops/blob/master/bangc-ops/kernels/three_nn_forward/three_nn_forward.cpp
+// https://github.com/Cambricon/mlu-ops/blob/master/kernels/three_nn_forward/three_nn_forward.cpp
 static mluOpStatus_t transposeTensor(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, const int *permute,
@@ -107,7 +107,7 @@ mluOpStatus_t GetAddNWorkspaceSize(
 ### 示例3
 在算子中调用CNNL matmul 算子的相关接口。
 ```c++
-// https://github.com/Cambricon/mlu-ops/blob/master/bangc-ops/kernels/indice_convolution_backward_data/indice_convolution_backward_data.cpp
+// https://github.com/Cambricon/mlu-ops/blob/master/kernels/indice_convolution_backward_data/indice_convolution_backward_data.cpp
 // 需要包含该文件
 #include "utils/cnnl_helper.h"
 

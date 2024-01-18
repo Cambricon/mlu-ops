@@ -201,7 +201,8 @@ mluOpRoiPointPool3d(mluOpHandle_t handle,
 ### 3.1 实现方案
 
 roipoint_pool3d算子实现的功能是筛选出3D boxes内的点云数据坐标和特征，mmcv内cuda实现拆分为3个kernel，mlu合并成1个kernel进行实现。
-1. 首先对每个3d box遍历batch内所有点云数据，计算其是否在box边框内部。从mlu计算效率角度出发，计算需采用矢量运算（计算公式详见1.2小节），即拆成x、y、z矢量分别计算。但是points输入数据规模为[B, N, 3], x矢量、y矢量、z矢量在低纬度不连续，因此计算前要通过transpose将points规模[B, N, 3]转置为[3, B, N]。这里做统一处理，将points以其数据规模[B, N, 3]整体做转置，放到第一步来做，通过调用mluOpTranspose_v2将计算结果存储到workspace空间。
+1. 首先对每个3d box遍历batch内所有点云数据，计算其是否在box边框内部。从mlu计算效率角度出发，计算需采用矢量运算（计算公式详见1.2小节），即拆成x、y、z矢量分别计算。但是points输入数据规模为[B, N, 3], x矢量、y矢量、z矢量在低纬度不连续，因此计算前要通过transpose将points规模[B, N, 3]转置为[3, B, N]。这里做统一处理，将points以其数据规模[B, N, 3]整体做转置，放到第一步来做，通过调用 transpose op 对feature进行转置
+将计算结果存储到workspace空间。
 2. 多核拆分从B、M两个维度进行拆分（详见3.3小节），每个core处理拆分到的3d boxes，最小计算单元为计算3d box对应batch内的N个点云坐标是否在box边框内部。
 3. 最小计算单元见如下伪代码。输入数据boxes3d表征LiDAR坐标系下3d box的参数(cx, cy, cz, dx, dy, dz, rz)，其中，(cx, cy, cz)表示3d box底面中心点坐标，(dx, dy, dz)分别表示3d box的长宽高，rz表示box在俯视图下的朝向角（xy平面内），朝向角为x轴方向逆时针到box朝向的角度。(x, y, z)为点云数据在LiDAR坐标系中的坐标，旋转坐标系，计算点云数据在box坐标系（以box长宽高为x轴、y轴、z轴）中的坐标(local_x, local_y, z)，并判断其是否在box边框内部。
 4. 统计3d box内的点云数据数量，得到输出pooled_empty_flag。此外，不足采样点数则duplicate至采样点数，超出采样点数则做截取。
@@ -440,7 +441,7 @@ void check_pts_in_box3d(const T *boxes3d,
 
 - workspace空间划分
 
-points转置按其数据规模[3, B, N]申请workspace空间，point_features转置按其数据规模[B, C, N]申请workspace空间。输入数据points规模为[B, N, 3]，point_features规模为[B, N, C]，当前版本mluOpTranspose_v2调用mluOpGetTransposeWorkspaceSize根据此参数计算不需额外workspace空间。
+points转置按其数据规模[3, B, N]申请workspace空间，point_features转置按其数据规模[B, C, N]申请workspace空间。输入数据points规模为[B, N, 3]，point_features规模为[B, N, C]，当前版本 transpose op 调用cnnlGetTransposeWorkspaceSize根据此参数计算不需额外workspace空间。
 
 2、流水设计
 

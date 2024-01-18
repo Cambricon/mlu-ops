@@ -33,6 +33,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 using std::vector;
 
@@ -397,16 +398,13 @@ static vector<int64_t> getDefaultStride(int64_t *dims, int dim) {
 mluOpStatus_t MLUOP_WIN_API
 mluOpContiguous(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
                 const void *input, void *output) {
-  auto default_stride = getDefaultStride(input_desc->dims, input_desc->dim);
-  mluOpTensorDescriptor_t temp_desc = nullptr;
-  mluOpCreateTensorDescriptor(&temp_desc);
-  mluOpSetTensorDescriptorEx_v2(temp_desc, input_desc->layout,
-                                input_desc->dtype, input_desc->dim,
-                                input_desc->dims, default_stride.data());
-  auto status_copy = mluOpCopy(handle, input_desc, input, temp_desc, output);
-  if (status_copy != MLUOP_STATUS_SUCCESS) {
-    KERNEL_CALL_CHECK("mluOpContiguous", "mluOpCopy", status_copy, "");
-  }
-  mluOpDestroyTensorDescriptor(temp_desc);
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_output_desc);
+  CALL_CNNL(
+      cnnlCopy(cnnl_handle, cnnl_input_desc, input, cnnl_output_desc, output));
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+  DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }

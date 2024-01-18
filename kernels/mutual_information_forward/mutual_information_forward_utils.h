@@ -40,12 +40,9 @@ __mlu_func__ void logAddVector(float *dst, float *src1, float *src2,
   __asm__ volatile(
       "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
       ".and(%[src1]), .ge(%[src2]), .mul(%[src3]),"
-      ".and([%[src4]]);\n" :: [dst] "r"((int32_t *)temp),
-      [ size ] "r"(data_num),
-      [ src0 ] "r"((int32_t *)src1),
-      [ src1 ] "r"(0x7fffffff),
-      [ src2 ] "r"(0x7f800001),
-      [ src3 ] "r"(-1),
+      ".and([%[src4]]);\n" ::[dst] "r"((int32_t *)temp),
+      [ size ] "r"(data_num), [ src0 ] "r"((int32_t *)src1),
+      [ src1 ] "r"(0x7fffffff), [ src2 ] "r"(0x7f800001), [ src3 ] "r"(-1),
       [ src4 ] "r"((int32_t *)src1));
   __bang_add(max_value, max_value, temp, data_num);
 
@@ -61,11 +58,9 @@ __mlu_func__ void logAddVector(float *dst, float *src1, float *src2,
   // mask eq with 0x3f800000(float32(1.0)), -> 0xffffffff
   __asm__ volatile(
       "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
-      ".eq(%[src1]), .mul(%[src2]);\n" :: [dst] "r"((int32_t *)mask),
-      [ size ] "r"(data_num),
-      [ src0 ] "r"((int32_t *)mask),
-      [ src1 ] "r"(0x3f800000),
-      [ src2 ] "r"(-1));
+      ".eq(%[src1]), .mul(%[src2]);\n" ::[dst] "r"((int32_t *)mask),
+      [ size ] "r"(data_num), [ src0 ] "r"((int32_t *)mask),
+      [ src1 ] "r"(0x3f800000), [ src2 ] "r"(-1));
   __bang_band((char *)dst, (char *)dst, (char *)mask, data_num * sizeof(float));
 
   // Reverse the mask bits, ((int)mask+1)*(-1), 0->-1, -1->0

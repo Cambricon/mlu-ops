@@ -74,9 +74,10 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
     deal_g = PAD_UP(grid_total / skip_n, num_levels * num_points);
     size_t id = taskId % skip_n;
     offset_g = id * deal_g;
-    deal_g = offset_g > grid_total ?
-                 0 : ((id + 1) * deal_g > grid_total ?
-                         deal_g = grid_total - offset_g : deal_g);
+    deal_g = offset_g > grid_total ? 0
+                                   : ((id + 1) *deal_g > grid_total
+                                          ? deal_g = grid_total - offset_g
+                                          : deal_g);
   }
   if (deal_g == 0) {
     return;
@@ -218,21 +219,21 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
       __bang_move((char *)valid_mask, (char *)auxiliary_a,
                   deal_num * sizeof(float));
       __bang_gt_scalar((float *)auxiliary_a, (float *)coord_y, -1.0, deal_num);
-      __bang_add((float *)valid_mask, (float *)valid_mask,
-                 (float *)auxiliary_a, deal_num);
+      __bang_add((float *)valid_mask, (float *)valid_mask, (float *)auxiliary_a,
+                 deal_num);
 
       // condition coordx < spatial_x / coordy < spatial_y
       __bang_cycle_le((float *)mask_bl, (float *)coord_x,
-                      (float *)spatial_x_float,
-                      deal_num, num_levels * num_points);
+                      (float *)spatial_x_float, deal_num,
+                      num_levels * num_points);
       __bang_cycle_le((float *)mask_br, (float *)coord_y,
-                      (float *)spatial_y_float,
-                      deal_num, num_levels * num_points);
+                      (float *)spatial_y_float, deal_num,
+                      num_levels * num_points);
 
-      __bang_add((float *)mask_bl, (float *)mask_bl,
-                 (float *)mask_br, deal_num);
-      __bang_add((float *)valid_mask, (float *)valid_mask,
-                 (float *)mask_bl, deal_num);
+      __bang_add((float *)mask_bl, (float *)mask_bl, (float *)mask_br,
+                 deal_num);
+      __bang_add((float *)valid_mask, (float *)valid_mask, (float *)mask_bl,
+                 deal_num);
       // all condition satisfied, value should be 4.
       __bang_eq_scalar((float *)valid_mask, (float *)valid_mask, 4, deal_num);
 
@@ -337,16 +338,16 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
       // if loc has nan/inf, fill invalid value with 0.
       // Note, althrough nan joins the compatution, the comparison returns
       // normal value.
-      __bang_cycle_and((float *)mask_tl, (float *)mask_tl,
-                       (float *)valid_mask, 4 * deal_num, deal_num);
+      __bang_cycle_and((float *)mask_tl, (float *)mask_tl, (float *)valid_mask,
+                       4 * deal_num, deal_num);
 
       // switch valid_mask to bit-type mask. 1 to 0xffffffff, 0 to 0x00000000
       // first we cast float32 to int32. then multiply -1,
       // whose hex is 0xffffffff
       __bang_float2int32_rd((int32_t *)valid_mask, (float *)valid_mask,
                             deal_num, 0);
-      __bang_mul_scalar((int32_t *)valid_mask, (int32_t *)valid_mask,
-                        -1, deal_num);
+      __bang_mul_scalar((int32_t *)valid_mask, (int32_t *)valid_mask, -1,
+                        deal_num);
 
       // calc inner point num
       __bang_mul_scalar((float *)weight_tl, (float *)mask_tl, (float)7.0,

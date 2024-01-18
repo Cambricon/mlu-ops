@@ -30,8 +30,7 @@
 namespace mluop {
 // This function is used to get high 32bit and low 32bit of param value.
 // The hardware hasn't support 8 bytes operation, so if the sizeof(dtype) is 8
-// bytes, sometimes we need to separate 8bytes to two 4bytes. Example:for
-// mluOpPad, users will pass the host pointer of padding_value to mluOpPad.
+// bytes, sometimes we need to separate 8bytes to two 4bytes. Example:
 // uint32_t high_value = 0, low_value = 0;
 // if (getSizeOfDataType(dtype) == sizeof(int64_t)) {
 //   getLowAndHighValueFrom64Bits(*(int64_t*)padding_value_ptr, &high_value,

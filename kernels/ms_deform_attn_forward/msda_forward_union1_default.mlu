@@ -188,7 +188,8 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
       taskId < block_num_rem
           ? (batch_size * num_queries * num_heads) / taskDim + 1
           : (batch_size * num_queries * num_heads) / taskDim;
-  for (int32_t cur_idx = idx_start; cur_idx < idx_start + block_num_per_core; ++cur_idx) {  // NOLINT
+  for (int32_t cur_idx = idx_start; cur_idx < idx_start + block_num_per_core;
+       ++cur_idx) {
     /*
       cur_idx = batch_idx * num_queries * num_heads +
                 query_idx * num_heads + head_idx
@@ -258,8 +259,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
                 [(level_idx * num_points + point_idx + 1) * 2];
             loc_h = ((T *)data_sampling_loc_gdram_start)
                 [(level_idx * num_points + point_idx + 1) * 2 + 1];
-            weight_next_point = ((T *)data_attn_weight_gdram_start)
-                [level_idx * num_points + point_idx + 1];
+            weight_next_point =
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];
             x_next_point = loc_w * spatial_w_next_point - 0.5;
             y_next_point = loc_h * spatial_h_next_point - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&
@@ -285,13 +287,13 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
                 [(level_idx * num_points + point_idx + 1) * 2];
             loc_h = ((T *)data_sampling_loc_gdram_start)
                 [(level_idx * num_points + point_idx + 1) * 2 + 1];
-            weight_next_point = ((T *)data_attn_weight_gdram_start)
-                [level_idx * num_points + point_idx + 1];
+            weight_next_point =
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];
             x_next_point = loc_w * spatial_w - 0.5;
             y_next_point = loc_h * spatial_h - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&
-                y_next_point < spatial_h &&
-                x_next_point < spatial_w) {
+                y_next_point < spatial_h && x_next_point < spatial_w) {
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
@@ -389,8 +391,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
                 [(level_idx * num_points + point_idx + 1) * 2];
             loc_h = ((T *)data_sampling_loc_gdram_start)
                 [(level_idx * num_points + point_idx + 1) * 2 + 1];
-            weight_next_point = ((T *)data_attn_weight_gdram_start)
-                [level_idx * num_points + point_idx + 1];
+            weight_next_point =
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];
             x_next_point = loc_w * spatial_w_next_point - 0.5;
             y_next_point = loc_h * spatial_h_next_point - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&
@@ -416,8 +419,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
                 [(level_idx * num_points + point_idx + 1) * 2];
             loc_h = ((T *)data_sampling_loc_gdram_start)
                 [(level_idx * num_points + point_idx + 1) * 2 + 1];
-            weight_next_point = ((T *)data_attn_weight_gdram_start)
-                [level_idx * num_points + point_idx + 1];
+            weight_next_point =
+                ((T *)data_attn_weight_gdram_start)[level_idx * num_points +
+                                                    point_idx + 1];
             x_next_point = loc_w * spatial_w - 0.5;
             y_next_point = loc_h * spatial_h - 0.5;
             if (y_next_point > -1 && x_next_point > -1 &&

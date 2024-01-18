@@ -33,8 +33,7 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
 
 __mlu_func__ void GetPointBatchIdx(int *nram_batch_idx,
                                    const int pt_idx_cur_loop,
-                                   const int num_points,
-                                   const int deal_num) {
+                                   const int num_points, const int deal_num) {
   int cur_loop_batch_idx_pt_num = 0;
   int cur_loop_batch_pt_idx_begin = pt_idx_cur_loop;
   int cur_loop_batch_pt_idx_end = pt_idx_cur_loop + deal_num - 1;

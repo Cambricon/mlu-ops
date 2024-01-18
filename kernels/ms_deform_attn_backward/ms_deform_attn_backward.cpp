@@ -31,6 +31,7 @@
 #include "core/type.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 char API[] = "[mluOpMsDeformAttnBackward]";
 
@@ -295,23 +296,37 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
 
   if (calc_grad_loc_weight_flag) {
     uint64_t fill_value = 0x0;
-    PARAM_CHECK(API,
-                MLUOP_STATUS_SUCCESS ==
-                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                 grad_value_desc, grad_value));
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_value_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_value));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
   }
   if (calc_grad_value_flag) {
     uint64_t fill_value = 0x0;
-    PARAM_CHECK(API,
-                MLUOP_STATUS_SUCCESS ==
-                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                 grad_sampling_loc_desc, grad_sampling_loc));
-    PARAM_CHECK(API,
-                MLUOP_STATUS_SUCCESS ==
-                    mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                                 grad_attn_weight_desc, grad_attn_weight));
+    {
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_sampling_loc_desc,
+                                                   cnnl_output_desc);
+      CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                            cnnl_output_desc, grad_sampling_loc));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    }
+
+    {
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_attn_weight_desc,
+                                                   cnnl_output_desc);
+      CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                            cnnl_output_desc, grad_attn_weight));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    }
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
   }
@@ -319,23 +334,40 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
   }
-  VLOG(5) << "[mluOpMsDeformAttnBackward] mluOpFill_v3 start.";
+  VLOG(5) << "[mluOpMsDeformAttnBackward] cnnlFill_v3 start.";
   uint64_t fill_value = 0x0;
 
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                    &fill_value, grad_value_desc, grad_value));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_value_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_value));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
-  PARAM_CHECK(API,
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               grad_sampling_loc_desc, grad_sampling_loc));
-  PARAM_CHECK(API,
-              MLUOP_STATUS_SUCCESS ==
-                  mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               grad_attn_weight_desc, grad_attn_weight));
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_sampling_loc_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_sampling_loc));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
-  VLOG(5) << "[mluOpMsDeformAttnBackward] mluOpFill_v3 end.";
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_attn_weight_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_attn_weight));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+
+  VLOG(5) << "[mluOpMsDeformAttnBackward] cnnlFill_v3 end.";
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   const int32_t spatial_size = value_desc->dims[1];

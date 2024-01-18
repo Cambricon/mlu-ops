@@ -31,6 +31,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 static void policyFunc(const mluOpHandle_t handle, const int samples,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -196,11 +197,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardGate(
   if (zero_element == true) {
     VLOG(5) << "[mluOpMoeDispatchBackwardGate] Skip zero element tensor.";
     if (samples > 0) {
-      VLOG(5) << "mluopFill start.";
+      VLOG(5) << "cnnlFill_v3 start.";
       const size_t fill_value = 0x0;
-      MLUOP_CHECK(mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST, &fill_value,
-                               grad_gates_desc, grad_gates));
-      VLOG(5) << "mluopFill end.";
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_gates_desc,
+                                                   cnnl_output_desc);
+      CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                            cnnl_output_desc, grad_gates));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+      VLOG(5) << "cnnlFill_v3 end.";
     }
     return MLUOP_STATUS_SUCCESS;
   }

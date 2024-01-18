@@ -32,6 +32,7 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
+#include "kernels/utils/cnnl_helper.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
@@ -132,12 +133,18 @@ mluOpStatus_t mluOpBorderAlignBackward(
   cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type);
 
-  VLOG(5) << "[mluOpBorderAlignBackward] mluOpFill_v3 start.";
+  VLOG(5) << "[mluOpBorderAlignBackward] cnnlFill_v3 start.";
   uint64_t fill_value = 0x0;
-  PARAM_CHECK(API, MLUOP_STATUS_SUCCESS ==
-                       mluOpFill_v3(handle, MLUOP_POINTER_MODE_HOST,
-                                    &fill_value, grad_input_desc, grad_input));
-  VLOG(5) << "[mluOpBorderAlignBackward] mluOpFill_v3 end.";
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_input_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                          cnnl_output_desc, grad_input));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  VLOG(5) << "[mluOpBorderAlignBackward] cnnlFill_v3 end.";
   mluOpDataType_t input_dtype = grad_output_desc->dtype;
 
   VLOG(5) << "Launch Kernel KernelBorderAlignBackward<<<Union"

@@ -30,6 +30,7 @@
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
+#include "kernels/utils/cnnl_helper.h"
 
 static void policyFunc(const mluOpHandle_t handle, const int num_points_total,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
@@ -155,8 +156,29 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
-  uint32_t num_points_total = batch_size * num_points;
+  const float output_features_init_vaule = 0;
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_features_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &output_features_init_vaule, cnnl_output_desc,
+                          output_features));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+  const int pos_memo_init_vaule = -1;
+  {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(pos_memo_desc,
+                                                 cnnl_output_desc);
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                          &pos_memo_init_vaule, cnnl_output_desc, pos_memo));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
 
+  uint32_t num_points_total = batch_size * num_points;
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
 

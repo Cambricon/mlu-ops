@@ -37,7 +37,7 @@ MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开
 MLU-OPS 提供了以下功能：
 - [算子精度标准](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Accuracy-Acceptance-Standard.md)
 - [算子性能标准](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md)
-- [Op List (高质量实现 BANG C 算子)](https://github.com/Cambricon/mlu-ops/blob/master/docs/bangc-docs/BANGC-OPS-OpList.md)
+- [Op List (高质量实现 BANG C 算子)](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-OpList.md)
 - [CNNL基础算子使用](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-How-To-Use-CNNL-API.md)
 - [测试模块 GTest](https://github.com/cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md) 支持 [内存泄露测试](https://github.com/cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md#6-%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F%E6%A3%80%E6%B5%8B)、[代码覆盖率测试](https://github.com/cambricon/mlu-ops/blob/master/docs/GTest-User-Guide-zh.md#7-%E4%BB%A3%E7%A0%81%E8%A6%86%E7%9B%96%E7%8E%87)
 - [Gen-case (运行时测例生成工具)](https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md)
