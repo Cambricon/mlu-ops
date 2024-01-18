@@ -20,7 +20,7 @@
     </a>
   </b>
 </div>
-  
+
 <div>&nbsp;</div>
 
 [![ci](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml/badge.svg)](https://github.com/Cambricon/mlu-ops/actions/workflows/ci.yaml)
@@ -54,7 +54,7 @@ MLU-OPS 提供了以下功能：
 - 外部链接库：
   - libxml2-dev、libprotobuf-dev<=3.8.0、protobuf-compiler<=3.8.0、llvm-6.0-dev
 - Python环境：
-  - 依赖Python-3.8.0版本
+  - 依赖Python-3版本（默认版本 python 3.8.0，最低要求 python 3.6.0）
 
 
 ## 依赖环境准备

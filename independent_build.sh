@@ -71,6 +71,32 @@ add_mlu_arch_support () {
   MLUOP_MLU_ARCH_LIST+=${bang_arch}
 }
 
+# check python
+python3_version_check() {
+  cur_python_ver=(`python3 --version`)
+  stat=$?
+  if [ ${stat} != 0 ]; then
+    echo "Not found python3"
+    exit ${stat}
+  fi
+  required_python_version=$(cat build.property|grep "python"|cut -d ':' -f2|cut -d '"' -f2)
+  if [[ "$(printf '%s\n' "${cur_python_ver[1]}" "${required_python_version}" \
+        | sort -V | head -n1)" == "${cur_python_ver[1]}" ]]; then
+    echo "python version should no less than ${required_python_version}"
+    exit 1
+  fi
+}
+python3_version_check
+
+build_requires_version_check() {
+  # check build_requires
+  python3 version_pre_check.py check_build_requires
+  stat=$?
+  if [ ${stat} != 0 ]; then
+    exit ${stat}
+  fi
+}
+
 usage () {
     echo "USAGE: ./independent_build.sh <options>"
     echo
@@ -99,33 +125,21 @@ usage () {
 }
 
 prepare_cntoolkit () {
-  python2 json_parser.py
-  output='dependency.txt'
-  MODULE_VERSION=""
   PACKAGE_ARCH="$(uname -m)"
-  
-  # dep-package-version
-  PACKAGE_MODULES=`cat $output | awk -F ':' '{print $1}'`
-  prog_log_info "PACKAGE_MODULES: $PACKAGE_MODULES"
-
-  PACKAGE_BRANCH=`cat $output | awk -F ':' '{print $2}'`
-  prog_log_info "PACKAGE_BRANCH: $PACKAGE_BRANCH"
-
-  PACKAGE_MODULE_VERS=`cat $output | awk -F ':' '{print $3}'`
-  prog_log_info "PACKAGE_MODULE_VERS: $PACKAGE_MODULE_VERS"
-
   PACKAGE_SERVER="http://daily.software.cambricon.com"
   PACKAGE_OS="Linux"
 
-
-  arr_modules=(`echo $PACKAGE_MODULES`)
-  arr_branch=(`echo $PACKAGE_BRANCH`)
-  arr_vers=(`echo $PACKAGE_MODULE_VERS`)
+  # read build.property, print cntoolkit and cnnl dep-package-version
+  build_requires=(`python version_pre_check.py get_build_requires`)
+  # build_requires is an array(cntoolkit release cntoolkit-version cnnl release cnnl-version)
+  arr_modules=(${build_requires[0]} ${build_requires[3]})
+  arr_branch=(${build_requires[1]} ${build_requires[4]})
+  arr_vers=(${build_requires[2]} ${build_requires[5]})
 
   n=${#arr_vers[@]}
 
   sub_pkg_to_extract=(cncc cnas cnperf cngdb cndrv cnrt cnbin cnpapi cndev cntoolkit-cloud)
-      
+
   if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
     rm -rf ${PACKAGE_EXTRACT_DIR}
   fi
@@ -142,7 +156,7 @@ prepare_cntoolkit () {
               REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
               prog_log_info "${arr_modules[$i]} url: ${REAL_PATH}"
               wget -A deb -m -p -E -k -K -np -q --reject-regex 'static'  ${PACKAGE_PATH}
-              
+
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
               for filename in ../${REAL_PATH}*.deb; do
                 dpkg -x --force-overwrite ${filename} .
@@ -290,7 +304,7 @@ if [ $# != 0 ]; then
         export BUILD_JOBS=$1
         shift
         ;;
-      -t) 
+      -t)
         shift
         export RELEASE_TYPE=$1
         export MLUOP_PACKAGE_INFO_SET="ON"
@@ -371,6 +385,9 @@ if [ "${MLUOP_BUILD_PREPARE_ONLY}" = "ON" ]; then
   exit -1
 elif [ "${MLUOP_BUILD_PREPARE}" = "ON" ]; then
   prepare_cntoolkit
+  build_requires_version_check
+else
+  build_requires_version_check
 fi
 
 if [ ! -z "${NEUWARE_HOME}" ]; then
