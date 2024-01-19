@@ -17,8 +17,7 @@ Cambricon MLU-OPS具有以下特点：
 
   -  常见的网络算子：
 
-     * AddN、Abs、Copy、Div、Expand、Fill、Log、MatMul、Sqrt、SqrtBackward
-     * Reduce、GatherNd、ScatterNd、Transpose、Unique
+     * Abs、Div、Log、Sqrt、SqrtBackward
 
   -  领域类算子：
 
