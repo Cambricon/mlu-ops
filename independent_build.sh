@@ -453,6 +453,4 @@ if [ "${MLUOP_PACKAGE_INFO_SET}" = "ON" ]; then
 
   DEPS_DIR=`echo ${PACKAGE_SERVER} | awk -F '//' '{print $2}'`
   rm -rf $DEPS_DIR
-
-  rm dependency.txt
 fi
