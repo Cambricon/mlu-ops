@@ -176,7 +176,7 @@ class roiaware_pool3d_forward : public testing::Test {
   }
 
   mluOpStatus_t compute() {
-    mluOpStatus_t status = mluOpRoiawarePool3dForward(
+    mluOpStatus_t status = mluOpRoiAwarePool3dForward(
         handle_, pool_method_, boxes_num_, pts_num_, channels_, rois_desc_,
         rois_, pts_desc_, pts_, pts_feature_desc_, pts_feature_, workspace_,
         workspace_size_, max_pts_each_voxel_, out_x_, out_y_, out_z_,

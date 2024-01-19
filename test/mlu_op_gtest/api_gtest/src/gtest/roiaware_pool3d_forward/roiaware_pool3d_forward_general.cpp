@@ -131,14 +131,14 @@ class roiaware_pool3d_forward_general
       return true;
     }
     mluOpStatus_t status;
-    status = mluOpGetRoiawarePool3dForwardWorkspaceSize(
+    status = mluOpGetRoiAwarePool3dForwardWorkspaceSize(
         handle_, rois_desc_, pts_desc_, pts_feature_desc_, &workspace_size_);
     if (status != MLUOP_STATUS_SUCCESS) {
       destroy();
       return expected_status_ == status;
     }
     GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
-    status = mluOpRoiawarePool3dForward(
+    status = mluOpRoiAwarePool3dForward(
         handle_, pool_method_, boxes_num_, pts_num_, channels_, rois_desc_,
         rois_, pts_desc_, pts_, pts_feature_desc_, pts_feature_, workspace_,
         workspace_size_, max_pts_each_voxel_, out_x_, out_y_, out_z_,
