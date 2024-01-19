@@ -21,21 +21,6 @@ mluOpAbs
 - ``i`` 表示一个多元组的索引，例如在4维时可以表示（n,c,h,w）。
 - ``xi`` 和 ``yi`` 表示多元组中 ``i`` 索引处的元素。
 
-.. _add_n:
-
-mluOpAddN
------------------------------
-
-实现多个张量的加法运算。
-
-公式如下：
-
-.. math::
-
-     Y=\sum_{n=0}^{N-1}X_n
-
-注：X表示包含N个形状相同的张量的集合。
-
 .. _active_rotated_filter_forward:
 
 mluOpActiveRotatedFilterForward
@@ -83,12 +68,6 @@ mluOpCarafeBackward
 mluOpCarafeForward
 ----------------------------------
 一种通用、轻量且非常有效的上采样算法，在物体识别、语义分割、图像修复等任务上都展示出很好的效果。
-
-.. _copy:
-
-mluOpCopy
------------------------------
-该算子主要在语音网络中使用，对数据块进行 device 到 device 的拷贝。
 
 .. _dcn_backward_data:
 
@@ -164,21 +143,9 @@ mluOpDiffIouRotatedSortVerticesForward
 该算子为 ``diff_iou_rotated`` 整个计算过程中的一步，完成对两个box相交构成的多边形有效顶点排序（参考算法按逆时针排序所有有效顶点），输出排序后顶点索引。
 示意图如下：
 
-.. figure:: ../images/sort_vertices.*
+.. figure:: ../images/sort_vertices.png
 
    顶点逆时针排序示意图
-
-.. _expand:
-
-mluOpExpand
------------------------------
-该算子应用于各种需要广播的场景，实现张量的维度扩展。算子需要输出维度与输入维度符合广播扩展标准，根据输入输出的维度，将输入数据复制并扩展成输出维度。
-
-.. _fill:
-
-mluOpFill
------------------------------
-创建一个所有元素都设置为 value 的张量，不支持广播。给定一个张量 tensor，以及值为 value 的 Scale 标量，该操作会返回一个所有元素设置为 value 的 tensor 对象，其与输入 tensor 具有相同的类型和形状。
 
 .. _focal_loss_sigmoid_forward:
 
@@ -240,23 +207,6 @@ mluOpFocalLossSigmoidBackward
    -(1-\alpha)*p^\gamma*(\gamma*(1-p)*log(1-p)-p)*weight[target[n]]*grad\_output & otherwise
    \end{cases}
    \end{array}
-
-.. _gather_nd:
-
-mluOpGatherNd
---------------
-
-用于输入数据的抽取后聚集，即将一个张量根据其indices抽取其中部分数据，最后将抽取出的数据聚合为一个输出张量，是ScatterNd的逆运算。
-
-与Gather算子的区别是，GatherNd算子可以按照从高维开始以多维坐标的索引方式抽取，而Gather算子只能按照一维方式索引抽取。
-
-设输入为 ``params``，index为 ``indices``，输出为output。
-其中 ``indices`` 的最后一维是坐标，其他维的乘积则代表坐标的个数N，每一个坐标值（x,y,z...）映射到输入数据的高维，通过坐标要抽取的数据可称为是输入数据的低维，
-最后将抽取的N个数据块聚合为输出张量。则output的shape应满足如下公式：
-
-.. math::
-
-   indices.shape[:-1] + params.shape[indices.shape[-1]:]
 
 .. _generate_proposal_v2:
 
@@ -333,26 +283,6 @@ mluOpMaskedIm2colForward
 ---------------------------------
 
 根据mask坐标信息将feature数据按列展开。
-
-.. _mat_mul:
-
-mluOpMatMul
----------------------------------
-
-对张量进行矩阵乘计算。
-
-公式如下：
-
-.. math::
-
-   D=alpha*(op(A)*op(B))+beta*C
-
-其中：
-
-- ``op(A)`` 代表对A矩阵进行转置或者不进行操作，``op(A)`` 也是一个矩阵。
-- ``op(A)*op(B)`` 代表对两个矩阵进行矩阵乘。
-- C可以和D的指针地址相同，此时为原位操作。
-- beta!=0时才会计算beta*C。
 
 .. _moe_dispatch_backward_data:
 
@@ -433,12 +363,6 @@ NMS的算法简述：
 mluOpNmsRotated
 -----------------------------
 计算旋转box的非极大值抑制。
-
-.. _pad:
-
-mluOpPad
-----------------------------------
-该算子功能是按照CONSTANT的方式根据填充大小和填充值对tensor的外围进行扩展或者裁切，主要用在反向传播中的形状补齐。
 
 .. _points_in_boxes:
 
@@ -574,144 +498,6 @@ mluOpPsRoiPoolForward
 -----------------------------
 一种针对位置敏感区域的池化方式。psroipool的操作与roipool类似，不同之处在于不同空间维度输出的图片特征来自不同的feature map channels，且对每个小区域进行的是Average Pooling，不同于roipool的Max Pooling。对于一个输出 k * k 的结果，不同空间维度的特征取自输入feature map中不同的组，即将输入的feature map在通道维度均匀分为k * k组，每组的channel数与输出的channel一致。
 
-.. _reduce:
-
-mluOpReduce
-------------
-
-根据axis参数，对相应维度的元素进行累加、累乘、求最大、求最小、求均值等操作。
-
-公式如下：
-
-以 axis = 0 为例， 其中 ``X`` 和 ``Y`` 为 ``shape=(I,J,K,M,N)`` 的向量，``x`` 为 ``X`` 中第 ``(i,j,k,m,n)`` 个元素 ，``y`` 为 ``Y`` 中第 ``(0,j,k,m,n)`` 个元素。
-
-reduce_sum 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceSum(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}x_{(i,j,k,m,n)}
-   \end{aligned}
-
-reduce_mean 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceMean(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\frac{\sum_{i=0}^{I}x_{(i,j,k,m,n)}}{I}
-   \end{aligned}
-
-reduce_prod 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceProd(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\prod_{i=0}^{I}x_{(i,j,k,m,n)}
-   \end{aligned}
-
-reduce_asum 公式如下：
-
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceASum(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}|x_{(i,j,k,m,n)}|
-   \end{aligned}
-
-reduce_sumsq 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceSumSq(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}(x_{(i,j,k,m,n)})^2
-   \end{aligned}
-
-reduce_norm1 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceNorm1(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sum_{i=0}^{I}\mid x_{(i,j,k,m,n)}\mid
-   \end{aligned}
-
-reduce_norm2 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceNorm2(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\sqrt{\sum_{i=0}^{I}x_{(i,j,k,m,n)}^2}
-   \end{aligned}
-
-reduce_normp 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceNormP(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=(\sum_{i=0}{I}x_{(i,j,k,m,n)}^p)(1/p)
-   \end{aligned}
-
-reduce_max 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{I,J,K,M,N}=ReduceMax(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\max_{i=0}^{I}{x_{(i,j,k,m,n)}}
-   \end{aligned}
-
-reduce_min 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{I,J,K,M,N}=ReduceMin(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\min_{i=0}^{I}{x_{(i,j,k,m,n)}}
-   \end{aligned}
-
-reduce_max_last_index 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{I,J,K,M,N}=ReduceMaxLastIndex(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\max_{i=0}^{I}{x_{(i,j,k,m,n)}}
-   \end{aligned}
-
-reduce_min_last_index 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{I,J,K,M,N}=ReduceMinLastIndex(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)}=\min_{i=0}^{I}{x_{(i,j,k,m,n)}}
-   \end{aligned}
-
-reduce_and 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceAnd(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)} = x_{(0,j,k,m,n)} \&\&{i=1}^{I} x{(i,j,k,m,n)}
-   \end{aligned}
-
-reduce_or 公式如下：
-
-.. math::
-
-   \begin{aligned}
-   Y_{(I,J,K,M,N)}=ReduceOr(X_{(I,J,K,M,N)}),
-   y_{(0,j,k,m,n)} = x_{(0,j,k,m,n)} ||{i=1}^{I} x{(i,j,k,m,n)}
-   \end{aligned}
-
 .. _roi_align_backward:
 
 mluOpRoiAlignBackward
@@ -803,13 +589,6 @@ mluOpRotatedFeatureAlignForward
 ----------------------------------
 该算子是利用旋转锚点框中的位置信息对输入特征图中的像素值进行特征插值矫正，逐像素的重建输入特征图特征信息，该特征插值方法是根据旋转锚点的位置信息进行一次或是五次双线性插值。
 
-.. _scatter_nd:
-
-mluOpScatterNd
-----------------
-
-用于输入数据的抽取后分发，即将一个张量根据其indices将updates散布到新的张量（初始为零）。该算子根据索引对给定shape的零张量中的单个值或切片应用稀疏updates来创建新的张量。是GatherNd的逆运算。如果indices中存在重复>值，那么与之对应updates中的值或切片会在output上进行累加运算。对于indices中的非法值（比如负数或者超过输出边界的值）自动跳过，不进行报错。
-
 .. _sqrt:
 
 mluOpSqrt
@@ -881,30 +660,6 @@ mluOpTinShiftForward
 示例中，输入为[1, 6, 6, 1]，偏移 ``Shifts`` 为[-1, 0, 2]。
 输入按照通道分为3组，每组含有2个通道。第一组的偏移量为-1，第一组内的数据整体往左移1个时间序列；第二组的偏移量为，第二组内的数据保持不变；第三组的偏移量为2，第三组内的数据整体往右移2个时间序列。
 
-.. _transpose:
-
-mluOpTranspose
-----------------
-维度转换。公式如下：
-
-.. math::
-   out_tensor.shape[i] = input_tensor.shape(permute[i])
-
-其中 ``permute`` 为用户希望的对输入张量转置的规则。例如 ``input shape = (11,22,33), permute[3] = {2,1,0}``，则输出 ``output shape = [33,22,11]``。
-
-.. _unique:
-
-mluOpUnique
--------------
-
-对一维数组去重。公式如下：
-
-.. math::
-
-   y[index[i]] = x[i] for i in range(len(x))
-
-其中 ``x`` 表示输入数据，``y`` 表示输出数据。
-
 .. _voxel_pooling_forward:
 
 mluOpVoxelPoolingForward
@@ -974,55 +729,3 @@ mluOpSyncBatchnormBackwardReduce
 mluOpSyncBatchNormBackwardElemt
 ---------------------------------
 该算子用来计算输入的梯度，与 :ref:`sync_batchnorm_backward_reduce` 共同实现了sync_batchnorm_backward。
-
-.. _transform:
-
-mluOpTransform
----------------------------------
-该算子Transform算子用于对数据做转换；
-
-.. math::
- 
-  y_i = alpha \times x_i + beta
-
-其中 ``i`` 表示一个多元组索引，表示多维张量，例如在4维时可以表示(n,c,h,w)。
-``x_i`` 和 ``y_i`` 表示多元组中 ``i`` 索引处的元素。
-
-.. _strided_slice:
-
-mluOpStridedSlice
------------------------
-该算子从给定input张量中提取一个 ``(end - begin) / stride`` 的片段。从指定的位置开始 ``begin`` ，每隔 ``stride`` 个索引，直到所有维度都不小于 ``end`` 结束。当 ``stride`` 为负数时，会导致反向切片。公式如下：
-
-.. math::
-
-   output = input[begin[0]:end[0]:stride[0],
-                 ...,
-                 begin[N-1]:end[N-1]:stride[N-1]]
-
-.. note::
-
- - input为 ``N`` 个维度的张量。
- - output为 ``N`` 个维度的张量。
- - ``begin`` ， ``end`` 和 ``stride`` 均为长度为 ``N`` 的数组，分别表示每个维度切片的起始索引，结束索引和步幅。
-
-.. _concat:
-
-mluOpConcat
-----------------------
-该算子将多个张量在某一维度上进行拼接，输出一个张量。公式如下：
-
-.. math::
-
-   input_1 = [DIM_0, ..., axis_1, ..., DIM_(N-1)],
-   ... ,
-   input_M = [DIM_0, ..., axis_m, ..., DIM_(N-1)]
-
-   output = [DIM_0, ... , sum(axis_1, ..., axis_m), ..., DIM_(N-1)]
-
-.. note::
-
- - ``M`` 为input的个数。
- - ``N`` 为每个input和output的维度数。
- - ``sum(axis_1, ..., axis_m)`` 表示对待拼接维度求和，output的拼接维度大小为所有input拼接维度的总和。
- - 除拼接维度外，其余维度的大小需要相等。
