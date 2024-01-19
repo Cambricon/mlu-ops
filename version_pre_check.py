@@ -11,6 +11,10 @@ modules = ["cntoolkit", "cnnl"]
 # NEUWARE_HOME = env_vars["NEUWARE_HOME"]
 env_vars = dict(os.environ)
 
+# version check status
+version_status = {"not_found_version":2, "version_check_failed": 1,
+                  "success": 0}
+
 
 def get_build_requires(print_mode=1):
     global required_version
@@ -29,8 +33,8 @@ def get_build_requires(print_mode=1):
 def check_cntoolkit():
     toolkit_ver_path = env_vars["NEUWARE_HOME"] + "/version.txt"
     if not os.path.exists(toolkit_ver_path):
-        print("Not found toolkit")
-        exit(2)
+        print("Warning: Not found toolkit version")
+        return version_status["not_found_version"]
 
     # check cntoolkit
     with open(toolkit_ver_path) as tk_f:
@@ -42,19 +46,21 @@ def check_cntoolkit():
                     cur_tk_ver
                 ):
                     print(
-                        "The version of cntoolkit must be at least "
+                        "Warning: The version of cntoolkit needs to be at least "
                         + required_version["cntoolkit"]
                         + ", but local version is "
                         + cur_tk_ver
                     )
-                    exit(1)
+                    return version_status["version_check_failed"]
+
+    return version_status["success"]
 
 
 def check_cnnl():
     cnnl_ver_pre = env_vars["NEUWARE_HOME"] + "/lib64/"
     if not os.path.exists(cnnl_ver_pre):
-        print("Not found cnnl")
-        exit(2)
+        print("Warning: Not found cnnl version")
+        return version_status["not_found_version"]
 
     # check cnnl
     for filePath in os.listdir(cnnl_ver_pre):
@@ -64,64 +70,71 @@ def check_cnnl():
                 cur_cnnl_ver = filePath[11:]
                 if LooseVersion(required_version["cnnl"]) > LooseVersion(cur_cnnl_ver):
                     print(
-                        "The version of cnnl must be at least "
+                        "Warning: The version of cnnl needs to be at least "
                         + required_version["cnnl"]
                         + ", but local version is "
                         + cur_cnnl_ver
                     )
-                    exit(1)
+                    return version_status["version_check_failed"]
+
+    return version_status["success"]
 
 
 def check_driver():
     sys_out = os.popen("cnmon version").readline()
     if len(sys_out) == 0:
-        print("Warning: not found cnmon.")
-        print("If compilation failed, please check driver version")
-        return
+        print("Warning: Not found driver version.")
+        return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(":")[-1]
     if LooseVersion(required_version["driver"]) > LooseVersion(sys_out):
         print(
-            "The version of driver must be at least "
+            "Warning: The version of driver needs to be at least "
             + required_version["driver"]
             + ", but local version is "
             + sys_out
         )
-        exit(1)
+        return version_status["version_check_failed"]
+
+    return version_status["success"]
 
 
 def check_protoc():
     sys_out = os.popen("protoc --version").readline()
     if len(sys_out) == 0:
-        print("Not found protoc")
-        exit(2)
+        print("Warning: Not found protoc version")
+        return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(" ")[-1]
-    if LooseVersion(required_version["protoc"]) < LooseVersion(sys_out):
+    if LooseVersion(required_version["protoc"]) > LooseVersion(sys_out):
         print(
-            "The version of protoc must be at most "
+            "Warning: The version of protoc needs to be at most "
             + required_version["protoc"]
             + ", but local version is "
             + sys_out
         )
-        exit(1)
+        return version_status["version_check_failed"]
+
+    return version_status["success"]
 
 
 def check_libxml2():
     sys_out = os.popen("xml2-config --version").readline()
     if len(sys_out) == 0:
-        print("Not found libxml2")
-        exit(2)
+        print("Warning: Not found libxml2 version")
+        return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n")
     if LooseVersion(required_version["libxml2"]) > LooseVersion(sys_out):
         print(
-            "The version of libxml2 must be at least "
+            "Warning: The version of libxml2 needs to be at least "
             + required_version["libxml2"]
             + ", but local version is "
             + sys_out
         )
-        exit(1)
+        return version_status["version_check_failed"]
+
+    return version_status["success"]
 
 
 def check_eigen3():
@@ -130,8 +143,8 @@ def check_eigen3():
     elif os.path.exists("/usr/include/eigen3/Eigen/src/Core/util/Macros.h"):
         h_file = open("/usr/include/eigen3/Eigen/src/Core/util/Macros.h")
     else:
-        print("Not found eigen3")
-        exit(2)
+        print("Warning: Not found eigen3 version")
+        return 2
 
     line = h_file.readline()
     eigen_ver = ""
@@ -147,22 +160,30 @@ def check_eigen3():
 
     if LooseVersion(required_version["eigen3"]) > LooseVersion(eigen_ver):
         print(
-            "The version of eigen3 must be at least "
+            "Warning: The version of eigen3 needs to be at least "
             + required_version["eigen3"]
             + ", but local version is "
             + eigen_ver
         )
-        exit(1)
+        return 1
+
+    return 0
 
 
 def check_build_requires():
     get_build_requires(0)
-    check_cntoolkit()
-    check_cnnl()
-    check_driver()
-    check_protoc()
-    check_libxml2()
-    check_eigen3()
+    if check_cntoolkit() != version_status["success"]:
+        print("If compilation failed, please check cntoolkit version")
+    if check_cnnl() != version_status["success"]:
+        print("If compilation failed, please check cnnl version")
+    if check_driver() != version_status["success"]:
+        print("If compilation failed, please check driver version")
+    if check_protoc() != version_status["success"]:
+        print("If compilation failed, please check protoc version")
+    if check_libxml2() != version_status["success"]:
+        print("If compilation failed, please check libxml2 version")
+    if check_eigen3() != version_status["success"]:
+        print("If compilation failed, please check eigen3 version")
 
 
 argvs = sys.argv[1:]

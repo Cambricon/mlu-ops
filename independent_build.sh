@@ -76,14 +76,16 @@ python3_version_check() {
   cur_python_ver=(`python3 --version`)
   stat=$?
   if [ ${stat} != 0 ]; then
-    echo "Not found python3"
-    exit ${stat}
+    echo "Warning: Not found python3"
+    echo "If compilation failed, please check python version"
+    return
   fi
   required_python_version=$(cat build.property|grep "python"|cut -d ':' -f2|cut -d '"' -f2)
   if [[ "$(printf '%s\n' "${cur_python_ver[1]}" "${required_python_version}" \
         | sort -V | head -n1)" == "${cur_python_ver[1]}" ]]; then
-    echo "python version should no less than ${required_python_version}"
-    exit 1
+    echo "Warning: python version should no less than ${required_python_version}"
+    echo "If compilation failed, please check python version"
+    return
   fi
 }
 python3_version_check
@@ -91,10 +93,6 @@ python3_version_check
 build_requires_version_check() {
   # check build_requires
   python3 version_pre_check.py check_build_requires
-  stat=$?
-  if [ ${stat} != 0 ]; then
-    exit ${stat}
-  fi
 }
 
 usage () {
