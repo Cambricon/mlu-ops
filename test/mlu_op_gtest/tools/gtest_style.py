@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import io
 import sys
 import re
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     malloc_error = []
     for cpp in all_cpps:
         # print("Checking %s \n" %(cpp))
-        fin = open(cpp, "r")
+        fin = io.open(cpp, "r", encoding="utf-8")
         lines = fin.readlines()
         func_mark = find_func(lines)
         if len(func_mark) == 0:
