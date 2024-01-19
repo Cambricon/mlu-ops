@@ -179,7 +179,7 @@ void RoiawarePool3dBackwardExecutor::compute() {
 
   interface_timer_.start();
 
-  MLUOP_CHECK(mluOpRoiawarePool3dBackward(
+  MLUOP_CHECK(mluOpRoiAwarePool3dBackward(
       handle_, pool_method_, boxes_num_, out_x_, out_y_, out_z_, channels_,
       max_pts_each_voxel_, desc_pts_idx_of_voxels_, dev_pts_idx_of_voxels_,
       desc_argmax_, dev_argmax_, desc_grad_out_, dev_grad_out_, desc_grad_in_,
