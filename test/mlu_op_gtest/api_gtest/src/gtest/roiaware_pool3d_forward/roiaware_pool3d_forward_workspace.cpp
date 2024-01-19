@@ -52,7 +52,7 @@ class roiaware_pool3d_forward_workspace : public testing::Test {
   }
 
   mluOpStatus_t compute() {
-    mluOpStatus_t status = mluOpGetRoiawarePool3dForwardWorkspaceSize(
+    mluOpStatus_t status = mluOpGetRoiAwarePool3dForwardWorkspaceSize(
         handle_, rois_desc_, pts_desc_, pts_feature_desc_, workspace_size_);
     destroy();
     return status;

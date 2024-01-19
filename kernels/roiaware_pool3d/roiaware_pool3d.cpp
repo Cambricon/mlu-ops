@@ -698,9 +698,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiawarePool3dForwardWorkspaceSize(
       << "[mluOpGetRoiawarePool3dForwardWorkspaceSize] is deprecated and "
       << "will be removed in the future release, "
       << "please use [mluOpGetRoiAwarePool3dForwardWorkspaceSize] instead.";
-  MLUOP_CHECK(mluOpGetRoiAwarePool3dForwardWorkspaceSize(
-                  handle, rois_desc, pts_desc, pts_feature_desc,
-                  workspace_size));
+  return mluOpGetRoiAwarePool3dForwardWorkspaceSize(
+              handle, rois_desc, pts_desc, pts_feature_desc,
+              workspace_size);
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
@@ -719,12 +719,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
       << "[mluOpRoiawarePool3dForward] is deprecated and will be removed in "
       << "the future release, "
       << "please use [mluOpRoiAwarePool3dForward] instead.";
-  MLUOP_CHECK(mluOpRoiAwarePool3dForward(
-                  handle, pool_method, boxes_num, pts_num, channels, rois_desc,
-                  rois, pts_desc, pts, pts_feature_desc, pts_feature, workspace,
-                  workspace_size, max_pts_each_voxel, out_x, out_y, out_z,
-                  argmax_desc, argmax, pts_idx_of_voxels_desc,
-                  pts_idx_of_voxels, pooled_features_desc, pooled_features));
+  return mluOpRoiAwarePool3dForward(
+              handle, pool_method, boxes_num, pts_num, channels, rois_desc,
+              rois, pts_desc, pts, pts_feature_desc, pts_feature, workspace,
+              workspace_size, max_pts_each_voxel, out_x, out_y, out_z,
+              argmax_desc, argmax, pts_idx_of_voxels_desc,
+              pts_idx_of_voxels, pooled_features_desc, pooled_features);
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
@@ -740,9 +740,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
       << "[mluOpRoiawarePool3dBackward] is deprecated and will be removed in "
       << "the future release, "
       << "please use [mluOpRoiAwarePool3dBackward] instead.";
-  MLUOP_CHECK(mluOpRoiAwarePool3dBackward(
-                  handle, pool_method, boxes_num, out_x, out_y, out_z,
-                  channels, max_pts_each_voxel, pts_idx_of_voxels_desc,
-                  pts_idx_of_voxels, argmax_desc, argmax, grad_out_desc,
-                  grad_out, grad_in_desc, grad_in));
+  return mluOpRoiAwarePool3dBackward(
+              handle, pool_method, boxes_num, out_x, out_y, out_z,
+              channels, max_pts_each_voxel, pts_idx_of_voxels_desc,
+              pts_idx_of_voxels, argmax_desc, argmax, grad_out_desc,
+              grad_out, grad_in_desc, grad_in);
 }
