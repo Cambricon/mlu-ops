@@ -270,7 +270,7 @@ void RoiawarePool3dForwardExecutor::paramCheck() {
 void RoiawarePool3dForwardExecutor::workspaceMalloc() {
   void *tmp = nullptr;
   // allocate extra space when broadcast
-  MLUOP_CHECK(mluOpGetRoiawarePool3dForwardWorkspaceSize(
+  MLUOP_CHECK(mluOpGetRoiAwarePool3dForwardWorkspaceSize(
       handle_, tensor_desc_[0].tensor, tensor_desc_[1].tensor,
       tensor_desc_[2].tensor, &workspace_size_));
   if (workspace_size_ > 0) {
@@ -300,7 +300,7 @@ void RoiawarePool3dForwardExecutor::compute() {
   printDataInfo();
 
   interface_timer_.start();
-  MLUOP_CHECK(mluOpRoiawarePool3dForward(
+  MLUOP_CHECK(mluOpRoiAwarePool3dForward(
       handle_, pool_method_, boxes_num_, pts_num_, channels_, desc_rois_,
       dev_rois_, desc_pts_, dev_pts_, desc_pts_feature_, dev_pts_feature_,
       workspace_[0], workspace_size_, max_pts_each_voxel_, out_x_, out_y_,

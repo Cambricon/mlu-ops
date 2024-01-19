@@ -132,16 +132,16 @@ static mluOpStatus_t transposeTensor(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpGetRoiawarePool3dForwardWorkspaceSize(
+mluOpStatus_t MLUOP_WIN_API mluOpGetRoiAwarePool3dForwardWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t rois_desc,
     const mluOpTensorDescriptor_t pts_desc,
     const mluOpTensorDescriptor_t pts_feature_desc, size_t *workspace_size) {
   // rois_desc and pts_desc is unused parameter.
-  PARAM_CHECK("[mluOpGetRoiawarePool3dForwardWorkspaceSize]",
+  PARAM_CHECK("[mluOpGetRoiAwarePool3dForwardWorkspaceSize]",
               handle != nullptr);
-  PARAM_CHECK("[mluOpGetRoiawarePool3dForwardWorkspaceSize]",
+  PARAM_CHECK("[mluOpGetRoiAwarePool3dForwardWorkspaceSize]",
               pts_feature_desc != nullptr);
-  PARAM_CHECK("[mluOpGetRoiawarePool3dForwardWorkspaceSize]",
+  PARAM_CHECK("[mluOpGetRoiAwarePool3dForwardWorkspaceSize]",
               workspace_size != nullptr);
   const int pts_num = pts_feature_desc->dims[0];
   const int channels = pts_feature_desc->dims[1];
@@ -157,7 +157,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiawarePool3dForwardWorkspaceSize(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
+mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
     mluOpHandle_t handle, const int pool_method, const int boxes_num,
     const int pts_num, const int channels,
     const mluOpTensorDescriptor_t rois_desc, const void *rois,
@@ -176,7 +176,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   // pts_idx_of_voxels: (boxes_num, out_x, out_y, out_z, max_pts_each_voxel)
   // pooled_features: (boxes_num, out_x, out_y, out_z, channels)
 
-  const std::string API = "[mluOpRoiawarePool3dForward]";
+  const std::string API = "[mluOpRoiAwarePool3dForward]";
   // check desc
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, rois_desc != NULL);
@@ -327,7 +327,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
-  // generate mluOpRoiawarePool3dForward prototxt start!
+  // generate mluOpRoiAwarePool3dForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("roiaware_pool3d_forward");
     GEN_CASE_HANDLE(handle);
@@ -353,7 +353,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     GEN_CASE_OP_PARAM_SINGLE(7, "roiaware_pool3d_forward", "out_z", out_z);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-  // generate mluOpRoiawarePool3dForward prototxt end!
+  // generate mluOpRoiAwarePool3dForward prototxt end!
 
   mluOpDataType_t data_dtype = pts_desc->dtype;
   uint64_t pts_dtype_size =
@@ -365,7 +365,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   void *transpose_workspace =
       (char *)pts_feature_workspace + pts_feature_dtype_size;
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts start.";
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts start.";
   int pts_dim = pts_desc->dim;
   int pts_permute[2] = {1, 0};
   int pts_tmp_dims[2] = {0, 0};
@@ -384,9 +384,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
 
   MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_desc_tmp));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts end.";
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts end.";
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts_feature start.";
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts_feature start.";
   int pts_feature_dim = pts_feature_desc->dim;
   int pts_feature_permute[2] = {1, 0};
   int pts_feature_tmp_dims[2] = {0, 0};
@@ -407,9 +407,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
 
   MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_feature_desc_tmp));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlTranspose pts_feature end.";
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts_feature end.";
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlFill_v3 host pointer start.";
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlFill_v3 host pointer start.";
   int argmax_initial_value = (pool_method == 0) ? -1 : 0;
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -441,7 +441,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  VLOG(5) << "[mluOpRoiawarePool3dForward] cnnlFill_v3 host pointer end.";
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlFill_v3 host pointer end.";
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -454,19 +454,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
   }
 
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] Launch Kernel "
              "KernelPtsIdxOfVoxels<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
-  VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] Launch Kernel "
              "KernelPtsIdxOfVoxels().";
-  CHECK_RETURN("[mluOpRoiawarePool3dForward]",
+  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
                KernelPtsIdxOfVoxels(
                    k_dim, k_type, handle->queue, rois_desc->dtype, pool_method,
                    boxes_num, pts_num, max_pts_each_voxel, out_x, out_y, out_z,
                    rois, pts_workspace, pts_idx_of_voxels));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] Finish kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] Finish kernel "
              "KernelPtsIdxOfVoxels.";
 
   status = kernelRoiawarePool3dForwardPolicyFunc(handle, pooled_features_desc,
@@ -476,27 +476,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
     return status;
   }
 
-  VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] Launch Kernel "
              "KernelRoiawarePool3dForward<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
-  VLOG(5) << "[mluOpRoiawarePool3dForward] Launch Kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] Launch Kernel "
              "KernelRoiawarePool3dForward().";
   CHECK_RETURN(
-      "[mluOpRoiawarePool3dForward]",
+      "[mluOpRoiAwarePool3dForward]",
       KernelRoiawarePool3dForward(
           k_dim, k_type, handle->queue, pooled_features_desc->dtype,
           pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
           out_y, out_z, pts_feature_workspace, pts_idx_of_voxels,
           pooled_features, argmax));
-  VLOG(5) << "[mluOpRoiawarePool3dForward] Finish kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dForward] Finish kernel "
              "KernelRoiawarePool3dForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
+mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
     mluOpHandle_t handle, const int pool_method, const int boxes_num,
     const int out_x, const int out_y, const int out_z, const int channels,
     const int max_pts_each_voxel,
@@ -510,7 +510,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   // grad_out: (boxes_num, out_x, out_y, out_z, channels)
   // grad_in: (pts_num, channels)
 
-  const std::string API = "[mluOpRoiawarePool3dBackward]";
+  const std::string API = "[mluOpRoiAwarePool3dBackward]";
   // check desc
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, pts_idx_of_voxels_desc != NULL);
@@ -623,7 +623,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
           << ", max_pts_each_voxel = " << max_pts_each_voxel
           << ", points num = " << grad_in_desc->dims[0];
 
-  // generate mluOpRoiawarePool3dBackward prototxt start!
+  // generate mluOpRoiAwarePool3dBackward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("roiaware_pool3d_backward");
     GEN_CASE_HANDLE(handle);
@@ -645,7 +645,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
                              "max_pts_each_voxel", max_pts_each_voxel);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-  // generate mluOpRoiawarePool3dBackward prototxt end!
+  // generate mluOpRoiAwarePool3dBackward prototxt end!
 
   int grad_in_initial_value = 0;
   {
@@ -658,7 +658,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
   VLOG(5)
-      << "[mluOpRoiawarePool3dBackward] Initialize output space successfully.";
+      << "[mluOpRoiAwarePool3dBackward] Initialize output space successfully.";
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -671,21 +671,78 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
   }
 
   int core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dBackward] Launch Kernel "
              "KernelRoiawarePool3dBackward<<< Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << " >>>"
           << " core_dim : " << core_dim;
-  VLOG(5) << "[mluOpRoiawarePool3dBackward] Launch Kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dBackward] Launch Kernel "
              "KernelRoiawarePool3dBackward().";
   CHECK_RETURN(
-      "[mluOpRoiawarePool3dBackward]",
+      "[mluOpRoiAwarePool3dBackward]",
       KernelRoiawarePool3dBackward(
           k_dim, k_type, handle->queue, grad_out_desc->dtype, pool_method,
           boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
           pts_idx_of_voxels, argmax, grad_out, grad_in));
-  VLOG(5) << "[mluOpRoiawarePool3dBackward] Finish kernel "
+  VLOG(5) << "[mluOpRoiAwarePool3dBackward] Finish kernel "
              "KernelRoiawarePool3dBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetRoiawarePool3dForwardWorkspaceSize(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t rois_desc,
+    const mluOpTensorDescriptor_t pts_desc,
+    const mluOpTensorDescriptor_t pts_feature_desc, size_t *workspace_size) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetRoiawarePool3dForwardWorkspaceSize] is deprecated and "
+      << "will be removed in the future release, "
+      << "please use [mluOpGetRoiAwarePool3dForwardWorkspaceSize] instead.";
+  MLUOP_CHECK(mluOpGetRoiAwarePool3dForwardWorkspaceSize(
+                  handle, rois_desc, pts_desc, pts_feature_desc,
+                  workspace_size));
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dForward(
+    mluOpHandle_t handle, const int pool_method, const int boxes_num,
+    const int pts_num, const int channels,
+    const mluOpTensorDescriptor_t rois_desc, const void *rois,
+    const mluOpTensorDescriptor_t pts_desc, const void *pts,
+    const mluOpTensorDescriptor_t pts_feature_desc, const void *pts_feature,
+    void *workspace, size_t workspace_size, const int max_pts_each_voxel,
+    const int out_x, const int out_y, const int out_z,
+    const mluOpTensorDescriptor_t argmax_desc, void *argmax,
+    const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+    void *pts_idx_of_voxels, const mluOpTensorDescriptor_t pooled_features_desc,
+    void *pooled_features) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpRoiawarePool3dForward] is deprecated and will be removed in "
+      << "the future release, "
+      << "please use [mluOpRoiAwarePool3dForward] instead.";
+  MLUOP_CHECK(mluOpRoiAwarePool3dForward(
+                  handle, pool_method, boxes_num, pts_num, channels, rois_desc,
+                  rois, pts_desc, pts, pts_feature_desc, pts_feature, workspace,
+                  workspace_size, max_pts_each_voxel, out_x, out_y, out_z,
+                  argmax_desc, argmax, pts_idx_of_voxels_desc,
+                  pts_idx_of_voxels, pooled_features_desc, pooled_features));
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpRoiawarePool3dBackward(
+    mluOpHandle_t handle, const int pool_method, const int boxes_num,
+    const int out_x, const int out_y, const int out_z, const int channels,
+    const int max_pts_each_voxel,
+    const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+    const void *pts_idx_of_voxels, const mluOpTensorDescriptor_t argmax_desc,
+    const void *argmax, const mluOpTensorDescriptor_t grad_out_desc,
+    const void *grad_out, const mluOpTensorDescriptor_t grad_in_desc,
+    void *grad_in) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpRoiawarePool3dBackward] is deprecated and will be removed in "
+      << "the future release, "
+      << "please use [mluOpRoiAwarePool3dBackward] instead.";
+  MLUOP_CHECK(mluOpRoiAwarePool3dBackward(
+                  handle, pool_method, boxes_num, out_x, out_y, out_z,
+                  channels, max_pts_each_voxel, pts_idx_of_voxels_desc,
+                  pts_idx_of_voxels, argmax_desc, argmax, grad_out_desc,
+                  grad_out, grad_in_desc, grad_in));
 }
