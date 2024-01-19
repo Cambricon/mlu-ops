@@ -52,7 +52,7 @@ MLU-OPS 提供了以下功能：
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v5.10.15 或更高版本
 - 外部链接库：
-  - libxml2-dev、libprotobuf-dev<=3.8.0、protobuf-compiler<=3.8.0、llvm-6.0-dev、libeigen3-dev>=3.4
+  - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev、libeigen3-dev>=3.4
 - Python环境：
   - 依赖Python-3版本（默认版本 python 3.8.0，最低要求 python 3.6.0）
 
