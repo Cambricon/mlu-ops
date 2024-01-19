@@ -21,7 +21,7 @@
     - 算子伪代码开发
     - 算子主体代码开发
 
-3. 完成测试并撰写测试报告，参考[MLU-OPS™ 性能验收标准](docs/MLU-OPS™-Performance-Acceptance-Standard.md)、[MLU-OPS™测试报告模板](docs/MLU-OPS-Test-Report-Template.md)、[MLU-OPS™-Accuracy-Acceptance-Standard](docs/MLU-OPS-Accuracy-Acceptance-Standard.md)，主要包括：
+3. 完成测试并撰写测试报告，参考[MLU-OPS™ 性能验收标准](docs/MLU-OPS-Performance-Acceptance-Standard.md)、[MLU-OPS™测试报告模板](docs/MLU-OPS-Test-Report-Template.md)、[MLU-OPS™-Accuracy-Acceptance-Standard](docs/MLU-OPS-Accuracy-Acceptance-Standard.md)，主要包括：
     - 测例规模
     - 测例数据类型
     - 性能测试 
