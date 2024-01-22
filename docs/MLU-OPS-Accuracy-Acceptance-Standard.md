@@ -1,10 +1,10 @@
-## MLU-OPS 算子精度验收标准
+## MLU-OPS™ 算子精度验收标准
 
-为了量化表示 MLU-OPS 算子与 CPU 或其他设备的精度差异， MLU-OPS 提出一套精度验收标准供开发者衡量算子质量。
+为了量化表示 MLU-OPS™ 算子与 CPU 或其他设备的精度差异， MLU-OPS™ 提出一套精度验收标准供开发者衡量算子质量。
 
 ### 1. 精度评价公式
 
-MLU-OPS 正在使用的误差度量方式及其含义
+MLU-OPS™ 正在使用的误差度量方式及其含义
 
 |     | 误差度量指标 |       含义       |
 | :-- | :----------: | :--------------: |
@@ -34,7 +34,7 @@ $$
 **$diff3_1$：最大单点相对误差**
 
 $$
-diff3_1 = \mathop{max}\limits_{i}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{\sum  |baseline \\_ data_i| }
+diff3_1 = \mathop{max}\limits_{i}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{ |baseline \\_ data_i| }
 $$
 
 **$diff3_2$：最大单点绝对误差**
@@ -56,7 +56,7 @@ P_2 = P - P_1
 $$
 
 $$
-m_1 = \mathop{max}\limits_{i \in P_1}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{\sum  |baseline \\_ data_i| }
+m_1 = \mathop{max}\limits_{i \in P_1}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{ |baseline \\_ data_i| }
 $$
 
 $$
@@ -89,7 +89,7 @@ $count_1$ 表示 $evaluated\\_data$ 大于 $baseline\\_data$ 的个数， $count
 
 ### 2. 算子精度分类
 
-不同类型算子的误差度量方式和精度验收标准不同，我们把 MLU-OPS 算子根据使用的指令、计算的逻辑做了算子类型划分 :
+不同类型算子的误差度量方式和精度验收标准不同，我们把 MLU-OPS™ 算子根据使用的指令、计算的逻辑做了算子类型划分 :
 
 |     | 算子类型    |                                   解释                              |            固定阈值                |
 | :-: | :----:      | :-----------------------------------------------------------------: | :--------------------------------: |

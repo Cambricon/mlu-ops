@@ -29,7 +29,7 @@ Cambricon MLU-OPS库为两种主流Linux发行版提供端侧软件包，包括�
 - <distro_suffix>：deb文件。根据所在发行版，保持和对应deb或RPM包相同的文件后缀名。
 
 
-示例：x86_64架构的CentOS 7下，Cambricon MLU-OPS的包为 ``mluops-x.y.z-1.el7.x86_64.rpm`` 。
+示例：x86_64架构的CentOS 7下，Cambricon MLU-OPS™ 的包为 ``mluops-x.y.z-1.el7.x86_64.rpm`` 。
 
 
 面向x86_64架构

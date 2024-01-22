@@ -4,7 +4,7 @@
 <div align="center">
   <b>
     <a href="https://www.cambricon.com/docs/sdk_1.15.0/cambricon_bang_c_ops_0.9.0/user_guide/index.html">
-      <font size="4"> 📖 MLU-OPS 用户手册</font>
+      <font size="4"> 📖 MLU-OPS™用户手册</font>
     </a>
   </b>
   &nbsp;&nbsp;&nbsp;&nbsp;
@@ -31,10 +31,10 @@
 </div>
 
 ## 简介
-MLU-OPS 提供基于寒武纪人工智能单元（MLU），使用 C 接口开发高性能算子的示例代码。
-MLU-OPS 旨在通过提供示例代码，供开发者参考使用，可用于开发自定义算子，实现对应模型的计算。
+MLU-OPS™提供基于寒武纪人工智能单元（MLU），使用 C 接口开发高性能算子的示例代码。
+MLU-OPS™旨在通过提供示例代码，供开发者参考使用，可用于开发自定义算子，实现对应模型的计算。
 
-MLU-OPS 提供了以下功能：
+MLU-OPS™提供了以下功能：
 - [算子精度标准](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Accuracy-Acceptance-Standard.md)
 - [算子性能标准](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md)
 - [Op List (高质量实现 BANG C 算子)](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-OpList.md)
@@ -59,7 +59,7 @@ MLU-OPS 提供了以下功能：
 
 ## 依赖环境准备
 
-- 获取 MLU-OPS 代码
+- 获取 MLU-OPS™ 代码
 
   ```sh
   git clone https://github.com/Cambricon/mlu-ops.git
@@ -122,6 +122,6 @@ MLU-OPS 提供了以下功能：
 
 提供基于寒武纪人工智能单元（MLU）开发高性能算子、C 接口封装的示例代码。
 
-具体的编译、开发与测试介绍见 [MLU-OPS 算子编译、开发与测试介绍.md](docs/MLU-OPS-Compile-Develop-And-Test.md)。
+具体的编译、开发与测试介绍见 [MLU-OPS™算子编译、开发与测试介绍.md](docs/MLU-OPS-Compile-Develop-And-Test.md)。
 
 更多内容见 docs 目录下文档。

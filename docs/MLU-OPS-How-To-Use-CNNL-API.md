@@ -1,5 +1,5 @@
-## MLU-OPS 如何使用 CNNL 基础算子
-在MLU-OPS 开发算子时，如果需要用到某个基础功能，其功能已经由CNNL 算子实现，我们不妨直接在MLU-OPS 代码中调用CNNL 的API，快速达成算子开发的目的。下面3个示例介绍了如何在MLU-OPS 代码中实现调用CNNL 算子的方法。
+## MLU-OPS™ 如何使用 CNNL 基础算子
+在MLU-OPS™ 开发算子时，如果需要用到某个基础功能，其功能已经由CNNL 算子实现，我们不妨直接在MLU-OPS™ 代码中调用CNNL 的API，快速达成算子开发的目的。下面3个示例介绍了如何在 MLU-OPS™ 代码中实现调用CNNL 算子的方法。
 
 ### 示例1
 在算子中调用CNNL tranpose 算子。

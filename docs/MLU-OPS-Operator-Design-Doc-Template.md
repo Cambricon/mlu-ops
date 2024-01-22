@@ -31,7 +31,7 @@
 
 ### 1.1 算子需求分析
 
-该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU-OPS 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU-OPS 全部支持。
+该需求分析为框架原生算子实现功能的需求分析，对于框架原生支持但 MLU-OPS™ 当前版本不支持的功能，需要在`1.4算子限制` 章节中显式注明。未明确注明不支持的功能，默认 MLU-OPS™ 全部支持。
 
 example:
 
@@ -113,7 +113,7 @@ example:
 
 #### 1.5.2 性能验收标准
 
-见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
+见 [MLU-OPS™ 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
 
 ## 2 算子接口设计
 

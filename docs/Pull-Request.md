@@ -28,7 +28,7 @@
 
 - 当第一次提交 `PR` 时
 
-  `Fork` MLU-OPS 原代码库，点击 GitHub 界面右上角的 `Fork` 按钮即可
+  `Fork` MLU-OPS™ 原代码库，点击 GitHub 界面右上角的 `Fork` 按钮即可
 
    ![fork](./PR-Fork.png)
 
@@ -107,8 +107,8 @@
 
 3. 粒度要细，一个 `PR` 只做一件事情，避免超大的 `PR`
 
-   - Bad：给 MLU-OPS 添加一个 Add 算子，同时修改了 Div 算子的接口  
-   - Acceptable：给 MLU-OPS 添加一个 Add 算子并添加 Add 算子的设计文档
+   - Bad：给 MLU-OPS™ 添加一个 Add 算子，同时修改了 Div 算子的接口  
+   - Acceptable：给 MLU-OPS™ 添加一个 Add 算子并添加 Add 算子的设计文档
    - Good：提交两个`PR`，分别为：提交 Add 算子的设计文档，提交 Add 算子的代码
 
 4. `commit` 需要提供清晰且有意义的 `commit` 信息

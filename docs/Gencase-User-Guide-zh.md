@@ -1,4 +1,4 @@
-## MLU-OPS GEN_CASE 使用指南
+## MLU-OPS™ GEN_CASE 使用指南
 
 ## 概述
 

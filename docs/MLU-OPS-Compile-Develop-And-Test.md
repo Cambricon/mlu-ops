@@ -1,4 +1,4 @@
-# MLU-OPS 算子编译、开发与测试
+# MLU-OPS™ 算子编译、开发与测试
 
 ## 编译 Operators
 - 环境依赖准备
@@ -118,7 +118,7 @@ test$ ./mluop_gtest --gtest_filter=*abs*
 
 ## 新算子开发流程
 
-详情可以参考文档 [MLU-OPS 算子开发流程.md](./MLU-OPS-Operator-Development-Process.md)以及 docs 目录下的其它补充说明。
+详情可以参考文档 [MLU-OPS™ 算子开发流程.md](./MLU-OPS-Operator-Development-Process.md)以及 docs 目录下的其它补充说明。
 
 1. 在`mlu-ops/kernels/`路径下，创建算子文件夹，添加算子实现，可以参考现有的 abs 算子进行添加。
 2. 在`mlu-ops/test/mlu_op_gtest/src/zoo`创建算子文件夹，添加测试代码。
@@ -143,8 +143,8 @@ mlu-ops$ source env_gencase_set.sh off
 
 |   |        环境变量        |                         功能说明                        |  使用方法 |               备注                    |
 |---|------------------------|---------------------------------------------------------|----|-----------------------------------------|
-| 1 | MLUOP_BUILD_GTEST  | 编译MLU-OPS的GTEST| ON时使能，其他情况不使能           | 在build脚本中默认设为ON     |
-| 2 | MLUOP_GTEST_DUMP_DATA  | 将MLU-OPS的GTEST的输入输出数据打印至文件中| ON: 保存 GTEST 测试过程中用到的输入输出数据             | 不使用此环境变量时需要unset环境变量     |
+| 1 | MLUOP_BUILD_GTEST  | 编译MLU-OPS™ 的GTEST| ON时使能，其他情况不使能           | 在build脚本中默认设为ON     |
+| 2 | MLUOP_GTEST_DUMP_DATA  | 将MLU-OPS™ 的GTEST的输入输出数据打印至文件中| ON: 保存 GTEST 测试过程中用到的输入输出数据             | 不使用此环境变量时需要unset环境变量     |
 | 3 | MLUOP_GEN_CASE         |运行前设置，设置gen_case工具功能等级 |0: 关闭 gen_case 模块功能;<br>1: 生成 prototxt，输入输出只保留 shape 等信息（GEN_CASE_DATA_REAL 将无效）;<br>2: 生成 prototxt,并保留输入真实值;<br>3: 不生成 prototxt,只在屏幕上打印输入输出的 shape 等信息;<br> 详情见: [Gencase-User-Guide-zh.md](./Gencase-User-Guide-zh.md)|   |
 | 4 | MLUOP_MIN_LOG_LEVEL    | 设置外部LOG()宏的最小打印级别，用来让外部用户屏蔽不需要的LOG|0: enable INFO/WARNING/ERROR/FATAL;<br>1: enable WARNING/ERROR/FATAL;<br>2: enable ERROR/FATAL;<br>3: enable FATAL |默认为0  |
 | 5 | MLUOP_MIN_VLOG_LEVEL   |设置内部VLOG()宏的最小打印级别，用来控制软件内部不同层级调试需要的LOG |0: enable VLOG(0);<br>1: enable VLOG(0)-VLOG(1);<br>2: enable VLOG(0)-VLOG(2);<br>3: enable VLOG(0)-VLOG(3);<br>4: enable VLOG(0)-VLOG(4);<br>5: enable VLOG(0)-VLOG(5);<br>6: enable VLOG(0)-VLOG(6);<br>7: enable VLOG(0)-VLOG(7); | 默认为0| 

@@ -10,18 +10,18 @@
 
 ## 如何添加新算子
 
-1. 调研算子功能，撰写算子设计文档，参考[MLU-OPS算子设计文档模板](docs/MLU-OPS-Operator-Design-Doc-Template.md)，主要包括：
+1. 调研算子功能，撰写算子设计文档，参考[MLU-OPS™ 算子设计文档模板](docs/MLU-OPS-Operator-Design-Doc-Template.md)，主要包括：
     - 算子需求分析
     - 算子接口设计
     - 算子实现方案设计
 
-2. 算子代码开发，参考[MLU-OPS算子开发流程](docs/MLU-OPS-Operator-Development-Process.md)、[PULL REQUEST流程](./docs/Pull-Request.md)，主要包括：
+2. 算子代码开发，参考[MLU-OPS™ 算子开发流程](docs/MLU-OPS-Operator-Development-Process.md)、[PULL REQUEST流程](./docs/Pull-Request.md)，主要包括：
     - 算子设计文档提交 `PR`（Pull Requset），其中算子设计文档目录为`docs/design_docs`
     - GTest 代码开发
     - 算子伪代码开发
     - 算子主体代码开发
 
-3. 完成测试并撰写测试报告，参考[MLU-OPS性能验收标准](docs/MLU-OPS-Performance-Acceptance-Standard.md)、[MLU-OPS测试报告模板](docs/MLU-OPS-Test-Report-Template.md)、[MLU-OPS-Accuracy-Acceptance-Standard](docs/MLU-OPS-Accuracy-Acceptance-Standard.md)，主要包括：
+3. 完成测试并撰写测试报告，参考[MLU-OPS™ 性能验收标准](docs/MLU-OPS-Performance-Acceptance-Standard.md)、[MLU-OPS™测试报告模板](docs/MLU-OPS-Test-Report-Template.md)、[MLU-OPS™-Accuracy-Acceptance-Standard](docs/MLU-OPS-Accuracy-Acceptance-Standard.md)，主要包括：
     - 测例规模
     - 测例数据类型
     - 性能测试 
