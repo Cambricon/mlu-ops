@@ -34,7 +34,7 @@ $$
 **$diff3_1$：最大单点相对误差**
 
 $$
-diff3_1 = \mathop{max}\limits_{i}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{\sum  |baseline \\_ data_i| }
+diff3_1 = \mathop{max}\limits_{i}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{ |baseline \\_ data_i| }
 $$
 
 **$diff3_2$：最大单点绝对误差**
@@ -56,7 +56,7 @@ P_2 = P - P_1
 $$
 
 $$
-m_1 = \mathop{max}\limits_{i \in P_1}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{\sum  |baseline \\_ data_i| }
+m_1 = \mathop{max}\limits_{i \in P_1}\frac{|evaluated \\_ data_i - baseline \\_ data_i|}{ |baseline \\_ data_i| }
 $$
 
 $$
