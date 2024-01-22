@@ -6,7 +6,11 @@ on:
     paths:
       - 'CMakeLists.txt'
       - 'independent_build.sh'
+      - 'build.sh'
       - 'build.property'
+      - 'test/mlu_op_gtest/CMakeLists.txt'
+      - 'cmake/*'
+      - 'CMakeLists.txt'
     tags:
       - v*
   pull_request:
