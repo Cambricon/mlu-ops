@@ -442,7 +442,7 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   status = mluOpCreateTensorDescriptor(&input_desc);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  mluOpTransposeDescriptor_t trans_desc = nullptr;
+  cnnlTransposeDescriptor_t trans_desc = nullptr;
   CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
