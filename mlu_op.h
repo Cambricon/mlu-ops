@@ -7545,7 +7545,7 @@ mluOpMutualInformationForward(mluOpHandle_t handle,
                               const mluOpTensorDescriptor_t ans_desc,
                               void *ans);
 
-// Group:RoiAwarePool3d
+// Group: Deprecated APIs
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpRoiAwarePool3dForward.
@@ -7653,7 +7653,7 @@ mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
                                            const mluOpTensorDescriptor_t pts_feature_desc,
                                            size_t *workspace_size);
 
-// Group:RoiAwarePool3d
+// Group: Deprecated APIs
 /*!
  * @brief Returns \b argmax, \b pts_idx_of_voxels and \b pooled_features calculated by
  * this operator.
@@ -7915,7 +7915,7 @@ mluOpRoiAwarePool3dForward(mluOpHandle_t handle,
                            const mluOpTensorDescriptor_t pooled_features_desc,
                            void *pooled_features);
 
-// Group:RoiAwarePool3d
+// Group: Deprecated APIs
 /*!
  * @brief Returns \b pts_idx_of_voxels, \b argmax, \b grad_out and \b grad_in by
  * performing the backpropagation of ::mluOpRoiAwarePool3dForward.
