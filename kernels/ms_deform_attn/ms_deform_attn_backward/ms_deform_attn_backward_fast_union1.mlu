@@ -1,0 +1,626 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "kernels/ms_deform_attn/ms_deform_attn_backward/ms_deform_attn_backward.h"
+#include "kernels/ms_deform_attn/ms_deform_attn_forward/ms_deform_attn_utils.h"
+
+#include "core/logging.h"
+
+#if (__BANG_ARCH__ == 592)
+
+#define MAX_MEMCPY_SEGNUM (65536)
+#define NRAM_REMAIN_SIZE (48 * 1024)
+#define SRAM_REMAIN_SIZE (32 * 1024)
+#define NRAM_AVALIABLE_SIZE (__MLU_NRAM_SIZE__ * 1024 - NRAM_REMAIN_SIZE)
+#define WRAM_AVALIABLE_SIZE (__MLU_WRAM_SIZE__ * 1024)
+#define SRAM_AVALIABLE_SIZE (__MLU_SRAM_SIZE__ * 1024 - SRAM_REMAIN_SIZE)
+
+__nram__ char nram_buffer[NRAM_AVALIABLE_SIZE];
+__mlu_shared__ char sram_buffer[SRAM_AVALIABLE_SIZE];
+__wram__ char wram_buffer[WRAM_AVALIABLE_SIZE];
+
+__mlu_func__ void loadNram2Gpr(int32_t& v1, int32_t& v2, int32_t& v3,
+                               int32_t& v4, const int32_t* p1,
+                               const int32_t* p2, const int32_t* p3,
+                               const int32_t* p4) {
+  v1 = __load_nram(p1);
+  v2 = __load_nram(p2);
+  v3 = __load_nram(p3);
+  v4 = __load_nram(p4);
+}
+
+template <typename T>
+__mlu_func__ void memPolicyBackward(
+    int32_t*& seq_nram, T*& zeros_nram, int32_t*& data_offset_nram,
+    T*& weight_polation_nram, T*& cond_point_polation_nram,
+    T*& cond_point_valid_nram, T*& delta_xy_nram, T*& loc_nram, T*& buf_nram,
+    T*& buf_nram_end, int8_t*& mask_x_nram, int8_t*& mask_y_nram,
+    T*& spatial_offset_bd_nram, T*& spatial_w_bd_nram, T*& spatial_h_bd_nram,
+    int32_t*& spatial_offset_nram, int32_t*& spatial_hw_nram,
+    T*& compute_buffer,  // (5, deal_n, num_levels, num_points, channels)
+    T*& weight_polation_nram_stg2, T*& weight_attn_nram_stg2,
+    int32_t*& offset_nram_stg2, T*& grad_output_nram,
+    int8_t*& bit_cond_nram,          // (4, pad_points / 8)
+    int8_t*& bit_cond_reverse_nram,  // (4, pad_points / 8)
+    T*& cond_nram_stg2,
+    T*& compute_buffer_nram_stg3,  // (4, max_deal_n, num_levels, num_points)
+    T*& delta_xy_nram_stg3,        // (4, max_deal_n, num_levels, num_points)
+    T*& grad_wp_nram_stg3,         // (4, total_deal_n, num_levels, num_points)
+    int32_t*& data_offset_sram, T*& weight_polation_sram, T*& grad_wp_sram,
+    T*& weight_attn_sram, T*& cond_point_polation_sram, T*& delta_xy_sram,
+    char* nram_buffer, char* sram_buffer, int32_t& max_cached_n,
+    int32_t& stage_1_max_deal_n, int32_t& stage_2_max_deal_n,
+    int32_t& stage_3_max_deal_n, int32_t& mask_size,
+    const int32_t nram_avaliable_size, const int32_t sram_avaliable_size,
+    const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_queries,
+    const int32_t num_points) {
+  const int32_t num_points_levels = num_levels * num_points;
+  const int32_t spatial_info_size =
+      PAD_UP(3 * num_levels * sizeof(int32_t), WRAM_ALIGN_SIZE);
+  const int32_t spatial_info_bd_size =
+      PAD_UP(3 * num_points_levels * sizeof(T), WRAM_ALIGN_SIZE);
+  const int32_t zeros_size = PAD_UP(channels * sizeof(T), WRAM_ALIGN_SIZE);
+  const int32_t seq_size = BACKWARD_MAX_NQ_NL_NP * sizeof(int32_t);
+  const int32_t fix_space_size = spatial_info_size +
+                                 2 * BIT_COLLECT_PAD * sizeof(T) +
+                                 spatial_info_bd_size + zeros_size + seq_size;
+  const int32_t left_space_size = nram_avaliable_size - fix_space_size;
+  stage_1_max_deal_n = left_space_size / (24 * num_points_levels * sizeof(T));
+  const int32_t total_points = stage_1_max_deal_n * num_points_levels;
+  const int32_t total_coord_pad = PAD_UP(total_points * 2, BIT_COLLECT_PAD);
+  mask_size = PAD_UP(total_coord_pad / BIT_COLLECT_PAD, WRAM_ALIGN_SIZE);
+  stage_2_max_deal_n =
+      (left_space_size - 2 * mask_size - 7 * WRAM_ALIGN_SIZE) /
+      ((5 * num_points_levels * channels + 20 * num_points_levels + channels) *
+       sizeof(T));
+  stage_2_max_deal_n =
+      std::min(BACKWARD_MAX_NQ_NL_NP / num_points_levels, stage_2_max_deal_n);
+  stage_3_max_deal_n = (left_space_size - 2 * mask_size - 2 * WRAM_ALIGN_SIZE) /
+                       (12 * num_points_levels * sizeof(T));
+  // fix nram space
+  seq_nram = (int32_t*)(nram_buffer);
+  zeros_nram = (T*)(seq_nram + seq_size / sizeof(int32_t));
+  spatial_offset_nram = (int32_t*)(zeros_nram + zeros_size / sizeof(T));
+  spatial_hw_nram = spatial_offset_nram + num_levels;
+  spatial_offset_bd_nram =
+      (T*)((int8_t*)spatial_offset_nram + spatial_info_size);
+  spatial_w_bd_nram = spatial_offset_bd_nram + num_points_levels;
+  spatial_h_bd_nram = spatial_w_bd_nram + num_points_levels;
+  mask_x_nram = (int8_t*)spatial_offset_bd_nram + spatial_info_bd_size;
+  mask_y_nram = mask_x_nram + mask_size;
+  // stage1 nram space
+  // 4 + 4 + 4 + 4 + 1 + 6
+  data_offset_nram = (int32_t*)(mask_y_nram + mask_size);
+  delta_xy_nram = (T*)(data_offset_nram + 4 * total_points);
+  weight_polation_nram = delta_xy_nram + 4 * total_points;
+  cond_point_polation_nram = weight_polation_nram + 4 * total_points;
+  cond_point_valid_nram = cond_point_polation_nram + 4 * total_points;
+  buf_nram = cond_point_valid_nram + total_points;
+  loc_nram = buf_nram + 4 * total_points;
+  buf_nram_end = buf_nram + 6 * total_points + total_coord_pad;
+  // stage2 nram space
+  const int32_t total_points_stg2 = stage_2_max_deal_n * num_points_levels;
+  const int32_t compute_buffer_size_pad =
+      5 * PAD_UP(total_points_stg2 * channels * sizeof(T), WRAM_ALIGN_SIZE);
+  const int32_t bit_cond_pad_size =
+      PAD_UP(PAD_UP(total_points_stg2, BIT_COLLECT_PAD) / BIT_COLLECT_PAD * 5,
+             WRAM_ALIGN_SIZE);
+  cond_nram_stg2 = (T*)(mask_y_nram + mask_size);
+  bit_cond_nram = (int8_t*)cond_nram_stg2 +
+                  PAD_UP(5 * total_points_stg2 * sizeof(T), WRAM_ALIGN_SIZE);
+  bit_cond_reverse_nram = bit_cond_nram + bit_cond_pad_size;
+  compute_buffer = (T*)(bit_cond_reverse_nram + bit_cond_pad_size);
+  grad_output_nram = compute_buffer + compute_buffer_size_pad / sizeof(T);
+  weight_polation_nram_stg2 = grad_output_nram + stage_2_max_deal_n * channels;
+  weight_attn_nram_stg2 = weight_polation_nram_stg2 + 4 * total_points_stg2;
+  offset_nram_stg2 = (int32_t*)(weight_attn_nram_stg2 + total_points_stg2);
+  // stage3 nram space
+  const int32_t total_points_stg3 = stage_3_max_deal_n * num_points_levels;
+  compute_buffer_nram_stg3 = (T*)(mask_y_nram + mask_size);
+  delta_xy_nram_stg3 = compute_buffer_nram_stg3 + 4 * total_points_stg3;
+  grad_wp_nram_stg3 = delta_xy_nram_stg3 + 4 * total_points_stg3;
+  // sram space: 4 + 4 + 1 + 5 + 4
+  const int32_t polation_info_size = 18 * num_points_levels * sizeof(T);
+  const int32_t avg_sram_size = sram_avaliable_size / coreDim;
+  max_cached_n = avg_sram_size / polation_info_size;
+  const int32_t max_cached_points = max_cached_n * num_points_levels;
+  T* sram_buf_base = (T*)(sram_buffer + avg_sram_size * coreId);
+  data_offset_sram = (int32_t*)sram_buf_base;
+  weight_polation_sram = (T*)(data_offset_sram + 4 * max_cached_points);
+  weight_attn_sram = (T*)(weight_polation_sram + 4 * max_cached_points);
+  cond_point_polation_sram = (T*)(weight_attn_sram + max_cached_points);
+  delta_xy_sram = (T*)(cond_point_polation_sram + 5 * max_cached_points);
+  grad_wp_sram = weight_polation_sram;  // reuse
+}
+
+template <typename T>
+__mlu_func__ void backwardStageTwoLoop(
+    int32_t* seq_nram, T* compute_buffer_nram, T* zeros_nram,
+    T* weight_polation_nram, T* weight_attn_nram, int32_t* offset_nram,
+    T* cond_nram, int8_t* bit_cond_nram, int8_t* bit_cond_reverse_nram,
+    T* grad_output_nram, T* delta_xy_nram, int32_t* data_offset_sram,
+    T* weight_polation_sram, T* grad_wp_sram, T* weight_attn_sram,
+    T* cond_point_polation_sram, T* delta_xy_sram, T* data_value_gdram,
+    T* grad_output_gdram, T* grad_value_gdram, T* grad_attn_weight_gdram,
+    char* wram_buffer, const int32_t total_deal_n, const int32_t max_deal_n,
+    const int32_t input_stride_2, const int32_t input_stride_3,
+    const int32_t output_stride_2, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels,
+    const int32_t num_points) {
+  const int32_t num_levels_points = num_levels * num_points;
+  const int32_t loop_num = (total_deal_n + max_deal_n - 1) / max_deal_n;
+  int32_t* offset_zero_nram_stg2 =
+      offset_nram + 4 * max_deal_n * num_levels_points;
+  const int32_t src_stride = total_deal_n * num_levels_points * sizeof(T);
+  for (int i = 0; i < loop_num; i++) {
+    int32_t deal_n = std::min(total_deal_n - i * max_deal_n, max_deal_n);
+    int32_t copy_size_1 = deal_n * num_levels_points * sizeof(T);
+    int32_t copy_size_2 = deal_n * num_levels_points * sizeof(int32_t);
+    int32_t sram_src_offset = i * max_deal_n * num_levels_points;
+    int32_t nq_nl_np_c = deal_n * num_levels_points * channels;
+    int32_t nq_nl_np = deal_n * num_levels_points;
+    int32_t nq_nl_np_4 = 4 * deal_n * num_levels_points;
+
+    __memcpy_async(grad_output_nram,
+                   grad_output_gdram + i * max_deal_n * output_stride_2,
+                   channels * sizeof(T), GDRAM2NRAM, channels * sizeof(T),
+                   output_stride_2 * sizeof(T), deal_n - 1);
+    __memcpy_async(offset_nram, data_offset_sram + sram_src_offset, copy_size_2,
+                   SRAM2NRAM, copy_size_2, src_stride, 3);
+    __memcpy_async(cond_nram, cond_point_polation_sram + sram_src_offset,
+                   copy_size_1, SRAM2NRAM, copy_size_1, src_stride, 4);
+    __memcpy_async(weight_attn_nram, weight_attn_sram + sram_src_offset,
+                   copy_size_1, SRAM2NRAM);
+    __memcpy_async(weight_polation_nram, weight_polation_sram + sram_src_offset,
+                   copy_size_1, SRAM2NRAM, copy_size_1, src_stride, 3);
+    __bang_write_value(offset_zero_nram_stg2, nq_nl_np_4, (int32_t)0);
+    __sync_move();
+
+    T* tmp_zero = (T*)offset_zero_nram_stg2;
+    int32_t nq_nl_np_pad8 = PAD_UP(nq_nl_np, BIT_COLLECT_PAD);
+    int32_t bit_cond_stride = nq_nl_np_pad8 / BIT_COLLECT_PAD;
+    if (nq_nl_np_pad8 == nq_nl_np) {
+      int32_t bit_cond_stride_4 = 4 * bit_cond_stride;
+      __bang_gt_bitindex((T*)bit_cond_nram, cond_nram, tmp_zero, nq_nl_np_4);
+      __bang_bnot((char*)bit_cond_reverse_nram, (char*)bit_cond_nram,
+                  4 * bit_cond_stride);
+      __bang_gt_bitindex((T*)(bit_cond_nram + bit_cond_stride_4),
+                         cond_nram + nq_nl_np_4, tmp_zero, nq_nl_np);
+      __bang_bnot((char*)(bit_cond_reverse_nram + bit_cond_stride_4),
+                  (char*)(bit_cond_nram + bit_cond_stride_4), bit_cond_stride);
+    } else {
+      for (int j = 0; j < 5; j++) {
+        __bang_gt_bitindex((T*)((int8_t*)bit_cond_nram + j * bit_cond_stride),
+                           cond_nram + j * nq_nl_np, tmp_zero, nq_nl_np_pad8);
+        __bang_bnot((char*)bit_cond_reverse_nram + j * bit_cond_stride,
+                    (char*)bit_cond_nram + j * bit_cond_stride,
+                    bit_cond_stride);
+      }
+    }
+
+    __sync_io_move_compute();
+
+    int32_t buffer_size_pad = PAD_UP(nq_nl_np_c * sizeof(T), WRAM_ALIGN_SIZE);
+    int32_t buffer_data_num = buffer_size_pad / sizeof(T);
+    T* inter_grad = compute_buffer_nram;
+    T* v_ping = inter_grad + buffer_data_num;
+    T* v_pong = v_ping + buffer_data_num;
+    T* value_wp = v_pong + buffer_data_num;
+    T* buffer = value_wp + buffer_data_num;
+
+    for (int j = 0; j < 5; j++) {
+      T* tmp_wp = weight_polation_nram + (j - 1) * nq_nl_np;
+      if (j < 4) {
+        gatherAsync(v_ping, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
+                    bit_cond_reverse_nram + j * bit_cond_stride,
+                    channels * sizeof(T), NRAM2NRAM, channels * sizeof(T),
+                    nq_nl_np);
+        gatherAsync(v_ping, data_value_gdram,
+                    (unsigned int*)offset_nram + j * nq_nl_np,
+                    bit_cond_nram + j * bit_cond_stride, channels * sizeof(T),
+                    GDRAM2NRAM, channels * sizeof(T), nq_nl_np);
+      }
+
+      if (j == 0) {
+        // (n, c) => (n, nl, np, c)
+        __memcpy_async(buffer, grad_output_nram, channels * sizeof(T),
+                       NRAM2NRAM, channels * sizeof(T), num_levels_points - 1,
+                       num_levels_points * channels * sizeof(T), deal_n - 1, 0,
+                       num_levels_points - 1, channels * sizeof(T), deal_n - 1);
+        gatherAsync(buffer, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
+                    bit_cond_reverse_nram + 4 * bit_cond_stride,
+                    channels * sizeof(T), NRAM2NRAM, channels * sizeof(T),
+                    nq_nl_np);
+        __bang_write_value(value_wp, nq_nl_np_c, (T)0);  // clear value*wp
+        __sync_move();
+        // (n, nl, np, c) => (c, n, nl, np)
+        __bang_transpose(v_pong, buffer, nq_nl_np, channels);
+        __sync_compute();
+        // (c, n, nl, np) * (n, nl, np)
+        __bang_cycle_mul(inter_grad, v_pong, weight_attn_nram, nq_nl_np_c,
+                         nq_nl_np);
+        __memcpy_async(wram_buffer, v_pong, buffer_size_pad, NRAM2WRAM);
+      }
+
+      if (j == 4) {
+        __memcpy_async(v_ping, wram_buffer, buffer_size_pad, WRAM2NRAM);
+      }
+
+      if (j > 0) {
+        // (n, nl, np, c) => (c, n, nl, np)
+        __bang_transpose(buffer, v_pong, nq_nl_np, channels);
+        // (c, n, nl, np) * (n, nl, np)
+        __bang_cycle_mul(v_pong, buffer, tmp_wp, nq_nl_np_c, nq_nl_np);
+        __bang_add(value_wp, value_wp, v_pong, nq_nl_np_c);
+        __bang_mul(v_pong, buffer, inter_grad, nq_nl_np_c);
+        // (c, nq, nl, np) => (nq, nl, np)
+        __bang_sumpool(buffer, v_pong, nq_nl_np, channels, 1, channels, 1, 1,
+                       1);
+        __bang_float2int32((int32_t*)v_pong, cond_nram + (j - 1) * nq_nl_np,
+                           nq_nl_np, 0);
+        __bang_mul_scalar((int32_t*)v_pong, (int32_t*)v_pong,
+                          (int32_t)0xffffffff, nq_nl_np);
+        __bang_band((char*)buffer, (char*)buffer, (char*)v_pong,
+                    nq_nl_np * sizeof(T));
+        // (nq, nl, np) => (Nq, nl, np)
+        __sync_compute();
+        __memcpy_async(grad_wp_sram + sram_src_offset +
+                           (j - 1) * total_deal_n * num_levels_points,
+                       buffer, nq_nl_np * sizeof(T), NRAM2SRAM);
+      }
+
+      T* tmp = v_ping;
+      v_ping = v_pong;
+      v_pong = tmp;
+
+      __sync_io_move_compute();
+    }
+
+    // compute grad_attn_weight
+    T* grad_output_bd = v_pong;
+    __bang_mul(v_ping, value_wp, grad_output_bd, nq_nl_np_c);
+    // (c, nq, nl, np) => (nq, nl, np)
+    __bang_sumpool(buffer, v_ping, nq_nl_np, channels, 1, channels, 1, 1, 1);
+    __memcpy(grad_attn_weight_gdram + i * max_deal_n * input_stride_3, buffer,
+             num_levels_points * sizeof(T), NRAM2GDRAM,
+             input_stride_3 * sizeof(T), num_levels_points * sizeof(T),
+             deal_n - 1);
+
+    // compute grad_value
+    T* grad_value_buffer = inter_grad + buffer_data_num;
+    int32_t neighbor_order[4] = {1, 3, 0, 2};
+    for (int k = 0; k < 4; k++) {
+      int neighbor_idx = neighbor_order[k];
+      T* grad_value_tmp = k < 3 ? buffer : inter_grad;
+      __bang_cycle_mul(grad_value_tmp, inter_grad,
+                       weight_polation_nram + neighbor_idx * nq_nl_np,
+                       nq_nl_np_c, nq_nl_np);
+      __bang_transpose(grad_value_buffer + k * buffer_data_num, grad_value_tmp,
+                       channels, nq_nl_np);
+    }
+
+    // store all valid point
+    T* cond_all_valid = cond_nram + nq_nl_np_4;
+    __bang_and(cond_all_valid, cond_nram, cond_nram + nq_nl_np, nq_nl_np);
+    __bang_and(cond_all_valid, cond_all_valid, cond_nram + 2 * nq_nl_np,
+               nq_nl_np);
+    __bang_and(cond_all_valid, cond_all_valid, cond_nram + 3 * nq_nl_np,
+               nq_nl_np);
+    int32_t all_valid_count = __bang_sum(cond_all_valid, nq_nl_np);
+    int32_t* dst_offset = (int32_t*)offset_zero_nram_stg2;
+    for (int i = 0; i < 4; i++) {
+      __bang_collect((T*)dst_offset + i * nq_nl_np,
+                     (T*)offset_nram + i * nq_nl_np, cond_all_valid, nq_nl_np);
+    }
+    int32_t* src_offset = (int32_t*)inter_grad;
+    int32_t* stride_4_2 = dst_offset + 3 * nq_nl_np;
+    int32_t* stride_1_2 = dst_offset;
+    __bang_collect((T*)src_offset, (T*)seq_nram, cond_all_valid, nq_nl_np);
+    __bang_mul_scalar(src_offset, src_offset, channels * sizeof(T), nq_nl_np);
+    __bang_sub(stride_4_2, stride_4_2, dst_offset + nq_nl_np, nq_nl_np);
+    __bang_sub(stride_1_2, stride_1_2, dst_offset + nq_nl_np, nq_nl_np);
+    int src_stride_1 = buffer_size_pad;
+    int src_stride_2 = src_stride_1 * 2;
+    int32_t* dst_offset_base = dst_offset + nq_nl_np;
+    int32_t dst_offset_2, src_offset_2, dst_stride_4_2, dst_stride_1_2;
+    for (int s = 0; s < all_valid_count; s++) {
+      loadNram2Gpr(dst_offset_2, src_offset_2, dst_stride_4_2, dst_stride_1_2,
+                   dst_offset_base + s, src_offset + s, stride_4_2 + s,
+                   stride_1_2 + s);
+      __bang_atomic_reduce_add((T*)((int8_t*)grad_value_gdram + dst_offset_2),
+                               (T*)((int8_t*)grad_value_buffer + src_offset_2),
+                               channels, 1, 1, dst_stride_4_2, dst_stride_1_2,
+                               src_stride_1, src_stride_2);
+    }
+
+    // store partial valid point
+    __bang_not(cond_all_valid, cond_all_valid, nq_nl_np);
+    __bang_cycle_and(cond_nram, cond_nram, cond_all_valid, nq_nl_np_4,
+                     nq_nl_np);
+    for (int k = 0; k < 4; k++) {
+      int32_t offset = neighbor_order[k] * nq_nl_np;
+      T* grad_value_tmp = grad_value_buffer + k * buffer_data_num;
+      T* tmp_cond = cond_nram + offset;
+      int32_t* tmp_dst_offset = offset_nram + offset;
+      int32_t* tmp_src_offset = (int32_t*)inter_grad;
+      int32_t valid_count = __bang_sum(tmp_cond, nq_nl_np);
+      if (valid_count > 0) {
+        __bang_collect((T*)tmp_dst_offset, (T*)tmp_dst_offset, tmp_cond,
+                       nq_nl_np);
+        __bang_collect((T*)tmp_src_offset, (T*)seq_nram, tmp_cond, nq_nl_np);
+        __bang_mul_scalar(tmp_src_offset, tmp_src_offset, channels * sizeof(T),
+                          valid_count);
+        for (int p = 0; p < valid_count; p++) {
+          __bang_atomic_reduce_add(
+              (T*)((int8_t*)grad_value_gdram + tmp_dst_offset[p]),
+              (T*)((int8_t*)grad_value_tmp + tmp_src_offset[p]), channels);
+        }
+      }
+    }
+    __sync_io_move_compute();
+  }
+}
+
+template <typename T>
+__mlu_func__ void backwardStageThreeLoop(
+    T* compute_buffer_nram, T* delta_xy_nram, T* grad_wp_nram,
+    T* spatial_h_bd_nram, T* spatial_w_bd_nram, T* delta_xy_sram,
+    T* grad_wp_sram, T* grad_loc_gdram, const int32_t total_deal_n,
+    const int32_t max_deal_n, const int32_t input_stride_2,
+    const int32_t input_stride_3, const int32_t output_stride_2,
+    const int32_t num_heads, const int32_t channels, const int32_t num_levels,
+    const int32_t num_points) {
+  const int32_t loop_num = (total_deal_n + max_deal_n - 1) / max_deal_n;
+  const int32_t num_levels_points = num_levels * num_points;
+  const int32_t src_stride = total_deal_n * num_levels_points * sizeof(T);
+  /*
+    grad_dx    = (grad_w3-grad_w1)*dy + (grad_w4-grad_w2)*(1-dy)
+    grad_loc_x = grad_dx * W
+    grad_dy    = (grad_w3-grad_w4)*dx + (grad_w1-grad_w2)*(1-dx)
+    grad_loc_y = grad_dy * H
+  */
+  for (int i = 0; i < loop_num; i++) {
+    int32_t deal_n = std::min(total_deal_n - i * max_deal_n, max_deal_n);
+    int32_t copy_size = deal_n * num_levels_points * sizeof(T);
+    int32_t sram_src_offset = i * max_deal_n * num_levels_points;
+    int32_t nq_nl_np = deal_n * num_levels_points;
+    T* grad_wp_1 = grad_wp_nram;
+    T* grad_wp_2 = grad_wp_nram + nq_nl_np;
+    T* grad_wp_3 = grad_wp_nram + 2 * nq_nl_np;
+    T* grad_wp_4 = grad_wp_nram + 3 * nq_nl_np;
+    T* dx = delta_xy_nram;
+    T* dx_1 = delta_xy_nram + nq_nl_np;
+    T* dy = delta_xy_nram + 2 * nq_nl_np;
+    T* dy_1 = delta_xy_nram + 3 * nq_nl_np;
+    T* buf_1 = compute_buffer_nram;
+    T* buf_2 = compute_buffer_nram + nq_nl_np;
+    T* buf_3 = compute_buffer_nram + 2 * nq_nl_np;
+    __memcpy(delta_xy_nram, delta_xy_sram + sram_src_offset, copy_size,
+             SRAM2NRAM, copy_size, src_stride, 3);
+    __memcpy(grad_wp_nram, grad_wp_sram + sram_src_offset, copy_size, SRAM2NRAM,
+             copy_size, src_stride, 3);
+    __bang_fusion(FUSION_FSM, buf_1, grad_wp_3, grad_wp_1, dy, nq_nl_np,
+                  nq_nl_np);
+    __bang_fusion(FUSION_FSM, buf_2, grad_wp_4, grad_wp_2, dy_1, nq_nl_np,
+                  nq_nl_np);
+    __bang_add(buf_1, buf_1, buf_2, nq_nl_np);
+    __bang_cycle_mul(buf_1, buf_1, spatial_w_bd_nram, nq_nl_np,
+                     num_levels_points);
+    __bang_fusion(FUSION_FSM, buf_2, grad_wp_3, grad_wp_4, dx, nq_nl_np,
+                  nq_nl_np);
+    __bang_fusion(FUSION_FSM, buf_3, grad_wp_1, grad_wp_2, dx_1, nq_nl_np,
+                  nq_nl_np);
+    __bang_add(buf_2, buf_2, buf_3, nq_nl_np);
+    __bang_cycle_mul(buf_2, buf_2, spatial_h_bd_nram, nq_nl_np,
+                     num_levels_points);
+    __bang_transpose(buf_3, buf_1, 2,
+                     nq_nl_np);  // (2, nq_nl_np) -> (nq_nl_np, 2)
+    __memcpy(grad_loc_gdram + i * max_deal_n * input_stride_3 * 2, buf_3,
+             input_stride_2 * 2 * sizeof(T), NRAM2GDRAM,
+             input_stride_3 * 2 * sizeof(T), input_stride_2 * 2 * sizeof(T),
+             deal_n - 1);
+  }
+}
+
+#endif
+
+__mlu_global__ void MLUUnion1KernelMsDeformAttnBackwardFastKernel(
+    const float* data_value, const int32_t* spatial_shapes,
+    const int32_t* data_level_start_index, const float* data_sampling_loc,
+    const float* data_attn_weight, const float* grad_output,
+    const int32_t batch, const int32_t spatial_size, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_query,
+    const int32_t num_points, float* grad_value, float* grad_sampling_loc,
+    float* grad_attn_weight) {
+#if (__BANG_ARCH__ == 592)
+  using T = float;
+  const int32_t num_keys = spatial_size;
+  const int32_t input_stride_4 =
+      num_query * num_heads * num_levels * num_points;
+  const int32_t input_stride_3 = num_heads * num_levels * num_points;
+  const int32_t input_stride_2 = num_levels * num_points;
+  const int32_t output_stride_3 = num_query * num_heads * channels;
+  const int32_t output_stride_2 = num_heads * channels;
+  const int32_t data_value_stride_3 = num_keys * num_heads * channels;
+
+  int32_t* seq_nram = nullptr;            // (1024)
+  T* zeros_nram = nullptr;                // (channels)
+  int32_t* data_offset_nram = nullptr;    // (4, deal_n, num_levels, num_points)
+  T* weight_polation_nram = nullptr;      // (4, deal_n, num_levels, num_points)
+  T* cond_point_polation_nram = nullptr;  // (4, deal_n, num_levels, num_points)
+  T* cond_point_valid_nram = nullptr;     // (deal_n, num_levels, num_points)
+  T* loc_nram = nullptr;                  // (deal_n, num_levels, num_points, 2)
+  T* buf_nram = nullptr;                  // (6, deal_n, num_levels, num_points)
+  T* buf_nram_end = nullptr;
+  int8_t* mask_x_nram = nullptr;  // (deal_n, num_levels, num_points, 2) / 8
+  int8_t* mask_y_nram = nullptr;  // (deal_n, num_levels, num_points, 2) / 8
+  T* spatial_offset_bd_nram = nullptr;     // (num_levels, num_points)
+  T* spatial_w_bd_nram = nullptr;          // (num_levels, num_points)
+  T* spatial_h_bd_nram = nullptr;          // (num_levels, num_points)
+  int32_t* spatial_offset_nram = nullptr;  // (num_levels)
+  int32_t* spatial_hw_nram = nullptr;      // (num_levels, 2)
+  T* compute_buffer_nram_stg2 =
+      nullptr;  // (deal_n, num_levels, num_points, channels)
+  T* weight_polation_nram_stg2 =
+      nullptr;                          // (4, deal_n, num_levels, num_points)
+  T* delta_xy_nram = nullptr;           // (4, deal_n, num_levels, num_points)
+  T* weight_attn_nram_stg2 = nullptr;   // (1, deal_n, num_levels, num_points)
+  int32_t* offset_nram_stg2 = nullptr;  // (4, deal_n, num_levels, num_points)
+  T* grad_output_nram = nullptr;        // (deal_n, channels)
+  T* cond_nram_stg2 = nullptr;          // (4, deal_n, num_levels, num_points)
+  T* compute_buffer_nram_stg3 =
+      nullptr;                      // (4, max_deal_n, num_levels, num_points)
+  T* delta_xy_nram_stg3 = nullptr;  // (4, max_deal_n, num_levels, num_points)
+  T* grad_wp_nram_stg3 = nullptr;
+  T* value_sram = nullptr;  // (num_keys, channels)
+  int32_t* data_offset_sram = nullptr;
+  T* weight_polation_sram = nullptr;
+  T* grad_wp_sram = nullptr;
+  T* weight_attn_sram = nullptr;
+  T* cond_point_polation_sram = nullptr;
+  T* delta_xy_sram = nullptr;
+  int8_t* bit_cond_nram = nullptr;          // (4, pad_points / 8)
+  int8_t* bit_cond_reverse_nram = nullptr;  // (4, pad_points / 8)
+  int32_t stage_1_max_deal_n = 0;
+  int32_t stage_2_max_deal_n = 0;
+  int32_t stage_3_max_deal_n = 0;
+  int32_t max_cached_n = 0;
+  int32_t mask_size = 0;
+  memPolicyBackward(
+      seq_nram, zeros_nram, data_offset_nram, weight_polation_nram,
+      cond_point_polation_nram, cond_point_valid_nram, delta_xy_nram, loc_nram,
+      buf_nram, buf_nram_end, mask_x_nram, mask_y_nram, spatial_offset_bd_nram,
+      spatial_w_bd_nram, spatial_h_bd_nram, spatial_offset_nram,
+      spatial_hw_nram, compute_buffer_nram_stg2, weight_polation_nram_stg2,
+      weight_attn_nram_stg2, offset_nram_stg2, grad_output_nram, bit_cond_nram,
+      bit_cond_reverse_nram, cond_nram_stg2, compute_buffer_nram_stg3,
+      delta_xy_nram_stg3, grad_wp_nram_stg3, data_offset_sram,
+      weight_polation_sram, grad_wp_sram, weight_attn_sram,
+      cond_point_polation_sram, delta_xy_sram, nram_buffer, sram_buffer,
+      max_cached_n, stage_1_max_deal_n, stage_2_max_deal_n, stage_3_max_deal_n,
+      mask_size, NRAM_AVALIABLE_SIZE, SRAM_AVALIABLE_SIZE, batch, num_keys,
+      num_heads, channels, num_levels, num_query, num_points);
+
+  if (stage_1_max_deal_n <= 0 || stage_2_max_deal_n <= 0) {
+    return;
+  }
+
+  int32_t cluster_begin_batch_head = 0;
+  int32_t cluster_act_batch_head = 0;
+  int32_t cluster_end_batch_head = 0;
+  int32_t core_begin_query = 0;
+  int32_t core_act_query = 0;
+  int32_t core_loop_num = 0;
+  int32_t core_step_query = 0;
+  splitTaskV2(cluster_begin_batch_head, cluster_act_batch_head,
+              cluster_end_batch_head, core_begin_query, core_act_query,
+              core_loop_num, core_step_query, max_cached_n, batch, num_keys,
+              num_heads, channels, num_levels, num_query, num_points);
+
+  prepareLoopV2(seq_nram, zeros_nram, spatial_offset_nram, spatial_hw_nram,
+                mask_x_nram, mask_y_nram, spatial_offset_bd_nram,
+                spatial_h_bd_nram, spatial_w_bd_nram, value_sram,
+                data_level_start_index, spatial_shapes, num_keys, num_levels,
+                num_points, stage_1_max_deal_n, mask_size, channels);
+
+  for (int32_t bh_idx = cluster_begin_batch_head;
+       bh_idx < cluster_end_batch_head; bh_idx++) {
+    int32_t b = bh_idx / num_heads;
+    int32_t head_idx = bh_idx % num_heads;
+    size_t output_base_offset =
+        (size_t)b * output_stride_3 + head_idx * channels;
+    size_t attn_weight_base_offset =
+        (size_t)b * input_stride_4 + head_idx * input_stride_2;
+    size_t data_value_base_offset =
+        (size_t)b * data_value_stride_3 + head_idx * channels;
+
+    for (int32_t i = 0; __is_ipu() && i < core_loop_num; i++) {
+      int32_t deal_n =
+          std::min(core_act_query - core_step_query * i, core_step_query);
+      int32_t core_query_offset = i * core_step_query;
+      size_t attn_weight_offset =
+          attn_weight_base_offset +
+          (core_begin_query + core_query_offset) * input_stride_3;
+      size_t loc_offset = attn_weight_offset * 2;
+      size_t output_offset =
+          output_base_offset +
+          (core_begin_query + core_query_offset) * output_stride_2;
+
+      // compute offset/cond/wp
+      stageOneLoop((T*)data_sampling_loc + loc_offset,
+                   (T*)data_attn_weight + attn_weight_offset, data_offset_nram,
+                   delta_xy_nram, weight_polation_nram,
+                   cond_point_polation_nram, cond_point_valid_nram, loc_nram,
+                   buf_nram, buf_nram_end, mask_x_nram, mask_y_nram,
+                   spatial_offset_bd_nram, spatial_w_bd_nram, spatial_h_bd_nram,
+                   spatial_offset_nram, spatial_hw_nram, data_offset_sram,
+                   delta_xy_sram, weight_polation_sram, weight_attn_sram,
+                   cond_point_polation_sram, true, true, deal_n,
+                   stage_1_max_deal_n, num_heads, channels, num_levels,
+                   num_points, input_stride_2, input_stride_3);
+
+      // compute grad_value/grad_attn_w
+      backwardStageTwoLoop(
+          seq_nram, compute_buffer_nram_stg2, zeros_nram,
+          weight_polation_nram_stg2, weight_attn_nram_stg2, offset_nram_stg2,
+          cond_nram_stg2, bit_cond_nram, bit_cond_reverse_nram,
+          grad_output_nram, delta_xy_nram, data_offset_sram,
+          weight_polation_sram, grad_wp_sram, weight_attn_sram,
+          cond_point_polation_sram, delta_xy_sram,
+          (T*)data_value + data_value_base_offset,
+          (T*)grad_output + output_offset,
+          (T*)grad_value + data_value_base_offset,
+          (T*)grad_attn_weight + attn_weight_offset, wram_buffer, deal_n,
+          stage_2_max_deal_n, input_stride_2, input_stride_3, output_stride_2,
+          num_heads, channels, num_levels, num_points);
+
+      // caompute grad_loc
+      backwardStageThreeLoop(
+          compute_buffer_nram_stg3, delta_xy_nram_stg3, grad_wp_nram_stg3,
+          spatial_h_bd_nram, spatial_w_bd_nram, delta_xy_sram, grad_wp_sram,
+          (T*)grad_sampling_loc + loc_offset, deal_n, stage_3_max_deal_n,
+          input_stride_2, input_stride_3, output_stride_2, num_heads, channels,
+          num_levels, num_points);
+    }
+  }
+#endif
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelMsDeformAttnBackwardFast(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const float* data_value, const int32_t* spatial_shapes,
+    const int32_t* data_level_start_index, const float* data_sampling_loc,
+    const float* data_attn_weight, const float* grad_output,
+    const int32_t batch, const int32_t spatial_size, const int32_t num_heads,
+    const int32_t channels, const int32_t num_levels, const int32_t num_query,
+    const int32_t num_points, float* grad_value, float* grad_sampling_loc,
+    float* grad_attn_weight) {
+  KERNEL_CHECK(
+      MLUUnion1KernelMsDeformAttnBackwardFastKernel<<<k_dim, k_type, queue>>>(
+          data_value, spatial_shapes, data_level_start_index, data_sampling_loc,
+          data_attn_weight, grad_output, batch, spatial_size, num_heads,
+          channels, num_levels, num_query, num_points, grad_value,
+          grad_sampling_loc, grad_attn_weight));
+  return MLUOP_STATUS_SUCCESS;
+}

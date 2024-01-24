@@ -1,0 +1,289 @@
+/*************************************************************************
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "core/logging.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+#include "kernels/mutual_information/mutual_information_backward/mutual_information_backward.h"
+#include "kernels/mutual_information/mutual_information_backward/mutual_information_backward_utils.h"
+
+__mlu_func__ void computeTerm1AndTerm2(const int b, const int S, const int T,
+                                       const int s_begin, const int s_end,
+                                       const int t_begin, const int t_end,
+                                       const float *px, const float *py,
+                                       const float *p) {
+  /* *********************nram space split********************** */
+  /* |  term1  |  term2  | cur_p | next_p | large_neg |  mask |*/
+  /* | S*(T+1) | (S+1)*T | t_len | t_len  |  2*t_len  | t_len |*/
+  float *nram_term1 = (float *)nram_buffer;
+  float *nram_term2 = nram_term1 + S * (T + 1);
+  float *nram_cur_p = nram_term2 + (S + 1) * T;
+
+  int t_len = t_end - t_begin + 1;
+
+  float *nram_next_p = nram_cur_p + t_len;
+  float *nram_large_neg = nram_next_p + t_len;
+  float *nram_mask = nram_large_neg + 2 * t_len;
+
+  __bang_write_value(nram_large_neg, 2 * t_len, (float)-1.0e+30);
+
+  for (int i = s_begin; i < s_end; ++i) {
+    // load p to cur_p and next_p
+    __memcpy(nram_cur_p, p + b * (S + 1) * (T + 1) + i * (T + 1) + t_begin,
+             t_len * sizeof(float), GDRAM2NRAM, t_len * sizeof(float),
+             (T + 1) * sizeof(float), 1);
+    __bang_nan_maximum(nram_cur_p, nram_cur_p, nram_large_neg, 2 * t_len);
+
+    // load px to term1
+    __memcpy(nram_term1 + i * (T + 1) + t_begin,
+             px + b * S * (T + 1) + i * (T + 1) + t_begin,
+             t_len * sizeof(float), GDRAM2NRAM);
+    __bang_fusion(FUSION_FAS, nram_term1 + i * (T + 1) + t_begin,
+                  nram_term1 + i * (T + 1) + t_begin, nram_cur_p, nram_next_p,
+                  t_len, t_len);
+    safeExp(nram_term1 + i * (T + 1) + t_begin,
+            nram_term1 + i * (T + 1) + t_begin, nram_mask, t_len);
+
+    if (t_len > 1) {
+      // load py to term2
+      __memcpy(nram_term2 + i * T + t_begin,
+               py + b * (S + 1) * T + i * T + t_begin,
+               (t_len - 1) * sizeof(float), GDRAM2NRAM);
+      __bang_fusion(FUSION_FAS, nram_term2 + i * T + t_begin,
+                    nram_term2 + i * T + t_begin, nram_cur_p, nram_cur_p + 1,
+                    t_len - 1, t_len - 1);
+      safeExp(nram_term2 + i * T + t_begin, nram_term2 + i * T + t_begin,
+              nram_mask, t_len - 1);
+    }
+  }
+
+  if (t_len > 1) {
+    if (s_begin == s_end) {
+      // load p to next_p
+      __memcpy(nram_next_p,
+               p + b * (S + 1) * (T + 1) + s_end * (T + 1) + t_begin,
+               t_len * sizeof(float), GDRAM2NRAM);
+      __bang_nan_maximum(nram_next_p, nram_next_p, nram_large_neg, t_len);
+    }
+    // compute term2[s_end][:]
+    __memcpy(nram_term2 + s_end * T + t_begin,
+             py + b * (S + 1) * T + s_end * T + t_begin,
+             (t_len - 1) * sizeof(float), GDRAM2NRAM);
+    __bang_fusion(FUSION_FAS, nram_term2 + s_end * T + t_begin,
+                  nram_term2 + s_end * T + t_begin, nram_next_p,
+                  nram_next_p + 1, t_len - 1, t_len - 1);
+    safeExp(nram_term2 + s_end * T + t_begin, nram_term2 + s_end * T + t_begin,
+            nram_mask, t_len - 1);
+  }
+}
+
+__mlu_func__ void computePGrad(const int b, const int S, const int T,
+                               const int s_begin, const int s_end,
+                               const int t_begin, const int t_end,
+                               const bool overwrite_ans_grad, float *ans_grad) {
+  /* ***************************nram space split*************************** */
+  /* |  term1  |  term2  |   p_grad  | cur_term1|zero|cur_term2|cur_p_grad| */
+  /* | S*(T+1) | (S+1)*T |(S+1)*(T+1)|  min_len | 1  | min_len |  min_len | */
+  float *nram_term1 = (float *)nram_buffer;
+  float *nram_term2 = nram_term1 + S * (T + 1);
+  float *nram_p_grad = nram_term2 + (S + 1) * T;
+  float *nram_cur_term1 = nram_p_grad + (S + 1) * (T + 1);
+
+  int s_len = s_end - s_begin + 1;
+  int t_len = t_end - t_begin + 1;
+  int max_len = __mluop_max(s_len, t_len);
+  int min_len = __mluop_min(s_len, t_len);
+
+  float *nram_cur_term2 = nram_cur_term1 + min_len + 1;
+  float *nram_cur_p_grad = nram_cur_term2 + min_len;
+  __bang_write_zero(nram_cur_term1, 3 * min_len + 1);
+
+  // compute the last one: p_grad[b][s_end][t_end] = ans_grad[b]
+  __memcpy_async(nram_p_grad + s_end * (T + 1) + t_end, ans_grad + b,
+                 sizeof(float), GDRAM2NRAM);
+  __sync();
+  nram_cur_p_grad[0] = nram_p_grad[s_end * (T + 1) + t_end];
+
+  int data_num = 0;
+  int s = 0;
+  int t = 0;
+  int term2_s = 0;
+  int term2_t = 0;
+  int term1_num = 0;
+  int term2_num = 0;
+  float *nram_p_grad_for_compute_term1 = nram_cur_p_grad;
+  float *nram_compute_term2 = nram_cur_term2;
+
+  int loop_time = s_len + t_len - 1;
+  for (int i = 1; i < loop_time; ++i) {
+    data_num = i < max_len ? __mluop_min(i + 1, min_len) : loop_time - i;
+    s = i < s_len ? s_end - i : s_begin;
+    t = i < s_len ? t_end : t_end + s_len - i - 1;
+
+    term1_num = i < t_len ? data_num - 1 : data_num;
+    if (term1_num > 0) {
+      __memcpy(nram_cur_term1, nram_term1 + s * (T + 1) + t, sizeof(float),
+               NRAM2NRAM, sizeof(float), T * sizeof(float), term1_num - 1);
+      nram_p_grad_for_compute_term1 =
+          i >= s_len ? nram_cur_p_grad + 1 : nram_cur_p_grad;
+      __bang_mul(nram_cur_term1, nram_cur_term1, nram_p_grad_for_compute_term1,
+                 term1_num);
+    }
+
+    term2_num = data_num;
+    nram_compute_term2 = nram_cur_term2;
+    term2_s = s;
+    term2_t = t;
+    if (i < s_len) {
+      term2_num -= 1;
+      nram_compute_term2 -= 1;
+      term2_s += 1;
+      term2_t -= 1;
+    }
+    if (term2_num > 0) {
+      __memcpy(nram_cur_term2, nram_term2 + term2_s * T + term2_t,
+               sizeof(float), NRAM2NRAM, sizeof(float), (T - 1) * sizeof(float),
+               term2_num - 1);
+      __bang_mul(nram_cur_term2, nram_cur_term2, nram_cur_p_grad, term2_num);
+    }
+
+    __bang_add(nram_cur_p_grad, nram_cur_term1, nram_compute_term2, data_num);
+    __memcpy(nram_p_grad + s * (T + 1) + t, nram_cur_p_grad, sizeof(float),
+             NRAM2NRAM, T * sizeof(float), sizeof(float), data_num - 1);
+  }
+
+  if (overwrite_ans_grad) {
+    __memcpy(ans_grad + b, nram_p_grad + s_begin * (T + 1) + t_begin,
+             sizeof(float), NRAM2GDRAM);
+  }
+}
+
+__mlu_func__ void computePxGradAndPyGrad(const int b, const int S, const int T,
+                                         const int s_begin, const int s_end,
+                                         const int t_begin, const int t_end,
+                                         float *px_grad, float *py_grad) {
+  /* ***********nram space split********** */
+  /* |  term1  |  term2  |     p_grad    | */
+  /* | S*(T+1) | (S+1)*T |  (S+1)*(T+1)  | */
+  float *nram_term1 = (float *)nram_buffer;
+  float *nram_term2 = nram_term1 + S * (T + 1);
+  float *nram_p_grad = nram_term2 + (S + 1) * T;
+
+  int t_len = t_end - t_begin + 1;
+
+  for (int i = s_begin; i < s_end; ++i) {
+    // compute term1
+    __bang_mul(nram_term1 + i * (T + 1) + t_begin,
+               nram_term1 + i * (T + 1) + t_begin,
+               nram_p_grad + (i + 1) * (T + 1) + t_begin, t_len);
+
+    if (t_len > 1) {
+      // compute term2
+      __bang_mul(nram_term2 + i * T + t_begin, nram_term2 + i * T + t_begin,
+                 nram_p_grad + i * (T + 1) + t_begin + 1, t_len - 1);
+    }
+  }
+
+  if (t_len > 1) {
+    // compute term2[s_end][:]
+    __bang_mul(nram_term2 + s_end * T + t_begin,
+               nram_term2 + s_end * T + t_begin,
+               nram_p_grad + s_end * (T + 1) + t_begin + 1, t_len - 1);
+  }
+
+  if (S > 0) {
+    __memcpy(px_grad + b * S * (T + 1), nram_term1, S * (T + 1) * sizeof(float),
+             NRAM2GDRAM);
+  }
+  if (T > 0) {
+    __memcpy(py_grad + b * (S + 1) * T, nram_term2, (S + 1) * T * sizeof(float),
+             NRAM2GDRAM);
+  }
+}
+
+__mlu_global__ void mluBlock3PipelineMutualInformationBackward(
+    const int B, const int S, const int T, const float *px, const float *py,
+    const bool has_boundary, const int64_t *opt_boundary, const float *p,
+    const bool overwrite_ans_grad, float *ans_grad, float *px_grad,
+    float *py_grad) {
+  const int num_per_core = B / taskDim;
+  const int num_rem = B % taskDim;
+  const int num_cur_core = num_per_core + (taskId < num_rem);
+  const int b_offset = taskId * num_cur_core + (taskId >= num_rem) * num_rem;
+
+  int s_begin = 0;
+  int t_begin = 0;
+  int s_end = S;
+  int t_end = T;
+  if (has_boundary) {
+    int64_t *boundary = (int64_t *)nram_buffer;
+    for (int b = b_offset; b < b_offset + num_cur_core; ++b) {
+      __memcpy(boundary, opt_boundary + 4 * b, 4 * sizeof(int64_t), GDRAM2NRAM);
+      s_begin = boundary[0];
+      t_begin = boundary[1];
+      s_end = boundary[2];
+      t_end = boundary[3];
+      __bang_write_zero((float *)nram_buffer, S * (T + 1) + (S + 1) * T);
+
+      if (s_begin > s_end || t_begin > t_end) {
+        if (S > 0) {
+          __memcpy(px_grad + b * S * (T + 1), (float *)nram_buffer,
+                   S * (T + 1) * sizeof(float), NRAM2GDRAM);
+        }
+        if (T > 0) {
+          __memcpy(py_grad + b * (S + 1) * T,
+                   (float *)nram_buffer + S * (T + 1),
+                   (S + 1) * T * sizeof(float), NRAM2GDRAM);
+        }
+        continue;
+      }
+      computeTerm1AndTerm2(b, S, T, s_begin, s_end, t_begin, t_end, px, py, p);
+      computePGrad(b, S, T, s_begin, s_end, t_begin, t_end, overwrite_ans_grad,
+                   ans_grad);
+      computePxGradAndPyGrad(b, S, T, s_begin, s_end, t_begin, t_end, px_grad,
+                             py_grad);
+    }
+  } else {
+    for (int b = b_offset; b < b_offset + num_cur_core; ++b) {
+      computeTerm1AndTerm2(b, S, T, s_begin, s_end, t_begin, t_end, px, py, p);
+      computePGrad(b, S, T, s_begin, s_end, t_begin, t_end, overwrite_ans_grad,
+                   ans_grad);
+      computePxGradAndPyGrad(b, S, T, s_begin, s_end, t_begin, t_end, px_grad,
+                             py_grad);
+    }
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API kernel3PipelineMutualInformationBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, const int B,
+    const int S, const int T, const void *px, const void *py,
+    const bool has_boundary, const void *opt_boundary, const void *p,
+    const bool overwrite_ans_grad, void *ans_grad, void *px_grad,
+    void *py_grad) {
+  KERNEL_CHECK(
+      mluBlock3PipelineMutualInformationBackward<<<k_dim, k_type, queue>>>(
+          B, S, T, (float *)px, (float *)py, has_boundary,
+          (int64_t *)opt_boundary, (float *)p, overwrite_ans_grad,
+          (float *)ans_grad, (float *)px_grad, (float *)py_grad));
+  return MLUOP_STATUS_SUCCESS;
+}
