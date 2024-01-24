@@ -185,7 +185,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     fft_plan->odist = mluOpGetTensorElementNum(output_desc) / fft_plan->batch;
   }
   fft_plan->is_input_contiguous = !mluop::ifNeedTensorStrideProcess(input_desc);
-  fft_plan->is_output_contiguous = !mluop::ifNeedTensorStrideProcess(output_desc);
+  fft_plan->is_output_contiguous =
+      !mluop::ifNeedTensorStrideProcess(output_desc);
 
   // dtype check
   mluOpDataType_t input_dtype = input_desc->dtype;
