@@ -1,4 +1,4 @@
-op_name: "roialign_forward"
+op_name: "roi_align_forward"
 input {
   id: "input0"
   shape: {

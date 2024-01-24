@@ -1,11 +1,11 @@
-op_name: "roialign_forward"
+op_name: "roi_align_forward"
 input {
   id: "input0"
   shape: {
-    dims: 8
-    dims: 4
-    dims: 4
-    dims: 4
+    dims: 18
+    dims: 250
+    dims: 250
+    dims: 50
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
@@ -27,47 +27,47 @@ input {
   value_f: 0
   value_f: 3.222
   value_f: 4.666
-  value_f: 3.222
-  value_f: 4.666
+  value_f: 124.323181
+  value_f: 59.33343
   value_f: 1
-  value_f: 9.311646
-  value_f: 7.723267
-  value_f: 7.382996
-  value_f: 24.105499
+  value_f: 74.382996
+  value_f: 71.723267
+  value_f: 74.382996
+  value_f: 124.105499
   value_f: 3
   value_f: 9.311646
-  value_f: -1.73267
+  value_f: 71.73267
   value_f: 4.382996
   value_f: 24.105499
   value_f: 1
-  value_f: 9.311646
-  value_f: 1.723267
-  value_f: 7.382996
-  value_f: 14.105499
+  value_f: 39.311646
+  value_f: 71.723267
+  value_f: 74.382996
+  value_f: 124.105499
   value_f: 6
-  value_f: 19.311646
-  value_f: 1.723267
+  value_f: 119.311646
+  value_f: 71.723267
   value_f: 72.382996
-  value_f: 14.105499
+  value_f: 124.105499
   value_f: 4
   value_f: 9.311646
-  value_f: 1.723267
-  value_f: 17.382996
-  value_f: 14.105499
+  value_f: 71.723267
+  value_f: 174.382996
+  value_f: 124.105499
   value_f: 7
-  value_f: 19.1646
-  value_f: 1.723267
-  value_f: 14.382996
-  value_f: 12.105499
+  value_f: 139.1646
+  value_f: 71.723267
+  value_f: 174.382996
+  value_f: 124.105499
   value_f: 4
-  value_f: 5.311646
-  value_f: 7.723267
-  value_f: 12.3996
-  value_f: 14.105499
+  value_f: 56.311646
+  value_f: 71.723267
+  value_f: 124.3996
+  value_f: 124.105499
   value_f: 4
   value_f: 3.1646
-  value_f: 1.723267
-  value_f: 7.82996
+  value_f: 171.723267
+  value_f: 76.82996
   value_f: 4.105499
 }
 
@@ -75,19 +75,19 @@ output {
   id: "output0"
   shape: {
     dims: 9
-    dims: 3
-    dims: 3
-    dims: 4
+    dims: 15
+    dims: 15
+    dims: 50
   }
   layout: LAYOUT_NHWC
   dtype: DTYPE_FLOAT
 }
 roialign_param: {
-  pooled_height: 3
-  pooled_width: 3
+  pooled_height: 15
+  pooled_width: 15
   sampling_ratio: 2
-  spatial_scale : 0.0025
-  aligned : 0
+  spatial_scale : 0.125
+  aligned : 1
 }
 test_param: {
   error_func: DIFF1

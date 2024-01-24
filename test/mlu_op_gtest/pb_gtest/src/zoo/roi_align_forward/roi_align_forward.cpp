@@ -22,14 +22,14 @@
  *************************************************************************/
 #include <string>
 #include <algorithm>
-#include "roialign_forward.h"
+#include "roi_align_forward.h"
 #include "mlu_op.h"
 
 namespace mluoptest {
 
-void RoialignForwardExecutor::paramCheck() {
-  if (!parser_->getProtoNode()->has_roialign_param()) {
-    LOG(ERROR) << "mluOpRoiAlignForward_v2: lose roialign_param. ";
+void RoiAlignForwardExecutor::paramCheck() {
+  if (!parser_->getProtoNode()->has_roi_align_forward_param()) {
+    LOG(ERROR) << "mluOpRoiAlignForward_v2: lose roi_align_forward_param. ";
   }
   if (parser_->getInputNum() != 2) {
     LOG(ERROR) << "mluOpRoiAlignForward_v2: tensor input number is wrong.";
@@ -40,14 +40,14 @@ void RoialignForwardExecutor::paramCheck() {
   }
 }
 
-void RoialignForwardExecutor::compute() {
+void RoiAlignForwardExecutor::compute() {
   float spatial_scale =
-      parser_->getProtoNode()->roialign_param().spatial_scale();
+      parser_->getProtoNode()->roi_align_forward_param().spatial_scale();
   int sampling_ratio =
-      parser_->getProtoNode()->roialign_param().sampling_ratio();
-  int pool_mode = parser_->getProtoNode()->roialign_param().pool_mode();
-  int verison = parser_->getProtoNode()->roialign_param().version();
-  bool aligned = parser_->getProtoNode()->roialign_param().aligned();
+      parser_->getProtoNode()->roi_align_forward_param().sampling_ratio();
+  int pool_mode = parser_->getProtoNode()->roi_align_forward_param().pool_mode();
+  int verison = parser_->getProtoNode()->roi_align_forward_param().version();
+  bool aligned = parser_->getProtoNode()->roi_align_forward_param().aligned();
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto input_rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
@@ -94,7 +94,7 @@ void RoialignForwardExecutor::compute() {
   mluOpDestroyRoiAlignForwardDescriptor(roialign_desc);
 }
 
-void RoialignForwardExecutor::bilinear_interpolate(
+void RoiAlignForwardExecutor::bilinear_interpolate(
     int height, int width, float y, float x, float &w1, float &w2, float &w3,
     float &w4, int &x_low, int &x_high, int &y_low, int &y_high, int &empty) {
   if (y < -1.0 || y > height || x < -1.0 || x > width) {
@@ -124,17 +124,17 @@ void RoialignForwardExecutor::bilinear_interpolate(
   return;
 }
 
-void RoialignForwardExecutor::cpuCompute() {
+void RoiAlignForwardExecutor::cpuCompute() {
   float spatial_scale =
-      parser_->getProtoNode()->roialign_param().spatial_scale();
+      parser_->getProtoNode()->roi_align_forward_param().spatial_scale();
   int sampling_ratio =
-      parser_->getProtoNode()->roialign_param().sampling_ratio();
-  bool aligned = parser_->getProtoNode()->roialign_param().aligned();
+      parser_->getProtoNode()->roi_align_forward_param().sampling_ratio();
+  bool aligned = parser_->getProtoNode()->roi_align_forward_param().aligned();
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto input_rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
-  int verison = parser_->getProtoNode()->roialign_param().version();
-  int pool_mode = parser_->getProtoNode()->roialign_param().pool_mode();
+  int verison = parser_->getProtoNode()->roi_align_forward_param().version();
+  int pool_mode = parser_->getProtoNode()->roi_align_forward_param().pool_mode();
 
   int input_height = input_desc->dims[1];
   int input_width = input_desc->dims[2];
@@ -373,12 +373,12 @@ void RoialignForwardExecutor::cpuCompute() {
   }
 }
 
-int64_t RoialignForwardExecutor::getTheoryOps() {
+int64_t RoiAlignForwardExecutor::getTheoryOps() {
   float spatial_scale =
-      parser_->getProtoNode()->roialign_param().spatial_scale();
+      parser_->getProtoNode()->roi_align_forward_param().spatial_scale();
   int sampling_ratio =
-      parser_->getProtoNode()->roialign_param().sampling_ratio();
-  bool aligned = parser_->getProtoNode()->roialign_param().aligned();
+      parser_->getProtoNode()->roi_align_forward_param().sampling_ratio();
+  bool aligned = parser_->getProtoNode()->roi_align_forward_param().aligned();
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto input_rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
@@ -454,16 +454,16 @@ int64_t RoialignForwardExecutor::getTheoryOps() {
   return theory_ops;
 }
 
-int64_t RoialignForwardExecutor::getTheoryIoSize() {
+int64_t RoiAlignForwardExecutor::getTheoryIoSize() {
   float spatial_scale =
-      parser_->getProtoNode()->roialign_param().spatial_scale();
+      parser_->getProtoNode()->roi_align_forward_param().spatial_scale();
   int sampling_ratio =
-      parser_->getProtoNode()->roialign_param().sampling_ratio();
-  bool aligned = parser_->getProtoNode()->roialign_param().aligned();
+      parser_->getProtoNode()->roi_align_forward_param().sampling_ratio();
+  bool aligned = parser_->getProtoNode()->roi_align_forward_param().aligned();
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto input_rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
-  int pool_mode = parser_->getProtoNode()->roialign_param().pool_mode();
+  int pool_mode = parser_->getProtoNode()->roi_align_forward_param().pool_mode();
 
   int input_height = input_desc->dims[1];
   int input_width = input_desc->dims[2];

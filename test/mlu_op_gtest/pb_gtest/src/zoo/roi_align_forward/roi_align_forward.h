@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2023] by Cambricon, Inc.
+ * Copyright (C) [2022] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -20,30 +20,34 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_MUTUAL_INFORMATION_BACKWARD_MUTUAL_INFORMATION_BACKWARD_UTILS_H_
-#define KERNELS_MUTUAL_INFORMATION_BACKWARD_MUTUAL_INFORMATION_BACKWARD_UTILS_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_ROI_ALIGN_FORWARD_ROI_ALIGN_FORWARD_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_ROI_ALIGN_FORWARD_ROI_ALIGN_FORWARD_H_
+#include "executor.h"
+namespace mluoptest {
+class RoiAlignForwardExecutor : public Executor {
+ public:
+  RoiAlignForwardExecutor() {}
+  ~RoiAlignForwardExecutor() {
+  }
 
-#include "mlu_op.h"
-
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
-
-__mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
-  // band with 0x7F800000, exp bits are not all 1, mask -> 0xffffffff
-  __asm__ volatile(
-      "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
-      ".and(%[src1]), .ne(%[src2]), .mul(%[src3]);\n" ::[dst] "r"(
-          (int32_t *)mask),
-      [ size ] "r"(num), [ src0 ] "r"((int32_t *)src), [ src1 ] "r"(0x7f800000),
-      [ src2 ] "r"(0x7f800000), [ src3 ] "r"(-1));
-  __bang_band((char *)src, (char *)src, (char *)mask, num * sizeof(float));
-}
-
-__mlu_func__ void safeExp(float *dst, float *src, float *mask, const int num) {
-  setNanInfToZero(src, mask, num);
-  __mluop_exp(dst, src, NULL, 0, num);
-  // erase exp(0) to 0 with mask
-  __bang_band((char *)dst, (char *)dst, (char *)mask, num * sizeof(float));
-  setNanInfToZero(dst, mask, num);
-}
-
-#endif  // KERNELS_MUTUAL_INFORMATION_BACKWARD_MUTUAL_INFORMATION_BACKWARD_UTILS_H_  // NOLINT
+  void paramCheck() override;
+  void compute() override;
+  void cpuCompute() override;
+  int64_t getTheoryOps() override;
+  int64_t getTheoryIoSize() override;
+  void bilinear_interpolate(int height,
+                            int width,
+                            float y,
+                            float x,
+                            float& w1,
+                            float& w2,
+                            float& w3,
+                            float& w4,
+                            int& x_low,
+                            int& x_high,
+                            int& y_low,
+                            int& y_high,
+                            int& empty);
+};
+}  // namespace mluoptest
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_ROI_ALIGN_FORWARD_ROI_ALIGN_FORWARD_H_
