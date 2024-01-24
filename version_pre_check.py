@@ -106,7 +106,7 @@ def check_protoc():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(" ")[-1]
-    if LooseVersion(required_version["protoc"]) > LooseVersion(sys_out):
+    if LooseVersion(required_version["protoc"]) < LooseVersion(sys_out):
         print(
             "Warning: The version of protoc needs to be at most "
             + required_version["protoc"]

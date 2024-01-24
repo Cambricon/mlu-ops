@@ -6,6 +6,6 @@
                      "driver": "5.10.15",
                      "eigen3": "3.4.0",
                      "libxml2": "2.9.0",
-                     "protoc": "3.6.0"},
+                     "protoc": "3.9.0"},
   "package_type": ["rpm","deb"]
 }
