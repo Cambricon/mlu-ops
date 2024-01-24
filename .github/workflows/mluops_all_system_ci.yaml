@@ -6,11 +6,24 @@ on:
     paths:
       - 'CMakeLists.txt'
       - 'independent_build.sh'
+      - 'build.sh'
+      - 'build.property'
+      - 'test/mlu_op_gtest/CMakeLists.txt'
+      - 'cmake/*'
+      - 'CMakeLists.txt'
     tags:
       - v*
   pull_request:
+    branches: [master, r*]
     paths:
       - '.github/workflows/mluops_all_system_ci.yaml'
+      - 'CMakeLists.txt'
+      - 'independent_build.sh'
+      - 'build.sh'
+      - 'build.property'
+      - 'test/mlu_op_gtest/CMakeLists.txt'
+      - 'cmake/*'
+      - 'CMakeLists.txt'
 
 jobs:
   test:
