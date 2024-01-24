@@ -128,7 +128,7 @@ prepare_cntoolkit () {
   PACKAGE_OS="Linux"
 
   # read build.property, print cntoolkit and cnnl dep-package-version
-  build_requires=(`python version_pre_check.py get_build_requires`)
+  build_requires=(`python3 version_pre_check.py get_build_requires`)
   # build_requires is an array(cntoolkit release cntoolkit-version cnnl release cnnl-version)
   arr_modules=(${build_requires[0]} ${build_requires[3]})
   arr_branch=(${build_requires[1]} ${build_requires[4]})
