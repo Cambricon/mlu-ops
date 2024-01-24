@@ -424,7 +424,7 @@ bool TestEnvironment::getComputeMode(std::string bus_id_str, char &mode) {
   compute_mode_file_ss << "/proc/driver/cambricon/mlus/" << bus_id_str
                        << "/exclusive_mode";
   int fd =
-      open(compute_mode_file_ss.str().c_str(), O_CLOEXEC | O_SYNC | O_RDWR);
+      open(compute_mode_file_ss.str().c_str(), O_CLOEXEC | O_SYNC | O_RDONLY);
   char compute_mode[1];
   ssize_t stat = read(fd, compute_mode, 1);
   if (stat == -1) {
