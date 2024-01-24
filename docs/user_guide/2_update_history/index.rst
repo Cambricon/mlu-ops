@@ -19,8 +19,8 @@
 
   - 新增以下算子章节内容
 
-     + :ref:`pad`
-     + :ref:`concat`
+     + pad
+     + concat
 
 * **V0.9.0**
 
@@ -30,8 +30,8 @@
 
   - 新增以下算子章节内容
 
-     + :ref:`transform`
-     + :ref:`strided_slice`
+     + transform
+     + strided_slice
      + :ref:`sync_batchnorm_stats`
      + :ref:`sync_batchnorm_gather_stats_with_counts`
      + :ref:`sync_batchnorm_elemt`
@@ -130,31 +130,31 @@
   - 新增以下算子章节内容：
 
      + :ref:`active_rotated_filter_forward`
-     + :ref:`add_n`
+     + add_n
      + :ref:`bbox_overlaps`
      + :ref:`box_iou_rotated`
      + :ref:`carafe_backward`
      + :ref:`carafe_forward`
      + :ref:`deform_roi_pool_backward`
      + :ref:`deform_roi_pool_forward`
-     + :ref:`gather_nd`
+     + gather_nd
      + :ref:`get_indice_pairs`
      + :ref:`indice_convolution_backward_data`
      + :ref:`indice_convolution_backward_filter`
      + :ref:`indice_convolution_forward`
-     + :ref:`mat_mul`
-     + :ref:`reduce`
+     + mat_mul
+     + reduce
      + :ref:`roi_align_rotated_backward`
      + :ref:`roi_align_rotated_forward`
      + :ref:`roiaware_pool3d_backward`
      + :ref:`roiaware_pool3d_forward`
      + :ref:`rotated_feature_align_backward`
      + :ref:`rotated_feature_align_forward`
-     + :ref:`scatter_nd`
+     + scatter_nd
      + :ref:`three_interpolate_backward`
      + :ref:`three_nn_forward`
-     + :ref:`transpose`
-     + :ref:`unique`
+     + transpose
+     + unique
 
 * **V0.4.2**
 
@@ -188,7 +188,7 @@
      + :ref:`voxelization`
      + :ref:`psa_mask_forward`
      + :ref:`psa_mask_backward`
-     + :ref:`fill`
+     + fill
 
 * **V0.3.0**
 
