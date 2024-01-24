@@ -16,7 +16,7 @@
 
 1) 在测试机上打开环境变量
    ```
-   export MLUOP_GEN_CASE = 1
+   export MLUOP_GEN_CASE=1
    ```
 2) 执行
    ```
@@ -29,11 +29,11 @@
 #### 1.2 GEN_CASE 环境变量说明
 |          环境变量             |                  功能                                                 |    默认状态         |
 |-------------------------------|-----------------------------------------------------------------------|---------------------|
-|MLUOP_GEN_CASE                 |export MLUOP_GEN_CASE = 0: 关闭gen_case模块功能;<br>export MLUOP_GEN_CASE = 1: 生成 prototxt, 输入输出只保留 shape 等信息(GEN_CASE_DATA_REAL将无效);<br>export MLUOP_GEN_CASE = 2: 生成 proto, 并保留输入真实值;<br>export MLUOP_GEN_CASE = 3: 不生成 prototxt, 只在屏幕上打印输入输出的shape等信息。                                                          |     默认 0          |
-|MLUOP_GEN_CASE_OP_NAME         |export MLUOP_GEN_CASE_OP_NAME = "算子A; 算子B……": 指定只使能算子 A/B……的 gen_case 功能;<br>export MLUOP_GEN_CASE_OP_NAME = "-算子A; -算子B……": 指定只不使能算子 A/B……的 gen_case 功能。                    | 默认全部算子使能     |
-|MLUOP_GEN_CASE_DUMP_DATA       |在MLUOP_GEN_CASE = 2时生效;<br>export MLUOP_GEN_CASE_DUMP_DATA = 0: prototxt 中不保存输入的真值(此时的GEN_CASE_DATA_REAL有效);<br>export MLUOP_GEN_CASE_DUMP_DATA = 1: prototxt 中保存输入的文本形式真值;<br>export MLUOP_GEN_CASE_DUMP_DATA = 2: prototxt 中保存输入的二进制真值。                                                                         |     默认 0          |
-|MLUOP_GEN_CASE_DUMP_DATA_OUTPUT|export MLUOP_GEN_CASE_DUMP_DATA_OUTPUT = 0: prototxt 中不保存 mlu 的输出值;<br>export MLUOP_GEN_CASE_DUMP_DATA_OUTPUT = 1: prototxt 中保存文本形式的 mlu 输出值;<br>export MLUOP_GEN_CASE_DUMP_DATA_OUTPUT = 2: prototxt 中保存二进制形式的 mlu 输出值。                                                                                       |     默认 0           |
-|MLUOP_GEN_CASE_DUMP_DATA_FILE  |在 MLUOP_GEN_CASE = 2时生效;<br>export MLUOP_GEN_CASE_DUMP_DATA_FILE = 0: 保存方式以 MLUOP_GEN_CASE_DUMP_DATA 为准 export MLUOP_GEN_CASE_DUMP_DATA_FILE = 1: 真实值以一个二进制文件单独存储, prototxt 文件中保存 path。 |      默认 0          |
+|MLUOP_GEN_CASE                 |export MLUOP_GEN_CASE=0: 关闭gen_case模块功能;<br>export MLUOP_GEN_CASE=1: 生成 prototxt, 输入输出只保留 shape 等信息(GEN_CASE_DATA_REAL将无效);<br>export MLUOP_GEN_CASE=2: 生成 proto, 并保留输入真实值;<br>export MLUOP_GEN_CASE=3: 不生成 prototxt, 只在屏幕上打印输入输出的shape等信息。                                                          |     默认 0          |
+|MLUOP_GEN_CASE_OP_NAME         |export MLUOP_GEN_CASE_OP_NAME="算子A; 算子B……": 指定只使能算子 A/B……的 gen_case 功能;<br>export MLUOP_GEN_CASE_OP_NAME="-算子A; -算子B……": 指定只不使能算子 A/B……的 gen_case 功能。                    | 默认全部算子使能     |
+|MLUOP_GEN_CASE_DUMP_DATA       |在MLUOP_GEN_CASE = 2时生效;<br>export MLUOP_GEN_CASE_DUMP_DATA=0: prototxt 中不保存输入的真值(此时的GEN_CASE_DATA_REAL有效);<br>export MLUOP_GEN_CASE_DUMP_DATA=1: prototxt 中保存输入的文本形式真值;<br>export MLUOP_GEN_CASE_DUMP_DATA=2: prototxt 中保存输入的二进制真值。                                                                         |     默认 0          |
+|MLUOP_GEN_CASE_DUMP_DATA_OUTPUT|export MLUOP_GEN_CASE_DUMP_DATA_OUTPUT=0: prototxt 中不保存 mlu 的输出值;<br>export MLUOP_GEN_CASE_DUMP_DATA_OUTPUT=1: prototxt 中保存文本形式的 mlu 输出值;<br>export MLUOP_GEN_CASE_DUMP_DATA_OUTPUT=2: prototxt 中保存二进制形式的 mlu 输出值。                                                                                       |     默认 0           |
+|MLUOP_GEN_CASE_DUMP_DATA_FILE  |在 MLUOP_GEN_CASE = 2时生效;<br>export MLUOP_GEN_CASE_DUMP_DATA_FILE=0: 保存方式以 MLUOP_GEN_CASE_DUMP_DATA 为准 export MLUOP_GEN_CASE_DUMP_DATA_FILE=1: 真实值以一个二进制文件单独存储, prototxt 文件中保存 path。 |      默认 0          |
 
 ### 2. 算子中添加 GEN_CASE 功能
 
@@ -79,7 +79,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     const void *input, const mluOpTensorDescriptor_t grid_desc,
     const void *grid, const mluOpTensorDescriptor_t output_desc, void *output) {
-    
+
     ……
 
     if (MLUOP_GEN_CASE_ON_NEW)
@@ -91,21 +91,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
         GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
         GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
     }
- 
+
     cnrtDim3_t k_dim;
     cnrtFunctionType_t k_type;
-    
+
     policyFunc(handle, bin_num, &k_dim, &k_type);
     VLOG(5) << "[mluOpRoiCropForward] launch kernel policyFunc[" << k_dim.x
             << ", " << k_dim.y << ", " << k_dim.z << "].";
-    
+
     KERNEL_CHECK((mluOpBlockKernelRoiCropForwardFloat(
         k_dim, k_type, handle->queue, input, grid, batch, height, width, channels,
         grid_n, output_h, output_w, output)));
     VLOG(5) << "Kernel mluOpBlockKernelRoiCropForwardFloat.";
-    
+
     GEN_CASE_END();
-    
+
     return MLUOP_STATUS_SUCCESS;
 }
 
