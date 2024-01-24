@@ -1,0 +1,311 @@
+/*************************************************************************
+ * Copyright (C) [2023] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "border_align_backward.h"
+
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+#define BORDER_NUM 4
+#define CALCULATE_GRAD_INPUT(w, x, y)                                          \
+  const int32_t offset_##w = n * origin_h * origin_w * origin_c * BORDER_NUM + \
+                             y * origin_w * origin_c * BORDER_NUM +            \
+                             x * origin_c * BORDER_NUM + border * origin_c +   \
+                             c;                                                \
+  __bang_mul_scalar(nram_grad_input, nram_grad_output, w, deal_num_align);     \
+  __bang_band((char *)nram_grad_input, (char *)nram_grad_input, (char *)mask,  \
+              sizeof(T) * deal_num_align);                                     \
+  __bang_atomic_reduce_add(grad_input + offset_##w, nram_grad_input, deal_num);
+
+template <typename T>
+__mlu_func__ void computeGradInput(
+    T *nram_grad_input, T *nram_grad_output, T *grad_input, T *mask, const T w1,
+    const T w2, const T w3, const T w4, const int32_t x_low,
+    const int32_t y_low, const int32_t x_high, const int32_t y_high,
+    const int32_t origin_c, const int32_t c, const int32_t origin_w,
+    const int32_t n, const int32_t origin_h, const int32_t border,
+    const int32_t deal_num, const int32_t deal_num_align) {
+  /* bilinear-interpolation:
+   *   v1 = input_HW[y_low,  x_low]
+   *   v2 = input_HW[y_low,  x_high]
+   *   v3 = input_HW[y_high, x_low]
+   *   v4 = input_HW[y_high, x_high]
+   *
+   * forward:
+   *    output_value = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
+   * backwrad:
+   *    v1.atomicAdd(grad_output_value * w1)
+   *    ...
+   *    v4.atomicAdd(grad_output_value * w4)
+   */
+  CALCULATE_GRAD_INPUT(w1, x_low, y_low);
+  CALCULATE_GRAD_INPUT(w2, x_high, y_low);
+  CALCULATE_GRAD_INPUT(w3, x_low, y_high);
+  CALCULATE_GRAD_INPUT(w4, x_high, y_high);
+}
+
+template <typename T>
+__mlu_func__ void bilinearInterpolate(const int32_t input_height,
+                                      const int32_t input_width, T y, T x,
+                                      T *w1, T *w2, T *w3, T *w4,
+                                      int32_t *x_low, int32_t *x_high,
+                                      int32_t *y_low, int32_t *y_high,
+                                      bool *empty) {
+  // deal with case that the point is out of feature map boundary
+  if (y < -1.0 || y > input_height || x < -1.0 || x > input_width) {
+    *empty = true;
+    *w1 = *w2 = *w3 = *w4 = 0;
+    *x_low = *x_high = *y_low = *y_high = -1;
+    return;
+  }
+  *empty = false;
+  if (y <= 0) y = (T)0;
+  if (x <= 0) x = (T)0;
+
+  *y_low = int32_t(y);
+  *x_low = int32_t(x);
+
+  if (*y_low >= input_height - 1) {
+    *y_high = *y_low = input_height - 1;
+    y = (T)(*y_low);
+  } else {
+    *y_high = *y_low + 1;
+  }
+
+  if (*x_low >= input_width - 1) {
+    *x_high = *x_low = input_width - 1;
+    x = T(*x_low);
+  } else {
+    *x_high = *x_low + 1;
+  }
+  T ly = y - *y_low;
+  T lx = x - *x_low;
+  T hy = 1.0 - ly;
+  T hx = 1.0 - lx;
+  *w1 = hy * hx;
+  *w2 = hy * lx;
+  *w3 = ly * hx;
+  *w4 = ly * lx;
+}
+
+template <typename T>
+__mlu_func__ void computeImpl(T *nram_grad_output, const T *grad_output,
+                              int32_t *nram_argmax_idx,
+                              const int32_t *argmax_idx, T *grad_input,
+                              T *nram_grad_input, const T *nram_boxes,
+                              const int32_t n, const int32_t c, const int32_t k,
+                              const int32_t border, const int32_t origin_k,
+                              const int32_t origin_n, const int32_t origin_c,
+                              const int32_t origin_h, const int32_t origin_w,
+                              const int32_t pool_size, const int32_t deal_num,
+                              const int32_t deal_num_align) {
+  // argmax_idx, grad_output offset num
+  const int32_t src_offset = n * origin_k * origin_c * BORDER_NUM +
+                             k * origin_c * BORDER_NUM + border * origin_c + c;
+
+  // bilinear_interpolate params
+  int32_t x_low = 0, x_high = 0;
+  int32_t y_low = 0, y_high = 0;
+  bool empty = false;
+  T w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+
+  const T x_start = *(nram_boxes + border / 2 * 2);
+  const T y_start = *(nram_boxes + 1 + border / 2 * 2);
+  const T box_width = *((T *)nram_boxes + 2) - *(T *)nram_boxes;
+  const T box_height = *((T *)nram_boxes + 3) - *((T *)nram_boxes + 1);
+  T x_stride = 0;
+  T y_stride = 0;
+  switch (border) {
+    case 0: {  // Top
+      x_stride = box_width / pool_size;
+      y_stride = 0;
+    } break;
+    case 1: {  // Left
+      x_stride = 0;
+      y_stride = box_height / pool_size;
+    } break;
+    case 2: {  // Bottom
+      x_stride = -box_width / pool_size;
+      y_stride = 0;
+    } break;
+    case 3: {  // Right
+      x_stride = 0;
+      y_stride = -box_height / pool_size;
+    } break;
+  }
+
+  // layer 2: loop over range[0, pool_size]
+  for (int32_t i = 0; i < pool_size + 1; ++i) {
+    const T x = x_start + x_stride * i;
+    const T y = y_start + y_stride * i;
+    bilinearInterpolate(origin_h, origin_w, y, x, &w1, &w2, &w3, &w4, &x_low,
+                        &x_high, &y_low, &y_high, &empty);
+    if (!empty) {
+      // load argmax,
+      __memcpy(nram_argmax_idx, argmax_idx + src_offset,
+               deal_num * sizeof(int32_t), GDRAM2NRAM);  // NOLINT
+
+      /* Creat mask, mask.shape([1, deal_num]) is the same as argmax_idx
+       * mask[1, j] = (T)1  if (argmax_idx[1, j] == pool_idx)
+       *            = (T)0  otherwise
+       */
+      __bang_write_value(nram_grad_output, deal_num_align, int32_t(i));
+      __bang_eq(nram_argmax_idx, nram_argmax_idx, (int32_t *)nram_grad_output,
+                deal_num_align);  // NOLINT
+      if (__mluop_is_float<T>()) {
+        __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
+        __bang_lut_s32((int32_t *)nram_argmax_idx, (int32_t *)nram_argmax_idx,
+                       table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+      } else {
+        __nram__ int16_t table[COMPUTE_COUNT_ALIGN] = {0, (int16_t)0xffff};
+        __bang_int322int16((int16_t *)nram_argmax_idx,
+                           (int32_t *)nram_argmax_idx, deal_num_align, 0,
+                           0);  // NOLINT
+        __bang_lut_s16((int16_t *)nram_argmax_idx, (int16_t *)nram_argmax_idx,
+                       table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+      }
+
+      // load grad_output, and calculate grad_input
+      __memcpy(nram_grad_output, grad_output + src_offset, deal_num * sizeof(T),
+               GDRAM2NRAM);  // NOLINT
+      computeGradInput(nram_grad_input, nram_grad_output, grad_input,
+                       (T *)nram_argmax_idx, w1, w2, w3, w4, x_low, y_low,
+                       x_high, y_high, origin_c, c, origin_w, n, origin_h,
+                       border, deal_num, deal_num_align);
+    }
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelBorderAlignBackward(
+    const T *grad_output, const T *boxes, const int32_t *argmax_idx,
+    const int32_t pool_size, const int32_t origin_n, const int32_t origin_h,
+    const int32_t origin_w, const int32_t origin_c, const int32_t origin_k,
+    T *grad_input) {
+  // unused MPU
+  if (__is_mpu()) {
+    return;
+  }
+
+  /*
+   * NRAM partition
+   *  |=============|=======================|
+   *  | Semantics   | Size                  |
+   *  |=============|=======================|
+   *  | grad_output | deal_num * sizeof(T)  |
+   *  |-------------|-----------------------|
+   *  | grad_intput | deal_num * sizeof(T)  |
+   *  |-------------|-----------------------|
+   *  | argmax_idx  | deal_num * sizeof(int)|
+   *  |-------------|-----------------------|
+   *  | boxes       | 128byte               |
+   *  |-------------|-----------------------|
+   */
+  const int32_t deal_num = PAD_DOWN(
+      (MAX_NRAM_SIZE - NFU_ALIGN_SIZE) / (2 * sizeof(T) + 1 * sizeof(int32_t)),
+      NFU_ALIGN_SIZE);
+  T *nram_boxes = (T *)nram_buffer;
+  T *nram_grad_output = (T *)((char *)nram_buffer + NFU_ALIGN_SIZE);
+  T *nram_grad_input = (T *)nram_grad_output + deal_num;
+  int32_t *nram_argmax_idx = (int32_t *)((T *)nram_grad_input + deal_num);
+
+  /*
+   * grad_output.shape = [origin_n, origin_k, border_num, origin_c]
+   * boxes.shape       = [origin_n, origin_k, coord_num]
+   * argmax_idx.shape  = [origin_n, origin_k, border_num, origin_c]
+   * coord_num  = 4;
+   * border_num = 4; [0:Top, 1:Left, 2:Bottom, 3:Right]
+   *
+   * Partition output:
+   *   Split the num of boxes(origin_n * origin_k * border_num) among taskDim,
+   *   Mulitple core load the different part of the output
+   *   in each loop.
+   *
+   * Calculation process:
+   *  layer 0: 0 ~ origin_n * origin_k * border_num
+   *  layer 1: 0 ~ origin_c
+   *  layer 2: 0 ~ pool_size
+   */
+  const int32_t coord_num = 4;
+  const int32_t total_num = origin_n * origin_k * BORDER_NUM;
+  const int32_t num_per_core =
+      total_num / taskDim + int32_t((total_num % taskDim) > taskId);
+
+  // layer 0: loop over range[0, origin_n * origin_k * border_num)
+  for (int32_t i = 0; i < num_per_core; ++i) {
+    const int32_t idx = taskId + i * taskDim;
+    const int32_t n = idx / origin_k / BORDER_NUM;
+    const int32_t k = idx / BORDER_NUM % origin_k;
+    const int32_t border_idx = idx % BORDER_NUM;
+
+    /* load boxes:
+     *     boxes[n,k,0:4] indicates the information on the bottom left
+     *     and top right points: [lb_x, lb_y, rt_x, rt_y]
+     */
+    __memcpy(nram_boxes, (T *)boxes + n * origin_k * coord_num + k * coord_num,
+             coord_num * sizeof(T), GDRAM2NRAM);
+
+    // layer 1: loop over range[0, origin_c)
+    const int32_t c_repeat = origin_c / deal_num;
+    const int32_t c_rem = origin_c % deal_num;
+    for (int32_t c_seg_idx = 0; c_seg_idx < c_repeat; ++c_seg_idx) {
+      computeImpl((T *)nram_grad_output, (T *)grad_output,
+                  (int32_t *)nram_argmax_idx, (int32_t *)argmax_idx,
+                  (T *)grad_input, (T *)nram_grad_input, nram_boxes, n,
+                  c_seg_idx * deal_num, k, border_idx, origin_k, origin_n,
+                  origin_c, origin_h, origin_w, pool_size, deal_num, deal_num);
+    }
+    if (c_rem != 0) {
+      const int32_t c_rem_align = PAD_UP(c_rem, NFU_ALIGN_SIZE);
+      computeImpl((T *)nram_grad_output, (T *)grad_output,
+                  (int32_t *)nram_argmax_idx, (int32_t *)argmax_idx,
+                  (T *)grad_input, (T *)nram_grad_input, nram_boxes, n,
+                  origin_c - c_rem, k, border_idx, origin_k, origin_n, origin_c,
+                  origin_h, origin_w, pool_size, c_rem, c_rem_align);
+    }
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelBorderAlignBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t data_type, const void *grad_output, const void *boxes,
+    const int32_t *argmax_idx, const int32_t pool_size, const int32_t origin_n,
+    const int32_t origin_h, const int32_t origin_w, const int32_t origin_c,
+    const int32_t origin_k, void *grad_input) {
+  // launch kernel
+  if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUKernelBorderAlignBackward<<<k_dim, k_type, queue>>>(
+        (float *)grad_output, (float *)boxes, (int32_t *)argmax_idx, pool_size,
+        origin_n, origin_h, origin_w, origin_c, origin_k, (float *)grad_input));
+
+  } else {
+    // half
+    KERNEL_CHECK(MLUKernelBorderAlignBackward<<<k_dim, k_type, queue>>>(
+        (half *)grad_output, (half *)boxes, (int32_t *)argmax_idx, pool_size,
+        origin_n, origin_h, origin_w, origin_c, origin_k, (half *)grad_input));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
