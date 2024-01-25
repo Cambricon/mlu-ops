@@ -12951,7 +12951,7 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
 void MLUOP_WIN_API
 mluOpSetGenCaseMode(int mode);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward
  * or backward operation, and allocates memory for holding the information about the
@@ -12985,7 +12985,7 @@ mluOpSetGenCaseMode(int mode);
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Initializes the deformable convolution descriptor \p dcn_desc that was
  * created by ::mluOpCreateDCNDescriptor function, and sets the information about the
@@ -13084,7 +13084,7 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
                       int im2col_step,
                       const mluOpDataType_t compute_type);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Destroys a deformable convolution descriptor \p dcn_desc that was previously created by
  * ::mluOpCreateDCNDescriptor.
@@ -13112,7 +13112,7 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  *        workspace to optimize the deformable convolution forward operation.
@@ -13185,7 +13185,7 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
                                 const mluOpTensorDescriptor_t output_desc,
                                 size_t *workspace_size);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Performs a 2D deformable convolution forward operation. Compared with the standard
  *        convolution, the deformable convolution introduces 2D offsets and masks to make
@@ -13353,7 +13353,7 @@ mluOpDCNForward(mluOpHandle_t handle,
                 const mluOpTensorDescriptor_t output_desc,
                 void *output);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  *        workspace to optimize the deformable convolution backward filter operation.
@@ -13430,7 +13430,7 @@ mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
                                        const mluOpTensorDescriptor_t grad_bias_desc,
                                        size_t *workspace_size);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  *        the gradient with respect to filter \p grad_filter and bias \p grad_bias
@@ -13576,7 +13576,7 @@ mluOpDCNBackwardWeight(mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t grad_bias_desc,
                        void *grad_bias);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the deformable convolution backward data operation.
@@ -13663,7 +13663,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
                                      const mluOpTensorDescriptor_t grad_mask_desc,
                                      size_t *workspace_size);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  * the gradient with respect to input \p grad_input, offset \p grad_offset, and mask
