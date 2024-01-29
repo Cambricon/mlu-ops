@@ -48,5 +48,5 @@
 7.fft_optm_device文件夹：
    * fft_cooley-tukey_ux_device.mlu：优化kernel device代码，基于cooley-tukey算法思想实现；
    * fft_stockham_u1_device.mlu：优化kernel device代码，基于stockham算法思想实现；
-   * 备注：DFT调用mluOpTranspose, mluOpMatmul等kernel实现，调用fft_basic_ops.cpp中封装好的函数即可，未单独实现kernel device代码。
+   * 备注：DFT调用cnnlTranspose, cnnlMatmul等kernel实现，调用fft_basic_ops.cpp中封装好的函数即可，未单独实现kernel device代码。
 

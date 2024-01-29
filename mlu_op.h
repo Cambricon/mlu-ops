@@ -13266,16 +13266,25 @@ mluOpDCNBackwardData(mluOpHandle_t handle,
  */
 typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
 
-// Group:i FFT
+// Group: FFT
 /*!
  * @brief Creates a descriptor pointed by \p fft_plan for the FFT operation, and allocates memory
  * for holding the information about the FFT operation. The information is defined in ::mluOpFFTPlan_t.
  *
  * @param[out] fft_plan
- * Output. Pointer to the FFT descriptor that holds information about the FFT operation.
+ * Pointer to the FFT descriptor that holds information about the FFT operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par Data Type 
+ * - None.
+ *
+ * @par Data Layout 
+ * - None.
+ *
+ * @par Scale Limitation 
+ * - None.
  *
  * @par API Dependency
  * - After calling this function, you can call the ::mluOpMakeFFTPlanMany function to initialize and set the
@@ -13290,16 +13299,14 @@ typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
  * length = \f$base * 2^ {m}\f$ , and the base should be less than or equal to 4096.
  * - When the data type of input is half or complex_half, the 1D FFT length should be equal to:
  * length = \f$2^{m}
-
- * \f$.
  *
- * @par Requirements
+ * @par Example.
  * - None.
  *
- * @par Example
+ * @par Reference.
  * - None.
  */
-mluOpStatus_t
+mluOpStatus_t MLUOP_WIN_API
 mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
 
 // Group: FFT
@@ -13309,34 +13316,33 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  * with the ::mluOpCreateFFTPlan function, and sets the information about the
  * tensor descriptors of input tensor and output tensor, the rank of FFT, and the FFT size on each
  * dimension.
- *
  * This function also gets the size of MLU memory buffers for FFT execution, including \p reservespace_size and
  * \p workspace_size. The size of extra workspace is based on the given information of the
  * \p fft_plan.
  *
  * @param[in] handle
- * Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
  * in the FFT operation. For detailed information, see ::mluOpHandle_t.
  * @param[in,out] fft_plan
- * Input/output. The descriptor of FFT. For detailed information, see ::mluOpFFTPlan_t.
+ * The descriptor of FFT. For detailed information, see ::mluOpFFTPlan_t.
  * @param[in] input_desc
- * Input. The descriptor of input signals. For detailed information,
+ * The descriptor of input signals. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] output_desc
- * Input. The descriptor of output signals. For detailed information,
+ * The descriptor of output signals. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] rank
- * Input. The dimensionality of the FFT operation. It can be 1D, 2D or 3D.
+ * The dimensionality of the FFT operation. It can be 1D, 2D or 3D.
  * @param[in] n
- * Input. An array of size \p rank describing the FFT size of each dimension. n[0]
+ * An array of size \p rank describing the FFT size of each dimension. n[0]
  * is the size of the outermost dimension and n[rank - 1] is the innermost dimension
  * of FFT operation. If n[i] is greater than the size of input on dimension i, the input
  * signal will be zero-padded on that dimension. Otherwise, input signal is trimmed
  * on the dimension i.
  * @param[out] reservespace_size
- * Output. The size of the extra reserved space in bytes that needs to be used in FFT operation.
+ * The size of the extra reserved space in bytes that needs to be used in FFT operation.
  * @param[out] workspace_size
- * Output. The size of the extra workspace in bytes that needs to be used in FFT operation.
+ * The size of the extra workspace in bytes that needs to be used in FFT operation.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_NOT_INITIALIZED
@@ -13353,7 +13359,7 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  *     - complex_half(input offchip)-complex_half(output offchip)-int16(input onchip)
  *     - complex_float(input offchip)-complex_float(output offchip)-int31(input onchip)
  * - On MLU300 series or above, this function also supports the combinations of
- * data types as follows:
+ *   data types as follows:
  * - real-to-complex FFT:
  *     - half(input offchip)-complex_half(output offchip)-half(input onchip)
  *     - float(input offchip)-complex_float(output offchip)-float(input onchip)
@@ -13364,34 +13370,39 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  *     - complex_half(input offchip)-complex_half(output offchip)-half(input onchip)
  *     - complex_float(input offchip)-complex_float(output offchip)-float(input onchip)
  *
- * @par API Dependency
- * - Before calling this function, you need to call the ::mluOpCreateFFTPlan function to
- * create an FFT descriptor, call the ::mluOpSetTensorDescriptor or
- * ::mluOpSetTensorDescriptorEx function to set the input and output tensor descriptor,
- * and then call the ::mluOpSetTensorDescriptorOnchipDataType to set the onchip data type
- * of input tensor descriptor.
- *
- * @par Note
- * - The advanced data layout parameters including (i/o)nembed, (i/o)istride and (i/o)idist, are set through
- * ::mluOpSetTensorDescriptorEx. If stride information is not needed, you can set the simple data layout
- * through ::mluOpSetTensorDescriptor.
- * - The dimension size of input or output should be equal to \p rank or \p rank + 1. In the former case,
- * the batch size is considered as 1. Otherwise, the outermost dimension is the batch size.
- * - For real-to-complex FFTs, the innermost dimension of FFT length and output arrays are not the same.
- * For a x-length 1D real-to-complex FFT, the output is x/2 + 1 complex numbers (the non-redundant outputs).
- * For a N-D real-to-complex FFT with n=[z, y, x], the output shape will be [z, y, x/2+1].
- * - For complex-to-real FFTs, the input tensor only holds the non-redundant part of the Fourier coefficients.
- * And the output tensor stores the real output values.
- * - When n[0] is greater than 4096, the data type of input only supports float or complex_float.
+ * @par Data Layout 
+ * - None.
  *
  * @par Scale Limitation
  * - None.
  *
- * @par Requirements
+ * @par API Dependency
+ * - Before calling this function, you need to call the ::mluOpCreateFFTPlan function to
+ *   create an FFT descriptor, call the ::mluOpSetTensorDescriptor or
+ *   ::mluOpSetTensorDescriptorEx function to set the input and output tensor descriptor,
+ *   and then call the ::mluOpSetTensorDescriptorOnchipDataType to set the onchip data type
+ *   of input tensor descriptor.
+ *
+ * @par Note
+ * - The advanced data layout parameters including (i/o)nembed, (i/o)istride and (i/o)idist, are set through
+ *   ::mluOpSetTensorDescriptorEx. If stride information is not needed, you can set the simple data layout
+ *   through ::mluOpSetTensorDescriptor.
+ * - The dimension size of input or output should be equal to \p rank or \p rank + 1. In the former case,
+ *   the batch size is considered as 1. Otherwise, the outermost dimension is the batch size.
+ * - For real-to-complex FFTs, the innermost dimension of FFT length and output arrays are not the same.
+ *   For a x-length 1D real-to-complex FFT, the output is x/2 + 1 complex numbers (the non-redundant outputs).
+ *   For a N-D real-to-complex FFT with n=[z, y, x], the output shape will be [z, y, x/2+1].
+ * - For complex-to-real FFTs, the input tensor only holds the non-redundant part of the Fourier coefficients.
+ *   And the output tensor stores the real output values.
+ * - When n[0] is greater than 4096, the data type of input only supports float or complex_float.
+ *
+ * @par Example.
  * - None.
  *
+ * @par Reference.
+ * - None.
  */
-mluOpStatus_t
+mluOpStatus_t MLUOP_WIN_API
 mluOpMakeFFTPlanMany(mluOpHandle_t handle,
                      mluOpFFTPlan_t fft_plan,
                      const mluOpTensorDescriptor_t input_desc,
@@ -13408,24 +13419,42 @@ mluOpMakeFFTPlanMany(mluOpHandle_t handle,
  * through ::mluOpMakeFFTPlanMany.
  *
  * @param[in] handle
- * Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
  * ::mluOpExecFFT. For detailed information, see ::mluOpHandle_t.
  * @param[in, out] fft_plan
- * Input/Output. The descriptor of FFT. For detailed information, see ::mluOpFFTPlan_t.
+ * The descriptor of FFT. For detailed information, see ::mluOpFFTPlan_t.
  * @param[in] reservespace
- * Input. Pointer to the MLU memory that is used as an extra memory space for saving
+ * Pointer to the MLU memory that is used as an extra memory space for saving
  * intermediate results of FFT operation.
- *
- * @par API Dependency
- * - Before calling this function, you need to call the ::mluOpCreateFFTPlan function
- * to create an FFT descriptor, call the ::mluOpMakeFFTPlanMany function to set the
- * FFT descriptor and get the size of reserved space, and then call the
- * cnrtMalloc function to create MLU memory according to the rservespace_size given.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
+ *
+ * @par Data Type 
+ * - None.
+ *
+ * @par Data Layout 
+ * - None.
+ *
+ * @par Scale Limitation 
+ * - None.
+ *
+ * @par API Dependency
+ * - Before calling this function, you need to call the ::mluOpCreateFFTPlan function
+ *   to create an FFT descriptor, call the ::mluOpMakeFFTPlanMany function to set the
+ *   FFT descriptor and get the size of reserved space, and then call the
+ *   cnrtMalloc function to create MLU memory according to the rservespace_size given.
+ *
+ * @par Note 
+ * - None.
+ *
+ * @par Example.
+ * - None.
+ *
+ * @par Reference.
+ * - None.
  */
-mluOpStatus_t
+mluOpStatus_t MLUOP_WIN_API
 mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *reservespace);
 
 // Group:FFT
@@ -13437,51 +13466,69 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  * is adopted.
  *
  * @param[in] handle
- * Input. Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
  * in the FFT execution. For detailed information, see ::mluOpHandle_t.
  * @param[in] fft_plan
- * Input. The plan for FFT execution. For detailed information, see ::mluOpFFTPlan_t.
+ * The plan for FFT execution. For detailed information, see ::mluOpFFTPlan_t.
  * @param[in] input
- * Input. Pointer to the MLU memory that stores the input tensor.
+ * Pointer to the MLU memory that stores the input tensor.
  * @param[in] scale_factor
  * Input. A float-point scalar used to multiply the FFT output.
  * @param[in, out] workspace
- * Input/Output. Pointer to the MLU memory that is used as an extra workspace for the
+ * Pointer to the MLU memory that is used as an extra workspace for the
  * ::mluOpExecFFT.
  * @param[out] output
- * Output. Pointer to the MLU memory that stores the output tensor.
+ * Pointer to the MLU memory that stores the output tensor.
  * @param[in] direction
- * Input. The transform direction: 0 means FFT forward and 1 means FFT inverse.
+ * The transform direction: 0 means FFT forward and 1 means FFT inverse.
  * Direction is ignored for real-to-complex and complex-to-real transforms.
  *
  * @par Note
  * - For in-place 1D real-to-complex FFTs, the input is a batch of n real numbers, and the
- * output is n/2 + 1 non-redundant complex numbers. This requires a padding of input array.
+ *   output is n/2 + 1 non-redundant complex numbers. This requires a padding of input array.
  * - For in-place N-D real-to-complex FFTs, extra padding of the real-data array on the innermost
- * dimension is necessary to accommodate the size of the complex-data output.
+ *   dimension is necessary to accommodate the size of the complex-data output.
  * - When \p input contains NaN or infinity and the input onchip data type of FFT is not quantized
- * data type, the output is computed through the FFT formula with computation rules of NaN or
- * infinity based on IEEE 754.
+ *   data type, the output is computed through the FFT formula with computation rules of NaN or
+ *   infinity based on IEEE 754.
  * - When \p input contains NaN or infinity and the input onchip data type of FFT is quantized
- * data type such as int31 or int16, the output will be unpredictable.
+ *   data type such as int31 or int16, the output will be unpredictable.
  * - \p Input is recommended to be in range of [-10, 10] with uniform
- * distribution for higher precision.
+ *   distribution for higher precision.
  * - \p Scale_factor is recommended to be in range of [-1, 1] to avoid exceeding
- * the data representation range.
+ *   the data representation range.
  * - Half data type of \p input is not recommended due to low precision. The first element of the
- * FFT result is the sum of all input elements, and it is likely to overflow.
+ *   FFT result is the sum of all input elements, and it is likely to overflow.
  * - This operation is not supported on the 1V platforms.
- *
- * @par API Dependency
- * - Before calling this function, you need to call the ::mluOpCreateFFTPlan
- * function to create an FFT descriptor, call the ::mluOpMakeFFTPlanMany
- * function to set the FFT descriptor and the size of reserved space and work space,
- * and then call the ::mluOpSetFFTReserveArea to bond the reservespace area to the descriptor.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
+ *
+ * @par Data Type 
+ * - None.
+ *
+ * @par Data Layout 
+ * - None.
+ *
+ * @par Scale Limitation 
+ * - None.
+ *
+ * @par API Dependency
+ * - Before calling this function, you need to call the ::mluOpCreateFFTPlan
+ *   function to create an FFT descriptor, call the ::mluOpMakeFFTPlanMany
+ *   function to set the FFT descriptor and the size of reserved space and work space,
+ *   and then call the ::mluOpSetFFTReserveArea to bond the reservespace area to the descriptor.
+ *
+ * @par Note 
+ * - None.
+ *
+ * @par Example.
+ * - None.
+ *
+ * @par Reference.
+ * - None.
  */
-mluOpStatus_t
+mluOpStatus_t MLUOP_WIN_API
 mluOpExecFFT(mluOpHandle_t handle,
              const mluOpFFTPlan_t fft_plan,
              const void *input,
@@ -13494,28 +13541,38 @@ mluOpExecFFT(mluOpHandle_t handle,
 /*!
 
  * @brief Destroys an FFT plan \p fft_plan that is created with the
- * ::mluOpCreateFFTPlan function.
- *
- * The FFT plan is defined in ::mluOpFFTPlan_t and holds the information about the
- * FFT operation.
+ * ::mluOpCreateFFTPlan function. The FFT plan is defined in ::mluOpFFTPlan_t and
+ * holds the information about the FFT operation.
  *
  * @param[in] fft_plan
- * Input. The fft plan to be destroyed.
+ * The fft plan to be destroyed.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
  *
- * @par Note
- * - You need to call this function after calling the ::mluOpExecFFT.
- * Otherwise, memory leak may occur.
- *
- * @par Requirements
+ * @par Data Type 
  * - None.
+ *
+ * @par Data Layout 
+ * - None.
+ *
+ * @par Scale Limitation 
+ * - None.
+ *
+ * @par API Dependency 
+ * - None.
+ *
+ * @par Note 
+ * - You need to call this function after calling the ::mluOpExecFFT.
+ *   Otherwise, memory leak may occur.
  *
  * @par Example.
  * - None.
+ *
+ * @par Reference.
+ * - None.
  */
-mluOpStatus_t
+mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 #if defined(__cplusplus)
 }
