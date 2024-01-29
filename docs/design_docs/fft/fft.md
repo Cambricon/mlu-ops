@@ -1,14 +1,14 @@
-# mluopFFT1d 算子开发设计方案
+# FFT1d 算子开发设计方案
 
 
 * #### 文档基本信息
 | 算子名称                                   |
 | ------------------------------------------ | 
-| mluopFFT(RFFT1d, IRFFT1d, FFT1d, IFFT1d)   | 
+| FFT(RFFT1d, IRFFT1d, FFT1d, IFFT1d)   | 
 
 * #### 内容描述
 
-本文档为`mluopFFT`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
+本文档为`FFT`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录和方案实施部分。
 
 * #### 算子需求checklist
 
@@ -16,14 +16,8 @@
 
 - 算子接口描述：实现RFFT1d, IRFFT1d, FFT1d, IFFT1d的DFT算法
 - 功能描述：实现RFFT1d, IRFFT1d, FFT1d, IFFT1d的傅里叶变换算法
-- 框架版本 + 对应源码路径：
-- 需求对应网络：Conformer
-- 网络中用到的规模：[2592, 400]
-- 常用规模下的竞品性能（可选）：T4下性能，第一次230ms，第二次207us左右
 - 是否需要支持原位：需要*
 - 是否需要支持stride机制：需要
-- 框架单元测试阈值指标（可选）
-- 其他特殊需求（在线量化/融合/转数提前等，可选）
 
 *当支持原位的时候，需要保证input的sequence长度补齐到output的sequence的长度，否则会出现未定义的结果。
 
@@ -45,7 +39,7 @@ example:
 
 | 算子功能简介| 简要填写算子功能，详细描述在1.2中进行说明                    |
 |-------------|--------------------------------------------------------------|
-| 需求来源    | PyTorch/Tensorflow/                                       |
+| 需求来源    | PyTorch/Tensorflow                                       |
 | 应用网络    | Conformer                                        |
 | 输入数据类型| half, float, complex_half, complex_float          |
 | 输入Shape   | [batches, array] |
@@ -272,22 +266,22 @@ void fftw_destroy_plan(fftw_plan plan);
  * the tensor descriptor of input tensor and output tensor, the rank of FFT, the FFT size on each
  * dimension, the size of reserved space and the size of workspace.
  *
- * You need to call the ::mluopCreateFFTPlan function to create a descriptor for the FFT operator, and call
- * the ::mluopMakeFFTPlanMany function to set the information of the FFT operator to the descriptor.
- * Then, you need to allocate the reserved space and set the space to the fft descriptor by ::mluopSetReserveArea.
- * Also, you need to destroy the MluOp context at the end with the ::mluopDestroyFFTPlan.
+ * You need to call the ::mluOpCreateFFTPlan function to create a descriptor for the FFT operator, and call
+ * the ::mluOpMakeFFTPlanMany function to set the information of the FFT operator to the descriptor.
+ * Then, you need to allocate the reserved space and set the space to the fft descriptor by ::mluOpSetReserveArea.
+ * Also, you need to destroy the MluOp context at the end with the ::mluOpDestroyFFTPlan.
  */
-typedef struct mluopFFTStruct *mluopFFTPlan_t;
+typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
 
 /*!
  *  @brief Creates a descriptor pointed by \b fft_plan for the FFT operator, and allocates memory
- *  for holding the information about the FFT operation. The information is defined in ::mluopFFTPlan_t.
+ *  for holding the information about the FFT operation. The information is defined in ::mluOpFFTPlan_t.
  */
-mluopStatus_t mluopCreateFFTPlan(mluopFFTPlan_t *fft_plan);
+mluOpStatus_t mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
 
 /*!
  *  @brief Initializes the FFT descriptor pointed by \b fft_plan that is previously created
- *  with the ::mluopCreateFFTPlan function, and sets the information about the
+ *  with the ::mluOpCreateFFTPlan function, and sets the information about the
  *  tensor descriptors of input tensor and output tensor, the rank of FFT, and the FFT size on each
  *  dimension.
  *
@@ -295,19 +289,19 @@ mluopStatus_t mluopCreateFFTPlan(mluopFFTPlan_t *fft_plan);
  *  \b workspace_size. The size of extra workspace is based on the given information of the
  *  \b fft_plan.
  */
-mluopStatus_t mluopMakeFFTPlanMany(mluopHandle_t handle,
-                                 mluopFFTPlan_t fft_plan,
-                                 const mluopTensorDescriptor_t input_desc,
-                                 const mluopTensorDescriptor_t output_desc,
+mluOpStatus_t mluOpMakeFFTPlanMany(mluOpHandle_t handle,
+                                 mluOpFFTPlan_t fft_plan,
+                                 const mluOpTensorDescriptor_t input_desc,
+                                 const mluOpTensorDescriptor_t output_desc,
                                  const int rank,
                                  const int n[],
                                  size_t *reservespace_size,
                                  size_t *workspace_size);
 /*!
- *  @brief Bond the reserve space to the \b fft_plan. The size of reserved space can be derived through ::mluopMakeFFTPlanMany.
+ *  @brief Bond the reserve space to the \b fft_plan. The size of reserved space can be derived through ::mluOpMakeFFTPlanMany.
  */
-mluopStatus_t mluopSetFFTReserveArea(mluopHandle_t handle,
-                                   mluopFFTPlan_t fft_plan,
+mluOpStatus_t mluOpSetFFTReserveArea(mluOpHandle_t handle,
+                                   mluOpFFTPlan_t fft_plan,
                                    void *reservespace);
 /*!
  *  @brief Executes any FFT. In case of complex-to-real and real-to-complex
@@ -315,8 +309,8 @@ mluopStatus_t mluopSetFFTReserveArea(mluopHandle_t handle,
  *  in the output array. If the address of input and output are the same, an in-place FFT
  *  is adopted.
  */
-mluopStatus_t mluopExecFFT(mluopHandle_t handle,
-                         const mluopFFTPlan_t fft_plan,
+mluOpStatus_t mluOpExecFFT(mluOpHandle_t handle,
+                         const mluOpFFTPlan_t fft_plan,
                          const void *input,
                          const float scale_factor,
                          void *workspace,
@@ -325,9 +319,9 @@ mluopStatus_t mluopExecFFT(mluopHandle_t handle,
 
 /*!
  *  @brief Destroys a FFT plan \b fft_plan that is created with the
- *  ::mluopCreateFFTPlan function.
+ *  ::mluOpCreateFFTPlan function.
  */
-mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
+mluOpStatus_t mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 ```
 
 框架使用场景，下面假设一个一维rfft，batch为2000，n=400的rfft：
@@ -335,17 +329,17 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
 1. 建立fft描述符
 
    ```c
-   mluopFFTPlan_t fft_plan;
-   mluopCreateFFTPlan(&fft_plan);
+   mluOpFFTPlan_t fft_plan;
+   mluOpCreateFFTPlan(&fft_plan);
    ```
 
-2. 给fft描述符设定参数，并获取reservesize，workspacesize大小
+2. 给fft描述符设定参数，并获取reserve_size，workspace_size大小
 
    ```c
-   mluopTensorDescriptor_t input_desc, output_desc;
-   mluopDataType_t input_data_type = MLUOP_DTYPE_FLOAT;
-   mluopDataType_t output_data_type = MLUOP_DTYPE_COMPLEX_FLOAT;
-   mluopDataType_t execution_dtype = MLUOP_DTYPE_FLOAT;
+   mluOpTensorDescriptor_t input_desc, output_desc;
+   mluOpDataType_t input_data_type = MLUOP_DTYPE_FLOAT;
+   mluOpDataType_t output_data_type = MLUOP_DTYPE_COMPLEX_FLOAT;
+   mluOpDataType_t execution_dtype = MLUOP_DTYPE_FLOAT;
    const int rank = 1;
    const int batch = 2000;
    const int n[rank] = {400};
@@ -356,17 +350,17 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
    const int output_dim_size[ndim] = {batch, n[0] / 2 + 1};
    const int output_dim_stride[ndim] = {n[0] / 2 + 1, 1};
 
-   mluopCreateTensorDescriptor(&input_desc);
-   mluopCreateTensorDescriptor(&output_desc);
-   mluopSetTensorDescriptorEx(input_desc, MLUOP_LAYOUT_ARRAY, input_data_type, ndim, input_dim_size, input_dim_stride);
-   mluopSetTensorDescriptorOnchipDataType(execution_dtype);
-   mluopSetTensorDescriptorEx(output_desc, MLUOP_LAYOUT_ARRAY, output_data_type, ndim,
+   mluOpCreateTensorDescriptor(&input_desc);
+   mluOpCreateTensorDescriptor(&output_desc);
+   mluOpSetTensorDescriptorEx(input_desc, MLUOP_LAYOUT_ARRAY, input_data_type, ndim, input_dim_size, input_dim_stride);
+   mluOpSetTensorDescriptorOnchipDataType(execution_dtype);
+   mluOpSetTensorDescriptorEx(output_desc, MLUOP_LAYOUT_ARRAY, output_data_type, ndim,
                              output_dim_size, output_dim_stride);
    size_t reservespace_size;
    size_t workspace_size;
-   mluopMakeFFTPlanMany(handle, fft_plan, input_desc, output_desc, rank, n, &reservespace_size, &workspace_size);
-   mluopDestroyTensorDescriptor(input_desc);
-   mluopDestroyTensorDescriptor(output_desc);
+   mluOpMakeFFTPlanMany(handle, fft_plan, input_desc, output_desc, rank, n, &reservespace_size, &workspace_size);
+   mluOpDestroyTensorDescriptor(input_desc);
+   mluOpDestroyTensorDescriptor(output_desc);
    ```
 
 3. 给plan绑定reservespace指针
@@ -374,7 +368,7 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
    ```c
    void *reservespace;
    cnrtMalloc(&reservespace, reservespace_size);
-   mluopSetReserveArea(handle, fft_plan, reservespace);
+   mluOpSetReserveArea(handle, fft_plan, reservespace);
    ```
 
 4. 执行FFT，plan创建好以后可以执行多次
@@ -383,14 +377,14 @@ mluopStatus_t mluopDestroyFFTPlan(mluopFFTPlan_t fft_plan);
    void *workspace;
    cnrtMalloc(&workspace, workspace_size);
    const float scale = 1.0;
-   mluopStatus_t mluopExecFFT(handle, fft_plan, input, scale, workspace, output, 0);
+   mluOpStatus_t mluOpExecFFT(handle, fft_plan, input, scale, workspace, output, 0);
    cnrtFree(workspace);
    ```pull/902/files#diff-7274399dd2d36c9d582d793971e1ecb6a43564088f8c10c16d32d6297520bd5b
 
 5. 算子运行完以后释放plan，释放reservespace。
 
    ```c
-   mluopDestroyFFTPlan(fft_plan);
+   mluOpDestroyFFTPlan(fft_plan);
    cnrtFree(reservespace);
    ```
 
@@ -414,7 +408,7 @@ https://docs.nvidia.com/cuda/cufft/index.html
 
 参照franz、cufft、OTFFT、和Microsoft的"Fast Computation of General Fourier Transforms on GPUs"的方案进行设计。
 
-针对2的整数次幂采用StockhamFFT算法进行计算，质因数分解采用Six-Step FFT，对于非上述两种情况采用Blustein z-chirp方法进行计算。对于LT上面能直接放下Fourier Matrix的情境，可以考虑直接采用O(n^2)的暴力方法进行计算。
+针对2的整数次幂采用StockhamFFT算法进行计算，质因数分解采用Six-Step FFT，对于非上述两种情况采用Blustein z-chirp方法进行计算。对于WRAM上面能直接放下Fourier Matrix的情境，可以考虑直接采用O(n^2)的暴力方法进行计算。
 
 #### 3.1.1 Iterative FFT：Stockham FFT Algorithm
 
@@ -634,7 +628,6 @@ x_7\\
   - 拼接流程如下：
   - 生成DFT-matrix ，公式（21）
     - 300系列生成DFT-matrix，使用surpass生成sin-cos查找表，然后使用vaa指令生成DFT-matrix，每个taskId处理一行DFT-matrix。
-    - 200系列生成DFT-matrix，使用标量生成sin-cos查找表，然后使用标量指令生成DFT-matrix，每个taskId处理一行DFT-matrix。
   - 生成DFT-matrix的量化参数（可选）
   - input tensor 连续化（可选）
   - input tensor补pad/切crop（可选）
@@ -653,7 +646,7 @@ x_7\\
   - step6：继续合并剩余的m-s层，因为无法放下一个完整的子图，需要每次处理一部分子图数据；计算时，子图划分的部分均分给每个核处理；
   - step7：将计算结果转置为layout要求格式：c维度从最高维变到最低维，写回到output；
 
-  step1通过在host端 findLimit函数实现；step0，step2，step3为子序列拆分步骤，通过调用mluopTranspose、mluopMatmul等kernel实现；step4-step7为子序列合并步骤，为了提高效率，减少重复IO，通过一个新的kernel实现。
+  step1通过在host端 findLimit函数实现；step0，step2，step3为子序列拆分步骤，通过调用mluOpTranspose、mluOpMatmul等kernel实现；step4-step7为子序列合并步骤，为了提高效率，减少重复IO，通过一个新的kernel实现。
 
 - 对于片上可以放下一个2^(m-1) * align_size * 29的规模，采用stockham算法进行优化
 
@@ -668,7 +661,7 @@ x_7\\
 
 ### 3.6 可维护性设计
 
-1、bangc代码中加入必要的 log信息，比如输入的规模、数据类型、layout这些，以及如果出错会导致程序core dump的变量，比如IO指令的data_size、dim xyz的值等，这些信息都是有利于快速定位问题。   (待整理完善，对log进行规范)
+1、bangc代码中加入必要的 log信息，比如输入的规模、数据类型、layout这些，以及如果出错会导致程序core dump的变量，比如IO指令的data_size、dim xyz的值等，这些信息都是有利于快速定位问题。
 
 2、对每一个函数命名变量命名都有充分的注释
 
