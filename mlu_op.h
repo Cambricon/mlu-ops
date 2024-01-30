@@ -13277,13 +13277,13 @@ typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
  *
- * @par Data Type 
+ * @par Data Type
  * - None.
  *
- * @par Data Layout 
+ * @par Data Layout
  * - None.
  *
- * @par Scale Limitation 
+ * @par Scale Limitation
  * - None.
  *
  * @par API Dependency
@@ -13370,7 +13370,7 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  *     - complex_half(input offchip)-complex_half(output offchip)-half(input onchip)
  *     - complex_float(input offchip)-complex_float(output offchip)-float(input onchip)
  *
- * @par Data Layout 
+ * @par Data Layout
  * - None.
  *
  * @par Scale Limitation
@@ -13430,13 +13430,13 @@ mluOpMakeFFTPlanMany(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
- * @par Data Type 
+ * @par Data Type
  * - None.
  *
- * @par Data Layout 
+ * @par Data Layout
  * - None.
  *
- * @par Scale Limitation 
+ * @par Scale Limitation
  * - None.
  *
  * @par API Dependency
@@ -13445,7 +13445,7 @@ mluOpMakeFFTPlanMany(mluOpHandle_t handle,
  *   FFT descriptor and get the size of reserved space, and then call the
  *   cnrtMalloc function to create MLU memory according to the rservespace_size given.
  *
- * @par Note 
+ * @par Note
  * - None.
  *
  * @par Example.
@@ -13504,13 +13504,13 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
- * @par Data Type 
+ * @par Data Type
  * - None.
  *
- * @par Data Layout 
+ * @par Data Layout
  * - None.
  *
- * @par Scale Limitation 
+ * @par Scale Limitation
  * - None.
  *
  * @par API Dependency
@@ -13519,7 +13519,7 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   function to set the FFT descriptor and the size of reserved space and work space,
  *   and then call the ::mluOpSetFFTReserveArea to bond the reservespace area to the descriptor.
  *
- * @par Note 
+ * @par Note
  * - None.
  *
  * @par Example.
@@ -13550,19 +13550,19 @@ mluOpExecFFT(mluOpHandle_t handle,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
  *
- * @par Data Type 
+ * @par Data Type
  * - None.
  *
- * @par Data Layout 
+ * @par Data Layout
  * - None.
  *
- * @par Scale Limitation 
+ * @par Scale Limitation
  * - None.
  *
- * @par API Dependency 
+ * @par API Dependency
  * - None.
  *
- * @par Note 
+ * @par Note
  * - You need to call this function after calling the ::mluOpExecFFT.
  *   Otherwise, memory leak may occur.
  *
