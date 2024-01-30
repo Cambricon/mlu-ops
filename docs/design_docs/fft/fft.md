@@ -139,58 +139,6 @@ torch.fft.fftn(input, s=None, dim=None, norm=None, *, out=None)->Tensor
 torch.fft.ifftn(input, s=None, dim=None, norm=None, *, out=None)->Tensor
 ```
 
-- cuFFT
-```c++
-// Following a call to cufftCreate() makes an FFT plan configuration of dimension rank, with sizes specified in the array n. The batch input parameter tells cuFFT how many transforms to configure. With this function, batched plans of 1, 2, or 3 dimensions may be created.
-// Type specifiers inputtype, outputtype and executiontype dictate type and precision of transform to be performed. Not all combinations of parameters are supported. Currently all three parameters need to match precision. Parameters inputtype and outputtype need to match transform type complex-to-complex, real-to-complex or complex-to-real.
-//Parameter executiontype needs to match precision and be of a complex type. Example: for a half-precision real-to-complex transform, parameters inputtype, outputtype and executiontype would have values of CUDA_R_16F, CUDA_C_16F and CUDA_C_16F respectively.
-// Similarly, a bfloat16 complex-to-real transform would use CUDA_C_16BF for inputtype and executiontype, and CUDA_R_16BF for output type.
-// The cufftXtMakePlanMany() API supports more complicated input and output data layouts via the advanced data layout parameters: inembed, istride, idist, onembed, ostrided, and odist.
-// If inembed and onembed are set to NULL, all other stride information is ignored, and default strides are used. The default assumes contiguous data arrays.
-// If cufftXtSetGPUs() was called prior to this call with multiple GPUs, then workSize will contain multiple sizes. See sections on multiple GPUs for more details.
-cufftResult cufftXtMakePlanMany(cufftHandle plan, int rank, long long int *n, long long int *inembed, long long int istride, long long int idist, cudaDataType inputtype, long long int *onembed, long long int ostride, long long int odist, cudaDataType outputtype, long long int batch, size_t *workSize, cudaDataType executiontype);
-
-// cufftSetAutoAllocation() indicates that the caller intends to allocate and manage work areas for plans that have been generated. cuFFT default behavior is to allocate the work area at plan generation time. If cufftSetAutoAllocation() has been called with auto Allocate set to 0("false") prior to one of the cufftMakePlan*() calls, cuFFT does not allocate the work area. This is the preffered sequence for callers wishing to manage work area allocation.
-cufftResult cufftSetAutoAllocation(cufftHandle plan, int autoAllocate);
-
-// cufftSetWorkArea() overrides the work area pointer associated with a plan. If the work area was auto-allocated, cuFFT frees the auto-allocated space. The cufftExecute*() calls assume that the work area pointer is valid and that it points to a contiguous region in device memory that does not overlap with any other work area. If this is not the case, results are indeterminate.
-cufftResult cufftSetWorkArea(cufftHandle plan, int *workArea);
-
-// Function cufftXtExec executes any cuFFT transform regardless of precision and type. In case of complex-to-real and real-to-complex transforms direction parameter is ignored.
-// cuFFT uses the GPU memory pointed to by the input parameter as input data. This function stores the Fourier coefficients in the output array. If input and output are the same this method does an in-place transform
-cufftResult cufftExec(cufftHandle plan, void *input, void *output, int direction);
-
-// cufftExecR2C() executes a single-precision (double-precision) real-to-complex, implicitly forward, cuFFT transform plan. cuFFT uses as input data the GPU memory pointed to by the idata parameter. This function stores the nonredundant Fourier coefficients in the odata array. Pointers to idata and odata are both required to be aligned to cufftComplex data type in single-precision transforms and cufftDoubleComplex data type in double-precision transforms. If idata and odata are the same, this method does an in-place transform. Note the data layout differences between in-place and out-of-place transforms as described in Parameter cufftType.
-cufftResult cufftExecR2C(cufftHandle plan, cufftReal *idata, cufftComplex *odata);
-
-cufftResult cufftExecC2R(cufftHandle plan, cufftComplex *idata, cufftReal *odata);
-
-cufftResult cufftExecC2C(cufftHandle plan, cufftComplex *idata, cufftComplex *odata, int direction);
-
-// The cuFFT library supports complex- and real-data transforms. The cufftType data type is an enumeration of the types of transform data supported by cuFFT.
-typedef enum cufftType_t {
-    CUFFT_R2C = 0x2a, // Real to complex (interleaved)
-    CUFFT_C2R = 0x2c, // Complex (interleaved) to real
-    CUFFT_C2C = 0x29, // Complex to complex (interleaved)
-    CUFFT_D2Z = 0x6a, // Double to double-complex (interleaved)
-    CUFFT_Z2D = 0x6c, // Double-complex (interleaved) to double
-    CUFFT_Z2Z = 0x69  // Double-complex to double-complex (interleaved)
-}
-// Creates a 1D fft plan configuration for a specified signal size and data type. The batch input parameter tells cuFFT how many 1D transforms to configure.
-// This call can only be used once for a given handle. It will fail and return CUFFT_INVALID_PLAN if the plan is locked, i.e. the handle was previously used with a different cufftPlan or cufftMakePlan call.
-cufftResult cufftPlan1d(cufftHandle *plan, int nx, cufftType type, int batch);
-
-// Following a call to cufftCreate() makes a 1D FFT plan configuration for a specified signal size and data type. The batch input parameter tells cuFFT how many 1D transforms to configure.
-// This call can only be used once for a given handle. It will fail and return CUFFT_INVALID_PLAN if the plan is locked, i.e. the handle was previously used with a different cufftPlan or cufftMakePlan call.
-cufftResult cufftMakePlan1d(cufftHandle plan, int nx, cufftType type, int batch, size_t *workSize);
-
-// During plan execution, cuFFT requires a work area for temporary storage of intermediate results. This call returns an estimate for the size of the work area required, given the specified parameters, and assuming default plan settings.
-cufftResult cufftEstimate1d(int nx, cufftType, int batch, size_t *workSize);
-
-// This call gives a more accurate estimate of the work area size required for a plan than cufftEstimate1d(), given the specified parameters, and taking into account any plan settings that may have been made.
-cufftResult cufftGetSize1d(cufftHandle plan, int nx, cufftType type, int batch, size_t workSize);
-```
-
 - Mathematica
 
 ```mathematica
