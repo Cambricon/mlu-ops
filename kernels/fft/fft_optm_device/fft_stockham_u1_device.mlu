@@ -516,7 +516,8 @@ __mlu_func__ void store(DT* output, DT* y_in_r, DT* x_out1_r,
 // in seq_addr.
 __mlu_func__ void generateIncSequence(float* seq_addr, float* tmp_addr, int L,
                                       int L_sub, int pow_2_m_half) {
-  __mluop_get_indices((float*)seq_addr, (float)0.0, PAD_UP(L_sub, NFU_ALIGN_SIZE));
+  __mluop_get_indices((float*)seq_addr, (float)0.0,
+                      PAD_UP(L_sub, NFU_ALIGN_SIZE));
   // reduce call times of "__mluop_get_indices", which time is longer, by
   // using "for loop" and
   // "__bang_add_scalar".

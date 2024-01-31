@@ -697,11 +697,13 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram, int length) {
  *      dst only support nram.
  *      This funciton currently only supports float type indices.
  * *************************************************************************/
-__mlu_vector__ void __mluop_get_indices(float *dst, float start_index, uint32_t len) {
+__mlu_vector__ void __mluop_get_indices(float *dst, float start_index,
+                                        uint32_t len) {
   vv_int16 r_out, r_dim;
   unsigned BlockDim = __vv_get_length() / sizeof(int16_t);
   __asm__ volatile("index.vvr.f32 %[dst], %[base], 1;\n\t"
-                   : [dst] "+r"(r_out) : [base] "r"(start_index)); 
+                   : [ dst ] "+r"(r_out)
+                   : [ base ] "r"(start_index));
   __vv_move(r_dim, BlockDim);
   int repeat = DIV_UP(len, BlockDim);
   for (int iter = 0; iter < repeat; iter++) {
