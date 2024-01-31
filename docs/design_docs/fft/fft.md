@@ -35,8 +35,6 @@
 
 ### 1.1 算子需求分析
 
-example:
-
 | 算子功能简介| 对数列进行傅里叶变换操作，详细描述在1.2中进行说明            |
 |-------------|--------------------------------------------------------------|
 | 需求来源    | PyTorch/Tensorflow                                       |
@@ -216,13 +214,13 @@ mluOpStatus_t mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  *  \b fft_plan.
  */
 mluOpStatus_t mluOpMakeFFTPlanMany(mluOpHandle_t handle,
-                                 mluOpFFTPlan_t fft_plan,
-                                 const mluOpTensorDescriptor_t input_desc,
-                                 const mluOpTensorDescriptor_t output_desc,
-                                 const int rank,
-                                 const int n[],
-                                 size_t *reservespace_size,
-                                 size_t *workspace_size);
+                                   mluOpFFTPlan_t fft_plan,
+                                   const mluOpTensorDescriptor_t input_desc,
+                                   const mluOpTensorDescriptor_t output_desc,
+                                   const int rank,
+                                   const int n[],
+                                   size_t *reservespace_size,
+                                   size_t *workspace_size);
 /*!
  *  @brief Bond the reserve space to the \b fft_plan. The size of reserved space can be derived through ::mluOpMakeFFTPlanMany.
  */
@@ -426,27 +424,27 @@ $R_r^{r^l}$为bit-reverse矩阵，即按位逆序置换矩阵。下面给出长�
 
 ​	Step 1. 转置$`x`$
 ```math
-x[p_1+p_2 m] \rarr; a[p_2+p_1k] \tag{10}
+x[p_1+p_2 m] -> a[p_2+p_1k] \tag{10}
 ```
 ​	Step 2. 对$`a`$ 中所有的 $`p_1`$ 分别做 $`F_m`$ 的FFT：
 ```math
-a[p_2+p_1m] \rarr; b[k_1+p_1 m] \tag{11}
+a[p_2+p_1m] -> b[k_1+p_1 m] \tag{11}
 ```
 ​	Step 3. 乘以旋转因子 $`W_n^{k_1 p_1}`$ ：
 ```math
-b[k_1+p_1m] \rarr; b[k_1+p_1 m]W_n^{k_1 p_1}=c[k_1+p_1 m]\tag{12}
+b[k_1+p_1m] -> b[k_1+p_1 m]W_n^{k_1 p_1}=c[k_1+p_1 m]\tag{12}
 ```
 ​	Step 4. 对 $`c`$ 进行转置：
 ```math
-c[k_1+p_1 m] \rarr; d[p_1+k_1 k] \tag{13}
+c[k_1+p_1 m] -> d[p_1+k_1 k] \tag{13}
 ```
 ​	Step 5. 对所有的 $`k_1`$ 做 $`F_k`$ 的FFT：
 ```math
-d[p_1+k_1 k] \rarr; e[k_2+k_1 k] \tag{14}
+d[p_1+k_1 k] -> e[k_2+k_1 k] \tag{14}
 ```
 ​	Step 6. 转置 $`e`$ ：
 ```math
-e[k_2+k_1 k] \rarr; X[k_1+k_2 m] \tag{15}
+e[k_2+k_1 k] -> X[k_1+k_2 m] \tag{15}
 ```
 其中，第2步和第6步的FFT可以使用3.1.1节中的迭代附列变换完成。
 
@@ -634,7 +632,7 @@ x_7\\
 
  5、batch 大小防呆；
 
- 6、execution dtype 数据类型防呆，200为INT31， 300为INT31或float。
+ 6、execution dtype 数据类型防呆。
 
  7、输入输出stride防呆；
 

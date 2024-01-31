@@ -24,8 +24,7 @@
 #include "fft_basic_ops.h"
 
 bool fftIsIntDtype(const mluOpDataType_t dtype) {
-  if (dtype == MLUOP_DTYPE_INT8 || dtype == MLUOP_DTYPE_INT16 ||
-      dtype == MLUOP_DTYPE_INT31) {
+  if (dtype == MLUOP_DTYPE_INT8 || dtype == MLUOP_DTYPE_INT16) {
     return true;
   } else {
     return false;
@@ -165,12 +164,8 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  if (a_compute_type == MLUOP_DTYPE_INT31 ||
-      b_compute_type == MLUOP_DTYPE_INT31) {
-    status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  } else if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
-             c_desc->dtype == MLUOP_DTYPE_HALF) {
+  if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
+      c_desc->dtype == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else {
@@ -278,12 +273,8 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  if (a_compute_type == MLUOP_DTYPE_INT31 ||
-      b_compute_type == MLUOP_DTYPE_INT31) {
-    status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  } else if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
-             c_desc->dtype == MLUOP_DTYPE_HALF) {
+  if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
+    c_desc->dtype == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else {

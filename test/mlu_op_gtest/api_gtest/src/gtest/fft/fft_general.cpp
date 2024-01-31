@@ -141,7 +141,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({0, 1}), std::vector<int>({1, 1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1, 1}), std::vector<int>({1, 1})}),
@@ -155,7 +155,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 2,
                          std::vector<int>({1, 7}), std::vector<int>({1, 1}),
-                         MLUOP_DTYPE_INT16}),
+                         MLUOP_DTYPE_HALF}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 2,
                          std::vector<int>({1, 7}), std::vector<int>({1, 1})}),
@@ -170,7 +170,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
                          std::vector<int>({1, 4097}), std::vector<int>({1, 1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
                          std::vector<int>({1, 4097}),
@@ -184,7 +184,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1})}),
@@ -197,7 +197,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1})}),
@@ -210,7 +210,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
                          std::vector<int>({1, 1}), std::vector<int>({1, 1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
                          std::vector<int>({2, 1}), std::vector<int>({1, 1})}),
@@ -223,7 +223,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({-1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1})}),
@@ -236,7 +236,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({-1})}),
@@ -249,7 +249,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_HALF, 1,
                          std::vector<int>({1}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1})}),
@@ -276,7 +276,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 1,
                          std::vector<int>({4}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1})}),
@@ -290,7 +290,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({1}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({0}), std::vector<int>({1})}),
@@ -304,7 +304,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Combine(testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
                          std::vector<int>({4}), std::vector<int>({1}),
-                         MLUOP_DTYPE_INT31}),
+                         MLUOP_DTYPE_FLOAT}),
                      testing::Values(MLUOpTensorParam{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT, 1,
                          std::vector<int>({3}), std::vector<int>({1})}),

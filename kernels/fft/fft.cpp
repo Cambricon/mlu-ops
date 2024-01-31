@@ -296,15 +296,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT:
     case CNFFT_COMPLEX_FLOAT2FLOAT: {
       if (supportFloatConv(handle)) {
-        if (!(execution_dtype == f_r_dtype ||
-              execution_dtype == MLUOP_DTYPE_INT31)) {
-          LOG(ERROR) << make_plan_api << ": invalid execution dtype "
-                     << mluOpGetNameOfDataType(fft_plan->execution_dtype)
-                     << ".";
-          return MLUOP_STATUS_BAD_PARAM;
-        }
-      } else {
-        if (!(execution_dtype == MLUOP_DTYPE_INT31)) {
+        if (!execution_dtype == f_r_dtype) {
           LOG(ERROR) << make_plan_api << ": invalid execution dtype "
                      << mluOpGetNameOfDataType(fft_plan->execution_dtype)
                      << ".";

@@ -56,7 +56,7 @@ __mlu_func__ void convert(half *dst, float *src, int length) {
   [output] src_addr: output data
  */
 template <typename T>
-__mlu_func__ void __mluOp_mod(T *src_addr, T *temp_addr, T n, int len) {
+__mlu_func__ void __mluop_mod(T *src_addr, T *temp_addr, T n, int len) {
   T array_max;
   __bang_argmax(temp_addr, src_addr, len);
   array_max = temp_addr[0];
@@ -152,8 +152,7 @@ __mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                      nullptr);
+  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -166,7 +165,7 @@ __mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
     // generate offsets
     __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
     __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, deal_size);
-    __mluOp_mod(offset_addr, temp_addr, (float)n, deal_size);
+    __mluop_mod(offset_addr, temp_addr, (float)n, deal_size);
 
     genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
 
@@ -237,8 +236,7 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                      nullptr);
+  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -251,7 +249,7 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
     // generate offsets
     __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
     __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, deal_size);
-    __mluOp_mod(offset_addr, temp_addr, (float)n, deal_size);
+    __mluop_mod(offset_addr, temp_addr, (float)n, deal_size);
 
     genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
 
@@ -327,8 +325,7 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                      nullptr);
+  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
 
   // generate sin and cos coefficient vectors
   __bang_write_value((float *)cos_coeff_addr, deal_size, (float)2.0);
@@ -349,7 +346,7 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
     // generate offsets
     __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
     __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
-    __mluOp_mod(offset_addr, temp_addr, (float)n, pad_col);
+    __mluop_mod(offset_addr, temp_addr, (float)n, pad_col);
 
     genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
 
@@ -423,8 +420,7 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                      nullptr);
+  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
 
   // generate sin and cos vectors
   const float scale = 2.0 * M_PI / n;
@@ -437,7 +433,7 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
     // generate offsets
     __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
     __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
-    __mluOp_mod(offset_addr, temp_addr, (float)n, pad_col);
+    __mluop_mod(offset_addr, temp_addr, (float)n, pad_col);
 
     genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
 
@@ -520,8 +516,7 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(deal_size, (float)0.0, inc_addr, nullptr, inc_addr,
-                      nullptr);
+  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
 
   // generate sin and cos vectors
   const float forward_scale = -2.0 * M_PI / n;
@@ -540,7 +535,7 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
     // generate offsets
     __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
     __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
-    __mluOp_mod(offset_addr, temp_addr, (float)n, pad_col);
+    __mluop_mod(offset_addr, temp_addr, (float)n, pad_col);
 
     genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
 

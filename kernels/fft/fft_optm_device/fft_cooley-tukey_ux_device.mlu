@@ -59,16 +59,7 @@ __mlu_func__ void genWVec1(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
     float *tmp_offset_addr = offset_addr + L_align * i;
     float *tmp_inc_addr = inc_addr + L_align * i;
     float start_value = L * i;
-#if __BANG_ARCH__ >= 372
-    __mluop_get_indices(L_align, start_value, tmp_inc_addr, nullptr,
-                        tmp_inc_addr, nullptr);
-#else
-    float *int32_temp_addr = tmp_cos_addr;
-    float *float2int_dst_ad = tmp_sin_addr;
-    float *float2int_src128B = w_tmp3;
-    __mluop_get_indices(L_align, start_value, int32_temp_addr,
-                        float2int_src128B, tmp_inc_addr, float2int_dst_ad);
-#endif
+    __mluop_get_indices(tmp_inc_addr, start_value, L_align);
     float scale =
         2.0 * M_PI / (n / L_align * L * 2.0) * (fft_flag != IRFFT ? -1 : 1);
     scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
@@ -99,16 +90,7 @@ __mlu_func__ void genWVec2(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
   float scale = 2.0 * M_PI / (n_tmp * 2.0) * (fft_flag != IRFFT ? -1 : 1);
   scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
   float start_value = ri * op_size;
-#if __BANG_ARCH__ >= 372
-  __mluop_get_indices(op_size_align, start_value, inc_addr, nullptr, inc_addr,
-                      nullptr);
-#else
-  float *int32_temp_addr = cos_addr;
-  float *float2int_dst_ad = sin_addr;
-  float *float2int_src128B = w_tmp3;
-  __mluop_get_indices(op_size_align, start_value, int32_temp_addr,
-                      float2int_src128B, inc_addr, float2int_dst_ad);
-#endif
+  __mluop_get_indices(inc_addr, start_value, op_size_align);
   __bang_mul_scalar(offset_addr, inc_addr, scale, op_size_align);
   __bang_cos(cos_addr, offset_addr, op_size);
   if (n <= 48000) {

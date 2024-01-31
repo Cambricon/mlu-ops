@@ -13288,17 +13288,17 @@ typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
  *
  * @par API Dependency
  * - After calling this function, you can call the ::mluOpMakeFFTPlanMany function to initialize and set the
- * information to the created descriptor.
+ *   information to the created descriptor.
  * - You need to call the ::mluOpDestroyFFTPlan to destroy the descriptor.
- * Otherwise, the memory leak may occur.
+ *   Otherwise, the memory leak may occur.
  *
  * @par Note
  * - This function only supports 1D FFT currently. 2D FFT and 3D FFT
- * will be supported in the future.
+ *   will be supported in the future.
  * - When the data type of input is float or complex_float, the 1D FFT length should be equal to:
- * length = \f$base * 2^ {m}\f$ , and the base should be less than or equal to 4096.
+ *   length = \f$base * 2^ {m}\f$, and the base should be less than or equal to 4096.
  * - When the data type of input is half or complex_half, the 1D FFT length should be equal to:
- * length = \f$2^{m}
+ *   length = \f$2^{m}\f$.
  *
  * @par Example.
  * - None.
@@ -13311,7 +13311,6 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
 
 // Group: FFT
 /*!
-
  * @brief Initializes the FFT descriptor pointed by \p fft_plan that is previously created
  * with the ::mluOpCreateFFTPlan function, and sets the information about the
  * tensor descriptors of input tensor and output tensor, the rank of FFT, and the FFT size on each
@@ -13351,22 +13350,14 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  * - The supported data types of \p input and \p output tensors are as follows:
  * - real-to-complex FFT:
  *     - half(input offchip)-complex_half(output offchip)-int16(input onchip)
- *     - float(input offchip)-complex_float(output offchip)-int31(input onchip)
- * - complex-to-real FFT:
- *     - complex_half(input offchip)-half(output offchip)-int16(input onchip)
- *     - complex_float(input offchip)-float(output offchip)-int31(input onchip)
- * - complex-to-complex FFT:
- *     - complex_half(input offchip)-complex_half(output offchip)-int16(input onchip)
- *     - complex_float(input offchip)-complex_float(output offchip)-int31(input onchip)
- * - On MLU300 series or above, this function also supports the combinations of
- *   data types as follows:
- * - real-to-complex FFT:
  *     - half(input offchip)-complex_half(output offchip)-half(input onchip)
  *     - float(input offchip)-complex_float(output offchip)-float(input onchip)
  * - complex-to-real FFT:
+ *     - complex_half(input offchip)-half(output offchip)-int16(input onchip)
  *     - complex_half(input offchip)-half(output offchip)-half(input onchip)
  *     - complex_float(input offchip)-float(output offchip)-float(input onchip)
  * - complex-to-complex FFT:
+ *     - complex_half(input offchip)-complex_half(output offchip)-int16(input onchip)
  *     - complex_half(input offchip)-complex_half(output offchip)-half(input onchip)
  *     - complex_float(input offchip)-complex_float(output offchip)-float(input onchip)
  *
@@ -13414,7 +13405,6 @@ mluOpMakeFFTPlanMany(mluOpHandle_t handle,
 
 // Group:FFT
 /*!
-
  * @brief Bonds the \p reservespace to the \p fft_plan. The size of reserved space can be derived
  * through ::mluOpMakeFFTPlanMany.
  *
@@ -13459,7 +13449,6 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
 
 // Group:FFT
 /*!
-
  * @brief Executes any FFT. In case of complex-to-real and real-to-complex
  * transforms, \p direction parameter is ignored. This function stores the Fourier coefficients
  * in the output array. If the address of input and output are the same, an in-place FFT
@@ -13492,7 +13481,7 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   data type, the output is computed through the FFT formula with computation rules of NaN or
  *   infinity based on IEEE 754.
  * - When \p input contains NaN or infinity and the input onchip data type of FFT is quantized
- *   data type such as int31 or int16, the output will be unpredictable.
+ *   data type such as int16, the output will be unpredictable.
  * - \p Input is recommended to be in range of [-10, 10] with uniform
  *   distribution for higher precision.
  * - \p Scale_factor is recommended to be in range of [-1, 1] to avoid exceeding
@@ -13539,7 +13528,6 @@ mluOpExecFFT(mluOpHandle_t handle,
 
 // Group:FFT
 /*!
-
  * @brief Destroys an FFT plan \p fft_plan that is created with the
  * ::mluOpCreateFFTPlan function. The FFT plan is defined in ::mluOpFFTPlan_t and
  * holds the information about the FFT operation.

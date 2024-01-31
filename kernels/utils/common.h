@@ -685,71 +685,28 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram, int length) {
 #endif
 }
 
-template <typename T>
-__mlu_func__ void __mluop_get_indices(const uint32_t num_integers,
-                                      T first_index, float *TInt32_temp,
-                                      float *float2int_src128B, T *dst,
-                                      float *float2int_dst_ad,
-                                      int float2int_dst_add_space = -1) {
-  // cache miss is so bad at MLU290 when doing (int)MAX_INT2FLOAT_EXACT, so skip
-  // it, which results in not being able to distinguish MAX_INT2FLOAT_EXACT and
-  // (MAX_INT2FLOAT_EXACT + 1), same for the negative end. The following way of
-  // programming reduces cache miss.
-  bool T_not_2_bytes = sizeof(T) != sizeof(uint16_t);
-  bool pos_range = (first_index + num_integers - 1) <= MAX_INT2FLOAT_EXACT - 1;
-  bool neg_range = (int64_t)first_index >= NEG_MAX_INT2FLOAT_EXACT + 1;
-  if (T_not_2_bytes && pos_range && neg_range) {
-    int align_num = NFU_ALIGN_SIZE / sizeof(float);
-    int repeat = (int)(logf(num_integers / align_num) / logf(2));
-    int remain = num_integers / align_num - powf(2, repeat);
-    uint32_t count = 1;
-    bool integer_index =
-        std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value;
-    float *index_temp = (integer_index) ? (float *)TInt32_temp : (float *)dst;
-    for (int i = 0; i < align_num; i++) {
-      *((float *)index_temp + i) = (float)(i + first_index);
-    }
-    for (int i = 0; i < repeat; i++) {
-      __bang_add_scalar((float *)index_temp + count * align_num,
-                        (float *)index_temp, (float)(count * align_num),
-                        count * align_num);
-      count *= 2;
-    }
-    if (remain > 0) {
-      __bang_add_scalar((float *)index_temp + count * align_num,
-                        (float *)index_temp, (float)(count * align_num),
-                        remain * align_num);
-    }
-    if (!integer_index) {
-      return;
-    }
-    if (float2int_dst_add_space < 0) {
-      __bang_float2int32((int *)dst, (float *)TInt32_temp, num_integers, 0);
-    } else {
-      // limited temp space is provided
-      float2int_dst_add_space =
-          (num_integers * sizeof(float) > float2int_dst_add_space)
-              ? float2int_dst_add_space
-              : num_integers * sizeof(float);
-      int max_num_convert =
-          PAD_DOWN(float2int_dst_add_space, NFU_ALIGN_SIZE) / sizeof(float);
-      int repeat = (num_integers + max_num_convert - 1) / max_num_convert;
-      int remain = num_integers % max_num_convert;  // remain%32 is 0
-      for (int i = 0; i < repeat; ++i) {
-        int num_convert =
-            ((i == repeat - 1) && (remain != 0)) ? remain : max_num_convert;
-        __bang_float2int32((int *)dst + i * max_num_convert,
-                           (float *)TInt32_temp + i * max_num_convert,
-                           num_convert, 0);
-      }
-    }
-  } else {
-    // T can only be uint32_t/int32_t/uint16_t/int16_t, not float/half
-    // set i to be type of uint32_t, otherwise may suffer moderate performance
-    // degradation
-    for (uint32_t i = 0; i < num_integers; i++) {
-      *((T *)dst + i) = (T)(i + first_index);
-    }
+/***************************************************************************
+ * MLUOPS FUNC: __mluop_get_indices.
+ * param "dst" is needed for holding the final result.
+ * param "start_index" is the smallest integer to be generated.
+ * param "len" is the total number of integers to be generated.
+ * Note:
+ *      Get [start_index, len-1] stage indices in nram on mlu590 mlu300
+ *      and other platform which support necessary instruction.
+ *      len not need to be aligned any number.
+ *      dst only support nram.
+ *      This funciton currently only supports float type indices.
+ * *************************************************************************/
+__mlu_vector__ void __mluop_get_indices(float *dst, float start_index, uint32_t len) {
+  vv_int16 r_out, r_dim;
+  unsigned BlockDim = __vv_get_length() / sizeof(int16_t);
+  __asm__ volatile("index.vvr.f32 %[dst], %[base], 1;\n\t"
+                   : [dst] "+r"(r_out) : [base] "r"(start_index)); 
+  __vv_move(r_dim, BlockDim);
+  int repeat = DIV_UP(len, BlockDim);
+  for (int iter = 0; iter < repeat; iter++) {
+    __vv_store(dst + iter * BlockDim, r_out);
+    __vv_add(r_out, r_out, r_dim);
   }
 }
 
