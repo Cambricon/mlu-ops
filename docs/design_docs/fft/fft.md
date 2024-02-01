@@ -234,12 +234,12 @@ mluOpStatus_t mluOpSetFFTReserveArea(mluOpHandle_t handle,
  *  is adopted.
  */
 mluOpStatus_t mluOpExecFFT(mluOpHandle_t handle,
-                         const mluOpFFTPlan_t fft_plan,
-                         const void *input,
-                         const float scale_factor,
-                         void *workspace,
-                         void *output,
-                         int direction);
+                           const mluOpFFTPlan_t fft_plan,
+                           const void *input,
+                           const float scale_factor,
+                           void *workspace,
+                           void *output,
+                           int direction);
 
 /*!
  *  @brief Destroys a FFT plan \b fft_plan that is created with the
