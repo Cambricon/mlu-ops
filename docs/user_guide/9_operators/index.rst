@@ -735,17 +735,16 @@ mluOpSyncBatchNormBackwardElemt
 mluOpExecFFT
 -----------
 对一个长度为N的实数数列进行傅里叶变换。
+
 计算公式如下：
 
 .. math::
 
-y = DFT_{N} x
+   y = DFT_{N} x
 
 其中：
 
-  - ``x`` 为输入信号。
-  - ``y`` 为输出信号。
-  - :math:`DFT_{N}
-
-` 为长度为N傅里叶变换的变换矩阵。
+- ``x`` 为输入信号。
+- ``y`` 为输出信号。
+- :math:`DFT_{N}` 为长度为N傅里叶变换的变换矩阵。
 
