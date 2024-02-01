@@ -424,27 +424,27 @@ $R_r^{r^l}$为bit-reverse矩阵，即按位逆序置换矩阵。下面给出长�
 
 ​	Step 1. 转置$`x`$
 ```math
-x[p_1+p_2 m] -> a[p_2+p_1k] \tag{10}
+x[p_1+p_2 m]->a[p_2+p_1k] \tag{10}
 ```
 ​	Step 2. 对$`a`$ 中所有的 $`p_1`$ 分别做 $`F_m`$ 的FFT：
 ```math
-a[p_2+p_1m] -> b[k_1+p_1 m] \tag{11}
+a[p_2+p_1m]->b[k_1+p_1 m] \tag{11}
 ```
 ​	Step 3. 乘以旋转因子 $`W_n^{k_1 p_1}`$ ：
 ```math
-b[k_1+p_1m] -> b[k_1+p_1 m]W_n^{k_1 p_1}=c[k_1+p_1 m]\tag{12}
+b[k_1+p_1m]->b[k_1+p_1 m]W_n^{k_1 p_1}=c[k_1+p_1 m]\tag{12}
 ```
 ​	Step 4. 对 $`c`$ 进行转置：
 ```math
-c[k_1+p_1 m] -> d[p_1+k_1 k] \tag{13}
+c[k_1+p_1 m]->d[p_1+k_1 k] \tag{13}
 ```
 ​	Step 5. 对所有的 $`k_1`$ 做 $`F_k`$ 的FFT：
 ```math
-d[p_1+k_1 k] -> e[k_2+k_1 k] \tag{14}
+d[p_1+k_1 k]->e[k_2+k_1 k] \tag{14}
 ```
 ​	Step 6. 转置 $`e`$ ：
 ```math
-e[k_2+k_1 k] -> X[k_1+k_2 m] \tag{15}
+e[k_2+k_1 k]->X[k_1+k_2 m] \tag{15}
 ```
 其中，第2步和第6步的FFT可以使用3.1.1节中的迭代附列变换完成。
 
