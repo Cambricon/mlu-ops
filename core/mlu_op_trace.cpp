@@ -156,14 +156,7 @@ class mluOpTrace {
 
   void serializeLine(std::ofstream &case_file, int idx,
                      const std::atomic_int &hit) {
-    if (mluOpTrace::flag_dump_api()) {
-      if (hit.load()) {
-        LOG(INFO) << "[MLUOP_API_CNT] " << mluOpInternalGetApiNameById(idx)
-                  << ",\t" << hit.load();
-      }
-    }
-    case_file << mluOpInternalGetApiNameById(idx) << ",\t" << hit.load()
-              << "\n";
+    // TODO(None): Add function definition
   }
 
   template <int policy, class Iterable>
@@ -219,14 +212,7 @@ class mluOpTrace {
   }
 
   static void addApi(int api_idx) {
-    getInstance().api_counter_[api_idx]++;
-    if (getInstance().dump_api_count_) {
-      const char *fname = mluOpInternalGetApiNameById(api_idx);
-      if (filterApiNameComputeOnly(fname)) {
-        LOG(CNPAPI) << "[MLUOP_API_CNT] logged api " << fname
-                    << " (hit: " << getInstance().api_counter_[api_idx] << ")";
-      }
-    }
+    // TODO(None): Add function definition
   }
 
   static void addKernel(const std::string &kernel) {
@@ -290,7 +276,7 @@ class mluOpTrace {
  private:
   mluOpTrace()
       : api_counter_(
-            std::vector<std::atomic_int>(mluOpInternalGetApiNameNumber())) {
+            std::vector<std::atomic_int>(0)) {
 #if DEBUG
     printf("mluOpTrace singleten init\n");
 #endif
