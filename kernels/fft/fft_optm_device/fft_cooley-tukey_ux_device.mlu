@@ -1,0 +1,775 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "mlu.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "kernels/fft/fft.h"
+
+#define TRANS_ALIGN_SIZE 64
+
+#define ITER_ONCHIP 0
+#define ITER_OFFCHIP 1
+
+// direction
+#define FFT_INVERSE 1
+
+#define COMPLEX_FACTOR 2
+#define YZ_FACTOR 2
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+
+// Generate W matrix with alignment as interval.
+// For example: when W is [L_align * s], the valid range of values is
+//     [0, L - 1], [L_align, L_align + L - 1], ..., [L_align * (s - 1), L_align
+//     * (s - 1) + L - 1].
+template <typename DT>
+__mlu_func__ void genWVec1(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
+                           float *w_tmp3, int L, int L_align, int L_align_bytes,
+                           int n, int fft_flag, int direction) {
+  float *cos_addr = w_r;
+  float *sin_addr = w_i;
+  float *offset_addr = w_tmp1;
+  float *inc_addr = w_tmp2;
+
+  // deal with each L segment.
+  for (int i = 0; i < n / L_align; i++) {
+    float *tmp_cos_addr = cos_addr + L_align * i;
+    float *tmp_sin_addr = sin_addr + L_align * i;
+    float *tmp_offset_addr = offset_addr + L_align * i;
+    float *tmp_inc_addr = inc_addr + L_align * i;
+    float start_value = L * i;
+    __mluop_get_indices(tmp_inc_addr, start_value, L_align);
+    float scale =
+        2.0 * M_PI / (n / L_align * L * 2.0) * (fft_flag != IRFFT ? -1 : 1);
+    scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
+    __bang_mul_scalar(tmp_offset_addr, tmp_inc_addr, scale, L_align);
+#if __BANG_ARCH__ >= 372
+    __bang_cos(tmp_cos_addr, tmp_offset_addr, L_align);
+    __bang_sin(tmp_sin_addr, tmp_offset_addr, L_align);
+#else
+    for (int i = 0; i < L_align; i++) {
+      tmp_cos_addr[i] = cosf(tmp_offset_addr[i]);
+      tmp_sin_addr[i] = sinf(tmp_offset_addr[i]);
+    }
+#endif
+  }
+}
+
+// Generate W matrix contimuously with different start value.
+template <typename DT>
+__mlu_func__ void genWVec2(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
+                           float *w_tmp3, float n_tmp, int n, int L,
+                           int L_align, int ri, int op_size, int op_size_align,
+                           int op_size_bytes_align, int fft_flag,
+                           int direction) {
+  float *cos_addr = w_r;
+  float *sin_addr = w_i;
+  float *offset_addr = w_tmp1;
+  float *inc_addr = w_tmp2;
+  float scale = 2.0 * M_PI / (n_tmp * 2.0) * (fft_flag != IRFFT ? -1 : 1);
+  scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
+  float start_value = ri * op_size;
+  __mluop_get_indices(inc_addr, start_value, op_size_align);
+  __bang_mul_scalar(offset_addr, inc_addr, scale, op_size_align);
+  __bang_cos(cos_addr, offset_addr, op_size);
+  if (n <= 48000) {
+    __bang_sin(sin_addr, offset_addr, op_size);
+  } else {
+    __cn_vector_sin_f32(op_size, sin_addr, offset_addr);
+  }
+  for (int i = 0; i < op_size; i++) {
+    cos_addr[i] = cosf(offset_addr[i]);
+    sin_addr[i] = sinf(offset_addr[i]);
+  }
+}
+
+template <typename DT>
+__mlu_func__ void genWSc1(float *w_r, float *w_i, int n, int fft_flag,
+                          int direction, int L, int L_align) {
+  float scale =
+      2.0 * M_PI / (n / L_align * L * 2.0) * (fft_flag != IRFFT ? -1 : 1);
+  scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
+  for (int i = 0; i < n / L_align; i++) {
+    for (int j = 0; j < L; j++) {
+      w_r[i * L_align + j] = std::cos((i * L + j) * scale);
+      w_i[i * L_align + j] = std::sin((i * L + j) * scale);
+    }
+  }
+}
+
+template <typename DT>
+__mlu_func__ void genWSc2(float *w_r, float *w_i, float n_tmp, int ri,
+                          int op_size, int op_size_align, int fft_flag,
+                          int direction, int L, int L_align) {
+  float scale = 2.0 * M_PI / (n_tmp * 2.0) * (fft_flag != IRFFT ? -1 : 1);
+  scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
+  for (int i = 0; i < op_size; i++) {
+    w_r[i] = std::cos((ri * op_size + i) * scale);
+    w_i[i] = std::sin((ri * op_size + i) * scale);
+  }
+}
+
+// pick the correct input index.
+__mlu_func__ void permute(int &ind_inner_op, int &ind_outer_op, int M) {
+  for (int i = 0; i < M; i++) {
+    ind_inner_op = 2 * ind_inner_op + ind_outer_op % 2;
+    ind_outer_op = ind_outer_op / 2;
+  }
+}
+
+// Subgraph internal merge calculation as follows:
+//     x_out1 = y + wz = (y_real + i * y_imag) + (w_real + i * w_imag) * (z_real
+//     + i * z_imag) x_out2 = y - wz = (y_real + i * y_imag) - (w_real + i *
+//     w_imag) * (z_real + i * z_imag)
+// Note: the output of each iteration is the input of next layer. When not
+// iterating to the last
+//       layer, that is ,stage == ITER_ONCHIP, the output result needs to be
+//       moved back to the input.
+template <typename DT>
+__mlu_func__ void computeOneStep(DT *wz_rr, DT *wz_ri, DT *wz_ir, DT *wz_ii,
+                                 DT *w_r, DT *w_i, DT *wz_r, DT *wz_i,
+                                 DT *x_out1_r, DT *x_out2_r, DT *x_out1_i,
+                                 DT *x_out2_i, DT *y_in_r, DT *z_in_r,
+                                 DT *y_in_i, DT *z_in_i, int op_iter_size,
+                                 int stage) {
+  uint32_t op_iter_size_bytes = op_iter_size * sizeof(DT);
+  if (std::is_same<DT, half>::value) {
+    __memcpy((half *)x_out1_r, (half *)z_in_r, op_iter_size_bytes, NRAM2NRAM);
+    __memcpy((half *)x_out1_i, (half *)z_in_i, op_iter_size_bytes, NRAM2NRAM);
+    __bang_half2float((float *)x_out2_r, (half *)x_out1_r, op_iter_size);
+    __bang_half2float((float *)x_out2_i, (half *)x_out1_i, op_iter_size);
+
+    // (w_real + i * w_imag) * (z_real + i * z_imag)
+    __bang_mul((float *)wz_rr, (float *)w_r, (float *)x_out2_r, op_iter_size);
+    __bang_mul((float *)wz_ri, (float *)w_r, (float *)x_out2_i, op_iter_size);
+    __bang_mul((float *)wz_ir, (float *)w_i, (float *)x_out2_r, op_iter_size);
+    __bang_mul((float *)wz_ii, (float *)w_i, (float *)x_out2_i, op_iter_size);
+
+    // wz_real = w_real * z_real - w_imag * z_imag
+    __bang_sub((float *)wz_r, (float *)wz_rr, (float *)wz_ii, op_iter_size);
+
+    // wz_imag = w_real * z_imag + w_imag * z_real
+    __bang_add((float *)wz_i, (float *)wz_ri, (float *)wz_ir, op_iter_size);
+
+    __memcpy((half *)x_out1_r, (half *)y_in_r, op_iter_size_bytes, NRAM2NRAM);
+    __memcpy((half *)x_out1_i, (half *)y_in_i, op_iter_size_bytes, NRAM2NRAM);
+    __bang_half2float((float *)x_out2_r, (half *)x_out1_r, op_iter_size);
+    __bang_half2float((float *)x_out2_i, (half *)x_out1_i, op_iter_size);
+
+    // y + wz
+    __bang_add((float *)x_out1_r, (float *)x_out2_r, (float *)wz_r,
+               op_iter_size);
+    __bang_add((float *)x_out1_i, (float *)x_out2_i, (float *)wz_i,
+               op_iter_size);
+
+    // y - wz
+    __bang_sub((float *)x_out2_r, (float *)x_out2_r, (float *)wz_r,
+               op_iter_size);
+    __bang_sub((float *)x_out2_i, (float *)x_out2_i, (float *)wz_i,
+               op_iter_size);
+
+    __mluop_float2half((half *)x_out1_r, (float *)x_out1_r, op_iter_size);
+    __mluop_float2half((half *)x_out1_i, (float *)x_out1_i, op_iter_size);
+    __mluop_float2half((half *)x_out2_r, (float *)x_out2_r, op_iter_size);
+    __mluop_float2half((half *)x_out2_i, (float *)x_out2_i, op_iter_size);
+  } else {
+    __bang_mul(wz_rr, w_r, z_in_r, op_iter_size);
+    __bang_mul(wz_ri, w_r, z_in_i, op_iter_size);
+    __bang_mul(wz_ir, w_i, z_in_r, op_iter_size);
+    __bang_mul(wz_ii, w_i, z_in_i, op_iter_size);
+
+    // wz_real = w_real * z_real - w_imag * z_imag
+    __bang_sub(wz_r, wz_rr, wz_ii, op_iter_size);
+
+    // wz_imag = w_real * z_imag + w_imag * z_real
+    __bang_add(wz_i, wz_ri, wz_ir, op_iter_size);
+
+    // y + wz
+    __bang_add(x_out1_r, y_in_r, wz_r, op_iter_size);
+    __bang_add(x_out1_i, y_in_i, wz_i, op_iter_size);
+
+    // y - wz
+    __bang_sub(x_out2_r, y_in_r, wz_r, op_iter_size);
+    __bang_sub(x_out2_i, y_in_i, wz_i, op_iter_size);
+  }
+
+  // move the output result back to the input.
+  if (stage == ITER_ONCHIP) {  // iterate on chip
+    __memcpy(y_in_r, x_out1_r, op_iter_size_bytes, NRAM2NRAM);
+    __memcpy(z_in_r, x_out2_r, op_iter_size_bytes, NRAM2NRAM);
+    __memcpy(y_in_i, x_out1_i, op_iter_size_bytes, NRAM2NRAM);
+    __memcpy(z_in_i, x_out2_i, op_iter_size_bytes, NRAM2NRAM);
+  }
+}
+
+template <typename DT>
+__mlu_func__ void computeOnchip(DT *y_in_r, DT *y_in_i, DT *x_out1_r,
+                                DT *x_out1_i, DT *x_out2_r, DT *x_out2_i,
+                                DT *w_tmp1, DT *w_tmp2, DT *w_tmp3, DT *w_r,
+                                DT *w_i, DT *wz_rr, DT *wz_ri, DT *wz_ir,
+                                DT *wz_ii, DT *wz_r, DT *wz_i, int L, int s,
+                                int subgraph_size, int L_align,
+                                int L_align_bytes, int fft_flag,
+                                int direction) {
+  int op_iter_size = L_align;
+  for (int sub = 0; sub < subgraph_size; sub++) {
+    int unit_num_each_layer = powf(2, s - sub);
+#if 1  // generate w1 using vector operators
+    genWVec1<DT>((float *)w_r, (float *)w_i, (float *)w_tmp1, (float *)w_tmp2,
+                 (float *)w_tmp3, L, L_align, L_align_bytes, op_iter_size,
+                 fft_flag, direction);
+#else
+    genWSc1<DT>((float *)w_r, (float *)w_i, op_iter_size, fft_flag, direction,
+                l, L_align);
+#endif
+    for (int cnt = 0; cnt < unit_num_each_layer; cnt++) {
+      int offset = op_iter_size * YZ_FACTOR * cnt;
+      DT *y_in_r_local = y_in_r + offset;
+      DT *z_in_r_local = y_in_r_local + op_iter_size;
+      DT *y_in_i_local = y_in_i + offset;
+      DT *z_in_i_local = y_in_i_local + op_iter_size;
+      computeOneStep(wz_rr, wz_ri, wz_ir, wz_ii, w_r, w_i, wz_r, wz_i, x_out1_r,
+                     x_out2_r, x_out1_i, x_out2_i, y_in_r_local, z_in_r_local,
+                     y_in_i_local, z_in_i_local, op_iter_size, ITER_ONCHIP);
+    }
+    op_iter_size *= 2;
+  }
+}
+
+// Transpose to the required layout before output: [C, N] -> [N, C], C == 2 when
+// output is complex.
+template <typename DT>
+__mlu_func__ void transAndStore(DT *x_out_trans, DT *y_in_r, DT *y_in_i,
+                                DT *z_in_i, void *output,
+                                int basic_size_align_via_L,
+                                int basic_size_bytes, int bc, int n, int ro,
+                                int repeat_inner_basic_group, int ri,
+                                int basic_size,  // represent for y or y + z
+                                int fft_flag, int stage) {
+  if (fft_flag == FFT_IFFT) {
+    int bc_offset = bc * n * COMPLEX_FACTOR;
+    int dst_offset =
+        (ro * repeat_inner_basic_group + ri) * basic_size * 2 + bc_offset;
+#if __BANG_ARCH__ >= 372
+    __bang_transpose(x_out_trans, y_in_r, COMPLEX_FACTOR,
+                     basic_size_align_via_L);
+    __memcpy((DT *)output + dst_offset, x_out_trans,
+             basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
+    if (stage == ITER_ONCHIP) {
+      __bang_transpose(x_out_trans, y_in_i, COMPLEX_FACTOR,
+                       basic_size_align_via_L);
+      __memcpy((DT *)output + dst_offset + n, x_out_trans,
+               basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
+    }
+#else
+    // For efficiency and space, we split one transpose [2, N] --> [2, x, N/x],
+    // into two as follows:
+    //     trans1: [(2, x),  N/x] -> [N/x, (2, x)]
+    //     trans2: [(N/x, 2), x)] -> [x, (N/x, 2)]
+    // Note: both dim2 and dim3 need to meet alignment requirement:
+    //       TRANS_ALIGN_SIZE / (int)sizeof(DT)
+    int dim1 = COMPLEX_FACTOR;
+    int dim2 = TRANS_ALIGN_SIZE / (int)sizeof(DT);
+    int dim3 = basic_size_align_via_L / dim2;
+    DT *x_out_trans_tmp = x_out_trans + dim1 * dim2 * dim3;
+    __bang_transpose(x_out_trans_tmp, y_in_r, dim1 * dim2, dim3);
+    __bang_transpose(x_out_trans, x_out_trans_tmp, dim3 * dim1, dim2);
+    __memcpy((DT *)output + dst_offset, x_out_trans,
+             basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
+    if (stage == ITER_ONCHIP) {
+      __bang_transpose(x_out_trans_tmp, y_in_i, dim1 * dim2, dim3);
+      __bang_transpose(x_out_trans, x_out_trans_tmp, dim3 * dim1, dim2);
+      __memcpy((DT *)output + dst_offset + n, x_out_trans,
+               basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
+    }
+#endif
+  } else if (fft_flag == RFFT) {
+    int bc_offset = bc * (n / 2 + 1) * COMPLEX_FACTOR;
+    int dst_offset = (ro * repeat_inner_basic_group + ri) * basic_size;
+    if (stage == ITER_OFFCHIP) {
+      *((DT *)output + bc_offset + n) =
+          *((DT *)y_in_r + basic_size / YZ_FACTOR);
+      *((DT *)output + bc_offset + (n + 1)) =
+          *((DT *)y_in_i + basic_size / YZ_FACTOR);
+    }
+#if __BANG_ARCH__ >= 372
+    __bang_transpose(x_out_trans, y_in_r, COMPLEX_FACTOR,
+                     basic_size_align_via_L);
+#else
+    // the principle of transpose is the same as FFT_IFFT
+    int dim1 = COMPLEX_FACTOR;
+    int dim2 = TRANS_ALIGN_SIZE / (int)sizeof(DT);
+    int dim3 = basic_size_align_via_L / dim2;
+    DT *x_out_trans_tmp = x_out_trans + dim1 * dim2 * dim3;
+    __bang_transpose(x_out_trans_tmp, y_in_r, dim1 * dim2, dim3);
+    __bang_transpose(x_out_trans, x_out_trans_tmp, dim3 * dim1, dim2);
+#endif
+    if (stage == ITER_OFFCHIP) {
+      __memcpy((DT *)output + dst_offset + bc_offset, x_out_trans,
+               basic_size_bytes, NRAM2GDRAM);
+    } else {
+      __memcpy((DT *)output + dst_offset * YZ_FACTOR + bc_offset, x_out_trans,
+               basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
+    }
+    if (ro == 0 && ri == 0 && stage == ITER_ONCHIP) {
+      *((DT *)output + n + bc_offset) = *(DT *)y_in_i;
+      *((DT *)output + (n + 1) + bc_offset) = *(DT *)z_in_i;
+    }
+  } else if (fft_flag == IRFFT) {
+    int bc_offset = bc * n;
+    int dst_offset = (ro * repeat_inner_basic_group + ri) * basic_size;
+    __memcpy((DT *)output + dst_offset + bc_offset, y_in_r, basic_size_bytes,
+             NRAM2GDRAM);
+    if (stage == ITER_ONCHIP) {
+      __memcpy((DT *)output + dst_offset + bc_offset + n / 2, y_in_i,
+               basic_size_bytes, NRAM2GDRAM);
+    }
+  }
+}
+
+template <typename DT>
+__mlu_func__ void loadMultiLayer(DT *y_in_r, DT *y_in_i, DT *x_out1_r,
+                                 DT *x_out2_r, DT *matmul_re_mul_re_addr,
+                                 DT *matmul_re_mul_im_addr,
+                                 DT *matmul_im_mul_re_addr,
+                                 DT *matmul_im_mul_im_addr, int L, int m,
+                                 int sub, int L_num_in_op_group, int L_bytes,
+                                 int L_align, int bc_offset, int fft_flag) {
+  for (int ln = 0; ln < L_num_in_op_group; ln++) {
+    int ind_outer_op = sub * L_num_in_op_group + ln;  // set index for each op.
+    int ind_inner_op = 0;
+    permute(ind_inner_op, ind_outer_op, m);
+    int dst_offset = ln * L_align;
+    int src_offset = L * ind_inner_op + bc_offset;
+    // y and z: x_real*w_real
+    __memcpy(y_in_r + dst_offset, matmul_re_mul_re_addr + src_offset, L_bytes,
+             GDRAM2NRAM);
+    // y and z: x_real*w_image
+    __memcpy(y_in_i + dst_offset, matmul_re_mul_im_addr + src_offset, L_bytes,
+             GDRAM2NRAM);
+    // combine when input is: rr, ri, ir, ii
+    if (fft_flag == FFT_IFFT || fft_flag == IRFFT) {
+      // y and z: x_real*w_real
+      __memcpy(x_out1_r + dst_offset, matmul_im_mul_re_addr + src_offset,
+               L_bytes, GDRAM2NRAM);
+      // y and z: x_real*w_image
+      __memcpy(x_out2_r + dst_offset, matmul_im_mul_im_addr + src_offset,
+               L_bytes, GDRAM2NRAM);
+      __bang_sub(y_in_r + dst_offset, y_in_r + dst_offset,
+                 x_out2_r + dst_offset, L_align);
+      __bang_add(y_in_i + dst_offset, y_in_i + dst_offset,
+                 x_out1_r + dst_offset, L_align);
+    }
+  }
+}
+
+template <typename DT>
+__mlu_func__ void storeMultiLayer(DT *y_in_r, DT *y_in_i, DT *z_in_r,
+                                  DT *z_in_i, DT *wspace_r, DT *wspace_i,
+                                  DT *w_tmp1, DT *output, int n, int L, int bc,
+                                  int sub, int L_num_in_op_group, int L_bytes,
+                                  int L_align_bytes, int op_size,
+                                  int op_size_bytes,
+                                  int op_size_align_via_L_trans, int bc_offset,
+                                  int remain_layer_num, int fft_flag) {
+  // output -> workspace
+  int dst_offset = sub * L_num_in_op_group * L + bc_offset;
+
+  __memcpy(wspace_r + dst_offset, y_in_r, L_bytes, NRAM2GDRAM, L_bytes,
+           L_align_bytes, L_num_in_op_group - 1);
+  __memcpy(wspace_i + dst_offset, y_in_i, L_bytes, NRAM2GDRAM, L_bytes,
+           L_align_bytes, L_num_in_op_group - 1);
+  if (remain_layer_num == 0) {
+    // reorganize NRAM align size for transpose
+    DT *z_in_r = y_in_r + op_size_align_via_L_trans;
+    DT *y_in_i = z_in_r + op_size_align_via_L_trans;
+    DT *z_in_i = y_in_i + op_size_align_via_L_trans;
+    // y_real and z_real
+    __memcpy(y_in_r, wspace_r + bc_offset, op_size_bytes * YZ_FACTOR,
+             GDRAM2NRAM);
+    // y_imag and z_imag
+    __memcpy(y_in_i, wspace_i + bc_offset, op_size_bytes * YZ_FACTOR,
+             GDRAM2NRAM);
+    transAndStore<DT>(w_tmp1, y_in_r, y_in_i, z_in_i, output,
+                      op_size_align_via_L_trans * YZ_FACTOR,
+                      op_size_bytes * YZ_FACTOR, bc, n, sub, 1, 0,
+                      op_size * YZ_FACTOR, fft_flag, ITER_OFFCHIP);
+  }
+}
+
+template <typename DT>
+__mlu_func__ void loadLayerByLayer(
+    DT *y_in_r, DT *y_in_i, DT *z_in_r, DT *z_in_i, DT *w_r, DT *w_i,
+    DT *w_tmp1, DT *w_tmp2, DT *w_tmp3, DT *wspace_r, DT *wspace_i,
+    int y_local_offset, int z_local_offset, int n, int L, int L_align, int ri,
+    int op_size, int op_size_bytes, int op_size_align, int op_size_bytes_align,
+    int op_group_distance, int bc_offset, int fft_flag, int direction) {
+#if 1  // generate w2 using vector operators
+  genWVec2<DT>((float *)w_r, (float *)w_i, (float *)w_tmp1, (float *)w_tmp2,
+               (float *)w_tmp3, op_size * op_group_distance / 2, n, L, L_align,
+               ri, op_size, op_size_align, op_size_bytes_align, fft_flag,
+               direction);
+#else
+  genWSc2<DT>((float *)w_r, (float *)w_i, op_size * op_group_distance / 2, ri,
+              op_size, op_size_align, fft_flag, direction, L, L_align);
+#endif
+
+  // load input data
+  __memcpy(y_in_r, wspace_r + y_local_offset + bc_offset, op_size_bytes,
+           GDRAM2NRAM);
+  __memcpy(z_in_r, wspace_r + z_local_offset + bc_offset, op_size_bytes,
+           GDRAM2NRAM);
+  __memcpy(y_in_i, wspace_i + y_local_offset + bc_offset, op_size_bytes,
+           GDRAM2NRAM);
+  __memcpy(z_in_i, wspace_i + z_local_offset + bc_offset, op_size_bytes,
+           GDRAM2NRAM);
+}
+
+template <typename DT>
+__mlu_func__ void storeLayerByLayer(
+    DT *y_in_r, DT *y_in_i, DT *z_in_r, DT *z_in_i, DT *x_out1_r, DT *x_out1_i,
+    DT *x_out2_r, DT *x_out2_i, DT *w_r, DT *w_i, DT *w_tmp1, DT *wspace_r,
+    DT *wspace_i, DT *output, int y_local_offset, int z_local_offset,
+    int repeat_id, int repeat_outer_op_group, int repeat_inner_op_group, int n,
+    int bc, int L, int L_align, int ri, int ro, int op_size, int op_size_bytes,
+    int op_size_align, int op_size_bytes_align, int op_size_align_via_L_trans,
+    int bc_offset, int remain_layer_num, int layer, int fft_flag,
+    int direction) {
+  if (layer < remain_layer_num - 1) {
+    __memcpy(wspace_r + y_local_offset + bc_offset, x_out1_r, op_size_bytes,
+             NRAM2GDRAM);
+    __memcpy(wspace_r + z_local_offset + bc_offset, x_out2_r, op_size_bytes,
+             NRAM2GDRAM);
+    __memcpy(wspace_i + y_local_offset + bc_offset, x_out1_i, op_size_bytes,
+             NRAM2GDRAM);
+    __memcpy(wspace_i + z_local_offset + bc_offset, x_out2_i, op_size_bytes,
+             NRAM2GDRAM);
+  } else {
+    DT *z_in_r = y_in_r + op_size_align_via_L_trans;
+    DT *y_in_i = z_in_r + op_size_align_via_L_trans;
+    DT *z_in_i = y_in_i + op_size_align_via_L_trans;
+    __memcpy(y_in_r, x_out1_r, op_size_bytes_align, NRAM2NRAM);
+    __memcpy(z_in_r, x_out1_i, op_size_bytes_align, NRAM2NRAM);
+    __memcpy(y_in_i, x_out2_r, op_size_bytes_align, NRAM2NRAM);
+    __memcpy(z_in_i, x_out2_i, op_size_bytes_align, NRAM2NRAM);
+    transAndStore<DT>(w_tmp1, y_in_r, y_in_i, z_in_i, output,
+                      op_size_align_via_L_trans, op_size_bytes, bc, n, ro,
+                      repeat_inner_op_group, ri, op_size, fft_flag,
+                      ITER_ONCHIP);
+  }
+}
+
+template <typename DT>
+__mlu_func__ void computeMutiLayerOnchip(
+    const AddrNode<DT> &addr, const ParamNode &param, DT *matmul_re_mul_re_addr,
+    DT *matmul_re_mul_im_addr, DT *matmul_im_mul_re_addr,
+    DT *matmul_im_mul_im_addr, DT *output, int batch, int n, int m, int l,
+    int s, int fft_flag, int direction) {
+  // load subgraph from workspace data: X[C, batch_id, 2^s * core_offset, L]
+  // ->(C x 1 x 2^s x L) each ipu core deals with 2 sub graph
+  int repeat_remain_flag = (param.op_group_num_x_batch % taskDimX);
+  int repeat_plus_one = repeat_remain_flag > 0 ? 1 : 0;
+  int repeat_for_each_core =
+      (param.op_group_num_x_batch / taskDimX + repeat_plus_one);
+  MLULOG("[computeMutiLayerOnchip]: repeat_for_each_core: %ld\n",
+         repeat_for_each_core);
+  for (int id = 0; id < repeat_for_each_core; id++) {
+    int continue_flag_for_each_core =
+        repeat_remain_flag == 0 || (id != repeat_for_each_core - 1) ||
+        (id == repeat_for_each_core - 1 && taskId < repeat_remain_flag);
+    MLULOG(
+        "[computeMutiLayerOnchip]: taskIdX: %d, id: %ld, "
+        "continue_flag_for_each_core: %ld, ",
+        taskIdX, id, continue_flag_for_each_core);
+    MLULOG(
+        "repeat_remain_flag: %ld, repeat_plus_one: %ld, repeat_for_each_core: "
+        "%ld, ",
+        repeat_remain_flag, repeat_plus_one, repeat_for_each_core);
+    if (continue_flag_for_each_core) {
+      int id_global = id * taskDimX + taskId;
+      int bc = id_global / param.op_group_num_1_batch;
+      int sub = id_global % param.op_group_num_1_batch;
+      int bc_offset = bc * n;
+      int L_num_in_op_group =
+          param.op_size_align_via_L / param.L_align * YZ_FACTOR;
+      MLULOG(
+          "id_global: %ld, bc: %ld, sub: %ld, bc_offset: %ld, "
+          "L_num_in_op_group: %ld\n",
+          id_global, bc, sub, bc_offset, L_num_in_op_group);
+      loadMultiLayer(addr.y_in_r, addr.y_in_i, addr.x_out1_r, addr.x_out2_r,
+                     matmul_re_mul_re_addr, matmul_re_mul_im_addr,
+                     matmul_im_mul_re_addr, matmul_im_mul_im_addr, l, m, sub,
+                     L_num_in_op_group, param.L_bytes, param.L_align, bc_offset,
+                     fft_flag);
+      computeOnchip(addr.y_in_r, addr.y_in_i, addr.x_out1_r, addr.x_out1_i,
+                    addr.x_out2_r, addr.x_out2_i, addr.w_tmp1, addr.w_tmp2,
+                    addr.w_tmp3, addr.w_r, addr.w_i, addr.wz_rr, addr.wz_ri,
+                    addr.wz_ir, addr.wz_ii, addr.wz_r, addr.wz_i, l, s,
+                    param.subgraph_size, param.L_align, param.L_align_bytes,
+                    fft_flag, direction);
+      storeMultiLayer(addr.y_in_r, addr.y_in_i, addr.z_in_r, addr.z_in_i,
+                      addr.wspace_r, addr.wspace_i, addr.w_tmp1, output, n, l,
+                      bc, sub, L_num_in_op_group, param.L_bytes,
+                      param.L_align_bytes, param.op_size, param.op_size_bytes,
+                      param.op_size_align_via_L_trans, bc_offset,
+                      param.remain_layer_num, fft_flag);
+    }
+  }
+}
+
+template <typename DT>
+__mlu_func__ void computeLayerByLayer(const AddrNode<DT> &addr,
+                                      const ParamNode &param, DT *output,
+                                      int batch, int n, int m, int l, int s,
+                                      int fft_flag, int direction) {
+  for (int layer = 0; layer < param.remain_layer_num; layer++) {
+    int op_cnt_each_layer = powf(2, m - s - 1 - layer);
+    int repeat_outer_op_group = op_cnt_each_layer / 2;
+    int repeat_inner_op_group = powf(2, layer + 1);
+    int repeat_total_with_batch =
+        batch * repeat_outer_op_group * repeat_inner_op_group;
+    int repeat_remain_flag = (repeat_total_with_batch % taskDimX);
+    int repeat_plus_one = repeat_remain_flag > 0 ? 1 : 0;
+    int repeat_for_each_core =
+        (repeat_total_with_batch / taskDimX + repeat_plus_one);
+    int op_group_distance = powf(2, layer + YZ_FACTOR);
+    MLULOG("[computeLayerByLayer]: repeat_for_each_core: %ld\n",
+           repeat_for_each_core);
+    for (int repeat_id = 0; repeat_id < repeat_for_each_core; repeat_id++) {
+      int continue_flag_for_each_core =
+          // all ipu cores will be used the same times
+          repeat_remain_flag == 0
+          // assume that all ipu cores just less one than others at most
+          || (repeat_id != repeat_for_each_core - 1) ||
+          (repeat_id == repeat_for_each_core - 1 &&
+           taskId < repeat_remain_flag);
+      MLULOG(
+          "[computeLayerByLayer   ]: taskIdX: %ld, id: %ld, "
+          "continue_flag_for_each_core: %ld, ",
+          taskIdX, repeat_id, continue_flag_for_each_core);
+      MLULOG(
+          "repeat_remain_flag: %ld, repeat_plus_one: %ld, "
+          "repeat_for_each_core: %ld, ",
+          repeat_remain_flag, repeat_plus_one, repeat_for_each_core, layer);
+      MLULOG("layer: %ld\n", layer);
+      int id_global = repeat_id * taskDimX + taskId;
+      int bc = id_global / (repeat_outer_op_group * repeat_inner_op_group);
+      int ro = id_global % (repeat_outer_op_group * repeat_inner_op_group) /
+               repeat_inner_op_group;
+      int ri = id_global % repeat_inner_op_group;
+      int bc_offset = bc * n;
+      int y_local_offset = (ro * op_group_distance + ri) * param.op_size;
+      int z_local_offset =
+          y_local_offset + op_group_distance / 2 * param.op_size;
+      MLULOG("id_global: %ld, bc: %ld, ro: %ld, ri: %ld\n", id_global, bc, ro,
+             ri);
+      MLULOG("y_local_offset: %ld, z_local_offset: %ld, bc_offset: %ld\n",
+             y_local_offset, z_local_offset, bc_offset);
+      if (continue_flag_for_each_core) {
+        loadLayerByLayer(addr.y_in_r, addr.y_in_i, addr.z_in_r, addr.z_in_i,
+                         addr.w_r, addr.w_i, addr.w_tmp1, addr.w_tmp2,
+                         addr.w_tmp3, addr.wspace_r, addr.wspace_i,
+                         y_local_offset, z_local_offset, n, l, param.L_align,
+                         ri, param.op_size, param.op_size_bytes,
+                         param.op_size_align, param.op_size_bytes_align,
+                         op_group_distance, bc_offset, fft_flag, direction);
+        computeOneStep(addr.wz_rr, addr.wz_ri, addr.wz_ir, addr.wz_ii, addr.w_r,
+                       addr.w_i, addr.wz_r, addr.wz_i, addr.x_out1_r,
+                       addr.x_out2_r, addr.x_out1_i, addr.x_out2_i, addr.y_in_r,
+                       addr.z_in_r, addr.y_in_i, addr.z_in_i,
+                       param.op_size_align, ITER_OFFCHIP);
+        storeLayerByLayer(
+            addr.y_in_r, addr.y_in_i, addr.z_in_r, addr.z_in_i, addr.x_out1_r,
+            addr.x_out1_i, addr.x_out2_r, addr.x_out2_i, addr.w_r, addr.w_i,
+            addr.w_tmp1, addr.wspace_r, addr.wspace_i, output, y_local_offset,
+            z_local_offset, repeat_id, repeat_outer_op_group,
+            repeat_inner_op_group, n, bc, l, param.L_align, ri, ro,
+            param.op_size, param.op_size_bytes, param.op_size_align,
+            param.op_size_bytes_align, param.op_size_align_via_L_trans,
+            bc_offset, param.remain_layer_num, layer, fft_flag, direction);
+      }
+    }
+    __sync_all_ipu();
+  }
+}
+
+// fftCooleyTukey combine subgraphs as follows:
+//
+//             layer0:         layer1:                   layer2:           ...
+// subgraph0:  y_in_0 -------> x_out1--(y_in_0) -------> x_out1--(y_in_0)
+// -------> x_out --> x_trans
+//             z_in_0 _|   |_> x_out2_|          |   |          |          |
+//                                               |   |          |          |
+// subgraph1:  y_in_0 -------> x_out1--(z_in_0) _|   |_> x_out2_|          |
+//             z_in_1 _|   |_> x_out2_|                                    |
+//                                                                         |
+// subgraph2:  y_in_0 -------> x_out1--(y_in_0) -------> x_out1--(y_in_1) _|
+//             z_in_0 _|   |_> x_out2_|          |   |          |
+//                                               |   |          |
+// subgraph3:  y_in_0 -------> x_out1--(z_in_0) _|   |_> x_out2_|
+//             z_in_1 _|   |_> x_out2_|
+// ...
+//
+// where: x_out1 = y_in_0 + W * z_in_0, x_out_2 = y_in_0 - W * z_in_1.
+// the size of subgraph increases layer by layer, equals to (y_in_0) + (z_in_0).
+//
+// when subgraph can be placed on chip, call function computeMutiLayerOnchip(),
+// and write the intermediate result back to the workspace, otherwise call
+// function computeLayerByLayer().
+template <typename DT>
+__mlu_func__ void fftCooleyTukey(DT *matmul_re_mul_re_addr,
+                                 DT *matmul_re_mul_im_addr,
+                                 DT *matmul_im_mul_re_addr,
+                                 DT *matmul_im_mul_im_addr,
+                                 DT *internal_workspace_addr, DT *output,
+                                 int fft_flag, int direction, int n, int batch,
+                                 int L, int m, int s) {
+  MLULOG("batch: %d, n: %d, L: %d, m: %d, s: %d, fft_flag: %d, direction: %d\n",
+         batch, n, L, m, s, fft_flag, direction);
+  int align_size = NFU_ALIGN_SIZE / sizeof(DT);
+  ParamNode param;
+  // Data Info:
+  param.subgraph_size =
+      s + 1;  // the size of subgraph that can be placed on NRAM
+  param.L_bytes = L * sizeof(DT);
+  param.L_align = PAD_UP(L, align_size);
+  param.L_align_bytes = param.L_align * sizeof(DT);
+  param.op_size = powf(2, s) * L;
+  param.op_size_align = PAD_UP(param.op_size, align_size);
+  param.op_size_align_via_L = powf(2, s) * param.L_align;
+
+  param.op_size_bytes = param.op_size * sizeof(DT);
+  param.op_size_bytes_align = PAD_UP(param.op_size_bytes, NFU_ALIGN_SIZE);
+  param.op_size_align_via_L_trans =
+      PAD_UP(param.op_size_align_via_L,
+             int(powf(TRANS_ALIGN_SIZE / (int)sizeof(DT), 2)));
+  param.op_group_num_1_batch = powf(2, m - (s + 1));
+  param.op_group_num_x_batch = param.op_group_num_1_batch * batch;
+  param.remain_layer_num = m - (s + 1);
+  int half_multiplier = sizeof(DT) == sizeof(half) ? 2 : 1;
+  int op_size_align_via_L_dt = param.op_size_align_via_L * half_multiplier;
+  MLULOG("subgraph_size: %d, L_bytes: %d, L_align: %d, L_align_bytes: %d",
+         param.subgraph_size, param.L_bytes, param.L_align,
+         param.L_align_bytes);
+  MLULOG(
+      "op_size: %d, op_size_align: %d, op_size_align_via_L: %d, op_size_bytes: "
+      "%d",
+      param.op_size, param.op_size_align, param.op_size_align_via_L,
+      param.op_size_bytes);
+  MLULOG(
+      "op_size_bytes_align: %d, op_size_align_via_L_trans: %d, "
+      "op_group_num_1_batch: %d",
+      param.op_size_bytes_align, param.op_size_align_via_L_trans,
+      param.op_group_num_1_batch);
+  MLULOG("op_group_num_x_batch: %d, remain_layer_num: %d\n",
+         param.op_group_num_x_batch, param.remain_layer_num);
+  AddrNode<DT> addr;
+  // GDRAM Addr Info:
+  addr.wspace_r = internal_workspace_addr;
+  addr.wspace_i = internal_workspace_addr + n * batch;
+
+  // NRAM Addr Info:
+  // input addr:
+  addr.y_in_r = (DT *)nram_buffer;
+  addr.z_in_r = addr.y_in_r + op_size_align_via_L_dt;
+  addr.y_in_i = addr.z_in_r + op_size_align_via_L_dt;
+  addr.z_in_i = addr.y_in_i + op_size_align_via_L_dt;
+  // output addr:
+  addr.x_out1_r = addr.z_in_i + op_size_align_via_L_dt;
+  addr.x_out2_r = addr.x_out1_r + op_size_align_via_L_dt;
+  addr.x_out1_i = addr.x_out2_r + op_size_align_via_L_dt;
+  addr.x_out2_i = addr.x_out1_i + op_size_align_via_L_dt;
+  // w_matrix addr:
+  addr.w_r = addr.x_out2_i + op_size_align_via_L_dt;
+  addr.w_i = addr.w_r + op_size_align_via_L_dt;
+  // temp addr reserved for vector generation w_matrix.
+  addr.w_tmp1 = addr.w_i + op_size_align_via_L_dt;
+  addr.w_tmp2 = addr.w_tmp1 + op_size_align_via_L_dt;
+  addr.w_tmp3 = addr.w_tmp2 + op_size_align_via_L_dt;
+  // temp addr reserved for subgraph internal merge calculation, using the same
+  // addr with w_tmp*.
+  addr.wz_rr = addr.w_i + op_size_align_via_L_dt;
+  addr.wz_ri = addr.wz_rr + op_size_align_via_L_dt;
+  addr.wz_ir = addr.wz_ri + op_size_align_via_L_dt;
+  addr.wz_ii = addr.wz_ir + op_size_align_via_L_dt;
+  addr.wz_r = addr.wz_rr;  // using the same addr with wz_rr
+  addr.wz_i = addr.wz_ri;  // using the same addr with wz_ri
+  computeMutiLayerOnchip(addr, param, matmul_re_mul_re_addr,
+                         matmul_re_mul_im_addr, matmul_im_mul_re_addr,
+                         matmul_im_mul_im_addr, output, batch, n, m, L, s,
+                         fft_flag, direction);
+  __sync_all_ipu();
+  computeLayerByLayer(addr, param, output, batch, n, m, L, s, fft_flag,
+                      direction);
+}
+
+__mlu_global__ void MLUKernelFFTCooleyTukey(
+    void *matmul_re_mul_re_addr, void *matmul_re_mul_im_addr,
+    void *matmul_im_mul_re_addr, void *matmul_im_mul_im_addr,
+    void *internal_workspace_addr, void *output, int fft_flag, int direction,
+    int n, int batch, int L, int m, int s, int dtype_size) {
+  if (coreId == 0x80) return;
+  switch (dtype_size) {
+    default: {
+      MLULOG("mluOpFFT Not Implemented.");
+    }
+    case (MLUOP_DTYPE_COMPLEX_FLOAT):
+    case (MLUOP_DTYPE_FLOAT): {
+      MLULOG("MLUOP_DTYPE_COMPLEX_FLOAT: MLUOP_DTYPE_FLOAT\n");
+      fftCooleyTukey<float>(
+          (float *)matmul_re_mul_re_addr, (float *)matmul_re_mul_im_addr,
+          (float *)matmul_im_mul_re_addr, (float *)matmul_im_mul_im_addr,
+          (float *)internal_workspace_addr, (float *)output, fft_flag,
+          direction, n, batch, L, m, s);
+    }; break;
+    case (MLUOP_DTYPE_COMPLEX_HALF):
+    case (MLUOP_DTYPE_HALF): {
+      MLULOG("MLUOP_DTYPE_COMPLEX_HALF: MLUOP_DTYPE_HALF\n");
+      fftCooleyTukey<half>(
+          (half *)matmul_re_mul_re_addr, (half *)matmul_re_mul_im_addr,
+          (half *)matmul_im_mul_re_addr, (half *)matmul_im_mul_im_addr,
+          (half *)internal_workspace_addr, (half *)output, fft_flag, direction,
+          n, batch, L, m, s);
+    }; break;
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelFFTCooleyTukey(cnrtDim3_t k_dim,
+                                                 cnrtFunctionType_t k_type,
+                                                 cnrtQueue_t queue,
+                                                 mluOpFFTPlan_t fft_plan,
+                                                 int direction, FFTFlag flag) {
+  VLOG(5) << "Launch Kernel MLUKernelFFTCooleyTukey<<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTCooleyTukey<<<k_dim, k_type, queue>>>(
+      fft_plan->matmul_addrs.matmul_re_mul_re_addr,
+      fft_plan->matmul_addrs.matmul_re_mul_im_addr,
+      fft_plan->matmul_addrs.matmul_im_mul_re_addr,
+      fft_plan->matmul_addrs.matmul_im_mul_im_addr,
+      fft_plan->matmul_addrs.internal_workspace_addr,
+      fft_plan->matmul_addrs.output_contiguous_addr, flag, direction,
+      fft_plan->n[0], fft_plan->batch, fft_plan->L, fft_plan->m, fft_plan->s,
+      fft_plan->output_dtype)));
+  return MLUOP_STATUS_SUCCESS;
+}

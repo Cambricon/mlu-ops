@@ -1,0 +1,736 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "mlu.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "kernels/fft/fft.h"
+
+// direction: 1 means IFFT, used to distinguish FFT and IFFT.
+#define FFT_INVERSE 1
+
+// Two split dimemsion(batch && L) trversal orders can be selected via
+// "L_FIRST". By default "L" is preferred, then "batch".
+#define L_FIRST 1
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
+
+// Generate w vector.
+template <typename DT>
+__mlu_func__ void genWSc1_opt(DT* w_r, DT* w_i, DT* tmp, DT* seq_addr,
+                              const int& L, const int& L_sub, const int& part,
+                              const int& unit_size, float scale, int n) {
+  float inc_value = part * L_sub;
+  int size_tmp_bytes = L_sub * unit_size;
+  scale = scale / unit_size;
+  __bang_add_scalar(tmp, seq_addr, inc_value, size_tmp_bytes);
+  __bang_mul_scalar(tmp, tmp, scale, size_tmp_bytes);
+
+#if __BANG_ARCH__ >= 372
+  __bang_cos((float*)w_r, (float*)tmp, size_tmp_bytes);
+  if (n <= 48000) {
+    __bang_sin((float*)w_i, (float*)tmp, size_tmp_bytes);
+  } else {
+    // This function has higher precision, and the actual test determined n.
+    __cn_vector_sin_f32(size_tmp_bytes, (float*)w_i, (float*)tmp);
+  }
+#endif
+}
+
+// Load input data from GDRAM to NRAM. The data source(src_in) is the
+// calculation result of "mluOpBatchMatmulBcast". Different "fft_flag" has
+// different layout, as follows:
+//     RFFT:     src_in[batch, 2, L, powf(2, m)] = w[batch, 2, (L/2 + 1), l] *
+//     in_ori[L, powf(2, m)] IRFFT:    src_in[2, 2, batch, L, powf(2, m)] = w[2,
+//     batch, L, l] * in_ori[2, L, powf(2, m)] FFT_IFFT: src_in[batch, 2, L,
+//     powf(2, m), 2] = w[batch, 2, L, l] * in_ori[L, powf(2, m), 2]
+// "2," represents the real and imag part size of "w" or "src_in". According to
+// the multicore splitting method, each "load" takes data block [1, *, L_sub,
+// powf(2, m), *], using "memcpy_async" with stride. When input type is float,
+// the address is used as defined by name: in(y_in_r, z_in_r, ...), ... When
+// input type is half, the address interval is the same as float. The reason is
+// that we perform bit width promotion calculations, considering the accuracy.
+// Some temporarily unused space is used to ensure opertions such as
+// "half2float" in "compute()" function.
+template <typename DT>
+__mlu_func__ void load(DT* y_in_r, DT* y_in_i, DT* z_in_r, DT* z_in_i,
+                       DT* x_out1_r, DT* x_out1_i, DT* x_out2_r, DT* x_out2_i,
+                       DT* wz_rr, DT* wz_ir, DT* matmul_re_mul_re_addr,
+                       const int& n, const int& L, const int& L_sub,
+                       const int& part_num, const int& pow_2_m,
+                       const int& pow_2_m_half, const int& batch_x_part,
+                       const int& fft_flag, const int& batch,
+                       const int& op_size_align_via_L_dt,
+                       const int& ping_pong) {
+#if L_FIRST
+  int b = batch_x_part / part_num;
+  int part = batch_x_part % part_num;
+#else
+  int part = batch_x_part / batch;
+  int b = batch_x_part % batch;
+#endif
+  int pingpong_offset = batch_x_part % 2 == 0 ? 0 : ping_pong;
+  int L_re = L % L_sub;
+  int L_deal = part < (part_num - 1) ? L_sub : (L_re != 0 ? L_re : L_sub);
+
+  if (sizeof(DT) == sizeof(half)) {
+    if (fft_flag == RFFT) {
+      // Save the real part of RFFT, data shape is [1, 1, L_sub, powf(2, m)].
+      x_out1_r = y_in_i;
+      // Save the imag part of RFFT, data shape is the same as above.
+      x_out1_i = wz_ir;
+    } else if (fft_flag == IRFFT) {
+      // Save the real * real part of IRFFT, data shape is [1, 1, 1, L_sub,
+      // powf(2, m)].
+      x_out1_r = x_out2_r;
+      // Save the real * imag part of IRFFT, data shape is the same as above.
+      x_out1_i = x_out2_i;
+      // Save the imag * real part of IRFFT, data shape is the same as above.
+      y_in_r = z_in_r;
+      // Save the imag * imag part of IRFFT, data shape is the same as above.
+      y_in_i = z_in_i;
+    } else if (fft_flag == FFT_IFFT) {
+      // Save the real * (real + imag) part of FFT_IFFT, data shape is
+      // [1, 1, L_sub, powf(2, m), 2].
+      y_in_r = y_in_i;
+      // Save the imag * (real + imag) part of FFT_IFFT, data shape is the same
+      // as above.
+      wz_rr = wz_ir;
+    }
+  }
+  x_out1_r += pingpong_offset;
+  x_out1_i += pingpong_offset;
+  y_in_r += pingpong_offset;
+  y_in_i += pingpong_offset;
+
+  if (fft_flag == RFFT) {
+    int src_offset = L_sub * pow_2_m * part + b * n * 2;
+    int data_size_bytes = pow_2_m * sizeof(DT);
+    int total_data_size_bytes = L_deal * data_size_bytes;
+    int distance_bytes = int((char*)x_out1_i - (char*)x_out1_r);
+    if (part < part_num / 2 || part_num == 1) {
+      __memcpy_async(x_out1_r, matmul_re_mul_re_addr + src_offset,
+                     total_data_size_bytes, GDRAM2NRAM, distance_bytes,
+                     n * sizeof(DT), 1);
+    } else {
+      // According to conjugate symmetry, only the first L/2+1 set of data is
+      // calculated by "mluOpBatchMatmulBcast", and the second half of the data
+      // eed to be calculated according to the coordinate mapping. This is the
+      // reson why memcpy's src_str appears negative below.
+      int ind_fwd = part * L_sub + L % 2;
+      int src_offset = b * n * 2 + (L - ind_fwd + L % 2) * pow_2_m;
+      __memcpy_async(x_out1_r,                            // dst addr
+                     matmul_re_mul_re_addr + src_offset,  // src addr
+                     data_size_bytes,                     // size
+                     GDRAM2NRAM,                          // direction
+                     data_size_bytes,                     // dst_stride o0
+                     L_deal - 1,                          // dst_segnum o1
+                     distance_bytes,                      // dst_stride o1
+                     1,                                   // dst_segnum o2
+                     -data_size_bytes,                    // src_stride i0
+                     L_deal - 1,                          // src_segnum i1
+                     n * sizeof(DT),                      // src_stride i1
+                     1);                                  // src_segnum i2
+    }
+  } else if (fft_flag == IRFFT) {
+    int total_data_size_bytes = L_deal * pow_2_m * sizeof(DT);
+    DT* x[4] = {x_out1_r, x_out1_i, y_in_r, y_in_i};
+    for (int addr_i = 0; addr_i < 4; addr_i++) {
+      int complex_in = addr_i / 2;
+      int complex_w = addr_i % 2;
+      __memcpy_async(x[addr_i],
+                     matmul_re_mul_re_addr +
+                         complex_in * batch * 2 * L * pow_2_m +
+                         b * 2 * L * pow_2_m + complex_w * L * pow_2_m +
+                         part * L_sub * pow_2_m,
+                     total_data_size_bytes, GDRAM2NRAM);
+    }
+  } else if (fft_flag == FFT_IFFT) {
+    wz_rr += pingpong_offset;
+    int src_offset = b * 2 * n * 2 + part * L_sub * pow_2_m * 2;
+    int total_data_size_bytes = L_deal * pow_2_m * 2 * sizeof(DT);
+    __memcpy_async(y_in_r, matmul_re_mul_re_addr + src_offset,
+                   total_data_size_bytes, GDRAM2NRAM);
+    __memcpy_async(wz_rr, matmul_re_mul_re_addr + src_offset + n * 2,
+                   total_data_size_bytes, GDRAM2NRAM);
+  }
+}
+
+template <typename DT, typename YT>
+__mlu_func__ void preProcessRFFT(YT* y_in_r, YT* y_in_i, YT* x_out1_r,
+                                 YT* x_out1_i, YT* wz_ir, const int& L_sub,
+                                 const int& part_num, const int& pow_2_m,
+                                 const int& part) {
+  if (sizeof(DT) == sizeof(half)) {
+    if (part >= part_num / 2 && part_num > 1) {
+      // According to conjugate symmetry, it need to multiply the second half of
+      // the imag part by -1.
+      __bang_mul_scalar((DT*)wz_ir, (DT*)wz_ir, -1.0, pow_2_m * L_sub);
+    }
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose((DT*)x_out1_r, (DT*)y_in_i, L_sub, pow_2_m);
+    __bang_transpose((DT*)x_out1_i, (DT*)wz_ir, L_sub, pow_2_m);
+    // Convert to float, prepare for bitwidth promition calculation.
+    __bang_half2float((float*)y_in_r, (half*)x_out1_r, L_sub * pow_2_m);
+    __bang_half2float((float*)y_in_i, (half*)x_out1_i, L_sub * pow_2_m);
+  } else {
+    if (part >= part_num / 2 && part_num > 1) {
+      // According to conjugate symmetry, it need to multiply the second half of
+      // the imag part by -1.
+      __bang_mul_scalar(x_out1_i, x_out1_i, -1.0, pow_2_m * L_sub);
+    }
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose(y_in_r, x_out1_r, L_sub, pow_2_m);
+    __bang_transpose(y_in_i, x_out1_i, L_sub, pow_2_m);
+  }
+}
+
+template <typename DT, typename YT>
+__mlu_func__ void preProcessFFT_IFFT(YT* y_in_r, YT* y_in_i, YT* z_in_r,
+                                     YT* x_out1_r, YT* x_out1_i, YT* wz_rr,
+                                     YT* wz_ri, YT* wz_ir, const int& L_sub,
+                                     const int& pow_2_m) {
+  if (sizeof(DT) == sizeof(half)) {
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose((DT*)y_in_r, (DT*)y_in_i, L_sub * pow_2_m, 2);
+    __bang_transpose((DT*)wz_rr, (DT*)wz_ir, L_sub * pow_2_m, 2);
+    // Compute the real part: src_in(real * real) - src_in(imag * imag).
+    __bang_sub((DT*)y_in_r, (DT*)y_in_r, (DT*)wz_ri, L_sub * pow_2_m);
+    // Compute the imag part: src_in(real * imag) - src_in(imag * real).
+    __bang_add((DT*)wz_rr, (DT*)wz_rr, (DT*)z_in_r, L_sub * pow_2_m);
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose((DT*)y_in_i, (DT*)y_in_r, L_sub, pow_2_m);
+    __bang_transpose((DT*)wz_ir, (DT*)wz_rr, L_sub, pow_2_m);
+    // Convert to float, prepare for bitwidth promition calculation.
+    __bang_half2float((float*)y_in_r, (half*)y_in_i, L_sub * pow_2_m);
+    __bang_half2float((float*)y_in_i, (half*)wz_ir, L_sub * pow_2_m);
+  } else {
+    // Transpose the read and imag parts to the highest dimension for easy
+    // vector operations.
+    __bang_transpose(x_out1_r, y_in_r, L_sub * pow_2_m, 2);
+    __bang_transpose(y_in_r, wz_rr, L_sub * pow_2_m, 2);
+    // Compute the real part: src_in(real * real) - src_in(imag * imag).
+    __bang_sub(x_out1_r, x_out1_r, y_in_i, L_sub * pow_2_m);
+    // Compute the imag part: src_in(real * imag) - src_in(imag * real).
+    __bang_add(x_out1_i, x_out1_i, y_in_r, L_sub * pow_2_m);
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose(y_in_r, x_out1_r, L_sub, pow_2_m);
+    __bang_transpose(y_in_i, x_out1_i, L_sub, pow_2_m);
+  }
+}
+
+template <typename DT, typename YT>
+__mlu_func__ void preProcessIRFFT(YT* y_in_r, YT* y_in_i, YT* z_in_r,
+                                  YT* z_in_i, YT* x_out1_r, YT* x_out1_i,
+                                  YT* x_out2_r, YT* x_out2_i, YT* wz_ir,
+                                  const int& L_sub, const int& pow_2_m) {
+  if (sizeof(DT) == sizeof(half)) {
+    // Compute the real part: src_in(real * real) - src_in(imag * imag).
+    __bang_sub((DT*)x_out2_r, (DT*)x_out2_r, (DT*)z_in_i, L_sub * pow_2_m);
+    // Compute the imag part: src_in(real * imag) - src_in(imag * real).
+    __bang_add((DT*)x_out2_i, (DT*)x_out2_i, (DT*)z_in_r, L_sub * pow_2_m);
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose((DT*)z_in_r, (DT*)x_out2_r, L_sub, pow_2_m);
+    __bang_transpose((DT*)wz_ir, (DT*)x_out2_i, L_sub, pow_2_m);
+    // Convert to float, prepare for bitwidth promition calculation.
+    __bang_half2float((float*)y_in_r, (half*)z_in_r, L_sub * pow_2_m);
+    __bang_half2float((float*)y_in_i, (half*)wz_ir, L_sub * pow_2_m);
+  } else {
+    // Compute the real part: src_in(real * real) - src_in(imag * imag).
+    __bang_sub(x_out1_r, x_out1_r, y_in_i, L_sub * pow_2_m);
+    // Compute the imag part: src_in(real * imag) - src_in(imag * real).
+    __bang_add(x_out1_i, x_out1_i, y_in_r, L_sub * pow_2_m);
+    // Transpose L_sub to the lowest dimension for easy vector operations.
+    __bang_transpose(y_in_r, x_out1_r, L_sub, pow_2_m);
+    __bang_transpose(y_in_i, x_out1_i, L_sub, pow_2_m);
+  }
+}
+
+// Perform preprocessing for "compute()" function, including merging of real and
+// imag parts, transposition and data types conversion, etc.
+template <typename DT, typename YT>
+__mlu_func__ void preProcess(YT* y_in_r, YT* y_in_i, YT* z_in_r, YT* z_in_i,
+                             YT* x_out1_r, YT* x_out1_i, YT* x_out2_r,
+                             YT* x_out2_i, YT* wz_rr, YT* wz_ri, YT* wz_ir,
+                             const int& fft_flag, const int& L_sub,
+                             const int& part_num, const int& pow_2_m,
+                             const int& part) {
+  if (fft_flag == RFFT) {
+    preProcessRFFT<DT, float>((float*)y_in_r, (float*)y_in_i, (float*)x_out1_r,
+                              (float*)x_out1_i, (float*)wz_ir, L_sub, part_num,
+                              pow_2_m, part);
+  } else if (fft_flag == FFT_IFFT) {
+    preProcessFFT_IFFT<DT, float>((float*)y_in_r, (float*)y_in_i,
+                                  (float*)z_in_r, (float*)x_out1_r,
+                                  (float*)x_out1_i, (float*)wz_rr,
+                                  (float*)wz_ri, (float*)wz_ir, L_sub, pow_2_m);
+  } else if (fft_flag == IRFFT) {
+    preProcessIRFFT<DT, float>((float*)y_in_r, (float*)y_in_i, (float*)z_in_r,
+                               (float*)z_in_i, (float*)x_out1_r,
+                               (float*)x_out1_i, (float*)x_out2_r,
+                               (float*)x_out2_i, (float*)wz_ir, L_sub, pow_2_m);
+  }
+}
+
+template <typename DT, typename YT>
+__mlu_func__ void computeOneLayer(YT* y_in_r, YT* y_in_i, YT* z_in_r,
+                                  YT* z_in_i, YT* x_out1_r, YT* x_out1_i,
+                                  YT* w_r, YT* w_i, YT* wz_rr, YT* wz_ri,
+                                  YT* wz_ir, YT* wz_ii, const int& fft_flag,
+                                  const int& L_sub, const int& part,
+                                  const int& pow_2_m_half, const int& layer_num,
+                                  int ln, int ln_pow2) {
+  int basic_size = L_sub * ln_pow2;
+  int group_size = basic_size * 2;
+  int basic_group_num = pow_2_m_half / ln_pow2;
+  int long_size_bytes = basic_size * basic_group_num;
+  // Compute w * z_in: real * reaL, real * imag, imag * reaL, imag * imag.
+  __bang_cycle_mul(wz_rr, z_in_r, w_r, long_size_bytes, basic_size);
+  __bang_cycle_mul(wz_ri, z_in_i, w_r, long_size_bytes, basic_size);
+  __bang_cycle_mul(wz_ir, z_in_r, w_i, long_size_bytes, basic_size);
+  __bang_cycle_mul(wz_ii, z_in_i, w_i, long_size_bytes, basic_size);
+  // Combine real and imag parts: real = real * real - imag * imag, imag = real
+  // * imag + imag * real.
+  __bang_sub(wz_rr, wz_rr, wz_ii, long_size_bytes);
+  __bang_add(wz_ri, wz_ri, wz_ir, long_size_bytes);
+
+  for (int bgn = 0; bgn < basic_group_num; bgn++) {
+    int bgn_offset = basic_size * bgn;
+    YT* y_r = y_in_r + bgn_offset;
+    YT* y_i = y_in_i + bgn_offset;
+    YT* x_r = x_out1_r + group_size * bgn;
+    YT* x_i = x_out1_i + group_size * bgn;
+    YT* wz_rr_tmp = wz_rr + bgn_offset;
+    YT* wz_ri_tmp = wz_ri + bgn_offset;
+    // Compute x_out1 = y_in + w * z_in.
+    __bang_add(x_r, y_r, wz_rr_tmp, basic_size);
+    __bang_add(x_i, y_i, wz_ri_tmp, basic_size);
+    if (fft_flag == RFFT) {
+      if (ln != layer_num - 1) {
+        // Compute x_out2 = y_in - w * z_in.
+        __bang_sub(x_r + basic_size, y_r, wz_rr_tmp, basic_size);
+        __bang_sub(x_i + basic_size, y_i, wz_ri_tmp, basic_size);
+      } else if (part == 0) {
+        // According to conjugate symmetrym the last layer does not need to
+        // calculate the second half part, except the point (n/2 + 1).
+        *((YT*)x_r + basic_size) = *((YT*)y_r) - *((YT*)wz_rr_tmp);
+        *((YT*)x_i + basic_size) = *((YT*)y_i) - *((YT*)wz_ri_tmp);
+      }
+    } else {
+      // Compute x_out2 = y_in - w * z_in.
+      __bang_sub(x_r + basic_size, y_r, wz_rr_tmp, basic_size);
+      __bang_sub(x_i + basic_size, y_i, wz_ri_tmp, basic_size);
+    }
+  }
+}
+
+// Accoding to the merging rules of Stockham algorithm, calculate layer by
+// layer. An examples is as follows:
+//
+// layer0   |layer1      |layer2            |layer3
+// ---------|------------|------------------|-------------------------
+// {0}      |{0, 4}      |{0, 4, 2, 6}      |{0, 4, 2, 6, 1, 5, 3, 7}
+// {1}      |            |                  |
+// {2}      |{1, 5}      |                  |
+// {3}      |            |                  |
+// {4}      |{2, 6}      |{1, 5, 2, 6}      |
+// {5}      |            |                  |
+// {6}      |{3, 7}      |                  |
+// {7}      |            |                  |
+//
+// Each {*} represets a sequence of of complex numbers of length l. Each time
+// the first half and the second half are merged, such as {0} and {4}, {0, 4}
+// and {1, 6}. The first half is y_in, the second half is z_in, and the output
+// is x_out*(the first half is x_out1, the second half is x_out2). The
+// calculation formula(Butterfly Transform) is:
+//     x_out1 = y_in + w * z_in
+//     x_out2 = y_in - w * z_in
+// w is calculted as follows: w_k = exp(-i * k * (2 * pi / N) * flag), k
+// represents the k_th point, i represents real and imag part, N represents the
+// total number of points, flag represents FFT type, 1 for RFFT and FFT, -1 for
+// IRFFT and IFFT.
+template <typename DT, typename YT>
+__mlu_func__ void compute(YT* y_in_r, YT* y_in_i, YT* z_in_r, YT* z_in_i,
+                          YT* x_out1_r, YT* x_out1_i, YT* x_out2_r,
+                          YT* x_out2_i, YT* w_r, YT* w_i, YT* wz_rr, YT* wz_ri,
+                          YT* wz_ir, YT* wz_ii, YT* seq_addr,
+                          const int& fft_flag, const int& direction,
+                          const int& n, const int& L, const int& L_sub,
+                          const int& part_num, const int& pow_2_m,
+                          const int& pow_2_m_half, const int& layer_num,
+                          const int& op_size_align_via_L_dt, float scale,
+                          const float scale_factor, const int& batch_x_part,
+                          const int& batch, int ping_pong) {
+#if L_FIRST
+  int part = batch_x_part % part_num;
+#else
+  int part = batch_x_part / batch;
+#endif
+  if (sizeof(DT) == sizeof(half)) {
+    // Because float type is acually used, the number of points is half of half
+    // type.
+    ping_pong = ping_pong / 2;
+  }
+  int pingpong_offset = batch_x_part % 2 == 0 ? 0 : ping_pong;
+  y_in_r += pingpong_offset;
+  y_in_i += pingpong_offset;
+  z_in_r += pingpong_offset;
+  z_in_i += pingpong_offset;
+  x_out1_r += pingpong_offset;
+  x_out1_i += pingpong_offset;
+  x_out2_r += pingpong_offset;
+  x_out2_i += pingpong_offset;
+  w_r += pingpong_offset;
+  w_i += pingpong_offset;
+  wz_rr += pingpong_offset;
+  wz_ri += pingpong_offset;
+  wz_ir += pingpong_offset;
+  wz_ii += pingpong_offset;
+  preProcess<DT, float>((float*)y_in_r, (float*)y_in_i, (float*)z_in_r,
+                        (float*)z_in_i, (float*)x_out1_r, (float*)x_out1_i,
+                        (float*)x_out2_r, (float*)x_out2_i, (float*)wz_rr,
+                        (float*)wz_ri, (float*)wz_ir, fft_flag, L_sub, part_num,
+                        pow_2_m, part);
+
+  // Calculate layer by layer as shown in the example.
+  for (int ln = 0; ln < layer_num; ln++) {
+    int ln_pow2 = powf(2, ln);
+    // Generate w vector.
+    genWSc1_opt<YT>(w_r, w_i, wz_ii, seq_addr, L, L_sub, part, ln_pow2, scale,
+                    n);
+    computeOneLayer<DT, float>(
+        (float*)y_in_r, (float*)y_in_i, (float*)z_in_r, (float*)z_in_i,
+        (float*)x_out1_r, (float*)x_out1_i, (float*)w_r, (float*)w_i,
+        (float*)wz_rr, (float*)wz_ri, (float*)wz_ir, (float*)wz_ii, fft_flag,
+        L_sub, part, pow_2_m_half, layer_num, ln, ln_pow2);
+
+    // In order to avoid the data movement, the addr of input and output are
+    // exchanged here.
+    YT* tmp_y_r = y_in_r;
+    YT* tmp_y_i = y_in_i;
+    YT* tmp_z_r = z_in_r;
+    YT* tmp_z_i = z_in_i;
+    y_in_r = x_out1_r;
+    y_in_i = x_out1_i;
+    z_in_r = x_out2_r;
+    z_in_i = x_out2_i;
+    x_out1_r = tmp_y_r;
+    x_out1_i = tmp_y_i;
+    x_out2_r = tmp_z_r;
+    x_out2_i = tmp_z_i;
+  }
+
+  if (fft_flag != IRFFT) {
+    // Iranspose to the output save data format: the real and imag parts are at
+    // the lowest dimention: [c, 2^M * L_sub] -> [2^M * L_sub, c]
+    __bang_transpose(x_out1_r, y_in_r, pow_2_m * 2, L_sub);
+    __bang_transpose(y_in_r, x_out1_r, L_sub * 2, pow_2_m);
+  }
+  if (scale_factor != 1.0) {
+    __bang_mul_scalar(y_in_r, y_in_r, scale_factor, L_sub * 2 * pow_2_m);
+  }
+  if (sizeof(DT) == sizeof(half)) {
+    __mluop_float2half((half*)y_in_r, (float*)y_in_r, L_sub * 2 * pow_2_m);
+  }
+}
+
+// Store the calculation result to output. The difference between RFFT, IRFFT
+// and FFT_IFFT can see in the description of "load()" function.
+template <typename DT>
+__mlu_func__ void store(DT* output, DT* y_in_r, DT* x_out1_r,
+                        const int& pow_2_m, const int& pow_2_m_half,
+                        const int& m, const int& L, const int& L_sub,
+                        const int& part_num, const int& n, const int& out_n,
+                        const int& batch_x_part, const int& batch,
+                        const int& fft_flag, const int& ping_pong) {
+#if L_FIRST
+  int b = batch_x_part / part_num;
+  int part = batch_x_part % part_num;
+#else
+  int part = batch_x_part / batch;
+  int b = batch_x_part % batch;
+#endif
+  int pingpong_offset = batch_x_part % 2 == 0 ? 0 : ping_pong;
+  int L_re = L % L_sub;
+  int L_deal = part < (part_num - 1) ? L_sub : (L_re != 0 ? L_re : L_sub);
+  int dst_offset = part * L_sub * 2;
+  DT* out_nram = m % 2 == 0 ? y_in_r : x_out1_r;
+  out_nram += pingpong_offset;
+  if (fft_flag == RFFT) {
+    int output_block = pow_2_m_half - 1;
+    __memcpy_async(output + dst_offset + b * out_n * 2, out_nram,
+                   L_deal * sizeof(DT) * 2, NRAM2GDRAM, L * sizeof(DT) * 2,
+                   L_sub * sizeof(DT) * 2, output_block);
+    if (part == 0) {
+      int dst_one_point_offset = b * out_n * 2 + n;
+      int src_one_point_offset = pow_2_m * L_sub;
+      *(output + dst_one_point_offset) = *(out_nram + src_one_point_offset);
+      *(output + dst_one_point_offset + 1) =
+          *(out_nram + src_one_point_offset + 1);
+    }
+  } else if (fft_flag == IRFFT) {
+    int dst_offset = part * L_sub;
+    int output_block = pow_2_m - 1;
+    __memcpy_async(output + dst_offset + b * out_n, out_nram,
+                   L_deal * sizeof(DT), NRAM2GDRAM, L * sizeof(DT),
+                   L_sub * sizeof(DT), output_block);
+
+  } else if (fft_flag == FFT_IFFT) {
+    int output_block = pow_2_m - 1;
+    __memcpy_async(output + dst_offset + b * out_n * 2, out_nram,
+                   L_deal * sizeof(DT) * 2, NRAM2GDRAM, L * sizeof(DT) * 2,
+                   L_sub * sizeof(DT) * 2, output_block);
+  }
+}
+
+// Generate an incremental sequence acorrding to the following rules:
+//     1. the sequence length is L_sub*pow_2_m_half, means pow_2_m_half groups,
+//     each group has L_sub
+//        numbers.
+//     2. the init_value of each group are 0, L, L*2, ..., L*pow_2_m_half.
+// For FFT algorithm, a step called many times is vector operation: W * Z, where
+// compute W requires two steps:
+//     1. generate an incermental sequence.
+//     2. perform sin && cos operation with scale on the incermental sequence.
+// where, the sequence generated by step1 can be reused. Therefore, we save it
+// in seq_addr.
+__mlu_func__ void generateIncSequence(float* seq_addr, float* tmp_addr, int L,
+                                      int L_sub, int pow_2_m_half) {
+  __mluop_get_indices((float*)seq_addr, (float)0.0,
+                      PAD_UP(L_sub, NFU_ALIGN_SIZE));
+  // reduce call times of "__mluop_get_indices", which time is longer, by
+  // using "for loop" and
+  // "__bang_add_scalar".
+  for (size_t i = 1; i < pow_2_m_half; i++) {
+    int offset = i * L_sub;
+    int init_value = i * L;
+    __bang_add_scalar((float*)seq_addr + offset, (float*)seq_addr, init_value,
+                      L_sub);
+  }
+}
+
+// Onchip iterative calculation of Stockham algorithm. It is divided into three
+// steps:
+//    1. Load input data. RFFT, IRFFT and FFT_IFFT are processed different
+//    because of different data
+//       characteristics. See the "load()" function for details.
+//    2. Compute data. Before the calculation, the data is put into a suitable
+//    format through
+//       "compute stream transpose", and then, the calculation is carried out
+//       layer by layer according to the Stockham rules. Finally, through
+//       "transpose", the real and imag parts that were calculated separately
+//       are mixed. See the "compute()" function for details. (In order to
+//       ensure the accuracy, the HALF type is calculated with a bit width
+//       increase processing: HALF->FLOAT)
+//    3. Store output data. See the "store()" function for details.
+template <typename DT>
+__mlu_func__ void computeMutiLayerOnchip(
+    const AddrNode<DT>& addr, DT* matmul_re_mul_re_addr, DT* output,
+    DT* seq_addr, int batch, int n, int m, int L, int fft_flag, int direction,
+    int op_size_align_via_L_dt, int pow_2_m, int pow_2_m_half, int L_sub,
+    const float scale_factor, int ping_pong) {
+  // Generate an incremental sequence
+  generateIncSequence((float*)seq_addr, (float*)addr.y_in_r, L, L_sub,
+                      pow_2_m_half);
+  // Calculate the fixed part of W scale.
+  float scale = M_PI / L;
+  scale *=
+      (fft_flag == RFFT || (fft_flag == FFT_IFFT && direction != FFT_INVERSE))
+          ? -1
+          : 1;
+  // When RFFT, using conjugate symmetry, do "BatchMatmulBcast" only on half of
+  // the data, so the input n also becames half. int in_n       = fft_flag ==
+  // RFFT ? int(PAD_UP(L, L_sub)/2 + 1) * pow_2_m : n;
+  int in_n = fft_flag == RFFT ? int(PAD_UP(L / 2, L_sub) + 1) * pow_2_m : n;
+  in_n = L <= L_sub ? n : in_n;
+  // The obtain of out_n is the same as in_n, the difference is that no
+  // alignment is performed.
+  int out_n = fft_flag == RFFT ? n / 2 + 1 : n;
+  // Input_size = batch * L * powf(2, m), NRAM can deal at least one "powf(2,
+  // m)" at a time. Split "batch" and "L" between multi-core. "batch" processes
+  // one at a time. Addording to the limit of NRAM size, "L" can be splitted
+  // into "part_num" parts.
+  int part_num = (L / L_sub) + (L % L_sub > 0 ? 1 : 0);
+  // "total_num" blocks need to be processed.
+  int total_num = part_num * batch;
+  int repeat_num = total_num / taskDim;
+  int remain_num = total_num % taskDim;
+  if (repeat_num > 0 || taskId < remain_num) {
+    // Each core needs to process "t_len" blocks, "remain_num" is evenly
+    // assigned to the previous "remian_num" cores.
+    int t_len = repeat_num + ((remain_num > 0 && taskId < remain_num) ? 1 : 0);
+    // Calculate the offset of the block at each core.
+    int t_start = taskId - remain_num <= 0
+                      ? taskId * (repeat_num + 1)
+                      : (remain_num * (repeat_num + 1) +
+                         (taskId - remain_num) * repeat_num);
+    int t_end = (t_start + t_len);
+    MLULOG("taskId: %d, taskDim: %d\n", taskId, taskDim);
+    MLULOG(
+        "scale: %d, in_n: %d, out_n: %d, part_num: %d, total_num: %d, "
+        "repeat_num: %d, "
+        "remain_num: %d, t_len: %d, t_start: %d, t_end: %d\n",
+        scale, in_n, out_n, part_num, total_num, repeat_num, remain_num, t_len,
+        t_start, t_end);
+
+    // Exectue three-stage pipeline operation(load: GDRAM2NRAM, compute, store:
+    // NRAM2GDRAM) as follows: L1
+    // -----------------sync
+    // C1    L2
+    // -----------------sync
+    // S1    C2    L3
+    // -----------------sync
+    //       S2    C3
+    // -----------------sync
+    //             S3
+    //             ...
+    for (int t = t_start; t < t_end + 2; t++) {
+      // Store output data.
+      if (t >= t_start + 2) {
+        store(output, addr.y_in_r, addr.x_out1_r, pow_2_m, pow_2_m_half, m, L,
+              L_sub, part_num, n, out_n, t - 2, batch, fft_flag, ping_pong);
+      }
+      // Compute data layer by layer according to the Stockham rules.
+      if (t >= t_start + 1 && t < t_end + 1) {
+        compute<DT, float>(
+            (float*)addr.y_in_r, (float*)addr.y_in_i, (float*)addr.z_in_r,
+            (float*)addr.z_in_i, (float*)addr.x_out1_r, (float*)addr.x_out1_i,
+            (float*)addr.x_out2_r, (float*)addr.x_out2_i, (float*)addr.w_r,
+            (float*)addr.w_i, (float*)addr.wz_rr, (float*)addr.wz_ri,
+            (float*)addr.wz_ir, (float*)addr.wz_ii, (float*)seq_addr, fft_flag,
+            direction, n, L, L_sub, part_num, pow_2_m, pow_2_m_half, m,
+            op_size_align_via_L_dt, scale, scale_factor, t - 1, batch,
+            ping_pong);
+      }
+      // Load input data.
+      if (t < t_end) {
+        load(addr.y_in_r, addr.y_in_i, addr.z_in_r, addr.z_in_i, addr.x_out1_r,
+             addr.x_out1_i, addr.x_out2_r, addr.x_out2_i, addr.wz_rr,
+             addr.wz_ir, matmul_re_mul_re_addr, in_n, L, L_sub, part_num,
+             pow_2_m, pow_2_m_half, t, fft_flag, batch, op_size_align_via_L_dt,
+             ping_pong);
+      }
+      __sync();
+    }
+  }
+}
+
+// Divide the space size and call the onchip iterative calculation of Stockham
+// algorithm.
+template <typename DT>
+__mlu_func__ void fftStockham(DT* matmul_re_mul_re_addr, DT* output,
+                              int fft_flag, int direction, int n, int batch,
+                              int L, int m, int L_sub,
+                              const float scale_factor) {
+  MLULOG(
+      "batch: %d, n: %d, l: %d, m: %d, L_sub: %d, fft_flag: %d, direction: "
+      "%d\n",
+      batch, n, L, m, L_sub, fft_flag, direction);
+  int pow_2_m = powf(2, m);
+  // Number of L_sub processed by a src input at a time.
+  int pow_2_m_half = pow_2_m / 2;
+  // Double the number of inverval points in half type, because the bit width
+  // lifing processing is required to ensure the accuracy.
+  int half_multiplier = sizeof(DT) == sizeof(half) ? 2 : 1;
+  // The length of an float input vector, such as "z_in_r" in "w_in_r * z_in_r"
+  // below.
+  int op_size_align_via_L_dt = pow_2_m_half * L_sub * half_multiplier;
+
+  // NRAM Addr Info: "_r" represents the real part of the complex vector, "_i"
+  // represents the imag part of the complex vector. The complex process is as
+  // follows:
+  //     x_out1 = y_in + w * z_in
+  //     x_out2 = y_in - w * z_in
+  AddrNode<DT> addr;
+
+  // Input vector addr.
+  addr.y_in_r = (DT*)nram_buffer;
+  addr.z_in_r = addr.y_in_r + op_size_align_via_L_dt;
+  addr.y_in_i = addr.z_in_r + op_size_align_via_L_dt;
+  addr.z_in_i = addr.y_in_i + op_size_align_via_L_dt;
+
+  // Output vector addr.
+  addr.x_out1_r = addr.z_in_i + op_size_align_via_L_dt;
+  addr.x_out2_r = addr.x_out1_r + op_size_align_via_L_dt;
+  addr.x_out1_i = addr.x_out2_r + op_size_align_via_L_dt;
+  addr.x_out2_i = addr.x_out1_i + op_size_align_via_L_dt;
+
+  // W vector addr.
+  addr.w_r = addr.x_out2_i + op_size_align_via_L_dt;
+  addr.w_i = addr.w_r + op_size_align_via_L_dt;
+  addr.wz_rr = addr.w_i + op_size_align_via_L_dt;
+  addr.wz_ri = addr.wz_rr + op_size_align_via_L_dt;
+  addr.wz_ir = addr.wz_ri + op_size_align_via_L_dt;
+  addr.wz_ii = addr.wz_ir + op_size_align_via_L_dt;
+
+  // From "addr.y_in_r" to "addr.wz_ii", each ping_pong needs 14 spaces for
+  // three-stage pipeline operation.
+  int ping_pong = op_size_align_via_L_dt * 14;
+  // The public space stores the incremental sequence shared by ping_pong.
+  DT* seq_addr = (DT*)nram_buffer + ping_pong * 2;
+
+  computeMutiLayerOnchip(addr, matmul_re_mul_re_addr, output, seq_addr, batch,
+                         n, m, L, fft_flag, direction, op_size_align_via_L_dt,
+                         pow_2_m, pow_2_m_half, L_sub, scale_factor, ping_pong);
+}
+
+__mlu_global__ void MLUKernelFFTStockham(void* matmul_re_mul_re_addr,
+                                         void* output, int fft_flag,
+                                         int direction, int n, int batch, int L,
+                                         int m, int L_sub, int dtype_size,
+                                         const float scale_factor) {
+  if (__is_mpu()) return;
+  switch (dtype_size) {
+    default: {
+      MLULOG("mluOpFFT Not Implemented.");
+    }
+    case (MLUOP_DTYPE_COMPLEX_FLOAT):
+    case (MLUOP_DTYPE_FLOAT): {
+      MLULOG("MLUOP_DTYPE_COMPLEX_FLOAT: MLUOP_DTYPE_FLOAT\n");
+      fftStockham<float>((float*)matmul_re_mul_re_addr, (float*)output,
+                         fft_flag, direction, n, batch, L, m, L_sub,
+                         scale_factor);
+    }; break;
+    case (MLUOP_DTYPE_COMPLEX_HALF):
+    case (MLUOP_DTYPE_HALF): {
+      MLULOG("MLUOP_DTYPE_COMPLEX_HALF: MLUOP_DTYPE_HALF\n");
+      fftStockham<half>((half*)matmul_re_mul_re_addr, (half*)output, fft_flag,
+                        direction, n, batch, L, m, L_sub, scale_factor);
+    }; break;
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API
+kernelFFTStockham(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                  cnrtQueue_t queue, mluOpFFTPlan_t fft_plan, int direction,
+                  const float scale_factor, FFTFlag flag) {
+  VLOG(5) << "Launch Kernel MLUKernelFFTStockham<<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTStockham<<<k_dim, k_type, queue>>>(
+      fft_plan->matmul_addrs.matmul_re_mul_re_addr,
+      fft_plan->matmul_addrs.output_contiguous_addr, flag,
+      direction,  // direction, -1 means invalid(only FFT_IFFT use).
+      fft_plan->n[0], fft_plan->batch, fft_plan->L, fft_plan->m,
+      fft_plan->L_sub, fft_plan->output_dtype, scale_factor)));
+  return MLUOP_STATUS_SUCCESS;
+}
