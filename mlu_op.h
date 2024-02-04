@@ -1235,7 +1235,7 @@ typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 
-// Group: GetIndicePairs
+// Group: SparseConv
 /*!
  * @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, pad, stride,
  * dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape.
@@ -1274,7 +1274,7 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc);
 
-// Group: GetIndicePairs
+// Group: SparseConv
 /*!
  * @brief Destroys a convolution descriptor \b desc that was previously created with the
  * ::mluOpCreateSparseConvolutionDescriptor function.
@@ -1517,7 +1517,7 @@ mluOpSetTensorDescriptor_v2(mluOpTensorDescriptor_t desc,
                             int dimNb,
                             const int64_t dimSize[]);
 
-// Group: GetIndicePairs
+// Group: SparseConv
 /*!
  * @brief Initializes the sparse convolution descriptor \b desc that was previously created
  * with ::mluOpCreateSparseConvolutionDescriptor, and sets the information
@@ -1620,7 +1620,7 @@ mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
                                     const int transpose,
                                     const int inverse);
 
-// Group: GetIndicePairs
+// Group: SparseConv
 /*!
  * @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionDescriptor_t.
  *
@@ -3487,7 +3487,7 @@ mluOpDiv(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t z_desc,
          void *z);
 
-// Group: DynamicPointToVoxelBackward
+// Group: DynamicPointToVoxel
 /*!
  * @brief Gets extra space size for the DynamicPointToVoxelBackward operation.
  *
@@ -3551,7 +3551,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
                                                  const mluOpTensorDescriptor_t voxel_num_desc,
                                                  size_t *workspace_size);
 
-// Group: DynamicPointToVoxelBackward
+// Group: DynamicPointToVoxel
 /*!
  * @brief Performs the back-propagation of DynamicPointToVoxelForward
  * operation to compute the gradient for input \b grad_voxel_feats
@@ -4834,7 +4834,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t bottom_grad_desc,
                        void *bottom_grad);
 
-// Group: RoiAlignForward
+// Group: RoiAlign
 /*!
  * @brief Creates a descriptor pointed by \b desc for ::mluOpRoiAlignForward_v2,
  * and allocates memory for holding the information about the function.
@@ -4872,7 +4872,7 @@ mluOpPsRoiPoolBackward(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
 
-// Group: RoiAlignForward
+// Group: RoiAlign
 /*!
  * @brief Initializes the descriptor \b desc that was previously created with
  * ::mluOpCreateRoiAlignForwardDescriptor function, and sets RoiAlign information
@@ -4932,7 +4932,7 @@ mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_d
                                      const int pool_mode,
                                      const bool aligned);
 
-// Group: RoiAlignForward
+// Group: RoiAlign
 /*!
  * @brief Destroys a RoiAlign descriptor \b desc that was previously created
  * with ::mluOpCreateRoiAlignForwardDescriptor function.
@@ -4972,7 +4972,7 @@ mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_d
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
 
-// Group: RoiAlignForward
+// Group: RoiAlign
 /*!
  * @brief Computes the output feature map \b output based on the input feature map \b input
  * and bounding boxes \b boxes to perform this function. This function supports
@@ -6685,7 +6685,7 @@ mluOpThreeInterpolateBackward(mluOpHandle_t handle,
                               const mluOpTensorDescriptor_t grad_features_desc,
                               void *grad_features);
 
-// Group: Ballquery
+// Group: BallQuery
 /*!
  * @brief Takes the point's index in the \b new_xyz set as the center of the sphere,
  * uses \b min_radius and \b max_radius as the radius, and returns the \b idx of
@@ -7173,7 +7173,7 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t data_col_desc,
                          void *data_col);
 
-// Group: MoeDispatchBackwardData
+// Group: MoeDispatch
 /*!
  * @brief Calculates the inverse gradient of \b input tensor, and returns the results in the output
  * tensor \b grad_input.
@@ -7395,7 +7395,7 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
                           const mluOpTensorDescriptor_t grad_attn_weight_desc,
                           void *grad_attn_weight);
 
-// Group: MutualInformationBackward
+// Group: MutualInformation
 /*!
  * @brief Returns the size of the MLU memory as an extra workspace
  * to optimize ::mluOpMutualInformationBackward.
@@ -7457,7 +7457,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
                                                const bool overwrite_ans_grad,
                                                size_t *workspace_size);
 
-// Group: MutualInformationBackward
+// Group: MutualInformation
 /*!
  * @brief Computes the gradients of tensor \b px and tensor \b py.
  *
@@ -7575,7 +7575,7 @@ mluOpMutualInformationBackward(mluOpHandle_t handle,
                                const mluOpTensorDescriptor_t py_grad_desc,
                                void *py_grad);
 
-// Group: MutualInformationForward
+// Group: MutualInformation
 /*!
  * @brief Returns the size of the MLU memory as an extra workspace
  * to optimize ::mluOpMutualInformationForward.
@@ -7634,7 +7634,7 @@ mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
                                               const mluOpTensorDescriptor_t ans_desc,
                                               size_t *workspace_size);
 
-// Group: MutualInformationForward
+// Group: MutualInformation
 /*!
  * @brief Computes mutual information between tensor \b px and tensor \b py.
  *
@@ -8450,7 +8450,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
                      const mluOpTensorDescriptor_t dx_desc,
                      void *dx);
 
-// Group: GetIndicePairs
+// Group: SparseConv
 /*!
  * @brief Computes the get_indice_paris operation, then returns the results in the output
  * tensor \b out_indices , \b indice_pairs and \b ind, ice_num.
@@ -8549,7 +8549,7 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
                     const mluOpTensorDescriptor_t indice_num_desc,
                     void *indice_num);
 
-// Group: GetIndicePairs
+// Group: SparseConv
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the get_indice_pairs operation.
@@ -8620,7 +8620,7 @@ mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
                                  const mluOpTensorDescriptor_t indice_num_desc,
                                  size_t *workspace_size);
 
-// Group: ActiveRotatedFilterForward
+// Group: ActiveRotatedFilter
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpActiveRotatedFilterForward. The size of the extra
@@ -8666,7 +8666,7 @@ mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
                                                 const mluOpTensorDescriptor_t input_desc,
                                                 size_t *workspace_size);
 
-// Group: ActiveRotatedFilterForward
+// Group: ActiveRotatedFilter
 /*!
  * @brief Rotates \b input according to \b indices. This function encodes
  * the orientation information and generates orientation-sensitive features.
@@ -9276,7 +9276,7 @@ mluOpBorderAlignBackward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t grad_input_desc,
                          void *grad_input);
 
-// Group: IndiceConvolutionBackwardData
+// Group: SparseConv
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as
  * an extra workspace to optimize the indice convolution backward data operation.
@@ -9349,7 +9349,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
                                                    const int64_t inverse,
                                                    size_t *workspace_size);
 
-// Group: IndiceConvolutionBackwardData
+// Group: SparseConv
 /*!
  * @brief Performs the back propagation of an indice convolution operation to
  * compute the gradient of input \b input_grad based on the gradient of response
@@ -9489,7 +9489,7 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
                                    const mluOpTensorDescriptor_t input_grad_desc,
                                    void *input_grad);
 
-// Group: IndiceConvolutionBackwardFilter
+// Group: SparseConv
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the indice_convolution_backward_filter operation.
@@ -9562,7 +9562,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
                                                      const int64_t sub_m,
                                                      size_t *workspace_size);
 
-// Group: IndiceConvolutionBackwardFilter
+// Group: SparseConv
 /*!
  * @brief Computes the indice_convolution_backward_filter operation, then returns the results in the output
  * tensor \b filters_grad.
@@ -9843,7 +9843,7 @@ mluOpRoiPointPool3d(mluOpHandle_t handle,
                     const mluOpTensorDescriptor_t pooled_empty_flag_desc,
                     void *pooled_empty_flag);
 
-// Group: ThreeNNForward
+// Group: ThreeNN
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpThreeNNForward. The size of the extra workspace is
@@ -9889,7 +9889,7 @@ mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
                                     const mluOpTensorDescriptor_t known_desc,
                                     size_t *workspace_size);
 
-// Group: ThreeNNForward
+// Group: ThreeNN
 /*!
  * @brief Finds the closest 3 points of \b unknown among \b known, and outputs \b dist and index
  * \b idx tensor. This function firstly computes dist of each known point to a unknown point, and
@@ -9971,7 +9971,7 @@ mluOpThreeNNForward(const mluOpHandle_t handle,
                     const mluOpTensorDescriptor_t idx_desc,
                     void *idx);
 
-// Group: IndiceConvolutionForward
+// Group: SparseConv
 /*!
  * @brief Returns in \b workspace_size of the MLU memory which is used as an extra workspace
  * to boost up indice_convolution_forward computation.
@@ -10047,7 +10047,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
                                               const int64_t sub_m,
                                               size_t *workspace_size);
 
-// Group: IndiceConvolutionForward
+// Group: SparseConv
 /*!
  * @brief Performs convolution on input sparse tensor \b features with kernel \b filters,
  * then returns the output sparse tensor \b features_out.
@@ -10164,7 +10164,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
                               const mluOpTensorDescriptor_t features_out_desc,
                               void *features_out);
 
-// Group: MoeDispatchForward
+// Group: MoeDispatch
 /*!
  * @brief Dispatches the order of \b input tensor, and returns the
  * results in the output tensor \b dispatch in the MoE algorithm.
@@ -10270,7 +10270,7 @@ mluOpMoeDispatchForward(mluOpHandle_t handle,
                         const mluOpTensorDescriptor_t dispatch_desc,
                         void *dispatch);
 
-// Group: MoeDispatchBackwardGate
+// Group: MoeDispatch
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the moe_dispatch_backward_gate operation.
@@ -10317,7 +10317,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
                                              const mluOpTensorDescriptor_t input_desc,
                                              size_t *workspace_size);
 
-// Group: MoeDispatchBackwardGate
+// Group: MoeDispatch
 /*!
  * @brief Calculates the inverse gradient of \b gates tensor, and returns the results in the output
  * tensor \b grad_gates.
@@ -10497,7 +10497,7 @@ mluOpPointsInBoxes(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t points_indices_desc,
                    void *points_indices);
 
-// Group: RoiAlignBackward
+// Group: RoiAlign
 /*!
  * @brief Computes the gradients of images \b grads_image using the gradients \b grads and
  * bounding boxes \b boxes to perform the backpropagation of ::mluOpRoiAlignForward_v2
@@ -10593,7 +10593,7 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
                       const mluOpTensorDescriptor_t grads_image_desc,
                       void *grads_image);
 
-// Group: RoiAlignBackward
+// Group: RoiAlign
 /*!
  * @brief Computes the gradients of images \b grads_image based on the gradients \b grads,
  * bounding boxes \b boxes, the coordinate of x axis \b argmax_x, and the coordinate of y axis
@@ -10731,7 +10731,7 @@ mluOpRoiAlignBackward_v2(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t grads_image_desc,
                          void *grads_image);
 
-// Group: MsDeformAttnForward
+// Group: MsDeformAttn
 /*!
  * @brief Implements a multi-scale deformable attention module used in Deformable-Detr.
  * For detailed information about Deformable-Detr, see "Deformable DETR: Deformable
@@ -10938,7 +10938,7 @@ mluOpTinShiftForward(mluOpHandle_t handle,
                      const mluOpTensorDescriptor_t output_desc,
                      void *output);
 
-// Group: MaskedCol2im
+// Group: MaskedIm2Col
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
  * optimize the MaskedCol2imForward operation.
@@ -10993,7 +10993,7 @@ mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
                                          const mluOpTensorDescriptor_t im_desc,
                                          size_t *workspace_size);
 
-// Group: MaskedCol2im
+// Group: MaskedIm2Col
 /*!
  * @brief  Copies the data of the input tensor \b col to the special coordinates by combining \b mask_h_idx tensor
  * and \b mask_w_idx tensor of output tensor \b im.
@@ -11085,7 +11085,7 @@ mluOpMaskedCol2imForward(mluOpHandle_t handle,
                          const mluOpTensorDescriptor_t im_desc,
                          void *im);
 
-// Group: DiffIouRotatedSortVerticesForward
+// Group: DiffIouRotatedSortVertices
 /*!
  * @brief Sorts the effective vertices of the polygon formed by the intersection of two boxes,
  * and outputs the sorted vertex index.
@@ -11157,7 +11157,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
                                        const mluOpTensorDescriptor_t idx_desc,
                                        void *idx);
 
-// Group: RoiPoolingForward
+// Group: RoiPooling
 /*!
  * @brief Generates a fixed size feature map and input feature index
  * of argmax for each ROI (Regions of Interest) to perform ::mluOpRoiPoolingForward operation.
@@ -11304,7 +11304,7 @@ mluOpRoiPoolingForward(mluOpHandle_t handle,
                        void *output,
                        int *argmax);
 
-// Group: RoiPoolingBackward
+// Group: RoiPooling
 /*!
  * @brief Computes the gradients of image \b grads_image based on the gradients \b grads and
  * region proposals \b rois to perform the backpropagation of ::mluOpRoiPoolingForward operation.
@@ -11406,7 +11406,7 @@ mluOpRoiPoolingBackward(mluOpHandle_t handle,
                         const mluOpTensorDescriptor_t grads_image_desc,
                         void *grads_image);
 
-// Group: SyncBatchNormStats
+// Group: SyncBatchNorm
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpSyncBatchNormStats_v2 operation.
@@ -11454,7 +11454,7 @@ mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
                                         const mluOpTensorDescriptor_t x_desc,
                                         size_t *workspace_size);
 
-// Group: SyncBatchNormStats
+// Group: SyncBatchNorm
 /*!
  * @brief Computes the local mean and the local inverse standard deviation for each channel
  * across a batch of data in the training scenario.
@@ -11549,7 +11549,7 @@ mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
                            const mluOpTensorDescriptor_t invstd_desc,
                            void *invstd);
 
-// Group: SyncBatchNormStats
+// Group: SyncBatchNorm
 /*!
  * @brief Computes the local mean and the local inverse standard deviation for each channel
  * across a batch of data in the training scenario.
@@ -11633,7 +11633,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
                         const mluOpTensorDescriptor_t invstd_desc,
                         void *invstd);
 
-// Group: SyncBatchNormGatherStatsWithCounts
+// Group: SyncBatchNorm
 /*!
  * @brief Computes the global mean and the global inverse standard deviation across aggregation
  * of the local mean and local inverse standard deviation of multiple MLU devices.
@@ -11762,7 +11762,7 @@ mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
                                         const mluOpTensorDescriptor_t invstd_desc,
                                         void *invstd);
 
-// Group: SyncBatchNormElemt
+// Group: SyncBatchNorm
 /*!
  * @brief Applies Batch Normalization for each channel across a batch of data with the given mean,
  *        inverse variance and scaling factors.
@@ -11876,7 +11876,7 @@ mluOpSyncBatchNormElemt(mluOpHandle_t handle,
                         const mluOpTensorDescriptor_t y_desc,
                         void *y);
 
-// Group: SyncBatchNormBackwardReduce
+// Group: SyncBatchNorm
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the sync_batchnorm_backward_reduce operation.
@@ -11977,7 +11977,7 @@ mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
                                                  const mluOpTensorDescriptor_t x_desc,
                                                  size_t *workspace_size);
 
-// Group: SyncBatchNormBackwardReduce
+// Group: SyncBatchNorm
 /*!
  * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad
  * filters, grad bias, sum_dy and sum_dy_xmu on each MLU device.
@@ -12326,7 +12326,7 @@ mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
                                     const bool needs_input_grad1,
                                     const bool needs_input_grad2);
 
-// Group: SyncBatchNormBackwardReduce
+// Group: SyncBatchNorm
 /*!
  * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad filters,
  * grad bias, sum_dy and sum_dy_xmu on each MLU device.
@@ -12641,7 +12641,7 @@ mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
                                  const bool needs_input_grad1,
                                  const bool needs_input_grad2);
 
-// Group: SyncBatchNormBackwardElemt
+// Group: SyncBatchNorm
 /*!
  * @brief Computes the gradients of input in the training scenario.
  *
@@ -12769,7 +12769,7 @@ mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
                                 const mluOpTensorDescriptor_t diff_x_desc,
                                 void *diff_x);
 
-// Group: SyncBatchNormBackwardElemt
+// Group: SyncBatchNorm
 /*!
  * @brief Computes the gradients of input in the training scenario.
  *
@@ -12951,7 +12951,7 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
 void MLUOP_WIN_API
 mluOpSetGenCaseMode(int mode);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward
  * or backward operation, and allocates memory for holding the information about the
@@ -12985,7 +12985,7 @@ mluOpSetGenCaseMode(int mode);
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Initializes the deformable convolution descriptor \p dcn_desc that was
  * created by ::mluOpCreateDCNDescriptor function, and sets the information about the
@@ -13084,7 +13084,7 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
                       int im2col_step,
                       const mluOpDataType_t compute_type);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Destroys a deformable convolution descriptor \p dcn_desc that was previously created by
  * ::mluOpCreateDCNDescriptor.
@@ -13112,7 +13112,7 @@ mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  *        workspace to optimize the deformable convolution forward operation.
@@ -13185,7 +13185,7 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
                                 const mluOpTensorDescriptor_t output_desc,
                                 size_t *workspace_size);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Performs a 2D deformable convolution forward operation. Compared with the standard
  *        convolution, the deformable convolution introduces 2D offsets and masks to make
@@ -13353,7 +13353,7 @@ mluOpDCNForward(mluOpHandle_t handle,
                 const mluOpTensorDescriptor_t output_desc,
                 void *output);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  *        workspace to optimize the deformable convolution backward filter operation.
@@ -13430,7 +13430,7 @@ mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
                                        const mluOpTensorDescriptor_t grad_bias_desc,
                                        size_t *workspace_size);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  *        the gradient with respect to filter \p grad_filter and bias \p grad_bias
@@ -13576,7 +13576,7 @@ mluOpDCNBackwardWeight(mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t grad_bias_desc,
                        void *grad_bias);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the deformable convolution backward data operation.
@@ -13663,7 +13663,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
                                      const mluOpTensorDescriptor_t grad_mask_desc,
                                      size_t *workspace_size);
 
-// Group: DCN
+// Group: DeformConv
 /*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  * the gradient with respect to input \p grad_input, offset \p grad_offset, and mask
