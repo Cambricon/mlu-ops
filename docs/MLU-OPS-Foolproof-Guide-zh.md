@@ -83,14 +83,7 @@ Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
 
 ```
 常见错误示例：
-```c++
-// 不对外暴露的函数也带了 MLUOP_WIN_API 修饰
-mluOpStatus_t MLUOP_WIN_API
-Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
-                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
-                        const void *x, void *y, const int num);
-
-```
+无
 
 ### MLUOP_CHECK
 应用场景：gtest 中使用，检查 mlu_op.h 中 的 api 函数。<br>
