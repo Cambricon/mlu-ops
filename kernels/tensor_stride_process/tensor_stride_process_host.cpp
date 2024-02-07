@@ -484,3 +484,4 @@ mluOpContiguous(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   DESTROY_CNNL_HANDLE(cnnl_handle);
   return MLUOP_STATUS_SUCCESS;
 }
+
