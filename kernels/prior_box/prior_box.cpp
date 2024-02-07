@@ -213,7 +213,6 @@ mluOpStatus_t mluOpPriorBox(
     GEN_CASE_DATA(false, "var", var, var_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-  GEN_CASE_END();
   cnrtDim3_t k_dim_box;
   cnrtFunctionType_t k_type;
   policyFuncPriorBox(handle, &k_dim_box, &k_type, height);
@@ -228,5 +227,6 @@ mluOpStatus_t mluOpPriorBox(
                      min_max_aspect_ratios_order, output, output_size, var,
                      var_size));
   VLOG(5) << "End KernelPriorBox kernel";
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
