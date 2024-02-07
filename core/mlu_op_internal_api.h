@@ -67,9 +67,6 @@ mluOpInternalUnsubscribe(mluOpSubscriber_t subscriber);
 MLUOP_WIN_API mluOpStatus_t mluOpInternalGetKernelName(
     const void *kernel, const char **name, int *);  // api is not stable yet
 
-MLUOP_WIN_API const char *mluOpInternalGetApiNameById(int id);
-MLUOP_WIN_API int mluOpInternalGetApiNameNumber();
-
 MLUOP_WIN_API const char *mluOpInternalGetCommitId();
 MLUOP_WIN_API const char *mluOpInternalGetBranchInfo();
 
