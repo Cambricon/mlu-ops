@@ -10938,7 +10938,7 @@ mluOpTinShiftForward(mluOpHandle_t handle,
                      const mluOpTensorDescriptor_t output_desc,
                      void *output);
 
-// Group: MaskedIm2Col
+// Group: MaskedIm2col
 /*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
  * optimize the MaskedCol2imForward operation.
@@ -10993,7 +10993,7 @@ mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
                                          const mluOpTensorDescriptor_t im_desc,
                                          size_t *workspace_size);
 
-// Group: MaskedIm2Col
+// Group: MaskedIm2col
 /*!
  * @brief  Copies the data of the input tensor \b col to the special coordinates by combining \b mask_h_idx tensor
  * and \b mask_w_idx tensor of output tensor \b im.
